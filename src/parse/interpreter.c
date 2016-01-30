@@ -43,6 +43,7 @@ int InitialiseInterpreter(char* data, void* vcallbacks) {
   callbacks->add_require = AddRequire;
   callbacks->add_provide = AddProvide;
   callbacks->add_named_src = AddNamedSource;
+  callbacks->add_command = AddCommand;
   callbacks->set_container_setting = SetContainerSetting;
   callbacks->glob = Glob;
   callbacks->get_include_file = GetIncludeFile;

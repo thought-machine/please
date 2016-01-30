@@ -29,7 +29,8 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
     deps = deps or []
     linker_flags = linker_flags or []
     pkg_config_libs = pkg_config_libs or []
-    flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs)
+    dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
+    opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs)
 
     # Collect the headers for other rules
     filegroup(
@@ -45,7 +46,10 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
         outs=[name + '.a'],
         deps=deps,
         visibility=visibility,
-        cmd='%s -c -I . ${SRCS_SRCS} %s && ar rcs%s $OUT *.o' % (CONFIG.CC_TOOL, flags, _AR_FLAG),
+        cmd={
+            'dbg': '%s -c -I . ${SRCS_SRCS} %s && ar rcs%s $OUT *.o' % (CONFIG.CC_TOOL, dbg_flags, _AR_FLAG),
+            'opt': '%s -c -I . ${SRCS_SRCS} %s && ar rcs%s $OUT *.o' % (CONFIG.CC_TOOL, opt_flags, _AR_FLAG),
+        },
         building_description='Compiling...',
         requires=['cc', 'cc_hdrs'],
         test_only=test_only,
@@ -137,8 +141,12 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
     deps = deps or []
     srcs = srcs or []
     hdrs = hdrs or []
-    flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
-    cmd = '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, flags)
+    dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
+    opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
+    cmd = {
+        'dbg': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, dbg_flags),
+        'opt': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, opt_flags),
+    }
     build_rule(
         name=name,
         srcs={'srcs': srcs, 'hdrs': hdrs},
@@ -171,8 +179,12 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None,
     srcs = srcs or []
     hdrs = hdrs or []
     linker_flags = linker_flags or [CONFIG.DEFAULT_LDFLAGS]
-    flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
-    cmd = '%s -o ${OUT} -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, flags)
+    dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
+    opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
+    cmd = {
+        'dbg': '%s -o ${OUT} -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, dbg_flags),
+        'opt': '%s -o ${OUT} -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, opt_flags),
+    }
     build_rule(
         name=name,
         srcs={'srcs': srcs, 'hdrs': hdrs},
@@ -214,9 +226,9 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
     """
     srcs = srcs or []
     deps=deps or []
-    compiler_flags = compiler_flags or [CONFIG.DEFAULT_TEST_CFLAGS]
-    linker_flags = linker_flags or [CONFIG.DEFAULT_TEST_LDFLAGS]
-    flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
+    linker_flags = ['-lunittest++'] + (linker_flags or [CONFIG.DEFAULT_LDFLAGS])
+    dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
+    opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
     genrule(
         name='_%s#main' % name,
         outs=['_%s_main.cc' % name],
@@ -225,7 +237,10 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
     )
     deps.append(':_%s#main' % name)
     srcs.append(':_%s#main' % name)
-    cmd = '%s -o ${OUT} -I . ${SRCS} %s' % (CONFIG.CC_TOOL, flags)
+    cmd = {
+        'dbg': '%s -o ${OUT} -I . ${SRCS} %s' % (CONFIG.CC_TOOL, dbg_flags),
+        'opt': '%s -o ${OUT} -I . ${SRCS} %s' % (CONFIG.CC_TOOL, opt_flags),
+    }
     build_rule(
         name=name,
         srcs=srcs,
@@ -278,6 +293,9 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
     """
     if src.startswith(':') or src.startswith('/'):
         deps = (deps or []) + [src]
+    namespace = namespace or CONFIG.DEFAULT_NAMESPACE
+    if not namespace:
+        raise ValueError('You must either pass namespace= to cc_library or set the default namespace in .plzconfig')
     build_rule(
         name='_%s#hdr' % name,
         srcs=[],
@@ -286,7 +304,7 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         cmd='; '.join([
             'ENCODED_FILENAME=$(location %s)' % src,
             'BINARY_NAME=' + name,
-            'NAMESPACE=' + (namespace or CONFIG.DEFAULT_NAMESPACE),
+            'NAMESPACE=' + namespace,
             'echo "%s" | sed -E -e "s/([^/ ])[/\\.-]([^/ ])/\\1_\\2/g" > $OUT' % _CC_HEADER_CONTENTS,
         ]),
         visibility=visibility,
@@ -379,9 +397,9 @@ cxx_library = cc_library
 cxx_test = cc_test
 
 
-def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False):
+def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
-    compiler_flags = compiler_flags or [CONFIG.DEFAULT_CFLAGS]
+    compiler_flags = compiler_flags or [CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS]
     compiler_flags.append('-fPIC')
     # Linker flags may need this leading -Xlinker mabob.
     linker_flags = ['-Xlinker ' + flag for flag in (linker_flags or [])]
@@ -392,7 +410,7 @@ def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflag
                      pkg_config_cmd, pkg_config_cmd_2, postamble])
 
 
-def _apply_transitive_labels(command):
+def _apply_transitive_labels(command_map):
     """Acquires the required linker flags from all transitive labels of a rule.
 
     This is how we handle libraries sensibly for C++ rules; you might write a rule that
@@ -401,8 +419,9 @@ def _apply_transitive_labels(command):
     that use it. The solution to this is here; we collect the set of linker flags from all
     dependencies and apply them to the binary rule that needs them.
     """
-    return lambda name: set_command(name, ' '.join([
-        command,
+    update_command = lambda name, config: set_command(name, config, ' '.join([
+        command_map[config],
         ' '.join('-Xlinker ' + flag for flag in get_labels(name, 'cc:ld:')),
         ' '.join('`pkg-config --libs %s`' % x for x in get_labels(name, 'cc:pc:')),
     ]))
+    return lambda name: (update_command(name, 'dbg'), update_command(name, 'opt'))
