@@ -170,7 +170,6 @@ type Configuration struct {
 	}
 	Go struct {
 		Version string
-		Strip   string
 	}
 	Python struct {
 		PipTool            string

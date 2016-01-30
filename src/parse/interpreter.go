@@ -98,7 +98,6 @@ func initializeInterpreter(config core.Configuration) {
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version)
 	setConfigValue("GO_VERSION", config.Go.Version)
-	setConfigValue("GO_STRIP", config.Go.Strip)
 	setConfigValue("PIP_TOOL", config.Python.PipTool)
 	setConfigValue("PEX_TOOL", config.Python.PexTool)
 	setConfigValue("DEFAULT_PYTHON_INTERPRETER", config.Python.DefaultInterpreter)
