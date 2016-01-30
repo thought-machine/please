@@ -1,3 +1,19 @@
+Version 1.5.0
+-------------
+
+    * Support for build configurations, activated by '-c opt' and '-c dbg'. Those two
+      are provided by default on C++ and Go rules; other languages can stick with a
+      single command at present, use those and / or define their own configs.
+    * The 'strip' config option and go_binary argument has been removed. It's now
+      implicit in -c opt for go_binary.
+    * C++ config options have changed a lot; the test / normal dichotomy has gone, we now
+      have defaults for dbg and opt and a default set of ldflags. -lunittest++ is applied
+      automatically by cc_test.
+    * --no_cache has been changed to --nocache for consistency.
+    * The -c argument to plz clean is now removed. Default is to clean the cache,
+      and it honours the top-level --nocache flag if you don't want to clean that.
+
+
 Version 1.4.9
 -------------
 
