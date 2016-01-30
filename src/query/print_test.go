@@ -13,6 +13,7 @@ var KnownFields = map[string]bool{
 	"BuildTimeout":                true,
 	"BuildingDescription":         true,
 	"Command":                     true,
+	"Commands":                    true,
 	"Containerise":                true,
 	"ContainerSettings":           true,
 	"Data":                        true,

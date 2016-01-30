@@ -13,6 +13,7 @@ typedef char* (ParseFileCallback)(char*, char*, void*);
 typedef void* (AddTargetCallback)(void*, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*);
 typedef void (AddStringCallback)(void*, char*);
 typedef void (AddTwoStringsCallback)(void*, char*, char*);
+typedef void (AddThreeStringsCallback)(void*, char*, char*, char*);
 typedef void (AddDependencyCallback)(void*, char*, char*, uint8);
 typedef void (AddOutputCallback)(void*, char*, char*);
 typedef char** (GlobCallback)(char*, char**, long long, char**, long long, uint8);
@@ -41,6 +42,7 @@ struct PleaseCallbacks {
     AddStringCallback* add_require;
     AddTwoStringsCallback* add_provide;
     AddTwoStringsCallback* add_named_src;
+    AddTwoStringsCallback* add_command;
     AddTwoStringsCallback* set_container_setting;
     GlobCallback* glob;
     GetIncludeFileCallback* get_include_file;
@@ -51,7 +53,7 @@ struct PleaseCallbacks {
     AddDependencyCallback* add_dependency;
     AddOutputCallback* add_output;
     AddTwoStringsCallback* add_licence_post;
-    AddTwoStringsCallback* set_command;
+    AddThreeStringsCallback* set_command;
     SetConfigValueCallback* set_config_value;
     PreBuildCallbackRunner* pre_build_callback_runner;
     PostBuildCallbackRunner* post_build_callback_runner;

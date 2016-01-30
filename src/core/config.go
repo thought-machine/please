@@ -77,6 +77,8 @@ func DefaultConfiguration() Configuration {
 	config.Please.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Please.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
 	config.Build.Timeout = 600         // Ten minutes
+	config.Build.Config = "opt"        // Optimised builds by default
+	config.Build.DefaultConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Cache.HttpTimeout = 5       // Five seconds
 	config.Cache.RpcTimeout = 5        // Five seconds
 	config.Cache.DirCacheCleaner = "/opt/please/cache_cleaner"
@@ -137,6 +139,8 @@ type Configuration struct {
 	Build struct {
 		Timeout int
 		Path    []string
+		Config  string
+		DefaultConfig string
 	}
 	Cache struct {
 		Dir                   string

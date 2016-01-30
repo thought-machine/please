@@ -46,6 +46,8 @@ type BuildTarget struct {
 	Labels []string
 	// Shell command to run.
 	Command string
+	// Per-configuration shell commands to run.
+	Commands map[string]string
 	// Shell command to run for test targets.
 	TestCommand string
 	// Represents the state of this build target (see below)
@@ -202,7 +204,6 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 	target.resolvedDependencies = map[BuildLabel]bool{}
 	target.IsBinary = false
 	target.IsTest = false
-	target.Command = "false"
 	target.BuildingDescription = "Building..."
 	return target
 }
@@ -478,13 +479,54 @@ func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 	return []BuildLabel{target.Label}
 }
 
+// AddNamedSource adds a source to the target which is tagged with a particular name.
+// For example, C++ rules add sources tagged as "sources" and "headers" to distinguish
+// two conceptually different kinds of input.
 func (target *BuildTarget) AddNamedSource(name string, source BuildInput) {
 	if target.NamedSources == nil {
-		target.NamedSources = map[string][]BuildInput{}
+		target.NamedSources = map[string][]BuildInput{name: []BuildInput{source}}
+	} else {
+		target.NamedSources[name] = append(target.NamedSources[name], source)
 	}
-	target.NamedSources[name] = append(target.NamedSources[name], source)
 }
 
+// AddCommand adds a new config-specific command to this build target.
+// Adding a general command is still done by simply setting the Command member.
+func (target *BuildTarget) AddCommand(config, command string) {
+	if target.Command != "" {
+		panic(fmt.Sprintf("Adding named command %s to %s, but it already has a general command set", config, target.Label))
+	} else if target.Commands == nil {
+		target.Commands = map[string]string{config: command}
+	} else {
+		target.Commands[config] = command
+	}
+}
+
+// GetCommand returns the command we should use to build this target for the current config.
+func (target *BuildTarget) GetCommand() string {
+	if target.Commands == nil {
+		return target.Command
+	} else if command, present := target.Commands[State.Config.Build.Config]; present {
+		return command  // Has command for current config, good
+	} else if command, present := target.Commands[State.Config.Build.DefaultConfig]; present {
+		return command  // Has command for default config, fall back to that
+	}
+	// Oh dear, target doesn't have any matching config. Panicking is a bit heavy here, instead
+	// fall back to an arbitrary (but consistent) one.
+	highestCommand := ""
+	highestConfig := ""
+	for config, command := range target.Commands {
+		if config > highestConfig {
+			highestConfig = config
+			highestCommand = command
+		}
+	}
+	log.Warning("%s doesn't have a command for %s (or %s), falling back to %s",
+		target.Label, State.Config.Build.Config, State.Config.Build.DefaultConfig, highestConfig)
+	return highestCommand
+}
+
+// AllSources returns an iterable channel of all the sources of this rule.
 func (target *BuildTarget) AllSources() <-chan BuildInput {
 	ch := make(chan BuildInput, 10)
 	go func() {
