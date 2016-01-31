@@ -1,18 +1,15 @@
-// Package gobuild contains utilities used by plz_go_test.
+// Package buildgo contains utilities used by plz_go_test.
 // It's split up mostly for ease of testing.
-package gobuild
+package buildgo
 
 import (
 	"bufio"
 	"bytes"
-	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	
 	"github.com/op/go-logging"
-
-	"buildgo"
-	"output"
 )
 
 var log = logging.MustGetLogger("buildgo")
@@ -20,7 +17,10 @@ var log = logging.MustGetLogger("buildgo")
 // FindCoverVars searches the given directory recursively to find all compiled packages in it.
 // From these we extract any coverage variables that have been templated into them; unfortunately
 // this isn't possible to examine dynamically using the reflect package.
-func FindCoverVars(dir string, exclude []string) ([]string, err) {
+func FindCoverVars(dir string, exclude []string) ([]string, error) {
+	if dir == "" {
+		return nil, nil
+	}
 	excludeMap := map[string]struct{}{}
 	for _, e := range exclude {
 		excludeMap[e] = struct{}{}
@@ -53,28 +53,31 @@ func readPkgdef(file string) (vars []string, err error) {
 	}
 	defer f.Close()
 
-	// Read from file, collecting header for __.PKGDEF.
-	// The header is from the beginning of the file until a line
-	// containing just "!". The first line must begin with "go object ".
 	rbuf := bufio.NewReader(f)
+	// First lines contain some headers, make sure it's the right file then continue
+	rbuf.ReadBytes('\n')
+	line, _ := rbuf.ReadBytes('\n')
+	if !bytes.HasPrefix(line, []byte("__.PKGDEF")) {
+		log.Warning("%s doesn't lead with a PKGDEF entry, skipping", file)
+		return nil, nil
+	}
+	
 	ret := []string{}
+	pkg := ""
 	for {
 		line, err := rbuf.ReadBytes('\n')
 		if err != nil {
 			return nil, err
 		}
-		if wbuf.Len() == 0 && !bytes.HasPrefix(line, []byte("go object ")) {
-			// Slight alteration here; we cannot rely on all .a files being Go archives
-			// (we might be linking against cgo libraries too). This is therefore nonfatal.
-			log.Warning("%s isn't a Go object file, skipping", file)
-			return []string{}, nil
-		}
 		if bytes.Equal(line, []byte("!\n")) {
 			break
 		}
-		if index := bytes.Index(line, "var @\"\".GoCover"); index != -1 {
+		if bytes.HasPrefix(line, []byte("package ")) {
+			pkg = string(line[8:len(line)-1])
+		}
+		if index := bytes.Index(line, []byte("var @\"\".GoCover")); index != -1 {
 			line = line[8:]  // Strip the leading gunk
-			ret = append(ret, string(line[:bytes.IndexRune(line, ' ')]))
+			ret = append(ret, pkg + string(line[:bytes.IndexByte(line, ' ')]))
 		}
 	}
 	return ret, nil
