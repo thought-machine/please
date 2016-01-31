@@ -1,6 +1,6 @@
 go_library(
     name = 'buildgo',
-    srcs = ['find_cover_vars.go'],
+    srcs = ['find_cover_vars.go', 'write_test_main.go'],
     deps = [
         '//src/output',
         '//third_party/go:logging',
@@ -36,4 +36,14 @@ genrule(
     srcs = ['test_data/core.a'],
     outs = ['test_data/x/core.a'],
     cmd = 'cp $SRC $OUT',
+)
+
+go_test(
+    name = 'write_test_main_test',
+    srcs = ['write_test_main_test.go'],
+    deps = [
+        ':buildgo',
+        '//third_party/go:testify',
+    ],
+    data = glob(['test_data/*.go']),
 )
