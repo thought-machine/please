@@ -29,10 +29,13 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
     copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
     # Invokes the Go compiler.
     compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL
+    # Annotates files for coverage
+    cover_cmd = 'for SRC in $SRCS; do mv $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
     # String it all together.
     cmd = {
         'dbg': '%s %s && %s -N -l $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
         'opt': '%s %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
+        'cover': '%s %s && %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, cover_cmd, compile_cmd),
     }
 
     # go_test and cgo_library need access to the sources as well.
