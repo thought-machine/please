@@ -13,9 +13,11 @@ import (
 )
 
 type testDescr struct {
-	Package   string
-	Main      string
-	Functions []string
+	Package      string
+	Main         string
+	Functions    []string
+	CoverVars    []string
+	CoverEnabled bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
@@ -37,6 +39,7 @@ func createTestMain(sources []string, coverVars []string) (string, error) {
 	if len(testDescr.Functions) == 0 {
 		return "", fmt.Errorf("Didn't find any test functions in the source files")
 	}
+	testDescr.CoverVars = coverVars
 	return "", nil
 }
 
@@ -109,7 +112,7 @@ var testMainTmpl = template.Must(template.New("main").Parse(`
 package main
 
 import (
-{{if not .TestMain}}
+{{if not .Main}}
 	"os"
 {{end}}
 	"testing"
@@ -183,8 +186,8 @@ func main() {
 	benchmarks := []testing.InternalBenchmark{}
 	var examples = []testing.InternalExample{}
 	m := testing.MainStart(matchString, tests, benchmarks, examples)
-{{with .TestMain}}
-	{{.Package}}.{{.Name}}(m)
+{{if .Main}}
+	{{.Package}}.{{.Main}}(m)
 {{else}}
 	os.Exit(m.Run())
 {{end}}
