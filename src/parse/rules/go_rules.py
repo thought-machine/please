@@ -24,41 +24,26 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
     """
-    # Copies archives up a directory; this is needed in some cases depending on whether
-    # the library matches the name of the directory it's in or not.
-    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
-    # Invokes the Go compiler.
-    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL
-    # Annotates files for coverage
-    cover_cmd = 'for SRC in $SRCS; do mv $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
-    # String it all together.
-    cmd = {
-        'dbg': '%s %s && %s -N -l $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
-        'opt': '%s %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
-        'cover': '%s %s && %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, cover_cmd, compile_cmd),
-    }
-
     # go_test and cgo_library need access to the sources as well.
     filegroup(
         name='_%s#srcs' % name,
         srcs=srcs,
-        deps=deps,
+        exported_deps=deps,
         visibility=visibility,
         output_is_complete=False,
         requires=['go'],
         test_only=test_only,
     )
-
     build_rule(
         name=name,
         srcs=srcs,
         deps=(deps or []) + [':_%s#srcs' % name],
         outs=[out or name + '.a'],
-        cmd=cmd,
+        cmd=_go_library_cmd(),
         visibility=visibility,
         building_description="Compiling...",
         requires=['go'],
-        provides={'go_src': ':_%s#srcs' % name},
+        provides={'go': ':' + name, 'go_src': ':_%s#srcs' % name},
         test_only=test_only,
     )
 
@@ -146,26 +131,9 @@ def go_binary(name, main=None, deps=None, visibility=None, test_only=False):
     )
 
 
-def _go_binary_cmd():
-    """Returns the commands we'd use for a go_binary rule."""
-    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
-    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL
-    link_cmd = 'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL
-    all_cmds = '%s %s && %s && %s' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd, link_cmd)
-    return {
-        'dbg': all_cmds + ' ${OUT}.6',
-        'opt': all_cmds + '-s -w ${OUT}.6',
-    }
-
-
 def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
             timeout=0, flaky=0, test_outputs=None, labels=None):
     """Defines a Go test rule.
-
-    Note that similarly to cgo_library this requires the test sources in order to
-    template in the test specifications. We kind of get away with this because Go compilation
-    is so fast but it would be better not to - on the other hand, this also allows us
-    to build with coverage tracing which wouldn't be possible otherwise.
 
     Args:
       name (str): Name of the rule.
@@ -179,17 +147,27 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
       test_outputs (list): Extra test output files to generate from this test.
       labels (list): Labels for this rule.
     """
-    go_library(
+    # Unfortunately we have to recompile this to build the test together with its library.
+    build_rule(
         name='_%s#lib' % name,
         srcs=srcs,
         deps=deps,
+        outs=[name + '.a'],
+        cmd={k: 'SRCS=${PKG}/*.go; ' + v for k, v in _go_library_cmd().items()},
+        building_description="Compiling...",
+        requires=['go', 'go_src'],
+        test_only=True,
+        # TODO(pebers): We should be able to get away without this via a judicious
+        #               exported_deps in go_library, but it doesn't seem to be working.
+        needs_transitive_deps=True,
     )
     go_test_tool, tools = _tool_path(CONFIG.GO_TEST_TOOL)
     build_rule(
         name='_%s#main' % name,
         srcs=srcs,
+        outs=[name + '_main.go'],
         deps=deps,
-        cmd='%s -o $OUT $SRCS && ' % go_test_tool,
+        cmd='%s -o $OUT $SRCS' % go_test_tool,
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
         requires=['go'],
         tools=tools,
@@ -286,3 +264,32 @@ def _extra_outs(get):
                 add_out(name, 'src/' + subpath)
             last = subpath
     return _inner
+
+
+def _go_library_cmd():
+    """Returns the commands we'd use for a go_library rule."""
+    # Copies archives up a directory; this is needed in some cases depending on whether
+    # the library matches the name of the directory it's in or not.
+    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
+    # Invokes the Go compiler.
+    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL
+    # Annotates files for coverage
+    cover_cmd = 'for SRC in $SRCS; do mv $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
+    # String it all together.
+    return {
+        'dbg': '%s %s && %s -N -l $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
+        'opt': '%s %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
+        'cover': '%s %s && %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, cover_cmd, compile_cmd),
+    }
+
+
+def _go_binary_cmd():
+    """Returns the commands we'd use for a go_binary rule."""
+    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
+    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL
+    link_cmd = 'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL
+    all_cmds = '%s %s && %s && %s' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd, link_cmd)
+    return {
+        'dbg': all_cmds + ' ${OUT}.6',
+        'opt': all_cmds + '-s -w ${OUT}.6',
+    }
