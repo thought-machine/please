@@ -1,0 +1,47 @@
+// Code for parsing Go's coverage output.
+//
+// Go comes with a built-in coverage tool and a package to parse its output format. <3
+// Its format is actually rather richer than ours and can handle sub-line coverage etc.
+// We may look into taking more advantage of that later...
+
+package test
+
+import "bytes"
+import "golang.org/x/tools/cover"
+
+import "core"
+
+func looksLikeGoCoverageResults(results []byte) bool {
+	return bytes.HasPrefix(results, []byte("mode: "))
+}
+
+func parseGoCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, filename string) error {
+	profiles, err := cover.ParseProfiles(filename)
+	if err != nil {
+		return err
+	}
+	for _, profile := range profiles {
+		// Prepending src/ is a bit of a hack but it's oh so easy...
+		coverage.Files["src/"+profile.FileName] = parseBlocks(profile.Blocks)
+	}
+	coverage.Tests[target.Label] = coverage.Files
+	return nil
+}
+
+func parseBlocks(blocks []cover.ProfileBlock) []core.LineCoverage {
+	if len(blocks) == 0 {
+		return nil
+	}
+	lastLine := blocks[len(blocks)-1].EndLine
+	ret := make([]core.LineCoverage, lastLine, lastLine)
+	for _, block := range blocks {
+		for line := block.StartLine - 1; line < block.EndLine; line++ {
+			if block.Count > 0 {
+				ret[line] = core.Covered
+			} else {
+				ret[line] = core.Uncovered
+			}
+		}
+	}
+	return ret
+}

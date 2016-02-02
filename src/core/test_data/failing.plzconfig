@@ -1,0 +1,7 @@
+[python]
+pext
+
+[java]
+javactool = javac
+sourceversion = 7
+targetversion = 7

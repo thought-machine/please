@@ -1,0 +1,100 @@
+# So far just contains tests for the C++ build rules.
+
+cc_embed_binary(
+    name = 'embedded_file_1',
+    src = 'embedded_file_1.txt',
+)
+
+genrule(
+    name = 'embedded_file_3_gen',
+    outs = ['embedded_file_3.txt'],
+    cmd = 'echo "testing message 3" > $OUT'
+)
+
+cc_embed_binary(
+    name = 'embedded_file_3',
+    src = ':embedded_file_3_gen',
+    deps = [':embedded_file_3_gen'],
+)
+
+cc_test(
+    name = 'embed_file_test',
+    srcs = ['embed_file_test.cc'],
+    deps = [
+        ':embedded_file_1',
+        ':embedded_file_3',
+    ],
+)
+
+# This is a little chain of tests to exercise the cc_shared_object rule.
+cc_library(
+    name = 'embedded_files',
+    srcs = ['embedded_files.cc'],
+    hdrs = ['embedded_files.h'],
+    deps = [
+        ':embedded_file_1',
+        ':embedded_file_3',
+    ],
+)
+
+cc_shared_object(
+    name = 'so_test',
+    srcs = ['so_test.cc'],
+    deps = [
+        ':embedded_files',
+    ],
+    pkg_config_libs = ['python'],
+)
+
+# Used by Python build code as a convenient way of testing itself.
+python_library(
+    name = 'so_test_py',
+    srcs = ['__init__.py'],
+    resources = [':so_test'],
+    visibility = ['//src/build/python/...'],
+    zip_safe = False,
+)
+
+python_test(
+    name = 'shared_object_test',
+    srcs = ['shared_object_test.py'],
+    deps = [
+        ':so_test',
+    ],
+    labels = ['cc'],
+    zip_safe = False,
+)
+
+# Make sure we have at least one working cc_binary rule.
+cc_binary(
+    name = 'test_binary',
+    srcs = ['test_binary.cc'],
+    deps = [
+        ':embedded_files',
+    ],
+)
+
+gentest(
+    name = 'cc_binary_test',
+    data = [':test_binary'],
+    test_cmd = '$(exe :test_binary)',
+    labels = ['cc'],
+    no_test_output = True,
+)
+
+# These rules implicitly test the way transitive build labels and pre-build functions
+# work; these are needed for cc linker rules to apply transitively.
+cc_library(
+    name = 'cc_fst_lib',
+    srcs = ['fst_lib.cc'],
+    hdrs = ['fst_lib.h'],
+    linker_flags = ['-lfst -ldl'],
+)
+
+cc_test(
+    name = 'cc_fst_test',
+    srcs = ['fst_test.cc'],
+    deps = [
+        ':cc_fst_lib',
+    ],
+)

@@ -1,0 +1,80 @@
+// Test to make sure that every field in BuildTarget has been thought of
+// in the rule hash calculation.
+// Not every field necessarily needs to be hashed there (and indeed not
+// all should be), this is just a guard against adding new fields and
+// forgetting to update that function.
+
+package build
+
+import (
+	"reflect"
+	"testing"
+
+	"core"
+)
+
+var KnownFields = map[string]bool{
+	// These fields are explicitly hashed.
+	"Label":                       true,
+	"DeclaredDependencies":        true,
+	"Hashes":                      true,
+	"Sources":                     true,
+	"NamedSources":                true,
+	"IsBinary":                    true,
+	"IsTest":                      true,
+	"Command":                     true,
+	"TestCommand":                 true,
+	"NeedsTransitiveDependencies": true,
+	"OutputIsComplete":            true,
+	"Requires":                    true,
+	"Provides":                    true,
+	"PreBuildFunction":            true,
+	"PostBuildFunction":           true,
+	"PreBuildHash":                true,
+	"PostBuildHash":               true,
+	"outputs":                     true,
+	"Licences":                    true,
+	"Tools":                       true,
+	"TestOutputs":                 true,
+
+	// These only contribute to the runtime hash, not at build time.
+	"Data":              true,
+	"Containerise":      true,
+	"ContainerSettings": true,
+
+	// These would ideally not contribute to the hash, but we need that at present
+	// because we don't have a good way to force a recheck of its reverse dependencies.
+	"Visibility": true,
+	"TestOnly":   true,
+	"Labels":     true,
+
+	// These fields we have thought about and decided that they shouldn't contribute to the
+	// hash because they don't affect the actual output of the target.
+	"Flakiness":           true,
+	"NoTestOutput":        true,
+	"SkipCache":           true,
+	"BuildTimeout":        true,
+	"TestTimeout":         true,
+	"state":               true,
+	"Results":             true, // Recall that unsuccessful test results aren't cached...
+	"BuildingDescription": true,
+
+	// Used to save the rule hash rather than actually being hashed itself.
+	"RuleHash": true,
+
+	// Covered sufficiently by DeclaredDependencies
+	"ExportedDependencies": true,
+	"Dependencies":         true,
+	"resolvedDependencies": true,
+}
+
+func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
+	target := core.BuildTarget{}
+	val := reflect.ValueOf(target)
+	for i := 0; i < val.Type().NumField(); i++ {
+		field := val.Type().Field(i)
+		if !KnownFields[field.Name] {
+			t.Errorf("Unaccounted field in 'query print': %s", field.Name)
+		}
+	}
+}

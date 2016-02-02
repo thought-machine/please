@@ -1,0 +1,7 @@
+[python]
+pextool = pexmabob
+
+[java]
+javactool = javac
+sourcelevel = 8
+targetlevel = 7

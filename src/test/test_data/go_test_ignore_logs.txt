@@ -1,0 +1,14 @@
+=== RUN   TestA
+log: some output
+log: some more output
+--- PASS: TestA (0.00s)
+=== RUN   TestB
+log: log
+log: log
+--- PASS: TestB (0.00s)
+=== RUN   TestC
+--- PASS: TestC (0.00s)
+=== RUN   TestD
+--- PASS: TestD (0.00s)
+PASS
+coverage: 22.9% of statements

@@ -1,0 +1,18 @@
+// Just a wee binary to test that we can compile one ok.
+
+#include <string>
+
+#include "src/build/cc/clang/embedded_files.h"
+
+
+int main(int argc, char** argv) {
+    using namespace thought_machine;
+
+    if (embedded_file1_contents() != "testing message 1\n") {
+	return 1;
+    } else if (embedded_file3_contents() != "testing message 3\n") {
+	return 3;
+    } else {
+	return 0;
+    }
+}

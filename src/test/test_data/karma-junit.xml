@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<testsuites>
+  <testsuite name="PhantomJS 2.0.0 (Linux 0.0.0)" package="" timestamp="2015-06-23T15:41:49" id="0" hostname="TM-Hilden" tests="10" errors="0" failures="0" time="0.019">
+    <properties>
+      <property name="browser.fullName" value="Mozilla/5.0 (Unknown; Linux x86_64) AppleWebKit/538.1 (KHTML, like Gecko) PhantomJS/2.0.0 Safari/538.1"/>
+    </properties>
+    <testcase name="should return the server storage from the http backend for single key" time="0.005" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <testcase name="should return the server storage in a single request for multiple keys" time="0.002" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <testcase name="should only fetch remote data on the first access for a user / key" time="0.001" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <testcase name="should only fetch remote data for non-cached keys" time="0.002" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <testcase name="should sync local storage changes to the backend per key" time="0.002" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <testcase name="should should clear the storage when the user changes." time="0.001" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <testcase name="should consolidate multiple changes correctly" time="0.002" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <testcase name="should reliably read and write objects into local storage" time="0" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <testcase name="should answer requests from localstorage if there is no network connection" time="0.003" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <testcase name="should queue changes when offline for remote sync" time="0.001" classname="PhantomJS 2.0.0 (Linux 0.0.0).services_StorageService"/>
+    <system-out><![CDATA[
+]]></system-out>
+    <system-err/>
+  </testsuite>
+</testsuites>

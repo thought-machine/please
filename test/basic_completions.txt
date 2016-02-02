@@ -1,0 +1,4 @@
+//test/completions:all
+//test/completions:binary
+//test/completions:library
+//test/completions:test

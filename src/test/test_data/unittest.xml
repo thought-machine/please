@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<unittest-results tests="2" failedtests="2" failures="2" time="0">
+  <test suite="DefaultSuite" name="EmbeddedFile1" time="0">
+    <failure message="src/build/cc/embed_file_test.cc(14) : Expected testing message 1 but was testing message 1 "/>
+  </test>
+  <test suite="DefaultSuite" name="EmbeddedFile3" time="0">
+    <failure message="src/build/cc/embed_file_test.cc(21) : Expected testing message 3 but was testing message 3 "/>
+  </test>
+</unittest-results>

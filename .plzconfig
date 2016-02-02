@@ -1,0 +1,61 @@
+; We obviously can't rely on anyone having our pex tool already available,
+; so in this repo we have to build one without it which we can use to
+; compile other python_binary rules within the Please repo itself.
+;
+; Other projects using Please wouldn't normally need to do anything like this.
+[python]
+pextool = //src/build/python:bootstrap_pexer
+defaultpiprepo = https://s3-eu-west-1.amazonaws.com/py-wheels/index.html
+
+; This is a hack to handle peasant operating systems with case-insensitive file systems.
+; I don't want to rename my package so we have one slightly differently named build file
+; in this project.
+[please]
+buildfilename = BUILD
+buildfilename = BUILD_
+
+[go]
+version = 1.5.3
+; We're going to distribute the binaries and they're quite a bit smaller after this.
+; Could disable if people strongly preferred this to be distributed as well.
+strip = true
+
+[cpp]
+defaultcflags = --std=c++11
+defaultnamespace = thought_machine
+
+[java]
+jarcattool = //src/build/java:jarcat
+junitrunner = //src/build/java:junit_runner
+pleasemaventool = //src/build/java:please_maven
+defaulttestpackage = net.thoughtmachine
+; We want the default to remain at java 8 because obviously it's significantly better,
+; but the builtin packages here support java 7 fine so it's nice not to require more.
+sourcelevel = 7
+targetlevel = 7
+
+[proto]
+pythonpackage = third_party.python.google.protobuf
+; TODO(pebers): Remove these once we rationalise our package names
+grpcpythonplugin = `which grpc_python_plugin`
+grpcjavaplugin = `which grpc_java_plugin`
+protocgoplugin = //third_party/go:protoc-gen-go
+
+[docker]
+allowlocalfallback = false
+
+[cache]
+dir = .plz-cache
+; Too hard to make this guy work during initial bootstrap.
+dircachecleaner =
+
+[licences]
+accept = MIT
+accept = BSD
+accept = BSD License
+accept = Simplified BSD
+accept = BSD 3-Clause
+accept = New BSD License
+accept = Apache 2.0
+accept = Apache License, Version 2.0
+accept = PSF

@@ -1,0 +1,9 @@
+=== RUN TestJSONExpectedFailure-6
+--- PASS: TestJSONExpectedFailure-6 (0.00s)
+=== RUN TestJSONSkipped-6
+--- PASS: TestJSONSkipped-6 (0.00s)
+=== RUN TestBuckXML-6
+--- PASS: TestBuckXML-6 (0.00s)
+=== RUN TestJUnitXML-6
+--- PASS: TestJUnitXML-6 (0.00s)
+PASS

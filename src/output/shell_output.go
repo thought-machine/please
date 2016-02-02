@@ -1,0 +1,478 @@
+// Package for displaying output on the command line of the current build state.
+
+package output
+
+import (
+	"fmt"
+	"os"
+	"path"
+	"regexp"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
+
+	"core"
+)
+
+var startTime = time.Now()
+var stdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
+
+// SetColouredOutput forces on or off coloured output in logging and other console output.
+func SetColouredOutput(on bool) {
+	stdErrIsATerminal = on
+}
+
+// Used to track currently building targets.
+type buildingTarget struct {
+	sync.Mutex
+	buildingTargetData
+}
+
+type buildingTargetData struct {
+	Label       core.BuildLabel
+	Started     time.Time
+	Finished    time.Time
+	Description string
+	Active      bool
+	Failed      bool
+	Cached      bool
+	Err         error
+	Colour      string
+}
+
+func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest bool, done chan<- bool, traceFile string) {
+	failedTargetMap := map[core.BuildLabel]error{}
+	buildingTargets := make([]buildingTarget, numThreads, numThreads)
+
+	displayDone := make(chan interface{})
+	stop := make(chan interface{})
+	if !plainOutput {
+		go display(state, &buildingTargets, stop, displayDone)
+	}
+	aggregatedResults := core.TestResults{}
+	failedTargets := []core.BuildLabel{}
+	failedNonTests := []core.BuildLabel{}
+	for {
+		result, ok := <-state.Results
+		if ok {
+			processResult(state, result, buildingTargets, &aggregatedResults, plainOutput, keepGoing, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
+		} else {
+			break
+		}
+	}
+	if !plainOutput {
+		stop <- struct{}{}
+		<-displayDone
+	}
+	if traceFile != "" {
+		writeTrace(traceFile)
+	}
+	duration := time.Since(startTime).Seconds()
+	// Check all the targets we wanted to build actually have been built.
+	for _, label := range state.OriginalTargets {
+		if target := state.Graph.Target(label); target == nil && !label.IsAllTargets() {
+			log.Fatalf("Target %s doesn't exist in build graph", label)
+		} else if shouldBuild && target != nil && target.State() < core.Built {
+			cycle := graphCycleMessage(state.Graph, target)
+			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, cycle)
+		}
+	}
+	if state.Verbosity > 0 && shouldBuild {
+		if len(failedNonTests) > 0 { // We didn't get to the tests, something failed in the build step.
+			printFailedBuildResults(failedNonTests, failedTargetMap, duration)
+		} else if shouldTest { // Got to the test phase, report their results.
+			printTestResults(state.Graph, aggregatedResults, failedTargets, duration)
+		} else { // Must be plz build or similar, report build outputs.
+			printBuildResults(state, duration)
+		}
+	}
+	done <- len(failedTargetMap) == 0
+}
+
+func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, aggregatedResults *core.TestResults, plainOutput bool,
+	keepGoing bool, failedTargets, failedNonTests *[]core.BuildLabel, failedTargetMap map[core.BuildLabel]error, shouldTrace bool) {
+	label := result.Label
+	active := result.Status == core.PackageParsing || result.Status == core.TargetBuilding || result.Status == core.TargetTesting
+	failed := result.Status == core.ParseFailed || result.Status == core.TargetBuildFailed || result.Status == core.TargetTestFailed
+	cached := result.Status == core.TargetCached || result.Tests.Cached
+	if shouldTrace {
+		addTrace(result, buildingTargets[result.ThreadId].Label, active)
+	}
+	if failed && result.Tests.NumTests == 0 && result.Tests.Failed == 0 {
+		result.Tests.NumTests = 1
+		result.Tests.Failed = 1 // Ensure there's one test failure when there're no results to parse.
+	}
+	// Only aggregate test results the first time it finishes.
+	if buildingTargets[result.ThreadId].Active && !active {
+		aggregatedResults.Aggregate(result.Tests)
+	}
+	updateTarget(state, plainOutput, &buildingTargets[result.ThreadId], label, active, failed, cached, result.Description, result.Err, targetColour(state.Graph.Target(label)))
+	if failed {
+		failedTargetMap[label] = result.Err
+		// Don't stop here after test failure, aggregate them for later.
+		if !keepGoing && result.Status != core.TargetTestFailed {
+			// Reset colour so the entire compiler error output doesn't appear purple.
+			log.Fatalf("%s failed:${RESET}\n%s\n", result.Label, result.Err)
+		} else if !plainOutput { // plain output will have already logged this
+			log.Error("%s failed: %s\n", result.Label, result.Err)
+		}
+		*failedTargets = append(*failedTargets, label)
+		if result.Status != core.TargetTestFailed {
+			*failedNonTests = append(*failedNonTests, label)
+		}
+	}
+}
+
+func printTestResults(graph *core.BuildGraph, aggregatedResults core.TestResults, failedTargets []core.BuildLabel, duration float64) {
+	if len(failedTargets) > 0 {
+		for _, failed := range failedTargets {
+			target := graph.TargetOrDie(failed)
+			if len(target.Results.Failures) == 0 {
+				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
+			} else {
+				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_WHITE}Took %3.1fs${RESET}\n",
+					target.Label, target.Results.Passed, target.Results.Skipped, target.Results.Failed, target.Results.Duration)
+				for _, failure := range target.Results.Failures {
+					printf("${BOLD_RED}Failure: %s in %s${RESET}\n", failure.Type, failure.Name)
+					printf("%s\n", failure.Traceback)
+					if len(failure.Stdout) > 0 {
+						printf("${BOLD_RED}Standard output:${RESET}\n%s\n", failure.Stdout)
+					}
+					if len(failure.Stderr) > 0 {
+						printf("${BOLD_RED}Standard error:${RESET}\n%s\n", failure.Stderr)
+					}
+				}
+			}
+			if len(target.Results.Output) > 0 {
+				printf("${BOLD_RED}Full output:${RESET}\n%s\n", target.Results.Output)
+			}
+			if target.Results.Flakes > 0 {
+				printf("${BOLD_MAGENTA}Flaky target; made %s before giving up${RESET}\n", pluralise(target.Results.Flakes, "attempt", "attempts"))
+			}
+		}
+	}
+	// Print individual test results
+	i := 0
+	for _, target := range graph.AllTargets() {
+		if target.IsTest && target.Results.NumTests > 0 {
+			if target.Results.Failed > 0 {
+				printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, failedTargets))
+			} else {
+				printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, failedTargets))
+			}
+			i++
+		}
+	}
+	aggregatedResults.Duration = -0.1 // Exclude this from being displayed later.
+	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}. Total time %0.2fs.${RESET}\n",
+		pluralise(i, "test target", "test targets"), testResultMessage(aggregatedResults, failedTargets), duration))
+}
+
+// Produces a string describing the results of one test (or a single aggregation).
+func testResultMessage(results core.TestResults, failedTargets []core.BuildLabel) string {
+	if results.NumTests == 0 {
+		if len(failedTargets) > 0 {
+			return "Tests failed"
+		} else {
+			return "No tests found"
+		}
+	} else {
+		msg := fmt.Sprintf("%s run", pluralise(results.NumTests, "test", "tests"))
+		if results.Duration >= 0.0 {
+			msg += fmt.Sprintf(" in %4.2fs", results.Duration)
+		}
+		msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passed)
+		if results.Failed > 0 {
+			msg += fmt.Sprintf(", ${BOLD_RED}%d failed${RESET}", results.Failed)
+		}
+		if results.Skipped > 0 {
+			msg += fmt.Sprintf(", ${BOLD_YELLOW}%d skipped${RESET}", results.Skipped)
+		}
+		if results.Flakes > 0 {
+			msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.Flakes, "flake", "flakes"))
+		}
+		if results.Cached {
+			msg += " ${GREEN}[cached]${RESET}"
+		}
+		return msg
+	}
+}
+
+func printBuildResults(state *core.BuildState, duration float64) {
+	// Count incrementality.
+	totalBuilt := 0
+	totalUnchanged := 0
+	for _, target := range state.Graph.AllTargets() {
+		if target.State() == core.Built {
+			totalBuilt++
+		} else if target.State() == core.Unchanged {
+			totalUnchanged++
+		}
+	}
+	incrementality := 100.0 * float64(totalUnchanged) / float64(totalBuilt+totalUnchanged)
+	if totalBuilt+totalUnchanged == 0 {
+		incrementality = 100 // avoid NaN
+	}
+	// Print this stuff so we always see it.
+	printf("Build finished; total time %0.2fs, incrementality %.1f%%. Outputs:\n", duration, incrementality)
+	results := []string{}
+	for _, label := range state.ExpandOriginalTargets() {
+		target := state.Graph.TargetOrDie(label)
+		// This is slightly dodgy; really we should check if it was included in the original query
+		// or not, but we don't have the include/exclude labels here. Instead we assume whether
+		// it was actually built as a proxy for it.
+		if target.State() >= core.Built {
+			results = append(results, buildResult(target)...)
+		}
+	}
+	sort.Strings(results)
+	for i, result := range results {
+		if i == 0 || result != results[i-1] { // Don't repeat results.
+			printf("  %s\n", result)
+		}
+	}
+}
+
+func buildResult(target *core.BuildTarget) []string {
+	results := []string{}
+	if target != nil {
+		for _, out := range target.Outputs() {
+			if core.StartedAtRepoRoot() {
+				results = append(results, path.Join(target.OutDir(), out))
+			} else {
+				results = append(results, path.Join(core.RepoRoot, target.OutDir(), out))
+			}
+		}
+	}
+	return results
+}
+
+func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap map[core.BuildLabel]error, duration float64) {
+	printf("${WHITE_ON_RED}Build stopped after %0.2fs. Some targets failed:${RESET}\n", duration)
+	for _, label := range failedTargets {
+		err, present := failedTargetMap[label]
+		if present {
+			printf("    ${BOLD_RED}%s\n${RESET}${RED}%s${RESET}\n", label, err)
+		} else {
+			printf("    ${BOLD_RED}%s${RESET}\n", label)
+		}
+	}
+}
+
+func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buildingTarget, label core.BuildLabel,
+	active bool, failed bool, cached bool, description string, err error, colour string) {
+	updateTarget2(buildingTarget, label, active, failed, cached, description, err, colour)
+	if plainOutput || failed {
+		if failed {
+			log.Error("%s: %s", label.String(), description)
+		} else {
+			if !active {
+				active := pluralise(state.NumActive(), "task", "tasks")
+				log.Notice("[%d/%s] %s: %s [%3.1fs]", state.NumDone(), active, label.String(), description, time.Now().Sub(buildingTarget.Started).Seconds())
+			} else {
+				log.Info("%s: %s", label.String(), description)
+			}
+		}
+	}
+}
+
+func updateTarget2(target *buildingTarget, label core.BuildLabel, active bool, failed bool, cached bool, description string, err error, colour string) {
+	target.Lock()
+	defer target.Unlock()
+	target.Label = label
+	target.Description = description
+	if !target.Active {
+		// Starting to build now.
+		target.Started = time.Now()
+		target.Finished = target.Started
+	} else if !active {
+		// finished building
+		target.Finished = time.Now()
+	}
+	target.Active = active
+	target.Failed = failed
+	target.Cached = cached
+	target.Err = err
+	target.Colour = colour
+}
+
+func targetColour(target *core.BuildTarget) string {
+	if target == nil {
+		return "${BOLD_CYAN}" // unknown
+	} else if target.IsBinary {
+		return "${BOLD}" + targetColour2(target)
+	} else {
+		return targetColour2(target)
+	}
+}
+
+func targetColour2(target *core.BuildTarget) string {
+	// Quick heuristic on language types. May want to make this configurable.
+	for _, require := range target.Requires {
+		if require == "py" {
+			return "${GREEN}"
+		} else if require == "java" {
+			return "${RED}"
+		} else if require == "go" {
+			return "${YELLOW}"
+		} else if require == "js" {
+			return "${BLUE}"
+		}
+	}
+	if strings.Contains(target.Label.PackageName, "third_party") {
+		return "${MAGENTA}"
+	}
+	return "${WHITE}"
+}
+
+// Used to strip the formatting stuff when running directly through 'go run'.
+var stripFormatting = regexp.MustCompile("\\$\\{[^\\}]+\\}")
+
+// printf is used throughout this package to print something to stderr with some niceties
+// around ANSI formatting codes.
+func printf(format string, args ...interface{}) {
+	if "${WHITE}"[0] == '$' || !stdErrIsATerminal {
+		msg := stripFormatting.ReplaceAllString(fmt.Sprintf(format, args...), "")
+		fmt.Fprint(os.Stderr, stripAnsi.ReplaceAllString(msg, ""))
+	} else {
+		fmt.Fprintf(os.Stderr, format, args...)
+	}
+}
+
+// Since this is a gentleman's build tool, we'll make an effort to get plurals correct
+// in at least this one place.
+func pluralise(num int, singular, plural string) string {
+	if num == 1 {
+		return fmt.Sprintf("1 %s", singular)
+	} else {
+		return fmt.Sprintf("%d %s", num, plural)
+	}
+}
+
+// Writes out coverage metrics after a test run in a file tree setup.
+// Only files that were covered by tests and not excluded are shown.
+func PrintCoverage(state *core.BuildState) {
+	printf("${BOLD_WHITE}Coverage results:${RESET}\n")
+	totalCovered := 0
+	totalTotal := 0
+	lastDir := "_"
+	for _, file := range state.Coverage.OrderedFiles() {
+		if strings.HasPrefix(file, core.RepoRoot) {
+			file = file[len(core.RepoRoot):]
+		}
+		file = strings.TrimLeft(file, "/")
+		dir := file[:strings.LastIndex(file, "/")+1]
+		if dir != lastDir {
+			printf("${WHITE}%s:${RESET}\n", strings.TrimRight(dir, "/"))
+		}
+		lastDir = dir
+		covered, total := countCoverage(state.Coverage.Files[file])
+		printf("  %s\n", coveragePercentage(covered, total, file[len(dir):]))
+		totalCovered += covered
+		totalTotal += total
+	}
+	printf("${BOLD_WHITE}Total coverage: %s${RESET}\n", coveragePercentage(totalCovered, totalTotal, ""))
+}
+
+// Counts the number of lines covered and the total number coverable in a single file.
+func countCoverage(lines []core.LineCoverage) (int, int) {
+	covered := 0
+	total := 0
+	for _, line := range lines {
+		if line == core.Covered {
+			total++
+			covered++
+		} else if line != core.NotExecutable {
+			total++
+		}
+	}
+	return covered, total
+}
+
+// Returns some appropriate ANSI colour code for a coverage percentage.
+func coverageColour(percentage float32) string {
+	// TODO(pebers): consider making these configurable?
+	if percentage < 20.0 {
+		return "${MAGENTA}"
+	} else if percentage < 60.0 {
+		return "${BOLD_RED}"
+	} else if percentage < 80.0 {
+		return "${BOLD_YELLOW}"
+	} else {
+		return "${BOLD_GREEN}"
+	}
+}
+
+func coveragePercentage(covered, total int, label string) string {
+	if total == 0 {
+		return fmt.Sprintf("${BOLD_MAGENTA}%s No data${RESET}", label)
+	} else {
+		percentage := 100.0 * float32(covered) / float32(total)
+		return fmt.Sprintf("%s%s %d/%s, %2.1f%%${RESET}", coverageColour(percentage), label, covered, pluralise(total, "line", "lines"), percentage)
+	}
+}
+
+// Attempts to detect graph cycles and produces a readable message from it.
+func graphCycleMessage(graph *core.BuildGraph, target *core.BuildTarget) string {
+	if cycle := findGraphCycle(graph, target); len(cycle) > 0 {
+		msg := "Dependency cycle found:\n"
+		msg += fmt.Sprintf("    %s\n", cycle[len(cycle)-1].Label)
+		for i := len(cycle) - 2; i >= 0; i-- {
+			msg += fmt.Sprintf(" -> %s\n", cycle[i].Label)
+		}
+		msg += fmt.Sprintf(" -> %s\n", cycle[len(cycle)-1].Label)
+		return msg + fmt.Sprintf("Sorry, but you'll have to refactor your build files to avoid this cycle.")
+	}
+	return unbuiltTargetsMessage(graph)
+}
+
+// Attempts to detect cycles in the build graph. Returns an empty slice if none is found,
+// otherwise returns a slice of labels describing the cycle.
+func findGraphCycle(graph *core.BuildGraph, target *core.BuildTarget) []*core.BuildTarget {
+	index := func(haystack []*core.BuildTarget, needle *core.BuildTarget) int {
+		for i, straw := range haystack {
+			if straw == needle {
+				return i
+			}
+		}
+		return -1
+	}
+
+	var detectCycle func(*core.BuildTarget, []*core.BuildTarget) []*core.BuildTarget
+	detectCycle = func(target *core.BuildTarget, deps []*core.BuildTarget) []*core.BuildTarget {
+		if i := index(deps, target); i != -1 {
+			return deps[i:]
+		}
+		deps = append(deps, target)
+		for _, dep := range target.Dependencies {
+			if cycle := detectCycle(dep, deps); len(cycle) > 0 {
+				return cycle
+			}
+		}
+		return nil
+	}
+	return detectCycle(target, nil)
+}
+
+// Prints all targets in the build graph that are marked to be built but not built yet.
+func unbuiltTargetsMessage(graph *core.BuildGraph) string {
+	msg := ""
+	for _, target := range graph.AllTargets() {
+		if target.State() == core.Active {
+			if graph.AllDepsBuilt(target) {
+				msg += fmt.Sprintf("  %s (waiting for deps to build)\n", target.Label)
+			} else {
+				msg += fmt.Sprintf("  %s\n", target.Label)
+			}
+		} else if target.State() == core.Pending {
+			msg += fmt.Sprintf("  %s (pending build)\n", target.Label)
+		}
+	}
+	if msg != "" {
+		return "\nThe following targets have not yet built:\n" + msg
+	}
+	return ""
+}

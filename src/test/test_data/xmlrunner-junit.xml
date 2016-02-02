@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite errors="0" failures="0" name="src.build.python.pex_test.PexTest-20150416153858" tests="1" time="0.000">
+	<properties/>
+	<system-out>
+<![CDATA[]]>	</system-out>
+	<system-err>
+<![CDATA[]]>	</system-err>
+	<testcase classname="src.build.python.pex_test.PexTest" name="testSuccess" time="0.000"/>           <testcase classname="src.build.python.pex_test.PexTest" name="testSuccess" time="0.000">
+                <failure message="4 != 9" type="AssertionError">
+<![CDATA[Traceback (most recent call last):
+  File "./src/build/python/pex_test.py", line 10, in testSuccess
+    self.assertEqual(4, 3**2)
+AssertionError: 4 != 9
+]]>             </failure>
+        </testcase>
+
+</testsuite>

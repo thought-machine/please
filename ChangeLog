@@ -1,0 +1,507 @@
+Version 1.4.9
+-------------
+
+    * 'plz clean' now backgrounds itself when possible, in which case the user can
+      continue with other tasks with no delay.
+    * Added licenses() builtin function for Bazel compatibility; it roughly parallels
+      theirs in setting the default licence for all targets in a BUILD file. Implicitly
+      we can also now use package(default_licences = [...]) which is equivalent.
+    * + is now allowed in names of build rules.
+    * Fixed .deb package to include plz_diff_graphs.
+
+
+Version 1.4.8
+-------------
+
+    * Fixed a bug where Please would sometimes panic during coverage display.
+    * 'plz query graph' now includes all transitive dependencies of requested targets
+      as well as the targets themselves.
+
+
+Version 1.4.7
+-------------
+
+    * Quoting of expansions in shell commands now only happens when needed.
+    * $PKG variable is available to test commands as well.
+    * $ROOT_DIR variable is no longer available to any commands.
+
+
+Version 1.4.6
+-------------
+
+    * Added a 'tools' attribute on genrules which refers to things used to build a rule
+      which aren't copied into the temp directory.
+    * Fixed bug where filegroup() didn't correctly honour the binary flag.
+
+
+Version 1.4.5
+-------------
+
+    * Fix debs to have .jar suffix correctly.
+    * cc_library now correctly supports multiple srcs. As a result it produces a single .a
+      always instead of .o files. 'archive' attribute is now deprecated.
+
+
+Version 1.4.4
+-------------
+
+    * Make timeout for retrieving Dockerised test results configurable, and default to
+      a higher value.
+    * Remove results file before running plz test or plz cover.
+    * Add configurable extensions which can be excluded from coverage.
+
+
+Version 1.4.3
+-------------
+
+    * Adds support for nested tests in golang (e.g. test suites).
+
+
+Version 1.4.2
+-------------
+
+    * Add a test failure when the test returns nonzero but produces a valid output
+      file with no errors, so we always show at least one in the summary.
+    * Add a cc_static_library rule which archives a transitive set of C++ rules.
+      Essentially it's the static counterpart to cc_shared_object.
+    * 'plz op' repeats the previous operation.
+    * Non-zip-safe pexes are now always extracted at startup, even if pex thinks
+      it doesn't need to. Fixes a bug where incrementality wasn't always correct
+      because we modify the .pex file after pex has built it.
+    * New flags --colour and --nocolour allow one to force coloured output on/off.
+
+
+Version 1.4.1
+-------------
+
+    * Temporary directories are now cleaned after successfully building or testing.
+    * Minor updates to interactive console display.
+    * Fixes to make cgo_library more robust.
+    * Small fix to cc_embed_binary which no longer requires passing deps if the src
+      is generated via a genrule.
+
+
+Version 1.4.0
+-------------
+
+    * java_binary and java_test now generate a self-executable .jar file and no
+      wrapper script, so the _name#jar sub-rule is no longer generated.
+    * A number of deprecated arguments have been removed; for example
+      source_under_test, headers / exported_headers, etc.
+    * Added a global config parameter to allow enabling/disabling PyPI globally.
+    * Slightly stricter type checking of arguments to build_rule
+    * All output of build steps now prints to stderr instead of stdout
+      (plz query still prints to stdout but plz test / plz build don't)
+    * Config hashes are now much more granular; only things that affect something
+      global are used in the calculation of the config hash. Changes to tools etc
+      are assumed to be handled by the rule hash of any rule using that tool.
+    * Test container settings in the global config only affect containerised
+      test rules and only at test time.
+    * Added a nonce field to the config which we'll use to invalidate the config
+      hash when necessary. This might happen at any minor release but should
+      be rare that we'll have to change it.
+    * Interactive display should be a bit nicer on some non-vsynced terminals
+      (xterm? not entirely sure what the conditions here were).
+    * 'query graph' now accepts a list of targets to filter to.
+    * Support for building with python3.
+    * Initial support for aliases in config file; the implementation is a little
+      agricultural but they seem to work so far, within their limits.
+    * Fix a bunch of small bugs too numerous to mention here.
+
+
+Version 1.3.9
+-------------
+
+    * go_get now takes a `revision` argument which allows pinning libraries to a
+      particular git revision. `install` now has no effect on it.
+    * Adding new targets to a package in post build functions now takes effect
+      immediately, rather than waiting until the end of that post build function.
+      Fixes some subtle race conditions around dependencies.
+
+
+Version 1.3.8
+-------------
+
+    * Fixed several (benign) race conditions in the interactive display in the interest
+      of having it run cleanly under go's race detector.
+    * Bunch of small cleanups suggested by gometalint.
+    * Add fpm_package and fpm_deb rules and use those to build packages instead of
+      top-level script.
+    * Fix for test result hashes; make them the same length as others so the cache cleaner
+      finds them ok.
+    * Fixed a hash calculation bug that would sometimes silently fail when the sources of a rule
+      included a symlink to a directory.
+
+
+Version 1.3.7
+-------------
+
+    * Rules that specify a source dependency on a single output of another rule are now
+      honoured correctly when being built into a larger rule (eg. a python_library into
+      a python_binary, as happens often with protos).
+    * Added option to proto config to rewrite package of Python proto modules.
+
+
+Version 1.3.6
+------------
+
+    * please_maven now correctly fetches all transitive dependencies, not just one level.
+    * Added org.ow2.asm:asm-debug-all as a dependency for the test runner which was missing.
+    * 'plz query graph' now outputs labels in the graph dump.
+    * plz_diff_graphs can now include/exclude based on labels.
+
+
+Version 1.3.5
+-------------
+
+    * Fixed a couple of subtle internal race conditions. Suspect that most but not all
+      cases were benign, and it's nicer to have them gone, albeit at the cost of more
+      lock contention - not that it seems to matter particularly.
+    * More robust Python licence detection.
+
+
+Version 1.3.4
+-------------
+
+    * More informative error messages when parsing fails due to not finding a package.
+    * Defaults for repeated entries in the config files now only take effect if nothing else
+      is specified (ie. the entries in the config replace instead of appending). This
+      was always the intended behaviour although it's technically breaking.
+    * Added 'plz query graph' command that produces a (currently fairly minimal) JSON
+      representation of the graph that other tools could consume.
+    * Added a tool to diff two graphs produced by new 'query graph' command.
+
+
+Version 1.3.3
+-------------
+
+    * Fix to filegroup rules at the top level of the repo.
+    * Fix some hash instability in at least some rules.
+
+
+Version 1.3.2
+-------------
+
+    * Support for autodetecting licenses for packages found in a maven_jars rule.
+      Still pretty experimental since it's surprisingly hard to handle all the maven output
+      (maybe having someone write this who knew more about Maven would have been an idea...)
+    * Fix a parse bug where we need to transitively pass the requirement to build a target
+      that's needed for parse.
+    * Correct bug in output where it would sometimes crash in rare circumstances (attempting
+      to print build output of a target that wasn't built due to 'manual' label or similar)
+
+
+Version 1.3.1
+-------------
+
+    * Added possibility for targets to depend on a single output of another rule,
+      using the format //package:target:output_file. This isn't accepted as a command
+      line input and is still a little experimental. Proto rules have been changed to
+      use it instead of generating #only sub-rules.
+    * Changed detection of multiple rules outputting the same file to parse-time detection
+      instead of unreliable build-time detection (this requires the proto changes above).
+    * The exec statement is now banned from the build language.
+    * When multiple caches are configured, artifacts fetched from a lower-priority cache
+      are stored into a higher-priority cache (eg. RPC cache -> dir cache).
+    * Support for associating licences with build targets. Can specify which to accept
+      and reject in the config.
+
+
+Version 1.3
+-----------
+
+    * Add support to go_binary for stripping symbols.
+    * Added self-cleaning to HTTP cache
+    * Added RPC cache implementation.
+    * Fixed "source file not found" error in some (fairly complex) cases
+      (I think, this one has been a long battle...)
+    * Changed jarcat to proper logging & go-flags library
+    * Implement file copying to dir cache via copy+rename to avoid errors when files
+      are half-written.
+    * Building with PyPy 4.0
+    * Redid locking around parsing, should allow for better parallelism there
+      (although I think PyPy is still limited by its GIL).
+    * Introduced new builtin build function subinclude() which is similar to include_defs
+      but can be visibility controlled and consumes a real build label instead of basically
+      a file path. Will eventually remove include_defs since it can't be visibility controlled.
+    * python_binary rules can be depended on by python_library rules and imported as though
+      they were a python_library.
+
+
+Version 1.2.7
+-------------
+
+    * Tag test results files with their runtime hash so they are correctly re-run
+      when runtime data files change
+    * Small fix to cc_shared_object which was incorrectly marked as binary.
+
+
+Version 1.2.6
+-------------
+
+    * Propagate require / provide through exported_deps when producing sources.
+    * Add zip_safe as a flag on python_library and pip_library. python_binary and
+      python_test will pick this up if it's in their transitive dependencies and
+      mark the pex appropriately.
+    * Add a flag to control level of messages logged to file output separate from
+      normal verbosity.
+
+
+Version 1.2.5
+-------------
+
+    * Import ban in Python changed to work by inspecting the AST instead of hacking
+      __builtins__. Removed some hacky global state changes as a result and added
+      caching of bytecode which seems quite a bit faster for parsing.
+    * Add flag to print commands as they're run (CEO request).
+    * Use directories under /tmp for containerised tests rather than top-level ones
+      so they can be run as non-root users within the container.
+
+
+Version 1.2.4
+-------------
+
+    * Add detection of multiple rules outputting the same files. This is trickier
+      then one might think due to things like filegroup() and python_library()
+      repeating their outputs again so must be done at build time (not parse time).
+    * Make output trace file configurable.
+    * Delete test results file at plz startup.
+    * Disallow : or / in an incoming target name.
+    * Small cleanup which results in Java source / target levels now being strings.
+
+
+Version 1.2.3
+-------------
+
+    * Small bugfix: named sources that are build labels now automatically add the
+      dependency in the same way that anonymous sources do.
+    * Fix a case where post-build rules weren't always linking up deps properly.
+	* Rename split_path_ext to just splitext, it's more natural.
+
+
+Version 1.2.2
+-------------
+
+    * Small bugfix: always attempt to kill container, even if we can't retrieve results.
+    * Add basename, dirname, split_path and split_path_ext as global utility functions.
+
+
+Version 1.2.1
+-------------
+
+    * Docker change: rather than attempting to run as the current user which often
+      has weird effects because they're not known within the container, run as root and
+      extract the files afterwards with 'docker cp' to avoid root ownership.
+    * Added timeout and container arguments to sh_test which were missing
+    * Small improvement to 'plz query print' to not repeat things that are implied
+      (requires -> labels, exported_deps -> deps).
+    * Strip all leading underscores for dependent rule names in interactive display
+    * Remove PY_PKG variable, just replace it in bash
+    * OP has merged my go-flags patch upstream, it's no longer needed
+    * Allow specifying the output name of a go_library rule
+    * Add labels arg to filegroup
+
+
+Version 1.2
+-----------
+
+    * Support for acquiring the transitive set of labels a rule & its dependencies possess.
+      Useful for implementing properties that affect the final target, eg. cc_library
+      linker flags being applied to the final cc_binary.
+    * cc rules: change 'headers' and 'exported_headers' to just 'hdrs', which are always
+      exported because that's generally what you want. Will consider adding 'private_headers'
+      or similar later if there's a need but for now I'd prefer the default to be obvious.
+    * Incremental pex compilation; every python_library rule generates a little .zip file
+      of just its stuff which get merged together in the final rule. Quite fiddly to get
+      right but the speedup is dramatic.
+    * Some rewriting of Go rules to make them more robust for complex libraries & go_get.
+    * Added an exclusive file lock to two plz processes running in the same repo will
+      not run simultaneously (unless you pass --nolock).
+
+
+Version 1.1.4
+-------------
+
+    * Added jvm_args parameters to java_test and java_binary so it's possible to
+      customise JVM startup.
+
+
+Version 1.1.3
+-------------
+
+    * `plz update` now ignores the selfupdate field in config and always updates.
+    * Added new subcommand, `plz query output` to get the outputs of a rule.
+
+
+Version 1.1.2
+-------------
+
+    * Fix passing relative targets on command line; was accidentally broken by parsing
+      build labels earlier on in the initialisation process.
+    * Refactor of the underlying zip writer stuff in jarcat. Doesn't make much difference
+      yet but is a step towards some future work.
+    * Add a count of number of targets done / total which better approximates progress.
+
+
+Version 1.1.1
+-------------
+
+    * Upgrade to go 1.5, at last fixed the PyPy issue with a couple of lines of Go.
+      Note that this is a breaking change for developers (but invisible to users of plz,
+      so we're doing it at a minor version).
+    * Share env-building code between build & test, and log more for tests.
+    * Fixes to http cache.
+    * New command, 'query affectedtargets', which is similar to 'query affectedtests' but
+      finds all targets, not just tests. 'query affectedtargets --tests' obsoletes
+      'query affectedtests' which will be removed at plz 1.2.
+
+
+Version 1.1
+-----------
+
+    * Major version bump because numbers were getting too big.
+    * HTTP cache ready for early adopter testing
+    * Can set containerisation settings on a per-target basis and control the user Docker
+      runs as within the container.
+    * Changed $(location ...) style substitutions to use relative instead of absolute paths
+      so they can be shared via the HTTP cache.
+
+
+Version 1.0.13
+--------------
+
+    * Expand ~ to home path when building targets.
+
+
+Version 1.0.12
+--------------
+
+    * Initial implementation of HTTP cache, not yet ready to use.
+    * Add a little more logging when targets fail to build, which we've seen a few times.
+    * Some suggestions from go vet, one of which may improve locking potentially
+    * Ensure rule outputs are added uniquely.
+
+
+Version 1.0.11
+--------------
+
+    * Fix for cases where sometimes parse errors would not be reported.
+      Turned out to be related to disallowing imports, so we attempt to
+      allow them during compilation (but not execution) of code.
+	* Update of go rules to be more correct and hopefully streamlined around go_get.
+
+
+Version 1.0.10
+--------------
+
+    * Added RunArgs to [docker] section of config file to allow passing it
+      arbitrary extra arguments.
+    * Rewrite of parts of the Go rules to more correctly support targets
+      in subdirectories.
+    * add_out() function introduced to build language which can be used
+      to annotate a target with additional outputs, particularly during
+      post-build function. Still slightly experimental.
+
+
+Version 1.0.9
+-------------
+
+    * 'query completions' can now be filtered to particular targets, so it will
+      only complete binaries for 'plz run' and tests for 'plz test' or 'plz cover'.
+    * Update by downloading tarballs instead of individual binaries. This deprecates
+      the --extra_tools flag but we will keep it for compatibility for a while.
+    * Fix for query affectedtests so it correctly excludes manual tests.
+
+
+Version 1.0.8
+-------------
+
+    * Bugfix, 'query affectedtests' not always reading from stdin properly.
+
+
+Version 1.0.7
+-------------
+
+    * Bugfix, previous version mistakenly changed 'query input' to 'query inputs'.
+
+
+Version 1.0.6
+-------------
+
+    * Remove SRCDIR variable and built-in supporting code. No longer needed
+      for compatibility and the symlink causes problems for some rules because
+      it introduces a diamond into the folder structure.
+    * Remove __import__ builtin from parser so build scripts can no longer
+      import external modules.
+    * Added a test_only attribute for library rules that ensures they can only be
+      used by tests or other test_only rules.
+    * python3 compatibility fix in test_main.py
+    * Added a package() function that can be used to set various global config
+      things (probably most usefully, default_visibility).
+    * Flag parsing refactor; should mostly be invisible externally except that
+      `plz clean cache` is now `plz clean --cache`.
+    * Selective test running, eg. `plz test //test:my_test my_test_function`
+    * --num_runs flag to force a test to run multiple times.
+    * Some refactoring & bugfixes to require/provide.
+
+
+Version 1.0.5
+-------------
+
+    * Fix crash in output code when window is very small vertically.
+    * Support for Go 1.5. Seeing some issues that may be caused by it so
+      not upgrading just yet.
+    * Populate Java test class names correctly.
+    * Display elapsed time for each test.
+    * Fix for require / provide stuff still building unnecessary targets
+      (they weren't depended on, but still got built).
+    * Fix caching targets when run with plz cover.
+    * Support for pseudo-targets like :all and ... with plz clean.
+
+
+Version 1.0.4
+-------------
+
+    * Fix crash when running tests with --no_cache.
+    * Nothing else, quick release to fix crasher.
+
+
+Version 1.0.3
+-------------
+
+    * Test results are now cached & retrieved as other build artifacts.
+    * Hashes are verified after retrieving from cache
+    * Targets retrieved from cache are marked as unchanged when appropriate
+    * Added a join_path builtin to the build language.
+    * Remove all outputs after a build fails.
+    * Attempt to import Python test modules ourselves before relying on unittest's
+      detection, which produces misleading error messages if an ImportError is
+      thrown while attempting to load the test.
+    * Display depending target when we encounter a missing dependency.
+    * If build fails due to an apparent dependency cycle, attempt to detect and
+      print the cycle.
+
+
+Version 1.0.2
+-------------
+
+    * Generate a python_library rule behind a python_binary to symlink
+      the main .py file into plz-out. Fixes certain run issues.
+    * Set ROOT_DIR variable while running tests.
+
+
+Version 1.0.1
+-------------
+
+    * Support for skipping tests in go_test
+    * Limit length of printed lines in interactive shell mode so
+      output doesn't go berserk when window is too narrow.
+      (it's still not great at being resized down but at least it
+       stabilises after the window is reduced).
+    * Fall back to attempting to copy files if hardlink fails.
+
+
+Version 1.0
+-----------
+
+    * f1rst post!!!1!one

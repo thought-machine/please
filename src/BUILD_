@@ -1,0 +1,21 @@
+go_binary(
+    name = 'please',
+    deps = [
+        '//src/build',
+        '//src/cache',
+        '//src/clean',
+        '//src/core',
+        '//src/output',
+        '//src/parse',
+        '//src/query',
+        '//src/run',
+        '//src/test',
+        '//src/update',
+        '//src/utils',
+        '//third_party/go:go-flags',
+        '//third_party/go:logging',
+        '//third_party/go:osext',
+        '//third_party/go:terminal',
+    ],
+    visibility = ['PUBLIC'],
+)

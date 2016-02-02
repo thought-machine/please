@@ -1,0 +1,8 @@
+=== RUN TestPlzConfigWorking-6
+--- FAIL: TestPlzConfigWorking-6 (0.00s)
+	config_test.go:12: Failed to parse Python.PexTool correctly.
+	config_test.go:21: Failed to parse Java.TargetLevel correctly.
+=== RUN TestPlzConfigFailing-6
+--- FAIL: TestPlzConfigFailing-6 (0.00s)
+	config_test.go:30: No error reported reading config file.
+FAIL

@@ -1,0 +1,25 @@
+# Test on the builtin go rules
+go_library(
+    name = 'go_rules_test_lib',
+    srcs = ['go_rules_test_lib.go'],
+    deps = [
+        '//test/go_rules/test',
+    ],
+    test_only = True,
+)
+go_binary(
+    name = 'go_rules_test_bin',
+    main = 'go_rules_test_bin.go',
+    deps = [
+        ':go_rules_test_lib',
+    ],
+    test_only = True,
+)
+gentest(
+    name = 'go_rules_test',
+    test_cmd = '$(location :go_rules_test_bin)',
+    data = [
+        ':go_rules_test_bin',
+    ],
+    no_test_output = True,
+)

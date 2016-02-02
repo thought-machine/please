@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<testcase name="net.thoughtmachine.platform.model.SoulReflectorTest">
+  <test name="testDeconstructsSoulNames" success="true" time="172" type="SUCCESS"/>
+  <test name="testDeconstructsSoulPersonal" success="true" time="2" type="SUCCESS"/>
+  <test name="testSoulEntriesNames" success="true" time="18" type="SUCCESS"/>
+  <test name="testSoulEntriesPersonal" success="true" time="0" type="SUCCESS"/>
+</testcase>
