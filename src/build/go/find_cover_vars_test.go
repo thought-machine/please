@@ -7,7 +7,12 @@ import (
 )
 
 // The library here is a (very) reduced version of core that only has one file in it.
-var coverageVars = []string{"core.GoCover_lock_go"} 
+var coverageVars = []CoverVar{{
+	Dir:     "src/build/go/test_data",
+	Package: "core",
+	Var:     "GoCover_lock_go",
+	File:    "src/build/go/test_data/lock.go",
+}}
 
 func TestReadPkgdef(t *testing.T) {
 	vars, err := readPkgdef("src/build/go/test_data/core.a")
@@ -19,7 +24,13 @@ func TestReadCopiedPkgdef(t *testing.T) {
 	// Sanity check that this file exists.
 	vars, err := readPkgdef("src/build/go/test_data/x/core.a")
 	assert.NoError(t, err)
-	assert.Equal(t, coverageVars, vars)
+	expected := []CoverVar{{
+		Dir:     "src/build/go/test_data/x",
+		Package: "core",
+		Var:     "GoCover_lock_go",
+		File:    "src/build/go/test_data/x/lock.go",
+	}}
+	assert.Equal(t, expected, vars)
 }
 
 func TestFindCoverVars(t *testing.T) {

@@ -2,10 +2,10 @@ package buildgo
 
 import (
 	"fmt"
-	"io/ioutil"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/ioutil"
 	"strings"
 	"text/template"
 	"unicode"
@@ -16,13 +16,13 @@ type testDescr struct {
 	Package      string
 	Main         string
 	Functions    []string
-	CoverVars    []string
+	CoverVars    []CoverVar
 	CoverEnabled bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(sources []string, output string, coverVars []string) error {
+func WriteTestMain(sources []string, output string, coverVars []CoverVar) error {
 	main, err := createTestMain(sources, coverVars)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func WriteTestMain(sources []string, output string, coverVars []string) error {
 }
 
 // createTestMain templates the test main and returns it.
-func createTestMain(sources []string, coverVars []string) (string, error) {
+func createTestMain(sources []string, coverVars []CoverVar) (string, error) {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return "", err
@@ -126,8 +126,8 @@ import (
 )
 
 var tests = []testing.InternalTest{
-{{range .Tests}}
-	{"{{.Name}}", {{.Package}}.{{.Name}}},
+{{range .Functions}}
+	{"{{.}}", {{$.Package}}.{{.}}},
 {{end}}
 }
 
@@ -140,10 +140,8 @@ var (
 )
 
 func init() {
-	{{range $i, $p := .Cover}}
-	{{range $file, $cover := $p.Vars}}
-	coverRegisterFile({{printf "%q" $cover.File}}, _cover{{$i}}.{{$cover.Var}}.Count[:], _cover{{$i}}.{{$cover.Var}}.Pos[:], _cover{{$i}}.{{$cover.Var}}.NumStmt[:])
-	{{end}}
+	{{range $i, $c := .CoverVars}}
+	coverRegisterFile({{printf "%q" $c.File}}, {{$c.Package}}.{{$c.Var}}.Count[:], {{$c.Package}}.{{$c.Var}}.Pos[:], {{$c.Package}}.{{$c.Var}}.NumStmt[:])
 	{{end}}
 }
 
