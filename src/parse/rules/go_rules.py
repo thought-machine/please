@@ -175,6 +175,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
         requires=['go'],
         tools=tools,
+        post_build=_replace_test_package,
     )
     build_rule(
         name=name,
@@ -183,7 +184,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         deps=(deps or []) + [':_%s#lib' % name],
         outs=[name],
         cmd=_go_binary_cmd(),
-        test_cmd='$(exe :%s)' % name,
+        test_cmd='$(exe :%s) | tee test.results' % name,
         visibility=visibility,
         container=container,
         test_timeout=timeout,
@@ -297,3 +298,18 @@ def _go_binary_cmd():
         'dbg': all_cmds + ' ${OUT}.6',
         'opt': all_cmds + '-s -w ${OUT}.6',
     }
+
+
+def _replace_test_package(name, output):
+    """Post-build function, called after we template the main function.
+
+    The purpose is to replace the real library with the specific one we've
+    built for this test which has the actual test functions in it.
+    """
+    if not name.endswith('#main') or not name.startswith('_'):
+        raise ValueError('unexpected rule name: ' + name)
+    name = name[1:-5]
+    for line in output:
+        if line.startswith('Package: '):
+            for k, v in _go_binary_cmd().items():
+                set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))

@@ -36,6 +36,8 @@ func WriteTestMain(sources []string, output string, coverVars []CoverVar) error 
 		return err
 	}
 	defer f.Close()
+	// This might be consumed by other things.
+	fmt.Printf("Package: %s\n", testDescr.Package)
 	return testMainTmpl.Execute(f, testDescr)
 }
 
@@ -108,9 +110,7 @@ var testMainTmpl = template.Must(template.New("main").Parse(`
 package main
 
 import (
-{{if not .Main}}
 	"os"
-{{end}}
 	"testing"
 
 	{{.Package | printf "%q"}}
@@ -175,6 +175,7 @@ func main() {
 		CoveredPackages: "",
 	})
 {{end}}
+        os.Args = append([]string{os.Args[0], "-test.v"}, os.Args[1:]...)
 	benchmarks := []testing.InternalBenchmark{}
 	var examples = []testing.InternalExample{}
 	m := testing.MainStart(matchString, tests, benchmarks, examples)
