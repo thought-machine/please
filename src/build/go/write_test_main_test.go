@@ -1,8 +1,10 @@
 package buildgo
 
 import (
+	"go/parser"
+	"go/token"
 	"testing"
-	
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,4 +43,23 @@ func TestParseTestSourcesWithMain(t *testing.T) {
 func TestParseTestSourcesFailsGracefully(t *testing.T) {
 	_, err := parseTestSources([]string{"wibble"})
 	assert.Error(t, err)
+}
+
+func TestWriteTestMain(t *testing.T) {
+	err := WriteTestMain(
+		[]string{"src/build/go/test_data/example_test.go"},
+		"test.go",
+		[]CoverVar{{
+			Dir:     "src/build/go/test_data",
+			Package: "core",
+			Var:     "GoCover_lock_go",
+			File:    "src/build/go/test_data/lock.go",
+		}},
+	)
+	assert.NoError(t, err)
+	// It's not really practical to assert the contents of the file in great detail.
+	// We'll do the obvious thing of asserting that it is valid Go source.
+	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, "main", f.Name.Name)
 }

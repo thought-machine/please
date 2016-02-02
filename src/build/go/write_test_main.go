@@ -5,7 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/ioutil"
+	"os"
 	"strings"
 	"text/template"
 	"unicode"
@@ -13,34 +13,30 @@ import (
 )
 
 type testDescr struct {
-	Package      string
-	Main         string
-	Functions    []string
-	CoverVars    []CoverVar
-	CoverEnabled bool
+	Package   string
+	Main      string
+	Functions []string
+	CoverVars []CoverVar
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
 func WriteTestMain(sources []string, output string, coverVars []CoverVar) error {
-	main, err := createTestMain(sources, coverVars)
+	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(output, []byte(main), 0644)
-}
-
-// createTestMain templates the test main and returns it.
-func createTestMain(sources []string, coverVars []CoverVar) (string, error) {
-	testDescr, err := parseTestSources(sources)
-	if err != nil {
-		return "", err
-	}
 	if len(testDescr.Functions) == 0 {
-		return "", fmt.Errorf("Didn't find any test functions in the source files")
+		return fmt.Errorf("Didn't find any test functions in the source files")
 	}
 	testDescr.CoverVars = coverVars
-	return "", nil
+
+	f, err := os.Create(output)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return testMainTmpl.Execute(f, testDescr)
 }
 
 // parseTestSources parses the test sources and returns the package and set of test functions in them.
@@ -117,11 +113,9 @@ import (
 {{end}}
 	"testing"
 
-{{if .ImportTest}}
-	{{if .NeedTest}}_test{{else}}_{{end}} {{.Package.ImportPath | printf "%q"}}
-{{end}}
+	{{.Package | printf "%q"}}
 {{range $i, $v := .CoverVars}}
-	_cover{{$i}} {{$v}}
+	_cover{{$i}} "{{$v.Package}}"
 {{end}}
 )
 
@@ -131,7 +125,7 @@ var tests = []testing.InternalTest{
 {{end}}
 }
 
-{{if .CoverEnabled}}
+{{if .CoverVars}}
 
 // Only updated by init functions, so no need for atomicity.
 var (
@@ -173,7 +167,7 @@ func matchString(pat, str string) (result bool, err error) {
 }
 
 func main() {
-{{if .CoverEnabled}}
+{{if .CoverVars}}
 	testing.RegisterCover(testing.Cover{
 		Mode: "set",
 		Counters: coverCounters,
