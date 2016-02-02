@@ -135,9 +135,9 @@ type Configuration struct {
 		Nonce            string
 	}
 	Build struct {
-		Timeout int
-		Path    []string
-		Config  string
+		Timeout       int
+		Path          []string
+		Config        string
 		DefaultConfig string
 	}
 	Cache struct {
@@ -169,7 +169,8 @@ type Configuration struct {
 		RunArgs            []string
 	}
 	Go struct {
-		Version string
+		Version  string
+		TestTool string
 	}
 	Python struct {
 		PipTool            string
@@ -190,12 +191,12 @@ type Configuration struct {
 		TargetLevel        string
 	}
 	Cpp struct {
-		CCTool             string
-		LdTool             string
-		DefaultOptCflags   string
-		DefaultDbgCflags   string
-		DefaultLdflags     string
-		DefaultNamespace   string
+		CCTool           string
+		LdTool           string
+		DefaultOptCflags string
+		DefaultDbgCflags string
+		DefaultLdflags   string
+		DefaultNamespace string
 	}
 	Proto struct {
 		ProtocTool       string

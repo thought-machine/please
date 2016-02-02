@@ -6,7 +6,7 @@ package main
 
 import (
 	"os"
-	
+
 	"github.com/op/go-logging"
 
 	"buildgo"
@@ -16,11 +16,13 @@ import (
 var log = logging.MustGetLogger("plz_go_test")
 
 var opts struct {
-	Dir        string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
-	Verbosity  int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
-	Exclude    []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
-	Sources    []string `short:"s" long:"source" description:"Sources to parse for tests" required:"true"`
-	Output     string   `short:"o" long:"output" description:"Output filename" required:"true"`
+	Dir       string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
+	Verbosity int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
+	Exclude   []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
+	Output    string   `short:"o" long:"output" description:"Output filename" required:"true"`
+	Sources   struct {
+		Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
+	} `positional-args:"true" required:"true"`
 }
 
 func main() {
@@ -30,7 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error scanning for coverage: %s", err)
 	}
-	if err = buildgo.WriteTestMain(opts.Sources, opts.Output, coverVars); err != nil {
+	if err = buildgo.WriteTestMain(opts.Sources.Sources, opts.Output, coverVars); err != nil {
 		log.Fatalf("Error writing test main: %s", err)
 	}
 	os.Exit(0)

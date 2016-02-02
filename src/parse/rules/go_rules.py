@@ -130,20 +130,12 @@ def go_binary(name, main=None, deps=None, visibility=None, test_only=False):
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
     """
-    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
-    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL
-    link_cmd = 'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL
-    all_cmds = '%s %s && %s && %s' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd, link_cmd)
-    cmd = {
-        'dbg': all_cmds + ' ${OUT}.6',
-        'opt': all_cmds + '-s -w ${OUT}.6',
-    }
     build_rule(
         name=name,
         srcs=[main or name + '.go'],
         deps=deps,
         outs=[name],
-        cmd=cmd,
+        cmd=_go_binary_cmd(),
         building_description="Compiling...",
         needs_transitive_deps=True,
         binary=True,
@@ -154,8 +146,20 @@ def go_binary(name, main=None, deps=None, visibility=None, test_only=False):
     )
 
 
+def _go_binary_cmd():
+    """Returns the commands we'd use for a go_binary rule."""
+    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
+    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL
+    link_cmd = 'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL
+    all_cmds = '%s %s && %s && %s' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd, link_cmd)
+    return {
+        'dbg': all_cmds + ' ${OUT}.6',
+        'opt': all_cmds + '-s -w ${OUT}.6',
+    }
+
+
 def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
-            timeout=0, flaky=0, test_outputs=None, labels=None, tags=None):
+            timeout=0, flaky=0, test_outputs=None, labels=None):
     """Defines a Go test rule.
 
     Note that similarly to cgo_library this requires the test sources in order to
@@ -174,24 +178,36 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
       flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
       test_outputs (list): Extra test output files to generate from this test.
       labels (list): Labels for this rule.
-      tags (list): Tags to pass to go build (see 'go help build' for details).
     """
-    tag_cmd = '-tags "%s"' % ' '.join(tags) if tags else ''
+    go_library(
+        name='_%s#lib' % name,
+        srcs=srcs,
+        deps=deps,
+    )
+    go_test_tool, tools = _tool_path(CONFIG.GO_TEST_TOOL)
+    build_rule(
+        name='_%s#main' % name,
+        srcs=srcs,
+        deps=deps,
+        cmd='%s -o $OUT $SRCS && ' % go_test_tool,
+        needs_transitive_deps=True,  # Need all .a files to template coverage variables
+        requires=['go'],
+        tools=tools,
+    )
     build_rule(
         name=name,
-        srcs=srcs,
+        srcs=[':_%s#main' % name],
         data=data,
-        deps=deps,
+        deps=(deps or []) + [':_%s#lib' % name],
         outs=[name],
-        # TODO(pebers): how not to hardcode third_party/go here?
-        cmd='export GOPATH=${PWD}:${PWD}/third_party/go; ln -s $TMP_DIR src; go test ${PKG#*src/} %s -c -test.cover -o $OUT' % tag_cmd,
-        test_cmd='set -o pipefail && $(exe :%s) -test.v -test.coverprofile test.coverage | tee test.results' % name,
+        cmd=_go_binary_cmd(),
+        test_cmd='$(exe :%s)' % name,
         visibility=visibility,
         container=container,
         test_timeout=timeout,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['go', 'go_src'],
+        requires=['go'],
         labels=labels,
         binary=True,
         test=True,

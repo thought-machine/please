@@ -22,7 +22,6 @@ go_test(
     ],
     data = ['test_data/linux_amd64', 'test_data/darwin_amd64'],
     container = True,  # Brings up an internal server
-    tags = ['proto'],  # Protos are available so can compile in rpc.
 )
 
 go_test(
@@ -38,5 +37,4 @@ go_test(
     ],
     data = ['test_data/linux_amd64', 'test_data/darwin_amd64', 'test_data/plz-out'],
     container = True,  # Brings up an internal server
-    tags = ['proto'],  # Protos are available so can compile in rpc.
 )

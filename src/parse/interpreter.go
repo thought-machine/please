@@ -49,16 +49,16 @@ var cDeferParse = C.CString(pyDeferParse)
 
 // Callback state about how we communicate with the interpreter.
 type PleaseCallbacks struct {
-	ParseFile, ParseCode                                                                   *C.ParseFileCallback
-	AddTarget, AddSrc, AddData, AddDep, AddExportedDep, AddTool, AddOut, AddVis, AddLabe   unsafe.Pointer
-	AddHash, AddLicence, AddTestOutput, AddRequire, AddProvide, AddNamedSrc, AddCommand    unsafe.Pointer
-	SetContainerSetting, Glob, GetIncludeFile, GetSubincludeFile, GetLabels                unsafe.Pointer
-	SetPreBuildFunction, SetPostBuildFunction, AddDependency, AddOutput, AddLicencePost    unsafe.Pointer
-	SetCommand                                                                             unsafe.Pointer
-	SetConfigValue                                                                         *C.SetConfigValueCallback
-	PreBuildCallbackRunner                                                                 *C.PreBuildCallbackRunner
-	PostBuildCallbackRunner                                                                *C.PostBuildCallbackRunner
-	Log                                                                                    unsafe.Pointer
+	ParseFile, ParseCode                                                                 *C.ParseFileCallback
+	AddTarget, AddSrc, AddData, AddDep, AddExportedDep, AddTool, AddOut, AddVis, AddLabe unsafe.Pointer
+	AddHash, AddLicence, AddTestOutput, AddRequire, AddProvide, AddNamedSrc, AddCommand  unsafe.Pointer
+	SetContainerSetting, Glob, GetIncludeFile, GetSubincludeFile, GetLabels              unsafe.Pointer
+	SetPreBuildFunction, SetPostBuildFunction, AddDependency, AddOutput, AddLicencePost  unsafe.Pointer
+	SetCommand                                                                           unsafe.Pointer
+	SetConfigValue                                                                       *C.SetConfigValueCallback
+	PreBuildCallbackRunner                                                               *C.PreBuildCallbackRunner
+	PostBuildCallbackRunner                                                              *C.PostBuildCallbackRunner
+	Log                                                                                  unsafe.Pointer
 }
 
 var callbacks PleaseCallbacks
@@ -98,6 +98,7 @@ func initializeInterpreter(config core.Configuration) {
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version)
 	setConfigValue("GO_VERSION", config.Go.Version)
+	setConfigValue("GO_TEST_TOOL", config.Go.TestTool)
 	setConfigValue("PIP_TOOL", config.Python.PipTool)
 	setConfigValue("PEX_TOOL", config.Python.PexTool)
 	setConfigValue("DEFAULT_PYTHON_INTERPRETER", config.Python.DefaultInterpreter)
@@ -326,7 +327,7 @@ func SetCommand(cPackage unsafe.Pointer, cTarget *C.char, cConfigOrCommand *C.ch
 	target := getTargetPost(cPackage, cTarget)
 	command := C.GoString(cCommand)
 	if command == "" {
-		target.Command = C.GoString(cConfigOrCommand)	
+		target.Command = C.GoString(cConfigOrCommand)
 	} else {
 		target.AddCommand(C.GoString(cConfigOrCommand), command)
 	}
