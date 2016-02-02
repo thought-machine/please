@@ -25,7 +25,7 @@ bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/
 # Now invoke Go to run Please to build itself.
 echo "Building Please..."
 rm -rf plz-out
-go run -race src/please.go --plain_output build //src:please //src/build/python:bootstrap_pexer //src/build/java:jarcat //src/build/java:please_maven --log_file plz-out/log/build.log --log_file_level 4
+go run -race src/please.go --plain_output build //src:please --log_file plz-out/log/build.log --log_file_level 4
 # Let's prove it works by rebuilding itself with itself.
 echo "Rebuilding Please with itself..."
 plz-out/bin/src/please --plain_output build //:all_tools //package:tarballs --log_file plz-out/log/build.log --log_file_level 4
