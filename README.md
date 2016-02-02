@@ -5,6 +5,7 @@ similar concepts, but aims to be lighter weight and more flexible
 in its build rules.
 
 See http://please.build for more information.
+
 TODO(all): Set up the website.
 
 
@@ -17,10 +18,12 @@ build it once manually and then rebuild it again using itself.
 You'll need to have Go 1.5 and PyPy installed to use Please.
 If you're using Ubuntu, run sudo apt-get install golang to install
 Go.
+
 Unfortunately at the time of writing the Ubuntu PyPy packages don't
 include any shared libraries. We've stashed a .deb at
 https://s3-eu-west-1.amazonaws.com/please-build/pypy_4.0.0_amd64.deb
 which contains what you need.
+
 To build on OSX, you'll need Homebrew installed. After that it's
 rather easier; simply 'brew install pypy' and 'brew install go'
 and you should be good to go (heh).
@@ -64,9 +67,3 @@ performance penalty of sorting them before iteration.
 Deprecate include_defs in favour of subinclude since it can't be
 controlled by visibility attributes. Want to be sure subinclude doesn't
 compromise significantly on efficiency before we do though.
-
-Make `plz clean` move the directories and background itself rather than
-hanging around in the foreground incessantly.
-
-Remove temporary directories after targets build successfully. Maybe
-control this by a flag or something.
