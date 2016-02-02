@@ -49,6 +49,20 @@ func TestWriteTestMain(t *testing.T) {
 	err := WriteTestMain(
 		[]string{"src/build/go/test_data/example_test.go"},
 		"test.go",
+		[]CoverVar{},
+	)
+	assert.NoError(t, err)
+	// It's not really practical to assert the contents of the file in great detail.
+	// We'll do the obvious thing of asserting that it is valid Go source.
+	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, "main", f.Name.Name)
+}
+
+func TestWriteTestMainWithCoverage(t *testing.T) {
+	err := WriteTestMain(
+		[]string{"src/build/go/test_data/example_test.go"},
+		"test.go",
 		[]CoverVar{{
 			Dir:     "src/build/go/test_data",
 			Package: "core",
