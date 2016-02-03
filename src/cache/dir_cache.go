@@ -6,8 +6,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
+	"syscall"
 
 	"core"
 )
@@ -125,12 +125,12 @@ func newDirCache(config core.Configuration) *dirCache {
 		go func() {
 			log.Info("Running cache cleaner: %s --dir %s --high_water_mark %s --low_water_mark %s",
 				config.Cache.DirCacheCleaner, cache.Dir, config.Cache.DirCacheHighWaterMark, config.Cache.DirCacheLowWaterMark)
-			cmd := exec.Command(config.Cache.DirCacheCleaner,
+			if _, err := syscall.ForkExec(config.Cache.DirCacheCleaner, []string{
 				"--dir", cache.Dir,
 				"--high_water_mark", config.Cache.DirCacheHighWaterMark,
-				"--low_water_mark", config.Cache.DirCacheLowWaterMark)
-			if out, err := cmd.CombinedOutput(); err != nil {
-				log.Error("Cache cleaner error %s.\nFull output: %s", err, out)
+				"--low_water_mark", config.Cache.DirCacheLowWaterMark,
+			}, nil); err != nil {
+				log.Error("Failed to start cache cleaner: %s", err)
 			}
 		}()
 	}
