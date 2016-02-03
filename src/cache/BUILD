@@ -17,8 +17,6 @@ go_test(
         ':cache',
         '//src/cache/server',
         '//third_party/go:logging',
-        # TODO(pebers): should not need this dependency.
-        '//src/cache/proto:rpc_cache',
     ],
     data = ['test_data/linux_amd64', 'test_data/darwin_amd64'],
     container = True,  # Brings up an internal server
@@ -32,8 +30,6 @@ go_test(
         '//src/cache/server',
         '//src/output',
         '//third_party/go:logging',
-        # TODO(pebers): should not need this dependency.
-        '//src/cache/proto:rpc_cache',
     ],
     data = ['test_data/linux_amd64', 'test_data/darwin_amd64', 'test_data/plz-out'],
     container = True,  # Brings up an internal server

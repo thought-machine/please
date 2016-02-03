@@ -92,6 +92,7 @@ func DefaultConfiguration() Configuration {
 	config.Docker.ResultsTimeout = 20 // Twenty seconds
 	config.Docker.RemoveTimeout = 20  // Twenty seconds
 	config.Go.Version = "1.5.1"
+	config.Go.TestTool = "/opt/please/please_go_test"
 	config.Python.PipTool = "pip"
 	config.Python.PexTool = "/opt/please/please_pex"
 	config.Python.DefaultInterpreter = "/usr/bin/python"
