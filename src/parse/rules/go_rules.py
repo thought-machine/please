@@ -200,6 +200,52 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
     )
 
 
+def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
+             timeout=0, flaky=0, test_outputs=None, labels=None, tags=None):
+    """Defines a Go test rule for a library that uses cgo.
+
+    If the library you are testing is a cgo_library, you must use this instead of go_test.
+    It's ok to depend on a cgo_library though as long as it's not the same package
+    as your test.
+
+    Args:
+      name (str): Name of the rule.
+      srcs (list): Go source files to compile.
+      data (list): Runtime data files for the test.
+      deps (list): Dependencies
+      visibility (list): Visibility specification
+      container (bool | dict): True to run this test in a container.
+      timeout (int): Timeout in seconds to allow the test to run for.
+      flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
+      test_outputs (list): Extra test output files to generate from this test.
+      labels (list): Labels for this rule.
+      tags (list): Tags to pass to go build (see 'go help build' for details).
+    """
+    tag_cmd = '-tags "%s"' % ' '.join(tags) if tags else ''
+    build_rule(
+        name=name,
+        srcs=srcs,
+        data=data,
+        deps=deps,
+        outs=[name],
+        # TODO(pebers): how not to hardcode third_party/go here?
+        cmd='export GOPATH=${PWD}:${PWD}/third_party/go; ln -s $TMP_DIR src; go test ${PKG#*src/} %s -c -test.cover -o $OUT' % tag_cmd,
+        test_cmd='set -o pipefail && $(exe :%s) -test.v -test.coverprofile test.coverage | tee test.results' % name,
+        visibility=visibility,
+        container=container,
+        test_timeout=timeout,
+        flaky=flaky,
+        test_outputs=test_outputs,
+        requires=['go', 'go_src'],
+        labels=labels,
+        binary=True,
+        test=True,
+        building_description="Compiling...",
+        needs_transitive_deps=True,
+        output_is_complete=True,
+    )
+
+
 def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
            binary=False, test_only=False, install=None, revision=None):
     """Defines a dependency on a third-party Go library.
