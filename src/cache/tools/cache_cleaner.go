@@ -63,11 +63,12 @@ func start(directory string, highWaterMark, lowWaterMark int64) {
 	if err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
-		} else if len(info.Name()) == 28 && info.Name()[27] == '=' {
+		} else if (len(info.Name()) == 28 || len(info.Name()) == 29) && info.Name()[27] == '=' {
 			// Directory has the right length. We do this in an attempt to clean only entire
 			// entries in the cache, not just individual files from them.
 			// 28 == length of 20-byte sha1 hash, encoded to base64, which always gets a trailing =
 			// as padding so we can check that to be "sure".
+			// Also 29 in case we appended an extra = (see below)
 			if size, err := findSize(path); err != nil {
 				return err
 			} else {
@@ -90,8 +91,14 @@ func start(directory string, highWaterMark, lowWaterMark int64) {
 	sort.Sort(entries)
 	for _, entry := range entries {
 		log.Notice("Cleaning %s, accessed %s, saves %s", entry.Path, humanize.Time(time.Unix(entry.Atime, 0)), humanize.Bytes(uint64(entry.Size)))
-		if err := os.RemoveAll(entry.Path); err != nil {
-			log.Error("Couldn't remove %s: %s", entry.Path, err)
+		// Try to rename the directory first so we don't delete bits while someone might access them.
+		newPath := entry.Path + "="
+		if err := os.Rename(entry.Path, newPath); err == nil {
+			log.Error("Couldn't rename %s: %s", entry.Path, err)
+			continue
+		}
+		if err := os.RemoveAll(newPath); err != nil {
+			log.Error("Couldn't remove %s: %s", newPath, err)
 			continue
 		}
 		totalSize -= entry.Size
