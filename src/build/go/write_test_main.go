@@ -111,6 +111,7 @@ package main
 
 import (
 	"os"
+    "strings"
 	"testing"
 
 	{{.Package | printf "%q"}}
@@ -162,8 +163,17 @@ func coverRegisterFile(fileName string, counter []uint32, pos []uint32, numStmts
 }
 {{end}}
 
-func matchString(pat, str string) (result bool, err error) {
-	return true, nil
+func matchString(pat, str string) (bool, error) {
+    tests := os.Getenv("TESTS")
+    if tests == "" {
+        return true, nil
+    }
+    for _, arg := range strings.Split(tests, " ") {
+        if arg == str {
+            return true, nil
+        }
+    }
+    return false, nil
 }
 
 func main() {
@@ -175,7 +185,7 @@ func main() {
 		CoveredPackages: "",
 	})
 {{end}}
-        os.Args = append([]string{os.Args[0], "-test.v"}, os.Args[1:]...)
+    os.Args = append([]string{os.Args[0], "-test.v"}, os.Args[1:]...)
 	benchmarks := []testing.InternalBenchmark{}
 	var examples = []testing.InternalExample{}
 	m := testing.MainStart(matchString, tests, benchmarks, examples)
