@@ -19,6 +19,7 @@ typedef char* (ParseFileCallback)(const char*, const char*, void*);
 typedef void* (AddTargetCallback)(void*, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*);
 typedef void (AddStringCallback)(void*, char*);
 typedef void (AddTwoStringsCallback)(void*, char*, char*);
+typedef void (AddThreeStringsCallback)(void*, char*, char*, char*);
 typedef void (AddDependencyCallback)(void*, char*, char*, uint8);
 typedef void (AddOutputCallback)(void*, char*, char*);
 typedef char** (GlobCallback)(char*, char**, long long, char**, long long, uint8);
@@ -49,6 +50,7 @@ typedef struct _PleaseCallbacks {
     AddStringCallback* add_require;
     AddTwoStringsCallback* add_provide;
     AddTwoStringsCallback* add_named_src;
+    AddTwoStringsCallback* add_command;
     AddTwoStringsCallback* set_container_setting;
     GlobCallback* glob;
     GetIncludeFileCallback* get_include_file;
@@ -59,7 +61,7 @@ typedef struct _PleaseCallbacks {
     AddDependencyCallback* add_dependency;
     AddOutputCallback* add_output;
     AddTwoStringsCallback* add_licence_post;
-    AddTwoStringsCallback* set_command;
+    AddThreeStringsCallback* set_command;
     SetConfigValueCallback* set_config_value;
     PreBuildCallbackRunner* pre_build_callback_runner;
     PostBuildCallbackRunner* post_build_callback_runner;
@@ -192,7 +194,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     ffi_string = lambda x: ffi.cast('char*', 0) if x is None else ffi.new('char[]', x)
     target = _add_target(package,
                          ffi_string(name),
-                         ffi_string(cmd),
+                         ffi_string('' if isinstance(cmd, Mapping) else cmd),
                          ffi_string(test_cmd),
                          binary,
                          test,
@@ -217,6 +219,9 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                     _add_named_src(target, name, src)
     else:
         _add_strings(target, _add_src, srcs, 'srcs')
+    if isinstance(cmd, Mapping):
+        for config, command in cmd.items():
+            _add_command(target, config, command)
     _add_strings(target, _add_data, data, 'data')
     _add_strings(target, _add_dep, deps, 'deps')
     _add_strings(target, _add_exported_dep, exported_deps, 'exported_deps')
@@ -361,7 +366,7 @@ def _get_globals(c_package, c_package_name):
     local_globals['add_exported_dep'] = lambda target, dep: _add_dependency(c_package, target, dep, True)
     local_globals['add_out'] = lambda target, out: _add_output(c_package, target, out)
     local_globals['add_licence'] = lambda name, licence: _add_licence_post(c_package, name, licence)
-    local_globals['set_command'] = lambda name, command: _set_command(c_package, name, command)
+    local_globals['set_command'] = lambda name, config, command='': _set_command(c_package, name, config, command)
     local_globals['package'] = lambda **kwargs: package(local_globals, **kwargs)
     local_globals['licenses'] = lambda l: licenses(local_globals, l)
     # Make these available to other scripts so they can get it without import.
@@ -404,6 +409,7 @@ _add_test_output = ffi.cast('AddStringCallback*', callbacks.add_test_output)
 _add_require = ffi.cast('AddStringCallback*', callbacks.add_require)
 _add_provide = ffi.cast('AddTwoStringsCallback*', callbacks.add_provide)
 _add_named_src = ffi.cast('AddTwoStringsCallback*', callbacks.add_named_src)
+_add_command = ffi.cast('AddTwoStringsCallback*', callbacks.add_command)
 _set_container_setting = ffi.cast('AddTwoStringsCallback*', callbacks.set_container_setting)
 _glob = ffi.cast('GlobCallback*', callbacks.glob)
 _get_include_file = ffi.cast('GetIncludeFileCallback*', callbacks.get_include_file)
@@ -414,7 +420,7 @@ _set_post_build_callback = ffi.cast('SetBuildFunctionCallback*', callbacks.set_p
 _add_dependency = ffi.cast('AddDependencyCallback*', callbacks.add_dependency)
 _add_output = ffi.cast('AddOutputCallback*', callbacks.add_output)
 _add_licence_post = ffi.cast('AddTwoStringsCallback*', callbacks.add_licence_post)
-_set_command = ffi.cast('AddTwoStringsCallback*', callbacks.set_command)
+_set_command = ffi.cast('AddThreeStringsCallback*', callbacks.set_command)
 _log = ffi.cast('LogCallback*', callbacks.log)
 
 # Derive to support dot notation.

@@ -132,7 +132,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if err != nil {
 		if state.Verbosity >= 4 {
 			return fmt.Errorf("Error building target %s: %s\nENVIRONMENT:\n%s\n%s\n%s",
-				target.Label, err, strings.Join(cmd.Env, "\n"), target.Command, out)
+				target.Label, err, strings.Join(cmd.Env, "\n"), target.GetCommand(), out)
 		} else {
 			return fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, out)
 		}

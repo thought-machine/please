@@ -58,7 +58,7 @@ var locationPairsReplacement = regexp.MustCompile("\\$\\(location_pairs ([^\\)]+
 // Replace escape sequences in the target's command.
 // For example, $(location :blah) -> the output of rule blah.
 func replaceSequences(target *core.BuildTarget) string {
-	return ReplaceSequences(target, target.Command)
+	return ReplaceSequences(target, target.GetCommand())
 }
 
 // Replace escape sequences in the given string.

@@ -77,6 +77,8 @@ func DefaultConfiguration() Configuration {
 	config.Please.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Please.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
 	config.Build.Timeout = 600         // Ten minutes
+	config.Build.Config = "opt"        // Optimised builds by default
+	config.Build.DefaultConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Cache.HttpTimeout = 5       // Five seconds
 	config.Cache.RpcTimeout = 5        // Five seconds
 	config.Cache.DirCacheCleaner = "/opt/please/cache_cleaner"
@@ -104,10 +106,8 @@ func DefaultConfiguration() Configuration {
 	config.Java.TargetLevel = "8"
 	config.Cpp.CCTool = "g++"
 	config.Cpp.LdTool = "ld"
-	config.Cpp.DefaultCflags = "--std=c++11 -O2 -Wall -Wextra -Werror"
-	config.Cpp.DefaultTestCflags = "--std=c++11 -O2 -Wall -Wextra -Werror"
-	config.Cpp.DefaultTestLdflags = "-lunittest++"
-	config.Cpp.DefaultNamespace = "my_namespace" // Rules don't support not having this set.
+	config.Cpp.DefaultOptCflags = "--std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror"
+	config.Cpp.DefaultDbgCflags = "--std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror"
 	config.Proto.ProtocTool = "protoc"
 	config.Proto.ProtocGoPlugin = "`which protoc-gen-go`" // These seem to need absolute paths
 	config.Proto.GrpcPythonPlugin = "`which protoc-gen-grpc-python`"
@@ -137,6 +137,8 @@ type Configuration struct {
 	Build struct {
 		Timeout int
 		Path    []string
+		Config  string
+		DefaultConfig string
 	}
 	Cache struct {
 		Dir                   string
@@ -168,7 +170,6 @@ type Configuration struct {
 	}
 	Go struct {
 		Version string
-		Strip   string
 	}
 	Python struct {
 		PipTool            string
@@ -191,10 +192,9 @@ type Configuration struct {
 	Cpp struct {
 		CCTool             string
 		LdTool             string
-		DefaultCflags      string
-		DefaultTestCflags  string
+		DefaultOptCflags   string
+		DefaultDbgCflags   string
 		DefaultLdflags     string
-		DefaultTestLdflags string
 		DefaultNamespace   string
 	}
 	Proto struct {

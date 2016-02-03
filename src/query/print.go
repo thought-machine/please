@@ -36,7 +36,16 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			}
 			fmt.Printf("      ],\n")
 		}
-		fmt.Printf("      cmd = '%s'\n", target.Command)
+		if target.Commands != nil {
+			fmt.Printf("      cmd = {\n")
+			for config, command := range target.Commands {
+				fmt.Printf("          '%s': '%s',\n", config, command)
+			}
+			fmt.Printf("      },\n")
+			
+		} else {
+			fmt.Printf("      cmd = '%s'\n", target.Command)
+		}
 		if target.TestCommand != "" {
 			fmt.Printf("      test_cmd = '%s'\n", target.TestCommand)
 		}

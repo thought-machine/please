@@ -23,6 +23,7 @@ var KnownFields = map[string]bool{
 	"IsBinary":                    true,
 	"IsTest":                      true,
 	"Command":                     true,
+	"Commands":                    true,
 	"TestCommand":                 true,
 	"NeedsTransitiveDependencies": true,
 	"OutputIsComplete":            true,

@@ -255,7 +255,10 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	}
 	hashBool(h, target.IsBinary)
 	hashBool(h, target.IsTest)
-	h.Write([]byte(target.Command))
+
+	// Note that we only hash the current command here; whatever's set in commands that we're not going
+	// to run is uninteresting to us.
+	h.Write([]byte(target.GetCommand()))
 
 	if runtime {
 		h.Write([]byte(target.TestCommand))

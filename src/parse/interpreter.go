@@ -49,15 +49,16 @@ var cDeferParse = C.CString(pyDeferParse)
 
 // Callback state about how we communicate with the interpreter.
 type PleaseCallbacks struct {
-	ParseFile, ParseCode                                                                         *C.ParseFileCallback
-	AddTarget, AddSrc, AddData, AddDep, AddExportedDep, AddTool, AddOut, AddVis, AddLabel        unsafe.Pointer
-	AddHash, AddLicence, AddTestOutput, AddRequire, AddProvide, AddNamedSrc, SetContainerSetting unsafe.Pointer
-	Glob, GetIncludeFile, GetSubincludeFile, GetLabels, SetPreBuildFunction                      unsafe.Pointer
-	SetPostBuildFunction, AddDependency, AddOutput, AddLicencePost, SetCommand                   unsafe.Pointer
-	SetConfigValue                                                                               *C.SetConfigValueCallback
-	PreBuildCallbackRunner                                                                       *C.PreBuildCallbackRunner
-	PostBuildCallbackRunner                                                                      *C.PostBuildCallbackRunner
-	Log                                                                                          unsafe.Pointer
+	ParseFile, ParseCode                                                                   *C.ParseFileCallback
+	AddTarget, AddSrc, AddData, AddDep, AddExportedDep, AddTool, AddOut, AddVis, AddLabe   unsafe.Pointer
+	AddHash, AddLicence, AddTestOutput, AddRequire, AddProvide, AddNamedSrc, AddCommand    unsafe.Pointer
+	SetContainerSetting, Glob, GetIncludeFile, GetSubincludeFile, GetLabels                unsafe.Pointer
+	SetPreBuildFunction, SetPostBuildFunction, AddDependency, AddOutput, AddLicencePost    unsafe.Pointer
+	SetCommand                                                                             unsafe.Pointer
+	SetConfigValue                                                                         *C.SetConfigValueCallback
+	PreBuildCallbackRunner                                                                 *C.PreBuildCallbackRunner
+	PostBuildCallbackRunner                                                                *C.PostBuildCallbackRunner
+	Log                                                                                    unsafe.Pointer
 }
 
 var callbacks PleaseCallbacks
@@ -97,7 +98,6 @@ func initializeInterpreter(config core.Configuration) {
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version)
 	setConfigValue("GO_VERSION", config.Go.Version)
-	setConfigValue("GO_STRIP", config.Go.Strip)
 	setConfigValue("PIP_TOOL", config.Python.PipTool)
 	setConfigValue("PEX_TOOL", config.Python.PexTool)
 	setConfigValue("DEFAULT_PYTHON_INTERPRETER", config.Python.DefaultInterpreter)
@@ -118,10 +118,9 @@ func initializeInterpreter(config core.Configuration) {
 	setConfigValue("JAVA_TARGET_LEVEL", config.Java.TargetLevel)
 	setConfigValue("CC_TOOL", config.Cpp.CCTool)
 	setConfigValue("LD_TOOL", config.Cpp.LdTool)
-	setConfigValue("DEFAULT_CFLAGS", config.Cpp.DefaultCflags)
-	setConfigValue("DEFAULT_TEST_CFLAGS", config.Cpp.DefaultTestCflags)
+	setConfigValue("DEFAULT_OPT_CFLAGS", config.Cpp.DefaultOptCflags)
+	setConfigValue("DEFAULT_DBG_CFLAGS", config.Cpp.DefaultDbgCflags)
 	setConfigValue("DEFAULT_LDFLAGS", config.Cpp.DefaultLdflags)
-	setConfigValue("DEFAULT_TEST_LDFLAGS", config.Cpp.DefaultTestLdflags)
 	setConfigValue("DEFAULT_NAMESPACE", config.Cpp.DefaultNamespace)
 	setConfigValue("OS", runtime.GOOS)
 	setConfigValue("ARCH", runtime.GOARCH)
@@ -323,11 +322,14 @@ func AddLicencePost(cPackage unsafe.Pointer, cTarget *C.char, cLicence *C.char) 
 }
 
 //export SetCommand
-func SetCommand(cPackage unsafe.Pointer, cTarget *C.char, cCommand *C.char) {
+func SetCommand(cPackage unsafe.Pointer, cTarget *C.char, cConfigOrCommand *C.char, cCommand *C.char) {
 	target := getTargetPost(cPackage, cTarget)
-	oldCommand := target.Command
-	target.Command = C.GoString(cCommand)
-	log.Debug("Set command for %s to %s (was %s)", target.Label, target.Command, oldCommand)
+	command := C.GoString(cCommand)
+	if command == "" {
+		target.Command = C.GoString(cConfigOrCommand)	
+	} else {
+		target.AddCommand(C.GoString(cConfigOrCommand), command)
+	}
 	// It'd be nice if we could ensure here that we're in the pre-build function
 	// but not the post-build function which is too late to have any effect.
 	// OTOH while it's ineffective it shouldn't cause any trouble trying it either...
@@ -392,6 +394,12 @@ func AddNamedSource(cTarget unsafe.Pointer, cName *C.char, cSource *C.char) {
 	if label := source.Label(); label != nil {
 		target.AddDependency(*label)
 	}
+}
+
+//export AddCommand
+func AddCommand(cTarget unsafe.Pointer, cConfig *C.char, cCommand *C.char) {
+	target := (*core.BuildTarget)(cTarget)
+	target.AddCommand(C.GoString(cConfig), C.GoString(cCommand))
 }
 
 //export AddData

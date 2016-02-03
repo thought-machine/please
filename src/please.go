@@ -35,6 +35,7 @@ const coverageResultsFile = "plz-out/log/coverage.json"
 var Config core.Configuration
 
 var opts struct {
+	Config             string   `short:"c" long:"config" description:"Build config to use"` 
 	RepoRoot           string   `short:"r" long:"repo_root" description:"Root of repository to build."`
 	NumThreads         int      `short:"n" long:"num_threads" description:"Number of concurrent threads operations."`
 	Verbosity          int      `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)" default:"1"`
@@ -44,7 +45,7 @@ var opts struct {
 	Include            []string `short:"i" long:"include" description:"Label of targets to include from automatic detection."`
 	Exclude            []string `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
 	NoUpdate           bool     `long:"noupdate" description:"Disable Please attempting to auto-update itself." default:"false"`
-	NoCache            bool     `long:"no_cache" description:"Disable caching locally" default:"false"`
+	NoCache            bool     `long:"nocache" description:"Disable caching locally" default:"false"`
 	Version            bool     `long:"version" description:"Print the version of the tool"`
 	AssertVersion      string   `long:"assert_version" hidden:"true" description:"Assert the tool matches this version."`
 	NoHashVerification bool     `long:"nohash_verification" description:"Hash verification errors are nonfatal." default:"false"`
@@ -96,7 +97,6 @@ var opts struct {
 	} `command:"run" description:"Builds and runs a single target"`
 
 	Clean struct {
-		Cache bool     `long:"cache" short:"c" description:"Clean cache as well" default:"false"`
 		NoBackground bool `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished." default:"false"`
 		Args  struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
@@ -210,7 +210,7 @@ var buildFunctions = map[string]func() bool{
 			opts.PlainOutput = true  // No need for interactive display, we won't parse anything.
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false, false); success {
-			clean.Clean(state, state.ExpandOriginalTargets(), opts.Clean.Cache, !opts.Clean.NoBackground)
+			clean.Clean(state, state.ExpandOriginalTargets(), !opts.NoCache, !opts.Clean.NoBackground)
 			return true
 		}
 		return false
@@ -361,6 +361,9 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	}
 	if opts.NoCacheCleaner {
 		config.Cache.DirCacheCleaner = ""
+	}
+	if opts.Config != "" {
+		config.Build.Config = opts.Config
 	}
 	var cash *core.Cache = nil
 	if !opts.NoCache {

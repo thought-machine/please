@@ -136,7 +136,7 @@ filegroup(
 # Test running a test with no-cache
 plz_e2e_test(
     name = 'test_nocache_test',
-    cmd = 'plz test --no_cache //test:nocache_test',
+    cmd = 'plz test --nocache //test:nocache_test',
 )
 gentest(
     name = 'nocache_test',

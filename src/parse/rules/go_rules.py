@@ -28,9 +28,12 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
     # the library matches the name of the directory it's in or not.
     copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
     # Invokes the Go compiler.
-    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT $SRCS' % _GO_COMPILE_TOOL
+    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL
     # String it all together.
-    cmd = '%s %s && %s' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd)
+    cmd = {
+        'dbg': '%s %s && %s -N -l $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
+        'opt': '%s %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
+    }
 
     # go_test and cgo_library need access to the sources as well.
     filegroup(
@@ -114,7 +117,7 @@ def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=Fals
     )
 
 
-def go_binary(name, main=None, deps=None, visibility=None, test_only=False, strip=None):
+def go_binary(name, main=None, deps=None, visibility=None, test_only=False):
     """Compiles a Go binary.
 
     Args:
@@ -123,16 +126,15 @@ def go_binary(name, main=None, deps=None, visibility=None, test_only=False, stri
       deps (list): Dependencies
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
-      strip (bool): Controls whether to strip the final binary of symbols or not (ie. -s to go tool link).
-                    By default it's controlled by the config setting, but can be set to True or False to
-                    override on a per-rule basis.
     """
-    strip = CONFIG.GO_STRIP if strip is None else strip
     copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
     compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL
-    link_cmd = 'go tool %s %s ${SRC_DIRS//-I/-L} -L . -o ${OUT} ${OUT}.6' % (
-        _GO_LINK_TOOL, '-s' if strip else '')
-    cmd='%s %s && %s && %s' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd, link_cmd)
+    link_cmd = 'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL
+    all_cmds = '%s %s && %s && %s' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd, link_cmd)
+    cmd = {
+        'dbg': all_cmds + ' ${OUT}.6',
+        'opt': all_cmds + '-s -w ${OUT}.6',
+    }
     build_rule(
         name=name,
         srcs=[main or name + '.go'],

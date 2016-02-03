@@ -16,13 +16,11 @@ buildfilename = BUILD_
 
 [go]
 version = 1.5.3
-; We're going to distribute the binaries and they're quite a bit smaller after this.
-; Could disable if people strongly preferred this to be distributed as well.
-strip = true
 
 [cpp]
-defaultcflags = --std=c++11
 defaultnamespace = thought_machine
+defaultoptcflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
+defaultdbgcflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 
 [java]
 jarcattool = //src/build/java:jarcat
