@@ -112,11 +112,11 @@ func DefaultConfiguration() Configuration {
 	config.Proto.ProtocGoPlugin = "`which protoc-gen-go`" // These seem to need absolute paths
 	config.Proto.GrpcPythonPlugin = "`which protoc-gen-grpc-python`"
 	config.Proto.GrpcJavaPlugin = "`which protoc-gen-grpc-java`"
-	config.Proto.ProtocVersion = "3.0.0"
+	config.Proto.ProtocVersion = ""
 	config.Proto.PythonDep = "//third_party/python:protobuf"
 	config.Proto.JavaDep = "//third_party/java:protobuf"
 	config.Proto.GoDep = "//third_party/go:protobuf"
-	config.Proto.GrpcVersion = "0.11.1"
+	config.Proto.GrpcVersion = ""
 	config.Proto.PythonGrpcDep = "//third_party/python:grpc"
 	config.Proto.JavaGrpcDep = "//third_party/java:grpc-all"
 	config.Proto.GoGrpcDep = "//third_party/go:grpc"
@@ -135,9 +135,9 @@ type Configuration struct {
 		Nonce            string
 	}
 	Build struct {
-		Timeout int
-		Path    []string
-		Config  string
+		Timeout       int
+		Path          []string
+		Config        string
 		DefaultConfig string
 	}
 	Cache struct {
@@ -190,12 +190,12 @@ type Configuration struct {
 		TargetLevel        string
 	}
 	Cpp struct {
-		CCTool             string
-		LdTool             string
-		DefaultOptCflags   string
-		DefaultDbgCflags   string
-		DefaultLdflags     string
-		DefaultNamespace   string
+		CCTool           string
+		LdTool           string
+		DefaultOptCflags string
+		DefaultDbgCflags string
+		DefaultLdflags   string
+		DefaultNamespace string
 	}
 	Proto struct {
 		ProtocTool       string
