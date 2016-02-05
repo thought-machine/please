@@ -12,6 +12,8 @@ Version 1.5.0
     * --no_cache has been changed to --nocache for consistency.
     * The -c argument to plz clean is now removed. Default is to clean the cache,
       and it honours the top-level --nocache flag if you don't want to clean that.
+    * python_library now has an 'out' argument where you can set the name of the output
+      pex. It defaults to the same as before.
 
 
 Version 1.4.9

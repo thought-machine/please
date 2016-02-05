@@ -71,7 +71,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
     )
 
 
-def python_binary(name, main, deps=None, visibility=None, zip_safe=None,
+def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=None,
                   interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
     """Generates a Python binary target.
 
@@ -83,6 +83,7 @@ def python_binary(name, main, deps=None, visibility=None, zip_safe=None,
     Args:
       name (str): Name of the rule.
       main (str): Python file which is the entry point and __main__ module.
+      out (str): Name of the output file. Default to name + .pex
       deps (list): Dependencies of this rule.
       visibility (list): Visibility specification.
       zip_safe (bool): Allows overriding whether the output is marked zip safe or not.
@@ -129,7 +130,7 @@ def python_binary(name, main, deps=None, visibility=None, zip_safe=None,
     build_rule(
         name=name,
         deps=[':_%s#pex' % name, ':_%s#lib' % name],
-        outs=['%s.pex' % name],
+        outs=[out or (name + '.pex')],
         cmd=' && '.join([
             'PREAMBLE=`head -n 1 $(location :_%s#pex)`' % name,
             '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict' % jarcat_tool,
