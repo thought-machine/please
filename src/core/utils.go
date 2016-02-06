@@ -152,20 +152,16 @@ func copyOrLinkFile(from, to string, mode os.FileMode, link bool) error {
 	return CopyFile(from, to, mode)
 }
 
-// Runs an external command with a timeout.
+// ExecWithTimeout runs an external command with a timeout.
 func ExecWithTimeout(cmd *exec.Cmd, timeout int, defaultTimeout int) ([]byte, error) {
-	type cmdResult struct {
-		out []byte
-		err error
-	}
+	var out bytes.Buffer
 	if timeout == 0 {
 		timeout = defaultTimeout
 	}
-	done := make(chan cmdResult, 1)
-	go func() {
-		out, err := cmd.CombinedOutput()
-		done <- cmdResult{out, err}
-	}()
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	ch := make(chan error)
+	go func() { ch <- cmd.Run() }()
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
 		if err := cmd.Process.Kill(); err != nil {
@@ -174,13 +170,13 @@ func ExecWithTimeout(cmd *exec.Cmd, timeout int, defaultTimeout int) ([]byte, er
 		// Don't do a blocking read here; if the process refuses to die we can hang on it forever.
 		// TODO(pebers): possibly we need to give it more of a chance to terminate than this.
 		select {
-		case result := <-done:
-			return result.out, fmt.Errorf("Timeout (%d seconds) exceeded", timeout)
+		case <-ch:
+			return out.Bytes(), fmt.Errorf("Timeout (%d seconds) exceeded", timeout)
 		default:
-			return []byte{}, fmt.Errorf("Timeout (%d seconds) exceeded. No process output available.", timeout)
+			return out.Bytes(), fmt.Errorf("Timeout (%d seconds) exceeded", timeout)
 		}
-	case result := <-done:
-		return result.out, result.err
+	case err := <-ch:
+	return out.Bytes(), err
 	}
 }
 
