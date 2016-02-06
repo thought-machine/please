@@ -147,6 +147,7 @@ type TestResults struct {
 	Passes           []string
 	Output           string  // Stdout / stderr from the test.
 	Cached           bool    // True if the test results were retrieved from cache
+	TimedOut         bool    // True if the test failed because we timed it out.
 	Duration         float64 // Length of time this test took, in seconds.
 }
 

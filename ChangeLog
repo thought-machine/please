@@ -14,6 +14,7 @@ Version 1.5.0
       and it honours the top-level --nocache flag if you don't want to clean that.
     * python_library now has an 'out' argument where you can set the name of the output
       pex. It defaults to the same as before.
+    * More reliable returning of test output when tests time out.
 
 
 Version 1.4.9

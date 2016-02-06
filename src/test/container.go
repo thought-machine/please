@@ -25,7 +25,6 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 	// Fiddly hack follows to handle docker run --rm failing saying "Cannot destroy container..."
 	// "Driver aufs failed to remove root filesystem... device or resource busy"
 	cidfile := path.Join(testDir, ".container_id")
-	defer retrieveResultsAndRemoveContainer(target, cidfile)
 	// Using C.UTF-8 for LC_ALL because it works. Not sure it's strictly
 	// correct to mix that with LANG=en_GB.UTF-8
 	command := []string{"run", "--cidfile", cidfile, "-e", "LC_ALL=C.UTF-8"}
@@ -51,7 +50,10 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 	}
 	cmd := exec.Command("docker", command...)
 	cmd.Dir = target.TestDir()
-	return core.ExecWithTimeout(cmd, target.TestTimeout, state.Config.Test.Timeout)
+	out, err := core.ExecWithTimeout(cmd, target.TestTimeout, state.Config.Test.Timeout)
+	_, isTimeout := err.(core.TimeoutError)
+	retrieveResultsAndRemoveContainer(target, cidfile, !isTimeout)
+	return out, err
 }
 
 func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
@@ -75,13 +77,13 @@ func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarg
 
 // retrieveResultsAndRemoveContainer copies the test.results file out of the Docker container and into
 // the expected location. It then removes the container.
-func retrieveResultsAndRemoveContainer(target *core.BuildTarget, containerFile string) {
+func retrieveResultsAndRemoveContainer(target *core.BuildTarget, containerFile string, warn bool) {
 	cid, err := ioutil.ReadFile(containerFile)
 	if err != nil {
 		log.Warning("Failed to read Docker container file %s", containerFile)
 		return
 	}
-	retrieveFile(target, cid, "test.results", true)
+	retrieveFile(target, cid, "test.results", warn)
 	if core.State.NeedCoverage {
 		retrieveFile(target, cid, "test.coverage", false)
 	}

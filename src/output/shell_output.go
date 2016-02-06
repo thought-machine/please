@@ -131,7 +131,11 @@ func printTestResults(graph *core.BuildGraph, aggregatedResults core.TestResults
 		for _, failed := range failedTargets {
 			target := graph.TargetOrDie(failed)
 			if len(target.Results.Failures) == 0 {
-				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
+				if target.Results.TimedOut {
+					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
+				} else {
+					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
+				}
 			} else {
 				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_WHITE}Took %3.1fs${RESET}\n",
 					target.Label, target.Results.Passed, target.Results.Skipped, target.Results.Failed, target.Results.Duration)

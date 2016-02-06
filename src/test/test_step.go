@@ -140,6 +140,9 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		if err != nil && target.Results.Output == "" {
 			target.Results.Output = err.Error()
 		}
+		if err != nil {
+			_, target.Results.TimedOut = err.(core.TimeoutError)
+		}
 		coverage := parseCoverageFile(target, coverageFile)
 		if !core.PathExists(outputFile) {
 			target.Results.Duration += duration

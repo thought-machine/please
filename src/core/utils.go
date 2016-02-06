@@ -152,7 +152,17 @@ func copyOrLinkFile(from, to string, mode os.FileMode, link bool) error {
 	return CopyFile(from, to, mode)
 }
 
+// TimeoutError is the type of error that's issued when a command times out.
+type TimeoutError int
+
+// Error formats this error as a string.
+func (i TimeoutError) Error() string {
+	return fmt.Sprintf("Timeout (%d seconds) exceeded", i)
+}
+
+
 // ExecWithTimeout runs an external command with a timeout.
+// If the command times out the returned error will be a TimeoutError.
 func ExecWithTimeout(cmd *exec.Cmd, timeout int, defaultTimeout int) ([]byte, error) {
 	var out bytes.Buffer
 	if timeout == 0 {
@@ -165,18 +175,11 @@ func ExecWithTimeout(cmd *exec.Cmd, timeout int, defaultTimeout int) ([]byte, er
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
 		if err := cmd.Process.Kill(); err != nil {
-			return []byte{}, fmt.Errorf("Process %d could not be killed after exceeding timeout of %d seconds", cmd.Process.Pid, timeout)
+			log.Error("Process %d could not be killed after exceeding timeout of %d seconds", cmd.Process.Pid, timeout)
 		}
-		// Don't do a blocking read here; if the process refuses to die we can hang on it forever.
-		// TODO(pebers): possibly we need to give it more of a chance to terminate than this.
-		select {
-		case <-ch:
-			return out.Bytes(), fmt.Errorf("Timeout (%d seconds) exceeded", timeout)
-		default:
-			return out.Bytes(), fmt.Errorf("Timeout (%d seconds) exceeded", timeout)
-		}
+		return out.Bytes(), TimeoutError(timeout)
 	case err := <-ch:
-	return out.Bytes(), err
+		return out.Bytes(), err
 	}
 }
 
