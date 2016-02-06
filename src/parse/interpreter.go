@@ -143,13 +143,12 @@ func initializeInterpreter(config core.Configuration) {
 
 	// Load all the builtin rules
 	log.Debug("Loading builtin build rules...")
-	loadBuiltinRules("misc_rules.py")
-	loadBuiltinRules("sh_rules.py")
-	loadBuiltinRules("python_rules.py")
-	loadBuiltinRules("java_rules.py")
-	loadBuiltinRules("cc_rules.py")
-	loadBuiltinRules("go_rules.py")
-	loadBuiltinRules("proto_rules.py")
+	dir, _ := AssetDir("");
+	for _, filename := range dir {
+		if filename != "please_parser.py" { // We already did this guy.
+			loadBuiltinRules(filename)
+		}
+	}
 	log.Debug("Interpreter ready")
 }
 
@@ -185,10 +184,7 @@ func loadBuiltinRules(path string) {
 }
 
 func loadAsset(path string) *C.char {
-	data, err := Asset(path)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to load builtin build rules from %s", path))
-	}
+	data := MustAsset(path)
 	// well this is pretty inefficient... we end up with three copies of the data for no
 	// really good reason.
 	return C.CString(string(data))
