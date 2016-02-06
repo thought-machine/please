@@ -72,7 +72,7 @@ var opts struct {
 
 	Build struct {
 		Args struct { // Inner nesting is necessary to make positional-args work :(
-			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build" required:"true"`
+			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
 

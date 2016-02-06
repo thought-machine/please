@@ -79,20 +79,6 @@ pip_library(
 )
 
 pip_library(
-    name = 'grpc',
-    package_name = 'grpcio',
-    version = '0.11.0b1',
-    deps = [
-        ':enum',
-        ':futures'
-    ],
-    hashes = [
-        'sha1: 142a73fc44678075de122137954ea718f1a46013',
-        'sha1: bce711d0a23350f0ff5a1281d61c514f93292da2',
-    ],
-)
-
-pip_library(
     name = 'enum',
     version = '1.0.4',
     hashes = [
