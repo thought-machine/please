@@ -35,29 +35,38 @@ const coverageResultsFile = "plz-out/log/coverage.json"
 var Config core.Configuration
 
 var opts struct {
-	Config             string   `short:"c" long:"config" description:"Build config to use"` 
-	RepoRoot           string   `short:"r" long:"repo_root" description:"Root of repository to build."`
-	NumThreads         int      `short:"n" long:"num_threads" description:"Number of concurrent threads operations."`
-	Verbosity          int      `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)" default:"1"`
-	KeepGoing          bool     `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
-	InteractiveOutput  bool     `long:"interactive_output" description:"Show interactive output in a terminal"`
-	PlainOutput        bool     `short:"p" long:"plain_output" description:"Don't show interactive output."`
-	Include            []string `short:"i" long:"include" description:"Label of targets to include from automatic detection."`
-	Exclude            []string `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
-	NoUpdate           bool     `long:"noupdate" description:"Disable Please attempting to auto-update itself." default:"false"`
-	NoCache            bool     `long:"nocache" description:"Disable caching locally" default:"false"`
-	Version            bool     `long:"version" description:"Print the version of the tool"`
-	AssertVersion      string   `long:"assert_version" hidden:"true" description:"Assert the tool matches this version."`
-	NoHashVerification bool     `long:"nohash_verification" description:"Hash verification errors are nonfatal." default:"false"`
-	LogFile            string   `long:"log_file" description:"File to echo full logging output to"`
-	LogFileLevel       int      `long:"log_file_level" description:"Log level for file output" default:"2"`
-	NoLock             bool     `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care." default:"false"`
-	TraceFile          string   `long:"trace_file" description:"File to write Chrome tracing output into"`
-	PrintCommands      bool     `long:"print_commands" description:"Print each build / test command as they're run"`
-	Colour             bool     `long:"colour" description:"Forces coloured output from logging & other shell output."`
-	NoColour           bool     `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
-	KeepWorkdirs       bool     `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
+	BuildFlags struct {
+		Config             string   `short:"c" long:"config" description:"Build config to use. Defaults to opt."` 
+		RepoRoot           string   `short:"r" long:"repo_root" description:"Root of repository to build."`
+		KeepGoing          bool     `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
+		NumThreads         int      `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
+		Include            []string `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
+		Exclude            []string `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
+	} `group:"Options controlling what to build & how to build it"`
 
+	OutputFlags struct {
+		Verbosity          int      `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)" default:"1"`
+		LogFile            string   `long:"log_file" description:"File to echo full logging output to"`
+		LogFileLevel       int      `long:"log_file_level" description:"Log level for file output" default:"2"`
+		InteractiveOutput  bool     `long:"interactive_output" description:"Show interactive output in a terminal"`
+		PlainOutput        bool     `short:"p" long:"plain_output" description:"Don't show interactive output."`
+		Colour             bool     `long:"colour" description:"Forces coloured output from logging & other shell output."`
+		NoColour           bool     `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
+		TraceFile          string   `long:"trace_file" description:"File to write Chrome tracing output into"`
+		PrintCommands      bool     `long:"print_commands" description:"Print each build / test command as they're run"`
+		Version            bool     `long:"version" description:"Print the version of the tool"`
+	} `group:"Options controlling output & logging"`
+
+	FeatureFlags struct {
+		NoUpdate           bool     `long:"noupdate" description:"Disable Please attempting to auto-update itself." default:"false"`
+		NoCache            bool     `long:"nocache" description:"Disable caching locally" default:"false"`
+		NoHashVerification bool     `long:"nohash_verification" description:"Hash verification errors are nonfatal." default:"false"`
+		NoLock             bool     `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care." default:"false"`
+		KeepWorkdirs       bool     `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
+
+	} `group:"Options that enable / disable certain features"`
+	
+	AssertVersion      string   `long:"assert_version" hidden:"true" description:"Assert the tool matches this version."`
 	ParsePackageOnly bool `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	NoCacheCleaner   bool `description:"Don't start a cleaning process for the directory cache" default:"false" no-flag:"true"`
 
@@ -190,7 +199,7 @@ var buildFunctions = map[string]func() bool{
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
 		success, state := runBuild(targets, true, true, true)
 		test.WriteResultsToFileOrDie(state.Graph, testResultsFile)
-		test.AddOriginalTargetsToCoverage(state, opts.Include, opts.Exclude)
+		test.AddOriginalTargetsToCoverage(state, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 		test.WriteCoverageToFileOrDie(state.Coverage, coverageResultsFile)
 		if !opts.Cover.NoCoverageReport {
@@ -207,10 +216,10 @@ var buildFunctions = map[string]func() bool{
 	"clean": func() bool {
 		opts.NoCacheCleaner = true
 		if len(opts.Clean.Args.Targets) == 0 {
-			opts.PlainOutput = true  // No need for interactive display, we won't parse anything.
+			opts.OutputFlags.PlainOutput = true  // No need for interactive display, we won't parse anything.
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false, false); success {
-			clean.Clean(state, state.ExpandOriginalTargets(), !opts.NoCache, !opts.Clean.NoBackground)
+			clean.Clean(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
 			return true
 		}
 		return false
@@ -259,7 +268,7 @@ var buildFunctions = map[string]func() bool{
 			files = readStdin()
 		}
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.QueryAffectedTargets(state.Graph, files, opts.Include, opts.Exclude, opts.Query.AffectedTargets.Tests)
+			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests)
 		})
 	},
 	"affectedtests": func() bool {
@@ -270,7 +279,7 @@ var buildFunctions = map[string]func() bool{
 			files = readStdin()
 		}
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.QueryAffectedTargets(state.Graph, files, opts.Include, opts.Exclude, true)
+			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, true)
 		})
 	},
 	"input": func() bool {
@@ -313,7 +322,7 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 	opts.NoCacheCleaner = true
 	if !needFullParse {
 		opts.ParsePackageOnly = true
-		opts.PlainOutput = true // No point displaying this for one of these queries.
+		opts.OutputFlags.PlainOutput = true // No point displaying this for one of these queries.
 	}
 	if success, state := runBuild(labels, false, false, true); success {
 		onSuccess(state)
@@ -356,35 +365,35 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool 
 }
 
 func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
-	if opts.NumThreads <= 0 {
-		opts.NumThreads = runtime.NumCPU() + 2
+	if opts.BuildFlags.NumThreads <= 0 {
+		opts.BuildFlags.NumThreads = runtime.NumCPU() + 2
 	}
 	if opts.NoCacheCleaner {
 		config.Cache.DirCacheCleaner = ""
 	}
-	if opts.Config != "" {
-		config.Build.Config = opts.Config
+	if opts.BuildFlags.Config != "" {
+		config.Build.Config = opts.BuildFlags.Config
 	}
-	var cash *core.Cache = nil
-	if !opts.NoCache {
-		cash = cache.NewCache(config)
+	var c *core.Cache = nil
+	if !opts.FeatureFlags.NoCache {
+		c = cache.NewCache(config)
 	}
-	state := core.NewBuildState(opts.NumThreads, cash, opts.Verbosity, config)
-	state.VerifyHashes = !opts.NoHashVerification
+	state := core.NewBuildState(opts.BuildFlags.NumThreads, c, opts.OutputFlags.Verbosity, config)
+	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.MaxFlakes = opts.Test.MaxFlakes + opts.Cover.MaxFlakes          // Only one of these can be passed.
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
 	state.NeedCoverage = opts.Cover.Args.Target != core.BuildLabel{}
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.PrintCommands = opts.PrintCommands
-	state.CleanWorkdirs = !opts.KeepWorkdirs
+	state.PrintCommands = opts.OutputFlags.PrintCommands
+	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	if opts.Test.NumRuns > opts.Cover.NumRuns {
 		state.NumTestRuns = opts.Test.NumRuns
 	} else {
 		state.NumTestRuns = opts.Cover.NumRuns
 	}
 	// Acquire the lock before we start building
-	if (shouldBuild || shouldTest) && !opts.NoLock {
+	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
 	}
@@ -394,9 +403,9 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 		}
 	}
 	displayDone := make(chan bool)
-	go output.MonitorState(state, opts.NumThreads, !prettyOutput, opts.KeepGoing, shouldBuild, shouldTest, displayDone, opts.TraceFile)
-	for i := 0; i < opts.NumThreads; i++ {
-		go please(i, state, opts.ParsePackageOnly, opts.Include, opts.Exclude)
+	go output.MonitorState(state, opts.BuildFlags.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, displayDone, opts.OutputFlags.TraceFile)
+	for i := 0; i < opts.BuildFlags.NumThreads; i++ {
+		go please(i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	}
 	for _, target := range targets {
 		if target.IsAllSubpackages() {
@@ -464,7 +473,7 @@ func readConfig(forceUpdate bool) core.Configuration {
 	if opts.AssertVersion != "" && core.PleaseVersion != opts.AssertVersion {
 		log.Fatalf("Requested Please version %s, but this is version %s", opts.AssertVersion, core.PleaseVersion)
 	}
-	if opts.NoHashVerification {
+	if opts.FeatureFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
 	}
 
@@ -476,7 +485,7 @@ func readConfig(forceUpdate bool) core.Configuration {
 	// This is kinda weird, but we need to check for an update before handling errors, because the
 	// error may be for a missing config value that we don't know about yet. If we error first it's
 	// essentially impossible to add new fields to the config because gcfg doesn't permit unknown fields.
-	update.CheckAndUpdate(config, !opts.NoUpdate, forceUpdate)
+	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	}
@@ -489,7 +498,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, defaultToAllTa
 	if len(targets) == 0 && defaultToAllTargets {
 		targets = core.WholeGraph
 	}
-	pretty := prettyOutput(opts.InteractiveOutput, opts.PlainOutput, opts.Verbosity)
+	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
 	return Please(handleStdinLabels(targets), Config, pretty, shouldBuild, shouldTest)
 }
 
@@ -505,16 +514,20 @@ func activeCommand(parser *flags.Parser) string {
 
 func main() {
 	parser, extraArgs, err := output.ParseFlags("Please", &opts, os.Args)
-	// PrintCommands implies verbosity of at least 2, because commands are logged at that level
-	if opts.PrintCommands && opts.Verbosity < 2 {
-		opts.Verbosity = 2
+	if opts.OutputFlags.Version {
+		fmt.Printf("Please version %s\n", core.PleaseVersion)
+		os.Exit(0) // Ignore other errors if --version was passed.
 	}
-	if opts.Colour {
+	// PrintCommands implies verbosity of at least 2, because commands are logged at that level
+	if opts.OutputFlags.PrintCommands && opts.OutputFlags.Verbosity < 2 {
+		opts.OutputFlags.Verbosity = 2
+	}
+	if opts.OutputFlags.Colour {
 		output.SetColouredOutput(true)
-	} else if opts.NoColour {
+	} else if opts.OutputFlags.NoColour {
 		output.SetColouredOutput(false)
 	}
-	output.InitLogging(opts.Verbosity, opts.LogFile, opts.LogFileLevel)
+	output.InitLogging(opts.OutputFlags.Verbosity, opts.OutputFlags.LogFile, opts.OutputFlags.LogFileLevel)
 
 	command := activeCommand(parser)
 	if command == "init" {
@@ -522,11 +535,11 @@ func main() {
 		utils.InitConfig(opts.Init.Dir)
 		os.Exit(0)
 	}
-	if opts.RepoRoot == "" {
+	if opts.BuildFlags.RepoRoot == "" {
 		core.FindRepoRoot(true)
 		log.Debug("Found repo root at %s", core.RepoRoot)
 	} else {
-		core.RepoRoot = opts.RepoRoot
+		core.RepoRoot = opts.BuildFlags.RepoRoot
 	}
 
 	// Please always runs from the repo root, so move there now.
