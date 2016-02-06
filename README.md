@@ -45,3 +45,18 @@ Optional dependencies for various tests include unittest++
 (sudo apt-get install libunittest++-dev), clang, gold and docker - none
 of those are required to build components so their tests will be excluded
 if they aren't available.
+
+
+Contributors
+============
+
+The core contributors so far are:
+[Peter Ebden](https://github.com/peterebden)
+[Will Montgomery](https://github.com/csdigi)
+[Fabian Siddiqi](https://github.com/FS89)
+Diana-Maria Costea
+
+Progress has been slightly hindered by our fearless leader Paul
+who continually insists that we should "get on with our work" and
+"stop messing around with the build system". But he's not actually
+fired us for spending time on this which he has our thanks for.
