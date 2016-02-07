@@ -9,7 +9,6 @@ from contextlib import contextmanager
 from types import FunctionType
 
 
-lib = ffi.dlopen(None)
 _please_builtins = imp.new_module('_please_builtins')
 _please_globals = _please_builtins.__dict__
 _keepalive_functions = set()
