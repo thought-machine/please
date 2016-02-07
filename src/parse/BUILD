@@ -22,11 +22,8 @@ genrule(
     name = 'builtin_rules',
     srcs = glob(['rules/*.py'], excludes=['embedded_parser.py']) + ['//src/parse/cffi:embedded_parser'],
     outs = ['builtin_rules.go'],
-    # Massive hack since symlinks don't seem to be working with go-bindata here.
-    # Not sure why, they have a resolved issue for them...
-    cmd = 'for i in `find -L $PKG -type f`; do cp $i tmp && rm $i && mv tmp $i; done && '
-          '$(exe //third_party/go:go-bindata) -o $OUT -nomemcopy -pkg parse -prefix ${PKG}/rules ${PKG}/rules',
-    deps = [
+    cmd = '$(exe //third_party/go:go-bindata) -o $OUT -nomemcopy -pkg parse -prefix ${PKG}/rules ${PKG}/rules',
+    tools = [
         '//third_party/go:go-bindata',
     ]
 )
