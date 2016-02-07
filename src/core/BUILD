@@ -51,6 +51,15 @@ go_test(
 )
 
 go_test(
+    name = 'package_test',
+    srcs = ['package_test.go'],
+    deps = [
+        ':core',
+        '//third_party/go:testify',
+    ],
+)
+
+go_test(
     name = 'build_env_test',
     srcs = ['build_env_test.go'],
     deps = [
