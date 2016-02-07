@@ -10,7 +10,37 @@ _GO_LINK_TOOL = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
 # This is the command we use to provide include directories to the Go compiler.
 # It's fairly brutal but since our model is that we completely specify all the dependencies
 # it's valid to essentially allow it to pick up any of them.
-_SRC_DIRS_CMD = 'SRC_DIRS=`find . -type d | grep -v "^\\.$" | sed -E -e "s|^./|-I |g"`; '
+_SRC_DIRS_CMD = 'SRC_DIRS=`find . -type d | grep -v "^\\.$" | sed -E -e "s|^./|-I |g"`'
+
+# Commands for go_binary and go_test.
+_ALL_GO_BINARY_CMDS = ' && '.join([
+    _SRC_DIRS_CMD,
+    'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done',
+    'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL,
+    'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL,
+])
+_GO_BINARY_CMDS = {
+    'dbg': _ALL_GO_BINARY_CMDS + ' ${OUT}.6',
+    'opt': _ALL_GO_BINARY_CMDS + '-s -w ${OUT}.6',
+}
+
+# Commands for go_library, which differ a bit more by config.
+_ALL_GO_LIBRARY_CMDS = {
+    # Copies archives up a directory; this is needed in some cases depending on whether
+    # the library matches the name of the directory it's in or not.
+    'copy_cmd': 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done',
+    # Invokes the Go compiler.
+    'compile_cmd': 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL,
+    # Annotates files for coverage
+    'cover_cmd': 'for SRC in $SRCS; do mv $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done',
+    'src_dirs_cmd': _SRC_DIRS_CMD,
+}
+# String it all together.
+_GO_LIBRARY_CMDS = {
+    'dbg': '%(src_dirs_cmd)s; %(copy_cmd)s && %(compile_cmd)s -N -l $SRCS' % _ALL_GO_LIBRARY_CMDS,
+    'opt': '%(src_dirs_cmd)s; %(copy_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
+    'cover': '%(src_dirs_cmd)s; %(copy_cmd)s && %(cover_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
+}
 
 
 def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False):
@@ -39,7 +69,7 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         srcs=srcs,
         deps=(deps or []) + [':_%s#srcs' % name],
         outs=[out or name + '.a'],
-        cmd=_go_library_cmd(),
+        cmd=_GO_LIBRARY_CMDS,
         visibility=visibility,
         building_description="Compiling...",
         requires=['go'],
@@ -120,7 +150,7 @@ def go_binary(name, main=None, deps=None, visibility=None, test_only=False):
         srcs=[main or name + '.go'],
         deps=deps,
         outs=[name],
-        cmd=_go_binary_cmd(),
+        cmd=_GO_BINARY_CMDS,
         building_description="Compiling...",
         needs_transitive_deps=True,
         binary=True,
@@ -153,7 +183,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         srcs=srcs,
         deps=deps,
         outs=[name + '.a'],
-        cmd={k: 'SRCS=${PKG}/*.go; ' + v for k, v in _go_library_cmd().items()},
+        cmd={k: 'SRCS=${PKG}/*.go; ' + v for k, v in _GO_LIBRARY_CMDS.items()},
         building_description="Compiling...",
         requires=['go', 'go_src'],
         test_only=True,
@@ -183,7 +213,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         data=data,
         deps=(deps or []) + [':_%s#lib' % name],
         outs=[name],
-        cmd=_go_binary_cmd(),
+        cmd=_GO_BINARY_CMDS,
         test_cmd='$(exe :%s) | tee test.results' % name,
         visibility=visibility,
         container=container,
@@ -317,35 +347,6 @@ def _extra_outs(get):
     return _inner
 
 
-def _go_library_cmd():
-    """Returns the commands we'd use for a go_library rule."""
-    # Copies archives up a directory; this is needed in some cases depending on whether
-    # the library matches the name of the directory it's in or not.
-    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
-    # Invokes the Go compiler.
-    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL
-    # Annotates files for coverage
-    cover_cmd = 'for SRC in $SRCS; do mv $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
-    # String it all together.
-    return {
-        'dbg': '%s %s && %s -N -l $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
-        'opt': '%s %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
-        'cover': '%s %s && %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, cover_cmd, compile_cmd),
-    }
-
-
-def _go_binary_cmd():
-    """Returns the commands we'd use for a go_binary rule."""
-    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
-    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL
-    link_cmd = 'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL
-    all_cmds = '%s %s && %s && %s' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd, link_cmd)
-    return {
-        'dbg': all_cmds + ' ${OUT}.6',
-        'opt': all_cmds + '-s -w ${OUT}.6',
-    }
-
-
 def _replace_test_package(name, output):
     """Post-build function, called after we template the main function.
 
@@ -357,5 +358,5 @@ def _replace_test_package(name, output):
     name = name[1:-5]
     for line in output:
         if line.startswith('Package: '):
-            for k, v in _go_binary_cmd().items():
+            for k, v in _GO_BINARY_CMDS.items():
                 set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
