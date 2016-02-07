@@ -51,10 +51,10 @@ Contributors
 ============
 
 The core contributors so far are:
-[Peter Ebden](https://github.com/peterebden)
-[Will Montgomery](https://github.com/csdigi)
-[Fabian Siddiqi](https://github.com/FS89)
-Diana-Maria Costea
+ * [Peter Ebden](https://github.com/peterebden)
+ * [Will Montgomery](https://github.com/csdigi)
+ * [Fabian Siddiqi](https://github.com/FS89)
+ * Diana-Maria Costea
 
 Progress has been slightly hindered by our fearless leader Paul
 who continually insists that we should "get on with our work" and
