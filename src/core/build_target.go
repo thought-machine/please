@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -577,7 +578,7 @@ func (target *BuildTarget) AddExportedDependency(dep BuildLabel) {
 	}
 }
 
-// IsTool returns true if the given build label is a dependency of this target.
+// IsTool returns true if the given build label is a tool used by this target.
 func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 	for _, t := range target.Tools {
 		if t == tool {
@@ -585,6 +586,17 @@ func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 		}
 	}
 	return false
+}
+
+// toolPath returns a path to this target when used as a tool.
+func (target *BuildTarget) toolPath() string {
+	outputs := target.Outputs()
+	if len(outputs) != 1 {
+		log.Error("Target %s used as a tool, but has %d outputs (should only be 1)", target.Label, len(outputs))
+		return ""
+	}
+	p, _ := filepath.Abs(path.Join(target.OutDir(), outputs[0]))
+	return p
 }
 
 // AddOutput adds a new output to the target if it's not already there.
