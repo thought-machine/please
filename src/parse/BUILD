@@ -12,8 +12,22 @@ cgo_library(
 )
 
 genrule(
+    name = 'cffi_compile',
+    srcs = ['rules/cffi_compiler.py'],
+    outs = ['rules/parser_interface.py'],
+    cmd = 'pypy $SRC && mv parser_interface.py $OUT',
+)
+
+genrule(
+    name = 'embedded_parser',
+    srcs = [':cffi_compile', 'rules/please_parser.py'],
+    outs = ['rules/embedded_parser.py'],
+    cmd = 'cat $SRCS > $OUT',
+)
+
+genrule(
     name = 'builtin_rules',
-    srcs = glob(['rules/*.py']),
+    srcs = glob(['rules/*.py'], excludes=['cffi_compiler.py', 'parser_interface.py', 'embedded_parser.py']) + [':embedded_parser'],
     outs = ['builtin_rules.go'],
     # Massive hack since symlinks don't seem to be working with go-bindata here.
     # Not sure why, they have a resolved issue for them...

@@ -23,11 +23,12 @@ go get github.com/kardianos/osext
 go get github.com/Songmu/prompter
 
 # Clean out old artifacts.
-rm -rf src/parse/rules/_parser_interface.py plz-out
+rm -rf plz-out src/parse/rules/parser_interface.py src/parse/rules/embedded_parser.py
 # Generate the cffi compiled source
 (cd src/parse/rules && pypy cffi_compiler.py)
+cat src/parse/rules/parser_interface.py src/parse/rules/please_parser.py > src/parse/rules/embedded_parser.py
 # Invoke this tool to embed the Python scripts.
-bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
+bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/ -ignore "(BUILD|parser_interface.py|please_parser.py|cffi_compiler.py)" src/parse/rules/
 
 # Now invoke Go to run Please to build itself.
 echo "Building Please..."

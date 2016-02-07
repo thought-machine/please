@@ -65,6 +65,6 @@ typedef struct _PleaseCallbacks {
 
 if __name__ == '__main__':
     ffi = FFI()
-    ffi.set_source('_parser_interface', None)
+    ffi.set_source('parser_interface', None)
     ffi.cdef(CDEF)
     ffi.compile()
