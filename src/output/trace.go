@@ -35,7 +35,7 @@ func writeTrace(traceFile string) {
 
 func formatTrace() []byte {
 	var out traceObjectFormat
-	out.OtherData.Version = "Please v1.2" // TODO(pebers): Get this from somewhere...
+	out.OtherData.Version = "Please v" + core.PleaseVersion
 	out.TraceEvents = traces
 	data, err := json.Marshal(out)
 	if err != nil {
@@ -47,7 +47,7 @@ func formatTrace() []byte {
 func translateEvent(result *core.BuildResult, phase string) traceEntry {
 	entry := traceEntry{
 		Name: result.Label.String(),
-		Cat:  "Please", // Not sure what would be useful here
+		Cat:  result.Status.Category(),
 		Ph:   phase,
 		Pid:  0, // This isn't really important, there's only one process.
 		Ts:   result.Time.UnixNano() / 1000,
