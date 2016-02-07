@@ -1,8 +1,9 @@
 cgo_library(
     name = 'parse',
-    srcs = glob(['*.go', '*.h', '*.c', 'python_interface.*'], excludes=['builtin_rules.go', 'go_rules_test_*', '*_test.go']) + [':builtin_rules'],
+    srcs = glob(['parse_step.go', 'interpreter.*']) + [':builtin_rules'],
     env = {'CGO_LDFLAGS': '-L${TMP_DIR}/${PKG}/rules'},
     deps = [
+        ':defs_hdr',
         ':builtin_rules',
         '//src/core',
         '//third_party/go:logging',
@@ -11,6 +12,11 @@ cgo_library(
     visibility = ['PUBLIC'],
 )
 
+filegroup(
+    name = 'defs_hdr',
+    srcs = ['defs.h'],
+    visibility = ['//src/parse/cffi:all'],
+)
 
 genrule(
     name = 'builtin_rules',

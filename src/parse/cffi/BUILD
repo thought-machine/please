@@ -1,8 +1,8 @@
 genrule(
     name = 'cffi_compile',
-    srcs = ['cffi_compiler.py'],
+    srcs = ['cffi_compiler.py', '//src/parse:defs_hdr'],
     outs = ['parser_interface.py'],
-    cmd = 'pypy $SRC',
+    cmd = 'pypy $SRCS',
 )
 
 genrule(

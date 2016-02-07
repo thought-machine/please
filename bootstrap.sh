@@ -25,7 +25,7 @@ go get github.com/Songmu/prompter
 # Clean out old artifacts.
 rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parser.py
 # Generate the cffi compiled source
-(cd src/parse/cffi && pypy cffi_compiler.py)
+(cd src/parse/cffi && pypy cffi_compiler.py ../defs.h)
 cat src/parse/cffi/parser_interface.py src/parse/cffi/please_parser.py > src/parse/rules/embedded_parser.py
 # Invoke this tool to embed the Python scripts.
 bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
