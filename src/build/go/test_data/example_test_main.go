@@ -1,3 +1,5 @@
+// This isn't a 'real' source file, it's test data for //src/build/go:write_test_main_test
+
 package parse
 
 import (
