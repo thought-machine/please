@@ -3,7 +3,7 @@
 typedef unsigned char uint8;
 typedef long long int64;
 typedef char* (ParseFileCallback)(char*, char*, void*);
-typedef void* (AddTargetCallback)(void*, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*);
+typedef void* (AddTargetCallback)(void*, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*);
 typedef void (AddStringCallback)(void*, char*);
 typedef void (AddTwoStringsCallback)(void*, char*, char*);
 typedef void (AddThreeStringsCallback)(void*, char*, char*, char*);
