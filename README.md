@@ -24,6 +24,11 @@ https://s3-eu-west-1.amazonaws.com/please-build/pypy_4.0.0_amd64.deb
 which contains what you need, or you can use the packages from
 http://pypy.org.
 
+Then you simply run `plz init` at the root of your project to set up
+a default config and you're good to start adding BUILD files.
+See [the website](https://please.build) for more instructions about
+how to write them.
+
 
 Building Please
 ===============
@@ -51,10 +56,10 @@ Contributors
 ============
 
 The core contributors so far are:
-[Peter Ebden](https://github.com/peterebden)
-[Will Montgomery](https://github.com/csdigi)
-[Fabian Siddiqi](https://github.com/FS89)
-Diana-Maria Costea
+ * [Peter Ebden](https://github.com/peterebden)
+ * [Will Montgomery](https://github.com/csdigi)
+ * [Fabian Siddiqi](https://github.com/FS89)
+ * Diana-Maria Costea
 
 Progress has been slightly hindered by our fearless leader Paul
 who continually insists that we should "get on with our work" and

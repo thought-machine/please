@@ -167,6 +167,15 @@ func TestGetCommand(t *testing.T) {
 	assert.Equal(t, "test3", target.GetCommand(), "Default config is opt, should fall back to that")
 }
 
+func TestHasSource(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	target.Sources = append(target.Sources, FileLabel{File:"file1.go"})
+	target.AddNamedSource("wevs", FileLabel{File:"file2.go"})
+	assert.True(t, target.HasSource("file1.go"))
+	assert.True(t, target.HasSource("file2.go"))
+	assert.False(t, target.HasSource("file3.go"))
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
