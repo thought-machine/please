@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"sync"
 	"sync/atomic"
 )
 
@@ -551,6 +550,17 @@ func (target *BuildTarget) AllSources() <-chan BuildInput {
 	return ch
 }
 
+// HasSource returns true if this target has the given file as a source (named or not).
+func (target *BuildTarget) HasSource(source string) bool {
+	for src := range target.AllSources() {
+		if src.String() == source {  // Comparison is a bit dodgy tbh
+			return true
+		}
+	}
+	return false
+}
+
+// AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
@@ -625,55 +635,4 @@ func (slice BuildTargets) Less(i, j int) bool {
 }
 func (slice BuildTargets) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
-}
-
-// Representation of a package, ie. the part of the system (one or more
-// directories) covered by a single build file.
-type Package struct {
-	// Name of the package, ie. //spam/eggs
-	Name string
-	// Filename of the build file that defined this package
-	Filename string
-	// Subincluded build defs files that this package imported
-	Subincludes []string
-	// Targets contained within the package
-	Targets map[string]*BuildTarget
-	// Set of output files from rules.
-	Outputs map[string]*BuildTarget
-	// Protects access to above
-	Mutex sync.Mutex
-}
-
-func NewPackage(name string) *Package {
-	pkg := new(Package)
-	pkg.Name = name
-	pkg.Targets = map[string]*BuildTarget{}
-	pkg.Outputs = map[string]*BuildTarget{}
-	return pkg
-}
-
-func (pkg *Package) RegisterSubinclude(filename string) {
-	// Ensure these are unique.
-	for _, fn := range pkg.Subincludes {
-		if fn == filename {
-			return
-		}
-	}
-	pkg.Subincludes = append(pkg.Subincludes, filename)
-}
-
-// RegisterOutput registers a new output file in the map.
-// Dies if the file has already been registered.
-func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) {
-	pkg.Mutex.Lock()
-	defer pkg.Mutex.Unlock()
-	originalFileName := fileName
-	if target.IsBinary {
-		fileName = ":_bin_" + fileName // Add some arbitrary prefix so they don't clash.
-	}
-	if existing, present := pkg.Outputs[fileName]; present && existing != target {
-		log.Fatalf("Rules %s and %s in %s both attempt to output the same file: %s\n",
-			existing.Label, target.Label, pkg.Filename, originalFileName)
-	}
-	pkg.Outputs[fileName] = target
 }
