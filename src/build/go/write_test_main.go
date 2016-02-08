@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path"
 	"strings"
 	"text/template"
 	"unicode"
@@ -22,7 +23,7 @@ type testDescr struct {
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(sources []string, output string, coverVars []CoverVar) error {
+func WriteTestMain(pkgDir string, sources []string, output string, coverVars []CoverVar) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
@@ -31,7 +32,7 @@ func WriteTestMain(sources []string, output string, coverVars []CoverVar) error 
 		return fmt.Errorf("Didn't find any test functions in the source files")
 	}
 	testDescr.CoverVars = coverVars
-	testDescr.Imports = extraImportPaths(testDescr.Package, coverVars)
+	testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, coverVars)
 
 	f, err := os.Create(output)
 	if err != nil {
@@ -44,8 +45,9 @@ func WriteTestMain(sources []string, output string, coverVars []CoverVar) error 
 }
 
 // extraImportPaths returns the set of extra import paths that are needed.
-func extraImportPaths(pkg string, coverVars []CoverVar) []string {
-	ret := []string{"\"" + pkg + "\""}
+func extraImportPaths(pkg, pkgDir string, coverVars []CoverVar) []string {
+	pkgDir = collapseFinalDir(path.Join(strings.TrimPrefix(pkgDir, "src/"), pkg))
+	ret := []string{fmt.Sprintf("%s \"%s\"", pkg, pkgDir)}
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name

@@ -23,6 +23,7 @@ var opts struct {
 	Sources   struct {
 		Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 	} `positional-args:"true" required:"true"`
+	Package string `short:"p" long:"package" description:"Package containing this test" env:"PKG"`
 }
 
 func main() {
@@ -32,7 +33,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error scanning for coverage: %s", err)
 	}
-	if err = buildgo.WriteTestMain(opts.Sources.Sources, opts.Output, coverVars); err != nil {
+	if err = buildgo.WriteTestMain(opts.Package, opts.Sources.Sources, opts.Output, coverVars); err != nil {
 		log.Fatalf("Error writing test main: %s", err)
 	}
 	os.Exit(0)

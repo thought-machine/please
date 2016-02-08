@@ -1,3 +1,10 @@
+Version 1.5.1
+-------------
+
+    * Fixed a bug where importing of libraries in test main files could be indeterminate
+      if you had multiple libraries of the same name in different subdirectories.
+
+
 Version 1.5.0
 -------------
 

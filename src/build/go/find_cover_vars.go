@@ -70,11 +70,7 @@ func readPkgdef(file string) (vars []CoverVar, err error) {
 	}
 
 	dir := path.Dir(file)
-	importPath := strings.TrimPrefix(strings.TrimSuffix(file, ".a"), "src/")
-	// Trim final part if the last two components are the same.
-	if path.Base(path.Dir(importPath)) == path.Base(importPath) {
-		importPath = path.Dir(importPath)
-	}
+	importPath := collapseFinalDir(strings.TrimPrefix(strings.TrimSuffix(file, ".a"), "src/"))
 
 	ret := []CoverVar{}
 	pkg := ""
@@ -106,4 +102,13 @@ func readPkgdef(file string) (vars []CoverVar, err error) {
 		}
 	}
 	return ret, nil
+}
+
+// collapseFinalDir mimics what go does with import paths; if the final two components of
+// the given path are the same (eg. "src/core/core") it collapses them into one ("src/core")
+func collapseFinalDir(s string) string {
+	if path.Base(path.Dir(s)) == path.Base(s) {
+		return path.Dir(s)
+	}
+	return s
 }
