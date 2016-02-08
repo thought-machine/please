@@ -12,11 +12,6 @@
 
 subinclude('//test/build_defs:plz_e2e_test')
 
-export_file(
-    name = 'plz_e2e_test_build_defs',
-    src = 'plz_e2e_test.build_defs',
-)
-
 # Tests the expected output of 'query somepath'.
 # Note that you have to be careful with the choice of targets, since the path
 # found is not necessarily unique or stable.
@@ -43,9 +38,10 @@ plz_e2e_test(
     expect_output_contains = "//test:failed_dep can't use //src/core; doesn't depend on target //src/core",
     expected_failure = True,
 )
-genrule(
+build_rule(
     name = 'failed_dep',
     cmd = 'echo $(location //src/core)',
+    labels = ['manual'],
 )
 
 # Test that we count test output correctly. Also indirectly tests access to test data files.

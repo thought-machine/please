@@ -84,12 +84,16 @@ func maybeFork(outDir, cacheDir string, cleanCache bool) error {
 	if err != nil {
 		return err
 	}
-	newCacheDir, err := moveDir(cacheDir)
-	if err != nil {
-		return err
+	args := []string{rm, "-rf", newOutDir}
+	if cleanCache {
+		newCacheDir, err := moveDir(cacheDir)
+		if err != nil {
+			return err
+		}
+		args = append(args, newCacheDir)
 	}
 	// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay.
-	_, err = syscall.ForkExec(rm, []string{rm, "-rf", newOutDir, newCacheDir}, nil)
+	_, err = syscall.ForkExec(rm, args, nil)
 	if err == nil {
 		// Success if we get here.
 		fmt.Println("Cleaning in background; you may continue to do pleasing things in this repo in the meantime.")
@@ -107,4 +111,3 @@ func moveDir(dir string) (string, error) {
 	log.Notice("Moving %s to %s", dir, name)
 	return name, os.Rename(dir, name)
 }
-	
