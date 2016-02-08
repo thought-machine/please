@@ -92,6 +92,7 @@ func DefaultConfiguration() Configuration {
 	config.Docker.ResultsTimeout = 20 // Twenty seconds
 	config.Docker.RemoveTimeout = 20  // Twenty seconds
 	config.Go.Version = "1.5.1"
+	config.Go.TestTool = "/opt/please/please_go_test"
 	config.Python.PipTool = "pip"
 	config.Python.PexTool = "/opt/please/please_pex"
 	config.Python.DefaultInterpreter = "/usr/bin/python"
@@ -135,9 +136,9 @@ type Configuration struct {
 		Nonce            string
 	}
 	Build struct {
-		Timeout int
-		Path    []string
-		Config  string
+		Timeout       int
+		Path          []string
+		Config        string
 		DefaultConfig string
 	}
 	Cache struct {
@@ -169,7 +170,8 @@ type Configuration struct {
 		RunArgs            []string
 	}
 	Go struct {
-		Version string
+		Version  string
+		TestTool string
 	}
 	Python struct {
 		PipTool            string
@@ -190,12 +192,12 @@ type Configuration struct {
 		TargetLevel        string
 	}
 	Cpp struct {
-		CCTool             string
-		LdTool             string
-		DefaultOptCflags   string
-		DefaultDbgCflags   string
-		DefaultLdflags     string
-		DefaultNamespace   string
+		CCTool           string
+		LdTool           string
+		DefaultOptCflags string
+		DefaultDbgCflags string
+		DefaultLdflags   string
+		DefaultNamespace string
 	}
 	Proto struct {
 		ProtocTool       string

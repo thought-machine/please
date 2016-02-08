@@ -9,6 +9,7 @@ fpm_deb(
         '/opt/please/cache_cleaner': '//src/cache/tools:cache_cleaner',
         '/opt/please/jarcat': '//src/build/java:jarcat',
         '/opt/please/please_diff_graphs': '//src/misc:plz_diff_graphs',
+        '/opt/please/please_go_test': '//src/build/go:plz_go_test',
     },
     links = {
         '/usr/bin/plz': '/opt/please/please',
@@ -60,6 +61,7 @@ tarball(
         '//src/build/java:jarcat',
         '//src/build/java:please_maven',
         '//src/misc:plz_diff_graphs',
+        '//src/build/go:plz_go_test',
     ],
     subdir = 'please',
     out = 'please.tar.gz',

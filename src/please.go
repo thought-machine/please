@@ -194,6 +194,11 @@ var buildFunctions = map[string]func() bool{
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
+		if opts.Config != "" {
+			log.Warning("Build config overridden; coverage may not be available for some languages")
+		} else {
+			opts.Config = "cover"
+		}
 		os.RemoveAll(testResultsFile)
 		os.RemoveAll(coverageResultsFile)
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
