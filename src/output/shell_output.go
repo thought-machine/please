@@ -117,7 +117,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 			// Reset colour so the entire compiler error output doesn't appear purple.
 			log.Fatalf("%s failed:${RESET}\n%s\n", result.Label, result.Err)
 		} else if !plainOutput { // plain output will have already logged this
-			log.Error("%s failed: %s\n", result.Label, result.Err)
+			log.Errorf("%s failed: %s\n", result.Label, result.Err)
 		}
 		*failedTargets = append(*failedTargets, label)
 		if result.Status != core.TargetTestFailed {
@@ -271,7 +271,7 @@ func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buil
 	updateTarget2(buildingTarget, label, active, failed, cached, description, err, colour)
 	if plainOutput || failed {
 		if failed {
-			log.Error("%s: %s", label.String(), description)
+			log.Errorf("%s: %s", label.String(), description)
 		} else {
 			if !active {
 				active := pluralise(state.NumActive(), "task", "tasks")

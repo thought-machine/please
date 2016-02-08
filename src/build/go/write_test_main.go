@@ -47,7 +47,7 @@ func parseTestSources(sources []string) (testDescr, error) {
 	for _, source := range sources {
 		f, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
 		if err != nil {
-			log.Error("Error parsing %s: %s", source, err)
+			log.Errorf("Error parsing %s: %s", source, err)
 			return descr, err
 		}
 		descr.Package = f.Name.Name

@@ -159,7 +159,7 @@ func fileMode(filename string) os.FileMode {
 func cleanDir(newDir string) {
 	log.Notice("Attempting to clean directory %s", newDir)
 	if err := os.RemoveAll(newDir); err != nil {
-		log.Error("Failed to clean %s: %s", newDir, err)
+		log.Errorf("Failed to clean %s: %s", newDir, err)
 	}
 }
 

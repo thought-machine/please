@@ -164,7 +164,7 @@ func StoreArtifact(artPath string, key []byte) error {
 	}
 	log.Debug("Writing artifact to %s", artPath)
 	if err := core.WriteFile(bytes.NewReader(key), artPath, 0); err != nil {
-		log.Error("Could not create %s artifact: %s", artPath, err)
+		log.Errorf("Could not create %s artifact: %s", artPath, err)
 		return err
 	}
 	return nil
@@ -200,13 +200,13 @@ func DeleteAllArtifacts() error {
 		log.Warning("%s directory does not exist, nothing to delete.", cachePath)
 		return nil
 	} else if err != nil {
-		log.Error("Error reading cache directory: %s", err)
+		log.Errorf("Error reading cache directory: %s", err)
 		return err
 	}
 	for _, file := range files {
 		p := path.Join(cachePath, file.Name())
 		if err := os.RemoveAll(p); err != nil {
-			log.Error("Failed to remove directory %s: %s", p, err)
+			log.Errorf("Failed to remove directory %s: %s", p, err)
 			return err
 		}
 	}
@@ -223,7 +223,7 @@ func clean(path string, cleanFrequency int, lowWaterMark, highWaterMark int64) {
 			for _, file := range files {
 				removeFile(file.path, file.file)
 				if err := os.RemoveAll(file.path); err != nil {
-					log.Error("Failed to remove artifact: %s", err)
+					log.Errorf("Failed to remove artifact: %s", err)
 				}
 			}
 		}

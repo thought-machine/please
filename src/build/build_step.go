@@ -26,7 +26,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	if err := buildTarget(tid, state, target); err != nil {
 		state.LogBuildError(tid, label, core.TargetBuildFailed, err, "Build failed: %s", err)
 		if err := removeOutputs(target); err != nil {
-			log.Error("Failed to remove outputs for %s: %s", target.Label, err)
+			log.Errorf("Failed to remove outputs for %s: %s", target.Label, err)
 		}
 		target.SetState(core.Failed)
 		return

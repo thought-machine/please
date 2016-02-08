@@ -130,7 +130,7 @@ func newDirCache(config core.Configuration) *dirCache {
 				"--high_water_mark", config.Cache.DirCacheHighWaterMark,
 				"--low_water_mark", config.Cache.DirCacheLowWaterMark,
 			}, nil); err != nil {
-				log.Error("Failed to start cache cleaner: %s", err)
+				log.Errorf("Failed to start cache cleaner: %s", err)
 			}
 		}()
 	}

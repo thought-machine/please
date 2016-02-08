@@ -130,17 +130,17 @@ func (cache *httpCache) RetrieveExtra(target *core.BuildTarget, key []byte, file
 func (cache *httpCache) writeFile(target *core.BuildTarget, file string, r io.Reader) bool {
 	outFile := path.Join(target.OutDir(), file)
 	if err := os.MkdirAll(path.Dir(outFile), core.DirPermissions); err != nil {
-		log.Error("Failed to create directory: %s", err)
+		log.Errorf("Failed to create directory: %s", err)
 		return false
 	}
 	f, err := os.OpenFile(outFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, fileMode(target))
 	if err != nil {
-		log.Error("Failed to open file: %s", err)
+		log.Errorf("Failed to open file: %s", err)
 		return false
 	}
 	defer f.Close()
 	if _, err := io.Copy(f, r); err != nil {
-		log.Error("Failed to write file: %s", err)
+		log.Errorf("Failed to write file: %s", err)
 		return false
 	}
 	log.Info("Retrieved %s from http cache", target.Label)

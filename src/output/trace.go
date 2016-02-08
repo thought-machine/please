@@ -26,7 +26,7 @@ func addTrace(result *core.BuildResult, previous core.BuildLabel, active bool) {
 func writeTrace(traceFile string) {
 	file, err := os.Create(traceFile)
 	if err != nil {
-		log.Error("Couldn't create trace file: %s", err)
+		log.Errorf("Couldn't create trace file: %s", err)
 		return
 	}
 	defer file.Close()
@@ -39,7 +39,7 @@ func formatTrace() []byte {
 	out.TraceEvents = traces
 	data, err := json.Marshal(out)
 	if err != nil {
-		log.Error("Error serialising JSON trace data: %s", err)
+		log.Errorf("Error serialising JSON trace data: %s", err)
 	}
 	return data
 }

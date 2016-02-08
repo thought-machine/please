@@ -161,7 +161,7 @@ func getDependingTarget(packageName string) string {
 		}
 	}
 	// We shouldn't really get here, of course.
-	log.Error("No pending target entry for %s at deferral. Must assume :all.", packageName)
+	log.Errorf("No pending target entry for %s at deferral. Must assume :all.", packageName)
 	return "all"
 }
 

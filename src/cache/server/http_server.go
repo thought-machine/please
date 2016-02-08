@@ -37,7 +37,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		log.Debug("%s doesn't exist in http cache", artifactPath)
 		return
 	} else if err != nil {
-		log.Error("Failed to retrieve artifact %s: %s", artifactPath, err)
+		log.Errorf("Failed to retrieve artifact %s: %s", artifactPath, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -52,10 +52,10 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", mw.FormDataContentType())
 	for name, body := range art {
 		if part, err := mw.CreateFormFile(name, name); err != nil {
-			log.Error("Failed to create form file %s: %s", name, err)
+			log.Errorf("Failed to create form file %s: %s", name, err)
 			w.WriteHeader(http.StatusInternalServerError)
 		} else if _, err := io.Copy(part, bytes.NewReader(body)); err != nil {
-			log.Error("Failed to write form file %s: %s", name, err)
+			log.Errorf("Failed to write form file %s: %s", name, err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}
@@ -72,7 +72,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		if err := StoreArtifact(strings.TrimPrefix(r.URL.Path, "/artifact"), artifact); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			log.Error("Failed to store artifact %s: %s", fileName, err)
+			log.Errorf("Failed to store artifact %s: %s", fileName, err)
 			return
 		}
 		absPath, _ := filepath.Abs(filePath)
@@ -80,7 +80,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		log.Notice("%s was stored in the http cache.", fileName)
 	} else {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Error("Failed to store artifact %s: %s", fileName, err)
+		log.Errorf("Failed to store artifact %s: %s", fileName, err)
 	}
 }
 
@@ -90,7 +90,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 func deleteAllHandler(w http.ResponseWriter, r *http.Request) {
 	if err := DeleteAllArtifacts(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Error("Failed to clean http cache: %s", err)
+		log.Errorf("Failed to clean http cache: %s", err)
 		return
 	} else {
 		log.Notice("The http cache has been cleaned.")
@@ -105,7 +105,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	artifactPath := strings.TrimPrefix(r.URL.Path, "/artifact")
 	if err := DeleteArtifact(artifactPath); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Error("Failed to remove %s from http cache: %s", artifactPath, err)
+		log.Errorf("Failed to remove %s from http cache: %s", artifactPath, err)
 		return
 	} else {
 		log.Notice("%s was removed from the http cache.", artifactPath)

@@ -175,7 +175,7 @@ func ExecWithTimeout(cmd *exec.Cmd, timeout int, defaultTimeout int) ([]byte, er
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
 		if err := cmd.Process.Kill(); err != nil {
-			log.Error("Process %d could not be killed after exceeding timeout of %d seconds", cmd.Process.Pid, timeout)
+			log.Errorf("Process %d could not be killed after exceeding timeout of %d seconds", cmd.Process.Pid, timeout)
 		}
 		return out.Bytes(), TimeoutError(timeout)
 	case err := <-ch:

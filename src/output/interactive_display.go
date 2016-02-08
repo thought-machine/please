@@ -126,7 +126,7 @@ func windowSize() (int, int) {
 		uintptr(magicNumber()),
 		uintptr(unsafe.Pointer(ws)),
 	); int(ret) == -1 {
-		log.Error("error %d getting window size", int(errno))
+		log.Errorf("error %d getting window size", int(errno))
 		return 80, 25
 	} else {
 		return int(ws.Row), int(ws.Col)

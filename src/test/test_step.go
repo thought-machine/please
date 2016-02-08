@@ -292,7 +292,7 @@ func runTestWithRetries(tid int, state *core.BuildState, target *core.BuildTarge
 func parseCoverageFile(target *core.BuildTarget, coverageFile string) core.TestCoverage {
 	coverage, err := parseTestCoverage(target, coverageFile)
 	if err != nil {
-		log.Error("Failed to parse coverage file for %s: %s", target.Label, err)
+		log.Errorf("Failed to parse coverage file for %s: %s", target.Label, err)
 	}
 	return coverage
 }

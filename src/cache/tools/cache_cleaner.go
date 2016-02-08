@@ -94,11 +94,11 @@ func start(directory string, highWaterMark, lowWaterMark int64) {
 		// Try to rename the directory first so we don't delete bits while someone might access them.
 		newPath := entry.Path + "="
 		if err := os.Rename(entry.Path, newPath); err == nil {
-			log.Error("Couldn't rename %s: %s", entry.Path, err)
+			log.Errorf("Couldn't rename %s: %s", entry.Path, err)
 			continue
 		}
 		if err := os.RemoveAll(newPath); err != nil {
-			log.Error("Couldn't remove %s: %s", newPath, err)
+			log.Errorf("Couldn't remove %s: %s", newPath, err)
 			continue
 		}
 		totalSize -= entry.Size

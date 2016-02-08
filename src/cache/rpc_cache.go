@@ -144,7 +144,7 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 		req.Artifacts = []*pb.Artifact{&artifact}
 		response, err := cache.client.Delete(context.Background(), &req)
 		if err != nil || !response.Success {
-			log.Error("Failed to remove %s from RPC cache", target.Label)
+			log.Errorf("Failed to remove %s from RPC cache", target.Label)
 		}
 	}
 }

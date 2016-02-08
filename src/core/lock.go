@@ -53,14 +53,14 @@ func AcquireRepoLock() {
 // Does not die on errors, at this point it wouldn't really do any good.
 func ReleaseRepoLock() {
 	if lockFile == nil {
-		log.Error("Lock file not acquired!")
+		log.Errorf("Lock file not acquired!")
 		return
 	}
 	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN); err != nil {
-		log.Error("Failed to release lock: %s", err) // No point making this fatal really
+		log.Errorf("Failed to release lock: %s", err) // No point making this fatal really
 	}
 	if err := lockFile.Close(); err != nil {
-		log.Error("Failed to close lock file: %s", err)
+		log.Errorf("Failed to close lock file: %s", err)
 	}
 }
 

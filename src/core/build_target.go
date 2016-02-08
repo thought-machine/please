@@ -592,7 +592,7 @@ func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 func (target *BuildTarget) toolPath() string {
 	outputs := target.Outputs()
 	if len(outputs) != 1 {
-		log.Error("Target %s used as a tool, but has %d outputs (should only be 1)", target.Label, len(outputs))
+		log.Errorf("Target %s used as a tool, but has %d outputs (should only be 1)", target.Label, len(outputs))
 		return ""
 	}
 	p, _ := filepath.Abs(path.Join(target.OutDir(), outputs[0]))
