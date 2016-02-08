@@ -47,6 +47,7 @@ func TestParseTestSourcesFailsGracefully(t *testing.T) {
 
 func TestWriteTestMain(t *testing.T) {
 	err := WriteTestMain(
+		"src/build/go/test_data",
 		[]string{"src/build/go/test_data/example_test.go"},
 		"test.go",
 		[]CoverVar{},
@@ -61,6 +62,7 @@ func TestWriteTestMain(t *testing.T) {
 
 func TestWriteTestMainWithCoverage(t *testing.T) {
 	err := WriteTestMain(
+		"src/build/go/test_data",
 		[]string{"src/build/go/test_data/example_test.go"},
 		"test.go",
 		[]CoverVar{{
@@ -80,11 +82,11 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 }
 
 func TestExtraImportPaths(t *testing.T) {
-	assert.Equal(t, extraImportPaths("core", []CoverVar{
+	assert.Equal(t, extraImportPaths("core", "src/core", []CoverVar{
 		{ImportPath: "core"},
 		{ImportPath: "output"},
 	}), []string{
-		"\"core\"",
+		"core \"core\"",
 		"_cover0 \"core\"",
 		"_cover1 \"output\"",
 	})
