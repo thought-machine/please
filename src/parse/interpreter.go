@@ -43,6 +43,7 @@ var log = logging.MustGetLogger("parse")
 
 // Embedded parser file.
 const embeddedParser = "embedded_parser.py"
+
 // Communicated back from PyPy to indicate that a parse has been deferred because
 // we need to wait for another target to build.
 const pyDeferParse = "_DEFER_"
@@ -146,7 +147,7 @@ func initializeInterpreter(config core.Configuration) {
 
 	// Load all the builtin rules
 	log.Debug("Loading builtin build rules...")
-	dir, _ := AssetDir("");
+	dir, _ := AssetDir("")
 	for _, filename := range dir {
 		if filename != embeddedParser { // We already did this guy.
 			loadBuiltinRules(filename)
@@ -565,7 +566,7 @@ func runPostBuildFunction(pkg *core.Package, target *core.BuildTarget, out strin
 // Unfortunately there doesn't seem to be any API to do this dynamically :(
 var logLevelFuncs = map[logging.Level]func(format string, args ...interface{}){
 	logging.CRITICAL: log.Fatalf,
-	logging.ERROR:    log.Error,
+	logging.ERROR:    log.Errorf,
 	logging.WARNING:  log.Warning,
 	logging.NOTICE:   log.Notice,
 	logging.INFO:     log.Info,
@@ -577,7 +578,7 @@ func Log(level int, cPackage unsafe.Pointer, cMessage *C.char) {
 	pkg := (*core.Package)(cPackage)
 	f, present := logLevelFuncs[logging.Level(level)]
 	if !present {
-		f = log.Error
+		f = log.Errorf
 	}
 	f("//%s/BUILD: %s", pkg.Name, C.GoString(cMessage))
 }

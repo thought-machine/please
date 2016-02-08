@@ -3,7 +3,7 @@ package(default_visibility = ['PUBLIC'])
 go_get(
     name = 'logging',
     get = 'github.com/op/go-logging',
-    revision = 'dfaf3dff9b631bc4236201d90d41ee0de9202889',
+    revision = '0882c9abce533ab4afbab5677fcef7434dd36d5a',
 )
 
 go_get(
