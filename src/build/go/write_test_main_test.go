@@ -64,10 +64,11 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 		[]string{"src/build/go/test_data/example_test.go"},
 		"test.go",
 		[]CoverVar{{
-			Dir:     "src/build/go/test_data",
-			Package: "core",
-			Var:     "GoCover_lock_go",
-			File:    "src/build/go/test_data/lock.go",
+			Dir:        "src/build/go/test_data",
+			Package:    "core",
+			ImportPath: "core",
+			Var:        "GoCover_lock_go",
+			File:       "src/build/go/test_data/lock.go",
 		}},
 	)
 	assert.NoError(t, err)
@@ -76,4 +77,15 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "main", f.Name.Name)
+}
+
+func TestExtraImportPaths(t *testing.T) {
+	assert.Equal(t, extraImportPaths("core", []CoverVar{
+		{ImportPath: "core"},
+		{ImportPath: "output"},
+	}), []string{
+		"\"core\"",
+		"_cover0 \"core\"",
+		"_cover1 \"output\"",
+	})
 }

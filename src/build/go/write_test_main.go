@@ -17,6 +17,7 @@ type testDescr struct {
 	Main      string
 	Functions []string
 	CoverVars []CoverVar
+	Imports   []string
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
@@ -30,6 +31,7 @@ func WriteTestMain(sources []string, output string, coverVars []CoverVar) error 
 		return fmt.Errorf("Didn't find any test functions in the source files")
 	}
 	testDescr.CoverVars = coverVars
+	testDescr.Imports = extraImportPaths(testDescr.Package, coverVars)
 
 	f, err := os.Create(output)
 	if err != nil {
@@ -39,6 +41,17 @@ func WriteTestMain(sources []string, output string, coverVars []CoverVar) error 
 	// This might be consumed by other things.
 	fmt.Printf("Package: %s\n", testDescr.Package)
 	return testMainTmpl.Execute(f, testDescr)
+}
+
+// extraImportPaths returns the set of extra import paths that are needed.
+func extraImportPaths(pkg string, coverVars []CoverVar) []string {
+	ret := []string{"\"" + pkg + "\""}
+	for i, v := range coverVars {
+		name := fmt.Sprintf("_cover%d", i)
+		coverVars[i].ImportName = name
+		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, v.ImportPath))
+	}
+	return ret
 }
 
 // parseTestSources parses the test sources and returns the package and set of test functions in them.
@@ -114,7 +127,9 @@ import (
     "strings"
 	"testing"
 
-	{{.Package | printf "%q"}}
+{{range .Imports}}
+	{{.}}
+{{end}}
 )
 
 var tests = []testing.InternalTest{
@@ -133,7 +148,7 @@ var (
 
 func init() {
 	{{range $i, $c := .CoverVars}}
-	coverRegisterFile({{printf "%q" $c.File}}, {{$c.Package}}.{{$c.Var}}.Count[:], {{$c.Package}}.{{$c.Var}}.Pos[:], {{$c.Package}}.{{$c.Var}}.NumStmt[:])
+	coverRegisterFile({{printf "%q" $c.File}}, {{$c.ImportName}}.{{$c.Var}}.Count[:], {{$c.ImportName}}.{{$c.Var}}.Pos[:], {{$c.ImportName}}.{{$c.Var}}.NumStmt[:])
 	{{end}}
 }
 
@@ -181,8 +196,11 @@ func main() {
 		Blocks: coverBlocks,
 		CoveredPackages: "",
 	})
+    args := []string{os.Args[0], "-test.v", "-test.coverprofile", "test.coverage"}
+{{else}}
+    args := []string{os.Args[0], "-test.v"}
 {{end}}
-    os.Args = append([]string{os.Args[0], "-test.v"}, os.Args[1:]...)
+    os.Args = append(args, os.Args[1:]...)
 	benchmarks := []testing.InternalBenchmark{}
 	var examples = []testing.InternalExample{}
 	m := testing.MainStart(matchString, tests, benchmarks, examples)
