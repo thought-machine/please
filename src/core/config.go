@@ -55,7 +55,7 @@ func ReadConfigFiles(filenames []string) (Configuration, error) {
 	setDefault(&config.Build.Path, []string{"/usr/local/bin", "/usr/bin", "/bin"})
 	setDefault(&config.Please.PyPyLocation, []string{"/usr/lib/libpypy-c.so", "/usr/local/lib/libpypy-c.dylib"})
 	setDefault(&config.Cover.FileExtension, []string{".go", ".py", ".java", ".js", ".cc", ".h", ".c"})
-	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py"})
+	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go"})
 	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go"})
 
 	return config, nil

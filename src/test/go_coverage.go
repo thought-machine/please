@@ -21,8 +21,7 @@ func parseGoCoverageResults(target *core.BuildTarget, coverage *core.TestCoverag
 		return err
 	}
 	for _, profile := range profiles {
-		// Prepending src/ is a bit of a hack but it's oh so easy...
-		coverage.Files["src/"+profile.FileName] = parseBlocks(profile.Blocks)
+		coverage.Files[profile.FileName] = parseBlocks(profile.Blocks)
 	}
 	coverage.Tests[target.Label] = coverage.Files
 	return nil
