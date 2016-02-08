@@ -41,6 +41,8 @@ import "C"
 
 var log = logging.MustGetLogger("parse")
 
+// Embedded parser file.
+const embeddedParser = "embedded_parser.py"
 // Communicated back from PyPy to indicate that a parse has been deferred because
 // we need to wait for another target to build.
 const pyDeferParse = "_DEFER_"
@@ -91,7 +93,7 @@ func initializeInterpreter(config core.Configuration) {
 
 	// Load interpreter & set up callbacks for communication
 	log.Debug("Initialising interpreter environment...")
-	data := loadAsset("please_parser.py")
+	data := loadAsset(embeddedParser)
 	defer C.free(unsafe.Pointer(data))
 	if result := C.InitialiseInterpreter(data, unsafe.Pointer(&callbacks)); result != 0 {
 		panic(fmt.Sprintf("Failed to initialise parsing callbacks, error %d", result))
@@ -146,7 +148,7 @@ func initializeInterpreter(config core.Configuration) {
 	log.Debug("Loading builtin build rules...")
 	dir, _ := AssetDir("");
 	for _, filename := range dir {
-		if filename != "please_parser.py" { // We already did this guy.
+		if filename != embeddedParser { // We already did this guy.
 			loadBuiltinRules(filename)
 		}
 	}

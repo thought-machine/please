@@ -4,70 +4,10 @@ import __builtin__
 import ast
 import imp
 import os
-from cffi import FFI
 from collections import defaultdict, Mapping
 from contextlib import contextmanager
 from types import FunctionType
 
-
-ffi = FFI()
-
-ffi.cdef("""
-typedef unsigned char uint8;
-typedef long long int64;
-typedef char* (ParseFileCallback)(const char*, const char*, void*);
-typedef void* (AddTargetCallback)(void*, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*);
-typedef void (AddStringCallback)(void*, char*);
-typedef void (AddTwoStringsCallback)(void*, char*, char*);
-typedef void (AddThreeStringsCallback)(void*, char*, char*, char*);
-typedef void (AddDependencyCallback)(void*, char*, char*, uint8);
-typedef void (AddOutputCallback)(void*, char*, char*);
-typedef char** (GlobCallback)(char*, char**, long long, char**, long long, uint8);
-typedef char* (GetIncludeFileCallback)(void*, char*);
-typedef char** (GetLabelsCallback)(void*, char*, char*);
-typedef void (SetConfigValueCallback)(char*, char*);
-typedef char* (PreBuildCallbackRunner)(void*, void*, char*);
-typedef char* (PostBuildCallbackRunner)(void*, void*, char*, char*);
-// We're not going to call this SetBuildCallbackCallback because we're not peasants.
-typedef void (SetBuildFunctionCallback)(void*, char*, void*);
-typedef void (LogCallback)(int64, void*, char*);
-
-typedef struct _PleaseCallbacks {
-    ParseFileCallback* parse_file;
-    ParseFileCallback* parse_code;
-    AddTargetCallback* add_target;
-    AddStringCallback* add_src;
-    AddStringCallback* add_data;
-    AddStringCallback* add_dep;
-    AddStringCallback* add_exported_dep;
-    AddStringCallback* add_tool;
-    AddStringCallback* add_out;
-    AddStringCallback* add_vis;
-    AddStringCallback* add_label;
-    AddStringCallback* add_hash;
-    AddStringCallback* add_licence;
-    AddStringCallback* add_test_output;
-    AddStringCallback* add_require;
-    AddTwoStringsCallback* add_provide;
-    AddTwoStringsCallback* add_named_src;
-    AddTwoStringsCallback* add_command;
-    AddTwoStringsCallback* set_container_setting;
-    GlobCallback* glob;
-    GetIncludeFileCallback* get_include_file;
-    GetIncludeFileCallback* get_subinclude_file;
-    GetLabelsCallback* get_labels;
-    SetBuildFunctionCallback* set_pre_build_callback;
-    SetBuildFunctionCallback* set_post_build_callback;
-    AddDependencyCallback* add_dependency;
-    AddOutputCallback* add_output;
-    AddTwoStringsCallback* add_licence_post;
-    AddThreeStringsCallback* set_command;
-    SetConfigValueCallback* set_config_value;
-    PreBuildCallbackRunner* pre_build_callback_runner;
-    PostBuildCallbackRunner* post_build_callback_runner;
-    LogCallback* log;
-} PleaseCallbacks;
-""")
 
 _please_builtins = imp.new_module('_please_builtins')
 _please_globals = _please_builtins.__dict__
@@ -96,7 +36,7 @@ _DEFER_PARSE = '_DEFER_'
 _FFI_DEFER_PARSE = ffi.new('char[]', _DEFER_PARSE)
 
 
-@ffi.callback('char* (const char*, const char*, void*)')
+@ffi.callback('ParseFileCallback*')
 def parse_file(c_filename, c_package_name, c_package):
     try:
         filename = ffi.string(c_filename)
@@ -110,7 +50,7 @@ def parse_file(c_filename, c_package_name, c_package):
         return ffi.new('char[]', str(err))
 
 
-@ffi.callback('char* (const char*, const char*, void*)')
+@ffi.callback('ParseFileCallback*')
 def parse_code(c_code, c_filename, _):
     try:
         code = ffi.string(c_code)
@@ -143,7 +83,7 @@ def _parse_build_code(filename, globals_dict, cache=False):
     exec(code, globals_dict)
 
 
-@ffi.callback('void (const char*, const char*)')
+@ffi.callback('SetConfigValueCallback*')
 def set_config_value(c_name, c_value):
     name = ffi.string(c_name)
     value = ffi.string(c_value)
@@ -254,7 +194,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
             _set_container_setting(target, k, v)
 
 
-@ffi.callback('char* (void*, void*, char*)')
+@ffi.callback('PreBuildCallbackRunner*')
 def run_pre_build_function(handle, package, name):
     try:
         callback = ffi.from_handle(handle)
@@ -266,7 +206,7 @@ def run_pre_build_function(handle, package, name):
         return ffi.new('char[]', str(err))
 
 
-@ffi.callback('char* (void*, void*, char*, char*)')
+@ffi.callback('PostBuildCallbackRunner*')
 def run_post_build_function(handle, package, name, output):
     try:
         callback = ffi.from_handle(handle)
@@ -388,7 +328,7 @@ def _get_globals(c_package, c_package_name):
 
 
 # c_argument is magically created for us by pypy.
-callbacks = ffi.cast('PleaseCallbacks*', c_argument)
+callbacks = ffi.cast('struct PleaseCallbacks*', c_argument)
 callbacks.parse_file = parse_file
 callbacks.parse_code = parse_code
 callbacks.set_config_value = set_config_value
@@ -415,8 +355,8 @@ _glob = ffi.cast('GlobCallback*', callbacks.glob)
 _get_include_file = ffi.cast('GetIncludeFileCallback*', callbacks.get_include_file)
 _get_subinclude_file = ffi.cast('GetIncludeFileCallback*', callbacks.get_subinclude_file)
 _get_labels = ffi.cast('GetLabelsCallback*', callbacks.get_labels)
-_set_pre_build_callback = ffi.cast('SetBuildFunctionCallback*', callbacks.set_pre_build_callback)
-_set_post_build_callback = ffi.cast('SetBuildFunctionCallback*', callbacks.set_post_build_callback)
+_set_pre_build_callback = ffi.cast('SetBuildFunctionCallback*', callbacks.set_pre_build_function)
+_set_post_build_callback = ffi.cast('SetBuildFunctionCallback*', callbacks.set_post_build_function)
 _add_dependency = ffi.cast('AddDependencyCallback*', callbacks.add_dependency)
 _add_output = ffi.cast('AddOutputCallback*', callbacks.add_output)
 _add_licence_post = ffi.cast('AddTwoStringsCallback*', callbacks.add_licence_post)
