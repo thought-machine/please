@@ -18,7 +18,7 @@ var log = logging.MustGetLogger("buildgo")
 // A CoverVar is just a combination of package path and variable name
 // for one of the templated-in coverage variables.
 type CoverVar struct {
-	Dir, Package, Var, File string
+	Dir, ImportPath, Package, Var, File string
 }
 
 // FindCoverVars searches the given directory recursively to find all compiled packages in it.
@@ -70,6 +70,11 @@ func readPkgdef(file string) (vars []CoverVar, err error) {
 	}
 
 	dir := path.Dir(file)
+	importPath := dir
+	if strings.HasPrefix(dir, "src/") {
+		importPath = dir[4:]
+	}
+
 	ret := []CoverVar{}
 	pkg := ""
 	for {
@@ -82,6 +87,9 @@ func readPkgdef(file string) (vars []CoverVar, err error) {
 		}
 		if bytes.HasPrefix(line, []byte("package ")) {
 			pkg = string(line[8 : len(line)-1])
+			if path.Base(dir) != pkg {
+				importPath = path.Join(importPath, pkg)
+			}
 		}
 		if index := bytes.Index(line, []byte("var @\"\".GoCover")); index != -1 {
 			line = line[9:] // Strip the leading gunk
@@ -91,10 +99,11 @@ func readPkgdef(file string) (vars []CoverVar, err error) {
 				f = f[:len(f)-3] + ".go"
 			}
 			ret = append(ret, CoverVar{
-				Dir:     dir,
-				Package: pkg,
-				Var:     v,
-				File:    f,
+				Dir:        dir,
+				ImportPath: importPath,
+				Package:    pkg,
+				Var:        v,
+				File:       f,
 			})
 		}
 	}

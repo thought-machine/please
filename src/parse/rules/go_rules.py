@@ -200,7 +200,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         cmd={
             'dbg': go_test_tool + ' -o $OUT $SRCS',
             'opt': go_test_tool + ' -o $OUT $SRCS',
-            'cover': go_test_tool + ' -d . -o $OUT $SRCS',
+            'cover': go_test_tool + ' -d . -o $OUT $SRCS ',
         },
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
         requires=['go'],

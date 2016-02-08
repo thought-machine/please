@@ -115,9 +115,6 @@ import (
 	"testing"
 
 	{{.Package | printf "%q"}}
-{{range $i, $v := .CoverVars}}
-	_cover{{$i}} "{{$v.Package}}"
-{{end}}
 )
 
 var tests = []testing.InternalTest{

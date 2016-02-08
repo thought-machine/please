@@ -8,10 +8,11 @@ import (
 
 // The library here is a (very) reduced version of core that only has one file in it.
 var coverageVars = []CoverVar{{
-	Dir:     "src/build/go/test_data",
-	Package: "core",
-	Var:     "GoCover_lock_go",
-	File:    "src/build/go/test_data/lock.go",
+	Dir:        "src/build/go/test_data",
+	ImportPath: "build/go/test_data/core",
+	Package:    "core",
+	Var:        "GoCover_lock_go",
+	File:       "src/build/go/test_data/lock.go",
 }}
 
 func TestReadPkgdef(t *testing.T) {
@@ -25,10 +26,11 @@ func TestReadCopiedPkgdef(t *testing.T) {
 	vars, err := readPkgdef("src/build/go/test_data/x/core.a")
 	assert.NoError(t, err)
 	expected := []CoverVar{{
-		Dir:     "src/build/go/test_data/x",
-		Package: "core",
-		Var:     "GoCover_lock_go",
-		File:    "src/build/go/test_data/x/lock.go",
+		Dir:        "src/build/go/test_data/x",
+		ImportPath: "build/go/test_data/x/core",
+		Package:    "core",
+		Var:        "GoCover_lock_go",
+		File:       "src/build/go/test_data/x/lock.go",
 	}}
 	assert.Equal(t, expected, vars)
 }
