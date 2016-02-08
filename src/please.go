@@ -36,39 +36,38 @@ var Config core.Configuration
 
 var opts struct {
 	BuildFlags struct {
-		Config             string   `short:"c" long:"config" description:"Build config to use. Defaults to opt."` 
-		RepoRoot           string   `short:"r" long:"repo_root" description:"Root of repository to build."`
-		KeepGoing          bool     `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
-		NumThreads         int      `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
-		Include            []string `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
-		Exclude            []string `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
+		Config     string   `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
+		RepoRoot   string   `short:"r" long:"repo_root" description:"Root of repository to build."`
+		KeepGoing  bool     `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
+		NumThreads int      `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
+		Include    []string `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
+		Exclude    []string `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
-		Verbosity          int      `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)" default:"1"`
-		LogFile            string   `long:"log_file" description:"File to echo full logging output to"`
-		LogFileLevel       int      `long:"log_file_level" description:"Log level for file output" default:"2"`
-		InteractiveOutput  bool     `long:"interactive_output" description:"Show interactive output in a terminal"`
-		PlainOutput        bool     `short:"p" long:"plain_output" description:"Don't show interactive output."`
-		Colour             bool     `long:"colour" description:"Forces coloured output from logging & other shell output."`
-		NoColour           bool     `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
-		TraceFile          string   `long:"trace_file" description:"File to write Chrome tracing output into"`
-		PrintCommands      bool     `long:"print_commands" description:"Print each build / test command as they're run"`
-		Version            bool     `long:"version" description:"Print the version of the tool"`
+		Verbosity         int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)" default:"1"`
+		LogFile           string `long:"log_file" description:"File to echo full logging output to"`
+		LogFileLevel      int    `long:"log_file_level" description:"Log level for file output" default:"2"`
+		InteractiveOutput bool   `long:"interactive_output" description:"Show interactive output in a terminal"`
+		PlainOutput       bool   `short:"p" long:"plain_output" description:"Don't show interactive output."`
+		Colour            bool   `long:"colour" description:"Forces coloured output from logging & other shell output."`
+		NoColour          bool   `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
+		TraceFile         string `long:"trace_file" description:"File to write Chrome tracing output into"`
+		PrintCommands     bool   `long:"print_commands" description:"Print each build / test command as they're run"`
+		Version           bool   `long:"version" description:"Print the version of the tool"`
 	} `group:"Options controlling output & logging"`
 
 	FeatureFlags struct {
-		NoUpdate           bool     `long:"noupdate" description:"Disable Please attempting to auto-update itself." default:"false"`
-		NoCache            bool     `long:"nocache" description:"Disable caching locally" default:"false"`
-		NoHashVerification bool     `long:"nohash_verification" description:"Hash verification errors are nonfatal." default:"false"`
-		NoLock             bool     `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care." default:"false"`
-		KeepWorkdirs       bool     `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
-
+		NoUpdate           bool `long:"noupdate" description:"Disable Please attempting to auto-update itself." default:"false"`
+		NoCache            bool `long:"nocache" description:"Disable caching locally" default:"false"`
+		NoHashVerification bool `long:"nohash_verification" description:"Hash verification errors are nonfatal." default:"false"`
+		NoLock             bool `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care." default:"false"`
+		KeepWorkdirs       bool `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 	} `group:"Options that enable / disable certain features"`
-	
-	AssertVersion      string   `long:"assert_version" hidden:"true" description:"Assert the tool matches this version."`
-	ParsePackageOnly bool `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
-	NoCacheCleaner   bool `description:"Don't start a cleaning process for the directory cache" default:"false" no-flag:"true"`
+
+	AssertVersion    string `long:"assert_version" hidden:"true" description:"Assert the tool matches this version."`
+	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
+	NoCacheCleaner   bool   `description:"Don't start a cleaning process for the directory cache" default:"false" no-flag:"true"`
 
 	Build struct {
 		Args struct { // Inner nesting is necessary to make positional-args work :(
@@ -106,8 +105,8 @@ var opts struct {
 	} `command:"run" description:"Builds and runs a single target"`
 
 	Clean struct {
-		NoBackground bool `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished." default:"false"`
-		Args  struct { // Inner nesting is necessary to make positional-args work :(
+		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished." default:"false"`
+		Args         struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
@@ -194,10 +193,10 @@ var buildFunctions = map[string]func() bool{
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
-		if opts.Config != "" {
+		if opts.BuildFlags.Config != "" {
 			log.Warning("Build config overridden; coverage may not be available for some languages")
 		} else {
-			opts.Config = "cover"
+			opts.BuildFlags.Config = "cover"
 		}
 		os.RemoveAll(testResultsFile)
 		os.RemoveAll(coverageResultsFile)
@@ -221,7 +220,7 @@ var buildFunctions = map[string]func() bool{
 	"clean": func() bool {
 		opts.NoCacheCleaner = true
 		if len(opts.Clean.Args.Targets) == 0 {
-			opts.OutputFlags.PlainOutput = true  // No need for interactive display, we won't parse anything.
+			opts.OutputFlags.PlainOutput = true // No need for interactive display, we won't parse anything.
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false, false); success {
 			clean.Clean(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
