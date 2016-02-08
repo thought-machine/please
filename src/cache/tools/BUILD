@@ -18,7 +18,7 @@ genrule(
            if CONFIG.OS == 'darwin' else 'cp $SRC $OUT')
 )
 
-go_test(
+cgo_test(
     name = 'cache_cleaner_test',
     srcs = ['cache_cleaner_test.go', ':cache_cleaner_platform'],
     deps = [

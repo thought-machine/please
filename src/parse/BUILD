@@ -24,7 +24,7 @@ genrule(
     ]
 )
 
-go_test(
+cgo_test(
     name = 'glob_test',
     srcs = ['glob_test.go'],
     deps = [
@@ -34,7 +34,7 @@ go_test(
     data = glob(['test_data/**/*.txt']),
 )
 
-go_test(
+cgo_test(
     name = 'parse_step_test',
     srcs = ['parse_step_test.go'],
     deps = [
@@ -44,7 +44,7 @@ go_test(
     ],
 )
 
-go_test(
+cgo_test(
     name = 'interpreter_test',
     srcs = ['interpreter_test.go'],
     deps = [
@@ -99,7 +99,7 @@ genrule(
         ':_gen_output_name',
     ],
 )
-go_test(
+cgo_test(
     name = 'additional_output_test',
     srcs = ['additional_output_test.go'],
     data = [':_gen_output'],

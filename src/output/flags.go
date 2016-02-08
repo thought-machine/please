@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
 	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/jessevdk/go-flags"
-
-	"core"
 )
 
 // ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
@@ -29,9 +26,6 @@ func ParseFlags(appname string, data interface{}, args []string) (*flags.Parser,
 			fmt.Printf("Hmmmmm, hows can I halp you?\n")
 			parser.WriteHelp(os.Stderr)
 			os.Exit(1)
-		} else if v := reflect.ValueOf(data).Elem().FieldByName("Version"); v != reflect.ValueOf(nil) && v.Bool() {
-			fmt.Printf("%s version %s\n", appname, core.PleaseVersion)
-			os.Exit(0) // Ignore other errors if --version was passed.
 		}
 	}
 	return parser, extraArgs, err

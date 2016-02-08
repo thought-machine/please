@@ -10,7 +10,37 @@ _GO_LINK_TOOL = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
 # This is the command we use to provide include directories to the Go compiler.
 # It's fairly brutal but since our model is that we completely specify all the dependencies
 # it's valid to essentially allow it to pick up any of them.
-_SRC_DIRS_CMD = 'SRC_DIRS=`find . -type d | grep -v "^\\.$" | sed -E -e "s|^./|-I |g"`; '
+_SRC_DIRS_CMD = 'SRC_DIRS=`find . -type d | grep -v "^\\.$" | sed -E -e "s|^./|-I |g"`'
+
+# Commands for go_binary and go_test.
+_ALL_GO_BINARY_CMDS = ' && '.join([
+    _SRC_DIRS_CMD,
+    'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done',
+    'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL,
+    'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL,
+])
+_GO_BINARY_CMDS = {
+    'dbg': _ALL_GO_BINARY_CMDS + ' ${OUT}.6',
+    'opt': _ALL_GO_BINARY_CMDS + '-s -w ${OUT}.6',
+}
+
+# Commands for go_library, which differ a bit more by config.
+_ALL_GO_LIBRARY_CMDS = {
+    # Copies archives up a directory; this is needed in some cases depending on whether
+    # the library matches the name of the directory it's in or not.
+    'copy_cmd': 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done',
+    # Invokes the Go compiler.
+    'compile_cmd': 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL,
+    # Annotates files for coverage
+    'cover_cmd': 'for SRC in $SRCS; do mv $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done',
+    'src_dirs_cmd': _SRC_DIRS_CMD,
+}
+# String it all together.
+_GO_LIBRARY_CMDS = {
+    'dbg': '%(src_dirs_cmd)s; %(copy_cmd)s && %(compile_cmd)s -N -l $SRCS' % _ALL_GO_LIBRARY_CMDS,
+    'opt': '%(src_dirs_cmd)s; %(copy_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
+    'cover': '%(src_dirs_cmd)s; %(copy_cmd)s && %(cover_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
+}
 
 
 def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False):
@@ -24,38 +54,26 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
     """
-    # Copies archives up a directory; this is needed in some cases depending on whether
-    # the library matches the name of the directory it's in or not.
-    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
-    # Invokes the Go compiler.
-    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL
-    # String it all together.
-    cmd = {
-        'dbg': '%s %s && %s -N -l $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
-        'opt': '%s %s && %s $SRCS' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd),
-    }
-
     # go_test and cgo_library need access to the sources as well.
     filegroup(
         name='_%s#srcs' % name,
         srcs=srcs,
-        deps=deps,
+        exported_deps=deps,
         visibility=visibility,
         output_is_complete=False,
         requires=['go'],
         test_only=test_only,
     )
-
     build_rule(
         name=name,
         srcs=srcs,
         deps=(deps or []) + [':_%s#srcs' % name],
         outs=[out or name + '.a'],
-        cmd=cmd,
+        cmd=_GO_LIBRARY_CMDS,
         visibility=visibility,
         building_description="Compiling...",
         requires=['go'],
-        provides={'go_src': ':_%s#srcs' % name},
+        provides={'go': ':' + name, 'go_src': ':_%s#srcs' % name},
         test_only=test_only,
     )
 
@@ -127,20 +145,12 @@ def go_binary(name, main=None, deps=None, visibility=None, test_only=False):
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
     """
-    copy_cmd = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
-    compile_cmd = 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL
-    link_cmd = 'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL
-    all_cmds = '%s %s && %s && %s' % (_SRC_DIRS_CMD, copy_cmd, compile_cmd, link_cmd)
-    cmd = {
-        'dbg': all_cmds + ' ${OUT}.6',
-        'opt': all_cmds + '-s -w ${OUT}.6',
-    }
     build_rule(
         name=name,
         srcs=[main or name + '.go'],
         deps=deps,
         outs=[name],
-        cmd=cmd,
+        cmd=_GO_BINARY_CMDS,
         building_description="Compiling...",
         needs_transitive_deps=True,
         binary=True,
@@ -152,13 +162,81 @@ def go_binary(name, main=None, deps=None, visibility=None, test_only=False):
 
 
 def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
-            timeout=0, flaky=0, test_outputs=None, labels=None, tags=None):
+            timeout=0, flaky=0, test_outputs=None, labels=None):
     """Defines a Go test rule.
 
-    Note that similarly to cgo_library this requires the test sources in order to
-    template in the test specifications. We kind of get away with this because Go compilation
-    is so fast but it would be better not to - on the other hand, this also allows us
-    to build with coverage tracing which wouldn't be possible otherwise.
+    Args:
+      name (str): Name of the rule.
+      srcs (list): Go source files to compile.
+      data (list): Runtime data files for the test.
+      deps (list): Dependencies
+      visibility (list): Visibility specification
+      container (bool | dict): True to run this test in a container.
+      timeout (int): Timeout in seconds to allow the test to run for.
+      flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
+      test_outputs (list): Extra test output files to generate from this test.
+      labels (list): Labels for this rule.
+    """
+    # Unfortunately we have to recompile this to build the test together with its library.
+    build_rule(
+        name='_%s#lib' % name,
+        srcs=srcs,
+        deps=deps,
+        outs=[name + '.a'],
+        cmd={k: 'SRCS=${PKG}/*.go; ' + v for k, v in _GO_LIBRARY_CMDS.items()},
+        building_description="Compiling...",
+        requires=['go', 'go_src'],
+        test_only=True,
+        # TODO(pebers): We should be able to get away without this via a judicious
+        #               exported_deps in go_library, but it doesn't seem to be working.
+        needs_transitive_deps=True,
+    )
+    go_test_tool, tools = _tool_path(CONFIG.GO_TEST_TOOL)
+    build_rule(
+        name='_%s#main' % name,
+        srcs=srcs,
+        outs=[name + '_main.go'],
+        deps=deps,
+        cmd={
+            'dbg': go_test_tool + ' -o $OUT $SRCS',
+            'opt': go_test_tool + ' -o $OUT $SRCS',
+            'cover': go_test_tool + ' -d . -o $OUT $SRCS',
+        },
+        needs_transitive_deps=True,  # Need all .a files to template coverage variables
+        requires=['go'],
+        tools=tools,
+        post_build=_replace_test_package,
+    )
+    build_rule(
+        name=name,
+        srcs=[':_%s#main' % name],
+        data=data,
+        deps=(deps or []) + [':_%s#lib' % name],
+        outs=[name],
+        cmd=_GO_BINARY_CMDS,
+        test_cmd='$(exe :%s) | tee test.results' % name,
+        visibility=visibility,
+        container=container,
+        test_timeout=timeout,
+        flaky=flaky,
+        test_outputs=test_outputs,
+        requires=['go'],
+        labels=labels,
+        binary=True,
+        test=True,
+        building_description="Compiling...",
+        needs_transitive_deps=True,
+        output_is_complete=True,
+    )
+
+
+def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
+             timeout=0, flaky=0, test_outputs=None, labels=None, tags=None):
+    """Defines a Go test rule for a library that uses cgo.
+
+    If the library you are testing is a cgo_library, you must use this instead of go_test.
+    It's ok to depend on a cgo_library though as long as it's not the same package
+    as your test.
 
     Args:
       name (str): Name of the rule.
@@ -267,3 +345,18 @@ def _extra_outs(get):
                 add_out(name, 'src/' + subpath)
             last = subpath
     return _inner
+
+
+def _replace_test_package(name, output):
+    """Post-build function, called after we template the main function.
+
+    The purpose is to replace the real library with the specific one we've
+    built for this test which has the actual test functions in it.
+    """
+    if not name.endswith('#main') or not name.startswith('_'):
+        raise ValueError('unexpected rule name: ' + name)
+    name = name[1:-5]
+    for line in output:
+        if line.startswith('Package: '):
+            for k, v in _GO_BINARY_CMDS.items():
+                set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))

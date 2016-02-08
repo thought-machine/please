@@ -35,7 +35,7 @@ python_test(
         ':bootstrap_pexer'
     ],
     labels = ['manual'],
-    interpreter = 'pypy'
+    interpreter = '/usr/bin/pypy'
 )
 
 # This is needed for bootstrapping the build system: we have to be

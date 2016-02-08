@@ -140,6 +140,9 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		if err != nil && target.Results.Output == "" {
 			target.Results.Output = err.Error()
 		}
+		if err != nil {
+			_, target.Results.TimedOut = err.(core.TimeoutError)
+		}
 		coverage := parseCoverageFile(target, coverageFile)
 		if !core.PathExists(outputFile) {
 			target.Results.Duration += duration
@@ -241,10 +244,15 @@ func prepareTestDir(graph *core.BuildGraph, target *core.BuildTarget) error {
 
 func runTest(state *core.BuildState, target *core.BuildTarget, timeout int) ([]byte, error) {
 	replacedCmd := build.ReplaceTestSequences(target, target.TestCommand)
-	replacedCmd += " " + strings.Join(state.TestArgs, " ")
+	env := core.BuildEnvironment(state, target, true)
+	if len(state.TestArgs) > 0 {
+		args := strings.Join(state.TestArgs, " ")
+		replacedCmd += " " + args
+		env = append(env, "TESTS="+args)
+	}
 	cmd := exec.Command("bash", "-c", replacedCmd)
 	cmd.Dir = target.TestDir()
-	cmd.Env = core.BuildEnvironment(state, target, true)
+	cmd.Env = env
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(cmd.Env, "\n"), replacedCmd)
 	if state.PrintCommands {
 		log.Notice("Running test %s: %s", target.Label, replacedCmd)

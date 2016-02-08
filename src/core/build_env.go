@@ -43,6 +43,11 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 			"OUTS="+strings.Join(target.Outputs(), " "),
 			"NAME="+target.Label.Name,
 		)
+		tools := make([]string, len(target.Tools))
+		for i, tool := range target.Tools {
+			tools[i] = state.Graph.TargetOrDie(tool).toolPath()
+		}
+		env = append(env, "TOOLS=" + strings.Join(tools, " "))
 		// The OUT variable is only available on rules that have a single output.
 		if len(target.Outputs()) == 1 {
 			env = append(env, "OUT="+path.Join(RepoRoot, target.TmpDir(), target.Outputs()[0]))
@@ -50,6 +55,10 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		// The SRC variable is only available on rules that have a single source file.
 		if len(sources) == 1 {
 			env = append(env, "SRC="+sources[0])
+		}
+		// Similarly, TOOL is only available on rules with a single tool.
+		if len(target.Tools) == 1 {
+			env = append(env, "TOOL="+state.Graph.TargetOrDie(target.Tools[0]).toolPath())
 		}
 		// Named source groups if the target declared any.
 		for name, srcs := range target.NamedSources {
