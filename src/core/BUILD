@@ -1,13 +1,13 @@
 genrule(
-    name = 'config',
-    srcs = {'go': ['config.go'], 'version': ['//:version']},
-    outs = ['config_versioned.go'],
+    name = 'version',
+    srcs = {'go': ['version.go'], 'version': ['//:version']},
+    outs = ['versioned.go'],
     cmd = 'sed "s/<git>/`cat $SRCS_VERSION`/" $SRCS_GO > $OUT',
 )
 
 go_library(
     name = 'core',
-    srcs = glob(['*.go'], excludes=['*_test.go', 'config.go']) + [':config'],
+    srcs = glob(['*.go'], excludes=['*_test.go', 'version.go']) + [':version'],
     visibility = ['PUBLIC'],
     deps = [
         '//third_party/go:gcfg',

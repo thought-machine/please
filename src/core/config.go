@@ -22,8 +22,6 @@ const LocalConfigFileName string = ".plzconfig.local"
 // for a particular machine (eg. build machine with different caching behaviour).
 const MachineConfigFileName = "/etc/plzconfig"
 
-const PleaseVersion string = "<git>"
-
 const TestContainerDocker = "docker"
 const TestContainerNone = "none"
 
