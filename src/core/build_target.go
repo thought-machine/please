@@ -508,9 +508,9 @@ func (target *BuildTarget) GetCommand() string {
 	if target.Commands == nil {
 		return target.Command
 	} else if command, present := target.Commands[State.Config.Build.Config]; present {
-		return command  // Has command for current config, good
+		return command // Has command for current config, good
 	} else if command, present := target.Commands[State.Config.Build.DefaultConfig]; present {
-		return command  // Has command for default config, fall back to that
+		return command // Has command for default config, fall back to that
 	}
 	// Oh dear, target doesn't have any matching config. Panicking is a bit heavy here, instead
 	// fall back to an arbitrary (but consistent) one.
@@ -554,7 +554,7 @@ func (target *BuildTarget) AllSources() <-chan BuildInput {
 // HasSource returns true if this target has the given file as a source (named or not).
 func (target *BuildTarget) HasSource(source string) bool {
 	for src := range target.AllSources() {
-		if src.String() == source {  // Comparison is a bit dodgy tbh
+		if src.String() == source { // Comparison is a bit dodgy tbh
 			return true
 		}
 	}
@@ -591,12 +591,11 @@ func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 // toolPath returns a path to this target when used as a tool.
 func (target *BuildTarget) toolPath() string {
 	outputs := target.Outputs()
-	if len(outputs) != 1 {
-		log.Errorf("Target %s used as a tool, but has %d outputs (should only be 1)", target.Label, len(outputs))
-		return ""
+	ret := make([]string, len(outputs))
+	for i, o := range target.Outputs() {
+		ret[i], _ = filepath.Abs(path.Join(target.OutDir(), o))
 	}
-	p, _ := filepath.Abs(path.Join(target.OutDir(), outputs[0]))
-	return p
+	return strings.Join(ret, " ")
 }
 
 // AddOutput adds a new output to the target if it's not already there.
