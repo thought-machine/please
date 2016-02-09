@@ -2,6 +2,8 @@
 package core
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -169,11 +171,20 @@ func TestGetCommand(t *testing.T) {
 
 func TestHasSource(t *testing.T) {
 	target := makeTarget("//src/core:target1", "")
-	target.Sources = append(target.Sources, FileLabel{File:"file1.go"})
-	target.AddNamedSource("wevs", FileLabel{File:"file2.go"})
+	target.Sources = append(target.Sources, FileLabel{File: "file1.go"})
+	target.AddNamedSource("wevs", FileLabel{File: "file2.go"})
 	assert.True(t, target.HasSource("file1.go"))
 	assert.True(t, target.HasSource("file2.go"))
 	assert.False(t, target.HasSource("file3.go"))
+}
+
+func TestToolPath(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	target.AddOutput("file1.go")
+	target.AddOutput("file2.go")
+	wd, _ := os.Getwd()
+	root := wd + "/plz-out/gen/src/core"
+	assert.Equal(t, fmt.Sprintf("%s/file1.go %s/file2.go", root, root), target.toolPath())
 }
 
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
