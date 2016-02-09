@@ -99,7 +99,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
     )
 
 
-def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None,
+def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None, tools=None,
             data=None, visibility=None, timeout=0, needs_transitive_deps=False, flaky=0,
             no_test_output=False, output_is_complete=True, requires=None, container=False):
     """A rule which creates a test with an arbitrary command.
@@ -116,6 +116,8 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
       srcs (list): Source files for this rule.
       outs (list): Output files of this rule.
       deps (list): Dependencies of this rule.
+      tools (list): Tools used to build this rule; similar to srcs but are not copied to the temporary
+                    build directory. Should be accessed via $(exe //path/to:tool) or similar.
       data (list): Runtime data files for the test.
       visibility (list): Visibility declaration of this rule.
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
@@ -135,6 +137,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
         outs=outs,
         deps=deps,
         data=data,
+        tools=tools,
         test_cmd = test_cmd,
         cmd=cmd or 'true',  # By default, do nothing
         visibility=visibility,
