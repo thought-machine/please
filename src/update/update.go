@@ -89,7 +89,7 @@ func downloadPlease(config core.Configuration) {
 			panic(err)
 		}
 	}
-	
+
 	url := fmt.Sprintf("%s/%s_%s/%s/please.tar.gz", config.Please.DownloadLocation, runtime.GOOS, runtime.GOARCH, config.Please.Version)
 	log.Info("Downloading %s", url)
 	response, err := http.Get(url)

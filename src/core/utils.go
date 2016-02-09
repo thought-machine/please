@@ -160,7 +160,6 @@ func (i TimeoutError) Error() string {
 	return fmt.Sprintf("Timeout (%d seconds) exceeded", i)
 }
 
-
 // ExecWithTimeout runs an external command with a timeout.
 // If the command times out the returned error will be a TimeoutError.
 func ExecWithTimeout(cmd *exec.Cmd, timeout int, defaultTimeout int) ([]byte, error) {

@@ -24,7 +24,7 @@ func expandHomePath(path string) string {
 func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []string {
 	sources := target.AllSourcePaths(state.Graph)
 	env := []string{
-		"PKG="+target.Label.PackageName,
+		"PKG=" + target.Label.PackageName,
 		// Need to know these for certain rules, particularly Go rules.
 		"ARCH=" + runtime.GOARCH,
 		"OS=" + runtime.GOOS,
@@ -47,7 +47,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		for i, tool := range target.Tools {
 			tools[i] = state.Graph.TargetOrDie(tool).toolPath()
 		}
-		env = append(env, "TOOLS=" + strings.Join(tools, " "))
+		env = append(env, "TOOLS="+strings.Join(tools, " "))
 		// The OUT variable is only available on rules that have a single output.
 		if len(target.Outputs()) == 1 {
 			env = append(env, "OUT="+path.Join(RepoRoot, target.TmpDir(), target.Outputs()[0]))

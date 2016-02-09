@@ -42,7 +42,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 				fmt.Printf("          '%s': '%s',\n", config, command)
 			}
 			fmt.Printf("      },\n")
-			
+
 		} else {
 			fmt.Printf("      cmd = '%s'\n", target.Command)
 		}

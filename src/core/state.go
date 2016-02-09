@@ -265,10 +265,14 @@ const (
 
 func (s BuildResultStatus) Category() string {
 	switch s {
-	case PackageParsing, PackageParsed, ParseFailed: return "Parse"
-	case TargetBuilding, TargetBuilt, TargetBuildFailed: return "Build"
-	case TargetTesting, TargetTested, TargetTestFailed: return "Test"
-	default: return "Other"
+	case PackageParsing, PackageParsed, ParseFailed:
+		return "Parse"
+	case TargetBuilding, TargetBuilt, TargetBuildFailed:
+		return "Build"
+	case TargetTesting, TargetTested, TargetTestFailed:
+		return "Test"
+	default:
+		return "Other"
 	}
 }
 

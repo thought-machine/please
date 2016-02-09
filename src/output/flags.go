@@ -44,7 +44,7 @@ func ParseFlagsFromArgsOrDie(appname string, data interface{}, args []string) *f
 	if err != nil {
 		parser.WriteHelp(os.Stderr)
 		fmt.Printf("\n%s\n", err)
-		os.Exit(1);
+		os.Exit(1)
 	} else if len(extraArgs) > 0 {
 		fmt.Printf("Unknown option %s\n", extraArgs)
 		parser.WriteHelp(os.Stderr)

@@ -9,7 +9,7 @@ import (
 )
 
 // The library here is a (very) reduced version of core that only has one file in it.
-var coverageVars = []string{"core.GoCover_lock_go"} 
+var coverageVars = []string{"core.GoCover_lock_go"}
 
 func TestReadPkgdef(t *testing.T) {
 	vars, err := readPkgdef("src/build/go/test_data/core.a")

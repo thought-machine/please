@@ -25,7 +25,7 @@ func AcquireRepoLock() {
 	os.MkdirAll(path.Dir(lockFilePath), DirPermissions)
 	// TODO(pebers): This doesn't seem quite as intended, I think the file still gets truncated sometimes.
 	//               Not sure why since I'm not passing O_TRUNC...
-	if lockFile, err = os.OpenFile(lockFilePath, os.O_RDWR | os.O_CREATE, 0644); err != nil && !os.IsNotExist(err) {
+	if lockFile, err = os.OpenFile(lockFilePath, os.O_RDWR|os.O_CREATE, 0644); err != nil && !os.IsNotExist(err) {
 		log.Fatalf("Failed to acquire lock: %s", err)
 	} else if lockFile, err = os.Create(lockFilePath); err != nil {
 		log.Fatalf("Failed to create lock: %s", err)
