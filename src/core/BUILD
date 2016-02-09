@@ -75,3 +75,12 @@ go_test(
         '//third_party/go:testify',
     ],
 )
+
+go_test(
+    name = 'lock_test',
+    srcs = ['lock_test.go'],
+    deps = [
+        ':core',
+        '//third_party/go:testify',
+    ],
+)
