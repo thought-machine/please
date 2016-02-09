@@ -102,6 +102,9 @@ plz_e2e_test(
     name = 'coverage_output_test',
     cmd = 'plz cover //test:_coverage_output_test',
     expect_file_exists = '../../../bin/test/.test_coverage__coverage_output_test*',
+    # Temporarily disabled until #25 is resolved. Until then it recompiles various go_library
+    # rules which makes it (and possibly others) flaky.
+    labels = ['manual'],
 )
 
 # Quick test for plz run

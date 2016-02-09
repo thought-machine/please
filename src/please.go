@@ -24,7 +24,6 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/kardianos/osext"
 	"github.com/op/go-logging"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var log = logging.MustGetLogger("plz")
@@ -365,7 +364,7 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool 
 		fmt.Printf("Can't pass both --interactive_output and --plain_output\n")
 		os.Exit(1)
 	}
-	return interactiveOutput || (!plainOutput && terminal.IsTerminal(int(os.Stderr.Fd())) && verbosity < 4)
+	return interactiveOutput || (!plainOutput && output.StdErrIsATerminal && verbosity < 4)
 }
 
 func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {

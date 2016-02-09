@@ -18,11 +18,11 @@ import (
 )
 
 var startTime = time.Now()
-var stdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
+var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
 
 // SetColouredOutput forces on or off coloured output in logging and other console output.
 func SetColouredOutput(on bool) {
-	stdErrIsATerminal = on
+	StdErrIsATerminal = on
 }
 
 // Used to track currently building targets.
@@ -338,7 +338,7 @@ var stripFormatting = regexp.MustCompile("\\$\\{[^\\}]+\\}")
 // printf is used throughout this package to print something to stderr with some niceties
 // around ANSI formatting codes.
 func printf(format string, args ...interface{}) {
-	if "${WHITE}"[0] == '$' || !stdErrIsATerminal {
+	if "${WHITE}"[0] == '$' || !StdErrIsATerminal {
 		msg := stripFormatting.ReplaceAllString(fmt.Sprintf(format, args...), "")
 		fmt.Fprint(os.Stderr, stripAnsi.ReplaceAllString(msg, ""))
 	} else {

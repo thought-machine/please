@@ -70,7 +70,7 @@ func InitLogging(verbosity int, logFile string, logFileLevel int) {
 
 func logFormatter() logging.Formatter {
 	formatStr := "%{time:15:04:05.000} %{level:7s}: %{message}"
-	if stdErrIsATerminal {
+	if StdErrIsATerminal {
 		formatStr = "%{color}" + formatStr + "%{color:reset}"
 	}
 	return logging.MustStringFormatter(formatStr)
