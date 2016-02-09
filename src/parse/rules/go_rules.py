@@ -32,7 +32,7 @@ _ALL_GO_LIBRARY_CMDS = {
     # Invokes the Go compiler.
     'compile_cmd': 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL,
     # Annotates files for coverage
-    'cover_cmd': 'for SRC in $SRCS; do mv $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done',
+    'cover_cmd': 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done',
     'src_dirs_cmd': _SRC_DIRS_CMD,
 }
 # String it all together.
