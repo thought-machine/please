@@ -1,3 +1,9 @@
+Version 1.5.2
+-------------
+
+    * Fix incorrect warning on tools that have multiple outputs.
+
+
 Version 1.5.1
 -------------
 
