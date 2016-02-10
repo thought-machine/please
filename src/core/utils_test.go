@@ -31,3 +31,36 @@ func TestCollapseHash2(t *testing.T) {
 	output2 := CollapseHash(input2)
 	assert.NotEqual(t, output1, output2)
 }
+
+func TestIterSources(t *testing.T) {
+}
+
+// buildGraph builds a test graph which we use to test IterSources etc.
+func buildGraph() *Graph {
+	graph := NewGraph()
+	mt := func(label, deps ...*string) *BuildTarget {
+		target := makeTarget(graph, label, deps...)
+		graph.AddTarget(target)
+		return target
+	}
+	
+	mt("//src/core:target1")
+	mt("//src/core:target2", "//src/core:target1")
+	mt("//src/build:target1", "//src/core:target1")
+	mt("//src/output:output1", "//src/build:target1")
+	mt("//src/output:output2", "//src/output:output1", "//src/core:target2")
+	t1 := mt("//src/parse:target1", "//src/core:target2")
+	t1.NeedsTransitiveDependencies = true
+	t1.OutputIsComplete = true
+}
+
+// makeTarget creates a new build target for us.
+func makeTarget(graph, label, deps ...*string) *BuildTarget {
+	target := NewBuildTarget(ParseBuildLabel(label, ""))
+	for _, dep := range deps {
+		target.Dependencies = append(target.Dependencies, graph.TargetOrDie(ParseBuildLabel(dep, "")))
+	}
+	target.Sources = append(target.Sources, target.Label.Name + ".go")
+	target.AddOutput(target.Label.Name + ".a")
+	return target
+}
