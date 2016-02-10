@@ -1,3 +1,9 @@
+Version 1.5.3
+-------------
+
+    * Fix tarballs to be consistent about /opt/please/please_go_test.
+
+
 Version 1.5.2
 -------------
 

@@ -8,7 +8,7 @@ go_library(
 )
 
 go_binary(
-    name = 'plz_go_test',
+    name = 'please_go_test',
     main = 'plz_go_test.go',
     deps = [
         ':buildgo',

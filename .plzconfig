@@ -16,7 +16,7 @@ buildfilename = BUILD_
 
 [go]
 version = 1.5.3
-testtool = //src/build/go:plz_go_test
+testtool = //src/build/go:please_go_test
 
 [cpp]
 defaultnamespace = thought_machine
