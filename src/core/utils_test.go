@@ -73,6 +73,11 @@ func TestIterSources(t *testing.T) {
 		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/parse/target1/src/core/target2.a"},
 		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/parse/target1/src/core/target1.a"},
 	}, iterSources("//src/parse:target1"))
+
+	assert.Equal(t, []sourcePair{
+		{"src/parse/target2.go", "plz-out/tmp/src/parse/target2/src/parse/target2.go"},
+		{"plz-out/gen/src/parse/target1.a", "plz-out/tmp/src/parse/target2/src/parse/target1.a"},
+	}, iterSources("//src/parse:target2"))
 }
 
 // buildGraph builds a test graph which we use to test IterSources etc.
