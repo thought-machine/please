@@ -18,11 +18,9 @@ curl -s https://s3-eu-west-1.amazonaws.com/please-build/get_plz.sh | bash
 You will need to have PyPy installed for it to run. On OSX this is
 straightforward with Homebrew, simply run `brew install pypy`.
 
-Unfortunately at the time of writing the Ubuntu PyPy packages don't
-include any shared libraries. We've stashed a .deb at
-https://s3-eu-west-1.amazonaws.com/please-build/pypy_4.0.0_amd64.deb
-which contains what you need, or you can use the packages from
-http://pypy.org.
+Unfortunately at the time of writing the Ubuntu and Debian PyPy packages
+don't have the shared libraries. For now we suggest that you use the
+packages from http://pypy.org.
 
 Then you simply run `plz init` at the root of your project to set up
 a default config and you're good to start adding BUILD files.
