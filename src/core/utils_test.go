@@ -33,17 +33,45 @@ func TestCollapseHash2(t *testing.T) {
 }
 
 func TestIterSources(t *testing.T) {
+	graph := buildGraph()
+	iterSources := func(label string) []sourcePair {
+		return toSlice(IterSources(graph, graph.TargetOrDie(ParseBuildLabel(label, "")), true))
+	}
+
+	assert.Equal(t, []sourcePair{
+		{"src/core/target1.go", "plz-out/tmp/src/core/target1/src/core/target1.go"},
+	}, iterSources("//src/core:target1"))
+
+	assert.Equal(t, []sourcePair{
+		{"src/core/target2.go", "plz-out/tmp/src/core/target2/src/core/target2.go"},
+		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/core/target2/src/core/target1.a"},
+	}, iterSources("//src/core:target2"))
+
+	assert.Equal(t, []sourcePair{
+		{"src/build/target1.go", "plz-out/tmp/src/build/target1/src/build/target1.go"},
+		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/build/target1/src/core/target1.a"},
+	}, iterSources("//src/build:target1"))
+
+	assert.Equal(t, []sourcePair{
+		{"src/output/output1.go", "plz-out/tmp/src/output/output1/src/output/output1.go"},
+		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1/src/build/target1.a"},
+	}, iterSources("//src/output:output1"))
+
+	assert.Equal(t, []sourcePair{
+		{"src/output/output1.go", "plz-out/tmp/src/output/output1/src/output/output1.go"},
+		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1/src/build/target1.a"},
+	}, iterSources("//src/output:output1"))
 }
 
 // buildGraph builds a test graph which we use to test IterSources etc.
-func buildGraph() *Graph {
+func buildGraph() *BuildGraph {
 	graph := NewGraph()
-	mt := func(label, deps ...*string) *BuildTarget {
+	mt := func(label string, deps ...string) *BuildTarget {
 		target := makeTarget(graph, label, deps...)
 		graph.AddTarget(target)
 		return target
 	}
-	
+
 	mt("//src/core:target1")
 	mt("//src/core:target2", "//src/core:target1")
 	mt("//src/build:target1", "//src/core:target1")
@@ -52,15 +80,29 @@ func buildGraph() *Graph {
 	t1 := mt("//src/parse:target1", "//src/core:target2")
 	t1.NeedsTransitiveDependencies = true
 	t1.OutputIsComplete = true
+	mt("//src/parse:target2", "//src/parse:target1")
+
+	return graph
 }
 
 // makeTarget creates a new build target for us.
-func makeTarget(graph, label, deps ...*string) *BuildTarget {
+func makeTarget(graph *BuildGraph, label string, deps ...string) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	for _, dep := range deps {
 		target.Dependencies = append(target.Dependencies, graph.TargetOrDie(ParseBuildLabel(dep, "")))
 	}
-	target.Sources = append(target.Sources, target.Label.Name + ".go")
+	target.Sources = append(target.Sources, FileLabel{
+		File:    target.Label.Name + ".go",
+		Package: target.Label.PackageName,
+	})
 	target.AddOutput(target.Label.Name + ".a")
 	return target
+}
+
+func toSlice(ch <-chan sourcePair) []sourcePair {
+	ret := []sourcePair{}
+	for x := range ch {
+		ret = append(ret, x)
+	}
+	return ret
 }
