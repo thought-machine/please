@@ -35,7 +35,7 @@ func TestCollapseHash2(t *testing.T) {
 func TestIterSources(t *testing.T) {
 	graph := buildGraph()
 	iterSources := func(label string) []sourcePair {
-		return toSlice(IterSources(graph, graph.TargetOrDie(ParseBuildLabel(label, "")), true))
+		return toSlice(IterSources(graph, graph.TargetOrDie(ParseBuildLabel(label, ""))))
 	}
 
 	assert.Equal(t, []sourcePair{
@@ -61,6 +61,18 @@ func TestIterSources(t *testing.T) {
 		{"src/output/output1.go", "plz-out/tmp/src/output/output1/src/output/output1.go"},
 		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1/src/build/target1.a"},
 	}, iterSources("//src/output:output1"))
+
+	assert.Equal(t, []sourcePair{
+		{"src/output/output2.go", "plz-out/tmp/src/output/output2/src/output/output2.go"},
+		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/output/output2/src/core/target2.a"},
+		{"plz-out/gen/src/output/output1.a", "plz-out/tmp/src/output/output2/src/output/output1.a"},
+	}, iterSources("//src/output:output2"))
+
+	assert.Equal(t, []sourcePair{
+		{"src/parse/target1.go", "plz-out/tmp/src/parse/target1/src/parse/target1.go"},
+		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/parse/target1/src/core/target2.a"},
+		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/parse/target1/src/core/target1.a"},
+	}, iterSources("//src/parse:target1"))
 }
 
 // buildGraph builds a test graph which we use to test IterSources etc.

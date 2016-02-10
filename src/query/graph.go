@@ -93,7 +93,7 @@ func makeJSONPackage(graph *core.BuildGraph, pkg *core.Package) JSONPackage {
 
 func makeJSONTarget(graph *core.BuildGraph, target *core.BuildTarget) JSONTarget {
 	t := JSONTarget{}
-	for in := range core.IterSources(graph, target, true) {
+	for in := range core.IterSources(graph, target) {
 		t.Inputs = append(t.Inputs, in.Src)
 	}
 	for _, out := range target.Outputs() {

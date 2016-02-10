@@ -118,7 +118,7 @@ func anyDependencyHasChanged(target *core.BuildTarget) bool {
 // Calculate the hash of all sources of this rule
 func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
-	for source := range core.IterSources(graph, target, true) {
+	for source := range core.IterSources(graph, target) {
 		result, err := pathHash(source.Src)
 		if err != nil {
 			return result, err

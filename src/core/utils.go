@@ -182,12 +182,12 @@ func ExecWithTimeout(cmd *exec.Cmd, timeout int, defaultTimeout int) ([]byte, er
 	}
 }
 
-// Returns all the sources for a function, allowing for sources that are other rules
-// and rules that require transitive dependencies.
-// Yielded values are pairs of the original source location and its temporary location for this rule.
 type sourcePair struct{ Src, Tmp string }
 
-func IterSources(graph *BuildGraph, target *BuildTarget, includeTransitive bool) <-chan sourcePair {
+// IterSources returns all the sources for a function, allowing for sources that are other rules
+// and rules that require transitive dependencies.
+// Yielded values are pairs of the original source location and its temporary location for this rule.
+func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 	ch := make(chan sourcePair)
 	done := map[BuildLabel]bool{}
 	donePaths := map[string]bool{}
@@ -227,7 +227,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget, includeTransitive bool)
 			}
 		}
 		done[dependency.Label] = true
-		if includeTransitive && (target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete)) {
+		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
 			// Need to make sure we iterate these in order for things that care.
 			deps := make(BuildTargets, len(dependency.Dependencies))
 			copy(deps, dependency.Dependencies)

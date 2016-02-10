@@ -206,7 +206,7 @@ func prepareDirectory(directory string, remove bool) error {
 
 // Symlinks the source files of this rule into its temp directory.
 func prepareSources(graph *core.BuildGraph, target *core.BuildTarget, dependency *core.BuildTarget, done map[core.BuildLabel]bool) error {
-	for source := range core.IterSources(graph, target, true) {
+	for source := range core.IterSources(graph, target) {
 		if err := core.PrepareSourcePair(source); err != nil {
 			return err
 		}
