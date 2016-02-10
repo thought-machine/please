@@ -111,7 +111,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 	}
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
-	if state.NumTestRuns == 1 && !needToRun() {
+	if state.NumTestRuns <= 1 && !needToRun() {
 		cachedTest()
 		return
 	}
@@ -121,9 +121,9 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		return
 	}
 	numSucceeded := 0
-	for i := 0; i < state.NumTestRuns; i++ {
-		if state.NumTestRuns > 1 {
-			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i, state.NumTestRuns))
+	for i := 0, n := max(state.NumTestRuns, 1); i < n; i++ {
+		if n > 1 {
+			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i, n))
 		}
 		out, err, flakes := runTestWithRetries(tid, state, target)
 		duration := time.Since(startTime).Seconds()
@@ -193,7 +193,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 				logTestSuccess(state, tid, label, results, coverage)
 				numSucceeded++
 				// Cache only on the last run.
-				if numSucceeded == state.NumTestRuns {
+				if numSucceeded == n {
 					moveAndCacheOutputFiles(results, coverage)
 				}
 				// Clean up the test directory.
@@ -345,4 +345,11 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 		(*state.Cache).StoreExtra(target, hash, filename)
 	}
 	return nil
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

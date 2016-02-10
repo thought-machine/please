@@ -54,9 +54,7 @@ type BuildState struct {
 	NeedBuild bool
 	// True if we're running tests. False if we're only building or parsing.
 	NeedTests bool
-	// Max number of flakes for any test. 0 == defined by test.
-	MaxFlakes int
-	// Number of times to run each test target.
+	// Number of times to run each test target. 0 == once each, plus flakes if necessary.
 	NumTestRuns int
 	// True to print the build / test commands as they're run
 	PrintCommands bool
