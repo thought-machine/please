@@ -1,3 +1,9 @@
+Version 1.5.4
+-------------
+
+    * Fix to cache_cleaner which wasn't always cleaning correctly.
+
+
 Version 1.5.3
 -------------
 
