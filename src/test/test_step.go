@@ -127,7 +127,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		if numRuns > 1 {
 			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i, numRuns))
 		}
-		out, err, flakes := runTestWithRetries(tid, state, target)
+		out, err := prepareAndRunTest(tid, state, target)
 		duration := time.Since(startTime).Seconds()
 		startTime = time.Now() // reset this for next time
 
@@ -262,29 +262,13 @@ func runTest(state *core.BuildState, target *core.BuildTarget, timeout int) ([]b
 	return core.ExecWithTimeout(cmd, target.TestTimeout, timeout)
 }
 
-// Runs a test some number of times as indicated by its flakiness.
-func runTestWithRetries(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error, flakiness int) {
-	flakiness = target.Flakiness
-	if flakiness == 0 {
-		flakiness = 1
+// prepareAndRunTest sets up a test directory and runs the test.
+func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
+	if err = prepareTestDir(state.Graph, target); err != nil {
+		state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
+		return []byte{}, err
 	}
-	for i := 0; i < flakiness; i++ {
-		// Re-prepare test directory between each attempt so they can't accidentally contaminate each other.
-		if err = prepareTestDir(state.Graph, target); err != nil {
-			state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
-			return []byte{}, err, i
-		}
-		out, err = runPossiblyContainerisedTest(state, target)
-		if err == nil {
-			return out, err, i
-		} else if i < flakiness-1 {
-			log.Warning("%s failed on attempt %d (%d more to go).", target.Label, i+1, flakiness-i-1)
-		}
-	}
-	if target.Flakiness == 0 {
-		flakiness = 0
-	} // Reset this again so non-flaky targets don't appear so.
-	return out, err, flakiness
+	return runPossiblyContainerisedTest(state, target)
 }
 
 // Parses the coverage output for a single target.
