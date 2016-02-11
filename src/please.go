@@ -381,7 +381,7 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	}
 	state := core.NewBuildState(opts.BuildFlags.NumThreads, c, opts.OutputFlags.Verbosity, config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.NumRuns = opts.Test.NumRuns + opts.Cover.NumRuns                // Only one of these can be passed.
+	state.NumTestRuns = opts.Test.NumRuns + opts.Cover.NumRuns            // Only one of these can be passed.
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
 	state.NeedCoverage = opts.Cover.Args.Target != core.BuildLabel{}
 	state.NeedBuild = shouldBuild
