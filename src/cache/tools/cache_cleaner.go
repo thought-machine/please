@@ -93,7 +93,7 @@ func start(directory string, highWaterMark, lowWaterMark int64) {
 		log.Notice("Cleaning %s, accessed %s, saves %s", entry.Path, humanize.Time(time.Unix(entry.Atime, 0)), humanize.Bytes(uint64(entry.Size)))
 		// Try to rename the directory first so we don't delete bits while someone might access them.
 		newPath := entry.Path + "="
-		if err := os.Rename(entry.Path, newPath); err == nil {
+		if err := os.Rename(entry.Path, newPath); err != nil {
 			log.Errorf("Couldn't rename %s: %s", entry.Path, err)
 			continue
 		}
