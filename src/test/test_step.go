@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"os/exec"
 	"path"
@@ -121,9 +122,10 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		return
 	}
 	numSucceeded := 0
-	for i := 0, n := max(state.NumTestRuns, 1); i < n; i++ {
-		if n > 1 {
-			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i, n))
+	numRuns, successesRequired := calcNumRuns(state.NumTestRuns, target.Flakiness)
+	for i := 0; i < numRuns && numSucceeded < successesRequired; i++ {
+		if numRuns > 1 {
+			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i, numRuns))
 		}
 		out, err, flakes := runTestWithRetries(tid, state, target)
 		duration := time.Since(startTime).Seconds()
@@ -193,7 +195,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 				logTestSuccess(state, tid, label, results, coverage)
 				numSucceeded++
 				// Cache only on the last run.
-				if numSucceeded == n {
+				if numSucceeded >= successesRequired {
 					moveAndCacheOutputFiles(results, coverage)
 				}
 				// Clean up the test directory.
@@ -265,9 +267,6 @@ func runTestWithRetries(tid int, state *core.BuildState, target *core.BuildTarge
 	flakiness = target.Flakiness
 	if flakiness == 0 {
 		flakiness = 1
-	} // Flakiness of 0 -> run it once. Equivalent behaviour to 1 but more intuitive.
-	if state.MaxFlakes > 0 && flakiness > state.MaxFlakes {
-		flakiness = state.MaxFlakes // Cap max flakes by flag
 	}
 	for i := 0; i < flakiness; i++ {
 		// Re-prepare test directory between each attempt so they can't accidentally contaminate each other.
@@ -347,9 +346,15 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 	return nil
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
+// calcNumRuns works out how many total runs we should have for a test, and how many successes
+// are required for it to count as success.
+func calcNumRuns(numRuns, flakiness int) (int, int) {
+	if numRuns > 0 && flakiness > 0 { // If flag is passed we run exactly that many times with proportionate flakiness.
+		return numRuns, int(math.Ceil(float64(numRuns) * (1.0 / float64(flakiness))))
+	} else if numRuns > 0 {
+		return numRuns, numRuns
+	} else if flakiness > 0 { // Test is flaky, run that many times
+		return flakiness, 1
 	}
-	return b
+	return 1, 1
 }
