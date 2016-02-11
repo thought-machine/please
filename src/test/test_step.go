@@ -146,9 +146,11 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 			_, target.Results.TimedOut = err.(core.TimeoutError)
 		}
 		coverage := parseCoverageFile(target, coverageFile)
+		target.Results.Duration += duration
 		if !core.PathExists(outputFile) {
-			target.Results.Duration += duration
 			if err == nil && target.NoTestOutput {
+				target.Results.NumTests += 1
+				target.Results.Passed += 1
 				results := core.TestResults{NumTests: 1, Passed: 1, Flakes: flakes}
 				if moveAndCacheOutputFiles(results, coverage) {
 					target.Results.NumTests = 1
@@ -169,7 +171,6 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 			}
 		} else {
 			results, err2 := parseTestResults(target, outputFile, flakes, false)
-			target.Results.Duration += duration
 			if err2 != nil {
 				state.LogBuildError(tid, label, core.TargetTestFailed, err2,
 					"Couldn't parse test output file: %s. Stdout: %s", err2, string(out))
