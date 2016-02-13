@@ -89,7 +89,7 @@ func DefaultConfiguration() Configuration {
 	config.Docker.Timeout = 1200      // Twenty minutes
 	config.Docker.ResultsTimeout = 20 // Twenty seconds
 	config.Docker.RemoveTimeout = 20  // Twenty seconds
-	config.Go.Version = "1.5.1"
+	config.Go.GoVersion = "1.5.1"
 	config.Go.TestTool = "/opt/please/please_go_test"
 	config.Python.PipTool = "pip"
 	config.Python.PexTool = "/opt/please/please_pex"
@@ -168,7 +168,7 @@ type Configuration struct {
 		RunArgs            []string
 	}
 	Go struct {
-		Version  string
+		GoVersion  string
 		TestTool string
 	}
 	Python struct {
