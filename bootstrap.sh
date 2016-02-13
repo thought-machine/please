@@ -29,6 +29,8 @@ rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parse
 cat src/parse/cffi/parser_interface.py src/parse/cffi/please_parser.py > src/parse/rules/embedded_parser.py
 # Invoke this tool to embed the Python scripts.
 bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
+# Similarly for the wrapper script.
+bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/misc
 
 # Now invoke Go to run Please to build itself.
 echo "Building Please..."

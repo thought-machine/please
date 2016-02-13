@@ -1,3 +1,9 @@
+filegroup(
+    name = 'wrapper_script',
+    srcs = ['pleasew.sh'],
+    visibility = ['PUBLIC'],
+)
+
 go_library(
     name = 'misc',
     srcs = ['plz_diff_graphs.go'],
