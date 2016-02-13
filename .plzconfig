@@ -15,7 +15,6 @@ buildfilename = BUILD
 buildfilename = BUILD_
 
 [go]
-goversion = 1.5.3
 testtool = //src/build/go:please_go_test
 
 [cpp]
