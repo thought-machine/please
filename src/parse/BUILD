@@ -1,3 +1,5 @@
+subinclude('//build_defs:go_bindata')
+
 cgo_library(
     name = 'parse',
     srcs = glob(['parse_step.go', 'interpreter.*']) + [':builtin_rules'],
@@ -18,14 +20,10 @@ filegroup(
     visibility = ['//src/parse/cffi:all'],
 )
 
-genrule(
+go_bindata(
     name = 'builtin_rules',
     srcs = glob(['rules/*.py'], excludes=['embedded_parser.py']) + ['//src/parse/cffi:embedded_parser'],
-    outs = ['builtin_rules.go'],
-    cmd = '$TOOL -o $OUT -nomemcopy -nometadata -nocompress -pkg parse -prefix ${PKG}/rules ${PKG}/rules',
-    tools = [
-        '//third_party/go:go-bindata',
-    ]
+    prefix = '${PKG}/rules',
 )
 
 cgo_test(

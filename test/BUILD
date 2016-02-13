@@ -10,7 +10,7 @@
 # mitigated by having these tests only run tests in this package which are tagged as manual
 # so the bootstrap script won't try to run them twice simultaneously.
 
-subinclude('//test/build_defs:plz_e2e_test')
+subinclude('//build_defs:plz_e2e_test')
 
 # Tests the expected output of 'query somepath'.
 # Note that you have to be careful with the choice of targets, since the path
