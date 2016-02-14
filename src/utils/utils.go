@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/Songmu/prompter"
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 
 	"core"
 )

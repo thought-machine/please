@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"sort"
 
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 
 	"core"
 	"query"

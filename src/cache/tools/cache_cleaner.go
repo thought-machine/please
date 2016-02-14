@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 
 	"output"
 )

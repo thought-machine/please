@@ -4,7 +4,7 @@ package cache
 
 import (
 	"core"
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 	"net/http"
 )
 

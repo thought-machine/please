@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 
 	"core"
 	"parse"

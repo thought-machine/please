@@ -2,8 +2,8 @@ package(default_visibility = ['PUBLIC'])
 
 go_get(
     name = 'logging',
-    get = 'github.com/op/go-logging',
-    revision = '0882c9abce533ab4afbab5677fcef7434dd36d5a',
+    get = 'gopkg.in/op/go-logging.v1',
+    revision = 'b2cb9fa56473e98db8caba80237377e83fe44db5',
 )
 
 go_get(

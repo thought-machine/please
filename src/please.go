@@ -23,7 +23,7 @@ import (
 
 	"github.com/jessevdk/go-flags"
 	"github.com/kardianos/osext"
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 )
 
 var log = logging.MustGetLogger("plz")
