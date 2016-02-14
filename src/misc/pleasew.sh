@@ -24,7 +24,7 @@ fi
 VERSION=`grep -i "^version" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
 if [ -z "$VERSION" ]; then
     echo "Can't determine version, will use latest."
-    VERSION=`curl -s ${URL_BASE}/latest_version`
+    VERSION=`curl -fsSL ${URL_BASE}/latest_version`
 fi
 
 # Find the os / arch to download. You can do this quite nicely with go env

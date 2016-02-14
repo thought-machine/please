@@ -3,7 +3,7 @@
 # Downloads a precompiled copy of Please from our s3 bucket and installs it.
 set -eu
 
-VERSION=`curl -s https://s3-eu-west-1.amazonaws.com/please-build/latest_version`
+VERSION=`curl -fsSL https://s3-eu-west-1.amazonaws.com/please-build/latest_version`
 # Find the os / arch to download. You can do this quite nicely with go env
 # but we use this script on machines that don't necessarily have Go itself.
 OS=`uname`
@@ -31,6 +31,7 @@ done
 ln -sf "${DIR}/please" "${LOCATION}/plz"
 
 if [ ! -f /usr/local/bin/plz ]; then
+    echo "Creating a symlink in /usr/local/bin..."
     sudo ln -sf "${LOCATION}/plz" /usr/local/bin/plz
 fi
 echo "Please installed."
