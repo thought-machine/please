@@ -82,7 +82,7 @@ var opts struct {
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors"`
-		} `positional-args:"true" required:"true"`
+		} `positional-args:"true"`
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
@@ -93,7 +93,7 @@ var opts struct {
 		Args             struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
-		} `positional-args:"true" required:"true"`
+		} `positional-args:"true"`
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
@@ -459,10 +459,13 @@ func readStdin() []string {
 	return ret
 }
 
-// Handles test targets which can be given in two formats; a list of targets or a single
+// testTargets handles test targets which can be given in two formats; a list of targets or a single
 // target with a list of trailing arguments.
+// Alternatively they can be completely omitted in which case we test everything.
 func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
-	if len(args) > 0 && core.LooksLikeABuildLabel(args[0]) {
+	if target.Name == "" {
+		return core.WholeGraph
+	} else if len(args) > 0 && core.LooksLikeABuildLabel(args[0]) {
 		opts.Cover.Args.Args = []string{}
 		opts.Test.Args.Args = []string{}
 		return append(core.ParseBuildLabels(args), target)
@@ -471,7 +474,7 @@ func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
 	}
 }
 
-// Sets various things up and reads the initial configuration.
+// readConfig sets various things up and reads the initial configuration.
 func readConfig(forceUpdate bool) core.Configuration {
 	if opts.AssertVersion != "" && core.PleaseVersion != opts.AssertVersion {
 		log.Fatalf("Requested Please version %s, but this is version %s", opts.AssertVersion, core.PleaseVersion)
