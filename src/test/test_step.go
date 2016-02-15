@@ -155,6 +155,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 			if err == nil && target.NoTestOutput {
 				target.Results.NumTests += 1
 				target.Results.Passed += 1
+				numSucceeded++
 			} else if err == nil {
 				target.Results.NumTests++
 				target.Results.Failed++
