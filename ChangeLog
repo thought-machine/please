@@ -1,3 +1,10 @@
+Version 1.5.6
+-------------
+
+    * Fix bug where golang tests pass if they panic since the exit code was being ignored
+      after piping the command to tee.
+
+
 Version 1.5.5
 -------------
 
