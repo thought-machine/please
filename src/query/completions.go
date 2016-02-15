@@ -23,6 +23,8 @@ func QueryCompletionLabels(config core.Configuration, args []string, repoRoot st
 	if strings.HasSuffix(args[0], ":") {
 		args[0] += "all"
 	}
+	// Bash completion sometimes produces \: instead of just : (see issue #18).
+	// We silently fix that here since we've not yet worked out how to fix Bash itself :(
 	args[0] = strings.Replace(args[0], "\\:", ":", -1)
 	labels := core.ParseBuildLabels([]string{args[0]})
 	// Return this label without the trailing bit.
