@@ -3,6 +3,7 @@ Version 1.5.6
 
     * Fix bug where golang tests pass if they panic since the exit code was being ignored
       after piping the command to tee.
+    * 'plz query completions' now treats \: as equivalent to : to work around #18.
 
 
 Version 1.5.5
