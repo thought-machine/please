@@ -1,4 +1,11 @@
+Version 1.5.8
+-------------
+
+    * Various fixes to RPC cache. Use base64 URL encoding and short hashes.
+
+
 Version 1.5.7
+-------------
 
     * Adds `go generate` support. You can now call it by adding `go_tools` to your go_library.
 
