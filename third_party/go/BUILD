@@ -101,3 +101,10 @@ go_get(
         ':terminal',
     ],
 )
+
+go_get(
+    name = 'stringer',
+    get = 'golang.org/x/tools/cmd/stringer',
+    revision = 'f8ecfdb6b66ec67ca930b39806519a2b72d1eaca',
+    binary = True,
+)
