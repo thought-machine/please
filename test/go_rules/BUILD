@@ -25,7 +25,7 @@ go_binary(
 
 gentest(
     name = 'go_rules_generate_test',
-    test_cmd = '$(location :go_rules_test_generate_bin)',
+    test_cmd = 'OUT=$($(location :go_rules_test_generate_bin)); if [[ "$OUT" == "Placebo" ]]; then exit 0; else echo "$OUT" && exit 1; fi',
     data = [
         ':go_rules_test_generate_bin',
     ],
