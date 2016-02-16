@@ -1,3 +1,8 @@
+Version 1.5.7
+
+    * Adds `go generate` support. You can now call it by adding `go_tools` to your go_library.
+
+
 Version 1.5.6
 -------------
 
