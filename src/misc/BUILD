@@ -1,6 +1,6 @@
 filegroup(
     name = 'wrapper_script',
-    srcs = ['pleasew.sh'],
+    srcs = ['pleasew'],
     visibility = ['PUBLIC'],
 )
 

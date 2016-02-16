@@ -26,7 +26,7 @@ const configTemplate = `; Please config file
 ; [please]
 ; version = %s
 `
-const wrapperScriptName = "pleasew.sh"
+const wrapperScriptName = "pleasew"
 
 // InitConfig initialises a .plzconfig template in the given directory.
 func InitConfig(dir string) {
