@@ -85,6 +85,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 
 	retrieveArtifacts := func() bool {
+		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 		if _, retrieved := retrieveFromCache(state, target); retrieved {
 			log.Debug("Retrieved artifacts for %s from cache", target.Label)
 			if calculateAndCheckRuleHash(state, target) {
@@ -103,7 +104,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if state.Cache != nil && !target.SkipCache {
 		// Note that ordering here is quite sensitive since the post-build function can modify
 		// what we would retrieve from the cache.
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 		if target.PostBuildFunction != 0 {
 			log.Debug("Checking for post-build output file for %s in cache...", target.Label)
 			if (*state.Cache).RetrieveExtra(target, cacheKey, core.PostBuildOutputFileName(target)) {

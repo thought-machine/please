@@ -71,5 +71,6 @@ func ServeGrpcForever(port int) {
 	}
 	s := grpc.NewServer()
 	pb.RegisterRpcCacheServer(s, &RpcCacheServer{})
+	log.Notice("Serving RPC cache on port %d", port)
 	s.Serve(lis)
 }

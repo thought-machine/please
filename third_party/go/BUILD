@@ -62,7 +62,7 @@ go_get(
 go_get(
     name = 'grpc',
     get = 'google.golang.org/grpc',
-    revision = 'ecd68681d46b97d7c84e7c7d12ee7a04c138a9fa',
+    revision = '01de3de50a4fada34ce39322801a1533c9554cdc',
     deps = [
         ':protobuf',
     ],

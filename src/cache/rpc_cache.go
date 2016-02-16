@@ -154,8 +154,8 @@ func newRpcCache(config core.Configuration) (*rpcCache, error) {
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
 	// TODO(pebers): Add support for communicating over https.
-	connection, err := grpc.Dial(config.Cache.RpcUrl,
-		grpc.WithBlock(), grpc.WithInsecure(), grpc.WithTimeout(time.Duration(config.Cache.RpcTimeout)*time.Second))
+	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(),
+		grpc.WithTimeout(time.Duration(config.Cache.RpcTimeout)*time.Second))
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +172,6 @@ type grpcLogMabob struct{}
 func (g *grpcLogMabob) Fatal(args ...interface{})                 { log.Fatal(args...) }
 func (g *grpcLogMabob) Fatalf(format string, args ...interface{}) { log.Fatalf(format, args...) }
 func (g *grpcLogMabob) Fatalln(args ...interface{})               { log.Fatal(args...) }
-func (g *grpcLogMabob) Print(args ...interface{})                 { log.Info("%s", args) }
-func (g *grpcLogMabob) Printf(format string, args ...interface{}) { log.Info(format, args...) }
-func (g *grpcLogMabob) Println(args ...interface{})               { log.Info("%s", args) }
+func (g *grpcLogMabob) Print(args ...interface{})                 { log.Warning("%s", args) }
+func (g *grpcLogMabob) Printf(format string, args ...interface{}) { log.Warning(format, args...) }
+func (g *grpcLogMabob) Println(args ...interface{})               { log.Warning("%s", args) }

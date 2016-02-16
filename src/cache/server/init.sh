@@ -20,7 +20,7 @@ start() {
 }
 
 stop() {
-  echo "stopping teamcity-server"
+  echo "stopping plz cache"
   start-stop-daemon --pidfile $PIDFILE --stop $BIN
 }
 
