@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"os/exec"
 	"path"
@@ -43,7 +44,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 	cachedTest := func() {
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)
-		results, err := parseTestResults(target, cachedOutputFile, 0, true)
+		results, err := parseTestResults(target, cachedOutputFile, true)
 		target.Results.Duration = time.Since(startTime).Seconds()
 		target.Results.Cached = true
 		if err != nil {
@@ -111,7 +112,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 	}
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
-	if state.NumTestRuns == 1 && !needToRun() {
+	if state.NumTestRuns <= 1 && !needToRun() {
 		cachedTest()
 		return
 	}
@@ -121,11 +122,16 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		return
 	}
 	numSucceeded := 0
-	for i := 0; i < state.NumTestRuns; i++ {
-		if state.NumTestRuns > 1 {
-			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i, state.NumTestRuns))
+	numFlakes := 0
+	numRuns, successesRequired := calcNumRuns(state.NumTestRuns, target.Flakiness)
+	var resultErr error
+	resultMsg := ""
+	var coverage core.TestCoverage
+	for i := 0; i < numRuns && numSucceeded < successesRequired; i++ {
+		if numRuns > 1 {
+			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i+1, numRuns))
 		}
-		out, err, flakes := runTestWithRetries(tid, state, target)
+		out, err := prepareAndRunTest(tid, state, target)
 		duration := time.Since(startTime).Seconds()
 		startTime = time.Now() // reset this for next time
 
@@ -143,34 +149,32 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		if err != nil {
 			_, target.Results.TimedOut = err.(core.TimeoutError)
 		}
-		coverage := parseCoverageFile(target, coverageFile)
+		coverage = parseCoverageFile(target, coverageFile)
+		target.Results.Duration += duration
 		if !core.PathExists(outputFile) {
-			target.Results.Duration += duration
 			if err == nil && target.NoTestOutput {
-				results := core.TestResults{NumTests: 1, Passed: 1, Flakes: flakes}
-				if moveAndCacheOutputFiles(results, coverage) {
-					target.Results.NumTests = 1
-					target.Results.Passed = 1
-					logTestSuccess(state, tid, label, results, coverage)
-				}
+				target.Results.NumTests += 1
+				target.Results.Passed += 1
+				numSucceeded++
 			} else if err == nil {
 				target.Results.NumTests++
 				target.Results.Failed++
-				err = fmt.Errorf("Test failed to produce output results file")
-				state.LogBuildError(tid, label, core.TargetTestFailed, err,
-					"Test apparently succeeded but failed to produce %s. Output: %s", outputFile, string(out))
+				resultErr = fmt.Errorf("Test failed to produce output results file")
+				resultMsg = fmt.Sprintf("Test apparently succeeded but failed to produce %s. Output: %s", outputFile, string(out))
+				numFlakes++
 			} else {
 				target.Results.NumTests++
 				target.Results.Failed++
-				state.LogBuildError(tid, label, core.TargetTestFailed, err,
-					fmt.Sprintf("Test failed with no results. Output: %s", string(out)))
+				numFlakes++
+				resultErr = err
+				resultMsg = fmt.Sprintf("Test failed with no results. Output: %s", string(out))
 			}
 		} else {
-			results, err2 := parseTestResults(target, outputFile, flakes, false)
-			target.Results.Duration += duration
+			results, err2 := parseTestResults(target, outputFile, false)
 			if err2 != nil {
-				state.LogBuildError(tid, label, core.TargetTestFailed, err2,
-					"Couldn't parse test output file: %s. Stdout: %s", err2, string(out))
+				resultErr = err2
+				resultMsg = fmt.Sprintf("Couldn't parse test output file: %s. Stdout: %s", err2, string(out))
+				numFlakes++
 			} else if err != nil && results.Failed == 0 {
 				// Add a failure result to the test so it shows up in the final aggregation.
 				results.Failed = 1
@@ -179,31 +183,38 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 					Type:   fmt.Sprintf("%s", err),
 					Stdout: string(out),
 				})
-				state.LogTestResult(tid, label, core.TargetTestFailed, results, coverage, err,
-					"Test returned nonzero but reported no errors: %s. Output: %s", err, string(out))
+				numFlakes++
+				resultErr = err
+				resultMsg = fmt.Sprintf("Test returned nonzero but reported no errors: %s. Output: %s", err, string(out))
 			} else if err == nil && results.Failed != 0 {
-				err = fmt.Errorf("Test returned 0 but still reported failures")
-				state.LogTestResult(tid, label, core.TargetTestFailed, results, coverage, err,
-					"Test returned 0 but still reported failures. Stdout: %s", string(out))
+				resultErr = fmt.Errorf("Test returned 0 but still reported failures")
+				resultMsg = fmt.Sprintf("Test returned 0 but still reported failures. Stdout: %s", string(out))
+				numFlakes++
 			} else if results.Failed != 0 {
-				err = fmt.Errorf("Tests failed")
-				state.LogTestResult(tid, label, core.TargetTestFailed, results, coverage, err,
-					fmt.Sprintf("Tests failed. Stdout: %s", string(out)))
+				resultErr = fmt.Errorf("Tests failed")
+				resultMsg = fmt.Sprintf("Tests failed. Stdout: %s", string(out))
+				numFlakes++
 			} else {
-				logTestSuccess(state, tid, label, results, coverage)
 				numSucceeded++
-				// Cache only on the last run.
-				if numSucceeded == state.NumTestRuns {
-					moveAndCacheOutputFiles(results, coverage)
-				}
-				// Clean up the test directory.
-				if state.CleanWorkdirs {
-					if err := os.RemoveAll(target.TestDir()); err != nil {
-						log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
-					}
-				}
 			}
 		}
+	}
+	if numSucceeded >= successesRequired {
+		if numSucceeded > 0 && numFlakes > 0 {
+			target.Results.Flakes = numFlakes
+		}
+		// Success, clean things up
+		if moveAndCacheOutputFiles(target.Results, coverage) {
+			logTestSuccess(state, tid, label, target.Results, coverage)
+		}
+		// Clean up the test directory.
+		if state.CleanWorkdirs {
+			if err := os.RemoveAll(target.TestDir()); err != nil {
+				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
+			}
+		}
+	} else {
+		state.LogTestResult(tid, label, core.TargetTestFailed, target.Results, coverage, resultErr, resultMsg)
 	}
 }
 
@@ -260,32 +271,13 @@ func runTest(state *core.BuildState, target *core.BuildTarget, timeout int) ([]b
 	return core.ExecWithTimeout(cmd, target.TestTimeout, timeout)
 }
 
-// Runs a test some number of times as indicated by its flakiness.
-func runTestWithRetries(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error, flakiness int) {
-	flakiness = target.Flakiness
-	if flakiness == 0 {
-		flakiness = 1
-	} // Flakiness of 0 -> run it once. Equivalent behaviour to 1 but more intuitive.
-	if state.MaxFlakes > 0 && flakiness > state.MaxFlakes {
-		flakiness = state.MaxFlakes // Cap max flakes by flag
+// prepareAndRunTest sets up a test directory and runs the test.
+func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
+	if err = prepareTestDir(state.Graph, target); err != nil {
+		state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
+		return []byte{}, err
 	}
-	for i := 0; i < flakiness; i++ {
-		// Re-prepare test directory between each attempt so they can't accidentally contaminate each other.
-		if err = prepareTestDir(state.Graph, target); err != nil {
-			state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
-			return []byte{}, err, i
-		}
-		out, err = runPossiblyContainerisedTest(state, target)
-		if err == nil {
-			return out, err, i
-		} else if i < flakiness-1 {
-			log.Warning("%s failed on attempt %d (%d more to go).", target.Label, i+1, flakiness-i-1)
-		}
-	}
-	if target.Flakiness == 0 {
-		flakiness = 0
-	} // Reset this again so non-flaky targets don't appear so.
-	return out, err, flakiness
+	return runPossiblyContainerisedTest(state, target)
 }
 
 // Parses the coverage output for a single target.
@@ -345,4 +337,17 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 		(*state.Cache).StoreExtra(target, hash, filename)
 	}
 	return nil
+}
+
+// calcNumRuns works out how many total runs we should have for a test, and how many successes
+// are required for it to count as success.
+func calcNumRuns(numRuns, flakiness int) (int, int) {
+	if numRuns > 0 && flakiness > 0 { // If flag is passed we run exactly that many times with proportionate flakiness.
+		return numRuns, int(math.Ceil(float64(numRuns) / float64(flakiness)))
+	} else if numRuns > 0 {
+		return numRuns, numRuns
+	} else if flakiness > 0 { // Test is flaky, run that many times
+		return flakiness, 1
+	}
+	return 1, 1
 }

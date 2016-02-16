@@ -76,8 +76,7 @@ var opts struct {
 
 	Test struct {
 		FailingTestsOk bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)" default:"false"`
-		MaxFlakes      int  `long:"max_flakes" description:"Max number of times to run a test (0 for default)"`
-		NumRuns        int  `long:"num_runs" short:"n" default:"1" description:"Number of times to run each test target."`
+		NumRuns        int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -88,8 +87,7 @@ var opts struct {
 	Cover struct {
 		FailingTestsOk   bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)" default:"false"`
 		NoCoverageReport bool `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell" default:"false"`
-		MaxFlakes        int  `long:"max_flakes" description:"Max number of times to run a test (0 for default)"`
-		NumRuns          int  `long:"num_runs" short:"n" default:"1" description:"Number of times to run each test target."`
+		NumRuns          int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		Args             struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -383,18 +381,13 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	}
 	state := core.NewBuildState(opts.BuildFlags.NumThreads, c, opts.OutputFlags.Verbosity, config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.MaxFlakes = opts.Test.MaxFlakes + opts.Cover.MaxFlakes          // Only one of these can be passed.
+	state.NumTestRuns = opts.Test.NumRuns + opts.Cover.NumRuns            // Only one of these can be passed.
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
 	state.NeedCoverage = opts.Cover.Args.Target != core.BuildLabel{}
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
-	if opts.Test.NumRuns > opts.Cover.NumRuns {
-		state.NumTestRuns = opts.Test.NumRuns
-	} else {
-		state.NumTestRuns = opts.Cover.NumRuns
-	}
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
