@@ -343,7 +343,7 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 // are required for it to count as success.
 func calcNumRuns(numRuns, flakiness int) (int, int) {
 	if numRuns > 0 && flakiness > 0 { // If flag is passed we run exactly that many times with proportionate flakiness.
-		return numRuns, int(math.Ceil(float64(numRuns) * (1.0 / float64(flakiness))))
+		return numRuns, int(math.Ceil(float64(numRuns) / float64(flakiness)))
 	} else if numRuns > 0 {
 		return numRuns, numRuns
 	} else if flakiness > 0 { // Test is flaky, run that many times
