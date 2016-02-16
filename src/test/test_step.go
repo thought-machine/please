@@ -129,7 +129,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 	var coverage core.TestCoverage
 	for i := 0; i < numRuns && numSucceeded < successesRequired; i++ {
 		if numRuns > 1 {
-			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i, numRuns))
+			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i+1, numRuns))
 		}
 		out, err := prepareAndRunTest(tid, state, target)
 		duration := time.Since(startTime).Seconds()
@@ -197,7 +197,6 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 			} else {
 				numSucceeded++
 			}
-			target.Results.Aggregate(results)
 		}
 	}
 	if numSucceeded >= successesRequired {
