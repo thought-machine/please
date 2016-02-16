@@ -54,7 +54,6 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
       test_only (bool): If True, is only visible to test rules.
       go_tools (list): A list of targets to pre-process your src files with go generate.
     """
-    cmds = _GO_LIBRARY_CMDS
     deps = deps or []
     # go_test and cgo_library need access to the sources as well.
     filegroup(
@@ -82,7 +81,7 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         srcs=srcs,
         deps=deps + [':_%s#srcs' % name],
         outs=[out or name + '.a'],
-        cmd=cmds,
+        cmd=_GO_LIBRARY_CMDS,
         visibility=visibility,
         building_description="Compiling...",
         requires=['go'],
@@ -98,7 +97,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None):
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to run go generate over.
-      tools (list): A list of targets which represent go libraries to be used via `go generate`.
+      tools (list): A list of targets which represent binaries to be used via `go generate`.
       deps (list): Dependencies
       visibility (list): Visibility specification
     """
