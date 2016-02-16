@@ -100,7 +100,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		return false
 	}
 
-	cacheKey := mustTargetHash(state, target)
+	cacheKey := mustShortTargetHash(state, target)
 	if state.Cache != nil && !target.SkipCache {
 		// Note that ordering here is quite sensitive since the post-build function can modify
 		// what we would retrieve from the cache.
@@ -155,7 +155,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 	if state.Cache != nil && !target.SkipCache {
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
-		(*state.Cache).Store(target, mustTargetHash(state, target))
+		(*state.Cache).Store(target, mustShortTargetHash(state, target))
 		if target.PostBuildFunction != 0 {
 			// NB. Important this is stored with the earlier hash - if we calculate the hash
 			//     now, it might be different, and we could of course never retrieve it again.
@@ -348,10 +348,7 @@ func checkRuleHashes(target *core.BuildTarget, hash []byte) error {
 }
 
 func retrieveFromCache(state *core.BuildState, target *core.BuildTarget) ([]byte, bool) {
-	hash, err := targetHash(state, target)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to calculate source hash for %s: %s", target.Label, err))
-	}
+	hash := mustShortTargetHash(state, target)
 	return hash, (*state.Cache).Retrieve(target, hash)
 }
 

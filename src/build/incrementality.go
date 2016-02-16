@@ -403,6 +403,11 @@ func mustTargetHash(state *core.BuildState, target *core.BuildTarget) []byte {
 	return hash
 }
 
+// mustShortTargetHash returns the hash for a target, shortened to 1/4 length.
+func mustShortTargetHash(state *core.BuildState, target *core.BuildTarget) []byte {
+	return core.CollapseHash(mustTargetHash(state, target))
+}
+
 // RuntimeHash returns the target hash, source hash, config hash & runtime file hash,
 // all rolled into one. Essentially this is one hash needed to determine if the runtime
 // state is consistent.
