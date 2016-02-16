@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
+DEFAULT_URL_BASE="https://s3-eu-west-1.amazonaws.com/please-build"
 # We might already have it downloaded...
 LOCATION=`grep -i "^location" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
 if [ -z "$LOCATION" ]; then
@@ -18,7 +19,7 @@ fi
 
 URL_BASE=`grep -i "^downloadlocation" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
 if [ -z "$URL_BASE" ]; then
-    URL_BASE="https://s3-eu-west-1.amazonaws.com/please-build"
+    URL_BASE=$DEFAULT_URL_BASE
 fi
 
 VERSION=`grep -i "^version" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
