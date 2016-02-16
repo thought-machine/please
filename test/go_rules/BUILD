@@ -1,4 +1,5 @@
 # Test on the builtin go rules
+
 go_library(
     name = 'go_rules_test_lib',
     srcs = ['go_rules_test_lib.go'],
@@ -15,6 +16,22 @@ go_binary(
     ],
     test_only = True,
 )
+go_binary(
+    name = 'go_rules_test_generate_bin',
+    main = 'go_rules_test_generate_bin.go',
+    deps = ['//test/go_rules/test:generate_test'],
+    test_only = True,
+)
+
+gentest(
+    name = 'go_rules_generate_test',
+    test_cmd = '$(location :go_rules_test_generate_bin)',
+    data = [
+        ':go_rules_test_generate_bin',
+    ],
+    no_test_output = True,
+)
+
 gentest(
     name = 'go_rules_test',
     test_cmd = '$(location :go_rules_test_bin)',

@@ -6,3 +6,12 @@ go_library(
     visibility = ['//test/...'],
     test_only = True,
 )
+
+go_library(
+    name = 'generate_test',
+    srcs = ['generate.go'],
+    go_tools = [
+        '//third_party/go:stringer',
+    ],
+    visibility = ['//test/...'],
+)
