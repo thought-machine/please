@@ -26,8 +26,7 @@ char* RunPostBuildFunction(PostBuildCallbackRunner* runner, size_t callback, voi
     return runner((void*)callback, package, name, output);
 }
 
-int InitialiseInterpreter(char* data, void* vcallbacks) {
-  struct PleaseCallbacks* callbacks = (struct PleaseCallbacks*)vcallbacks;
+int InitialiseInterpreter(char* data, struct PleaseCallbacks* callbacks) {
   callbacks->add_target = (AddTargetCallback*)AddTarget;
   callbacks->add_src = AddSource;
   callbacks->add_data = AddData;
