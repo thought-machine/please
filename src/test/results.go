@@ -9,9 +9,8 @@ import "path/filepath"
 
 import "core"
 
-func parseTestResults(target *core.BuildTarget, outputFile string, flakes int, cached bool) (core.TestResults, error) {
+func parseTestResults(target *core.BuildTarget, outputFile string, cached bool) (core.TestResults, error) {
 	results, err := parseTestResultsDir(target, outputFile)
-	results.Flakes = flakes
 	results.Cached = cached
 	target.Results.Aggregate(results)
 	// Ensure that the target has a failure if we encountered an error

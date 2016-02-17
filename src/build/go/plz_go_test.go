@@ -7,7 +7,7 @@ package main
 import (
 	"os"
 
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 
 	"buildgo"
 	"output"

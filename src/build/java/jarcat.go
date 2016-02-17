@@ -13,7 +13,7 @@ import (
 	"strings"
 	"zip"
 
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 
 	"java"
 	"output"

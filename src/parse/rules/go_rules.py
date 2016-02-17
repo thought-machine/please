@@ -42,8 +42,7 @@ _GO_LIBRARY_CMDS = {
     'cover': '%(src_dirs_cmd)s; %(copy_cmd)s && %(cover_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
 }
 
-
-def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False):
+def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False, go_tools=None):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -53,7 +52,9 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
       deps (list): Dependencies
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
+      go_tools (list): A list of targets to pre-process your src files with go generate.
     """
+    deps = deps or []
     # go_test and cgo_library need access to the sources as well.
     filegroup(
         name='_%s#srcs' % name,
@@ -64,10 +65,21 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         requires=['go'],
         test_only=test_only,
     )
+
+    # Run go generate if needed.
+    if go_tools:
+        go_generate(
+            name='_%s#gen' % name,
+            srcs=srcs,
+            tools=go_tools,
+            deps=deps + [':_%s#srcs' % name]
+        )
+        srcs += [':_%s#gen' % name]
+
     build_rule(
         name=name,
         srcs=srcs,
-        deps=(deps or []) + [':_%s#srcs' % name],
+        deps=deps + [':_%s#srcs' % name],
         outs=[out or name + '.a'],
         cmd=_GO_LIBRARY_CMDS,
         visibility=visibility,
@@ -75,6 +87,49 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         requires=['go'],
         provides={'go': ':' + name, 'go_src': ':_%s#srcs' % name},
         test_only=test_only,
+        tools=go_tools,
+    )
+
+
+def go_generate(name, srcs, tools, deps=None, visibility=None):
+    """Generates a `go generate` rule.
+
+    Args:
+      name (str): Name of the rule.
+      srcs (list): Go source files to run go generate over.
+      tools (list): A list of targets which represent binaries to be used via `go generate`.
+      deps (list): Dependencies
+      visibility (list): Visibility specification
+    """
+    # We simply capture all go files produced by go generate.
+    def _post_build(rule_name, output):
+        for out in output:
+            if out.endswith('.go') and srcs and out not in srcs:
+                add_out(rule_name, out)
+
+    # All the tools must be in the $PATH.
+    path = ':'.join('$(dirname $(location %s))' % tool for tool in tools)
+    gopath = ' | '.join([
+        'find . -type d -name src',
+        'grep -v "^\.$"',
+        'sed "s|^\.|$TMP_DIR|g"',
+        'sed "/^\s*$/d"',
+        'tr "\n" ":"',
+        'sed -e "s/:$//" -e "s/src$//g"'
+    ])
+    cmd = ' && '.join([
+        'PATH="$PATH:%s" GOPATH="$TMP_DIR$(echo ":$(%s)" | sed "s/:$//g")" go generate $SRCS' % (path, gopath),
+        'mv $PKG/*.go .',
+        'ls *.go'
+    ])
+    build_rule(
+        name=name,
+        srcs=srcs,
+        deps=deps,
+        tools=tools,
+        cmd=cmd,
+        visibility=visibility,
+        post_build=_post_build,
     )
 
 
@@ -214,7 +269,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         deps=(deps or []) + [':_%s#lib' % name],
         outs=[name],
         cmd=_GO_BINARY_CMDS,
-        test_cmd='$(exe :%s) | tee test.results' % name,
+        test_cmd='set -o pipefail && $(exe :%s) | tee test.results' % name,
         visibility=visibility,
         container=container,
         test_timeout=timeout,
@@ -315,10 +370,11 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
     cmd.append('go install ' + get)
     if install:
         cmd.extend('go install %s' % lib for lib in install)
-    cmd.extend([
-        'find . -name .git | xargs rm -rf',
-        'find pkg -name "*.a"',
-    ])
+    if not binary:
+        cmd.extend([
+            'find . -name .git | xargs rm -rf',
+            'find pkg -name "*.a"',
+        ])
     build_rule(
         name=name,
         srcs=[patch] if patch else [],

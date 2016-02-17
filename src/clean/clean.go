@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 
 	"core"
 	"test"

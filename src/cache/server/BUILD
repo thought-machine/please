@@ -13,6 +13,12 @@ go_library(
     visibility = ['//src/cache/...'],
 )
 
+filegroup(
+    name = 'init_sh',
+    srcs = ['init.sh'],
+    visibility = ['PUBLIC'],
+)
+
 go_binary(
     name = 'http_cache_server_bin',
     main = 'http_server_main.go',

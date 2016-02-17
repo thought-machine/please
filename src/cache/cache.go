@@ -4,8 +4,10 @@ package cache
 
 import (
 	"core"
-	"github.com/op/go-logging"
 	"net/http"
+	"sync"
+
+	"gopkg.in/op/go-logging.v1"
 )
 
 var log = logging.MustGetLogger("cache")
@@ -48,7 +50,7 @@ type cacheMultiplexer struct {
 }
 
 func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte) {
-	mplex.storeUntil(target, key, nil)
+	mplex.storeUntil(target, key, len(mplex.caches))
 }
 
 // storeUntil stores artifacts into higher priority caches than the given one.
@@ -56,52 +58,50 @@ func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte) {
 // downloading from the RPC cache.
 // This is a little inefficient since we could write the file to plz-out then copy it to the dir cache,
 // but it's hard to fix that without breaking the cache abstraction.
-func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, stopAt core.Cache) {
+func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, stopAt int) {
 	// Attempt to store on all caches simultaneously.
-	ch := make(chan bool)
-	for _, cache := range mplex.caches {
-		if cache == stopAt {
+	var wg sync.WaitGroup
+	for i, cache := range mplex.caches {
+		if i == stopAt {
 			break
 		}
 		go func(cache core.Cache) {
 			cache.Store(target, key)
-			ch <- true
+			wg.Done()
 		}(cache)
+		wg.Add(1)
 	}
-	for _ = range mplex.caches {
-		<-ch
-	}
+	wg.Wait()
 }
 
 func (mplex cacheMultiplexer) StoreExtra(target *core.BuildTarget, key []byte, file string) {
-	mplex.storeExtraUntil(target, key, file, nil)
+	mplex.storeExtraUntil(target, key, file, len(mplex.caches))
 }
 
 // storeExtraUntil is similar to storeUntil but stores a single file.
-func (mplex cacheMultiplexer) storeExtraUntil(target *core.BuildTarget, key []byte, file string, stopAt core.Cache) {
+func (mplex cacheMultiplexer) storeExtraUntil(target *core.BuildTarget, key []byte, file string, stopAt int) {
 	// Attempt to store on all caches simultaneously.
-	ch := make(chan bool)
-	for _, cache := range mplex.caches {
-		if cache == stopAt {
+	var wg sync.WaitGroup
+	for i, cache := range mplex.caches {
+		if i == stopAt {
 			break
 		}
 		go func(cache core.Cache) {
 			cache.StoreExtra(target, key, file)
-			ch <- true
+			wg.Done()
 		}(cache)
+		wg.Add(1)
 	}
-	for _ = range mplex.caches {
-		<-ch
-	}
+	wg.Wait()
 }
 
 func (mplex cacheMultiplexer) Retrieve(target *core.BuildTarget, key []byte) bool {
 	// Retrieve from caches sequentially; if we did them simultaneously we could
 	// easily write the same file from two goroutines at once.
-	for _, cache := range mplex.caches {
+	for i, cache := range mplex.caches {
 		if cache.Retrieve(target, key) {
 			// Store this into other caches
-			mplex.storeUntil(target, key, cache)
+			mplex.storeUntil(target, key, i)
 			return true
 		}
 	}
@@ -111,10 +111,10 @@ func (mplex cacheMultiplexer) Retrieve(target *core.BuildTarget, key []byte) boo
 func (mplex cacheMultiplexer) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {
 	// Retrieve from caches sequentially; if we did them simultaneously we could
 	// easily write the same file from two goroutines at once.
-	for _, cache := range mplex.caches {
+	for i, cache := range mplex.caches {
 		if cache.RetrieveExtra(target, key, file) {
 			// Store this into other caches
-			mplex.storeExtraUntil(target, key, file, cache)
+			mplex.storeExtraUntil(target, key, file, i)
 			return true
 		}
 	}

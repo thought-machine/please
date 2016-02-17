@@ -26,7 +26,7 @@ import (
 
 import "core"
 
-import "github.com/op/go-logging"
+import "gopkg.in/op/go-logging.v1"
 
 var log = logging.MustGetLogger("update")
 

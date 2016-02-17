@@ -22,8 +22,15 @@ filegroup(
 
 go_bindata(
     name = 'builtin_rules',
-    srcs = glob(['rules/*.py'], excludes=['embedded_parser.py']) + ['//src/parse/cffi:embedded_parser'],
+    srcs = glob(['rules/*.py'], excludes=['embedded_parser.py']) + [':embedded_parser'],
     prefix = '${PKG}/rules',
+)
+
+genrule(
+    name = 'embedded_parser',
+    srcs = ['//src/parse/cffi:embedded_parser'],
+    outs = ['rules/embedded_parser.py'],
+    cmd = 'cp $SRC $OUT',
 )
 
 cgo_test(

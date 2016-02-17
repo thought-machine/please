@@ -18,7 +18,7 @@ type RpcCacheServer struct{}
 
 func (*RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
 	arch := req.Os + "_" + req.Arch
-	hash := base64.RawStdEncoding.EncodeToString(req.Hash)
+	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
 	for _, artifact := range req.Artifacts {
 		path := path.Join(arch, artifact.Package, artifact.Target, hash, artifact.File)
 		if err := StoreArtifact(path, artifact.Body); err != nil {
@@ -31,7 +31,7 @@ func (*RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.Sto
 func (*RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) (*pb.RetrieveResponse, error) {
 	response := pb.RetrieveResponse{Success: true}
 	arch := req.Os + "_" + req.Arch
-	hash := base64.RawStdEncoding.EncodeToString(req.Hash)
+	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
 	for _, artifact := range req.Artifacts {
 		root := path.Join(arch, artifact.Package, artifact.Target, hash)
 		fileRoot := path.Join(root, artifact.File)
@@ -71,5 +71,6 @@ func ServeGrpcForever(port int) {
 	}
 	s := grpc.NewServer()
 	pb.RegisterRpcCacheServer(s, &RpcCacheServer{})
+	log.Notice("Serving RPC cache on port %d", port)
 	s.Serve(lis)
 }

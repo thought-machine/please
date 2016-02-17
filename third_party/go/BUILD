@@ -2,8 +2,8 @@ package(default_visibility = ['PUBLIC'])
 
 go_get(
     name = 'logging',
-    get = 'github.com/op/go-logging',
-    revision = '0882c9abce533ab4afbab5677fcef7434dd36d5a',
+    get = 'gopkg.in/op/go-logging.v1',
+    revision = 'b2cb9fa56473e98db8caba80237377e83fe44db5',
 )
 
 go_get(
@@ -62,7 +62,7 @@ go_get(
 go_get(
     name = 'grpc',
     get = 'google.golang.org/grpc',
-    revision = 'ecd68681d46b97d7c84e7c7d12ee7a04c138a9fa',
+    revision = '01de3de50a4fada34ce39322801a1533c9554cdc',
     deps = [
         ':protobuf',
     ],
@@ -100,4 +100,11 @@ go_get(
     deps = [
         ':terminal',
     ],
+)
+
+go_get(
+    name = 'stringer',
+    get = 'golang.org/x/tools/cmd/stringer',
+    revision = 'f8ecfdb6b66ec67ca930b39806519a2b72d1eaca',
+    binary = True,
 )

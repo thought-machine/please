@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"fmt"
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 )
 
 var log = logging.MustGetLogger("core")

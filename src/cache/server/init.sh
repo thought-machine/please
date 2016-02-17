@@ -15,12 +15,12 @@ export CLEAN_FREQUENCY=10
 PIDFILE=/var/run/${NAME}.pid
 
 start() {
-  echo "starting plz rpc cache"
-  start-stop-daemon --pidfile $PIDFILE --start --exec $BIN -- -v $VERBOSITY -p $PORT -d $DIR -l $LOW_WATER_MARK -i $HIGH_WATER_MARK -f $CLEAN_FREQUENCY
+  echo "starting plz cache"
+  start-stop-daemon --pidfile $PIDFILE --start --background --exec $BIN -- -v $VERBOSITY -p $PORT -d $DIR -l $LOW_WATER_MARK -i $HIGH_WATER_MARK -f $CLEAN_FREQUENCY
 }
 
 stop() {
-  echo "stopping teamcity-server"
+  echo "stopping plz cache"
   start-stop-daemon --pidfile $PIDFILE --stop $BIN
 }
 

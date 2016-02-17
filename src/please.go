@@ -23,7 +23,7 @@ import (
 
 	"github.com/jessevdk/go-flags"
 	"github.com/kardianos/osext"
-	"github.com/op/go-logging"
+	"gopkg.in/op/go-logging.v1"
 )
 
 var log = logging.MustGetLogger("plz")
@@ -76,24 +76,22 @@ var opts struct {
 
 	Test struct {
 		FailingTestsOk bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)" default:"false"`
-		MaxFlakes      int  `long:"max_flakes" description:"Max number of times to run a test (0 for default)"`
-		NumRuns        int  `long:"num_runs" short:"n" default:"1" description:"Number of times to run each test target."`
+		NumRuns        int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors"`
-		} `positional-args:"true" required:"true"`
+		} `positional-args:"true"`
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
 		FailingTestsOk   bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)" default:"false"`
 		NoCoverageReport bool `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell" default:"false"`
-		MaxFlakes        int  `long:"max_flakes" description:"Max number of times to run a test (0 for default)"`
-		NumRuns          int  `long:"num_runs" short:"n" default:"1" description:"Number of times to run each test target."`
+		NumRuns          int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		Args             struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
-		} `positional-args:"true" required:"true"`
+		} `positional-args:"true"`
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
@@ -383,18 +381,13 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	}
 	state := core.NewBuildState(opts.BuildFlags.NumThreads, c, opts.OutputFlags.Verbosity, config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.MaxFlakes = opts.Test.MaxFlakes + opts.Cover.MaxFlakes          // Only one of these can be passed.
+	state.NumTestRuns = opts.Test.NumRuns + opts.Cover.NumRuns            // Only one of these can be passed.
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
 	state.NeedCoverage = opts.Cover.Args.Target != core.BuildLabel{}
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
-	if opts.Test.NumRuns > opts.Cover.NumRuns {
-		state.NumTestRuns = opts.Test.NumRuns
-	} else {
-		state.NumTestRuns = opts.Cover.NumRuns
-	}
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
@@ -459,10 +452,13 @@ func readStdin() []string {
 	return ret
 }
 
-// Handles test targets which can be given in two formats; a list of targets or a single
+// testTargets handles test targets which can be given in two formats; a list of targets or a single
 // target with a list of trailing arguments.
+// Alternatively they can be completely omitted in which case we test everything.
 func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
-	if len(args) > 0 && core.LooksLikeABuildLabel(args[0]) {
+	if target.Name == "" {
+		return core.WholeGraph
+	} else if len(args) > 0 && core.LooksLikeABuildLabel(args[0]) {
 		opts.Cover.Args.Args = []string{}
 		opts.Test.Args.Args = []string{}
 		return append(core.ParseBuildLabels(args), target)
@@ -471,7 +467,7 @@ func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
 	}
 }
 
-// Sets various things up and reads the initial configuration.
+// readConfig sets various things up and reads the initial configuration.
 func readConfig(forceUpdate bool) core.Configuration {
 	if opts.AssertVersion != "" && core.PleaseVersion != opts.AssertVersion {
 		log.Fatalf("Requested Please version %s, but this is version %s", opts.AssertVersion, core.PleaseVersion)

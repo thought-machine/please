@@ -10,7 +10,7 @@ import "syscall"
 import "core"
 import "build"
 
-import "github.com/op/go-logging"
+import "gopkg.in/op/go-logging.v1"
 
 var log = logging.MustGetLogger("run")
 

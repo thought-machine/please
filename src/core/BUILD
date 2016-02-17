@@ -34,6 +34,15 @@ go_test(
 )
 
 go_test(
+    name = 'graph_test',
+    srcs = ['graph_test.go'],
+    deps = [
+        ':core',
+        '//third_party/go:testify',
+    ],
+)
+
+go_test(
     name = 'state_test',
     srcs = ['state_test.go'],
     deps = [

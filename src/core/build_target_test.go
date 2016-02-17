@@ -122,6 +122,18 @@ func TestProvideFor(t *testing.T) {
 	assert.Equal(t, []BuildLabel{target2.Label}, target2.ProvideFor(target4))
 }
 
+func TestAddProvide(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "PUBLIC")
+	target2 := makeTarget("//src/core:target2", "PUBLIC", target1)
+	target3 := makeTarget("//src/core:target3", "PUBLIC", target2)
+	target2.AddDependency(target1.Label)
+	target2.AddProvide("go", ParseBuildLabel(":target1", "src/core"))
+	target3.Requires = append(target3.Requires, "go")
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3))
+	assert.Panics(t, func() { target3.AddProvide("go", ParseBuildLabel(":target1", "src/core")) },
+		"target3 doesn't depend on target1 so can't provide it directly")
+}
+
 func TestCheckDuplicateOutputs(t *testing.T) {
 	target1 := makeTarget("//src/core:target1", "PUBLIC")
 	target3 := makeTarget("//src/core:target3", "PUBLIC")

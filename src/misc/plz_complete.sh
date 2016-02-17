@@ -11,7 +11,7 @@ _PleaseCompleteMe() {
   if [[ "$cur" == -* || "$COMP_CWORD" == "1" || ("$COMP_CWORD" == "2" && "${COMP_WORDS[1]}" == "query")]]; then
       COMPREPLY=( $( compgen -W "`GO_FLAGS_COMPLETION=1 plz ${cur}`" -- $cur) )
   else
-	  COMPREPLY=( $( compgen -W "`plz --noupdate -p query completions --cmd ${COMP_WORDS[1]} $cur 2>/dev/null`" -- $cur ) )
+      COMPREPLY=( $( compgen -W "`plz --noupdate -p query completions --cmd ${COMP_WORDS[1]} $cur 2>/dev/null`" -- $cur ) )
   fi
   __ltrim_colon_completions "$cur"
   return 0

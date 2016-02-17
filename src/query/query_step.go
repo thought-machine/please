@@ -19,6 +19,6 @@
 //            (including transitive deps) that are referenced by this rule.
 package query
 
-import "github.com/op/go-logging"
+import "gopkg.in/op/go-logging.v1"
 
 var log = logging.MustGetLogger("query")
