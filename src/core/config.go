@@ -69,7 +69,7 @@ func setDefault(conf *[]string, def []string) {
 func DefaultConfiguration() Configuration {
 	config := Configuration{}
 	config.Please.Version = PleaseVersion
-	config.Please.Location = "/opt/please"
+	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.DownloadLocation = "https://s3-eu-west-1.amazonaws.com/please-build"
 	config.Please.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
@@ -79,7 +79,7 @@ func DefaultConfiguration() Configuration {
 	config.Build.DefaultConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Cache.HttpTimeout = 5       // Five seconds
 	config.Cache.RpcTimeout = 5        // Five seconds
-	config.Cache.DirCacheCleaner = "/opt/please/cache_cleaner"
+	config.Cache.DirCacheCleaner = "~/.please/cache_cleaner"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
 	config.Test.Timeout = 600
@@ -89,17 +89,17 @@ func DefaultConfiguration() Configuration {
 	config.Docker.Timeout = 1200      // Twenty minutes
 	config.Docker.ResultsTimeout = 20 // Twenty seconds
 	config.Docker.RemoveTimeout = 20  // Twenty seconds
-	config.Go.Version = "1.5.1"
-	config.Go.TestTool = "/opt/please/please_go_test"
+	config.Go.GoVersion = "1.5.1"
+	config.Go.TestTool = "~/.please/please_go_test"
 	config.Python.PipTool = "pip"
-	config.Python.PexTool = "/opt/please/please_pex"
+	config.Python.PexTool = "~/.please/please_pex"
 	config.Python.DefaultInterpreter = "/usr/bin/python"
 	config.Python.UsePyPI = true
 	config.Java.JavacTool = "javac"
 	config.Java.JarTool = "jar"
-	config.Java.JarCatTool = "/opt/please/jarcat"
-	config.Java.PleaseMavenTool = "/opt/please/please_maven"
-	config.Java.JUnitRunner = "/opt/please/junit_runner.jar"
+	config.Java.JarCatTool = "~/.please/jarcat"
+	config.Java.PleaseMavenTool = "~/.please/please_maven"
+	config.Java.JUnitRunner = "~/.please/junit_runner.jar"
 	config.Java.DefaultTestPackage = ""
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"
@@ -168,7 +168,7 @@ type Configuration struct {
 		RunArgs            []string
 	}
 	Go struct {
-		Version  string
+		GoVersion  string
 		TestTool string
 	}
 	Python struct {
@@ -233,7 +233,7 @@ func (config *Configuration) Hash() []byte {
 	for _, p := range config.Build.Path {
 		h.Write([]byte(p))
 	}
-	h.Write([]byte(config.Go.Version)) // Sucks a bit not to invalidate just Go rules but it's hard to detect.
+	h.Write([]byte(config.Go.GoVersion)) // Sucks a bit not to invalidate just Go rules but it's hard to detect.
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}

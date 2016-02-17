@@ -26,6 +26,7 @@ const configTemplate = `; Please config file
 ; [please]
 ; version = %s
 `
+const wrapperScriptName = "pleasew"
 
 // InitConfig initialises a .plzconfig template in the given directory.
 func InitConfig(dir string) {
@@ -51,4 +52,10 @@ func InitConfig(dir string) {
 		log.Fatalf("Failed to write file: %s", err)
 	}
 	fmt.Printf("Wrote config template to %s, you're now ready to go!\n", config)
+	// Now write the wrapper script
+	data := MustAsset(wrapperScriptName)
+	if err := ioutil.WriteFile(wrapperScriptName, data, 0755); err != nil {
+		log.Fatalf("Failed to write file: %s", err)
+	}
+	fmt.Printf("\nAlso wrote wrapper script to %s; users can invoke that directly to run Please, even without it installed.\n", wrapperScriptName)
 }

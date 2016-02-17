@@ -100,7 +100,7 @@ func initializeInterpreter(config core.Configuration) {
 		panic(fmt.Sprintf("Failed to initialise parsing callbacks, error %d", result))
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version)
-	setConfigValue("GO_VERSION", config.Go.Version)
+	setConfigValue("GO_VERSION", config.Go.GoVersion)
 	setConfigValue("GO_TEST_TOOL", config.Go.TestTool)
 	setConfigValue("PIP_TOOL", config.Python.PipTool)
 	setConfigValue("PEX_TOOL", config.Python.PexTool)
