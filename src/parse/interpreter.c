@@ -2,15 +2,15 @@
 
 #include "_cgo_export.h"
 
-void PreBuildFunctionSetter(void* callback, char* bytecode, void* target) {
+void PreBuildFunctionSetter(void* callback, char* bytecode, TargetPtr target) {
     SetPreBuildFunction((size_t)callback, bytecode, target);
 }
 
-void PostBuildFunctionSetter(void* callback, char* bytecode, void* target) {
+void PostBuildFunctionSetter(void* callback, char* bytecode, TargetPtr target) {
     SetPostBuildFunction((size_t)callback, bytecode, target);
 }
 
-char* ParseFile(ParseFileCallback* func, char* filename, char* package_name, void* package) {
+char* ParseFile(ParseFileCallback* func, char* filename, char* package_name, PackagePtr package) {
     return (*func)(filename, package_name, package);
 }
 
@@ -18,11 +18,11 @@ void SetConfigValue(SetConfigValueCallback* func, char* name, char* value) {
     func(name, value);
 }
 
-char* RunPreBuildFunction(PreBuildCallbackRunner* runner, size_t callback, void* package, char* name) {
+char* RunPreBuildFunction(PreBuildCallbackRunner* runner, size_t callback, PackagePtr package, char* name) {
     return runner((void*)callback, package, name);
 }
 
-char* RunPostBuildFunction(PostBuildCallbackRunner* runner, size_t callback, void* package, char* name, char* output) {
+char* RunPostBuildFunction(PostBuildCallbackRunner* runner, size_t callback, PackagePtr package, char* name, char* output) {
     return runner((void*)callback, package, name, output);
 }
 
