@@ -19,11 +19,12 @@ var opts struct {
 	LowWaterMark   output.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"18G"`
 	HighWaterMark  output.ByteSize `short:"i" long:"high_water_mark" description:"Max size of cache to clean at" default:"20G"`
 	CleanFrequency int             `short:"f" long:"clean_frequency" description:"Frequency to clean cache at, in seconds" default:"10"`
+	LogFile        string          `long:"log_file" description:"File to log to (in addition to stdout)"`
 }
 
 func main() {
 	output.ParseFlagsOrDie("Please RPC cache server", &opts)
-	output.InitLogging(opts.Verbosity, "", 0)
+	output.InitLogging(opts.Verbosity, opts.LogFile, opts.Verbosity)
 	log.Notice("Initialising cache server...")
 	server.Init(opts.Dir, opts.CleanFrequency, int64(opts.LowWaterMark), int64(opts.HighWaterMark))
 	log.Notice("Starting up http cache server on port %d...", opts.Port)

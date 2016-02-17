@@ -13,10 +13,11 @@ export HIGH_WATER_MARK=50G
 export CLEAN_FREQUENCY=10
 
 PIDFILE=/var/run/${NAME}.pid
+LOGFILE=/var/log/${NAME}.log
 
 start() {
   echo "starting plz cache"
-  start-stop-daemon --make-pidfile --pidfile $PIDFILE --start --background --startas /bin/bash -- -c "$BIN -v $VERBOSITY -p $PORT -d $DIR -l $LOW_WATER_MARK -i $HIGH_WATER_MARK -f $CLEAN_FREQUENCY > /var/log/${NAME}.log 2>&1"
+  start-stop-daemon --make-pidfile --pidfile $PIDFILE --start --background --exec $BIN -- -v $VERBOSITY -p $PORT -d $DIR -l $LOW_WATER_MARK -i $HIGH_WATER_MARK -f $CLEAN_FREQUENCY --log_file $LOG_FILE
 }
 
 stop() {
