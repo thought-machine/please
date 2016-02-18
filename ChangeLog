@@ -1,3 +1,9 @@
+Version 1.5.10
+--------------
+
+    * Fix for multiple caches which could sometimes panic with a negative waitgroup.
+
+
 Version 1.5.9
 -------------
 
