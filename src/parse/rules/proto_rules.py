@@ -75,7 +75,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
         'mv -f ${PKG}/* .',
         'find . -name "*.java"  # protoc v%s' % protoc_version,
     ]
-    if CONFIG.PROTO_PYTHON_PACKAGE:
+    if 'py' in languages:
         cmds.insert(2, 'sed -i -e "s/from google.protobuf/from %s/g" *.py' %
                     CONFIG.PROTO_PYTHON_PACKAGE)
     cmd = ' && '.join(cmds)
@@ -112,6 +112,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
         output_is_complete = False,
     )
 
+    provides = {x: ':_%s#%s' % (name, x) for x in ['proto'] + list(languages)}
+
     if 'cc' in languages:
         cc_library(
             name = '_%s#cc' % name,
@@ -120,6 +122,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
             deps = [gen_rule] + deps + cc_deps,
             visibility = visibility,
         )
+        provides['cc_hdrs'] = ':__%s#cc#hdrs' % name
 
     if 'py' in languages:
         python_library(
@@ -165,10 +168,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
             deps = deps,
             requires = ['go_src'],
         )
+        provides['go_src'] = ':_%s#go_src' % name
 
-    provides = {x: ':_%s#%s' % (name, x) for x in ['proto'] + list(languages)}
-    provides['go_src'] = ':_%s#go_src' % name
-    provides['cc_hdrs'] = ':__%s#cc#hdrs' % name
     filegroup(
         name = name,
         deps = provides.values(),
@@ -177,13 +178,17 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
     )
 
 
-def grpc_library(name, srcs, deps=None, visibility=None, languages=None):
+def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
+                 python_deps=None, java_deps=None, go_deps=None):
     """Defines a rule for a grpc library.
 
     Args:
       name (str): Name of the rule
       srcs (list): Input .proto files.
       deps (list): Dependencies (other proto_library rules)
+      python_deps (list): Additional deps to add to the python_library rules
+      java_deps (list): Additional deps to add to the java_library rules
+      go_deps (list): Additional deps to add to the go_library rules
       visibility (list): Visibility specification for the rule.
       languages (list): List of languages to generate rules for, chosen from the set {cc, py, go, java}.
                         At present this will not create any service definitions for C++, but 'cc' is
@@ -196,17 +201,22 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None):
     if 'py' in languages:
         plugins['plugin=protoc-gen-grpc-python'] = _plugin(CONFIG.GRPC_PYTHON_PLUGIN, deps)
         plugins['grpc-python_out'] = '$TMP_DIR'
+        python_deps = (python_deps or []) + [CONFIG.GRPC_PYTHON_DEP]
     if 'java' in languages:
         plugins['plugin=protoc-gen-grpc-java'] = _plugin(CONFIG.GRPC_JAVA_PLUGIN, deps)
         plugins['grpc-java_out'] = '$TMP_DIR'
+        java_deps = (java_deps or []) + [CONFIG.GRPC_JAVA_DEP]
+    if 'go' in languages:
+        go_deps = (go_deps or []) + [CONFIG.GRPC_GO_DEP]
     proto_library(
         name = name,
         srcs = srcs,
         plugins=plugins,
         deps=deps,
-        python_deps=[CONFIG.GRPC_PYTHON_DEP] if 'py' in languages else [],
-        java_deps=[CONFIG.GRPC_JAVA_DEP] if 'java' in languages else [],
-        go_deps=[CONFIG.GRPC_GO_DEP] if 'go' in languages else [],
+        python_deps=python_deps,
+        java_deps=java_deps,
+        go_deps=go_deps,
+        languages=languages,
         visibility=visibility,
         protoc_version='%s, grpc v%s' % (CONFIG.PROTOC_VERSION, CONFIG.GRPC_VERSION),
     )
