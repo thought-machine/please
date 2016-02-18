@@ -234,21 +234,21 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 //export AddTarget
 func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary bool, test bool,
 	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
-	flakiness, buildTimeout, testTimeout int, cBuildingDescription *C.char) unsafe.Pointer {
+	flakiness, buildTimeout, testTimeout int, cBuildingDescription *C.char) C.size_t {
 	buildingDescription := ""
 	if cBuildingDescription != nil {
 		buildingDescription = C.GoString(cBuildingDescription)
 	}
-	return addTarget(pkgPtr, C.GoString(cName), C.GoString(cCmd), C.GoString(cTestCmd),
+	return sizet(addTarget(pkgPtr, C.GoString(cName), C.GoString(cCmd), C.GoString(cTestCmd),
 		binary, test, needsTransitiveDeps, outputIsComplete, containerise, noTestOutput,
-		skipCache, testOnly, flakiness, buildTimeout, testTimeout, buildingDescription)
+		skipCache, testOnly, flakiness, buildTimeout, testTimeout, buildingDescription))
 }
 
 // addTarget adds a new build target to the graph.
 // Separated from AddTarget to make it possible to test (since you can't mix cgo and go test).
 func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool,
 	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
-	flakiness, buildTimeout, testTimeout int, buildingDescription string) unsafe.Pointer {
+	flakiness, buildTimeout, testTimeout int, buildingDescription string) *core.BuildTarget {
 	pkg := unsizep(pkgPtr)
 	target := core.NewBuildTarget(core.NewBuildLabel(pkg.Name, name))
 	target.IsBinary = binary
@@ -288,7 +288,7 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool
 		log.Debug("Adding new target %s directly to graph", target.Label)
 		core.State.Graph.AddTarget(target)
 	}
-	return unsafe.Pointer(target)
+	return target
 }
 
 //export SetPreBuildFunction

@@ -24,13 +24,11 @@ import "sync"
 // 'include' and 'exclude' refer to the labels of targets to be added. If 'include' is non-empty then only
 // targets with at least one matching label are added. Any targets with a label in 'exclude' are not added.
 func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string) {
-	/*
-		defer func() {
-			if r := recover(); r != nil {
-				state.LogBuildError(tid, label, core.ParseFailed, fmt.Errorf("%s", r), "Failed to parse package")
-			}
-		}()
-	*/
+	defer func() {
+		if r := recover(); r != nil {
+			state.LogBuildError(tid, label, core.ParseFailed, fmt.Errorf("%s", r), "Failed to parse package")
+		}
+	}()
 	// First see if this package already exists; once it's in the graph it will have been parsed.
 	pkg := state.Graph.Package(label.PackageName)
 	if pkg != nil {
