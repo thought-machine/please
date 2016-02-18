@@ -20,7 +20,6 @@ inline void setStringInArray(char** arr, int i, char* s) { arr[i] = s; }
 inline char* getStringFromArray(char** arr, int i) { return arr[i]; }
 
 // Initialises interpreter.
-// TODO(pebers): Second argument should change to 'struct PleaseCallbacks*' for go1.6.
 int InitialiseInterpreter(char* data, struct PleaseCallbacks* callbacks);
 
 #endif  // _SRC_PARSE_INTERPRETER_H

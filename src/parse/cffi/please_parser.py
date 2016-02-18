@@ -43,7 +43,7 @@ def parse_file(c_filename, c_package_name, c_package):
         package_name = ffi.string(c_package_name)
         builtins = _get_globals(c_package, c_package_name)
         _parse_build_code(filename, builtins)
-        return ffi.new('char[]', '')
+        return ffi.cast('char*', 0)
     except DeferParse as err:
         return _FFI_DEFER_PARSE
     except Exception as err:
@@ -60,7 +60,7 @@ def parse_code(c_code, c_filename, _):
         # import in those files, but we will not do that because it would be sheer peasantry.
         code = _compile(code, filename, 'exec')
         exec(code, _please_globals)
-        return ffi.new('char[]', '')
+        return ffi.cast('char*', 0)
     except Exception as err:
         return ffi.new('char[]', str(err))
 
