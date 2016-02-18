@@ -1,3 +1,15 @@
+Version 1.5.10
+--------------
+
+    * Fix for multiple caches which could sometimes panic with a negative waitgroup.
+
+
+Version 1.5.9
+-------------
+
+    * grpc_library now correctly honours the 'languages' argument.
+
+
 Version 1.5.8
 -------------
 
