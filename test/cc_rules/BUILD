@@ -1,4 +1,4 @@
-subinclude('//test/build_defs:plz_e2e_test')
+subinclude('//build_defs:plz_e2e_test')
 
 # Test the way cc rules depend on one another; ideally we should be able to
 # pick up all transitive dependencies correctly but compile the .o files independently.
