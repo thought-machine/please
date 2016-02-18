@@ -7,12 +7,12 @@
 #include "defs.h"
 
 // AFAICT there isn't a way to call the function pointers directly.
-char* ParseFile(ParseFileCallback* func, char* filename, char* package_name, PackagePtr package);
+char* ParseFile(ParseFileCallback* func, char* filename, char* package_name, size_t package);
 void SetConfigValue(SetConfigValueCallback* func, char* name, char* value);
-char* RunPreBuildFunction(PreBuildCallbackRunner* runner, size_t callback, PackagePtr package, char* name);
-char* RunPostBuildFunction(PostBuildCallbackRunner* runner, size_t callback, PackagePtr package, char* name, char* output);
-void PreBuildFunctionSetter(void* callback, char* bytecode, TargetPtr target);
-void PostBuildFunctionSetter(void* callback, char* bytecode, TargetPtr target);
+char* RunPreBuildFunction(PreBuildCallbackRunner* runner, size_t callback, size_t package, char* name);
+char* RunPostBuildFunction(PostBuildCallbackRunner* runner, size_t callback, size_t package, char* name, char* output);
+void PreBuildFunctionSetter(void* callback, char* bytecode, size_t target);
+void PostBuildFunctionSetter(void* callback, char* bytecode, size_t target);
 
 // Helper functions for handling arrays of strings in C; seems to be nigh impossible in native Go.
 inline char** allocateStringArray(int len) { return malloc(len * sizeof(char*)); }

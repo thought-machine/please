@@ -2,23 +2,21 @@
 // This is used by both cgo and cffi to generate their own interfaces.
 typedef unsigned char uint8;
 typedef long long int64;
-typedef size_t PackagePtr;
-typedef size_t TargetPtr;
-typedef char* (ParseFileCallback)(char*, char*, PackagePtr);
-typedef void* (AddTargetCallback)(PackagePtr, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*);
-typedef void (AddStringCallback)(TargetPtr, char*);
-typedef void (AddTwoStringsCallback)(TargetPtr, char*, char*);
-typedef void (AddThreeStringsCallback)(TargetPtr, char*, char*, char*);
-typedef void (AddDependencyCallback)(TargetPtr, char*, char*, uint8);
-typedef void (AddOutputCallback)(TargetPtr, char*, char*);
+typedef char* (ParseFileCallback)(char*, char*, size_t);
+typedef void* (AddTargetCallback)(size_t, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*);
+typedef void (AddStringCallback)(size_t, char*);
+typedef void (AddTwoStringsCallback)(size_t, char*, char*);
+typedef void (AddThreeStringsCallback)(size_t, char*, char*, char*);
+typedef void (AddDependencyCallback)(size_t, char*, char*, uint8);
+typedef void (AddOutputCallback)(size_t, char*, char*);
 typedef char** (GlobCallback)(char*, char**, long long, char**, long long, uint8);
-typedef char* (GetIncludeFileCallback)(PackagePtr, char*);
-typedef char** (GetLabelsCallback)(PackagePtr, char*, char*);
+typedef char* (GetIncludeFileCallback)(size_t, char*);
+typedef char** (GetLabelsCallback)(size_t, char*, char*);
 typedef void (SetConfigValueCallback)(char*, char*);
-typedef char* (PreBuildCallbackRunner)(void*, PackagePtr, char*);
-typedef char* (PostBuildCallbackRunner)(void*, PackagePtr, char*, char*);
-typedef void (SetBuildFunctionCallback)(void*, char*, TargetPtr);
-typedef void (LogCallback)(int64, PackagePtr, char*);
+typedef char* (PreBuildCallbackRunner)(void*, size_t, char*);
+typedef char* (PostBuildCallbackRunner)(void*, size_t, char*, char*);
+typedef void (SetBuildFunctionCallback)(void*, char*, size_t);
+typedef void (LogCallback)(int64, size_t, char*);
 
 // NB. This struct must remain consistent with the PleaseCallbacks type
 //     in interpreter.go, otherwise Bad Things will happen.
