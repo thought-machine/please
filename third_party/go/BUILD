@@ -108,3 +108,9 @@ go_get(
     revision = 'f8ecfdb6b66ec67ca930b39806519a2b72d1eaca',
     binary = True,
 )
+
+go_get(
+    name = 'levenshtein',
+    get = 'github.com/texttheater/golang-levenshtein/levenshtein',
+    revision = '14026fface0cb806188c85e792a93d625dc37d0f',
+)
