@@ -1,0 +1,7 @@
+syntax = 'proto2';
+
+package test.python;
+
+message TestMessage {
+  optional int32 test = 1;
+}
