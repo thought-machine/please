@@ -6,6 +6,7 @@ Version 1.6.0
       This is a breaking addition to the cache's interface since it is now required to
       implement the gRPC health check (from google.golang.org/grpc/health) so
       v1.6+ of the server will have to be deployed to support v1.6+ clients.
+      It will remain backwards compatible for older clients though.
     * Plz now comes with a wrapper script which can be committed and will fetch
       plz and invoke it. Makes it easy to use for people who don't have it
       installed already, ala Gradle's gradlew script.
