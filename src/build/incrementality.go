@@ -49,7 +49,7 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 			return true // one of the transitive deps has changed, need to rebuild
 		}
 	} else {
-		for _, dep := range target.Dependencies {
+		for _, dep := range target.Dependencies() {
 			if dep.State() < core.Unchanged {
 				log.Debug("Need to rebuild %s, %s has changed", target.Label, dep.Label)
 				return true // dependency has just been rebuilt, do this too.
@@ -101,7 +101,7 @@ func anyDependencyHasChanged(target *core.BuildTarget) bool {
 		if dependency != target && dependency.State() < core.Unchanged {
 			return true
 		} else if !dependency.OutputIsComplete || dependency == target {
-			for _, dep := range dependency.Dependencies {
+			for _, dep := range dependency.Dependencies() {
 				if !done[dep.Label] {
 					if inner(dep) {
 						log.Debug("Need to rebuild %s, %s has changed", target.Label, dep.Label)
@@ -229,7 +229,7 @@ func RuleHash(target *core.BuildTarget, runtime, postBuild bool) []byte {
 func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	h := sha1.New()
 	h.Write([]byte(target.Label.String()))
-	for _, dep := range target.DeclaredDependencies {
+	for _, dep := range target.DeclaredDependencies() {
 		h.Write([]byte(dep.String()))
 	}
 	for _, vis := range target.Visibility {

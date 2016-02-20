@@ -118,7 +118,7 @@ func replaceSequenceLabel(target *core.BuildTarget, label core.BuildLabel, file,
 	if label == target.Label { // targets can always use themselves.
 		return checkAndReplaceSequence(target, target, file, in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, false)
 	}
-	for _, dep := range target.Dependencies {
+	for _, dep := range target.Dependencies() {
 		if dep.Label == label {
 			return checkAndReplaceSequence(target, dep, file, in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, target.IsTool(label))
 		}

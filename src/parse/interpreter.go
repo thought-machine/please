@@ -705,7 +705,7 @@ func GetLabels(cPackage unsafe.Pointer, cTarget *C.char, cPrefix *C.char) **C.ch
 				labels[strings.TrimSpace(strings.TrimPrefix(label, prefix))] = true
 			}
 		}
-		for _, dep := range target.Dependencies {
+		for _, dep := range target.Dependencies() {
 			getLabels(dep)
 		}
 	}
