@@ -228,11 +228,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 		}
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
-			// Need to make sure we iterate these in order for things that care.
-			deps := make(BuildTargets, len(dependency.Dependencies))
-			copy(deps, dependency.Dependencies)
-			sort.Sort(deps)
-			for _, dep := range deps {
+			for _, dep := range dependency.Dependencies() {
 				if !done[dep.Label] && !target.IsTool(dep.Label) {
 					inner(dep)
 				}
@@ -363,7 +359,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 			}
 
 			// Finally recurse for all the deps of this rule.
-			for _, dep := range target.Dependencies {
+			for _, dep := range target.Dependencies() {
 				inner(dep)
 			}
 			doneTargets[target] = true
