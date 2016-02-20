@@ -45,6 +45,7 @@ func TestAllDepsBuilt(t *testing.T) {
 	target2 := makeTarget("//src/core:target2", target1)
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)
+	graph.AddDependency(target2.Label, target1.Label)
 	assert.True(t, graph.AllDepsBuilt(target1), "Should be true because it has no dependencies")
 	assert.False(t, graph.AllDepsBuilt(target2), "Should be false because target1 isn't built yet")
 	target1.SyncUpdateState(Inactive, Building)
@@ -85,7 +86,6 @@ func makeTarget(label string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	for _, dep := range deps {
 		target.AddDependency(dep.Label)
-		target.resolveDependency(dep.Label, dep)
 	}
 	return target
 }

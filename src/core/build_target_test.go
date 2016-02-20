@@ -217,12 +217,20 @@ func TestAddDependency(t *testing.T) {
 	target2.AddDependency(target1.Label)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
-	target2.AddExportedDependency(target1.Label)
+	target2.AddMaybeExportedDependency(target1.Label, true)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ExportedDependencies())
 	assert.Equal(t, []*BuildTarget{}, target2.Dependencies())
 	target2.resolveDependency(target1.Label, target1)
 	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
+}
+
+func TestDependencyFor(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "", target1)
+	assert.Equal(t, []*BuildTarget{target1}, target2.DependenciesFor(target1.Label))
+	assert.Equal(t, []*BuildTarget(nil), target2.DependenciesFor(target2.Label))
+	assert.Equal(t, 1, len(target2.dependencies))
 }
 
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {

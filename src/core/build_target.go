@@ -273,6 +273,11 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	return ret
 }
 
+// DependenciesFor returns the dependencies that relate to a given label.
+func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
+	return target.dependencies[label].deps
+}
+
 // DeclaredOutputs returns the outputs from this target's original declaration.
 // Hence it's similar to Outputs() but without the resolving of other rule names.
 func (target *BuildTarget) DeclaredOutputs() []string {
