@@ -25,7 +25,7 @@ type BuildTarget struct {
 	// Dependencies of this target.
 	// Maps the original declaration to whatever dependencies actually got attached,
 	// which may be more than one in some cases.
-	dependencies map[BuildLabel][]*BuildTarget
+	dependencies map[BuildLabel]depInfo
 	// Dependencies that are 'exported' to consuming rules, ie. if something depends
 	// on this rule, they get the exported dependencies as well.
 	ExportedDependencies []BuildLabel
@@ -115,6 +115,12 @@ type BuildTarget struct {
 	TestOutputs []string
 }
 
+type depInfo struct {
+	deps []*BuildTarget  // list of actual deps
+	resolved bool        // has the graph resolved it
+	exported bool        // is it an exported dependency
+}
+
 type BuildTargetState int32
 
 const (
@@ -193,7 +199,7 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 	target.Label = label
 	target.state = int32(Inactive)
 	// TODO(pebers): investigate assigning this map lazily
-	target.dependencies = map[BuildLabel][]*BuildTarget{}
+	target.dependencies = map[BuildLabel]depInfo{}
 	target.IsBinary = false
 	target.IsTest = false
 	target.BuildingDescription = "Building..."
@@ -250,7 +256,7 @@ func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 func (target *BuildTarget) Dependencies() []*BuildTarget {
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
-		for _, dep := range deps {
+		for _, dep := range deps.deps {
 			ret = append(ret, dep)
 		}
 	}
@@ -290,7 +296,7 @@ func (target *BuildTarget) findOutputTarget(label BuildLabel, out string) []stri
 	for declared, deps := range target.dependencies {
 		if declared == label {
 			ret := []string{}
-			for _, dep := range deps {
+			for _, dep := range deps.deps {
 				ret = append(ret, dep.Outputs()...)
 			}
 			return ret
@@ -316,7 +322,7 @@ func (target *BuildTarget) allDepsBuilt() bool {
 		return false // Target still has some deps pending parse.
 	}
 	for _, deps := range target.dependencies {
-		for _, dep := range deps {
+		for _, dep := range deps.deps {
 			if dep.State() < Built {
 				return false
 			}
@@ -329,7 +335,7 @@ func (target *BuildTarget) allDepsBuilt() bool {
 // parsed and resolved to real targets.
 func (target *BuildTarget) allDependenciesResolved() bool {
 	for _, deps := range target.dependencies {
-		if len(deps) == 0 {
+		if !deps.resolved {
 			return false
 		}
 	}
@@ -361,7 +367,7 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 // Returns an error if not, or nil if all's well.
 func (target *BuildTarget) CheckDependencyVisibility() error {
 	for _, deps := range target.dependencies {
-		for _, dep := range deps {
+		for _, dep := range deps.deps {
 			if !target.CanSee(dep) {
 				return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
 			} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
@@ -409,7 +415,7 @@ func (target *BuildTarget) HasExportedDependency(label BuildLabel) bool {
 func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
 	for declared, deps := range target.dependencies {
 		if declared == label {
-			return len(deps) > 0
+			return deps.resolved
 		}
 	}
 	return false
@@ -417,8 +423,12 @@ func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
 
 // resolveDependency resolves a particular dependency on a target.
 func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget) {
-	existing, _ := target.dependencies[label]
-	target.dependencies[label] = append(existing, dep)
+	info := target.dependencies[label]
+	if dep != nil {
+		info.deps = append(info.deps, dep)
+	}
+	info.resolved = true
+	target.dependencies[label] = info
 }
 
 // State returns the target's current state.
@@ -591,7 +601,7 @@ func (target *BuildTarget) AddDependency(dep BuildLabel) {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
 	}
 	if !target.HasDependency(dep) {
-		target.dependencies[dep] = []*BuildTarget{}
+		target.dependencies[dep] = depInfo{}
 	}
 }
 

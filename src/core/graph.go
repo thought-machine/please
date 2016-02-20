@@ -179,8 +179,8 @@ func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
 func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 	for _, label := range toTarget.ProvideFor(fromTarget) {
 		target, present := graph.targets[label]
+		fromTarget.resolveDependency(toTarget.Label, target)
 		if present {
-			fromTarget.resolveDependency(toTarget.Label, target)
 			graph.revDeps[label] = append(graph.revDeps[label], fromTarget)
 		} else {
 			graph.addPendingRevDep(fromTarget.Label, label)
