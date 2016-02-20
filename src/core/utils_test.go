@@ -106,9 +106,9 @@ func buildGraph() *BuildGraph {
 func makeTarget(graph *BuildGraph, label string, deps ...string) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	for _, dep := range deps {
-		target := graph.TargetOrDie(ParseBuildLabel(dep, ""))
-		target.AddDependency(target.Label)
-		target.resolveDependency(target.Label, target)
+		t := graph.TargetOrDie(ParseBuildLabel(dep, ""))
+		target.AddDependency(t.Label)
+		target.resolveDependency(target.Label, t)
 	}
 	target.Sources = append(target.Sources, FileLabel{
 		File:    target.Label.Name + ".go",
