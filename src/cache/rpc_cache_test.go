@@ -5,6 +5,7 @@ import (
 	"path"
 	"runtime"
 	"testing"
+	"time"
 
 	"cache/server"
 	"core"
@@ -41,6 +42,11 @@ func init() {
 	rpccache, err = newRpcCache(config)
 	if err != nil {
 		log.Fatalf("Failed to create RPC cache: %s", err)
+	}
+
+	// Busy-wait sucks but this isn't supposed to be visible from outside.
+	for i := 0; i < 100 && !rpccache.Connected; i++ {
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 

@@ -24,11 +24,12 @@ type rpcCache struct {
 	connection *grpc.ClientConn
 	client     pb.RpcCacheClient
 	Writeable  bool
+	Connected  bool
 	OSName     string
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
-	if cache.Writeable {
+	if cache.Connected && cache.Writeable {
 		artifacts := []*pb.Artifact{}
 		for out := range cacheArtifacts(target) {
 			artifacts2, err := cache.loadArtifacts(target, out)
@@ -43,7 +44,7 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
 }
 
 func (cache *rpcCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
-	if cache.Writeable {
+	if cache.Connected && cache.Writeable {
 		artifacts, err := cache.loadArtifacts(target, file)
 		if err != nil {
 			log.Warning("RPC cache failed to load artifact %s: %s", file, err)
@@ -88,6 +89,9 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 }
 
 func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
+	if !cache.Connected {
+		return false
+	}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
 	for out := range cacheArtifacts(target) {
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name, File: out}
@@ -103,6 +107,9 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
 }
 
 func (cache *rpcCache) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {
+	if !cache.Connected {
+		return false
+	}
 	artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name, File: file}
 	artifacts := []*pb.Artifact{&artifact}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH, Artifacts: artifacts}
@@ -138,7 +145,7 @@ func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []b
 }
 
 func (cache *rpcCache) Clean(target *core.BuildTarget) {
-	if cache.Writeable {
+	if cache.Connected && cache.Writeable {
 		req := pb.DeleteRequest{Os: runtime.GOOS, Arch: runtime.GOARCH}
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name}
 		req.Artifacts = []*pb.Artifact{&artifact}
@@ -149,7 +156,7 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 	}
 }
 
-func newRpcCache(config core.Configuration) (*rpcCache, error) {
+func (cache *rpcCache) connect(config core.Configuration) {
 	// Change grpc to log using our implementation
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
@@ -157,13 +164,18 @@ func newRpcCache(config core.Configuration) (*rpcCache, error) {
 	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(),
 		grpc.WithTimeout(time.Duration(config.Cache.RpcTimeout)*time.Second))
 	if err != nil {
-		return nil, err
+		log.Warning("Failed to connect to RPC cache: %s", err)
+	} else {
+		cache.connection = connection
+		cache.client = pb.NewRpcCacheClient(connection)
+		cache.Connected = true
 	}
-	return &rpcCache{
-		connection: connection,
-		client:     pb.NewRpcCacheClient(connection),
-		Writeable:  config.Cache.RpcWriteable,
-	}, nil
+}
+
+func newRpcCache(config core.Configuration) (*rpcCache, error) {
+	cache := &rpcCache{Writeable:  config.Cache.RpcWriteable}
+	go cache.connect(config)
+	return cache, nil
 }
 
 // grpcLogMabob is an implementation of grpc's logging interface using our backend.
