@@ -9,4 +9,4 @@ class TestProtoLibrary(unittest.TestCase):
         The real test is at build time, this is really just here to make
         sure that it gets built, and we might as well verify things are OK.
         """
-        from test.python import test_pb2
+        from test.python_rules import test_pb2
