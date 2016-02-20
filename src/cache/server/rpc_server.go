@@ -10,6 +10,8 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1alpha"
 
 	pb "cache/proto/rpc_cache"
 )
@@ -71,6 +73,9 @@ func ServeGrpcForever(port int) {
 	}
 	s := grpc.NewServer()
 	pb.RegisterRpcCacheServer(s, &RpcCacheServer{})
+	healthserver := health.NewHealthServer()
+	healthserver.SetServingStatus("plz-rpc-cache", healthpb.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(s, healthserver)
 	log.Notice("Serving RPC cache on port %d", port)
 	s.Serve(lis)
 }

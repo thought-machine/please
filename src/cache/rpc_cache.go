@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1alpha"
 
 	pb "cache/proto/rpc_cache"
 )
@@ -165,6 +166,17 @@ func (cache *rpcCache) connect(config core.Configuration) {
 		grpc.WithTimeout(time.Duration(config.Cache.RpcTimeout)*time.Second))
 	if err != nil {
 		log.Warning("Failed to connect to RPC cache: %s", err)
+		return
+	}
+	// Note that we have to actually send it a message here to validate the connection;
+	// Dial() only seems to return errors for superficial failures like syntactically invalid addresses,
+	// it will return essentially immediately even if the server doesn't exist.
+	healthclient := healthpb.NewHealthClient(connection)
+	resp, err := healthclient.Check(context.Background(), &healthpb.HealthCheckRequest{Service:"plz-rpc-cache"})
+	if err != nil {
+		log.Warning("Failed to contact RPC cache: %s", err)
+	} else if resp.Status != healthpb.HealthCheckResponse_SERVING {
+		log.Warning("RPC cache says it is not serving (%d)", resp.Status)
 	} else {
 		cache.connection = connection
 		cache.client = pb.NewRpcCacheClient(connection)

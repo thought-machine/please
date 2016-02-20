@@ -63,6 +63,7 @@ go_get(
     name = 'grpc',
     get = 'google.golang.org/grpc',
     revision = '01de3de50a4fada34ce39322801a1533c9554cdc',
+    install = ['google.golang.org/grpc/health'],
     deps = [
         ':protobuf',
     ],
