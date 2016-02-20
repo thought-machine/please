@@ -195,8 +195,6 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 	target := new(BuildTarget)
 	target.Label = label
 	target.state = int32(Inactive)
-	// TODO(pebers): investigate assigning this map lazily
-	target.dependencies = map[BuildLabel]depInfo{}
 	target.IsBinary = false
 	target.IsTest = false
 	target.BuildingDescription = "Building..."
@@ -609,7 +607,9 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported b
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
 	}
-	if !target.HasDependency(dep) {
+	if target.dependencies == nil {
+		target.dependencies = map[BuildLabel]depInfo{dep: depInfo{exported: exported}}
+	} else if !target.HasDependency(dep) {
 		target.dependencies[dep] = depInfo{exported: exported}
 	} else if exported {
 		// Make sure this is set in case it was already added as a non-exported dependency.
