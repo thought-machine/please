@@ -602,7 +602,7 @@ func (target *BuildTarget) AddDependency(dep BuildLabel) {
 	target.AddMaybeExportedDependency(dep, false)
 }
 
-// AddExportedDependency adds a dependency to this target which may be exported. It deduplicates against any existing deps.
+// AddMaybeExportedDependency adds a dependency to this target which may be exported. It deduplicates against any existing deps.
 func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported bool) {
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
