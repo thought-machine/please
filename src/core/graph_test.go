@@ -84,7 +84,8 @@ func TestDependentTargets(t *testing.T) {
 func makeTarget(label string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	for _, dep := range deps {
-		target.Dependencies = append(target.Dependencies, dep)
+		target.AddDependency(dep.Label)
+		target.resolveDependency(dep.Label, dep)
 	}
 	return target
 }

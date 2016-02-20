@@ -209,6 +209,22 @@ func TestDependencies(t *testing.T) {
 	assert.Equal(t, []*BuildTarget{target1, target2}, target3.Dependencies())
 }
 
+func TestAddDependency(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	assert.Equal(t, []BuildLabel{}, target2.DeclaredDependencies())
+	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
+	target2.AddDependency(target1.Label)
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
+	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
+	target2.AddExportedDependency(target1.Label)
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.ExportedDependencies())
+	assert.Equal(t, []*BuildTarget{}, target2.Dependencies())
+	target2.resolveDependency(target1.Label, target1)
+	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
@@ -217,6 +233,7 @@ func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 		target.Visibility = append(target.Visibility, ParseBuildLabel(visibility, ""))
 	}
 	for _, dep := range deps {
+		target.AddDependency(dep.Label)
 		target.resolveDependency(dep.Label, dep)
 	}
 	return target

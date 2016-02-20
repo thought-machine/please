@@ -299,10 +299,7 @@ func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget unsafe.Po
 func AddDependency(cPackage unsafe.Pointer, cTarget *C.char, cDep *C.char, exported bool) {
 	target := getTargetPost(cPackage, cTarget)
 	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
-	target.AddDependency(dep)
-	if exported {
-		target.AddExportedDependency(dep)
-	}
+	target.AddMaybeExportedDependency(dep, exported)
 	core.State.Graph.AddDependency(target.Label, dep)
 }
 
@@ -429,8 +426,7 @@ func AddDep(cTarget unsafe.Pointer, cDep *C.char) {
 func AddExportedDep(cTarget unsafe.Pointer, cDep *C.char) {
 	target := (*core.BuildTarget)(cTarget)
 	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
-	target.AddDependency(dep)
-	target.AddExportedDependency(dep)
+	target.AddMaybeExportedDependency(dep, true)
 }
 
 //export AddTool

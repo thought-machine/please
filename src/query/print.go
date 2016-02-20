@@ -64,8 +64,8 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		pythonBool("no_test_output", target.NoTestOutput)
 		pythonBool("test_only", target.TestOnly)
 		pythonBool("skip_cache", target.SkipCache)
-		labelList("deps", excludeLabels(target.DeclaredDependencies(), target.ExportedDependencies), target)
-		labelList("exported_deps", target.ExportedDependencies, target)
+		labelList("deps", excludeLabels(target.DeclaredDependencies(), target.ExportedDependencies()), target)
+		labelList("exported_deps", target.ExportedDependencies(), target)
 		labelList("tools", target.Tools, target)
 		if len(target.Data) > 0 {
 			fmt.Printf("      data = [\n")

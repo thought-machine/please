@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 )
@@ -233,11 +232,8 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 					inner(dep)
 				}
 			}
-		} else if len(dependency.ExportedDependencies) > 0 {
-			deps := make(BuildLabels, len(dependency.ExportedDependencies))
-			copy(deps, dependency.ExportedDependencies)
-			sort.Sort(deps)
-			for _, dep := range deps {
+		} else {
+			for _, dep := range dependency.ExportedDependencies() {
 				for _, dep2 := range recursivelyProvideFor(graph, target, dep) {
 					if !done[dep2] {
 						inner(graph.TargetOrDie(dep2))
@@ -298,12 +294,12 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool)
 				pushOut(fullPaths[i], dataPath)
 			}
 			if label := data.Label(); label != nil {
-				for _, dep := range graph.TargetOrDie(*label).ExportedDependencies {
+				for _, dep := range graph.TargetOrDie(*label).ExportedDependencies() {
 					inner(graph.TargetOrDie(dep))
 				}
 			}
 		}
-		for _, dep := range target.ExportedDependencies {
+		for _, dep := range target.ExportedDependencies() {
 			inner(graph.TargetOrDie(dep))
 		}
 	}

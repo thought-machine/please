@@ -24,11 +24,8 @@ type BuildTarget struct {
 	Label BuildLabel
 	// Dependencies of this target.
 	// Maps the original declaration to whatever dependencies actually got attached,
-	// which may be more than one in some cases.
+	// which may be more than one in some cases. Also contains info about exporting etc.
 	dependencies map[BuildLabel]depInfo
-	// Dependencies that are 'exported' to consuming rules, ie. if something depends
-	// on this rule, they get the exported dependencies as well.
-	ExportedDependencies []BuildLabel
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
 	// Source files of this rule. Can refer to build rules themselves.
@@ -264,6 +261,18 @@ func (target *BuildTarget) Dependencies() []*BuildTarget {
 	return ret
 }
 
+// ExportedDependencies returns any exported dependencies of this target.
+func (target *BuildTarget) ExportedDependencies() []BuildLabel {
+	ret := make(BuildLabels, 0, len(target.dependencies))
+	for dep, info := range target.dependencies {
+		if info.exported {
+			ret = append(ret, dep)
+		}
+	}
+	sort.Sort(ret)
+	return ret
+}
+
 // DeclaredOutputs returns the outputs from this target's original declaration.
 // Hence it's similar to Outputs() but without the resolving of other rule names.
 func (target *BuildTarget) DeclaredOutputs() []string {
@@ -394,16 +403,6 @@ func (target *BuildTarget) CheckDuplicateOutputs() error {
 // HasDependency checks if a target already depends on this label.
 func (target *BuildTarget) HasDependency(label BuildLabel) bool {
 	for dep := range target.dependencies {
-		if dep == label {
-			return true
-		}
-	}
-	return false
-}
-
-// HasExportedDependency checks if a target already has an exported dependency on this label.
-func (target *BuildTarget) HasExportedDependency(label BuildLabel) bool {
-	for _, dep := range target.ExportedDependencies {
 		if dep == label {
 			return true
 		}
@@ -597,17 +596,21 @@ func (target *BuildTarget) HasSource(source string) bool {
 
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
+	target.AddMaybeExportedDependency(dep, false)
+}
+
+// AddExportedDependency adds a dependency to this target which may be exported. It deduplicates against any existing deps.
+func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported bool) {
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
 	}
 	if !target.HasDependency(dep) {
-		target.dependencies[dep] = depInfo{}
-	}
-}
-
-func (target *BuildTarget) AddExportedDependency(dep BuildLabel) {
-	if !target.HasExportedDependency(dep) {
-		target.ExportedDependencies = append(target.ExportedDependencies, dep)
+		target.dependencies[dep] = depInfo{exported: exported}
+	} else if exported {
+		// Make sure this is set in case it was already added as a non-exported dependency.
+		info := target.dependencies[dep]
+		info.exported = true
+		target.dependencies[dep] = info
 	}
 }
 
