@@ -98,12 +98,12 @@ func replaceSequencesInternal(target *core.BuildTarget, command string, test boo
 // Replaces a single escape sequence in a command.
 func replaceSequence(target *core.BuildTarget, in string, runnable, multiple, pairs, dir, outPrefix, test bool) string {
 	if core.LooksLikeABuildLabel(in) {
-		label, file := core.ParseBuildFileLabel(in, target.Label.PackageName)
-		return replaceSequenceLabel(target, label, file, in, runnable, multiple, pairs, dir, outPrefix, test, true)
+		label := core.ParseBuildLabel(in, target.Label.PackageName)
+		return replaceSequenceLabel(target, label, in, runnable, multiple, pairs, dir, outPrefix, test, true)
 	}
 	for src := range target.AllSources() {
 		if label := src.Label(); label != nil && src.String() == in {
-			return replaceSequenceLabel(target, *label, "", in, runnable, multiple, pairs, dir, outPrefix, test, false)
+			return replaceSequenceLabel(target, *label, in, runnable, multiple, pairs, dir, outPrefix, test, false)
 		}
 	}
 	if pairs {
@@ -113,20 +113,20 @@ func replaceSequence(target *core.BuildTarget, in string, runnable, multiple, pa
 	}
 }
 
-func replaceSequenceLabel(target *core.BuildTarget, label core.BuildLabel, file, in string, runnable, multiple, pairs, dir, outPrefix, test, allOutputs bool) string {
+func replaceSequenceLabel(target *core.BuildTarget, label core.BuildLabel, in string, runnable, multiple, pairs, dir, outPrefix, test, allOutputs bool) string {
 	// Check this label is a dependency of the target, otherwise it's not allowed.
 	if label == target.Label { // targets can always use themselves.
-		return checkAndReplaceSequence(target, target, file, in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, false)
+		return checkAndReplaceSequence(target, target, in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, false)
 	}
 	for _, dep := range target.Dependencies {
 		if dep.Label == label {
-			return checkAndReplaceSequence(target, dep, file, in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, target.IsTool(label))
+			return checkAndReplaceSequence(target, dep, in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, target.IsTool(label))
 		}
 	}
 	panic(fmt.Sprintf("Rule %s can't use %s; doesn't depend on target %s", target.Label, in, label))
 }
 
-func checkAndReplaceSequence(target, dep *core.BuildTarget, file, in string, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, tool bool) string {
+func checkAndReplaceSequence(target, dep *core.BuildTarget, in string, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, tool bool) string {
 	if allOutputs && !multiple && len(dep.Outputs()) != 1 {
 		// Label must have only one output.
 		panic(fmt.Sprintf("Rule %s can't use %s; %s has multiple outputs.", target.Label, in, dep.Label))
@@ -137,9 +137,6 @@ func checkAndReplaceSequence(target, dep *core.BuildTarget, file, in string, run
 	}
 	output := ""
 	for _, out := range dep.Outputs() {
-		if file != "" && file != out {
-			continue
-		}
 		if allOutputs || out == in {
 			if pairs {
 				output += quote(path.Join(core.RepoRoot, dep.OutDir(), out)) + " " + quote(out) + " "

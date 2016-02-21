@@ -66,20 +66,6 @@ func TestLocationPairsLocalFile(t *testing.T) {
 	}
 }
 
-func TestPartialOutput(t *testing.T) {
-	// Second rule uses only one file from first one.
-	target2 := makeTarget("//path/to:target2", "", nil)
-	target2.AddOutput("test.py")
-	target1 := makeTarget("//path/to:target1", "ln -s $(location test.py) ${OUT}", target2)
-	target1.Sources = append(target1.Sources, core.BuildFileLabel{File: "test.py", BuildLabel: target2.Label})
-
-	expected := "ln -s path/to/test.py ${OUT}"
-	cmd := replaceSequences(target1)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
-}
-
 func TestReplacementsForTest(t *testing.T) {
 	target2 := makeTarget("//path/to:target2", "", nil)
 	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target1) $(location //path/to:target2)", target2)
