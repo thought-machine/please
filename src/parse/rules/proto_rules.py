@@ -75,7 +75,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
         'mv -f ${PKG}/* .',
         'find . -name "*.java"  # protoc v%s' % protoc_version,
     ]
-    if 'py' in languages:
+    if 'py' in languages and CONFIG.PROTO_PYTHON_PACKAGE:
         cmds.insert(2, 'sed -i -e "s/from google.protobuf/from %s/g" *.py' %
                     CONFIG.PROTO_PYTHON_PACKAGE)
     cmd = ' && '.join(cmds)
