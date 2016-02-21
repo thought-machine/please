@@ -10,7 +10,7 @@
 // callbacks etc.
 // The setup isn't actually extremely complex but some care is needed; it's relatively rare to need
 // to modify it (generally only when adding new properties to build targets) but when you do you
-// must make sure this file, interpreter.h and rules/please_parser.py all agree about struct
+// must make sure this file, defs.h / interpreter.h and cffi/please_parser.py all agree about struct
 // definitions etc. Bad Things will happen if you do not.
 
 package parse
