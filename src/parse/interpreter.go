@@ -371,6 +371,8 @@ func parseSource(src string, packageName string) core.BuildInput {
 			return core.BuildFileLabel{BuildLabel: label, File: file}
 		}
 		return label
+	} else if src == "" {
+		panic(fmt.Errorf("Empty source path (in package %s)", packageName))
 	} else if strings.Contains(src, "../") {
 		panic(fmt.Errorf("'%s' (in package %s) is an invalid path; build target paths can't contain ../", src, packageName))
 	} else if src[0] == '/' {
