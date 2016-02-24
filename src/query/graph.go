@@ -99,8 +99,8 @@ func makeJSONTarget(graph *core.BuildGraph, target *core.BuildTarget) JSONTarget
 	for _, out := range target.Outputs() {
 		t.Outputs = append(t.Outputs, path.Join(target.Label.PackageName, out))
 	}
-	for _, in := range target.Sources {
-		t.Sources = append(t.Sources, in.String())
+	for _, src := range target.AllSourcePaths(graph) {
+		t.Sources = append(t.Sources, src)
 	}
 	for _, dep := range target.DeclaredDependencies {
 		t.Deps = append(t.Deps, dep.String())
