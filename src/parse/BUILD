@@ -2,7 +2,7 @@ subinclude('//build_defs:go_bindata')
 
 cgo_library(
     name = 'parse',
-    srcs = glob(['parse_step.go', 'interpreter.*']) + [':builtin_rules'],
+    srcs = glob(['parse_step.go', 'suggest.go', 'interpreter.*']) + [':builtin_rules'],
     env = {'CGO_LDFLAGS': '-L${TMP_DIR}/${PKG}/rules'},
     deps = [
         ':defs_hdr',
@@ -10,6 +10,7 @@ cgo_library(
         '//src/core',
         '//third_party/go:logging',
         '//third_party/go:gcfg',
+        '//third_party/go:levenshtein',
     ],
     visibility = ['PUBLIC'],
 )
@@ -61,6 +62,15 @@ cgo_test(
         '//third_party/go:testify',
     ],
     data = glob(['test_data/**/TEST_BUILD', 'test_data/**/test.py']),
+)
+
+cgo_test(
+    name = 'suggest_test',
+    srcs = ['suggest_test.go'],
+    deps = [
+        ':parse',
+        '//third_party/go:testify',
+    ],
 )
 
 # Simulates a code generating rule to test the require / provide mechanism.
