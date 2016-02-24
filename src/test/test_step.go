@@ -159,12 +159,20 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 			} else if err == nil {
 				target.Results.NumTests++
 				target.Results.Failed++
+				target.Results.Failures = append(target.Results.Failures, core.TestFailure{
+					Name:   "Missing results",
+					Stdout: string(out),
+				})
 				resultErr = fmt.Errorf("Test failed to produce output results file")
 				resultMsg = fmt.Sprintf("Test apparently succeeded but failed to produce %s. Output: %s", outputFile, string(out))
 				numFlakes++
 			} else {
 				target.Results.NumTests++
 				target.Results.Failed++
+				target.Results.Failures = append(target.Results.Failures, core.TestFailure{
+					Name:   "Test failed with no results",
+					Stdout: string(out),
+				})
 				numFlakes++
 				resultErr = err
 				resultMsg = fmt.Sprintf("Test failed with no results. Output: %s", string(out))
