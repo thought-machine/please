@@ -32,7 +32,8 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		return
 	}
 	// Check the cached output files if the target wasn't rebuilt.
-	hashStr := base64.RawURLEncoding.EncodeToString(core.CollapseHash(hash))
+	hash = core.CollapseHash(hash)
+	hashStr := base64.RawURLEncoding.EncodeToString(hash)
 	resultsFileName := fmt.Sprintf(".test_results_%s_%s", label.Name, hashStr)
 	coverageFileName := fmt.Sprintf(".test_coverage_%s_%s", label.Name, hashStr)
 	outputFile := path.Join(target.TestDir(), "test.results")
