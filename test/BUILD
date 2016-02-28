@@ -286,3 +286,10 @@ plz_e2e_test(
     expect_file_exists = '../../../bin/test/truth.txt',
     labels = ['container', 'py3'],
 )
+
+plz_e2e_test(
+    name = 'cyclic_dependency_test',
+    cmd = 'plz test //test/cycle:all',
+    expect_output_contains = 'Dependency cycle found',
+    expected_failure = True,
+)
