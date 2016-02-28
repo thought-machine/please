@@ -5,6 +5,7 @@ package core
 import "fmt"
 import "path"
 
+// FileLabel represents a file in the current package which is directly used by a target.
 type FileLabel struct {
 	// Name of the file
 	File string
@@ -51,3 +52,25 @@ func (label BuildFileLabel) Label() *BuildLabel {
 func (label BuildFileLabel) String() string {
 	return fmt.Sprintf("%s:%s", label.BuildLabel, label.File)
 }
+
+// SystemFileLabel represents an absolute system dependency, which is not managed by the build system.
+type SystemFileLabel struct {
+	Path string
+}
+
+func (label SystemFileLabel) Paths(graph *BuildGraph) []string {
+	return []string{label.Path}
+}
+
+func (label SystemFileLabel) FullPaths(graph *BuildGraph) []string {
+	return []string{label.Path}
+}
+
+func (label SystemFileLabel) Label() *BuildLabel {
+	return nil
+}
+
+func (label SystemFileLabel) String() string {
+	return label.Path
+}
+
