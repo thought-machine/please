@@ -15,3 +15,11 @@ python_test(
         ':timestamp',
     ],
 )
+
+go_test(
+    name = 'go_system_dep_test',
+    srcs = ['system_dep_test.go'],
+    deps = [
+        ':timestamp',
+    ],
+)
