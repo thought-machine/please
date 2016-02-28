@@ -16,5 +16,5 @@ gentest(
     test_cmd = 'true',
     no_test_output = True,
     deps = [':cycle_1', ':cycle_2'],
-    labels = ['manual'],
+    labels = ['cycle'],
 )
