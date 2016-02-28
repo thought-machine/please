@@ -123,10 +123,11 @@ func newDirCache(config core.Configuration) *dirCache {
 	// Fire off the cache cleaner process.
 	if config.Cache.DirCacheCleaner != "" {
 		go func() {
+			cleaner := core.ExpandHomePath(config.Cache.DirCacheCleaner)
 			log.Info("Running cache cleaner: %s --dir %s --high_water_mark %s --low_water_mark %s",
-				config.Cache.DirCacheCleaner, cache.Dir, config.Cache.DirCacheHighWaterMark, config.Cache.DirCacheLowWaterMark)
-			if _, err := syscall.ForkExec(config.Cache.DirCacheCleaner, []string{
-				config.Cache.DirCacheCleaner,
+				cleaner, cache.Dir, config.Cache.DirCacheHighWaterMark, config.Cache.DirCacheLowWaterMark)
+			if _, err := syscall.ForkExec(cleaner, []string{
+				cleaner,
 				"--dir", cache.Dir,
 				"--high_water_mark", config.Cache.DirCacheHighWaterMark,
 				"--low_water_mark", config.Cache.DirCacheLowWaterMark,

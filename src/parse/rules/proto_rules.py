@@ -10,9 +10,16 @@ the proto_library rule to get its appropriate outputs.
 # Languages to generate protos for.
 # We maintain this internal mapping to normalize their names to the same ones we use elsewhere.
 _PROTO_LANGUAGES = {'cc': 'cpp', 'py': 'python', 'java': 'java', 'go': 'go'}
+# File extensions that are produced for each language.
+_PROTO_FILE_EXTENSIONS = {
+    'cc': ['.pb.cc', '.pb.h'],
+    'py': ['_pb2.py'],
+    'go': ['.pb.go'],
+    'java': ['.java'],
+}
 
 
-def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
+def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None,
                   python_deps=None, cc_deps=None, java_deps=None, go_deps=None,
                   protoc_version=CONFIG.PROTOC_VERSION, languages=None):
     """Compile a .proto file to generated code for various languages.
@@ -23,6 +30,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
       plugins (dict): Plugins to invoke for code generation.
       deps (list): Dependencies
       visibility (list): Visibility specification for the rule.
+      labels(list): List of labels to apply to this rule.
       python_deps (list): Additional deps to add to the python_library rules
       cc_deps (list): Additional deps to add to the cc_library rules
       java_deps (list): Additional deps to add to the java_library rules
@@ -36,72 +44,133 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
                 raise ValueError('Unknown language for proto_library: %s' % language)
     else:
         languages = CONFIG.PROTO_LANGUAGES
+    labels = labels or []
     plugins = plugins or {}
-    plugin_cmds = ''
-    deps = deps or []
-    if 'go' in languages and 'plugin=protoc-gen-go' not in plugins:
-        plugins['plugin=protoc-gen-go'] = _plugin(CONFIG.PROTOC_GO_PLUGIN, deps)
-    if plugins:
-        if isinstance(plugins, dict):
-            plugins = sorted(plugins.items())
-        plugin_cmds = ' '.join('--%s=%s' % (k, v) for k, v in plugins)
     python_deps = python_deps or []
     cc_deps = cc_deps or []
     java_deps = java_deps or []
     go_deps = go_deps or []
-    python_outs = [src.replace('.proto', '_pb2.py') for src in srcs] if 'py' in languages else []
-    go_outs = [src.replace('.proto', '.pb.go') for src in srcs] if 'go' in languages else []
-    cc_hdrs = [src.replace('.proto', '.pb.h') for src in srcs] if 'cc' in languages else []
-    cc_srcs = [src.replace('.proto', '.pb.cc') for src in srcs] if 'cc' in languages else []
-    gen_name = '_%s#protoc' % name
-    gen_rule = ':' + gen_name
-    java_only_name = '_%s#java_only' % name
-    base_path = get_base_path()
-    labels = ['proto:go-map: %s/%s=%s/%s' % (base_path, src, base_path, name) for src in srcs]
 
-    # Used to collect Java output files; we don't know where they'll end up because their
+    # We detect output names for normal sources, but will have to do a post-build rule for
+    # any input rules. We could just do that for everything but it's nicer to avoid them
+    # when possible since they obscure what's going on with the build graph.
+    file_srcs = [src for src in srcs if not src.startswith(':') and not src.startswith('/')]
+    find_outs = lambda lang, ext: [src.replace('.proto', ext) for src in file_srcs] if lang in languages else []
+    outs = {
+        'py': find_outs('py', '_pb2.py'),
+        'go': find_outs('go', '.pb.go'),
+        'cc': find_outs('cc', '.pb.h') + find_outs('cc', '.pb.cc'),
+    }
+    need_post_build = file_srcs != srcs
+    provides = {'proto': ':_%s#proto' % name}
+
+    # Used to collect output files for Java we don't know where they'll end up because their
     # location depends on the java_package option defined in the .proto file.
-    def _annotate_java_outs(rule_name, output):
-        for out in output:
-            if out and out.endswith('.java'):
-                java_file = out.lstrip('./')
-                add_out(rule_name, java_file)
-                add_out(java_only_name, ':%s:%s' % (gen_name, java_file))
+    # For other language we might not know if the sources come from another rule.
+    def _annotate_outs(language, extensions):
+        def _annotate_outs(rule_name, output):
+            for out in output:
+                for ext in extensions:
+                    if out.endswith(ext):
+                        add_out(rule_name, out.lstrip('./'))
+        return _annotate_outs
 
-    protoc_out_flags = ' '.join('--%s_out=$TMP_DIR' % _PROTO_LANGUAGES[language]
-                                for language in languages)
-    cmds = [
-        '%s %s %s ${SRCS}' % (_plugin(CONFIG.PROTOC_TOOL, deps), protoc_out_flags, plugin_cmds),
-        'mv -f ${PKG}/* .',
-        'find . -name "*.java"  # protoc v%s' % protoc_version,
-    ]
-    if 'py' in languages:
-        cmds.insert(2, 'sed -i -e "s/from google.protobuf/from %s/g" *.py' %
-                    CONFIG.PROTO_PYTHON_PACKAGE)
-    cmd = ' && '.join(cmds)
+    for language in languages:
+        gen_name = '_%s#protoc_%s' % (name, language)
+        gen_dep = ':' + gen_name
+        lang_name = '_%s#%s' % (name, language)
 
-    # Used to update the Go path mapping; by default it doesn't really import in the way we want.
-    def _go_path_mapping(rule_name):
-        mapping = ',M'.join(get_labels(rule_name, 'proto:go-map:'))
-        # Bit of a hack, it's very hard to insert this one generically because of the way the
-        # go code generator specifies its own plugins.
-        grpc_plugin = 'plugins=grpc,' if 'grpc' in protoc_version else ''
-        new_cmd = cmd.replace('go_out=$TMP_DIR', 'go_out=%sM%s:$TMP_DIR' % (grpc_plugin, mapping))
-        set_command(rule_name, new_cmd)
+        plugin_cmds = ''
+        deps = deps[:] if deps else []
+        lang_plugins = plugins.get(language, [])
+        if language == 'go' and not plugins:
+            # Go doesn't come by default, so add it here.
+            lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, deps))
+        cmds = [
+            '%s --%s_out=$TMP_DIR %s ${SRCS}' % (_plugin(CONFIG.PROTOC_TOOL, deps),
+                                                 _PROTO_LANGUAGES[language],
+                                                 ' '.join(lang_plugins)),
+            'mv -f ${PKG}/* .',
+        ]
+        if language == 'py' and CONFIG.PROTO_PYTHON_PACKAGE:
+            cmds.append('sed -i -e "s/from google.protobuf/from %s/g" *_pb2.py' %
+                        CONFIG.PROTO_PYTHON_PACKAGE)
+        post_build = None
+        if need_post_build or language == 'java':
+            cmds.append('find . ' + ' -or '.join('-name "*%s"' % ext
+                                                 for ext in _PROTO_FILE_EXTENSIONS[language]))
+            post_build = _annotate_outs(language, _PROTO_FILE_EXTENSIONS[language])
 
-    build_rule(
-        name = gen_name,
-        srcs = srcs,
-        outs = python_outs + go_outs + cc_hdrs + cc_srcs,
-        cmd = cmd,
-        deps = deps,
-        requires = ['proto'],
-        pre_build = _go_path_mapping if 'go' in languages else None,
-        post_build = _annotate_java_outs if 'java' in languages else None,
-        labels = labels,
-        needs_transitive_deps = True,
-        visibility = visibility,
-    )
+        if language == 'go':
+            base_path = get_base_path()
+            labels += ['proto:go-map: %s/%s=%s/%s' % (base_path, src, base_path, name) for src in srcs]
+
+        cmd = ' && '.join(cmds)
+        if protoc_version:
+            cmd += ' # protoc v%s' % protoc_version
+
+        build_rule(
+            name = gen_name,
+            srcs = srcs,
+            outs = outs.get(language, None),
+            cmd = cmd,
+            deps = deps,
+            requires = ['proto'],
+            pre_build = _go_path_mapping(cmd, 'grpc' in protoc_version) if language == 'go' else None,
+            post_build = post_build,
+            labels = labels,
+            needs_transitive_deps = True,
+            visibility = visibility,
+        )
+        provides[language] = ':' + lang_name
+
+        if language == 'cc':
+            cc_library(
+                name = lang_name,
+                srcs = [gen_dep],
+                hdrs = [gen_dep],
+                deps = [gen_dep] + deps + cc_deps,
+                visibility = visibility,
+            )
+            provides['cc_hdrs'] = ':__%s#cc#hdrs' % name  # Must wire this up by hand
+
+        elif language == 'py':
+            python_library(
+                name = lang_name,
+                srcs = [gen_dep],
+                deps = [CONFIG.PROTO_PYTHON_DEP] + deps + python_deps,
+                visibility = visibility,
+            )
+
+        elif language == 'java':
+            java_library(
+                name = lang_name,
+                srcs = [gen_dep],
+                exported_deps = [CONFIG.PROTO_JAVA_DEP] + deps + java_deps,
+                visibility = visibility,
+            )
+
+        elif language == 'go':
+            go_library(
+                name = lang_name,
+                srcs = [gen_dep],
+                out = name + '.a',
+                deps = [CONFIG.PROTO_GO_DEP] + deps + go_deps,
+                visibility = visibility,
+            )
+            # Needed for things like go_test / cgo_library that need the source in expected places
+            build_rule(
+                name = '_%s#go_src' % name,
+                srcs = [gen_dep],
+                outs = [name],  # TODO(pebers): could be more specific if we knew the outs?
+                deps = deps,
+                cmd = 'cp ${PKG}/*.go ' + name,
+                visibility = visibility,
+                requires = ['go_src'],
+            )
+            provides['go_src'] = ':_%s#go_src' % name
+
+    # This simply collects the sources, it's used for other proto_library rules to depend on.
     filegroup(
         name = '_%s#proto' % name,
         srcs = srcs,
@@ -111,65 +180,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None,
         requires = ['proto'],
         output_is_complete = False,
     )
-
-    provides = {x: ':_%s#%s' % (name, x) for x in ['proto'] + list(languages)}
-
-    if 'cc' in languages:
-        cc_library(
-            name = '_%s#cc' % name,
-            srcs = [':%s:%s' % (gen_name, src) for src in cc_srcs],
-            hdrs = [':%s:%s' % (gen_name, hdr) for hdr in cc_hdrs],
-            deps = [gen_rule] + deps + cc_deps,
-            visibility = visibility,
-        )
-        provides['cc_hdrs'] = ':__%s#cc#hdrs' % name
-
-    if 'py' in languages:
-        python_library(
-            name = '_%s#py' % name,
-            srcs = [':%s:%s' % (gen_name, out) for out in python_outs],
-            deps = [CONFIG.PROTO_PYTHON_DEP] + deps + python_deps,
-            visibility = visibility,
-        )
-
-    if 'java' in languages:
-        # Used to reduce to just the Java files.
-        # Can't avoid this as we do with the other rules since java_library won't generate what we want
-        # for a rule with no srcs. Also can't use a filegroup directly, it's not quite flexible enough.
-        build_rule(
-            name = java_only_name,
-            srcs = [gen_rule],
-            cmd = 'echo $(location_pairs %s) | xargs -n 2 ln -s' % gen_rule,
-            skip_cache = True,
-        )
-        java_library(
-            name = '_%s#java' % name,
-            srcs = [':' + java_only_name],
-            deps = deps,
-            exported_deps = [CONFIG.PROTO_JAVA_DEP] + java_deps,
-            visibility = visibility,
-        )
-
-    if 'go' in languages:
-        go_library(
-            name = '_%s#go' % name,
-            srcs = [':%s:%s' % (gen_name, out) for out in go_outs],
-            out = name + '.a',
-            deps = [CONFIG.PROTO_GO_DEP] + deps + go_deps,
-            visibility = visibility,
-        )
-        # Needed for things like go_test / cgo_library that need the source in expected places
-        build_rule(
-            name = '_%s#go_src' % name,
-            srcs = [':%s:%s' % (gen_name, out) for out in go_outs],
-            outs = ['%s/%s' % (name, src.replace('.proto', '.pb.go')) for src in srcs],
-            cmd = 'cp ${PKG}/*.go %s' % name,
-            visibility = visibility,
-            deps = deps,
-            requires = ['go_src'],
-        )
-        provides['go_src'] = ':_%s#go_src' % name
-
+    # This is the final rule that directs dependencies to the appropriate language.
     filegroup(
         name = name,
         deps = provides.values(),
@@ -199,12 +210,16 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
     languages = languages or CONFIG.PROTO_LANGUAGES
     plugins = {}
     if 'py' in languages:
-        plugins['plugin=protoc-gen-grpc-python'] = _plugin(CONFIG.GRPC_PYTHON_PLUGIN, deps)
-        plugins['grpc-python_out'] = '$TMP_DIR'
+        plugins['py'] = [
+            '--plugin=protoc-gen-grpc-python=' + _plugin(CONFIG.GRPC_PYTHON_PLUGIN, deps),
+            '--grpc-python_out=$TMP_DIR',
+        ]
         python_deps = (python_deps or []) + [CONFIG.GRPC_PYTHON_DEP]
     if 'java' in languages:
-        plugins['plugin=protoc-gen-grpc-java'] = _plugin(CONFIG.GRPC_JAVA_PLUGIN, deps)
-        plugins['grpc-java_out'] = '$TMP_DIR'
+        plugins['java'] = [
+            '--plugin=protoc-gen-grpc-java=' + _plugin(CONFIG.GRPC_JAVA_PLUGIN, deps),
+            '--grpc-java_out=$TMP_DIR',
+        ]
         java_deps = (java_deps or []) + [CONFIG.GRPC_JAVA_DEP]
     if 'go' in languages:
         go_deps = (go_deps or []) + [CONFIG.GRPC_GO_DEP]
@@ -228,3 +243,15 @@ def _plugin(plugin, deps):
         deps.append(plugin)
         return '$(exe %s)' % plugin
     return plugin
+
+
+def _go_path_mapping(cmd, include_grpc):
+    """Used to update the Go path mapping; by default it doesn't really import in the way we want."""
+    def _map_go_paths(rule_name):
+        mapping = ',M'.join(get_labels(rule_name, 'proto:go-map:'))
+        # Bit of a hack, it's very hard to insert this one generically because of the way the
+        # go code generator specifies its own plugins.
+        grpc_plugin = 'plugins=grpc,' if include_grpc else ''
+        new_cmd = cmd.replace('go_out=$TMP_DIR', 'go_out=%sM%s:$TMP_DIR' % (grpc_plugin, mapping))
+        set_command(rule_name, new_cmd)
+    return _map_go_paths

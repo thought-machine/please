@@ -18,7 +18,7 @@ func TestExpandHomePath(t *testing.T) {
 			"/bin:" + HOME + "/bin:" + HOME + "/script:/usr/local/bin"},
 	}
 	for _, c := range cases {
-		got := expandHomePath(c.in)
+		got := ExpandHomePath(c.in)
 		if got != c.want {
 			t.Errorf("ExpandHomePath(%q) == %q, want %q", c.in, got, c.want)
 		}

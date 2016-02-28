@@ -289,12 +289,8 @@ func (target *BuildTarget) Outputs() []string {
 	ret := []string{}
 	for _, out := range target.outputs {
 		if LooksLikeABuildLabel(out) {
-			label, file := ParseBuildFileLabel(out, target.Label.PackageName)
-			if file != "" {
-				ret = append(ret, file)
-			} else {
-				ret = append(ret, target.findOutputTarget(label, out)...)
-			}
+			label := ParseBuildLabel(out, target.Label.PackageName)
+			ret = append(ret, target.findOutputTarget(label, out)...)
 		} else {
 			ret = append(ret, out)
 		}

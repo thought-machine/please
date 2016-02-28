@@ -10,7 +10,7 @@
 // callbacks etc.
 // The setup isn't actually extremely complex but some care is needed; it's relatively rare to need
 // to modify it (generally only when adding new properties to build targets) but when you do you
-// must make sure this file, interpreter.h and rules/please_parser.py all agree about struct
+// must make sure this file, defs.h / interpreter.h and cffi/please_parser.py all agree about struct
 // definitions etc. Bad Things will happen if you do not.
 
 package parse
@@ -298,7 +298,7 @@ func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget unsafe.Po
 //export AddDependency
 func AddDependency(cPackage unsafe.Pointer, cTarget *C.char, cDep *C.char, exported bool) {
 	target := getTargetPost(cPackage, cTarget)
-	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
+	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddMaybeExportedDependency(dep, exported)
 	core.State.Graph.AddDependency(target.Label, dep)
 }
@@ -363,11 +363,9 @@ func AddSource(cTarget unsafe.Pointer, cSource *C.char) {
 // Identifies if the file is owned by this package and dies if not.
 func parseSource(src, packageName string, systemAllowed bool) core.BuildInput {
 	if core.LooksLikeABuildLabel(src) {
-		label, file := core.ParseBuildFileLabel(src, packageName)
-		if file != "" {
-			return core.BuildFileLabel{BuildLabel: label, File: file}
-		}
-		return label
+		return core.ParseBuildLabel(src, packageName)
+	} else if src == "" {
+		panic(fmt.Errorf("Empty source path (in package %s)", packageName))
 	} else if strings.Contains(src, "../") {
 		panic(fmt.Errorf("'%s' (in package %s) is an invalid path; build target paths can't contain ../", src, packageName))
 	} else if src[0] == '/' {
@@ -421,21 +419,21 @@ func AddOutput(cTarget unsafe.Pointer, cOutput *C.char) {
 //export AddDep
 func AddDep(cTarget unsafe.Pointer, cDep *C.char) {
 	target := (*core.BuildTarget)(cTarget)
-	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
+	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddDependency(dep)
 }
 
 //export AddExportedDep
 func AddExportedDep(cTarget unsafe.Pointer, cDep *C.char) {
 	target := (*core.BuildTarget)(cTarget)
-	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
+	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddMaybeExportedDependency(dep, true)
 }
 
 //export AddTool
 func AddTool(cTarget unsafe.Pointer, cTool *C.char) {
 	target := (*core.BuildTarget)(cTarget)
-	tool, _ := core.ParseBuildFileLabel(C.GoString(cTool), target.Label.PackageName)
+	tool := core.ParseBuildLabel(C.GoString(cTool), target.Label.PackageName)
 	target.Tools = append(target.Tools, tool)
 	target.AddDependency(tool)
 }
