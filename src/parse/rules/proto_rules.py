@@ -103,7 +103,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
 
         if language == 'go':
             base_path = get_base_path()
-            labels += ['proto:go-map: %s/%s=%s/%s' % (base_path, src, base_path, name) for src in srcs]
+            labels += ['proto:go-map: %s/%s=%s/%s' % (base_path, src, base_path, name) for src in srcs
+                       if not src.startswith(':') and not src.startswith('/')]
 
         cmd = ' && '.join(cmds)
         if protoc_version:
