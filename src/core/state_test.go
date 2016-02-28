@@ -1,6 +1,7 @@
 package core
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -81,9 +82,27 @@ func TestExpandOriginalTargets(t *testing.T) {
 	})
 }
 
+func TestExpandOriginalTestTargets(t *testing.T) {
+	state := NewBuildState(1, nil, 4, DefaultConfiguration())
+	state.OriginalTargets = []BuildLabel{{"src/core", "all"}}
+	state.NeedTests = true
+	state.Include = []string{"go"}
+	state.Exclude = []string{"py"}
+	addTarget(state, "//src/core:target1", "go")
+	addTarget(state, "//src/core:target2", "py")
+	addTarget(state, "//src/core:target1_test", "go")
+	addTarget(state, "//src/core:target2_test", "py")
+	addTarget(state, "//src/core:target3_test")
+	addTarget(state, "//src/core:target4_test", "go", "manual")
+	// Only the one target comes out here; it must be a test and otherwise follows
+	// the same include / exclude logic as the previous test.
+	assert.Equal(t, state.ExpandOriginalTargets(), []BuildLabel{{"src/core", "target1_test"}})
+}
+
 func addTarget(state *BuildState, name string, labels ...string) { 
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Labels = labels
+	target.IsTest = strings.HasSuffix(name, "_test")
 	pkg := state.Graph.Package(target.Label.PackageName)
 	if pkg == nil {
 		pkg = NewPackage(target.Label.PackageName)
