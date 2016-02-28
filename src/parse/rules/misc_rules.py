@@ -225,6 +225,33 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
     )
 
 
+def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_only=False):
+    """Defines a rule to collect some dependencies from outside the build tree.
+
+    This is essentially the same as a filegroup; it will simply copy files from the system
+    into the build tree, you must add additional rules if compilation is necessary.
+
+    Args:
+      name: Name of the rule.
+      srcs: System-level sources. Should all be absolute paths.
+      deps: Dependencies of the rule.
+      hashes: List of hashes; the output must match at least one of these. This is not required
+              but could be used to assert that the system lib is of some known version.
+      visibility (list): Visibility declaration of the rule.
+      test_only (bool): If true the rule is only visible to test targets.
+    """
+    build_rule(
+        name = name,
+        system_srcs = srcs,
+        outs = [basename(src) for src in srcs],
+        deps = deps,
+        cmd = 'ln -s $SRCS .',
+        hashes = hashes,
+        visibility = visibility,
+        test_only = test_only,
+    )
+
+
 def remote_file(name, url, hashes, out=None, binary=False, visibility=None, test_only=False):
     """Defines a rule to fetch a file over HTTP(S).
 
