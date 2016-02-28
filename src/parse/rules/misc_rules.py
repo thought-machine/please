@@ -245,7 +245,7 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
         system_srcs = srcs,
         outs = [basename(src) for src in srcs],
         deps = deps,
-        cmd = 'ln -s $SRCS .',
+        cmd = 'true',  # The process of preparing the sources actually copies the files.
         hashes = hashes,
         visibility = visibility,
         test_only = test_only,
