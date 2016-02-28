@@ -72,7 +72,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	}
 	duration := time.Since(startTime).Seconds()
 	// Check all the targets we wanted to build actually have been built.
-	for _, label := range state.OriginalTargets {
+	for _, label := range state.ExpandOriginalTargets() {
 		if target := state.Graph.Target(label); target == nil && !label.IsAllTargets() {
 			log.Fatalf("Target %s doesn't exist in build graph", label)
 		} else if shouldBuild && target != nil && target.State() < core.Built {
