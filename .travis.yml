@@ -6,10 +6,8 @@ go:
 script:
   - echo "[build]" > .plzconfig.local
   - echo "path = $PATH" >> .plzconfig.local
-  - cat .plzconfig.local
-  - echo $GOPATH
-  - echo $GOROOT
-  - echo `which go`
+  - echo "[go]" >> .plzconfig.local
+  - echo "goroot = $GOROOT" >> .plzconfig.local
   - ./bootstrap.sh
 
 before_install:

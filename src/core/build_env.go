@@ -35,6 +35,9 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		// in PATH entries.
 		"PATH=" + ExpandHomePath(strings.Join(state.Config.Build.Path, ":")),
 	}
+	if state.Config.Go.GoRoot != "" {
+		env = append(env, "GOROOT="+state.Config.Go.GoRoot)
+	}
 	if !test {
 		env = append(env,
 			"TMP_DIR="+path.Join(RepoRoot, target.TmpDir()),

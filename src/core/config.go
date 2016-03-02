@@ -168,8 +168,9 @@ type Configuration struct {
 		RunArgs            []string
 	}
 	Go struct {
-		GoVersion  string
-		TestTool string
+		GoVersion string
+		GoRoot    string
+		TestTool  string
 	}
 	Python struct {
 		PipTool            string
