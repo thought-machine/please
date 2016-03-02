@@ -1,0 +1,18 @@
+language: go
+
+go:
+  - 1.5
+
+script:
+  - ./bootstrap.sh
+
+before_install:
+  - wget https://s3-eu-west-1.amazonaws.com/please-build/tm-pypy_4.0.1_amd64.deb
+  - sudo dpkg -i tm-pypy_4.0.1_amd64.deb
+
+addons:
+  apt:
+    packages:
+      - libunittest++-dev
+      - binutils
+      - clang
