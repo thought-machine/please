@@ -13,6 +13,8 @@ script:
 before_install:
   - wget https://s3-eu-west-1.amazonaws.com/please-build/tm-pypy_4.0.1_amd64.deb
   - sudo dpkg -i tm-pypy_4.0.1_amd64.deb
+  - wget https://s3-eu-west-1.amazonaws.com/please-build/tm-google-protobuf_3.0.0-beta-2_amd64.deb
+  - sudo dpkg -i tm-google-protobuf_3.0.0-beta-2_amd64.deb
 
 addons:
   apt:
