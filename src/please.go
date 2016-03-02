@@ -57,16 +57,16 @@ var opts struct {
 	} `group:"Options controlling output & logging"`
 
 	FeatureFlags struct {
-		NoUpdate           bool `long:"noupdate" description:"Disable Please attempting to auto-update itself." default:"false"`
-		NoCache            bool `long:"nocache" description:"Disable caching locally" default:"false"`
-		NoHashVerification bool `long:"nohash_verification" description:"Hash verification errors are nonfatal." default:"false"`
-		NoLock             bool `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care." default:"false"`
+		NoUpdate           bool `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
+		NoCache            bool `long:"nocache" description:"Disable caching locally"`
+		NoHashVerification bool `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
+		NoLock             bool `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 	} `group:"Options that enable / disable certain features"`
 
 	AssertVersion    string `long:"assert_version" hidden:"true" description:"Assert the tool matches this version."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
-	NoCacheCleaner   bool   `description:"Don't start a cleaning process for the directory cache" default:"false" no-flag:"true"`
+	NoCacheCleaner   bool   `description:"Don't start a cleaning process for the directory cache" no-flag:"true"`
 
 	Build struct {
 		Args struct { // Inner nesting is necessary to make positional-args work :(
@@ -75,7 +75,7 @@ var opts struct {
 	} `command:"build" description:"Builds one or more targets"`
 
 	Test struct {
-		FailingTestsOk bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)" default:"false"`
+		FailingTestsOk bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NumRuns        int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
@@ -85,8 +85,8 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
-		FailingTestsOk   bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)" default:"false"`
-		NoCoverageReport bool `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell" default:"false"`
+		FailingTestsOk   bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NoCoverageReport bool `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
 		NumRuns          int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		Args             struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
@@ -102,7 +102,7 @@ var opts struct {
 	} `command:"run" description:"Builds and runs a single target"`
 
 	Clean struct {
-		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished." default:"false"`
+		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
 		Args         struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
@@ -516,6 +516,11 @@ func main() {
 	if opts.OutputFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other errors if --version was passed.
+	}
+	if err != nil {
+		parser.WriteHelp(os.Stderr)
+		fmt.Printf("\n%s\n", err)
+		os.Exit(1)
 	}
 	// PrintCommands implies verbosity of at least 2, because commands are logged at that level
 	if opts.OutputFlags.PrintCommands && opts.OutputFlags.Verbosity < 2 {
