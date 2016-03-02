@@ -1,0 +1,32 @@
+language: go
+
+go:
+  - 1.5.3
+
+script:
+  - echo "[build]" > .plzconfig.local
+  - echo "path = $PATH" >> .plzconfig.local
+  - echo "[go]" >> .plzconfig.local
+  - echo "goroot = $GOROOT" >> .plzconfig.local
+  - ./bootstrap.sh --plain_output
+
+before_install:
+  - wget https://s3-eu-west-1.amazonaws.com/please-build/tm-pypy_4.0.1_amd64.deb
+  - sudo dpkg -i tm-pypy_4.0.1_amd64.deb
+  - wget https://s3-eu-west-1.amazonaws.com/please-build/tm-google-protobuf_3.0.0-beta-2_amd64.deb
+  - sudo dpkg -i tm-google-protobuf_3.0.0-beta-2_amd64.deb
+
+addons:
+  apt:
+    packages:
+      - libunittest++-dev
+      - binutils
+      - clang
+      - gcc-4.8
+      - g++-4.8
+
+install:
+  - true
+
+git:
+  depth: 3

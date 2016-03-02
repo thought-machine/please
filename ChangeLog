@@ -1,3 +1,40 @@
+Version 1.6.0
+-------------
+
+    * RPC cache now initialises asynchronously so if it's not available the
+      build will not hang waiting for its connection to time out.
+      This is a breaking addition to the cache's interface since it is now required to
+      implement the gRPC health check (from google.golang.org/grpc/health) so
+      v1.6+ of the server will have to be deployed to support v1.6+ clients.
+      It will remain backwards compatible for older clients though.
+    * Plz now comes with a wrapper script which can be committed and will fetch
+      plz and invoke it. Makes it easy to use for people who don't have it
+      installed already, ala Gradle's gradlew script.
+    * The default location for tools is in ~/.please instead of /opt/please,
+      which again makes it easier for people who don't have the tools already.
+    * --max_flakes flag has been removed in favour of --num_runs always making
+      a test run exactly that many times. Hopefully this is less confusing.
+
+
+Version 1.5.12
+--------------
+
+    * Altered exclusion rules for java_binary / java_test to better support native libraries.
+
+
+Version 1.5.11
+--------------
+
+    * Write explicit failures into unit test output on timeout etc. Needed for some downstream
+      tools that don't check attributes like 'failures' and need explicit entries.
+
+
+Version 1.5.10
+--------------
+
+    * Fix for multiple caches which could sometimes panic with a negative waitgroup.
+
+
 Version 1.5.9
 -------------
 

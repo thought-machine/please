@@ -64,15 +64,6 @@ func ParseBuildLabel(target string, currentPath string) BuildLabel {
 	panic("Invalid build target label: " + target)
 }
 
-// ParseBuildFileLabel parses a build label with an attached file specification. Panics on failure.
-func ParseBuildFileLabel(target string, currentPath string) (BuildLabel, string) {
-	if strings.Count(target, ":") == 2 {
-		index := strings.LastIndex(target, ":")
-		return ParseBuildLabel(target[0:index], currentPath), target[index+1 : len(target)]
-	}
-	return ParseBuildLabel(target, currentPath), ""
-}
-
 // tryParseBuildLabel attempts to parse a single build label from a string. Returns a bool indicating success.
 func tryParseBuildLabel(target string, currentPath string) (BuildLabel, bool) {
 	matches := absoluteTarget.FindStringSubmatch(target)

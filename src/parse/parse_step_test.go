@@ -146,7 +146,7 @@ func makeState(withPackage1, withPackage2 bool) *core.BuildState {
 
 func addDeps(graph *core.BuildGraph, pkg *core.Package) {
 	for _, target := range pkg.Targets {
-		for _, dep := range target.DeclaredDependencies {
+		for _, dep := range target.DeclaredDependencies() {
 			graph.AddDependency(target.Label, dep)
 		}
 	}

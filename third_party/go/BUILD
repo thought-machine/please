@@ -63,6 +63,7 @@ go_get(
     name = 'grpc',
     get = 'google.golang.org/grpc',
     revision = '01de3de50a4fada34ce39322801a1533c9554cdc',
+    install = ['google.golang.org/grpc/health'],
     deps = [
         ':protobuf',
     ],
@@ -107,4 +108,10 @@ go_get(
     get = 'golang.org/x/tools/cmd/stringer',
     revision = 'f8ecfdb6b66ec67ca930b39806519a2b72d1eaca',
     binary = True,
+)
+
+go_get(
+    name = 'levenshtein',
+    get = 'github.com/texttheater/golang-levenshtein/levenshtein',
+    revision = '14026fface0cb806188c85e792a93d625dc37d0f',
 )

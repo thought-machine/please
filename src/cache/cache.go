@@ -65,11 +65,11 @@ func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, s
 		if i == stopAt {
 			break
 		}
+		wg.Add(1)
 		go func(cache core.Cache) {
 			cache.Store(target, key)
 			wg.Done()
 		}(cache)
-		wg.Add(1)
 	}
 	wg.Wait()
 }
@@ -86,11 +86,11 @@ func (mplex cacheMultiplexer) storeExtraUntil(target *core.BuildTarget, key []by
 		if i == stopAt {
 			break
 		}
+		wg.Add(1)
 		go func(cache core.Cache) {
 			cache.StoreExtra(target, key, file)
 			wg.Done()
 		}(cache)
-		wg.Add(1)
 	}
 	wg.Wait()
 }

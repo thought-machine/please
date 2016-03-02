@@ -169,6 +169,7 @@ type Configuration struct {
 	}
 	Go struct {
 		GoVersion string
+		GoRoot    string
 		TestTool  string
 	}
 	Python struct {

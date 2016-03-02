@@ -56,12 +56,12 @@ func TestCheckDependencyVisibility(t *testing.T) {
 	assert.NoError(t, target7.CheckDependencyVisibility())
 
 	// Now if we add a dep on this mock library, lib2 will fail because it's not a test.
-	target2.Dependencies = append(target2.Dependencies, target5)
+	target2.resolveDependency(target5.Label, target5)
 	assert.Error(t, target2.CheckDependencyVisibility())
 
 	// Similarly to above test, if we add a dep on something that can't be seen, we should
 	// get errors back from this function.
-	target3.Dependencies = append(target3.Dependencies, target1)
+	target3.resolveDependency(target1.Label, target1)
 	assert.Error(t, target3.CheckDependencyVisibility())
 }
 
@@ -130,8 +130,6 @@ func TestAddProvide(t *testing.T) {
 	target2.AddProvide("go", ParseBuildLabel(":target1", "src/core"))
 	target3.Requires = append(target3.Requires, "go")
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3))
-	assert.Panics(t, func() { target3.AddProvide("go", ParseBuildLabel(":target1", "src/core")) },
-		"target3 doesn't depend on target1 so can't provide it directly")
 }
 
 func TestCheckDuplicateOutputs(t *testing.T) {
@@ -199,6 +197,42 @@ func TestToolPath(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s/file1.go %s/file2.go", root, root), target.toolPath())
 }
 
+func TestDependencies(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "", target1)
+	target3 := makeTarget("//src/core:target3", "", target1, target2)
+	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependencies())
+	assert.Equal(t, []*BuildTarget{}, target1.Dependencies())
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
+	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
+	assert.Equal(t, []BuildLabel{target1.Label, target2.Label}, target3.DeclaredDependencies())
+	assert.Equal(t, []*BuildTarget{target1, target2}, target3.Dependencies())
+}
+
+func TestAddDependency(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	assert.Equal(t, []BuildLabel{}, target2.DeclaredDependencies())
+	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
+	target2.AddDependency(target1.Label)
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
+	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
+	target2.AddMaybeExportedDependency(target1.Label, true)
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.ExportedDependencies())
+	assert.Equal(t, []*BuildTarget{}, target2.Dependencies())
+	target2.resolveDependency(target1.Label, target1)
+	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
+}
+
+func TestDependencyFor(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "", target1)
+	assert.Equal(t, []*BuildTarget{target1}, target2.DependenciesFor(target1.Label))
+	assert.Equal(t, []*BuildTarget(nil), target2.DependenciesFor(target2.Label))
+	assert.Equal(t, 1, len(target2.dependencies))
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
@@ -206,6 +240,9 @@ func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	} else if visibility != "" {
 		target.Visibility = append(target.Visibility, ParseBuildLabel(visibility, ""))
 	}
-	target.Dependencies = append(target.Dependencies, deps...)
+	for _, dep := range deps {
+		target.AddDependency(dep.Label)
+		target.resolveDependency(dep.Label, dep)
+	}
 	return target
 }

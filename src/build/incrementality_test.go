@@ -16,7 +16,7 @@ import (
 var KnownFields = map[string]bool{
 	// These fields are explicitly hashed.
 	"Label":                       true,
-	"DeclaredDependencies":        true,
+	"dependencies":                true,
 	"Hashes":                      true,
 	"Sources":                     true,
 	"NamedSources":                true,
@@ -62,11 +62,6 @@ var KnownFields = map[string]bool{
 
 	// Used to save the rule hash rather than actually being hashed itself.
 	"RuleHash": true,
-
-	// Covered sufficiently by DeclaredDependencies
-	"ExportedDependencies": true,
-	"Dependencies":         true,
-	"resolvedDependencies": true,
 }
 
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
@@ -75,7 +70,7 @@ func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
 	for i := 0; i < val.Type().NumField(); i++ {
 		field := val.Type().Field(i)
 		if !KnownFields[field.Name] {
-			t.Errorf("Unaccounted field in 'query print': %s", field.Name)
+			t.Errorf("Unaccounted field in RuleHash: %s", field.Name)
 		}
 	}
 }

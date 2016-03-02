@@ -11,15 +11,14 @@ import (
 var home = os.Getenv("HOME")
 var homeRex = regexp.MustCompile("(?:^|:)(~(?:[/:]|$))")
 
-// Expand all prefixes of ~ without a user specifier TO $HOME.
-// NB: this will break on recursive calls to plz
-func expandHomePath(path string) string {
+// ExpandHomePath expands all prefixes of ~ without a user specifier TO $HOME.
+func ExpandHomePath(path string) string {
 	return homeRex.ReplaceAllStringFunc(path, func(subpath string) string {
 		return strings.Replace(subpath, "~", home, -1)
 	})
 }
 
-// BuildEnvironment state target test creates the shell env vars to be passed
+// BuildEnvironment creates the shell env vars to be passed
 // into the exec.Command calls made by plz. Use test=true for plz test targets.
 func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []string {
 	sources := target.AllSourcePaths(state.Graph)
@@ -34,7 +33,10 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		"PATH=" + expandHomePath(strings.Join(state.Config.Build.Path, ":")),
+		"PATH=" + ExpandHomePath(strings.Join(state.Config.Build.Path, ":")),
+	}
+	if state.Config.Go.GoRoot != "" {
+		env = append(env, "GOROOT="+state.Config.Go.GoRoot)
 	}
 	if !test {
 		env = append(env,

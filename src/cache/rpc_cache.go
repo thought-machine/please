@@ -6,6 +6,7 @@ package cache
 import (
 	"bytes"
 	"core"
+	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"path"
@@ -16,6 +17,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1alpha"
 
 	pb "cache/proto/rpc_cache"
 )
@@ -24,11 +26,13 @@ type rpcCache struct {
 	connection *grpc.ClientConn
 	client     pb.RpcCacheClient
 	Writeable  bool
+	Connected  bool
+	Connecting bool
 	OSName     string
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
-	if cache.Writeable {
+	if cache.isConnected() && cache.Writeable {
 		artifacts := []*pb.Artifact{}
 		for out := range cacheArtifacts(target) {
 			artifacts2, err := cache.loadArtifacts(target, out)
@@ -43,7 +47,7 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
 }
 
 func (cache *rpcCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
-	if cache.Writeable {
+	if cache.isConnected() && cache.Writeable {
 		artifacts, err := cache.loadArtifacts(target, file)
 		if err != nil {
 			log.Warning("RPC cache failed to load artifact %s: %s", file, err)
@@ -88,6 +92,9 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 }
 
 func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
+	if !cache.isConnected() {
+		return false
+	}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
 	for out := range cacheArtifacts(target) {
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name, File: out}
@@ -103,6 +110,9 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
 }
 
 func (cache *rpcCache) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {
+	if !cache.isConnected() {
+		return false
+	}
 	artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name, File: file}
 	artifacts := []*pb.Artifact{&artifact}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH, Artifacts: artifacts}
@@ -116,7 +126,7 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 		return false
 	} else if !response.Success {
 		// Quiet, this is almost certainly just a 'not found'
-		log.Debug("Couldn't retrieve artifacts for %s", target.Label)
+		log.Debug("Couldn't retrieve artifacts for %s [key %s] from RPC cache", target.Label, base64.RawURLEncoding.EncodeToString(req.Hash))
 		return false
 	}
 	for _, artifact := range response.Artifacts {
@@ -138,7 +148,7 @@ func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []b
 }
 
 func (cache *rpcCache) Clean(target *core.BuildTarget) {
-	if cache.Writeable {
+	if cache.isConnected() && cache.Writeable {
 		req := pb.DeleteRequest{Os: runtime.GOOS, Arch: runtime.GOARCH}
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name}
 		req.Artifacts = []*pb.Artifact{&artifact}
@@ -149,7 +159,7 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 	}
 }
 
-func newRpcCache(config core.Configuration) (*rpcCache, error) {
+func (cache *rpcCache) connect(config core.Configuration) {
 	// Change grpc to log using our implementation
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
@@ -157,13 +167,50 @@ func newRpcCache(config core.Configuration) (*rpcCache, error) {
 	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(),
 		grpc.WithTimeout(time.Duration(config.Cache.RpcTimeout)*time.Second))
 	if err != nil {
-		return nil, err
+		cache.Connecting = false
+		log.Warning("Failed to connect to RPC cache: %s", err)
+		return
 	}
-	return &rpcCache{
-		connection: connection,
-		client:     pb.NewRpcCacheClient(connection),
-		Writeable:  config.Cache.RpcWriteable,
-	}, nil
+	// Note that we have to actually send it a message here to validate the connection;
+	// Dial() only seems to return errors for superficial failures like syntactically invalid addresses,
+	// it will return essentially immediately even if the server doesn't exist.
+	healthclient := healthpb.NewHealthClient(connection)
+	resp, err := healthclient.Check(context.Background(), &healthpb.HealthCheckRequest{Service: "plz-rpc-cache"})
+	if err != nil {
+		cache.Connecting = false
+		log.Warning("Failed to contact RPC cache: %s", err)
+	} else if resp.Status != healthpb.HealthCheckResponse_SERVING {
+		cache.Connecting = false
+		log.Warning("RPC cache says it is not serving (%d)", resp.Status)
+	} else {
+		cache.connection = connection
+		cache.client = pb.NewRpcCacheClient(connection)
+		cache.Connected = true
+		cache.Connecting = false
+		log.Info("RPC cache connected")
+	}
+}
+
+// isConnected checks if the cache is connected. If it's still trying to connect it allows a
+// very brief wait to give it a chance to come online.
+func (cache *rpcCache) isConnected() bool {
+	if cache.Connected {
+		return true
+	} else if !cache.Connecting {
+		return false
+	}
+	ticker := time.NewTicker(10 * time.Millisecond)
+	for i := 0; i < 5 && cache.Connecting; i++ {
+		<-ticker.C
+	}
+	ticker.Stop()
+	return cache.Connected
+}
+
+func newRpcCache(config core.Configuration) (*rpcCache, error) {
+	cache := &rpcCache{Writeable: config.Cache.RpcWriteable, Connecting: true}
+	go cache.connect(config)
+	return cache, nil
 }
 
 // grpcLogMabob is an implementation of grpc's logging interface using our backend.

@@ -13,7 +13,7 @@ type BuildGraph struct {
 	// Map of all currently known packages.
 	packages map[string]*Package
 	// Reverse dependencies that are pending on targets actually being added to the graph.
-	pendingRevDeps map[BuildLabel]map[BuildLabel]bool
+	pendingRevDeps map[BuildLabel]map[BuildLabel]*BuildTarget
 	// Actual reverse dependencies
 	revDeps map[BuildLabel][]*BuildTarget
 	// Used to arbitrate access to the graph. We parallelise most build operations
@@ -33,8 +33,12 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	// Check these reverse deps which may have already been added against this target.
 	revdeps, present := graph.pendingRevDeps[target.Label]
 	if present {
-		for revdep := range revdeps {
-			graph.linkDependencies(graph.targets[revdep], target)
+		for revdep, originalTarget := range revdeps {
+			if originalTarget != nil {
+				graph.linkDependencies(graph.targets[revdep], originalTarget)
+			} else {
+				graph.linkDependencies(graph.targets[revdep], target)
+			}
 		}
 		delete(graph.pendingRevDeps, target.Label) // Don't need any more
 	}
@@ -125,14 +129,14 @@ func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 	defer graph.mutex.Unlock()
 	fromTarget := graph.targets[from]
 	// We might have done this already; do a quick check here first.
-	if fromTarget.resolvedDependencies[to] {
+	if fromTarget.hasResolvedDependency(to) {
 		return
 	}
 	toTarget, present := graph.targets[to]
 	// The dependency may not exist yet if we haven't parsed its package.
 	// In that case we stash it away for later.
 	if !present {
-		graph.addPendingRevDep(from, to)
+		graph.addPendingRevDep(from, to, nil)
 	} else {
 		graph.linkDependencies(fromTarget, toTarget)
 	}
@@ -142,7 +146,7 @@ func NewGraph() *BuildGraph {
 	graph := new(BuildGraph)
 	graph.targets = make(map[BuildLabel]*BuildTarget)
 	graph.packages = make(map[string]*Package)
-	graph.pendingRevDeps = make(map[BuildLabel]map[BuildLabel]bool)
+	graph.pendingRevDeps = make(map[BuildLabel]map[BuildLabel]*BuildTarget)
 	graph.revDeps = make(map[BuildLabel][]*BuildTarget)
 	return graph
 }
@@ -180,22 +184,20 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 	for _, label := range toTarget.ProvideFor(fromTarget) {
 		target, present := graph.targets[label]
 		if present {
-			fromTarget.Dependencies = append(fromTarget.Dependencies, target)
+			fromTarget.resolveDependency(toTarget.Label, target)
 			graph.revDeps[label] = append(graph.revDeps[label], fromTarget)
 		} else {
-			graph.addPendingRevDep(fromTarget.Label, label)
+			graph.addPendingRevDep(fromTarget.Label, label, toTarget)
 		}
 	}
-	fromTarget.resolvedDependencies[toTarget.Label] = true
 }
 
-func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel) {
-	deps, present := graph.pendingRevDeps[to]
-	if !present {
-		deps = map[BuildLabel]bool{}
-		graph.pendingRevDeps[to] = deps
+func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {
+	if deps, present := graph.pendingRevDeps[to]; present {
+		deps[from] = orig
+	} else {
+		graph.pendingRevDeps[to] = map[BuildLabel]*BuildTarget{from: orig}
 	}
-	deps[from] = true
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.

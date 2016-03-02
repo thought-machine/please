@@ -10,7 +10,7 @@
 // callbacks etc.
 // The setup isn't actually extremely complex but some care is needed; it's relatively rare to need
 // to modify it (generally only when adding new properties to build targets) but when you do you
-// must make sure this file, interpreter.h and rules/please_parser.py all agree about struct
+// must make sure this file, defs.h / interpreter.h and cffi/please_parser.py all agree about struct
 // definitions etc. Bad Things will happen if you do not.
 
 package parse
@@ -66,18 +66,12 @@ type PleaseCallbacks struct {
 
 var callbacks PleaseCallbacks
 
-// Something of a hack - we need to know these for globbing correctly but don't have
-// access to the actual config object inside the glob function.
-// Fortunately it doesn't change at runtime so we can stash these away...
-var buildFileNames []string
-
 // To ensure we only initialise once.
 var initializeOnce sync.Once
 
 // Code to initialise the Python interpreter.
 func initializeInterpreter(config core.Configuration) {
 	log.Debug("Initialising interpreter...")
-	buildFileNames = config.Please.BuildFileName
 
 	// PyPy becomes very unhappy if Go schedules it to a different OS thread during
 	// its initialisation. Force it to stay on this one thread for now.
@@ -310,11 +304,8 @@ func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget uintptr) 
 //export AddDependency
 func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported bool) {
 	target := getTargetPost(cPackage, cTarget)
-	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
-	target.AddDependency(dep)
-	if exported {
-		target.AddExportedDependency(dep)
-	}
+	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
+	target.AddMaybeExportedDependency(dep, exported)
 	core.State.Graph.AddDependency(target.Label, dep)
 }
 
@@ -378,11 +369,9 @@ func AddSource(cTarget uintptr, cSource *C.char) {
 // Identifies if the file is owned by this package and dies if not.
 func parseSource(src string, packageName string) core.BuildInput {
 	if core.LooksLikeABuildLabel(src) {
-		label, file := core.ParseBuildFileLabel(src, packageName)
-		if file != "" {
-			return core.BuildFileLabel{BuildLabel: label, File: file}
-		}
-		return label
+		return core.ParseBuildLabel(src, packageName)
+	} else if src == "" {
+		panic(fmt.Errorf("Empty source path (in package %s)", packageName))
 	} else if strings.Contains(src, "../") {
 		panic(fmt.Errorf("'%s' (in package %s) is an invalid path; build target paths can't contain ../", src, packageName))
 	} else if src[0] == '/' {
@@ -433,22 +422,21 @@ func AddOutput(cTarget uintptr, cOutput *C.char) {
 //export AddDep
 func AddDep(cTarget uintptr, cDep *C.char) {
 	target := unsizet(cTarget)
-	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
+	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddDependency(dep)
 }
 
 //export AddExportedDep
 func AddExportedDep(cTarget uintptr, cDep *C.char) {
 	target := unsizet(cTarget)
-	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
-	target.AddDependency(dep)
-	target.AddExportedDependency(dep)
+	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
+	target.AddMaybeExportedDependency(dep, true)
 }
 
 //export AddTool
 func AddTool(cTarget uintptr, cTool *C.char) {
 	target := unsizet(cTarget)
-	tool, _ := core.ParseBuildFileLabel(C.GoString(cTool), target.Label.PackageName)
+	tool := core.ParseBuildLabel(C.GoString(cTool), target.Label.PackageName)
 	target.Tools = append(target.Tools, tool)
 	target.AddDependency(tool)
 }
@@ -696,7 +684,7 @@ func isPackage(name string) bool {
 }
 
 func isPackageInternal(name string) bool {
-	for _, buildFileName := range buildFileNames {
+	for _, buildFileName := range core.State.Config.Please.BuildFileName {
 		if core.FileExists(path.Join(name, buildFileName)) {
 			return true
 		}
@@ -719,7 +707,7 @@ func GetLabels(cPackage uintptr, cTarget *C.char, cPrefix *C.char) **C.char {
 				labels[strings.TrimSpace(strings.TrimPrefix(label, prefix))] = true
 			}
 		}
-		for _, dep := range target.Dependencies {
+		for _, dep := range target.Dependencies() {
 			getLabels(dep)
 		}
 	}
