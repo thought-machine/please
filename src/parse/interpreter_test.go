@@ -55,9 +55,8 @@ func TestParseSourceWithAbsolutePath(t *testing.T) {
 func TestAddTarget(t *testing.T) {
 	pkg := core.NewPackage("src/parse")
 	addTargetTest1 := func(name string, binary, container, test bool, testCmd string) *core.BuildTarget {
-		target := addTarget(unsafe.Pointer(pkg), name, "true", testCmd, binary, test,
+		return addTarget(uintptr(unsafe.Pointer(pkg)), name, "true", testCmd, binary, test,
 			false, false, container, false, false, false, 0, 0, 0, "Building...")
-		return (*core.BuildTarget)(target)
 	}
 	addTargetTest := func(name string, binary, container bool) *core.BuildTarget {
 		return addTargetTest1(name, binary, container, false, "")
@@ -90,8 +89,8 @@ func TestAddTarget(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	// Need to set this before calling parseSource. It's a bit of a hack but whatevs.
-	buildFileNames = []string{"TEST_BUILD"}
 	core.NewBuildState(10, nil, 2, core.DefaultConfiguration())
+	// Need to set this before calling parseSource.
+	core.State.Config.Please.BuildFileName = []string{"TEST_BUILD"}
 	os.Exit(m.Run())
 }

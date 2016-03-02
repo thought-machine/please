@@ -6,13 +6,16 @@
 // will work as expected.
 package parse
 
-import "core"
-import "fmt"
-import "os"
-import "path"
-import "path/filepath"
-import "strings"
-import "sync"
+import (
+	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"sync"
+
+	"core"
+)
 
 // Parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
 // It is not an error if the package has already been parsed.
@@ -75,7 +78,7 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 		if dependor != core.OriginalTarget {
 			msg += fmt.Sprintf(" (depended on by %s)", dependor)
 		}
-		panic(msg)
+		panic(msg + suggestTargets(pkg, label, dependor))
 	}
 	if noDeps && !dependor.IsAllTargets() { // IsAllTargets indicates requirement for parse
 		return // Some kinds of query don't need a full recursive parse.
@@ -380,7 +383,7 @@ func FindAllSubpackages(config core.Configuration, rootPath string, prefix strin
 	return ch
 }
 
-// Returns true if given filename is a build file name.
+// isABuildFile returns true if given filename is a build file name.
 func isABuildFile(name string, config core.Configuration) bool {
 	for _, buildFileName := range config.Please.BuildFileName {
 		if name == buildFileName {

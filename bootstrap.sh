@@ -21,6 +21,7 @@ go get github.com/golang/lint/golint
 go get google.golang.org/grpc
 go get github.com/kardianos/osext
 go get github.com/Songmu/prompter
+go get github.com/texttheater/golang-levenshtein/levenshtein
 
 # Clean out old artifacts.
 rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parser.py
@@ -83,4 +84,4 @@ if ! hash fstproject 2>/dev/null ; then
     echo "libfst not found, excluding relevant tests"
     EXCLUDES="${EXCLUDES} --exclude=fst"
 fi
-plz-out/bin/src/please test ... $EXCLUDES --log_file plz-out/log/build.log --log_file_level 4
+plz-out/bin/src/please test ... $EXCLUDES --log_file plz-out/log/build.log --log_file_level 4 $@

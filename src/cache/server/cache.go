@@ -116,6 +116,7 @@ func lockFile(path string, write bool, size int64) *cachedFile {
 func removeFile(path string, file *cachedFile) {
 	delete(cachedFiles, path)
 	totalSize -= file.size
+	log.Debug("Removing file %s, saves %d, new size will be %d", path, file.size, totalSize)
 }
 
 // RetrieveArtifact takes in the artifact path as a parameter and checks in the base server
@@ -214,16 +215,18 @@ func DeleteAllArtifacts() error {
 }
 
 // clean implements a periodic clean of the cache to remove old artifacts.
-func clean(path string, cleanFrequency int, lowWaterMark, highWaterMark int64) {
+func clean(cachePath string, cleanFrequency int, lowWaterMark, highWaterMark int64) {
 	for _ = range time.NewTicker(time.Duration(cleanFrequency) * time.Second).C {
+		log.Debug("Total size: %d High water mark: %d", totalSize, highWaterMark)
 		if totalSize > highWaterMark {
 			log.Info("Cleaning cache...")
 			files := filesToClean(lowWaterMark)
 			log.Info("Identified %d files to clean...", len(files))
 			for _, file := range files {
-				removeFile(file.path, file.file)
-				if err := os.RemoveAll(file.path); err != nil {
+				if err := os.RemoveAll(path.Join(cachePath, file.path)); err != nil {
 					log.Errorf("Failed to remove artifact: %s", err)
+				} else {
+					removeFile(file.path, file.file)
 				}
 			}
 		}

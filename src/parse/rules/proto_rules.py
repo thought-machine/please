@@ -54,7 +54,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
     # We detect output names for normal sources, but will have to do a post-build rule for
     # any input rules. We could just do that for everything but it's nicer to avoid them
     # when possible since they obscure what's going on with the build graph.
-    file_srcs = [src for src in srcs if not src.startswith(':') and not src.startswith('/')]
+    file_srcs = [src for src in srcs if src[0] not in {':', '/'}]
     find_outs = lambda lang, ext: [src.replace('.proto', ext) for src in file_srcs] if lang in languages else []
     outs = {
         'py': find_outs('py', '_pb2.py'),

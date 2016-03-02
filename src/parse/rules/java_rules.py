@@ -1,7 +1,8 @@
 """Built-in rules to compile Java code."""
 
 # Prefixes of files to exclude when building jars. May need to be configurable.
-_JAVA_EXCLUDE_FILES = ','.join(['LICENSE', 'META-INF/', 'NOTICE', 'asm-license.txt'])
+_JAVA_EXCLUDE_FILES = ','.join(['META-INF/LICENSE', 'META-INF/NOTICE', 'META-INF/maven',
+                                'META-INF/MANIFEST.MF', 'META-INF/MTNMINDS'])
 
 _MAVEN_CENTRAL = "https://repo1.maven.org/maven2"
 _maven_packages = defaultdict(dict)

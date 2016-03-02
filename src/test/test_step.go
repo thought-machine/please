@@ -32,7 +32,8 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		return
 	}
 	// Check the cached output files if the target wasn't rebuilt.
-	hashStr := base64.RawURLEncoding.EncodeToString(core.CollapseHash(hash))
+	hash = core.CollapseHash(hash)
+	hashStr := base64.RawURLEncoding.EncodeToString(hash)
 	resultsFileName := fmt.Sprintf(".test_results_%s_%s", label.Name, hashStr)
 	coverageFileName := fmt.Sprintf(".test_coverage_%s_%s", label.Name, hashStr)
 	outputFile := path.Join(target.TestDir(), "test.results")
@@ -159,12 +160,20 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 			} else if err == nil {
 				target.Results.NumTests++
 				target.Results.Failed++
+				target.Results.Failures = append(target.Results.Failures, core.TestFailure{
+					Name:   "Missing results",
+					Stdout: string(out),
+				})
 				resultErr = fmt.Errorf("Test failed to produce output results file")
 				resultMsg = fmt.Sprintf("Test apparently succeeded but failed to produce %s. Output: %s", outputFile, string(out))
 				numFlakes++
 			} else {
 				target.Results.NumTests++
 				target.Results.Failed++
+				target.Results.Failures = append(target.Results.Failures, core.TestFailure{
+					Name:   "Test failed with no results",
+					Stdout: string(out),
+				})
 				numFlakes++
 				resultErr = err
 				resultMsg = fmt.Sprintf("Test failed with no results. Output: %s", string(out))

@@ -6,6 +6,7 @@ package cache
 import (
 	"bytes"
 	"core"
+	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"path"
@@ -26,11 +27,12 @@ type rpcCache struct {
 	client     pb.RpcCacheClient
 	Writeable  bool
 	Connected  bool
+	Connecting bool
 	OSName     string
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
-	if cache.Connected && cache.Writeable {
+	if cache.isConnected() && cache.Writeable {
 		artifacts := []*pb.Artifact{}
 		for out := range cacheArtifacts(target) {
 			artifacts2, err := cache.loadArtifacts(target, out)
@@ -45,7 +47,7 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
 }
 
 func (cache *rpcCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
-	if cache.Connected && cache.Writeable {
+	if cache.isConnected() && cache.Writeable {
 		artifacts, err := cache.loadArtifacts(target, file)
 		if err != nil {
 			log.Warning("RPC cache failed to load artifact %s: %s", file, err)
@@ -90,7 +92,7 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 }
 
 func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
-	if !cache.Connected {
+	if !cache.isConnected() {
 		return false
 	}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
@@ -108,7 +110,7 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
 }
 
 func (cache *rpcCache) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {
-	if !cache.Connected {
+	if !cache.isConnected() {
 		return false
 	}
 	artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name, File: file}
@@ -124,7 +126,7 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 		return false
 	} else if !response.Success {
 		// Quiet, this is almost certainly just a 'not found'
-		log.Debug("Couldn't retrieve artifacts for %s", target.Label)
+		log.Debug("Couldn't retrieve artifacts for %s [key %s] from RPC cache", target.Label, base64.RawURLEncoding.EncodeToString(req.Hash))
 		return false
 	}
 	for _, artifact := range response.Artifacts {
@@ -146,7 +148,7 @@ func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []b
 }
 
 func (cache *rpcCache) Clean(target *core.BuildTarget) {
-	if cache.Connected && cache.Writeable {
+	if cache.isConnected() && cache.Writeable {
 		req := pb.DeleteRequest{Os: runtime.GOOS, Arch: runtime.GOARCH}
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name}
 		req.Artifacts = []*pb.Artifact{&artifact}
@@ -165,6 +167,7 @@ func (cache *rpcCache) connect(config core.Configuration) {
 	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(),
 		grpc.WithTimeout(time.Duration(config.Cache.RpcTimeout)*time.Second))
 	if err != nil {
+		cache.Connecting = false
 		log.Warning("Failed to connect to RPC cache: %s", err)
 		return
 	}
@@ -172,20 +175,40 @@ func (cache *rpcCache) connect(config core.Configuration) {
 	// Dial() only seems to return errors for superficial failures like syntactically invalid addresses,
 	// it will return essentially immediately even if the server doesn't exist.
 	healthclient := healthpb.NewHealthClient(connection)
-	resp, err := healthclient.Check(context.Background(), &healthpb.HealthCheckRequest{Service:"plz-rpc-cache"})
+	resp, err := healthclient.Check(context.Background(), &healthpb.HealthCheckRequest{Service: "plz-rpc-cache"})
 	if err != nil {
+		cache.Connecting = false
 		log.Warning("Failed to contact RPC cache: %s", err)
 	} else if resp.Status != healthpb.HealthCheckResponse_SERVING {
+		cache.Connecting = false
 		log.Warning("RPC cache says it is not serving (%d)", resp.Status)
 	} else {
 		cache.connection = connection
 		cache.client = pb.NewRpcCacheClient(connection)
 		cache.Connected = true
+		cache.Connecting = false
+		log.Info("RPC cache connected")
 	}
 }
 
+// isConnected checks if the cache is connected. If it's still trying to connect it allows a
+// very brief wait to give it a chance to come online.
+func (cache *rpcCache) isConnected() bool {
+	if cache.Connected {
+		return true
+	} else if !cache.Connecting {
+		return false
+	}
+	ticker := time.NewTicker(10 * time.Millisecond)
+	for i := 0; i < 5 && cache.Connecting; i++ {
+		<-ticker.C
+	}
+	ticker.Stop()
+	return cache.Connected
+}
+
 func newRpcCache(config core.Configuration) (*rpcCache, error) {
-	cache := &rpcCache{Writeable:  config.Cache.RpcWriteable}
+	cache := &rpcCache{Writeable: config.Cache.RpcWriteable, Connecting: true}
 	go cache.connect(config)
 	return cache, nil
 }

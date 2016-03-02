@@ -6,7 +6,8 @@ proto_library(
 
 python_library(
     name = 'proto_lib',
-    srcs = ['proto_lib.py', ':test_proto'],
+    srcs = ['proto_lib.py'],
+    resources = [':test_proto'],
 )
 
 python_test(

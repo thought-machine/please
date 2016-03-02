@@ -16,6 +16,19 @@ Version 1.6.0
       a test run exactly that many times. Hopefully this is less confusing.
 
 
+Version 1.5.12
+--------------
+
+    * Altered exclusion rules for java_binary / java_test to better support native libraries.
+
+
+Version 1.5.11
+--------------
+
+    * Write explicit failures into unit test output on timeout etc. Needed for some downstream
+      tools that don't check attributes like 'failures' and need explicit entries.
+
+
 Version 1.5.10
 --------------
 
