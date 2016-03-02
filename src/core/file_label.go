@@ -2,7 +2,6 @@
 
 package core
 
-import "fmt"
 import "path"
 
 type FileLabel struct {
@@ -26,28 +25,4 @@ func (label FileLabel) Label() *BuildLabel {
 
 func (label FileLabel) String() string {
 	return label.File
-}
-
-// Similar to above but used for collecting a single output of another file.
-type BuildFileLabel struct {
-	// Target the label comes from
-	BuildLabel BuildLabel
-	// Name of the file
-	File string
-}
-
-func (label BuildFileLabel) Paths(graph *BuildGraph) []string {
-	return []string{path.Join(label.BuildLabel.PackageName, label.File)}
-}
-
-func (label BuildFileLabel) FullPaths(graph *BuildGraph) []string {
-	return []string{path.Join(graph.TargetOrDie(label.BuildLabel).OutDir(), label.File)}
-}
-
-func (label BuildFileLabel) Label() *BuildLabel {
-	return &label.BuildLabel
-}
-
-func (label BuildFileLabel) String() string {
-	return fmt.Sprintf("%s:%s", label.BuildLabel, label.File)
 }

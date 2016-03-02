@@ -298,7 +298,7 @@ func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget unsafe.Po
 //export AddDependency
 func AddDependency(cPackage unsafe.Pointer, cTarget *C.char, cDep *C.char, exported bool) {
 	target := getTargetPost(cPackage, cTarget)
-	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
+	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddMaybeExportedDependency(dep, exported)
 	core.State.Graph.AddDependency(target.Label, dep)
 }
@@ -363,11 +363,7 @@ func AddSource(cTarget unsafe.Pointer, cSource *C.char) {
 // Identifies if the file is owned by this package and dies if not.
 func parseSource(src string, packageName string) core.BuildInput {
 	if core.LooksLikeABuildLabel(src) {
-		label, file := core.ParseBuildFileLabel(src, packageName)
-		if file != "" {
-			return core.BuildFileLabel{BuildLabel: label, File: file}
-		}
-		return label
+		return core.ParseBuildLabel(src, packageName)
 	} else if src == "" {
 		panic(fmt.Errorf("Empty source path (in package %s)", packageName))
 	} else if strings.Contains(src, "../") {
@@ -420,21 +416,21 @@ func AddOutput(cTarget unsafe.Pointer, cOutput *C.char) {
 //export AddDep
 func AddDep(cTarget unsafe.Pointer, cDep *C.char) {
 	target := (*core.BuildTarget)(cTarget)
-	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
+	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddDependency(dep)
 }
 
 //export AddExportedDep
 func AddExportedDep(cTarget unsafe.Pointer, cDep *C.char) {
 	target := (*core.BuildTarget)(cTarget)
-	dep, _ := core.ParseBuildFileLabel(C.GoString(cDep), target.Label.PackageName)
+	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddMaybeExportedDependency(dep, true)
 }
 
 //export AddTool
 func AddTool(cTarget unsafe.Pointer, cTool *C.char) {
 	target := (*core.BuildTarget)(cTarget)
-	tool, _ := core.ParseBuildFileLabel(C.GoString(cTool), target.Label.PackageName)
+	tool := core.ParseBuildLabel(C.GoString(cTool), target.Label.PackageName)
 	target.Tools = append(target.Tools, tool)
 	target.AddDependency(tool)
 }

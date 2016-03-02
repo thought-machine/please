@@ -202,9 +202,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 					donePaths[path.Join(tmpDir, sourcePath)] = true
 				}
 				if label := source.Label(); label != nil {
-					if _, found := source.(BuildFileLabel); found {
-						done[*label] = true
-					}
+					done[*label] = true
 				}
 			}
 		} else {
@@ -220,7 +218,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 			// Mark any label-type outputs as done.
 			for _, out := range dependency.DeclaredOutputs() {
 				if LooksLikeABuildLabel(out) {
-					label, _ := ParseBuildFileLabel(out, target.Label.PackageName)
+					label := ParseBuildLabel(out, target.Label.PackageName)
 					done[label] = true
 				}
 			}
