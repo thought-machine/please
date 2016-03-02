@@ -125,7 +125,7 @@ func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 	defer graph.mutex.Unlock()
 	fromTarget := graph.targets[from]
 	// We might have done this already; do a quick check here first.
-	if fromTarget.resolvedDependencies[to] {
+	if fromTarget.hasResolvedDependency(to) {
 		return
 	}
 	toTarget, present := graph.targets[to]
@@ -179,14 +179,13 @@ func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
 func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 	for _, label := range toTarget.ProvideFor(fromTarget) {
 		target, present := graph.targets[label]
+		fromTarget.resolveDependency(toTarget.Label, target)
 		if present {
-			fromTarget.Dependencies = append(fromTarget.Dependencies, target)
 			graph.revDeps[label] = append(graph.revDeps[label], fromTarget)
 		} else {
 			graph.addPendingRevDep(fromTarget.Label, label)
 		}
 	}
-	fromTarget.resolvedDependencies[toTarget.Label] = true
 }
 
 func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel) {

@@ -201,7 +201,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 	}
 	// Do this in a separate loop so we get intra-package dependencies right now.
 	for _, target := range pkg.Targets {
-		for _, dep := range target.DeclaredDependencies {
+		for _, dep := range target.DeclaredDependencies() {
 			state.Graph.AddDependency(target.Label, dep)
 		}
 	}
@@ -281,7 +281,7 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 			return
 		}
 	}
-	for _, dep := range target.DeclaredDependencies {
+	for _, dep := range target.DeclaredDependencies() {
 		// Check the require/provide stuff; we may need to add a different target.
 		if len(target.Requires) > 0 {
 			if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
@@ -343,7 +343,7 @@ func rescanDeps(state *core.BuildState, pkg *core.Package) {
 		//               targets that need it but it's not easy to tell we're in a post build
 		//               function at the point we'd need to do that.
 		if !state.Graph.AllDependenciesResolved(target) {
-			for _, dep := range target.DeclaredDependencies {
+			for _, dep := range target.DeclaredDependencies() {
 				state.Graph.AddDependency(target.Label, dep)
 			}
 		}

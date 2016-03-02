@@ -22,16 +22,10 @@ const binDir string = "plz-out/bin"
 type BuildTarget struct {
 	// Identifier of this build target
 	Label BuildLabel
-	// Dependencies of this target
-	Dependencies []*BuildTarget
-	// Label dependencies of this target.
-	// This is mostly used during the parse phase when we know the set of
-	// declared labels, but don't necessarily have targets to associate
-	// with them until we've parsed the relevant build files.
-	DeclaredDependencies []BuildLabel
-	// Dependencies that are 'exported' to consuming rules, ie. if something depends
-	// on this rule, they get the exported dependencies as well.
-	ExportedDependencies []BuildLabel
+	// Dependencies of this target.
+	// Maps the original declaration to whatever dependencies actually got attached,
+	// which may be more than one in some cases. Also contains info about exporting etc.
+	dependencies map[BuildLabel]depInfo
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
 	// Source files of this rule. Can refer to build rules themselves.
@@ -116,11 +110,12 @@ type BuildTarget struct {
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string
-	// Used internally to track how many dependencies we've resolved, ie. how many declared
-	// dependencies have been mapped to actual dependencies. Once all are done this target is
-	// ready to build.
-	// TODO(pebers): unify this, Dependencies and DeclaredDependencies into one map.
-	resolvedDependencies map[BuildLabel]bool
+}
+
+type depInfo struct {
+	deps []*BuildTarget  // list of actual deps
+	resolved bool        // has the graph resolved it
+	exported bool        // is it an exported dependency
 }
 
 type BuildTargetState int32
@@ -199,10 +194,7 @@ type TargetContainerSettings struct {
 func NewBuildTarget(label BuildLabel) *BuildTarget {
 	target := new(BuildTarget)
 	target.Label = label
-	target.DeclaredDependencies = []BuildLabel{}
 	target.state = int32(Inactive)
-	target.Dependencies = []*BuildTarget{}
-	target.resolvedDependencies = map[BuildLabel]bool{}
 	target.IsBinary = false
 	target.IsTest = false
 	target.BuildingDescription = "Building..."
@@ -245,6 +237,45 @@ func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
 	return ret
 }
 
+// DeclaredDependencies returns the original declaration of this target's dependencies.
+func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
+	ret := make(BuildLabels, 0, len(target.dependencies))
+	for dep := range target.dependencies {
+		ret = append(ret, dep)
+	}
+	sort.Sort(ret)
+	return ret
+}
+
+// Dependencies returns the resolved dependencies of this target.
+func (target *BuildTarget) Dependencies() []*BuildTarget {
+	ret := make(BuildTargets, 0, len(target.dependencies))
+	for _, deps := range target.dependencies {
+		for _, dep := range deps.deps {
+			ret = append(ret, dep)
+		}
+	}
+	sort.Sort(ret)
+	return ret
+}
+
+// ExportedDependencies returns any exported dependencies of this target.
+func (target *BuildTarget) ExportedDependencies() []BuildLabel {
+	ret := make(BuildLabels, 0, len(target.dependencies))
+	for dep, info := range target.dependencies {
+		if info.exported {
+			ret = append(ret, dep)
+		}
+	}
+	sort.Sort(ret)
+	return ret
+}
+
+// DependenciesFor returns the dependencies that relate to a given label.
+func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
+	return target.dependencies[label].deps
+}
+
 // DeclaredOutputs returns the outputs from this target's original declaration.
 // Hence it's similar to Outputs() but without the resolving of other rule names.
 func (target *BuildTarget) DeclaredOutputs() []string {
@@ -274,9 +305,13 @@ func (target *BuildTarget) Outputs() []string {
 // findOutputTarget finds, among this target's dependencies, the target that outputs
 // the given label, and returns its outputs.
 func (target *BuildTarget) findOutputTarget(label BuildLabel, out string) []string {
-	for _, dep := range target.Dependencies {
-		if dep.Label == label {
-			return dep.Outputs()
+	for declared, deps := range target.dependencies {
+		if declared == label {
+			ret := []string{}
+			for _, dep := range deps.deps {
+				ret = append(ret, dep.Outputs()...)
+			}
+			return ret
 		}
 	}
 	panic(fmt.Sprintf("Target %s declares outputs of %s but they're not a resolved dependency of it", target.Label, out))
@@ -298,9 +333,11 @@ func (target *BuildTarget) allDepsBuilt() bool {
 	if !target.allDependenciesResolved() {
 		return false // Target still has some deps pending parse.
 	}
-	for _, dep := range target.Dependencies {
-		if dep.State() < Built {
-			return false
+	for _, deps := range target.dependencies {
+		for _, dep := range deps.deps {
+			if dep.State() < Built {
+				return false
+			}
 		}
 	}
 	return true
@@ -309,8 +346,8 @@ func (target *BuildTarget) allDepsBuilt() bool {
 // allDependenciesResolved returns true once all the dependencies of a target have been
 // parsed and resolved to real targets.
 func (target *BuildTarget) allDependenciesResolved() bool {
-	for _, resolved := range target.resolvedDependencies {
-		if !resolved {
+	for _, deps := range target.dependencies {
+		if !deps.resolved {
 			return false
 		}
 	}
@@ -341,11 +378,13 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 // CheckDependencyVisibility checks that all dependencies of this target are visible to it.
 // Returns an error if not, or nil if all's well.
 func (target *BuildTarget) CheckDependencyVisibility() error {
-	for _, dep := range target.Dependencies {
-		if !target.CanSee(dep) {
-			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
-		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
-			return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
+	for _, deps := range target.dependencies {
+		for _, dep := range deps.deps {
+			if !target.CanSee(dep) {
+				return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
+			} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
+				return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
+			}
 		}
 	}
 	return nil
@@ -366,7 +405,7 @@ func (target *BuildTarget) CheckDuplicateOutputs() error {
 
 // HasDependency checks if a target already depends on this label.
 func (target *BuildTarget) HasDependency(label BuildLabel) bool {
-	for _, dep := range target.DeclaredDependencies {
+	for dep := range target.dependencies {
 		if dep == label {
 			return true
 		}
@@ -374,14 +413,24 @@ func (target *BuildTarget) HasDependency(label BuildLabel) bool {
 	return false
 }
 
-// Checks if a target already has an exported dependency on this label.
-func (target *BuildTarget) HasExportedDependency(label BuildLabel) bool {
-	for _, dep := range target.ExportedDependencies {
-		if dep == label {
-			return true
+// hasResolvedDependency returns true if a particular dependency has been resolved to real targets yet.
+func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
+	for declared, deps := range target.dependencies {
+		if declared == label {
+			return deps.resolved
 		}
 	}
 	return false
+}
+
+// resolveDependency resolves a particular dependency on a target.
+func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget) {
+	info := target.dependencies[label]
+	if dep != nil {
+		info.deps = append(info.deps, dep)
+	}
+	info.resolved = true
+	target.dependencies[label] = info
 }
 
 // State returns the target's current state.
@@ -430,27 +479,14 @@ func (target *BuildTarget) HasAnyLabel(labels []string) bool {
 	return false
 }
 
-// Handles the typical include/exclude logic for a target's labels; returns true if
+// ShouldInclude handles the typical include/exclude logic for a target's labels; returns true if
 // target has any include label and not an exclude one.
 func (target *BuildTarget) ShouldInclude(include, exclude []string) bool {
 	return (len(include) == 0 || target.HasAnyLabel(include)) && !target.HasAnyLabel(exclude) && !target.HasLabel("manual")
 }
 
+// AddProvide adds a new provide entry to this target.
 func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
-	if label == target.Label {
-		target.addProvide(language, target.Label)
-		return
-	}
-	for _, dep := range target.DeclaredDependencies {
-		if dep == label {
-			target.addProvide(language, label)
-			return
-		}
-	}
-	panic(fmt.Sprintf("Target %s must depend on %s in order to provide it", target.Label, label))
-}
-
-func (target *BuildTarget) addProvide(language string, label BuildLabel) {
 	if target.Provides == nil {
 		target.Provides = map[string]BuildLabel{language: label}
 	} else {
@@ -458,7 +494,7 @@ func (target *BuildTarget) addProvide(language string, label BuildLabel) {
 	}
 }
 
-// Returns the build label that we'd provide for the given target.
+// ProvideFor returns the build label that we'd provide for the given target.
 func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 	ret := []BuildLabel{}
 	if target.Provides != nil {
@@ -563,18 +599,23 @@ func (target *BuildTarget) HasSource(source string) bool {
 
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
+	target.AddMaybeExportedDependency(dep, false)
+}
+
+// AddMaybeExportedDependency adds a dependency to this target which may be exported. It deduplicates against any existing deps.
+func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported bool) {
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
 	}
-	if !target.HasDependency(dep) {
-		target.DeclaredDependencies = append(target.DeclaredDependencies, dep)
-		target.resolvedDependencies[dep] = false
-	}
-}
-
-func (target *BuildTarget) AddExportedDependency(dep BuildLabel) {
-	if !target.HasExportedDependency(dep) {
-		target.ExportedDependencies = append(target.ExportedDependencies, dep)
+	if target.dependencies == nil {
+		target.dependencies = map[BuildLabel]depInfo{dep: depInfo{exported: exported}}
+	} else if !target.HasDependency(dep) {
+		target.dependencies[dep] = depInfo{exported: exported}
+	} else if exported {
+		// Make sure this is set in case it was already added as a non-exported dependency.
+		info := target.dependencies[dep]
+		info.exported = true
+		target.dependencies[dep] = info
 	}
 }
 

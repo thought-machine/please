@@ -6,6 +6,7 @@
 [python]
 pextool = //src/build/python:bootstrap_pexer
 defaultpiprepo = https://s3-eu-west-1.amazonaws.com/py-wheels/index.html
+moduledir = third_party.python
 
 ; This is a hack to handle peasant operating systems with case-insensitive file systems.
 ; I don't want to rename my package so we have one slightly differently named build file

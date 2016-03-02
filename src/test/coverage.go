@@ -67,7 +67,7 @@ func collectAllFiles(state *core.BuildState, target *core.BuildTarget, allFiles 
 	// Small hack here; explore these targets when we don't have any sources yet. Helps languages
 	// like Java where we generate a wrapper target with a complete one immediately underneath.
 	if !target.OutputIsComplete || len(allFiles) == 0 {
-		for _, dep := range target.Dependencies {
+		for _, dep := range target.Dependencies() {
 			if !doneTargets[dep] {
 				collectAllFiles(state, dep, allFiles, doneTargets, include, exclude)
 			}

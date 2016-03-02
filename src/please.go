@@ -31,7 +31,7 @@ var log = logging.MustGetLogger("plz")
 const testResultsFile = "plz-out/log/test_results.xml"
 const coverageResultsFile = "plz-out/log/coverage.json"
 
-var Config core.Configuration
+var config core.Configuration
 
 var opts struct {
 	BuildFlags struct {
@@ -302,8 +302,8 @@ var buildFunctions = map[string]func() bool{
 		} else if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
 		}
-		labels := query.QueryCompletionLabels(Config, fragments, core.RepoRoot)
-		if success, state := Please(labels, Config, false, false, false); success {
+		labels := query.QueryCompletionLabels(config, fragments, core.RepoRoot)
+		if success, state := Please(labels, config, false, false, false); success {
 			binary := opts.Query.Completions.Cmd == "run"
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
 			query.QueryCompletions(state.Graph, labels, binary, test)
@@ -375,7 +375,7 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config
 	}
-	var c *core.Cache = nil
+	var c *core.Cache
 	if !opts.FeatureFlags.NoCache {
 		c = cache.NewCache(config)
 	}
@@ -498,7 +498,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, defaultToAllTa
 		targets = core.WholeGraph
 	}
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
-	return Please(handleStdinLabels(targets), Config, pretty, shouldBuild, shouldTest)
+	return Please(handleStdinLabels(targets), config, pretty, shouldBuild, shouldTest)
 }
 
 // activeCommand returns the name of the currently active command.
@@ -546,13 +546,13 @@ func main() {
 		log.Fatalf("%s", err)
 	}
 
-	Config = readConfig(command == "update")
+	config = readConfig(command == "update")
 
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
 	if err != nil || len(extraArgs) > 0 {
 		argv := strings.Join(os.Args, " ")
-		for k, v := range Config.Aliases {
+		for k, v := range config.Aliases {
 			argv = strings.Replace(argv, k, v, 1)
 		}
 		parser = output.ParseFlagsFromArgsOrDie("Please", &opts, strings.Fields(argv))

@@ -79,7 +79,7 @@ func addJSONTarget(graph *core.BuildGraph, ret *JSONGraph, label core.BuildLabel
 			},
 		}
 	}
-	for _, dep := range target.Dependencies {
+	for _, dep := range target.Dependencies() {
 		addJSONTarget(graph, ret, dep.Label, done)
 	}
 }
@@ -103,7 +103,7 @@ func makeJSONTarget(graph *core.BuildGraph, target *core.BuildTarget) JSONTarget
 	for _, src := range target.AllSourcePaths(graph) {
 		t.Sources = append(t.Sources, src)
 	}
-	for _, dep := range target.DeclaredDependencies {
+	for _, dep := range target.DeclaredDependencies() {
 		t.Deps = append(t.Deps, dep.String())
 	}
 	for data := range core.IterRuntimeFiles(graph, target, false) {
