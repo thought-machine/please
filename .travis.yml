@@ -16,3 +16,6 @@ addons:
       - libunittest++-dev
       - binutils
       - clang
+
+install:
+  - true
