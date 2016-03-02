@@ -66,18 +66,12 @@ type PleaseCallbacks struct {
 
 var callbacks PleaseCallbacks
 
-// Something of a hack - we need to know these for globbing correctly but don't have
-// access to the actual config object inside the glob function.
-// Fortunately it doesn't change at runtime so we can stash these away...
-var buildFileNames []string
-
 // To ensure we only initialise once.
 var initializeOnce sync.Once
 
 // Code to initialise the Python interpreter.
 func initializeInterpreter(config core.Configuration) {
 	log.Debug("Initialising interpreter...")
-	buildFileNames = config.Please.BuildFileName
 
 	// PyPy becomes very unhappy if Go schedules it to a different OS thread during
 	// its initialisation. Force it to stay on this one thread for now.
@@ -676,7 +670,7 @@ func isPackage(name string) bool {
 }
 
 func isPackageInternal(name string) bool {
-	for _, buildFileName := range buildFileNames {
+	for _, buildFileName := range core.State.Config.Please.BuildFileName {
 		if core.FileExists(path.Join(name, buildFileName)) {
 			return true
 		}

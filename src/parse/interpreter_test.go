@@ -88,8 +88,8 @@ func TestAddTarget(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	// Need to set this before calling parseSource. It's a bit of a hack but whatevs.
-	buildFileNames = []string{"TEST_BUILD"}
 	core.NewBuildState(10, nil, 2, core.DefaultConfiguration())
+	// Need to set this before calling parseSource.
+	core.State.Config.Please.BuildFileName = []string{"TEST_BUILD"}
 	os.Exit(m.Run())
 }
