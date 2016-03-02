@@ -4,6 +4,8 @@ go:
   - 1.5.3
 
 script:
+  - echo "[build]" > .plzconfig.local
+  - echo "path = $PATH" >> .plzconfig.local
   - ./bootstrap.sh
 
 before_install:
