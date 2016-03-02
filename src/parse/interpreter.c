@@ -2,15 +2,15 @@
 
 #include "_cgo_export.h"
 
-void PreBuildFunctionSetter(void* callback, char* bytecode, void* target) {
+void PreBuildFunctionSetter(void* callback, char* bytecode, size_t target) {
     SetPreBuildFunction((size_t)callback, bytecode, target);
 }
 
-void PostBuildFunctionSetter(void* callback, char* bytecode, void* target) {
+void PostBuildFunctionSetter(void* callback, char* bytecode, size_t target) {
     SetPostBuildFunction((size_t)callback, bytecode, target);
 }
 
-char* ParseFile(ParseFileCallback* func, char* filename, char* package_name, void* package) {
+char* ParseFile(ParseFileCallback* func, char* filename, char* package_name, size_t package) {
     return (*func)(filename, package_name, package);
 }
 
@@ -18,16 +18,15 @@ void SetConfigValue(SetConfigValueCallback* func, char* name, char* value) {
     func(name, value);
 }
 
-char* RunPreBuildFunction(PreBuildCallbackRunner* runner, size_t callback, void* package, char* name) {
+char* RunPreBuildFunction(PreBuildCallbackRunner* runner, size_t callback, size_t package, char* name) {
     return runner((void*)callback, package, name);
 }
 
-char* RunPostBuildFunction(PostBuildCallbackRunner* runner, size_t callback, void* package, char* name, char* output) {
+char* RunPostBuildFunction(PostBuildCallbackRunner* runner, size_t callback, size_t package, char* name, char* output) {
     return runner((void*)callback, package, name, output);
 }
 
-int InitialiseInterpreter(char* data, void* vcallbacks) {
-  struct PleaseCallbacks* callbacks = (struct PleaseCallbacks*)vcallbacks;
+int InitialiseInterpreter(char* data, struct PleaseCallbacks* callbacks) {
   callbacks->add_target = (AddTargetCallback*)AddTarget;
   callbacks->add_src = AddSource;
   callbacks->add_data = AddData;

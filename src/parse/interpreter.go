@@ -176,7 +176,7 @@ func loadBuiltinRules(path string) {
 	defer C.free(unsafe.Pointer(data))
 	cPackageName := C.CString(path)
 	defer C.free(unsafe.Pointer(cPackageName))
-	if result := C.GoString(C.ParseFile(callbacks.ParseCode, data, cPackageName, nil)); result != "" {
+	if result := C.GoString(C.ParseFile(callbacks.ParseCode, data, cPackageName, 0)); result != "" {
 		panic(fmt.Sprintf("Failed to interpret builtin build rules from %s: %s", path, result))
 	}
 }
@@ -187,6 +187,18 @@ func loadAsset(path string) *C.char {
 	// really good reason.
 	return C.CString(string(data))
 }
+
+// sizet converts a build target to a C.size_t.
+func sizet(t *core.BuildTarget) C.size_t { return C.size_t(uintptr(unsafe.Pointer(t))) }
+
+// sizep converts a package to a C.size_t
+func sizep(p *core.Package) C.size_t { return C.size_t(uintptr(unsafe.Pointer(p))) }
+
+// unsizet converts a C.size_t back to a *BuildTarget.
+func unsizet(u uintptr) *core.BuildTarget { return (*core.BuildTarget)(unsafe.Pointer(u)) }
+
+// unsizep converts a C.size_t back to a *Package
+func unsizep(u uintptr) *core.Package { return (*core.Package)(unsafe.Pointer(u)) }
 
 // parsePackageFile parses a single BUILD file.
 // It returns true if parsing is deferred and waiting on other build actions, false otherwise on success
@@ -206,7 +218,7 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	cPackageName := C.CString(pkg.Name)
 	defer C.free(unsafe.Pointer(cFilename))
 	defer C.free(unsafe.Pointer(cPackageName))
-	if ret := C.GoString(C.ParseFile(callbacks.ParseFile, cFilename, cPackageName, unsafe.Pointer(pkg))); ret != "" && ret != pyDeferParse {
+	if ret := C.GoString(C.ParseFile(callbacks.ParseFile, cFilename, cPackageName, sizep(pkg))); ret != "" && ret != pyDeferParse {
 		panic(fmt.Sprintf("Failed to parse file %s: %s", filename, ret))
 	} else {
 		return ret == pyDeferParse
@@ -214,24 +226,24 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 }
 
 //export AddTarget
-func AddTarget(pkgPtr unsafe.Pointer, cName, cCmd, cTestCmd *C.char, binary bool, test bool,
+func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary bool, test bool,
 	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
-	flakiness, buildTimeout, testTimeout int, cBuildingDescription *C.char) unsafe.Pointer {
+	flakiness, buildTimeout, testTimeout int, cBuildingDescription *C.char) C.size_t {
 	buildingDescription := ""
 	if cBuildingDescription != nil {
 		buildingDescription = C.GoString(cBuildingDescription)
 	}
-	return addTarget(pkgPtr, C.GoString(cName), C.GoString(cCmd), C.GoString(cTestCmd),
+	return sizet(addTarget(pkgPtr, C.GoString(cName), C.GoString(cCmd), C.GoString(cTestCmd),
 		binary, test, needsTransitiveDeps, outputIsComplete, containerise, noTestOutput,
-		skipCache, testOnly, flakiness, buildTimeout, testTimeout, buildingDescription)
+		skipCache, testOnly, flakiness, buildTimeout, testTimeout, buildingDescription))
 }
 
 // addTarget adds a new build target to the graph.
 // Separated from AddTarget to make it possible to test (since you can't mix cgo and go test).
-func addTarget(pkgPtr unsafe.Pointer, name, cmd, testCmd string, binary bool, test bool,
+func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool,
 	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
-	flakiness, buildTimeout, testTimeout int, buildingDescription string) unsafe.Pointer {
-	pkg := (*core.Package)(pkgPtr)
+	flakiness, buildTimeout, testTimeout int, buildingDescription string) *core.BuildTarget {
+	pkg := unsizep(pkgPtr)
 	target := core.NewBuildTarget(core.NewBuildLabel(pkg.Name, name))
 	target.IsBinary = binary
 	target.IsTest = test
@@ -270,27 +282,27 @@ func addTarget(pkgPtr unsafe.Pointer, name, cmd, testCmd string, binary bool, te
 		log.Debug("Adding new target %s directly to graph", target.Label)
 		core.State.Graph.AddTarget(target)
 	}
-	return unsafe.Pointer(target)
+	return target
 }
 
 //export SetPreBuildFunction
-func SetPreBuildFunction(callback uintptr, cBytecode *C.char, cTarget unsafe.Pointer) {
-	target := (*core.BuildTarget)(cTarget)
+func SetPreBuildFunction(callback uintptr, cBytecode *C.char, cTarget uintptr) {
+	target := unsizet(cTarget)
 	target.PreBuildFunction = callback
 	hash := sha1.Sum([]byte(C.GoString(cBytecode)))
 	target.PreBuildHash = hash[:]
 }
 
 //export SetPostBuildFunction
-func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget unsafe.Pointer) {
-	target := (*core.BuildTarget)(cTarget)
+func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget uintptr) {
+	target := unsizet(cTarget)
 	target.PostBuildFunction = callback
 	hash := sha1.Sum([]byte(C.GoString(cBytecode)))
 	target.PostBuildHash = hash[:]
 }
 
 //export AddDependency
-func AddDependency(cPackage unsafe.Pointer, cTarget *C.char, cDep *C.char, exported bool) {
+func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported bool) {
 	target := getTargetPost(cPackage, cTarget)
 	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddMaybeExportedDependency(dep, exported)
@@ -298,22 +310,22 @@ func AddDependency(cPackage unsafe.Pointer, cTarget *C.char, cDep *C.char, expor
 }
 
 //export AddOutputPost
-func AddOutputPost(cPackage unsafe.Pointer, cTarget *C.char, cOut *C.char) {
+func AddOutputPost(cPackage uintptr, cTarget *C.char, cOut *C.char) {
 	target := getTargetPost(cPackage, cTarget)
 	out := C.GoString(cOut)
-	pkg := (*core.Package)(cPackage)
+	pkg := unsizep(cPackage)
 	pkg.RegisterOutput(out, target)
 	target.AddOutput(out)
 }
 
 //export AddLicencePost
-func AddLicencePost(cPackage unsafe.Pointer, cTarget *C.char, cLicence *C.char) {
+func AddLicencePost(cPackage uintptr, cTarget *C.char, cLicence *C.char) {
 	target := getTargetPost(cPackage, cTarget)
 	target.AddLicence(C.GoString(cLicence))
 }
 
 //export SetCommand
-func SetCommand(cPackage unsafe.Pointer, cTarget *C.char, cConfigOrCommand *C.char, cCommand *C.char) {
+func SetCommand(cPackage uintptr, cTarget *C.char, cConfigOrCommand *C.char, cCommand *C.char) {
 	target := getTargetPost(cPackage, cTarget)
 	command := C.GoString(cCommand)
 	if command == "" {
@@ -328,8 +340,8 @@ func SetCommand(cPackage unsafe.Pointer, cTarget *C.char, cConfigOrCommand *C.ch
 
 // Called by above to get a target from the current package.
 // Panics if the target is not in the current package or has already been built.
-func getTargetPost(cPackage unsafe.Pointer, cTarget *C.char) *core.BuildTarget {
-	pkg := (*core.Package)(cPackage)
+func getTargetPost(cPackage uintptr, cTarget *C.char) *core.BuildTarget {
+	pkg := unsizep(cPackage)
 	name := C.GoString(cTarget)
 	target, present := pkg.Targets[name]
 	if !present {
@@ -344,8 +356,8 @@ func getTargetPost(cPackage unsafe.Pointer, cTarget *C.char) *core.BuildTarget {
 }
 
 //export AddSource
-func AddSource(cTarget unsafe.Pointer, cSource *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddSource(cTarget uintptr, cSource *C.char) {
+	target := unsizet(cTarget)
 	source := parseSource(C.GoString(cSource), target.Label.PackageName)
 	target.Sources = append(target.Sources, source)
 	if label := source.Label(); label != nil {
@@ -376,8 +388,8 @@ func parseSource(src string, packageName string) core.BuildInput {
 }
 
 //export AddNamedSource
-func AddNamedSource(cTarget unsafe.Pointer, cName *C.char, cSource *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddNamedSource(cTarget uintptr, cName *C.char, cSource *C.char) {
+	target := unsizet(cTarget)
 	source := parseSource(C.GoString(cSource), target.Label.PackageName)
 	target.AddNamedSource(C.GoString(cName), source)
 	if label := source.Label(); label != nil {
@@ -386,14 +398,14 @@ func AddNamedSource(cTarget unsafe.Pointer, cName *C.char, cSource *C.char) {
 }
 
 //export AddCommand
-func AddCommand(cTarget unsafe.Pointer, cConfig *C.char, cCommand *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddCommand(cTarget uintptr, cConfig *C.char, cCommand *C.char) {
+	target := unsizet(cTarget)
 	target.AddCommand(C.GoString(cConfig), C.GoString(cCommand))
 }
 
 //export AddData
-func AddData(cTarget unsafe.Pointer, cData *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddData(cTarget uintptr, cData *C.char) {
+	target := unsizet(cTarget)
 	data := parseSource(C.GoString(cData), target.Label.PackageName)
 	target.Data = append(target.Data, data)
 	if label := data.Label(); label != nil {
@@ -402,36 +414,36 @@ func AddData(cTarget unsafe.Pointer, cData *C.char) {
 }
 
 //export AddOutput
-func AddOutput(cTarget unsafe.Pointer, cOutput *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddOutput(cTarget uintptr, cOutput *C.char) {
+	target := unsizet(cTarget)
 	target.AddOutput(C.GoString(cOutput))
 }
 
 //export AddDep
-func AddDep(cTarget unsafe.Pointer, cDep *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddDep(cTarget uintptr, cDep *C.char) {
+	target := unsizet(cTarget)
 	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddDependency(dep)
 }
 
 //export AddExportedDep
-func AddExportedDep(cTarget unsafe.Pointer, cDep *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddExportedDep(cTarget uintptr, cDep *C.char) {
+	target := unsizet(cTarget)
 	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	target.AddMaybeExportedDependency(dep, true)
 }
 
 //export AddTool
-func AddTool(cTarget unsafe.Pointer, cTool *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddTool(cTarget uintptr, cTool *C.char) {
+	target := unsizet(cTarget)
 	tool := core.ParseBuildLabel(C.GoString(cTool), target.Label.PackageName)
 	target.Tools = append(target.Tools, tool)
 	target.AddDependency(tool)
 }
 
 //export AddVis
-func AddVis(cTarget unsafe.Pointer, cVis *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddVis(cTarget uintptr, cVis *C.char) {
+	target := unsizet(cTarget)
 	vis := C.GoString(cVis)
 	if vis == "PUBLIC" {
 		target.Visibility = append(target.Visibility, core.NewBuildLabel("", "..."))
@@ -441,52 +453,52 @@ func AddVis(cTarget unsafe.Pointer, cVis *C.char) {
 }
 
 //export AddLabel
-func AddLabel(cTarget unsafe.Pointer, cLabel *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddLabel(cTarget uintptr, cLabel *C.char) {
+	target := unsizet(cTarget)
 	target.AddLabel(C.GoString(cLabel))
 }
 
 //export AddHash
-func AddHash(cTarget unsafe.Pointer, cHash *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddHash(cTarget uintptr, cHash *C.char) {
+	target := unsizet(cTarget)
 	target.Hashes = append(target.Hashes, C.GoString(cHash))
 }
 
 //export AddLicence
-func AddLicence(cTarget unsafe.Pointer, cLicence *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddLicence(cTarget uintptr, cLicence *C.char) {
+	target := unsizet(cTarget)
 	target.AddLicence(C.GoString(cLicence))
 }
 
 //export AddTestOutput
-func AddTestOutput(cTarget unsafe.Pointer, cTestOutput *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddTestOutput(cTarget uintptr, cTestOutput *C.char) {
+	target := unsizet(cTarget)
 	target.TestOutputs = append(target.TestOutputs, C.GoString(cTestOutput))
 }
 
 //export AddRequire
-func AddRequire(cTarget unsafe.Pointer, cRequire *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddRequire(cTarget uintptr, cRequire *C.char) {
+	target := unsizet(cTarget)
 	target.Requires = append(target.Requires, C.GoString(cRequire))
 	// Requirements are also implicit labels
 	target.AddLabel(C.GoString(cRequire))
 }
 
 //export AddProvide
-func AddProvide(cTarget unsafe.Pointer, cLanguage *C.char, cDep *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func AddProvide(cTarget uintptr, cLanguage *C.char, cDep *C.char) {
+	target := unsizet(cTarget)
 	target.AddProvide(C.GoString(cLanguage), core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName))
 }
 
 //export SetContainerSetting
-func SetContainerSetting(cTarget unsafe.Pointer, cName, cValue *C.char) {
-	target := (*core.BuildTarget)(cTarget)
+func SetContainerSetting(cTarget uintptr, cName, cValue *C.char) {
+	target := unsizet(cTarget)
 	target.SetContainerSetting(strings.Replace(C.GoString(cName), "_", "", -1), C.GoString(cValue))
 }
 
 //export GetIncludeFile
-func GetIncludeFile(cPackage unsafe.Pointer, cLabel *C.char) *C.char {
-	pkg := (*core.Package)(cPackage)
+func GetIncludeFile(cPackage uintptr, cLabel *C.char) *C.char {
+	pkg := unsizep(cPackage)
 	label := C.GoString(cLabel)
 	if !strings.HasPrefix(label, "//") {
 		panic("include_defs argument must be an absolute path (ie. start with //)")
@@ -501,8 +513,8 @@ func GetIncludeFile(cPackage unsafe.Pointer, cLabel *C.char) *C.char {
 // For convenience we use in-band signalling for some errors since C can't handle multiple return values :)
 // Fatal errors (like incorrect build labels etc) will cause a panic.
 //export GetSubincludeFile
-func GetSubincludeFile(cPackage unsafe.Pointer, cLabel *C.char) *C.char {
-	pkg := (*core.Package)(cPackage)
+func GetSubincludeFile(cPackage uintptr, cLabel *C.char) *C.char {
+	pkg := unsizep(cPackage)
 	label := core.ParseBuildLabel(C.GoString(cLabel), pkg.Name)
 	pkgLabel := core.BuildLabel{PackageName: pkg.Name, Name: "all"}
 	target := core.State.Graph.Target(label)
@@ -531,7 +543,8 @@ func runPreBuildFunction(pkg *core.Package, target *core.BuildTarget) error {
 	defer C.free(unsafe.Pointer(cName))
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	if result := C.GoString(C.RunPreBuildFunction(callbacks.PreBuildCallbackRunner, C.size_t(target.PreBuildFunction), unsafe.Pointer(pkg), cName)); result != "" {
+	f := C.size_t(uintptr(unsafe.Pointer(target.PreBuildFunction)))
+	if result := C.GoString(C.RunPreBuildFunction(callbacks.PreBuildCallbackRunner, f, sizep(pkg), cName)); result != "" {
 		return fmt.Errorf("Failed to run pre-build function for target %s: %s", target.Label.String(), result)
 	}
 	return nil
@@ -545,7 +558,8 @@ func runPostBuildFunction(pkg *core.Package, target *core.BuildTarget, out strin
 	defer C.free(unsafe.Pointer(cOutput))
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	if result := C.GoString(C.RunPostBuildFunction(callbacks.PostBuildCallbackRunner, C.size_t(target.PostBuildFunction), unsafe.Pointer(pkg), cName, cOutput)); result != "" {
+	f := C.size_t(uintptr(unsafe.Pointer(target.PostBuildFunction)))
+	if result := C.GoString(C.RunPostBuildFunction(callbacks.PostBuildCallbackRunner, f, sizep(pkg), cName, cOutput)); result != "" {
 		return fmt.Errorf("Failed to run post-build function for target %s: %s", target.Label.String(), result)
 	}
 	return nil
@@ -562,8 +576,8 @@ var logLevelFuncs = map[logging.Level]func(format string, args ...interface{}){
 }
 
 //export Log
-func Log(level int, cPackage unsafe.Pointer, cMessage *C.char) {
-	pkg := (*core.Package)(cPackage)
+func Log(level int, cPackage uintptr, cMessage *C.char) {
+	pkg := unsizep(cPackage)
 	f, present := logLevelFuncs[logging.Level(level)]
 	if !present {
 		f = log.Errorf
@@ -679,7 +693,7 @@ func isPackageInternal(name string) bool {
 }
 
 //export GetLabels
-func GetLabels(cPackage unsafe.Pointer, cTarget *C.char, cPrefix *C.char) **C.char {
+func GetLabels(cPackage uintptr, cTarget *C.char, cPrefix *C.char) **C.char {
 	target := getTargetPost(cPackage, cTarget)
 	prefix := C.GoString(cPrefix)
 	if target.State() != core.Building {

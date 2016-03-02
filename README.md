@@ -34,9 +34,10 @@ Building Please
 To build Please yourself, run ./bootstrap.sh in the repo root.
 This will set up the minimal environment needed to build Please,
 build it once manually and then rebuild it again using itself.
-You'll need to have Go 1.5 and PyPy installed to build Please.
-Go 1.6 is not yet supported due to cgo incompatibilities; we hope
-to resolve that soon.
+You'll need to have Go 1.6 and PyPy installed to build Please.
+Go 1.5 and earlier are not currently supported due to subtle cgo
+incompatibilities (Note that this is only for building Please itself;
+it can target Go 1.4 or later).
 
 To build on OSX, you'll need Homebrew installed. After that simply
 'brew install pypy' and 'brew install go' and you should be good to go (heh).

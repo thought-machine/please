@@ -2,21 +2,21 @@
 // This is used by both cgo and cffi to generate their own interfaces.
 typedef unsigned char uint8;
 typedef long long int64;
-typedef char* (ParseFileCallback)(char*, char*, void*);
-typedef void* (AddTargetCallback)(void*, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*);
-typedef void (AddStringCallback)(void*, char*);
-typedef void (AddTwoStringsCallback)(void*, char*, char*);
-typedef void (AddThreeStringsCallback)(void*, char*, char*, char*);
-typedef void (AddDependencyCallback)(void*, char*, char*, uint8);
-typedef void (AddOutputCallback)(void*, char*, char*);
+typedef char* (ParseFileCallback)(char*, char*, size_t);
+typedef size_t (AddTargetCallback)(size_t, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*);
+typedef void (AddStringCallback)(size_t, char*);
+typedef void (AddTwoStringsCallback)(size_t, char*, char*);
+typedef void (AddThreeStringsCallback)(size_t, char*, char*, char*);
+typedef void (AddDependencyCallback)(size_t, char*, char*, uint8);
+typedef void (AddOutputCallback)(size_t, char*, char*);
 typedef char** (GlobCallback)(char*, char**, long long, char**, long long, uint8);
-typedef char* (GetIncludeFileCallback)(void*, char*);
-typedef char** (GetLabelsCallback)(void*, char*, char*);
+typedef char* (GetIncludeFileCallback)(size_t, char*);
+typedef char** (GetLabelsCallback)(size_t, char*, char*);
 typedef void (SetConfigValueCallback)(char*, char*);
-typedef char* (PreBuildCallbackRunner)(void*, void*, char*);
-typedef char* (PostBuildCallbackRunner)(void*, void*, char*, char*);
-typedef void (SetBuildFunctionCallback)(void*, char*, void*);
-typedef void (LogCallback)(int64, void*, char*);
+typedef char* (PreBuildCallbackRunner)(void*, size_t, char*);
+typedef char* (PostBuildCallbackRunner)(void*, size_t, char*, char*);
+typedef void (SetBuildFunctionCallback)(void*, char*, size_t);
+typedef void (LogCallback)(int64, size_t, char*);
 
 // NB. This struct must remain consistent with the PleaseCallbacks type
 //     in interpreter.go, otherwise Bad Things will happen.
