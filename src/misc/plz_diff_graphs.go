@@ -76,6 +76,12 @@ func targetChanged(before, after *query.JSONTarget, pkgName string, changedFiles
 			return true
 		}
 	}
+	// Same for data files.
+	for _, data := range after.Data {
+		if _, present := changedFiles[data]; present {
+			return true
+		}
+	}
 	return false
 }
 

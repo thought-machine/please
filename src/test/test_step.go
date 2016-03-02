@@ -186,8 +186,8 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 				numFlakes++
 			} else if err != nil && results.Failed == 0 {
 				// Add a failure result to the test so it shows up in the final aggregation.
-				results.Failed = 1
-				results.Failures = append(results.Failures, core.TestFailure{
+				target.Results.Failed = 1
+				target.Results.Failures = append(results.Failures, core.TestFailure{
 					Name:   "Return value",
 					Type:   fmt.Sprintf("%s", err),
 					Stdout: string(out),

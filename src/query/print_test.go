@@ -17,8 +17,7 @@ var KnownFields = map[string]bool{
 	"Containerise":                true,
 	"ContainerSettings":           true,
 	"Data":                        true,
-	"DeclaredDependencies":        true,
-	"ExportedDependencies":        true,
+	"dependencies":                true,
 	"Flakiness":                   true,
 	"Hashes":                      true,
 	"IsBinary":                    true,
@@ -45,12 +44,10 @@ var KnownFields = map[string]bool{
 	"Visibility":                  true,
 
 	// These aren't part of the declaration, only used internally.
-	"Dependencies":         true,
 	"state":                true,
 	"Results":              true,
 	"PreBuildHash":         true,
 	"PostBuildHash":        true,
-	"resolvedDependencies": true,
 	"RuleHash":             true,
 	"mutex":                true,
 }

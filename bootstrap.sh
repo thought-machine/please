@@ -84,4 +84,5 @@ if ! hash fstproject 2>/dev/null ; then
     echo "libfst not found, excluding relevant tests"
     EXCLUDES="${EXCLUDES} --exclude=fst"
 fi
-plz-out/bin/src/please test ... --exclude cycle $EXCLUDES --log_file plz-out/log/build.log --log_file_level 4
+
+plz-out/bin/src/please test ... --exclude cycle $EXCLUDES --log_file plz-out/log/build.log --log_file_level 4 $@

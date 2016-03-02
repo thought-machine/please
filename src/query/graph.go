@@ -36,6 +36,7 @@ type JSONTarget struct {
 	Outputs []string `json:"outs,omitempty" note:"corresponds to outs in rule declaration"`
 	Sources []string `json:"srcs,omitempty" note:"corresponds to srcs in rule declaration"`
 	Deps    []string `json:"deps,omitempty" note:"corresponds to deps in rule declaration"`
+	Data    []string `json:"data,omitempty" note:"corresponds to data in rule declaration"`
 	Labels  []string `json:"labels,omitempty" note:"corresponds to labels in rule declaration"`
 	Hash    string   `json:"hash" note:"partial hash of target, does not include source hash"`
 	Test    bool     `json:"test,omitempty" note:"true if target is a test"`
@@ -78,7 +79,7 @@ func addJSONTarget(graph *core.BuildGraph, ret *JSONGraph, label core.BuildLabel
 			},
 		}
 	}
-	for _, dep := range target.Dependencies {
+	for _, dep := range target.Dependencies() {
 		addJSONTarget(graph, ret, dep.Label, done)
 	}
 }
@@ -102,8 +103,11 @@ func makeJSONTarget(graph *core.BuildGraph, target *core.BuildTarget) JSONTarget
 	for _, src := range target.AllSourcePaths(graph) {
 		t.Sources = append(t.Sources, src)
 	}
-	for _, dep := range target.DeclaredDependencies {
+	for _, dep := range target.DeclaredDependencies() {
 		t.Deps = append(t.Deps, dep.String())
+	}
+	for data := range core.IterRuntimeFiles(graph, target, false) {
+		t.Data = append(t.Data, data.Src)
 	}
 	t.Labels = target.Labels
 	rawHash := append(build.RuleHash(target, true, false), core.State.Hashes.Config...)
