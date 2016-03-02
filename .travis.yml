@@ -8,7 +8,7 @@ script:
   - echo "path = $PATH" >> .plzconfig.local
   - echo "[go]" >> .plzconfig.local
   - echo "goroot = $GOROOT" >> .plzconfig.local
-  - ./bootstrap.sh
+  - ./bootstrap.sh --plain_output
 
 before_install:
   - wget https://s3-eu-west-1.amazonaws.com/please-build/tm-pypy_4.0.1_amd64.deb
@@ -22,6 +22,8 @@ addons:
       - libunittest++-dev
       - binutils
       - clang
+      - gcc-4.8
+      - g++-4.8
 
 install:
   - true
