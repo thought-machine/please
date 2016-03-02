@@ -41,8 +41,8 @@ func makeTarget(label string, deps ...string) *core.BuildTarget {
 // Has to be done after to test cycles etc.
 func updateDependencies(graph *core.BuildGraph) {
 	for _, target := range graph.AllTargets() {
-		for _, dep := range target.DeclaredDependencies {
-			target.Dependencies = append(target.Dependencies, graph.TargetOrDie(dep))
+		for _, dep := range target.DeclaredDependencies() {
+			graph.AddDependency(target.Label, dep)
 		}
 	}
 }

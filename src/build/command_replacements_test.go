@@ -139,7 +139,12 @@ func makeTarget(name string, command string, dep *core.BuildTarget) *core.BuildT
 	target.Command = command
 	target.AddOutput(target.Label.Name + ".py")
 	if dep != nil {
-		target.Dependencies = append(target.Dependencies, dep)
+		target.AddDependency(dep.Label)
+		// This is a bit awkward but I don't want to add a public interface just for a test.
+		graph := core.NewGraph()
+		graph.AddTarget(target)
+		graph.AddTarget(dep)
+		graph.AddDependency(target.Label, dep.Label)
 	}
 	return target
 }

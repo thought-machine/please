@@ -72,7 +72,13 @@ func targetChanged(before, after *query.JSONTarget, pkgName string, changedFiles
 	// Note that if the set of sources etc has changed, the hash will have changed also,
 	// so here we're only worrying about the content.
 	for _, src := range after.Sources {
-		if _, present := changedFiles[pkgName+"/"+src]; present {
+		if _, present := changedFiles[src]; present {
+			return true
+		}
+	}
+	// Same for data files.
+	for _, data := range after.Data {
+		if _, present := changedFiles[data]; present {
 			return true
 		}
 	}

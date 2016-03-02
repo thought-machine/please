@@ -451,7 +451,7 @@ func findGraphCycle(graph *core.BuildGraph, target *core.BuildTarget) []*core.Bu
 			return deps[i:]
 		}
 		deps = append(deps, target)
-		for _, dep := range target.Dependencies {
+		for _, dep := range target.Dependencies() {
 			if cycle := detectCycle(dep, deps); len(cycle) > 0 {
 				return cycle
 			}

@@ -118,12 +118,13 @@ func replaceSequenceLabel(target *core.BuildTarget, label core.BuildLabel, in st
 	if label == target.Label { // targets can always use themselves.
 		return checkAndReplaceSequence(target, target, in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, false)
 	}
-	for _, dep := range target.Dependencies {
-		if dep.Label == label {
-			return checkAndReplaceSequence(target, dep, in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, target.IsTool(label))
-		}
+	deps := target.DependenciesFor(label)
+	if len(deps) == 0 {
+		panic(fmt.Sprintf("Rule %s can't use %s; doesn't depend on target %s", target.Label, in, label))
 	}
-	panic(fmt.Sprintf("Rule %s can't use %s; doesn't depend on target %s", target.Label, in, label))
+	// TODO(pebers): this does not correctly handle the case where there are multiple deps here
+	//               (but is better than the previous case where it never worked at all)
+	return checkAndReplaceSequence(target, deps[0], in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, target.IsTool(label))
 }
 
 func checkAndReplaceSequence(target, dep *core.BuildTarget, in string, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, tool bool) string {
