@@ -366,8 +366,10 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool 
 }
 
 func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
-	if opts.BuildFlags.NumThreads <= 0 {
-		opts.BuildFlags.NumThreads = runtime.NumCPU() + 2
+	if opts.BuildFlags.NumThreads > 0 {
+		config.Please.NumThreads = opts.BuildFlags.NumThreads
+	} else if config.Please.NumThreads <= 0 {
+		config.Please.NumThreads = runtime.NumCPU() + 2
 	}
 	if opts.NoCacheCleaner {
 		config.Cache.DirCacheCleaner = ""
@@ -379,7 +381,7 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	if !opts.FeatureFlags.NoCache {
 		c = cache.NewCache(config)
 	}
-	state := core.NewBuildState(opts.BuildFlags.NumThreads, c, opts.OutputFlags.Verbosity, config)
+	state := core.NewBuildState(config.Please.NumThreads, c, opts.OutputFlags.Verbosity, config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.NumTestRuns = opts.Test.NumRuns + opts.Cover.NumRuns            // Only one of these can be passed.
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
@@ -399,8 +401,8 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 		}
 	}
 	displayDone := make(chan bool)
-	go output.MonitorState(state, opts.BuildFlags.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, displayDone, opts.OutputFlags.TraceFile)
-	for i := 0; i < opts.BuildFlags.NumThreads; i++ {
+	go output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, displayDone, opts.OutputFlags.TraceFile)
+	for i := 0; i < config.Please.NumThreads; i++ {
 		go please(i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	}
 	for _, target := range targets {
