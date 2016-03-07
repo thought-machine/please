@@ -18,6 +18,8 @@ before_install:
 
 addons:
   apt:
+    sources:
+      - ubuntu-toolchain-r-test
     packages:
       - libunittest++-dev
       - binutils
