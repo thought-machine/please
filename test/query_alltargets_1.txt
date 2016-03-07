@@ -1,0 +1,4 @@
+//test/moar:require_provide_check
+//test/moar:test_require_fg
+//test/moar:test_require_go
+//test/moar:test_require_py

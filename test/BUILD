@@ -286,3 +286,15 @@ plz_e2e_test(
     expect_file_exists = '../../../bin/test/truth.txt',
     labels = ['container', 'py3'],
 )
+
+# Test 'query alltargets'
+plz_e2e_test(
+    name = 'query_alltargets_1_test',
+    cmd = 'plz query alltargets //test/moar/...',
+    expected_output = 'query_alltargets_1.txt',
+)
+plz_e2e_test(
+    name = 'query_alltargets_2_test',
+    cmd = 'plz query alltargets //test/moar/... --include test',
+    expected_output = 'query_alltargets_2.txt',
+)
