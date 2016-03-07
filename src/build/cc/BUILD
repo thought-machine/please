@@ -97,4 +97,5 @@ cc_test(
     deps = [
         ':cc_fst_lib',
     ],
+    labels = ['fst'],
 )
