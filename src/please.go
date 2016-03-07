@@ -255,7 +255,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"alltargets": func() bool {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
-			query.QueryAllTargets(state.Graph, state.ExpandOriginalTargets())
+			query.QueryAllTargets(state.Graph, state.ExpandOriginalTargets(), opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 		})
 	},
 	"print": func() bool {
