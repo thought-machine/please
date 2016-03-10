@@ -15,6 +15,8 @@ Version 1.6.0
     * --max_flakes flag has been removed in favour of --num_runs always making
       a test run exactly that many times. Hopefully this is less confusing.
     * `query alltargets` now obeys the original targets and --include / --exclude better.
+    * There is now a `system_library` rule which can collect files from outside the build tree.
+      Correspondingly, there is a `system_srcs` attribute on `build_rule`.
 
 
 Version 1.5.12
