@@ -16,6 +16,7 @@ MODULE_DIR = '__MODULE_DIR__'
 ENTRY_POINT = '__ENTRY_POINT__'
 
 ABSOLUTE_IMPORT_ONLY = 0
+DEFAULT_IMPORT_LEVEL = -1 if sys.version_info[0] < 3 else 0
 
 
 def override_import(package=MODULE_DIR):
@@ -35,7 +36,7 @@ def override_import(package=MODULE_DIR):
     if not modules:
         return  # nothing to do
 
-    def _override_import(name, globals=None, locals=None, fromlist=None, level=-1):
+    def _override_import(name, globals=None, locals=None, fromlist=None, level=DEFAULT_IMPORT_LEVEL):
         module_name = name.partition('.')[0]
         if module_name in modules and level < 1:
             prefix = modules[module_name] + '.'

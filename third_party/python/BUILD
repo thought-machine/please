@@ -42,6 +42,7 @@ pip_library(
         'sha1: 39bc6df0d3f7c0633fed8336324e1a7caab58dfa',
         'sha1: 115cc5c535340856c390d6739c34b7a545349145',
         'sha1: df1bc0741e71507a107ccb40d710f7ae650c8b78',
+        'sha1: af8f939d2fef1349c73c3b6e67a36cdb68f91140',
     ],
     patch = 'coverage_pex.patch',
 )
