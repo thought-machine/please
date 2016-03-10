@@ -208,7 +208,7 @@ func (label *BuildLabel) UnmarshalFlag(value string) error {
 // Returns true if the string appears to be a build label, false if not.
 // Useful for cases like rule sources where sources can be a filename or a label.
 func LooksLikeABuildLabel(str string) bool {
-	return strings.HasPrefix(str, "/") || strings.HasPrefix(str, ":")
+	return strings.HasPrefix(str, "//") || strings.HasPrefix(str, ":")
 }
 
 // Make slices of these guys sortable.

@@ -120,7 +120,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                needs_transitive_deps=False, output_is_complete=False, container=False,
                skip_cache=False, no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
-               test_outputs=None):
+               test_outputs=None, system_srcs=None):
     if name == 'all':
         raise ValueError('"all" is a reserved build target name.')
     if '/' in name or ':' in name:
@@ -157,11 +157,21 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
             if src_list:
                 for src in src_list:
                     _add_named_src(target, name, src)
-    else:
+    elif srcs:
+        for src in srcs:
+            if src.startswith('/') and not src.startswith('//'):
+                raise ValueError('Entry "%s" in srcs of %s has an absolute path; that\'s not allowed. '
+                                 'You might want to try system_srcs instead' % (src, name))
         _add_strings(target, _add_src, srcs, 'srcs')
     if isinstance(cmd, Mapping):
         for config, command in cmd.items():
             _add_command(target, config, command)
+    if system_srcs:
+        for src in system_srcs:
+            if not src.startswith('/') or src.startswith('//'):
+                raise ValueError('Entry "%s" in system_srcs of %s is not an absolute path. '
+                                 'You might want to try srcs instead' % (src, name))
+        _add_strings(target, _add_src, system_srcs, 'system_srcs')
     _add_strings(target, _add_data, data, 'data')
     _add_strings(target, _add_dep, deps, 'deps')
     _add_strings(target, _add_exported_dep, exported_deps, 'exported_deps')

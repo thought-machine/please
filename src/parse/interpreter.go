@@ -358,7 +358,7 @@ func getTargetPost(cPackage uintptr, cTarget *C.char) *core.BuildTarget {
 //export AddSource
 func AddSource(cTarget uintptr, cSource *C.char) {
 	target := unsizet(cTarget)
-	source := parseSource(C.GoString(cSource), target.Label.PackageName)
+	source := parseSource(C.GoString(cSource), target.Label.PackageName, true)
 	target.Sources = append(target.Sources, source)
 	if label := source.Label(); label != nil {
 		target.AddDependency(*label)
@@ -367,7 +367,7 @@ func AddSource(cTarget uintptr, cSource *C.char) {
 
 // Parses an incoming source label as either a file or a build label.
 // Identifies if the file is owned by this package and dies if not.
-func parseSource(src string, packageName string) core.BuildInput {
+func parseSource(src, packageName string, systemAllowed bool) core.BuildInput {
 	if core.LooksLikeABuildLabel(src) {
 		return core.ParseBuildLabel(src, packageName)
 	} else if src == "" {
@@ -375,7 +375,10 @@ func parseSource(src string, packageName string) core.BuildInput {
 	} else if strings.Contains(src, "../") {
 		panic(fmt.Errorf("'%s' (in package %s) is an invalid path; build target paths can't contain ../", src, packageName))
 	} else if src[0] == '/' {
-		panic(fmt.Errorf("'%s' (in package %s) is an absolute path; that's not allowed.", src, packageName))
+		if !systemAllowed {
+			panic(fmt.Errorf("'%s' (in package %s) is an absolute path; that's not allowed.", src, packageName))
+		}
+		return core.SystemFileLabel{Path: src}
 	} else if strings.Contains(src, "/") {
 		// Target is in a subdirectory, check nobody else owns that.
 		for dir := path.Dir(path.Join(packageName, src)); dir != packageName && dir != "."; dir = path.Dir(dir) {
@@ -390,7 +393,7 @@ func parseSource(src string, packageName string) core.BuildInput {
 //export AddNamedSource
 func AddNamedSource(cTarget uintptr, cName *C.char, cSource *C.char) {
 	target := unsizet(cTarget)
-	source := parseSource(C.GoString(cSource), target.Label.PackageName)
+	source := parseSource(C.GoString(cSource), target.Label.PackageName, false)
 	target.AddNamedSource(C.GoString(cName), source)
 	if label := source.Label(); label != nil {
 		target.AddDependency(*label)
@@ -406,7 +409,7 @@ func AddCommand(cTarget uintptr, cConfig *C.char, cCommand *C.char) {
 //export AddData
 func AddData(cTarget uintptr, cData *C.char) {
 	target := unsizet(cTarget)
-	data := parseSource(C.GoString(cData), target.Label.PackageName)
+	data := parseSource(C.GoString(cData), target.Label.PackageName, false)
 	target.Data = append(target.Data, data)
 	if label := data.Label(); label != nil {
 		target.AddDependency(*label)

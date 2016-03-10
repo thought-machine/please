@@ -198,8 +198,9 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 			for source := range dependency.AllSources() {
 				fullPaths := source.FullPaths(graph)
 				for i, sourcePath := range source.Paths(graph) {
-					ch <- sourcePair{fullPaths[i], path.Join(tmpDir, sourcePath)}
-					donePaths[path.Join(tmpDir, sourcePath)] = true
+					tmpPath := path.Join(tmpDir, sourcePath)
+					ch <- sourcePair{fullPaths[i], tmpPath}
+					donePaths[tmpPath] = true
 				}
 				if label := source.Label(); label != nil {
 					done[*label] = true
@@ -381,6 +382,9 @@ func PrepareSource(sourcePath string, tmpPath string) error {
 }
 
 func PrepareSourcePair(pair sourcePair) error {
+	if path.IsAbs(pair.Src) {
+		return PrepareSource(pair.Src, pair.Tmp)
+	}
 	return PrepareSource(path.Join(RepoRoot, pair.Src), pair.Tmp)
 }
 

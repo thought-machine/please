@@ -11,7 +11,7 @@ import (
 )
 
 func TestParseSourceBuildLabel(t *testing.T) {
-	src := parseSource("//src/parse/test_data/test_subfolder4:test_py", "src/parse")
+	src := parseSource("//src/parse/test_data/test_subfolder4:test_py", "src/parse", false)
 	label := src.Label()
 	assert.NotNil(t, label)
 	assert.Equal(t, label.PackageName, "src/parse/test_data/test_subfolder4")
@@ -19,7 +19,7 @@ func TestParseSourceBuildLabel(t *testing.T) {
 }
 
 func TestParseSourceRelativeBuildLabel(t *testing.T) {
-	src := parseSource(":builtin_rules", "src/parse")
+	src := parseSource(":builtin_rules", "src/parse", false)
 	label := src.Label()
 	assert.NotNil(t, label)
 	assert.Equal(t, "src/parse", label.PackageName)
@@ -28,7 +28,7 @@ func TestParseSourceRelativeBuildLabel(t *testing.T) {
 
 // Test parsing from a subdirectory that does not contain a build file.
 func TestParseSourceFromSubdirectory(t *testing.T) {
-	src := parseSource("test_subfolder3/test_py", "src/parse/test_data")
+	src := parseSource("test_subfolder3/test_py", "src/parse/test_data", false)
 	assert.Nil(t, src.Label())
 	paths := src.Paths(nil)
 	assert.Equal(t, 1, len(paths))
@@ -36,18 +36,20 @@ func TestParseSourceFromSubdirectory(t *testing.T) {
 }
 
 func TestParseSourceFromOwnedSubdirectory(t *testing.T) {
-	assert.Panics(t, func() { parseSource("test_subfolder4/test_py", "src/parse/test_data") },
+	assert.Panics(t, func() { parseSource("test_subfolder4/test_py", "src/parse/test_data", false) },
 		"Should panic when parsing from a subdirectory that does contain a build file")
 }
 
 func TestParseSourceWithParentPath(t *testing.T) {
-	assert.Panics(t, func() { parseSource("test_subfolder4/../test_py", "src/parse/test_data") },
+	assert.Panics(t, func() { parseSource("test_subfolder4/../test_py", "src/parse/test_data", false) },
 		"Should panic when parsing a path with ../ in it")
 }
 
 func TestParseSourceWithAbsolutePath(t *testing.T) {
-	assert.Panics(t, func() { parseSource("/test_subfolder4/test_py", "src/parse/test_data") },
+	assert.Panics(t, func() { parseSource("/test_subfolder4/test_py", "src/parse/test_data", false) },
 		"Should panic trying to parse an absolute path")
+	assert.NotPanics(t, func() { parseSource("/usr/bin/go", "src/parse/test_data", true) },
+		"Should not panic trying to parse an absolute path in cases where it's allowed")
 }
 
 func TestAddTarget(t *testing.T) {
