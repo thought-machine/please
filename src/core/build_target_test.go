@@ -158,6 +158,10 @@ func TestLabels(t *testing.T) {
 	target.AddLabel("py")
 	target.AddLabel("go")
 	assert.Equal(t, 2, len(target.Labels))
+	// "test" label is implicit on tests.
+	assert.False(t, target.HasLabel("test"))
+	target.IsTest = true
+	assert.True(t, target.HasLabel("test"))
 }
 
 func TestGetCommand(t *testing.T) {

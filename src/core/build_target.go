@@ -113,9 +113,9 @@ type BuildTarget struct {
 }
 
 type depInfo struct {
-	deps []*BuildTarget  // list of actual deps
-	resolved bool        // has the graph resolved it
-	exported bool        // is it an exported dependency
+	deps     []*BuildTarget // list of actual deps
+	resolved bool           // has the graph resolved it
+	exported bool           // is it an exported dependency
 }
 
 type BuildTargetState int32
@@ -462,7 +462,7 @@ func (target *BuildTarget) HasLabel(label string) bool {
 			return true
 		}
 	}
-	return false
+	return label == "test" && target.IsTest
 }
 
 // HasAnyLabel returns true if target has any of these labels.

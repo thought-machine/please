@@ -287,6 +287,18 @@ plz_e2e_test(
     labels = ['container', 'py3'],
 )
 
+# Test 'query alltargets'
+plz_e2e_test(
+    name = 'query_alltargets_1_test',
+    cmd = 'plz query alltargets //test/moar/...',
+    expected_output = 'query_alltargets_1.txt',
+)
+plz_e2e_test(
+    name = 'query_alltargets_2_test',
+    cmd = 'plz query alltargets //test/moar/... --include test',
+    expected_output = 'query_alltargets_2.txt',
+)
+
 plz_e2e_test(
     name = 'cyclic_dependency_test',
     cmd = 'plz test //test/cycle:all',

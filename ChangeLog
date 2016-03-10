@@ -14,6 +14,7 @@ Version 1.6.0
       which again makes it easier for people who don't have the tools already.
     * --max_flakes flag has been removed in favour of --num_runs always making
       a test run exactly that many times. Hopefully this is less confusing.
+    * `query alltargets` now obeys the original targets and --include / --exclude better.
 
 
 Version 1.5.12

@@ -132,6 +132,7 @@ type Configuration struct {
 		Lang             string
 		PyPyLocation     []string
 		Nonce            string
+		NumThreads       int
 	}
 	Build struct {
 		Timeout       int
