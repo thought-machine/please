@@ -390,6 +390,8 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	state.NeedTests = shouldTest
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
+	state.Include = opts.BuildFlags.Include
+	state.Exclude = opts.BuildFlags.Exclude
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()

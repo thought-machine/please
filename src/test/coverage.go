@@ -42,14 +42,8 @@ func AddOriginalTargetsToCoverage(state *core.BuildState, include, exclude []str
 	// First we collect all the source files from all relevant targets
 	allFiles := map[string]bool{}
 	doneTargets := map[*core.BuildTarget]bool{}
-	for _, label := range state.OriginalTargets {
-		if label.IsAllTargets() {
-			for _, target := range state.Graph.PackageOrDie(label.PackageName).Targets {
-				collectAllFiles(state, target, allFiles, doneTargets, include, exclude)
-			}
-		} else {
-			collectAllFiles(state, state.Graph.TargetOrDie(label), allFiles, doneTargets, include, exclude)
-		}
+	for _, label := range state.ExpandOriginalTargets() {
+		collectAllFiles(state, state.Graph.TargetOrDie(label), allFiles, doneTargets, include, exclude)
 	}
 
 	// Now merge the recorded coverage so far into them

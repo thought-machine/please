@@ -47,6 +47,7 @@ go_test(
     srcs = ['state_test.go'],
     deps = [
         ':core',
+        '//third_party/go:testify',
     ],
 )
 

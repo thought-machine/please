@@ -298,3 +298,10 @@ plz_e2e_test(
     cmd = 'plz query alltargets //test/moar/... --include test',
     expected_output = 'query_alltargets_2.txt',
 )
+
+plz_e2e_test(
+    name = 'cyclic_dependency_test',
+    cmd = 'plz test //test/cycle:all',
+    expect_output_contains = 'Dependency cycle found',
+    expected_failure = True,
+)

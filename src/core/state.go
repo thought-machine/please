@@ -41,6 +41,8 @@ type BuildState struct {
 	OriginalTargets []BuildLabel
 	// Arguments to tests.
 	TestArgs []string
+	// Labels of targets that we will include / exclude
+	Include, Exclude []string
 	// True once the main thread has finished finding / loading targets.
 	TargetsLoaded bool
 	// True if we require rule hashes to be correctly verified (usually the case).
@@ -180,13 +182,15 @@ func (state *BuildState) NumDone() int {
 // from the set of original targets.
 func (state *BuildState) ExpandOriginalTargets() []BuildLabel {
 	ret := []BuildLabel{}
-	for _, target := range state.OriginalTargets {
-		if target.IsAllTargets() {
-			for _, target2 := range state.Graph.PackageOrDie(target.PackageName).Targets {
-				ret = append(ret, target2.Label)
+	for _, label := range state.OriginalTargets {
+		if label.IsAllTargets() {
+			for _, target := range state.Graph.PackageOrDie(label.PackageName).Targets {
+				if target.ShouldInclude(state.Include, state.Exclude) && (!state.NeedTests || target.IsTest) {
+					ret = append(ret, target.Label)
+				}
 			}
 		} else {
-			ret = append(ret, target)
+			ret = append(ret, label)
 		}
 	}
 	return ret
