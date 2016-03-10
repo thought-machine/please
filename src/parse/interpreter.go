@@ -589,8 +589,10 @@ func Log(level int, cPackage uintptr, cMessage *C.char) {
 func Glob(cPackage *C.char, cIncludes **C.char, numIncludes int, cExcludes **C.char, numExcludes int, includeHidden bool) **C.char {
 	packageName := C.GoString(cPackage)
 	filenames := []string{}
+	excludes := cStringArrayToStringSlice(cExcludes, numExcludes, packageName)
+	excludes2 := cStringArrayToStringSlice(cExcludes, numExcludes, "")
 	for i := 0; i < numIncludes; i++ {
-		matches, err := glob(packageName, C.GoString(C.getStringFromArray(cIncludes, C.int(i))))
+		matches, err := glob(packageName, C.GoString(C.getStringFromArray(cIncludes, C.int(i))), includeHidden, excludes)
 		if err != nil {
 			panic(err)
 		}
@@ -602,10 +604,10 @@ func Glob(cPackage *C.char, cIncludes **C.char, numIncludes int, cExcludes **C.c
 					continue
 				}
 			}
-			if !shouldExcludeMatch(filename, packageName, cExcludes, numExcludes) {
-				if strings.HasPrefix(filename, packageName) {
-					filename = filename[len(packageName)+1:] // +1 to strip the slash too
-				}
+			if strings.HasPrefix(filename, packageName) {
+				filename = filename[len(packageName)+1:] // +1 to strip the slash too
+			}
+			if !shouldExcludeMatch(filename, excludes2) {
 				filenames = append(filenames, filename)
 			}
 		}
@@ -625,20 +627,26 @@ func stringSliceToCStringArray(s []string) **C.char {
 	return ret
 }
 
-func shouldExcludeMatch(match string, packageName string, cExcludes **C.char, numExcludes int) bool {
-	for j := 0; j < numExcludes; j++ {
-		exclPattern := path.Join(packageName, C.GoString(C.getStringFromArray(cExcludes, C.int(j))))
-		matches, err := filepath.Match(exclPattern, match)
-		if err != nil {
-			panic(err)
-		} else if matches {
+// cStringArrayToStringSlice converts a C array of char*'s to a Go slice of strings.
+func cStringArrayToStringSlice(a **C.char, n int, prefix string) []string {
+	ret := make([]string, n)
+	for i := 0; i < n; i++ {
+		ret[i] = path.Join(prefix, C.GoString(C.getStringFromArray(a, C.int(i))))
+	}
+	return ret
+}
+
+func shouldExcludeMatch(match string, excludes []string) bool {
+	for _, excl := range excludes {
+		matches, err := filepath.Match(excl, match)
+		if matches || err != nil {
 			return true
 		}
 	}
 	return false
 }
 
-func glob(rootPath, pattern string) ([]string, error) {
+func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]string, error) {
 	// Go's Glob function doesn't handle Ant-style ** patterns. Do it ourselves if we have to,
 	// but we prefer not since our solution will have to do a potentially inefficient walk.
 	if !strings.Contains(pattern, "**") {
@@ -650,6 +658,7 @@ func glob(rootPath, pattern string) ([]string, error) {
 	pattern = strings.Replace(pattern, "*", "[^/]*", -1)        // handle single (all) * components
 	pattern = strings.Replace(pattern, "[^/]*[^/]*", ".*", -1)  // handle ** components
 	pattern = strings.Replace(pattern, "/.*/", "/(?:.*/)?", -1) // allow /**/ to match nothing
+	pattern = "^" + rootPath + "/" + pattern
 	regex, err := regexp.Compile(pattern)
 	if err != nil {
 		return matches, err
@@ -658,9 +667,16 @@ func glob(rootPath, pattern string) ([]string, error) {
 	err = filepath.Walk(rootPath, func(name string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
-		} else if info.IsDir() && name != rootPath && isPackage(name) {
-			return filepath.SkipDir // Can't glob past a package boundary
-		} else if !info.IsDir() && regex.MatchString(name) {
+		}
+		if info.IsDir() {
+			if name != rootPath && isPackage(name) {
+				return filepath.SkipDir // Can't glob past a package boundary
+			} else if !includeHidden && strings.HasPrefix(info.Name(), ".") {
+				return filepath.SkipDir // Don't descend into hidden directories
+			} else if shouldExcludeMatch(name, excludes) {
+				return filepath.SkipDir
+			}
+		} else if regex.MatchString(name) && !shouldExcludeMatch(name, excludes) {
 			matches = append(matches, name)
 		}
 		return nil
