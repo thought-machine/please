@@ -229,6 +229,8 @@ def _add_strings(target, func, lst, name):
 
 
 def glob(package, includes, excludes=None, hidden=False):
+    if isinstance(includes, str):
+        raise TypeError('The first argument to glob() should be a list')
     includes_keepalive = [ffi.new('char[]', include) for include in includes]
     excludes_keepalive = [ffi.new('char[]', exclude) for exclude in excludes or []]
     filenames = _glob(ffi.new('char[]', package),
