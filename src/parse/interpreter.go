@@ -524,17 +524,21 @@ func GetSubincludeFile(cPackage uintptr, cLabel *C.char) *C.char {
 	if target == nil {
 		// Might not have been parsed yet. Check for that first.
 		if subincludePackage := core.State.Graph.Package(label.PackageName); subincludePackage == nil {
-			deferParse(label, pkg)
-			return cDeferParse // Not an error, they'll just have to wait.
+			if deferParse(label, pkg) {
+				return cDeferParse // Not an error, they'll just have to wait.
+			}
+			target = core.State.Graph.TargetOrDie(label) // Should be there now.
+		} else {
+			panic(fmt.Sprintf("Failed to subinclude %s; package %s has no target by that name", label, label.PackageName))
 		}
-		panic(fmt.Sprintf("Failed to subinclude %s; package %s has no target by that name", label, label.PackageName))
 	} else if tmp := core.NewBuildTarget(pkgLabel); !tmp.CanSee(target) {
 		panic(fmt.Sprintf("Can't subinclude %s from %s due to visibility constraints", label, pkg.Name))
 	} else if len(target.Outputs()) != 1 {
 		panic(fmt.Sprintf("Can't subinclude %s, subinclude targets must have exactly one output", label))
 	} else if target.State() < core.Built {
-		deferParse(label, pkg)
-		return cDeferParse // Again, they'll have to wait for this guy to build.
+		if deferParse(label, pkg) {
+			return cDeferParse // Again, they'll have to wait for this guy to build.
+		}
 	}
 	// Well if we made it to here it's actually ready to go, so tell them where to get it.
 	return C.CString(path.Join(target.OutDir(), target.Outputs()[0]))

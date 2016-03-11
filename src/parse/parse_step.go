@@ -124,9 +124,13 @@ func firstToParse(label, dependor core.BuildLabel) bool {
 }
 
 // deferParse defers the parsing of a package until the given label has been built.
-func deferParse(label core.BuildLabel, pkg *core.Package) {
+// Returns true if it was deferred, or false if it's already built.
+func deferParse(label core.BuildLabel, pkg *core.Package) bool {
 	pendingTargetMutex.Lock()
 	defer pendingTargetMutex.Unlock()
+	if target := core.State.Graph.Target(label); target != nil && target.State() >= core.Built {
+		return false
+	}
 	log.Debug("Deferring parse of %s pending %s", pkg.Name, label)
 	if m, present := deferredParses[label.PackageName]; present {
 		m[label.Name] = append(m[label.Name], pkg.Name)
@@ -134,6 +138,7 @@ func deferParse(label core.BuildLabel, pkg *core.Package) {
 		deferredParses[label.PackageName] = map[string][]string{label.Name: []string{pkg.Name}}
 	}
 	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkg.Name, Name: "all"})
+	return true
 }
 
 // UndeferAnyParses un-defers the parsing of a package if it depended on some subinclude target being built.
