@@ -127,7 +127,7 @@ func firstToParse(label, dependor core.BuildLabel) bool {
 func deferParse(label core.BuildLabel, pkg *core.Package) {
 	pendingTargetMutex.Lock()
 	defer pendingTargetMutex.Unlock()
-	log.Debug("Deferring parse of %s", pkg.Name)
+	log.Debug("Deferring parse of %s pending %s", pkg.Name, label)
 	if m, present := deferredParses[label.PackageName]; present {
 		m[label.Name] = append(m[label.Name], pkg.Name)
 	} else {
