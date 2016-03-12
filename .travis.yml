@@ -18,6 +18,7 @@ script:
   - echo "protoctool = ${HOME}/protoc" >> .plzconfig.local
   - echo "defaultoptcflags = --std=c++11 -O2 -DNDEBUG" >> .plzconfig.local
   - sed -i "s|/usr/include/pypy|${HOME}/pypy/include|" src/parse/interpreter.go
+  - sed -i "s|-lpypy-c|-L${HOME}/pypy/bin -lpypy-c|" src/parse/interpreter.go
   - PATH="$PATH:${HOME}/pypy/bin" ./bootstrap.sh --plain_output
 
 before_install:
