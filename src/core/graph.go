@@ -59,11 +59,7 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
-	target, present := graph.targets[label]
-	if !present {
-		target = nil // easier than a 'null' BuildTarget.
-	}
-	return target
+	return graph.targets[label]
 }
 
 // TargetOrDie retrieves a target from the graph by label. Dies if the target doesn't exist.
@@ -79,11 +75,7 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 func (graph *BuildGraph) Package(name string) *Package {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
-	pkg, present := graph.packages[name]
-	if !present {
-		pkg = nil
-	}
-	return pkg
+	return graph.packages[name]
 }
 
 // PackageOrDie retrieves a package by name, and dies if it can't be found.

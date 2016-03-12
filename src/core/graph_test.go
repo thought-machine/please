@@ -20,6 +20,13 @@ func TestAddPackage(t *testing.T) {
 	assert.Equal(t, pkg, graph.PackageOrDie("src/core"))
 }
 
+func TestTarget(t *testing.T) {
+	graph := NewGraph()
+	target := graph.Target(ParseBuildLabel("//src/core:target1", ""))
+	assert.Nil(t, target)
+	assert.Equal(t, 0, len(graph.AllTargets()))
+}
+
 func TestRevDeps(t *testing.T) {
 	graph := NewGraph()
 	target1 := makeTarget("//src/core:target1")
