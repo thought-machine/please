@@ -20,7 +20,7 @@ script:
   - ./bootstrap.sh --plain_output
 
 before_install:
-  - bash .travis-install.sh
+  - ./.travis_install.sh
 
 addons:
   apt:
