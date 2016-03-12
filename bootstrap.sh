@@ -36,9 +36,9 @@ bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/mi
 # Now invoke Go to run Please to build itself.
 echo "Building Please..."
 go run src/please.go --plain_output build //src:please --log_file plz-out/log/build.log --log_file_level 4
-# Let's prove it works by rebuilding itself with itself.
+# Use it to build the rest of the tools that come with it.
 echo "Building the tools..."
-plz-out/bin/src/please --plain_output build //:all_tools //package:tarballs --log_file plz-out/log/build.log --log_file_level 4
+plz-out/bin/src/please --plain_output build //src:please //:all_tools //package:tarballs --log_file plz-out/log/build.log --log_file_level 4
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
