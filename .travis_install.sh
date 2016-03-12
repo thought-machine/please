@@ -14,6 +14,7 @@ else
 fi
 
 if [ ! -f "$HOME/pypy/bin/pypy" ]; then
+    rm -rf $HOME/pypy
     echo 'Downloading pypy...'
     mkdir $HOME/pypy
     curl -fsSL https://bitbucket.org/pypy/pypy/downloads/pypy-5.0.0-linux64.tar.bz2 | tar -xj --strip-components=1 -C $HOME/pypy
