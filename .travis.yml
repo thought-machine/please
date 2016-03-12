@@ -1,23 +1,26 @@
+sudo: false
+
 language: go
 
 go:
   - 1.6
 
 script:
-  - echo "[build]" > .plzconfig.local
+  - echo "[please]" > .plzconfig.local
+  - echo "pypylocation = ${HOME}/pypy/bin/libpypy-c.so"
+  - echo "[build]" >> .plzconfig.local
   - echo "path = $PATH" >> .plzconfig.local
   - echo "[go]" >> .plzconfig.local
   - echo "goroot = $GOROOT" >> .plzconfig.local
   - echo "[cpp]" >> .plzconfig.local
   - echo "cctool = g++-4.8" >> .plzconfig.local
+  - echo "[proto]" >> .plzconfig.local
+  - echo "protoctool = ${HOME}/protoc" >> .plzconfig.local
   - echo "defaultoptcflags = --std=c++11 -O2 -DNDEBUG" >> .plzconfig.local
   - ./bootstrap.sh --plain_output
 
 before_install:
-  - wget https://s3-eu-west-1.amazonaws.com/please-build/tm-pypy_4.0.1_amd64.deb
-  - sudo dpkg -i tm-pypy_4.0.1_amd64.deb
-  - wget https://s3-eu-west-1.amazonaws.com/please-build/tm-google-protobuf_3.0.0-beta-2_amd64.deb
-  - sudo dpkg -i tm-google-protobuf_3.0.0-beta-2_amd64.deb
+  - ./.travis-install.sh
 
 addons:
   apt:
@@ -29,6 +32,7 @@ addons:
       - clang
       - gcc-4.8
       - g++-4.8
+      - unzip
 
 install:
   - true
