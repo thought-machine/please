@@ -37,7 +37,7 @@ bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/mi
 echo "Building Please..."
 go run src/please.go --plain_output build //src:please --log_file plz-out/log/build.log --log_file_level 4
 # Let's prove it works by rebuilding itself with itself.
-echo "Rebuilding Please with itself..."
+echo "Building the tools..."
 plz-out/bin/src/please --plain_output build //:all_tools //package:tarballs --log_file plz-out/log/build.log --log_file_level 4
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then

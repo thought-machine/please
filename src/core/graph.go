@@ -18,7 +18,7 @@ type BuildGraph struct {
 	revDeps map[BuildLabel][]*BuildTarget
 	// Used to arbitrate access to the graph. We parallelise most build operations
 	// and Go maps aren't natively threadsafe so this is needed.
-	mutex sync.Mutex
+	mutex sync.RWMutex
 }
 
 // Adds a new target to the graph.
@@ -57,8 +57,8 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 
 // Target retrieves a target from the graph by label
 func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
 	return graph.targets[label]
 }
 
@@ -73,8 +73,8 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 
 // Package retrieves a package from the graph by name
 func (graph *BuildGraph) Package(name string) *Package {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
 	return graph.packages[name]
 }
 
@@ -88,15 +88,15 @@ func (graph *BuildGraph) PackageOrDie(name string) *Package {
 }
 
 func (graph *BuildGraph) Len() int {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
 	return len(graph.targets)
 }
 
 // Returns a sorted slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
 	targets := make(BuildTargets, 0, len(graph.targets))
 	for _, target := range graph.targets {
 		targets = append(targets, target)
@@ -107,8 +107,8 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 
 // Used for getting a local copy of the package map without having to expose it publicly.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
 	packages := make(map[string]*Package)
 	for name, pkg := range graph.packages {
 		packages[name] = pkg
@@ -145,8 +145,8 @@ func NewGraph() *BuildGraph {
 
 // ReverseDependencies returns the set of revdeps on the given target.
 func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
 	if revdeps, present := graph.revDeps[target.Label]; present {
 		return revdeps[:]
 	}
@@ -155,16 +155,16 @@ func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget
 
 // AllDepsBuilt returns true if all the dependencies of a target are built.
 func (graph *BuildGraph) AllDepsBuilt(target *BuildTarget) bool {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
 	return target.allDepsBuilt()
 }
 
 // AllDependenciesResolved returns true once all the dependencies of a target have been
 // parsed and resolved to real targets.
 func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
 	return target.allDependenciesResolved()
 }
 
