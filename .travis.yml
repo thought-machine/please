@@ -20,7 +20,7 @@ script:
   - ./bootstrap.sh --plain_output
 
 before_install:
-  - ./.travis-install.sh
+  - bash .travis-install.sh
 
 addons:
   apt:
@@ -39,3 +39,8 @@ install:
 
 git:
   depth: 3
+
+cache:
+  directories:
+    - $HOME/pypy
+    - $HOME/protoc
