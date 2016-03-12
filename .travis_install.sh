@@ -4,21 +4,16 @@
 
 set -eu
 
-if [ ! -d "$HOME/protobuf/lib" ]; then
+if [ ! -f "$HOME/protoc" ]; then
     echo 'Downloading protobuf...'
-    curl -fsSL https://github.com/google/protobuf/archive/v3.0.0-beta-2.tar.gz | tar -xz
-    (
-	cd protobuf-3.0.0-beta-2
-	./autogen.sh
-	./configure --prefix=$HOME/protobuf
-	make -j2
-	make install
-    )
+    curl -fsSLO https://github.com/google/protobuf/releases/download/v3.0.0-beta-2/protoc-3.0.0-beta-2-linux-x86_64.zip
+    unzip protoc-3.0.0-beta-2-linux-x86_64.zip protoc
+    mv protoc $HOME/protoc
 else
     echo 'Using cached protobuf.';
 fi
 
-if [ ! -d "$HOME/pypy/bin/pypy" ]; then
+if [ ! -f "$HOME/pypy/bin/pypy" ]; then
     echo 'Downloading pypy...'
     mkdir $HOME/pypy
     curl -fsSL https://bitbucket.org/pypy/pypy/downloads/pypy-5.0.0-linux64.tar.bz2 | tar -xj --strip-components=1 -C $HOME/pypy
