@@ -332,12 +332,10 @@ func checkRuleHashes(target *core.BuildTarget, hash []byte) error {
 		return nil // nothing to check
 	}
 	hashStr := hex.EncodeToString(hash)
-	const prefix string = "sha1: "
 	for _, okHash := range target.Hashes {
-		// Allow hashes to specify the hash type initially. For now we only provide one
-		// hash type though.
-		if strings.HasPrefix(okHash, prefix) {
-			okHash = okHash[len(prefix):]
+		// Hashes can have an arbitrary label prefix. Strip it off if present.
+		if index := strings.LastIndex(okHash, ':'); index != -1 {
+			okHash = strings.TrimSpace(okHash[index+1:])
 		}
 		if okHash == hashStr {
 			return nil

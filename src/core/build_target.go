@@ -122,13 +122,14 @@ type BuildTargetState int32
 
 const (
 	Inactive   BuildTargetState = iota // Target isn't used in current build
-	Semiactive BuildTargetState = iota // Target would be active if we needed a build
-	Active     BuildTargetState = iota // Target is going to be used in current build
-	Pending    BuildTargetState = iota // Target is ready to be built but not yet started.
-	Building   BuildTargetState = iota // Target is currently being built
-	Built      BuildTargetState = iota // Target has been successfully built
-	Unchanged  BuildTargetState = iota // Target hasn't changed since last build
-	Failed     BuildTargetState = iota // Target failed for some reason
+	Semiactive                         // Target would be active if we needed a build
+	Active                             // Target is going to be used in current build
+	Pending                            // Target is ready to be built but not yet started.
+	Building                           // Target is currently being built
+	Stopped                            // We stopped building the target because we'd gone as far as needed.
+	Built                              // Target has been successfully built
+	Unchanged                          // Target hasn't changed since last build
+	Failed                             // Target failed for some reason
 )
 
 type TestResults struct {
