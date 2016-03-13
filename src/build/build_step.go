@@ -31,6 +31,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	if err := buildTarget(tid, state, target); err != nil {
 		if _, ok := err.(stopTarget); ok {
 			target.SetState(core.Stopped)
+			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Stopped")
 			return
 		}
 		state.LogBuildError(tid, label, core.TargetBuildFailed, err, "Build failed: %s", err)

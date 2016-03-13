@@ -79,7 +79,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 			log.Fatalf("Target %s doesn't exist in build graph", label)
 		} else if state.NeedHashesOnly && target.State() == core.Stopped {
 			// Do nothing, we will output about this shortly.
-		} else if shouldBuild && target != nil && target.State() < core.Built && len(failedNonTests) == 0 {
+		} else if shouldBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 {
 			cycle := graphCycleMessage(state.Graph, target)
 			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, cycle)
 		}
@@ -104,6 +104,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	active := result.Status == core.PackageParsing || result.Status == core.TargetBuilding || result.Status == core.TargetTesting
 	failed := result.Status == core.ParseFailed || result.Status == core.TargetBuildFailed || result.Status == core.TargetTestFailed
 	cached := result.Status == core.TargetCached || result.Tests.Cached
+	stopped := result.Status == core.TargetBuildStopped
 	if shouldTrace {
 		addTrace(result, buildingTargets[result.ThreadId].Label, active)
 	}
@@ -129,6 +130,8 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		if result.Status != core.TargetTestFailed {
 			*failedNonTests = append(*failedNonTests, label)
 		}
+	} else if stopped {
+		failedTargetMap[result.Label] = nil
 	}
 }
 
@@ -247,13 +250,13 @@ func printBuildResults(state *core.BuildState, duration float64) {
 }
 
 func printHashes(state *core.BuildState, duration float64) {
-	printf("Hashes calculated, total time %0.2fs:\n", duration)
+	fmt.Printf("Hashes calculated, total time %0.2fs:\n", duration)
 	for _, label := range state.ExpandOriginalTargets() {
 		hash, err := build.OutputHash(state.Graph.TargetOrDie(label))
 		if err != nil {
-			printf("  %s: cannot calculate: %s\n", label, err)
+			fmt.Printf("  %s: cannot calculate: %s\n", label, err)
 		} else {
-			printf("  %s: %s\n", label, hex.EncodeToString(hash))
+			fmt.Printf("  %s: %s\n", label, hex.EncodeToString(hash))
 		}
 	}
 }
@@ -275,8 +278,8 @@ func buildResult(target *core.BuildTarget) []string {
 func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap map[core.BuildLabel]error, duration float64) {
 	printf("${WHITE_ON_RED}Build stopped after %0.2fs. Some targets failed:${RESET}\n", duration)
 	for _, label := range failedTargets {
-		err, present := failedTargetMap[label]
-		if present {
+		err := failedTargetMap[label]
+		if err != nil {
 			printf("    ${BOLD_RED}%s\n${RESET}${RED}%s${RESET}\n", label, err)
 		} else {
 			printf("    ${BOLD_RED}%s${RESET}\n", label)

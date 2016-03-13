@@ -183,8 +183,8 @@ func (state *BuildState) NumDone() int {
 
 // ExpandOriginalTargets expands any pseudo-targets (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original targets.
-func (state *BuildState) ExpandOriginalTargets() []BuildLabel {
-	ret := []BuildLabel{}
+func (state *BuildState) ExpandOriginalTargets() BuildLabels {
+	ret := BuildLabels{}
 	for _, label := range state.OriginalTargets {
 		if label.IsAllTargets() {
 			for _, target := range state.Graph.PackageOrDie(label.PackageName).Targets {
@@ -196,6 +196,7 @@ func (state *BuildState) ExpandOriginalTargets() []BuildLabel {
 			ret = append(ret, label)
 		}
 	}
+	sort.Sort(ret)
 	return ret
 }
 
@@ -256,23 +257,24 @@ func NewBuildError(tid int, label BuildLabel, status BuildResultStatus, err erro
 type BuildResultStatus int
 
 const (
-	PackageParsing    BuildResultStatus = iota
-	PackageParsed     BuildResultStatus = iota
-	ParseFailed       BuildResultStatus = iota
-	TargetBuilding    BuildResultStatus = iota
-	TargetBuilt       BuildResultStatus = iota
-	TargetCached      BuildResultStatus = iota
-	TargetBuildFailed BuildResultStatus = iota
-	TargetTesting     BuildResultStatus = iota
-	TargetTested      BuildResultStatus = iota
-	TargetTestFailed  BuildResultStatus = iota
+	PackageParsing BuildResultStatus = iota
+	PackageParsed
+	ParseFailed
+	TargetBuilding
+	TargetBuildStopped
+	TargetBuilt
+	TargetCached
+	TargetBuildFailed
+	TargetTesting
+	TargetTested
+	TargetTestFailed
 )
 
 func (s BuildResultStatus) Category() string {
 	switch s {
 	case PackageParsing, PackageParsed, ParseFailed:
 		return "Parse"
-	case TargetBuilding, TargetBuilt, TargetBuildFailed:
+	case TargetBuilding, TargetBuildStopped, TargetBuilt, TargetBuildFailed:
 		return "Build"
 	case TargetTesting, TargetTested, TargetTestFailed:
 		return "Test"
