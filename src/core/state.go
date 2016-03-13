@@ -56,6 +56,8 @@ type BuildState struct {
 	NeedBuild bool
 	// True if we're running tests. False if we're only building or parsing.
 	NeedTests bool
+	// True if we want to calculate target hashes (ie. 'plz hash').
+	NeedHashesOnly bool
 	// Number of times to run each test target. 0 == once each, plus flakes if necessary.
 	NumTestRuns int
 	// True to print the build / test commands as they're run
@@ -120,6 +122,7 @@ func (state *BuildState) ProcessedOne() {
 	state.mutex.Unlock()
 }
 
+// IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
 func (state *BuildState) IsOriginalTarget(label BuildLabel) bool {
 	for _, original := range state.OriginalTargets {
 		if original == label || (original.IsAllTargets() && original.PackageName == label.PackageName) {
@@ -178,7 +181,7 @@ func (state *BuildState) NumDone() int {
 	return state.numDone
 }
 
-// Expands any pseudo-targets (ie. :all, ... has already been resolved to a bunch :all targets)
+// ExpandOriginalTargets expands any pseudo-targets (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original targets.
 func (state *BuildState) ExpandOriginalTargets() []BuildLabel {
 	ret := []BuildLabel{}

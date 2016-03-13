@@ -3,6 +3,7 @@
 package output
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path"
@@ -14,6 +15,7 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
+	"build"
 	"core"
 )
 
@@ -75,7 +77,9 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	for _, label := range state.ExpandOriginalTargets() {
 		if target := state.Graph.Target(label); target == nil {
 			log.Fatalf("Target %s doesn't exist in build graph", label)
-		} else if shouldBuild && target != nil && target.State() < core.Built {
+		} else if state.NeedHashesOnly && target.State() == core.Stopped {
+			// Do nothing, we will output about this shortly.
+		} else if shouldBuild && target != nil && target.State() < core.Built && len(failedNonTests) == 0 {
 			cycle := graphCycleMessage(state.Graph, target)
 			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, cycle)
 		}
@@ -85,6 +89,8 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 			printFailedBuildResults(failedNonTests, failedTargetMap, duration)
 		} else if shouldTest { // Got to the test phase, report their results.
 			printTestResults(state.Graph, aggregatedResults, failedTargets, duration)
+		} else if state.NeedHashesOnly {
+			printHashes(state, duration)
 		} else { // Must be plz build or similar, report build outputs.
 			printBuildResults(state, duration)
 		}
@@ -236,6 +242,18 @@ func printBuildResults(state *core.BuildState, duration float64) {
 	for i, result := range results {
 		if i == 0 || result != results[i-1] { // Don't repeat results.
 			printf("  %s\n", result)
+		}
+	}
+}
+
+func printHashes(state *core.BuildState, duration float64) {
+	printf("Hashes calculated, total time %0.2fs:\n", duration)
+	for _, label := range state.ExpandOriginalTargets() {
+		hash, err := build.OutputHash(state.Graph.TargetOrDie(label))
+		if err != nil {
+			printf("  %s: cannot calculate: %s\n", label, err)
+		} else {
+			printf("  %s: %s\n", label, hex.EncodeToString(hash))
 		}
 	}
 }
