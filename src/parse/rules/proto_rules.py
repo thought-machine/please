@@ -83,7 +83,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         plugin_cmds = ''
         deps = deps[:] if deps else []
         lang_plugins = plugins.get(language, [])
-        if language == 'go' and not plugins:
+        if language == 'go' and not lang_plugins:
             # Go doesn't come by default, so add it here.
             lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, deps))
         cmds = [
