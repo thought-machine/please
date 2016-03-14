@@ -662,10 +662,10 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 
 	matches := []string{}
 	// Turn the pattern into a regex. Oh dear...
+	pattern = "^" + path.Join(rootPath, pattern)
 	pattern = strings.Replace(pattern, "*", "[^/]*", -1)        // handle single (all) * components
 	pattern = strings.Replace(pattern, "[^/]*[^/]*", ".*", -1)  // handle ** components
 	pattern = strings.Replace(pattern, "/.*/", "/(?:.*/)?", -1) // allow /**/ to match nothing
-	pattern = "^" + rootPath + "/" + pattern
 	regex, err := regexp.Compile(pattern)
 	if err != nil {
 		return matches, err

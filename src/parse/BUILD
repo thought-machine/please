@@ -40,6 +40,7 @@ cgo_test(
     deps = [
         ':parse',
         '//src/core',
+        '//third_party/go:testify',
     ],
     data = glob(['test_data/**/*.txt']),
 )

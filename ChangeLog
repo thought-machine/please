@@ -1,3 +1,10 @@
+Version 1.6.4
+-------------
+
+    * `glob()` now correctly finds files in the current directory that are prefixed
+      with **, ie. `glob(['**/*.png'])` matches `a.png`.
+
+
 Version 1.6.3
 -------------
 
