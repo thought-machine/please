@@ -1,3 +1,9 @@
+Version 1.6.5
+-------------
+
+    * BuildGraph now uses a RWMutex instead of a normal Mutex for slightly better concurrency.
+
+
 Version 1.6.4
 -------------
 
