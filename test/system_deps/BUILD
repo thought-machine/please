@@ -14,6 +14,7 @@ python_test(
     deps = [
         ':timestamp',
     ],
+    labels = ['proto'],
 )
 
 go_test(
@@ -22,4 +23,5 @@ go_test(
     deps = [
         ':timestamp',
     ],
+    labels = ['proto'],
 )

@@ -9,10 +9,11 @@ the proto_library rule to get its appropriate outputs.
 
 # Languages to generate protos for.
 # We maintain this internal mapping to normalize their names to the same ones we use elsewhere.
-_PROTO_LANGUAGES = {'cc': 'cpp', 'py': 'python', 'java': 'java', 'go': 'go'}
+_PROTO_LANGUAGES = {'cc': 'cpp', 'cc_hdrs': 'cpp', 'py': 'python', 'java': 'java', 'go': 'go'}
 # File extensions that are produced for each language.
 _PROTO_FILE_EXTENSIONS = {
-    'cc': ['.pb.cc', '.pb.h'],
+    'cc': ['.pb.cc'],
+    'cc_hdrs': ['.pb.h'],
     'py': ['_pb2.py'],
     'go': ['.pb.go'],
     'java': ['.java'],
@@ -59,7 +60,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
     outs = {
         'py': find_outs('py', '_pb2.py'),
         'go': find_outs('go', '.pb.go'),
-        'cc': find_outs('cc', '.pb.h') + find_outs('cc', '.pb.cc'),
+        'cc': find_outs('cc', '.pb.cc'),
+        'cc_hdrs': find_outs('cc', '.pb.h'),
     }
     need_post_build = file_srcs != srcs
     provides = {'proto': ':_%s#proto' % name}
@@ -75,6 +77,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                         add_out(rule_name, out.lstrip('./'))
         return _annotate_outs
 
+    if 'cc' in languages:
+        languages = ['cc_hdrs'] + languages  # Order is important
     for language in languages:
         gen_name = '_%s#protoc_%s' % (name, language)
         gen_dep = ':' + gen_name
@@ -83,7 +87,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         plugin_cmds = ''
         deps = deps[:] if deps else []
         lang_plugins = plugins.get(language, [])
-        if language == 'go' and not plugins:
+        if language == 'go' and not lang_plugins:
             # Go doesn't come by default, so add it here.
             lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, deps))
         cmds = [
@@ -129,8 +133,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             cc_library(
                 name = lang_name,
                 srcs = [gen_dep],
-                hdrs = [gen_dep],
-                deps = [gen_dep] + deps + cc_deps,
+                hdrs = [':_%s#protoc_cc_hdrs' % name],
+                deps = deps + cc_deps,
                 visibility = visibility,
             )
             provides['cc_hdrs'] = ':__%s#cc#hdrs' % name  # Must wire this up by hand
