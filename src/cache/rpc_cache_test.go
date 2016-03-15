@@ -9,7 +9,6 @@ import (
 
 	"cache/server"
 	"core"
-	"output"
 )
 
 var (
@@ -20,7 +19,6 @@ var (
 
 func init() {
 	runtime.GOMAXPROCS(1) // Don't allow tests to run in parallel, they should work but makes debugging tricky
-	output.InitLogging(4, "", 0)
 	osName = runtime.GOOS + "_" + runtime.GOARCH
 	label = core.NewBuildLabel("pkg/name", "label/name")
 
