@@ -45,7 +45,7 @@ outer:
 			continue
 		}
 		for _, excl := range exclude {
-			if strings.HasPrefix(f.Name, excl) {
+			if matched, _ := filepath.Match(excl, f.Name); matched {
 				continue outer
 			}
 		}
