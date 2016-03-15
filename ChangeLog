@@ -2,6 +2,8 @@ Version 1.6.5
 -------------
 
     * BuildGraph now uses a RWMutex instead of a normal Mutex for slightly better concurrency.
+    * Added `plz hash` command which calculates the current hash for targets.
+    * Jarcat now does proper unsigning of jars always.
 
 
 Version 1.6.4
