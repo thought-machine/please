@@ -42,6 +42,7 @@ go_library(
     name = 'output',
     srcs = glob(['*.go'], excludes=TEMPLATED_FILES.keys() + ['*_test.go']) + TEMPLATED_FILES_DEPS,
     deps = TEMPLATED_FILES_DEPS + [
+        '//src/build',
         '//src/core',
 	'//third_party/go:go-flags',
 	'//third_party/go:humanize',

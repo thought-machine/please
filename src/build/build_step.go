@@ -20,10 +20,20 @@ import (
 
 var log = logging.MustGetLogger("build")
 
+// Type that indicates that we're stopping the build of a target in a nonfatal way.
+type stopTarget string
+
+func (err stopTarget) Error() string { return string(err) }
+
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	target := state.Graph.TargetOrDie(label)
 	target.SetState(core.Building)
 	if err := buildTarget(tid, state, target); err != nil {
+		if _, ok := err.(stopTarget); ok {
+			target.SetState(core.Stopped)
+			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
+			return
+		}
 		state.LogBuildError(tid, label, core.TargetBuildFailed, err, "Build failed: %s", err)
 		if err := removeOutputs(target); err != nil {
 			log.Errorf("Failed to remove outputs for %s: %s", target.Label, err)
@@ -48,7 +58,11 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("%s", r)
+			if e, ok := r.(error); ok {
+				err = e
+			} else {
+				err = fmt.Errorf("%s", r)
+			}
 		}
 	}()
 
@@ -302,17 +316,14 @@ func removeOutputs(target *core.BuildTarget) error {
 // Checks the hash for a rule and compares it to any previous one.
 // Returns true if outputs have changed from what was there previously.
 func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) bool {
-	h := sha1.New()
-	for _, output := range target.Outputs() {
-		if h2, err := pathHash(path.Join(target.OutDir(), output)); err != nil {
-			panic(err)
-		} else {
-			h.Write(h2)
-		}
+	hash, err := OutputHash(target)
+	if err != nil {
+		panic(err)
 	}
-	hash := h.Sum(nil)
-	if err := checkRuleHashes(target, hash); err != nil {
-		if state.VerifyHashes {
+	if err = checkRuleHashes(target, hash); err != nil {
+		if state.NeedHashesOnly && state.IsOriginalTarget(target.Label) {
+			panic(stopTarget("Hash mismatch"))
+		} else if state.VerifyHashes {
 			panic(err)
 		} else {
 			log.Warning("%s", err)
@@ -326,18 +337,29 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	return !bytes.Equal(oldSourceHash, hash)
 }
 
+// OutputHash calculates the hash of a target's outputs.
+func OutputHash(target *core.BuildTarget) ([]byte, error) {
+	h := sha1.New()
+	for _, output := range target.Outputs() {
+		h2, err := pathHash(path.Join(target.OutDir(), output))
+		if err != nil {
+			return nil, err
+		}
+		h.Write(h2)
+	}
+	return h.Sum(nil), nil
+}
+
 // Verify the hash of output files for a rule match the ones set on it.
 func checkRuleHashes(target *core.BuildTarget, hash []byte) error {
 	if len(target.Hashes) == 0 {
 		return nil // nothing to check
 	}
 	hashStr := hex.EncodeToString(hash)
-	const prefix string = "sha1: "
 	for _, okHash := range target.Hashes {
-		// Allow hashes to specify the hash type initially. For now we only provide one
-		// hash type though.
-		if strings.HasPrefix(okHash, prefix) {
-			okHash = okHash[len(prefix):]
+		// Hashes can have an arbitrary label prefix. Strip it off if present.
+		if index := strings.LastIndexByte(okHash, ':'); index != -1 {
+			okHash = strings.TrimSpace(okHash[index+1:])
 		}
 		if okHash == hashStr {
 			return nil

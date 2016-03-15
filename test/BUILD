@@ -195,6 +195,7 @@ plz_e2e_test(
 go_test(
     name = '_num_runs_test',
     srcs = ['num_runs_test.go'],
+    labels = ['manual'],
 )
 plz_e2e_test(
     name = 'num_runs_test',

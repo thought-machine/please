@@ -76,7 +76,7 @@ func TestExpandOriginalTargets(t *testing.T) {
 	// and target5 has 'go' but 'manual' should also take priority.
 	// //src/parse:parse doesn't have 'go' but was explicitly requested so will be
 	// added anyway.
-	assert.Equal(t, state.ExpandOriginalTargets(), []BuildLabel{
+	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{
 		{"src/core", "target1"},
 		{"src/parse", "parse"},
 	})
@@ -96,10 +96,10 @@ func TestExpandOriginalTestTargets(t *testing.T) {
 	addTarget(state, "//src/core:target4_test", "go", "manual")
 	// Only the one target comes out here; it must be a test and otherwise follows
 	// the same include / exclude logic as the previous test.
-	assert.Equal(t, state.ExpandOriginalTargets(), []BuildLabel{{"src/core", "target1_test"}})
+	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{"src/core", "target1_test"}})
 }
 
-func addTarget(state *BuildState, name string, labels ...string) { 
+func addTarget(state *BuildState, name string, labels ...string) {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Labels = labels
 	target.IsTest = strings.HasSuffix(name, "_test")
