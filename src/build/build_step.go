@@ -31,7 +31,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	if err := buildTarget(tid, state, target); err != nil {
 		if _, ok := err.(stopTarget); ok {
 			target.SetState(core.Stopped)
-			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Stopped")
+			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
 			return
 		}
 		state.LogBuildError(tid, label, core.TargetBuildFailed, err, "Build failed: %s", err)
@@ -341,11 +341,11 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 func OutputHash(target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
 	for _, output := range target.Outputs() {
-		if h2, err := pathHash(path.Join(target.OutDir(), output)); err != nil {
+		h2, err := pathHash(path.Join(target.OutDir(), output))
+		if err != nil {
 			return nil, err
-		} else {
-			h.Write(h2)
 		}
+		h.Write(h2)
 	}
 	return h.Sum(nil), nil
 }
