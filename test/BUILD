@@ -306,3 +306,11 @@ plz_e2e_test(
     expect_output_contains = 'Dependency cycle found',
     expected_failure = True,
 )
+
+# Used manually for testing the test flakiness stuff.
+python_test(
+    name = 'flaky_test',
+    srcs = ['flaky_test.py'],
+    flaky = True,
+    labels = ['manual'],
+)
