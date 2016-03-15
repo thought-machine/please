@@ -163,13 +163,13 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 deps = [CONFIG.PROTO_GO_DEP] + deps + go_deps,
                 visibility = visibility,
             )
-            # Needed for things like go_test / cgo_library that need the source in expected places
+            # Needed for things like cgo_test / cgo_library that need the source in expected places
             build_rule(
                 name = '_%s#go_src' % name,
                 srcs = [gen_dep],
-                outs = [name],  # TODO(pebers): could be more specific if we knew the outs?
+                outs = [name],
                 deps = deps,
-                cmd = 'cp ${PKG}/*.go ' + name,
+                cmd = 'mkdir -p $OUT && cp ${PKG}/*.go $OUT',
                 visibility = visibility,
                 requires = ['go_src'],
             )
