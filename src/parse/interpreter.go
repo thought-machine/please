@@ -653,11 +653,26 @@ func shouldExcludeMatch(match string, excludes []string) bool {
 	return false
 }
 
+// Used to identify the fixed part at the start of a glob pattern.
+var initialFixedPart = regexp.MustCompile("([^\\*]+)/(.*)")
+
 func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]string, error) {
 	// Go's Glob function doesn't handle Ant-style ** patterns. Do it ourselves if we have to,
 	// but we prefer not since our solution will have to do a potentially inefficient walk.
 	if !strings.Contains(pattern, "**") {
 		return filepath.Glob(path.Join(rootPath, pattern))
+	}
+
+	// Optimisation: when we have a fixed part at the start, add that to the root path.
+	// e.g. glob(["src/**/*"]) should start walking in src and not at the current directory,
+	// because it can't possibly match anything else at that level.
+	// Can be quite important in cases where it would descend into a massive node_modules tree
+	// or similar, which leads to a big slowdown since it's synchronous with parsing
+	// (ideally it would not be of course, but that's a more complex change and this is useful anyway).
+	submatches := initialFixedPart.FindStringSubmatch(pattern)
+	if submatches != nil {
+		rootPath = path.Join(rootPath, submatches[1])
+		pattern = submatches[2]
 	}
 
 	matches := []string{}
