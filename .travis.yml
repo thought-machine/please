@@ -14,9 +14,9 @@ script:
   - echo "goroot = $GOROOT" >> .plzconfig.local
   - echo "[cpp]" >> .plzconfig.local
   - echo "cctool = g++-4.8" >> .plzconfig.local
+  - echo "defaultoptcflags = --std=c++11 -O2 -DNDEBUG" >> .plzconfig.local
   - echo "[proto]" >> .plzconfig.local
   - echo "protoctool = ${HOME}/protoc" >> .plzconfig.local
-  - echo "defaultoptcflags = --std=c++11 -O2 -DNDEBUG" >> .plzconfig.local
   - sed -i "s|/usr/include/pypy|${HOME}/pypy/include|" src/parse/interpreter.go
   - sed -i "s|-lpypy-c|-L${HOME}/pypy/bin -lpypy-c|" src/parse/interpreter.go
   - PATH="$PATH:${HOME}/pypy/bin" LD_LIBRARY_PATH="${HOME}/pypy/bin" ./bootstrap.sh --plain_output
