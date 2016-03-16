@@ -1,3 +1,50 @@
+Version 1.6.7
+-------------
+
+    * Fix for go_src part of proto_library; don't think we exercise that internally
+      anywhere any more, but it is now a bit less broken than before.
+
+
+Version 1.6.6
+-------------
+
+    * Fix to flaky tests; don't count as failures once success has been reached.
+
+
+Version 1.6.5
+-------------
+
+    * BuildGraph now uses a RWMutex instead of a normal Mutex for slightly better concurrency.
+    * Added `plz hash` command which calculates the current hash for targets.
+    * Jarcat now does proper unsigning of jars always.
+
+
+Version 1.6.4
+-------------
+
+    * `glob()` now correctly finds files in the current directory that are prefixed
+      with **, ie. `glob(['**/*.png'])` matches `a.png`.
+
+
+Version 1.6.3
+-------------
+
+    * Proto rules now correctly set up C++ headers / sources separately which fixes
+      compilation with Clang.
+
+
+Version 1.6.2
+-------------
+
+    * Fix for proto rules where grpc_library sometimes did not add a plugin correctly.
+
+
+Version 1.6.1
+-------------
+
+    * Various tools now honour the please.location setting correctly.
+
+
 Version 1.6.0
 -------------
 

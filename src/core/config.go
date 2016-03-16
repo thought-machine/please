@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"os"
+	"path"
 
 	"gopkg.in/gcfg.v1"
 )
@@ -56,6 +57,14 @@ func ReadConfigFiles(filenames []string) (Configuration, error) {
 	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go"})
 	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go"})
 
+	// Default values for these guys depend on config.Please.Location.
+	defaultPath(&config.Cache.DirCacheCleaner, config.Please.Location, "cache_cleaner")
+	defaultPath(&config.Go.TestTool, config.Please.Location, "please_go_test")
+	defaultPath(&config.Python.PexTool, config.Please.Location, "please_pex")
+	defaultPath(&config.Java.JarCatTool, config.Please.Location, "jarcat")
+	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
+	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
+
 	return config, nil
 }
 
@@ -63,6 +72,13 @@ func ReadConfigFiles(filenames []string) (Configuration, error) {
 func setDefault(conf *[]string, def []string) {
 	if len(*conf) == 0 {
 		*conf = def
+	}
+}
+
+// defaultPath sets a variable to a location in a directory if it's not already set.
+func defaultPath(conf *string, dir, file string) {
+	if *conf == "" {
+		*conf = path.Join(dir, file)
 	}
 }
 
@@ -79,7 +95,6 @@ func DefaultConfiguration() Configuration {
 	config.Build.DefaultConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Cache.HttpTimeout = 5       // Five seconds
 	config.Cache.RpcTimeout = 5        // Five seconds
-	config.Cache.DirCacheCleaner = "~/.please/cache_cleaner"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
 	config.Test.Timeout = 600
@@ -90,16 +105,11 @@ func DefaultConfiguration() Configuration {
 	config.Docker.ResultsTimeout = 20 // Twenty seconds
 	config.Docker.RemoveTimeout = 20  // Twenty seconds
 	config.Go.GoVersion = "1.6"
-	config.Go.TestTool = "~/.please/please_go_test"
 	config.Python.PipTool = "pip"
-	config.Python.PexTool = "~/.please/please_pex"
 	config.Python.DefaultInterpreter = "/usr/bin/python"
 	config.Python.UsePyPI = true
 	config.Java.JavacTool = "javac"
 	config.Java.JarTool = "jar"
-	config.Java.JarCatTool = "~/.please/jarcat"
-	config.Java.PleaseMavenTool = "~/.please/please_maven"
-	config.Java.JUnitRunner = "~/.please/junit_runner.jar"
 	config.Java.DefaultTestPackage = ""
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"

@@ -121,7 +121,7 @@ func newDirCache(config core.Configuration) *dirCache {
 		panic(fmt.Sprintf("Failed to create root cache directory %s: %s", cache.Dir, err))
 	}
 	// Fire off the cache cleaner process.
-	if config.Cache.DirCacheCleaner != "" {
+	if config.Cache.DirCacheCleaner != "" && config.Cache.DirCacheCleaner != "none" {
 		go func() {
 			cleaner := core.ExpandHomePath(config.Cache.DirCacheCleaner)
 			log.Info("Running cache cleaner: %s --dir %s --high_water_mark %s --low_water_mark %s",

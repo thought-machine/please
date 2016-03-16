@@ -209,6 +209,8 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 		}
 	}
 	if numSucceeded >= successesRequired {
+		target.Results.Failures = nil // Remove any failures, they don't count
+		target.Results.Failed = 0     // (they'll be picked up as flakes below)
 		if numSucceeded > 0 && numFlakes > 0 {
 			target.Results.Flakes = numFlakes
 		}

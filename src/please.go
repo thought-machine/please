@@ -74,6 +74,12 @@ var opts struct {
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
 
+	Hash struct {
+		Args struct {
+			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
+		} `positional-args:"true" required:"true"`
+	} `command:"hash" description:"Calculates hash for one or more targets"`
+
 	Test struct {
 		FailingTestsOk bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NumRuns        int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
@@ -180,6 +186,10 @@ var opts struct {
 var buildFunctions = map[string]func() bool{
 	"build": func() bool {
 		success, _ := runBuild(opts.Build.Args.Targets, true, false, true)
+		return success
+	},
+	"hash": func() bool {
+		success, _ := runBuild(opts.Hash.Args.Targets, true, false, true)
 		return success
 	},
 	"test": func() bool {
@@ -388,6 +398,7 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	state.NeedCoverage = opts.Cover.Args.Target != core.BuildLabel{}
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
+	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.Include = opts.BuildFlags.Include

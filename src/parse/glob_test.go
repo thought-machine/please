@@ -2,9 +2,13 @@
 
 package parse
 
-import "testing"
+import (
+	"testing"
 
-import "core"
+	"github.com/stretchr/testify/assert"
+
+	"core"
+)
 
 func TestCanGlobFirstFile(t *testing.T) {
 	// If this fails then we probably failed to interpret /**/ properly,
@@ -29,4 +33,10 @@ func TestCannotGlobThirdFile(t *testing.T) {
 	if core.FileExists("src/parse/test_data/test_subfolder2/b.txt") {
 		t.Errorf("Incorrectly loaded test_data/test_subfolder2/b.txt; have globbed it through a package boundary")
 	}
+}
+
+func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
+	files, err := glob("src/parse/test_data/test_subfolder1", "**/*.txt", false, []string{})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"src/parse/test_data/test_subfolder1/a.txt"}, files)
 }

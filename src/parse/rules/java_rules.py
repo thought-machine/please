@@ -1,8 +1,11 @@
 """Built-in rules to compile Java code."""
 
 # Prefixes of files to exclude when building jars. May need to be configurable.
-_JAVA_EXCLUDE_FILES = ','.join(['META-INF/LICENSE', 'META-INF/NOTICE', 'META-INF/maven',
-                                'META-INF/MANIFEST.MF', 'META-INF/MTNMINDS'])
+_JAVA_EXCLUDE_FILES = ','.join([
+    'META-INF/LICENSE', 'META-INF/NOTICE', 'META-INF/maven/*', 'META-INF/MANIFEST.MF',
+    # Unsign all jars by default, after concatenation the signatures will no longer be valid.
+    'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.LIST',
+])
 
 _MAVEN_CENTRAL = "https://repo1.maven.org/maven2"
 _maven_packages = defaultdict(dict)
@@ -268,7 +271,8 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
 
 
 def maven_jar(name, id, repository=_MAVEN_CENTRAL, hash=None, deps=None,
-              visibility=None, filename=None, sources=True, licences=None):
+              visibility=None, filename=None, sources=True, licences=None,
+              exclude_paths=None):
     """Fetches a single Java dependency from Maven.
 
     Args:
@@ -281,6 +285,7 @@ def maven_jar(name, id, repository=_MAVEN_CENTRAL, hash=None, deps=None,
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
       sources (bool): True to download source jars as well.
       licences (list): Licences this package is subject to.
+      exclude_paths (list): Paths to remove from the downloaded .jar.
     """
     _maven_packages[get_base_path()][name] = id
     # TODO(pebers): Handle exclusions, packages with no source available and packages with no version.
@@ -301,9 +306,11 @@ def maven_jar(name, id, repository=_MAVEN_CENTRAL, hash=None, deps=None,
     src_url = bin_url.replace('.jar', '-sources.jar')  # is this always predictable?
     outs = [name + '.jar']
     cmd = 'echo "Fetching %s..." && curl -f %s -o %s' % (bin_url, bin_url, outs[0])
+    if exclude_paths:
+        cmd += ' && zip -d %s %s' % (outs[0], ' '.join(exclude_paths))
     if sources:
         outs.append(name + '_src.jar')
-        cmd += ' && echo "Fetching %s..." && curl -f %s -o %s' % (src_url, src_url, outs[1])
+        cmd += ' && curl -fsSL %s -o %s' % (src_url, outs[1])
     build_rule(
         name=name,
         outs=outs,

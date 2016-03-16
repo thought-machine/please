@@ -36,9 +36,9 @@ bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/mi
 # Now invoke Go to run Please to build itself.
 echo "Building Please..."
 go run src/please.go --plain_output build //src:please --log_file plz-out/log/build.log --log_file_level 4
-# Let's prove it works by rebuilding itself with itself.
-echo "Rebuilding Please with itself..."
-plz-out/bin/src/please --plain_output build //:all_tools //package:tarballs --log_file plz-out/log/build.log --log_file_level 4
+# Use it to build the rest of the tools that come with it.
+echo "Building the tools..."
+plz-out/bin/src/please --plain_output build //src:please //:all_tools //package:tarballs --log_file plz-out/log/build.log --log_file_level 4
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
@@ -83,6 +83,11 @@ fi
 if ! hash fstproject 2>/dev/null ; then
     echo "libfst not found, excluding relevant tests"
     EXCLUDES="${EXCLUDES} --exclude=fst"
+fi
+# If the proto files are installed in a different location, their tests won't work.
+if [ ! -d "/usr/include/google/protobuf" ]; then
+    echo "google/protobuf not found, excluding relevant tests"
+    EXCLUDES="${EXCLUDES} --exclude=proto"
 fi
 
 plz-out/bin/src/please test ... --exclude cycle $EXCLUDES --log_file plz-out/log/build.log --log_file_level 4 $@

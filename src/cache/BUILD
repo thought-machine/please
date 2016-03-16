@@ -28,7 +28,6 @@ go_test(
     deps = [
         ':cache',
         '//src/cache/server',
-        '//src/output',
         '//third_party/go:logging',
     ],
     data = ['test_data/linux_amd64', 'test_data/darwin_amd64', 'test_data/plz-out'],

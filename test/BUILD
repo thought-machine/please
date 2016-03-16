@@ -195,6 +195,7 @@ plz_e2e_test(
 go_test(
     name = '_num_runs_test',
     srcs = ['num_runs_test.go'],
+    labels = ['manual'],
 )
 plz_e2e_test(
     name = 'num_runs_test',
@@ -304,4 +305,12 @@ plz_e2e_test(
     cmd = 'plz test //test/cycle:all',
     expect_output_contains = 'Dependency cycle found',
     expected_failure = True,
+)
+
+# Used manually for testing the test flakiness stuff.
+python_test(
+    name = 'flaky_test',
+    srcs = ['flaky_test.py'],
+    flaky = True,
+    labels = ['manual'],
 )

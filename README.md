@@ -31,7 +31,7 @@ how to write them.
 Building Please
 ===============
 
-To build Please yourself, run ./bootstrap.sh in the repo root.
+To build Please yourself, run `./bootstrap.sh` in the repo root.
 This will set up the minimal environment needed to build Please,
 build it once manually and then rebuild it again using itself.
 You'll need to have Go 1.6 and PyPy installed to build Please.
@@ -46,7 +46,7 @@ You'll need to have dependencies for the various helper programs
 of Please installed in order to build it. At the moment the minimal
 set are Python (which you'll likely have anyway) and Java 7 or above.
 Optional dependencies for various tests include unittest++
-(sudo apt-get install libunittest++-dev), clang, gold and docker - none
+(`sudo apt-get install libunittest++-dev`), clang, gold and docker - none
 of those are required to build components so their tests will be excluded
 if they aren't available.
 
