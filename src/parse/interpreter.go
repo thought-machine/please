@@ -674,6 +674,9 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 		rootPath = path.Join(rootPath, submatches[1])
 		pattern = submatches[2]
 	}
+	if !core.PathExists(rootPath) {
+		return nil, nil
+	}
 
 	matches := []string{}
 	// Turn the pattern into a regex. Oh dear...
