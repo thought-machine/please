@@ -657,7 +657,7 @@ func (target *BuildTarget) AddLicence(licence string) {
 	target.Licences = append(target.Licences, licence)
 }
 
-// Sets one of the fields on the container settings by name.
+// SetContainerSetting sets one of the fields on the container settings by name.
 func (target *BuildTarget) SetContainerSetting(name, value string) {
 	if target.ContainerSettings == nil {
 		target.ContainerSettings = &TargetContainerSettings{}
@@ -671,6 +671,18 @@ func (target *BuildTarget) SetContainerSetting(name, value string) {
 		}
 	}
 	panic(fmt.Sprintf("Field %s isn't a valid container setting", name))
+}
+
+// Parent finds the parent of a build target, or nil if the target is parentless.
+// Note that this is a fairly informal relationship; we identify it by labels with the convention of
+// a leading _ and trailing hashtag on child rules, rather than storing pointers between them in the graph.
+// The parent returned, if any, will be the ultimate ancestor of the target.
+func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
+	parent := target.Label.Parent()
+	if parent == target.Label {
+		return nil
+	}
+	return graph.Target(parent)
 }
 
 // Make slices of these guys sortable.
