@@ -3,6 +3,10 @@ language: go
 go:
   - 1.6
 
+python:
+  - 2.7
+  - 3.5
+
 script:
   - echo "[build]" > .plzconfig.local
   - echo "path = $PATH" >> .plzconfig.local
