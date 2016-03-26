@@ -88,6 +88,27 @@ func TestAddTarget(t *testing.T) {
 	assert.True(t, target6.HasLabel("bin"))
 }
 
+func TestGetSubincludeFile(t *testing.T) {
+	state := core.NewBuildState(10, nil, 2, core.DefaultConfiguration())
+	pkg := core.NewPackage("src/parse")
+	pkg2 := core.NewPackage("src/core")
+	assert.Equal(t, pyDeferParse, getSubincludeFile(pkg, "//src/core:target"), "Package not loaded yet, should defer")
+	assert.Panics(t, func() { getSubincludeFile(pkg, "//src/parse:target") }, "Should panic on attempts for local subincludes.")
+	assert.Panics(t, func() { getSubincludeFile(pkg, ":target") }, "Should panic on attempts for local subincludes.")
+	state.Graph.AddPackage(pkg)
+	state.Graph.AddPackage(pkg2)
+	assert.Panics(t, func() { getSubincludeFile(pkg, "//src/core:target") }, "Panics, target does not exist in package.")
+	target := core.NewBuildTarget(core.ParseBuildLabel("//src/core:target", ""))
+	state.Graph.AddTarget(target)
+	assert.Panics(t, func() { getSubincludeFile(pkg, "//src/core:target") }, "Panics, target is not visible to subincluding package.")
+	target.Visibility = []core.BuildLabel{core.ParseBuildLabel("//src/parse:all", "")}
+	assert.Panics(t, func() { getSubincludeFile(pkg, "//src/core:target") }, "Panics, target doesn't have any outputs to include.")
+	target.AddOutput("test.py")
+	assert.Equal(t, pyDeferParse, getSubincludeFile(pkg, "//src/core:target"), "Target isn't built yet, so still deferred")
+	target.SetState(core.Built)
+	assert.Equal(t, "plz-out/gen/src/core/test.py", getSubincludeFile(pkg, "//src/core:target"), "Success at last")
+}
+
 func TestMain(m *testing.M) {
 	core.NewBuildState(10, nil, 2, core.DefaultConfiguration())
 	// Need to set this before calling parseSource.
