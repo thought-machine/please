@@ -94,6 +94,7 @@ var opts struct {
 		FailingTestsOk   bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NoCoverageReport bool `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
 		NumRuns          int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
+		IncludeAllFiles  bool `long:"include_all_files" short:"a" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
 		Args             struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -210,7 +211,7 @@ var buildFunctions = map[string]func() bool{
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
 		success, state := runBuild(targets, true, true, true)
 		test.WriteResultsToFileOrDie(state.Graph, testResultsFile)
-		test.AddOriginalTargetsToCoverage(state)
+		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 		test.WriteCoverageToFileOrDie(state.Coverage, coverageResultsFile)
 		if !opts.Cover.NoCoverageReport {

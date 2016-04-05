@@ -39,7 +39,7 @@ func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCo
 // tests, so it's important that we identify anything with zero coverage here.
 // This is made trickier by attempting to reconcile coverage targets from languages like
 // Java that don't preserve the original file structure, which requires a slightly fuzzy match.
-func AddOriginalTargetsToCoverage(state *core.BuildState) {
+func AddOriginalTargetsToCoverage(state *core.BuildState, includeAllFiles bool) {
 	// First we collect all the source files from all relevant targets
 	allFiles := map[string]bool{}
 	doneTargets := map[*core.BuildTarget]bool{}
@@ -49,19 +49,19 @@ func AddOriginalTargetsToCoverage(state *core.BuildState) {
 		coveragePackages[label.PackageName] = true
 	}
 	for _, label := range state.ExpandOriginalTargets() {
-		collectAllFiles(state, state.Graph.TargetOrDie(label), coveragePackages, allFiles, doneTargets)
+		collectAllFiles(state, state.Graph.TargetOrDie(label), coveragePackages, allFiles, doneTargets, includeAllFiles)
 	}
 
 	// Now merge the recorded coverage so far into them
 	recordedCoverage := state.Coverage
 	state.Coverage = core.TestCoverage{Tests: recordedCoverage.Tests, Files: map[string][]core.LineCoverage{}}
-	mergeCoverage(state, recordedCoverage, coveragePackages, allFiles)
+	mergeCoverage(state, recordedCoverage, coveragePackages, allFiles, includeAllFiles)
 }
 
 // Collects all the source files from a single target
-func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coveragePackages, allFiles map[string]bool, doneTargets map[*core.BuildTarget]bool) {
+func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coveragePackages, allFiles map[string]bool, doneTargets map[*core.BuildTarget]bool, includeAllFiles bool) {
 	doneTargets[target] = true
-	if !coveragePackages[target.Label.PackageName] {
+	if !includeAllFiles && !coveragePackages[target.Label.PackageName] {
 		return
 	}
 	// Small hack here; explore these targets when we don't have any sources yet. Helps languages
@@ -70,7 +70,7 @@ func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coverageP
 	if !target.OutputIsComplete || len(allFiles) == 0 {
 		for _, dep := range target.Dependencies() {
 			if !doneTargets[dep] {
-				collectAllFiles(state, dep, coveragePackages, allFiles, doneTargets)
+				collectAllFiles(state, dep, coveragePackages, allFiles, doneTargets, includeAllFiles)
 			}
 		}
 	}
@@ -89,9 +89,9 @@ func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coverageP
 }
 
 // mergeCoverage merges recorded coverage with the list of all existing files.
-func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, coveragePackages, allFiles map[string]bool) {
+func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, coveragePackages, allFiles map[string]bool, includeAllFiles bool) {
 	for file, coverage := range recordedCoverage.Files {
-		if isOwnedBy(file, coveragePackages) {
+		if includeAllFiles || isOwnedBy(file, coveragePackages) {
 			state.Coverage.Files[file] = coverage
 			allFiles[file] = true
 		}
