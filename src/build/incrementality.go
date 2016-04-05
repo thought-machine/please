@@ -222,8 +222,8 @@ func fileHash(h *hash.Hash, filename string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	_, err = io.Copy(*h, file)
+	file.Close()
 	return err
 }
 
@@ -333,17 +333,15 @@ func readRuleHashFile(filename string, postBuild bool) ([]byte, []byte, []byte) 
 		if !os.IsNotExist(err) {
 			log.Warning("Failed to read rule hash file %s: %s", filename, err)
 		}
-		return []byte{}, []byte{}, []byte{}
+		return nil, nil, nil
 	}
 	defer file.Close()
 	if n, err := file.Read(contents); err != nil {
 		log.Warning("Error reading rule hash file %s: %s", filename, err)
-		return []byte{}, []byte{}, []byte{}
+		return nil, nil, nil
 	} else if n != hashFileLength {
-		// TODO(pebers): Uncomment once we've all moved to v1.4, until then it will produce
-		//               many annoying pointless warnings.
-		//log.Warning("Unexpected rule hash file length: expected %d bytes, was %d", hashFileLength, n)
-		return []byte{}, []byte{}, []byte{}
+		log.Warning("Unexpected rule hash file length: expected %d bytes, was %d", hashFileLength, n)
+		return nil, nil, nil
 	}
 	if postBuild {
 		return contents[hashLength : 2*hashLength], contents[2*hashLength : 3*hashLength], contents[3*hashLength : hashFileLength]
@@ -406,7 +404,7 @@ func targetHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 	hash = append(hash, state.Hashes.Config...)
 	hash2, err := sourceHash(state.Graph, target)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	return append(hash, hash2...), nil
 }
@@ -433,7 +431,7 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 	hash = append(hash, state.Hashes.Config...)
 	sh, err := sourceHash(state.Graph, target)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	h := sha1.New()
 	h.Write(sh)
