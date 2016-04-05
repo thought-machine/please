@@ -210,7 +210,7 @@ var buildFunctions = map[string]func() bool{
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
 		success, state := runBuild(targets, true, true, true)
 		test.WriteResultsToFileOrDie(state.Graph, testResultsFile)
-		test.AddOriginalTargetsToCoverage(state, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+		test.AddOriginalTargetsToCoverage(state)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 		test.WriteCoverageToFileOrDie(state.Coverage, coverageResultsFile)
 		if !opts.Cover.NoCoverageReport {

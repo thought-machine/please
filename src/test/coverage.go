@@ -38,12 +38,12 @@ func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCo
 // tests, so it's important that we identify anything with zero coverage here.
 // This is made trickier by attempting to reconcile coverage targets from languages like
 // Java that don't preserve the original file structure, which requires a slightly fuzzy match.
-func AddOriginalTargetsToCoverage(state *core.BuildState, include, exclude []string) {
+func AddOriginalTargetsToCoverage(state *core.BuildState) {
 	// First we collect all the source files from all relevant targets
 	allFiles := map[string]bool{}
 	doneTargets := map[*core.BuildTarget]bool{}
 	for _, label := range state.ExpandOriginalTargets() {
-		collectAllFiles(state, state.Graph.TargetOrDie(label), allFiles, doneTargets, include, exclude)
+		collectAllFiles(state, state.Graph.TargetOrDie(label), allFiles, doneTargets)
 	}
 
 	// Now merge the recorded coverage so far into them
@@ -53,17 +53,15 @@ func AddOriginalTargetsToCoverage(state *core.BuildState, include, exclude []str
 }
 
 // Collects all the source files from a single target
-func collectAllFiles(state *core.BuildState, target *core.BuildTarget, allFiles map[string]bool, doneTargets map[*core.BuildTarget]bool, include, exclude []string) {
+func collectAllFiles(state *core.BuildState, target *core.BuildTarget, allFiles map[string]bool, doneTargets map[*core.BuildTarget]bool) {
 	doneTargets[target] = true
-	if !target.ShouldInclude(include, exclude) {
-		return
-	}
 	// Small hack here; explore these targets when we don't have any sources yet. Helps languages
 	// like Java where we generate a wrapper target with a complete one immediately underneath.
+	// TODO(pebers): do we still need this now we have Java sourcemaps?
 	if !target.OutputIsComplete || len(allFiles) == 0 {
 		for _, dep := range target.Dependencies() {
 			if !doneTargets[dep] {
-				collectAllFiles(state, dep, allFiles, doneTargets, include, exclude)
+				collectAllFiles(state, dep, allFiles, doneTargets)
 			}
 		}
 	}
