@@ -26,6 +26,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"core"
@@ -142,6 +143,7 @@ var pathHashMutex sync.RWMutex // Of course it will be accessed concurrently.
 // Calculate the hash of a single path which might be a file or a directory
 // This is the memoized form that only hashes each path once.
 func pathHash(path string) ([]byte, error) {
+	path = ensureRelative(path)
 	pathHashMutex.RLock()
 	cached, present := pathHashMemoizer[path]
 	pathHashMutex.RUnlock()
@@ -191,12 +193,27 @@ func pathHashImpl(path string) ([]byte, error) {
 	return h.Sum(nil), err
 }
 
-// Used when we move files from tmp to out and there was one there before; that's
+// movePathHash is used when we move files from tmp to out and there was one there before; that's
 // the only case in which the hash of a filepath could change.
 func movePathHash(oldPath, newPath string) {
+	oldPath = ensureRelative(oldPath)
+	newPath = ensureRelative(newPath)
 	pathHashMutex.Lock()
 	pathHashMemoizer[newPath] = pathHashMemoizer[oldPath]
+	// If the path is in plz-out/tmp we aren't ever going to use it again, so free some space.
+	if strings.HasPrefix(oldPath, core.TmpDir) {
+		delete(pathHashMemoizer, oldPath)
+	}
 	pathHashMutex.Unlock()
+}
+
+// ensureRelative ensures a path is relative to the repo root.
+// This is important for getting best performance from memoizing the path hashes.
+func ensureRelative(path string) string {
+	if strings.HasPrefix(path, core.RepoRoot) {
+		return strings.TrimLeft(strings.TrimPrefix(path, core.RepoRoot), "/")
+	}
+	return path
 }
 
 // Calculate the hash of a single file

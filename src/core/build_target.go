@@ -12,7 +12,7 @@ import (
 
 // OutDir is the output directory for everything.
 const OutDir string = "plz-out"
-const tmpDir string = "plz-out/tmp"
+const TmpDir string = "plz-out/tmp"
 const genDir string = "plz-out/gen"
 const binDir string = "plz-out/bin"
 
@@ -206,7 +206,7 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 // //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy
 // Note the extra subdirectory to keep rules separate from one another.
 func (target *BuildTarget) TmpDir() string {
-	return path.Join(tmpDir, target.Label.PackageName, target.Label.Name)
+	return path.Join(TmpDir, target.Label.PackageName, target.Label.Name)
 }
 
 // Returns the output directory for this target, eg.
