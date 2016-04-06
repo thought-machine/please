@@ -33,14 +33,18 @@ var BuildLabelStdin = BuildLabel{PackageName: "", Name: "_STDIN"}
 var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // This is a little strict; doesn't allow for non-ascii names, for example.
-var absoluteTarget = regexp.MustCompile("^//([A-Za-z0-9\\._/-]*):([A-Za-z0-9\\._#+-]+)$")
-var localTarget = regexp.MustCompile("^:([A-Za-z0-9\\._#+-]+)$")
-var implicitTarget = regexp.MustCompile("^//([A-Za-z0-9\\._/-]+/)?([A-Za-z0-9\\._-]+)$")
-var subTargets = regexp.MustCompile("^//([A-Za-z0-9\\._/-]+)/(\\.\\.\\.)$")
-var rootSubTargets = regexp.MustCompile("^(//)(\\.\\.\\.)$")
-var relativeTarget = regexp.MustCompile("^([A-Za-z0-9\\._-][A-Za-z0-9\\._/-]*):([A-Za-z0-9\\._#+-]+)$")
-var relativeImplicitTarget = regexp.MustCompile("^([A-Za-z0-9\\._-][A-Za-z0-9\\._-]*/)([A-Za-z0-9\\._-]+)$")
-var relativeSubTargets = regexp.MustCompile("^(?:([A-Za-z0-9\\._-][A-Za-z0-9\\._/-]*)/)?(\\.\\.\\.)$")
+const packagePart = "[A-Za-z0-9\\._-]+"
+const packageName = "(" + packagePart + "(?:/" + packagePart + ")*)"
+const targetName = "([A-Za-z0-9\\._#+-]+)"
+
+var absoluteTarget = regexp.MustCompile(fmt.Sprintf("^//(?:%s)?:%s$", packageName, targetName))
+var localTarget = regexp.MustCompile(fmt.Sprintf("^:%s$", targetName))
+var implicitTarget = regexp.MustCompile(fmt.Sprintf("^//(?:%s/)?(%s)$", packageName, packagePart))
+var subTargets = regexp.MustCompile(fmt.Sprintf("^//%s/(\\.\\.\\.)$", packageName))
+var rootSubTargets = regexp.MustCompile(fmt.Sprintf("^(//)(\\.\\.\\.)$"))
+var relativeTarget = regexp.MustCompile(fmt.Sprintf("^%s:%s$", packageName, targetName))
+var relativeImplicitTarget = regexp.MustCompile(fmt.Sprintf("^(?:%s/)?(%s)$", packageName, packagePart))
+var relativeSubTargets = regexp.MustCompile(fmt.Sprintf("^(?:%s/)?(\\.\\.\\.)$", packageName))
 
 func (label BuildLabel) String() string {
 	if label.Name != "" {
@@ -84,7 +88,10 @@ func tryParseBuildLabel(target string, currentPath string) (BuildLabel, bool) {
 	}
 	matches = implicitTarget.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(matches[1]+matches[2], matches[2]), true
+		if matches[1] != "" {
+			return NewBuildLabel(matches[1]+"/"+matches[2], matches[2]), true
+		}
+		return NewBuildLabel(matches[2], matches[2]), true
 	}
 	return BuildLabel{}, false
 }
