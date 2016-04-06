@@ -26,6 +26,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"core"
@@ -142,6 +143,7 @@ var pathHashMutex sync.RWMutex // Of course it will be accessed concurrently.
 // Calculate the hash of a single path which might be a file or a directory
 // This is the memoized form that only hashes each path once.
 func pathHash(path string) ([]byte, error) {
+	path = ensureRelative(path)
 	pathHashMutex.RLock()
 	cached, present := pathHashMemoizer[path]
 	pathHashMutex.RUnlock()
@@ -191,12 +193,27 @@ func pathHashImpl(path string) ([]byte, error) {
 	return h.Sum(nil), err
 }
 
-// Used when we move files from tmp to out and there was one there before; that's
+// movePathHash is used when we move files from tmp to out and there was one there before; that's
 // the only case in which the hash of a filepath could change.
 func movePathHash(oldPath, newPath string) {
+	oldPath = ensureRelative(oldPath)
+	newPath = ensureRelative(newPath)
 	pathHashMutex.Lock()
 	pathHashMemoizer[newPath] = pathHashMemoizer[oldPath]
+	// If the path is in plz-out/tmp we aren't ever going to use it again, so free some space.
+	if strings.HasPrefix(oldPath, core.TmpDir) {
+		delete(pathHashMemoizer, oldPath)
+	}
 	pathHashMutex.Unlock()
+}
+
+// ensureRelative ensures a path is relative to the repo root.
+// This is important for getting best performance from memoizing the path hashes.
+func ensureRelative(path string) string {
+	if strings.HasPrefix(path, core.RepoRoot) {
+		return strings.TrimLeft(strings.TrimPrefix(path, core.RepoRoot), "/")
+	}
+	return path
 }
 
 // Calculate the hash of a single file
@@ -205,8 +222,8 @@ func fileHash(h *hash.Hash, filename string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	_, err = io.Copy(*h, file)
+	file.Close()
 	return err
 }
 
@@ -316,17 +333,15 @@ func readRuleHashFile(filename string, postBuild bool) ([]byte, []byte, []byte) 
 		if !os.IsNotExist(err) {
 			log.Warning("Failed to read rule hash file %s: %s", filename, err)
 		}
-		return []byte{}, []byte{}, []byte{}
+		return nil, nil, nil
 	}
 	defer file.Close()
 	if n, err := file.Read(contents); err != nil {
 		log.Warning("Error reading rule hash file %s: %s", filename, err)
-		return []byte{}, []byte{}, []byte{}
+		return nil, nil, nil
 	} else if n != hashFileLength {
-		// TODO(pebers): Uncomment once we've all moved to v1.4, until then it will produce
-		//               many annoying pointless warnings.
-		//log.Warning("Unexpected rule hash file length: expected %d bytes, was %d", hashFileLength, n)
-		return []byte{}, []byte{}, []byte{}
+		log.Warning("Unexpected rule hash file length: expected %d bytes, was %d", hashFileLength, n)
+		return nil, nil, nil
 	}
 	if postBuild {
 		return contents[hashLength : 2*hashLength], contents[2*hashLength : 3*hashLength], contents[3*hashLength : hashFileLength]
@@ -389,7 +404,7 @@ func targetHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 	hash = append(hash, state.Hashes.Config...)
 	hash2, err := sourceHash(state.Graph, target)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	return append(hash, hash2...), nil
 }
@@ -416,7 +431,7 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 	hash = append(hash, state.Hashes.Config...)
 	sh, err := sourceHash(state.Graph, target)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	h := sha1.New()
 	h.Write(sh)
