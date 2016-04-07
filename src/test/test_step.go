@@ -320,6 +320,10 @@ func RemoveCachedTestFiles(target *core.BuildTarget) error {
 func removeAnyFilesWithPrefix(dir, prefix string) error {
 	infos, err := ioutil.ReadDir(dir)
 	if err != nil {
+		// Not an error if the directory just isn't there.
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 	for _, info := range infos {

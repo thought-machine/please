@@ -237,6 +237,25 @@ func TestDependencyFor(t *testing.T) {
 	assert.Equal(t, 1, len(target2.dependencies))
 }
 
+func TestParent(t *testing.T) {
+	// "grandchild" is of course a misnomer since we only really have a concept of
+	// one level of parent-child relationship.
+	grandchild := makeTarget("//src/core:__target1#child#grandchild", "")
+	child := makeTarget("//src/core:_target1#child", "", grandchild)
+	parent := makeTarget("//src/core:target1", "", child)
+	graph := NewGraph()
+	graph.AddTarget(grandchild)
+	graph.AddTarget(child)
+	graph.AddTarget(parent)
+
+	assert.Equal(t, parent.Label, grandchild.Label.Parent())
+	assert.Equal(t, parent.Label, child.Label.Parent())
+	assert.Equal(t, parent.Label, parent.Label.Parent())
+	assert.Equal(t, parent, grandchild.Parent(graph))
+	assert.Equal(t, parent, child.Parent(graph))
+	assert.Equal(t, (*BuildTarget)(nil), parent.Parent(graph))
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {

@@ -186,7 +186,7 @@ func (label BuildLabel) Label() *BuildLabel {
 	return &label
 }
 
-// Unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.
+// UnmarshalFlag unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.
 func (label *BuildLabel) UnmarshalFlag(value string) error {
 	// This is only allowable here, not in any other usage of build labels.
 	if value == "-" {
@@ -205,7 +205,19 @@ func (label *BuildLabel) UnmarshalFlag(value string) error {
 	return nil
 }
 
-// Returns true if the string appears to be a build label, false if not.
+// Parent returns what would be the parent of a build label, or the label itself if it's parentless.
+// Note that there is not a concrete guarantee that the returned label exists in the build graph,
+// and that the label returned is the ultimate ancestor (ie. not necessarily immediate parent).
+func (label BuildLabel) Parent() BuildLabel {
+	index := strings.IndexRune(label.Name, '#')
+	if index == -1 || !strings.HasPrefix(label.Name, "_") {
+		return label
+	}
+	label.Name = strings.TrimLeft(label.Name[:index], "_")
+	return label
+}
+
+// LooksLikeABuildLabel returns true if the string appears to be a build label, false if not.
 // Useful for cases like rule sources where sources can be a filename or a label.
 func LooksLikeABuildLabel(str string) bool {
 	return strings.HasPrefix(str, "//") || strings.HasPrefix(str, ":")

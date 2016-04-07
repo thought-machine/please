@@ -7,12 +7,12 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"syscall"
 
 	"gopkg.in/op/go-logging.v1"
 
+	"build"
 	"core"
 	"test"
 )
@@ -36,13 +36,23 @@ func Clean(state *core.BuildState, labels []core.BuildLabel, cleanCache, backgro
 	} else {
 		for _, label := range labels {
 			cleanTarget(state, state.Graph.TargetOrDie(label), cleanCache)
+			// Now clean any sub-targets of this target.
+			// This is not super efficient; we potentially repeat this walk multiple times if
+			// we have several targets to clean in a package. It's unlikely to be a big concern though
+			// unless we have lots of targets to clean and their packages are very large.
+			pkg := state.Graph.PackageOrDie(label.PackageName)
+			for _, target := range pkg.Targets {
+				if parent := target.Parent(state.Graph); parent != nil && parent.Label == label {
+					cleanTarget(state, target, cleanCache)
+				}
+			}
 		}
 	}
 }
 
 func cleanTarget(state *core.BuildState, target *core.BuildTarget, cleanCache bool) {
-	for _, out := range target.Outputs() {
-		clean(path.Join(target.OutDir(), out))
+	if err := build.RemoveOutputs(target); err != nil {
+		log.Fatalf("Failed to remove output: %s", err)
 	}
 	if target.IsTest {
 		if err := test.RemoveCachedTestFiles(target); err != nil {
@@ -54,16 +64,12 @@ func cleanTarget(state *core.BuildState, target *core.BuildTarget, cleanCache bo
 	}
 }
 
-func clean(what string) {
-	dir := path.Join(core.RepoRoot, what)
-	if !core.PathExists(dir) {
-		// Out path doesn't exist. Nothing to do.
-		log.Info("Path %s not found, nothing to do.", dir)
-		return
-	}
-	log.Info("Cleaning path %s", dir)
-	if err := os.RemoveAll(dir); err != nil {
-		log.Fatalf("Failed to clean path %s: %s", dir, err)
+func clean(path string) {
+	if core.PathExists(path) {
+		log.Info("Cleaning path %s", path)
+		if err := os.RemoveAll(path); err != nil {
+			log.Fatalf("Failed to clean path %s: %s", path, err)
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ go_library(
     srcs = glob(['*.go']),
     deps = [
         '//src/core',
+        '//src/build',
         '//src/test',
 	'//third_party/go:logging',
     ],

@@ -35,7 +35,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 			return
 		}
 		state.LogBuildError(tid, label, core.TargetBuildFailed, err, "Build failed: %s", err)
-		if err := removeOutputs(target); err != nil {
+		if err := RemoveOutputs(target); err != nil {
 			log.Errorf("Failed to remove outputs for %s: %s", target.Label, err)
 		}
 		target.SetState(core.Failed)
@@ -300,8 +300,8 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 	return calculateAndCheckRuleHash(state, target), nil
 }
 
-// Removes all generated outputs for a rule.
-func removeOutputs(target *core.BuildTarget) error {
+// RemoveOutputs removes all generated outputs for a rule.
+func RemoveOutputs(target *core.BuildTarget) error {
 	if err := os.Remove(ruleHashFileName(target)); err != nil && !os.IsNotExist(err) {
 		return err
 	}
