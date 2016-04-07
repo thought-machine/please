@@ -1,3 +1,17 @@
+Version 1.7.0
+-------------
+
+    * Optimised glob() a bit so it doesn't descend into directories that will never match
+      the given pattern.
+    * Fixed compilation of clang tests with python3
+    * Officially ban subincluding of local targets (didn't actually work before anyway)
+    * `plz clean` now cleans sub-targets as well
+    * Banned double slashes in build labels which was being incorrectly let though, leading
+      to some very strange failures.
+    * Ensure paths are relative in hash memoisation - improves hit rate by about 30% and
+      is a performance improvement (although probably not very noticeable in most cases).
+
+
 Version 1.6.7
 -------------
 
