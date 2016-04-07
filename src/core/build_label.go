@@ -37,13 +37,30 @@ const packagePart = "[A-Za-z0-9\\._-]+"
 const packageName = "(" + packagePart + "(?:/" + packagePart + ")*)"
 const targetName = "([A-Za-z0-9\\._#+-]+)"
 
+// Regexes for matching the various ways of writing a build label.
+// Fully specified labels, e.g. //src/core:core
 var absoluteTarget = regexp.MustCompile(fmt.Sprintf("^//(?:%s)?:%s$", packageName, targetName))
+
+// Targets in local package, e.g. :core
 var localTarget = regexp.MustCompile(fmt.Sprintf("^:%s$", targetName))
+
+// Targets with an implicit target name, e.g. //src/core (expands to //src/core:core)
 var implicitTarget = regexp.MustCompile(fmt.Sprintf("^//(?:%s/)?(%s)$", packageName, packagePart))
+
+// All targets underneath a package, e.g. //src/core/...
 var subTargets = regexp.MustCompile(fmt.Sprintf("^//%s/(\\.\\.\\.)$", packageName))
+
+// Sub targets immediately underneath the root; //...
 var rootSubTargets = regexp.MustCompile(fmt.Sprintf("^(//)(\\.\\.\\.)$"))
+
+// The following cases only apply on the command line and can't be used in BUILD files.
+// A relative target, e.g. core:core (expands to //src/core:core if already in src)
 var relativeTarget = regexp.MustCompile(fmt.Sprintf("^%s:%s$", packageName, targetName))
+
+// A relative target with implicitly specified target name, e.g. src/core (expands to //src/core:core)
 var relativeImplicitTarget = regexp.MustCompile(fmt.Sprintf("^(?:%s/)?(%s)$", packageName, packagePart))
+
+// All targets underneath a relative package, e.g. src/core/...
 var relativeSubTargets = regexp.MustCompile(fmt.Sprintf("^(?:%s/)?(\\.\\.\\.)$", packageName))
 
 func (label BuildLabel) String() string {
