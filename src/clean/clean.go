@@ -64,11 +64,11 @@ func cleanTarget(state *core.BuildState, target *core.BuildTarget, cleanCache bo
 	}
 }
 
-func clean(what string) {
-	if core.PathExists(what) {
-		log.Info("Cleaning path %s", what)
-		if err := os.RemoveAll(what); err != nil {
-			log.Fatalf("Failed to clean path %s: %s", what, err)
+func clean(path string) {
+	if core.PathExists(path) {
+		log.Info("Cleaning path %s", path)
+		if err := os.RemoveAll(path); err != nil {
+			log.Fatalf("Failed to clean path %s: %s", path, err)
 		}
 	}
 }

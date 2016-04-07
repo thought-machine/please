@@ -100,3 +100,11 @@ func TestRelativeImplicitTarget(t *testing.T) {
 	assertNotLabel(t, "path/to:thingy/mabob", "can't have a slash in target name")
 	assertNotLabel(t, "path/to:thingy:mabob", "can only have one colon")
 }
+
+// Test for issue #55 where we were incorrectly allowing consecutive double slashes,
+// which has all manner of weird follow-on effects
+func TestDoubleSlashes(t *testing.T) {
+	assertNotLabel(t, "//src//core", "double slashes not allowed")
+	assertNotLabel(t, "//src//core:target1", "double slashes not allowed")
+	assertNotLabel(t, "//src/core/something//something", "double slashes not allowed")
+}
