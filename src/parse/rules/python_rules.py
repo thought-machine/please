@@ -84,7 +84,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
 
 
 def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=None,
-                  interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
+                  interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER, strip_source=False):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -105,6 +105,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
+      strip_source (bool): If True, source (.py) files are stripped from the .pex.
     """
     main_mod = main[:-3] if main.endswith('.py') else main
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
@@ -145,7 +146,8 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         outs=[out or (name + '.pex')],
         cmd=' && '.join([
             'PREAMBLE=`head -n 1 $(location :_%s#pex)`' % name,
-            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict' % jarcat_tool,
+            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict%s' %
+                (jarcat_tool, ' -e .py -x "*.py"' if strip_source else ''),
             'chmod +x $OUTS',
         ]),
         needs_transitive_deps=True,
@@ -167,7 +169,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
 
 def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
                 visibility=None, container=False, timeout=0, flaky=0, test_outputs=None,
-                zip_safe=None, interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
+                zip_safe=None, interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER, strip_source=False):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
@@ -194,6 +196,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                         'pypy' or whatever.
+      strip_source (bool): If True, source (.py) files are stripped from the .pex.
     """
     deps = deps or []
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
@@ -246,7 +249,8 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
         labels=labels or [],
         cmd=' && '.join([
             'PREAMBLE=`head -n 1 $(location :_%s#pex)`' % name,
-            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict' % jarcat_tool,
+            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict%s' %
+                (jarcat_tool, ' -e .py -x "*.py"' if strip_source else ''),
             'chmod +x $OUTS',
         ]),
         test_cmd = '$(exe :%s)' % name,
