@@ -46,6 +46,10 @@ outer:
 		}
 		for _, excl := range exclude {
 			if matched, _ := filepath.Match(excl, f.Name); matched {
+				log.Info("Skipping %s (excluded by %s)", f.Name, excl)
+				continue outer
+			} else if matched, _ := filepath.Match(excl, filepath.Base(f.Name)); matched {
+				log.Info("Skipping %s (excluded by %s)", f.Name, excl)
 				continue outer
 			}
 		}
@@ -103,6 +107,10 @@ func AddInitPyFiles(w *zip.Writer) error {
 		}
 		initPyPath := path.Join(d, "__init__.py")
 		if _, present := m[initPyPath]; !present && !done[initPyPath] {
+			// If we already have a pyc we don't need the __init__.py as well.
+			if _, present := m[initPyPath+"c"]; present {
+				continue
+			}
 			// Don't write one at the root, it's not necessary.
 			if initPyPath != "__init__.py" {
 				done[initPyPath] = true

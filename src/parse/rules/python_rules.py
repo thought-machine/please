@@ -146,8 +146,8 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         outs=[out or (name + '.pex')],
         cmd=' && '.join([
             'PREAMBLE=`head -n 1 $(location :_%s#pex)`' % name,
-            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict%s' %
-                (jarcat_tool, ' -e .py -x "*.py"' if strip_source else ''),
+            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict %s' %
+                (jarcat_tool, '-e .py -x "*.py"' if strip_source else ''),
             'chmod +x $OUTS',
         ]),
         needs_transitive_deps=True,
@@ -249,7 +249,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
         labels=labels or [],
         cmd=' && '.join([
             'PREAMBLE=`head -n 1 $(location :_%s#pex)`' % name,
-            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict%s' %
+            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict %s' %
                 (jarcat_tool, ' -e .py -x "*.py"' if strip_source else ''),
             'chmod +x $OUTS',
         ]),
