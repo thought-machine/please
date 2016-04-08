@@ -15,7 +15,8 @@ a target which has only had small changes.
 
 
 def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
-                   test_only=False, zip_safe=True, labels=None):
+                   test_only=False, zip_safe=True, labels=None,
+                   interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
     Note that each python_library performs some pre-zipping of its inputs before they're combined
@@ -36,6 +37,9 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
                        (the most obvious reason not is when it contains .so modules).
                        See python_binary for more information.
       labels (list): Labels to apply to this rule.
+      interpreter (str): The Python interpreter to use. Defaults to the config setting
+                         which is normally just 'python', but could be 'python3' or
+                         'pypy' or whatever.
     """
     all_srcs = (srcs or []) + (resources or [])
     deps = deps or []
@@ -44,14 +48,22 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
         labels.append('py:zip-unsafe')
     if all_srcs:
         # Pre-zip the files for later collection by python_binary.
+        cmd = ' && '.join([
+            # This is a little heavy-handed but approximates what pex would do (ie. create __init__.py
+            # files anywhere they don't exist). It's a little more selective but this is much better than
+            # the alternative.
+            'find ${PKG} -type d | grep -v "${PKG}$" | xargs -I {} touch "{}/__init__.py"',
+            # TODO(pebers): We probably should make timestamps consistent before using this, but there
+            # are many other parts of the Python rules that would similarly need to be so for it to
+            # really make much difference.
+            'find ${PKG} -name "*.py" | xargs %s -m py_compile' % interpreter,
+            'zip -r1 $OUT $(echo "$PKG" | cut -d "/" -f 1)',
+        ])
         build_rule(
             name='_%s#zip' % name,
             srcs=all_srcs,
             outs=['.%s.pex.zip' % name],
-            # This is a little heavy-handed but approximates what pex would do (ie. create __init__.py
-            # files anywhere they don't exist). It's a little more selective but this is much better than
-            # the alternative.
-            cmd = 'find ${PKG} -type d | grep -v "${PKG}$" | xargs -I {} touch "{}/__init__.py" && zip -r1 $OUT $(echo "$PKG" | cut -d "/" -f 1)',
+            cmd = cmd,
             building_description='Compressing...',
             requires=['py'],
             test_only=test_only,

@@ -97,7 +97,11 @@ func AddInitPyFiles(w *zip.Writer) error {
 	done := map[string]bool{}
 	m := files[w]
 	for p := range m {
-		initPyPath := path.Join(filepath.Dir(p), "__init__.py")
+		d := filepath.Dir(p)
+		if filepath.Base(d) == "__pycache__" {
+			continue // Don't need to add an __init__.py here.
+		}
+		initPyPath := path.Join(d, "__init__.py")
 		if _, present := m[initPyPath]; !present && !done[initPyPath] {
 			// Don't write one at the root, it's not necessary.
 			if initPyPath != "__init__.py" {
