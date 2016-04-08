@@ -56,7 +56,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
             # TODO(pebers): We probably should make timestamps consistent before using this, but there
             # are many other parts of the Python rules that would similarly need to be so for it to
             # really make much difference.
-            'find ${PKG} -name "*.py" | xargs %s -m py_compile' % interpreter,
+            'find ${PKG} -name "*.py" | xargs %s -O -m py_compile' % interpreter,
             'zip -r1 $OUT $(echo "$PKG" | cut -d "/" -f 1)',
         ])
         build_rule(

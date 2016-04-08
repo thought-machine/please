@@ -216,11 +216,12 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	cPackageName := C.CString(pkg.Name)
 	defer C.free(unsafe.Pointer(cFilename))
 	defer C.free(unsafe.Pointer(cPackageName))
-	if ret := C.GoString(C.ParseFile(callbacks.ParseFile, cFilename, cPackageName, sizep(pkg))); ret != "" && ret != pyDeferParse {
+	ret := C.GoString(C.ParseFile(callbacks.ParseFile, cFilename, cPackageName, sizep(pkg)))
+	if ret != "" && ret != pyDeferParse {
 		panic(fmt.Sprintf("Failed to parse file %s: %s", filename, ret))
-	} else {
-		return ret == pyDeferParse
 	}
+	log.Debug("Parsed package file %s", filename)
+	return ret == pyDeferParse
 }
 
 //export AddTarget

@@ -107,8 +107,10 @@ func AddInitPyFiles(w *zip.Writer) error {
 		}
 		initPyPath := path.Join(d, "__init__.py")
 		if _, present := m[initPyPath]; !present && !done[initPyPath] {
-			// If we already have a pyc we don't need the __init__.py as well.
+			// If we already have a pyc / pyo we don't need the __init__.py as well.
 			if _, present := m[initPyPath+"c"]; present {
+				continue
+			} else if _, present := m[initPyPath+"o"]; present {
 				continue
 			}
 			// Don't write one at the root, it's not necessary.
