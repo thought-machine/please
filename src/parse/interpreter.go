@@ -238,15 +238,19 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool
 	target.Flakiness = flakiness
 	target.BuildTimeout = buildTimeout
 	target.TestTimeout = testTimeout
+	// Automatically label containerised tests.
 	if containerise {
-		// Automatically label containerised tests.
 		target.AddLabel("container")
 	}
-	if buildingDescription != "" {
-		target.BuildingDescription = buildingDescription
+	// Automatically label flaky tests.
+	if flakiness > 0 {
+		target.AddLabel("flaky")
 	}
 	if binary {
 		target.AddLabel("bin")
+	}
+	if buildingDescription != "" {
+		target.BuildingDescription = buildingDescription
 	}
 	target.Command = cmd
 	target.TestCommand = testCmd

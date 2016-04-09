@@ -148,10 +148,6 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                          build_timeout,
                          test_timeout,
                          ffi_string(building_description))
-    if flaky:
-        labels = labels or []
-        if 'flaky' not in labels:
-            labels.append('flaky')
     if isinstance(srcs, Mapping):
         for name, src_list in srcs.iteritems():
             if src_list:
