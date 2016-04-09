@@ -50,16 +50,23 @@ const pyDeferParse = "_DEFER_"
 
 // Callback state about how we communicate with the interpreter.
 type PleaseCallbacks struct {
-	ParseFile, ParseCode                                                                 *C.ParseFileCallback
-	AddTarget, AddSrc, AddData, AddDep, AddExportedDep, AddTool, AddOut, AddVis, AddLabe unsafe.Pointer
-	AddHash, AddLicence, AddTestOutput, AddRequire, AddProvide, AddNamedSrc, AddCommand  unsafe.Pointer
-	SetContainerSetting, Glob, GetIncludeFile, GetSubincludeFile, GetLabels              unsafe.Pointer
-	SetPreBuildFunction, SetPostBuildFunction, AddDependency, AddOutput, AddLicencePost  unsafe.Pointer
-	SetCommand                                                                           unsafe.Pointer
-	SetConfigValue                                                                       *C.SetConfigValueCallback
-	PreBuildCallbackRunner                                                               *C.PreBuildCallbackRunner
-	PostBuildCallbackRunner                                                              *C.PostBuildCallbackRunner
-	Log                                                                                  unsafe.Pointer
+	ParseFile, ParseCode                                             *C.ParseFileCallback
+	AddTarget                                                        *C.AddTargetCallback
+	AddSrc, AddData, AddDep, AddExportedDep, AddTool, AddOut, AddVis *C.AddStringCallback
+	AddLabel, AddHash, AddLicence, AddTestOutput, AddRequire         *C.AddStringCallback
+	AddProvide, AddNamedSrc, AddCommand, SetContainerSetting         *C.AddTwoStringsCallback
+	Glob                                                             *C.GlobCallback
+	GetIncludeFile, GetSubincludeFile                                *C.GetIncludeFileCallback
+	GetLabels                                                        *C.GetLabelsCallback
+	SetPreBuildFunction, SetPostBuildFunction                        *C.SetBuildFunctionCallback
+	AddDependency                                                    *C.AddDependencyCallback
+	AddOutput                                                        *C.AddOutputCallback
+	AddLicencePost                                                   *C.AddTwoStringsCallback
+	SetCommand                                                       *C.AddThreeStringsCallback
+	SetConfigValue                                                   *C.SetConfigValueCallback
+	PreBuildCallbackRunner                                           *C.PreBuildCallbackRunner
+	PostBuildCallbackRunner                                          *C.PostBuildCallbackRunner
+	Log                                                              *C.LogCallback
 }
 
 var callbacks PleaseCallbacks
