@@ -48,29 +48,6 @@ const embeddedParser = "embedded_parser.py"
 // we need to wait for another target to build.
 const pyDeferParse = "_DEFER_"
 
-// Callback state about how we communicate with the interpreter.
-type PleaseCallbacks struct {
-	ParseFile, ParseCode                                             *C.ParseFileCallback
-	AddTarget                                                        *C.AddTargetCallback
-	AddSrc, AddData, AddDep, AddExportedDep, AddTool, AddOut, AddVis *C.AddStringCallback
-	AddLabel, AddHash, AddLicence, AddTestOutput, AddRequire         *C.AddStringCallback
-	AddProvide, AddNamedSrc, AddCommand, SetContainerSetting         *C.AddTwoStringsCallback
-	Glob                                                             *C.GlobCallback
-	GetIncludeFile, GetSubincludeFile                                *C.GetIncludeFileCallback
-	GetLabels                                                        *C.GetLabelsCallback
-	SetPreBuildFunction, SetPostBuildFunction                        *C.SetBuildFunctionCallback
-	AddDependency                                                    *C.AddDependencyCallback
-	AddOutput                                                        *C.AddOutputCallback
-	AddLicencePost                                                   *C.AddTwoStringsCallback
-	SetCommand                                                       *C.AddThreeStringsCallback
-	SetConfigValue                                                   *C.SetConfigValueCallback
-	PreBuildCallbackRunner                                           *C.PreBuildCallbackRunner
-	PostBuildCallbackRunner                                          *C.PostBuildCallbackRunner
-	Log                                                              *C.LogCallback
-}
-
-var callbacks PleaseCallbacks
-
 // To ensure we only initialise once.
 var initializeOnce sync.Once
 
@@ -95,8 +72,8 @@ func initializeInterpreter(config core.Configuration) {
 	log.Debug("Initialising interpreter environment...")
 	data := loadAsset(embeddedParser)
 	defer C.free(unsafe.Pointer(data))
-	if result := C.InitialiseInterpreter(data, unsafe.Pointer(&callbacks)); result != 0 {
-		panic(fmt.Sprintf("Failed to initialise parsing callbacks, error %d", result))
+	if result := C.InitialiseInterpreter(data); result != 0 {
+		panic(fmt.Sprintf("Failed to initialise interpreter, error %d", result))
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version)
 	setConfigValue("GO_VERSION", config.Go.GoVersion)
@@ -173,7 +150,7 @@ func setConfigValue(name string, value string) {
 	cValue := C.CString(value)
 	defer C.free(unsafe.Pointer(cName))
 	defer C.free(unsafe.Pointer(cValue))
-	C.SetConfigValue(callbacks.SetConfigValue, cName, cValue)
+	C.SetConfigValue(cName, cValue)
 }
 
 func loadBuiltinRules(path string) {
@@ -181,7 +158,7 @@ func loadBuiltinRules(path string) {
 	defer C.free(unsafe.Pointer(data))
 	cPackageName := C.CString(path)
 	defer C.free(unsafe.Pointer(cPackageName))
-	if result := C.GoString(C.ParseFile(callbacks.ParseCode, data, cPackageName, 0)); result != "" {
+	if result := C.GoString(C.ParseCode(data, cPackageName)); result != "" {
 		panic(fmt.Sprintf("Failed to interpret builtin build rules from %s: %s", path, result))
 	}
 }
@@ -223,7 +200,7 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	cPackageName := C.CString(pkg.Name)
 	defer C.free(unsafe.Pointer(cFilename))
 	defer C.free(unsafe.Pointer(cPackageName))
-	if ret := C.GoString(C.ParseFile(callbacks.ParseFile, cFilename, cPackageName, sizep(pkg))); ret != "" && ret != pyDeferParse {
+	if ret := C.GoString(C.ParseFile(cFilename, cPackageName, sizep(pkg))); ret != "" && ret != pyDeferParse {
 		panic(fmt.Sprintf("Failed to parse file %s: %s", filename, ret))
 	} else {
 		return ret == pyDeferParse
@@ -562,7 +539,7 @@ func runPreBuildFunction(pkg *core.Package, target *core.BuildTarget) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	f := C.size_t(uintptr(unsafe.Pointer(target.PreBuildFunction)))
-	if result := C.GoString(C.RunPreBuildFunction(callbacks.PreBuildCallbackRunner, f, sizep(pkg), cName)); result != "" {
+	if result := C.GoString(C.RunPreBuildFunction(f, sizep(pkg), cName)); result != "" {
 		return fmt.Errorf("Failed to run pre-build function for target %s: %s", target.Label.String(), result)
 	}
 	return nil
@@ -577,7 +554,7 @@ func runPostBuildFunction(pkg *core.Package, target *core.BuildTarget, out strin
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	f := C.size_t(uintptr(unsafe.Pointer(target.PostBuildFunction)))
-	if result := C.GoString(C.RunPostBuildFunction(callbacks.PostBuildCallbackRunner, f, sizep(pkg), cName, cOutput)); result != "" {
+	if result := C.GoString(C.RunPostBuildFunction(f, sizep(pkg), cName, cOutput)); result != "" {
 		return fmt.Errorf("Failed to run post-build function for target %s: %s", target.Label.String(), result)
 	}
 	return nil

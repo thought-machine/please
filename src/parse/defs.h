@@ -18,8 +18,6 @@ typedef char* (PostBuildCallbackRunner)(void*, size_t, char*, char*);
 typedef void (SetBuildFunctionCallback)(void*, char*, size_t);
 typedef void (LogCallback)(int64, size_t, char*);
 
-// NB. This struct must remain consistent with the PleaseCallbacks type
-//     in interpreter.go, otherwise Bad Things will happen.
 struct PleaseCallbacks {
     ParseFileCallback* parse_file;
     ParseFileCallback* parse_code;

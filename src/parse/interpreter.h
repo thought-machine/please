@@ -7,10 +7,11 @@
 #include "defs.h"
 
 // AFAICT there isn't a way to call the function pointers directly.
-char* ParseFile(ParseFileCallback* func, char* filename, char* package_name, size_t package);
-void SetConfigValue(SetConfigValueCallback* func, char* name, char* value);
-char* RunPreBuildFunction(PreBuildCallbackRunner* runner, size_t callback, size_t package, char* name);
-char* RunPostBuildFunction(PostBuildCallbackRunner* runner, size_t callback, size_t package, char* name, char* output);
+char* ParseFile(char* filename, char* package_name, size_t package);
+char* ParseCode(char* filename, char* package_name);
+void SetConfigValue(char* name, char* value);
+char* RunPreBuildFunction(size_t callback, size_t package, char* name);
+char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* output);
 void PreBuildFunctionSetter(void* callback, char* bytecode, size_t target);
 void PostBuildFunctionSetter(void* callback, char* bytecode, size_t target);
 
@@ -20,6 +21,6 @@ inline void setStringInArray(char** arr, int i, char* s) { arr[i] = s; }
 inline char* getStringFromArray(char** arr, int i) { return arr[i]; }
 
 // Initialises interpreter.
-int InitialiseInterpreter(char* data, struct PleaseCallbacks* callbacks);
+int InitialiseInterpreter(char* data);
 
 #endif  // _SRC_PARSE_INTERPRETER_H
