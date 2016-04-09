@@ -1,6 +1,11 @@
 Version 1.7.0
 -------------
 
+    * Reworking of error handling in parsing code. Previous code used to panic back through
+      the parser which deeply upset PyPy (often we got away with it because we'd die before
+      anything else could go wrong, but not always). Now errors are returned to Python and
+      reraised as exceptions there - which implies that it's possible for BUILD code to
+      catch and handle such exceptions, although I don't recommend writing them that way :)
     * Optimised glob() a bit so it doesn't descend into directories that will never match
       the given pattern.
     * Fixed compilation of clang tests with python3

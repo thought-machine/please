@@ -658,7 +658,7 @@ func (target *BuildTarget) AddLicence(licence string) {
 }
 
 // SetContainerSetting sets one of the fields on the container settings by name.
-func (target *BuildTarget) SetContainerSetting(name, value string) {
+func (target *BuildTarget) SetContainerSetting(name, value string) error {
 	if target.ContainerSettings == nil {
 		target.ContainerSettings = &TargetContainerSettings{}
 	}
@@ -667,10 +667,10 @@ func (target *BuildTarget) SetContainerSetting(name, value string) {
 		if strings.ToLower(t.Field(i).Name) == name {
 			v := reflect.ValueOf(target.ContainerSettings)
 			v.Elem().Field(i).SetString(value)
-			return
+			return nil
 		}
 	}
-	panic(fmt.Sprintf("Field %s isn't a valid container setting", name))
+	return fmt.Errorf("Field %s isn't a valid container setting", name)
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.

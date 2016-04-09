@@ -41,8 +41,8 @@ func (pkg *Package) RegisterSubinclude(filename string) {
 }
 
 // RegisterOutput registers a new output file in the map.
-// Panics if the file has already been registered.
-func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) {
+// Returns an error if the file has already been registered.
+func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) error {
 	pkg.Mutex.Lock()
 	defer pkg.Mutex.Unlock()
 	originalFileName := fileName
@@ -51,12 +51,20 @@ func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) {
 	}
 	if existing, present := pkg.Outputs[fileName]; present && existing != target {
 		if target.HasSource(originalFileName) || existing.HasSource(originalFileName) {
-			log.Info("Rules %s and %s both output %s, but ignoring because we think one's a filegroup",
+			log.Debug("Rules %s and %s both output %s, but ignoring because we think one's a filegroup",
 				existing.Label, target.Label, originalFileName)
 		} else {
-			panic(fmt.Sprintf("Rules %s and %s in %s both attempt to output the same file: %s\n",
-				existing.Label, target.Label, pkg.Filename, originalFileName))
+			return fmt.Errorf("Rules %s and %s in %s both attempt to output the same file: %s\n",
+				existing.Label, target.Label, pkg.Filename, originalFileName)
 		}
 	}
 	pkg.Outputs[fileName] = target
+	return nil
+}
+
+// MustRegisterOutput registers a new output file and panics if it's already been registered.
+func (pkg *Package) MustRegisterOutput(fileName string, target *BuildTarget) {
+	if err := pkg.RegisterOutput(fileName, target); err != nil {
+		panic(err)
+	}
 }

@@ -73,7 +73,7 @@ func initializeInterpreter(config core.Configuration) {
 	data := loadAsset(embeddedParser)
 	defer C.free(unsafe.Pointer(data))
 	if result := C.InitialiseInterpreter(data); result != 0 {
-		panic(fmt.Sprintf("Failed to initialise interpreter, error %d", result))
+		log.Fatalf("Failed to initialise interpreter, error %d", result)
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version)
 	setConfigValue("GO_VERSION", config.Go.GoVersion)
@@ -159,7 +159,9 @@ func loadBuiltinRules(path string) {
 	cPackageName := C.CString(path)
 	defer C.free(unsafe.Pointer(cPackageName))
 	if result := C.GoString(C.ParseCode(data, cPackageName)); result != "" {
-		panic(fmt.Sprintf("Failed to interpret builtin build rules from %s: %s", path, result))
+		// This obviously shouldn't happen, because we control all the builtin rules.
+		// It's here for developing rules in Please in case one makes a mistake :)
+		log.Fatalf("Failed to interpret builtin build rules from %s: %s", path, result)
 	}
 }
 
@@ -210,7 +212,7 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 //export AddTarget
 func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary bool, test bool,
 	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
-	flakiness, buildTimeout, testTimeout int, cBuildingDescription *C.char) C.size_t {
+	flakiness, buildTimeout, testTimeout int, cBuildingDescription *C.char) (ret C.size_t) {
 	buildingDescription := ""
 	if cBuildingDescription != nil {
 		buildingDescription = C.GoString(cBuildingDescription)
@@ -226,7 +228,12 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool
 	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
 	flakiness, buildTimeout, testTimeout int, buildingDescription string) *core.BuildTarget {
 	pkg := unsizep(pkgPtr)
-	target := core.NewBuildTarget(core.NewBuildLabel(pkg.Name, name))
+	label, err := core.TryNewBuildLabel(pkg.Name, name)
+	if err != nil {
+		log.Error("%s", err)
+		return nil
+	}
+	target := core.NewBuildTarget(label)
 	target.IsBinary = binary
 	target.IsTest = test
 	target.NeedsTransitiveDependencies = needsTransitiveDeps
@@ -255,12 +262,8 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool
 	target.Command = cmd
 	target.TestCommand = testCmd
 	if _, present := pkg.Targets[name]; present {
-		panic(fmt.Sprintf("Duplicate build target in %s: %s", pkg.Name, name))
-	}
-	if target.TestCommand != "" && !target.IsTest {
-		panic(fmt.Sprintf("Target %s has been given a test command but isn't a test", target.Label))
-	} else if target.IsTest && target.TestCommand == "" {
-		panic(fmt.Sprintf("Target %s is a test but hasn't been given a test command", target.Label))
+		log.Error("Duplicate build target in %s: %s", pkg.Name, name)
+		return nil
 	}
 	pkg.Targets[name] = target
 	if core.State.Graph.Package(pkg.Name) != nil {
@@ -288,31 +291,49 @@ func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget uintptr) 
 }
 
 //export AddDependency
-func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported bool) {
-	target := getTargetPost(cPackage, cTarget)
-	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
+func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported bool) *C.char {
+	target, err := getTargetPost(cPackage, cTarget)
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	dep, err := core.TryParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	target.AddMaybeExportedDependency(dep, exported)
 	core.State.Graph.AddDependency(target.Label, dep)
+	return nil
 }
 
 //export AddOutputPost
-func AddOutputPost(cPackage uintptr, cTarget *C.char, cOut *C.char) {
-	target := getTargetPost(cPackage, cTarget)
+func AddOutputPost(cPackage uintptr, cTarget *C.char, cOut *C.char) *C.char {
+	target, err := getTargetPost(cPackage, cTarget)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	out := C.GoString(cOut)
 	pkg := unsizep(cPackage)
 	pkg.RegisterOutput(out, target)
 	target.AddOutput(out)
+	return nil
 }
 
 //export AddLicencePost
-func AddLicencePost(cPackage uintptr, cTarget *C.char, cLicence *C.char) {
-	target := getTargetPost(cPackage, cTarget)
+func AddLicencePost(cPackage uintptr, cTarget *C.char, cLicence *C.char) *C.char {
+	target, err := getTargetPost(cPackage, cTarget)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	target.AddLicence(C.GoString(cLicence))
+	return nil
 }
 
 //export SetCommand
-func SetCommand(cPackage uintptr, cTarget *C.char, cConfigOrCommand *C.char, cCommand *C.char) {
-	target := getTargetPost(cPackage, cTarget)
+func SetCommand(cPackage uintptr, cTarget *C.char, cConfigOrCommand *C.char, cCommand *C.char) *C.char {
+	target, err := getTargetPost(cPackage, cTarget)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	command := C.GoString(cCommand)
 	if command == "" {
 		target.Command = C.GoString(cConfigOrCommand)
@@ -322,175 +343,223 @@ func SetCommand(cPackage uintptr, cTarget *C.char, cConfigOrCommand *C.char, cCo
 	// It'd be nice if we could ensure here that we're in the pre-build function
 	// but not the post-build function which is too late to have any effect.
 	// OTOH while it's ineffective it shouldn't cause any trouble trying it either...
+	return nil
 }
 
 // Called by above to get a target from the current package.
-// Panics if the target is not in the current package or has already been built.
-func getTargetPost(cPackage uintptr, cTarget *C.char) *core.BuildTarget {
+// Returns an error if the target is not in the current package or has already been built.
+func getTargetPost(cPackage uintptr, cTarget *C.char) (*core.BuildTarget, error) {
 	pkg := unsizep(cPackage)
 	name := C.GoString(cTarget)
 	target, present := pkg.Targets[name]
 	if !present {
-		panic(fmt.Sprintf("Unknown build target %s in %s", name, pkg.Name))
+		return nil, fmt.Errorf("Unknown build target %s in %s", name, pkg.Name)
 	}
 	// It'd be cheating to try to modify targets that're already built.
 	// Prohibit this because it'd likely end up with nasty race conditions.
 	if target.State() >= core.Built {
-		panic(fmt.Sprintf("Attempted to modify target %s, but it's already built", target.Label))
+		return nil, fmt.Errorf("Attempted to modify target %s, but it's already built", target.Label)
 	}
-	return target
+	return target, nil
 }
 
 //export AddSource
-func AddSource(cTarget uintptr, cSource *C.char) {
+func AddSource(cTarget uintptr, cSource *C.char) *C.char {
 	target := unsizet(cTarget)
-	source := parseSource(C.GoString(cSource), target.Label.PackageName, true)
+	source, err := parseSource(C.GoString(cSource), target.Label.PackageName, true)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	target.Sources = append(target.Sources, source)
 	if label := source.Label(); label != nil {
 		target.AddDependency(*label)
 	}
+	return nil
 }
 
 // Parses an incoming source label as either a file or a build label.
-// Identifies if the file is owned by this package and dies if not.
-func parseSource(src, packageName string, systemAllowed bool) core.BuildInput {
+// Identifies if the file is owned by this package and returns an error if not.
+func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, error) {
 	if core.LooksLikeABuildLabel(src) {
-		return core.ParseBuildLabel(src, packageName)
+		return core.TryParseBuildLabel(src, packageName)
 	} else if src == "" {
-		panic(fmt.Errorf("Empty source path (in package %s)", packageName))
+		return nil, fmt.Errorf("Empty source path (in package %s)", packageName)
 	} else if strings.Contains(src, "../") {
-		panic(fmt.Errorf("'%s' (in package %s) is an invalid path; build target paths can't contain ../", src, packageName))
+		return nil, fmt.Errorf("'%s' (in package %s) is an invalid path; build target paths can't contain ../", src, packageName)
 	} else if src[0] == '/' {
 		if !systemAllowed {
-			panic(fmt.Errorf("'%s' (in package %s) is an absolute path; that's not allowed.", src, packageName))
+			return nil, fmt.Errorf("'%s' (in package %s) is an absolute path; that's not allowed.", src, packageName)
 		}
-		return core.SystemFileLabel{Path: src}
+		return core.SystemFileLabel{Path: src}, nil
 	} else if strings.Contains(src, "/") {
 		// Target is in a subdirectory, check nobody else owns that.
 		for dir := path.Dir(path.Join(packageName, src)); dir != packageName && dir != "."; dir = path.Dir(dir) {
 			if isPackage(dir) {
-				panic(fmt.Errorf("Package %s tries to use file %s, but that belongs to another package (%s).", packageName, src, dir))
+				return nil, fmt.Errorf("Package %s tries to use file %s, but that belongs to another package (%s).", packageName, src, dir)
 			}
 		}
 	}
-	return core.FileLabel{File: src, Package: packageName}
+	return core.FileLabel{File: src, Package: packageName}, nil
 }
 
 //export AddNamedSource
-func AddNamedSource(cTarget uintptr, cName *C.char, cSource *C.char) {
+func AddNamedSource(cTarget uintptr, cName *C.char, cSource *C.char) *C.char {
 	target := unsizet(cTarget)
-	source := parseSource(C.GoString(cSource), target.Label.PackageName, false)
+	source, err := parseSource(C.GoString(cSource), target.Label.PackageName, false)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	target.AddNamedSource(C.GoString(cName), source)
 	if label := source.Label(); label != nil {
 		target.AddDependency(*label)
 	}
+	return nil
 }
 
 //export AddCommand
-func AddCommand(cTarget uintptr, cConfig *C.char, cCommand *C.char) {
+func AddCommand(cTarget uintptr, cConfig *C.char, cCommand *C.char) *C.char {
 	target := unsizet(cTarget)
 	target.AddCommand(C.GoString(cConfig), C.GoString(cCommand))
+	return nil
 }
 
 //export AddData
-func AddData(cTarget uintptr, cData *C.char) {
+func AddData(cTarget uintptr, cData *C.char) *C.char {
 	target := unsizet(cTarget)
-	data := parseSource(C.GoString(cData), target.Label.PackageName, false)
+	data, err := parseSource(C.GoString(cData), target.Label.PackageName, false)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	target.Data = append(target.Data, data)
 	if label := data.Label(); label != nil {
 		target.AddDependency(*label)
 	}
+	return nil
 }
 
 //export AddOutput
-func AddOutput(cTarget uintptr, cOutput *C.char) {
+func AddOutput(cTarget uintptr, cOutput *C.char) *C.char {
 	target := unsizet(cTarget)
 	target.AddOutput(C.GoString(cOutput))
+	return nil
 }
 
 //export AddDep
-func AddDep(cTarget uintptr, cDep *C.char) {
+func AddDep(cTarget uintptr, cDep *C.char) *C.char {
 	target := unsizet(cTarget)
-	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
+	dep, err := core.TryParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	target.AddDependency(dep)
+	return nil
 }
 
 //export AddExportedDep
-func AddExportedDep(cTarget uintptr, cDep *C.char) {
+func AddExportedDep(cTarget uintptr, cDep *C.char) *C.char {
 	target := unsizet(cTarget)
-	dep := core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
+	dep, err := core.TryParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	target.AddMaybeExportedDependency(dep, true)
+	return nil
 }
 
 //export AddTool
-func AddTool(cTarget uintptr, cTool *C.char) {
+func AddTool(cTarget uintptr, cTool *C.char) *C.char {
 	target := unsizet(cTarget)
-	tool := core.ParseBuildLabel(C.GoString(cTool), target.Label.PackageName)
+	tool, err := core.TryParseBuildLabel(C.GoString(cTool), target.Label.PackageName)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	target.Tools = append(target.Tools, tool)
 	target.AddDependency(tool)
+	return nil
 }
 
 //export AddVis
-func AddVis(cTarget uintptr, cVis *C.char) {
+func AddVis(cTarget uintptr, cVis *C.char) *C.char {
 	target := unsizet(cTarget)
 	vis := C.GoString(cVis)
 	if vis == "PUBLIC" {
 		target.Visibility = append(target.Visibility, core.NewBuildLabel("", "..."))
 	} else {
-		target.Visibility = append(target.Visibility, core.ParseBuildLabel(vis, target.Label.PackageName))
+		label, err := core.TryParseBuildLabel(vis, target.Label.PackageName)
+		if err != nil {
+			return C.CString(err.Error())
+		}
+		target.Visibility = append(target.Visibility, label)
 	}
+	return nil
 }
 
 //export AddLabel
-func AddLabel(cTarget uintptr, cLabel *C.char) {
+func AddLabel(cTarget uintptr, cLabel *C.char) *C.char {
 	target := unsizet(cTarget)
 	target.AddLabel(C.GoString(cLabel))
+	return nil
 }
 
 //export AddHash
-func AddHash(cTarget uintptr, cHash *C.char) {
+func AddHash(cTarget uintptr, cHash *C.char) *C.char {
 	target := unsizet(cTarget)
 	target.Hashes = append(target.Hashes, C.GoString(cHash))
+	return nil
 }
 
 //export AddLicence
-func AddLicence(cTarget uintptr, cLicence *C.char) {
+func AddLicence(cTarget uintptr, cLicence *C.char) *C.char {
 	target := unsizet(cTarget)
 	target.AddLicence(C.GoString(cLicence))
+	return nil
 }
 
 //export AddTestOutput
-func AddTestOutput(cTarget uintptr, cTestOutput *C.char) {
+func AddTestOutput(cTarget uintptr, cTestOutput *C.char) *C.char {
 	target := unsizet(cTarget)
 	target.TestOutputs = append(target.TestOutputs, C.GoString(cTestOutput))
+	return nil
 }
 
 //export AddRequire
-func AddRequire(cTarget uintptr, cRequire *C.char) {
+func AddRequire(cTarget uintptr, cRequire *C.char) *C.char {
 	target := unsizet(cTarget)
 	target.Requires = append(target.Requires, C.GoString(cRequire))
 	// Requirements are also implicit labels
 	target.AddLabel(C.GoString(cRequire))
+	return nil
 }
 
 //export AddProvide
-func AddProvide(cTarget uintptr, cLanguage *C.char, cDep *C.char) {
+func AddProvide(cTarget uintptr, cLanguage *C.char, cDep *C.char) *C.char {
 	target := unsizet(cTarget)
-	target.AddProvide(C.GoString(cLanguage), core.ParseBuildLabel(C.GoString(cDep), target.Label.PackageName))
+	label, err := core.TryParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	target.AddProvide(C.GoString(cLanguage), label)
+	return nil
 }
 
 //export SetContainerSetting
-func SetContainerSetting(cTarget uintptr, cName, cValue *C.char) {
+func SetContainerSetting(cTarget uintptr, cName, cValue *C.char) *C.char {
 	target := unsizet(cTarget)
-	target.SetContainerSetting(strings.Replace(C.GoString(cName), "_", "", -1), C.GoString(cValue))
+	if err := target.SetContainerSetting(strings.Replace(C.GoString(cName), "_", "", -1), C.GoString(cValue)); err != nil {
+		return C.CString(err.Error())
+	}
+	return nil
 }
 
+// GetIncludeFile is a callback to the interpreter that returns the path it
+// should be opening in order to include_defs() a file.
+// We use in-band signalling for some errors since C can't handle multiple return values :)
 //export GetIncludeFile
 func GetIncludeFile(cPackage uintptr, cLabel *C.char) *C.char {
 	pkg := unsizep(cPackage)
 	label := C.GoString(cLabel)
 	if !strings.HasPrefix(label, "//") {
-		panic("include_defs argument must be an absolute path (ie. start with //)")
+		return C.CString("__include_defs argument must be an absolute path (ie. start with //)")
 	}
 	relPath := strings.TrimLeft(label, "/")
 	pkg.RegisterSubinclude(relPath)
@@ -499,8 +568,7 @@ func GetIncludeFile(cPackage uintptr, cLabel *C.char) *C.char {
 
 // GetSubincludeFile is a callback to the interpreter that returns the path it
 // should be opening in order to subinclude() a build target.
-// For convenience we use in-band signalling for some errors since C can't handle multiple return values :)
-// Fatal errors (like incorrect build labels etc) will cause a panic.
+// We use in-band signalling for some errors since C can't handle multiple return values :)
 //export GetSubincludeFile
 func GetSubincludeFile(cPackage uintptr, cLabel *C.char) *C.char {
 	return C.CString(getSubincludeFile(unsizep(cPackage), C.GoString(cLabel)))
@@ -509,7 +577,7 @@ func GetSubincludeFile(cPackage uintptr, cLabel *C.char) *C.char {
 func getSubincludeFile(pkg *core.Package, labelStr string) string {
 	label := core.ParseBuildLabel(labelStr, pkg.Name)
 	if label.PackageName == pkg.Name {
-		panic(fmt.Sprintf("Can't subinclude :%s in %s; can't subinclude local targets.", label.Name, pkg.Name))
+		return fmt.Sprintf("__Can't subinclude :%s in %s; can't subinclude local targets.", label.Name, pkg.Name)
 	}
 	pkgLabel := core.BuildLabel{PackageName: pkg.Name, Name: "all"}
 	target := core.State.Graph.Target(label)
@@ -521,12 +589,12 @@ func getSubincludeFile(pkg *core.Package, labelStr string) string {
 			}
 			target = core.State.Graph.TargetOrDie(label) // Should be there now.
 		} else {
-			panic(fmt.Sprintf("Failed to subinclude %s; package %s has no target by that name", label, label.PackageName))
+			return fmt.Sprintf("__Failed to subinclude %s; package %s has no target by that name", label, label.PackageName)
 		}
 	} else if tmp := core.NewBuildTarget(pkgLabel); !tmp.CanSee(target) {
-		panic(fmt.Sprintf("Can't subinclude %s from %s due to visibility constraints", label, pkg.Name))
+		return fmt.Sprintf("__Can't subinclude %s from %s due to visibility constraints", label, pkg.Name)
 	} else if len(target.Outputs()) != 1 {
-		panic(fmt.Sprintf("Can't subinclude %s, subinclude targets must have exactly one output", label))
+		return fmt.Sprintf("__Can't subinclude %s, subinclude targets must have exactly one output", label)
 	} else if target.State() < core.Built {
 		if deferParse(label, pkg) {
 			return pyDeferParse // Again, they'll have to wait for this guy to build.
@@ -727,7 +795,10 @@ func isPackageInternal(name string) bool {
 
 //export GetLabels
 func GetLabels(cPackage uintptr, cTarget *C.char, cPrefix *C.char) **C.char {
-	target := getTargetPost(cPackage, cTarget)
+	target, err := getTargetPost(cPackage, cTarget)
+	if err != nil {
+		log.Fatalf("%s", err) // TODO(pebers): report proper errors here and below
+	}
 	prefix := C.GoString(cPrefix)
 	if target.State() != core.Building {
 		log.Fatalf("get_labels called for %s incorrectly; the only time this is safe to call is from its own pre-build function.", target.Label)

@@ -198,10 +198,10 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 	for _, target := range pkg.Targets {
 		state.Graph.AddTarget(target)
 		for _, out := range target.DeclaredOutputs() {
-			pkg.RegisterOutput(out, target)
+			pkg.MustRegisterOutput(out, target)
 		}
 		for _, out := range target.TestOutputs {
-			pkg.RegisterOutput(out, target)
+			pkg.MustRegisterOutput(out, target)
 		}
 	}
 	// Do this in a separate loop so we get intra-package dependencies right now.
