@@ -19,6 +19,8 @@ import (
 
 var log = logging.MustGetLogger("please_maven")
 
+var currentIndent = 0
+
 type pomXml struct {
 	GroupId              string          `xml:"groupId"`
 	ArtifactId           string          `xml:"artifactId"`
@@ -62,6 +64,7 @@ var opts struct {
 	Repository string   `short:"r" long:"repository" description:"Location of Maven repo" default:"https://repo1.maven.org/maven2"`
 	Verbosity  int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
 	Exclude    []string `short:"e" long:"exclude" description:"Artifacts to exclude from download"`
+	Indent     bool     `short:"i" long:"indent" description:"Indent stdout lines appropriately"`
 	Args       struct {
 		Package []string
 	} `positional-args:"yes" required:"yes"`
@@ -150,6 +153,9 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 			}
 		}
 		licences := strings.Join(fetchLicences(dep.GroupId, dep.ArtifactId, dep.Version), "|")
+		if opts.Indent {
+			fmt.Printf(strings.Repeat(" ", currentIndent))
+		}
 		if licences != "" {
 			fmt.Printf("%s:%s:%s:%s\n", dep.GroupId, dep.ArtifactId, dep.Version, licences)
 		} else {
@@ -157,8 +163,10 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 		}
 		opts.Exclude = append(opts.Exclude, dep.ArtifactId) // Don't do this one again.
 		// Recurse so we get all transitive dependencies
+		currentIndent += 2
 		pom := fetchAndParse(dep.GroupId, dep.ArtifactId, dep.Version)
 		process(pom, dep.GroupId, dep.ArtifactId, dep.Version)
+		currentIndent -= 2
 	}
 }
 
