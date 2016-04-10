@@ -15,9 +15,6 @@ char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* ou
 void PreBuildFunctionSetter(void* callback, char* bytecode, size_t target);
 void PostBuildFunctionSetter(void* callback, char* bytecode, size_t target);
 
-// Helper functions for handling arrays of strings in C; seems to be nigh impossible in native Go.
-inline void setStringInArray(char** arr, int i, char* s) { arr[i] = s; }
-
 // Initialises interpreter.
 int InitialiseInterpreter(char* data);
 

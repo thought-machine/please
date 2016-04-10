@@ -687,14 +687,16 @@ func Glob(cPackage *C.char, cIncludes **C.char, numIncludes int, cExcludes **C.c
 // The returned array is terminated by a null pointer - the Python interpreter code will
 // understand how to turn this back into Python strings.
 func stringSliceToCStringArray(s []string) **C.char {
-	// This is slightly (or more...) hacky; we assume that sizeof(char*) == size of a uintptr in Go.
+	// This is slightly hacky; we assume that sizeof(char*) == size of a uintptr in Go.
 	// Presumably that should hold in most cases and is more portable than just hardcoding 8...
 	const sz = int(unsafe.Sizeof(uintptr(0)))
-	ret := (**C.char)(C.malloc(C.size_t(sz * (len(s) + 1))))
+	n := len(s) + 1
+	ret := (**C.char)(C.malloc(C.size_t(sz * n)))
+	sl := (*[1 << 30]*C.char)(unsafe.Pointer(ret))[:n:n]
 	for i, x := range s {
-		C.setStringInArray(ret, C.int(i), C.CString(x))
+		sl[i] = C.CString(x)
 	}
-	C.setStringInArray(ret, C.int(len(s)), nil)
+	sl[n-1] = nil
 	return ret
 }
 
