@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
@@ -47,6 +46,7 @@ type pomDependencies struct {
 		ArtifactId string `xml:"artifactId"`
 		Version    string `xml:"version"`
 		Scope      string `xml:"scope"`
+		Optional   bool   `xml:"optional"`
 		// TODO(pebers): Handle exclusions here.
 	} `xml:"dependency"`
 }
@@ -71,8 +71,7 @@ var opts struct {
 func replaceVariables(s string, properties map[string]string) string {
 	if strings.HasPrefix(s, "${") {
 		if prop, present := properties[s[2:len(s)-1]]; !present {
-			fmt.Printf("Failed property lookup %s: %s\n", s, properties)
-			os.Exit(4)
+			log.Fatalf("Failed property lookup %s: %s\n", s, properties)
 		} else {
 			return prop
 		}
@@ -105,8 +104,8 @@ func process(pom *pomXml, group, artifact, version string) {
 	properties["project.groupId"] = group
 	properties["project.version"] = version
 	// Arbitrarily, some pom files have this different structure with the extra "dependencyManagement" level.
-	handleDependencies(pom.Dependencies, properties, version)
-	handleDependencies(pom.DependencyManagement.Dependencies, properties, version)
+	handleDependencies(pom.Dependencies, properties, group, version)
+	handleDependencies(pom.DependencyManagement.Dependencies, properties, group, version)
 }
 
 func fetchLicences(group, artifact, version string) []string {
@@ -119,21 +118,36 @@ func fetchLicences(group, artifact, version string) []string {
 	return ret
 }
 
-func handleDependencies(deps pomDependencies, properties map[string]string, version string) {
+func handleDependencies(deps pomDependencies, properties map[string]string, group, version string) {
 	for _, dep := range deps.Dependency {
 		// This is a bit of a hack; our build model doesn't distinguish these in the way Maven does.
 		// TODO(pebers): Consider allowing specifying these to this tool to produce test-only deps.
 		if dep.Scope == "test" {
 			continue
 		}
+		// Skip all optional dependencies for now.
+		if dep.Optional {
+			continue
+		}
 		dep.GroupId = replaceVariables(dep.GroupId, properties)
 		dep.ArtifactId = replaceVariables(dep.ArtifactId, properties)
+		// Not sure what this is about; httpclient seems to do this. It seems completely unhelpful but
+		// no doubt there's some highly obscure case where Maven aficionados consider this useful.
+		properties[dep.ArtifactId+".version"] = ""
 		dep.Version = replaceVariables(dep.Version, properties)
 		if isExcluded(dep.ArtifactId) {
 			continue
 		}
 		if dep.Version == "" {
-			dep.Version = version
+			// Not 100% sure what the logic should really be here; for example, jacoco
+			// seems to leave these underspecified and expects the same version, but other
+			// things (e.g. netty) expect the latest. Possibly we should try the same one then
+			// fall back to latest if it doesn't exist. This is easier but no doubt incorrect somewhere.
+			if dep.GroupId == group {
+				dep.Version = version
+			} else {
+				dep.Version = fetchMetadata(dep.GroupId, dep.ArtifactId).Versioning.Release
+			}
 		}
 		licences := strings.Join(fetchLicences(dep.GroupId, dep.ArtifactId, dep.Version), "|")
 		if licences != "" {
