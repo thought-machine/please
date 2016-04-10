@@ -18,7 +18,6 @@ void PostBuildFunctionSetter(void* callback, char* bytecode, size_t target);
 // Helper functions for handling arrays of strings in C; seems to be nigh impossible in native Go.
 inline char** allocateStringArray(int len) { return malloc(len * sizeof(char*)); }
 inline void setStringInArray(char** arr, int i, char* s) { arr[i] = s; }
-inline char* getStringFromArray(char** arr, int i) { return arr[i]; }
 
 // Initialises interpreter.
 int InitialiseInterpreter(char* data);

@@ -656,10 +656,11 @@ func Log(level int, cPackage uintptr, cMessage *C.char) {
 func Glob(cPackage *C.char, cIncludes **C.char, numIncludes int, cExcludes **C.char, numExcludes int, includeHidden bool) **C.char {
 	packageName := C.GoString(cPackage)
 	filenames := []string{}
+	includes := cStringArrayToStringSlice(cIncludes, numIncludes, "")
 	excludes := cStringArrayToStringSlice(cExcludes, numExcludes, packageName)
 	excludes2 := cStringArrayToStringSlice(cExcludes, numExcludes, "")
-	for i := 0; i < numIncludes; i++ {
-		matches, err := glob(packageName, C.GoString(C.getStringFromArray(cIncludes, C.int(i))), includeHidden, excludes)
+	for _, include := range includes {
+		matches, err := glob(packageName, include, includeHidden, excludes)
 		if err != nil {
 			panic(err)
 		}
@@ -697,8 +698,10 @@ func stringSliceToCStringArray(s []string) **C.char {
 // cStringArrayToStringSlice converts a C array of char*'s to a Go slice of strings.
 func cStringArrayToStringSlice(a **C.char, n int, prefix string) []string {
 	ret := make([]string, n)
-	for i := 0; i < n; i++ {
-		ret[i] = path.Join(prefix, C.GoString(C.getStringFromArray(a, C.int(i))))
+	// slightly scary incantation found on an internet
+	sl := (*[1 << 30]*C.char)(unsafe.Pointer(a))[:n:n]
+	for i, s := range sl {
+		ret[i] = path.Join(prefix, C.GoString(s))
 	}
 	return ret
 }
