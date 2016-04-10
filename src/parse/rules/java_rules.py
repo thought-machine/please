@@ -237,7 +237,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
                     licences=licences.split('|') if licences else None,
                     # We deliberately don't make this rule visible externally.
                 )
-                add_exported_dep(name, ':' + artifact)
+            add_exported_dep(name, ':' + artifact)
 
     deps = deps or []
     exclusions = ' '.join('-e ' + excl for excl in exclude)
@@ -248,7 +248,6 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
         post_build=create_maven_deps,
         building_description='Finding dependencies...',
         tools=tools,
-
     )
     if not deps_only:
         maven_jar(
