@@ -188,8 +188,8 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
     )
 
 
-def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
-               deps=None, visibility=None, filename=None, deps_only=False):
+def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, combine=False,
+               hash=None, deps=None, visibility=None, filename=None, deps_only=False):
     """Fetches a transitive set of dependencies from Maven.
 
     Requires post build commands to be allowed for this repo.
@@ -203,6 +203,9 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
       repository (str): Maven repo to fetch deps from.
       exclude (list): Dependencies to ignore when fetching this one.
       hashes (dict): Map of Maven id -> rule hash for each rule produced.
+      combine (bool): If True, we combine all downloaded .jar files into one uberjar.
+      hash (string): Hash of final produced .jar. This implies that we build an uber-jar of
+                     all the downloads which can be imported singly.
       deps (list): Labels of dependencies, as usual.
       visibility (list): Visibility label.
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
@@ -211,6 +214,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
     """
     existing_packages = _maven_packages[get_base_path()]
     exclude = exclude or []
+    combine = combine or hash
 
     def create_maven_deps(_, output):
         for line in output:
@@ -249,7 +253,26 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
         building_description='Finding dependencies...',
         tools=tools,
     )
-    if not deps_only:
+    if combine:
+        download_name = '_%s#download' % name
+        maven_jar(
+            name=download_name,
+            id=id,
+            repository=repository,
+            hash=None if hashes is None else hashes.get(id, hashes.get(name, '<not given>')),
+            deps = deps,
+            visibility=visibility,
+            filename=filename,
+        )
+        build_rule(
+            name=name,
+            hash=hash,
+            output_is_complete=True,
+            needs_transitive_deps=True,
+            deps=[':' + download_name, ':_%s#deps' % name],
+            visibility=visibility,
+        )
+    elif not deps_only:
         maven_jar(
             name=name,
             id=id,
