@@ -1,10 +1,13 @@
 package core
 
-import "bytes"
-import "fmt"
-import "sort"
-import "sync"
-import "time"
+import (
+	"bytes"
+	"fmt"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+)
 
 type BuildLabelPair struct {
 	Label    BuildLabel // Label of target to parse
@@ -343,6 +346,9 @@ func MergeCoverageLines(existing, coverage []LineCoverage) []LineCoverage {
 func (this TestCoverage) OrderedFiles() []string {
 	files := []string{}
 	for file, _ := range this.Files {
+		if strings.HasPrefix(file, RepoRoot) {
+			file = strings.TrimLeft(file[len(RepoRoot):], "/")
+		}
 		files = append(files, file)
 	}
 	sort.Strings(files)
