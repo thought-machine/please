@@ -15,6 +15,8 @@ Version 1.7.0
       to some very strange failures.
     * Ensure paths are relative in hash memoisation - improves hit rate by about 30% and
       is a performance improvement (although probably not very noticeable in most cases).
+	* `plz cover` now has a `--line_coverage_report` / `-l` flag to produce line-by-line
+      coverage output for its affected files.
 
 
 Version 1.6.7
