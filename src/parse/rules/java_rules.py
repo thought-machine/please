@@ -212,6 +212,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
     existing_packages = _maven_packages[get_base_path()]
     exclude = exclude or []
     combine = combine or hash
+    source_name = '_%s#src' % name
 
     def get_hash(id, artifact=None):
         if hashes is None:
@@ -245,6 +246,8 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
                     # We deliberately don't make this rule visible externally.
                 )
             add_exported_dep(name, ':' + artifact)
+            if combine:
+                add_exported_dep(source_name, ':' + artifact)
 
     deps = deps or []
     exclusions = ' '.join('-e ' + excl for excl in exclude)
@@ -267,14 +270,26 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
             visibility=visibility,
             filename=filename,
         )
+        # Combine the sources into a separate uberjar
         cmd, tools = _jarcat_cmd()
+        build_rule(
+            name=source_name,
+            output_is_complete=True,
+            needs_transitive_deps=True,
+            building_description="Creating source jar...",
+            deps=[':' + download_name, ':_%s#deps' % name] + deps,
+            outs=[name + '_src.jar'],
+            requires=['java'],
+            cmd=cmd + ' -s src.jar -e ""',
+            tools=tools,
+        )
         build_rule(
             name=name,
             hashes=[hash],
             output_is_complete=True,
             needs_transitive_deps=True,
             building_description="Creating jar...",
-            deps=[':' + download_name, ':_%s#deps' % name] + deps,
+            deps=[':' + download_name, ':' + source_name, ':_%s#deps' % name] + deps,
             outs=[name + '.jar'],
             requires=['java'],
             visibility=visibility,
