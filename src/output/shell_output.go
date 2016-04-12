@@ -381,12 +381,15 @@ func pluralise(num int, singular, plural string) string {
 
 // PrintCoverage writes out coverage metrics after a test run in a file tree setup.
 // Only files that were covered by tests and not excluded are shown.
-func PrintCoverage(state *core.BuildState) {
+func PrintCoverage(state *core.BuildState, includeFiles []string) {
 	printf("${BOLD_WHITE}Coverage results:${RESET}\n")
 	totalCovered := 0
 	totalTotal := 0
 	lastDir := "_"
 	for _, file := range state.Coverage.OrderedFiles() {
+		if !shouldInclude(file, includeFiles) {
+			continue
+		}
 		dir := filepath.Dir(file)
 		if dir != lastDir {
 			printf("${WHITE}%s:${RESET}\n", strings.TrimRight(dir, "/"))
@@ -401,7 +404,7 @@ func PrintCoverage(state *core.BuildState) {
 }
 
 // PrintCoverageReport writes out line-by-line coverage metrics after a test run.
-func PrintLineCoverageReport(state *core.BuildState) {
+func PrintLineCoverageReport(state *core.BuildState, includeFiles []string) {
 	coverageColours := map[core.LineCoverage]string{
 		core.NotExecutable: "${GREY}",
 		core.Unreachable:   "${YELLOW}",
@@ -411,6 +414,9 @@ func PrintLineCoverageReport(state *core.BuildState) {
 
 	printf("${BOLD_WHITE}Covered files:${RESET}\n")
 	for _, file := range state.Coverage.OrderedFiles() {
+		if !shouldInclude(file, includeFiles) {
+			continue
+		}
 		coverage := state.Coverage.Files[file]
 		covered, total := countCoverage(coverage)
 		printf("${BOLD_WHITE}%s: %s${RESET}\n", file, coveragePercentage(covered, total, ""))
@@ -433,6 +439,19 @@ func PrintLineCoverageReport(state *core.BuildState) {
 		}
 		printf("${RESET}\n")
 	}
+}
+
+// shouldInclude returns true if we should include a file in the coverage display.
+func shouldInclude(file string, files []string) bool {
+	if len(files) == 0 {
+		return true
+	}
+	for _, f := range files {
+		if file == f {
+			return true
+		}
+	}
+	return false
 }
 
 // countCoverage counts the number of lines covered and the total number coverable in a single file.
