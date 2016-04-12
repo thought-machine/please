@@ -7,6 +7,7 @@ Version 1.7.1
       into a single uberjar and `hash` which sets the hash for that uberjar.
       The intention here is to make it more lightweight to set a hash for a single target
       rather than having to provide potentially many individual hashes.
+    * Fixed aliases which were accidentally broken by some flag changes.
 
 
 Version 1.7.0

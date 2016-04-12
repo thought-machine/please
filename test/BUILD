@@ -314,3 +314,17 @@ python_test(
     flaky = True,
     labels = ['manual'],
 )
+
+# Tests on commands / flags etc.
+plz_e2e_test(
+    name = 'unknown_command_test',
+    cmd = 'plz fix',
+    expect_output_contains = 'Unknown command',
+    expected_failure = True,
+)
+plz_e2e_test(
+    name = 'unknown_flag_test',
+    cmd = 'plz build --wibble',
+    expect_output_contains = 'Unknown flag',
+    expected_failure = True,
+)

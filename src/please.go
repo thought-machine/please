@@ -532,15 +532,11 @@ func activeCommand(parser *flags.Parser) string {
 }
 
 func main() {
-	parser, extraArgs, err := output.ParseFlags("Please", &opts, os.Args)
+	parser, extraArgs, flagsErr := output.ParseFlags("Please", &opts, os.Args)
+	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.OutputFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other errors if --version was passed.
-	}
-	if err != nil {
-		parser.WriteHelp(os.Stderr)
-		fmt.Printf("\n%s\n", err)
-		os.Exit(1)
 	}
 	// PrintCommands implies verbosity of at least 2, because commands are logged at that level
 	if opts.OutputFlags.PrintCommands && opts.OutputFlags.Verbosity < 2 {
@@ -575,7 +571,7 @@ func main() {
 
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
-	if err != nil || len(extraArgs) > 0 {
+	if flagsErr != nil || len(extraArgs) > 0 {
 		argv := strings.Join(os.Args, " ")
 		for k, v := range config.Aliases {
 			argv = strings.Replace(argv, k, v, 1)
