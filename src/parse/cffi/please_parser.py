@@ -143,7 +143,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     ffi_string = lambda x: ffi.cast('char*', 0) if x is None else ffi.new('char[]', x)
     target = _add_target(package,
                          ffi_string(name),
-                         ffi_string('' if isinstance(cmd, Mapping) else cmd),
+                         ffi_string('' if isinstance(cmd, Mapping) else cmd.strip()),
                          ffi_string(test_cmd),
                          binary,
                          test,
@@ -172,7 +172,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         _add_strings(target, _add_src, srcs, 'srcs')
     if isinstance(cmd, Mapping):
         for config, command in cmd.items():
-            _check_c_error(_add_command(target, config, command))
+            _check_c_error(_add_command(target, config, command.strip()))
     if system_srcs:
         for src in system_srcs:
             if not src.startswith('/') or src.startswith('//'):

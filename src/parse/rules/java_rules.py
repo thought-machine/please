@@ -185,7 +185,8 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
 
 
 def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, combine=False,
-               hash=None, deps=None, visibility=None, filename=None, deps_only=False):
+               hash=None, deps=None, visibility=None, filename=None, deps_only=False,
+               optional=None):
     """Fetches a transitive set of dependencies from Maven.
 
     Requires post build commands to be allowed for this repo.
@@ -206,6 +207,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
       deps_only (bool): If True we fetch only dependent rules, not this one itself. Useful for some that
                         have a top-level target as a facade which doesn't have actual code.
+      optional (list): List of optional dependencies to fetch. By default we fetch none of them.
     """
     if id.count(':') != 2:
         raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
@@ -234,7 +236,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
             # Deduplicate packages
             existing = existing_packages.get(artifact)
             if existing:
-                if existing != line:
+                if existing != '%s:%s:%s' % (group, artifact, version):
                     raise ValueError('Package version clash in maven_jars: got %s, but already have %s' % (line, existing))
             else:
                 maven_jar(
@@ -251,10 +253,11 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
 
     deps = deps or []
     exclusions = ' '.join('-e ' + excl for excl in exclude)
+    options = ' '.join('-o ' + option for option in optional) if optional else ''
     please_maven_tool, tools = _tool_path(CONFIG.PLEASE_MAVEN_TOOL)
     build_rule(
         name='_%s#deps' % name,
-        cmd='%s -r %s %s %s' % (please_maven_tool, repository, id, exclusions),
+        cmd='%s -r %s %s %s %s' % (please_maven_tool, repository, id, exclusions, options),
         post_build=create_maven_deps,
         building_description='Finding dependencies...',
         tools=tools,

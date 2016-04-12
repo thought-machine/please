@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -81,6 +82,7 @@ var opts struct {
 	Verbosity  int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
 	Exclude    []string `short:"e" long:"exclude" description:"Artifacts to exclude from download"`
 	Indent     bool     `short:"i" long:"indent" description:"Indent stdout lines appropriately"`
+	Optional   []string `short:"o" long:"optional" description:"Optional dependencies to fetch"`
 	Args       struct {
 		Package []string
 	} `positional-args:"yes" required:"yes"`
@@ -101,9 +103,20 @@ func replaceVariables(s string, properties map[string]string) string {
 // parse parses a downloaded pom.xml. This is of course less trivial than you would hope.
 func parse(response []byte, group, artifact, version string) *pomXml {
 	pom := &pomXml{}
+	// This is an absolutely awful hack; we should use a proper decoder, but that seems
+	// to be provoking a panic from the linker for reasons I don't fully understand right now.
+	response = bytes.Replace(response, []byte("encoding=\"ISO-8859-1\""), []byte{}, -1)
 	if err := xml.Unmarshal(response, pom); err != nil {
 		log.Fatalf("Error parsing XML response: %s\n", err)
-	} else if (pom.GroupId != "" && group != pom.GroupId) ||
+	}
+	// Clean up strings in case they have spaces
+	pom.GroupId = strings.TrimSpace(pom.GroupId)
+	pom.ArtifactId = strings.TrimSpace(pom.ArtifactId)
+	pom.Version = strings.TrimSpace(pom.Version)
+	for i, licence := range pom.Licences.Licence {
+		pom.Licences.Licence[i].Name = strings.TrimSpace(licence.Name)
+	}
+	if (pom.GroupId != "" && group != pom.GroupId) ||
 		(pom.ArtifactId != "" && artifact != pom.ArtifactId) ||
 		(pom.Version != "" && version != "" && version != pom.Version) {
 		// These are a bit fiddly since inexplicably the fields are sometimes empty.
@@ -137,6 +150,15 @@ func fetchLicences(group, artifact, version string) []string {
 	return ret
 }
 
+func shouldFetchOptionalDep(artifact string) bool {
+	for _, option := range opts.Optional {
+		if option == artifact {
+			return true
+		}
+	}
+	return false
+}
+
 func handleDependencies(deps pomDependencies, properties map[string]string, group, version string) {
 	for _, dep := range deps.Dependency {
 		// This is a bit of a hack; our build model doesn't distinguish these in the way Maven does.
@@ -144,8 +166,8 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 		if dep.Scope == "test" {
 			continue
 		}
-		// Skip all optional dependencies for now.
-		if dep.Optional {
+		if dep.Optional && !shouldFetchOptionalDep(dep.ArtifactId) {
+			log.Debug("Not fetching optional dependency %s:%s", dep.GroupId, dep.ArtifactId)
 			continue
 		}
 		dep.GroupId = replaceVariables(dep.GroupId, properties)
