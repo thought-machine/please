@@ -1,3 +1,14 @@
+Version 1.7.1
+-------------
+
+    * Additional flag, `--include_file`, to `plz cover` which filters coverage output to
+      just the given files.
+    * maven_jars now has two new arguments, `combine` which combines its transitive deps
+      into a single uberjar and `hash` which sets the hash for that uberjar.
+      The intention here is to make it more lightweight to set a hash for a single target
+      rather than having to provide potentially many individual hashes.
+
+
 Version 1.7.0
 -------------
 
