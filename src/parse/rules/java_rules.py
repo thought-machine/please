@@ -387,5 +387,5 @@ def _jarcat_cmd(main_class=None, preamble=None):
     if main_class:
         cmd += ' -m "%s"' % main_class
     if preamble:
-        return cmd + " -p '%s'" % preamble
+        return cmd + " -p '%s'" % preamble, tools
     return cmd, tools
