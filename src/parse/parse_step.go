@@ -310,6 +310,8 @@ func RunPreBuildFunction(tid int, state *core.BuildState, target *core.BuildTarg
 	state.LogBuildResult(tid, target.Label, core.PackageParsing,
 		fmt.Sprintf("Running pre-build function for %s", target.Label))
 	pkg := state.Graph.Package(target.Label.PackageName)
+	pkg.BuildCallbackMutex.Lock()
+	defer pkg.BuildCallbackMutex.Unlock()
 	if err := runPreBuildFunction(pkg, target); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed pre-build function for %s", target.Label)
 		return err
@@ -329,6 +331,8 @@ func RunPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTar
 	state.LogBuildResult(tid, target.Label, core.PackageParsing,
 		fmt.Sprintf("Running post-build function for %s", target.Label))
 	pkg := state.Graph.Package(target.Label.PackageName)
+	pkg.BuildCallbackMutex.Lock()
+	defer pkg.BuildCallbackMutex.Unlock()
 	log.Debug("Running post-build function for %s. Build output:\n%s\n", target.Label, out)
 	if err := runPostBuildFunction(pkg, target, out); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed post-build function for %s", target.Label)

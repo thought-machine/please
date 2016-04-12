@@ -19,7 +19,11 @@ type Package struct {
 	// Set of output files from rules.
 	Outputs map[string]*BuildTarget
 	// Protects access to above
-	Mutex sync.Mutex
+	mutex sync.Mutex
+	// Used to arbitrate a single post-build function running at a time.
+	// It would be sort of conceptually nice if they ran simultaneously but it'd
+	// be far too hard to ensure consistency in any case where they can interact with one another.
+	BuildCallbackMutex sync.Mutex
 }
 
 func NewPackage(name string) *Package {
@@ -43,8 +47,8 @@ func (pkg *Package) RegisterSubinclude(filename string) {
 // RegisterOutput registers a new output file in the map.
 // Returns an error if the file has already been registered.
 func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) error {
-	pkg.Mutex.Lock()
-	defer pkg.Mutex.Unlock()
+	pkg.mutex.Lock()
+	defer pkg.mutex.Unlock()
 	originalFileName := fileName
 	if target.IsBinary {
 		fileName = ":_bin_" + fileName // Add some arbitrary prefix so they don't clash.
