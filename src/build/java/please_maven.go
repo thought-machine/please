@@ -54,10 +54,26 @@ type pomDependencies struct {
 }
 
 type mavenMetadataXml struct {
+	Version    string `xml:"version"`
 	Versioning struct {
 		Latest  string `xml:"latest"`
 		Release string `xml:"release"`
 	} `xml:"versioning"`
+	Group, Artifact string
+}
+
+func (metadata mavenMetadataXml) LatestVersion() string {
+	if metadata.Versioning.Release != "" {
+		return metadata.Versioning.Release
+	} else if metadata.Versioning.Latest != "" {
+		log.Warning("No release version for %s:%s, using latest", metadata.Group, metadata.Artifact)
+		return metadata.Versioning.Latest
+	} else if metadata.Version != "" {
+		log.Warning("No release version for %s:%s", metadata.Group, metadata.Artifact)
+		return metadata.Version
+	}
+	log.Fatalf("Can't find a version for %s:%s", metadata.Group, metadata.Artifact)
+	return ""
 }
 
 var opts struct {
@@ -137,6 +153,7 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 		// Not sure what this is about; httpclient seems to do this. It seems completely unhelpful but
 		// no doubt there's some highly obscure case where Maven aficionados consider this useful.
 		properties[dep.ArtifactId+".version"] = ""
+		properties[strings.Replace(dep.ArtifactId, "-", ".", -1)+".version"] = ""
 		dep.Version = replaceVariables(dep.Version, properties)
 		if isExcluded(dep.ArtifactId) {
 			continue
@@ -149,7 +166,7 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 			if dep.GroupId == group {
 				dep.Version = version
 			} else {
-				dep.Version = fetchMetadata(dep.GroupId, dep.ArtifactId).Versioning.Release
+				dep.Version = fetchMetadata(dep.GroupId, dep.ArtifactId).LatestVersion()
 			}
 		}
 		licences := strings.Join(fetchLicences(dep.GroupId, dep.ArtifactId, dep.Version), "|")
@@ -184,7 +201,7 @@ func buildPomUrl(group, artifact, version string) string {
 	if version == "" {
 		// This is kind of exciting - we just assume the latest version if one isn't available.
 		// Not sure what we're really meant to do but I'm losing the will to live over all this so #yolo
-		version = fetchMetadata(group, artifact).Versioning.Release
+		version = fetchMetadata(group, artifact).LatestVersion()
 		log.Notice("Version not specified for %s:%s, decided to use %s", group, artifact, version)
 	}
 	slashGroup := strings.Replace(group, ".", "/", -1)
@@ -234,7 +251,7 @@ func fetchMetadata(group, artifact string) *mavenMetadataXml {
 		return ret
 	}
 	content := fetchOrDie(url)
-	ret := &mavenMetadataXml{}
+	ret := &mavenMetadataXml{Group: group, Artifact: artifact}
 	if err := xml.Unmarshal(content, ret); err != nil {
 		log.Fatalf("Error parsing XML response: %s\n", err)
 	}
