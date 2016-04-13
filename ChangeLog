@@ -1,3 +1,9 @@
+Version 1.7.3
+-------------
+
+    * Support for maven_jars fetching specified optional dependencies via 'optional' argument.
+
+
 Version 1.7.2
 -------------
 
