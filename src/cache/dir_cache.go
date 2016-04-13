@@ -45,7 +45,7 @@ func (cache *dirCache) StoreExtra(target *core.BuildTarget, key []byte, out stri
 	} else if err := os.MkdirAll(cacheDir, core.DirPermissions); err != nil {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 		return
-	} else if err := core.RecursiveCopyFile(outFile, cachedFile, fileMode(target), false); err != nil {
+	} else if err := core.RecursiveCopyFile(outFile, cachedFile, fileMode(target), true); err != nil {
 		// Cannot hardlink files into the cache, must copy them for reals.
 		log.Warning("Failed to store cache file %s: %s", cachedFile, err)
 	}
