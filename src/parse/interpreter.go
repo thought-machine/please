@@ -31,7 +31,7 @@ import (
 )
 
 /*
-#cgo CFLAGS: --std=c99 -I/usr/include/pypy -Werror
+#cgo CFLAGS: --std=c99 -I/usr/include/pypy -I/usr/local/include/pypy -Werror
 #cgo LDFLAGS: -lpypy-c
 #include "interpreter.h"
 */
