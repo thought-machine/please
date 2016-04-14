@@ -14,6 +14,11 @@ moduledir = third_party.python
 [please]
 buildfilename = BUILD
 buildfilename = BUILD_
+; Blacklist the third-party dirs, we never need to descend into those.
+blacklistdirs = github.com
+blacklistdirs = golang.org
+blacklistdirs = google.golang.org
+blacklistdirs = gopkg.in
 
 [go]
 testtool = //src/build/go:please_go_test

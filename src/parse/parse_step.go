@@ -383,6 +383,12 @@ func FindAllSubpackages(config core.Configuration, rootPath string, prefix strin
 				dir, _ := path.Split(name)
 				ch <- strings.TrimRight(dir, "/")
 			}
+			// Check against blacklist
+			for _, dir := range config.Please.BlacklistDirs {
+				if dir == info.Name() {
+					return filepath.SkipDir
+				}
+			}
 			return nil
 		}); err != nil {
 			log.Fatalf("Failed to walk tree under %s; %s\n", rootPath, err)

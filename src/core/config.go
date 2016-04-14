@@ -139,6 +139,7 @@ type Configuration struct {
 		SelfUpdate       bool
 		DownloadLocation string
 		BuildFileName    []string
+		BlacklistDirs    []string
 		Lang             string
 		PyPyLocation     []string
 		Nonce            string
