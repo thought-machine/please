@@ -253,7 +253,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
     )
 
 
-def pip_library(name, version, hashes, package_name=None, outs=None, test_only=False,
+def pip_library(name, version, hashes=None, package_name=None, outs=None, test_only=False,
                 env=None, deps=None, post_install_commands=None, install_subdirectory=False,
                 repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True, licences=None):
     """Provides a build rule for third-party dependencies to be installed by pip.
