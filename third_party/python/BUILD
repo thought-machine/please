@@ -37,7 +37,7 @@ pip_library(
 
 pip_library(
     name = 'coverage',
-    version = '4.0a6',
+    version = '4.0.3',
     patch = 'coverage_pex.patch',
 )
 
