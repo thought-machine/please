@@ -16,7 +16,9 @@ The easiest way to install it on your own machine is to run:
 curl -s https://s3-eu-west-1.amazonaws.com/please-build/get_plz.sh | bash
 ```
 You will need to have PyPy installed for it to run. On OSX this is
-straightforward with Homebrew, simply run `brew install pypy`.
+straightforward with Homebrew, simply run `brew install pypy`. You may
+need to link the headers into /usr/local/include/pypy, at time of writing
+Homebrew doesn't seem to do this automatically.
 
 Unfortunately at the time of writing the Ubuntu and Debian PyPy packages
 don't have the shared libraries. For now we suggest that you use the
