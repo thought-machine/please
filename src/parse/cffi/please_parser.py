@@ -274,9 +274,7 @@ def get_labels(package, target, prefix):
 def has_label(package, target, prefix):
     """Returns True if the target has any matching label that would be returned by get_labels."""
     labels = _get_labels(package, ffi.new('char[]', target), ffi.new('char[]', prefix))
-    for label in _null_terminated_array(labels):
-        return True
-    return False
+    return all(_null_terminated_array(labels))
 
 
 def package(globals_dict, **kwargs):
