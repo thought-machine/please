@@ -28,7 +28,7 @@ type BuildState struct {
 	// Used to signal goroutines to stop once the build is done.
 	Stop chan bool
 	// Configuration options
-	Config Configuration
+	Config *Configuration
 	// Hashes of variouts bits of the configuration, used for incrementality.
 	Hashes struct {
 		// Hash of the general config, not including specialised bits.
@@ -203,7 +203,7 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 	return ret
 }
 
-func NewBuildState(numThreads int, cache *Cache, verbosity int, config Configuration) *BuildState {
+func NewBuildState(numThreads int, cache *Cache, verbosity int, config *Configuration) *BuildState {
 	State = &BuildState{
 		Graph: NewGraph(),
 		// Buffer the channels, since they will both send & receive on (potentially) the same threads.

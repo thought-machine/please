@@ -50,7 +50,7 @@ const pyDeferParse = "_DEFER_"
 var initializeOnce sync.Once
 
 // Code to initialise the Python interpreter.
-func initializeInterpreter(config core.Configuration) {
+func initializeInterpreter(config *core.Configuration) {
 	log.Debug("Initialising interpreter...")
 
 	// PyPy becomes very unhappy if Go schedules it to a different OS thread during
@@ -132,7 +132,7 @@ func initializeInterpreter(config core.Configuration) {
 
 // locateLibPyPy returns a C string corresponding to the location of libpypy.
 // It dies if it cannot be located successfully.
-func locateLibPyPy(config core.Configuration) *C.char {
+func locateLibPyPy(config *core.Configuration) *C.char {
 	// This is something of a hack to handle PyPy's dynamic location of itself.
 	for _, location := range config.Please.PyPyLocation {
 		if core.PathExists(location) {

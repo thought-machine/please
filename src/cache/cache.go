@@ -12,7 +12,7 @@ import (
 
 var log = logging.MustGetLogger("cache")
 
-func NewCache(config core.Configuration) *core.Cache {
+func NewCache(config *core.Configuration) *core.Cache {
 	mplex := new(cacheMultiplexer)
 	if config.Cache.Dir != "" {
 		mplex.caches = append(mplex.caches, newDirCache(config))

@@ -31,7 +31,7 @@ var log = logging.MustGetLogger("plz")
 const testResultsFile = "plz-out/log/test_results.xml"
 const coverageResultsFile = "plz-out/log/coverage.json"
 
-var config core.Configuration
+var config *core.Configuration
 
 var opts struct {
 	BuildFlags struct {
@@ -380,7 +380,7 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool 
 	return interactiveOutput || (!plainOutput && output.StdErrIsATerminal && verbosity < 4)
 }
 
-func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 	} else if config.Please.NumThreads <= 0 {
@@ -488,7 +488,7 @@ func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
 }
 
 // readConfig sets various things up and reads the initial configuration.
-func readConfig(forceUpdate bool) core.Configuration {
+func readConfig(forceUpdate bool) *core.Configuration {
 	if opts.AssertVersion != "" && core.PleaseVersion != opts.AssertVersion {
 		log.Fatalf("Requested Please version %s, but this is version %s", opts.AssertVersion, core.PleaseVersion)
 	}

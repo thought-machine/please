@@ -11,7 +11,7 @@ import (
 )
 
 // Produces a set of labels that complete a given input.
-func QueryCompletionLabels(config core.Configuration, args []string, repoRoot string) []core.BuildLabel {
+func QueryCompletionLabels(config *core.Configuration, args []string, repoRoot string) []core.BuildLabel {
 	if len(args) == 0 {
 		queryCompletionPackages(config, ".", repoRoot)
 	} else if !strings.Contains(args[0], ":") {
@@ -33,7 +33,7 @@ func QueryCompletionLabels(config core.Configuration, args []string, repoRoot st
 	return []core.BuildLabel{core.BuildLabel{PackageName: labels[0].PackageName, Name: "all"}}
 }
 
-func queryCompletionPackages(config core.Configuration, query, repoRoot string) {
+func queryCompletionPackages(config *core.Configuration, query, repoRoot string) {
 	root := path.Join(repoRoot, query)
 	origRoot := root
 	if !core.PathExists(root) {
