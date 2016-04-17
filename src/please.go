@@ -425,7 +425,7 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	}
 	for _, target := range targets {
 		if target.IsAllSubpackages() {
-			for pkg := range parse.FindAllSubpackages(state.Config, target.PackageName, "") {
+			for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
 				label := core.NewBuildLabel(pkg, "all")
 				state.OriginalTargets = append(state.OriginalTargets, label)
 				state.AddPendingParse(label, core.OriginalTarget)

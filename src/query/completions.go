@@ -1,12 +1,14 @@
 package query
 
-import "fmt"
-import "os"
-import "path"
-import "strings"
+import (
+	"fmt"
+	"os"
+	"path"
+	"strings"
 
-import "core"
-import "parse"
+	"core"
+	"utils"
+)
 
 // Produces a set of labels that complete a given input.
 func QueryCompletionLabels(config core.Configuration, args []string, repoRoot string) []core.BuildLabel {
@@ -38,7 +40,7 @@ func queryCompletionPackages(config core.Configuration, query, repoRoot string) 
 		root = path.Dir(root)
 	}
 	packages := []string{}
-	for pkg := range parse.FindAllSubpackages(config, root, origRoot) {
+	for pkg := range utils.FindAllSubpackages(config, root, origRoot) {
 		if strings.HasPrefix(pkg, origRoot) {
 			packages = append(packages, pkg[len(repoRoot):])
 		}

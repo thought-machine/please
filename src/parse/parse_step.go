@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -361,49 +360,4 @@ func rescanDeps(state *core.BuildState, pkg *core.Package) {
 			addDep(state, target.Label, core.OriginalTarget, true, false)
 		}
 	}
-}
-
-// Finds all packages under a particular path.
-// Used to implement rules with ... where we need to know all possible packages
-// under that location.
-func FindAllSubpackages(config core.Configuration, rootPath string, prefix string) <-chan string {
-	ch := make(chan string)
-	go func() {
-		if rootPath == "" {
-			rootPath = "."
-		}
-		if err := filepath.Walk(rootPath, func(name string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err // stop on any error
-			} else if name == "plz-out" || (info.IsDir() && strings.HasPrefix(info.Name(), ".") && name != ".") {
-				return filepath.SkipDir // Don't walk output or hidden directories
-			} else if info.IsDir() && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
-				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
-			} else if isABuildFile(info.Name(), config) && !info.IsDir() {
-				dir, _ := path.Split(name)
-				ch <- strings.TrimRight(dir, "/")
-			}
-			// Check against blacklist
-			for _, dir := range config.Please.BlacklistDirs {
-				if dir == info.Name() {
-					return filepath.SkipDir
-				}
-			}
-			return nil
-		}); err != nil {
-			log.Fatalf("Failed to walk tree under %s; %s\n", rootPath, err)
-		}
-		close(ch)
-	}()
-	return ch
-}
-
-// isABuildFile returns true if given filename is a build file name.
-func isABuildFile(name string, config core.Configuration) bool {
-	for _, buildFileName := range config.Please.BuildFileName {
-		if name == buildFileName {
-			return true
-		}
-	}
-	return false
 }
