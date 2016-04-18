@@ -108,7 +108,7 @@ func (cache *dirCache) getPath(target *core.BuildTarget, key []byte) string {
 	return path.Join(cache.Dir, target.Label.PackageName, target.Label.Name, base64.URLEncoding.EncodeToString(key))
 }
 
-func newDirCache(config core.Configuration) *dirCache {
+func newDirCache(config *core.Configuration) *dirCache {
 	cache := new(dirCache)
 	// Absolute paths are allowed. Relative paths are interpreted relative to the repo root.
 	if config.Cache.Dir[0] == '/' {

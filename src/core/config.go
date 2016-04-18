@@ -41,10 +41,10 @@ func readConfigFile(config *Configuration, filename string) error {
 
 // Reads a config file from the given locations, in order.
 // Values are filled in by defaults initially and then overridden by each file in turn.
-func ReadConfigFiles(filenames []string) (Configuration, error) {
+func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	config := DefaultConfiguration()
 	for _, filename := range filenames {
-		if err := readConfigFile(&config, filename); err != nil {
+		if err := readConfigFile(config, filename); err != nil {
 			return config, err
 		}
 	}
@@ -82,7 +82,7 @@ func defaultPath(conf *string, dir, file string) {
 	}
 }
 
-func DefaultConfiguration() Configuration {
+func DefaultConfiguration() *Configuration {
 	config := Configuration{}
 	config.Please.Version = PleaseVersion
 	config.Please.Location = "~/.please"
@@ -129,7 +129,7 @@ func DefaultConfiguration() Configuration {
 	config.Proto.PythonGrpcDep = "//third_party/python:grpc"
 	config.Proto.JavaGrpcDep = "//third_party/java:grpc-all"
 	config.Proto.GoGrpcDep = "//third_party/go:grpc"
-	return config
+	return &config
 }
 
 type Configuration struct {
@@ -139,6 +139,7 @@ type Configuration struct {
 		SelfUpdate       bool
 		DownloadLocation string
 		BuildFileName    []string
+		BlacklistDirs    []string
 		Lang             string
 		PyPyLocation     []string
 		Nonce            string

@@ -28,7 +28,7 @@ type BuildState struct {
 	// Used to signal goroutines to stop once the build is done.
 	Stop chan bool
 	// Configuration options
-	Config Configuration
+	Config *Configuration
 	// Hashes of variouts bits of the configuration, used for incrementality.
 	Hashes struct {
 		// Hash of the general config, not including specialised bits.
@@ -46,6 +46,8 @@ type BuildState struct {
 	TestArgs []string
 	// Labels of targets that we will include / exclude
 	Include, Exclude []string
+	// Actual targets to exclude from discovery
+	ExcludeTargets []BuildLabel
 	// True once the main thread has finished finding / loading targets.
 	TargetsLoaded bool
 	// True if we require rule hashes to be correctly verified (usually the case).
@@ -135,6 +137,31 @@ func (state *BuildState) IsOriginalTarget(label BuildLabel) bool {
 	return false
 }
 
+// SetIncludeAndExclude sets the include / exclude labels.
+// Handles build labels on Exclude so should be preferred over setting them directly.
+func (state *BuildState) SetIncludeAndExclude(include, exclude []string) {
+	state.Include = include
+	for _, e := range exclude {
+		if LooksLikeABuildLabel(e) {
+			state.ExcludeTargets = append(state.ExcludeTargets, parseMaybeRelativeBuildLabel(e, ""))
+		} else {
+			state.Exclude = append(state.Exclude, e)
+		}
+	}
+}
+
+// AddOriginalTarget adds one of the original targets and enqueues it for parsing / building.
+func (state *BuildState) AddOriginalTarget(label BuildLabel) {
+	// Check it's not excluded first.
+	for _, e := range state.ExcludeTargets {
+		if e.includes(label) {
+			return
+		}
+	}
+	state.OriginalTargets = append(state.OriginalTargets, label)
+	state.AddPendingParse(label, OriginalTarget)
+}
+
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	state.Results <- &BuildResult{
 		ThreadId:    tid,
@@ -203,7 +230,7 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 	return ret
 }
 
-func NewBuildState(numThreads int, cache *Cache, verbosity int, config Configuration) *BuildState {
+func NewBuildState(numThreads int, cache *Cache, verbosity int, config *Configuration) *BuildState {
 	State = &BuildState{
 		Graph: NewGraph(),
 		// Buffer the channels, since they will both send & receive on (potentially) the same threads.

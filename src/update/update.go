@@ -30,7 +30,7 @@ import "gopkg.in/op/go-logging.v1"
 
 var log = logging.MustGetLogger("update")
 
-func CheckAndUpdate(config core.Configuration, shouldUpdate, forceUpdate bool) {
+func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) {
 	if config.Please.Version == core.PleaseVersion {
 		return // Version matches, nothing to do here.
 	} else if config.Please.Version == "" {
@@ -68,7 +68,7 @@ func CheckAndUpdate(config core.Configuration, shouldUpdate, forceUpdate bool) {
 	panic("please update failed in an an unexpected and exciting way")
 }
 
-func downloadPlease(config core.Configuration) {
+func downloadPlease(config *core.Configuration) {
 	newDir := path.Join(config.Please.Location, config.Please.Version)
 	if err := os.MkdirAll(newDir, core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory %s: %s", newDir, err)
@@ -125,7 +125,7 @@ func downloadPlease(config core.Configuration) {
 	}
 }
 
-func linkNewPlease(config core.Configuration) {
+func linkNewPlease(config *core.Configuration) {
 	if files, err := ioutil.ReadDir(path.Join(config.Please.Location, config.Please.Version)); err != nil {
 		log.Fatalf("Failed to read directory: %s", err)
 	} else {
@@ -135,7 +135,7 @@ func linkNewPlease(config core.Configuration) {
 	}
 }
 
-func linkNewFile(config core.Configuration, file string) {
+func linkNewFile(config *core.Configuration, file string) {
 	newDir := path.Join(config.Please.Location, config.Please.Version)
 	globalFile := path.Join(config.Please.Location, file)
 	downloadedFile := path.Join(newDir, file)

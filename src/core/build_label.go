@@ -190,6 +190,21 @@ func (label BuildLabel) IsAllTargets() bool {
 	return label.Name == "all"
 }
 
+// covers returns true if label includes the other label (//pkg:target1 is covered by //pkg:all etc).
+func (label BuildLabel) includes(that BuildLabel) bool {
+	if strings.HasPrefix(that.PackageName, label.PackageName) {
+		// We're in the same package or a subpackage of this visibility spec
+		if label.IsAllSubpackages() {
+			return true
+		} else if label.PackageName == that.PackageName {
+			if label.Name == that.Name || label.IsAllTargets() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (this BuildLabel) Less(that BuildLabel) bool {
 	if this.PackageName == that.PackageName {
 		return this.Name < that.Name

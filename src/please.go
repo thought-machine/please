@@ -31,7 +31,7 @@ var log = logging.MustGetLogger("plz")
 const testResultsFile = "plz-out/log/test_results.xml"
 const coverageResultsFile = "plz-out/log/coverage.json"
 
-var config core.Configuration
+var config *core.Configuration
 
 var opts struct {
 	BuildFlags struct {
@@ -390,7 +390,7 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool 
 	return interactiveOutput || (!plainOutput && output.StdErrIsATerminal && verbosity < 4)
 }
 
-func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 	} else if config.Please.NumThreads <= 0 {
@@ -416,8 +416,7 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
-	state.Include = opts.BuildFlags.Include
-	state.Exclude = opts.BuildFlags.Exclude
+	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
@@ -435,14 +434,11 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	}
 	for _, target := range targets {
 		if target.IsAllSubpackages() {
-			for pkg := range parse.FindAllSubpackages(state.Config, target.PackageName, "") {
-				label := core.NewBuildLabel(pkg, "all")
-				state.OriginalTargets = append(state.OriginalTargets, label)
-				state.AddPendingParse(label, core.OriginalTarget)
+			for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
+				state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"))
 			}
 		} else {
-			state.OriginalTargets = append(state.OriginalTargets, target)
-			state.AddPendingParse(target, core.OriginalTarget)
+			state.AddOriginalTarget(target)
 		}
 	}
 	state.ProcessedOne() // initial target adding counts as one.
@@ -498,7 +494,7 @@ func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
 }
 
 // readConfig sets various things up and reads the initial configuration.
-func readConfig(forceUpdate bool) core.Configuration {
+func readConfig(forceUpdate bool) *core.Configuration {
 	if opts.AssertVersion != "" && core.PleaseVersion != opts.AssertVersion {
 		log.Fatalf("Requested Please version %s, but this is version %s", opts.AssertVersion, core.PleaseVersion)
 	}

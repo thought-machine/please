@@ -159,7 +159,7 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 	}
 }
 
-func (cache *rpcCache) connect(config core.Configuration) {
+func (cache *rpcCache) connect(config *core.Configuration) {
 	// Change grpc to log using our implementation
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
@@ -207,7 +207,7 @@ func (cache *rpcCache) isConnected() bool {
 	return cache.Connected
 }
 
-func newRpcCache(config core.Configuration) (*rpcCache, error) {
+func newRpcCache(config *core.Configuration) (*rpcCache, error) {
 	cache := &rpcCache{Writeable: config.Cache.RpcWriteable, Connecting: true}
 	go cache.connect(config)
 	return cache, nil
