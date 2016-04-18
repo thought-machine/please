@@ -154,7 +154,7 @@ func (state *BuildState) SetIncludeAndExclude(include, exclude []string) {
 func (state *BuildState) AddOriginalTarget(label BuildLabel) {
 	// Check it's not excluded first.
 	for _, e := range state.ExcludeTargets {
-		if e.covers(label) {
+		if e.includes(label) {
 			return
 		}
 	}

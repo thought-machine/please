@@ -358,7 +358,7 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 		return true
 	}
 	for _, vis := range dep.Visibility {
-		if vis.covers(target.Label) {
+		if vis.includes(target.Label) {
 			return true
 		}
 	}
