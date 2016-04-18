@@ -406,8 +406,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
-	state.Include = opts.BuildFlags.Include
-	state.Exclude = opts.BuildFlags.Exclude
+	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
@@ -426,13 +425,10 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	for _, target := range targets {
 		if target.IsAllSubpackages() {
 			for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
-				label := core.NewBuildLabel(pkg, "all")
-				state.OriginalTargets = append(state.OriginalTargets, label)
-				state.AddPendingParse(label, core.OriginalTarget)
+				state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"))
 			}
 		} else {
-			state.OriginalTargets = append(state.OriginalTargets, target)
-			state.AddPendingParse(target, core.OriginalTarget)
+			state.AddOriginalTarget(target)
 		}
 	}
 	state.ProcessedOne() // initial target adding counts as one.

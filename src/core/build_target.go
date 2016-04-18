@@ -358,15 +358,8 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 		return true
 	}
 	for _, vis := range dep.Visibility {
-		if strings.HasPrefix(target.Label.PackageName, vis.PackageName) {
-			// We're in the same package or a subpackage of this visibility spec
-			if vis.IsAllSubpackages() {
-				return true
-			} else if target.Label.PackageName == vis.PackageName {
-				if target.Label.Name == vis.Name || vis.IsAllTargets() {
-					return true
-				}
-			}
+		if vis.includes(target.Label) {
+			return true
 		}
 	}
 	return false
