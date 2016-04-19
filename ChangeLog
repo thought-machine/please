@@ -1,3 +1,14 @@
+Version 1.7.4
+-------------
+
+    * new setting in config, blacklistdirs, which excludes certain directory names from
+      being walked by `plz build ...` and the like.
+    * Upgraded python coverage package.
+    * Allow passing build target expressions to --exclude.
+    * Fix for some relative implicit labels passed on the command line which sometimes
+      incorrectly lost a slash.
+
+
 Version 1.7.3
 -------------
 
