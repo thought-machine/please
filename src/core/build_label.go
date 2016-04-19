@@ -154,7 +154,10 @@ func parseMaybeRelativeBuildLabel(target, subdir string) BuildLabel {
 	}
 	matches = relativeImplicitTarget.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(path.Join(subdir, matches[1]+matches[2]), matches[2])
+		if matches[1] != "" {
+			return NewBuildLabel(path.Join(subdir, matches[1], matches[2]), matches[2])
+		}
+		return NewBuildLabel(path.Join(subdir, matches[2]), matches[2])
 	}
 	matches = localTarget.FindStringSubmatch(target)
 	if matches != nil {

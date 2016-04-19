@@ -94,11 +94,9 @@ func TestRelativeTarget(t *testing.T) {
 }
 
 func TestRelativeImplicitTarget(t *testing.T) {
-	assertRelativeLabel(t, "path/to:thingy", "current_package/path/to", "thingy")
-	assertRelativeLabel(t, ":thingy", "current_package", "thingy")
+	assertRelativeLabel(t, "path/to", "current_package/path/to", "to")
+	assertRelativeLabel(t, "path", "current_package/path", "path")
 	assertNotLabel(t, "path/to:", "must have a target name")
-	assertNotLabel(t, "path/to:thingy/mabob", "can't have a slash in target name")
-	assertNotLabel(t, "path/to:thingy:mabob", "can only have one colon")
 }
 
 // Test for issue #55 where we were incorrectly allowing consecutive double slashes,
