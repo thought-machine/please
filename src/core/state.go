@@ -7,22 +7,39 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Workiva/go-datastructures/queue"
 )
 
-type BuildLabelPair struct {
+// A TaskType identifies the kind of task returned from NextTask()
+type TaskType int
+
+// Note that the ordering of these determines priority.
+const (
+	Stop TaskType = iota
+	// These are for subinclude targets which should be processed before others.
+	SubincludeBuild
+	SubincludeParse
+	Build
+	Parse
+	Test
+)
+
+type pendingTask struct {
 	Label    BuildLabel // Label of target to parse
-	Dependor BuildLabel // The target that depended on it
+	Dependor BuildLabel // The target that depended on it (only for parse tasks)
+	Type     TaskType
+}
+
+func (t pendingTask) Compare(that pendingTask) int {
+	return t.Type - that.Type
 }
 
 // Passed about to track the current state of the build.
 type BuildState struct {
 	Graph *BuildGraph
-	// Stream of pending packages to parse
-	pendingParses chan *BuildLabelPair
-	// Stream of pending targets to build
-	pendingBuilds chan BuildLabel
-	// Stream of pending tests to run
-	pendingTests chan BuildLabel
+	// Stream of pending tasks
+	pendingTasks *queue.PriorityQueue
 	// Stream of results from the build
 	Results chan *BuildResult
 	// Used to signal goroutines to stop once the build is done.
@@ -86,38 +103,52 @@ func (state *BuildState) AddActiveTarget() {
 	state.mutex.Unlock()
 }
 
-func (state *BuildState) AddPendingParse(label, dependor BuildLabel) {
+func (state *BuildState) AddPendingParse(label, dependor BuildLabel, forSubinclude bool) {
 	state.mutex.Lock()
 	state.numActive++
 	state.numPending++
 	state.mutex.Unlock()
-	state.pendingParses <- &BuildLabelPair{label, dependor}
+	if forSubinclude {
+		state.pendingTasks.Push(pendingTask{Label: label, Dependor: dependor, Type: SubincludeParse})
+	} else {
+		state.pendingTasks.Push(pendingTask{Label: label, Dependor: dependor, Type: Parse})
+	}
 }
 
-func (state *BuildState) AddPendingBuild(label BuildLabel) {
-	state.addPending(label, state.pendingBuilds)
+func (state *BuildState) AddPendingBuild(label BuildLabel, forSubinclude bool) {
+	if forSubinclude {
+		state.addPending(label, SubincludeBuild)
+	} else {
+		state.addPending(label, Build)
+	}
 }
 
 func (state *BuildState) AddPendingTest(label BuildLabel) {
 	if state.NeedTests {
-		state.addPending(label, state.pendingTests)
+		state.addPending(label, Test)
 	}
 }
 
-// Used to allow receive-only access to these channels.
-// Caller should call ProcessedOne *after* they're done handling the result of one of these.
-func (state *BuildState) ReceiveChannels() (<-chan *BuildLabelPair, <-chan BuildLabel, <-chan BuildLabel) {
-	return state.pendingParses, state.pendingBuilds, state.pendingTests
+// NextTask receives the next task that should be processed according to the priority queues.
+func (state *BuildState) NextTask() (BuildLabel, BuildLabel, TaskType) {
+	t, err := state.pendingTasks.Get(1)
+	if err != nil {
+		log.Fatalf("error receiving next task: %s", err)
+	}
+	task := t.(pendingTask)
+	return task.Label, task.Dependor, task.Type
 }
 
-func (state *BuildState) addPending(label BuildLabel, ch chan<- BuildLabel) {
+func (state *BuildState) addPending(label BuildLabel, t TaskType) {
 	state.mutex.Lock()
 	state.numPending++
 	state.mutex.Unlock()
-	ch <- label
+	state.pendingTasks.Put(pendingTask{Label: label, Type: t})
 }
 
-func (state *BuildState) ProcessedOne() {
+// TaskDone indicates that a single task is finished. Should be called after one is finished with
+// a task returned from NextTask().
+func (state *BuildState) TaskDone() {
 	state.mutex.Lock()
 	state.numDone++
 	state.numPending--
@@ -125,6 +156,13 @@ func (state *BuildState) ProcessedOne() {
 		state.Stop <- true
 	}
 	state.mutex.Unlock()
+}
+
+// Stop adds n stop tasks to the list of pending tasks, which stops n workers.
+func (state *BuildState) Stop(n int) {
+	for i := 0; i < n; i++ {
+		state.pendingTasks.Push(pendingTask{Type: Stop})
+	}
 }
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
@@ -159,7 +197,7 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel) {
 		}
 	}
 	state.OriginalTargets = append(state.OriginalTargets, label)
-	state.AddPendingParse(label, OriginalTarget)
+	state.AddPendingParse(label, OriginalTarget, false)
 }
 
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
@@ -232,24 +270,17 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 
 func NewBuildState(numThreads int, cache *Cache, verbosity int, config *Configuration) *BuildState {
 	State = &BuildState{
-		Graph: NewGraph(),
-		// Buffer the channels, since they will both send & receive on (potentially) the same threads.
-		// TODO(pebers): this is rather awkward, they (particularly the parse channel) can block when
-		//               given a sufficiently large set of inputs. I'd prefer not to make the buffers
-		//               massive since they are dominating quite a bit of our memory usage...
-		pendingParses: make(chan *BuildLabelPair, numThreads*100000),
-		pendingBuilds: make(chan BuildLabel, numThreads*10000),
-		pendingTests:  make(chan BuildLabel, numThreads*10000),
-		Results:       make(chan *BuildResult, numThreads*10000),
-		Stop:          make(chan bool, numThreads),
-		Config:        config,
-		Verbosity:     verbosity,
-		Cache:         cache,
-		VerifyHashes:  true,
-		NeedBuild:     true,
-		numActive:     1, // One for the initial target adding on the main thread.
-		numPending:    1,
-		Coverage:      TestCoverage{Files: map[string][]LineCoverage{}},
+		Graph:        NewGraph(),
+		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
+		Results:      make(chan *BuildResult, numThreads*10000),
+		Config:       config,
+		Verbosity:    verbosity,
+		Cache:        cache,
+		VerifyHashes: true,
+		NeedBuild:    true,
+		numActive:    1, // One for the initial target adding on the main thread.
+		numPending:   1,
+		Coverage:     TestCoverage{Files: map[string][]LineCoverage{}},
 	}
 	State.Hashes.Config = config.Hash()
 	State.Hashes.Containerisation = config.ContainerisationHash()

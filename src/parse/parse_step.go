@@ -136,7 +136,7 @@ func deferParse(label core.BuildLabel, pkg *core.Package) bool {
 	} else {
 		deferredParses[label.PackageName] = map[string][]string{label.Name: []string{pkg.Name}}
 	}
-	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkg.Name, Name: "all"})
+	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkg.Name, Name: "all"}, true)
 	return true
 }
 
@@ -151,6 +151,7 @@ func UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
 				state.AddPendingParse(
 					core.BuildLabel{PackageName: deferredPackageName, Name: getDependingTarget(deferredPackageName)},
 					core.BuildLabel{PackageName: deferredPackageName, Name: "_UNDEFER_"},
+					false,
 				)
 			}
 			delete(m, target.Label.Name) // Don't need this any more
@@ -253,7 +254,7 @@ func buildFileName(state *core.BuildState, pkgName string) string {
 func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, forceBuild bool) {
 	// Stop at any package that's not loaded yet
 	if state.Graph.Package(label.PackageName) == nil {
-		state.AddPendingParse(label, dependor)
+		state.AddPendingParse(label, dependor, false)
 		return
 	}
 	target := state.Graph.Target(label)
@@ -279,7 +280,7 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 	// Only add if we need to build targets (not if we're just parsing) but we might need it to parse...
 	if target.State() == core.Active && state.Graph.AllDepsBuilt(target) {
 		if target.SyncUpdateState(core.Active, core.Pending) {
-			state.AddPendingBuild(label)
+			state.AddPendingBuild(label, dependor.IsAllTargets())
 		}
 		if !rescan {
 			return

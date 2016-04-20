@@ -17,6 +17,7 @@ import (
 	"parse"
 	"query"
 	"run"
+	"sync"
 	"test"
 	"update"
 	"utils"
@@ -350,24 +351,18 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
 	pendingParses, pendingBuilds, pendingTests := state.ReceiveChannels()
 	for {
-		select {
-		case success := <-state.Stop:
-			state.Stop <- success // Pass on to another thread
+		label, dependor, t := state.NextTask()
+		switch t {
+		case Stop:
 			return
-		case pendingParse, ok := <-pendingParses:
-			if ok {
-				parse.Parse(tid, state, pendingParse.Label, pendingParse.Dependor, parsePackageOnly, include, exclude)
-			}
-		case pendingBuild, ok := <-pendingBuilds:
-			if ok {
-				build.Build(tid, state, pendingBuild)
-			}
-		case pendingTest, ok := <-pendingTests:
-			if ok {
-				test.Test(tid, state, pendingTest)
-			}
+		case Parse, SubincludeParse:
+			parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude)
+		case Build, SubincludeBuild:
+			build.Build(tid, state, label)
+		case Test:
+			test.Test(tid, state, label)
 		}
-		state.ProcessedOne()
+		state.TaskDone()
 	}
 }
 
@@ -417,10 +412,15 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 			log.Fatalf("Failed to remove test results file: %s", err)
 		}
 	}
+	var wg sync.WaitGroup
+	wg.Add(config.Please.NumThreads)
 	displayDone := make(chan bool)
 	go output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, displayDone, opts.OutputFlags.TraceFile)
 	for i := 0; i < config.Please.NumThreads; i++ {
-		go please(i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+		go func() {
+			please(i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+			wg.Done()
+		}()
 	}
 	for _, target := range targets {
 		if target.IsAllSubpackages() {
@@ -431,10 +431,10 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 			state.AddOriginalTarget(target)
 		}
 	}
-	state.ProcessedOne() // initial target adding counts as one.
+	state.TaskDone() // initial target adding counts as one.
 	state.TargetsLoaded = true
-	success := <-state.Stop
-	state.Stop <- success
+	state.Stop(config.Please.NumThreads)
+	wg.Wait()
 	close(state.Results) // This will signal the output goroutine to stop.
 	// TODO(pebers): shouldn't rely on the display routine to tell us whether we succeeded or not...
 	success = <-displayDone
