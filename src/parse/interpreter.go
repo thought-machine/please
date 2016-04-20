@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"gopkg.in/op/go-logging.v1"
@@ -187,6 +188,7 @@ func unsizep(u uintptr) *core.Package { return (*core.Package)(unsafe.Pointer(u)
 // and will panic on errors.
 func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package) bool {
 	log.Debug("Parsing package file %s", filename)
+	start := time.Now()
 	initializeOnce.Do(func() { initializeInterpreter(state.Config) })
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -200,11 +202,12 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	cPackageName := C.CString(pkg.Name)
 	defer C.free(unsafe.Pointer(cFilename))
 	defer C.free(unsafe.Pointer(cPackageName))
-	if ret := C.GoString(C.ParseFile(cFilename, cPackageName, sizep(pkg))); ret != "" && ret != pyDeferParse {
+	ret := C.GoString(C.ParseFile(cFilename, cPackageName, sizep(pkg)))
+	if ret != "" && ret != pyDeferParse {
 		panic(fmt.Sprintf("Failed to parse file %s: %s", filename, ret))
-	} else {
-		return ret == pyDeferParse
 	}
+	log.Debug("Parsed package file %s in %0.3f seconds", filename, time.Since(start).Seconds())
+	return ret == pyDeferParse
 }
 
 //export AddTarget
