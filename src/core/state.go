@@ -270,7 +270,7 @@ func NewBuildState(numThreads int, cache *Cache, verbosity int, config *Configur
 	State = &BuildState{
 		Graph:        NewGraph(),
 		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
-		Results:      make(chan *BuildResult, numThreads*10000),
+		Results:      make(chan *BuildResult, numThreads*100),
 		Config:       config,
 		Verbosity:    verbosity,
 		Cache:        cache,
