@@ -47,7 +47,7 @@ type buildingTargetData struct {
 	Colour      string
 }
 
-func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest bool, done chan<- bool, traceFile string) {
+func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest bool, traceFile string) bool {
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads, numThreads)
 
@@ -97,7 +97,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 			printBuildResults(state, duration)
 		}
 	}
-	done <- len(failedTargetMap) == 0
+	return len(failedTargetMap) == 0
 }
 
 func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, aggregatedResults *core.TestResults, plainOutput bool,

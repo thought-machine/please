@@ -413,14 +413,23 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	}
 	var wg sync.WaitGroup
 	wg.Add(config.Please.NumThreads)
-	displayDone := make(chan bool)
-	go output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, displayDone, opts.OutputFlags.TraceFile)
 	for i := 0; i < config.Please.NumThreads; i++ {
-		go func() {
-			please(i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+		go func(tid int) {
+			please(tid, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 			wg.Done()
-		}()
+		}(i)
 	}
+	go findOriginalTasks(state, targets)
+	go func() {
+		wg.Wait()
+		close(state.Results) // This will signal the output goroutine to stop.
+	}()
+	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, opts.OutputFlags.TraceFile)
+	return success, state
+}
+
+// findOriginalTasks finds the original parse tasks for the original set of targets.
+func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 	for _, target := range targets {
 		if target.IsAllSubpackages() {
 			for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
@@ -431,13 +440,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 		}
 	}
 	state.TaskDone() // initial target adding counts as one.
-	state.TargetsLoaded = true
-	state.Stop(config.Please.NumThreads)
-	wg.Wait()
-	close(state.Results) // This will signal the output goroutine to stop.
-	// TODO(pebers): shouldn't rely on the display routine to tell us whether we succeeded or not...
-	success = <-displayDone
-	return success, state
 }
 
 // Allows input args to come from stdin. It's a little slack to insist on reading it all
