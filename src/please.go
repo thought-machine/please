@@ -349,17 +349,16 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 }
 
 func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
-	pendingParses, pendingBuilds, pendingTests := state.ReceiveChannels()
 	for {
 		label, dependor, t := state.NextTask()
 		switch t {
-		case Stop:
+		case core.Stop:
 			return
-		case Parse, SubincludeParse:
+		case core.Parse, core.SubincludeParse:
 			parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude)
-		case Build, SubincludeBuild:
+		case core.Build, core.SubincludeBuild:
 			build.Build(tid, state, label)
-		case Test:
+		case core.Test:
 			test.Test(tid, state, label)
 		}
 		state.TaskDone()

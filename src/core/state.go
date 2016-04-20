@@ -31,8 +31,8 @@ type pendingTask struct {
 	Type     TaskType
 }
 
-func (t pendingTask) Compare(that pendingTask) int {
-	return t.Type - that.Type
+func (t pendingTask) Compare(that queue.Item) int {
+	return int(t.Type - that.(pendingTask).Type)
 }
 
 // Passed about to track the current state of the build.
@@ -42,8 +42,6 @@ type BuildState struct {
 	pendingTasks *queue.PriorityQueue
 	// Stream of results from the build
 	Results chan *BuildResult
-	// Used to signal goroutines to stop once the build is done.
-	Stop chan bool
 	// Configuration options
 	Config *Configuration
 	// Hashes of variouts bits of the configuration, used for incrementality.
@@ -86,6 +84,8 @@ type BuildState struct {
 	PrintCommands bool
 	// True to clean working directories after successful builds.
 	CleanWorkdirs bool
+	// Number of running workers
+	numWorkers int
 	// Used to count the number of currently active/pending targets
 	numActive  int
 	numPending int
@@ -109,9 +109,9 @@ func (state *BuildState) AddPendingParse(label, dependor BuildLabel, forSubinclu
 	state.numPending++
 	state.mutex.Unlock()
 	if forSubinclude {
-		state.pendingTasks.Push(pendingTask{Label: label, Dependor: dependor, Type: SubincludeParse})
+		state.pendingTasks.Put(pendingTask{Label: label, Dependor: dependor, Type: SubincludeParse})
 	} else {
-		state.pendingTasks.Push(pendingTask{Label: label, Dependor: dependor, Type: Parse})
+		state.pendingTasks.Put(pendingTask{Label: label, Dependor: dependor, Type: Parse})
 	}
 }
 
@@ -135,7 +135,7 @@ func (state *BuildState) NextTask() (BuildLabel, BuildLabel, TaskType) {
 	if err != nil {
 		log.Fatalf("error receiving next task: %s", err)
 	}
-	task := t.(pendingTask)
+	task := t[0].(pendingTask)
 	return task.Label, task.Dependor, task.Type
 }
 
@@ -153,7 +153,7 @@ func (state *BuildState) TaskDone() {
 	state.numDone++
 	state.numPending--
 	if state.numPending <= 0 {
-		state.Stop <- true
+		state.Stop(state.numWorkers)
 	}
 	state.mutex.Unlock()
 }
@@ -161,7 +161,7 @@ func (state *BuildState) TaskDone() {
 // Stop adds n stop tasks to the list of pending tasks, which stops n workers.
 func (state *BuildState) Stop(n int) {
 	for i := 0; i < n; i++ {
-		state.pendingTasks.Push(pendingTask{Type: Stop})
+		state.pendingTasks.Put(pendingTask{Type: Stop})
 	}
 }
 
@@ -281,6 +281,7 @@ func NewBuildState(numThreads int, cache *Cache, verbosity int, config *Configur
 		numActive:    1, // One for the initial target adding on the main thread.
 		numPending:   1,
 		Coverage:     TestCoverage{Files: map[string][]LineCoverage{}},
+		numWorkers:   numThreads,
 	}
 	State.Hashes.Config = config.Hash()
 	State.Hashes.Containerisation = config.ContainerisationHash()
