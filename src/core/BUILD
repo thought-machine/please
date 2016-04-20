@@ -11,7 +11,7 @@ go_library(
     visibility = ['PUBLIC'],
     deps = [
         '//third_party/go:gcfg',
-	'//third_party/go:logging',
+        '//third_party/go:logging',
         '//third_party/go:queue',
     ]
 )
