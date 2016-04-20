@@ -16,13 +16,13 @@ type TaskType int
 
 // Note that the ordering of these determines priority.
 const (
-	Stop TaskType = iota
 	// These are for subinclude targets which should be processed before others.
-	SubincludeBuild
+	SubincludeBuild TaskType = iota
 	SubincludeParse
 	Build
 	Parse
 	Test
+	Stop
 )
 
 type pendingTask struct {
