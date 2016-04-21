@@ -100,6 +100,7 @@ def set_config_value(c_name, c_value):
 
 
 def include_defs(package, dct, target):
+    _log(2, package, 'include_defs is deprecated, use subinclude() instead')
     filename = ffi.string(_get_include_file(package, ffi.new('char[]', target)))
     # Dodgy in-band signalling of errors follows.
     if filename.startswith('__'):
