@@ -161,11 +161,6 @@ var opts struct {
 				Files []string `positional-arg-name:"files" description:"Files to query affected tests for"`
 			} `positional-args:"true"`
 		} `command:"affectedtargets" description:"Prints any targets affected by a set of files."`
-		AffectedTests struct {
-			Args struct {
-				Files []string `positional-arg-name:"files" description:"Files to query affected tests for"`
-			} `positional-args:"true"`
-		} `command:"affectedtests" description:"Prints any tests affected by a set of files."`
 		Input struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to display inputs for" required:"true"`
@@ -285,17 +280,6 @@ var buildFunctions = map[string]func() bool{
 		}
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
 			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests)
-		})
-	},
-	"affectedtests": func() bool {
-		// For backwards compatibility.
-		// TODO(pebers): Remove at plz 1.2.
-		files := opts.Query.AffectedTests.Args.Files
-		if len(files) == 1 && files[0] == "-" {
-			files = readStdin()
-		}
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, true)
 		})
 	},
 	"input": func() bool {

@@ -206,12 +206,12 @@ plz_e2e_test(
 # Tests for query affectedtests.
 plz_e2e_test(
     name = 'query_affectedtests_test',
-    cmd = 'plz query affectedtests -p test/affectedtests_test.go',
+    cmd = 'plz query affectedtargets --tests -p test/affectedtests_test.go',
     expected_output = 'query_affectedtests_test.txt',
 )
 plz_e2e_test(
     name = 'query_affectedtests_stdin_test',
-    cmd = 'echo test/affectedtests_test.go | plz query affectedtests -p -',
+    cmd = 'echo test/affectedtests_test.go | plz query affectedtargets --tests -p -',
     expected_output = 'query_affectedtests_test.txt',
 )
 go_test(
