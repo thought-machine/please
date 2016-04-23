@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
@@ -85,9 +86,9 @@ type BuildState struct {
 	// Number of running workers
 	numWorkers int
 	// Used to count the number of currently active/pending targets
-	numActive  int
-	numPending int
-	numDone    int
+	numActive  int64
+	numPending int64
+	numDone    int64
 	mutex      sync.Mutex
 }
 
@@ -96,16 +97,12 @@ type BuildState struct {
 var State *BuildState
 
 func (state *BuildState) AddActiveTarget() {
-	state.mutex.Lock()
-	state.numActive++
-	state.mutex.Unlock()
+	atomic.AddInt64(&state.numActive, 1)
 }
 
 func (state *BuildState) AddPendingParse(label, dependor BuildLabel, forSubinclude bool) {
-	state.mutex.Lock()
-	state.numActive++
-	state.numPending++
-	state.mutex.Unlock()
+	atomic.AddInt64(&state.numActive, 1)
+	atomic.AddInt64(&state.numPending, 1)
 	if forSubinclude {
 		state.pendingTasks.Put(pendingTask{Label: label, Dependor: dependor, Type: SubincludeParse})
 	} else {
@@ -138,22 +135,17 @@ func (state *BuildState) NextTask() (BuildLabel, BuildLabel, TaskType) {
 }
 
 func (state *BuildState) addPending(label BuildLabel, t TaskType) {
-	state.mutex.Lock()
-	state.numPending++
-	state.mutex.Unlock()
+	atomic.AddInt64(&state.numPending, 1)
 	state.pendingTasks.Put(pendingTask{Label: label, Type: t})
 }
 
 // TaskDone indicates that a single task is finished. Should be called after one is finished with
 // a task returned from NextTask().
 func (state *BuildState) TaskDone() {
-	state.mutex.Lock()
-	state.numDone++
-	state.numPending--
-	if state.numPending <= 0 {
+	atomic.AddInt64(&state.numDone, 1)
+	if atomic.AddInt64(&state.numPending, -1) <= 0 {
 		state.Stop(state.numWorkers)
 	}
-	state.mutex.Unlock()
 }
 
 // Stop adds n stop tasks to the list of pending tasks, which stops n workers.
@@ -236,15 +228,11 @@ func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildRe
 }
 
 func (state *BuildState) NumActive() int {
-	state.mutex.Lock()
-	defer state.mutex.Unlock()
-	return state.numActive
+	return int(atomic.LoadInt64(&state.numActive))
 }
 
 func (state *BuildState) NumDone() int {
-	state.mutex.Lock()
-	defer state.mutex.Unlock()
-	return state.numDone
+	return int(atomic.LoadInt64(&state.numDone))
 }
 
 // ExpandOriginalTargets expands any pseudo-targets (ie. :all, ... has already been resolved to a bunch :all targets)
