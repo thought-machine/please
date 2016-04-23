@@ -21,6 +21,7 @@ go get google.golang.org/grpc
 go get github.com/kardianos/osext
 go get github.com/Songmu/prompter
 go get github.com/texttheater/golang-levenshtein/levenshtein
+go get github.com/Workiva/go-datastructures/queue
 
 # Clean out old artifacts.
 rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parser.py

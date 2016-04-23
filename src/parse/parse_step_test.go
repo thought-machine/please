@@ -38,8 +38,8 @@ func TestAddDepMultiplePackages(t *testing.T) {
 	// This time we already have package2 parsed
 	state := makeState(true, true)
 	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false, empty, empty)
-	assertPendingParses(t, state)                       // None, we have both packages already
 	assertPendingBuilds(t, state, "//package2:target2") // This is the only candidate target
+	assertPendingParses(t, state)                       // None, we have both packages already
 	assert.Equal(t, 6, state.NumActive())
 }
 
@@ -59,8 +59,8 @@ func TestAddParseDep(t *testing.T) {
 	state := makeState(true, true)
 	state.NeedBuild = false
 	activateTarget(state, nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false, empty, empty)
-	assertPendingParses(t, state)                       // None, we have both packages already
 	assertPendingBuilds(t, state, "//package2:target2") // Queued because it's needed for parse
+	assertPendingParses(t, state)                       // None, we have both packages already
 	assert.Equal(t, 2, state.NumActive())
 }
 
@@ -68,8 +68,8 @@ func TestAddDepRescan(t *testing.T) {
 	// Simulate a post-build function and rescan.
 	state := makeState(true, true)
 	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false, empty, empty)
-	assertPendingParses(t, state)                       // None, we have both packages already
 	assertPendingBuilds(t, state, "//package2:target2") // This is the only candidate target
+	assertPendingParses(t, state)                       // None, we have both packages already
 	assert.Equal(t, 6, state.NumActive())
 
 	// Add new target & dep to target1
@@ -87,8 +87,8 @@ func TestAddDepRescan(t *testing.T) {
 
 	// Now running this should activate it
 	rescanDeps(state, state.Graph.Package("package1"))
-	assertPendingParses(t, state)
 	assertPendingBuilds(t, state, "//package1:target4")
+	assertPendingParses(t, state)
 	assert.True(t, state.Graph.AllDependenciesResolved(target1))
 }
 
@@ -104,8 +104,8 @@ func TestAddParseDepDeferred(t *testing.T) {
 
 	// Now the undefer kicks off...
 	activateTarget(state, nil, buildLabel("//package2:target2"), buildLabel("//package1:all"), false, empty, empty)
-	assertPendingParses(t, state)
 	assertPendingBuilds(t, state, "//package2:target2") // This time!
+	assertPendingParses(t, state)
 	assert.Equal(t, 2, state.NumActive())
 }
 
@@ -153,15 +153,16 @@ func addDeps(graph *core.BuildGraph, pkg *core.Package) {
 }
 
 func assertPendingParses(t *testing.T, state *core.BuildState, targets ...string) {
-	pendingParses, _, _ := state.ReceiveChannels()
+	state.Stop(1)
 	pending := []core.BuildLabel{}
-loop:
 	for {
-		select {
-		case p := <-pendingParses:
-			pending = append(pending, p.Label)
-		default:
-			break loop
+		label, _, typ := state.NextTask()
+		if typ == core.Stop {
+			break
+		} else if typ != core.Parse && typ != core.SubincludeParse {
+			t.Errorf("Unexpected non-parse task")
+		} else {
+			pending = append(pending, label)
 		}
 	}
 	expected := []core.BuildLabel{}
@@ -172,15 +173,16 @@ loop:
 }
 
 func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string) {
-	_, pendingBuilds, _ := state.ReceiveChannels()
+	state.Stop(1)
 	pending := []core.BuildLabel{}
-loop:
 	for {
-		select {
-		case p := <-pendingBuilds:
-			pending = append(pending, p)
-		default:
-			break loop
+		label, _, typ := state.NextTask()
+		if typ == core.Stop {
+			break
+		} else if typ != core.Build && typ != core.SubincludeBuild {
+			t.Errorf("Unexpected non-build task")
+		} else {
+			pending = append(pending, label)
 		}
 	}
 	expected := []core.BuildLabel{}

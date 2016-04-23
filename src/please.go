@@ -17,6 +17,7 @@ import (
 	"parse"
 	"query"
 	"run"
+	"sync"
 	"test"
 	"update"
 	"utils"
@@ -332,26 +333,19 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 }
 
 func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
-	pendingParses, pendingBuilds, pendingTests := state.ReceiveChannels()
 	for {
-		select {
-		case success := <-state.Stop:
-			state.Stop <- success // Pass on to another thread
+		label, dependor, t := state.NextTask()
+		switch t {
+		case core.Stop:
 			return
-		case pendingParse, ok := <-pendingParses:
-			if ok {
-				parse.Parse(tid, state, pendingParse.Label, pendingParse.Dependor, parsePackageOnly, include, exclude)
-			}
-		case pendingBuild, ok := <-pendingBuilds:
-			if ok {
-				build.Build(tid, state, pendingBuild)
-			}
-		case pendingTest, ok := <-pendingTests:
-			if ok {
-				test.Test(tid, state, pendingTest)
-			}
+		case core.Parse, core.SubincludeParse:
+			parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude)
+		case core.Build, core.SubincludeBuild:
+			build.Build(tid, state, label)
+		case core.Test:
+			test.Test(tid, state, label)
 		}
-		state.ProcessedOne()
+		state.TaskDone()
 	}
 }
 
@@ -401,11 +395,25 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 			log.Fatalf("Failed to remove test results file: %s", err)
 		}
 	}
-	displayDone := make(chan bool)
-	go output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, displayDone, opts.OutputFlags.TraceFile)
+	var wg sync.WaitGroup
+	wg.Add(config.Please.NumThreads)
 	for i := 0; i < config.Please.NumThreads; i++ {
-		go please(i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+		go func(tid int) {
+			please(tid, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+			wg.Done()
+		}(i)
 	}
+	go findOriginalTasks(state, targets)
+	go func() {
+		wg.Wait()
+		close(state.Results) // This will signal the output goroutine to stop.
+	}()
+	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, opts.OutputFlags.TraceFile)
+	return success, state
+}
+
+// findOriginalTasks finds the original parse tasks for the original set of targets.
+func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 	for _, target := range targets {
 		if target.IsAllSubpackages() {
 			for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
@@ -415,14 +423,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 			state.AddOriginalTarget(target)
 		}
 	}
-	state.ProcessedOne() // initial target adding counts as one.
-	state.TargetsLoaded = true
-	success := <-state.Stop
-	state.Stop <- success
-	close(state.Results) // This will signal the output goroutine to stop.
-	// TODO(pebers): shouldn't rely on the display routine to tell us whether we succeeded or not...
-	success = <-displayDone
-	return success, state
+	state.TaskDone() // initial target adding counts as one.
 }
 
 // Allows input args to come from stdin. It's a little slack to insist on reading it all

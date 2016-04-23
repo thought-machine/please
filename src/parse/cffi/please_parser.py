@@ -115,9 +115,7 @@ def subinclude(package, dct, target):
         raise DeferParse(filename)
     elif filename.startswith('__'):
         raise ParseError(filename.lstrip('_'))
-    with _open(filename) as f:
-        code = _compile(f.read(), filename, 'exec')
-    exec(code, dct)
+    _parse_build_code(filename, dct, cache=True)
 
 
 def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=None, outs=None,

@@ -115,3 +115,9 @@ go_get(
     get = 'github.com/texttheater/golang-levenshtein/levenshtein',
     revision = '14026fface0cb806188c85e792a93d625dc37d0f',
 )
+
+go_get(
+    name = 'queue',
+    get = 'github.com/Workiva/go-datastructures/queue',
+    revision = '064f3ea06ab2337e6eaf42052392d14f779e91cb',
+)
