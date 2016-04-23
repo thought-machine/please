@@ -255,7 +255,7 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	for _, hsh := range target.Hashes {
 		h.Write([]byte(hsh))
 	}
-	for source := range target.AllSources() {
+	for _, source := range target.AllSources() {
 		h.Write([]byte(source.String()))
 	}
 	for _, out := range target.DeclaredOutputs() {

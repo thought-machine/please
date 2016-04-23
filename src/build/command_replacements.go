@@ -101,7 +101,7 @@ func replaceSequence(target *core.BuildTarget, in string, runnable, multiple, pa
 		label := core.ParseBuildLabel(in, target.Label.PackageName)
 		return replaceSequenceLabel(target, label, in, runnable, multiple, pairs, dir, outPrefix, test, true)
 	}
-	for src := range target.AllSources() {
+	for _, src := range target.AllSources() {
 		if label := src.Label(); label != nil && src.String() == in {
 			return replaceSequenceLabel(target, *label, in, runnable, multiple, pairs, dir, outPrefix, test, false)
 		}

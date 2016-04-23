@@ -195,7 +195,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 	inner = func(dependency *BuildTarget) {
 		if target == dependency {
 			// This is the current build rule, so link its sources.
-			for source := range dependency.AllSources() {
+			for _, source := range dependency.AllSources() {
 				fullPaths := source.FullPaths(graph)
 				for i, sourcePath := range source.Paths(graph) {
 					tmpPath := path.Join(tmpDir, sourcePath)
@@ -319,7 +319,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 		if !doneTargets[target] {
 			// First yield all the sources of the target only ever pushing declared paths to
 			// the channel to prevent us outputting any intermediate files.
-			for source := range target.AllSources() {
+			for _, source := range target.AllSources() {
 				// If the label is nil add any input paths contained here.
 				if label := source.Label(); label == nil {
 					for _, sourcePath := range source.FullPaths(graph) {

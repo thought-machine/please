@@ -230,7 +230,7 @@ func (target *BuildTarget) TestDir() string {
 // Returns all the source paths for this target
 func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
 	ret := make([]string, 0, len(target.Sources))
-	for source := range target.AllSources() {
+	for _, source := range target.AllSources() {
 		for _, file := range source.Paths(graph) {
 			ret = append(ret, file)
 		}
@@ -553,33 +553,30 @@ func (target *BuildTarget) GetCommand() string {
 	return highestCommand
 }
 
-// AllSources returns an iterable channel of all the sources of this rule.
-func (target *BuildTarget) AllSources() <-chan BuildInput {
-	ch := make(chan BuildInput, 10)
-	go func() {
-		for _, source := range target.Sources {
-			ch <- source
+// AllSources returns all the sources of this rule.
+func (target *BuildTarget) AllSources() []BuildInput {
+	ret := make([]BuildInput, 0, len(target.Sources))
+	for _, source := range target.Sources {
+		ret = append(ret, source)
+	}
+	if target.NamedSources != nil {
+		keys := make([]string, 0, len(target.NamedSources))
+		for k := range target.NamedSources {
+			keys = append(keys, k)
 		}
-		if target.NamedSources != nil {
-			keys := make([]string, 0, len(target.NamedSources))
-			for k := range target.NamedSources {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-			for _, k := range keys {
-				for _, source := range target.NamedSources[k] {
-					ch <- source
-				}
+		sort.Strings(keys)
+		for _, k := range keys {
+			for _, source := range target.NamedSources[k] {
+				ret = append(ret, source)
 			}
 		}
-		close(ch)
-	}()
-	return ch
+	}
+	return ret
 }
 
 // HasSource returns true if this target has the given file as a source (named or not).
 func (target *BuildTarget) HasSource(source string) bool {
-	for src := range target.AllSources() {
+	for _, src := range target.AllSources() {
 		if src.String() == source { // Comparison is a bit dodgy tbh
 			return true
 		}
