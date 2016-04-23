@@ -1,12 +1,16 @@
-Version 1.7.4
+Version 1.8.0
 -------------
 
+    * Reworked internal queuing implementation which prioritises `subinclude()` targets
+      more highly. `subinclude()` itself also caches compiled code.
     * new setting in config, blacklistdirs, which excludes certain directory names from
       being walked by `plz build ...` and the like.
     * Upgraded python coverage package.
+    * Upgraded gRPC implementation.
     * Allow passing build target expressions to --exclude.
     * Fix for some relative implicit labels passed on the command line which sometimes
       incorrectly lost a slash.
+    * Terminal window titles are now updated as build progresses.
 
 
 Version 1.7.3
