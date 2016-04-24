@@ -266,13 +266,9 @@ def remote_file(name, url, hashes, out=None, binary=False, visibility=None, test
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If true the rule is only visible to test targets.
     """
-    cmd = 'curl %s -o %s' % (url, out) if out else 'curl %s -O' % url
-    # TODO(pebers): maybe plz should automatically do this on binary outputs?
-    if binary:
-        cmd += ' && chmod +x $OUT'
     build_rule(
         name=name,
-        cmd=cmd,
+        cmd='curl -fSL %s -O $OUT' % url,
         outs=[out or url[url.rfind('/') + 1:]],
         binary=binary,
         visibility=visibility,

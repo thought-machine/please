@@ -128,6 +128,7 @@ func initializeInterpreter(config *core.Configuration) {
 			loadBuiltinRules(filename)
 		}
 	}
+	loadSubincludePackage()
 	log.Debug("Interpreter ready")
 }
 
@@ -169,6 +170,15 @@ func loadAsset(path string) *C.char {
 	// well this is pretty inefficient... we end up with three copies of the data for no
 	// really good reason.
 	return C.CString(string(data))
+}
+
+func loadSubincludePackage() {
+	pkg := core.NewPackage("/remote")
+	// Set up a builtin package for remote subincludes.
+	cPackageName := C.CString(pkg.Name)
+	C.ParseCode(nil, cPackageName, sizep(pkg))
+	C.free(cPackageName)
+	core.State.Graph.AddPackage(pkg)
 }
 
 // sizet converts a build target to a C.size_t.
