@@ -17,6 +17,7 @@ typedef char* (PreBuildCallbackRunner)(void*, size_t, char*);
 typedef char* (PostBuildCallbackRunner)(void*, size_t, char*, char*);
 typedef void (SetBuildFunctionCallback)(void*, char*, size_t);
 typedef void (LogCallback)(int64, size_t, char*);
+typedef uint8 (ValidateCallback)(char*);
 
 struct PleaseCallbacks {
     ParseFileCallback* parse_file;
@@ -52,4 +53,5 @@ struct PleaseCallbacks {
     PreBuildCallbackRunner* pre_build_callback_runner;
     PostBuildCallbackRunner* post_build_callback_runner;
     LogCallback* log;
+    ValidateCallback* is_valid_target_name;
 };

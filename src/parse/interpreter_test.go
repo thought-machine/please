@@ -76,7 +76,7 @@ func TestAddTarget(t *testing.T) {
 	assert.True(t, target3.HasLabel("bin"))
 	assert.True(t, target3.HasLabel("container"))
 
-	assert.Nil(t, addTargetTest(":target1", false, false),
+	assert.Panics(t, func() { addTargetTest(":target1", false, false) },
 		"Should return nil attempting to add a target with an illegal name")
 	assert.Nil(t, addTargetTest("target1", false, false),
 		"Should return nil attempting to add a new target with the same name")

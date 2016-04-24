@@ -210,6 +210,14 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	return ret == pyDeferParse
 }
 
+// IsValidTargetName returns true if the given name is valid in a package.
+// This is provided to help error handling on the Python side.
+//export IsValidTargetName
+func IsValidTargetName(name *C.char) bool {
+	_, err := core.TryNewBuildLabel("test", C.GoString(name))
+	return err == nil
+}
+
 //export AddTarget
 func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary bool, test bool,
 	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
@@ -229,12 +237,7 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool
 	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
 	flakiness, buildTimeout, testTimeout int, buildingDescription string) *core.BuildTarget {
 	pkg := unsizep(pkgPtr)
-	label, err := core.TryNewBuildLabel(pkg.Name, name)
-	if err != nil {
-		log.Error("%s", err)
-		return nil
-	}
-	target := core.NewBuildTarget(label)
+	target := core.NewBuildTarget(core.NewBuildLabel(pkg.Name, name))
 	target.IsBinary = binary
 	target.IsTest = test
 	target.NeedsTransitiveDependencies = needsTransitiveDeps
@@ -263,7 +266,9 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool
 	target.Command = cmd
 	target.TestCommand = testCmd
 	if _, present := pkg.Targets[name]; present {
-		log.Error("Duplicate build target in %s: %s", pkg.Name, name)
+		// NB. Not logged as an error because Python is now allowed to catch it.
+		//     It will turn into an error later if the exception is not caught.
+		log.Notice("Duplicate build target in %s: %s", pkg.Name, name)
 		return nil
 	}
 	pkg.Targets[name] = target

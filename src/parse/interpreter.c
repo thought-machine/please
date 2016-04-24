@@ -61,5 +61,6 @@ int InitialiseInterpreter(char* data) {
   callbacks.add_licence_post = AddLicencePost;
   callbacks.set_command = SetCommand;
   callbacks.log = Log;
+  callbacks.is_valid_target_name = IsValidTargetName;
   return pypy_execute_source_ptr(data, &callbacks);
 }

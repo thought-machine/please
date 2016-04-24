@@ -135,6 +135,8 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         raise ValueError('Target %s has been given a test command but isn\'t a test' % name)
     if test and not test_cmd:
         raise ValueError('Target %s is a test but hasn\'t been given a test command' % name)
+    if not _is_valid_target_name(ffi.new('char[]', name)):
+        raise ValueError('"%s" is not a valid target name' % name)
     if visibility is None:
         visibility = globals_dict['CONFIG'].get('DEFAULT_VISIBILITY')
     if licences is None:
@@ -157,7 +159,9 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                          test_timeout,
                          ffi_string(building_description))
     if not target:
-        raise ParseError('Failed to add target %s' % name)
+        # Currently this is the only reason _add_target can fail, given that we validated
+        # the target name earlier. Bit hacky but will have to do for now.
+        raise DuplicateTargetError('Duplicate target %s' % name)
     if isinstance(srcs, Mapping):
         for name, src_list in srcs.iteritems():
             if src_list:
@@ -383,10 +387,15 @@ _add_output = ffi.cast('AddOutputCallback*', callbacks.add_output)
 _add_licence_post = ffi.cast('AddTwoStringsCallback*', callbacks.add_licence_post)
 _set_command = ffi.cast('AddThreeStringsCallback*', callbacks.set_command)
 _log = ffi.cast('LogCallback*', callbacks.log)
+_is_valid_target_name = ffi.cast('ValidateCallback*', callbacks.is_valid_target_name)
 
 
 class ParseError(Exception):
     """Raised on general file parsing errors."""
+
+
+class DuplicateTargetError(ParseError):
+    """Raised when a duplicate target is added."""
 
 
 class DeferParse(Exception):
@@ -406,6 +415,7 @@ _please_globals['CONFIG']['DEFAULT_VISIBILITY'] = None
 _please_globals['CONFIG']['DEFAULT_LICENCES'] = None
 _please_globals['defaultdict'] = defaultdict
 _please_globals['ParseError'] = ParseError
+_please_globals['DuplicateTargetError'] = DuplicateTargetError
 
 # We'll need these guys locally. Unfortunately exec is a statement so we
 # can't do it for that.
