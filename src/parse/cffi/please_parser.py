@@ -13,7 +13,7 @@ _please_builtins = imp.new_module('_please_builtins')
 _please_globals = _please_builtins.__dict__
 _keepalive_functions = set()
 _build_code_cache = {}
-_subinclude_package_name = None
+_subinclude_package_name = '_remote'
 _subinclude_package = None
 
 # List of everything we keep in the __builtin__ module. This is a pretty agricultural way
@@ -54,13 +54,12 @@ def parse_file(c_filename, c_package_name, c_package):
 
 @ffi.callback('ParseFileCallback*')
 def parse_code(c_code, c_filename, c_package):
+    if c_package != 0:
+        global _subinclude_package
+        _subinclude_package = c_package
+        return ffi.NULL
     try:
         filename = ffi.string(c_filename)
-        if c_package != ffi.NULL:
-            global _subinclude_package, _subinclude_package_name
-            _subinclude_package = c_package
-            _subinclude_package_name = filename
-            return ffi.NULL
         code = ffi.string(c_code)
         # Note we don't go through _parse_build_code - there's no need to perform the ast
         # walk on code that we control internally. This conceptually means that we *could*
@@ -127,12 +126,13 @@ def subinclude(package, dct, target, hash=None):
     _parse_build_code(filename, dct, cache=True)
 
 
-def _get_subinclude_target(url):
+def _get_subinclude_target(url, hash):
     """Creates a remote_file target to subinclude() a remote url and returns its name."""
+    name = os.path.basename(url).replace('.', '_')
     _get_globals(_subinclude_package, _subinclude_package_name).get('remote_file')(
-        name = os.path.basename(url).replace('.', '_'),
+        name = name,
         url = url,
-        hashes = [hash],
+        hashes = [hash] if hash else [],
         visibility = ['PUBLIC'],
     )
     return '//%s:%s' % (_subinclude_package_name, name)
