@@ -134,6 +134,11 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"deps" description:"Queries the dependencies of a target."`
+		ReverseDeps struct {
+			Args struct {
+				 Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
+			} `positional-args:"true" required:"true"`
+		} `command:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
 		SomePath struct {
 			Args struct {
 				Target1 core.BuildLabel `positional-arg-name:"target1" description:"First build target" required:"true"`
@@ -254,6 +259,11 @@ var buildFunctions = map[string]func() bool{
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
 			query.QueryDeps(state.Graph, state.ExpandOriginalTargets())
+		})
+	},
+	"reverseDeps": func() bool {
+		return runQuery(true, opts.Query.ReverseDeps.Args.Targets, func(state *core.BuildState) {
+			query.ReverseDeps(state.Graph, state.ExpandOriginalTargets())
 		})
 	},
 	"somepath": func() bool {
