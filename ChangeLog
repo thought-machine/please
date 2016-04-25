@@ -3,6 +3,8 @@ Version 1.8.0
 
     * Reworked internal queuing implementation which prioritises `subinclude()` targets
       more highly. `subinclude()` itself also caches compiled code.
+    * New feature, `plz query reverseDeps` which finds reverse dependencies of a target.
+    * `plz query graph` output has more features in it.
     * new setting in config, blacklistdirs, which excludes certain directory names from
       being walked by `plz build ...` and the like.
     * Upgraded python coverage package.
