@@ -18,18 +18,28 @@ type dirCache struct {
 
 func (cache *dirCache) Store(target *core.BuildTarget, key []byte) {
 	cacheDir := cache.getPath(target, key)
+	tmpDir := cacheDir + "=" // Temp dir which we'll move when it's ready.
 	// Clear out anything that might already be there.
 	if err := os.RemoveAll(cacheDir); err != nil {
 		log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
 		return
+	} else if err := os.MkdirAll(tmpDir, core.DirPermissions); err != nil {
+		log.Warning("Failed to create cache directory %s: %s", tmpDir, err)
+		return
 	}
 	for out := range cacheArtifacts(target) {
-		cache.StoreExtra(target, key, out)
+		cache.storeFile(target, out, tmpDir)
+	}
+	if err := os.Rename(tmpDir, cacheDir); err != nil {
+		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 	}
 }
 
 func (cache *dirCache) StoreExtra(target *core.BuildTarget, key []byte, out string) {
-	cacheDir := cache.getPath(target, key)
+	cache.storeFile(target, out, cache.getPath(target, key))
+}
+
+func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string) {
 	log.Debug("Storing %s: %s in dir cache...", target.Label, out)
 	if dir := path.Dir(out); dir != "." {
 		if err := os.MkdirAll(path.Join(cacheDir, dir), core.DirPermissions); err != nil {
