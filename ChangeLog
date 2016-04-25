@@ -1,3 +1,10 @@
+Version 1.8.1
+-------------
+
+    * Support for loading arch-specific config files, .plzconfig_linux_amd64 etc.
+      Allows tweaking config for different machine types.
+
+
 Version 1.8.0
 -------------
 
@@ -8,7 +15,8 @@ Version 1.8.0
     * new setting in config, blacklistdirs, which excludes certain directory names from
       being walked by `plz build ...` and the like.
     * Upgraded python coverage package.
-    * Upgraded gRPC implementation.
+    * Upgraded gRPC implementation. Note that this is a breaking change for the RPC cache
+      so that will need to be upgraded in sync with plz itself.
     * Allow passing build target expressions to --exclude.
     * Fix for some relative implicit labels passed on the command line which sometimes
       incorrectly lost a slash.
