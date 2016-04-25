@@ -136,7 +136,7 @@ var opts struct {
 		} `command:"deps" description:"Queries the dependencies of a target."`
 		ReverseDeps struct {
 			Args struct {
-				 Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
+				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
 		SomePath struct {
@@ -489,6 +489,7 @@ func readConfig(forceUpdate bool) *core.Configuration {
 
 	config, err := core.ReadConfigFiles([]string{
 		path.Join(core.RepoRoot, core.ConfigFileName),
+		path.Join(core.RepoRoot, core.ArchConfigFileName),
 		core.MachineConfigFileName,
 		path.Join(core.RepoRoot, core.LocalConfigFileName),
 	})
