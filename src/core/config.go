@@ -8,12 +8,16 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime"
 
 	"gopkg.in/gcfg.v1"
 )
 
 // File name for the typical repo config - this is normally checked in
 const ConfigFileName string = ".plzconfig"
+
+// Architecture-specific config file which overrides the repo one. Also normally checked in if needed.
+var ArchConfigFileName string = fmt.Sprintf(".plzconfig_%s_%s", runtime.GOOS, runtime.GOARCH)
 
 // File name for the local repo config - this is not normally checked in and used to
 // override settings on the local machine.
@@ -32,6 +36,7 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else if err != nil {
 		return err
 	}
+	log.Debug("Reading config from %s...", filename)
 	// TODO(pebers): Use gcfg's types thingy to parse this once it's finalised.
 	if config.Test.DefaultContainer != TestContainerNone && config.Test.DefaultContainer != TestContainerDocker {
 		return fmt.Errorf("Unknown container type %s", config.Test.DefaultContainer)
