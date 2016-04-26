@@ -1,3 +1,10 @@
+Version 1.8.2
+-------------
+
+    * Fix interactive display on versions of iTerm (2.1.x) that don't support the
+      ANSI CPL instruction.
+
+
 Version 1.8.1
 -------------
 

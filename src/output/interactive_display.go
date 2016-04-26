@@ -67,7 +67,7 @@ func moveToFirstLine(buildingTargets []buildingTarget, outputLines, maxInteracti
 	if maxInteractiveRows > len(buildingTargets) {
 		maxInteractiveRows = len(buildingTargets)
 	}
-	printf("\x1b[%dF", maxInteractiveRows+1+outputLines)
+	printf("\x1b[%dA", maxInteractiveRows+1+outputLines)
 }
 
 func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLines, cols int) {
