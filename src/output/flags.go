@@ -10,6 +10,8 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/jessevdk/go-flags"
+
+	"core"
 )
 
 // ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
@@ -22,7 +24,7 @@ func ParseFlags(appname string, data interface{}, args []string) (*flags.Parser,
 		if err.(*flags.Error).Type == flags.ErrHelp {
 			fmt.Printf("%s\n", err)
 			os.Exit(0)
-		} else if err.(*flags.Error).Type == flags.ErrUnknownFlag && strings.Contains(err.(*flags.Error).Message, "halp") {
+		} else if err.(*flags.Error).Type == flags.ErrUnknownFlag && strings.Contains(err.(*flags.Error).Message, "`halp'") {
 			fmt.Printf("Hmmmmm, hows can I halp you?\n")
 			parser.WriteHelp(os.Stderr)
 			os.Exit(1)
@@ -41,6 +43,10 @@ func ParseFlagsOrDie(appname string, data interface{}) *flags.Parser {
 // flags passed.
 func ParseFlagsFromArgsOrDie(appname string, data interface{}, args []string) *flags.Parser {
 	parser, extraArgs, err := ParseFlags(appname, data, args)
+	if err != nil && err.(*flags.Error).Type == flags.ErrUnknownFlag && strings.Contains(err.(*flags.Error).Message, "`version'") {
+		fmt.Printf("%s version %s\n", appname, core.PleaseVersion)
+		os.Exit(0) // Ignore other errors if --version was passed.
+	}
 	if err != nil {
 		parser.WriteHelp(os.Stderr)
 		fmt.Printf("\n%s\n", err)
