@@ -3,6 +3,9 @@ Version 1.8.2
 
     * Fix interactive display on versions of iTerm (2.1.x) that don't support the
       ANSI CPL instruction.
+    * Go version in config now only affects hashes of Go targets. This alters the
+      general hash calculation logic so unfortunately will force rebuilds of all targets -
+      this is unavoidable but will lead to better incrementality in future.
 
 
 Version 1.8.1

@@ -251,7 +251,6 @@ func (config *Configuration) Hash() []byte {
 	for _, p := range config.Build.Path {
 		h.Write([]byte(p))
 	}
-	h.Write([]byte(config.Go.GoVersion)) // Sucks a bit not to invalidate just Go rules but it's hard to detect.
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
