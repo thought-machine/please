@@ -111,5 +111,4 @@ func TestDoubleSlashes(t *testing.T) {
 func TestReservedTempDirs(t *testing.T) {
 	assertNotLabel(t, "//src/core:core#.build", "#.build is a reserved suffix")
 	assertNotLabel(t, "//src/core:core#.test", "#.test is a reserved suffix")
-
 }

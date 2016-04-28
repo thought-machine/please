@@ -203,7 +203,7 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 }
 
 // TmpDir returns the temporary working directory for this target, eg.
-// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy.build
+// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy#.build
 // Note the extra subdirectory to keep rules separate from one another, and the .build suffix
 // to attempt to keep rules from duplicating the names of sub-packages; obviously that is not
 // 100% reliable but we don't have a better solution right now.
@@ -222,7 +222,7 @@ func (target *BuildTarget) OutDir() string {
 }
 
 // Returns the test directory for this target, eg.
-// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy.test
+// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy#.test
 // This is different to TmpDir so we run tests in a clean environment
 // and to facilitate containerising tests.
 func (target *BuildTarget) TestDir() string {
