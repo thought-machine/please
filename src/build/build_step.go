@@ -365,7 +365,7 @@ func checkRuleHashes(target *core.BuildTarget, hash []byte) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Bad output hash for rule %s: was %s, expected one of [%s]",
+	return fmt.Errorf("Bad output hash for rule %s: was %s but expected one of [%s]",
 		target.Label, hashStr, strings.Join(target.Hashes, ", "))
 }
 
