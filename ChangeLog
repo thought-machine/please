@@ -6,6 +6,9 @@ Version 1.8.2
     * Go version in config now only affects hashes of Go targets. This alters the
       general hash calculation logic so unfortunately will force rebuilds of all targets -
       this is unavoidable but will lead to better incrementality in future.
+    * Suffix temp build directories with #.build (and tests with #.test instead of just .test)
+      to avoid cases where they clash with paths to sub-packages that happen to
+      begin with the same name.
 
 
 Version 1.8.1
