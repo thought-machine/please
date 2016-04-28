@@ -39,44 +39,44 @@ func TestIterSources(t *testing.T) {
 	}
 
 	assert.Equal(t, []sourcePair{
-		{"src/core/target1.go", "plz-out/tmp/src/core/target1/src/core/target1.go"},
+		{"src/core/target1.go", "plz-out/tmp/src/core/target1#.build/src/core/target1.go"},
 	}, iterSources("//src/core:target1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/core/target2.go", "plz-out/tmp/src/core/target2/src/core/target2.go"},
-		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/core/target2/src/core/target1.a"},
+		{"src/core/target2.go", "plz-out/tmp/src/core/target2#.build/src/core/target2.go"},
+		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/core/target2#.build/src/core/target1.a"},
 	}, iterSources("//src/core:target2"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/build/target1.go", "plz-out/tmp/src/build/target1/src/build/target1.go"},
-		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/build/target1/src/core/target1.a"},
+		{"src/build/target1.go", "plz-out/tmp/src/build/target1#.build/src/build/target1.go"},
+		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/build/target1#.build/src/core/target1.a"},
 	}, iterSources("//src/build:target1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/output/output1.go", "plz-out/tmp/src/output/output1/src/output/output1.go"},
-		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1/src/build/target1.a"},
+		{"src/output/output1.go", "plz-out/tmp/src/output/output1#.build/src/output/output1.go"},
+		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1#.build/src/build/target1.a"},
 	}, iterSources("//src/output:output1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/output/output1.go", "plz-out/tmp/src/output/output1/src/output/output1.go"},
-		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1/src/build/target1.a"},
+		{"src/output/output1.go", "plz-out/tmp/src/output/output1#.build/src/output/output1.go"},
+		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1#.build/src/build/target1.a"},
 	}, iterSources("//src/output:output1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/output/output2.go", "plz-out/tmp/src/output/output2/src/output/output2.go"},
-		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/output/output2/src/core/target2.a"},
-		{"plz-out/gen/src/output/output1.a", "plz-out/tmp/src/output/output2/src/output/output1.a"},
+		{"src/output/output2.go", "plz-out/tmp/src/output/output2#.build/src/output/output2.go"},
+		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/output/output2#.build/src/core/target2.a"},
+		{"plz-out/gen/src/output/output1.a", "plz-out/tmp/src/output/output2#.build/src/output/output1.a"},
 	}, iterSources("//src/output:output2"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/parse/target1.go", "plz-out/tmp/src/parse/target1/src/parse/target1.go"},
-		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/parse/target1/src/core/target2.a"},
-		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/parse/target1/src/core/target1.a"},
+		{"src/parse/target1.go", "plz-out/tmp/src/parse/target1#.build/src/parse/target1.go"},
+		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/parse/target1#.build/src/core/target2.a"},
+		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/parse/target1#.build/src/core/target1.a"},
 	}, iterSources("//src/parse:target1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/parse/target2.go", "plz-out/tmp/src/parse/target2/src/parse/target2.go"},
-		{"plz-out/gen/src/parse/target1.a", "plz-out/tmp/src/parse/target2/src/parse/target1.a"},
+		{"src/parse/target2.go", "plz-out/tmp/src/parse/target2#.build/src/parse/target2.go"},
+		{"plz-out/gen/src/parse/target1.a", "plz-out/tmp/src/parse/target2#.build/src/parse/target1.a"},
 	}, iterSources("//src/parse:target2"))
 }
 
