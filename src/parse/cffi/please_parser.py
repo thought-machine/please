@@ -13,7 +13,8 @@ _please_builtins = imp.new_module('_please_builtins')
 _please_globals = _please_builtins.__dict__
 _keepalive_functions = set()
 _build_code_cache = {}
-_subinclude_package_name = '_remote'
+_c_subinclude_package_name = None
+_subinclude_package_name = None
 _subinclude_package = None
 
 # List of everything we keep in the __builtin__ module. This is a pretty agricultural way
@@ -55,7 +56,9 @@ def parse_file(c_filename, c_package_name, c_package):
 @ffi.callback('ParseFileCallback*')
 def parse_code(c_code, c_filename, c_package):
     if c_package != 0:
-        global _subinclude_package
+        global _subinclude_package, _subinclude_package_name, _c_subinclude_package_name
+        _subinclude_package_name = ffi.string(c_filename)
+        _c_subinclude_package_name = c_filename
         _subinclude_package = c_package
         return ffi.NULL
     try:
@@ -129,12 +132,15 @@ def subinclude(package, dct, target, hash=None):
 def _get_subinclude_target(url, hash):
     """Creates a remote_file target to subinclude() a remote url and returns its name."""
     name = os.path.basename(url).replace('.', '_')
-    _get_globals(_subinclude_package, _subinclude_package_name).get('remote_file')(
-        name = name,
-        url = url,
-        hashes = [hash] if hash else [],
-        visibility = ['PUBLIC'],
-    )
+    try:
+        _get_globals(_subinclude_package, _c_subinclude_package_name).get('remote_file')(
+            name = name,
+            url = url,
+            hashes = [hash] if hash else [],
+            visibility = ['PUBLIC'],
+        )
+    except DuplicateTargetError:
+        pass  # Bit dodgy but assume it's already added.
     return '//%s:%s' % (_subinclude_package_name, name)
 
 

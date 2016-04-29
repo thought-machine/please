@@ -268,7 +268,7 @@ def remote_file(name, url, hashes, out=None, binary=False, visibility=None, test
     """
     build_rule(
         name=name,
-        cmd='curl -fSL %s -O $OUT' % url,
+        cmd='curl -fSL %s -o $OUT' % url,
         outs=[out or url[url.rfind('/') + 1:]],
         binary=binary,
         visibility=visibility,
