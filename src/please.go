@@ -9,6 +9,10 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/jessevdk/go-flags"
+	"github.com/kardianos/osext"
+	"gopkg.in/op/go-logging.v1"
+
 	"build"
 	"cache"
 	"clean"
@@ -21,16 +25,9 @@ import (
 	"test"
 	"update"
 	"utils"
-
-	"github.com/jessevdk/go-flags"
-	"github.com/kardianos/osext"
-	"gopkg.in/op/go-logging.v1"
 )
 
 var log = logging.MustGetLogger("plz")
-
-const testResultsFile = "plz-out/log/test_results.xml"
-const coverageResultsFile = "plz-out/log/coverage.json"
 
 var config *core.Configuration
 
@@ -82,8 +79,9 @@ var opts struct {
 	} `command:"hash" description:"Calculates hash for one or more targets"`
 
 	Test struct {
-		FailingTestsOk bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
-		NumRuns        int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
+		FailingTestsOk  bool   `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NumRuns         int    `long:"num_runs" short:"n" description:"Number of times to run each test target."`
+		TestResultsFile string `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -92,13 +90,15 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
-		FailingTestsOk     bool     `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
-		NoCoverageReport   bool     `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
-		LineCoverageReport bool     `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
-		NumRuns            int      `short:"n" long:"num_runs" description:"Number of times to run each test target."`
-		IncludeAllFiles    bool     `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
-		IncludeFile        []string `long:"include_file" description:"Filenames to filter coverage display to"`
-		Args               struct {
+		FailingTestsOk      bool     `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NoCoverageReport    bool     `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
+		LineCoverageReport  bool     `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
+		NumRuns             int      `short:"n" long:"num_runs" description:"Number of times to run each test target."`
+		IncludeAllFiles     bool     `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
+		IncludeFile         []string `long:"include_file" description:"Filenames to filter coverage display to"`
+		TestResultsFile     string   `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		CoverageResultsFile string   `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
+		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
 		} `positional-args:"true"`
@@ -197,10 +197,10 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"test": func() bool {
-		os.RemoveAll(testResultsFile)
+		os.RemoveAll(opts.Test.TestResultsFile)
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args)
 		success, state := runBuild(targets, true, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, testResultsFile)
+		test.WriteResultsToFileOrDie(state.Graph, opts.Test.TestResultsFile)
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
@@ -209,14 +209,14 @@ var buildFunctions = map[string]func() bool{
 		} else {
 			opts.BuildFlags.Config = "cover"
 		}
-		os.RemoveAll(testResultsFile)
-		os.RemoveAll(coverageResultsFile)
+		os.RemoveAll(opts.Cover.TestResultsFile)
+		os.RemoveAll(opts.Cover.CoverageResultsFile)
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
 		success, state := runBuild(targets, true, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, testResultsFile)
+		test.WriteResultsToFileOrDie(state.Graph, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
-		test.WriteCoverageToFileOrDie(state.Coverage, coverageResultsFile)
+		test.WriteCoverageToFileOrDie(state.Coverage, opts.Cover.CoverageResultsFile)
 		if opts.Cover.LineCoverageReport {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile)
 		} else if !opts.Cover.NoCoverageReport {
@@ -399,11 +399,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
-	}
-	if (shouldBuild || shouldTest) && core.PathExists(testResultsFile) {
-		if err := os.Remove(testResultsFile); err != nil {
-			log.Fatalf("Failed to remove test results file: %s", err)
-		}
 	}
 	var wg sync.WaitGroup
 	wg.Add(config.Please.NumThreads)
