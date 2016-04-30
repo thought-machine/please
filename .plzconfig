@@ -49,7 +49,6 @@ protocgoplugin = //third_party/go:protoc-gen-go
 allowlocalfallback = false
 
 [cache]
-dir = .plz-cache
 ; Too hard to make this guy work during initial bootstrap.
 dircachecleaner = none
 

@@ -72,7 +72,8 @@
 
     <p>Some of the advanced features are based on things we would have liked to do with Blaze, for example
       being able to defer creation of some build rules until they actually need to be built. This is
-      only really of interest for spectacularly large trees of targets though.</p>
+      only really of interest for spectacularly large trees of targets or especially esoteric use
+      cases though.</p>
 
     <p>Mostly, of course, it was inspired by our fearless leader Paul, specifically the point when
       he told us "you absolutely cannot write your own build system". After that it was
@@ -92,7 +93,8 @@
 
     <p>There are no separate steps inside Please; parsing BUILD files, building targets and running
       tests can all happen simultaneously, so there's no down time waiting for the last thing to
-      compile before the tests begin.</p>
+      compile before the tests begin. The parsing process is also very fast due to having an
+      in-process PyPy interpreter.</p>
 
     <p>Finally, the rules themselves are optimised in various ways; for example, the construction of
       the final .jar from a <code>java_binary</code> is an efficient concatenation of other .jar
@@ -104,16 +106,22 @@
     <h3>How do you parse the BUILD files? What format are they?</h3>
 
     <p>The BUILD files are a (slightly) restricted dialect of Python. Please uses
-      <a href="http://pypy.org">PyPy</a> to parse them (more for the straightforward API than its
-      performance benefit) which is done in-process, allowing a tight integration and a rich
-      API with things like callbacks.</p>
+      <a href="http://pypy.org">PyPy</a> to parse them which is done in-process,
+      allowing a tight integration and a rich API with things like callbacks.<br/>
+      Possibly surprisingly we're using PyPy more for its straightforward embedding API than
+      any performance benefit over CPython, and swapping the implementation would be far
+      too much work to perform benchmarks between the two.</p>
 
     <p>The restrictions on the format are essentially that <code>import</code> and <code>print</code>
-      are banned, and a number of the normal builtins are not available.</p>
+      are banned, and a number of the normal builtins are not available.<br/>
+      A small handful of <code>os</code> members are available directly as globals
+      (named <code>join_path</code>, <code>split_path</code>, <code>splitext</code>,
+      <code>basename</code> and <code>dirname</code>) since they're extremely relevant to
+      the kinds of things rules typically do.</p>
 
     <p>One down side to this is that the BUILD files are a little hard to automatically edit or
-      update. We think this is worth the tradeoff for giving the developer more power and
-      (in our opinion) a significantly nicer format than data formats like XML.</p>
+      update compared to a data format like XML, Yaml or JSON. We think this is worth the tradeoff
+      for giving the developer more power and (in our opinion) a significantly nicer format.</p>
 
 
     <h3>How does Please build itself? Do I need Please to build Please?</h3>
@@ -128,12 +136,12 @@
 
     <h3>Why write it in Go?</h3>
 
-    <p>We eliminated most other languages through a process of elimination; JVM languages were
-      ruled out because the startup overhead is too high, we were concerned about Python's
-      threading performance for an inherently parallel system and felt C++ was too fiddly and
-      lacked a strong standard library. Rust was still pre-1.0 at the time (although that didn't
-      take long, as it turned out) so we felt it was a bit early to leap into that although
-      it was interesting.</p>
+    <p>We excluded most other languages that any of us were familiar with through a process
+      of elimination; JVM languages were ruled out from a concern about startup overhead,
+      we were concerned about Python's threading performance for an inherently parallel system
+      and felt C++ was too fiddly and lacked a strong standard library. Rust was still pre-1.0
+      at the time (although that didn't take long, as it turned out) so we felt it was a bit
+      early to leap into that.</p>
 
     <p>It also turned out to be a really useful way of learning the language; the project is
       about the right size to explore it properly and sufficiently self-contained not to
@@ -141,7 +149,7 @@
 
     <p>We're very happy with the results; the performance of native binaries is excellent,
       the language was easy to become productive with and has great support for all the things
-      we needed to do with it. Our early concerns (eg. the classic "no generics!")
+      we needed to do with it. Our early concerns (e.g. the classic "no generics!")
       turned out to be a lot less problematic than we expected.</p>
 
     <p>An alternative explanation is that the original high-level design meeting for Please was
@@ -159,6 +167,28 @@
       for various reasons.</p>
 
 
+    <h3>How does the versioning scheme work? What are the compatibility guarantees?</h3>
+
+    <p>At the moment we're not quite doing <a href="http://semver.org">semver</a> because
+      we're one level down (essentially all versions have a preceding "1." on the front from
+      how they'd have us work). We might change to that soon to make it a bit easier to know
+      what to expect.</p>
+
+    <p>In a somewhat similar way to the Go project, we consider some things to have stronger
+      compatibility guarantees than others. Specifically the command-line interface and flags,
+      the config file format and the BUILD file format and builtins are essentially the API
+      of the project and so we take significantly more care about compatibility around those.<br/>
+      The interface to the various sub-tools invoked by Please we consider an implementation
+      detail and those might change more aggressively (although in practice they rarely do).</p>
+
+    <p>Things whose behaviour is not explicitly specified might change with less notice,
+      because of course you shouldn't have been relying on it anyway. This includes the exact
+      hash generation method - if it becomes necessary to change that for a bugfix it may force
+      apparently unnecessary rebuilds after an update. We try to avoid that as much as possible
+      since it's aggravating (for us too!) but since it doesn't affect eventual correctness
+      it can change in minor releases.</p>
+
+
     <h3>What do the colours in the console output mean?</h3>
 
     <p>They change based on the type of rule that's being built:</p>
@@ -174,6 +204,9 @@
     </ul>
 
     <p>Libraries are normal weight, binaries (including tests) are bold.</p>
+
+    <p>There is absolutely no significance to the choice of colours beyond arbitrary choice
+      when that code was originally written.</p>
 
 
     <h3>Why's it called Please?</h3>
