@@ -16,7 +16,7 @@
     <p>This will download and install the latest version of Please on your system.</p>
     <p>You'll also need PyPy installed, including the .so which is not present in many packaged versions of it.<br/>
       We have a .deb compatible with Ubuntu 14.04 which you can fetch from
-      <a href="https://s3-eu-west-1.amazonaws.com/please-build/pypy_4.0.0_amd64.deb">https://s3-eu-west-1.amazonaws.com/please-build/pypy_4.0.0_amd64.deb</a>.
+      <a href="https://s3-eu-west-1.amazonaws.com/please-build/tm-pypy_5.1.0_amd64.deb">https://s3-eu-west-1.amazonaws.com/please-build/tm-pypy_5.1.0_amd64.deb</a>.
       <code>brew install pypy</code> should work on OSX though.
     </p>
 
@@ -33,8 +33,10 @@
     <h2>Getting started</h2>
     <p>Run <code>plz init</code> at the root of your repo to create the .plzconfig file.
       There are many options that can be configured in this file but you can worry about them
-      later - the defaults should be fine to begin with.</br>
-      You're ready to go now - carry on to <a href="basics.html">Please Basics</a>.
+      later - the defaults should be fine to begin with.</p>
+
+    <p>You will need to write some BUILD files to define how to compile your code.
+      Carry on to <a href="basics.html">Please Basics</a> which will explain more about it.
     </p>
   </body>
 </html>
