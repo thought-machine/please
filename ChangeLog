@@ -1,3 +1,12 @@
+Version 1.8.3
+-------------
+
+    * More convenient output on incorrect hashes.
+    * C++ tests now honour being given a specific test to run and output to stdout as well.
+      (The current implementation of this requires C++11, we could write it in a more
+       tedious way if it's a problem).
+
+
 Version 1.8.2
 -------------
 
