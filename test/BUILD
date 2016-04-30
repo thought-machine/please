@@ -273,19 +273,19 @@ plz_e2e_test(
 )
 
 # Test the extra output functionality.
-python_test(
+go_test(
     name = '_extra_test_output_test',
-    srcs = ['extra_test_output_test.py'],
+    srcs = ['extra_test_output_test.go'],
     test_outputs = ['truth.txt'],
     labels = ['manual'],
     container = True,
-    interpreter = '/usr/bin/python3',  # Docker image doesn't have /usr/bin/python
+    deps = ['//third_party/go:testify'],
 )
 plz_e2e_test(
     name = 'extra_test_output_test',
     cmd = 'plz test //test:_extra_test_output_test',
     expect_file_exists = '../../../bin/test/truth.txt',
-    labels = ['container', 'py3'],
+    labels = ['container'],
 )
 
 # Test 'query alltargets'
