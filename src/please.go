@@ -363,8 +363,7 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 // Determines from input flags whether we should show 'pretty' output (ie. interactive).
 func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool {
 	if interactiveOutput && plainOutput {
-		fmt.Printf("Can't pass both --interactive_output and --plain_output\n")
-		os.Exit(1)
+		log.Fatal("Can't pass both --interactive_output and --plain_output")
 	}
 	return interactiveOutput || (!plainOutput && output.StdErrIsATerminal && verbosity < 4)
 }
@@ -401,6 +400,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
 	}
+	// Start looking for the initial targets to kick the build off
+	go findOriginalTasks(state, targets)
+	// Start up all the build workers
 	var wg sync.WaitGroup
 	wg.Add(config.Please.NumThreads)
 	for i := 0; i < config.Please.NumThreads; i++ {
@@ -409,11 +411,12 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 			wg.Done()
 		}(i)
 	}
-	go findOriginalTasks(state, targets)
+	// Wait until they've all exited, which they'll do once they have no tasks left.
 	go func() {
 		wg.Wait()
-		close(state.Results) // This will signal the output goroutine to stop.
+		close(state.Results) // This will signal MonitorState (below) to stop.
 	}()
+	// Draw stuff to the screen while there are still results coming through.
 	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, opts.OutputFlags.TraceFile)
 	return success, state
 }
