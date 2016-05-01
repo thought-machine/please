@@ -13,8 +13,8 @@ import (
 // OutDir is the output directory for everything.
 const OutDir string = "plz-out"
 const TmpDir string = "plz-out/tmp"
-const genDir string = "plz-out/gen"
-const binDir string = "plz-out/bin"
+const GenDir string = "plz-out/gen"
+const BinDir string = "plz-out/bin"
 
 // Representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
@@ -215,9 +215,9 @@ func (target *BuildTarget) TmpDir() string {
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
 	if target.IsBinary {
-		return path.Join(binDir, target.Label.PackageName)
+		return path.Join(BinDir, target.Label.PackageName)
 	} else {
-		return path.Join(genDir, target.Label.PackageName)
+		return path.Join(GenDir, target.Label.PackageName)
 	}
 }
 
