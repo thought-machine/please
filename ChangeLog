@@ -1,10 +1,19 @@
-Version 1.8.3
+Version 2.0.0
 -------------
 
+    * We are going to try doing semver from here on, so this release increments the major
+      version due to several very slightly breaking changes.
     * More convenient output on incorrect hashes.
     * C++ tests now honour being given a specific test to run and output to stdout as well.
       (The current implementation of this requires C++11, we could write it in a more
        tedious way if it's a problem).
+    * Reading stdin for build labels is now done asynchronously, so Please will build initial
+      targets from a relatively slow supplying process immediately rather than waiting for them all.
+      `plz query affectedtargets` and `plz query completions` still retain the old behaviour
+      for technical reasons (aka. laziness).
+      It is also slightly more robust about the input it accepts (esp. around spaces).
+    * `plz query alltargets` now does not display hidden targets (those starting with an
+      underscore) by default. It has a new `--hidden` flag which will show them as well.
 
 
 Version 1.8.2
