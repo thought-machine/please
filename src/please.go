@@ -1,8 +1,8 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -28,6 +28,8 @@ import (
 )
 
 var log = logging.MustGetLogger("plz")
+
+var seenStdin = false // Used to track that we don't try to read stdin twice
 
 var config *core.Configuration
 
@@ -288,7 +290,7 @@ var buildFunctions = map[string]func() bool{
 	"affectedtargets": func() bool {
 		files := opts.Query.AffectedTargets.Args.Files
 		if len(files) == 1 && files[0] == "-" {
-			files = readStdin()
+			files = readAllStdin()
 		}
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
 			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests)
@@ -309,8 +311,9 @@ var buildFunctions = map[string]func() bool{
 		opts.ParsePackageOnly = true
 		fragments := opts.Query.Completions.Args.Fragments
 		if len(fragments) == 1 && fragments[0] == "-" {
-			fragments = readStdin()
-		} else if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
+			fragments = readAllStdin()
+		}
+		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
 		}
 		labels := query.QueryCompletionLabels(config, fragments, core.RepoRoot)
@@ -423,41 +426,65 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
 func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
+	count := 0
 	for _, target := range targets {
-		if target.IsAllSubpackages() {
-			for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
-				state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"))
+		if target == core.BuildLabelStdin {
+			for label := range readStdin() {
+				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0])
+				count++
 			}
 		} else {
-			state.AddOriginalTarget(target)
+			findOriginalTask(state, target)
+			count++
 		}
+	}
+	if count == 0 {
+		log.Warning("No targets supplied; nothing to do.")
+		os.Exit(0) // For various bad reasons things won't exit cleanly with no targets.
 	}
 	state.TaskDone() // initial target adding counts as one.
 }
 
-// Allows input args to come from stdin. It's a little slack to insist on reading it all
-// up front but it's too hard to pass around a potential stream of arguments, and none of
-// our current use cases really make any difference anyway.
-func handleStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
-	if len(labels) == 1 && labels[0] == core.BuildLabelStdin {
-		return core.ParseBuildLabels(readStdin())
+func findOriginalTask(state *core.BuildState, target core.BuildLabel) {
+	if target.IsAllSubpackages() {
+		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
+			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"))
+		}
+	} else {
+		state.AddOriginalTarget(target)
 	}
-	return labels
 }
 
-func readStdin() []string {
-	stdin, err := ioutil.ReadAll(os.Stdin)
-	if err != nil {
-		log.Fatalf("%s\n", err)
+// readStdin reads a sequence of space-delimited words from standard input.
+// Words are pushed onto the returned channel asynchronously.
+func readStdin() <-chan string {
+	c := make(chan string)
+	if seenStdin {
+		log.Fatalf("Repeated - on command line; can't reread stdin.")
 	}
-	trimmed := strings.TrimSpace(string(stdin))
-	if trimmed == "" {
-		log.Warning("No targets supplied; nothing to do.")
-		os.Exit(0)
-	}
-	ret := strings.Split(trimmed, "\n")
-	for i, s := range ret {
-		ret[i] = strings.TrimSpace(s)
+	seenStdin = true
+	go func() {
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Split(bufio.ScanWords)
+		for scanner.Scan() {
+			s := strings.TrimSpace(scanner.Text())
+			if s != "" {
+				c <- s
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			log.Fatalf("Error reading stdin: %s", err)
+		}
+		close(c)
+	}()
+	return c
+}
+
+// readAllStdin reads standard input in its entirety to a slice.
+func readAllStdin() []string {
+	var ret []string
+	for s := range readStdin() {
+		ret = append(ret, s)
 	}
 	return ret
 }
@@ -509,7 +536,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, defaultToAllTa
 		targets = core.WholeGraph
 	}
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
-	return Please(handleStdinLabels(targets), config, pretty, shouldBuild, shouldTest)
+	return Please(targets, config, pretty, shouldBuild, shouldTest)
 }
 
 // activeCommand returns the name of the currently active command.
