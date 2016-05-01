@@ -4,21 +4,16 @@ for src in glob(['*.html'], excludes=['header.html']):
     genrule(
         name = name,
 	srcs = {
-            'SRC': [src],
-            'HEADER': ['header.html'],
+            'src': [src],
+            'header': ['header.html'],
+            'templater': ['template.py'],
         },
-        tools = [':templater'],
         outs = [src],
-        cmd = 'cat $SRCS_SRC | $TOOL $SRCS_HEADER > $OUT',
+        cmd = 'cat $SRCS_SRC | python $SRCS_TEMPLATER $SRCS_HEADER > $OUT',
     )
     deps.append(':' + name)
 
 filegroup(
     name = 'docs',
     srcs = deps + ['skeleton.css'],
-)
-
-python_binary(
-    name = 'templater',
-    main = 'template.py',
 )
