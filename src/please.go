@@ -146,7 +146,8 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"somepath" description:"Queries for a path between two targets"`
 		AllTargets struct {
-			Args struct {
+			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query"`
 			} `positional-args:"true"`
 		} `command:"alltargets" description:"Lists all targets in the graph"`
@@ -276,7 +277,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"alltargets": func() bool {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
-			query.QueryAllTargets(state.Graph, state.ExpandOriginalTargets(), opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+			query.QueryAllTargets(state.Graph, state.ExpandOriginalTargets(), opts.Query.AllTargets.Hidden)
 		})
 	},
 	"print": func() bool {
