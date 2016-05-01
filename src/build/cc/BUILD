@@ -81,21 +81,3 @@ gentest(
     labels = ['cc'],
     no_test_output = True,
 )
-
-# These rules implicitly test the way transitive build labels and pre-build functions
-# work; these are needed for cc linker rules to apply transitively.
-cc_library(
-    name = 'cc_fst_lib',
-    srcs = ['fst_lib.cc'],
-    hdrs = ['fst_lib.h'],
-    linker_flags = ['-lfst -ldl'],
-)
-
-cc_test(
-    name = 'cc_fst_test',
-    srcs = ['fst_test.cc'],
-    deps = [
-        ':cc_fst_lib',
-    ],
-    labels = ['fst'],
-)
