@@ -7,12 +7,18 @@ for src in glob(['*.html'], excludes=['header.html']):
             'SRC': [src],
             'HEADER': ['header.html'],
         },
+        tools = [':templater'],
         outs = [src],
-        cmd = 'CONTENT=$(sed \'s:/:\\/:g\' $SRCS_HEADER) && sed -ie "s/<!-- HEADER -->/$CONTENT/g" $SRCS_SRC',
+        cmd = 'cat $SRCS_SRC | $TOOL $SRCS_HEADER > $OUT',
     )
     deps.append(':' + name)
 
 filegroup(
     name = 'docs',
-    srcs = deps,
+    srcs = deps + ['skeleton.css'],
+)
+
+python_binary(
+    name = 'templater',
+    main = 'template.py',
 )
