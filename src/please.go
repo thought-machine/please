@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path"
@@ -28,8 +27,6 @@ import (
 )
 
 var log = logging.MustGetLogger("plz")
-
-var seenStdin = false // Used to track that we don't try to read stdin twice
 
 var config *core.Configuration
 
@@ -290,7 +287,7 @@ var buildFunctions = map[string]func() bool{
 	"affectedtargets": func() bool {
 		files := opts.Query.AffectedTargets.Args.Files
 		if len(files) == 1 && files[0] == "-" {
-			files = readAllStdin()
+			files = utils.ReadAllStdin()
 		}
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
 			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests)
@@ -311,7 +308,7 @@ var buildFunctions = map[string]func() bool{
 		opts.ParsePackageOnly = true
 		fragments := opts.Query.Completions.Args.Fragments
 		if len(fragments) == 1 && fragments[0] == "-" {
-			fragments = readAllStdin()
+			fragments = utils.ReadAllStdin()
 		}
 		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
@@ -429,7 +426,7 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 	count := 0
 	for _, target := range targets {
 		if target == core.BuildLabelStdin {
-			for label := range readStdin() {
+			for label := range utils.ReadStdin() {
 				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0])
 				count++
 			}
@@ -453,40 +450,6 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel) {
 	} else {
 		state.AddOriginalTarget(target)
 	}
-}
-
-// readStdin reads a sequence of space-delimited words from standard input.
-// Words are pushed onto the returned channel asynchronously.
-func readStdin() <-chan string {
-	c := make(chan string)
-	if seenStdin {
-		log.Fatalf("Repeated - on command line; can't reread stdin.")
-	}
-	seenStdin = true
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		scanner.Split(bufio.ScanWords)
-		for scanner.Scan() {
-			s := strings.TrimSpace(scanner.Text())
-			if s != "" {
-				c <- s
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			log.Fatalf("Error reading stdin: %s", err)
-		}
-		close(c)
-	}()
-	return c
-}
-
-// readAllStdin reads standard input in its entirety to a slice.
-func readAllStdin() []string {
-	var ret []string
-	for s := range readStdin() {
-		ret = append(ret, s)
-	}
-	return ret
 }
 
 // testTargets handles test targets which can be given in two formats; a list of targets or a single
