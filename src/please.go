@@ -286,10 +286,10 @@ var buildFunctions = map[string]func() bool{
 	},
 	"affectedtargets": func() bool {
 		files := opts.Query.AffectedTargets.Args.Files
-		if len(files) == 1 && files[0] == "-" {
-			files = utils.ReadAllStdin()
-		}
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+			if len(files) == 1 && files[0] == "-" {
+				files = utils.ReadAllStdin()
+			}
 			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests)
 		})
 	},
