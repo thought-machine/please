@@ -437,7 +437,6 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 	}
 	if count == 0 {
 		log.Warning("No targets supplied; nothing to do.")
-		os.Exit(0) // For various bad reasons things won't exit cleanly with no targets.
 	}
 	state.TaskDone() // initial target adding counts as one.
 }
