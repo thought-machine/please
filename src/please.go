@@ -423,20 +423,14 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
 func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
-	count := 0
 	for _, target := range targets {
 		if target == core.BuildLabelStdin {
 			for label := range utils.ReadStdin() {
 				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0])
-				count++
 			}
 		} else {
 			findOriginalTask(state, target)
-			count++
 		}
-	}
-	if count == 0 {
-		log.Warning("No targets supplied; nothing to do.")
 	}
 	state.TaskDone() // initial target adding counts as one.
 }
