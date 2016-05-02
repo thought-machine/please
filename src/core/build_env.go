@@ -72,6 +72,9 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		if state.NeedCoverage {
 			env = append(env, "COVERAGE=true")
 		}
+		if len(target.Outputs()) > 0 {
+			env = append(env, "TEST="+path.Join(RepoRoot, target.TestDir(), target.Outputs()[0]))
+		}
 	}
 	return env
 }

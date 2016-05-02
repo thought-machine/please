@@ -133,8 +133,6 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         raise ValueError('Only tests can have container=True')
     if test_cmd and not test:
         raise ValueError('Target %s has been given a test command but isn\'t a test' % name)
-    if test and not test_cmd:
-        raise ValueError('Target %s is a test but hasn\'t been given a test command' % name)
     if not _is_valid_target_name(ffi.new('char[]', name)):
         raise ValueError('"%s" is not a valid target name' % name)
     if visibility is None:

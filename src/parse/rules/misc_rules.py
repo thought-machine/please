@@ -252,15 +252,13 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
     )
 
 
-def remote_file(name, url, hashes, out=None, binary=False, visibility=None, test_only=False):
+def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None, test_only=False):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
       name (str): Name of the rule
       url (str): URL to fetch
-      hashes (list): List of hashes; the output must match at least one of these. This is required
-                     because the remote file must not change, otherwise it'd introduce fundamental
-                     indeterminacy into the build.
+      hashes (list): List of hashes; the output must match at least one of these.
       out (str): Output name of the file. Chosen automatically if not given.
       binary (bool): True to mark the output as binary and runnable.
       visibility (list): Visibility declaration of the rule.
@@ -278,6 +276,29 @@ def remote_file(name, url, hashes, out=None, binary=False, visibility=None, test
         visibility=visibility,
         hashes=hashes,
         building_description='Fetching...',
+    )
+
+
+def github_file(name, repo, file, revision='master', hash=None, visibility=None, test_only=False):
+    """Defines a rule to fetch a file from Github.
+
+    This is just a convenience wrapper around remote_file but is somewhat clearer to write.
+
+    Args:
+      name: Name of the rule.
+      repo: Repository to fetch from (e.g. thought-machine/please).
+      file: File in the repo to fetch (e.g. src/parse/rules/misc_rules.py).
+      revision: Git revision to fetch from. Defaults to most recent on master.
+      hash: Hash of downloaded file.
+      visibility (list): Visibility declaration of the rule.
+      test_only (bool): If true the rule is only visible to test targets.
+    """
+    remote_file(
+        name = name,
+        url = 'https://raw.githubusercontent.com/%s/%s/%s' % (repo, revision, file),
+        hashes = [hash] if hash else None,
+        visibility = visibility,
+        test_only = test_only,
     )
 
 
