@@ -1,9 +1,9 @@
+[python]
 ; We obviously can't rely on anyone having our pex tool already available,
 ; so in this repo we have to build one without it which we can use to
 ; compile other python_binary rules within the Please repo itself.
 ;
 ; Other projects using Please wouldn't normally need to do anything like this.
-[python]
 pextool = //src/build/python:bootstrap_pexer
 defaultpiprepo = https://s3-eu-west-1.amazonaws.com/py-wheels/index.html
 moduledir = third_party.python
@@ -49,7 +49,6 @@ protocgoplugin = //third_party/go:protoc-gen-go
 allowlocalfallback = false
 
 [cache]
-dir = .plz-cache
 ; Too hard to make this guy work during initial bootstrap.
 dircachecleaner = none
 

@@ -161,10 +161,13 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         # the target name earlier. Bit hacky but will have to do for now.
         raise DuplicateTargetError('Duplicate target %s' % name)
     if isinstance(srcs, Mapping):
-        for name, src_list in srcs.iteritems():
-            if src_list:
+        for src_name, src_list in srcs.iteritems():
+            if isinstance(src_list, str):
+                raise ValueError('Value in named_srcs for target %s is a string, you probably '
+                                 'meant to use a list of strings instead' % name)
+            elif src_list:
                 for src in src_list:
-                    _check_c_error(_add_named_src(target, name, src))
+                    _check_c_error(_add_named_src(target, src_name, src))
     elif srcs:
         for src in srcs:
             if src.startswith('/') and not src.startswith('//'):

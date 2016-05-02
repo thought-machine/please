@@ -100,6 +100,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.DefaultConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Cache.HttpTimeout = 5       // Five seconds
 	config.Cache.RpcTimeout = 5        // Five seconds
+	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
 	config.Test.Timeout = 600

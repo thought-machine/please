@@ -391,16 +391,16 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
     """Defines a rule to create a tarball containing outputs of other rules.
 
     Args:
-      name: Rule name
-      srcs: Source files to include in the tarball
-      out: Name of output tarball (defaults to `name`.tar.gz, but see below re compression)
-      subdir: Subdirectory to create in (defaults to 'name')
-      compression: Kind of compression to use. Either one of {gzip, bzip2, xz, lzma}
-                   to filter through known tar methods, an explicit flag, or None for
-                   no compression.
-      deps: Dependencies
-      visibility: Visibility specification.
-      labels: Labels associated with this rule.
+      name (str): Rule name
+      srcs (list): Source files to include in the tarball
+      out (str): Name of output tarball (defaults to `name`.tar.gz, but see below re compression)
+      subdir (str): Subdirectory to create in (defaults to 'name')
+      compression (str): Kind of compression to use. Either one of {gzip, bzip2, xz, lzma}
+                         to filter through known tar methods, an explicit flag, or None for
+                         no compression.
+      deps (list): Dependencies
+      visibility (list): Visibility specification.
+      labels (list): Labels associated with this rule.
     """
     subdir = subdir or name
     locations = ' '.join('$(location_pairs %s)' % src for src in srcs)
