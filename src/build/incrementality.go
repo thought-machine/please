@@ -296,6 +296,12 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 
 	hashBool(h, target.NeedsTransitiveDependencies)
 	hashBool(h, target.OutputIsComplete)
+	// Should really not be conditional here, but we don't want adding the new flag to
+	// change the hash of every single other target everywhere.
+	// Might consider removing this the next time we peturb the hashing strategy.
+	if target.Stamp {
+		hashBool(h, target.Stamp)
+	}
 	for _, require := range target.Requires {
 		h.Write([]byte(require))
 	}

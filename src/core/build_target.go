@@ -64,6 +64,9 @@ type BuildTarget struct {
 	// for _binary rules which normally are, and genrules where you don't care about
 	// the inputs, only whatever they were turned into.
 	OutputIsComplete bool
+	// If true, the rule is given an env var at build time that contains the hash of its
+	// transitive dependencies, which can be used to identify the output in a predictable way.
+	Stamp bool
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings
 	// Results of test, if it is one

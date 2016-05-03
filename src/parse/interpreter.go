@@ -219,8 +219,8 @@ func IsValidTargetName(name *C.char) bool {
 }
 
 //export AddTarget
-func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary bool, test bool,
-	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
+func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary, test, needsTransitiveDeps,
+	outputIsComplete, containerise, noTestOutput, skipCache, testOnly, stamp bool,
 	flakiness, buildTimeout, testTimeout int, cBuildingDescription *C.char) (ret C.size_t) {
 	buildingDescription := ""
 	if cBuildingDescription != nil {
@@ -228,13 +228,13 @@ func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary bool, test 
 	}
 	return sizet(addTarget(pkgPtr, C.GoString(cName), C.GoString(cCmd), C.GoString(cTestCmd),
 		binary, test, needsTransitiveDeps, outputIsComplete, containerise, noTestOutput,
-		skipCache, testOnly, flakiness, buildTimeout, testTimeout, buildingDescription))
+		skipCache, testOnly, stamp, flakiness, buildTimeout, testTimeout, buildingDescription))
 }
 
 // addTarget adds a new build target to the graph.
 // Separated from AddTarget to make it possible to test (since you can't mix cgo and go test).
-func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool,
-	needsTransitiveDeps, outputIsComplete, containerise, noTestOutput, skipCache, testOnly bool,
+func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTransitiveDeps,
+	outputIsComplete, containerise, noTestOutput, skipCache, testOnly, stamp bool,
 	flakiness, buildTimeout, testTimeout int, buildingDescription string) *core.BuildTarget {
 	pkg := unsizep(pkgPtr)
 	target := core.NewBuildTarget(core.NewBuildLabel(pkg.Name, name))
@@ -249,6 +249,7 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary bool, test bool
 	target.Flakiness = flakiness
 	target.BuildTimeout = buildTimeout
 	target.TestTimeout = testTimeout
+	target.Stamp = stamp
 	// Automatically label containerised tests.
 	if containerise {
 		target.AddLabel("container")

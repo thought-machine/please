@@ -37,6 +37,7 @@ var KnownFields = map[string]bool{
 	"Licences":                    true,
 	"Tools":                       true,
 	"TestOutputs":                 true,
+	"Stamp":                       true,
 
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
