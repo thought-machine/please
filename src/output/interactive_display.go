@@ -198,13 +198,18 @@ func lprintfPrepare(cols int, format string, args ...interface{}) string {
 	return b.String()
 }
 
-// setWindowTitle sets the title of the current shell window.
+// setWindowTitle sets the title of the current shell window based on the current build state.
 func setWindowTitle(state *core.BuildState) {
-	if !StdErrIsATerminal || !terminalClaimsToBeXterm {
-		return // Terminal doesn't seem to support it.
-	} else if state == nil {
-		os.Stderr.Write([]byte(fmt.Sprintf("\033]0;plz: finishing up\007")))
+	if state == nil {
+		SetWindowTitle("plz: finishing up")
 	} else {
-		os.Stderr.Write([]byte(fmt.Sprintf("\033]0;plz: %d / %d tasks, %3.1fs\007", state.NumDone(), state.NumActive(), time.Since(startTime).Seconds())))
+		SetWindowTitle(fmt.Sprintf("plz: %d / %d tasks, %3.1fs", state.NumDone(), state.NumActive(), time.Since(startTime).Seconds()))
+	}
+}
+
+// SetWindowTitle sets the title of the current shell window.
+func SetWindowTitle(title string) {
+	if StdErrIsATerminal && terminalClaimsToBeXterm {
+		os.Stderr.Write([]byte(fmt.Sprintf("\033]0;%s\007", title)))
 	}
 }

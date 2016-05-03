@@ -13,6 +13,7 @@ import (
 
 	"build"
 	"core"
+	"output"
 )
 
 var log = logging.MustGetLogger("run")
@@ -31,6 +32,7 @@ func Run(graph *core.BuildGraph, label core.BuildLabel, args []string) {
 	splitCmd := strings.Split(cmd, " ")
 	args = append(splitCmd, args...)
 	log.Info("Running target %s...", strings.Join(args, " "))
+	output.SetWindowTitle("plz run: " + strings.Join(args, " "))
 	if err := syscall.Exec(splitCmd[0], args, os.Environ()); err != nil {
 		log.Fatalf("Error running command %s: %s", strings.Join(args, " "), err)
 	}
