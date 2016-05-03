@@ -295,7 +295,7 @@ def github_file(name, repo, file, revision='master', hash=None, visibility=None,
     """
     remote_file(
         name = name,
-        url = 'https://raw.githubusercontent.com/%s/%s/%s' % (repo, revision, file),
+        url = join_path('https://raw.githubusercontent.com', repo, revision, file),
         hashes = [hash] if hash else None,
         visibility = visibility,
         test_only = test_only,

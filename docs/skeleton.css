@@ -426,13 +426,28 @@ there.
     background-color: #0d4d61;
     text-align: center;
     vertical-align: middle;
+    padding: 0.5em;
 }
 
 .page-header div {
     height: 100%;
 }
 
-.page-header a {
+.page-header a, .left-menu a {
     vertical-align: middle;
     color: white;
+    text-decoration: none;
+}
+
+.left-menu {
+    float: left;
+    width: 14em;
+    box-sizing: border-box;
+    background-color: #0d4d61;
+    margin-right: 2em;
+    padding: 0.5em;
+}
+
+.left-menu ul {
+    list-style: none;
 }
