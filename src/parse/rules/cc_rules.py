@@ -249,7 +249,7 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
         data=data,
         visibility=visibility,
         cmd=cmd,
-        test_cmd='$(exe :%s)' % name,
+        test_cmd='$(exe :%s) > test.results' % name,
         building_description='Linking...',
         binary=True,
         test=True,
@@ -373,15 +373,14 @@ inline char* ${BINARY_NAME}_end_nc() {
 """
 
 
+# This is a lightweight way of building the test main, but it's awkward not
+# having command line output as well as XML output.
 _CC_TEST_MAIN_CONTENTS = """
 #include <algorithm>
 #include <fstream>
 #include <string.h>
 #include "unittest++/UnitTest++.h"
-#include "unittest++/CompositeTestReporter.h"
-#include "unittest++/TestReporterStdout.h"
 #include "unittest++/XmlTestReporter.h"
-
 int main(int argc, char const *argv[]) {
     auto run_named = [argc, argv](UnitTest::Test* test) {
         if (argc <= 1) { return true; }
@@ -391,13 +390,12 @@ int main(int argc, char const *argv[]) {
     };
 
     std::ofstream f("test.results");
-    UnitTest::XmlTestReporter xml(f);
-    UnitTest::TestReporterStdout stdout;
-    UnitTest::CompositeTestReporter reporter;
-    reporter.AddReporter(&xml);
-    reporter.AddReporter(&stdout);
+    UnitTest::XmlTestReporter reporter(f);
     UnitTest::TestRunner runner(reporter);
-    return runner.RunTestsIf(UnitTest::Test::GetTestList(), NULL, run_named, 0);
+    return runner.RunTestsIf(UnitTest::Test::GetTestList(),
+                             NULL,
+                             run_named,
+                             0);
 }
 """
 
