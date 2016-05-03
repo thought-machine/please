@@ -13,7 +13,7 @@
 
     <h2><a name="builtins">Builtin functions</a></h2>
 
-    <h3>subinclude</h3>
+    <h3><a name="subinclude">subinclude</a></h3>
 
     <p><code>subinclude(target)</code></p>
 
@@ -29,7 +29,7 @@
       it is possible to have more complex rules generating your BUILD definitions.</p>
 
 
-    <h3>include_defs</h3>
+    <h3><a name="include_defs">include_defs</a></h3>
 
     <p><code>include_defs(package, dct, target)</code></p>
 
@@ -37,7 +37,7 @@
 
     <p>It will be removed completely in a forthcoming version of Please.</p>
 
-    <h3>glob</h3>
+    <h3><a name="glob">glob</a></h3>
 
     <p><code>glob(includes, excludes=None, hidden=False)</code></p>
 
@@ -88,7 +88,7 @@
       </tbody>
     </table>
 
-    <h3>get_labels</h3>
+    <h3><a name="get_labels">get_labels</a></h3>
 
     <p><code>get_labels(target, prefix)</code></p>
 
@@ -131,7 +131,7 @@
       </tbody>
     </table>
 
-    <h3>has_label</h3>
+    <h3><a name="has_label">has_label</a></h3>
 
     <p><code>has_label(target, prefix)</code></p>
 
@@ -159,13 +159,13 @@
 	<td>prefix</td>
 	<td>None</td>
 	<td>str</td>
-	<td>Filters the returned labels to only ones starting with this prefix.</td>
+	<td>Checks only labels that start with this prefix.</td>
       </tr>
 
       </tbody>
     </table>
 
-    <h3>package</h3>
+    <h3><a name="package">package</a></h3>
 
     <p><code>package(**kwargs)</code></p>
 
@@ -178,7 +178,30 @@
       <code>default_licences</code> and <code>default_visibility</code>. As the names suggest
       these set defaults for those attributes for all following targets that don't set them.</p>
 
-    <h3>licenses</h3>
+    <h3><a name="log">log</a></h3>
+
+    <p><code>log.warning(message, [args...])</code></p>
+
+    <p>Logs an arbitrary message at some given level. The available levels, from most quiet
+      to most severe, are:
+      <ul>
+        <li><code>log.debug</code></li>
+        <li><code>log.info</code></li>
+        <li><code>log.notice</code></li>
+        <li><code>log.warning</code></li>
+        <li><code>log.error</code></li>
+        <li><code>log.fatal</code></li>
+      </ul>
+      These correspond to Please's built in messages and are controlled as usual by the
+      <code>-v</code> command-line argument.</p>
+
+    <p>As the name suggests, <code>log.fatal</code> immediately terminates the program with
+      a fatal error. The others have no side effect other than showing the message.</p>
+
+    <p>The message and arguments together are interpolated like Python's normal string
+      interpolation, similar to the builtin <code>logging</code> package.</p>
+
+    <h3><a name="licenses">licenses</a></h3>
 
     <p><code>licenses(licenses)</code></p>
 
@@ -191,7 +214,7 @@
 In general these have received somewhat less testing than would really be required for
 the complex build environment C++ has, so some issues may remain.</p>
 
-    <h3>cc_library</h3>
+    <h3><a name="cc_library">cc_library</a></h3>
 
     <p><code>cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only=False, compiler_flags=None, linker_flags=None, pkg_config_libs=None, archive=False)</code></p>
 
@@ -284,7 +307,7 @@ will be picked up by cc_binary or cc_test rules.</td>
       </tbody>
     </table>
 
-    <h3>cc_static_library</h3>
+    <h3><a name="cc_static_library">cc_static_library</a></h3>
 
     <p><code>cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None)</code></p>
 
@@ -371,7 +394,7 @@ it as a collection of other rules.</p>
       </tbody>
     </table>
 
-    <h3>cc_shared_object</h3>
+    <h3><a name="cc_shared_object">cc_shared_object</a></h3>
 
     <p><code>cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None)</code></p>
 
@@ -455,7 +478,7 @@ between srcs and hdrs is important.</td>
       </tbody>
     </table>
 
-    <h3>cc_binary</h3>
+    <h3><a name="cc_binary">cc_binary</a></h3>
 
     <p><code>cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, pkg_config_libs=None)</code></p>
 
@@ -531,7 +554,7 @@ between srcs and hdrs is important.</td>
       </tbody>
     </table>
 
-    <h3>cc_test</h3>
+    <h3><a name="cc_test">cc_test</a></h3>
 
     <p><code>cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None, deps=None, data=None, visibility=None, labels=None, flaky, test_outputs=None, timeout, container=False)</code></p>
 
@@ -645,7 +668,7 @@ We template in a main file so you don't have to supply your own.</p>
       </tbody>
     </table>
 
-    <h3>cc_embed_binary</h3>
+    <h3><a name="cc_embed_binary">cc_embed_binary</a></h3>
 
     <p><code>cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, namespace=None)</code></p>
 
@@ -728,7 +751,7 @@ mutate the contents of the returned pointer.</p>
 Go has a strong built-in concept of packages so it's probably a good idea to match Please
 rules to Go packages.</p>
 
-    <h3>go_library</h3>
+    <h3><a name="go_library">go_library</a></h3>
 
     <p><code>go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False, go_tools=None)</code></p>
 
@@ -797,7 +820,7 @@ rules to Go packages.</p>
       </tbody>
     </table>
 
-    <h3>go_generate</h3>
+    <h3><a name="go_generate">go_generate</a></h3>
 
     <p><code>go_generate(name, srcs, tools, deps=None, visibility=None)</code></p>
 
@@ -852,7 +875,7 @@ rules to Go packages.</p>
       </tbody>
     </table>
 
-    <h3>cgo_library</h3>
+    <h3><a name="cgo_library">cgo_library</a></h3>
 
     <p><code>cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=False, package)</code></p>
 
@@ -927,7 +950,7 @@ hard to mimic what 'go build' does well enough to actually work.</p>
       </tbody>
     </table>
 
-    <h3>go_binary</h3>
+    <h3><a name="go_binary">go_binary</a></h3>
 
     <p><code>go_binary(name, main=None, deps=None, visibility=None, test_only=False)</code></p>
 
@@ -982,7 +1005,7 @@ hard to mimic what 'go build' does well enough to actually work.</p>
       </tbody>
     </table>
 
-    <h3>go_test</h3>
+    <h3><a name="go_test">go_test</a></h3>
 
     <p><code>go_test(name, srcs, data=None, deps=None, visibility=None, container=False, timeout, flaky, test_outputs=None, labels=None)</code></p>
 
@@ -1072,7 +1095,7 @@ hard to mimic what 'go build' does well enough to actually work.</p>
       </tbody>
     </table>
 
-    <h3>cgo_test</h3>
+    <h3><a name="cgo_test">cgo_test</a></h3>
 
     <p><code>cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False, timeout, flaky, test_outputs=None, labels=None, tags=None)</code></p>
 
@@ -1173,7 +1196,7 @@ as your test.</p>
       </tbody>
     </table>
 
-    <h3>go_get</h3>
+    <h3><a name="go_get">go_get</a></h3>
 
     <p><code>go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None, binary=False, test_only=False, install=None, revision=None)</code></p>
 
@@ -1269,7 +1292,7 @@ not for other version control systems.</td>
 
     <p>Built-in rules to compile Java code.</p>
 
-    <h3>java_library</h3>
+    <h3><a name="java_library">java_library</a></h3>
 
     <p><code>java_library(name, srcs=None, resources=None, resources_root=None, deps=None, exported_deps=None, visibility=None, source=None, target=None, test_only=False)</code></p>
 
@@ -1366,7 +1389,7 @@ config, which itself defaults to 8.</td>
       </tbody>
     </table>
 
-    <h3>java_binary</h3>
+    <h3><a name="java_binary">java_binary</a></h3>
 
     <p><code>java_binary(name, main_class, deps=None, data=None, visibility=None, jvm_args=None, self_executable=False)</code></p>
 
@@ -1435,7 +1458,7 @@ config, which itself defaults to 8.</td>
       </tbody>
     </table>
 
-    <h3>java_test</h3>
+    <h3><a name="java_test">java_test</a></h3>
 
     <p><code>java_test(name, srcs, data=None, deps=None, labels=None, visibility=None, container=False, timeout, flaky, test_outputs=None, test_package=Set in config, jvm_args)</code></p>
 
@@ -1539,7 +1562,7 @@ config, which itself defaults to 8.</td>
       </tbody>
     </table>
 
-    <h3>maven_jars</h3>
+    <h3><a name="maven_jars">maven_jars</a></h3>
 
     <p><code>maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, combine=False, hash=None, deps=None, visibility=None, filename=None, deps_only=False, optional=None)</code></p>
 
@@ -1649,7 +1672,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
       </tbody>
     </table>
 
-    <h3>maven_jar</h3>
+    <h3><a name="maven_jar">maven_jar</a></h3>
 
     <p><code>maven_jar(name, id, repository=_MAVEN_CENTRAL, hash=None, deps=None, visibility=None, filename=None, sources=True, licences=None, exclude_paths=None)</code></p>
 
@@ -1743,7 +1766,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
 
     <p>Miscellaneous rules that aren't language-specific.</p>
 
-    <h3>genrule</h3>
+    <h3><a name="genrule">genrule</a></h3>
 
     <p><code>genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None, building_description=Building..., hashes=None, timeout, binary=False, needs_transitive_deps=False, output_is_complete=True, test_only=False, requires=None, provides=None, pre_build=None, post_build=None, tools=None)</code></p>
 
@@ -1957,7 +1980,7 @@ build directory. Should be accessed via $(exe //path/to:tool) or similar.</td>
       </tbody>
     </table>
 
-    <h3>gentest</h3>
+    <h3><a name="gentest">gentest</a></h3>
 
     <p><code>gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None, tools=None, data=None, visibility=None, timeout, needs_transitive_deps=False, flaky, no_test_output=False, output_is_complete=True, requires=None, container=False)</code></p>
 
@@ -2104,7 +2127,7 @@ dependencies by other rules.</td>
       </tbody>
     </table>
 
-    <h3>export_file</h3>
+    <h3><a name="export_file">export_file</a></h3>
 
     <p><code>export_file(name, src, visibility=None, binary=False, test_only=False)</code></p>
 
@@ -2159,7 +2182,7 @@ dependencies by other rules.</td>
       </tbody>
     </table>
 
-    <h3>filegroup</h3>
+    <h3><a name="filegroup">filegroup</a></h3>
 
     <p><code>filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, labels=None, binary=False, output_is_complete=True, requires=None, provides=None, link=True, test_only=False)</code></p>
 
@@ -2268,7 +2291,7 @@ in-depth discussion of this).</td>
       </tbody>
     </table>
 
-    <h3>system_library</h3>
+    <h3><a name="system_library">system_library</a></h3>
 
     <p><code>system_library(name, srcs, deps=None, hashes=None, visibility=None, test_only=False)</code></p>
 
@@ -2333,7 +2356,7 @@ into the build tree, you must add additional rules if compilation is necessary.<
       </tbody>
     </table>
 
-    <h3>remote_file</h3>
+    <h3><a name="remote_file">remote_file</a></h3>
 
     <p><code>remote_file(name, url, hashes=None, out=None, binary=False, visibility=None, test_only=False)</code></p>
 
@@ -2402,7 +2425,7 @@ into the build tree, you must add additional rules if compilation is necessary.<
       </tbody>
     </table>
 
-    <h3>github_file</h3>
+    <h3><a name="github_file">github_file</a></h3>
 
     <p><code>github_file(name, repo, file, revision=master, hash=None, visibility=None, test_only=False)</code></p>
 
@@ -2473,7 +2496,7 @@ This is just a convenience wrapper around remote_file but is somewhat clearer to
       </tbody>
     </table>
 
-    <h3>fpm_package</h3>
+    <h3><a name="fpm_package">fpm_package</a></h3>
 
     <p><code>fpm_package(name, files, version, package_type, links=None, package_name=None, options, srcs=None, deps=None, visibility=None, labels=None)</code></p>
 
@@ -2578,7 +2601,7 @@ This is just a convenience wrapper around remote_file but is somewhat clearer to
       </tbody>
     </table>
 
-    <h3>fpm_deb</h3>
+    <h3><a name="fpm_deb">fpm_deb</a></h3>
 
     <p><code>fpm_deb(name, files, version, links=None, package_name=None, options, srcs=None, deps=None, visibility=None, labels=None)</code></p>
 
@@ -2676,7 +2699,7 @@ This is just a convenience wrapper around remote_file but is somewhat clearer to
       </tbody>
     </table>
 
-    <h3>tarball</h3>
+    <h3><a name="tarball">tarball</a></h3>
 
     <p><code>tarball(name, srcs, out=None, deps=None, subdir=None, compression=gzip, visibility=None, labels=None)</code></p>
 
@@ -2764,7 +2787,7 @@ sub-rules to run protoc & the appropriate java_library, go_library rules etc. Us
 shouldn't worry about those sub-rules and just declare a dependency directly on
 the proto_library rule to get its appropriate outputs.</p>
 
-    <h3>proto_library</h3>
+    <h3><a name="proto_library">proto_library</a></h3>
 
     <p><code>proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None, python_deps=None, cc_deps=None, java_deps=None, go_deps=None, protoc_version=Set in config, languages=None)</code></p>
 
@@ -2870,7 +2893,7 @@ labels(list): List of labels to apply to this rule.</td>
       </tbody>
     </table>
 
-    <h3>grpc_library</h3>
+    <h3><a name="grpc_library">grpc_library</a></h3>
 
     <p><code>grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_deps=None, java_deps=None, go_deps=None)</code></p>
 
@@ -2953,8 +2976,7 @@ still accepted for forwards compatibility.</td>
 
     <p>Rules to build Python code.</p>
     <p>
-The output artifacts for Python rules are .pex files (see
-    <a href="https://github.com/pantsbuild/pex">https://github.com/pantsbuild/pex</a>).</p>
+The output artifacts for Python rules are .pex files (see https://github.com/pantsbuild/pex).</p>
     <p>Pex is a rather nice system for combining Python code and all needed dependencies
 (excluding the actual interpreter and possibly some system level bits) into a single file.</p>
     <p>
@@ -2966,7 +2988,7 @@ the final .pex. This builds at roughly the same pace for a clean build of a sing
 but is drastically faster for building many targets with similar dependencies or rebuilding
 a target which has only had small changes.</p>
 
-    <h3>python_library</h3>
+    <h3><a name="python_library">python_library</a></h3>
 
     <p><code>python_library(name, srcs=None, resources=None, deps=None, visibility=None, test_only=False, zip_safe=True, labels=None)</code></p>
 
@@ -3053,7 +3075,7 @@ See python_binary for more information.</td>
       </tbody>
     </table>
 
-    <h3>python_binary</h3>
+    <h3><a name="python_binary">python_binary</a></h3>
 
     <p><code>python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=None, interpreter=Set in config)</code></p>
 
@@ -3133,7 +3155,7 @@ which is normally just 'python', but could be 'python3' or
       </tbody>
     </table>
 
-    <h3>python_test</h3>
+    <h3><a name="python_test">python_test</a></h3>
 
     <p><code>python_test(name, srcs, data=None, resources=None, deps=None, labels=None, visibility=None, container=False, timeout, flaky, test_outputs=None, zip_safe=None, interpreter=Set in config)</code></p>
 
@@ -3255,7 +3277,7 @@ which is normally just 'python', but could be 'python3' or
       </tbody>
     </table>
 
-    <h3>pip_library</h3>
+    <h3><a name="pip_library">pip_library</a></h3>
 
     <p><code>pip_library(name, version, hashes=None, package_name=None, outs=None, test_only=False, env=None, deps=None, post_install_commands=None, install_subdirectory=False, repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True, licences=None)</code></p>
 
@@ -3387,14 +3409,14 @@ which is normally just 'python', but could be 'python3' or
       </tbody>
     </table>
 
-    <h2><a name="sh">Shell rules</a></h2>
+    <h2><a name="sh">Sh rules</a></h2>
 
     <p>Rules to 'build' shell scripts.</p>
     <p>
 Note that these do pretty much nothing beyond collecting the files. In future we might
 implement something more advanced (ala .sar files or whatever).</p>
 
-    <h3>sh_library</h3>
+    <h3><a name="sh_library">sh_library</a></h3>
 
     <p><code>sh_library(name, src, deps=None, visibility=None, link=True)</code></p>
 
@@ -3452,7 +3474,7 @@ Note that these are individually executable so can only have one source file eac
       </tbody>
     </table>
 
-    <h3>sh_binary</h3>
+    <h3><a name="sh_binary">sh_binary</a></h3>
 
     <p><code>sh_binary(name, main, deps=None, visibility=None, link=True)</code></p>
 
@@ -3507,7 +3529,7 @@ Note that these are individually executable so can only have one source file eac
       </tbody>
     </table>
 
-    <h3>sh_test</h3>
+    <h3><a name="sh_test">sh_test</a></h3>
 
     <p><code>sh_test(name, src=None, args=None, labels=None, data=None, deps=None, visibility=None, flaky, test_outputs=None, timeout, container=False)</code></p>
 
