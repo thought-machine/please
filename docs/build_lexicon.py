@@ -13,15 +13,17 @@ import sys
 
 def read_all_functions(path):
     """Yields all functions contained in the builtin rule set."""
-    for filename in os.listdir(path):
-        if filename.endswith('.py'):
+    for filename in sorted(os.listdir(path)):
+        if filename.endswith('.py') and filename != 'embedded_parser.py':
             with open(os.path.join(path, filename)) as f:
                 sys.stdout.write('\n    <h2><a name="%s">%s</a></h2>\n' % (
                     filename[:filename.find('_')],
                     filename[:-3].replace('_', ' ').capitalize()
                 ))
                 tree = ast.parse(f.read(), f.name)
-                for node in ast.iter_child_nodes(tree):
+                for i, node in enumerate(ast.iter_child_nodes(tree)):
+                    if i == 0 and isinstance(node, ast.Expr):
+                        sys.stdout.write('\n    <p>%s</p>\n' % htmlify(node.value.s))
                     if not isinstance(node, ast.FunctionDef):
                         continue
                     # Exclude anything ffi related, it'll be a callback
@@ -60,7 +62,7 @@ def to_html(name, args, docstring):
         'rows': ''.join(ROW_TEMPLATE % (arg,
                                         default or '',
                                         descs.get(arg, [''])[0],
-                                        descs.get(arg, ['', ''])[1])
+                                        htmlify(descs.get(arg, ['', ''])[1], new_p=False))
                         for arg, default in args),
     }
     sys.stdout.write(TEMPLATE % data)
@@ -82,7 +84,7 @@ def parse_docstring(name, docstring):
         yield ('Overview', docstring)
     else:
         before, sep, after = docstring.partition('Args:')
-        yield ('Overview', before.strip())
+        yield ('Overview', htmlify(before.strip()))
         s = []
         name = ''
         arg_type = ''
@@ -100,21 +102,36 @@ def parse_docstring(name, docstring):
         yield name, (arg_type, '\n'.join(s))
 
 
+def htmlify(s, new_p=True):
+    """Inserts HTML tags into a docstring to try to improve formatting."""
+    lines = [line.strip() for line in s.strip().split('\n')]
+    for i, line in enumerate(lines[:-1]):
+        if line.endswith('.'):
+            lines[i] = line + '<br/>\n'
+    if new_p:
+        return '\n'.join(lines).replace('\n\n', '</p>\n    <p>').replace('<br/></p>', '</p>')
+    return '\n'.join(lines)
+
+
 TEMPLATE = """
-    <h3>%(function_name)s</h3>
+    <h3><a name="%(function_name)s">%(function_name)s</a></h3>
 
     <p><code>%(function_name)s(%(arglist)s)</code></p>
 
     <p>%(overview)s</p>
 
     <table>
+      <thead>
       <tr>
 	<th>Argument</th>
 	<th>Default</th>
 	<th>Type</th>
 	<th></th>
       </tr>
+      </thead>
+      <tbody>
       %(rows)s
+      </tbody>
     </table>
 """
 
