@@ -1564,7 +1564,7 @@ config, which itself defaults to 8.</td>
 
     <h3><a name="maven_jars">maven_jars</a></h3>
 
-    <p><code>maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, combine=False, hash=None, deps=None, visibility=None, filename=None, deps_only=False, optional=None)</code></p>
+    <p><code>maven_jars(name, id, repository='https://repo1.maven.org/maven2', exclude=None, hashes=None, combine=False, hash=None, deps=None, visibility=None, filename=None, deps_only=False, optional=None)</code></p>
 
     <p>Fetches a transitive set of dependencies from Maven.</p>
     <p>
@@ -1600,7 +1600,7 @@ but it still has issues with some Maven packages.</p>
 
       <tr>
 	<td>repository</td>
-	<td>_MAVEN_CENTRAL</td>
+	<td>https://repo1.maven.org/maven2</td>
 	<td>str</td>
 	<td>Maven repo to fetch deps from.</td>
       </tr>
@@ -1674,7 +1674,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
 
     <h3><a name="maven_jar">maven_jar</a></h3>
 
-    <p><code>maven_jar(name, id, repository=_MAVEN_CENTRAL, hash=None, deps=None, visibility=None, filename=None, sources=True, licences=None, exclude_paths=None)</code></p>
+    <p><code>maven_jar(name, id, repository='https://repo1.maven.org/maven2', hash=None, deps=None, visibility=None, filename=None, sources=True, licences=None, exclude_paths=None)</code></p>
 
     <p>Fetches a single Java dependency from Maven.</p>
 
@@ -1705,7 +1705,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
 
       <tr>
 	<td>repository</td>
-	<td>_MAVEN_CENTRAL</td>
+	<td>https://repo1.maven.org/maven2</td>
 	<td>str</td>
 	<td>Maven repo to fetch deps from.</td>
       </tr>

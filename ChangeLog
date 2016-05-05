@@ -13,6 +13,9 @@ Version 2.0.0
       It is also slightly more robust about the input it accepts (esp. around spaces).
     * `plz query alltargets` now does not display hidden targets (those starting with an
       underscore) by default. It has a new `--hidden` flag which will show them as well.
+    * `subinclude()` can now be given a URL to download build defs from. Downloads will be
+      deduplicated and run as `real` build targets so the parse remains fast (or at least
+      as fast as possible given that something has to be downloaded for it to proceed).
 
 
 Version 1.8.2
