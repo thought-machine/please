@@ -333,18 +333,15 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
 
 
-def maven_jar(name, id=None, group_id=None, artifact_id=None, version=None,
-              repository=_MAVEN_CENTRAL, hash=None, deps=None,
+def maven_jar(name, id=None, artifact=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
               exclude_paths=None):
     """Fetches a single Java dependency from Maven.
 
     Args:
       name (str): Name of the output rule.
-      id (str): Maven id of the artifact (e.g. org.junit:junit:4.1.0)
-      group_id (str): Maven group id of the artifact (e.g. org.junit)
-      artifact_id (str): Maven artifact id (e.g. junit)
-      version (str): Maven version of the artifact (e.g. 4.1.0)
+      id (str): Maven id of the artifact (eg. org.junit:junit:4.1.0)
+      artifact (str): Alias for 'id'. Can only pass one of them.
       repository (str): Maven repo to fetch deps from.
       hash (str): Hash for produced rule.
       deps (list): Labels of dependencies, as usual.
@@ -354,25 +351,24 @@ def maven_jar(name, id=None, group_id=None, artifact_id=None, version=None,
       licences (list): Licences this package is subject to.
       exclude_paths (list): Paths to remove from the downloaded .jar.
     """
-    if not (bool(id) ^ bool(group_id and artifact_id and version)):
-        raise ValueError('You must pass either id or group_id, artifact_id and version.')
-    if id:
-        try:
-            group_id, artifact_id, version = id.split(':')
-        except ValueError:
-            group_id, artifact_id, version, licence = id.split(':')
-            if licence and not licences:
-                licences = licence.split('|')
-    else:
-        id = ':'.join([group_id, artifact_id, version])
+    if not (bool(id) ^ bool(artifact)):
+        raise ValueError('Must pass exactly one of "id" or "artifact" to maven_jar')
+    id = id or artifact
     _maven_packages[get_base_path()][name] = id
-    filename = filename or '%s-%s.jar' % (artifact_id, version)
+    # TODO(pebers): Handle exclusions, packages with no source available and packages with no version.
+    try:
+        group, artifact, version = id.split(':')
+    except ValueError:
+        group, artifact, version, licence = id.split(':')
+        if licence and not licences:
+            licences = licence.split('|')
+    filename = filename or '%s-%s.jar' % (artifact, version)
     bin_url = '/'.join([
         repository,
-        group_id.replace('.', '/'),
-        artifact_id,
+        group.replace('.', '/'),
+        artifact,
         version,
-        filename or '%s-%s.jar' % (artifact_id, version),
+        filename or '%s-%s.jar' % (artifact, version),
     ])
     src_url = bin_url.replace('.jar', '-sources.jar')  # is this always predictable?
     outs = [name + '.jar']
