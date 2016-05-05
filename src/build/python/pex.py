@@ -120,7 +120,7 @@ def main(args):
     # Setup a temp dir that the PEX builder will use as its scratch dir.
     tmp_dir = tempfile.mkdtemp()
     try:
-        if os.readlink(args.interpreter) == 'python-exec2c':
+        if os.path.islink(args.interpreter) and os.readlink(args.interpreter) == 'python-exec2c':
             # Some distros have this intermediate binary; it messes things up for
             # pex which derefences it to this binary which can't be invoked directly.
             print('Can\'t determine Python interpreter; you should set the \n'
