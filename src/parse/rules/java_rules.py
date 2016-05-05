@@ -95,8 +95,8 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
         )
 
 
-def java_binary(name, main_class, srcs=None, deps=None, data=None, visibility=None, jvm_args=None,
-                self_executable=False):
+def java_binary(name, main_class=None, srcs=None, deps=None, data=None, visibility=None,
+                jvm_args=None, self_executable=False):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
