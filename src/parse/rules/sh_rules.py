@@ -47,7 +47,7 @@ def sh_binary(name, main, deps=None, visibility=None, link=True):
     )
 
 
-def sh_test(name, src=None, args=None, labels=None, data=None, deps=None,
+def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=None,
             visibility=None, flaky=0, test_outputs=None, timeout=0, container=False):
     """Generates a shell test. Note that these aren't packaged in a useful way.
 
@@ -58,12 +58,14 @@ def sh_test(name, src=None, args=None, labels=None, data=None, deps=None,
       labels (list): Labels to apply to this test.
       data (list): Runtime data for the test.
       deps (list): Dependencies of this rule
+      size (str): Test size (enormous, large, medium or small).
       visibility (list): Visibility declaration of the rule.
       timeout (int): Maximum length of time, in seconds, to allow this test to run for.
       flaky (int | bool): True to mark this as flaky and automatically rerun.
       test_outputs (list): Extra test output files to generate from this test.
       container (bool | dict): True to run this test within a container (eg. Docker).
     """
+    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     build_rule(
         name=name,
         srcs=[src or test],

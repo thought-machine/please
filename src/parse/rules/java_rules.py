@@ -141,7 +141,7 @@ def java_binary(name, main_class, srcs=None, deps=None, data=None, visibility=No
 
 
 def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
-              container=False, timeout=0, flaky=0, test_outputs=None,
+              container=False, timeout=0, flaky=0, test_outputs=None, size=None,
               test_package=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args=''):
     """Defines a Java test.
 
@@ -156,9 +156,11 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
       timeout (int): Maximum length of time, in seconds, to allow this test to run for.
       flaky (int | bool): True to mark this as flaky and automatically rerun.
       test_outputs (list): Extra test output files to generate from this test.
+      size (str): Test size (enormous, large, medium or small).
       test_package (str): Java package to scan for test classes to run.
       jvm_args (str): Arguments to pass to the JVM in the run script.
     """
+    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # It's a bit sucky doing this in two separate steps, but it is
     # at least easy and reuses the existing code.
     java_library(

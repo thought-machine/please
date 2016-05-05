@@ -442,6 +442,33 @@ def _tool_path(tool, tools=None):
     return tool, tools
 
 
+def _test_size_and_timeout(size, timeout, labels):
+    """Resolves size and timeout arguments for a test. For Buck compatibility."""
+    if size:
+        labels = labels or []
+        labels.append(size)
+        if not timeout:
+            timeout = _SIZE_TIMEOUTS.get(size, 0)
+    if isinstance(timeout, str):
+        timeout = _TIMEOUT_NAMES[timeout]
+    return timeout, labels
+
+
+_SIZE_TIMEOUTS = {
+    'enormous': 600,
+    'large': 100,
+    'medium': 40,
+    'small': 10,
+}
+
+_TIMEOUT_NAMES = {
+    'eternal': 0,  # means unlimited
+    'long': 900,
+    'moderate': 300,
+    'short': 60,
+}
+
+
 if CONFIG.BAZEL_COMPATIBILITY:
     def bind(name, actual, **kwargs):
         """Mimics the Bazel bind() function which binds some target or sub-target into our repo.

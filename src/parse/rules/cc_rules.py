@@ -203,7 +203,7 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None,
 
 def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None,
             deps=None, data=None, visibility=None, labels=None, flaky=0, test_outputs=None,
-            timeout=0, container=False):
+            size=None, timeout=0, container=False):
     """Defines a C++ test using UnitTest++.
 
     We template in a main file so you don't have to supply your own.
@@ -221,9 +221,11 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
       labels (list): Labels to attach to this test.
       flaky (bool | int): If true the test will be marked as flaky and automatically retried.
       test_outputs (list): Extra test output files to generate from this test.
+      size (str): Test size (enormous, large, medium or small).
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
       container (bool | dict): If true the test is run in a container (eg. Docker).
     """
+    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     srcs = srcs or []
     deps=deps or []
     linker_flags = ['-lunittest++'] + (linker_flags or [CONFIG.DEFAULT_LDFLAGS])
