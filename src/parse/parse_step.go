@@ -242,6 +242,11 @@ func createInitPyIfNeeded(pkg *core.Package, packagePath string) {
 }
 
 func buildFileName(state *core.BuildState, pkgName string) string {
+	// Bazel defines targets in its "external" package from its WORKSPACE file.
+	// We will fake this by treating that as an actual package file...
+	if state.Config.Bazel.Compatibility && pkgName == "external" {
+		return "WORKSPACE"
+	}
 	for _, buildFileName := range state.Config.Please.BuildFileName {
 		if filename := path.Join(pkgName, buildFileName); core.FileExists(filename) {
 			return filename

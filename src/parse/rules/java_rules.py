@@ -395,3 +395,19 @@ def _jarcat_cmd(main_class=None, preamble=None):
     if preamble:
         return cmd + " -p '%s'" % preamble, tools
     return cmd, tools
+
+
+# Token nod to Bazel compatibility. This doesn't really have the same semantics but it's not
+# easy for us to mimic what they do.
+if CONFIG.BAZEL_COMPATIBILITY:
+    def java_toolchain(javac, source_version, target_version, *args, **kwargs):
+        """Mimics some effort at Bazel compatibility.
+
+        This doesn't really have the same semantics and ignores a bunch of arguments but it
+        isn't easy for us to behave the same way that they do.
+        """
+        package(
+            javac_tool = javac,
+            java_source_level = source_version,
+            java_target_level = target_version,
+        )

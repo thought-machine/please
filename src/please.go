@@ -124,7 +124,8 @@ var opts struct {
 	} `command:"op" description:"Re-runs previous command."`
 
 	Init struct {
-		Dir string `long:"dir" description:"Directory to create config in" default:"."`
+		Dir                string `long:"dir" description:"Directory to create config in" default:"."`
+		BazelCompatibility bool   `long:"bazel_compat" description:"Initialises config for Bazel compatibility mode."`
 	} `command:"init" description:"Initialises a .plzconfig file in the current directory"`
 
 	Query struct {
@@ -525,8 +526,11 @@ func main() {
 
 	command := activeCommand(parser)
 	if command == "init" {
+		if flagsErr != nil { // This error otherwise doesn't get checked until later.
+			output.ParseFlagsFromArgsOrDie("Please", &opts, os.Args)
+		}
 		// If we're running plz init then we obviously don't expect to read a config file.
-		utils.InitConfig(opts.Init.Dir)
+		utils.InitConfig(opts.Init.Dir, opts.Init.BazelCompatibility)
 		os.Exit(0)
 	}
 	if opts.BuildFlags.RepoRoot == "" {

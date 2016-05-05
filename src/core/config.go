@@ -237,6 +237,9 @@ type Configuration struct {
 		Reject []string
 	}
 	Aliases map[string]string
+	Bazel   struct {
+		Compatibility bool
+	}
 }
 
 func (config *Configuration) Hash() []byte {
