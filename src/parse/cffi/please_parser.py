@@ -13,6 +13,9 @@ _please_builtins = imp.new_module('_please_builtins')
 _please_globals = _please_builtins.__dict__
 _keepalive_functions = set()
 _build_code_cache = {}
+_c_subinclude_package_name = None
+_subinclude_package_name = None
+_subinclude_package = None
 
 # List of everything we keep in the __builtin__ module. This is a pretty agricultural way
 # of restricting what build files can do - no doubt there'd be clever ways of working
@@ -51,10 +54,16 @@ def parse_file(c_filename, c_package_name, c_package):
 
 
 @ffi.callback('ParseFileCallback*')
-def parse_code(c_code, c_filename, _):
+def parse_code(c_code, c_filename, c_package):
+    if c_package != 0:
+        global _subinclude_package, _subinclude_package_name, _c_subinclude_package_name
+        _subinclude_package_name = ffi.string(c_filename)
+        _c_subinclude_package_name = c_filename
+        _subinclude_package = c_package
+        return ffi.NULL
     try:
-        code = ffi.string(c_code)
         filename = ffi.string(c_filename)
+        code = ffi.string(c_code)
         # Note we don't go through _parse_build_code - there's no need to perform the ast
         # walk on code that we control internally. This conceptually means that we *could*
         # import in those files, but we will not do that because it would be sheer peasantry.
@@ -108,14 +117,31 @@ def include_defs(package, dct, target):
     _parse_build_code(filename, dct, cache=True)
 
 
-def subinclude(package, dct, target):
+def subinclude(package, dct, target, hash=None):
     """Includes the output of a build target as extra rules in this one."""
+    if target.startswith('http'):
+        target = _get_subinclude_target(target, hash)
     filename = ffi.string(_get_subinclude_file(package, ffi.new('char[]', target)))
     if filename == _DEFER_PARSE:
         raise DeferParse(filename)
     elif filename.startswith('__'):
         raise ParseError(filename.lstrip('_'))
     _parse_build_code(filename, dct, cache=True)
+
+
+def _get_subinclude_target(url, hash):
+    """Creates a remote_file target to subinclude() a remote url and returns its name."""
+    name = os.path.basename(url).replace('.', '_')
+    try:
+        _get_globals(_subinclude_package, _c_subinclude_package_name).get('remote_file')(
+            name = name,
+            url = url,
+            hashes = [hash] if hash else [],
+            visibility = ['PUBLIC'],
+        )
+    except DuplicateTargetError:
+        pass  # Bit dodgy but assume it's already added.
+    return '//%s:%s' % (_subinclude_package_name, name)
 
 
 def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=None, outs=None,
@@ -320,10 +346,9 @@ def _get_globals(c_package, c_package_name):
             local_globals[k] = v
     # Need to pass some hidden arguments to these guys.
     package_name = ffi.string(c_package_name)
-    local_globals['include_defs'] = lambda target: include_defs(c_package, local_globals, target)
-    local_globals['subinclude'] = lambda target: subinclude(c_package, local_globals, target)
-    local_globals['build_rule'] = lambda *args, **kwargs: build_rule(local_globals, c_package,
-                                                                     *args, **kwargs)
+    local_globals['include_defs'] = lambda *args, **kwargs: include_defs(c_package, local_globals, *args, **kwargs)
+    local_globals['subinclude'] = lambda *args, **kwargs: subinclude(c_package, local_globals, *args, **kwargs)
+    local_globals['build_rule'] = lambda *args, **kwargs: build_rule(local_globals, c_package, *args, **kwargs)
     local_globals['glob'] = lambda *args, **kwargs: glob(package_name, *args, **kwargs)
     local_globals['get_labels'] = lambda name, prefix: get_labels(c_package, name, prefix)
     local_globals['has_label'] = lambda name, prefix: has_label(c_package, name, prefix)

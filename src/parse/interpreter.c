@@ -16,8 +16,8 @@ char* ParseFile(char* filename, char* package_name, size_t package) {
     return (*callbacks.parse_file)(filename, package_name, package);
 }
 
-char* ParseCode(char* filename, char* package_name) {
-    return (*callbacks.parse_code)(filename, package_name, 0);
+char* ParseCode(char* filename, char* package_name, size_t package) {
+    return (*callbacks.parse_code)(filename, package_name, package);
 }
 
 void SetConfigValue(char* name, char* value) {

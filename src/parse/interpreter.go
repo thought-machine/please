@@ -42,6 +42,7 @@ var log = logging.MustGetLogger("parse")
 
 // Embedded parser file.
 const embeddedParser = "embedded_parser.py"
+const subincludePackage = "_remote"
 
 // Communicated back from PyPy to indicate that a parse has been deferred because
 // we need to wait for another target to build.
@@ -128,6 +129,7 @@ func initializeInterpreter(config *core.Configuration) {
 			loadBuiltinRules(filename)
 		}
 	}
+	loadSubincludePackage()
 	log.Debug("Interpreter ready")
 }
 
@@ -157,7 +159,7 @@ func loadBuiltinRules(path string) {
 	defer C.free(unsafe.Pointer(data))
 	cPackageName := C.CString(path)
 	defer C.free(unsafe.Pointer(cPackageName))
-	if result := C.GoString(C.ParseCode(data, cPackageName)); result != "" {
+	if result := C.GoString(C.ParseCode(data, cPackageName, 0)); result != "" {
 		// This obviously shouldn't happen, because we control all the builtin rules.
 		// It's here for developing rules in Please in case one makes a mistake :)
 		log.Fatalf("Failed to interpret builtin build rules from %s: %s", path, result)
@@ -169,6 +171,15 @@ func loadAsset(path string) *C.char {
 	// well this is pretty inefficient... we end up with three copies of the data for no
 	// really good reason.
 	return C.CString(string(data))
+}
+
+func loadSubincludePackage() {
+	pkg := core.NewPackage(subincludePackage)
+	// Set up a builtin package for remote subincludes.
+	cPackageName := C.CString(pkg.Name)
+	C.ParseCode(nil, cPackageName, sizep(pkg))
+	C.free(unsafe.Pointer(cPackageName))
+	core.State.Graph.AddPackage(pkg)
 }
 
 // sizet converts a build target to a C.size_t.
