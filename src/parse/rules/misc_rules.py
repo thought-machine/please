@@ -440,3 +440,19 @@ def _tool_path(tool, tools=None):
     if tool.startswith('//'):
         return '$(exe %s)' % tool, [tool] + (tools or [])
     return tool, tools
+
+
+if CONFIG.BAZEL_COMPATIBILITY:
+    def bind(name, actual, **kwargs):
+        """Mimics the Bazel bind() function which binds some target or sub-target into our repo.
+
+        This does not map well at all; we don't do sub-repos in the way they do, so for now this
+        is a quick and dirty attempt to make it work for maven_jar rules at least.
+        """
+        if actual.startswith('@') and actual.endswith('//jar'):
+            actual = ':' + actual[:-len('//jar')].lstrip('@')
+        filegroup(
+            name = name,
+            srcs = [actual],
+            visibility = ['PUBLIC'],
+        )

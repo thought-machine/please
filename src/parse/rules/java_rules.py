@@ -95,19 +95,29 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
         )
 
 
-def java_binary(name, main_class, deps=None, data=None, visibility=None, jvm_args=None,
+def java_binary(name, main_class, srcs=None, deps=None, data=None, visibility=None, jvm_args=None,
                 self_executable=False):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
       name (str): Name of the rule.
       main_class (str): Main class to set in the manifest.
+      srcs (list): Source files to compile.
       deps (list): Dependencies of this rule.
       data (list): Runtime data files for this rule.
       visibility (list): Visibility declaration of this rule.
       jvm_args (str): Arguments to pass to the JVM in the run script.
       self_executable (bool): True to make the jar self executable.
     """
+    if srcs:
+        lib_name = '_%s#lib' % name
+        java_library(
+            name = lib_name,
+            srcs = srcs,
+            deps = deps,
+        )
+        deps = deps or []
+        deps.append(':' + lib_name)
     if self_executable:
         cmd, tools = _java_binary_cmd(main_class, jvm_args)
     else:
@@ -323,14 +333,18 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
 
 
-def maven_jar(name, id, repository=_MAVEN_CENTRAL, hash=None, deps=None,
+def maven_jar(name, id=None, group_id=None, artifact_id=None, version=None,
+              repository=_MAVEN_CENTRAL, hash=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
               exclude_paths=None):
     """Fetches a single Java dependency from Maven.
 
     Args:
       name (str): Name of the output rule.
-      id (str): Maven id of the artifact (eg. org.junit:junit:4.1.0)
+      id (str): Maven id of the artifact (e.g. org.junit:junit:4.1.0)
+      group_id (str): Maven group id of the artifact (e.g. org.junit)
+      artifact_id (str): Maven artifact id (e.g. junit)
+      version (str): Maven version of the artifact (e.g. 4.1.0)
       repository (str): Maven repo to fetch deps from.
       hash (str): Hash for produced rule.
       deps (list): Labels of dependencies, as usual.
@@ -340,21 +354,25 @@ def maven_jar(name, id, repository=_MAVEN_CENTRAL, hash=None, deps=None,
       licences (list): Licences this package is subject to.
       exclude_paths (list): Paths to remove from the downloaded .jar.
     """
+    if not (bool(id) ^ bool(group_id and artifact_id and version)):
+        raise ValueError('You must pass either id or group_id, artifact_id and version.')
+    if id:
+        try:
+            group_id, artifact_id, version = id.split(':')
+        except ValueError:
+            group_id, artifact_id, version, licence = id.split(':')
+            if licence and not licences:
+                licences = licence.split('|')
+    else:
+        id = ':'.join([group_id, artifact_id, version])
     _maven_packages[get_base_path()][name] = id
-    # TODO(pebers): Handle exclusions, packages with no source available and packages with no version.
-    try:
-        group, artifact, version = id.split(':')
-    except ValueError:
-        group, artifact, version, licence = id.split(':')
-        if licence and not licences:
-            licences = licence.split('|')
-    filename = filename or '%s-%s.jar' % (artifact, version)
+    filename = filename or '%s-%s.jar' % (artifact_id, version)
     bin_url = '/'.join([
         repository,
-        group.replace('.', '/'),
-        artifact,
+        group_id.replace('.', '/'),
+        artifact_id,
         version,
-        filename or '%s-%s.jar' % (artifact, version),
+        filename or '%s-%s.jar' % (artifact_id, version),
     ])
     src_url = bin_url.replace('.jar', '-sources.jar')  # is this always predictable?
     outs = [name + '.jar']
@@ -397,10 +415,8 @@ def _jarcat_cmd(main_class=None, preamble=None):
     return cmd, tools
 
 
-# Token nod to Bazel compatibility. This doesn't really have the same semantics but it's not
-# easy for us to mimic what they do.
 if CONFIG.BAZEL_COMPATIBILITY:
-    def java_toolchain(javac, source_version, target_version, *args, **kwargs):
+    def java_toolchain(javac=None, source_version=None, target_version=None, **kwargs):
         """Mimics some effort at Bazel compatibility.
 
         This doesn't really have the same semantics and ignores a bunch of arguments but it
