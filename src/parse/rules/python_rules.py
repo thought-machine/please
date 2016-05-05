@@ -366,7 +366,7 @@ def _add_licences(name, output):
                 name.lstrip('_').split('#')[0])
 
 
-# Nod to superficial Bazel compatibility
-py_library = python_library
-py_binary = python_binary
-py_test = python_test
+if CONFIG.BAZEL_COMPATIBILITY:
+    py_library = python_library
+    py_binary = python_binary
+    py_test = python_test
