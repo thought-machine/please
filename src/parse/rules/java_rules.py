@@ -12,7 +12,8 @@ _maven_packages = defaultdict(dict)
 
 
 def java_library(name, srcs=None, resources=None, resources_root=None, deps=None,
-                 exported_deps=None, visibility=None, source=None, target=None, test_only=False):
+                 exported_deps=None, exports=None, visibility=None, source=None,
+                 target=None, test_only=False):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -27,6 +28,7 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
                             rule will also receive when they're compiling. This is quite important for
                             Java; any dependency that forms part of the public API for your classes
                             should be an exported dependency.
+      exports (list): Alias for 'exported_deps'.
       visibility (list): Visibility declaration of this rule.
       source (int): Java source level to compile sources as. Defaults to whatever's set in the config,
                     which itself defaults to 8.
@@ -35,6 +37,7 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
       test_only (bool): If True, this rule can only be depended on by tests.
     """
     all_srcs = (srcs or []) + (resources or [])
+    exported_deps = exported_deps or exports
     if srcs:
         build_rule(
             name=name,
