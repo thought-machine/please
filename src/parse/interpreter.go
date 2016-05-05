@@ -506,8 +506,8 @@ func AddTool(cTarget uintptr, cTool *C.char) *C.char {
 func AddVis(cTarget uintptr, cVis *C.char) *C.char {
 	target := unsizet(cTarget)
 	vis := C.GoString(cVis)
-	if vis == "PUBLIC" {
-		target.Visibility = append(target.Visibility, core.NewBuildLabel("", "..."))
+	if vis == "PUBLIC" || (core.State.Config.Bazel.Compatibility && vis == "//visibility:public") {
+		target.Visibility = append(target.Visibility, core.WholeGraph[0])
 	} else {
 		label, err := core.TryParseBuildLabel(vis, target.Label.PackageName)
 		if err != nil {
