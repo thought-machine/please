@@ -146,7 +146,7 @@ def _get_subinclude_target(url, hash):
 
 def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=None, outs=None,
                deps=None, exported_deps=None, tools=None, labels=None, visibility=None, hashes=None,
-               binary=False, test=False, test_only=False, building_description='Building...',
+               binary=False, test=False, test_only=None, building_description='Building...',
                needs_transitive_deps=False, output_is_complete=False, container=False,
                skip_cache=False, no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
@@ -165,6 +165,8 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         visibility = globals_dict['CONFIG'].get('DEFAULT_VISIBILITY')
     if licences is None:
         licences = globals_dict['CONFIG'].get('DEFAULT_LICENCES')
+    if test_only is None:
+        test_only = globals_dict['CONFIG'].get('DEFAULT_TESTONLY')
     ffi_string = lambda x: ffi.NULL if x is None else ffi.new('char[]', x)
     target = _add_target(package,
                          ffi_string(name),
@@ -281,9 +283,10 @@ def _check_c_error(error):
         raise ParseError(ffi.string(error))
 
 
-def glob(package, includes, excludes=None, hidden=False):
+def glob(package, includes, excludes=None, exclude=None, hidden=False):
     if isinstance(includes, str):
         raise TypeError('The first argument to glob() should be a list')
+    excludes = excludes or exclude
     includes_keepalive = [ffi.new('char[]', include) for include in includes]
     excludes_keepalive = [ffi.new('char[]', exclude) for exclude in excludes or []]
     filenames = _glob(ffi.new('char[]', package),
@@ -439,6 +442,7 @@ class DotDict(dict):
 _please_globals['CONFIG'] = DotDict()
 _please_globals['CONFIG']['DEFAULT_VISIBILITY'] = None
 _please_globals['CONFIG']['DEFAULT_LICENCES'] = None
+_please_globals['CONFIG']['DEFAULT_TESTONLY'] = False
 _please_globals['defaultdict'] = defaultdict
 _please_globals['ParseError'] = ParseError
 _please_globals['DuplicateTargetError'] = DuplicateTargetError
