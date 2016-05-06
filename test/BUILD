@@ -331,16 +331,17 @@ plz_e2e_test(
 
 # Tests on the stamp attribute.
 # These essentially pass as long as they can build.
+# (Note that we can't use -v because OSX is unlikely to have a new enough version of bash).
 build_rule(
     name = 'stamp_negative_test',
-    cmd = '[ ! -v STAMP ]',
+    cmd = '[ -z ${STAMP+x} ]',
     test_cmd = 'true',
     test = True,
     no_test_output = True,
 )
 build_rule(
     name = 'stamp_positive_test',
-    cmd = '[ -v STAMP ]',
+    cmd = '[ ! -z ${STAMP+x} ]',
     test_cmd = 'true',
     test = True,
     stamp = True,
