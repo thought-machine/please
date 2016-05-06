@@ -150,7 +150,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                needs_transitive_deps=False, output_is_complete=False, container=False,
                skip_cache=False, no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
-               test_outputs=None, system_srcs=None):
+               test_outputs=None, system_srcs=None, stamp=False):
     if name == 'all':
         raise ValueError('"all" is a reserved build target name.')
     if '/' in name or ':' in name:
@@ -178,6 +178,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                          no_test_output,
                          skip_cache,
                          test_only or test,  # Tests are implicitly test_only
+                         stamp,
                          3 if flaky is True else flaky,  # Default is to rerun three times.
                          build_timeout,
                          test_timeout,

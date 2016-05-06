@@ -36,6 +36,7 @@ var KnownFields = map[string]bool{
 	"Requires":                    true,
 	"SkipCache":                   true,
 	"Sources":                     true,
+	"Stamp":                       true,
 	"TestCommand":                 true,
 	"TestOnly":                    true,
 	"TestOutputs":                 true,
@@ -44,12 +45,12 @@ var KnownFields = map[string]bool{
 	"Visibility":                  true,
 
 	// These aren't part of the declaration, only used internally.
-	"state":                true,
-	"Results":              true,
-	"PreBuildHash":         true,
-	"PostBuildHash":        true,
-	"RuleHash":             true,
-	"mutex":                true,
+	"state":         true,
+	"Results":       true,
+	"PreBuildHash":  true,
+	"PostBuildHash": true,
+	"RuleHash":      true,
+	"mutex":         true,
 }
 
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
