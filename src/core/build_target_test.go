@@ -167,7 +167,7 @@ func TestLabels(t *testing.T) {
 func TestGetCommand(t *testing.T) {
 	state := NewBuildState(10, nil, 2, DefaultConfiguration())
 	state.Config.Build.Config = "dbg"
-	state.Config.Build.DefaultConfig = "opt"
+	state.Config.Build.FallbackConfig = "opt"
 	target := makeTarget("//src/core:target1", "PUBLIC")
 	target.Command = "test1"
 	assert.Equal(t, "test1", target.GetCommand())

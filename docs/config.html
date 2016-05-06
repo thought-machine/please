@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Please config file reference</title>
+    <link rel="stylesheet" type="text/css" href="skeleton.css">
+  </head>
+  <body>
+    <!-- HEADER -->
+
+    <h1>Please config file reference</h1>
+
+    <p>The root of a Please repo is identified by a .plzconfig file. This also has a number of
+      options to control various parts of its behaviour which might be useful to tailor it
+      to your environment.</p>
+
+    <p>Please looks in several locations for these files and builds it up bit by bit. In order
+      (from lowest priority to highest):
+      <ul>
+        <li>.plzconfig</li>
+        <li>.plzconfig_&lt;arch&gt; (e.g. .plzconfig_linux_amd64)</li>
+        <li>/etc/plzconfig</li>
+        <li>.plzconfig.local</li>
+      </ul>
+      One would normally check in .plzconfig (and arch-specific equivalents if needed).<br/>
+      /etc/plzconfig is there to facilitate per-machine config in cases where the repo is often
+      deleted - this is quite common in CI systems.<br/>
+      Finally you normally add .plzconfig.local to .gitignore to allow people to override
+      settings locally if needed.</p>
+
+    <p>The file format is very similar to
+      <a href="https://git-scm.com/docs/git-config#_syntax">Git's config</a>; it's broken into
+      sections by headers in square brackets, and each section contains <code>option = value</code>
+      pairs. Comments start with a semicolon.</p>
+
+    <p>We'll list out the various options by section. The option names are all case-insensitive,
+      the values are of course case sensitive (except in the case of boolean variables which accept
+      various forms of <code>true</code>, <code>false</code>, <code>yes</code>, <code>no</code> etc).<br/>
+      Various parameters can be repeated (they're noted as such below); this means passing them
+      multiple times in their entirety, e.g.
+      <pre><code>
+          buildfilename = BUILD
+          buildfilename = BUCK
+      </code></pre>
+      Comma-separating on the same line won't work.</p>
+
+    <h3>[Please]</h3>
+
+    <ul>
+      <li><b>Version</b><br/>
+        Defines the version of plz that this repo is supposed to use currently. If it's not present
+        or the version matches the currently running version no special action is taken; otherwise
+        if <code>SelfUpdate</code> is set Please will attempt to download an appropriate
+        version, otherwise it will issue a warning and continue.<br/><br/>
+
+        Note that if this is not set, you can run <code>plz update</code> to update to the latest
+        version available on the server.</li>
+
+      <li><b>Location</b><br/>
+        Defines the directory Please is installed into.<br/>
+        Defaults to <code>~/.please</code> but you might want it to be somewhere else if you're
+        installing via another method (e.g. the debs and install script still use <code>/opt/please</code>).</li>
+
+      <li><b>SelfUpdate</b> (bool)<br/>
+        Sets whether plz will attempt to update itself when the version set in the config file is
+        different.</li>
+
+      <li><b>DownloadLocation</b><br/>
+        Defines the location to download Please from when self-updating. Defaults to the Please
+        web server, but you can point it to some location of your own if you prefer to keep
+        traffic within your network or use home-grown versions.</li>
+
+      <li><b>BuildFileName</b> (repeated string)<br/>
+        Sets the names that Please uses instead of <code>BUILD</code> for its build files.<br/>
+        For clarity the documentation refers to them simply as BUILD files but you could
+        reconfigure them here to be something else.<br/>
+        One case this can be particularly useful is in cases where you have a subdirectory named
+        <code>build</code> on a case-insensitive file system like HFS+.</li>
+
+      <li><b>BlacklistDirs</b> (repeated string)<br/>
+        Directories to blacklist when recursively searching for BUILD files (e.g. when using
+        <code>plz build ...</code> or similar).<br/>
+        This is generally useful when you have large directories within your repo that don't
+        need to be searched, especially things like <code>node_modules</code> that have
+        come from external package managers.</li>
+
+      <li><b>Lang</b><br/>
+        Sets the language passed to build rules when building. This can be important for some
+        tools (although hopefully not many) - we've mostly observed it with Sass.</li>
+
+      <li><b>PyPyLocation</b> (repeated string)<br/>
+        Defines the locations to look in for PyPy, or specifically for the shared object which
+        must be found at runtime to initialise the parser.<br/>
+        Defaults to <code>/usr/lib/libpypy-c.so</code> and <code>/usr/local/lib/libpypy-c.dylib</code>
+        which should work for the most obvious setups on Linux and OSX respectively.</li>
+
+      <li><b>Nonce</b><br/>
+        This is an arbitrary string that is added to the hash of every build target. It provides
+        a way to force a rebuild of everything when it's changed.<br/>
+        We will bump the default of this whenever we think it's required - although it's been
+        a pretty long time now and we hope that'll continue.</li>
+
+      <li><b>NumThreads</b> (int)<br/>
+        Number of parallel build operations to run.<br/>
+        Is overridden by the equivalent command-line flag, if that's passed.</li>
+    </ul>
+
+    <h3>[Build]</h3>
+
+    <ul>
+
+      <li><b>Timeout</b> (int)<br/>
+        Timeout for build operations, in seconds. Defaults to 600 (ten minutes).</li>
+
+      <li><b>Path</b> (repeated string)<br/>
+        The PATH variable that will be passed to the build processes.<br/>
+        Defaults to <code>/usr/local/bin:/usr/bin:/bin</code> but of course can be modified if
+        you need to get binaries from other locations.</li>
+
+      <li><b>Config</b><br/>
+        The build config to use when one is not chosen on the command line. Defaults to <code>opt</code>.</li>
+
+      <li><b>FallbackConfig</b><br/>
+        The build config to use when one is chosen and a required target does not have
+        one by the same name. Also defaults to <code>opt</code>.</li>
+
+    </ul>
+
+    <h3>[Cache]</h3>
+
+    <ul>
+
+      <li><b>Dir</b><br/>
+        Sets the directory to use for the dir cache.<br/>
+        The default is <code>.plz-cache</code>, if set to the empty string the dir cache will
+        be disabled.</li>
+
+      <li><b>DirCacheCleaner</b><br/>
+        The binary to use for cleaning the directory cache.<br/>
+        Defaults to <code>cache_cleaner</code> in the plz install directory.<br/>
+        Can also be set to the empty string to disable attempting to run it - note that this
+        will of course lead to the dir cache growing without limit which may ruin your day
+        if it fills your disk :)</li>
+
+      <li><b>DirCacheHighWaterMark</b> (size)<br/>
+        Starts cleaning the directory cache when it is over this number of bytes.<br/>
+        Can also be given with human-readable suffixes like 10G, 200MB etc.</li>
+
+      <li><b>DirCacheLowWaterMark</b> (size)<br/>
+        When cleaning the directory cache, it's reduced to at most this size.</li>
+
+      <li><b>HttpUrl</b><br/>
+        Base URL of the HTTP cache.<br/>
+        Not set to anything by default which means the cache will be disabled.</li>
+
+      <li><b>HttpWriteable</b> (bool)<br/>
+        If True this plz instance will write content back to the HTTP cache.<br/>
+        By default it runs in read-only mode.</li>
+
+      <li><b>HttpTimeout</b> (int)<br/>
+        Timeout for operations contacting the HTTP cache, in seconds.</li>
+
+      <li><b>RpcUrl</b><br/>
+        Base URL of the RPC cache.<br/>
+        Not set to anything by default which means the cache will be disabled.</li>
+
+      <li><b>RpcWriteable</b> (bool)<br/>
+        If True this plz instance will write content back to the RPC cache.<br/>
+        By default it runs in read-only mode.</li>
+
+      <li><b>RpcTimeout</b> (int)<br/>
+        Timeout for operations contacting the RPC cache, in seconds.</li>
+
+    </ul>
+
+    <h3>[Test]</h3>
+
+    <ul>
+      <li><b>Timeout</b> (int)<br/>
+        Sets the default timeout length, in seconds, for any test that isn't explicitly given one.
+        Defaults to 600 (10 minutes).</li>
+
+      <li><b>DefaultContainer</b><br/>
+        Sets the default type of containerisation to use for tests that are given
+        <code>container = True</code>.<br/>
+        Currently the only option is "docker" but we intend to add rkt support at some point.</li>
+    </ul>
+
+    <h3>[Cover]</h3>
+
+    <ul>
+      <li><b>FileExtension</b> (repeated string)<br/>
+        Extensions of files to consider for coverage.<br/>
+        Defaults to a reasonably obvious set for the builtin rules including <code>.go</code>,
+        <code>.py</code>, <code>.java</code>, etc.</li>
+
+      <li><b>ExcludeExtension</b> (repeated string)<br/>
+        Extensions of files to exclude from coverage.<br/>
+        Typically this is for generated code; the default is to exclude protobuf extensions like
+        <code>.pb.go</code>, <code>_pb2.py</code>, etc.</li>
+    </ul>
+
+    <h3>[Docker]</h3>
+
+    <p>Options relating to tests that are run inside Docker containers.</p>
+
+    <ul>
+      <li><b>DefaultImage</b><br/>
+        The default image used for any test that doesn't specify another.</li>
+
+      <li><b>AllowLocalFallback</b> (bool)<br/>
+        If True, will attempt to run the test locally if containerised running fails.</li>
+
+      <li><b>Timeout</b> (int)<br/>
+        Default timeout for Dockerised tests, in seconds. Default is 1200 (twenty minutes).</li>
+
+      <li><b>ResultsTimeout</b> (int)<br/>
+        </li>
+
+      <li><b></b><br/>
+        </li>
+
+      <li><b></b><br/>
+        </li>
+
+  </body>
+</html>

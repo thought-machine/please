@@ -93,20 +93,20 @@ func DefaultConfiguration() *Configuration {
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.DownloadLocation = "https://s3-eu-west-1.amazonaws.com/please-build"
-	config.Please.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
-	config.Please.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
-	config.Build.Timeout = 600         // Ten minutes
-	config.Build.Config = "opt"        // Optimised builds by default
-	config.Build.DefaultConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
-	config.Cache.HttpTimeout = 5       // Five seconds
-	config.Cache.RpcTimeout = 5        // Five seconds
+	config.Please.Lang = "en_GB.UTF-8"  // Not the language of the UI, the language passed to rules.
+	config.Please.Nonce = "1402"        // Arbitrary nonce to invalidate config when needed.
+	config.Build.Timeout = 600          // Ten minutes
+	config.Build.Config = "opt"         // Optimised builds by default
+	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
+	config.Cache.HttpTimeout = 5        // Five seconds
+	config.Cache.RpcTimeout = 5         // Five seconds
 	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
 	config.Test.Timeout = 600
 	config.Test.DefaultContainer = TestContainerDocker
 	config.Docker.DefaultImage = "ubuntu:trusty"
-	config.Docker.AllowLocalFallback = true
+	config.Docker.AllowLocalFallback = false
 	config.Docker.Timeout = 1200      // Twenty minutes
 	config.Docker.ResultsTimeout = 20 // Twenty seconds
 	config.Docker.RemoveTimeout = 20  // Twenty seconds
@@ -152,10 +152,10 @@ type Configuration struct {
 		NumThreads       int
 	}
 	Build struct {
-		Timeout       int
-		Path          []string
-		Config        string
-		DefaultConfig string
+		Timeout        int
+		Path           []string
+		Config         string
+		FallbackConfig string
 	}
 	Cache struct {
 		Dir                   string

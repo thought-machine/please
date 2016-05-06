@@ -540,7 +540,7 @@ func (target *BuildTarget) GetCommand() string {
 		return target.Command
 	} else if command, present := target.Commands[State.Config.Build.Config]; present {
 		return command // Has command for current config, good
-	} else if command, present := target.Commands[State.Config.Build.DefaultConfig]; present {
+	} else if command, present := target.Commands[State.Config.Build.FallbackConfig]; present {
 		return command // Has command for default config, fall back to that
 	}
 	// Oh dear, target doesn't have any matching config. Panicking is a bit heavy here, instead
@@ -554,7 +554,7 @@ func (target *BuildTarget) GetCommand() string {
 		}
 	}
 	log.Warning("%s doesn't have a command for %s (or %s), falling back to %s",
-		target.Label, State.Config.Build.Config, State.Config.Build.DefaultConfig, highestConfig)
+		target.Label, State.Config.Build.Config, State.Config.Build.FallbackConfig, highestConfig)
 	return highestCommand
 }
 
