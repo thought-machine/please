@@ -6,7 +6,8 @@ the complex build environment C++ has, so some issues may remain.
 
 
 def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only=False,
-               compiler_flags=None, linker_flags=None, pkg_config_libs=None, archive=False):
+               compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None,
+               copts=None):
     """Generate a C++ library target.
 
     Args:
@@ -22,15 +23,19 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
                            picked up by a cc_binary or cc_test rule.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
-      archive (bool): Deprecated, has no effect.
+      includes (list): List of include directories to be added to the compiler's path.
+      copts (list): Alias for compiler_flags.
     """
     srcs = srcs or []
     hdrs = hdrs or []
     deps = deps or []
+    compiler_flags = compiler_flags or copts
     linker_flags = linker_flags or []
     pkg_config_libs = pkg_config_libs or []
     dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
     opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs)
+    include_flags = ' '.join('-isystem ' + i for i in includes) if includes else ''
+    cmd_template = '%s -c -I . %s ${SRCS_SRCS} %s && ar rcs%s $OUT *.o'
 
     # Collect the headers for other rules
     filegroup(
@@ -47,8 +52,8 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
         deps=deps,
         visibility=visibility,
         cmd={
-            'dbg': '%s -c -I . ${SRCS_SRCS} %s && ar rcs%s $OUT *.o' % (CONFIG.CC_TOOL, dbg_flags, _AR_FLAG),
-            'opt': '%s -c -I . ${SRCS_SRCS} %s && ar rcs%s $OUT *.o' % (CONFIG.CC_TOOL, opt_flags, _AR_FLAG),
+            'dbg': cmd_template % (CONFIG.CC_TOOL, include_flags, dbg_flags, _AR_FLAG),
+            'opt': cmd_template % (CONFIG.CC_TOOL, include_flags, opt_flags, _AR_FLAG),
         },
         building_description='Compiling...',
         requires=['cc', 'cc_hdrs'],
