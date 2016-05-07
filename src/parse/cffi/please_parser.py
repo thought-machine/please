@@ -97,8 +97,8 @@ def _parse_build_code(filename, globals_dict, cache=False):
 
 def _rewrite_bazel_args(tree):
     """Rewrites Bazel argument names in certain function calls."""
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, ast.Expr):
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
             for keyword in node.value.keywords:
                 if keyword.arg in _BAZEL_KEYWORD_REWRITES:
                     keyword.arg = _BAZEL_KEYWORD_REWRITES[keyword.arg]
@@ -109,6 +109,9 @@ _BAZEL_KEYWORD_REWRITES = {
     'copts': 'compiler_flags',
     'linkopts': 'linker_flags',
     'testonly': 'test_only',
+    'javacopts': 'javac_flags',
+    'tags': 'labels',
+    'runtime_deps': 'data',
 }
 
 
@@ -382,7 +385,6 @@ def _get_globals(c_package, c_package_name):
     local_globals['add_licence'] = lambda name, licence: _check_c_error(_add_licence_post(c_package, name, licence))
     local_globals['set_command'] = lambda name, config, command='': _check_c_error(_set_command(c_package, name, config, command))
     local_globals['package'] = lambda **kwargs: package(local_globals, **kwargs)
-    local_globals['licenses'] = lambda l: licenses(local_globals, l)
     # Make these available to other scripts so they can get it without import.
     local_globals['join_path'] = os.path.join
     local_globals['split_path'] = os.path.split
@@ -400,6 +402,7 @@ def _get_globals(c_package, c_package_name):
     })
     if local_globals.get('CONFIG').BAZEL_COMPATIBILITY:
         local_globals['native'] = DotDict(local_globals)
+        local_globals['licenses'] = lambda l: licenses(local_globals, l)
     return local_globals
 
 
