@@ -5,7 +5,7 @@ the complex build environment C++ has, so some issues may remain.
 """
 
 
-def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only=False,
+def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False,
                compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None):
     """Generate a C++ library target.
 
@@ -14,6 +14,8 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
       srcs (list): C or C++ source files to compile.
       hdrs (list): Header files. These will be made available to dependent rules, so the distinction
                    between srcs and hdrs is important.
+      private_hdrs (list): Header files that are available only to this rule and not exported to
+                           dependent rules.
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
       test_only (bool): If True, is only available to other test rules.
@@ -29,10 +31,21 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
     deps = deps or []
     linker_flags = linker_flags or []
     pkg_config_libs = pkg_config_libs or []
+    includes = includes or []
     dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
     opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs)
-    include_flags = ' '.join('-isystem ' + i for i in includes) if includes else ''
+    include_flags = ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in includes)
     cmd_template = '%s -c -I . %s ${SRCS_SRCS} %s && ar rcs%s $OUT *.o'
+
+    # Bazel suggests passing nonexported header files in 'srcs'. Detect that here.
+    # For the moment I'd rather not do this automatically in other cases.
+    if CONFIG.BAZEL_COMPATIBILITY:
+        src_hdrs = [src for src in srcs if src.endswith('.h')]
+        private_hdrs = (private_hdrs or []) + src_hdrs
+        srcs = [src for src in srcs if not src.endswith('.h')]
+        # This is rather nasty; people seem to be relying on being able to reuse
+        # headers that they've put in srcs. We seem to need to re-export them here.
+        hdrs += src_hdrs
 
     # Collect the headers for other rules
     filegroup(
@@ -44,7 +57,7 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
     )
     build_rule(
         name='_%s#a' % name,
-        srcs={'srcs': srcs, 'hdrs': hdrs},
+        srcs={'srcs': srcs, 'hdrs': hdrs, 'priv': private_hdrs},
         outs=[name + '.a'],
         deps=deps,
         visibility=visibility,
@@ -56,7 +69,8 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
         requires=['cc', 'cc_hdrs'],
         test_only=test_only,
         labels=['cc:ld:' + flag for flag in linker_flags] +
-               ['cc:pc:' + lib for lib in pkg_config_libs],
+               ['cc:pc:' + lib for lib in pkg_config_libs] +
+               ['cc:inc:' + include for include in includes],
     )
     hdrs_rule = ':_%s#hdrs' % name
     a_rule = ':_%s#a' % name
@@ -180,7 +194,8 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None,
     """
     srcs = srcs or []
     hdrs = hdrs or []
-    linker_flags = linker_flags or [CONFIG.DEFAULT_LDFLAGS]
+    linker_flags = linker_flags or []
+    linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
     cmd = {
@@ -230,7 +245,9 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     srcs = srcs or []
     deps=deps or []
-    linker_flags = ['-lunittest++'] + (linker_flags or [CONFIG.DEFAULT_LDFLAGS])
+    linker_flags = ['-lunittest++']
+    linker_flags.extend(linker_flags or [])
+    linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
     genrule(
@@ -412,7 +429,8 @@ cxx_test = cc_test
 
 def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
-    compiler_flags = compiler_flags or [CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS]
+    compiler_flags = compiler_flags or []
+    compiler_flags.append(CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS)
     compiler_flags.append('-fPIC')
     # Linker flags may need this leading -Xlinker mabob.
     linker_flags = ['-Xlinker ' + flag for flag in (linker_flags or [])]
@@ -436,5 +454,6 @@ def _apply_transitive_labels(command_map):
         command_map[config],
         ' '.join('-Xlinker ' + flag for flag in get_labels(name, 'cc:ld:')),
         ' '.join('`pkg-config --libs %s`' % x for x in get_labels(name, 'cc:pc:')),
+        ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in get_labels(name, 'cc:inc:')),
     ]))
     return lambda name: (update_command(name, 'dbg'), update_command(name, 'opt'))
