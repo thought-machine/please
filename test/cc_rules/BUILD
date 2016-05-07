@@ -36,7 +36,7 @@ plz_e2e_test(
 # lib2's object file should not have any dependency on lib1's though.
 plz_e2e_test(
     name = 'cc_query_somepath_test_2',
-    cmd = 'plz query somepath //test/cc_rules:_lib2#a //test/cc_rules:_lib1#a',
+    cmd = 'plz query somepath //test/cc_rules:_lib2#lib2_cc //test/cc_rules:_lib1#lib1_cc',
     expected_output = 'cc_query_somepath_test_2.txt',
 )
 

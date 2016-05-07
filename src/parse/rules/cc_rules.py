@@ -37,7 +37,6 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, defines=defines, dbg=True)
     opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, defines=defines)
     include_flags = ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in includes)
-    cmd_template = '%s -c -I . %s ${SRCS_SRCS} %s && ar rcs%s $OUT *.o'
 
     # Bazel suggests passing nonexported header files in 'srcs'. Detect that here.
     # For the moment I'd rather not do this automatically in other cases.
@@ -59,33 +58,39 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         requires=['cc_hdrs'],
         exported_deps=deps,
     )
-    build_rule(
-        name='_%s#a' % name,
-        srcs={'srcs': srcs, 'hdrs': hdrs, 'priv': private_hdrs},
-        outs=[name + '.a'],
-        deps=deps,
-        visibility=visibility,
-        cmd={
-            'dbg': cmd_template % (CONFIG.CC_TOOL, include_flags, dbg_flags, _AR_FLAG),
-            'opt': cmd_template % (CONFIG.CC_TOOL, include_flags, opt_flags, _AR_FLAG),
-        },
-        building_description='Compiling...',
-        requires=['cc', 'cc_hdrs'],
-        test_only=test_only,
-        labels=['cc:ld:' + flag for flag in linker_flags] +
-               ['cc:pc:' + lib for lib in pkg_config_libs] +
-               ['cc:inc:' + include for include in includes] +
-               ['cc:def:' + define for define in defines],
-    )
+    labels = (['cc:ld:' + flag for flag in linker_flags] +
+              ['cc:pc:' + lib for lib in pkg_config_libs] +
+              ['cc:inc:' + include for include in includes] +
+              ['cc:def:' + define for define in defines])
+    cmd_template = '%s -c -I . %s ${SRCS_SRCS} %s -o $OUT'
+    cmds = {
+        'dbg': cmd_template % (CONFIG.CC_TOOL, include_flags, dbg_flags),
+        'opt': cmd_template % (CONFIG.CC_TOOL, include_flags, opt_flags),
+    }
+    o_rules = []
+    for src in srcs:
+        o_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_'))
+        build_rule(
+            name=o_name,
+            srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
+            outs=[o_name + '.o'],
+            deps=deps,
+            visibility=visibility,
+            cmd=cmds,
+            building_description='Compiling...',
+            requires=['cc', 'cc_hdrs'],
+            test_only=test_only,
+            labels=labels,
+        )
+        o_rules.append(':' + o_name)
     hdrs_rule = ':_%s#hdrs' % name
-    a_rule = ':_%s#a' % name
     filegroup(
         name=name,
-        srcs=[hdrs_rule, a_rule],
+        srcs=[hdrs_rule] + o_rules,
         provides={
             'cc_hdrs': hdrs_rule,
         },
-        deps=deps + [hdrs_rule, a_rule],
+        deps=deps,
         test_only=test_only,
         visibility=visibility,
         output_is_complete=False,
@@ -134,7 +139,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         name = name,
         deps = deps,
         outs = ['lib%s.a' % name],
-        cmd = '(find . -name "*.a" | xargs -n 1 ar x) && ar rcs%s $OUT `find . -name "*.o"`' % _AR_FLAG,
+        cmd = 'ar rcs%s $OUT `find . -name "*.o"`' % _AR_FLAG,
         needs_transitive_deps = True,
         output_is_complete = True,
         visibility = visibility,
@@ -201,7 +206,8 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
     srcs = srcs or []
     hdrs = hdrs or []
     linker_flags = linker_flags or []
-    linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
+    if CONFIG.DEFAULT_LDFLAGS:
+        linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
     cmd = {
@@ -254,7 +260,8 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
     srcs = srcs or []
     linker_flags = ['-lunittest++']
     linker_flags.extend(linker_flags or [])
-    linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
+    if CONFIG.DEFAULT_LDFLAGS:
+        linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
     if write_main:
