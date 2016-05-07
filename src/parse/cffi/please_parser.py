@@ -398,6 +398,8 @@ def _get_globals(c_package, c_package_name):
         'info': lambda message, *args: _log(4, c_package, message % args),
         'debug': lambda message, *args: _log(5, c_package, message % args),
     })
+    if local_globals.get('CONFIG').BAZEL_COMPATIBILITY:
+        local_globals['native'] = DotDict(local_globals)
     return local_globals
 
 

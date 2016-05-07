@@ -483,3 +483,17 @@ if CONFIG.BAZEL_COMPATIBILITY:
             srcs = [actual],
             visibility = ['PUBLIC'],
         )
+
+    def load(name, *symbols):
+        """Vaguely mimics the Bazel load() function which loads things from a .bzl file.
+
+        Conveniently they have a deprecated mode which is a lot like include_defs(), and
+        a more modern one which resembles subinclude(). Unfortunately the latter doesn't
+        require having an actual target to subinclude() from...
+
+        In neither case do we support loading specific symbols.
+        """
+        if name.startswith('//'):
+            subinclude(name)
+        else:
+            include_defs('//%s/%s.bzl' % (get_base_path(), name))
