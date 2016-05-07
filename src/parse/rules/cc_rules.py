@@ -46,6 +46,8 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         # This is rather nasty; people seem to be relying on being able to reuse
         # headers that they've put in srcs. We seem to need to re-export them here.
         hdrs += src_hdrs
+        # Found this in a few cases... can't pass -pthread to the linker.
+        linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
 
     # Collect the headers for other rules
     filegroup(
@@ -220,7 +222,7 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None,
 
 def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None,
             deps=None, data=None, visibility=None, labels=None, flaky=0, test_outputs=None,
-            size=None, timeout=0, container=False):
+            size=None, timeout=0, container=False, write_main=not CONFIG.BAZEL_COMPATIBILITY):
     """Defines a C++ test using UnitTest++.
 
     We template in a main file so you don't have to supply your own.
@@ -241,23 +243,23 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
       size (str): Test size (enormous, large, medium or small).
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
       container (bool | dict): If true the test is run in a container (eg. Docker).
+      write_main (bool): Whether or not to write a main() for these tests.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     srcs = srcs or []
-    deps=deps or []
     linker_flags = ['-lunittest++']
     linker_flags.extend(linker_flags or [])
     linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
-    genrule(
-        name='_%s#main' % name,
-        outs=['_%s_main.cc' % name],
-        cmd='echo \'%s\' > $OUT' % _CC_TEST_MAIN_CONTENTS,
-        test_only=True,
-    )
-    deps.append(':_%s#main' % name)
-    srcs.append(':_%s#main' % name)
+    if write_main:
+        genrule(
+            name='_%s#main' % name,
+            outs=['_%s_main.cc' % name],
+            cmd='echo \'%s\' > $OUT' % _CC_TEST_MAIN_CONTENTS,
+            test_only=True,
+        )
+        srcs.append(':_%s#main' % name)
     cmd = {
         'dbg': '%s -o ${OUT} -I . ${SRCS} %s' % (CONFIG.CC_TOOL, dbg_flags),
         'opt': '%s -o ${OUT} -I . ${SRCS} %s' % (CONFIG.CC_TOOL, opt_flags),

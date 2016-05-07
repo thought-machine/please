@@ -108,6 +108,7 @@ _BAZEL_KEYWORD_REWRITES = {
     'artifact': 'id',
     'copts': 'compiler_flags',
     'linkopts': 'linker_flags',
+    'testonly': 'test_only',
 }
 
 
