@@ -335,7 +335,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
 
 
-def maven_jar(name, id=None, artifact=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
+def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
               exclude_paths=None):
     """Fetches a single Java dependency from Maven.
@@ -343,7 +343,6 @@ def maven_jar(name, id=None, artifact=None, repository=_MAVEN_CENTRAL, hash=None
     Args:
       name (str): Name of the output rule.
       id (str): Maven id of the artifact (eg. org.junit:junit:4.1.0)
-      artifact (str): Alias for 'id'. Can only pass one of them.
       repository (str): Maven repo to fetch deps from.
       hash (str): Hash for produced rule.
       deps (list): Labels of dependencies, as usual.
@@ -353,9 +352,6 @@ def maven_jar(name, id=None, artifact=None, repository=_MAVEN_CENTRAL, hash=None
       licences (list): Licences this package is subject to.
       exclude_paths (list): Paths to remove from the downloaded .jar.
     """
-    if not (bool(id) ^ bool(artifact)):
-        raise ValueError('Must pass exactly one of "id" or "artifact" to maven_jar')
-    id = id or artifact
     _maven_packages[get_base_path()][name] = id
     # TODO(pebers): Handle exclusions, packages with no source available and packages with no version.
     try:

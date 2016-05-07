@@ -87,9 +87,28 @@ def _parse_build_code(filename, globals_dict, cache=False):
                 raise SyntaxError('exec not allowed')
             if isinstance(node, ast.Print):
                 raise SyntaxError('print not allowed, use log functions instead')
+        if globals_dict.get('CONFIG', {}).get('BAZEL_COMPATIBILITY'):
+            _rewrite_bazel_args(tree)
         code = _compile(tree, filename, 'exec')
         _build_code_cache[filename] = code
     exec(code, globals_dict)
+
+
+
+def _rewrite_bazel_args(tree):
+    """Rewrites Bazel argument names in certain function calls."""
+    for node in ast.iter_child_nodes(tree):
+        if isinstance(node, ast.Expr):
+            for keyword in node.value.keywords:
+                if keyword.arg in _BAZEL_KEYWORD_REWRITES:
+                    keyword.arg = _BAZEL_KEYWORD_REWRITES[keyword.arg]
+
+
+_BAZEL_KEYWORD_REWRITES = {
+    'artifact': 'id',
+    'copts': 'compiler_flags',
+    'linkopts': 'linker_flags',
+}
 
 
 @ffi.callback('SetConfigValueCallback*')

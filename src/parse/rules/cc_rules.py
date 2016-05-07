@@ -6,8 +6,7 @@ the complex build environment C++ has, so some issues may remain.
 
 
 def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only=False,
-               compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None,
-               copts=None):
+               compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None):
     """Generate a C++ library target.
 
     Args:
@@ -24,12 +23,10 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
       includes (list): List of include directories to be added to the compiler's path.
-      copts (list): Alias for compiler_flags.
     """
     srcs = srcs or []
     hdrs = hdrs or []
     deps = deps or []
-    compiler_flags = compiler_flags or copts
     linker_flags = linker_flags or []
     pkg_config_libs = pkg_config_libs or []
     dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
