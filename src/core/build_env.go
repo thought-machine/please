@@ -67,6 +67,14 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 			paths := target.SourcePaths(state.Graph, srcs)
 			env = append(env, "SRCS_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
 		}
+		if state.Config.Bazel.Compatibility {
+			// Obviously this is only a subset of the variables Bazel would expose, but there's
+			// no point populating ones that we literally have no clue what they should be.
+			// To be honest I don't terribly like these, I'm pretty sure that using $GENDIR in
+			// your genrule is not a good sign.
+			env = append(env, "GENDIR="+path.Join(RepoRoot, GenDir))
+			env = append(env, "BINDIR="+path.Join(RepoRoot, BinDir))
+		}
 	} else {
 		env = append(env, "TEST_DIR="+path.Join(RepoRoot, target.TestDir()))
 		if state.NeedCoverage {

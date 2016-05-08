@@ -53,14 +53,9 @@ func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) error {
 	if target.IsBinary {
 		fileName = ":_bin_" + fileName // Add some arbitrary prefix so they don't clash.
 	}
-	if existing, present := pkg.Outputs[fileName]; present && existing != target {
-		if target.HasSource(originalFileName) || existing.HasSource(originalFileName) {
-			log.Debug("Rules %s and %s both output %s, but ignoring because we think one's a filegroup",
-				existing.Label, target.Label, originalFileName)
-		} else {
-			return fmt.Errorf("Rules %s and %s in %s both attempt to output the same file: %s\n",
-				existing.Label, target.Label, pkg.Filename, originalFileName)
-		}
+	if existing, present := pkg.Outputs[fileName]; present && existing != target && !target.IsFilegroup() && !existing.IsFilegroup() {
+		return fmt.Errorf("Rules %s and %s in %s both attempt to output the same file: %s\n",
+			existing.Label, target.Label, pkg.Filename, originalFileName)
 	}
 	pkg.Outputs[fileName] = target
 	return nil
