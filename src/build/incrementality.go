@@ -195,13 +195,13 @@ func pathHashImpl(path string) ([]byte, error) {
 
 // movePathHash is used when we move files from tmp to out and there was one there before; that's
 // the only case in which the hash of a filepath could change.
-func movePathHash(oldPath, newPath string) {
+func movePathHash(oldPath, newPath string, copy bool) {
 	oldPath = ensureRelative(oldPath)
 	newPath = ensureRelative(newPath)
 	pathHashMutex.Lock()
 	pathHashMemoizer[newPath] = pathHashMemoizer[oldPath]
 	// If the path is in plz-out/tmp we aren't ever going to use it again, so free some space.
-	if strings.HasPrefix(oldPath, core.TmpDir) {
+	if !copy && strings.HasPrefix(oldPath, core.TmpDir) {
 		delete(pathHashMemoizer, oldPath)
 	}
 	pathHashMutex.Unlock()

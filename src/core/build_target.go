@@ -16,6 +16,10 @@ const TmpDir string = "plz-out/tmp"
 const GenDir string = "plz-out/gen"
 const BinDir string = "plz-out/bin"
 
+// Placeholder commands for filegroups.
+const filegroupCommand = "__FILEGROUP__"
+const linkFilegroupCommand = "__LINK_FILEGROUP__"
+
 // Representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 
@@ -675,6 +679,25 @@ func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
 		return nil
 	}
 	return graph.Target(parent)
+}
+
+// IsFilegroup returns true if this target is a filegroup rule.
+func (target *BuildTarget) IsFilegroup() bool {
+	return target.Command == filegroupCommand || target.Command == linkFilegroupCommand
+}
+
+// IsLinkFilegroup returns true if this target is a filegroup rule that links its outputs.
+func (target *BuildTarget) IsLinkFilegroup() bool {
+	return target.Command == linkFilegroupCommand
+}
+
+// OutRoot returns either plz-out/gen or plz-out/bin depending on whether the target in question
+// is a binary target or not.
+func (target *BuildTarget) OutRoot() string {
+	if target.IsBinary {
+		return BinDir
+	}
+	return GenDir
 }
 
 // Make slices of these guys sortable.

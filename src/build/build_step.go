@@ -94,6 +94,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			log.Debug("Rebuilding %s after post-build function", target.Label)
 		}
 	}
+	if target.IsFilegroup() {
+		return buildFilegroup(tid, state, target)
+	}
 	if err := prepareDirectories(target); err != nil {
 		return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 	}
@@ -231,7 +234,7 @@ func prepareSources(graph *core.BuildGraph, target *core.BuildTarget, dependency
 func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error) {
 	// Before we write any outputs, we must remove the old hash file to avoid it being
 	// left in an inconsistent state.
-	if err := os.Remove(ruleHashFileName(target)); err != nil && !os.IsNotExist(err) {
+	if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
 		return true, err
 	}
 	for _, output := range target.Outputs() {
@@ -246,58 +249,65 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 		if err != nil {
 			return true, err
 		}
-		// hash the file
-		newHash, err := pathHash(dereferencedPath)
-		if err != nil {
+		// NB. false -> not filegroup, we wouldn't be here if it was.
+		if _, err = moveOutput(target, dereferencedPath, realOutput, false); err != nil {
 			return true, err
-		}
-		// The tmp output can be a symlink back to the real one; this is allowed for rules like
-		// filegroups that attempt to link outputs of other rules. In that case we can't
-		// remove the original because that'd break the link, but by definition we don't need
-		// to actually do anything more.
-		// TODO(pebers): The logic here is quite tortured, consider a (very careful) rewrite.
-		dereferencedOutput, _ := filepath.EvalSymlinks(realOutput)
-		if absOutput, _ := filepath.Abs(realOutput); dereferencedPath == absOutput || realOutput == dereferencedPath || dereferencedOutput == dereferencedPath {
-			continue
-		}
-		if core.PathExists(realOutput) {
-			oldHash, err := pathHash(realOutput)
-			if err != nil {
-				return true, err
-			} else if bytes.Equal(oldHash, newHash) {
-				// We already have the same file in the current location. Don't bother moving it.
-				continue
-			}
-		}
-		if err := os.RemoveAll(realOutput); err != nil {
-			return true, err
-		}
-		movePathHash(dereferencedPath, realOutput)
-		// Check if we need a directory for this output.
-		dir := path.Dir(realOutput)
-		if !core.PathExists(dir) {
-			if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
-				return true, err
-			}
-		}
-		// If the output file is in plz-out/tmp we can just move it to save time, otherwise we need
-		// to copy so we don't move files from other directories.
-		if strings.HasPrefix(dereferencedPath, target.TmpDir()) {
-			if err := os.Rename(dereferencedPath, realOutput); err != nil {
-				return true, err
-			}
-		} else {
-			if err := core.RecursiveCopyFile(dereferencedPath, realOutput, 0, false); err != nil {
-				return true, err
-			}
-		}
-		if target.IsBinary {
-			if err := os.Chmod(realOutput, 0775); err != nil {
-				return true, err
-			}
 		}
 	}
 	return calculateAndCheckRuleHash(state, target), nil
+}
+
+func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegroup bool) (bool, error) {
+	// hash the file
+	newHash, err := pathHash(tmpOutput)
+	if err != nil {
+		return true, err
+	}
+	// The tmp output can be a symlink back to the real one; this is allowed for rules like
+	// filegroups that attempt to link outputs of other rules. In that case we can't
+	// remove the original because that'd break the link, but by definition we don't need
+	// to actually do anything more.
+	// TODO(pebers): The logic here is quite tortured, consider a (very careful) rewrite.
+	dereferencedOutput, _ := filepath.EvalSymlinks(realOutput)
+	if absOutput, _ := filepath.Abs(realOutput); tmpOutput == absOutput || realOutput == tmpOutput || dereferencedOutput == tmpOutput {
+		return false, nil
+	}
+	if core.PathExists(realOutput) {
+		oldHash, err := pathHash(realOutput)
+		if err != nil {
+			return true, err
+		} else if bytes.Equal(oldHash, newHash) {
+			// We already have the same file in the current location. Don't bother moving it.
+			return false, nil
+		}
+	} else if err := os.RemoveAll(realOutput); err != nil {
+		return true, err
+	}
+	movePathHash(tmpOutput, realOutput, filegroup)
+	// Check if we need a directory for this output.
+	dir := path.Dir(realOutput)
+	if !core.PathExists(dir) {
+		if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
+			return true, err
+		}
+	}
+	// If the output file is in plz-out/tmp we can just move it to save time, otherwise we need
+	// to copy so we don't move files from other directories.
+	if strings.HasPrefix(tmpOutput, target.TmpDir()) {
+		if err := os.Rename(tmpOutput, realOutput); err != nil {
+			return true, err
+		}
+	} else {
+		if err := core.RecursiveCopyFile(tmpOutput, realOutput, 0, filegroup); err != nil {
+			return true, err
+		}
+	}
+	if target.IsBinary {
+		if err := os.Chmod(realOutput, 0775); err != nil {
+			return true, err
+		}
+	}
+	return true, nil
 }
 
 // RemoveOutputs removes all generated outputs for a rule.
@@ -403,4 +413,34 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 	if len(target.Licences) > 0 && len(state.Config.Licences.Accept) > 0 {
 		panic(fmt.Sprintf("None of the licences for %s are accepted in this repository: %s", target.Label, strings.Join(target.Licences, ", ")))
 	}
+}
+
+// buildFilegroup runs the manual build steps for a filegroup rule.
+// We don't force this to be done in bash to avoid errors with maximum command lengths,
+// and it's actually quite fiddly to get just so there.
+func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) error {
+	if err := prepareDirectory(target.OutDir(), false); err != nil {
+		return err
+	}
+	if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
+		return err
+	}
+	changed := false
+	for _, source := range target.Sources {
+		fullPaths := source.FullPaths(state.Graph)
+		for i, sourcePath := range source.Paths(state.Graph) {
+			c, err := moveOutput(target, fullPaths[i], path.Join(target.OutRoot(), sourcePath), true)
+			if err != nil {
+				return err
+			}
+			changed = changed || c
+		}
+	}
+	if changed {
+		target.SetState(core.Built)
+	} else {
+		target.SetState(core.Unchanged)
+	}
+	state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
+	return nil
 }

@@ -195,20 +195,13 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
                        in-depth discussion of this).
       test_only (bool): If true the exported file can only be used by test targets.
     """
-    cmd = 'true'  # Nothing to do if we only have deps.
-    if srcs:
-        not_root = bool(get_base_path())
-        locations = ' '.join('$(location_pairs %s)' % src for src in srcs
-                             if not_root or src.startswith(':') or src.startswith('/'))
-        if locations:
-            cmd = 'echo %s | xargs -rn 2 %s' % (locations, 'ln -s' if link else 'cp -r')
     build_rule(
         name=name,
         srcs=srcs,
         deps=deps,
         exported_deps=exported_deps,
         outs=srcs,
-        cmd=cmd,
+        cmd='__LINK_FILEGROUP__' if link else '__FILEGROUP__',
         visibility=visibility,
         building_description='Symlinking...' if link else 'Copying...',
         # This fixes some issues; I think it's reasonable that the outputs of filegroups
@@ -216,7 +209,7 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
         output_is_complete=output_is_complete,
         # This just symlinks its inputs so it's faster not to copy to the cache and back,
         # especially if the files it's collecting are large.
-        skip_cache=link,
+        skip_cache=True,
         requires=requires,
         provides=provides,
         test_only=test_only,
