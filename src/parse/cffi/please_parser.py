@@ -87,21 +87,22 @@ def _parse_build_code(filename, globals_dict, cache=False):
                 raise SyntaxError('exec not allowed')
             if isinstance(node, ast.Print):
                 raise SyntaxError('print not allowed, use log functions instead')
-        if globals_dict.get('CONFIG', {}).get('BAZEL_COMPATIBILITY'):
-            _rewrite_bazel_args(tree)
         code = _compile(tree, filename, 'exec')
         _build_code_cache[filename] = code
     exec(code, globals_dict)
 
 
-
-def _rewrite_bazel_args(tree):
-    """Rewrites Bazel argument names in certain function calls."""
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
-            for keyword in node.value.keywords:
-                if keyword.arg in _BAZEL_KEYWORD_REWRITES:
-                    keyword.arg = _BAZEL_KEYWORD_REWRITES[keyword.arg]
+def bazel_wrapper(func):
+    """Rewrites incoming argument names when we're in Bazel compatibility mode."""
+    def _inner(*args, **kwargs):
+        for k, v in _BAZEL_KEYWORD_REWRITES.iteritems():
+            if k in kwargs:
+                if v in kwargs:
+                    raise ValueError('You must pass at most one of %s and %s' % (k, v))
+                kwargs[v] = kwargs[k]
+                del kwargs[k]
+        return func(*args, **kwargs)
+    return _inner
 
 
 _BAZEL_KEYWORD_REWRITES = {
@@ -365,9 +366,11 @@ def _get_globals(c_package, c_package_name):
     can't reassign that at runtime, so we create duplicates here. YOLO.
     """
     local_globals = {}
+    bazel_compat = _please_globals.get('CONFIG', {}).get('BAZEL_COMPATIBILITY')
     for k, v in _please_globals.iteritems():
         if callable(v) and type(v) == FunctionType:
-            local_globals[k] = FunctionType(v.__code__, local_globals, k, v.__defaults__, v.__closure__)
+            func = FunctionType(v.__code__, local_globals, k, v.__defaults__, v.__closure__)
+            local_globals[k] = bazel_wrapper(func) if bazel_compat else func
         else:
             local_globals[k] = v
     # Need to pass some hidden arguments to these guys.
