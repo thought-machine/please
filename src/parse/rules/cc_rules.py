@@ -34,9 +34,8 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     pkg_config_libs = pkg_config_libs or []
     includes = includes or []
     defines = defines or []
-    dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, defines=defines, dbg=True)
-    opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, defines=defines)
-    include_flags = ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in includes)
+    dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
+    opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs)
 
     # Bazel suggests passing nonexported header files in 'srcs'. Detect that here.
     # For the moment I'd rather not do this automatically in other cases.
@@ -50,6 +49,10 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         # Found this in a few cases... can't pass -pthread to the linker.
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
 
+    labels = (['cc:ld:' + flag for flag in linker_flags] +
+              ['cc:pc:' + lib for lib in pkg_config_libs] +
+              ['cc:inc:' + include for include in includes] +
+              ['cc:def:' + define for define in defines])
     # Collect the headers for other rules
     filegroup(
         name='_%s#hdrs' % name,
@@ -57,15 +60,12 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         visibility=visibility,
         requires=['cc_hdrs'],
         exported_deps=deps,
+        labels=labels,
     )
-    labels = (['cc:ld:' + flag for flag in linker_flags] +
-              ['cc:pc:' + lib for lib in pkg_config_libs] +
-              ['cc:inc:' + include for include in includes] +
-              ['cc:def:' + define for define in defines])
-    cmd_template = '%s -c -I . %s ${SRCS_SRCS} %s -o $OUT'
+    cmd_template = '%s -c -I . ${SRCS_SRCS} %s -o $OUT'
     cmds = {
-        'dbg': cmd_template % (CONFIG.CC_TOOL, include_flags, dbg_flags),
-        'opt': cmd_template % (CONFIG.CC_TOOL, include_flags, opt_flags),
+        'dbg': cmd_template % (CONFIG.CC_TOOL, dbg_flags),
+        'opt': cmd_template % (CONFIG.CC_TOOL, opt_flags),
     }
     o_rules = []
     for src in srcs:
@@ -81,6 +81,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             requires=['cc', 'cc_hdrs'],
             test_only=test_only,
             labels=labels,
+            pre_build=_apply_transitive_labels(cmds, link=False),
         )
         o_rules.append(':' + o_name)
     hdrs_rule = ':_%s#hdrs' % name
@@ -441,13 +442,11 @@ cxx_library = cc_library
 cxx_test = cc_test
 
 
-def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, defines=None, dbg=False):
+def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
     compiler_flags = compiler_flags or []
     compiler_flags.append(CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS)
     compiler_flags.append('-fPIC')
-    if defines:
-        compiler_flags.extend('-D' + define for define in defines)
     # Linker flags may need this leading -Xlinker mabob.
     linker_flags = ['-Xlinker ' + flag for flag in (linker_flags or [])]
     pkg_config_cmd = ' '.join('`pkg-config --cflags --libs %s`' % x for x in pkg_config_libs or [])
@@ -457,7 +456,7 @@ def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflag
                      pkg_config_cmd, pkg_config_cmd_2, postamble])
 
 
-def _apply_transitive_labels(command_map):
+def _apply_transitive_labels(command_map, link=True):
     """Acquires the required linker flags from all transitive labels of a rule.
 
     This is how we handle libraries sensibly for C++ rules; you might write a rule that
@@ -466,11 +465,20 @@ def _apply_transitive_labels(command_map):
     that use it. The solution to this is here; we collect the set of linker flags from all
     dependencies and apply them to the binary rule that needs them.
     """
-    update_command = lambda name, config: set_command(name, config, ' '.join([
-        command_map[config],
-        ' '.join('-Xlinker ' + flag for flag in get_labels(name, 'cc:ld:')),
-        ' '.join('`pkg-config --libs %s`' % x for x in get_labels(name, 'cc:pc:')),
-        ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in get_labels(name, 'cc:inc:')),
-        ' '.join('-D' + define for define in get_labels(name, 'cc:def:')),
-    ]))
+    # TODO(pebers): This could probably be more efficient, it's going to walk the set of
+    #               labels quite a few times for each target.
+    if link:
+        update_command = lambda name, config: set_command(name, config, ' '.join([
+            command_map[config],
+            ' '.join('-Xlinker ' + flag for flag in get_labels(name, 'cc:ld:')),
+            ' '.join('`pkg-config --libs %s`' % x for x in get_labels(name, 'cc:pc:')),
+            ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in get_labels(name, 'cc:inc:')),
+            ' '.join('-D' + define for define in get_labels(name, 'cc:def:')),
+        ]))
+    else:
+        update_command = lambda name, config: set_command(name, config, ' '.join([
+            command_map[config],
+            ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in get_labels(name, 'cc:inc:')),
+            ' '.join('-D' + define for define in get_labels(name, 'cc:def:')),
+        ]))
     return lambda name: (update_command(name, 'dbg'), update_command(name, 'opt'))
