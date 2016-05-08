@@ -201,7 +201,7 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
         locations = ' '.join('$(location_pairs %s)' % src for src in srcs
                              if not_root or src.startswith(':') or src.startswith('/'))
         if locations:
-            cmd = 'echo %s | xargs -n 2 %s' % (locations, 'ln -s' if link else 'cp -r')
+            cmd = 'echo %s | xargs -rn 2 %s' % (locations, 'ln -s' if link else 'cp -r')
     build_rule(
         name=name,
         srcs=srcs,
