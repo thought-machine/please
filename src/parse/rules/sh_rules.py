@@ -4,6 +4,22 @@ Note that these do pretty much nothing beyond collecting the files. In future we
 implement something more advanced (ala .sar files or whatever).
 """
 
+# Used by sh_binary to separate the compressed files from the actual script.
+_TARBALL_BOUNDARY = '__TARFILE_FOLLOWS__'
+
+# NB: This string is formatted strangely due to bash variable expansion being a massive pain.
+_SH_BINARY_TMPL_PREFIX = """
+#!/bin/sh\n\
+SKIP=\\\$(awk '/^%(tarball_boundary)s/ { print NR + 1; exit 0; }' \\\$0)\n\
+THIS=\\\$(pwd)/\\\$0\n\
+tail -n +\\\$SKIP \\\$THIS | tar -xz
+"""
+
+_SH_BINARY_TMPL_SUFFIX = """
+exit 0\n\
+%(tarball_boundary)s"""
+
+
 def sh_library(name, src, deps=None, visibility=None, link=True):
     """Generates a shell script binary, essentially just the given source.
 
@@ -27,23 +43,43 @@ def sh_library(name, src, deps=None, visibility=None, link=True):
     )
 
 
-def sh_binary(name, main, deps=None, visibility=None, link=True):
-    """Generates a shell binary, essentially just the shell script itself.
+def sh_binary(name, main, deps=None, visibility=None):
+    """Generates a shell script binary.
+
+    The resulting script will contain three things:
+    1) Code necessary to untar dependent files.
+    2) The user defined shell script.
+    3) The tar ball containing all dependent files.
 
     Args:
       name (str): Name of the rule
-      main (str): Main script file.
+      main (str): The script to execute after all files have been uncompressed
       deps (list): Dependencies of this rule
       visibility (list): Visibility declaration of the rule.
-      link (bool): If True, outputs will be linked in plz-out; if False they'll be copied.
     """
-    filegroup(
-        name=name,
-        srcs=[main],
-        deps=deps,
-        visibility=visibility,
-        link=link,
-        binary=True,
+    tmpl_vars = {
+        'tarball_boundary': _TARBALL_BOUNDARY
+    }
+
+    cmds = ' && '.join([
+        # Inject bash code to untar the compressed files.
+        'echo "%s" > $OUT' % (_SH_BINARY_TMPL_PREFIX % tmpl_vars),
+        # Inject the user defined script.
+        'cat $SRCS >> $OUT',
+        # Inject the tar ball boundary.
+        'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_SUFFIX % tmpl_vars),
+        # Compress the dependent files and dump out into the bash script.
+        'find . -type f | grep -v ${SRCS} | grep -v ${OUT} | sed "s/^\.\///g" | tar zc -f - --files-from - >> ${OUT}',
+    ])
+
+    build_rule(
+        name = name,
+        srcs = [main],
+        outs = ['%s.sh' % name],
+        cmd = cmds,
+        deps = deps,
+        binary = True,
+        needs_transitive_deps = True
     )
 
 
