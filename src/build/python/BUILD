@@ -38,12 +38,6 @@ python_test(
     interpreter = '/usr/bin/pypy'
 )
 
-python_test(
-    name = 'strip_source_test',
-    srcs = ['strip_source_test.py'],
-    strip_source = True,
-)
-
 # This is needed for bootstrapping the build system: we have to be
 # able to build a .pex with the pex builder which is itself a pex.
 build_rule(

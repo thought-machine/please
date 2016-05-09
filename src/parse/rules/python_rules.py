@@ -16,7 +16,7 @@ a target which has only had small changes.
 # Commands used in python_library.
 _FIND_CMD = 'find ${PKG} -type d | grep -v "${PKG}$" | xargs -I {} touch "{}/__init__.py"'
 _ZIP_CMD = 'zip -r1 $OUT $(echo "$PKG" | cut -d "/" -f 1)'
-_COMPILE_CMD = 'find ${PKG} -name "*.py" | xargs %s -O -m py_compile' % interpreter
+_COMPILE_CMD = 'find ${PKG} -name "*.py" | xargs %s -O -m py_compile'
 _OPT_CMD = ' && '.join([_FIND_CMD, _ZIP_CMD])
 _STRIP_CMD = ' && '.join([_FIND_CMD, _COMPILE_CMD, _ZIP_CMD])
 
@@ -59,9 +59,9 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
             name='_%s#zip' % name,
             srcs=all_srcs,
             outs=['.%s.pex.zip' % name],
-            cmds = {
+            cmd={
                 'opt': _OPT_CMD,
-                'stripped': _STRIP_CMD,
+                'stripped': _STRIP_CMD % interpreter,
             },
             building_description='Compressing...',
             requires=['py'],

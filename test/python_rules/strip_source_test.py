@@ -12,4 +12,4 @@ class PexTest(unittest.TestCase):
 
     def testThisFileDoesntExist(self):
         """Test this file doesn't exist in the pex."""
-        self.assertFalse(pkg_resources.resource_exists('src.build.python', 'strip_source_test.py'))
+        self.assertFalse(pkg_resources.resource_exists('test.python_rules', 'strip_source_test.py'))

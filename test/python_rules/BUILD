@@ -15,3 +15,9 @@ python_test(
     srcs = ['proto_test.py'],
     deps = [':proto_lib'],
 )
+
+python_test(
+    name = 'strip_source_test',
+    srcs = ['strip_source_test.py'],
+    labels = ['manual'],  # only works in stripped configuration
+)
