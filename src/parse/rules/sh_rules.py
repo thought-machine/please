@@ -69,7 +69,7 @@ def sh_binary(name, main, deps=None, visibility=None):
         # Inject the tar ball boundary.
         'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_SUFFIX % tmpl_vars),
         # Compress the dependent files and dump out into the bash script.
-        'find $TMP_DIR -type f | grep -v $SRCS | grep -v $OUT | sed "s/^\.\///g" | tar zc --files-from - >> $OUT',
+        'find $TMP_DIR -type f | grep -v $SRCS | grep -v $OUT | sed "s/^\.\///g" | tar zc -f - --files-from - >> $OUT',
     ])
 
     build_rule(
