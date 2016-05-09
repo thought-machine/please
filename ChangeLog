@@ -1,3 +1,7 @@
+Version 2.1.1
+-------------
+    * Fixes bug with sh_binary not ignoring the main script properly when generating the tarball.
+
 Version 2.1.0
 -------------
     * Adds additional features to sh_binary to make it more complete. sh_binary now creates
