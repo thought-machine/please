@@ -79,6 +79,7 @@ def sh_binary(name, main, deps=None, visibility=None):
         cmd = cmds,
         deps = deps,
         binary = True,
+        needs_transitive_dep = True
     )
 
 
