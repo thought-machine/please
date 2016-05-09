@@ -13,6 +13,13 @@ but is drastically faster for building many targets with similar dependencies or
 a target which has only had small changes.
 """
 
+# Commands used in python_library.
+_FIND_CMD = 'find ${PKG} -type d | grep -v "${PKG}$" | xargs -I {} touch "{}/__init__.py"'
+_ZIP_CMD = 'zip -r1 $OUT $(echo "$PKG" | cut -d "/" -f 1)'
+_COMPILE_CMD = 'find ${PKG} -name "*.py" | xargs %s -O -m py_compile' % interpreter
+_OPT_CMD = ' && '.join([_FIND_CMD, _ZIP_CMD])
+_STRIP_CMD = ' && '.join([_FIND_CMD, _COMPILE_CMD, _ZIP_CMD])
+
 
 def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
                    test_only=False, zip_safe=True, labels=None,
@@ -48,22 +55,14 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
         labels.append('py:zip-unsafe')
     if all_srcs:
         # Pre-zip the files for later collection by python_binary.
-        cmd = ' && '.join([
-            # This is a little heavy-handed but approximates what pex would do (ie. create __init__.py
-            # files anywhere they don't exist). It's a little more selective but this is much better than
-            # the alternative.
-            'find ${PKG} -type d | grep -v "${PKG}$" | xargs -I {} touch "{}/__init__.py"',
-            # TODO(pebers): We probably should make timestamps consistent before using this, but there
-            # are many other parts of the Python rules that would similarly need to be so for it to
-            # really make much difference.
-            'find ${PKG} -name "*.py" | xargs %s -O -m py_compile' % interpreter,
-            'zip -r1 $OUT $(echo "$PKG" | cut -d "/" -f 1)',
-        ])
         build_rule(
             name='_%s#zip' % name,
             srcs=all_srcs,
             outs=['.%s.pex.zip' % name],
-            cmd = cmd,
+            cmds = {
+                'opt': _OPT_CMD,
+                'stripped': _STRIP_CMD,
+            },
             building_description='Compressing...',
             requires=['py'],
             test_only=test_only,
@@ -84,7 +83,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
 
 
 def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=None,
-                  interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER, strip_source=False):
+                  interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -105,7 +104,6 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
-      strip_source (bool): If True, source (.py) files are stripped from the .pex.
     """
     main_mod = main[:-3] if main.endswith('.py') else main
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
@@ -144,12 +142,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         name=name,
         deps=[':_%s#pex' % name, ':_%s#lib' % name],
         outs=[out or (name + '.pex')],
-        cmd=' && '.join([
-            'PREAMBLE=`head -n 1 $(location :_%s#pex)`' % name,
-            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict %s' %
-                (jarcat_tool, '-e .py -x "*.py"' if strip_source else ''),
-            'chmod +x $OUTS',
-        ]),
+        cmd=_python_binary_cmds(name, jarcat_tool),
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
@@ -169,7 +162,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
 
 def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
                 visibility=None, container=False, timeout=0, flaky=0, test_outputs=None,
-                zip_safe=None, interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER, strip_source=False):
+                zip_safe=None, interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
@@ -196,7 +189,6 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                         'pypy' or whatever.
-      strip_source (bool): If True, source (.py) files are stripped from the .pex.
     """
     deps = deps or []
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
@@ -247,12 +239,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
         data=data,
         outs=['%s.pex' % name],
         labels=labels or [],
-        cmd=' && '.join([
-            'PREAMBLE=`head -n 1 $(location :_%s#pex)`' % name,
-            '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict %s' %
-                (jarcat_tool, ' -e .py -x "*.py"' if strip_source else ''),
-            'chmod +x $OUTS',
-        ]),
+        cmd=_python_binary_cmds(name, jarcat_tool),
         test_cmd = '$(exe :%s)' % name,
         needs_transitive_deps=True,
         output_is_complete=True,
@@ -378,6 +365,18 @@ def _add_licences(name, output):
             return
     log.warning('No licence found for %s, should add licences = [...] to the rule',
                 name.lstrip('_').split('#')[0])
+
+
+def _python_binary_cmds(name, jarcat_tool):
+    """Returns the commands to use for python_binary and python_test rules."""
+    cmd = ' && '.join([
+        'PREAMBLE=`head -n 1 $(location :_%s#pex)`' % name,
+        '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict' % jarcat_tool,
+    ])
+    return {
+        'opt': cmd,
+        'stripped': cmd + ' -e .py -x "*.py"',
+    }
 
 
 # Nod to superficial Bazel compatibility
