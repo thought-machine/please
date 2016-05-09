@@ -1,5 +1,9 @@
 Version 2.0.0
 -------------
+    * Adds additional features to sh_binary to make it more complete.
+
+Version 2.0.0
+-------------
 
     * We are going to try doing semver from here on, so this release increments the major
       version due to several very slightly breaking changes.
