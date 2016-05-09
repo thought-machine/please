@@ -53,7 +53,7 @@ def sh_binary(name, main, deps=None, visibility=None):
 
     Args:
       name (str): Name of the rule
-      src (str): Source file for the rule
+      main (str): The script to execute after all files have been uncompressed
       deps (list): Dependencies of this rule
       visibility (list): Visibility declaration of the rule.
     """
