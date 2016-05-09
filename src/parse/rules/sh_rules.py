@@ -8,14 +8,14 @@ implement something more advanced (ala .sar files or whatever).
 _TARBALL_BOUNDARY = '__TARFILE_FOLLOWS__'
 
 # NB: This string is formatted strangely due to bash variable expansion being a massive pain.
-_SH_BINARY_TMPL_PREFIX = """\
-#!/bin/sh;\n\
-SKIP=\\\$(awk '/^%(tarball_boundary)s/ { print NR + 1; exit 0; }' \\\$0);\n\
-THIS=\\\$(pwd)/\\\$0;\n\
+_SH_BINARY_TMPL_PREFIX = """
+#!/bin/sh\n\
+SKIP=\\\$(awk '/^%(tarball_boundary)s/ { print NR + 1; exit 0; }' \\\$0)\n\
+THIS=\\\$(pwd)/\\\$0\n\
 tail -n +\\\$SKIP \\\$THIS | tar -xz
 """
 
-_SH_BINARY_TMPL_SUFFIX = """\
+_SH_BINARY_TMPL_SUFFIX = """
 exit 0\n\
 %(tarball_boundary)s"""
 
