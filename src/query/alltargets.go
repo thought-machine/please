@@ -2,16 +2,15 @@ package query
 
 import (
 	"fmt"
-	"sort"
+	"strings"
 
 	"core"
 )
 
-func QueryAllTargets(graph *core.BuildGraph, labels core.BuildLabels, include, exclude []string) {
-	sort.Sort(labels)
+func QueryAllTargets(graph *core.BuildGraph, labels core.BuildLabels, showHidden bool) {
 	for _, label := range labels {
-		if target := graph.TargetOrDie(label); target.ShouldInclude(include, exclude) {
-			fmt.Printf("%s\n", target.Label)
+		if showHidden || !strings.HasPrefix(label.Name, "_") {
+			fmt.Printf("%s\n", label)
 		}
 	}
 }

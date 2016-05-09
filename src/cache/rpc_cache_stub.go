@@ -8,6 +8,6 @@ import (
 	"fmt"
 )
 
-func newRpcCache(config core.Configuration) (*httpCache, error) {
+func newRpcCache(config *core.Configuration) (*httpCache, error) {
 	return nil, fmt.Errorf("Config specifies RPC cache but it is not compiled")
 }

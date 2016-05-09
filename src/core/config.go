@@ -8,12 +8,16 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime"
 
 	"gopkg.in/gcfg.v1"
 )
 
 // File name for the typical repo config - this is normally checked in
 const ConfigFileName string = ".plzconfig"
+
+// Architecture-specific config file which overrides the repo one. Also normally checked in if needed.
+var ArchConfigFileName string = fmt.Sprintf(".plzconfig_%s_%s", runtime.GOOS, runtime.GOARCH)
 
 // File name for the local repo config - this is not normally checked in and used to
 // override settings on the local machine.
@@ -32,6 +36,7 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else if err != nil {
 		return err
 	}
+	log.Debug("Reading config from %s...", filename)
 	// TODO(pebers): Use gcfg's types thingy to parse this once it's finalised.
 	if config.Test.DefaultContainer != TestContainerNone && config.Test.DefaultContainer != TestContainerDocker {
 		return fmt.Errorf("Unknown container type %s", config.Test.DefaultContainer)
@@ -41,10 +46,10 @@ func readConfigFile(config *Configuration, filename string) error {
 
 // Reads a config file from the given locations, in order.
 // Values are filled in by defaults initially and then overridden by each file in turn.
-func ReadConfigFiles(filenames []string) (Configuration, error) {
+func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	config := DefaultConfiguration()
 	for _, filename := range filenames {
-		if err := readConfigFile(&config, filename); err != nil {
+		if err := readConfigFile(config, filename); err != nil {
 			return config, err
 		}
 	}
@@ -82,25 +87,26 @@ func defaultPath(conf *string, dir, file string) {
 	}
 }
 
-func DefaultConfiguration() Configuration {
+func DefaultConfiguration() *Configuration {
 	config := Configuration{}
 	config.Please.Version = PleaseVersion
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.DownloadLocation = "https://s3-eu-west-1.amazonaws.com/please-build"
-	config.Please.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
-	config.Please.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
-	config.Build.Timeout = 600         // Ten minutes
-	config.Build.Config = "opt"        // Optimised builds by default
-	config.Build.DefaultConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
-	config.Cache.HttpTimeout = 5       // Five seconds
-	config.Cache.RpcTimeout = 5        // Five seconds
+	config.Please.Lang = "en_GB.UTF-8"  // Not the language of the UI, the language passed to rules.
+	config.Please.Nonce = "1402"        // Arbitrary nonce to invalidate config when needed.
+	config.Build.Timeout = 600          // Ten minutes
+	config.Build.Config = "opt"         // Optimised builds by default
+	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
+	config.Cache.HttpTimeout = 5        // Five seconds
+	config.Cache.RpcTimeout = 5         // Five seconds
+	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
 	config.Test.Timeout = 600
 	config.Test.DefaultContainer = TestContainerDocker
 	config.Docker.DefaultImage = "ubuntu:trusty"
-	config.Docker.AllowLocalFallback = true
+	config.Docker.AllowLocalFallback = false
 	config.Docker.Timeout = 1200      // Twenty minutes
 	config.Docker.ResultsTimeout = 20 // Twenty seconds
 	config.Docker.RemoveTimeout = 20  // Twenty seconds
@@ -129,7 +135,7 @@ func DefaultConfiguration() Configuration {
 	config.Proto.PythonGrpcDep = "//third_party/python:grpc"
 	config.Proto.JavaGrpcDep = "//third_party/java:grpc-all"
 	config.Proto.GoGrpcDep = "//third_party/go:grpc"
-	return config
+	return &config
 }
 
 type Configuration struct {
@@ -139,16 +145,17 @@ type Configuration struct {
 		SelfUpdate       bool
 		DownloadLocation string
 		BuildFileName    []string
+		BlacklistDirs    []string
 		Lang             string
 		PyPyLocation     []string
 		Nonce            string
 		NumThreads       int
 	}
 	Build struct {
-		Timeout       int
-		Path          []string
-		Config        string
-		DefaultConfig string
+		Timeout        int
+		Path           []string
+		Config         string
+		FallbackConfig string
 	}
 	Cache struct {
 		Dir                   string
@@ -245,7 +252,6 @@ func (config *Configuration) Hash() []byte {
 	for _, p := range config.Build.Path {
 		h.Write([]byte(p))
 	}
-	h.Write([]byte(config.Go.GoVersion)) // Sucks a bit not to invalidate just Go rules but it's hard to detect.
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}

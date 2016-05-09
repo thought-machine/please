@@ -23,7 +23,7 @@ maven_jars(
 
 maven_jars(
     name = 'jacoco',
-    id = 'org.jacoco:jacoco:0.7.5.201505241946',
+    id = 'org.jacoco:jacoco:0.7.6.201602180812',
     exclude = [
         'org.jacoco.ant',
         'org.jacoco.doc',
@@ -31,9 +31,9 @@ maven_jars(
         'asm-debug-all',
     ],
     hashes = {
-        'org.jacoco.report': 'sha1: 1129a80f257387660125fde69c82591effa53601',
-        'org.jacoco.agent': 'sha1: 3d9535a24f7536f643059d7bc41dafd3d99c96fb',
-        'org.jacoco.core': 'sha1: ff91273abd22add0bdda7aea226fcfe0026d7c4c',
+        'org.jacoco.report': 'sha1: fe79a683193a3e897e734add5abae9af27eedf13',
+        'org.jacoco.agent': 'sha1: 536da5bb74368a21bf322dff9413c23c7b595b61',
+        'org.jacoco.core': 'sha1: ecd020a32fdfc96c6c845422978b362e11bdde5d',
     },
     deps = [':asm'],
     deps_only = True,

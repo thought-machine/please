@@ -206,12 +206,12 @@ plz_e2e_test(
 # Tests for query affectedtests.
 plz_e2e_test(
     name = 'query_affectedtests_test',
-    cmd = 'plz query affectedtests -p test/affectedtests_test.go',
+    cmd = 'plz query affectedtargets --tests -p test/affectedtests_test.go',
     expected_output = 'query_affectedtests_test.txt',
 )
 plz_e2e_test(
     name = 'query_affectedtests_stdin_test',
-    cmd = 'echo test/affectedtests_test.go | plz query affectedtests -p -',
+    cmd = 'echo test/affectedtests_test.go | plz query affectedtargets --tests -p -',
     expected_output = 'query_affectedtests_test.txt',
 )
 go_test(
@@ -273,19 +273,19 @@ plz_e2e_test(
 )
 
 # Test the extra output functionality.
-python_test(
+go_test(
     name = '_extra_test_output_test',
-    srcs = ['extra_test_output_test.py'],
+    srcs = ['extra_test_output_test.go'],
     test_outputs = ['truth.txt'],
     labels = ['manual'],
     container = True,
-    interpreter = '/usr/bin/python3',  # Docker image doesn't have /usr/bin/python
+    deps = ['//third_party/go:testify'],
 )
 plz_e2e_test(
     name = 'extra_test_output_test',
     cmd = 'plz test //test:_extra_test_output_test',
     expect_file_exists = '../../../bin/test/truth.txt',
-    labels = ['container', 'py3'],
+    labels = ['container'],
 )
 
 # Test 'query alltargets'
@@ -313,4 +313,37 @@ python_test(
     srcs = ['flaky_test.py'],
     flaky = True,
     labels = ['manual'],
+)
+
+# Tests on commands / flags etc.
+plz_e2e_test(
+    name = 'unknown_command_test',
+    cmd = 'plz fix',
+    expect_output_contains = 'Unknown command',
+    expected_failure = True,
+)
+plz_e2e_test(
+    name = 'unknown_flag_test',
+    cmd = 'plz build --wibble',
+    expect_output_contains = 'Unknown flag',
+    expected_failure = True,
+)
+
+# Tests on the stamp attribute.
+# These essentially pass as long as they can build.
+# (Note that we can't use -v because OSX is unlikely to have a new enough version of bash).
+build_rule(
+    name = 'stamp_negative_test',
+    cmd = '[ -z ${STAMP+x} ]',
+    test_cmd = 'true',
+    test = True,
+    no_test_output = True,
+)
+build_rule(
+    name = 'stamp_positive_test',
+    cmd = '[ ! -z ${STAMP+x} ]',
+    test_cmd = 'true',
+    test = True,
+    stamp = True,
+    no_test_output = True,
 )

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>The BUILD language</title>
+    <link rel="stylesheet" type="text/css" href="skeleton.css">
+  </head>
+  <body>
+    <!-- HEADER -->
+
+    <h1>The BUILD language</h1>
+
+    <p>Please's BUILD files typically contain a series of build rule declarations. These are
+      invocations of builtins like <code>java_binary</code> which create new BUILD targets.</p>
+
+    <p>However, you can do much more with it; the syntax is actually a restricted Python subset
+      so it's possible to script the creation of build targets in elaborate ways.</p>
+
+    <h2>Syntax</h2>
+
+    <p>Formally, the grammar for the BUILD files is defined as for Python since we interpret
+      them as such (using <a href="http://pypy.org">PyPy</a>, as it happens). The only exceptions
+      to this are that the <code>import</code>, <code>print</code> and <code>exec</code>
+      keywords are disallowed. This means you can cheerfully have loops, classes, exceptions etc
+      as you want.</p>
+
+    <p>The reason these are disallowed is in an effort to keep BUILD file parsing reliable and
+      efficient. Allowing import of arbitrary modules opens the door for all kinds of bad things
+      to be done at parse time (we know, we did this in build systems we've used in the past
+      and it did not have a happy ending). There are other solutions for these anyway (well not
+      <code>exec</code>, but you weren't going to use that anyway, right?); see
+      <code><a href="lexicon.html#subinclude">subinclude</a></code> and
+      <code><a href="lexicon.html#log">log</a></code>.</p>
+
+    <p>Similarly, a number of the standard builtins are not available; an incomplete list of these
+      includes <code>execfile</code>, <code>eval</code>, <code>file</code> and <code>open</code>.<br/>
+      Again, if BUILD files were able to open and read arbitrary files, it would be possible to
+      do many bad things which would ultimately lead to builds being slow or unreliable.</p>
+
+    <p>Note that BUILD files are parsed in-order, so invocations of functions that affect global
+      defaults (notably <code><a href="lexicon.html#package">package</a></code>) will only
+      affect build rules declared after them. However the rules themselves can be declared in any
+      order, it isn't necessary to declare dependencies before rules that depend on them.</p>
+
+    <h2>Style</h2>
+
+    <p>We normally write BUILD files in a slightly non-standard idiom. The justification is that
+      these are mostly just inherited from working on Blaze, but a brief explanation follows
+      after an example:</p>
+
+    <pre><code>
+      # Taken from //src/core/BUILD in the Please repo
+      go_library(
+          name = 'core',
+          srcs = glob(['*.go'], excludes=['*_test.go', 'version.go']) + [':version'],
+          visibility = ['PUBLIC'],
+          deps = [
+              '//third_party/go:gcfg',
+              '//third_party/go:logging',
+              '//third_party/go:queue',
+          ]
+      )
+    </code></pre>
+
+    <p><b>All arguments to build rules are passed as keywords.</b>. This is pretty important
+      since (1) nobody will be able to read your BUILD file otherwise and (2) while we don't
+      normally change the order of function arguments, we might sometimes insert earlier ones
+      which will break code using positional arguments.</p>
+
+    <p>Arguments to functions like <code>glob()</code> and <code>subinclude()</code> are not
+      necessarily passed as keywords.</p>
+
+    <p>We put spaces around the <code>=</code> for each argument to the build rule.</p>
+
+    <p>Either single or double quotes work, as usual, but don't mix both in one file.</p>
+
+    <p>Lists either go all on one line:
+      <pre><code>['*_test.go', 'version.go']</code></pre>
+      or are broken across multiple lines like so:
+      <pre><code>          [
+              '//third_party/go:gcfg',
+              '//third_party/go:logging',
+              '//third_party/go:queue',
+          ]</code></pre>
+    </p>
+
+    <p>Indentation is normally four spaces.</p>
+
+    <p>We generally try to order lists lexicographically but don't always get this 100%.</p>
+
+    <p>There is no autoformatter for BUILD files at the moment; we've looked at building one
+      but the built-in modules for Python don't work because they don't preserve comments.<br/>
+      We'd like one someday though, several of us have fond memories of Google's one (and we
+      live in hope of being able to borrow that!).</p>
+
+  </body>
+</html>

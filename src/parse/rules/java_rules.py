@@ -110,9 +110,7 @@ def java_binary(name, main_class, deps=None, data=None, visibility=None, jvm_arg
     else:
         # This is essentially a hack to get past some Java things (notably Jersey) failing
         # in subtle ways when the jar has a preamble (srsly...).
-        jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
-        cmd = '%s -i . -o ${OUTS} --exclude_internal_prefix "%s" -m "%s"' % (
-            jarcat_tool, _JAVA_EXCLUDE_FILES, main_class)
+        cmd, tools = _jarcat_cmd(main_class)
     build_rule(
         name=name,
         deps=deps,
@@ -158,11 +156,9 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
         # Deliberately not visible outside this package.
     )
     # As above, would be nicer if we could make the jars self-executing again.
-    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
+    cmd, tools = _jarcat_cmd('net.thoughtmachine.please.test.TestMain')
     junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools)
-    main_class = 'net.thoughtmachine.please.test.TestMain'
-    cmd = 'ln -s %s . && %s -i . -o ${OUTS} --exclude_internal_prefix "%s" -m "%s"' % (
-        junit_runner, jarcat_tool, _JAVA_EXCLUDE_FILES, main_class)
+    cmd = 'ln -s %s . && %s' % (junit_runner, cmd)
     test_cmd = 'java -Dnet.thoughtmachine.please.testpackage=%s %s -jar $(location :%s) ' % (
         test_package, jvm_args, name)
     build_rule(
@@ -188,8 +184,9 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
     )
 
 
-def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
-               deps=None, visibility=None, filename=None, deps_only=False):
+def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, combine=False,
+               hash=None, deps=None, visibility=None, filename=None, deps_only=False,
+               optional=None):
     """Fetches a transitive set of dependencies from Maven.
 
     Requires post build commands to be allowed for this repo.
@@ -203,14 +200,27 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
       repository (str): Maven repo to fetch deps from.
       exclude (list): Dependencies to ignore when fetching this one.
       hashes (dict): Map of Maven id -> rule hash for each rule produced.
+      combine (bool): If True, we combine all downloaded .jar files into one uberjar.
+      hash (string): Hash of final produced .jar. For brevity, implies combine=True.
       deps (list): Labels of dependencies, as usual.
       visibility (list): Visibility label.
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
       deps_only (bool): If True we fetch only dependent rules, not this one itself. Useful for some that
                         have a top-level target as a facade which doesn't have actual code.
+      optional (list): List of optional dependencies to fetch. By default we fetch none of them.
     """
+    if id.count(':') != 2:
+        raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
     existing_packages = _maven_packages[get_base_path()]
     exclude = exclude or []
+    combine = combine or hash
+    source_name = '_%s#src' % name
+
+    def get_hash(id, artifact=None):
+        if hashes is None:
+            return None
+        artifact = artifact or id.split(':')[1]
+        return hashes.get(id, hashes.get(artifact, '<not given>'))
 
     def create_maven_deps(_, output):
         for line in output:
@@ -226,36 +236,75 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
             # Deduplicate packages
             existing = existing_packages.get(artifact)
             if existing:
-                if existing != line:
+                if existing != '%s:%s:%s' % (group, artifact, version):
                     raise ValueError('Package version clash in maven_jars: got %s, but already have %s' % (line, existing))
             else:
                 maven_jar(
                     name=artifact,
                     id=line,
                     repository=repository,
-                    hash=None if hashes is None else hashes.get(id, hashes.get(artifact, '<not given>')),
+                    hash=get_hash(id, artifact),
                     licences=licences.split('|') if licences else None,
                     # We deliberately don't make this rule visible externally.
                 )
-                add_exported_dep(name, ':' + artifact)
+            add_exported_dep(name, ':' + artifact)
+            if combine:
+                add_exported_dep(source_name, ':' + artifact)
 
     deps = deps or []
     exclusions = ' '.join('-e ' + excl for excl in exclude)
+    options = ' '.join('-o ' + option for option in optional) if optional else ''
     please_maven_tool, tools = _tool_path(CONFIG.PLEASE_MAVEN_TOOL)
     build_rule(
         name='_%s#deps' % name,
-        cmd='%s -r %s %s %s' % (please_maven_tool, repository, id, exclusions),
+        cmd='%s -r %s %s %s %s' % (please_maven_tool, repository, id, exclusions, options),
         post_build=create_maven_deps,
         building_description='Finding dependencies...',
         tools=tools,
-
     )
-    if not deps_only:
+    if combine:
+        download_name = '_%s#download' % name
+        maven_jar(
+            name=download_name,
+            id=id,
+            repository=repository,
+            hash=get_hash(id),
+            deps = deps,
+            visibility=visibility,
+            filename=filename,
+        )
+        # Combine the sources into a separate uberjar
+        cmd, tools = _jarcat_cmd()
+        build_rule(
+            name=source_name,
+            output_is_complete=True,
+            needs_transitive_deps=True,
+            building_description="Creating source jar...",
+            deps=[':' + download_name, ':_%s#deps' % name] + deps,
+            outs=[name + '_src.jar'],
+            requires=['java'],
+            cmd=cmd + ' -s src.jar -e ""',
+            tools=tools,
+        )
+        build_rule(
+            name=name,
+            hashes=[hash],
+            output_is_complete=True,
+            needs_transitive_deps=True,
+            building_description="Creating jar...",
+            deps=[':' + download_name, ':' + source_name, ':_%s#deps' % name] + deps,
+            outs=[name + '.jar'],
+            requires=['java'],
+            visibility=visibility,
+            cmd=cmd,
+            tools=tools,
+        )
+    elif not deps_only:
         maven_jar(
             name=name,
             id=id,
             repository=repository,
-            hash=None if hashes is None else hashes.get(id, hashes.get(name, '<not given>')),
+            hash=get_hash(id),
             deps = deps + [':_%s#deps' % name],
             visibility=visibility,
             filename=filename,
@@ -267,6 +316,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None,
             exported_deps=deps,
             cmd='true',  # do nothing!
             visibility=visibility,
+            requires=['java'],
         )
 
 
@@ -320,15 +370,25 @@ def maven_jar(name, id, repository=_MAVEN_CENTRAL, hash=None, deps=None,
         exported_deps=deps,  # easiest to assume these are always exported.
         visibility=visibility,
         building_description='Fetching...',
+        requires=['java'],
     )
 
 
 def _java_binary_cmd(main_class, jvm_args, test_package=None):
     """Returns the command we use to build a .jar for a java_binary or a java_test."""
-    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
-    junit_runner, toolss = _tool_path(CONFIG.JUNIT_RUNNER, tools)
     prop = '-Dnet.thoughtmachine.please.testpackage=' + test_package if test_package else ''
     preamble = '#!/bin/sh\nexec java %s %s -jar $0 $@' % (prop, jvm_args or '')
-    cmd = '%s -i . -o ${OUTS} --exclude_internal_prefix "%s" -p \'%s\' -m "%s"' % (
-        jarcat_tool, _JAVA_EXCLUDE_FILES, preamble, main_class)
-    return ('ln -s %s . && %s' % (junit_runner, cmd) if test_package else cmd), tools
+    jarcat_cmd, tools = _jarcat_cmd(main_class, preamble)
+    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools)
+    return ('ln -s %s . && %s' % (junit_runner, jarcat_cmd) if test_package else jarcat_cmd), tools
+
+
+def _jarcat_cmd(main_class=None, preamble=None):
+    """Returns the command we'd use to invoke jarcat, and the tool paths required."""
+    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
+    cmd = '%s -i . -o ${OUTS} --exclude_internal_prefix "%s"' % (jarcat_tool, _JAVA_EXCLUDE_FILES)
+    if main_class:
+        cmd += ' -m "%s"' % main_class
+    if preamble:
+        return cmd + " -p '%s'" % preamble, tools
+    return cmd, tools

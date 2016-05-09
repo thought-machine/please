@@ -2,6 +2,7 @@ package parse
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"unsafe"
 
@@ -11,7 +12,8 @@ import (
 )
 
 func TestParseSourceBuildLabel(t *testing.T) {
-	src := parseSource("//src/parse/test_data/test_subfolder4:test_py", "src/parse", false)
+	src, err := parseSource("//src/parse/test_data/test_subfolder4:test_py", "src/parse", false)
+	assert.NoError(t, err)
 	label := src.Label()
 	assert.NotNil(t, label)
 	assert.Equal(t, label.PackageName, "src/parse/test_data/test_subfolder4")
@@ -19,7 +21,8 @@ func TestParseSourceBuildLabel(t *testing.T) {
 }
 
 func TestParseSourceRelativeBuildLabel(t *testing.T) {
-	src := parseSource(":builtin_rules", "src/parse", false)
+	src, err := parseSource(":builtin_rules", "src/parse", false)
+	assert.NoError(t, err)
 	label := src.Label()
 	assert.NotNil(t, label)
 	assert.Equal(t, "src/parse", label.PackageName)
@@ -28,7 +31,8 @@ func TestParseSourceRelativeBuildLabel(t *testing.T) {
 
 // Test parsing from a subdirectory that does not contain a build file.
 func TestParseSourceFromSubdirectory(t *testing.T) {
-	src := parseSource("test_subfolder3/test_py", "src/parse/test_data", false)
+	src, err := parseSource("test_subfolder3/test_py", "src/parse/test_data", false)
+	assert.NoError(t, err)
 	assert.Nil(t, src.Label())
 	paths := src.Paths(nil)
 	assert.Equal(t, 1, len(paths))
@@ -36,27 +40,27 @@ func TestParseSourceFromSubdirectory(t *testing.T) {
 }
 
 func TestParseSourceFromOwnedSubdirectory(t *testing.T) {
-	assert.Panics(t, func() { parseSource("test_subfolder4/test_py", "src/parse/test_data", false) },
-		"Should panic when parsing from a subdirectory that does contain a build file")
+	_, err := parseSource("test_subfolder4/test_py", "src/parse/test_data", false)
+	assert.Error(t, err, "Should produce an error when parsing from a subdirectory that does contain a build file")
 }
 
 func TestParseSourceWithParentPath(t *testing.T) {
-	assert.Panics(t, func() { parseSource("test_subfolder4/../test_py", "src/parse/test_data", false) },
-		"Should panic when parsing a path with ../ in it")
+	_, err := parseSource("test_subfolder4/../test_py", "src/parse/test_data", false)
+	assert.Error(t, err, "Should produce an error when parsing a path with ../ in it")
 }
 
 func TestParseSourceWithAbsolutePath(t *testing.T) {
-	assert.Panics(t, func() { parseSource("/test_subfolder4/test_py", "src/parse/test_data", false) },
-		"Should panic trying to parse an absolute path")
-	assert.NotPanics(t, func() { parseSource("/usr/bin/go", "src/parse/test_data", true) },
-		"Should not panic trying to parse an absolute path in cases where it's allowed")
+	_, err := parseSource("/test_subfolder4/test_py", "src/parse/test_data", false)
+	assert.Error(t, err, "Should produce an error trying to parse an absolute path")
+	_, err = parseSource("/usr/bin/go", "src/parse/test_data", true)
+	assert.NoError(t, err, "Should not produce an error trying to parse an absolute path in cases where it's allowed")
 }
 
 func TestAddTarget(t *testing.T) {
 	pkg := core.NewPackage("src/parse")
 	addTargetTest1 := func(name string, binary, container, test bool, testCmd string) *core.BuildTarget {
 		return addTarget(uintptr(unsafe.Pointer(pkg)), name, "true", testCmd, binary, test,
-			false, false, container, false, false, false, 0, 0, 0, "Building...")
+			false, false, container, false, false, false, false, 0, 0, 0, "Building...")
 	}
 	addTargetTest := func(name string, binary, container bool) *core.BuildTarget {
 		return addTargetTest1(name, binary, container, false, "")
@@ -72,12 +76,10 @@ func TestAddTarget(t *testing.T) {
 	assert.True(t, target3.HasLabel("bin"))
 	assert.True(t, target3.HasLabel("container"))
 
-	assert.Panics(t, func() { addTargetTest("target1", false, false) },
-		"Should panic attempting to add a new target with the same name")
-	assert.Panics(t, func() { addTargetTest1("target4", false, false, true, "") },
-		"Should panic attempting to add a test target with no test command")
-	assert.Panics(t, func() { addTargetTest1("target5", false, false, false, "true") },
-		"Should panic attempting to add a non-test target with a test command")
+	assert.Panics(t, func() { addTargetTest(":target1", false, false) },
+		"Should return nil attempting to add a target with an illegal name")
+	assert.Nil(t, addTargetTest("target1", false, false),
+		"Should return nil attempting to add a new target with the same name")
 
 	assert.Nil(t, core.State.Graph.Target(core.ParseBuildLabel("//src/parse:target1", "")),
 		"Shouldn't have added target to the graph yet")
@@ -89,20 +91,22 @@ func TestAddTarget(t *testing.T) {
 }
 
 func TestGetSubincludeFile(t *testing.T) {
+	assertError := func(t *testing.T, ret, msg string) { assert.True(t, strings.HasPrefix(ret, "__"), msg) }
+
 	state := core.NewBuildState(10, nil, 2, core.DefaultConfiguration())
 	pkg := core.NewPackage("src/parse")
 	pkg2 := core.NewPackage("src/core")
 	assert.Equal(t, pyDeferParse, getSubincludeFile(pkg, "//src/core:target"), "Package not loaded yet, should defer")
-	assert.Panics(t, func() { getSubincludeFile(pkg, "//src/parse:target") }, "Should panic on attempts for local subincludes.")
-	assert.Panics(t, func() { getSubincludeFile(pkg, ":target") }, "Should panic on attempts for local subincludes.")
+	assertError(t, getSubincludeFile(pkg, "//src/parse:target"), "Should produce an error on attempts for local subincludes.")
+	assertError(t, getSubincludeFile(pkg, ":target"), "Should produce an error on attempts for local subincludes.")
 	state.Graph.AddPackage(pkg)
 	state.Graph.AddPackage(pkg2)
-	assert.Panics(t, func() { getSubincludeFile(pkg, "//src/core:target") }, "Panics, target does not exist in package.")
+	assertError(t, getSubincludeFile(pkg, "//src/core:target"), "Produces an error, target does not exist in package.")
 	target := core.NewBuildTarget(core.ParseBuildLabel("//src/core:target", ""))
 	state.Graph.AddTarget(target)
-	assert.Panics(t, func() { getSubincludeFile(pkg, "//src/core:target") }, "Panics, target is not visible to subincluding package.")
+	assertError(t, getSubincludeFile(pkg, "//src/core:target"), "Errors, target is not visible to subincluding package.")
 	target.Visibility = []core.BuildLabel{core.ParseBuildLabel("//src/parse:all", "")}
-	assert.Panics(t, func() { getSubincludeFile(pkg, "//src/core:target") }, "Panics, target doesn't have any outputs to include.")
+	assertError(t, getSubincludeFile(pkg, "//src/core:target"), "Errors, target doesn't have any outputs to include.")
 	target.AddOutput("test.py")
 	assert.Equal(t, pyDeferParse, getSubincludeFile(pkg, "//src/core:target"), "Target isn't built yet, so still deferred")
 	target.SetState(core.Built)

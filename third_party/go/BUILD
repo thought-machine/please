@@ -62,7 +62,7 @@ go_get(
 go_get(
     name = 'grpc',
     get = 'google.golang.org/grpc',
-    revision = '01de3de50a4fada34ce39322801a1533c9554cdc',
+    revision = '262ed2bd6d1c8cbaa14b43c3815d2e01e4f65ca8',
     install = ['google.golang.org/grpc/health'],
     deps = [
         ':protobuf',
@@ -72,7 +72,7 @@ go_get(
 go_get(
     name = 'protoc-gen-go',
     get = 'github.com/golang/protobuf/protoc-gen-go',
-    revision = '087949061006daa57b3a3be58d77092cf65f6cf7',
+    revision = 'bf531ff1a004f24ee53329dfd5ce0b41bfdc17df',
     binary = True,
 )
 
@@ -114,4 +114,10 @@ go_get(
     name = 'levenshtein',
     get = 'github.com/texttheater/golang-levenshtein/levenshtein',
     revision = '14026fface0cb806188c85e792a93d625dc37d0f',
+)
+
+go_get(
+    name = 'queue',
+    get = 'github.com/Workiva/go-datastructures/queue',
+    revision = '064f3ea06ab2337e6eaf42052392d14f779e91cb',
 )

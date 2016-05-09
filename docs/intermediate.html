@@ -2,9 +2,11 @@
 <html>
   <head>
     <title>Intermediate Please</title>
-    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="stylesheet" type="text/css" href="skeleton.css">
   </head>
   <body>
+    <!-- HEADER -->
+
     <h1>Intermediate Please</h1>
 
     <p>Okay, you've read the <a href="basics.html">basics</a>, so what's next?</p>
@@ -116,13 +118,13 @@
       and <code>plz test ... --exclude slow</code> will run all your tests except those labelled with 'slow'.</p>
 
     <p>The syntax looks like:
-      <pre>
+      <pre><code>
         go_test(
             name = 'my_test',
             srcs = ['my_test.go'],
             labels = ['slow', 'integration'],
         )
-      </pre>
+      </code></pre>
     </p>
 
     <p>There is one special label, <code>manual</code> which always excludes tests from autodetection when being run with
@@ -135,13 +137,13 @@
       to pass if any one run passes.</p>
 
     <p>The syntax looks like:
-      <pre>
+      <pre><code>
         go_test(
             name = 'my_test',
             srcs = ['my_test.go'],
             flaky = True,
         )
-      </pre>
+      </code></pre>
       By default they are run three times, you can alter this on a per-test basis by passing an integer instead of a boolean.
     </p>
 
@@ -157,13 +159,13 @@
       to be correct about declaring all such dependencies (but of course one would do that anyway...).</p>
 
     <p>The syntax looks like:
-      <pre>
+      <pre><code>
         go_test(
             name = 'my_test',
             srcs = ['my_test.go'],
             container = True,
         )
-      </pre>
+      </code></pre>
     </p>
 
     <p>Currently we support Docker as a container format, we plan to support rkt containers in a future release.</p>

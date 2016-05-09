@@ -30,10 +30,9 @@ func QueryAffectedTargets(graph *core.BuildGraph, files, include, exclude []stri
 	}()
 
 	// Check all the packages to see if any are defined by these files.
-	// TODO(pebers): This is pretty pessimistic, we have to just assume the whole package is
-	//               invalidated. A better but more complicated approach would be to generate
-	//               the hash of every rule before and after the change and invalidate the ones
-	//               that were different.
+	// This is pretty pessimistic, we have to just assume the whole package is invalidated.
+	// A better approach involves using plz query graph and plz_diff_graphs - see that tool
+	// for more explanation.
 	go func() {
 		invalidatePackage := func(pkg *core.Package) {
 			for _, target := range pkg.Targets {

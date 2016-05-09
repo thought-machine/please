@@ -68,6 +68,10 @@ func ReplaceSequences(target *core.BuildTarget, command string) string {
 
 // Replace escape sequences in the given string when running a test.
 func ReplaceTestSequences(target *core.BuildTarget, command string) string {
+	if command == "" {
+		// An empty test command implies running the test binary.
+		return replaceSequencesInternal(target, fmt.Sprintf("$(exe :%s)", target.Label.Name), true)
+	}
 	return replaceSequencesInternal(target, command, true)
 }
 
@@ -101,7 +105,7 @@ func replaceSequence(target *core.BuildTarget, in string, runnable, multiple, pa
 		label := core.ParseBuildLabel(in, target.Label.PackageName)
 		return replaceSequenceLabel(target, label, in, runnable, multiple, pairs, dir, outPrefix, test, true)
 	}
-	for src := range target.AllSources() {
+	for _, src := range target.AllSources() {
 		if label := src.Label(); label != nil && src.String() == in {
 			return replaceSequenceLabel(target, *label, in, runnable, multiple, pairs, dir, outPrefix, test, false)
 		}

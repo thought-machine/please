@@ -27,5 +27,5 @@ func TestRegisterOutput(t *testing.T) {
 	pkg.RegisterOutput("file1.go", target2)
 
 	pkg.RegisterOutput("file3.go", target1)
-	assert.Panics(t, func() { pkg.RegisterOutput("file3.go", target2) })
+	assert.Error(t, pkg.RegisterOutput("file3.go", target2))
 }

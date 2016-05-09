@@ -24,9 +24,7 @@ fpm_deb(
     version = CONFIG.PLZ_VERSION,
     files = {
         '/usr/bin/plz_rpc_cache_server': '//src/cache/server:rpc_cache_server_bin',
-        '/etc/init.d/plz-rpc-cache': '//src/cache/server:init_sh',
     },
-    options = '--deb-init etc/init.d/plz-rpc-cache -x etc/init.d/plz-rpc-cache',
     labels = ['manual'],
 )
 
@@ -36,9 +34,7 @@ fpm_deb(
     version = CONFIG.PLZ_VERSION,
     files = {
         '/usr/bin/plz_http_cache_server': '//src/cache/server:http_cache_server_bin',
-        '/etc/init.d/plz-http-cache': '//src/cache/server:init_sh',
     },
-    options = '--deb-init etc/init.d/plz-http-cache -x etc/init.d/plz-http-cache',
     labels = ['manual'],
 )
 

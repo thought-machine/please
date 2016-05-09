@@ -35,7 +35,7 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 // This is a little strict; doesn't allow for non-ascii names, for example.
 const packagePart = "[A-Za-z0-9\\._-]+"
 const packageName = "(" + packagePart + "(?:/" + packagePart + ")*)"
-const targetName = "([A-Za-z0-9\\._#+-]+)"
+const targetName = "([A-Za-z0-9\\._+-]+(?:#[A-Za-z0-9_+-]+)*)"
 
 // Regexes for matching the various ways of writing a build label.
 // Fully specified labels, e.g. //src/core:core
@@ -63,6 +63,10 @@ var relativeImplicitTarget = regexp.MustCompile(fmt.Sprintf("^(?:%s/)?(%s)$", pa
 // All targets underneath a relative package, e.g. src/core/...
 var relativeSubTargets = regexp.MustCompile(fmt.Sprintf("^(?:%s/)?(\\.\\.\\.)$", packageName))
 
+// Package and target names only, used for validation.
+var packageNameOnly = regexp.MustCompile(fmt.Sprintf("^%s?$", packageName))
+var targetNameOnly = regexp.MustCompile(fmt.Sprintf("^%s$", targetName))
+
 func (label BuildLabel) String() string {
 	if label.Name != "" {
 		return "//" + label.PackageName + ":" + label.Name
@@ -70,47 +74,60 @@ func (label BuildLabel) String() string {
 	return "//" + label.PackageName
 }
 
+// NewBuildLabel constructs a new build label from the given components. Panics on failure.
 func NewBuildLabel(pkgName string, name string) BuildLabel {
-	if strings.HasSuffix(pkgName, "/") || strings.HasSuffix(pkgName, ":") {
-		panic("Invalid package name: " + pkgName)
+	label, err := TryNewBuildLabel(pkgName, name)
+	if err != nil {
+		panic(err)
 	}
-	return BuildLabel{PackageName: pkgName, Name: name}
+	return label
+}
+
+// TryNewBuildLabel constructs a new build label from the given components.
+func TryNewBuildLabel(pkgName string, name string) (BuildLabel, error) {
+	if !packageNameOnly.MatchString(pkgName) {
+		return BuildLabel{}, fmt.Errorf("Invalid package name: %s", pkgName)
+	} else if !targetNameOnly.MatchString(name) {
+		return BuildLabel{}, fmt.Errorf("Invalid target name: %s", name)
+	}
+	return BuildLabel{PackageName: pkgName, Name: name}, nil
 }
 
 // ParseBuildLabel parses a single build label from a string. Panics on failure.
 func ParseBuildLabel(target string, currentPath string) BuildLabel {
-	if label, success := tryParseBuildLabel(target, currentPath); success {
-		return label
+	label, err := TryParseBuildLabel(target, currentPath)
+	if err != nil {
+		panic(err)
 	}
-	panic("Invalid build target label: " + target)
+	return label
 }
 
-// tryParseBuildLabel attempts to parse a single build label from a string. Returns a bool indicating success.
-func tryParseBuildLabel(target string, currentPath string) (BuildLabel, bool) {
+// TryParseBuildLabel attempts to parse a single build label from a string. Returns an error if unsuccessful.
+func TryParseBuildLabel(target string, currentPath string) (BuildLabel, error) {
 	matches := absoluteTarget.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(matches[1], matches[2]), true
+		return NewBuildLabel(matches[1], matches[2]), nil
 	}
 	matches = localTarget.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(currentPath, matches[1]), true
+		return NewBuildLabel(currentPath, matches[1]), nil
 	}
 	matches = subTargets.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(matches[1], matches[2]), true
+		return NewBuildLabel(matches[1], matches[2]), nil
 	}
 	matches = rootSubTargets.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel("", matches[2]), true
+		return NewBuildLabel("", matches[2]), nil
 	}
 	matches = implicitTarget.FindStringSubmatch(target)
 	if matches != nil {
 		if matches[1] != "" {
-			return NewBuildLabel(matches[1]+"/"+matches[2], matches[2]), true
+			return NewBuildLabel(matches[1]+"/"+matches[2], matches[2]), nil
 		}
-		return NewBuildLabel(matches[2], matches[2]), true
+		return NewBuildLabel(matches[2], matches[2]), nil
 	}
-	return BuildLabel{}, false
+	return BuildLabel{}, fmt.Errorf("Invalid build label: %s", target)
 }
 
 // As above, but allows parsing of relative labels (eg. src/parse/rules:python_rules)
@@ -118,7 +135,7 @@ func tryParseBuildLabel(target string, currentPath string) (BuildLabel, bool) {
 func parseMaybeRelativeBuildLabel(target, subdir string) BuildLabel {
 	// Try the ones that don't need locating the repo root first.
 	if !strings.HasPrefix(target, ":") {
-		if label, success := tryParseBuildLabel(target, ""); success {
+		if label, err := TryParseBuildLabel(target, ""); err == nil {
 			return label
 		}
 	}
@@ -137,7 +154,10 @@ func parseMaybeRelativeBuildLabel(target, subdir string) BuildLabel {
 	}
 	matches = relativeImplicitTarget.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(path.Join(subdir, matches[1]+matches[2]), matches[2])
+		if matches[1] != "" {
+			return NewBuildLabel(path.Join(subdir, matches[1], matches[2]), matches[2])
+		}
+		return NewBuildLabel(path.Join(subdir, matches[2]), matches[2])
 	}
 	matches = localTarget.FindStringSubmatch(target)
 	if matches != nil {
@@ -171,6 +191,21 @@ func (label BuildLabel) IsAllSubpackages() bool {
 // Returns true if the label is the pseudo-label referring to all targets in this package.
 func (label BuildLabel) IsAllTargets() bool {
 	return label.Name == "all"
+}
+
+// covers returns true if label includes the other label (//pkg:target1 is covered by //pkg:all etc).
+func (label BuildLabel) includes(that BuildLabel) bool {
+	if strings.HasPrefix(that.PackageName, label.PackageName) {
+		// We're in the same package or a subpackage of this visibility spec
+		if label.IsAllSubpackages() {
+			return true
+		} else if label.PackageName == that.PackageName {
+			if label.Name == that.Name || label.IsAllTargets() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (this BuildLabel) Less(that BuildLabel) bool {

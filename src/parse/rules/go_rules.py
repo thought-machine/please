@@ -397,7 +397,8 @@ def _extra_outs(get):
         for archive in sorted(output):
             add_out(name, archive)
             subpath = archive[archive.find('/', 6) + 1:-2]
-            if not subpath.startswith(get) and not subpath.startswith(last):
+            if (not subpath.startswith(get) and not subpath.startswith(last) and
+                not get.startswith(subpath) and not last.startswith(subpath)):
                 add_out(name, 'src/' + subpath)
             last = subpath
     return _inner

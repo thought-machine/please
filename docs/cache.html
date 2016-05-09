@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Please cache</title>
+    <link rel="stylesheet" type="text/css" href="skeleton.css">
+  </head>
+  <body>
+    <!-- HEADER -->
+
+    <h1>Please cache</h1>
+
+    <p>In various places in these docs you might find reference to caches.
+      Please can make use of several caches to speed up its performance which are described here.</p>
+
+    <p>In all cases artifacts are only stored in the cache after a successful build or test run.<br/>
+      Please takes a <code>--nocache</code> flag which disables all caches for an individual run.</p>
+
+    <h2>The directory cache</h2>
+
+    <p>This is the simplest kind of cache; it's on by default and simply is a directory tree
+      (by default <code>.plz-cache</code> at the root of your repo) containing various versions
+      of built artifacts. The main advantage of this is that it allows extremely fast rebuilds
+      when swapping between different versions of code (notably git branches).</p>
+
+    <p>Please comes with a binary creatively named <code>cache_cleaner</code> which it fires
+      off at startup to keep the size of the cache down. By nature of not having a full-time
+      daemon monitoring it it's possible that the size slightly exceeds the config bounds, but
+      generally it does as good a job as it can.</p>
+
+    <p>Note that the dir cache is <b>not</b> threadsafe or locked in any way beyond plz's normal
+      repo lock, so sharing the same directory between multiple projects is probably a Bad Idea.</p>
+
+    <h2>The HTTP cache</h2>
+
+    <p>This is a more advanced cache which, as one would expect, can run on a centralised machine
+      to share artifacts between multiple clients. It has a reasonably simple API, for reference:
+      <ul>
+	<li><code>GET /artifact/{os_name}/{artifact}</code>: Retrieves a particular artifact.</li>
+	<li><code>POST /artifact/{os_name}/{artifact}</code>: Stores a particular artifact.</li>
+	<li><code>DELETE /artifact/{artifact}</code>: Deletes all versions of a given artifact.</li>
+	<li><code>DELETE /</code>: Deletes all artifacts.</li>
+      </ul>
+
+      We should document this in more detail, especially since the formats can be subtle
+      (an awkward corner case requires multipart for some cases) but as described below it is probably
+      preferable to implement the RPC cache instead.
+    </p>
+
+    <p>The cache runs as a daemon and is fully threadsafe so is of course safe for multiple clients
+      to attempt to store / retrieve artifacts simultaneously. Because it's a daemon it maintains
+      its own stats about what artifacts it has so can be a little more intelligent than the dir
+      cache about what it should delete and when.</p>
+
+    <p>Please comes with an implementation of this cache as a standalone binary.</p>
+
+    <p>Thanks to Diana Costea who implemented the original version of this as part of her internship
+      with us, and prodded us into getting on and actually deploying it for our CI servers.</p>
+
+    <h2>The RPC cache</h2>
+
+    <p>This is very similar conceptually to the HTTP cache, but uses <a href="http://grpc.io">gRPC</a>
+      for communication (of course that uses HTTP itself underneath). The motivation was partly that
+      we realised fairly late that our cache semantics sometimes require multiple files to be communicated
+      in a single request, which implied multipart encodings which are of course not great fun. We
+      also felt that we could get better performance this way too. An awful lot of the internal code is
+      shared with the HTTP server so only the transport layer really differs.</p>
+
+    <p>The API can be found in <code>src/cache/proto/rpc_cache.proto</code>. It's not very complex
+      so would not be hard to implement, although again Please comes with an implementation of this
+      cache as a standalone binary.</p>
+
+    <h2>Notes</h2>
+
+    <p>Our current CI setup leans very heavily on these caches; every checkin to master triggers a build
+      of our repo in a clean environment, so initially nothing is present in plz-out. The build machines
+      maintain a local directory cache though which ensures things are pretty fast (the penalty for a
+      cache hit is obviously a bit worse than having the artifact in plz-out already, but it's pretty quick).</p>
+
+    <p>The build machines all push artifacts into a single central RPC cache and pull them back again as
+      needed, so generally after an initial test run of a PR subsequent builds are fast. Developer machines use
+      the RPC cache in read-only mode so can partake in these too; it would be nice if everyone was read-write
+      but generally the shared cache is vulnerable to developers having incompatible machine setups
+      (for example, different Go versions, even minor ones, cannot share compiled artifacts so many bad things
+      will happen if developers aren't all on exactly the same one). A very long-term goal is for Please
+      to have better insight into the machine-level deps of these things which would potentially allow
+      everyone to have read-write access.</p>
+
+    <p>Theoretically Please ensures hashes are as expected before storing or retrieving artifacts, but as just
+      noted there are ways to cause problems nonetheless. Hence the various caches store artifacts in
+      a pretty obvious filesystem structure analogous to the repo structure itself, so if any single
+      artifact is wrong it's not hard to excise it.</p>
+
+  </body>
+</html>

@@ -13,6 +13,9 @@ _please_builtins = imp.new_module('_please_builtins')
 _please_globals = _please_builtins.__dict__
 _keepalive_functions = set()
 _build_code_cache = {}
+_c_subinclude_package_name = None
+_subinclude_package_name = None
+_subinclude_package = None
 
 # List of everything we keep in the __builtin__ module. This is a pretty agricultural way
 # of restricting what build files can do - no doubt there'd be clever ways of working
@@ -43,7 +46,7 @@ def parse_file(c_filename, c_package_name, c_package):
         package_name = ffi.string(c_package_name)
         builtins = _get_globals(c_package, c_package_name)
         _parse_build_code(filename, builtins)
-        return ffi.cast('char*', 0)
+        return ffi.NULL
     except DeferParse as err:
         return _FFI_DEFER_PARSE
     except Exception as err:
@@ -51,16 +54,22 @@ def parse_file(c_filename, c_package_name, c_package):
 
 
 @ffi.callback('ParseFileCallback*')
-def parse_code(c_code, c_filename, _):
+def parse_code(c_code, c_filename, c_package):
+    if c_package != 0:
+        global _subinclude_package, _subinclude_package_name, _c_subinclude_package_name
+        _subinclude_package_name = ffi.string(c_filename)
+        _c_subinclude_package_name = c_filename
+        _subinclude_package = c_package
+        return ffi.NULL
     try:
-        code = ffi.string(c_code)
         filename = ffi.string(c_filename)
+        code = ffi.string(c_code)
         # Note we don't go through _parse_build_code - there's no need to perform the ast
         # walk on code that we control internally. This conceptually means that we *could*
         # import in those files, but we will not do that because it would be sheer peasantry.
         code = _compile(code, filename, 'exec')
         exec(code, _please_globals)
-        return ffi.cast('char*', 0)
+        return ffi.NULL
     except Exception as err:
         return ffi.new('char[]', str(err))
 
@@ -100,18 +109,39 @@ def set_config_value(c_name, c_value):
 
 
 def include_defs(package, dct, target):
+    _log(2, package, 'include_defs is deprecated, use subinclude() instead')
     filename = ffi.string(_get_include_file(package, ffi.new('char[]', target)))
+    # Dodgy in-band signalling of errors follows.
+    if filename.startswith('__'):
+        raise ParseError(filename.lstrip('_'))
     _parse_build_code(filename, dct, cache=True)
 
 
-def subinclude(package, dct, target):
+def subinclude(package, dct, target, hash=None):
     """Includes the output of a build target as extra rules in this one."""
+    if target.startswith('http'):
+        target = _get_subinclude_target(target, hash)
     filename = ffi.string(_get_subinclude_file(package, ffi.new('char[]', target)))
     if filename == _DEFER_PARSE:
         raise DeferParse(filename)
-    with _open(filename) as f:
-        code = _compile(f.read(), filename, 'exec')
-    exec(code, dct)
+    elif filename.startswith('__'):
+        raise ParseError(filename.lstrip('_'))
+    _parse_build_code(filename, dct, cache=True)
+
+
+def _get_subinclude_target(url, hash):
+    """Creates a remote_file target to subinclude() a remote url and returns its name."""
+    name = os.path.basename(url).replace('.', '_')
+    try:
+        _get_globals(_subinclude_package, _c_subinclude_package_name).get('remote_file')(
+            name = name,
+            url = url,
+            hashes = [hash] if hash else [],
+            visibility = ['PUBLIC'],
+        )
+    except DuplicateTargetError:
+        pass  # Bit dodgy but assume it's already added.
+    return '//%s:%s' % (_subinclude_package_name, name)
 
 
 def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=None, outs=None,
@@ -120,21 +150,25 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                needs_transitive_deps=False, output_is_complete=False, container=False,
                skip_cache=False, no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
-               test_outputs=None, system_srcs=None):
+               test_outputs=None, system_srcs=None, stamp=False):
     if name == 'all':
         raise ValueError('"all" is a reserved build target name.')
     if '/' in name or ':' in name:
         raise ValueError(': and / are reserved characters in build target names')
     if container and not test:
         raise ValueError('Only tests can have container=True')
+    if test_cmd and not test:
+        raise ValueError('Target %s has been given a test command but isn\'t a test' % name)
+    if not _is_valid_target_name(ffi.new('char[]', name)):
+        raise ValueError('"%s" is not a valid target name' % name)
     if visibility is None:
         visibility = globals_dict['CONFIG'].get('DEFAULT_VISIBILITY')
     if licences is None:
         licences = globals_dict['CONFIG'].get('DEFAULT_LICENCES')
-    ffi_string = lambda x: ffi.cast('char*', 0) if x is None else ffi.new('char[]', x)
+    ffi_string = lambda x: ffi.NULL if x is None else ffi.new('char[]', x)
     target = _add_target(package,
                          ffi_string(name),
-                         ffi_string('' if isinstance(cmd, Mapping) else cmd),
+                         ffi_string('' if isinstance(cmd, Mapping) else cmd.strip()),
                          ffi_string(test_cmd),
                          binary,
                          test,
@@ -144,19 +178,23 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                          no_test_output,
                          skip_cache,
                          test_only or test,  # Tests are implicitly test_only
+                         stamp,
                          3 if flaky is True else flaky,  # Default is to rerun three times.
                          build_timeout,
                          test_timeout,
                          ffi_string(building_description))
-    if flaky:
-        labels = labels or []
-        if 'flaky' not in labels:
-            labels.append('flaky')
+    if not target:
+        # Currently this is the only reason _add_target can fail, given that we validated
+        # the target name earlier. Bit hacky but will have to do for now.
+        raise DuplicateTargetError('Duplicate target %s' % name)
     if isinstance(srcs, Mapping):
-        for name, src_list in srcs.iteritems():
-            if src_list:
+        for src_name, src_list in srcs.iteritems():
+            if isinstance(src_list, str):
+                raise ValueError('Value in named_srcs for target %s is a string, you probably '
+                                 'meant to use a list of strings instead' % name)
+            elif src_list:
                 for src in src_list:
-                    _add_named_src(target, name, src)
+                    _check_c_error(_add_named_src(target, src_name, src))
     elif srcs:
         for src in srcs:
             if src.startswith('/') and not src.startswith('//'):
@@ -165,7 +203,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         _add_strings(target, _add_src, srcs, 'srcs')
     if isinstance(cmd, Mapping):
         for config, command in cmd.items():
-            _add_command(target, config, command)
+            _check_c_error(_add_command(target, config, command.strip()))
     if system_srcs:
         for src in system_srcs:
             if not src.startswith('/') or src.startswith('//'):
@@ -187,7 +225,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         if not isinstance(provides, Mapping):
             raise ValueError('"provides" argument for rule %s is not a mapping' % name)
         for lang, rule in provides.items():
-            _add_provide(target, ffi.new('char[]', lang), ffi.new('char[]', rule))
+            _check_c_error(_add_provide(target, ffi.new('char[]', lang), ffi.new('char[]', rule)))
     if pre_build:
         # Must manually ensure we keep these objects from being gc'd.
         handle = ffi.new_handle(pre_build)
@@ -209,7 +247,7 @@ def run_pre_build_function(handle, package, name):
     try:
         callback = ffi.from_handle(handle)
         callback(ffi.string(name))
-        return ffi.cast('char*', 0)
+        return ffi.NULL
     except DeferParse:
         return ffi.new('char[]', "Don't try to subinclude() from inside a pre-build function")
     except Exception as err:
@@ -221,7 +259,7 @@ def run_post_build_function(handle, package, name, output):
     try:
         callback = ffi.from_handle(handle)
         callback(ffi.string(name), ffi.string(output).strip().split('\n'))
-        return ffi.cast('char*', 0)
+        return ffi.NULL
     except DeferParse:
         return ffi.new('char[]', "Don't try to subinclude() from inside a post-build function")
     except Exception as err:
@@ -235,7 +273,13 @@ def _add_strings(target, func, lst, name):
             # easy to use a string by mistake, which tends to cause some weird cffi errors later.
             raise ValueError('"%s" argument should be a list of strings, not a string' % name)
         for x in lst:
-            func(target, ffi.new('char[]', x))
+            _check_c_error(func(target, ffi.new('char[]', x)))
+
+
+def _check_c_error(error):
+    """Converts returned errors from cffi to exceptions."""
+    if error:
+        raise ParseError(ffi.string(error))
 
 
 def glob(package, includes, excludes=None, hidden=False):
@@ -260,10 +304,7 @@ def get_labels(package, target, prefix):
 
 def has_label(package, target, prefix):
     """Returns True if the target has any matching label that would be returned by get_labels."""
-    labels = _get_labels(package, ffi.new('char[]', target), ffi.new('char[]', prefix))
-    for label in _null_terminated_array(labels):
-        return True
-    return False
+    return bool(get_labels(package, target, prefix))
 
 
 def package(globals_dict, **kwargs):
@@ -306,19 +347,18 @@ def _get_globals(c_package, c_package_name):
             local_globals[k] = v
     # Need to pass some hidden arguments to these guys.
     package_name = ffi.string(c_package_name)
-    local_globals['include_defs'] = lambda target: include_defs(c_package, local_globals, target)
-    local_globals['subinclude'] = lambda target: subinclude(c_package, local_globals, target)
-    local_globals['build_rule'] = lambda *args, **kwargs: build_rule(local_globals, c_package,
-                                                                     *args, **kwargs)
+    local_globals['include_defs'] = lambda *args, **kwargs: include_defs(c_package, local_globals, *args, **kwargs)
+    local_globals['subinclude'] = lambda *args, **kwargs: subinclude(c_package, local_globals, *args, **kwargs)
+    local_globals['build_rule'] = lambda *args, **kwargs: build_rule(local_globals, c_package, *args, **kwargs)
     local_globals['glob'] = lambda *args, **kwargs: glob(package_name, *args, **kwargs)
     local_globals['get_labels'] = lambda name, prefix: get_labels(c_package, name, prefix)
     local_globals['has_label'] = lambda name, prefix: has_label(c_package, name, prefix)
     local_globals['get_base_path'] = lambda: package_name
-    local_globals['add_dep'] = lambda target, dep: _add_dependency(c_package, target, dep, False)
-    local_globals['add_exported_dep'] = lambda target, dep: _add_dependency(c_package, target, dep, True)
-    local_globals['add_out'] = lambda target, out: _add_output(c_package, target, out)
-    local_globals['add_licence'] = lambda name, licence: _add_licence_post(c_package, name, licence)
-    local_globals['set_command'] = lambda name, config, command='': _set_command(c_package, name, config, command)
+    local_globals['add_dep'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, False))
+    local_globals['add_exported_dep'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, True))
+    local_globals['add_out'] = lambda target, out: _check_c_error(_add_output(c_package, target, out))
+    local_globals['add_licence'] = lambda name, licence: _check_c_error(_add_licence_post(c_package, name, licence))
+    local_globals['set_command'] = lambda name, config, command='': _check_c_error(_set_command(c_package, name, config, command))
     local_globals['package'] = lambda **kwargs: package(local_globals, **kwargs)
     local_globals['licenses'] = lambda l: licenses(local_globals, l)
     # Make these available to other scripts so they can get it without import.
@@ -374,6 +414,20 @@ _add_output = ffi.cast('AddOutputCallback*', callbacks.add_output)
 _add_licence_post = ffi.cast('AddTwoStringsCallback*', callbacks.add_licence_post)
 _set_command = ffi.cast('AddThreeStringsCallback*', callbacks.set_command)
 _log = ffi.cast('LogCallback*', callbacks.log)
+_is_valid_target_name = ffi.cast('ValidateCallback*', callbacks.is_valid_target_name)
+
+
+class ParseError(Exception):
+    """Raised on general file parsing errors."""
+
+
+class DuplicateTargetError(ParseError):
+    """Raised when a duplicate target is added."""
+
+
+class DeferParse(Exception):
+    """Raised to include that the parse of a file will be deferred until some build actions are done."""
+
 
 # Derive to support dot notation.
 class DotDict(dict):
@@ -387,6 +441,8 @@ _please_globals['CONFIG'] = DotDict()
 _please_globals['CONFIG']['DEFAULT_VISIBILITY'] = None
 _please_globals['CONFIG']['DEFAULT_LICENCES'] = None
 _please_globals['defaultdict'] = defaultdict
+_please_globals['ParseError'] = ParseError
+_please_globals['DuplicateTargetError'] = DuplicateTargetError
 
 # We'll need these guys locally. Unfortunately exec is a statement so we
 # can't do it for that.
@@ -399,7 +455,3 @@ for k, v in __builtin__.__dict__.items():  # YOLO
         pass
     if k not in _WHITELISTED_BUILTINS:
         del __builtin__.__dict__[k]
-
-
-class DeferParse(Exception):
-    """Raised to include that the parse of a file will be deferred until some build actions are done."""

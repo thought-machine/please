@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -38,32 +39,38 @@ func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCo
 // tests, so it's important that we identify anything with zero coverage here.
 // This is made trickier by attempting to reconcile coverage targets from languages like
 // Java that don't preserve the original file structure, which requires a slightly fuzzy match.
-func AddOriginalTargetsToCoverage(state *core.BuildState, include, exclude []string) {
+func AddOriginalTargetsToCoverage(state *core.BuildState, includeAllFiles bool) {
 	// First we collect all the source files from all relevant targets
 	allFiles := map[string]bool{}
 	doneTargets := map[*core.BuildTarget]bool{}
+	// Track the set of packages the user ran tests from; we only show coverage metrics from them.
+	coveragePackages := map[string]bool{}
+	for _, label := range state.OriginalTargets {
+		coveragePackages[label.PackageName] = true
+	}
 	for _, label := range state.ExpandOriginalTargets() {
-		collectAllFiles(state, state.Graph.TargetOrDie(label), allFiles, doneTargets, include, exclude)
+		collectAllFiles(state, state.Graph.TargetOrDie(label), coveragePackages, allFiles, doneTargets, includeAllFiles)
 	}
 
 	// Now merge the recorded coverage so far into them
 	recordedCoverage := state.Coverage
 	state.Coverage = core.TestCoverage{Tests: recordedCoverage.Tests, Files: map[string][]core.LineCoverage{}}
-	mergeCoverage(state, recordedCoverage, allFiles)
+	mergeCoverage(state, recordedCoverage, coveragePackages, allFiles, includeAllFiles)
 }
 
 // Collects all the source files from a single target
-func collectAllFiles(state *core.BuildState, target *core.BuildTarget, allFiles map[string]bool, doneTargets map[*core.BuildTarget]bool, include, exclude []string) {
+func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coveragePackages, allFiles map[string]bool, doneTargets map[*core.BuildTarget]bool, includeAllFiles bool) {
 	doneTargets[target] = true
-	if !target.ShouldInclude(include, exclude) {
+	if !includeAllFiles && !coveragePackages[target.Label.PackageName] {
 		return
 	}
 	// Small hack here; explore these targets when we don't have any sources yet. Helps languages
 	// like Java where we generate a wrapper target with a complete one immediately underneath.
+	// TODO(pebers): do we still need this now we have Java sourcemaps?
 	if !target.OutputIsComplete || len(allFiles) == 0 {
 		for _, dep := range target.Dependencies() {
 			if !doneTargets[dep] {
-				collectAllFiles(state, dep, allFiles, doneTargets, include, exclude)
+				collectAllFiles(state, dep, coveragePackages, allFiles, doneTargets, includeAllFiles)
 			}
 		}
 	}
@@ -81,11 +88,13 @@ func collectAllFiles(state *core.BuildState, target *core.BuildTarget, allFiles 
 	}
 }
 
-// Merges recorded coverage with the list of all existing files.
-func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, allFiles map[string]bool) {
+// mergeCoverage merges recorded coverage with the list of all existing files.
+func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, coveragePackages, allFiles map[string]bool, includeAllFiles bool) {
 	for file, coverage := range recordedCoverage.Files {
-		state.Coverage.Files[file] = coverage
-		allFiles[file] = true
+		if includeAllFiles || isOwnedBy(file, coveragePackages) {
+			state.Coverage.Files[file] = coverage
+			allFiles[file] = true
+		}
 	}
 	// For any files left over now, enter them in as 100% uncovered.
 	// This is pessimistic but there's not much we can do at this point.
@@ -102,7 +111,18 @@ func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, a
 	}
 }
 
-// Returns the number of lines in a file.
+// isOwnedBy returns true if the given file is owned by any of the given packages.
+func isOwnedBy(file string, coveragePackages map[string]bool) bool {
+	for file != "." {
+		file = path.Dir(file)
+		if coveragePackages[file] {
+			return true
+		}
+	}
+	return false
+}
+
+// countLines returns the number of lines in a file.
 func countLines(path string) int {
 	data, _ := ioutil.ReadFile(path)
 	return bytes.Count(data, []byte{'\n'})

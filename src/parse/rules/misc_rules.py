@@ -252,32 +252,49 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
     )
 
 
-def remote_file(name, url, hashes, out=None, binary=False, visibility=None, test_only=False):
+def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None, test_only=False):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
       name (str): Name of the rule
       url (str): URL to fetch
-      hashes (list): List of hashes; the output must match at least one of these. This is required
-                     because the remote file must not change, otherwise it'd introduce fundamental
-                     indeterminacy into the build.
+      hashes (list): List of hashes; the output must match at least one of these.
       out (str): Output name of the file. Chosen automatically if not given.
       binary (bool): True to mark the output as binary and runnable.
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If true the rule is only visible to test targets.
     """
-    cmd = 'curl %s -o %s' % (url, out) if out else 'curl %s -O' % url
-    # TODO(pebers): maybe plz should automatically do this on binary outputs?
-    if binary:
-        cmd += ' && chmod +x $OUT'
     build_rule(
         name=name,
-        cmd=cmd,
+        cmd='curl -fSL %s -o $OUT' % url,
         outs=[out or url[url.rfind('/') + 1:]],
         binary=binary,
         visibility=visibility,
         hashes=hashes,
         building_description='Fetching...',
+    )
+
+
+def github_file(name, repo, file, revision='master', hash=None, visibility=None, test_only=False):
+    """Defines a rule to fetch a file from Github.
+
+    This is just a convenience wrapper around remote_file but is somewhat clearer to write.
+
+    Args:
+      name: Name of the rule.
+      repo: Repository to fetch from (e.g. thought-machine/please).
+      file: File in the repo to fetch (e.g. src/parse/rules/misc_rules.py).
+      revision: Git revision to fetch from. Defaults to most recent on master.
+      hash: Hash of downloaded file.
+      visibility (list): Visibility declaration of the rule.
+      test_only (bool): If true the rule is only visible to test targets.
+    """
+    remote_file(
+        name = name,
+        url = join_path('https://raw.githubusercontent.com', repo, revision, file),
+        hashes = [hash] if hash else None,
+        visibility = visibility,
+        test_only = test_only,
     )
 
 
@@ -370,16 +387,16 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
     """Defines a rule to create a tarball containing outputs of other rules.
 
     Args:
-      name: Rule name
-      srcs: Source files to include in the tarball
-      out: Name of output tarball (defaults to `name`.tar.gz, but see below re compression)
-      subdir: Subdirectory to create in (defaults to 'name')
-      compression: Kind of compression to use. Either one of {gzip, bzip2, xz, lzma}
-                   to filter through known tar methods, an explicit flag, or None for
-                   no compression.
-      deps: Dependencies
-      visibility: Visibility specification.
-      labels: Labels associated with this rule.
+      name (str): Rule name
+      srcs (list): Source files to include in the tarball
+      out (str): Name of output tarball (defaults to `name`.tar.gz, but see below re compression)
+      subdir (str): Subdirectory to create in (defaults to 'name')
+      compression (str): Kind of compression to use. Either one of {gzip, bzip2, xz, lzma}
+                         to filter through known tar methods, an explicit flag, or None for
+                         no compression.
+      deps (list): Dependencies
+      visibility (list): Visibility specification.
+      labels (list): Labels associated with this rule.
     """
     subdir = subdir or name
     locations = ' '.join('$(location_pairs %s)' % src for src in srcs)

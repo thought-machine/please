@@ -13,8 +13,8 @@ import (
 // OutDir is the output directory for everything.
 const OutDir string = "plz-out"
 const TmpDir string = "plz-out/tmp"
-const genDir string = "plz-out/gen"
-const binDir string = "plz-out/bin"
+const GenDir string = "plz-out/gen"
+const BinDir string = "plz-out/bin"
 
 // Representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
@@ -64,6 +64,9 @@ type BuildTarget struct {
 	// for _binary rules which normally are, and genrules where you don't care about
 	// the inputs, only whatever they were turned into.
 	OutputIsComplete bool
+	// If true, the rule is given an env var at build time that contains the hash of its
+	// transitive dependencies, which can be used to identify the output in a predictable way.
+	Stamp bool
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings
 	// Results of test, if it is one
@@ -202,35 +205,37 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 	return target
 }
 
-// Returns the temporary working directory for this target, eg.
-// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy
-// Note the extra subdirectory to keep rules separate from one another.
+// TmpDir returns the temporary working directory for this target, eg.
+// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy#.build
+// Note the extra subdirectory to keep rules separate from one another, and the .build suffix
+// to attempt to keep rules from duplicating the names of sub-packages; obviously that is not
+// 100% reliable but we don't have a better solution right now.
 func (target *BuildTarget) TmpDir() string {
-	return path.Join(TmpDir, target.Label.PackageName, target.Label.Name)
+	return path.Join(TmpDir, target.Label.PackageName, target.Label.Name+"#.build")
 }
 
 // Returns the output directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
 	if target.IsBinary {
-		return path.Join(binDir, target.Label.PackageName)
+		return path.Join(BinDir, target.Label.PackageName)
 	} else {
-		return path.Join(genDir, target.Label.PackageName)
+		return path.Join(GenDir, target.Label.PackageName)
 	}
 }
 
 // Returns the test directory for this target, eg.
-// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy.test
+// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy#.test
 // This is different to TmpDir so we run tests in a clean environment
 // and to facilitate containerising tests.
 func (target *BuildTarget) TestDir() string {
-	return target.TmpDir() + ".test"
+	return path.Join(TmpDir, target.Label.PackageName, target.Label.Name+"#.test")
 }
 
 // Returns all the source paths for this target
 func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
 	ret := make([]string, 0, len(target.Sources))
-	for source := range target.AllSources() {
+	for _, source := range target.AllSources() {
 		for _, file := range source.Paths(graph) {
 			ret = append(ret, file)
 		}
@@ -358,15 +363,8 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 		return true
 	}
 	for _, vis := range dep.Visibility {
-		if strings.HasPrefix(target.Label.PackageName, vis.PackageName) {
-			// We're in the same package or a subpackage of this visibility spec
-			if vis.IsAllSubpackages() {
-				return true
-			} else if target.Label.PackageName == vis.PackageName {
-				if target.Label.Name == vis.Name || vis.IsAllTargets() {
-					return true
-				}
-			}
+		if vis.includes(target.Label) {
+			return true
 		}
 	}
 	return false
@@ -542,7 +540,7 @@ func (target *BuildTarget) GetCommand() string {
 		return target.Command
 	} else if command, present := target.Commands[State.Config.Build.Config]; present {
 		return command // Has command for current config, good
-	} else if command, present := target.Commands[State.Config.Build.DefaultConfig]; present {
+	} else if command, present := target.Commands[State.Config.Build.FallbackConfig]; present {
 		return command // Has command for default config, fall back to that
 	}
 	// Oh dear, target doesn't have any matching config. Panicking is a bit heavy here, instead
@@ -556,37 +554,34 @@ func (target *BuildTarget) GetCommand() string {
 		}
 	}
 	log.Warning("%s doesn't have a command for %s (or %s), falling back to %s",
-		target.Label, State.Config.Build.Config, State.Config.Build.DefaultConfig, highestConfig)
+		target.Label, State.Config.Build.Config, State.Config.Build.FallbackConfig, highestConfig)
 	return highestCommand
 }
 
-// AllSources returns an iterable channel of all the sources of this rule.
-func (target *BuildTarget) AllSources() <-chan BuildInput {
-	ch := make(chan BuildInput, 10)
-	go func() {
-		for _, source := range target.Sources {
-			ch <- source
+// AllSources returns all the sources of this rule.
+func (target *BuildTarget) AllSources() []BuildInput {
+	ret := make([]BuildInput, 0, len(target.Sources))
+	for _, source := range target.Sources {
+		ret = append(ret, source)
+	}
+	if target.NamedSources != nil {
+		keys := make([]string, 0, len(target.NamedSources))
+		for k := range target.NamedSources {
+			keys = append(keys, k)
 		}
-		if target.NamedSources != nil {
-			keys := make([]string, 0, len(target.NamedSources))
-			for k := range target.NamedSources {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-			for _, k := range keys {
-				for _, source := range target.NamedSources[k] {
-					ch <- source
-				}
+		sort.Strings(keys)
+		for _, k := range keys {
+			for _, source := range target.NamedSources[k] {
+				ret = append(ret, source)
 			}
 		}
-		close(ch)
-	}()
-	return ch
+	}
+	return ret
 }
 
 // HasSource returns true if this target has the given file as a source (named or not).
 func (target *BuildTarget) HasSource(source string) bool {
-	for src := range target.AllSources() {
+	for _, src := range target.AllSources() {
 		if src.String() == source { // Comparison is a bit dodgy tbh
 			return true
 		}
@@ -658,7 +653,7 @@ func (target *BuildTarget) AddLicence(licence string) {
 }
 
 // SetContainerSetting sets one of the fields on the container settings by name.
-func (target *BuildTarget) SetContainerSetting(name, value string) {
+func (target *BuildTarget) SetContainerSetting(name, value string) error {
 	if target.ContainerSettings == nil {
 		target.ContainerSettings = &TargetContainerSettings{}
 	}
@@ -667,10 +662,10 @@ func (target *BuildTarget) SetContainerSetting(name, value string) {
 		if strings.ToLower(t.Field(i).Name) == name {
 			v := reflect.ValueOf(target.ContainerSettings)
 			v.Elem().Field(i).SetString(value)
-			return
+			return nil
 		}
 	}
-	panic(fmt.Sprintf("Field %s isn't a valid container setting", name))
+	return fmt.Errorf("Field %s isn't a valid container setting", name)
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/base64"
 	"os"
 	"path"
 	"regexp"
@@ -72,6 +73,19 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		if state.NeedCoverage {
 			env = append(env, "COVERAGE=true")
 		}
+		if len(target.Outputs()) > 0 {
+			env = append(env, "TEST="+path.Join(RepoRoot, target.TestDir(), target.Outputs()[0]))
+		}
+	}
+	return env
+}
+
+// StampedBuildEnvironment returns the shell env vars to be passed into exec.Command.
+// Optionally includes a stamp if the target is marked as such.
+func StampedBuildEnvironment(state *BuildState, target *BuildTarget, test bool, stamp []byte) []string {
+	env := BuildEnvironment(state, target, test)
+	if target.Stamp {
+		return append(env, "STAMP="+base64.RawURLEncoding.EncodeToString(stamp))
 	}
 	return env
 }

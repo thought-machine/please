@@ -4,7 +4,7 @@ go_library(
     deps = [
         '//src/build',
         '//src/core',
-        '//src/parse',
+        '//src/utils',
 	'//third_party/go:logging',
     ],
     visibility = ['PUBLIC'],

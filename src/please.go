@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
 	"strings"
 	"syscall"
+
+	"github.com/jessevdk/go-flags"
+	"github.com/kardianos/osext"
+	"gopkg.in/op/go-logging.v1"
 
 	"build"
 	"cache"
@@ -17,21 +20,15 @@ import (
 	"parse"
 	"query"
 	"run"
+	"sync"
 	"test"
 	"update"
 	"utils"
-
-	"github.com/jessevdk/go-flags"
-	"github.com/kardianos/osext"
-	"gopkg.in/op/go-logging.v1"
 )
 
 var log = logging.MustGetLogger("plz")
 
-const testResultsFile = "plz-out/log/test_results.xml"
-const coverageResultsFile = "plz-out/log/coverage.json"
-
-var config core.Configuration
+var config *core.Configuration
 
 var opts struct {
 	BuildFlags struct {
@@ -52,13 +49,13 @@ var opts struct {
 		Colour            bool   `long:"colour" description:"Forces coloured output from logging & other shell output."`
 		NoColour          bool   `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
 		TraceFile         string `long:"trace_file" description:"File to write Chrome tracing output into"`
-		PrintCommands     bool   `long:"print_commands" description:"Print each build / test command as they're run"`
+		PrintCommands     bool   `long:"print_commands" description:"Print each build / test command as they're run" hidden:"true"`
 		Version           bool   `long:"version" description:"Print the version of the tool"`
 	} `group:"Options controlling output & logging"`
 
 	FeatureFlags struct {
 		NoUpdate           bool `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
-		NoCache            bool `long:"nocache" description:"Disable caching locally"`
+		NoCache            bool `long:"nocache" description:"Disable caches (NB. not incrementality)"`
 		NoHashVerification bool `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
 		NoLock             bool `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
@@ -81,8 +78,9 @@ var opts struct {
 	} `command:"hash" description:"Calculates hash for one or more targets"`
 
 	Test struct {
-		FailingTestsOk bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
-		NumRuns        int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
+		FailingTestsOk  bool   `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NumRuns         int    `long:"num_runs" short:"n" description:"Number of times to run each test target."`
+		TestResultsFile string `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -91,10 +89,15 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
-		FailingTestsOk   bool `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
-		NoCoverageReport bool `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
-		NumRuns          int  `long:"num_runs" short:"n" description:"Number of times to run each test target."`
-		Args             struct {
+		FailingTestsOk      bool     `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NoCoverageReport    bool     `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
+		LineCoverageReport  bool     `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
+		NumRuns             int      `short:"n" long:"num_runs" description:"Number of times to run each test target."`
+		IncludeAllFiles     bool     `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
+		IncludeFile         []string `long:"include_file" description:"Filenames to filter coverage display to"`
+		TestResultsFile     string   `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		CoverageResultsFile string   `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
+		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
 		} `positional-args:"true"`
@@ -130,6 +133,11 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"deps" description:"Queries the dependencies of a target."`
+		ReverseDeps struct {
+			Args struct {
+				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
+			} `positional-args:"true" required:"true"`
+		} `command:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
 		SomePath struct {
 			Args struct {
 				Target1 core.BuildLabel `positional-arg-name:"target1" description:"First build target" required:"true"`
@@ -137,7 +145,8 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"somepath" description:"Queries for a path between two targets"`
 		AllTargets struct {
-			Args struct {
+			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query"`
 			} `positional-args:"true"`
 		} `command:"alltargets" description:"Lists all targets in the graph"`
@@ -158,11 +167,6 @@ var opts struct {
 				Files []string `positional-arg-name:"files" description:"Files to query affected tests for"`
 			} `positional-args:"true"`
 		} `command:"affectedtargets" description:"Prints any targets affected by a set of files."`
-		AffectedTests struct {
-			Args struct {
-				Files []string `positional-arg-name:"files" description:"Files to query affected tests for"`
-			} `positional-args:"true"`
-		} `command:"affectedtests" description:"Prints any tests affected by a set of files."`
 		Input struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to display inputs for" required:"true"`
@@ -193,10 +197,10 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"test": func() bool {
-		os.RemoveAll(testResultsFile)
+		os.RemoveAll(opts.Test.TestResultsFile)
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args)
 		success, state := runBuild(targets, true, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, testResultsFile)
+		test.WriteResultsToFileOrDie(state.Graph, opts.Test.TestResultsFile)
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
@@ -205,16 +209,18 @@ var buildFunctions = map[string]func() bool{
 		} else {
 			opts.BuildFlags.Config = "cover"
 		}
-		os.RemoveAll(testResultsFile)
-		os.RemoveAll(coverageResultsFile)
+		os.RemoveAll(opts.Cover.TestResultsFile)
+		os.RemoveAll(opts.Cover.CoverageResultsFile)
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
 		success, state := runBuild(targets, true, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, testResultsFile)
-		test.AddOriginalTargetsToCoverage(state, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+		test.WriteResultsToFileOrDie(state.Graph, opts.Cover.TestResultsFile)
+		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
-		test.WriteCoverageToFileOrDie(state.Coverage, coverageResultsFile)
-		if !opts.Cover.NoCoverageReport {
-			output.PrintCoverage(state)
+		test.WriteCoverageToFileOrDie(state.Coverage, opts.Cover.CoverageResultsFile)
+		if opts.Cover.LineCoverageReport {
+			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile)
+		} else if !opts.Cover.NoCoverageReport {
+			output.PrintCoverage(state, opts.Cover.IncludeFile)
 		}
 		return success || opts.Cover.FailingTestsOk
 	},
@@ -255,6 +261,11 @@ var buildFunctions = map[string]func() bool{
 			query.QueryDeps(state.Graph, state.ExpandOriginalTargets())
 		})
 	},
+	"reverseDeps": func() bool {
+		return runQuery(true, opts.Query.ReverseDeps.Args.Targets, func(state *core.BuildState) {
+			query.ReverseDeps(state.Graph, state.ExpandOriginalTargets())
+		})
+	},
 	"somepath": func() bool {
 		return runQuery(true,
 			[]core.BuildLabel{opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2},
@@ -265,7 +276,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"alltargets": func() bool {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
-			query.QueryAllTargets(state.Graph, state.ExpandOriginalTargets(), opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+			query.QueryAllTargets(state.Graph, state.ExpandOriginalTargets(), opts.Query.AllTargets.Hidden)
 		})
 	},
 	"print": func() bool {
@@ -275,22 +286,11 @@ var buildFunctions = map[string]func() bool{
 	},
 	"affectedtargets": func() bool {
 		files := opts.Query.AffectedTargets.Args.Files
-		if len(files) == 1 && files[0] == "-" {
-			files = readStdin()
-		}
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+			if len(files) == 1 && files[0] == "-" {
+				files = utils.ReadAllStdin()
+			}
 			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests)
-		})
-	},
-	"affectedtests": func() bool {
-		// For backwards compatibility.
-		// TODO(pebers): Remove at plz 1.2.
-		files := opts.Query.AffectedTests.Args.Files
-		if len(files) == 1 && files[0] == "-" {
-			files = readStdin()
-		}
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, true)
 		})
 	},
 	"input": func() bool {
@@ -308,8 +308,9 @@ var buildFunctions = map[string]func() bool{
 		opts.ParsePackageOnly = true
 		fragments := opts.Query.Completions.Args.Fragments
 		if len(fragments) == 1 && fragments[0] == "-" {
-			fragments = readStdin()
-		} else if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
+			fragments = utils.ReadAllStdin()
+		}
+		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
 		}
 		labels := query.QueryCompletionLabels(config, fragments, core.RepoRoot)
@@ -343,39 +344,31 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 }
 
 func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
-	pendingParses, pendingBuilds, pendingTests := state.ReceiveChannels()
 	for {
-		select {
-		case success := <-state.Stop:
-			state.Stop <- success // Pass on to another thread
+		label, dependor, t := state.NextTask()
+		switch t {
+		case core.Stop:
 			return
-		case pendingParse, ok := <-pendingParses:
-			if ok {
-				parse.Parse(tid, state, pendingParse.Label, pendingParse.Dependor, parsePackageOnly, include, exclude)
-			}
-		case pendingBuild, ok := <-pendingBuilds:
-			if ok {
-				build.Build(tid, state, pendingBuild)
-			}
-		case pendingTest, ok := <-pendingTests:
-			if ok {
-				test.Test(tid, state, pendingTest)
-			}
+		case core.Parse, core.SubincludeParse:
+			parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude)
+		case core.Build, core.SubincludeBuild:
+			build.Build(tid, state, label)
+		case core.Test:
+			test.Test(tid, state, label)
 		}
-		state.ProcessedOne()
+		state.TaskDone()
 	}
 }
 
 // Determines from input flags whether we should show 'pretty' output (ie. interactive).
 func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool {
 	if interactiveOutput && plainOutput {
-		fmt.Printf("Can't pass both --interactive_output and --plain_output\n")
-		os.Exit(1)
+		log.Fatal("Can't pass both --interactive_output and --plain_output")
 	}
 	return interactiveOutput || (!plainOutput && output.StdErrIsATerminal && verbosity < 4)
 }
 
-func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 	} else if config.Please.NumThreads <= 0 {
@@ -401,70 +394,55 @@ func Please(targets []core.BuildLabel, config core.Configuration, prettyOutput, 
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
-	state.Include = opts.BuildFlags.Include
-	state.Exclude = opts.BuildFlags.Exclude
+	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
 	}
-	if (shouldBuild || shouldTest) && core.PathExists(testResultsFile) {
-		if err := os.Remove(testResultsFile); err != nil {
-			log.Fatalf("Failed to remove test results file: %s", err)
-		}
-	}
-	displayDone := make(chan bool)
-	go output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, displayDone, opts.OutputFlags.TraceFile)
+	// Start looking for the initial targets to kick the build off
+	go findOriginalTasks(state, targets)
+	// Start up all the build workers
+	var wg sync.WaitGroup
+	wg.Add(config.Please.NumThreads)
 	for i := 0; i < config.Please.NumThreads; i++ {
-		go please(i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+		go func(tid int) {
+			please(tid, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+			wg.Done()
+		}(i)
 	}
-	for _, target := range targets {
-		if target.IsAllSubpackages() {
-			for pkg := range parse.FindAllSubpackages(state.Config, target.PackageName, "") {
-				label := core.NewBuildLabel(pkg, "all")
-				state.OriginalTargets = append(state.OriginalTargets, label)
-				state.AddPendingParse(label, core.OriginalTarget)
-			}
-		} else {
-			state.OriginalTargets = append(state.OriginalTargets, target)
-			state.AddPendingParse(target, core.OriginalTarget)
-		}
-	}
-	state.ProcessedOne() // initial target adding counts as one.
-	state.TargetsLoaded = true
-	success := <-state.Stop
-	state.Stop <- success
-	close(state.Results) // This will signal the output goroutine to stop.
-	// TODO(pebers): shouldn't rely on the display routine to tell us whether we succeeded or not...
-	success = <-displayDone
+	// Wait until they've all exited, which they'll do once they have no tasks left.
+	go func() {
+		wg.Wait()
+		close(state.Results) // This will signal MonitorState (below) to stop.
+	}()
+	// Draw stuff to the screen while there are still results coming through.
+	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, opts.OutputFlags.TraceFile)
 	return success, state
 }
 
-// Allows input args to come from stdin. It's a little slack to insist on reading it all
-// up front but it's too hard to pass around a potential stream of arguments, and none of
-// our current use cases really make any difference anyway.
-func handleStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
-	if len(labels) == 1 && labels[0] == core.BuildLabelStdin {
-		return core.ParseBuildLabels(readStdin())
+// findOriginalTasks finds the original parse tasks for the original set of targets.
+func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
+	for _, target := range targets {
+		if target == core.BuildLabelStdin {
+			for label := range utils.ReadStdin() {
+				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0])
+			}
+		} else {
+			findOriginalTask(state, target)
+		}
 	}
-	return labels
+	state.TaskDone() // initial target adding counts as one.
 }
 
-func readStdin() []string {
-	stdin, err := ioutil.ReadAll(os.Stdin)
-	if err != nil {
-		log.Fatalf("%s\n", err)
+func findOriginalTask(state *core.BuildState, target core.BuildLabel) {
+	if target.IsAllSubpackages() {
+		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
+			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"))
+		}
+	} else {
+		state.AddOriginalTarget(target)
 	}
-	trimmed := strings.TrimSpace(string(stdin))
-	if trimmed == "" {
-		log.Warning("No targets supplied; nothing to do.")
-		os.Exit(0)
-	}
-	ret := strings.Split(trimmed, "\n")
-	for i, s := range ret {
-		ret[i] = strings.TrimSpace(s)
-	}
-	return ret
 }
 
 // testTargets handles test targets which can be given in two formats; a list of targets or a single
@@ -483,7 +461,7 @@ func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
 }
 
 // readConfig sets various things up and reads the initial configuration.
-func readConfig(forceUpdate bool) core.Configuration {
+func readConfig(forceUpdate bool) *core.Configuration {
 	if opts.AssertVersion != "" && core.PleaseVersion != opts.AssertVersion {
 		log.Fatalf("Requested Please version %s, but this is version %s", opts.AssertVersion, core.PleaseVersion)
 	}
@@ -493,6 +471,7 @@ func readConfig(forceUpdate bool) core.Configuration {
 
 	config, err := core.ReadConfigFiles([]string{
 		path.Join(core.RepoRoot, core.ConfigFileName),
+		path.Join(core.RepoRoot, core.ArchConfigFileName),
 		core.MachineConfigFileName,
 		path.Join(core.RepoRoot, core.LocalConfigFileName),
 	})
@@ -513,7 +492,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, defaultToAllTa
 		targets = core.WholeGraph
 	}
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
-	return Please(handleStdinLabels(targets), config, pretty, shouldBuild, shouldTest)
+	return Please(targets, config, pretty, shouldBuild, shouldTest)
 }
 
 // activeCommand returns the name of the currently active command.
@@ -527,15 +506,11 @@ func activeCommand(parser *flags.Parser) string {
 }
 
 func main() {
-	parser, extraArgs, err := output.ParseFlags("Please", &opts, os.Args)
+	parser, extraArgs, flagsErr := output.ParseFlags("Please", &opts, os.Args)
+	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.OutputFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other errors if --version was passed.
-	}
-	if err != nil {
-		parser.WriteHelp(os.Stderr)
-		fmt.Printf("\n%s\n", err)
-		os.Exit(1)
 	}
 	// PrintCommands implies verbosity of at least 2, because commands are logged at that level
 	if opts.OutputFlags.PrintCommands && opts.OutputFlags.Verbosity < 2 {
@@ -570,7 +545,7 @@ func main() {
 
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
-	if err != nil || len(extraArgs) > 0 {
+	if flagsErr != nil || len(extraArgs) > 0 {
 		argv := strings.Join(os.Args, " ")
 		for k, v := range config.Aliases {
 			argv = strings.Replace(argv, k, v, 1)

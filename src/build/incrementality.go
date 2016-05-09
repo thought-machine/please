@@ -255,7 +255,7 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	for _, hsh := range target.Hashes {
 		h.Write([]byte(hsh))
 	}
-	for source := range target.AllSources() {
+	for _, source := range target.AllSources() {
 		h.Write([]byte(source.String()))
 	}
 	for _, out := range target.DeclaredOutputs() {
@@ -296,6 +296,12 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 
 	hashBool(h, target.NeedsTransitiveDependencies)
 	hashBool(h, target.OutputIsComplete)
+	// Should really not be conditional here, but we don't want adding the new flag to
+	// change the hash of every single other target everywhere.
+	// Might consider removing this the next time we peturb the hashing strategy.
+	if target.Stamp {
+		hashBool(h, target.Stamp)
+	}
 	for _, require := range target.Requires {
 		h.Write([]byte(require))
 	}
@@ -312,6 +318,10 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	// Obviously we don't include the code pointer because it's a pointer.
 	h.Write(target.PreBuildHash)
 	h.Write(target.PostBuildHash)
+	// The Go version affects the hash for Go targets only.
+	if target.HasLabel("go") {
+		h.Write([]byte(core.State.Config.Go.GoVersion))
+	}
 	return h.Sum(nil)
 }
 

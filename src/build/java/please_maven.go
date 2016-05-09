@@ -6,11 +6,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
@@ -19,6 +19,8 @@ import (
 )
 
 var log = logging.MustGetLogger("please_maven")
+
+var currentIndent = 0
 
 type pomXml struct {
 	GroupId              string          `xml:"groupId"`
@@ -47,21 +49,40 @@ type pomDependencies struct {
 		ArtifactId string `xml:"artifactId"`
 		Version    string `xml:"version"`
 		Scope      string `xml:"scope"`
+		Optional   bool   `xml:"optional"`
 		// TODO(pebers): Handle exclusions here.
 	} `xml:"dependency"`
 }
 
 type mavenMetadataXml struct {
+	Version    string `xml:"version"`
 	Versioning struct {
 		Latest  string `xml:"latest"`
 		Release string `xml:"release"`
 	} `xml:"versioning"`
+	Group, Artifact string
+}
+
+func (metadata mavenMetadataXml) LatestVersion() string {
+	if metadata.Versioning.Release != "" {
+		return metadata.Versioning.Release
+	} else if metadata.Versioning.Latest != "" {
+		log.Warning("No release version for %s:%s, using latest", metadata.Group, metadata.Artifact)
+		return metadata.Versioning.Latest
+	} else if metadata.Version != "" {
+		log.Warning("No release version for %s:%s", metadata.Group, metadata.Artifact)
+		return metadata.Version
+	}
+	log.Fatalf("Can't find a version for %s:%s", metadata.Group, metadata.Artifact)
+	return ""
 }
 
 var opts struct {
 	Repository string   `short:"r" long:"repository" description:"Location of Maven repo" default:"https://repo1.maven.org/maven2"`
 	Verbosity  int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
 	Exclude    []string `short:"e" long:"exclude" description:"Artifacts to exclude from download"`
+	Indent     bool     `short:"i" long:"indent" description:"Indent stdout lines appropriately"`
+	Optional   []string `short:"o" long:"optional" description:"Optional dependencies to fetch"`
 	Args       struct {
 		Package []string
 	} `positional-args:"yes" required:"yes"`
@@ -71,8 +92,7 @@ var opts struct {
 func replaceVariables(s string, properties map[string]string) string {
 	if strings.HasPrefix(s, "${") {
 		if prop, present := properties[s[2:len(s)-1]]; !present {
-			fmt.Printf("Failed property lookup %s: %s\n", s, properties)
-			os.Exit(4)
+			log.Fatalf("Failed property lookup %s: %s\n", s, properties)
 		} else {
 			return prop
 		}
@@ -83,9 +103,20 @@ func replaceVariables(s string, properties map[string]string) string {
 // parse parses a downloaded pom.xml. This is of course less trivial than you would hope.
 func parse(response []byte, group, artifact, version string) *pomXml {
 	pom := &pomXml{}
+	// This is an absolutely awful hack; we should use a proper decoder, but that seems
+	// to be provoking a panic from the linker for reasons I don't fully understand right now.
+	response = bytes.Replace(response, []byte("encoding=\"ISO-8859-1\""), []byte{}, -1)
 	if err := xml.Unmarshal(response, pom); err != nil {
 		log.Fatalf("Error parsing XML response: %s\n", err)
-	} else if (pom.GroupId != "" && group != pom.GroupId) ||
+	}
+	// Clean up strings in case they have spaces
+	pom.GroupId = strings.TrimSpace(pom.GroupId)
+	pom.ArtifactId = strings.TrimSpace(pom.ArtifactId)
+	pom.Version = strings.TrimSpace(pom.Version)
+	for i, licence := range pom.Licences.Licence {
+		pom.Licences.Licence[i].Name = strings.TrimSpace(licence.Name)
+	}
+	if (pom.GroupId != "" && group != pom.GroupId) ||
 		(pom.ArtifactId != "" && artifact != pom.ArtifactId) ||
 		(pom.Version != "" && version != "" && version != pom.Version) {
 		// These are a bit fiddly since inexplicably the fields are sometimes empty.
@@ -105,8 +136,8 @@ func process(pom *pomXml, group, artifact, version string) {
 	properties["project.groupId"] = group
 	properties["project.version"] = version
 	// Arbitrarily, some pom files have this different structure with the extra "dependencyManagement" level.
-	handleDependencies(pom.Dependencies, properties, version)
-	handleDependencies(pom.DependencyManagement.Dependencies, properties, version)
+	handleDependencies(pom.Dependencies, properties, group, version)
+	handleDependencies(pom.DependencyManagement.Dependencies, properties, group, version)
 }
 
 func fetchLicences(group, artifact, version string) []string {
@@ -119,23 +150,51 @@ func fetchLicences(group, artifact, version string) []string {
 	return ret
 }
 
-func handleDependencies(deps pomDependencies, properties map[string]string, version string) {
+func shouldFetchOptionalDep(artifact string) bool {
+	for _, option := range opts.Optional {
+		if option == artifact {
+			return true
+		}
+	}
+	return false
+}
+
+func handleDependencies(deps pomDependencies, properties map[string]string, group, version string) {
 	for _, dep := range deps.Dependency {
 		// This is a bit of a hack; our build model doesn't distinguish these in the way Maven does.
 		// TODO(pebers): Consider allowing specifying these to this tool to produce test-only deps.
 		if dep.Scope == "test" {
 			continue
 		}
+		if dep.Optional && !shouldFetchOptionalDep(dep.ArtifactId) {
+			log.Debug("Not fetching optional dependency %s:%s", dep.GroupId, dep.ArtifactId)
+			continue
+		}
 		dep.GroupId = replaceVariables(dep.GroupId, properties)
 		dep.ArtifactId = replaceVariables(dep.ArtifactId, properties)
+		// Not sure what this is about; httpclient seems to do this. It seems completely unhelpful but
+		// no doubt there's some highly obscure case where Maven aficionados consider this useful.
+		properties[dep.ArtifactId+".version"] = ""
+		properties[strings.Replace(dep.ArtifactId, "-", ".", -1)+".version"] = ""
 		dep.Version = replaceVariables(dep.Version, properties)
 		if isExcluded(dep.ArtifactId) {
 			continue
 		}
 		if dep.Version == "" {
-			dep.Version = version
+			// Not 100% sure what the logic should really be here; for example, jacoco
+			// seems to leave these underspecified and expects the same version, but other
+			// things (e.g. netty) expect the latest. Possibly we should try the same one then
+			// fall back to latest if it doesn't exist. This is easier but no doubt incorrect somewhere.
+			if dep.GroupId == group {
+				dep.Version = version
+			} else {
+				dep.Version = fetchMetadata(dep.GroupId, dep.ArtifactId).LatestVersion()
+			}
 		}
 		licences := strings.Join(fetchLicences(dep.GroupId, dep.ArtifactId, dep.Version), "|")
+		if opts.Indent {
+			fmt.Printf(strings.Repeat(" ", currentIndent))
+		}
 		if licences != "" {
 			fmt.Printf("%s:%s:%s:%s\n", dep.GroupId, dep.ArtifactId, dep.Version, licences)
 		} else {
@@ -143,8 +202,10 @@ func handleDependencies(deps pomDependencies, properties map[string]string, vers
 		}
 		opts.Exclude = append(opts.Exclude, dep.ArtifactId) // Don't do this one again.
 		// Recurse so we get all transitive dependencies
+		currentIndent += 2
 		pom := fetchAndParse(dep.GroupId, dep.ArtifactId, dep.Version)
 		process(pom, dep.GroupId, dep.ArtifactId, dep.Version)
+		currentIndent -= 2
 	}
 }
 
@@ -162,7 +223,7 @@ func buildPomUrl(group, artifact, version string) string {
 	if version == "" {
 		// This is kind of exciting - we just assume the latest version if one isn't available.
 		// Not sure what we're really meant to do but I'm losing the will to live over all this so #yolo
-		version = fetchMetadata(group, artifact).Versioning.Release
+		version = fetchMetadata(group, artifact).LatestVersion()
 		log.Notice("Version not specified for %s:%s, decided to use %s", group, artifact, version)
 	}
 	slashGroup := strings.Replace(group, ".", "/", -1)
@@ -212,7 +273,7 @@ func fetchMetadata(group, artifact string) *mavenMetadataXml {
 		return ret
 	}
 	content := fetchOrDie(url)
-	ret := &mavenMetadataXml{}
+	ret := &mavenMetadataXml{Group: group, Artifact: artifact}
 	if err := xml.Unmarshal(content, ret); err != nil {
 		log.Fatalf("Error parsing XML response: %s\n", err)
 	}

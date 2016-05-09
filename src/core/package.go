@@ -19,7 +19,11 @@ type Package struct {
 	// Set of output files from rules.
 	Outputs map[string]*BuildTarget
 	// Protects access to above
-	Mutex sync.Mutex
+	mutex sync.Mutex
+	// Used to arbitrate a single post-build function running at a time.
+	// It would be sort of conceptually nice if they ran simultaneously but it'd
+	// be far too hard to ensure consistency in any case where they can interact with one another.
+	BuildCallbackMutex sync.Mutex
 }
 
 func NewPackage(name string) *Package {
@@ -41,22 +45,30 @@ func (pkg *Package) RegisterSubinclude(filename string) {
 }
 
 // RegisterOutput registers a new output file in the map.
-// Panics if the file has already been registered.
-func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) {
-	pkg.Mutex.Lock()
-	defer pkg.Mutex.Unlock()
+// Returns an error if the file has already been registered.
+func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) error {
+	pkg.mutex.Lock()
+	defer pkg.mutex.Unlock()
 	originalFileName := fileName
 	if target.IsBinary {
 		fileName = ":_bin_" + fileName // Add some arbitrary prefix so they don't clash.
 	}
 	if existing, present := pkg.Outputs[fileName]; present && existing != target {
 		if target.HasSource(originalFileName) || existing.HasSource(originalFileName) {
-			log.Info("Rules %s and %s both output %s, but ignoring because we think one's a filegroup",
+			log.Debug("Rules %s and %s both output %s, but ignoring because we think one's a filegroup",
 				existing.Label, target.Label, originalFileName)
 		} else {
-			panic(fmt.Sprintf("Rules %s and %s in %s both attempt to output the same file: %s\n",
-				existing.Label, target.Label, pkg.Filename, originalFileName))
+			return fmt.Errorf("Rules %s and %s in %s both attempt to output the same file: %s\n",
+				existing.Label, target.Label, pkg.Filename, originalFileName)
 		}
 	}
 	pkg.Outputs[fileName] = target
+	return nil
+}
+
+// MustRegisterOutput registers a new output file and panics if it's already been registered.
+func (pkg *Package) MustRegisterOutput(fileName string, target *BuildTarget) {
+	if err := pkg.RegisterOutput(fileName, target); err != nil {
+		panic(err)
+	}
 }

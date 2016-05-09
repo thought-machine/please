@@ -94,11 +94,9 @@ func TestRelativeTarget(t *testing.T) {
 }
 
 func TestRelativeImplicitTarget(t *testing.T) {
-	assertRelativeLabel(t, "path/to:thingy", "current_package/path/to", "thingy")
-	assertRelativeLabel(t, ":thingy", "current_package", "thingy")
+	assertRelativeLabel(t, "path/to", "current_package/path/to", "to")
+	assertRelativeLabel(t, "path", "current_package/path", "path")
 	assertNotLabel(t, "path/to:", "must have a target name")
-	assertNotLabel(t, "path/to:thingy/mabob", "can't have a slash in target name")
-	assertNotLabel(t, "path/to:thingy:mabob", "can only have one colon")
 }
 
 // Test for issue #55 where we were incorrectly allowing consecutive double slashes,
@@ -107,4 +105,10 @@ func TestDoubleSlashes(t *testing.T) {
 	assertNotLabel(t, "//src//core", "double slashes not allowed")
 	assertNotLabel(t, "//src//core:target1", "double slashes not allowed")
 	assertNotLabel(t, "//src/core/something//something", "double slashes not allowed")
+}
+
+// Test that labels can't match reserved suffixes used for temp dirs.
+func TestReservedTempDirs(t *testing.T) {
+	assertNotLabel(t, "//src/core:core#.build", "#.build is a reserved suffix")
+	assertNotLabel(t, "//src/core:core#.test", "#.test is a reserved suffix")
 }

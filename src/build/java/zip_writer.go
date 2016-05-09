@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"zip"
 
@@ -187,8 +188,14 @@ func concatenateFile(w *zip.Writer, f *zip.File) error {
 
 // HandleConcatenatedFiles appends concatenated files to the archive's directory for writing.
 func HandleConcatenatedFiles(w *zip.Writer) error {
-	for name, contents := range concatenatedFiles {
-		if err := WriteFile(w, name, []byte(contents)); err != nil {
+	// Must do it in a deterministic order
+	files := make([]string, 0, len(concatenatedFiles))
+	for name := range concatenatedFiles {
+		files = append(files, name)
+	}
+	sort.Strings(files)
+	for _, name := range files {
+		if err := WriteFile(w, name, []byte(concatenatedFiles[name])); err != nil {
 			return err
 		}
 	}

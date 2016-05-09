@@ -16,7 +16,9 @@ The easiest way to install it on your own machine is to run:
 curl -s https://s3-eu-west-1.amazonaws.com/please-build/get_plz.sh | bash
 ```
 You will need to have PyPy installed for it to run. On OSX this is
-straightforward with Homebrew, simply run `brew install pypy`.
+straightforward with Homebrew, simply run `brew install pypy`. You may
+need to link the headers into /usr/local/include/pypy, at time of writing
+Homebrew doesn't seem to do this automatically.
 
 Unfortunately at the time of writing the Ubuntu and Debian PyPy packages
 don't have the shared libraries. For now we suggest that you use the
@@ -34,10 +36,10 @@ Building Please
 To build Please yourself, run `./bootstrap.sh` in the repo root.
 This will set up the minimal environment needed to build Please,
 build it once manually and then rebuild it again using itself.
-You'll need to have Go 1.6 and PyPy installed to build Please.
-Go 1.5 and earlier are not currently supported due to subtle cgo
-incompatibilities (Note that this is only for building Please itself;
-it can target Go 1.4 or later).
+You'll need to have Go and PyPy installed to build Please. It should
+compile under Go 1.5+ (1.4 is no longer supported because we use
+several minor standard library features from 1.5) and once compiled
+can target 1.4+.
 
 To build on OSX, you'll need Homebrew installed. After that simply
 'brew install pypy' and 'brew install go' and you should be good to go (heh).

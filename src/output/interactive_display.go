@@ -18,6 +18,10 @@ import (
 	"core"
 )
 
+// We only set the terminal title for terminals that at least claim to be xterm
+// (note that most terminals do for compatibility; some report as xterm-color, hence HasPrefix)
+var terminalClaimsToBeXterm = strings.HasPrefix(os.Getenv("TERM"), "xterm")
+
 func display(state *core.BuildState, buildingTargets *[]buildingTarget, stop <-chan interface{}, done chan<- interface{}) {
 	backend := logBackend{InteractiveRows: len(*buildingTargets), MaxRecords: 10, LogMessages: list.New(), Formatter: logFormatter()}
 	go func() {
@@ -46,9 +50,11 @@ loop:
 				printf("\x1b[2K%s\n", line) // erase each line as we go
 			}
 			outputLines = len(backend.Output)
+			setWindowTitle(state)
 		}
 	}
 	ticker.Stop()
+	setWindowTitle(nil)
 	// Clear it all out.
 	moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows)
 	printf("\x1b[0J") // Clear out to end of screen.
@@ -61,7 +67,7 @@ func moveToFirstLine(buildingTargets []buildingTarget, outputLines, maxInteracti
 	if maxInteractiveRows > len(buildingTargets) {
 		maxInteractiveRows = len(buildingTargets)
 	}
-	printf("\x1b[%dF", maxInteractiveRows+1+outputLines)
+	printf("\x1b[%dA", maxInteractiveRows+1+outputLines)
 }
 
 func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLines, cols int) {
@@ -190,4 +196,20 @@ func lprintfPrepare(cols int, format string, args ...interface{}) string {
 		}
 	}
 	return b.String()
+}
+
+// setWindowTitle sets the title of the current shell window based on the current build state.
+func setWindowTitle(state *core.BuildState) {
+	if state == nil {
+		SetWindowTitle("plz: finishing up")
+	} else {
+		SetWindowTitle(fmt.Sprintf("plz: %d / %d tasks, %3.1fs", state.NumDone(), state.NumActive(), time.Since(startTime).Seconds()))
+	}
+}
+
+// SetWindowTitle sets the title of the current shell window.
+func SetWindowTitle(title string) {
+	if StdErrIsATerminal && terminalClaimsToBeXterm {
+		os.Stderr.Write([]byte(fmt.Sprintf("\033]0;%s\007", title)))
+	}
 }

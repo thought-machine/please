@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -137,7 +136,7 @@ func deferParse(label core.BuildLabel, pkg *core.Package) bool {
 	} else {
 		deferredParses[label.PackageName] = map[string][]string{label.Name: []string{pkg.Name}}
 	}
-	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkg.Name, Name: "all"})
+	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkg.Name, Name: "all"}, true)
 	return true
 }
 
@@ -152,6 +151,7 @@ func UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
 				state.AddPendingParse(
 					core.BuildLabel{PackageName: deferredPackageName, Name: getDependingTarget(deferredPackageName)},
 					core.BuildLabel{PackageName: deferredPackageName, Name: "_UNDEFER_"},
+					false,
 				)
 			}
 			delete(m, target.Label.Name) // Don't need this any more
@@ -198,10 +198,10 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 	for _, target := range pkg.Targets {
 		state.Graph.AddTarget(target)
 		for _, out := range target.DeclaredOutputs() {
-			pkg.RegisterOutput(out, target)
+			pkg.MustRegisterOutput(out, target)
 		}
 		for _, out := range target.TestOutputs {
-			pkg.RegisterOutput(out, target)
+			pkg.MustRegisterOutput(out, target)
 		}
 	}
 	// Do this in a separate loop so we get intra-package dependencies right now.
@@ -254,7 +254,7 @@ func buildFileName(state *core.BuildState, pkgName string) string {
 func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, forceBuild bool) {
 	// Stop at any package that's not loaded yet
 	if state.Graph.Package(label.PackageName) == nil {
-		state.AddPendingParse(label, dependor)
+		state.AddPendingParse(label, dependor, false)
 		return
 	}
 	target := state.Graph.Target(label)
@@ -280,7 +280,7 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 	// Only add if we need to build targets (not if we're just parsing) but we might need it to parse...
 	if target.State() == core.Active && state.Graph.AllDepsBuilt(target) {
 		if target.SyncUpdateState(core.Active, core.Pending) {
-			state.AddPendingBuild(label)
+			state.AddPendingBuild(label, dependor.IsAllTargets())
 		}
 		if !rescan {
 			return
@@ -310,6 +310,8 @@ func RunPreBuildFunction(tid int, state *core.BuildState, target *core.BuildTarg
 	state.LogBuildResult(tid, target.Label, core.PackageParsing,
 		fmt.Sprintf("Running pre-build function for %s", target.Label))
 	pkg := state.Graph.Package(target.Label.PackageName)
+	pkg.BuildCallbackMutex.Lock()
+	defer pkg.BuildCallbackMutex.Unlock()
 	if err := runPreBuildFunction(pkg, target); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed pre-build function for %s", target.Label)
 		return err
@@ -329,6 +331,8 @@ func RunPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTar
 	state.LogBuildResult(tid, target.Label, core.PackageParsing,
 		fmt.Sprintf("Running post-build function for %s", target.Label))
 	pkg := state.Graph.Package(target.Label.PackageName)
+	pkg.BuildCallbackMutex.Lock()
+	defer pkg.BuildCallbackMutex.Unlock()
 	log.Debug("Running post-build function for %s. Build output:\n%s\n", target.Label, out)
 	if err := runPostBuildFunction(pkg, target, out); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed post-build function for %s", target.Label)
@@ -357,43 +361,4 @@ func rescanDeps(state *core.BuildState, pkg *core.Package) {
 			addDep(state, target.Label, core.OriginalTarget, true, false)
 		}
 	}
-}
-
-// Finds all packages under a particular path.
-// Used to implement rules with ... where we need to know all possible packages
-// under that location.
-func FindAllSubpackages(config core.Configuration, rootPath string, prefix string) <-chan string {
-	ch := make(chan string)
-	go func() {
-		if rootPath == "" {
-			rootPath = "."
-		}
-		if err := filepath.Walk(rootPath, func(name string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err // stop on any error
-			} else if name == "plz-out" || (info.IsDir() && strings.HasPrefix(info.Name(), ".") && name != ".") {
-				return filepath.SkipDir // Don't walk output or hidden directories
-			} else if info.IsDir() && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
-				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
-			} else if isABuildFile(info.Name(), config) && !info.IsDir() {
-				dir, _ := path.Split(name)
-				ch <- strings.TrimRight(dir, "/")
-			}
-			return nil
-		}); err != nil {
-			log.Fatalf("Failed to walk tree under %s; %s\n", rootPath, err)
-		}
-		close(ch)
-	}()
-	return ch
-}
-
-// isABuildFile returns true if given filename is a build file name.
-func isABuildFile(name string, config core.Configuration) bool {
-	for _, buildFileName := range config.Please.BuildFileName {
-		if name == buildFileName {
-			return true
-		}
-	}
-	return false
 }

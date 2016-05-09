@@ -45,7 +45,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	// Add any of the reverse deps that are now fully built to the queue.
 	for _, reverseDep := range state.Graph.ReverseDependencies(target) {
 		if reverseDep.State() == core.Active && state.Graph.AllDepsBuilt(reverseDep) && reverseDep.SyncUpdateState(core.Active, core.Pending) {
-			state.AddPendingBuild(reverseDep.Label)
+			state.AddPendingBuild(reverseDep.Label, false)
 		}
 	}
 	if target.IsTest && state.NeedTests {
@@ -135,9 +135,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
 	replacedCmd := replaceSequences(target)
-	cmd := exec.Command("bash", "-c", replacedCmd)
+	cmd := exec.Command("bash", "-u", "-c", replacedCmd)
 	cmd.Dir = target.TmpDir()
-	cmd.Env = core.BuildEnvironment(state, target, false)
+	cmd.Env = core.StampedBuildEnvironment(state, target, false, cacheKey)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(cmd.Env, "\n"), replacedCmd)
 	if state.PrintCommands {
 		log.Notice("Building %s: %s", target.Label, replacedCmd)
@@ -365,7 +365,7 @@ func checkRuleHashes(target *core.BuildTarget, hash []byte) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Bad output hash for rule %s: was %s, expected one of [%s]",
+	return fmt.Errorf("Bad output hash for rule %s: was %s but expected one of [%s]",
 		target.Label, hashStr, strings.Join(target.Hashes, ", "))
 }
 

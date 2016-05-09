@@ -17,11 +17,11 @@ go get gopkg.in/gcfg.v1
 go get github.com/jteeuwen/go-bindata/...
 go get github.com/jessevdk/go-flags
 go get github.com/dustin/go-humanize
-go get github.com/golang/lint/golint
 go get google.golang.org/grpc
 go get github.com/kardianos/osext
 go get github.com/Songmu/prompter
 go get github.com/texttheater/golang-levenshtein/levenshtein
+go get github.com/Workiva/go-datastructures/queue
 
 # Clean out old artifacts.
 rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parser.py
@@ -77,12 +77,6 @@ fi
 if ! hash gold 2>/dev/null ; then
     echo "Gold not found, excluding Gold tests"
     EXCLUDES="${EXCLUDES} --exclude=gold"
-fi
-# Strictly some of these need the library but not the command line tools.
-# Pretty sure nobody in the world would be in a situation to care about that distinction though.
-if ! hash fstproject 2>/dev/null ; then
-    echo "libfst not found, excluding relevant tests"
-    EXCLUDES="${EXCLUDES} --exclude=fst"
 fi
 # If the proto files are installed in a different location, their tests won't work.
 if [ ! -d "/usr/include/google/protobuf" ]; then

@@ -1,31 +1,50 @@
 package core
 
-import "bytes"
-import "fmt"
-import "sort"
-import "sync"
-import "time"
+import (
+	"bytes"
+	"fmt"
+	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
-type BuildLabelPair struct {
+	"github.com/Workiva/go-datastructures/queue"
+)
+
+// A TaskType identifies the kind of task returned from NextTask()
+type TaskType int
+
+// Note that the ordering of these determines priority.
+const (
+	// These are for subinclude targets which should be processed before others.
+	SubincludeBuild TaskType = iota
+	SubincludeParse
+	Build
+	Parse
+	Test
+	Stop
+)
+
+type pendingTask struct {
 	Label    BuildLabel // Label of target to parse
-	Dependor BuildLabel // The target that depended on it
+	Dependor BuildLabel // The target that depended on it (only for parse tasks)
+	Type     TaskType
+}
+
+func (t pendingTask) Compare(that queue.Item) int {
+	return int(t.Type - that.(pendingTask).Type)
 }
 
 // Passed about to track the current state of the build.
 type BuildState struct {
 	Graph *BuildGraph
-	// Stream of pending packages to parse
-	pendingParses chan *BuildLabelPair
-	// Stream of pending targets to build
-	pendingBuilds chan BuildLabel
-	// Stream of pending tests to run
-	pendingTests chan BuildLabel
+	// Stream of pending tasks
+	pendingTasks *queue.PriorityQueue
 	// Stream of results from the build
 	Results chan *BuildResult
-	// Used to signal goroutines to stop once the build is done.
-	Stop chan bool
 	// Configuration options
-	Config Configuration
+	Config *Configuration
 	// Hashes of variouts bits of the configuration, used for incrementality.
 	Hashes struct {
 		// Hash of the general config, not including specialised bits.
@@ -43,8 +62,8 @@ type BuildState struct {
 	TestArgs []string
 	// Labels of targets that we will include / exclude
 	Include, Exclude []string
-	// True once the main thread has finished finding / loading targets.
-	TargetsLoaded bool
+	// Actual targets to exclude from discovery
+	ExcludeTargets []BuildLabel
 	// True if we require rule hashes to be correctly verified (usually the case).
 	VerifyHashes bool
 	// Aggregated coverage for this run
@@ -64,10 +83,12 @@ type BuildState struct {
 	PrintCommands bool
 	// True to clean working directories after successful builds.
 	CleanWorkdirs bool
+	// Number of running workers
+	numWorkers int
 	// Used to count the number of currently active/pending targets
-	numActive  int
-	numPending int
-	numDone    int
+	numActive  int64
+	numPending int64
+	numDone    int64
 	mutex      sync.Mutex
 }
 
@@ -76,50 +97,62 @@ type BuildState struct {
 var State *BuildState
 
 func (state *BuildState) AddActiveTarget() {
-	state.mutex.Lock()
-	state.numActive++
-	state.mutex.Unlock()
+	atomic.AddInt64(&state.numActive, 1)
 }
 
-func (state *BuildState) AddPendingParse(label, dependor BuildLabel) {
-	state.mutex.Lock()
-	state.numActive++
-	state.numPending++
-	state.mutex.Unlock()
-	state.pendingParses <- &BuildLabelPair{label, dependor}
+func (state *BuildState) AddPendingParse(label, dependor BuildLabel, forSubinclude bool) {
+	atomic.AddInt64(&state.numActive, 1)
+	atomic.AddInt64(&state.numPending, 1)
+	if forSubinclude {
+		state.pendingTasks.Put(pendingTask{Label: label, Dependor: dependor, Type: SubincludeParse})
+	} else {
+		state.pendingTasks.Put(pendingTask{Label: label, Dependor: dependor, Type: Parse})
+	}
 }
 
-func (state *BuildState) AddPendingBuild(label BuildLabel) {
-	state.addPending(label, state.pendingBuilds)
+func (state *BuildState) AddPendingBuild(label BuildLabel, forSubinclude bool) {
+	if forSubinclude {
+		state.addPending(label, SubincludeBuild)
+	} else {
+		state.addPending(label, Build)
+	}
 }
 
 func (state *BuildState) AddPendingTest(label BuildLabel) {
 	if state.NeedTests {
-		state.addPending(label, state.pendingTests)
+		state.addPending(label, Test)
 	}
 }
 
-// Used to allow receive-only access to these channels.
-// Caller should call ProcessedOne *after* they're done handling the result of one of these.
-func (state *BuildState) ReceiveChannels() (<-chan *BuildLabelPair, <-chan BuildLabel, <-chan BuildLabel) {
-	return state.pendingParses, state.pendingBuilds, state.pendingTests
-}
-
-func (state *BuildState) addPending(label BuildLabel, ch chan<- BuildLabel) {
-	state.mutex.Lock()
-	state.numPending++
-	state.mutex.Unlock()
-	ch <- label
-}
-
-func (state *BuildState) ProcessedOne() {
-	state.mutex.Lock()
-	state.numDone++
-	state.numPending--
-	if state.numPending <= 0 {
-		state.Stop <- true
+// NextTask receives the next task that should be processed according to the priority queues.
+func (state *BuildState) NextTask() (BuildLabel, BuildLabel, TaskType) {
+	t, err := state.pendingTasks.Get(1)
+	if err != nil {
+		log.Fatalf("error receiving next task: %s", err)
 	}
-	state.mutex.Unlock()
+	task := t[0].(pendingTask)
+	return task.Label, task.Dependor, task.Type
+}
+
+func (state *BuildState) addPending(label BuildLabel, t TaskType) {
+	atomic.AddInt64(&state.numPending, 1)
+	state.pendingTasks.Put(pendingTask{Label: label, Type: t})
+}
+
+// TaskDone indicates that a single task is finished. Should be called after one is finished with
+// a task returned from NextTask().
+func (state *BuildState) TaskDone() {
+	atomic.AddInt64(&state.numDone, 1)
+	if atomic.AddInt64(&state.numPending, -1) <= 0 {
+		state.Stop(state.numWorkers)
+	}
+}
+
+// Stop adds n stop tasks to the list of pending tasks, which stops n workers.
+func (state *BuildState) Stop(n int) {
+	for i := 0; i < n; i++ {
+		state.pendingTasks.Put(pendingTask{Type: Stop})
+	}
 }
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
@@ -130,6 +163,31 @@ func (state *BuildState) IsOriginalTarget(label BuildLabel) bool {
 		}
 	}
 	return false
+}
+
+// SetIncludeAndExclude sets the include / exclude labels.
+// Handles build labels on Exclude so should be preferred over setting them directly.
+func (state *BuildState) SetIncludeAndExclude(include, exclude []string) {
+	state.Include = include
+	for _, e := range exclude {
+		if LooksLikeABuildLabel(e) {
+			state.ExcludeTargets = append(state.ExcludeTargets, parseMaybeRelativeBuildLabel(e, ""))
+		} else {
+			state.Exclude = append(state.Exclude, e)
+		}
+	}
+}
+
+// AddOriginalTarget adds one of the original targets and enqueues it for parsing / building.
+func (state *BuildState) AddOriginalTarget(label BuildLabel) {
+	// Check it's not excluded first.
+	for _, e := range state.ExcludeTargets {
+		if e.includes(label) {
+			return
+		}
+	}
+	state.OriginalTargets = append(state.OriginalTargets, label)
+	state.AddPendingParse(label, OriginalTarget, false)
 }
 
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
@@ -170,15 +228,11 @@ func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildRe
 }
 
 func (state *BuildState) NumActive() int {
-	state.mutex.Lock()
-	defer state.mutex.Unlock()
-	return state.numActive
+	return int(atomic.LoadInt64(&state.numActive))
 }
 
 func (state *BuildState) NumDone() int {
-	state.mutex.Lock()
-	defer state.mutex.Unlock()
-	return state.numDone
+	return int(atomic.LoadInt64(&state.numDone))
 }
 
 // ExpandOriginalTargets expands any pseudo-targets (ie. :all, ... has already been resolved to a bunch :all targets)
@@ -200,26 +254,20 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 	return ret
 }
 
-func NewBuildState(numThreads int, cache *Cache, verbosity int, config Configuration) *BuildState {
+func NewBuildState(numThreads int, cache *Cache, verbosity int, config *Configuration) *BuildState {
 	State = &BuildState{
-		Graph: NewGraph(),
-		// Buffer the channels, since they will both send & receive on (potentially) the same threads.
-		// TODO(pebers): this is rather awkward, they (particularly the parse channel) can block when
-		//               given a sufficiently large set of inputs. I'd prefer not to make the buffers
-		//               massive since they are dominating quite a bit of our memory usage...
-		pendingParses: make(chan *BuildLabelPair, numThreads*100000),
-		pendingBuilds: make(chan BuildLabel, numThreads*10000),
-		pendingTests:  make(chan BuildLabel, numThreads*10000),
-		Results:       make(chan *BuildResult, numThreads*10000),
-		Stop:          make(chan bool, numThreads),
-		Config:        config,
-		Verbosity:     verbosity,
-		Cache:         cache,
-		VerifyHashes:  true,
-		NeedBuild:     true,
-		numActive:     1, // One for the initial target adding on the main thread.
-		numPending:    1,
-		Coverage:      TestCoverage{Files: map[string][]LineCoverage{}},
+		Graph:        NewGraph(),
+		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
+		Results:      make(chan *BuildResult, numThreads*100),
+		Config:       config,
+		Verbosity:    verbosity,
+		Cache:        cache,
+		VerifyHashes: true,
+		NeedBuild:    true,
+		numActive:    1, // One for the initial target adding on the main thread.
+		numPending:   1,
+		Coverage:     TestCoverage{Files: map[string][]LineCoverage{}},
+		numWorkers:   numThreads,
 	}
 	State.Hashes.Config = config.Hash()
 	State.Hashes.Containerisation = config.ContainerisationHash()
@@ -343,6 +391,9 @@ func MergeCoverageLines(existing, coverage []LineCoverage) []LineCoverage {
 func (this TestCoverage) OrderedFiles() []string {
 	files := []string{}
 	for file, _ := range this.Files {
+		if strings.HasPrefix(file, RepoRoot) {
+			file = strings.TrimLeft(file[len(RepoRoot):], "/")
+		}
 		files = append(files, file)
 	}
 	sort.Strings(files)

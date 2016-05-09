@@ -3,10 +3,12 @@
 package output
 
 import (
+	"bufio"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -45,7 +47,7 @@ type buildingTargetData struct {
 	Colour      string
 }
 
-func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest bool, done chan<- bool, traceFile string) {
+func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest bool, traceFile string) bool {
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads, numThreads)
 
@@ -95,7 +97,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 			printBuildResults(state, duration)
 		}
 	}
-	done <- len(failedTargetMap) == 0
+	return len(failedTargetMap) == 0
 }
 
 func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, aggregatedResults *core.TestResults, plainOutput bool,
@@ -377,19 +379,18 @@ func pluralise(num int, singular, plural string) string {
 	}
 }
 
-// Writes out coverage metrics after a test run in a file tree setup.
+// PrintCoverage writes out coverage metrics after a test run in a file tree setup.
 // Only files that were covered by tests and not excluded are shown.
-func PrintCoverage(state *core.BuildState) {
+func PrintCoverage(state *core.BuildState, includeFiles []string) {
 	printf("${BOLD_WHITE}Coverage results:${RESET}\n")
 	totalCovered := 0
 	totalTotal := 0
 	lastDir := "_"
 	for _, file := range state.Coverage.OrderedFiles() {
-		if strings.HasPrefix(file, core.RepoRoot) {
-			file = file[len(core.RepoRoot):]
+		if !shouldInclude(file, includeFiles) {
+			continue
 		}
-		file = strings.TrimLeft(file, "/")
-		dir := file[:strings.LastIndex(file, "/")+1]
+		dir := filepath.Dir(file)
 		if dir != lastDir {
 			printf("${WHITE}%s:${RESET}\n", strings.TrimRight(dir, "/"))
 		}
@@ -402,7 +403,58 @@ func PrintCoverage(state *core.BuildState) {
 	printf("${BOLD_WHITE}Total coverage: %s${RESET}\n", coveragePercentage(totalCovered, totalTotal, ""))
 }
 
-// Counts the number of lines covered and the total number coverable in a single file.
+// PrintCoverageReport writes out line-by-line coverage metrics after a test run.
+func PrintLineCoverageReport(state *core.BuildState, includeFiles []string) {
+	coverageColours := map[core.LineCoverage]string{
+		core.NotExecutable: "${GREY}",
+		core.Unreachable:   "${YELLOW}",
+		core.Uncovered:     "${RED}",
+		core.Covered:       "${GREEN}",
+	}
+
+	printf("${BOLD_WHITE}Covered files:${RESET}\n")
+	for _, file := range state.Coverage.OrderedFiles() {
+		if !shouldInclude(file, includeFiles) {
+			continue
+		}
+		coverage := state.Coverage.Files[file]
+		covered, total := countCoverage(coverage)
+		printf("${BOLD_WHITE}%s: %s${RESET}\n", file, coveragePercentage(covered, total, ""))
+		f, err := os.Open(file)
+		if err != nil {
+			printf("${BOLD_RED}Can't open: %s${RESET}\n", err)
+			continue
+		}
+		defer f.Close()
+		scanner := bufio.NewScanner(f)
+		i := 0
+		for scanner.Scan() {
+			if i < len(coverage) {
+				printf("${WHITE}%4d %s%s\n", i, coverageColours[coverage[i]], scanner.Text())
+			} else {
+				// Assume the lines are not executable. This happens for python, for example.
+				printf("${WHITE}%4d ${GREY}%s\n", i, scanner.Text())
+			}
+			i++
+		}
+		printf("${RESET}\n")
+	}
+}
+
+// shouldInclude returns true if we should include a file in the coverage display.
+func shouldInclude(file string, files []string) bool {
+	if len(files) == 0 {
+		return true
+	}
+	for _, f := range files {
+		if file == f {
+			return true
+		}
+	}
+	return false
+}
+
+// countCoverage counts the number of lines covered and the total number coverable in a single file.
 func countCoverage(lines []core.LineCoverage) (int, int) {
 	covered := 0
 	total := 0

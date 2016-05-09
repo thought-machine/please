@@ -2,7 +2,7 @@ subinclude('//build_defs:go_bindata')
 
 cgo_library(
     name = 'parse',
-    srcs = glob(['parse_step.go', 'suggest.go', 'interpreter.*']) + [':builtin_rules'],
+    srcs = glob(['parse_step.go', 'suggest.go', 'glob.go', 'interpreter.*']) + [':builtin_rules'],
     env = {'CGO_LDFLAGS': '-L${TMP_DIR}/${PKG}/rules'},
     deps = [
         ':defs_hdr',

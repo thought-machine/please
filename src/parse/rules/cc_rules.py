@@ -376,16 +376,25 @@ inline char* ${BINARY_NAME}_end_nc() {
 # This is a lightweight way of building the test main, but it's awkward not
 # having command line output as well as XML output.
 _CC_TEST_MAIN_CONTENTS = """
+#include <algorithm>
 #include <fstream>
+#include <string.h>
 #include "unittest++/UnitTest++.h"
 #include "unittest++/XmlTestReporter.h"
-int main(int, char const *[]) {
+int main(int argc, char const *argv[]) {
+    auto run_named = [argc, argv](UnitTest::Test* test) {
+        if (argc <= 1) { return true; }
+        return std::any_of(argv + 1, argv + argc, [test](const char* name) {
+            return strcmp(test->m_details.testName, name) == 0;
+        });
+    };
+
     std::ofstream f("test.results");
     UnitTest::XmlTestReporter reporter(f);
     UnitTest::TestRunner runner(reporter);
     return runner.RunTestsIf(UnitTest::Test::GetTestList(),
                              NULL,
-                             UnitTest::True(),
+                             run_named,
                              0);
 }
 """
