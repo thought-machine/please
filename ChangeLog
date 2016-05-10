@@ -1,3 +1,12 @@
+Version 2.2.0
+-------------
+
+    * Python targets now have a `stripped` build config in which the .py files are stripped out
+      and only .pyc / .pyo bytecode files included in the .pex.
+      We're considering making this the default behaviour for `opt` but if we do that will be
+      left for a future major revision.
+
+
 Version 2.1.2
 -------------
     * Fixes one more bug with sh_binary where paths were taken to be relative when they were absolute.
