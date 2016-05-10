@@ -14,11 +14,10 @@ a target which has only had small changes.
 """
 
 # Commands used in python_library.
-_FIND_CMD = 'find ${PKG} -type d | grep -v "${PKG}$" | xargs -I {} touch "{}/__init__.py"'
 _ZIP_CMD = 'zip -r1 $OUT .'
-_COMPILE_CMD = 'find ${PKG} -name "*.py" | xargs %s -O -m py_compile'
-_OPT_CMD = ' && '.join([_FIND_CMD, _ZIP_CMD])
-_STRIP_CMD = ' && '.join([_FIND_CMD, _COMPILE_CMD, _ZIP_CMD])
+_COMPILE_CMD = 'find . -name "*.py" | xargs %s -O -m py_compile'
+_RM_CMD = 'find . -name "*.py" | xargs rm'
+_STRIP_CMD = ' && '.join([_COMPILE_CMD, _RM_CMD, _ZIP_CMD])
 
 
 def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
@@ -60,7 +59,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
             srcs=all_srcs,
             outs=['.%s.pex.zip' % name],
             cmd={
-                'opt': _OPT_CMD,
+                'opt': _ZIP_CMD,
                 'stripped': _STRIP_CMD % interpreter,
             },
             building_description='Compressing...',
