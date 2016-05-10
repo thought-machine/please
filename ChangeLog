@@ -1,3 +1,18 @@
+Version 2.1.2
+-------------
+    * Fixes one more bug with sh_binary where paths were taken to be relative when they were absolute.
+
+Version 2.1.1
+-------------
+    * Fixes bug with sh_binary not ignoring the main script properly when generating the tarball.
+
+Version 2.1.0
+-------------
+    * Adds additional features to sh_binary to make it more complete. sh_binary now creates
+      a single bash script. This script contains all dependencies as well as the main
+      script to be executed. When the sh_binary is run, it extracts all the files
+      to the current directory and finally executes the main script.
+
 Version 2.0.0
 -------------
 
