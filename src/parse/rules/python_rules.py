@@ -16,7 +16,7 @@ a target which has only had small changes.
 # Commands used in python_library.
 _ZIP_CMD = 'zip -r1 $OUT .'
 _COMPILE_CMD = 'find . -name "*.py" | xargs %s -O -m py_compile'
-_RM_CMD = 'find . -name "*.py" | xargs rm'
+_RM_CMD = 'find . -name "*.py" -delete'
 _STRIP_CMD = ' && '.join([_COMPILE_CMD, _RM_CMD, _ZIP_CMD])
 
 
