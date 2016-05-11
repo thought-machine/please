@@ -5,9 +5,8 @@ the complex build environment C++ has, so some issues may remain.
 """
 
 
-def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only=False,
-               compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None,
-               copts=None):
+def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False,
+               compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None, defines=None):
     """Generate a C++ library target.
 
     Args:
@@ -15,6 +14,8 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
       srcs (list): C or C++ source files to compile.
       hdrs (list): Header files. These will be made available to dependent rules, so the distinction
                    between srcs and hdrs is important.
+      private_hdrs (list): Header files that are available only to this rule and not exported to
+                           dependent rules.
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
       test_only (bool): If True, is only available to other test rules.
@@ -24,18 +25,31 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
       includes (list): List of include directories to be added to the compiler's path.
-      copts (list): Alias for compiler_flags.
+      defines (list): List of tokens to define in the preprocessor.
     """
     srcs = srcs or []
     hdrs = hdrs or []
     deps = deps or []
-    compiler_flags = compiler_flags or copts
     linker_flags = linker_flags or []
     pkg_config_libs = pkg_config_libs or []
-    dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
-    opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs)
-    include_flags = ' '.join('-isystem ' + i for i in includes) if includes else ''
+    includes = includes or []
+    defines = defines or []
+    dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, defines=defines, dbg=True)
+    opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, defines=defines)
+    include_flags = ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in includes)
     cmd_template = '%s -c -I . %s ${SRCS_SRCS} %s && ar rcs%s $OUT *.o'
+
+    # Bazel suggests passing nonexported header files in 'srcs'. Detect that here.
+    # For the moment I'd rather not do this automatically in other cases.
+    if CONFIG.BAZEL_COMPATIBILITY:
+        src_hdrs = [src for src in srcs if src.endswith('.h')]
+        private_hdrs = (private_hdrs or []) + src_hdrs
+        srcs = [src for src in srcs if not src.endswith('.h')]
+        # This is rather nasty; people seem to be relying on being able to reuse
+        # headers that they've put in srcs. We hence need to re-export them here.
+        hdrs += src_hdrs
+        # Found this in a few cases... can't pass -pthread to the linker.
+        linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
 
     # Collect the headers for other rules
     filegroup(
@@ -47,7 +61,7 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
     )
     build_rule(
         name='_%s#a' % name,
-        srcs={'srcs': srcs, 'hdrs': hdrs},
+        srcs={'srcs': srcs, 'hdrs': hdrs, 'priv': private_hdrs},
         outs=[name + '.a'],
         deps=deps,
         visibility=visibility,
@@ -59,7 +73,9 @@ def cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only
         requires=['cc', 'cc_hdrs'],
         test_only=test_only,
         labels=['cc:ld:' + flag for flag in linker_flags] +
-               ['cc:pc:' + lib for lib in pkg_config_libs],
+               ['cc:pc:' + lib for lib in pkg_config_libs] +
+               ['cc:inc:' + include for include in includes] +
+               ['cc:def:' + define for define in defines],
     )
     hdrs_rule = ':_%s#hdrs' % name
     a_rule = ':_%s#a' % name
@@ -167,8 +183,8 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
     )
 
 
-def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None,
-              linker_flags=None, deps=None, visibility=None, pkg_config_libs=None):
+def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None,
+              deps=None, visibility=None, pkg_config_libs=None, test_only=False):
     """Builds a binary from a collection of C++ rules.
 
     Args:
@@ -180,10 +196,12 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None,
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      test_only (bool): If True, this rule can only be used by tests.
     """
     srcs = srcs or []
     hdrs = hdrs or []
-    linker_flags = linker_flags or [CONFIG.DEFAULT_LDFLAGS]
+    linker_flags = linker_flags or []
+    linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
     cmd = {
@@ -203,12 +221,13 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None,
         output_is_complete=True,
         requires=['cc'],
         pre_build=_apply_transitive_labels(cmd),
+        test_only=test_only,
     )
 
 
 def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None,
             deps=None, data=None, visibility=None, labels=None, flaky=0, test_outputs=None,
-            size=None, timeout=0, container=False):
+            size=None, timeout=0, container=False, write_main=not CONFIG.BAZEL_COMPATIBILITY):
     """Defines a C++ test using UnitTest++.
 
     We template in a main file so you don't have to supply your own.
@@ -229,21 +248,23 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
       size (str): Test size (enormous, large, medium or small).
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
       container (bool | dict): If true the test is run in a container (eg. Docker).
+      write_main (bool): Whether or not to write a main() for these tests.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     srcs = srcs or []
-    deps=deps or []
-    linker_flags = ['-lunittest++'] + (linker_flags or [CONFIG.DEFAULT_LDFLAGS])
+    linker_flags = ['-lunittest++']
+    linker_flags.extend(linker_flags or [])
+    linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
-    genrule(
-        name='_%s#main' % name,
-        outs=['_%s_main.cc' % name],
-        cmd='echo \'%s\' > $OUT' % _CC_TEST_MAIN_CONTENTS,
-        test_only=True,
-    )
-    deps.append(':_%s#main' % name)
-    srcs.append(':_%s#main' % name)
+    if write_main:
+        genrule(
+            name='_%s#main' % name,
+            outs=['_%s_main.cc' % name],
+            cmd='echo \'%s\' > $OUT' % _CC_TEST_MAIN_CONTENTS,
+            test_only=True,
+        )
+        srcs.append(':_%s#main' % name)
     cmd = {
         'dbg': '%s -o ${OUT} -I . ${SRCS} %s' % (CONFIG.CC_TOOL, dbg_flags),
         'opt': '%s -o ${OUT} -I . ${SRCS} %s' % (CONFIG.CC_TOOL, opt_flags),
@@ -413,10 +434,13 @@ cxx_library = cc_library
 cxx_test = cc_test
 
 
-def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, dbg=False):
+def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, defines=None, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
-    compiler_flags = compiler_flags or [CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS]
+    compiler_flags = compiler_flags or []
+    compiler_flags.append(CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS)
     compiler_flags.append('-fPIC')
+    if defines:
+        compiler_flags.extend('-D' + define for define in defines)
     # Linker flags may need this leading -Xlinker mabob.
     linker_flags = ['-Xlinker ' + flag for flag in (linker_flags or [])]
     pkg_config_cmd = ' '.join('`pkg-config --cflags --libs %s`' % x for x in pkg_config_libs or [])
@@ -439,5 +463,7 @@ def _apply_transitive_labels(command_map):
         command_map[config],
         ' '.join('-Xlinker ' + flag for flag in get_labels(name, 'cc:ld:')),
         ' '.join('`pkg-config --libs %s`' % x for x in get_labels(name, 'cc:pc:')),
+        ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in get_labels(name, 'cc:inc:')),
+        ' '.join('-D' + define for define in get_labels(name, 'cc:def:')),
     ]))
     return lambda name: (update_command(name, 'dbg'), update_command(name, 'opt'))

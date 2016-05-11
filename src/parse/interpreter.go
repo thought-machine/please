@@ -121,6 +121,7 @@ func initializeInterpreter(config *core.Configuration) {
 	// Load all the builtin rules
 	log.Debug("Loading builtin build rules...")
 	dir, _ := AssetDir("")
+	sort.Strings(dir)
 	for _, filename := range dir {
 		if filename != embeddedParser { // We already did this guy.
 			loadBuiltinRules(filename)

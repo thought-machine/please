@@ -92,6 +92,30 @@ def _parse_build_code(filename, globals_dict, cache=False):
     exec(code, globals_dict)
 
 
+def bazel_wrapper(func):
+    """Rewrites incoming argument names when we're in Bazel compatibility mode."""
+    def _inner(*args, **kwargs):
+        for k, v in _BAZEL_KEYWORD_REWRITES.iteritems():
+            if k in kwargs:
+                if v in kwargs:
+                    raise ValueError('You must pass at most one of %s and %s' % (k, v))
+                kwargs[v] = kwargs[k]
+                del kwargs[k]
+        return func(*args, **kwargs)
+    return _inner
+
+
+_BAZEL_KEYWORD_REWRITES = {
+    'artifact': 'id',
+    'copts': 'compiler_flags',
+    'linkopts': 'linker_flags',
+    'testonly': 'test_only',
+    'javacopts': 'javac_flags',
+    'tags': 'labels',
+    'runtime_deps': 'data',
+}
+
+
 @ffi.callback('SetConfigValueCallback*')
 def set_config_value(c_name, c_value):
     name = ffi.string(c_name)
@@ -343,9 +367,11 @@ def _get_globals(c_package, c_package_name):
     can't reassign that at runtime, so we create duplicates here. YOLO.
     """
     local_globals = {}
+    bazel_compat = _please_globals.get('CONFIG', {}).get('BAZEL_COMPATIBILITY')
     for k, v in _please_globals.iteritems():
         if callable(v) and type(v) == FunctionType:
-            local_globals[k] = FunctionType(v.__code__, local_globals, k, v.__defaults__, v.__closure__)
+            func = FunctionType(v.__code__, local_globals, k, v.__defaults__, v.__closure__)
+            local_globals[k] = bazel_wrapper(func) if bazel_compat else func
         else:
             local_globals[k] = v
     # Need to pass some hidden arguments to these guys.
@@ -363,7 +389,6 @@ def _get_globals(c_package, c_package_name):
     local_globals['add_licence'] = lambda name, licence: _check_c_error(_add_licence_post(c_package, name, licence))
     local_globals['set_command'] = lambda name, config, command='': _check_c_error(_set_command(c_package, name, config, command))
     local_globals['package'] = lambda **kwargs: package(local_globals, **kwargs)
-    local_globals['licenses'] = lambda l: licenses(local_globals, l)
     # Make these available to other scripts so they can get it without import.
     local_globals['join_path'] = os.path.join
     local_globals['split_path'] = os.path.split
@@ -379,6 +404,9 @@ def _get_globals(c_package, c_package_name):
         'info': lambda message, *args: _log(4, c_package, message % args),
         'debug': lambda message, *args: _log(5, c_package, message % args),
     })
+    if local_globals.get('CONFIG').BAZEL_COMPATIBILITY:
+        local_globals['native'] = DotDict(local_globals)
+        local_globals['licenses'] = lambda l: licenses(local_globals, l)
     return local_globals
 
 

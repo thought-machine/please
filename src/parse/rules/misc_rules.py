@@ -470,12 +470,14 @@ _TIMEOUT_NAMES = {
 
 
 if CONFIG.BAZEL_COMPATIBILITY:
-    def bind(name, actual, **kwargs):
+    def bind(name, actual=None, **kwargs):
         """Mimics the Bazel bind() function which binds some target or sub-target into our repo.
 
         This does not map well at all; we don't do sub-repos in the way they do, so for now this
         is a quick and dirty attempt to make it work for maven_jar rules at least.
         """
+        if not actual:
+            return
         if actual.startswith('@') and actual.endswith('//jar'):
             actual = ':' + actual[:-len('//jar')].lstrip('@')
         filegroup(
@@ -483,3 +485,19 @@ if CONFIG.BAZEL_COMPATIBILITY:
             srcs = [actual],
             visibility = ['PUBLIC'],
         )
+
+    def load(name, *symbols):
+        """Vaguely mimics the Bazel load() function which loads things from a .bzl file.
+
+        Conveniently they have a deprecated mode which is a lot like include_defs(), and
+        a more modern one which resembles subinclude(). Unfortunately the latter doesn't
+        require having an actual target to subinclude() from...
+
+        In neither case do we support loading specific symbols.
+        """
+        if name.startswith('//'):
+            subinclude(name)
+        elif name.startswith('/'):
+            include_defs('//%s.bzl' % name)
+        else:
+            include_defs('//%s/%s.bzl' % (get_base_path(), name))

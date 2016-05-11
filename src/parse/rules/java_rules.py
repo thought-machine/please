@@ -13,7 +13,7 @@ _maven_packages = defaultdict(dict)
 
 def java_library(name, srcs=None, resources=None, resources_root=None, deps=None,
                  exported_deps=None, exports=None, visibility=None, source=None,
-                 target=None, test_only=False):
+                 target=None, test_only=False, javac_flags=None):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -35,10 +35,14 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
       target (int): Java bytecode level to target after compile. Defaults to whatever's set in the
                     config, which itself defaults to 8.
       test_only (bool): If True, this rule can only be depended on by tests.
+      javac_flags (list): List of flags passed to javac.
     """
     all_srcs = (srcs or []) + (resources or [])
     exported_deps = exported_deps or exports
     if srcs:
+        # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
+        # it doesn't mean anything to us so we must filter it out.
+        javac_flags = [flag for flag in javac_flags or [] if flag != '-extra_checks:off']
         build_rule(
             name=name,
             srcs=all_srcs,
@@ -48,12 +52,13 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
             visibility=visibility,
             cmd=' && '.join([
                 'mkdir _tmp _tmp/META-INF',
-                '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp -g %s' % (
+                '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp -g %s %s' % (
                     CONFIG.JAVAC_TOOL,
                     source or CONFIG.JAVA_SOURCE_LEVEL,
                     target or CONFIG.JAVA_TARGET_LEVEL,
                     r'`find . -name "*.jar" ! -name "*src.jar" | tr \\\\n :`',
-                   ' '.join('$(locations %s)' % src for src in srcs)
+                    ' '.join('$(locations %s)' % src for src in srcs),
+                    ' '.join(javac_flags),
                 ),
                 'mv ${PKG}/%s/* _tmp' % resources_root if resources_root else 'true',
                 'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g"  > _tmp/META-INF/please_sourcemap',
@@ -335,7 +340,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
 
 
-def maven_jar(name, id=None, artifact=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
+def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
               exclude_paths=None):
     """Fetches a single Java dependency from Maven.
@@ -343,7 +348,6 @@ def maven_jar(name, id=None, artifact=None, repository=_MAVEN_CENTRAL, hash=None
     Args:
       name (str): Name of the output rule.
       id (str): Maven id of the artifact (eg. org.junit:junit:4.1.0)
-      artifact (str): Alias for 'id'. Can only pass one of them.
       repository (str): Maven repo to fetch deps from.
       hash (str): Hash for produced rule.
       deps (list): Labels of dependencies, as usual.
@@ -353,9 +357,6 @@ def maven_jar(name, id=None, artifact=None, repository=_MAVEN_CENTRAL, hash=None
       licences (list): Licences this package is subject to.
       exclude_paths (list): Paths to remove from the downloaded .jar.
     """
-    if not (bool(id) ^ bool(artifact)):
-        raise ValueError('Must pass exactly one of "id" or "artifact" to maven_jar')
-    id = id or artifact
     _maven_packages[get_base_path()][name] = id
     # TODO(pebers): Handle exclusions, packages with no source available and packages with no version.
     try:
@@ -424,4 +425,15 @@ if CONFIG.BAZEL_COMPATIBILITY:
             javac_tool = javac,
             java_source_level = source_version,
             java_target_level = target_version,
+        )
+
+    def java_import(name, jars, deps=None, exports=None, test_only=False, visibility=None):
+        """Mimics java_import, as far as I can tell we don't need to do much here."""
+        filegroup(
+            name = name,
+            srcs = jars,
+            deps = deps,
+            exported_deps = exports,
+            test_only = test_only,
+            visibility = visibility,
         )
