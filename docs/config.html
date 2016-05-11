@@ -479,6 +479,19 @@
       Due to the limitations of parsing our config format, you can only have one
       level of subcommand of aliases.</p>
 
+    <h3>[Bazel]</h3>
+
+    <p>This section defines some settings to help with limited Bazel compatibility.<br/>
+      We don't aspire to be fully compatible and mimic all the semantics of their system,
+      but we hope to ease migration and cross-testing by being able to parse simple repos.</p>
+
+    <p>Currently the only attribute here is <code>compatibility</code>, when that is enabled
+      some aspects of the parser behave a little differently; some of the rule names and flags
+      change, <code>//visibility:public</code> is interpreted specially and WORKSPACE files are
+      parsed to find dependencies in <code>//external</code>.<p>
+
+    <p>There is a <code>--bazel_compat</code> flag to <code>plz init</code> which sets this
+      on initialising a new repo.</p>
 
   </body>
 </html>
