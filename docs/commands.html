@@ -9,8 +9,129 @@
 
     <h1>Please commands</h1>
 
-    <p>As usual for build systems, Please has a number of commands
+    <p>As you might expect, Please has a number of commands
       to invoke various behaviours. This is a more or less complete list.</p>
+
+    <h2>Common flags</h2>
+
+    <p>These flags are common to all (or nearly all) operations.</p>
+
+    <h3>Options controlling what to build & how to build it:</h3>
+
+    <p>
+      <ul>
+        <li><code>-c, --config</code><br/>
+          The build config to use. The effect this has depends on the language; typically
+          it allows swapping between a debug or an optimised build.<br/>
+          The default is <code>opt</code> to build optimised code; <code>dbg</code> is accepted
+          for C++ and Go to build code with debugging symbols.<br/>
+          This has no effect on Python or Java rules.</li>
+
+        <li><code>-r, --repo_root</code><br/>
+          Sets the location of the repo root to use. Normally plz assumes it is within the repo
+          somewhere and locates the root itself, this forces it to a specific location.</li>
+
+        <li><code>-k, --keep_going</code><br/>
+          Continues after a build failure until it's not possible to proceed any further with
+          the build. By default plz stops immediately as soon as one target fails.</li>
+
+        <li><code>-n, --num_threads</code><br/>
+          Sets the number of parallel workers to use while building. The default is the number
+          of logical CPUs of the current machine plus two.</li>
+
+        <li><code>-i, --include</code><br/>
+          Labels of targets to include when selecting multiple targets with <code>:all</code>
+          or <code>/...</code>. These apply to labels which can be set on individual targets;
+          a number of them are predefined, most notably for each language (<code>go</code>,
+          <code>python</code>, <code>java</code>, <code>cc</code>, etc).<br/>
+          Only targets with this label will be built.</li>
+
+        <li><code>-e, --exclude</code><br/>
+          The inverse of <code>--include</code>; labels of targets to exclude when
+          selecting multiple targets with <code>:all</code> or <code>/...</code>.<br/>
+          Takes priority over <code>--include</code>.<br/>
+          You can also pass build expressions to <code>--exclude</code> to exclude targets
+          as well as by label.</li>
+      </ul>
+    </p>
+
+    <h3>Options controlling output & logging:</h3>
+
+    <p>
+      <ul>
+        <li><code>-v, --verbosity</code><br/>
+          Sets the amount of output logged from plz; a number between 0 and 4.<br/>
+          Each number shows all messages at the given level and above:
+          <ol>
+            <li>Error</li>
+            <li>Warning</li>
+            <li>Notice</li>
+            <li>Info</li>
+            <li>Debug</li>
+          </ol>
+          The default is 1, for warnings and errors only. If level 4 is requested then it
+          will suppress interactive output.
+        </li>
+
+        <li><code>--log_file</code><br/>
+          Writes all logs out into the given file.</li>
+
+        <li><code>--log_file_level</code><br/>
+          Level of logging to write to the file. Defaults to 2 (notice, warning and error).</li>
+
+        <li><code>--interactive_output</code><br/>
+          Forces plz to show interactive output on stderr. By default it autodetects based on
+          whether stderr appears to be an interactive terminal or not, but this flag can be
+          used to force it on in cases where it might get it wrong.</li>
+
+        <li><code>-p, --plain_output</code><br/>
+          Forces plz not to show interactive output on stderr. Can be useful in cases where it
+          might obscure other messages or where the output isn't capable of interpreting the
+          escape codes correctly.</li>
+
+        <li><code>--colour</code><br/>
+          Forces coloured output from logging & shell output. Again, this is autodetected by
+          default, but this can be used in cases where it would normally detect false but it
+          will later be consumed by something that understands the codes (e.g. CI systems like
+          Teamcity or Jenkins).</li>
+
+        <li><code>--nocolour</code><br/>
+          Inverse of above, forces colourless output from logging & the shell.</li>
+
+        <li><code>--trace_file</code><br/>
+          File to write Chrome tracing output into.<br/>
+          This is a JSON format that contains the actions taken by plz during the build and
+          their timings. You can load the file up in <a href="about:tracing">about:tracing</a>
+          and use that to see which parts of your build were slow.</li>
+
+        <li><code>--version</code><br/>
+          Prints the version of the tool and exits immediately.</li>
+      </ul>
+
+    <h3>Options that enable / disable certain features:</h3>
+
+    <ul>
+      <li><code>--noupdate</code><br/>
+        Disables Please attempting to auto-update itself.</li>
+
+      <li><code>--nocache</code><br/>
+        Disables caches.<br/>
+        Note that this does not disable incrementality, so targets that don't need rebuilding
+        still won't be.</li>
+
+      <li><code>--nohash_verification</code><br/>
+        Turns hash verification errors into non-fatal warnings.<br/>
+        Obviously this is only for local development & testing, not for 'production' use.</li>
+
+      <li><code>--nolock</code><br/>
+        Don't attempt to lock the repo exclusively while building.<br/>
+        Use with care - if two instances of plz start building the same targets simultaneously
+        they will likely fail with very strange errors.</li>
+
+      <li><code>--keep_workdirs</code><br/>
+        Don't clean directories in plz-out/tmp after successfully building targets.<br/>
+        They're always left in cases where targets fail.</li>
+    </ul>
 
     <h2>plz build</h2>
 
@@ -24,17 +145,6 @@
           <code>src/core/BUILD</code>.<br/>
       <code>plz build //src/...</code> builds every target in <code>src</code>
       and all subdirectories.</p>
-
-    <p>When selecting multiple targets with <code>:all</code> or <code>/...</code>
-      you can filter them with the <code>--include</code> and <code>--exclude</code>
-      flags. These apply to labels which can be set on individual targets; a number of
-      them are predefined, most notably for each language (<code>go</code>,
-      <code>python</code>, <code>java</code>, <code>cc</code>, etc).<br/>
-      If <code>--include</code> is passed then Please will only build targets with
-      that label. <code>--exclude</code> means that targets with those labels will
-      not be built, and takes priority over <code>--include</code>.<br/>
-      These flags apply to most plz commands in the same way so we won't repeat them.
-    </p>
 
     <h2>plz test</h2>
 

@@ -53,6 +53,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		pythonBool("test", target.IsTest)
 		pythonBool("needs_transitive_deps", target.NeedsTransitiveDependencies)
 		pythonBool("output_is_complete", target.OutputIsComplete)
+		pythonBool("stamp", target.Stamp)
 		if target.ContainerSettings != nil {
 			fmt.Printf("      container = {\n")
 			fmt.Printf("          'docker_image': '%s',\n", target.ContainerSettings.DockerImage)

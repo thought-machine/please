@@ -15,15 +15,19 @@ import (
 // A TaskType identifies the kind of task returned from NextTask()
 type TaskType int
 
-// Note that the ordering of these determines priority.
+// The values here are fiddled to make Compare work easily.
+// Essentially we prioritise on the higher bits only and use the lower ones to make
+// the values unique.
+// Subinclude tasks order first, but we're happy for all build / parse / test tasks
+// to be treated equivalently.
 const (
-	// These are for subinclude targets which should be processed before others.
-	SubincludeBuild TaskType = iota
-	SubincludeParse
-	Build
-	Parse
-	Test
-	Stop
+	SubincludeBuild TaskType = 0x1000 | 1
+	SubincludeParse          = 0x2000 | 2
+	Build                    = 0x4000 | 3
+	Parse                    = 0x4000 | 4
+	Test                     = 0x4000 | 5
+	Stop                     = 0x8000 | 6
+	priorityMask             = ^0x0FFF
 )
 
 type pendingTask struct {
@@ -33,7 +37,7 @@ type pendingTask struct {
 }
 
 func (t pendingTask) Compare(that queue.Item) int {
-	return int(t.Type - that.(pendingTask).Type)
+	return int((t.Type & priorityMask) - (that.(pendingTask).Type & priorityMask))
 }
 
 // Passed about to track the current state of the build.

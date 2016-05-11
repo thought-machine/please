@@ -64,6 +64,9 @@ type BuildTarget struct {
 	// for _binary rules which normally are, and genrules where you don't care about
 	// the inputs, only whatever they were turned into.
 	OutputIsComplete bool
+	// If true, the rule is given an env var at build time that contains the hash of its
+	// transitive dependencies, which can be used to identify the output in a predictable way.
+	Stamp bool
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings
 	// Results of test, if it is one
@@ -537,7 +540,7 @@ func (target *BuildTarget) GetCommand() string {
 		return target.Command
 	} else if command, present := target.Commands[State.Config.Build.Config]; present {
 		return command // Has command for current config, good
-	} else if command, present := target.Commands[State.Config.Build.DefaultConfig]; present {
+	} else if command, present := target.Commands[State.Config.Build.FallbackConfig]; present {
 		return command // Has command for default config, fall back to that
 	}
 	// Oh dear, target doesn't have any matching config. Panicking is a bit heavy here, instead
@@ -551,7 +554,7 @@ func (target *BuildTarget) GetCommand() string {
 		}
 	}
 	log.Warning("%s doesn't have a command for %s (or %s), falling back to %s",
-		target.Label, State.Config.Build.Config, State.Config.Build.DefaultConfig, highestConfig)
+		target.Label, State.Config.Build.Config, State.Config.Build.FallbackConfig, highestConfig)
 	return highestCommand
 }
 

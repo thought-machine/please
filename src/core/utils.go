@@ -224,7 +224,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
 			for _, dep := range dependency.Dependencies() {
-				if !done[dep.Label] && !target.IsTool(dep.Label) {
+				if !done[dep.Label] && !dependency.IsTool(dep.Label) {
 					inner(dep)
 				}
 			}
