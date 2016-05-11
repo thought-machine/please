@@ -1,3 +1,11 @@
+Version 2.2.1
+-------------
+
+    * Reworked ordering of tasks during build; should make little difference to overall time
+      but parses will happen relatively faster so the estimated total task number will rise
+      faster. This is more akin to the pre-1.8 behaviour.
+
+
 Version 2.2.0
 -------------
 
