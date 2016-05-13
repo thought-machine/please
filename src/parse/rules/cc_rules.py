@@ -468,20 +468,14 @@ def _apply_transitive_labels(command_map, link=True):
     that use it. The solution to this is here; we collect the set of linker flags from all
     dependencies and apply them to the binary rule that needs them.
     """
-    # TODO(pebers): This could probably be more efficient, it's going to walk the set of
-    #               labels quite a few times for each target.
-    if link:
-        update_command = lambda name, config: set_command(name, config, ' '.join([
-            command_map[config],
-            ' '.join('-Xlinker ' + flag for flag in get_labels(name, 'cc:ld:')),
-            ' '.join('`pkg-config --libs %s`' % x for x in get_labels(name, 'cc:pc:')),
-            ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in get_labels(name, 'cc:inc:')),
-            ' '.join('-D' + define for define in get_labels(name, 'cc:def:')),
-        ]))
-    else:
-        update_command = lambda name, config: set_command(name, config, ' '.join([
-            command_map[config],
-            ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in get_labels(name, 'cc:inc:')),
-            ' '.join('-D' + define for define in get_labels(name, 'cc:def:')),
-        ]))
-    return lambda name: (update_command(name, 'dbg'), update_command(name, 'opt'))
+    def update_commands(name):
+        base_path = get_base_path()
+        labels = get_labels(name, 'cc:')
+        flags = ' '.join('-isystem %s/%s' % (base_path, i[4:]) for i in labels if i.startswith('inc:'))
+        flags += ' '.join('-D' + define[4:] for define in labels if define.startswith('def:'))
+        if link:
+            flags += ' '.join('-Xlinker ' + flag for flag[3:] in labels if flag.startswith('ld:'))
+            flags += ' '.join('`pkg-config --libs %s`' % x[3:] for x in labels if x.startswith('pc:'))
+        set_command(name, 'dbg', command_map['dbg'] + ' ' + flags)
+        set_command(name, 'opt', command_map['opt'] + ' ' + flags)
+    return update_commands
