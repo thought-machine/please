@@ -83,11 +83,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("DEFAULT_PYTHON_INTERPRETER", config.Python.DefaultInterpreter)
 	setConfigValue("PYTHON_MODULE_DIR", config.Python.ModuleDir)
 	setConfigValue("PYTHON_DEFAULT_PIP_REPO", config.Python.DefaultPipRepo)
-	if config.Python.UsePyPI {
-		setConfigValue("USE_PYPI", "true")
-	} else {
-		setConfigValue("USE_PYPI", "")
-	}
+	setConfigValue("USE_PYPI", pythonBool(config.Python.UsePyPI))
 	setConfigValue("JAVAC_TOOL", config.Java.JavacTool)
 	setConfigValue("JAR_TOOL", config.Java.JarTool)
 	setConfigValue("JARCAT_TOOL", config.Java.JarCatTool)
@@ -120,10 +116,12 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("GRPC_PYTHON_DEP", config.Proto.PythonGrpcDep)
 	setConfigValue("GRPC_JAVA_DEP", config.Proto.JavaGrpcDep)
 	setConfigValue("GRPC_GO_DEP", config.Proto.GoGrpcDep)
+	setConfigValue("BAZEL_COMPATIBILITY", pythonBool(config.Bazel.Compatibility))
 
 	// Load all the builtin rules
 	log.Debug("Loading builtin build rules...")
 	dir, _ := AssetDir("")
+	sort.Strings(dir)
 	for _, filename := range dir {
 		if filename != embeddedParser { // We already did this guy.
 			loadBuiltinRules(filename)
@@ -131,6 +129,16 @@ func initializeInterpreter(config *core.Configuration) {
 	}
 	loadSubincludePackage()
 	log.Debug("Interpreter ready")
+}
+
+// pythonBool returns the representation of a bool we're going to send to Python.
+// We use strings to avoid having to do a different callback, but using the empty string for
+// false means normal truth checks work fine :)
+func pythonBool(b bool) string {
+	if b {
+		return "true"
+	}
+	return ""
 }
 
 // locateLibPyPy returns a C string corresponding to the location of libpypy.
@@ -500,8 +508,8 @@ func AddTool(cTarget uintptr, cTool *C.char) *C.char {
 func AddVis(cTarget uintptr, cVis *C.char) *C.char {
 	target := unsizet(cTarget)
 	vis := C.GoString(cVis)
-	if vis == "PUBLIC" {
-		target.Visibility = append(target.Visibility, core.NewBuildLabel("", "..."))
+	if vis == "PUBLIC" || (core.State.Config.Bazel.Compatibility && vis == "//visibility:public") {
+		target.Visibility = append(target.Visibility, core.WholeGraph[0])
 	} else {
 		label, err := core.TryParseBuildLabel(vis, target.Label.PackageName)
 		if err != nil {

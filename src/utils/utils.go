@@ -28,10 +28,14 @@ const configTemplate = `; Please config file
 ; [please]
 ; version = %s
 `
+const bazelCompatibilityConfig = `
+[bazel]
+compatibility = true
+`
 const wrapperScriptName = "pleasew"
 
 // InitConfig initialises a .plzconfig template in the given directory.
-func InitConfig(dir string) {
+func InitConfig(dir string, bazelCompatibility bool) {
 	if dir == "." {
 		core.FindRepoRoot(false)
 		if core.RepoRoot != "" {
@@ -46,10 +50,10 @@ func InitConfig(dir string) {
 		log.Warning("Can't determine absolute directory: %s", err)
 	}
 	config := path.Join(dir, core.ConfigFileName)
-	if core.FileExists(config) && !prompter.YN(fmt.Sprintf("Would create %s but it already exists. This will wipe out any previous config in the file - continue?", config), false) {
-		os.Exit(1)
-	}
 	contents := fmt.Sprintf(configTemplate, core.PleaseVersion)
+	if bazelCompatibility {
+		contents += bazelCompatibilityConfig
+	}
 	if err := ioutil.WriteFile(config, []byte(contents), 0644); err != nil {
 		log.Fatalf("Failed to write file: %s", err)
 	}

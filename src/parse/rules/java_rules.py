@@ -12,7 +12,8 @@ _maven_packages = defaultdict(dict)
 
 
 def java_library(name, srcs=None, resources=None, resources_root=None, deps=None,
-                 exported_deps=None, visibility=None, source=None, target=None, test_only=False):
+                 exported_deps=None, exports=None, visibility=None, source=None,
+                 target=None, test_only=False, javac_flags=None):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -27,15 +28,21 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
                             rule will also receive when they're compiling. This is quite important for
                             Java; any dependency that forms part of the public API for your classes
                             should be an exported dependency.
+      exports (list): Alias for 'exported_deps'.
       visibility (list): Visibility declaration of this rule.
       source (int): Java source level to compile sources as. Defaults to whatever's set in the config,
                     which itself defaults to 8.
       target (int): Java bytecode level to target after compile. Defaults to whatever's set in the
                     config, which itself defaults to 8.
       test_only (bool): If True, this rule can only be depended on by tests.
+      javac_flags (list): List of flags passed to javac.
     """
     all_srcs = (srcs or []) + (resources or [])
+    exported_deps = exported_deps or exports
     if srcs:
+        # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
+        # it doesn't mean anything to us so we must filter it out.
+        javac_flags = [flag for flag in javac_flags or [] if flag != '-extra_checks:off']
         build_rule(
             name=name,
             srcs=all_srcs,
@@ -45,12 +52,13 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
             visibility=visibility,
             cmd=' && '.join([
                 'mkdir _tmp _tmp/META-INF',
-                '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp -g %s' % (
+                '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp -g %s %s' % (
                     CONFIG.JAVAC_TOOL,
                     source or CONFIG.JAVA_SOURCE_LEVEL,
                     target or CONFIG.JAVA_TARGET_LEVEL,
                     r'`find . -name "*.jar" ! -name "*src.jar" | tr \\\\n :`',
-                   ' '.join('$(locations %s)' % src for src in srcs)
+                    ' '.join('$(locations %s)' % src for src in srcs),
+                    ' '.join(javac_flags),
                 ),
                 'mv ${PKG}/%s/* _tmp' % resources_root if resources_root else 'true',
                 'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g"  > _tmp/META-INF/please_sourcemap',
@@ -92,19 +100,29 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
         )
 
 
-def java_binary(name, main_class, deps=None, data=None, visibility=None, jvm_args=None,
-                self_executable=False):
+def java_binary(name, main_class=None, srcs=None, deps=None, data=None, visibility=None,
+                jvm_args=None, self_executable=False):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
       name (str): Name of the rule.
       main_class (str): Main class to set in the manifest.
+      srcs (list): Source files to compile.
       deps (list): Dependencies of this rule.
       data (list): Runtime data files for this rule.
       visibility (list): Visibility declaration of this rule.
       jvm_args (str): Arguments to pass to the JVM in the run script.
       self_executable (bool): True to make the jar self executable.
     """
+    if srcs:
+        lib_name = '_%s#lib' % name
+        java_library(
+            name = lib_name,
+            srcs = srcs,
+            deps = deps,
+        )
+        deps = deps or []
+        deps.append(':' + lib_name)
     if self_executable:
         cmd, tools = _java_binary_cmd(main_class, jvm_args)
     else:
@@ -128,7 +146,7 @@ def java_binary(name, main_class, deps=None, data=None, visibility=None, jvm_arg
 
 
 def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
-              container=False, timeout=0, flaky=0, test_outputs=None,
+              container=False, timeout=0, flaky=0, test_outputs=None, size=None,
               test_package=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args=''):
     """Defines a Java test.
 
@@ -143,9 +161,11 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
       timeout (int): Maximum length of time, in seconds, to allow this test to run for.
       flaky (int | bool): True to mark this as flaky and automatically rerun.
       test_outputs (list): Extra test output files to generate from this test.
+      size (str): Test size (enormous, large, medium or small).
       test_package (str): Java package to scan for test classes to run.
       jvm_args (str): Arguments to pass to the JVM in the run script.
     """
+    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # It's a bit sucky doing this in two separate steps, but it is
     # at least easy and reuses the existing code.
     java_library(
@@ -320,7 +340,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
 
 
-def maven_jar(name, id, repository=_MAVEN_CENTRAL, hash=None, deps=None,
+def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
               exclude_paths=None):
     """Fetches a single Java dependency from Maven.
@@ -392,3 +412,28 @@ def _jarcat_cmd(main_class=None, preamble=None):
     if preamble:
         return cmd + " -p '%s'" % preamble, tools
     return cmd, tools
+
+
+if CONFIG.BAZEL_COMPATIBILITY:
+    def java_toolchain(javac=None, source_version=None, target_version=None, **kwargs):
+        """Mimics some effort at Bazel compatibility.
+
+        This doesn't really have the same semantics and ignores a bunch of arguments but it
+        isn't easy for us to behave the same way that they do.
+        """
+        package(
+            javac_tool = javac,
+            java_source_level = source_version,
+            java_target_level = target_version,
+        )
+
+    def java_import(name, jars, deps=None, exports=None, test_only=False, visibility=None):
+        """Mimics java_import, as far as I can tell we don't need to do much here."""
+        filegroup(
+            name = name,
+            srcs = jars,
+            deps = deps,
+            exported_deps = exports,
+            test_only = test_only,
+            visibility = visibility,
+        )

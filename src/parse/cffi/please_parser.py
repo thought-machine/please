@@ -92,6 +92,30 @@ def _parse_build_code(filename, globals_dict, cache=False):
     exec(code, globals_dict)
 
 
+def bazel_wrapper(func):
+    """Rewrites incoming argument names when we're in Bazel compatibility mode."""
+    def _inner(*args, **kwargs):
+        for k, v in _BAZEL_KEYWORD_REWRITES.iteritems():
+            if k in kwargs:
+                if v in kwargs:
+                    raise ValueError('You must pass at most one of %s and %s' % (k, v))
+                kwargs[v] = kwargs[k]
+                del kwargs[k]
+        return func(*args, **kwargs)
+    return _inner
+
+
+_BAZEL_KEYWORD_REWRITES = {
+    'artifact': 'id',
+    'copts': 'compiler_flags',
+    'linkopts': 'linker_flags',
+    'testonly': 'test_only',
+    'javacopts': 'javac_flags',
+    'tags': 'labels',
+    'runtime_deps': 'data',
+}
+
+
 @ffi.callback('SetConfigValueCallback*')
 def set_config_value(c_name, c_value):
     name = ffi.string(c_name)
@@ -146,7 +170,7 @@ def _get_subinclude_target(url, hash):
 
 def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=None, outs=None,
                deps=None, exported_deps=None, tools=None, labels=None, visibility=None, hashes=None,
-               binary=False, test=False, test_only=False, building_description='Building...',
+               binary=False, test=False, test_only=None, building_description='Building...',
                needs_transitive_deps=False, output_is_complete=False, container=False,
                skip_cache=False, no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
@@ -165,6 +189,8 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         visibility = globals_dict['CONFIG'].get('DEFAULT_VISIBILITY')
     if licences is None:
         licences = globals_dict['CONFIG'].get('DEFAULT_LICENCES')
+    if test_only is None:
+        test_only = globals_dict['CONFIG'].get('DEFAULT_TESTONLY')
     ffi_string = lambda x: ffi.NULL if x is None else ffi.new('char[]', x)
     target = _add_target(package,
                          ffi_string(name),
@@ -282,9 +308,10 @@ def _check_c_error(error):
         raise ParseError(ffi.string(error))
 
 
-def glob(package, includes, excludes=None, hidden=False):
+def glob(package, includes, excludes=None, exclude=None, hidden=False):
     if isinstance(includes, str):
         raise TypeError('The first argument to glob() should be a list')
+    excludes = excludes or exclude
     includes_keepalive = [ffi.new('char[]', include) for include in includes]
     excludes_keepalive = [ffi.new('char[]', exclude) for exclude in excludes or []]
     filenames = _glob(ffi.new('char[]', package),
@@ -340,9 +367,11 @@ def _get_globals(c_package, c_package_name):
     can't reassign that at runtime, so we create duplicates here. YOLO.
     """
     local_globals = {}
+    bazel_compat = _please_globals.get('CONFIG', {}).get('BAZEL_COMPATIBILITY')
     for k, v in _please_globals.iteritems():
         if callable(v) and type(v) == FunctionType:
-            local_globals[k] = FunctionType(v.__code__, local_globals, k, v.__defaults__, v.__closure__)
+            func = FunctionType(v.__code__, local_globals, k, v.__defaults__, v.__closure__)
+            local_globals[k] = bazel_wrapper(func) if bazel_compat else func
         else:
             local_globals[k] = v
     # Need to pass some hidden arguments to these guys.
@@ -360,7 +389,6 @@ def _get_globals(c_package, c_package_name):
     local_globals['add_licence'] = lambda name, licence: _check_c_error(_add_licence_post(c_package, name, licence))
     local_globals['set_command'] = lambda name, config, command='': _check_c_error(_set_command(c_package, name, config, command))
     local_globals['package'] = lambda **kwargs: package(local_globals, **kwargs)
-    local_globals['licenses'] = lambda l: licenses(local_globals, l)
     # Make these available to other scripts so they can get it without import.
     local_globals['join_path'] = os.path.join
     local_globals['split_path'] = os.path.split
@@ -376,6 +404,9 @@ def _get_globals(c_package, c_package_name):
         'info': lambda message, *args: _log(4, c_package, message % args),
         'debug': lambda message, *args: _log(5, c_package, message % args),
     })
+    if local_globals.get('CONFIG').BAZEL_COMPATIBILITY:
+        local_globals['native'] = DotDict(local_globals)
+        local_globals['licenses'] = lambda l: licenses(local_globals, l)
     return local_globals
 
 
@@ -440,6 +471,7 @@ class DotDict(dict):
 _please_globals['CONFIG'] = DotDict()
 _please_globals['CONFIG']['DEFAULT_VISIBILITY'] = None
 _please_globals['CONFIG']['DEFAULT_LICENCES'] = None
+_please_globals['CONFIG']['DEFAULT_TESTONLY'] = False
 _please_globals['defaultdict'] = defaultdict
 _please_globals['ParseError'] = ParseError
 _please_globals['DuplicateTargetError'] = DuplicateTargetError

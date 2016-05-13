@@ -217,7 +217,7 @@ def go_binary(name, main=None, deps=None, visibility=None, test_only=False):
 
 
 def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
-            timeout=0, flaky=0, test_outputs=None, labels=None):
+            timeout=0, flaky=0, test_outputs=None, labels=None, size=None):
     """Defines a Go test rule.
 
     Args:
@@ -231,7 +231,9 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
       flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
       test_outputs (list): Extra test output files to generate from this test.
       labels (list): Labels for this rule.
+      size (str): Test size (enormous, large, medium or small).
     """
+    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # Unfortunately we have to recompile this to build the test together with its library.
     build_rule(
         name='_%s#lib' % name,
@@ -286,7 +288,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
 
 
 def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
-             timeout=0, flaky=0, test_outputs=None, labels=None, tags=None):
+             timeout=0, flaky=0, test_outputs=None, labels=None, tags=None, size=None):
     """Defines a Go test rule for a library that uses cgo.
 
     If the library you are testing is a cgo_library, you must use this instead of go_test.
@@ -305,7 +307,9 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
       test_outputs (list): Extra test output files to generate from this test.
       labels (list): Labels for this rule.
       tags (list): Tags to pass to go build (see 'go help build' for details).
+      size (str): Test size (enormous, large, medium or small).
     """
+    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     tag_cmd = '-tags "%s"' % ' '.join(tags) if tags else ''
     build_rule(
         name=name,

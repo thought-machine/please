@@ -159,7 +159,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
     )
 
 
-def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
+def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, size=None,
                 visibility=None, container=False, timeout=0, flaky=0, test_outputs=None,
                 zip_safe=None, interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
     """Generates a Python test target.
@@ -176,6 +176,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
                         and it may or may not be happy if given non-Python files.
       deps (list): Dependencies of this rule.
       labels (list): Labels for this rule.
+      size (str): Test size (enormous, large, medium or small).
       visibility (list): Visibility specification.
       container (bool | dict): If True, the test will be run in a container (eg. Docker).
       timeout (int): Maximum time this test is allowed to run for, in seconds.
@@ -189,6 +190,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None,
                          which is normally just 'python', but could be 'python3' or
                         'pypy' or whatever.
     """
+    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     deps = deps or []
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
     cmd=' '.join([
@@ -378,7 +380,7 @@ def _python_binary_cmds(name, jarcat_tool):
     }
 
 
-# Nod to superficial Bazel compatibility
-py_library = python_library
-py_binary = python_binary
-py_test = python_test
+if CONFIG.BAZEL_COMPATIBILITY:
+    py_library = python_library
+    py_binary = python_binary
+    py_test = python_test
