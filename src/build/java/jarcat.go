@@ -94,7 +94,7 @@ var opts struct {
 	In                    string `short:"i" long:"input" description:"Input directory" required:"true"`
 	Suffix                string `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
 	ExcludeSuffix         string `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
-	ExcludeInternalPrefix string `long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
+	ExcludeInternalPrefix string `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
 	Preamble              string `short:"p" long:"preamble" description:"Leading string to prepend to written zip file"`
 	MainClass             string `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
 	Verbosity             int    `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`

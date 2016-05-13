@@ -36,6 +36,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     defines = defines or []
     dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
     opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs)
+    include_flags = ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in includes)
 
     # Bazel suggests passing nonexported header files in 'srcs'. Detect that here.
     # For the moment I'd rather not do this automatically in other cases.
@@ -442,11 +443,13 @@ cxx_library = cc_library
 cxx_test = cc_test
 
 
-def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, dbg=False):
+def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, defines=None, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
     compiler_flags = compiler_flags or []
     compiler_flags.append(CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS)
     compiler_flags.append('-fPIC')
+    if defines:
+        compiler_flags.extend('-D' + define for define in defines)
     # Linker flags may need this leading -Xlinker mabob.
     linker_flags = ['-Xlinker ' + flag for flag in (linker_flags or [])]
     pkg_config_cmd = ' '.join('`pkg-config --cflags --libs %s`' % x for x in pkg_config_libs or [])

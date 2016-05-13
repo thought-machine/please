@@ -99,6 +99,38 @@ func TestExpandOriginalTestTargets(t *testing.T) {
 	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{"src/core", "target1_test"}})
 }
 
+func TestComparePendingTasks(t *testing.T) {
+	p := func(taskType TaskType) pendingTask { return pendingTask{Type: taskType} }
+	// NB. "Higher priority" means the task comes first, does not refer to numeric values.
+	assertHigherPriority := func(a, b TaskType) {
+		// relationship should be commutative
+		assert.True(t, p(a).Compare(p(b)) < 0)
+		assert.True(t, p(b).Compare(p(a)) > 0)
+	}
+	assertEqualPriority := func(a, b TaskType) {
+		assert.True(t, p(a).Compare(p(b)) == 0)
+		assert.True(t, p(b).Compare(p(a)) == 0)
+	}
+
+	assertHigherPriority(SubincludeBuild, SubincludeParse)
+	assertHigherPriority(SubincludeParse, Build)
+	assertHigherPriority(SubincludeBuild, Build)
+	assertEqualPriority(Build, Parse)
+	assertEqualPriority(Build, Test)
+	assertEqualPriority(Parse, Test)
+	assertHigherPriority(Build, Stop)
+	assertHigherPriority(Test, Stop)
+	assertHigherPriority(Parse, Stop)
+
+	// sanity check
+	assertEqualPriority(SubincludeBuild, SubincludeBuild)
+	assertEqualPriority(SubincludeParse, SubincludeParse)
+	assertEqualPriority(Build, Build)
+	assertEqualPriority(Parse, Parse)
+	assertEqualPriority(Test, Test)
+	assertEqualPriority(Stop, Stop)
+}
+
 func addTarget(state *BuildState, name string, labels ...string) {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Labels = labels

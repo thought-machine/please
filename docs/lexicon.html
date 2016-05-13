@@ -1795,42 +1795,37 @@ have a top-level target as a facade which doesn't have actual code.</td>
 	<td></td>
 	<td>str</td>
 	<td>Command to run. It's subject to various sequence replacements:
-$(location //path/to:target) expands to the location of the given build rule, which
-must have a single output only.<br/>
-
-$(locations //path/to:target) expands to the locations of the outputs of the given
-build rule, which can have any number of outputs.<br/>
-
-$(exe //path/to:target) expands to a command to run the output of the given target.<br/>
-
-The rule must be marked as binary.<br/>
-
-$(out_location //path_to:target) expands to the output of the given build rule, with
-the preceding plz-out/gen etc.<br/>
-
-Also a number of environment variables will be defined:
-ARCH: architecture of the system, eg. amd64
-OS: current operating system (linux, darwin, etc).<br/>
-
-PATH: usual PATH environment variable as defined in your .plzconfig
-TMP_DIR: the temporary directory you're compiling within.<br/>
-
-SRCS: the sources of your rule
-OUTS: the outputs of your rule
-PKG: the path to the package containing this rule
-NAME: the name of this build rule
-OUT: the output of this rule. Only present when there is only one output.<br/>
-
-SRC: the source of this rule. Only present when there is only one source.<br/>
-
-SRCS_<suffix>: Present when you've defined named sources on a rule. Each group
-creates one of these these variables with paths to those sources.</td>
+      <ul>
+        <li><code>$(location //path/to:target)</code> expands to the location of the given build rule, which
+must have a single output only.</li>
+        <li><code>$(locations //path/to:target)</code> expands to the locations of the outputs of the given
+build rule, which can have any number of outputs.</li>
+        <li><code>$(exe //path/to:target)</code> expands to a command to run the output of the given target. The rule must be marked as binary.</li>
+        <li><code>$(out_location //path_to:target)</code> expands to the output of the given build rule, with
+the preceding plz-out/gen etc.</li>
+      </ul>
+      Also a number of environment variables will be defined:
+      <ul>
+        <li><code>ARCH</code>: architecture of the system, eg. amd64</li>
+        <li><code>OS</code>: current operating system (linux, darwin, etc).</li>
+        <li><code>PATH</code>: usual PATH environment variable as defined in your .plzconfig</li>
+        <li><code>TMP_DIR</code>: the temporary directory you're compiling within.</li>
+        <li><code>SRCS</code>: the sources of your rule</li>
+        <li><code>OUTS</code>: the outputs of your rule</li>
+        <li><code>PKG</code>: the path to the package containing this rule</li>
+        <li><code>NAME</code>: the name of this build rule</li>
+        <li><code>OUT</code>: the output of this rule. Only present when there is only one output.</li>
+        <li><code>SRC</code>: the source of this rule. Only present when there is only one source.</li>
+        <li><code>SRCS_&lt;suffix&gt;</code>: Present when you've defined named sources on a rule. Each group
+creates one of these these variables with paths to those sources.</li>
+      </ul>
+    </td>
       </tr>
 
       <tr>
 	<td>srcs</td>
 	<td>None</td>
-	<td>list</td>
+	<td>list or dict</td>
 	<td>Sources of this rule. Can be a list of files or rules, or a dict of names to similar
 lists. In the latter case they can be accessed separately which is useful when you
 have separate kinds of things in a rule.</td>
@@ -2055,7 +2050,7 @@ to test.results (or not if no_test_output is True).</p>
 	<td>None</td>
 	<td>list</td>
 	<td>Tools used to build this rule; similar to srcs but are not copied to the temporary
-build directory. Should be accessed via $(exe //path/to:tool) or similar.</td>
+build directory. Should be accessed via <code>$(exe //path/to:tool)</code> or similar.</td>
       </tr>
 
       <tr>

@@ -49,13 +49,13 @@ var opts struct {
 		Colour            bool   `long:"colour" description:"Forces coloured output from logging & other shell output."`
 		NoColour          bool   `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
 		TraceFile         string `long:"trace_file" description:"File to write Chrome tracing output into"`
-		PrintCommands     bool   `long:"print_commands" description:"Print each build / test command as they're run"`
+		PrintCommands     bool   `long:"print_commands" description:"Print each build / test command as they're run" hidden:"true"`
 		Version           bool   `long:"version" description:"Print the version of the tool"`
 	} `group:"Options controlling output & logging"`
 
 	FeatureFlags struct {
 		NoUpdate           bool `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
-		NoCache            bool `long:"nocache" description:"Disable caching locally"`
+		NoCache            bool `long:"nocache" description:"Disable caches (NB. not incrementality)"`
 		NoHashVerification bool `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
 		NoLock             bool `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
