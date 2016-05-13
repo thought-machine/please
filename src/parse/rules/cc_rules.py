@@ -474,7 +474,7 @@ def _apply_transitive_labels(command_map, link=True):
         flags = ' '.join('-isystem %s/%s' % (base_path, i[4:]) for i in labels if i.startswith('inc:'))
         flags += ' '.join('-D' + define[4:] for define in labels if define.startswith('def:'))
         if link:
-            flags += ' '.join('-Xlinker ' + flag for flag[3:] in labels if flag.startswith('ld:'))
+            flags += ' '.join('-Xlinker ' + flag[3:] for flag in labels if flag.startswith('ld:'))
             flags += ' '.join('`pkg-config --libs %s`' % x[3:] for x in labels if x.startswith('pc:'))
         set_command(name, 'dbg', command_map['dbg'] + ' ' + flags)
         set_command(name, 'opt', command_map['opt'] + ' ' + flags)
