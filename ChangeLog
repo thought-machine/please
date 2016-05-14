@@ -1,3 +1,23 @@
+Version 2.3.0
+-------------
+
+    * Added Bazel compatibility mode; can be configured in .plzconfig and alters several
+      aspects of parsing behaviour to better mimic Bazel's behaviour. This allows parsing
+      of simple Bazel projects, complex Skylark rules are a long way from working at this
+      point though.
+    * cc_library gained new arguments, `includes` and `defines` which add directories to
+      the include path and define preprocessor symbols respectively. These are transitively
+      applied to dependent cc_library rules.
+    * cc_test has a new argument, `write_test_main` which defaults to true. If set to False
+      it does not provide a main() and you must write it yourself.
+    * java_binary no longer has to have main_class specified.
+    * cc_library generates (possibly) more sub-rules to compile each of its `srcs` separately,
+      which is significantly faster for large numbers of inputs.
+    * filegroup now has an internal implementation rather than being done in bash. This
+      allows some things internally to be done more robustly and avoids errors from command
+      line length limits for very large filegroups.
+
+
 Version 2.2.1
 -------------
 
