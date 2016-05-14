@@ -50,6 +50,13 @@
       match any number of <b>complete</b> path components.<br/>
       These are often referred to as &quot;Ant-style&quot; patterns since Ant introduced them.</p>
 
+    <p>It bears noting that you cannot glob generated files, only source files. Also glob will not
+      descend into any directories that contain a BUILD file; this maintains an invariant that
+      each file is owned by exactly one package (or potentially none, but then Please doesn't know
+      or care about them). If you want to pull in files from another package, export them there
+      using a <a href="#filegroup"><code>filegroup</code></a> and depend on that in the package
+      you want it.</p>
+
     <table>
       <thead>
       <tr>

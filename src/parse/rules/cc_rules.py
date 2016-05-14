@@ -36,7 +36,6 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     defines = defines or []
     dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
     opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs)
-    include_flags = ' '.join('-isystem %s/%s' % (get_base_path(), i) for i in includes)
 
     # Bazel suggests passing nonexported header files in 'srcs'. Detect that here.
     # For the moment I'd rather not do this automatically in other cases.
@@ -52,7 +51,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
 
     labels = (['cc:ld:' + flag for flag in linker_flags] +
               ['cc:pc:' + lib for lib in pkg_config_libs] +
-              ['cc:inc:' + include for include in includes] +
+              ['cc:inc:%s/%s' % (get_base_path(), include) for include in includes] +
               ['cc:def:' + define for define in defines])
     # Collect the headers for other rules
     filegroup(
@@ -472,11 +471,11 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
     def update_commands(name):
         base_path = get_base_path()
         labels = get_labels(name, 'cc:')
-        flags = ' '.join('-isystem %s/%s' % (base_path, i[4:]) for i in labels if i.startswith('inc:'))
-        flags += ' '.join('-D' + define[4:] for define in labels if define.startswith('def:'))
+        flags = ' '.join('-isystem %s' % l[4:] for l in labels if l.startswith('inc:'))
+        flags += ' '.join('-D' + l[4:] for l in labels if l.startswith('def:'))
         if link:
-            flags += ' '.join('-Xlinker ' + flag[3:] for flag in labels if flag.startswith('ld:'))
-            flags += ' '.join('`pkg-config --libs %s`' % x[3:] for x in labels if x.startswith('pc:'))
+            flags += ' '.join('-Xlinker ' + l[3:] for l in labels if l.startswith('ld:'))
+            flags += ' '.join('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
         if archive:
             flags += ar_cmd
         set_command(name, 'dbg', command_map['dbg'] + ' ' + flags)

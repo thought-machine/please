@@ -498,3 +498,11 @@ if CONFIG.BAZEL_COMPATIBILITY:
             include_defs('//%s.bzl' % name)
         else:
             include_defs('//%s/%s.bzl' % (get_base_path(), name))
+
+    def exports_files(srcs, visibility=None, licenses=None):
+        """No-op implementation to allow parsing to continue.
+
+        The actual semantics can't be easily mimicked in Please because they'd have to refer
+        to the files by label. Right now it seems too hard to support for real, but it's
+        useful to be able to parse BUILD files without getting hung up on this function.
+        """
