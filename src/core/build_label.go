@@ -218,27 +218,27 @@ func (this BuildLabel) Less(that BuildLabel) bool {
 
 // Implementation of BuildInput interface
 func (label BuildLabel) Paths(graph *BuildGraph) []string {
-	target := graph.Target(label)
-	if target == nil {
-		panic(fmt.Sprintf("Couldn't find target %s in build graph", label))
-	}
-	ret := make([]string, len(target.Outputs()), len(target.Outputs()))
-	for i, output := range target.Outputs() {
+	target := graph.TargetOrDie(label)
+	outputs := target.Outputs()
+	ret := make([]string, len(outputs), len(outputs))
+	for i, output := range outputs {
 		ret[i] = path.Join(label.PackageName, output)
 	}
 	return ret
 }
 
 func (label BuildLabel) FullPaths(graph *BuildGraph) []string {
-	target := graph.Target(label)
-	if target == nil {
-		panic("Couldn't find target corresponding to build label " + label.String())
-	}
-	ret := make([]string, len(target.Outputs()), len(target.Outputs()))
-	for i, output := range target.Outputs() {
+	target := graph.TargetOrDie(label)
+	outputs := target.Outputs()
+	ret := make([]string, len(outputs), len(outputs))
+	for i, output := range outputs {
 		ret[i] = path.Join(target.OutDir(), output)
 	}
 	return ret
+}
+
+func (label BuildLabel) LocalPaths(graph *BuildGraph) []string {
+	return graph.TargetOrDie(label).Outputs()
 }
 
 func (label BuildLabel) Label() *BuildLabel {

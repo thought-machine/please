@@ -26,13 +26,6 @@
 //   Expands to a path to the output of the given target, with the preceding plz-out/gen
 //   or plz-out/bin etc. Useful when these things will be run by a user.
 //
-// $(location_pairs //path/to:target)
-//   Expands to pairs of absolute and relative paths for all the outputs of
-//   the given build rule. Relative paths are relative to their package, so a
-//   rule in package //d/e with outputs = ['a.txt', 'b/c.txt'] would receive
-//   '/plz-out/gen/d/e/a.txt a.txt /plz-out/gen/d/e/b/c.txt b/c.txt' from this substitution.
-//   This is a fairly specific one used mostly by filegroups.
-//
 // In general it's a good idea to use these where possible in genrules rather than
 // hardcoding specific paths.
 
@@ -53,7 +46,6 @@ var locationsReplacement = regexp.MustCompile("\\$\\(locations ([^\\)]+)\\)")
 var exeReplacement = regexp.MustCompile("\\$\\(exe ([^\\)]+)\\)")
 var outReplacement = regexp.MustCompile("\\$\\(out_location ([^\\)]+)\\)")
 var dirReplacement = regexp.MustCompile("\\$\\(dir ([^\\)]+)\\)")
-var locationPairsReplacement = regexp.MustCompile("\\$\\(location_pairs ([^\\)]+)\\)")
 
 // Replace escape sequences in the target's command.
 // For example, $(location :blah) -> the output of rule blah.
@@ -77,22 +69,19 @@ func ReplaceTestSequences(target *core.BuildTarget, command string) string {
 
 func replaceSequencesInternal(target *core.BuildTarget, command string, test bool) string {
 	cmd := locationReplacement.ReplaceAllStringFunc(command, func(in string) string {
-		return replaceSequence(target, in[11:len(in)-1], false, false, false, false, false, test)
+		return replaceSequence(target, in[11:len(in)-1], false, false, false, false, test)
 	})
 	cmd = locationsReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
-		return replaceSequence(target, in[12:len(in)-1], false, true, false, false, false, test)
+		return replaceSequence(target, in[12:len(in)-1], false, true, false, false, test)
 	})
 	cmd = exeReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
-		return replaceSequence(target, in[6:len(in)-1], true, false, false, false, false, test)
+		return replaceSequence(target, in[6:len(in)-1], true, false, false, false, test)
 	})
 	cmd = outReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
-		return replaceSequence(target, in[15:len(in)-1], false, false, false, false, true, test)
+		return replaceSequence(target, in[15:len(in)-1], false, false, false, true, test)
 	})
 	cmd = dirReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
-		return replaceSequence(target, in[6:len(in)-1], false, true, false, true, false, test)
-	})
-	cmd = locationPairsReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
-		return replaceSequence(target, in[17:len(in)-1], false, true, true, false, false, test)
+		return replaceSequence(target, in[6:len(in)-1], false, true, true, false, test)
 	})
 	// TODO(pebers): We should check for this when doing matches above, but not easy in
 	//               Go since its regular expressions are actually regular and principled.
@@ -100,27 +89,23 @@ func replaceSequencesInternal(target *core.BuildTarget, command string, test boo
 }
 
 // Replaces a single escape sequence in a command.
-func replaceSequence(target *core.BuildTarget, in string, runnable, multiple, pairs, dir, outPrefix, test bool) string {
+func replaceSequence(target *core.BuildTarget, in string, runnable, multiple, dir, outPrefix, test bool) string {
 	if core.LooksLikeABuildLabel(in) {
 		label := core.ParseBuildLabel(in, target.Label.PackageName)
-		return replaceSequenceLabel(target, label, in, runnable, multiple, pairs, dir, outPrefix, test, true)
+		return replaceSequenceLabel(target, label, in, runnable, multiple, dir, outPrefix, test, true)
 	}
 	for _, src := range target.AllSources() {
 		if label := src.Label(); label != nil && src.String() == in {
-			return replaceSequenceLabel(target, *label, in, runnable, multiple, pairs, dir, outPrefix, test, false)
+			return replaceSequenceLabel(target, *label, in, runnable, multiple, dir, outPrefix, test, false)
 		}
 	}
-	if pairs {
-		return quote(path.Join(core.RepoRoot, target.Label.PackageName, in)) + " " + quote(in)
-	} else {
-		return quote(path.Join(target.Label.PackageName, in))
-	}
+	return quote(path.Join(target.Label.PackageName, in))
 }
 
-func replaceSequenceLabel(target *core.BuildTarget, label core.BuildLabel, in string, runnable, multiple, pairs, dir, outPrefix, test, allOutputs bool) string {
+func replaceSequenceLabel(target *core.BuildTarget, label core.BuildLabel, in string, runnable, multiple, dir, outPrefix, test, allOutputs bool) string {
 	// Check this label is a dependency of the target, otherwise it's not allowed.
 	if label == target.Label { // targets can always use themselves.
-		return checkAndReplaceSequence(target, target, in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, false)
+		return checkAndReplaceSequence(target, target, in, runnable, multiple, dir, outPrefix, test, allOutputs, false)
 	}
 	deps := target.DependenciesFor(label)
 	if len(deps) == 0 {
@@ -128,10 +113,10 @@ func replaceSequenceLabel(target *core.BuildTarget, label core.BuildLabel, in st
 	}
 	// TODO(pebers): this does not correctly handle the case where there are multiple deps here
 	//               (but is better than the previous case where it never worked at all)
-	return checkAndReplaceSequence(target, deps[0], in, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, target.IsTool(label))
+	return checkAndReplaceSequence(target, deps[0], in, runnable, multiple, dir, outPrefix, test, allOutputs, target.IsTool(label))
 }
 
-func checkAndReplaceSequence(target, dep *core.BuildTarget, in string, runnable, multiple, pairs, dir, outPrefix, test, allOutputs, tool bool) string {
+func checkAndReplaceSequence(target, dep *core.BuildTarget, in string, runnable, multiple, dir, outPrefix, test, allOutputs, tool bool) string {
 	if allOutputs && !multiple && len(dep.Outputs()) != 1 {
 		// Label must have only one output.
 		panic(fmt.Sprintf("Rule %s can't use %s; %s has multiple outputs.", target.Label, in, dep.Label))
@@ -143,9 +128,7 @@ func checkAndReplaceSequence(target, dep *core.BuildTarget, in string, runnable,
 	output := ""
 	for _, out := range dep.Outputs() {
 		if allOutputs || out == in {
-			if pairs {
-				output += quote(path.Join(core.RepoRoot, dep.OutDir(), out)) + " " + quote(out) + " "
-			} else if tool {
+			if tool {
 				abs, err := filepath.Abs(handleDir(dep.OutDir(), out, dir))
 				if err != nil {
 					log.Fatalf("Couldn't calculate relative path: %s", err)

@@ -183,6 +183,8 @@ type BuildInput interface {
 	Paths(graph *BuildGraph) []string
 	// As above, but includes the leading plz-out/gen directory.
 	FullPaths(graph *BuildGraph) []string
+	// Paths within the local package
+	LocalPaths(graph *BuildGraph) []string
 	// Returns the build label associated with this input, or nil if it doesn't have one (eg. it's just a file).
 	Label() *BuildLabel
 	// Returns a string representation of this input
@@ -692,15 +694,6 @@ func (target *BuildTarget) IsFilegroup() bool {
 // IsLinkFilegroup returns true if this target is a filegroup rule that links its outputs.
 func (target *BuildTarget) IsLinkFilegroup() bool {
 	return target.Command == linkFilegroupCommand
-}
-
-// OutRoot returns either plz-out/gen or plz-out/bin depending on whether the target in question
-// is a binary target or not.
-func (target *BuildTarget) OutRoot() string {
-	if target.IsBinary {
-		return BinDir
-	}
-	return GenDir
 }
 
 // Make slices of these guys sortable.

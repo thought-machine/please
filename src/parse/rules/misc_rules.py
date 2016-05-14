@@ -391,8 +391,14 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
       visibility (list): Visibility specification.
       labels (list): Labels associated with this rule.
     """
+    # A filegroup is a nice easy way to move all these files locally.
+    filegroup(
+        name = '_%s#files' % name,
+        srcs = srcs,
+    )
+    deps = deps or []
+    deps.append(':_%s#files' % name)
     subdir = subdir or name
-    locations = ' '.join('$(location_pairs %s)' % src for src in srcs)
     if compression is not None and compression.startswith('-'):
         if not out:
             raise ValueError('Must pass "out" argument to tarball() if you pass an '
@@ -403,12 +409,10 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
         name=name,
         cmd=' && '.join([
             'mkdir -p _tmp/' + subdir,
-            'cd _tmp/' + subdir,
-            'echo %s | xargs -n 2 cp -r' % locations,
-            'cd ${TMP_DIR}/_tmp',
+            'cp -r $(locations :_%s#files) _tmp/%s' % (name, subdir),
+            'cd _tmp',
             'tar %s -cf $OUT *' % compression,
         ]),
-        srcs=srcs,
         outs=[out or name + '.tar' + extension],
         deps=deps,
         visibility=visibility,

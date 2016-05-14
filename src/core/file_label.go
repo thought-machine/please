@@ -20,6 +20,10 @@ func (label FileLabel) FullPaths(graph *BuildGraph) []string {
 	return label.Paths(graph)
 }
 
+func (label FileLabel) LocalPaths(graph *BuildGraph) []string {
+	return []string{label.File}
+}
+
 func (label FileLabel) Label() *BuildLabel {
 	return nil
 }
@@ -39,6 +43,10 @@ func (label SystemFileLabel) Paths(graph *BuildGraph) []string {
 
 func (label SystemFileLabel) FullPaths(graph *BuildGraph) []string {
 	return []string{label.Path}
+}
+
+func (label SystemFileLabel) LocalPaths(graph *BuildGraph) []string {
+	return label.Paths(graph)
 }
 
 func (label SystemFileLabel) Label() *BuildLabel {

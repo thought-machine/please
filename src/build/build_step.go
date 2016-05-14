@@ -428,8 +428,8 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 	changed := false
 	for _, source := range target.Sources {
 		fullPaths := source.FullPaths(state.Graph)
-		for i, sourcePath := range source.Paths(state.Graph) {
-			c, err := moveOutput(target, fullPaths[i], path.Join(target.OutRoot(), sourcePath), true)
+		for i, sourcePath := range source.LocalPaths(state.Graph) {
+			c, err := moveOutput(target, fullPaths[i], path.Join(target.OutDir(), sourcePath), true)
 			if err != nil {
 				return err
 			}

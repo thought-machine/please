@@ -45,27 +45,6 @@ func TestExe(t *testing.T) {
 	}
 }
 
-func TestLocationPairs(t *testing.T) {
-	core.RepoRoot = "/home/user/repo"
-	target2 := makeTarget("//path/to:target2", "", nil)
-	target1 := makeTarget("//path/to:target1", "$(location_pairs //path/to:target2)", target2)
-	expected := "/home/user/repo/plz-out/gen/path/to/target2.py target2.py"
-	cmd := replaceSequences(target1)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
-}
-
-func TestLocationPairsLocalFile(t *testing.T) {
-	core.RepoRoot = "/home/user/repo"
-	target1 := makeTarget("//path/to:target1", "$(location_pairs target1.py)", nil)
-	expected := "/home/user/repo/path/to/target1.py target1.py"
-	cmd := replaceSequences(target1)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
-}
-
 func TestReplacementsForTest(t *testing.T) {
 	target2 := makeTarget("//path/to:target2", "", nil)
 	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target1) $(location //path/to:target2)", target2)
