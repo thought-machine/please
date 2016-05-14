@@ -72,7 +72,8 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
             name='_%s#gen' % name,
             srcs=srcs,
             tools=go_tools,
-            deps=deps + [':_%s#srcs' % name]
+            deps=deps + [':_%s#srcs' % name],
+            test_only=test_only,
         )
         srcs += [':_%s#gen' % name]
 
@@ -91,7 +92,7 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
     )
 
 
-def go_generate(name, srcs, tools, deps=None, visibility=None):
+def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
     """Generates a `go generate` rule.
 
     Args:
@@ -100,6 +101,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None):
       tools (list): A list of targets which represent binaries to be used via `go generate`.
       deps (list): Dependencies
       visibility (list): Visibility specification
+      test_only (bool): If True, is only visible to test rules.
     """
     # We simply capture all go files produced by go generate.
     def _post_build(rule_name, output):
@@ -129,6 +131,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None):
         tools=tools,
         cmd=cmd,
         visibility=visibility,
+        test_only=test_only,
         post_build=_post_build,
     )
 
