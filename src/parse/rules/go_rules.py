@@ -12,10 +12,13 @@ _GO_LINK_TOOL = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
 # it's valid to essentially allow it to pick up any of them.
 _SRC_DIRS_CMD = 'SRC_DIRS=`find . -type d | grep -v "^\\.$" | sed -E -e "s|^./|-I |g"`'
 
+# This copies all the .a files up one level. This is necessary for some Go tools to find them.
+_COPY_PKGS_CMD = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
+
 # Commands for go_binary and go_test.
 _ALL_GO_BINARY_CMDS = ' && '.join([
     _SRC_DIRS_CMD,
-    'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done',
+    _COPY_PKGS_CMD,
     'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL,
     'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL,
 ])
@@ -120,6 +123,12 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
         'sed -e "s/:$//" -e "s/src$//g"'
     ])
     cmd = ' && '.join([
+        # It's essential that we copy all .a files up a directory as well; we tend to output them one level
+        # down from where Go expects them to be.
+        _COPY_PKGS_CMD,
+        # It's also essential that the compiled .a files are under this prefix, otherwise gcimporter won't find them.
+        'mkdir pkg',
+        'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
         'PATH="$PATH:%s" GOPATH="$TMP_DIR$(echo ":$(%s)" | sed "s/:$//g")" go generate $SRCS' % (path, gopath),
         'mv $PKG/*.go .',
         'ls *.go'
