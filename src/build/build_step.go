@@ -21,15 +21,13 @@ import (
 var log = logging.MustGetLogger("build")
 
 // Type that indicates that we're stopping the build of a target in a nonfatal way.
-type stopTarget string
-
-func (err stopTarget) Error() string { return string(err) }
+var stopTarget = fmt.Errorf("stopping build")
 
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	target := state.Graph.TargetOrDie(label)
 	target.SetState(core.Building)
 	if err := buildTarget(tid, state, target); err != nil {
-		if _, ok := err.(stopTarget); ok {
+		if err == stopTarget {
 			target.SetState(core.Stopped)
 			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
 			return
@@ -332,7 +330,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	}
 	if err = checkRuleHashes(target, hash); err != nil {
 		if state.NeedHashesOnly && state.IsOriginalTarget(target.Label) {
-			panic(stopTarget("Hash mismatch"))
+			panic(stopTarget)
 		} else if state.VerifyHashes {
 			panic(err)
 		} else {
