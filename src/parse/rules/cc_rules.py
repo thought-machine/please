@@ -63,18 +63,18 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         exported_deps=deps,
         labels=labels,
     )
-    cmd_template = '%s -c -I . ${SRCS_SRCS} %s -o $OUT'
+    cmd_template = '%s -c -I . ${SRCS_SRCS} %s'
     cmds = {
         'dbg': cmd_template % (CONFIG.CC_TOOL, dbg_flags),
         'opt': cmd_template % (CONFIG.CC_TOOL, opt_flags),
     }
-    o_rules = []
+    a_rules = []
     for src in srcs:
-        o_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_'))
+        a_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_'))
         build_rule(
-            name=o_name,
+            name=a_name,
             srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
-            outs=[o_name + '.o'],
+            outs=[a_name + '.a'],
             deps=deps,
             visibility=visibility,
             cmd=cmds,
@@ -82,13 +82,13 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             requires=['cc', 'cc_hdrs'],
             test_only=test_only,
             labels=labels,
-            pre_build=_apply_transitive_labels(cmds, link=False),
+            pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
         )
-        o_rules.append(':' + o_name)
+        a_rules.append(':' + a_name)
     hdrs_rule = ':_%s#hdrs' % name
     filegroup(
         name=name,
-        srcs=[hdrs_rule] + o_rules,
+        srcs=[hdrs_rule] + a_rules,
         provides={
             'cc_hdrs': hdrs_rule,
         },
@@ -459,7 +459,7 @@ def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflag
                      pkg_config_cmd, pkg_config_cmd_2, postamble])
 
 
-def _apply_transitive_labels(command_map, link=True):
+def _apply_transitive_labels(command_map, link=True, archive=False):
     """Acquires the required linker flags from all transitive labels of a rule.
 
     This is how we handle libraries sensibly for C++ rules; you might write a rule that
@@ -468,6 +468,7 @@ def _apply_transitive_labels(command_map, link=True):
     that use it. The solution to this is here; we collect the set of linker flags from all
     dependencies and apply them to the binary rule that needs them.
     """
+    ar_cmd = '&& ar rcs%s $OUT *.o' % _AR_FLAG
     def update_commands(name):
         base_path = get_base_path()
         labels = get_labels(name, 'cc:')
@@ -476,6 +477,8 @@ def _apply_transitive_labels(command_map, link=True):
         if link:
             flags += ' '.join('-Xlinker ' + flag[3:] for flag in labels if flag.startswith('ld:'))
             flags += ' '.join('`pkg-config --libs %s`' % x[3:] for x in labels if x.startswith('pc:'))
+        if archive:
+            flags += ar_cmd
         set_command(name, 'dbg', command_map['dbg'] + ' ' + flags)
         set_command(name, 'opt', command_map['opt'] + ' ' + flags)
     return update_commands

@@ -52,3 +52,21 @@ cc_test(
     srcs = ['cc_multisrc_test.cc'],
     deps = [':multisrc_lib'],
 )
+
+# This tests that cc_library works correctly with inputs that are multiple sources.
+filegroup(
+    name = 'cc_multiple_srcs',
+    srcs = ['multisrc_1.cc', 'multisrc_2.cc'],
+)
+
+cc_library(
+    name = 'multisrc_lib_2',
+    srcs = [':cc_multiple_srcs'],
+    hdrs = ['multisrc.h'],
+)
+
+cc_test(
+    name = 'cc_multisrc_test_2',
+    srcs = ['cc_multisrc_test.cc'],
+    deps = [':multisrc_lib_2'],
+)
