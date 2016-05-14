@@ -51,6 +51,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
     cc_deps = cc_deps or []
     java_deps = java_deps or []
     go_deps = go_deps or []
+    deps = deps or []
 
     # We detect output names for normal sources, but will have to do a post-build rule for
     # any input rules. We could just do that for everything but it's nicer to avoid them
@@ -85,13 +86,13 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         lang_name = '_%s#%s' % (name, language)
 
         plugin_cmds = ''
-        deps = deps[:] if deps else []
+        lang_deps = deps[:]
         lang_plugins = plugins.get(language, [])
         if language == 'go' and not lang_plugins:
             # Go doesn't come by default, so add it here.
-            lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, deps))
+            lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, lang_deps))
         cmds = [
-            '%s --%s_out=$TMP_DIR %s ${SRCS}' % (_plugin(CONFIG.PROTOC_TOOL, deps),
+            '%s --%s_out=$TMP_DIR %s ${SRCS}' % (_plugin(CONFIG.PROTOC_TOOL, lang_deps),
                                                  _PROTO_LANGUAGES[language],
                                                  ' '.join(lang_plugins)),
             'mv -f ${PKG}/* .',
@@ -119,7 +120,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             srcs = srcs,
             outs = outs.get(language, None),
             cmd = cmd,
-            deps = deps,
+            deps = lang_deps,
             requires = ['proto'],
             pre_build = _go_path_mapping(cmd, 'grpc' in protoc_version) if language == 'go' else None,
             post_build = post_build,
