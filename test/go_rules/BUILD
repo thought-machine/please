@@ -6,6 +6,9 @@ go_library(
     deps = [
         '//test/go_rules/test',
     ],
+    go_tools = [
+        '//third_party/go:stringer',
+    ],
     test_only = True,
 )
 go_binary(
