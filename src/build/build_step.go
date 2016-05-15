@@ -95,6 +95,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if target.IsFilegroup() {
 		return buildFilegroup(tid, state, target)
 	}
+	oldOutputHash, outputHashErr := OutputHash(target)
 	if err := prepareDirectories(target); err != nil {
 		return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 	}
@@ -103,7 +104,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 		if _, retrieved := retrieveFromCache(state, target); retrieved {
 			log.Debug("Retrieved artifacts for %s from cache", target.Label)
-			if calculateAndCheckRuleHash(state, target) {
+			newOutputHash := calculateAndCheckRuleHash(state, target)
+			if outputHashErr != nil || !bytes.Equal(oldOutputHash, newOutputHash) {
 				target.SetState(core.Built)
 			} else {
 				target.SetState(core.Unchanged)
@@ -183,7 +185,11 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			log.Warning("Failed to remove temporary directory for %s: %s", target.Label, err)
 		}
 	}
-	state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
+	if outputsChanged {
+		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
+	} else {
+		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built (unchanged)")
+	}
 	return nil
 }
 
@@ -235,6 +241,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 	if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
 		return true, err
 	}
+	changed := false
 	for _, output := range target.Outputs() {
 		tmpOutput := path.Join(target.TmpDir(), output)
 		realOutput := path.Join(target.OutDir(), output)
@@ -248,11 +255,15 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 			return true, err
 		}
 		// NB. false -> not filegroup, we wouldn't be here if it was.
-		if _, err = moveOutput(target, dereferencedPath, realOutput, false); err != nil {
+		outputChanged, err := moveOutput(target, dereferencedPath, realOutput, false)
+		if err != nil {
 			return true, err
 		}
+		changed = changed || outputChanged
 	}
-	return calculateAndCheckRuleHash(state, target), nil
+	calculateAndCheckRuleHash(state, target)
+	log.Debug("Outputs for %s are unchanged", target.Label)
+	return changed, nil
 }
 
 func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegroup bool) (bool, error) {
@@ -276,6 +287,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
 			// We already have the same file in the current location. Don't bother moving it.
+			log.Debug("Checking %s vs. %s, hashes match", tmpOutput, realOutput)
 			return false, nil
 		}
 	} else if err := os.RemoveAll(realOutput); err != nil {
@@ -321,9 +333,8 @@ func RemoveOutputs(target *core.BuildTarget) error {
 	return nil
 }
 
-// Checks the hash for a rule and compares it to any previous one.
-// Returns true if outputs have changed from what was there previously.
-func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) bool {
+// calculateAndCheckRuleHash checks the output hash for a rule.
+func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) []byte {
 	hash, err := OutputHash(target)
 	if err != nil {
 		panic(err)
@@ -337,12 +348,10 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 			log.Warning("%s", err)
 		}
 	}
-	// TODO(pebers): We should be able to get away without reading & writing this file quite so often...
-	_, _, oldSourceHash := readRuleHashFile(ruleHashFileName(target), true)
 	if err := writeRuleHashFile(state, target); err != nil {
 		panic(fmt.Errorf("Attempting to create hash file: %s", err))
 	}
-	return !bytes.Equal(oldSourceHash, hash)
+	return hash
 }
 
 // OutputHash calculates the hash of a target's outputs.
