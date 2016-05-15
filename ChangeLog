@@ -16,6 +16,7 @@ Version 2.3.0
     * filegroup now has an internal implementation rather than being done in bash. This
       allows some things internally to be done more robustly and avoids errors from command
       line length limits for very large filegroups.
+    * `plz query somepath` now respects :all labels.
 
 
 Version 2.2.1
