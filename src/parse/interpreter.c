@@ -3,6 +3,7 @@
 #include "_cgo_export.h"
 
 static struct PleaseCallbacks callbacks;
+typedef void RegisterPypyCallbacks(struct PleaseCallbacks*);
 
 void PreBuildFunctionSetter(void* callback, char* bytecode, size_t target) {
     SetPreBuildFunction((size_t)callback, bytecode, target);
@@ -32,7 +33,7 @@ char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* ou
     return (*callbacks.post_build_callback_runner)((void*)callback, package, name, output);
 }
 
-int InitialiseInterpreter(char* data) {
+int InitialiseInterpreter(char* parser_location) {
   callbacks.add_target = (AddTargetCallback*)AddTarget;
   callbacks.add_src = AddSource;
   callbacks.add_data = AddData;
@@ -62,5 +63,15 @@ int InitialiseInterpreter(char* data) {
   callbacks.set_command = SetCommand;
   callbacks.log = Log;
   callbacks.is_valid_target_name = IsValidTargetName;
-  return pypy_execute_source_ptr(data, &callbacks);
+
+  void* parser = dlopen(parser_location, RTLD_NOW | RTLD_GLOBAL);
+  if (parser == NULL) {
+    return 1;
+  }
+  void* f = dlsym(parser, "RegisterCallbacks");
+  if (f == NULL) {
+    return 2;
+  }
+  ((RegisterPypyCallbacks*)f)(&callbacks);
+  return 0;
 }

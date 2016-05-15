@@ -55,3 +55,5 @@ struct PleaseCallbacks {
     LogCallback* log;
     ValidateCallback* is_valid_target_name;
 };
+
+extern void RegisterCallbacks(struct PleaseCallbacks*);

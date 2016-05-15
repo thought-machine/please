@@ -2,8 +2,7 @@ subinclude('//build_defs:go_bindata')
 
 cgo_library(
     name = 'parse',
-    srcs = glob(['parse_step.go', 'suggest.go', 'glob.go', 'interpreter.*']) + [':builtin_rules'],
-    env = {'CGO_LDFLAGS': '-L${TMP_DIR}/${PKG}/rules'},
+    srcs = glob(['*.go', 'interpreter.*'], excludes=['*_test.go', 'builtin_rules.go']) + [':builtin_rules'],
     deps = [
         ':defs_hdr',
         ':builtin_rules',
@@ -11,6 +10,7 @@ cgo_library(
         '//third_party/go:logging',
         '//third_party/go:gcfg',
         '//third_party/go:levenshtein',
+        '//third_party/go:osext',
     ],
     visibility = ['PUBLIC'],
 )
@@ -23,15 +23,8 @@ filegroup(
 
 go_bindata(
     name = 'builtin_rules',
-    srcs = glob(['rules/*.py'], excludes=['embedded_parser.py']) + [':embedded_parser'],
+    srcs = glob(['rules/*.py']),
     prefix = '${PKG}/rules',
-)
-
-genrule(
-    name = 'embedded_parser',
-    srcs = ['//src/parse/cffi:embedded_parser'],
-    outs = ['rules/embedded_parser.py'],
-    cmd = 'cp $SRC $OUT',
 )
 
 cgo_test(

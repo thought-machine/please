@@ -18,10 +18,12 @@ else
     rm -f /opt/please/please /opt/please/please_pex /opt/please/junit_runner.jar /opt/please/jarcat /opt/please/please_maven /opt/please/cache_cleaner
     cp plz-out/bin/src/please /opt/please/please
     chmod 0775 /opt/please/please
+    cp plz-out/bin/src/libplease_parser_*.so /opt/please
+    chmod 0664 /opt/please/libplease_parser_*.so
     cp plz-out/bin/src/build/python/please_pex.pex /opt/please/please_pex
     chmod 0775 /opt/please/please_pex
     cp plz-out/bin/src/build/java/junit_runner.jar /opt/please/junit_runner.jar
-    chmod 0775 /opt/please/junit_runner.jar
+    chmod 0664 /opt/please/junit_runner.jar
     cp plz-out/bin/src/build/java/jarcat /opt/please/jarcat
     chmod 0775 /opt/please/jarcat
     cp plz-out/bin/src/build/java/please_maven /opt/please/please_maven

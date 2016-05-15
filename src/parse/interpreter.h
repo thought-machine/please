@@ -1,9 +1,9 @@
 #ifndef _SRC_PARSE_INTERPRETER_H
 #define _SRC_PARSE_INTERPRETER_H
 
+#include <dlfcn.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <PyPy.h>
 #include "defs.h"
 
 // AFAICT there isn't a way to call the function pointers directly.
@@ -15,7 +15,7 @@ char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* ou
 void PreBuildFunctionSetter(void* callback, char* bytecode, size_t target);
 void PostBuildFunctionSetter(void* callback, char* bytecode, size_t target);
 
-// Initialises interpreter.
-int InitialiseInterpreter(char* data);
+// Initialises interpreter. Returns 0 on success.
+int InitialiseInterpreter(char* parser_location);
 
 #endif  // _SRC_PARSE_INTERPRETER_H

@@ -7,6 +7,7 @@ import os
 from collections import defaultdict, Mapping
 from contextlib import contextmanager
 from types import FunctionType
+from parser_interface import ffi
 
 
 _please_builtins = imp.new_module('_please_builtins')
@@ -410,42 +411,52 @@ def _get_globals(c_package, c_package_name):
     return local_globals
 
 
-# c_argument is magically created for us by pypy.
-callbacks = ffi.cast('struct PleaseCallbacks*', c_argument)
-callbacks.parse_file = parse_file
-callbacks.parse_code = parse_code
-callbacks.set_config_value = set_config_value
-callbacks.pre_build_callback_runner = run_pre_build_function
-callbacks.post_build_callback_runner = run_post_build_function
-_add_target = ffi.cast('AddTargetCallback*', callbacks.add_target)
-_add_src = ffi.cast('AddStringCallback*', callbacks.add_src)
-_add_data = ffi.cast('AddStringCallback*', callbacks.add_data)
-_add_dep = ffi.cast('AddStringCallback*', callbacks.add_dep)
-_add_exported_dep = ffi.cast('AddStringCallback*', callbacks.add_exported_dep)
-_add_tool = ffi.cast('AddStringCallback*', callbacks.add_tool)
-_add_out = ffi.cast('AddStringCallback*', callbacks.add_out)
-_add_vis = ffi.cast('AddStringCallback*', callbacks.add_vis)
-_add_label = ffi.cast('AddStringCallback*', callbacks.add_label)
-_add_hash = ffi.cast('AddStringCallback*', callbacks.add_hash)
-_add_licence = ffi.cast('AddStringCallback*', callbacks.add_licence)
-_add_test_output = ffi.cast('AddStringCallback*', callbacks.add_test_output)
-_add_require = ffi.cast('AddStringCallback*', callbacks.add_require)
-_add_provide = ffi.cast('AddTwoStringsCallback*', callbacks.add_provide)
-_add_named_src = ffi.cast('AddTwoStringsCallback*', callbacks.add_named_src)
-_add_command = ffi.cast('AddTwoStringsCallback*', callbacks.add_command)
-_set_container_setting = ffi.cast('AddTwoStringsCallback*', callbacks.set_container_setting)
-_glob = ffi.cast('GlobCallback*', callbacks.glob)
-_get_include_file = ffi.cast('GetIncludeFileCallback*', callbacks.get_include_file)
-_get_subinclude_file = ffi.cast('GetIncludeFileCallback*', callbacks.get_subinclude_file)
-_get_labels = ffi.cast('GetLabelsCallback*', callbacks.get_labels)
-_set_pre_build_callback = ffi.cast('SetBuildFunctionCallback*', callbacks.set_pre_build_function)
-_set_post_build_callback = ffi.cast('SetBuildFunctionCallback*', callbacks.set_post_build_function)
-_add_dependency = ffi.cast('AddDependencyCallback*', callbacks.add_dependency)
-_add_output = ffi.cast('AddOutputCallback*', callbacks.add_output)
-_add_licence_post = ffi.cast('AddTwoStringsCallback*', callbacks.add_licence_post)
-_set_command = ffi.cast('AddThreeStringsCallback*', callbacks.set_command)
-_log = ffi.cast('LogCallback*', callbacks.log)
-_is_valid_target_name = ffi.cast('ValidateCallback*', callbacks.is_valid_target_name)
+@ffi.def_extern()
+def RegisterCallbacks(callbacks):
+    """Called at initialisation time to sort out callbacks.
+
+    TODO(pebers): this is not yet beautiful. I think we can actually avoid all the function pointers...
+    """
+    global  _add_target, _add_src, _add_data, _add_dep, _add_exported_dep, _add_tool, _add_out, _add_vis
+    global _add_label, _add_hash, _add_licence, _add_test_output, _add_require, _add_provide, _add_named_src
+    global _add_command, _set_container_setting, _glob, _get_include_file, _get_subinclude_file, _get_labels
+    global _set_pre_build_callback, _set_post_build_callback, _add_dependency, _add_output, _add_licence_post
+    global _set_command, _log, _is_valid_target_name
+    callbacks = ffi.cast('struct PleaseCallbacks*', callbacks)
+    callbacks.parse_file = parse_file
+    callbacks.parse_code = parse_code
+    callbacks.set_config_value = set_config_value
+    callbacks.pre_build_callback_runner = run_pre_build_function
+    callbacks.post_build_callback_runner = run_post_build_function
+    _add_target = ffi.cast('AddTargetCallback*', callbacks.add_target)
+    _add_src = ffi.cast('AddStringCallback*', callbacks.add_src)
+    _add_data = ffi.cast('AddStringCallback*', callbacks.add_data)
+    _add_dep = ffi.cast('AddStringCallback*', callbacks.add_dep)
+    _add_exported_dep = ffi.cast('AddStringCallback*', callbacks.add_exported_dep)
+    _add_tool = ffi.cast('AddStringCallback*', callbacks.add_tool)
+    _add_out = ffi.cast('AddStringCallback*', callbacks.add_out)
+    _add_vis = ffi.cast('AddStringCallback*', callbacks.add_vis)
+    _add_label = ffi.cast('AddStringCallback*', callbacks.add_label)
+    _add_hash = ffi.cast('AddStringCallback*', callbacks.add_hash)
+    _add_licence = ffi.cast('AddStringCallback*', callbacks.add_licence)
+    _add_test_output = ffi.cast('AddStringCallback*', callbacks.add_test_output)
+    _add_require = ffi.cast('AddStringCallback*', callbacks.add_require)
+    _add_provide = ffi.cast('AddTwoStringsCallback*', callbacks.add_provide)
+    _add_named_src = ffi.cast('AddTwoStringsCallback*', callbacks.add_named_src)
+    _add_command = ffi.cast('AddTwoStringsCallback*', callbacks.add_command)
+    _set_container_setting = ffi.cast('AddTwoStringsCallback*', callbacks.set_container_setting)
+    _glob = ffi.cast('GlobCallback*', callbacks.glob)
+    _get_include_file = ffi.cast('GetIncludeFileCallback*', callbacks.get_include_file)
+    _get_subinclude_file = ffi.cast('GetIncludeFileCallback*', callbacks.get_subinclude_file)
+    _get_labels = ffi.cast('GetLabelsCallback*', callbacks.get_labels)
+    _set_pre_build_callback = ffi.cast('SetBuildFunctionCallback*', callbacks.set_pre_build_function)
+    _set_post_build_callback = ffi.cast('SetBuildFunctionCallback*', callbacks.set_post_build_function)
+    _add_dependency = ffi.cast('AddDependencyCallback*', callbacks.add_dependency)
+    _add_output = ffi.cast('AddOutputCallback*', callbacks.add_output)
+    _add_licence_post = ffi.cast('AddTwoStringsCallback*', callbacks.add_licence_post)
+    _set_command = ffi.cast('AddThreeStringsCallback*', callbacks.set_command)
+    _log = ffi.cast('LogCallback*', callbacks.log)
+    _is_valid_target_name = ffi.cast('ValidateCallback*', callbacks.is_valid_target_name)
 
 
 class ParseError(Exception):
