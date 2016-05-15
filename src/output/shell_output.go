@@ -396,7 +396,7 @@ func PrintCoverage(state *core.BuildState, includeFiles []string) {
 		}
 		lastDir = dir
 		covered, total := countCoverage(state.Coverage.Files[file])
-		printf("  %s\n", coveragePercentage(covered, total, file[len(dir):]))
+		printf("  %s\n", coveragePercentage(covered, total, file[len(dir)+1:]))
 		totalCovered += covered
 		totalTotal += total
 	}
