@@ -5,7 +5,7 @@ import "io/ioutil"
 import "testing"
 
 func TestContentsOfOutputFile(t *testing.T) {
-	contents, err := ioutil.ReadFile("src/parse/test_additional_output.txt")
+	contents, err := ioutil.ReadFile("test/parse_test/test_additional_output.txt")
 	if err != nil {
 		t.Errorf("Failed to read additional output file: %s", err)
 	}
