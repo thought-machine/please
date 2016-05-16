@@ -290,7 +290,8 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 			log.Debug("Checking %s vs. %s, hashes match", tmpOutput, realOutput)
 			return false, nil
 		}
-	} else if err := os.RemoveAll(realOutput); err != nil {
+	}
+	if err := os.RemoveAll(realOutput); err != nil {
 		return true, err
 	}
 	movePathHash(tmpOutput, realOutput, filegroup)
