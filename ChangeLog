@@ -1,3 +1,9 @@
+Version 2.3.1
+-------------
+
+    * Fix for cc_static_library which was broken in previous version.
+
+
 Version 2.3.0
 -------------
 

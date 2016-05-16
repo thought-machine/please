@@ -140,7 +140,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         name = name,
         deps = deps,
         outs = ['lib%s.a' % name],
-        cmd = 'ar rcs%s $OUT `find . -name "*.o"`' % _AR_FLAG,
+        cmd = '(find . -name "*.a" | xargs -n 1 ar x) && ar rcs%s $OUT `find . -name "*.o"`' % _AR_FLAG,
         needs_transitive_deps = True,
         output_is_complete = True,
         visibility = visibility,
