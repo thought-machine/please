@@ -1,3 +1,8 @@
+Version 2.3.3
+-------------
+
+    * Fix for sh_binary which used an incorrectly formatted version of sed.
+
 Version 2.3.2
 -------------
 
