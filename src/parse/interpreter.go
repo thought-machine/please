@@ -147,13 +147,7 @@ func initialiseInterpreter(engine string) bool {
 
 func initialiseInterpreterFrom(executableDir, engine string) bool {
 	enginePath := path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension()))
-	log.Debug("Attempting to load engine from %s", enginePath)
-	cEnginePath := C.CString(enginePath)
-	defer C.free(unsafe.Pointer(cEnginePath))
-	result := C.InitialiseInterpreter(cEnginePath)
-	if result != 0 {
-		// Low level of logging because it's allowable to fail on libplease_parser_pypy, which we try first.
-		log.Notice("Failed to initialise interpreter from %s: %s", enginePath, C.GoString(C.dlerror()))
+	if !core.PathExists(enginePath) {
 		// Hack to help bootstrapping: executable is in /tmp/go-build<whatever>, but parser is in repo dir...
 		if strings.HasPrefix(executableDir, "/tmp/go-build") {
 			if wd, err := os.Getwd(); err == nil && !strings.HasPrefix(wd, "/tmp/go-build") {
@@ -161,6 +155,15 @@ func initialiseInterpreterFrom(executableDir, engine string) bool {
 				return initialiseInterpreterFrom(path.Join(wd, "src/parse/cffi"), "python")
 			}
 		}
+		return false
+	}
+	log.Debug("Attempting to load engine from %s", enginePath)
+	cEnginePath := C.CString(enginePath)
+	defer C.free(unsafe.Pointer(cEnginePath))
+	result := C.InitialiseInterpreter(cEnginePath)
+	if result != 0 {
+		// Low level of logging because it's allowable to fail on libplease_parser_pypy, which we try first.
+		log.Notice("Failed to initialise interpreter from %s: %s", enginePath, C.GoString(C.dlerror()))
 		return false
 	}
 	log.Info("Using parser engine from %s", enginePath)
