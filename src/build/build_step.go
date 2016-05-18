@@ -104,14 +104,15 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 		if _, retrieved := retrieveFromCache(state, target); retrieved {
 			log.Debug("Retrieved artifacts for %s from cache", target.Label)
+			checkLicences(state, target)
 			newOutputHash := calculateAndCheckRuleHash(state, target)
 			if outputHashErr != nil || !bytes.Equal(oldOutputHash, newOutputHash) {
 				target.SetState(core.Built)
+				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 			} else {
 				target.SetState(core.Unchanged)
+				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
 			}
-			checkLicences(state, target)
-			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 			return true // got from cache
 		}
 		return false
