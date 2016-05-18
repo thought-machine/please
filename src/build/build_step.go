@@ -269,7 +269,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 
 func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegroup bool) (bool, error) {
 	// hash the file
-	newHash, err := pathHash(tmpOutput)
+	newHash, err := pathHash(tmpOutput, false)
 	if err != nil {
 		return true, err
 	}
@@ -283,7 +283,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 		return false, nil
 	}
 	if core.PathExists(realOutput) {
-		oldHash, err := pathHash(realOutput)
+		oldHash, err := pathHash(realOutput, false)
 		if err != nil {
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
@@ -360,7 +360,10 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 func OutputHash(target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
 	for _, output := range target.Outputs() {
-		h2, err := pathHash(path.Join(target.OutDir(), output))
+		// NB. Always force a recalculation of the output hashes here. Memoisation is not
+		//     useful because by definition we are rebuilding a target, and can actively hurt
+		//     in cases where we compare the retrieved cache artifacts with what was there before.
+		h2, err := pathHash(path.Join(target.OutDir(), output), true)
 		if err != nil {
 			return nil, err
 		}
