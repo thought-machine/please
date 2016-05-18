@@ -120,7 +120,7 @@ func anyDependencyHasChanged(target *core.BuildTarget) bool {
 func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
 	for source := range core.IterSources(graph, target) {
-		result, err := pathHash(source.Src)
+		result, err := pathHash(source.Src, false)
 		if err != nil {
 			return result, err
 		}
@@ -141,14 +141,17 @@ var pathHashMemoizer = map[string][]byte{}
 var pathHashMutex sync.RWMutex // Of course it will be accessed concurrently.
 
 // Calculate the hash of a single path which might be a file or a directory
-// This is the memoized form that only hashes each path once.
-func pathHash(path string) ([]byte, error) {
+// This is the memoized form that only hashes each path once, unless recalc is true in which
+// case it will force a recalculation of the hash.
+func pathHash(path string, recalc bool) ([]byte, error) {
 	path = ensureRelative(path)
-	pathHashMutex.RLock()
-	cached, present := pathHashMemoizer[path]
-	pathHashMutex.RUnlock()
-	if present {
-		return cached, nil
+	if !recalc {
+		pathHashMutex.RLock()
+		cached, present := pathHashMemoizer[path]
+		pathHashMutex.RUnlock()
+		if present {
+			return cached, nil
+		}
 	}
 	result, err := pathHashImpl(path)
 	if err == nil {
@@ -446,7 +449,7 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 	h := sha1.New()
 	h.Write(sh)
 	for source := range core.IterRuntimeFiles(state.Graph, target, true) {
-		result, err := pathHash(source.Src)
+		result, err := pathHash(source.Src, false)
 		if err != nil {
 			return result, err
 		}

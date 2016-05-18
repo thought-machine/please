@@ -1,3 +1,10 @@
+Version 2.3.4
+-------------
+
+    * Incrementality fix for some cases where targets weren't correctly rebuilt
+      if their dependencies had been cached.
+
+
 Version 2.3.3
 -------------
 

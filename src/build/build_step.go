@@ -104,14 +104,15 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 		if _, retrieved := retrieveFromCache(state, target); retrieved {
 			log.Debug("Retrieved artifacts for %s from cache", target.Label)
+			checkLicences(state, target)
 			newOutputHash := calculateAndCheckRuleHash(state, target)
 			if outputHashErr != nil || !bytes.Equal(oldOutputHash, newOutputHash) {
 				target.SetState(core.Built)
+				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 			} else {
 				target.SetState(core.Unchanged)
+				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
 			}
-			checkLicences(state, target)
-			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 			return true // got from cache
 		}
 		return false
@@ -165,7 +166,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
 		return fmt.Errorf("Error moving outputs for target %s: %s", target.Label, err)
-	} else if outputsChanged {
+	}
+	calculateAndCheckRuleHash(state, target)
+	if outputsChanged {
 		target.SetState(core.Built)
 	} else {
 		target.SetState(core.Unchanged)
@@ -261,14 +264,13 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 		}
 		changed = changed || outputChanged
 	}
-	calculateAndCheckRuleHash(state, target)
 	log.Debug("Outputs for %s are unchanged", target.Label)
 	return changed, nil
 }
 
 func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegroup bool) (bool, error) {
 	// hash the file
-	newHash, err := pathHash(tmpOutput)
+	newHash, err := pathHash(tmpOutput, false)
 	if err != nil {
 		return true, err
 	}
@@ -282,7 +284,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 		return false, nil
 	}
 	if core.PathExists(realOutput) {
-		oldHash, err := pathHash(realOutput)
+		oldHash, err := pathHash(realOutput, false)
 		if err != nil {
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
@@ -359,7 +361,10 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 func OutputHash(target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
 	for _, output := range target.Outputs() {
-		h2, err := pathHash(path.Join(target.OutDir(), output))
+		// NB. Always force a recalculation of the output hashes here. Memoisation is not
+		//     useful because by definition we are rebuilding a target, and can actively hurt
+		//     in cases where we compare the retrieved cache artifacts with what was there before.
+		h2, err := pathHash(path.Join(target.OutDir(), output), true)
 		if err != nil {
 			return nil, err
 		}
@@ -444,6 +449,7 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 			changed = changed || c
 		}
 	}
+	calculateAndCheckRuleHash(state, target)
 	if changed {
 		target.SetState(core.Built)
 	} else {
