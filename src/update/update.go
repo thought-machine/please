@@ -36,7 +36,7 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 	} else if config.Please.Version == "" {
 		return // No version specified, auto-update disabled.
 	} else if (!shouldUpdate || !config.Please.SelfUpdate) && !forceUpdate {
-		log.Warning("Update to Please version %s (currently %s) skipped", config.Please.Version, core.PleaseVersion)
+		log.Warning("Update to Please version %s skipped (current version: %s)", config.Please.Version, core.PleaseVersion)
 		return
 	} else if config.Please.Location == "" {
 		log.Warning("Please location not set in config, cannot auto-update.")
