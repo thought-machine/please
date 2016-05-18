@@ -166,7 +166,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
 		return fmt.Errorf("Error moving outputs for target %s: %s", target.Label, err)
-	} else if outputsChanged {
+	}
+	calculateAndCheckRuleHash(state, target)
+	if outputsChanged {
 		target.SetState(core.Built)
 	} else {
 		target.SetState(core.Unchanged)
@@ -262,7 +264,6 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 		}
 		changed = changed || outputChanged
 	}
-	calculateAndCheckRuleHash(state, target)
 	log.Debug("Outputs for %s are unchanged", target.Label)
 	return changed, nil
 }
@@ -448,6 +449,7 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 			changed = changed || c
 		}
 	}
+	calculateAndCheckRuleHash(state, target)
 	if changed {
 		target.SetState(core.Built)
 	} else {
