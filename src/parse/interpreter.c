@@ -15,14 +15,6 @@ SetConfigValueCallback* set_config_value;
 PreBuildCallbackRunner* pre_build_callback_runner;
 PostBuildCallbackRunner* post_build_callback_runner;
 
-void PreBuildFunctionSetter(void* callback, char* bytecode, size_t target) {
-    SetPreBuildFunction((size_t)callback, bytecode, target);
-}
-
-void PostBuildFunctionSetter(void* callback, char* bytecode, size_t target) {
-    SetPostBuildFunction((size_t)callback, bytecode, target);
-}
-
 char* ParseFile(char* filename, char* package_name, size_t package) {
     return (*parse_file)(filename, package_name, package);
 }
