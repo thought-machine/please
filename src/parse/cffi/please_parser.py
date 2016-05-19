@@ -40,7 +40,7 @@ _DEFER_PARSE = '_DEFER_'
 _FFI_DEFER_PARSE = ffi.new('char[]', _DEFER_PARSE)
 
 
-@ffi.callback('ParseFileCallback*')
+@ffi.def_extern('ParseFile')
 def parse_file(c_filename, c_package_name, c_package):
     try:
         filename = ffi.string(c_filename)
@@ -54,7 +54,7 @@ def parse_file(c_filename, c_package_name, c_package):
         return ffi.new('char[]', str(err))
 
 
-@ffi.callback('ParseFileCallback*')
+@ffi.def_extern('ParseCode')
 def parse_code(c_code, c_filename, c_package):
     if c_package != 0:
         global _subinclude_package, _subinclude_package_name, _c_subinclude_package_name
@@ -117,7 +117,7 @@ _BAZEL_KEYWORD_REWRITES = {
 }
 
 
-@ffi.callback('SetConfigValueCallback*')
+@ffi.def_extern('SetConfigValue')
 def set_config_value(c_name, c_value):
     name = ffi.string(c_name)
     value = ffi.string(c_value)
@@ -269,7 +269,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
             _set_container_setting(target, k, v)
 
 
-@ffi.callback('PreBuildCallbackRunner*')
+@ffi.def_extern('PreBuildFunctionRunner')
 def run_pre_build_function(handle, package, name):
     try:
         callback = ffi.from_handle(handle)
@@ -281,7 +281,7 @@ def run_pre_build_function(handle, package, name):
         return ffi.new('char[]', str(err))
 
 
-@ffi.callback('PostBuildCallbackRunner*')
+@ffi.def_extern('PostBuildFunctionRunner')
 def run_post_build_function(handle, package, name, output):
     try:
         callback = ffi.from_handle(handle)
@@ -423,11 +423,6 @@ def RegisterCallbacks(callbacks):
     global _set_pre_build_callback, _set_post_build_callback, _add_dependency, _add_output, _add_licence_post
     global _set_command, _log, _is_valid_target_name
     callbacks = ffi.cast('struct PleaseCallbacks*', callbacks)
-    callbacks.parse_file = parse_file
-    callbacks.parse_code = parse_code
-    callbacks.set_config_value = set_config_value
-    callbacks.pre_build_callback_runner = run_pre_build_function
-    callbacks.post_build_callback_runner = run_post_build_function
     _add_target = ffi.cast('AddTargetCallback*', callbacks.add_target)
     _add_src = ffi.cast('AddStringCallback*', callbacks.add_src)
     _add_data = ffi.cast('AddStringCallback*', callbacks.add_data)

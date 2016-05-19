@@ -5,6 +5,14 @@
 static struct PleaseCallbacks callbacks;
 typedef void RegisterPypyCallbacks(struct PleaseCallbacks*);
 
+// Since we dlsym() the callbacks out of the parser .so, we have variables for them as
+// well as extern definitions which cffi uses. The two must match, of course.
+ParseFileCallback* parse_file;
+ParseFileCallback* parse_code;
+SetConfigValueCallback* set_config_value;
+PreBuildCallbackRunner* pre_build_callback_runner;
+PostBuildCallbackRunner* post_build_callback_runner;
+
 void PreBuildFunctionSetter(void* callback, char* bytecode, size_t target) {
     SetPreBuildFunction((size_t)callback, bytecode, target);
 }
@@ -14,23 +22,23 @@ void PostBuildFunctionSetter(void* callback, char* bytecode, size_t target) {
 }
 
 char* ParseFile(char* filename, char* package_name, size_t package) {
-    return (*callbacks.parse_file)(filename, package_name, package);
+    return (*parse_file)(filename, package_name, package);
 }
 
 char* ParseCode(char* filename, char* package_name, size_t package) {
-    return (*callbacks.parse_code)(filename, package_name, package);
+    return (*parse_code)(filename, package_name, package);
 }
 
 void SetConfigValue(char* name, char* value) {
-    (*callbacks.set_config_value)(name, value);
+    (*set_config_value)(name, value);
 }
 
 char* RunPreBuildFunction(size_t callback, size_t package, char* name) {
-    return (*callbacks.pre_build_callback_runner)((void*)callback, package, name);
+    return (*pre_build_callback_runner)((void*)callback, package, name);
 }
 
 char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* output) {
-    return (*callbacks.post_build_callback_runner)((void*)callback, package, name, output);
+    return (*post_build_callback_runner)((void*)callback, package, name, output);
 }
 
 int InitialiseInterpreter(char* parser_location) {
@@ -73,5 +81,14 @@ int InitialiseInterpreter(char* parser_location) {
     return 2;
   }
   ((RegisterPypyCallbacks*)f)(&callbacks);
+  parse_file = dlsym(parser, "ParseFile");
+  parse_code = dlsym(parser, "ParseCode");
+  set_config_value = dlsym(parser, "SetConfigValue");
+  pre_build_callback_runner = dlsym(parser, "PreBuildFunctionRunner");
+  post_build_callback_runner = dlsym(parser, "PostBuildFunctionRunner");
+  if (!parse_file || !parse_code || !set_config_value ||
+      !pre_build_callback_runner || !post_build_callback_runner) {
+    return 2;
+  }
   return 0;
 }

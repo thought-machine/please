@@ -20,8 +20,6 @@ typedef void (LogCallback)(int64, size_t, char*);
 typedef uint8 (ValidateCallback)(char*);
 
 struct PleaseCallbacks {
-    ParseFileCallback* parse_file;
-    ParseFileCallback* parse_code;
     AddTargetCallback* add_target;
     AddStringCallback* add_src;
     AddStringCallback* add_data;
@@ -49,11 +47,13 @@ struct PleaseCallbacks {
     AddOutputCallback* add_output;
     AddTwoStringsCallback* add_licence_post;
     AddThreeStringsCallback* set_command;
-    SetConfigValueCallback* set_config_value;
-    PreBuildCallbackRunner* pre_build_callback_runner;
-    PostBuildCallbackRunner* post_build_callback_runner;
     LogCallback* log;
     ValidateCallback* is_valid_target_name;
 };
 
 extern void RegisterCallbacks(struct PleaseCallbacks*);
+extern char* ParseFile(char*, char*, size_t);
+extern char* ParseCode(char*, char*, size_t);
+extern void SetConfigValue(char*, char*);
+extern char* PreBuildFunctionRunner(void*, size_t, char*);
+extern char* PostBuildFunctionRunner(void*, size_t, char*, char*);
