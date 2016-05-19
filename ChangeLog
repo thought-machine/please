@@ -1,3 +1,10 @@
+Version 2.3.5
+-------------
+
+    * Better identification of dependency mediation in please_maven
+    * Rewording of version upgrade message.
+
+
 Version 2.3.4
 -------------
 

@@ -176,7 +176,10 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 		// no doubt there's some highly obscure case where Maven aficionados consider this useful.
 		properties[dep.ArtifactId+".version"] = ""
 		properties[strings.Replace(dep.ArtifactId, "-", ".", -1)+".version"] = ""
-		dep.Version = replaceVariables(dep.Version, properties)
+		dep.Version = strings.Trim(replaceVariables(dep.Version, properties), "[]")
+		if strings.Contains(dep.Version, ",") {
+			log.Fatalf("Can't do dependency mediation for %s:%s:%s", dep.GroupId, dep.ArtifactId, dep.Version)
+		}
 		if isExcluded(dep.ArtifactId) {
 			continue
 		}
