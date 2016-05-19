@@ -1,3 +1,15 @@
+Version 3.0.0
+-------------
+
+    * Rewrite of cffi parser interface to use cffi's new embedding
+      (see http://cffi.readthedocs.io/en/latest/embedding.html).
+      This means that we can use cpython or pypy as engines, and build both as separate
+      .so's which we attempt to dlopen() at runtime. The advantage of all this is that
+      it becomes possible to run plz with CPython + cffi, which is quite a bit more
+      straightforward to get installed in the way we need on Linux at present.
+      PyPy should continue to work for anyone who had it working already though.
+
+
 Version 2.3.5
 -------------
 
