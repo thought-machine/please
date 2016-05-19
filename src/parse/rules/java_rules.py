@@ -375,7 +375,7 @@ def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
     ])
     src_url = bin_url.replace('.jar', '-sources.jar')  # is this always predictable?
     outs = [name + '.jar']
-    cmd = 'echo "Fetching %s..." && curl -f %s -o %s' % (bin_url, bin_url, outs[0])
+    cmd = 'curl -fsSL %s -o %s' % (bin_url, outs[0])
     if exclude_paths:
         cmd += ' && zip -d %s %s' % (outs[0], ' '.join(exclude_paths))
     if sources:
