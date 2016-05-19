@@ -28,6 +28,7 @@ go get github.com/Workiva/go-datastructures/queue
 INTERPRETERS="$(interpreter pypy)$(interpreter python2)$(interpreter python3)"
 if [ -z "$INTERPRETERS" ]; then
     echo "No known Python interpreters found, can't build parser engine"
+    exit 1
 fi
 
 # Clean out old artifacts.
@@ -43,8 +44,10 @@ bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/mi
 echo "Building Please..."
 go run src/please.go --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/build.log --log_file_level 4
 # Use it to build the rest of the tools that come with it.
+# NB. We can't do the tarballs here because they depend on all the interpreters, which some
+#     users might not have installed.
 echo "Building the tools..."
-plz-out/bin/src/please --plain_output build //src:please //:all_tools //package:tarballs --log_file plz-out/log/build.log --log_file_level 4
+plz-out/bin/src/please --plain_output build //src:please //:all_tools --log_file plz-out/log/build.log --log_file_level 4
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
