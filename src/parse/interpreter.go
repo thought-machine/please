@@ -151,8 +151,8 @@ func initialiseInterpreterFrom(executableDir, engine string) bool {
 		// Hack to help bootstrapping: executable is in /tmp/go-build<whatever>, but parser is in repo dir...
 		if strings.HasPrefix(executableDir, "/tmp/go-build") {
 			if wd, err := os.Getwd(); err == nil && !strings.HasPrefix(wd, "/tmp/go-build") {
-				log.Notice("In Go build dir, assuming bootstrap and looking for another engine...")
-				return initialiseInterpreterFrom(path.Join(wd, "src/parse/cffi"), "python")
+				log.Notice("In Go build dir, assuming bootstrap and looking elsewhere...")
+				return initialiseInterpreterFrom(path.Join(wd, "src/parse/cffi"), engine)
 			}
 		}
 		return false
