@@ -4,7 +4,10 @@ set -eu
 
 function interpreter {
     if hash $1 2>/dev/null ; then
-	echo " //src:please_parser_$1"
+	    echo " //src:please_parser_$1"
+    else
+        >&2 echo "$1 not found; won't build parser engine for it."
+        >&2 echo "You won't be able to build Please packages unless all parsers are present."
     fi
 }
 
