@@ -41,7 +41,13 @@ int InitialiseInterpreter(char* parser_location) {
     return 1;
   }
   RegisterPypyCallback* reg = dlsym(parser, "RegisterCallback");
-  if (reg == NULL) {
+  parse_file = dlsym(parser, "ParseFile");
+  parse_code = dlsym(parser, "ParseCode");
+  set_config_value = dlsym(parser, "SetConfigValue");
+  pre_build_callback_runner = dlsym(parser, "PreBuildFunctionRunner");
+  post_build_callback_runner = dlsym(parser, "PostBuildFunctionRunner");
+  if (!reg || !parse_file || !parse_code || !set_config_value ||
+      !pre_build_callback_runner || !post_build_callback_runner) {
     return 2;
   }
   // TODO(pebers): it would be nicer if we could get rid of the explicit types here; something
@@ -76,15 +82,5 @@ int InitialiseInterpreter(char* parser_location) {
   reg("_set_command", "AddThreeStringsCallback*", SetCommand);
   reg("_log", "LogCallback*", Log);
   reg("_is_valid_target_name", "ValidateCallback*", IsValidTargetName);
-
-  parse_file = dlsym(parser, "ParseFile");
-  parse_code = dlsym(parser, "ParseCode");
-  set_config_value = dlsym(parser, "SetConfigValue");
-  pre_build_callback_runner = dlsym(parser, "PreBuildFunctionRunner");
-  post_build_callback_runner = dlsym(parser, "PostBuildFunctionRunner");
-  if (!parse_file || !parse_code || !set_config_value ||
-      !pre_build_callback_runner || !post_build_callback_runner) {
-    return 2;
-  }
   return 0;
 }
