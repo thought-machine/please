@@ -4,7 +4,6 @@ cgo_library(
     name = 'parse',
     srcs = glob(['*.go', 'interpreter.*'], excludes=['*_test.go', 'builtin_rules.go']) + [':builtin_rules'],
     deps = [
-        ':defs_hdr',
         ':builtin_rules',
         '//src/core',
         '//third_party/go:logging',
@@ -13,12 +12,6 @@ cgo_library(
         '//third_party/go:osext',
     ],
     visibility = ['PUBLIC'],
-)
-
-filegroup(
-    name = 'defs_hdr',
-    srcs = ['defs.h'],
-    visibility = ['//src/parse/cffi:all'],
 )
 
 go_bindata(

@@ -37,7 +37,7 @@ fi
 # Clean out old artifacts.
 rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parser.py
 # Generate the cffi compiled source
-(cd src/parse/cffi && python2 cffi_compiler.py ../defs.h please_parser.py)
+(cd src/parse/cffi && python2 cffi_compiler.py defs.h please_parser.py)
 # Invoke this tool to embed the Python scripts.
 bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
 # Similarly for the wrapper script.

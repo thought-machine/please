@@ -4,7 +4,7 @@ for interpreter in ENGINES:
     extension = 'dylib' if CONFIG.OS == 'darwin' else 'so'
     genrule(
         name = 'please_parser_' + interpreter,
-        srcs = ['cffi_compiler.py', '//src/parse:defs_hdr', 'please_parser.py'],
+        srcs = ['cffi_compiler.py', 'defs.h', 'please_parser.py'],
         outs = ['libplease_parser_%s.%s' % (interpreter, extension)],
         cmd = interpreter + ' $SRCS --verbose',
         visibility = ['PUBLIC'],
