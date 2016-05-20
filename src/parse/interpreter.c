@@ -53,34 +53,35 @@ int InitialiseInterpreter(char* parser_location) {
   // TODO(pebers): it would be nicer if we could get rid of the explicit types here; something
   //               like reg("_add_target", typeof(AddTarget), AddTarget) would be sweet.
   //               As far as I know this is only possible in C++ using typeid though :(
-  reg("_add_target", "AddTargetCallback*", AddTarget);
-  reg("_add_src", "AddStringCallback*", AddSource);
-  reg("_add_data", "AddStringCallback*", AddData);
-  reg("_add_dep", "AddStringCallback*", AddDep);
-  reg("_add_exported_dep", "AddStringCallback*", AddExportedDep);
-  reg("_add_tool", "AddStringCallback*", AddTool);
-  reg("_add_out", "AddStringCallback*", AddOutput);
-  reg("_add_vis", "AddStringCallback*", AddVis);
-  reg("_add_label", "AddStringCallback*", AddLabel);
-  reg("_add_hash", "AddStringCallback*", AddHash);
-  reg("_add_licence", "AddStringCallback*", AddLicence);
-  reg("_add_test_output", "AddStringCallback*", AddTestOutput);
-  reg("_add_require", "AddStringCallback*", AddRequire);
-  reg("_add_provide", "AddTwoStringsCallback*", AddProvide);
-  reg("_add_named_src", "AddTwoStringsCallback*", AddNamedSource);
-  reg("_add_command", "AddTwoStringsCallback*", AddCommand);
-  reg("_set_container_setting", "AddTwoStringsCallback*", SetContainerSetting);
-  reg("_glob", "GlobCallback*", Glob);
-  reg("_get_include_file", "GetIncludeFileCallback*", GetIncludeFile);
-  reg("_get_subinclude_file", "GetIncludeFileCallback*", GetSubincludeFile);
-  reg("_get_labels", "GetLabelsCallback*", GetLabels);
-  reg("_set_pre_build_callback", "SetBuildFunctionCallback*", SetPreBuildFunction);
-  reg("_set_post_build_callback", "SetBuildFunctionCallback*", SetPostBuildFunction);
-  reg("_add_dependency", "AddDependencyCallback*", AddDependency);
-  reg("_add_output", "AddOutputCallback*", AddOutputPost);
-  reg("_add_licence_post", "AddTwoStringsCallback*", AddLicencePost);
-  reg("_set_command", "AddThreeStringsCallback*", SetCommand);
-  reg("_log", "LogCallback*", Log);
-  reg("_is_valid_target_name", "ValidateCallback*", IsValidTargetName);
+  reg("_add_target", "size_t (*)(size_t, char*, char*, char*, uint8, uint8, uint8, uint8, "
+      "uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*)", AddTarget);
+  reg("_add_src", "char* (*)(size_t, char*)", AddSource);
+  reg("_add_data", "char* (*)(size_t, char*)", AddData);
+  reg("_add_dep", "char* (*)(size_t, char*)", AddDep);
+  reg("_add_exported_dep", "char* (*)(size_t, char*)", AddExportedDep);
+  reg("_add_tool", "char* (*)(size_t, char*)", AddTool);
+  reg("_add_out", "char* (*)(size_t, char*)", AddOutput);
+  reg("_add_vis", "char* (*)(size_t, char*)", AddVis);
+  reg("_add_label", "char* (*)(size_t, char*)", AddLabel);
+  reg("_add_hash", "char* (*)(size_t, char*)", AddHash);
+  reg("_add_licence", "char* (*)(size_t, char*)", AddLicence);
+  reg("_add_test_output", "char* (*)(size_t, char*)", AddTestOutput);
+  reg("_add_require", "char* (*)(size_t, char*)", AddRequire);
+  reg("_add_provide", "char* (*)(size_t, char*, char*)", AddProvide);
+  reg("_add_named_src", "char* (*)(size_t, char*, char*)", AddNamedSource);
+  reg("_add_command", "char* (*)(size_t, char*, char*)", AddCommand);
+  reg("_set_container_setting", "char* (*)(size_t, char*, char*)", SetContainerSetting);
+  reg("_glob", "char** (*)(char*, char**, long long, char**, long long, uint8)", Glob);
+  reg("_get_include_file", "char* (*)(size_t, char*)", GetIncludeFile);
+  reg("_get_subinclude_file", "char* (*)(size_t, char*)", GetSubincludeFile);
+  reg("_get_labels", "char** (*)(size_t, char*, char*)", GetLabels);
+  reg("_set_pre_build_callback", "char** (*)(void*, char*, size_t)", SetPreBuildFunction);
+  reg("_set_post_build_callback", "char** (*)(void*, char*, size_t)", SetPostBuildFunction);
+  reg("_add_dependency", "char* (*)(size_t, char*, char*, uint8)", AddDependency);
+  reg("_add_output", "char* (*)(size_t, char*, char*)", AddOutputPost);
+  reg("_add_licence_post", "char* (*)(size_t, char*, char*)", AddLicencePost);
+  reg("_set_command", "char* (*)(size_t, char*, char*, char*)", SetCommand);
+  reg("_log", "void (*)(int64, size_t, char*)", Log);
+  reg("_is_valid_target_name", "uint8 (*)(char*)", IsValidTargetName);
   return 0;
 }
