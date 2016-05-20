@@ -92,6 +92,7 @@ func TestToolReplacement(t *testing.T) {
 
 func TestDirReplacement(t *testing.T) {
 	target2 := makeTarget("//path/to:target2", "blah", nil)
+	target2.AddOutput("blah2.txt")
 	target1 := makeTarget("//path/to:target1", "$(dir //path/to:target2)", target2)
 
 	expected := "path/to"
@@ -103,6 +104,7 @@ func TestDirReplacement(t *testing.T) {
 
 func TestToolDirReplacement(t *testing.T) {
 	target2 := makeTarget("//path/to:target2", "blah", nil)
+	target2.AddOutput("blah2.txt")
 	target1 := makeTarget("//path/to:target1", "$(dir //path/to:target2)", target2)
 	target1.Tools = append(target1.Tools, target2.Label)
 
