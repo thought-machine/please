@@ -1,5 +1,4 @@
-// Interface code between Python & Go. C is a kind of intermediate translation layer.
-// This is used by both cgo and cffi to generate their own interfaces.
+// Interface code between C and Python; this is used by cffi to generate its interface.
 typedef unsigned char uint8;
 typedef long long int64;
 extern void RegisterCallback(char*, char*, void*);

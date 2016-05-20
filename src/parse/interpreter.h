@@ -1,10 +1,12 @@
+// Interface code between Go and C.
+// C is essentially just an intermediate translation layer.
+
 #ifndef _SRC_PARSE_INTERPRETER_H
 #define _SRC_PARSE_INTERPRETER_H
 
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "defs.h"
 
 // AFAICT there isn't a way to call the function pointers directly.
 char* ParseFile(char* filename, char* package_name, size_t package);
