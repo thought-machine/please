@@ -11,23 +11,23 @@ char* (*pre_build_callback_runner)(void*, size_t, char*);
 char* (*post_build_callback_runner)(void*, size_t, char*, char*);
 
 char* ParseFile(char* filename, char* package_name, size_t package) {
-    return (*parse_file)(filename, package_name, package);
+  return (*parse_file)(filename, package_name, package);
 }
 
 char* ParseCode(char* filename, char* package_name, size_t package) {
-    return (*parse_code)(filename, package_name, package);
+  return (*parse_code)(filename, package_name, package);
 }
 
 void SetConfigValue(char* name, char* value) {
-    (*set_config_value)(name, value);
+  (*set_config_value)(name, value);
 }
 
 char* RunPreBuildFunction(size_t callback, size_t package, char* name) {
-    return (*pre_build_callback_runner)((void*)callback, package, name);
+  return (*pre_build_callback_runner)((void*)callback, package, name);
 }
 
 char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* output) {
-    return (*post_build_callback_runner)((void*)callback, package, name, output);
+  return (*post_build_callback_runner)((void*)callback, package, name, output);
 }
 
 int InitialiseInterpreter(char* parser_location) {

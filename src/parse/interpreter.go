@@ -18,7 +18,6 @@ package parse
 import (
 	"crypto/sha1"
 	"fmt"
-	"os"
 	"path"
 	"runtime"
 	"sort"
@@ -137,24 +136,19 @@ func pythonBool(b bool) string {
 }
 
 func initialiseInterpreter(engine string) bool {
+	if strings.HasPrefix(engine, "/") {
+		return initialiseInterpreterFrom(engine)
+	}
 	executableDir, err := osext.ExecutableFolder()
 	if err != nil {
 		log.Error("Can't determine current executable: %s", err)
 		return false
 	}
-	return initialiseInterpreterFrom(executableDir, engine)
+	return initialiseInterpreterFrom(path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())))
 }
 
-func initialiseInterpreterFrom(executableDir, engine string) bool {
-	enginePath := path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension()))
+func initialiseInterpreterFrom(enginePath string) bool {
 	if !core.PathExists(enginePath) {
-		// Hack to help bootstrapping: executable is in /tmp/go-build<whatever>, but parser is in repo dir...
-		if strings.HasPrefix(executableDir, "/tmp/go-build") {
-			if wd, err := os.Getwd(); err == nil && !strings.HasPrefix(wd, "/tmp/go-build") {
-				log.Notice("In Go build dir, assuming bootstrap and looking elsewhere...")
-				return initialiseInterpreterFrom(path.Join(wd, "src/parse/cffi"), engine)
-			}
-		}
 		return false
 	}
 	log.Debug("Attempting to load engine from %s", enginePath)
