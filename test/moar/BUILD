@@ -28,3 +28,26 @@ python_library(
         ':test_require_fg',
     ],
 )
+
+# Test that require/provide updates $SRCS correctly.
+# See issue #87 for a bit more detail.
+filegroup(
+    name = 'provider',
+    provides = {'wibble': ':provided'},
+)
+
+genrule(
+    name = 'provided',
+    outs = ['provided.txt'],
+    cmd = 'echo "hello" > $OUT',
+)
+
+gentest(
+    name = 'require_test',
+    srcs = [':provider'],
+    requires = ['wibble'],
+    outs = ['require_test.txt'],
+    cmd = 'cat $SRCS > $OUT',
+    test_cmd = '[ "`cat $TEST`" == "hello" ]',
+    no_test_output = True,
+)
