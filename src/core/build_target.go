@@ -242,8 +242,16 @@ func (target *BuildTarget) TestDir() string {
 func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
 	ret := make([]string, 0, len(target.Sources))
 	for _, source := range target.AllSources() {
-		for _, file := range source.Paths(graph) {
-			ret = append(ret, file)
+		if label := source.Label(); label != nil {
+			for _, providedLabel := range graph.TargetOrDie(*label).ProvideFor(target) {
+				for _, file := range providedLabel.Paths(graph) {
+					ret = append(ret, file)
+				}
+			}
+		} else {
+			for _, file := range source.Paths(graph) {
+				ret = append(ret, file)
+			}
 		}
 	}
 	return ret
