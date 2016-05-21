@@ -45,7 +45,7 @@ bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/mi
 
 # Now invoke Go to run Please to build itself.
 echo "Building Please..."
-go run src/please.go --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/build.log --log_file_level 4
+go run src/please.go --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/build.log --log_file_level 4 --engine python2
 # Use it to build the rest of the tools that come with it.
 # NB. We can't do the tarballs here because they depend on all the interpreters, which some
 #     users might not have installed.
