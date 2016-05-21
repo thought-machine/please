@@ -4,16 +4,11 @@
 
 // Since we dlsym() the callbacks out of the parser .so, we have variables for them as
 // well as extern definitions which cffi uses. The two must match, of course.
-typedef void (RegisterPypyCallback)(char*, char*, void*);
-typedef char* (ParseFileCallback)(char*, char*, size_t);
-typedef void (SetConfigValueCallback)(char*, char*);
-typedef char* (PreBuildCallbackRunner)(void*, size_t, char*);
-typedef char* (PostBuildCallbackRunner)(void*, size_t, char*, char*);
-ParseFileCallback* parse_file;
-ParseFileCallback* parse_code;
-SetConfigValueCallback* set_config_value;
-PreBuildCallbackRunner* pre_build_callback_runner;
-PostBuildCallbackRunner* post_build_callback_runner;
+char* (*parse_file)(char*, char*, size_t);
+char* (*parse_code)(char*, char*, size_t);
+void (*set_config_value)(char*, char*);
+char* (*pre_build_callback_runner)(void*, size_t, char*);
+char* (*post_build_callback_runner)(void*, size_t, char*, char*);
 
 char* ParseFile(char* filename, char* package_name, size_t package) {
     return (*parse_file)(filename, package_name, package);
@@ -40,7 +35,7 @@ int InitialiseInterpreter(char* parser_location) {
   if (parser == NULL) {
     return 1;
   }
-  RegisterPypyCallback* reg = dlsym(parser, "RegisterCallback");
+  void (*reg)(char*, char*, void*) = dlsym(parser, "RegisterCallback");
   parse_file = dlsym(parser, "ParseFile");
   parse_code = dlsym(parser, "ParseCode");
   set_config_value = dlsym(parser, "SetConfigValue");
