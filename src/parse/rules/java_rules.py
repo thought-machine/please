@@ -221,7 +221,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
       exclude (list): Dependencies to ignore when fetching this one.
       hashes (dict): Map of Maven id -> rule hash for each rule produced.
       combine (bool): If True, we combine all downloaded .jar files into one uberjar.
-      hash (string): Hash of final produced .jar. For brevity, implies combine=True.
+      hash (string|list): Hash of final produced .jar. For brevity, implies combine=True.
       deps (list): Labels of dependencies, as usual.
       visibility (list): Visibility label.
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
@@ -308,7 +308,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
         build_rule(
             name=name,
-            hashes=[hash],
+            hashes=hash if isinstance(hash, list) else [hash] if hash else None,
             output_is_complete=True,
             needs_transitive_deps=True,
             building_description="Creating jar...",

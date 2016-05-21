@@ -1637,7 +1637,9 @@ but it still has issues with some Maven packages.</p>
 	<td>hash</td>
 	<td>None</td>
 	<td>string</td>
-	<td>Hash of final produced .jar. For brevity, implies combine=True.</td>
+	<td>Hash of final produced .jar. For brevity, implies combine=True.<br/>
+	  Can optionally be a list for cases where there are jars with multiple
+	  possible outputs, e.g. architecture-specific.</td>
       </tr>
 
       <tr>
