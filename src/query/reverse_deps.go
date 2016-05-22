@@ -1,7 +1,11 @@
 package query
 
-import "core"
-import "fmt"
+import (
+	"fmt"
+	"sort"
+
+	"core"
+)
 
 // ReverseDeps For each input label, finds all targets which depend upon it.
 func ReverseDeps(graph *core.BuildGraph, labels []core.BuildLabel) {
@@ -10,11 +14,20 @@ func ReverseDeps(graph *core.BuildGraph, labels []core.BuildLabel) {
 
 	for _, label := range labels {
 		for _, target := range graph.ReverseDependencies(graph.TargetOrDie(label)) {
-			uniqueTargets[target.Label] = struct {}{}
+			if parent := target.Parent(graph); parent != nil {
+				uniqueTargets[parent.Label] = struct{}{}
+			} else {
+				uniqueTargets[target.Label] = struct{}{}
+			}
 		}
 	}
 
+	targets := make(core.BuildLabels, 0, len(uniqueTargets))
 	for target := range uniqueTargets {
+		targets = append(targets, target)
+	}
+	sort.Sort(targets)
+	for _, target := range targets {
 		fmt.Printf("%s\n", target)
 	}
 }
