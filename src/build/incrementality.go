@@ -59,7 +59,12 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 	}
 	oldRuleHash, oldConfigHash, oldSourceHash := readRuleHashFile(ruleHashFileName(target), postBuild)
 	if !bytes.Equal(oldConfigHash, state.Hashes.Config) {
-		log.Debug("Need to rebuild %s, config has changed (was %s, need %s)", target.Label, b64(oldConfigHash), b64(state.Hashes.Config))
+		if len(oldConfigHash) == 0 {
+			// Small nicety to make it a bit clearer what's going on.
+			log.Debug("Need to build %s, outputs aren't there", target.Label)
+		} else {
+			log.Debug("Need to rebuild %s, config has changed (was %s, need %s)", target.Label, b64(oldConfigHash), b64(state.Hashes.Config))
+		}
 		return true
 	}
 	newRuleHash := RuleHash(target, false, postBuild)
