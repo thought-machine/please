@@ -221,7 +221,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
       exclude (list): Dependencies to ignore when fetching this one.
       hashes (dict): Map of Maven id -> rule hash for each rule produced.
       combine (bool): If True, we combine all downloaded .jar files into one uberjar.
-      hash (string): Hash of final produced .jar. For brevity, implies combine=True.
+      hash (string|list): Hash of final produced .jar. For brevity, implies combine=True.
       deps (list): Labels of dependencies, as usual.
       visibility (list): Visibility label.
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
@@ -308,7 +308,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
         build_rule(
             name=name,
-            hashes=[hash],
+            hashes=hash if isinstance(hash, list) else [hash] if hash else None,
             output_is_complete=True,
             needs_transitive_deps=True,
             building_description="Creating jar...",
@@ -340,9 +340,9 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
 
 
-def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
+def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, hashes=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
-              exclude_paths=None):
+              exclude_paths=None, native=False):
     """Fetches a single Java dependency from Maven.
 
     Args:
@@ -350,13 +350,17 @@ def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
       id (str): Maven id of the artifact (eg. org.junit:junit:4.1.0)
       repository (str): Maven repo to fetch deps from.
       hash (str): Hash for produced rule.
+      hashes (list): List of hashes for produced rule.
       deps (list): Labels of dependencies, as usual.
       visibility (list): Visibility label.
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
       sources (bool): True to download source jars as well.
       licences (list): Licences this package is subject to.
       exclude_paths (list): Paths to remove from the downloaded .jar.
+      native (bool): Attempt to download a native jar (i.e. add "-linux-x86_64" etc to the URL).
     """
+    if hash and hashes:
+        raise ParseError('You can pass only one of hash or hashes to maven_jar')
     _maven_packages[get_base_path()][name] = id
     # TODO(pebers): Handle exclusions, packages with no source available and packages with no version.
     try:
@@ -374,6 +378,11 @@ def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
         filename or '%s-%s.jar' % (artifact, version),
     ])
     src_url = bin_url.replace('.jar', '-sources.jar')  # is this always predictable?
+    if native:
+        # Maven has slightly different names for these.
+        os = 'osx' if CONFIG.OS == 'darwin' else CONFIG.OS
+        arch = 'x86_64' if CONFIG.ARCH == 'amd64' else CONFIG.ARCH
+        bin_url = bin_url.replace('.jar', '-%s-%s.jar' % (os, arch))
     outs = [name + '.jar']
     cmd = 'curl -fsSL %s -o %s' % (bin_url, outs[0])
     if exclude_paths:
@@ -385,7 +394,7 @@ def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, deps=None,
         name=name,
         outs=outs,
         cmd=cmd,
-        hashes=[hash] if hash else None,
+        hashes=hashes if hashes else [hash] if hash else None,
         licences=licences,
         exported_deps=deps,  # easiest to assume these are always exported.
         visibility=visibility,
