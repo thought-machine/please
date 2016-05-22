@@ -113,7 +113,7 @@ func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, c
 
 // isOwnedBy returns true if the given file is owned by any of the given packages.
 func isOwnedBy(file string, coveragePackages map[string]bool) bool {
-	for file != "." {
+	for file != "." && file != "/" {
 		file = path.Dir(file)
 		if coveragePackages[file] {
 			return true
