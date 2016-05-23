@@ -14,7 +14,7 @@ a target which has only had small changes.
 """
 
 # Commands used in python_library.
-_ZIP_CMD = 'zip -r1 $OUT .'
+_ZIP_CMD = '%s -d -o ${OUTS} -i .'
 _COMPILE_CMD = 'find . -name "*.py" | xargs %s -O -m py_compile'
 _RM_CMD = 'find . -name "*.py" -delete'
 _STRIP_CMD = ' && '.join([_COMPILE_CMD, _RM_CMD, _ZIP_CMD])
@@ -53,19 +53,21 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
     if not zip_safe:
         labels.append('py:zip-unsafe')
     if all_srcs:
+        jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
         # Pre-zip the files for later collection by python_binary.
         build_rule(
             name='_%s#zip' % name,
             srcs=all_srcs,
             outs=['.%s.pex.zip' % name],
             cmd={
-                'opt': _ZIP_CMD,
-                'stripped': _STRIP_CMD % interpreter,
+                'opt': _ZIP_CMD % jarcat_tool,
+                'stripped': _STRIP_CMD % (interpreter, jarcat_tool),
             },
             building_description='Compressing...',
             requires=['py'],
             test_only=test_only,
             output_is_complete=True,
+            tools=tools,
         )
         deps.append(':_%s#zip' % name)
 
@@ -106,16 +108,18 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
     """
     main_mod = main[:-3] if main.endswith('.py') else main
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
+    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
     deps = deps or []
     cmd = ' '.join([
-        # Ensure they all have an __init__.py
-        'find `echo $PKG | cut -d "/" -f 1` -type d | xargs -I {} touch {}/__init__.py && ',
         pex_tool,
         '--src_dir=${TMP_DIR}',
-        '--out=${OUT}',
+        '--out=temp.pex',
         '--entry_point=${PKG//\//.}.' + main_mod,
         '--interpreter=' + interpreter,
         '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
+        '--zip_safe',
+        # Run it through jarcat to normalise the timestamps.
+        ' && %s -i temp.pex -o $OUT --suffix=.pex --preamble="`head -n 1 temp.pex`"' % jarcat_tool,
     ])
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
@@ -136,7 +140,6 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         tools=tools,
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
-    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
     build_rule(
         name=name,
         deps=[':_%s#pex' % name, ':_%s#lib' % name],
@@ -193,17 +196,19 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     deps = deps or []
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
+    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
     cmd=' '.join([
-        # Ensure they all have an __init__.py
-        'find `echo $PKG | cut -d "/" -f 1` -type d | xargs -I {} touch {}/__init__.py && ',
         pex_tool,
         '--src_dir=${TMP_DIR}',
-        '--out=${OUTS}',
+        '--out=temp.pex',
         '--entry_point=test_main',
         '--test_package=${PKG//\//.}',
         '--test_srcs=${SRCS_SRCS// /,}',
         '--interpreter=' + interpreter,
         '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
+        '--zip_safe',
+        # Run it through jarcat to normalise the timestamps.
+        ' && %s -i temp.pex -o $OUT --suffix=.pex --preamble="`head -n 1 temp.pex`"' % jarcat_tool,
     ])
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
@@ -233,7 +238,6 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         tools=tools,
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
-    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
     build_rule(
         name=name,
         deps=[':_%s#pex' % name],
@@ -344,12 +348,12 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
 def _handle_zip_safe(cmd, zip_safe):
     """Handles the zip safe flag. Returns a tuple of (pre-build function, new command)."""
     if zip_safe is None:
-        return lambda name: (set_command(name, cmd + ' --nozip_safe')
+        return lambda name: (set_command(name, cmd.replace('--zip_safe', ' --nozip_safe'))
                              if has_label(name, 'py:zip-unsafe') else None), cmd
     elif zip_safe:
         return None, cmd
     else:
-        return None, cmd + ' --nozip_safe'
+        return None, cmd.replace('--zip_safe', ' --nozip_safe')
 
 
 def _add_licences(name, output):

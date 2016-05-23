@@ -56,9 +56,11 @@ func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInterna
 				return filepath.Walk(resolved, walkFunc)
 			}
 		}
-		if path != out && !info.IsDir() {
+		if path == out {
+			return nil
+		} else if !info.IsDir() {
 			if excludeSuffix == "" || !strings.HasSuffix(path, excludeSuffix) {
-				if strings.HasSuffix(path, suffix) {
+				if suffix != "" && strings.HasSuffix(path, suffix) {
 					log.Debug("Adding zip file %s", path)
 					if err := java.AddZipFile(w, path, excludeInternalPrefixes, []string{}, strict); err != nil {
 						return fmt.Errorf("Error adding %s to zipfile: %s", path, err)
@@ -71,6 +73,14 @@ func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInterna
 						return err
 					}
 				}
+			}
+		} else if suffix == "" && path != "." { // Only add directory entries in "dumb" mode.
+			fh := zip.FileHeader{
+				Name:   path + "/", // Must have trailing slash to tell it it's a directory.
+				Method: zip.Store,
+			}
+			if _, err := w.CreateHeader(&fh); err != nil {
+				return err
 			}
 		}
 		return nil
@@ -98,13 +108,19 @@ var opts struct {
 	Preamble              string `short:"p" long:"preamble" description:"Leading string to prepend to written zip file"`
 	MainClass             string `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
 	Verbosity             int    `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
-	Strict                bool   `long:"strict" default:"false" description:"Disallow duplicate files"`
-	IncludeOther          bool   `long:"include_other" default:"false" description:"Add files that are not jar files as well"`
-	AddInitPy             bool   `long:"add_init_py" default:"false" description:"Adds __init__.py files to all directories"`
+	Strict                bool   `long:"strict" description:"Disallow duplicate files"`
+	IncludeOther          bool   `long:"include_other" description:"Add files that are not jar files as well"`
+	AddInitPy             bool   `long:"add_init_py" description:"Adds __init__.py files to all directories"`
+	DumbMode              bool   `short:"d" long:"dumb" description:"Dumb mode, an alias for --suffix='' --exclude_suffix='' --include_other"`
 }
 
 func main() {
 	output.ParseFlagsOrDie("Jarcat", &opts)
+	if opts.DumbMode {
+		opts.Suffix = ""
+		opts.ExcludeSuffix = ""
+		opts.IncludeOther = true
+	}
 	output.InitLogging(opts.Verbosity, "", 0)
 	if err := combine(opts.Out, opts.In, opts.Suffix, opts.ExcludeSuffix, opts.Preamble, opts.MainClass, opts.ExcludeInternalPrefix, opts.Strict, opts.IncludeOther, opts.AddInitPy); err != nil {
 		log.Fatalf("Error combining zip files: %s\n", err)

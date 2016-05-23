@@ -13,7 +13,6 @@ func TestPlzConfigWorking(t *testing.T) {
 	assert.Equal(t, "javac", config.Java.JavacTool)
 	assert.Equal(t, "8", config.Java.SourceLevel)
 	assert.Equal(t, "7", config.Java.TargetLevel)
-	assert.Equal(t, "jar", config.Java.JarTool)
 }
 
 func TestPlzConfigFailing(t *testing.T) {

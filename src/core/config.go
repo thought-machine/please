@@ -70,6 +70,10 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
 
+	// TODO(pebers): Remove in please v4.0+
+	if config.Java.JarTool != "" {
+		log.Warning("jartool config property is deprecated and will go away soon")
+	}
 	return config, nil
 }
 
@@ -115,7 +119,6 @@ func DefaultConfiguration() *Configuration {
 	config.Python.DefaultInterpreter = "/usr/bin/python"
 	config.Python.UsePyPI = true
 	config.Java.JavacTool = "javac"
-	config.Java.JarTool = "jar"
 	config.Java.DefaultTestPackage = ""
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"

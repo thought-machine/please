@@ -153,7 +153,7 @@ def main(args):
         pex_builder._prepare_bootstrap = lambda: None
 
         # Generate the PEX file.
-        pex_builder.build(args.out)
+        pex_builder.build(args.out, bytecode_compile=False)
 
     # Always try cleaning up the scratch dir, ignoring failures.
     finally:

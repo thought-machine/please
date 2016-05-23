@@ -90,6 +90,9 @@ outer:
 		if _, err := r2.Seek(start, 0); err != nil {
 			return err
 		}
+		// Make these deterministic.
+		f.FileHeader.ModifiedDate = 0
+		f.FileHeader.ModifiedTime = 0
 		if err := addFile(w, &f.FileHeader, r2, f.CRC32); err != nil {
 			return err
 		}
@@ -99,7 +102,6 @@ outer:
 
 // AddInitPyFiles adds an __init__.py file to every directory in the zip file that doesn't already have one.
 func AddInitPyFiles(w *zip.Writer) error {
-	done := map[string]bool{}
 	m := files[w]
 	for p := range m {
 		d := filepath.Dir(p)
@@ -107,7 +109,7 @@ func AddInitPyFiles(w *zip.Writer) error {
 			continue // Don't need to add an __init__.py here.
 		}
 		initPyPath := path.Join(d, "__init__.py")
-		if _, present := m[initPyPath]; !present && !done[initPyPath] {
+		if _, present := m[initPyPath]; !present {
 			// If we already have a pyc / pyo we don't need the __init__.py as well.
 			if _, present := m[initPyPath+"c"]; present {
 				continue
@@ -116,7 +118,7 @@ func AddInitPyFiles(w *zip.Writer) error {
 			}
 			// Don't write one at the root, it's not necessary.
 			if initPyPath != "__init__.py" {
-				done[initPyPath] = true
+				m[initPyPath] = fileRecord{}
 				if err := WriteFile(w, initPyPath, []byte{}); err != nil {
 					return err
 				}

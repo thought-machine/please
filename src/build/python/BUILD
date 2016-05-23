@@ -2,7 +2,6 @@ python_binary(
     name = 'please_pex',
     main = 'pex.py',
     deps = [
-        ':bootstrap_pexer',
         ':main_files',
         '//third_party/python:pex',
         '//third_party/python:pkg_resources',
@@ -23,17 +22,11 @@ python_library(
 python_test(
     name = 'pex_test',
     srcs = ['pex_test.py'],
-    deps = [
-        ':bootstrap_pexer'
-    ]
 )
 
 python_test(
     name = 'custom_interpreter_test',
     srcs = ['custom_interpreter_test.py'],
-    deps = [
-        ':bootstrap_pexer'
-    ],
     labels = ['manual'],
     interpreter = '/usr/bin/pypy'
 )
@@ -65,7 +58,6 @@ python_test(
     name = 'pex_import_test',
     srcs = ['pex_import_test.py'],
     deps = [
-        ':bootstrap_pexer',
         '//third_party/python:dateutil',
         '//third_party/python:requests',
     ],

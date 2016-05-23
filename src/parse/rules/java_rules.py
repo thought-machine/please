@@ -39,6 +39,7 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
     """
     all_srcs = (srcs or []) + (resources or [])
     exported_deps = exported_deps or exports
+    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
     if srcs:
         # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
         # it doesn't mean anything to us so we must filter it out.
@@ -62,18 +63,20 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
                 ),
                 'mv ${PKG}/%s/* _tmp' % resources_root if resources_root else 'true',
                 'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g"  > _tmp/META-INF/please_sourcemap',
-                CONFIG.JAR_TOOL + ' cfM $OUT -C _tmp .',
+                'cd _tmp',
+                jarcat_tool + ' -d -o $OUT -i .',
             ]),
             building_description="Compiling...",
             requires=['java'],
             test_only=test_only,
+            tools=tools,
         )
     elif resources:
         # Can't run javac since there are no java files.
         if resources_root:
-            cmd = 'cd ${PKG}/%s && %s -cfM ${OUT} .' % (resources_root, CONFIG.JAR_TOOL)
+            cmd = 'cd ${PKG}/%s && %s -d -o ${OUT} -i .' % (resources_root, jarcat_tool)
         else:
-            cmd = '%s -cfM ${OUT} ${PKG}' % CONFIG.JAR_TOOL
+            cmd = '%s -d -o ${OUTS} -i ${PKG}' % jarcat_tool
         build_rule(
             name=name,
             srcs=all_srcs,
@@ -85,6 +88,7 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
             building_description="Linking...",
             requires=['java'],
             test_only=test_only,
+            tools=tools,
         )
     else:
         # If input is only jar files (as maven_jar produces in some cases) we simply collect them
