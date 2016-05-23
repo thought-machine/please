@@ -1,18 +1,18 @@
 system_library(
-    name = 'timestamp_proto',
-    srcs = ['/usr/include/google/protobuf/timestamp.proto'],
+    name = 'source_context_proto',
+    srcs = ['/usr/include/google/protobuf/source_context.proto'],
 )
 
 proto_library(
-    name = 'timestamp',
-    srcs = [':timestamp_proto'],
+    name = 'source_context',
+    srcs = [':source_context_proto'],
 )
 
 python_test(
     name = 'system_dep_test',
     srcs = ['system_dep_test.py'],
     deps = [
-        ':timestamp',
+        ':source_context',
     ],
     labels = ['proto'],
 )
@@ -21,7 +21,7 @@ go_test(
     name = 'go_system_dep_test',
     srcs = ['system_dep_test.go'],
     deps = [
-        ':timestamp',
+        ':source_context',
     ],
     labels = ['proto'],
 )
