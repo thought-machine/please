@@ -1,7 +1,7 @@
 // Basic tests for checking C++ build rules, particularly cc_embed_binary.
 
 #include <string>
-#include <UnitTest++/UnitTest++.h>
+#include <unittest++/UnitTest++.h>
 #include "src/build/cc/clang/embedded_file_1.h"
 #include "src/build/cc/clang/embedded_file_3.h"
 

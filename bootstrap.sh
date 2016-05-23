@@ -54,7 +54,7 @@ EXCLUDES=""
 
 HAVE_UNITTEST=false
 for path in `echo | cpp -xc++ -Wp,-v 2>&1 | grep "^ "`; do
-    if [ -f "${path}/UnitTest++/UnitTest++.h" ]; then
+    if [ -f "${path}/unittest++/UnitTest++.h" ]; then
         HAVE_UNITTEST=true
     fi
 done

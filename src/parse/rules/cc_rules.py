@@ -259,7 +259,7 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     srcs = srcs or []
-    linker_flags = ['-lUnitTest++']
+    linker_flags = ['-lunittest++']
     linker_flags.extend(linker_flags or [])
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
@@ -415,8 +415,8 @@ _CC_TEST_MAIN_CONTENTS = """
 #include <algorithm>
 #include <fstream>
 #include <string.h>
-#include "UnitTest++/UnitTest++.h"
-#include "UnitTest++/XmlTestReporter.h"
+#include "unittest++/UnitTest++.h"
+#include "unittest++/XmlTestReporter.h"
 int main(int argc, char const *argv[]) {
     auto run_named = [argc, argv](UnitTest::Test* test) {
         if (argc <= 1) { return true; }

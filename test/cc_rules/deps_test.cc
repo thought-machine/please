@@ -1,7 +1,7 @@
 // Trivial test that doesn't really do much. Only exists for us to
 // check its dependencies are set up as expected.
 
-#include <UnitTest++/UnitTest++.h>
+#include <unittest++/UnitTest++.h>
 #include "test/cc_rules/lib1.h"
 #include "test/cc_rules/lib2.h"
 

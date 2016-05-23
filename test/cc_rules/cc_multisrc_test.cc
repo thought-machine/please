@@ -1,6 +1,6 @@
 #include "test/cc_rules/multisrc.h"
 
-#include <UnitTest++/UnitTest++.h>
+#include <unittest++/UnitTest++.h>
 
 TEST(Multisrc1Result) {
   CHECK_EQUAL(42, MultisrcFunction1());
