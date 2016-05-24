@@ -6,7 +6,6 @@
 
 #include <dlfcn.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 // AFAICT there isn't a way to call the function pointers directly.
 char* ParseFile(char* filename, char* package_name, size_t package);

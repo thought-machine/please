@@ -33,6 +33,7 @@ _WHITELISTED_BUILTINS = {
     'super', 'tuple', 'type', 'unichr', 'unicode', 'vars', 'xrange', 'zip', '__name__',
     'NotImplemented',
     'compile', '__import__',  # We disallow importing separately, it's too hard to do here
+    '__cffi_backend_extern_py',  # This gets added with cpython / cffi 1.6+ and is pretty crucial.
 }
 
 # Used to indicate that parsing of a target is deferred because it requires another target.
