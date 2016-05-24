@@ -28,11 +28,11 @@ func WriteTestMain(pkgDir string, sources []string, output string, coverVars []C
 	if err != nil {
 		return err
 	}
-	if len(testDescr.Functions) == 0 {
-		return fmt.Errorf("Didn't find any test functions in the source files")
-	}
 	testDescr.CoverVars = coverVars
-	testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, coverVars)
+	if len(testDescr.Functions) > 0 {
+		// Can't set this if there are no test functions, it'll be an unused import.
+		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, coverVars)
+	}
 
 	f, err := os.Create(output)
 	if err != nil {

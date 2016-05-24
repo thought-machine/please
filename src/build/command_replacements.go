@@ -134,11 +134,11 @@ func checkAndReplaceSequence(target, dep *core.BuildTarget, in string, runnable,
 					log.Fatalf("Couldn't calculate relative path: %s", err)
 				}
 				output += quote(abs) + " "
-				if dir {
-					break
-				}
 			} else {
 				output += quote(fileDestination(target, dep, out, dir, outPrefix, test)) + " "
+			}
+			if dir {
+				break
 			}
 		}
 	}

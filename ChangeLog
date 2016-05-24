@@ -10,6 +10,16 @@ Version 3.0.0
       PyPy should continue to work for anyone who had it working already though.
 
 
+Version 2.4.0
+-------------
+
+    * Minor fixes to Python coverage code
+    * Added a 'native' attribute to maven_jar which attempts to fetch a .jar with
+      native code. It also now takes 'hashes' since those might of course have
+      different ones on each architecture.
+    * Minor fixes to reverse deps queries.
+
+
 Version 2.3.5
 -------------
 

@@ -279,7 +279,6 @@ go_test(
     test_outputs = ['truth.txt'],
     labels = ['manual'],
     container = True,
-    deps = ['//third_party/go:testify'],
 )
 plz_e2e_test(
     name = 'extra_test_output_test',

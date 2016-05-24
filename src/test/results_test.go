@@ -141,6 +141,13 @@ func TestGoFailIfUnknownTestPasses(t *testing.T) {
 	}
 }
 
+func TestParseGoFileWithNoTests(t *testing.T) {
+	_, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_empty_test.txt", false)
+	if err != nil {
+		t.Errorf("Unable to parse file: %s", err)
+	}
+}
+
 // because I'm already pining for self.assertEqual...
 func assert(t *testing.T, actual int, expected int, description string) {
 	if actual != expected {

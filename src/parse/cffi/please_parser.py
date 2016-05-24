@@ -114,6 +114,7 @@ _BAZEL_KEYWORD_REWRITES = {
     'javacopts': 'javac_flags',
     'tags': 'labels',
     'runtime_deps': 'data',
+    'exports': 'exported_deps',
 }
 
 
