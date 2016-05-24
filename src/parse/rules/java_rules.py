@@ -12,7 +12,7 @@ _maven_packages = defaultdict(dict)
 
 
 def java_library(name, srcs=None, resources=None, resources_root=None, deps=None,
-                 exported_deps=None, exports=None, visibility=None, source=None,
+                 exported_deps=None, visibility=None, source=None,
                  target=None, test_only=False, javac_flags=None):
     """Compiles Java source to a .jar which can be collected by other rules.
 
@@ -28,7 +28,6 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
                             rule will also receive when they're compiling. This is quite important for
                             Java; any dependency that forms part of the public API for your classes
                             should be an exported dependency.
-      exports (list): Alias for 'exported_deps'.
       visibility (list): Visibility declaration of this rule.
       source (int): Java source level to compile sources as. Defaults to whatever's set in the config,
                     which itself defaults to 8.
@@ -38,7 +37,6 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
       javac_flags (list): List of flags passed to javac.
     """
     all_srcs = (srcs or []) + (resources or [])
-    exported_deps = exported_deps or exports
     if srcs:
         # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
         # it doesn't mean anything to us so we must filter it out.
