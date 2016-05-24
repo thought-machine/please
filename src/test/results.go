@@ -2,12 +2,14 @@
 
 package test
 
-import "fmt"
-import "io/ioutil"
-import "os"
-import "path/filepath"
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
-import "core"
+	"core"
+)
 
 func parseTestResults(target *core.BuildTarget, outputFile string, cached bool) (core.TestResults, error) {
 	results, err := parseTestResultsDir(target, outputFile)
@@ -17,6 +19,11 @@ func parseTestResults(target *core.BuildTarget, outputFile string, cached bool) 
 	if err != nil && target.Results.Failed == 0 {
 		target.Results.NumTests++
 		target.Results.Failed++
+	}
+	// Ensure that there is one success if the target succeeded but there are no tests.
+	if err == nil && target.Results.Failed == 0 && target.Results.NumTests == 0 {
+		target.Results.NumTests++
+		target.Results.Passed++
 	}
 	return results, err
 }
@@ -37,6 +44,9 @@ func parseTestResultsImpl(target *core.BuildTarget, outputFile string) (core.Tes
 
 func parseTestResultsDir(target *core.BuildTarget, outputDir string) (core.TestResults, error) {
 	results := core.TestResults{}
+	if !core.PathExists(outputDir) {
+		return results, fmt.Errorf("Didn't find any test results in %s", outputDir)
+	}
 	err := filepath.Walk(outputDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -49,8 +59,5 @@ func parseTestResultsDir(target *core.BuildTarget, outputDir string) (core.TestR
 		}
 		return nil
 	})
-	if err == nil && results.NumTests == 0 {
-		return results, fmt.Errorf("Didn't find any test results in %s", outputDir)
-	}
 	return results, err
 }
