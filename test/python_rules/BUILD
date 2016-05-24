@@ -24,6 +24,6 @@ python_test(
 
 # Test that has no actual tests in it. Should still count as a pass.
 python_test(
-    name = 'empty_test_case_test',
+    name = 'empty_test',
     srcs = ['empty_test.py'],
 )
