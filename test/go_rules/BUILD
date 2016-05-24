@@ -43,3 +43,9 @@ gentest(
     ],
     no_test_output = True,
 )
+
+# Test that doesn't have any actual test cases in it.
+go_test(
+    name = 'empty_test',
+    srcs = ['empty_test.go'],
+)
