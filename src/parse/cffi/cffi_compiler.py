@@ -11,7 +11,7 @@ def main(defs_file, parser_file, verbose):
     ffi.set_source('parser_interface', '#include "%s"' % defs_file)
     with open(parser_file) as f:
         ffi.embedding_init_code(f.read())
-    interpreter = os.path.basename(sys.executable)
+    interpreter, _, _ = os.path.basename(sys.executable).partition('.')
     ffi.compile(target='libplease_parser_%s.*' % interpreter, verbose=verbose)
 
 
