@@ -56,8 +56,8 @@ bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/mi
 
 # Now invoke Go to run Please to build itself.
 echo "Building Please..."
-SCRIPT="`readlink -e $0`"
-ENGINE="$(dirname $SCRIPT)/src/parse/cffi/libplease_parser_${INTERPRETER}.so"
+SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
+ENGINE="${SCRIPT_DIR}/src/parse/cffi/libplease_parser_${INTERPRETER}.so"
 go run src/please.go --engine $ENGINE --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/build.log --log_file_level 4
 # Use it to build the rest of the tools that come with it.
 # NB. We can't do the tarballs here because they depend on all the interpreters, which some
