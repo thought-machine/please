@@ -8,6 +8,9 @@ Version 3.0.0
       it becomes possible to run plz with CPython + cffi, which is quite a bit more
       straightforward to get installed in the way we need on Linux at present.
       PyPy should continue to work for anyone who had it working already though.
+    * Builtin rules no longer call zip and jar, because those produce nondeterministic
+      output due to encoding timestamps into their output. They now use jarcat instead.
+      Note that this is a breaking change for some maven_jars rules whose hashes will change.
 
 
 Version 2.4.0
