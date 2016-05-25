@@ -388,6 +388,10 @@ func checkRuleHashes(target *core.BuildTarget, hash []byte) error {
 			return nil
 		}
 	}
+	if len(target.Hashes) == 1 {
+		return fmt.Errorf("Bad output hash for rule %s: was %s but expected %s",
+			target.Label, hashStr, target.Hashes[0])
+	}
 	return fmt.Errorf("Bad output hash for rule %s: was %s but expected one of [%s]",
 		target.Label, hashStr, strings.Join(target.Hashes, ", "))
 }
