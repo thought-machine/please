@@ -18,3 +18,13 @@ go_binary(
     ],
     visibility = ['PUBLIC'],
 )
+
+for engine in ['pypy', 'python2', 'python3']:
+    filegroup(
+        name = 'please_parser_' + engine,
+        srcs = ['//src/parse/cffi:please_parser_' + engine],
+        visibility = ['PUBLIC'],
+        # These aren't really binaries in the strictest sense, but it is useful to
+        # have them in the same directory as the Please binary itself.
+        binary = True,
+    )

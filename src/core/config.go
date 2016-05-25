@@ -57,7 +57,6 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	// them upfront as we would with other config values.
 	setDefault(&config.Please.BuildFileName, []string{"BUILD"})
 	setDefault(&config.Build.Path, []string{"/usr/local/bin", "/usr/bin", "/bin"})
-	setDefault(&config.Please.PyPyLocation, []string{"/usr/lib/libpypy-c.so", "/usr/local/lib/libpypy-c.dylib"})
 	setDefault(&config.Cover.FileExtension, []string{".go", ".py", ".java", ".js", ".cc", ".h", ".c"})
 	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go"})
 	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go"})
@@ -71,9 +70,13 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
 
 	// TODO(pebers): Remove in please v4.0+
+	if len(config.Please.PyPyLocation) > 0 {
+		log.Warning("pypylocation config property is deprecated and will go away soon")
+	}
 	if config.Java.JarTool != "" {
 		log.Warning("jartool config property is deprecated and will go away soon")
 	}
+
 	return config, nil
 }
 
@@ -151,6 +154,7 @@ type Configuration struct {
 		BlacklistDirs    []string
 		Lang             string
 		PyPyLocation     []string
+		ParserEngine     string
 		Nonce            string
 		NumThreads       int
 	}

@@ -26,22 +26,21 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/kardianos/osext"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
 )
 
 /*
-#cgo CFLAGS: --std=c99 -I/usr/include/pypy -I/usr/local/include/pypy -Werror
-#cgo LDFLAGS: -lpypy-c
+#cgo CFLAGS: --std=c99 -Werror
+#cgo LDFLAGS: -ldl
 #include "interpreter.h"
 */
 import "C"
 
 var log = logging.MustGetLogger("parse")
 
-// Embedded parser file.
-const embeddedParser = "embedded_parser.py"
 const subincludePackage = "_remote"
 
 // Communicated back from PyPy to indicate that a parse has been deferred because
@@ -60,20 +59,17 @@ func initializeInterpreter(config *core.Configuration) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	C.rpython_startup_code()
-	libpypy := locateLibPyPy(config)
-	defer C.free(unsafe.Pointer(libpypy))
-	if result := C.pypy_setup_home(libpypy, 1); result != 0 {
-		log.Fatalf("Failed to initialise PyPy (error %d)\n", result)
-	}
-	C.pypy_init_threads()
-
-	// Load interpreter & set up callbacks for communication
-	log.Debug("Initialising interpreter environment...")
-	data := loadAsset(embeddedParser)
-	defer C.free(unsafe.Pointer(data))
-	if result := C.InitialiseInterpreter(data); result != 0 {
-		log.Fatalf("Failed to initialise interpreter, error %d", result)
+	// If an engine has been explicitly set, by flag or config, we honour it here.
+	if config.Please.ParserEngine != "" {
+		if !initialiseInterpreter(config.Please.ParserEngine) {
+			log.Fatalf("Failed to initialise requested parser engine [%s]", config.Please.ParserEngine)
+		}
+	} else {
+		// Okay, now try the standard fallbacks.
+		// The python3 interpreter isn't ready yet, so don't try that.
+		if !initialiseInterpreter("pypy") && !initialiseInterpreter("python2") {
+			log.Fatalf("Can't initialise any Please parser engine. Please is putting itself out of its misery.")
+		}
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version)
 	setConfigValue("GO_VERSION", config.Go.GoVersion)
@@ -122,9 +118,7 @@ func initializeInterpreter(config *core.Configuration) {
 	dir, _ := AssetDir("")
 	sort.Strings(dir)
 	for _, filename := range dir {
-		if filename != embeddedParser { // We already did this guy.
-			loadBuiltinRules(filename)
-		}
+		loadBuiltinRules(filename)
 	}
 	loadSubincludePackage()
 	log.Debug("Interpreter ready")
@@ -140,17 +134,41 @@ func pythonBool(b bool) string {
 	return ""
 }
 
-// locateLibPyPy returns a C string corresponding to the location of libpypy.
-// It dies if it cannot be located successfully.
-func locateLibPyPy(config *core.Configuration) *C.char {
-	// This is something of a hack to handle PyPy's dynamic location of itself.
-	for _, location := range config.Please.PyPyLocation {
-		if core.PathExists(location) {
-			return C.CString(location)
-		}
+func initialiseInterpreter(engine string) bool {
+	if strings.HasPrefix(engine, "/") {
+		return initialiseInterpreterFrom(engine)
 	}
-	log.Fatalf("Cannot locate libpypy in any of [%s]\n", strings.Join(config.Please.PyPyLocation, ", "))
-	return nil
+	executableDir, err := osext.ExecutableFolder()
+	if err != nil {
+		log.Error("Can't determine current executable: %s", err)
+		return false
+	}
+	return initialiseInterpreterFrom(path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())))
+}
+
+func initialiseInterpreterFrom(enginePath string) bool {
+	if !core.PathExists(enginePath) {
+		return false
+	}
+	log.Debug("Attempting to load engine from %s", enginePath)
+	cEnginePath := C.CString(enginePath)
+	defer C.free(unsafe.Pointer(cEnginePath))
+	result := C.InitialiseInterpreter(cEnginePath)
+	if result != 0 {
+		// Low level of logging because it's allowable to fail on libplease_parser_pypy, which we try first.
+		log.Notice("Failed to initialise interpreter from %s: %s", enginePath, C.GoString(C.dlerror()))
+		return false
+	}
+	log.Info("Using parser engine from %s", enginePath)
+	return true
+}
+
+// libExtension returns the typical extension of shared objects on the current platform.
+func libExtension() string {
+	if runtime.GOOS == "darwin" {
+		return "dylib"
+	}
+	return "so"
 }
 
 func setConfigValue(name string, value string) {
