@@ -15,6 +15,7 @@ filegroup(
         '//src/build/java:jarcat',
         '//src/build/java:please_maven',
         '//src/misc:plz_diff_graphs',
+        '//src/parse/cffi:all_engines',
     ],
     deps = [
         '//:please',

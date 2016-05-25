@@ -38,6 +38,7 @@ var opts struct {
 		NumThreads int      `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
 		Include    []string `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
 		Exclude    []string `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
+		Engine     string   `long:"engine" hidden:"true" description:"Parser engine .so / .dylib to load"`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
@@ -401,6 +402,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
+	}
+	if opts.BuildFlags.Engine != "" {
+		state.Config.Please.ParserEngine = opts.BuildFlags.Engine
 	}
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, targets)

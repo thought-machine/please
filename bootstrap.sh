@@ -2,10 +2,14 @@
 
 set -eu
 
-if ! hash pypy 2>/dev/null ; then
-    echo 'You must have PyPy installed to compile Please.'
-    exit 1
-fi
+function interpreter {
+    if hash $1 2>/dev/null ; then
+	    echo " //src:please_parser_$1"
+    else
+        >&2 echo "$1 not found; won't build parser engine for it."
+        >&2 echo "You won't be able to build Please packages unless all parsers are present."
+    fi
+}
 
 # Fetch the Go dependencies manually
 echo "Installing Go dependencies..."
@@ -23,11 +27,17 @@ go get github.com/Songmu/prompter
 go get github.com/texttheater/golang-levenshtein/levenshtein
 go get github.com/Workiva/go-datastructures/queue
 
+# Determine which interpreter engines we'll build.
+INTERPRETERS="$(interpreter pypy)$(interpreter python2)$(interpreter python3)"
+if [ -z "$INTERPRETERS" ]; then
+    echo "No known Python interpreters found, can't build parser engine"
+    exit 1
+fi
+
 # Clean out old artifacts.
 rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parser.py
 # Generate the cffi compiled source
-(cd src/parse/cffi && pypy cffi_compiler.py ../defs.h)
-cat src/parse/cffi/parser_interface.py src/parse/cffi/please_parser.py > src/parse/rules/embedded_parser.py
+(cd src/parse/cffi && python2 cffi_compiler.py defs.h please_parser.py)
 # Invoke this tool to embed the Python scripts.
 bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
 # Similarly for the wrapper script.
@@ -35,10 +45,14 @@ bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/mi
 
 # Now invoke Go to run Please to build itself.
 echo "Building Please..."
-go run src/please.go --plain_output build //src:please --log_file plz-out/log/build.log --log_file_level 4
+SCRIPT="`readlink -e $0`"
+ENGINE="$(dirname $SCRIPT)/src/parse/cffi/libplease_parser_python2.so"
+go run src/please.go --engine $ENGINE --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/build.log --log_file_level 4
 # Use it to build the rest of the tools that come with it.
+# NB. We can't do the tarballs here because they depend on all the interpreters, which some
+#     users might not have installed.
 echo "Building the tools..."
-plz-out/bin/src/please --plain_output build //src:please //:all_tools //package:tarballs --log_file plz-out/log/build.log --log_file_level 4
+plz-out/bin/src/please --plain_output build //src:please //:all_tools --log_file plz-out/log/build.log --log_file_level 4
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
