@@ -1,3 +1,10 @@
+Version 3.0.2
+-------------
+
+    * Some caching fixes; directory entries are now retrieved correctly between restarts
+      of the RPC cache server.
+
+
 Version 3.0.1
 -------------
 
