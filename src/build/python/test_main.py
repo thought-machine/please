@@ -63,7 +63,7 @@ def run_tests(test_names):
         suite = filter_suite(suite, test_names)
         if suite.countTestCases() == 0:
             raise Exception('No matching tests found')
-    runner = xmlrunner.XMLTestRunner(output='test.results')
+    runner = xmlrunner.XMLTestRunner(output='test.results', outsuffix='')
     results = runner.run(suite)
     return len(results.errors) + len(results.failures)
 
