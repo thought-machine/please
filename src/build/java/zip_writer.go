@@ -226,6 +226,20 @@ func WriteFile(w *zip.Writer, filename string, data []byte) error {
 	return nil
 }
 
+// WriteDir writes a directory entry to the writer.
+func WriteDir(w *zip.Writer, filename string) error {
+	filename += "/" // Must have trailing slash to tell it it's a directory.
+	fh := zip.FileHeader{
+		Name:   filename,
+		Method: zip.Store,
+	}
+	if _, err := w.CreateHeader(&fh); err != nil {
+		return err
+	}
+	addExistingFile(w, filename, filename, 0, 0, 0)
+	return nil
+}
+
 type nopCloser struct {
 	io.Writer
 }

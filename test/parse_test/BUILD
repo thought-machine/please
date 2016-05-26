@@ -46,7 +46,6 @@ python_test(
     srcs = ['require_provide_test.py'],
     deps = [
         ':test_require',
-        '//src/build/python:bootstrap_pexer',
     ],
 )
 

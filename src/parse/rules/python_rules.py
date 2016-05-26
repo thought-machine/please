@@ -119,7 +119,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
         '--zip_safe',
         # Run it through jarcat to normalise the timestamps.
-        ' && %s -i temp.pex -o $OUT --suffix=.pex --preamble="`head -n 1 temp.pex`"' % jarcat_tool,
+        '&& %s -i temp.pex -o $OUT --suffix=.pex --preamble="`head -n 1 temp.pex`"' % jarcat_tool,
     ])
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
@@ -208,7 +208,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
         '--zip_safe',
         # Run it through jarcat to normalise the timestamps.
-        ' && %s -i temp.pex -o $OUT --suffix=.pex --preamble="`head -n 1 temp.pex`"' % jarcat_tool,
+        '&& %s -i temp.pex -o $OUT --suffix=.pex --preamble="`head -n 1 temp.pex`"' % jarcat_tool,
     ])
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 

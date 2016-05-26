@@ -74,12 +74,9 @@ func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInterna
 					}
 				}
 			}
-		} else if suffix == "" && path != "." { // Only add directory entries in "dumb" mode.
-			fh := zip.FileHeader{
-				Name:   path + "/", // Must have trailing slash to tell it it's a directory.
-				Method: zip.Store,
-			}
-			if _, err := w.CreateHeader(&fh); err != nil {
+		} else if (suffix == "" || addInitPy) && path != "." { // Only add directory entries in "dumb" mode.
+			log.Debug("Adding directory entry %s/", path)
+			if err := java.WriteDir(w, path); err != nil {
 				return err
 			}
 		}
