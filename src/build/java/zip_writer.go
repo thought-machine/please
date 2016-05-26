@@ -73,6 +73,7 @@ outer:
 				continue
 			}
 			if strict {
+				log.Error("Duplicate file %s (from %s, already added from %s); crc %d / %d", f.Name, path, existing.ZipFile, f.CRC32, existing.CRC32)
 				return fmt.Errorf("File %s already added to destination zip file (from %s)", f.Name, existing.ZipFile)
 			}
 			continue

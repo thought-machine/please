@@ -151,6 +151,11 @@ def main(args):
         # This function does some setuptools malarkey which is vexing me, so
         # I'm just gonna cheekily disable it for now.
         pex_builder._prepare_bootstrap = lambda: None
+        # Similarly I don't want it to write __init__.py files, we will take care
+        # of that later ourselves. This is important because we fail if we try to
+        # add different versions of the same file to the final pex, but because we
+        # only have a partial filetree here it may add some which don't appear until later.
+        pex_builder._prepare_inits = lambda: None
 
         # Generate the PEX file.
         pex_builder.build(args.out, bytecode_compile=False)
