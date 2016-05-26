@@ -1,3 +1,10 @@
+Version 3.0.1
+-------------
+
+    * Fix to pex generation from previous version where it could sometimes add extraneous
+      __init__.py files which conflicted with real ones added later.
+
+
 Version 3.0.0
 -------------
 
