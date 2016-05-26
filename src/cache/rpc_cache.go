@@ -33,6 +33,7 @@ type rpcCache struct {
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
 	if cache.isConnected() && cache.Writeable {
+		log.Debug("Storing %s in RPC cache...", target.Label)
 		artifacts := []*pb.Artifact{}
 		for out := range cacheArtifacts(target) {
 			artifacts2, err := cache.loadArtifacts(target, out)
@@ -48,6 +49,7 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
 
 func (cache *rpcCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
 	if cache.isConnected() && cache.Writeable {
+		log.Debug("Storing %s : %s in RPC cache...", target.Label, file)
 		artifacts, err := cache.loadArtifacts(target, file)
 		if err != nil {
 			log.Warning("RPC cache failed to load artifact %s: %s", file, err)
