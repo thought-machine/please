@@ -143,7 +143,7 @@ func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []b
 		log.Warning("RPC cache failed to write file %s", err)
 		return false
 	}
-	log.Debug("Retrieved %s from RPC cache", target.Label)
+	log.Debug("Retrieved %s - %s from RPC cache", target.Label, file)
 	return true
 }
 

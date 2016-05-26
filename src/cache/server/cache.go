@@ -65,17 +65,18 @@ func scan(path string) {
 	filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatalf("%s", err)
-		} else if !info.IsDir() { // We don't have directory entries.
-			name = name[len(path)+1 : len(name)]
-			log.Debug("Found file %s", name)
-			size := info.Size()
-			cachedFiles[name] = &cachedFile{
-				lastReadTime: time.Now(),
-				readCount:    0,
-				size:         size,
-			}
-			totalSize += size
+		} else if name == path {
+			return nil // Don't enter the base path...
 		}
+		name = name[len(path)+1 : len(name)]
+		log.Debug("Found file %s", name)
+		size := info.Size()
+		cachedFiles[name] = &cachedFile{
+			lastReadTime: time.Now(),
+			readCount:    0,
+			size:         size,
+		}
+		totalSize += size
 		return nil
 	})
 	cachePath = path
