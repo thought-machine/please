@@ -65,18 +65,17 @@ func scan(path string) {
 	filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatalf("%s", err)
-		} else if name == path {
-			return nil // Don't enter the base path...
+		} else if !info.IsDir() { // We don't have directory entries.
+			name = name[len(path)+1 : len(name)]
+			log.Debug("Found file %s", name)
+			size := info.Size()
+			cachedFiles[name] = &cachedFile{
+				lastReadTime: time.Now(),
+				readCount:    0,
+				size:         size,
+			}
+			totalSize += size
 		}
-		name = name[len(path)+1 : len(name)]
-		log.Debug("Found file %s", name)
-		size := info.Size()
-		cachedFiles[name] = &cachedFile{
-			lastReadTime: time.Now(),
-			readCount:    0,
-			size:         size,
-		}
-		totalSize += size
 		return nil
 	})
 	cachePath = path
@@ -125,13 +124,18 @@ func removeFile(path string, file *cachedFile) {
 // return whatever's been stored there, which might be a directory and therefore contain
 // multiple files to be returned.
 func RetrieveArtifact(artPath string) (map[string][]byte, error) {
+	fullPath := path.Join(cachePath, artPath)
 	lock := lockFile(artPath, false, 0)
 	if lock == nil {
+		// Can happen if artPath is a directory; we only store artifacts as files.
+		// (This is a debatable choice; it's a bit crap either way).
+		if info, err := os.Stat(fullPath); err == nil && info.IsDir() {
+			return retrieveDir(artPath)
+		}
 		return nil, os.ErrNotExist
 	}
 	defer lock.RUnlock()
 
-	fullPath := path.Join(cachePath, artPath)
 	ret := map[string][]byte{}
 	if err := filepath.Walk(fullPath, func(name string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -148,6 +152,30 @@ func RetrieveArtifact(artPath string) (map[string][]byte, error) {
 		return nil, err
 	}
 	return ret, nil
+}
+
+// retrieveDir retrieves a directory of artifacts. We don't track the directory itself
+// but allow its traversal to retrieve them.
+func retrieveDir(artPath string) (map[string][]byte, error) {
+	log.Debug("Searching dir %s for artifacts", artPath)
+	ret := map[string][]byte{}
+	fullPath := path.Join(cachePath, artPath)
+	err := filepath.Walk(fullPath, func(name string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		} else if !info.IsDir() {
+			// Must strip cache path off the front of this.
+			m, err := RetrieveArtifact(name[len(cachePath)+1:])
+			if err != nil {
+				return err
+			}
+			for k, v := range m {
+				ret[k] = v
+			}
+		}
+		return nil
+	})
+	return ret, err
 }
 
 // StoreArtifact takes in the artifact content and path as parameters and creates a file with
