@@ -89,6 +89,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("JAVA_TARGET_LEVEL", config.Java.TargetLevel)
 	setConfigValue("CC_TOOL", config.Cpp.CCTool)
 	setConfigValue("LD_TOOL", config.Cpp.LdTool)
+	setConfigValue("AR_TOOL", config.Cpp.ArTool)
 	setConfigValue("DEFAULT_OPT_CFLAGS", config.Cpp.DefaultOptCflags)
 	setConfigValue("DEFAULT_DBG_CFLAGS", config.Cpp.DefaultDbgCflags)
 	setConfigValue("DEFAULT_LDFLAGS", config.Cpp.DefaultLdflags)

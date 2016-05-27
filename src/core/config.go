@@ -127,6 +127,7 @@ func DefaultConfiguration() *Configuration {
 	config.Java.TargetLevel = "8"
 	config.Cpp.CCTool = "g++"
 	config.Cpp.LdTool = "ld"
+	config.Cpp.ArTool = "ar"
 	config.Cpp.DefaultOptCflags = "--std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror"
 	config.Cpp.DefaultDbgCflags = "--std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror"
 	config.Proto.ProtocTool = "protoc"
@@ -218,6 +219,7 @@ type Configuration struct {
 	Cpp struct {
 		CCTool           string
 		LdTool           string
+		ArTool           string
 		DefaultOptCflags string
 		DefaultDbgCflags string
 		DefaultLdflags   string

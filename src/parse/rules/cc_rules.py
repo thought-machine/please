@@ -140,7 +140,8 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         name = name,
         deps = deps,
         outs = ['lib%s.a' % name],
-        cmd = '(find . -name "*.a" | xargs -n 1 ar x) && ar rcs%s $OUT `find . -name "*.o"`' % _AR_FLAG,
+        cmd = '(find . -name "*.a" | xargs -n 1 %s x) && %s rcs%s $OUT `find . -name "*.o"`' %
+            (CONFIG.AR_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
         needs_transitive_deps = True,
         output_is_complete = True,
         visibility = visibility,
@@ -467,7 +468,7 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
     that use it. The solution to this is here; we collect the set of linker flags from all
     dependencies and apply them to the binary rule that needs them.
     """
-    ar_cmd = '&& ar rcs%s $OUT *.o' % _AR_FLAG
+    ar_cmd = '&& %s rcs%s $OUT *.o' % (CONFIG.AR_TOOL, _AR_FLAG)
     def update_commands(name):
         base_path = get_base_path()
         labels = get_labels(name, 'cc:')
