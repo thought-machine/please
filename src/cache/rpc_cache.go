@@ -136,7 +136,8 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 			return false
 		}
 	}
-	return true
+	// Sanity check: if we don't get anything back, assume it probably wasn't really a success.
+	return len(response.Artifacts) > 0
 }
 
 func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []byte) bool {
