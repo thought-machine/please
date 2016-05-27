@@ -29,7 +29,7 @@ func globall(packageName string, includes, prefixedExcludes, excludes []string, 
 					continue
 				}
 			}
-			if strings.HasPrefix(filename, packageName) {
+			if strings.HasPrefix(filename, packageName) && packageName != "" {
 				filename = filename[len(packageName)+1:] // +1 to strip the slash too
 			}
 			if !shouldExcludeMatch(filename, excludes) {
