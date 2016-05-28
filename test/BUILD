@@ -17,12 +17,12 @@ subinclude('//build_defs:plz_e2e_test')
 # found is not necessarily unique or stable.
 plz_e2e_test(
     name = 'query_somepath_test',
-    cmd = 'plz query somepath //src/build/python:bootstrap_pexer //third_party/python:coverage',
+    cmd = 'plz query somepath //src/build/java:junit_runner //third_party/java:guava',
     expected_output = 'query_somepath_test.txt',
 )
 plz_e2e_test(
     name = 'query_somepath_reverse_test',
-    cmd = 'plz query somepath //third_party/python:coverage //src/build/python:bootstrap_pexer',
+    cmd = 'plz query somepath //third_party/java:guava //src/build/java:junit_runner',
     expected_output = 'query_somepath_test.txt',  # Output should be the same as above
 )
 plz_e2e_test(

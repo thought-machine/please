@@ -35,18 +35,22 @@ python_test(
 # able to build a .pex with the pex builder which is itself a pex.
 build_rule(
     name = 'bootstrap_pexer',
-    srcs = ['pex.py'],
+    srcs = ['pex.py', 'test_main.py', 'pex_main.py'],
     outs = ['bootstrap_pexer.pex'],
     deps = [
-        ':main_files',
-        '//third_party/python:pex',
-        '//third_party/python:pkg_resources',
+        # Depending on these private targets is not nice, but works around
+        # a circular dependency because this tool is used to precompile the library.
+        '//third_party/python:_pex#install',
+        '//third_party/python:_pkg_resources#install',
+        '//third_party/python:_six#install',
+        '//third_party/python:_xmlrunner#install',
+        '//third_party/python:_coverage#install',
     ],
     cmd = ' && '.join([
         # Have to make sure these exist.
         'touch third_party/__init__.py third_party/python/__init__.py',
         'touch src/__init__.py src/build/__init__.py src/build/python/__init__.py',
-        'PYTHONPATH="." python src/build/python/pex.py --src_dir=${TMP_DIR} --out=${OUT} --entry_point=${PKG//\//.}.pex --interpreter ' + CONFIG.DEFAULT_PYTHON_INTERPRETER,
+        'PYTHONPATH="." python -O src/build/python/pex.py --src_dir=${TMP_DIR} --out=${OUT} --entry_point=${PKG//\//.}.pex --interpreter ' + CONFIG.DEFAULT_PYTHON_INTERPRETER,
     ]),
     needs_transitive_deps = True,
     binary = True,

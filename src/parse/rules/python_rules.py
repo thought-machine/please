@@ -13,12 +13,6 @@ but is drastically faster for building many targets with similar dependencies or
 a target which has only had small changes.
 """
 
-# Commands used in python_library.
-_ZIP_CMD = '%s -d -o ${OUTS} -i .'
-_COMPILE_CMD = 'find . -name "*.py" | xargs %s -O -m py_compile'
-_RM_CMD = 'find . -name "*.py" -delete'
-_STRIP_CMD = ' && '.join([_COMPILE_CMD, _RM_CMD, _ZIP_CMD])
-
 
 def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
                    test_only=False, zip_safe=True, labels=None,
@@ -53,16 +47,14 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
     if not zip_safe:
         labels.append('py:zip-unsafe')
     if all_srcs:
-        jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
+        pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
+        jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
         # Pre-zip the files for later collection by python_binary.
         build_rule(
             name='_%s#zip' % name,
             srcs=all_srcs,
             outs=['.%s.pex.zip' % name],
-            cmd={
-                'opt': _ZIP_CMD % jarcat_tool,
-                'stripped': _STRIP_CMD % (interpreter, jarcat_tool),
-            },
+            cmd='%s --compile && %s -d -o ${OUTS} -i .' % (pex_tool, jarcat_tool),
             building_description='Compressing...',
             requires=['py'],
             test_only=test_only,
@@ -135,7 +127,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         name='_%s#pex' % name,
         outs=['.%s_main.pex.zip' % name],  # just call it .zip so everything has the same extension
         cmd=cmd,
-        requires=['py'],
+        requires=['py', 'pex'],
         pre_build=pre_build,
         tools=tools,
     )

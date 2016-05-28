@@ -6,6 +6,7 @@ import contextlib
 import json
 import os
 import pkg_resources
+import py_compile
 import shutil
 import sys
 import tempfile
@@ -103,7 +104,26 @@ def extract_file(in_pkg, out_dir, filename, duplicates_allowed=False):
         write_file(f, pkg_resources.resource_string(in_pkg, filename))
 
 
+def compile_bytecode():
+    """Walks the temp dir and precompiles bytecode for all .py files there."""
+    for dirpath, dirnames, filenames in os.walk('.'):
+        for filename in filenames:
+            if filename.endswith('.py'):
+                filename = os.path.join(dirpath, filename)
+                py_compile.compile(filename, doraise=True)
+                # Overwrite the timestamp in the .pyc file with 2000-01-01 so it's deterministic.
+                extension = 'o' if sys.flags.optimize else 'c'
+                with open(filename + extension, 'r+b') as f:
+                    f.seek(4)
+                    f.write(b'\\x80Cm8')
+
+
 def main(args):
+    # If --compile is given, we just need to precompile bytecode.
+    if args.compile:
+        compile_bytecode()
+        sys.exit(0)
+
     # Pex doesn't support relative interpreter paths.
     # In python3 we could use shutil.which() to locate it but it's probably better
     # to just force the user to specify it.
@@ -171,14 +191,15 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--src_dir', required=True)
-    parser.add_argument('--out', required=True)
-    parser.add_argument('--entry_point', required=True)
+    parser.add_argument('--src_dir')
+    parser.add_argument('--out')
+    parser.add_argument('--entry_point')
     parser.add_argument('--interpreter', default=sys.executable)
     parser.add_argument('--test_package')
     parser.add_argument('--test_srcs')
     parser.add_argument('--module_dir', default='')
     parser.add_argument('--zip_safe', dest='zip_safe', action='store_true')
     parser.add_argument('--nozip_safe', dest='zip_safe', action='store_false')
-    parser.set_defaults(zip_safe=True)
+    parser.add_argument('--compile', dest='compile', action='store_true')
+    parser.set_defaults(zip_safe=True, compile=False)
     main(parser.parse_args())
