@@ -474,9 +474,8 @@ def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflag
     linker_flags = ['-Xlinker ' + flag for flag in (linker_flags or [])]
     pkg_config_cmd = ' '.join('`pkg-config --cflags --libs %s`' % x for x in pkg_config_libs or [])
     pkg_config_cmd_2 = ' '.join('`pkg-config --cflags %s`' % x for x in pkg_config_cflags or [])
-    postamble = '`find . -name "*.o" -or -name "*.a" | sort`' if binary else ''
-    return ' '.join([' '.join(compiler_flags), ' '.join(linker_flags),
-                     pkg_config_cmd, pkg_config_cmd_2, postamble])
+    objs = '-Wl,--start-group `find . -name "*.o" -or -name "*.a" | sort` -Wl,--end-group' if binary else ''
+    return ' '.join([' '.join(compiler_flags), objs, ' '.join(linker_flags), pkg_config_cmd, pkg_config_cmd_2])
 
 
 def _apply_transitive_labels(command_map, link=True, archive=False):
