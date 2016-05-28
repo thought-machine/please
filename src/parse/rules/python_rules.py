@@ -316,7 +316,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
 
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
-        cmd += ' && ' + ' && '.join('patch -p0 < $(location %s)' % patch for patch in patches)
+        cmd += ' && ' + ' && '.join('patch -p0 --no-backup-if-mismatch < $(location %s)' % patch for patch in patches)
 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)

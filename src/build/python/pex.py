@@ -162,20 +162,7 @@ def main(args):
         pex_builder._prepare_inits = lambda: None
 
         # Generate the PEX file.
-        pex_builder.build(tmp_file)
-
-        # Sort out timestamps in .pyc / .pyo files.
-        with contextlib.closing(zipfile.ZipFile(tmp_file, 'r')) as zf:
-            with open(args.out, 'wb') as f:
-                f.write(to_bytes('%s\n' % pex_builder._shebang))
-            with contextlib.closing(zipfile.ZipFile(args.out, 'a')) as zf2:
-                for info in zf.infolist():
-                    contents = zf.read(info)
-                    if info.filename.endswith('.pyc') or info.filename.endswith('.pyo'):
-                        # Flatten out timestamp of .pyc file to 2000-01-01
-                        contents = contents[:4] + b'\x80Cm8' + contents[8:]
-                    info.date_time = (1980, 1, 1, 0, 0, 0)
-                    zf2.writestr(info, contents)
+        pex_builder.build(args.out)
 
     # Always try cleaning up the scratch dir, ignoring failures.
     finally:
