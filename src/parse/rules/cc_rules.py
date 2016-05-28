@@ -30,6 +30,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     srcs = srcs or []
     hdrs = hdrs or []
     deps = deps or []
+    compiler_flags = compiler_flags or []
     linker_flags = linker_flags or []
     pkg_config_libs = pkg_config_libs or []
     includes = includes or []
