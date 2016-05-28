@@ -135,7 +135,8 @@ const (
 	Building                           // Target is currently being built
 	Stopped                            // We stopped building the target because we'd gone as far as needed.
 	Built                              // Target has been successfully built
-	Unchanged                          // Target hasn't changed since last build
+	Unchanged                          // Target has been built but hasn't changed since last build
+	Reused                             // Outputs of previous build have been reused.
 	Failed                             // Target failed for some reason
 )
 

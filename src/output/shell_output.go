@@ -219,16 +219,16 @@ func testResultMessage(results core.TestResults, failedTargets []core.BuildLabel
 func printBuildResults(state *core.BuildState, duration float64) {
 	// Count incrementality.
 	totalBuilt := 0
-	totalUnchanged := 0
+	totalReused := 0
 	for _, target := range state.Graph.AllTargets() {
 		if target.State() == core.Built {
 			totalBuilt++
-		} else if target.State() == core.Unchanged {
-			totalUnchanged++
+		} else if target.State() == core.Reused {
+			totalReused++
 		}
 	}
-	incrementality := 100.0 * float64(totalUnchanged) / float64(totalBuilt+totalUnchanged)
-	if totalBuilt+totalUnchanged == 0 {
+	incrementality := 100.0 * float64(totalReused) / float64(totalBuilt+totalReused)
+	if totalBuilt+totalReused == 0 {
 		incrementality = 100 // avoid NaN
 	}
 	// Print this stuff so we always see it.

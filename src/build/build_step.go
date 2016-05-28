@@ -85,7 +85,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		// If a post-build function ran it may modify the rule definition. In that case we
 		// need to check again whether the rule needs building.
 		if target.PostBuildFunction == 0 || !needsBuilding(state, target, true) {
-			target.SetState(core.Unchanged)
+			target.SetState(core.Reused)
 			state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
 			return nil // Nothing needs to be done.
 		} else {
