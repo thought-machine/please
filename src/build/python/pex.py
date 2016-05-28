@@ -2,13 +2,16 @@
 """Pex building script for Please."""
 
 import argparse
+import contextlib
 import json
 import os
 import pkg_resources
 import shutil
 import sys
 import tempfile
+import zipfile
 
+from third_party.python.pex.compatibility import to_bytes
 from third_party.python.pex.pex_builder import PEXBuilder
 from third_party.python.pex.interpreter import PythonInterpreter
 
@@ -119,6 +122,7 @@ def main(args):
 
     # Setup a temp dir that the PEX builder will use as its scratch dir.
     tmp_dir = tempfile.mkdtemp()
+    tmp_file = '_temp.pex'
     try:
         if os.path.islink(args.interpreter) and os.readlink(args.interpreter) == 'python-exec2c':
             # Some distros have this intermediate binary; it messes things up for
@@ -158,7 +162,20 @@ def main(args):
         pex_builder._prepare_inits = lambda: None
 
         # Generate the PEX file.
-        pex_builder.build(args.out, bytecode_compile=False)
+        pex_builder.build(tmp_file)
+
+        # Sort out timestamps in .pyc / .pyo files.
+        with contextlib.closing(zipfile.ZipFile(tmp_file, 'r')) as zf:
+            with open(args.out, 'wb') as f:
+                f.write(to_bytes('%s\n' % pex_builder._shebang))
+            with contextlib.closing(zipfile.ZipFile(args.out, 'a')) as zf2:
+                for info in zf.infolist():
+                    contents = zf.read(info)
+                    if info.filename.endswith('.pyc') or info.filename.endswith('.pyo'):
+                        # Flatten out timestamp of .pyc file to 2000-01-01
+                        contents = contents[:4] + b'\x80Cm8' + contents[8:]
+                    info.date_time = (1980, 1, 1, 0, 0, 0)
+                    zf2.writestr(info, contents)
 
     # Always try cleaning up the scratch dir, ignoring failures.
     finally:
