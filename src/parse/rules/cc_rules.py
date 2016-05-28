@@ -34,8 +34,8 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     pkg_config_libs = pkg_config_libs or []
     includes = includes or []
     defines = defines or []
-    dbg_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
-    opt_flags = _build_flags(compiler_flags, [], [], pkg_config_cflags=pkg_config_libs)
+    dbg_flags = _build_flags(compiler_flags[:], [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
+    opt_flags = _build_flags(compiler_flags[:], [], [], pkg_config_cflags=pkg_config_libs)
 
     # Bazel suggests passing nonexported header files in 'srcs'. Detect that here.
     # For the moment I'd rather not do this automatically in other cases.
@@ -140,7 +140,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         name = name,
         deps = deps,
         outs = ['lib%s.a' % name],
-        cmd = '(find . -name "*.a" | xargs -n 1 %s x) && %s rcs%s $OUT `find . -name "*.o"`' %
+        cmd = '(find . -name "*.a" | xargs -n 1 %s x) && %s rcs%s $OUT `find . -name "*.o" | sort`' %
             (CONFIG.AR_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
         needs_transitive_deps = True,
         output_is_complete = True,
@@ -213,8 +213,8 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
     cmd = {
-        'dbg': '%s -o ${OUT} -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, dbg_flags),
-        'opt': '%s -o ${OUT} -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, opt_flags),
+        'dbg': '%s -o ${OUT} -I . ${SRCS_SRCS:=} %s' % (CONFIG.CC_TOOL, dbg_flags),
+        'opt': '%s -o ${OUT} -I . ${SRCS_SRCS:=} %s' % (CONFIG.CC_TOOL, opt_flags),
     }
     build_rule(
         name=name,
@@ -454,7 +454,7 @@ def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflag
     linker_flags = ['-Xlinker ' + flag for flag in (linker_flags or [])]
     pkg_config_cmd = ' '.join('`pkg-config --cflags --libs %s`' % x for x in pkg_config_libs or [])
     pkg_config_cmd_2 = ' '.join('`pkg-config --cflags %s`' % x for x in pkg_config_cflags or [])
-    postamble = '`find . -name "*.o" -or -name "*.a"`' if binary else ''
+    postamble = '`find . -name "*.o" -or -name "*.a" | sort`' if binary else ''
     return ' '.join([' '.join(compiler_flags), ' '.join(linker_flags),
                      pkg_config_cmd, pkg_config_cmd_2, postamble])
 
