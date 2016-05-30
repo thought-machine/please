@@ -40,7 +40,6 @@ go_test(
     srcs = ['http_server_test.go'],
     deps = [
         ':server',
-        '//src/cache/proto:rpc_cache',
     ],
 )
 
