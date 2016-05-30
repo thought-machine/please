@@ -165,8 +165,7 @@ def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=Fals
     """
     env = env or {}
     package = package or name
-    # TODO(pebers): Need a sensible way of working out what GOPATH should be.
-    env.setdefault('GOPATH', '$TMP_DIR:$TMP_DIR/third_party/go')
+    env.setdefault('GOPATH', CONFIG.GOPATH)
     env_cmd = ' '.join('export %s="%s";' % (k, v) for k, v in sorted(env.items()))
     cmd = ' && '.join([
         'if [ ! -d src ]; then ln -s . src; fi',
@@ -329,8 +328,7 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         data=data,
         deps=deps,
         outs=[name],
-        # TODO(pebers): how not to hardcode third_party/go here?
-        cmd='export GOPATH=${PWD}:${PWD}/third_party/go; ln -s $TMP_DIR src; go test ${PKG#*src/} %s -c -test.cover -o $OUT' % tag_cmd,
+        cmd='export GOPATH="%s"; ln -s $TMP_DIR src; go test ${PKG#*src/} %s -c -test.cover -o $OUT' % (CONFIG.GOPATH, tag_cmd),
         test_cmd='set -o pipefail && $(exe :%s) -test.v -test.coverprofile test.coverage | tee test.results' % name,
         visibility=visibility,
         container=container,

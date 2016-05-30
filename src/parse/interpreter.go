@@ -74,6 +74,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("PLZ_VERSION", config.Please.Version)
 	setConfigValue("GO_VERSION", config.Go.GoVersion)
 	setConfigValue("GO_TEST_TOOL", config.Go.TestTool)
+	setConfigValue("GOPATH", config.Go.GoPath)
 	setConfigValue("PIP_TOOL", config.Python.PipTool)
 	setConfigValue("PEX_TOOL", config.Python.PexTool)
 	setConfigValue("DEFAULT_PYTHON_INTERPRETER", config.Python.DefaultInterpreter)
