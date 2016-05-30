@@ -83,8 +83,8 @@ func replaceSequencesInternal(target *core.BuildTarget, command string, test boo
 	cmd = dirReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
 		return replaceSequence(target, in[6:len(in)-1], false, true, true, false, test)
 	})
-	// TODO(pebers): We should check for this when doing matches above, but not easy in
-	//               Go since its regular expressions are actually regular and principled.
+	// We would ideally check for this when doing matches above, but not easy in
+	// Go since its regular expressions are actually regular and principled.
 	return strings.Replace(cmd, "\\$", "$", -1)
 }
 
