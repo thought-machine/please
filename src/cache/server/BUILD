@@ -40,7 +40,6 @@ go_test(
     srcs = ['http_server_test.go'],
     deps = [
         ':server',
-        # TODO(pebers): should not need this dependency.
         '//src/cache/proto:rpc_cache',
     ],
 )
@@ -50,8 +49,6 @@ go_test(
     srcs = ['rpc_server_test.go'],
     deps = [
         ':server',
-        # TODO(pebers): should not need this dependency.
-        '//src/cache/proto:rpc_cache',
     ],
 )
 
@@ -61,7 +58,5 @@ go_test(
     deps = [
         ':server',
         '//third_party/go:testify',
-        # TODO(pebers): should not need this dependency.
-        '//src/cache/proto:rpc_cache',
     ],
 )
