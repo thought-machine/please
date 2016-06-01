@@ -144,6 +144,7 @@ def java_binary(name, main_class=None, srcs=None, deps=None, data=None, visibili
         requires=['java'],
         visibility=visibility,
         tools=tools,
+        labels=None if self_executable else ['java_non_exe'],
     )
 
 
@@ -179,7 +180,7 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
     )
     # As above, would be nicer if we could make the jars self-executing again.
     cmd, tools = _jarcat_cmd('net.thoughtmachine.please.test.TestMain')
-    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools)
+    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools, binary=False)
     cmd = 'ln -s %s . && %s' % (junit_runner, cmd)
     test_cmd = 'java -Dnet.thoughtmachine.please.testpackage=%s %s -jar $(location :%s) ' % (
         test_package, jvm_args, name)
@@ -410,7 +411,7 @@ def _java_binary_cmd(main_class, jvm_args, test_package=None):
     prop = '-Dnet.thoughtmachine.please.testpackage=' + test_package if test_package else ''
     preamble = '#!/bin/sh\nexec java %s %s -jar $0 $@' % (prop, jvm_args or '')
     jarcat_cmd, tools = _jarcat_cmd(main_class, preamble)
-    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools)
+    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools, binary=False)
     return ('ln -s %s . && %s' % (junit_runner, jarcat_cmd) if test_package else jarcat_cmd), tools
 
 
