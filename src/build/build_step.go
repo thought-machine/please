@@ -105,8 +105,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		if _, retrieved := retrieveFromCache(state, target); retrieved {
 			log.Debug("Retrieved artifacts for %s from cache", target.Label)
 			checkLicences(state, target)
-			newOutputHash := calculateAndCheckRuleHash(state, target)
-			if outputHashErr != nil || !bytes.Equal(oldOutputHash, newOutputHash) {
+			newOutputHash, err := calculateAndCheckRuleHash(state, target)
+			if err != nil { // Most likely hash verification failure
+				log.Warning("Error retrieving cached artifacts for %s: %s", target.Label, err)
+				RemoveOutputs(target)
+				return false
+			} else if outputHashErr != nil || !bytes.Equal(oldOutputHash, newOutputHash) {
 				target.SetState(core.Built)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 			} else {
@@ -167,7 +171,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if err != nil {
 		return fmt.Errorf("Error moving outputs for target %s: %s", target.Label, err)
 	}
-	calculateAndCheckRuleHash(state, target)
+	if _, err = calculateAndCheckRuleHash(state, target); err != nil {
+		return err
+	}
 	if outputsChanged {
 		target.SetState(core.Built)
 	} else {
@@ -337,24 +343,24 @@ func RemoveOutputs(target *core.BuildTarget) error {
 }
 
 // calculateAndCheckRuleHash checks the output hash for a rule.
-func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) []byte {
+func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	hash, err := OutputHash(target)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if err = checkRuleHashes(target, hash); err != nil {
 		if state.NeedHashesOnly && state.IsOriginalTarget(target.Label) {
-			panic(stopTarget)
+			return nil, stopTarget
 		} else if state.VerifyHashes {
-			panic(err)
+			return nil, err
 		} else {
 			log.Warning("%s", err)
 		}
 	}
 	if err := writeRuleHashFile(state, target); err != nil {
-		panic(fmt.Errorf("Attempting to create hash file: %s", err))
+		return nil, fmt.Errorf("Attempting to create hash file: %s", err)
 	}
-	return hash
+	return hash, nil
 }
 
 // OutputHash calculates the hash of a target's outputs.
@@ -453,8 +459,9 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 			changed = changed || c
 		}
 	}
-	calculateAndCheckRuleHash(state, target)
-	if changed {
+	if _, err := calculateAndCheckRuleHash(state, target); err != nil {
+		return err
+	} else if changed {
 		target.SetState(core.Built)
 	} else {
 		target.SetState(core.Unchanged)
