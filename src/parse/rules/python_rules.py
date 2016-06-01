@@ -296,7 +296,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
     environment = ' '.join('%s=%s' % (k, v) for k, v in sorted((env or {}).items()))
     target = name if install_subdirectory else '.'
 
-    cmd = '%s install --no-deps --no-compile --default-timeout=60 --target=%s' % (CONFIG.PIP_TOOL, target)
+    cmd = '%s install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=%s' % (CONFIG.PIP_TOOL, target)
     cmd += ' -b build %s %s %s' % (repo_flag, index_flag, package_name)
     cmd += ' && find . -name "*.pyc" -or -name "tests" | xargs rm -rf'
 
