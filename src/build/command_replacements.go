@@ -142,6 +142,10 @@ func checkAndReplaceSequence(target, dep *core.BuildTarget, in string, runnable,
 			}
 		}
 	}
+	if runnable && dep.HasLabel("java_non_exe") {
+		// The target is a Java target that isn't self-executable, hence it needs something to run it.
+		output = "java -jar " + output
+	}
 	return strings.TrimRight(output, " ")
 }
 
