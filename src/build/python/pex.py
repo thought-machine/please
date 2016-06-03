@@ -125,11 +125,13 @@ def main(args):
         sys.exit(0)
 
     # Pex doesn't support relative interpreter paths.
-    # In python3 we could use shutil.which() to locate it but it's probably better
-    # to just force the user to specify it.
     if not args.interpreter.startswith('/'):
-        print('--interpreter argument must be an absolute path')
-        sys.exit(1)
+        try:
+            args.interpreter = shutil.which(args.interpreter)
+        except AttributeError:
+            # not python3.
+            from distutils import spawn
+            args.interpreter = spawn.find_executable(args.interpreter)
 
     # Add pkg_resources and the bootstrapper
     extract_directory('third_party.python',
