@@ -308,8 +308,13 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
 
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
-        flag = '-V never' if CONFIG.OS == 'freebsd' else '--no-backup-if-mismatch'
-        cmd += ' && ' + ' && '.join('patch -p0 %s < $(location %s)' % (flag, patch) for patch in patches)
+        if CONFIG.OS == 'freebsd':
+            # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
+            # files for hashes to match correctly.
+            cmd += ' && ' + ' && '.join('patch -p0 < $(location %s)' % patch for patch in patches)
+            cmd += ' && find . -name "*.orig" | xargs rm'
+        else:
+            cmd += ' && ' + ' && '.join('patch -p0 --no-backup-if-mismatch < $(location %s)' % patch for patch in patches)
 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)
