@@ -15,7 +15,7 @@ genrule(
     srcs = ['cache_cleaner.go'],
     outs = ['cache_cleaner_platform.go'],
     cmd = ('cat $SRC | sed -e "s/stat.Atim.Sec/stat.Atimespec.Sec/g" > $OUT'
-           if CONFIG.OS == 'darwin' else 'cp $SRC $OUT')
+           if CONFIG.OS != 'linux' else 'cp $SRC $OUT')
 )
 
 cgo_test(
