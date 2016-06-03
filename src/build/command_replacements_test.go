@@ -83,7 +83,8 @@ func TestToolReplacement(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(location //path/to:target2)", target2)
 	target1.Tools = append(target1.Tools, target2.Label)
 
-	expected := quote(path.Join(os.Getenv("TEST_DIR"), "plz-out/gen/path/to/target2.py"))
+	wd, _ := os.Getwd()
+	expected := quote(path.Join(wd, "plz-out/gen/path/to/target2.py"))
 	cmd := ReplaceSequences(target1, target1.Command)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
@@ -108,7 +109,8 @@ func TestToolDirReplacement(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(dir //path/to:target2)", target2)
 	target1.Tools = append(target1.Tools, target2.Label)
 
-	expected := quote(path.Join(os.Getenv("TEST_DIR"), "plz-out/gen/path/to"))
+	wd, _ := os.Getwd()
+	expected := quote(path.Join(wd, "plz-out/gen/path/to"))
 	cmd := ReplaceSequences(target1, target1.Command)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
