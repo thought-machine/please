@@ -21,7 +21,8 @@ type TaskType int
 // Subinclude tasks order first, but we're happy for all build / parse / test tasks
 // to be treated equivalently.
 const (
-	SubincludeBuild TaskType = 0x1000 | 1
+	Kill            TaskType = 0x0000 | 0
+	SubincludeBuild          = 0x1000 | 1
 	SubincludeParse          = 0x2000 | 2
 	Build                    = 0x4000 | 3
 	Parse                    = 0x4000 | 4
@@ -152,11 +153,23 @@ func (state *BuildState) TaskDone() {
 	}
 }
 
-// Stop adds n stop tasks to the list of pending tasks, which stops n workers.
+// Stop adds n stop tasks to the list of pending tasks, which stops n workers after all their other tasks are done.
 func (state *BuildState) Stop(n int) {
 	for i := 0; i < n; i++ {
 		state.pendingTasks.Put(pendingTask{Type: Stop})
 	}
+}
+
+// Kill adds n kill tasks to the list of pending tasks, which stops n workers before they do anything else.
+func (state *BuildState) Kill(n int) {
+	for i := 0; i < n; i++ {
+		state.pendingTasks.Put(pendingTask{Type: Kill})
+	}
+}
+
+// KillAll kills all the workers.
+func (state *BuildState) KillAll() {
+	state.Kill(state.numWorkers)
 }
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
