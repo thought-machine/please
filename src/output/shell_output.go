@@ -59,13 +59,8 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	aggregatedResults := core.TestResults{}
 	failedTargets := []core.BuildLabel{}
 	failedNonTests := []core.BuildLabel{}
-	for {
-		result, ok := <-state.Results
-		if ok {
-			processResult(state, result, buildingTargets, &aggregatedResults, plainOutput, keepGoing, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
-		} else {
-			break
-		}
+	for result := range state.Results {
+		processResult(state, result, buildingTargets, &aggregatedResults, plainOutput, keepGoing, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
 	}
 	if !plainOutput {
 		stop <- struct{}{}
