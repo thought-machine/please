@@ -28,9 +28,9 @@ func init() {
 		log.Fatalf("Failed to prepare test directory: %s\n", err)
 	}
 	// Arbitrary large numbers so the cleaner never needs to run.
-	server.Init("src/cache/test_data", 100000, 100000000, 1000000000)
+	cache := server.NewCache("src/cache/test_data", 100000, 100000000, 1000000000)
 
-	go server.ServeGrpcForever(7677)
+	go server.ServeGrpcForever(7677, cache)
 
 	config := core.DefaultConfiguration()
 	config.Cache.RpcUrl = "localhost:7677"

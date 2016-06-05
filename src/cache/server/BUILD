@@ -3,6 +3,7 @@ go_library(
     srcs = ['http_server.go', 'rpc_server.go', 'cache.go'],
     deps = [
         '//src/cache/proto:rpc_cache',
+        '//src/cache/tools',
         '//src/core',
         '//third_party/go:mux',
         '//third_party/go:logging',
@@ -41,6 +42,7 @@ go_test(
     deps = [
         ':server',
     ],
+    data = [':test_data'],
 )
 
 go_test(
@@ -49,6 +51,7 @@ go_test(
     deps = [
         ':server',
     ],
+    data = [':test_data'],
 )
 
 go_test(
@@ -58,4 +61,11 @@ go_test(
         ':server',
         '//third_party/go:testify',
     ],
+    data = [':test_data'],
+)
+
+filegroup(
+    name = 'test_data',
+    srcs = glob(['test_data/**']),
+    test_only = True,
 )

@@ -10,12 +10,12 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"syscall"
 	"time"
 
 	"github.com/dustin/go-humanize"
 	"gopkg.in/op/go-logging.v1"
 
+	"cache/tools"
 	"output"
 )
 
@@ -72,8 +72,7 @@ func start(directory string, highWaterMark, lowWaterMark int64) {
 			if size, err := findSize(path); err != nil {
 				return err
 			} else {
-				stat := info.Sys().(*syscall.Stat_t)
-				entries = append(entries, CacheEntry{path, size, stat.Atim.Sec})
+				entries = append(entries, CacheEntry{path, size, tools.AccessTime(info)})
 				totalSize += size
 				return filepath.SkipDir
 			}

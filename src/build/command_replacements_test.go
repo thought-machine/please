@@ -45,6 +45,44 @@ func TestExe(t *testing.T) {
 	}
 }
 
+func TestOutExe(t *testing.T) {
+	target2 := makeTarget("//path/to:target2", "", nil)
+	target2.IsBinary = true
+	target1 := makeTarget("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
+
+	expected := "plz-out/bin/path/to/target2.py -o ${OUT}"
+	cmd := replaceSequences(target1)
+	if cmd != expected {
+		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
+	}
+}
+
+func TestJavaExe(t *testing.T) {
+	target2 := makeTarget("//path/to:target2", "", nil)
+	target2.IsBinary = true
+	target2.AddLabel("java_non_exe") // This label tells us to prefix it with java -jar.
+	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target2) -o ${OUT}", target2)
+
+	expected := "java -jar path/to/target2.py -o ${OUT}"
+	cmd := replaceSequences(target1)
+	if cmd != expected {
+		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
+	}
+}
+
+func TestJavaOutExe(t *testing.T) {
+	target2 := makeTarget("//path/to:target2", "", nil)
+	target2.IsBinary = true
+	target2.AddLabel("java_non_exe") // This label tells us to prefix it with java -jar.
+	target1 := makeTarget("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
+
+	expected := "java -jar plz-out/bin/path/to/target2.py -o ${OUT}"
+	cmd := replaceSequences(target1)
+	if cmd != expected {
+		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
+	}
+}
+
 func TestReplacementsForTest(t *testing.T) {
 	target2 := makeTarget("//path/to:target2", "", nil)
 	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target1) $(location //path/to:target2)", target2)

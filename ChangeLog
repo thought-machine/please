@@ -1,3 +1,21 @@
+Version 3.1.1
+-------------
+
+    * Fixed `plz run` on java_binary rules not marked as self_executable.
+    * Various minor cache fixes. Access times should be correctly regenerated
+      on restart now.
+
+
+Version 3.1.0
+-------------
+
+    * Extra GOPATH additions for cgo_library / cgo_test are configurable through
+      [go]gopath setting. We typically use third_party/go for this.
+    * pip_library commands changed a bit to try to make it more deterministic.
+    * When artifacts fail hash verification after cache retrieval, attempt to build
+      locally instead of failing.
+
+
 Version 3.0.2
 -------------
 

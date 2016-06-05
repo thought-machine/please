@@ -563,8 +563,7 @@ func main() {
 		command = activeCommand(parser)
 	}
 
-	if buildFunctions[command]() {
-		os.Exit(0)
+	if !buildFunctions[command]() {
+		os.Exit(1)
 	}
-	os.Exit(1)
 }

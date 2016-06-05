@@ -5,7 +5,7 @@ package run
 import (
 	"fmt"
 	"os"
-	"path"
+	"os/exec"
 	"strings"
 	"syscall"
 
@@ -26,10 +26,17 @@ func Run(graph *core.BuildGraph, label core.BuildLabel, args []string) {
 	}
 	// ReplaceSequences always quotes stuff in case it contains spaces or special characters,
 	// that works fine if we interpret it as a shell but not to pass it as an argument here.
-	cmd := path.Join(core.BinDir, strings.Trim(build.ReplaceSequences(target, fmt.Sprintf("$(exe %s)", target.Label)), "\""))
-	// Handle targets where $(exe ...) returns something nontrivial (used to be the case for
-	// java_binary rules, currently not really needed but probably more futureproof)
+	cmd := strings.Trim(build.ReplaceSequences(target, fmt.Sprintf("$(out_exe %s)", target.Label)), "\"")
+	// Handle targets where $(exe ...) returns something nontrivial
 	splitCmd := strings.Split(cmd, " ")
+	if !strings.Contains(splitCmd[0], "/") {
+		// Probably it's a java -jar, we need an absolute path to it.
+		cmd, err := exec.LookPath(splitCmd[0])
+		if err != nil {
+			log.Fatalf("Can't find binary %s", splitCmd[0])
+		}
+		splitCmd[0] = cmd
+	}
 	args = append(splitCmd, args...)
 	log.Info("Running target %s...", strings.Join(args, " "))
 	output.SetWindowTitle("plz run: " + strings.Join(args, " "))

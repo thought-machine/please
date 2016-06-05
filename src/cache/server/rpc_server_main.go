@@ -23,7 +23,7 @@ func main() {
 	output.ParseFlagsOrDie("Please RPC cache server", &opts)
 	output.InitLogging(opts.Verbosity, opts.LogFile, opts.Verbosity)
 	log.Notice("Scanning existing cache directory %s...", opts.Dir)
-	server.Init(opts.Dir, opts.CleanFrequency, int64(opts.LowWaterMark), int64(opts.HighWaterMark))
+	cache := server.NewCache(opts.Dir, opts.CleanFrequency, int64(opts.LowWaterMark), int64(opts.HighWaterMark))
 	log.Notice("Starting up RPC cache server on port %d...", opts.Port)
-	server.ServeGrpcForever(opts.Port)
+	server.ServeGrpcForever(opts.Port, cache)
 }
