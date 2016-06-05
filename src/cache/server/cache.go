@@ -119,6 +119,16 @@ func removeFile(path string, file *cachedFile) {
 	log.Debug("Removing file %s, saves %d, new size will be %d", path, file.size, totalSize)
 }
 
+// removeAndDeleteFile deletes a file from the cache map and on-disk.
+// Caller should already hold the mutex before calling this
+func removeAndDeleteFile(p string, file *cachedFile) {
+	removeFile(p, file)
+	p = path.Join(cachePath, p)
+	if err := os.RemoveAll(p); err != nil {
+		log.Error("Failed to delete file: %s", p)
+	}
+}
+
 // RetrieveArtifact takes in the artifact path as a parameter and checks in the base server
 // file directory to see if the file exists in the given path. If found, the function will
 // return whatever's been stored there, which might be a directory and therefore contain
@@ -186,15 +196,17 @@ func StoreArtifact(artPath string, key []byte) error {
 	lock := lockFile(artPath, true, int64(len(key)))
 	defer lock.Unlock()
 
-	artPath = path.Join(cachePath, artPath)
-	dirPath := path.Dir(artPath)
+	fullPath := path.Join(cachePath, artPath)
+	dirPath := path.Dir(fullPath)
 	if err := os.MkdirAll(dirPath, core.DirPermissions); err != nil {
 		log.Warning("Couldn't create path %s in http cache: %s", dirPath, err)
+		removeAndDeleteFile(artPath, lock)
 		return err
 	}
-	log.Debug("Writing artifact to %s", artPath)
-	if err := core.WriteFile(bytes.NewReader(key), artPath, 0); err != nil {
-		log.Errorf("Could not create %s artifact: %s", artPath, err)
+	log.Debug("Writing artifact to %s", fullPath)
+	if err := core.WriteFile(bytes.NewReader(key), fullPath, 0); err != nil {
+		log.Errorf("Could not create %s artifact: %s", fullPath, err)
+		removeAndDeleteFile(artPath, lock)
 		return err
 	}
 	return nil
@@ -208,7 +220,7 @@ func DeleteArtifact(artPath string) error {
 	for p, file := range cachedFiles {
 		if strings.HasPrefix(p, artPath) {
 			file.Lock()
-			removeFile(path.Join(cachePath, p), file)
+			removeFile(p, file)
 			file.Unlock()
 		}
 	}
