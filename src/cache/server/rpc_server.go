@@ -16,28 +16,30 @@ import (
 	pb "cache/proto/rpc_cache"
 )
 
-type RpcCacheServer struct{}
+type RpcCacheServer struct {
+	cache *Cache
+}
 
-func (*RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
+func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
 	arch := req.Os + "_" + req.Arch
 	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
 	for _, artifact := range req.Artifacts {
 		path := path.Join(arch, artifact.Package, artifact.Target, hash, artifact.File)
-		if err := StoreArtifact(path, artifact.Body); err != nil {
+		if err := r.cache.StoreArtifact(path, artifact.Body); err != nil {
 			return &pb.StoreResponse{Success: false}, nil
 		}
 	}
 	return &pb.StoreResponse{Success: true}, nil
 }
 
-func (*RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) (*pb.RetrieveResponse, error) {
+func (r *RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) (*pb.RetrieveResponse, error) {
 	response := pb.RetrieveResponse{Success: true}
 	arch := req.Os + "_" + req.Arch
 	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
 	for _, artifact := range req.Artifacts {
 		root := path.Join(arch, artifact.Package, artifact.Target, hash)
 		fileRoot := path.Join(root, artifact.File)
-		art, err := RetrieveArtifact(fileRoot)
+		art, err := r.cache.RetrieveArtifact(fileRoot)
 		if err != nil {
 			log.Debug("Failed to retrieve artifact %s: %s", fileRoot, err)
 			return &pb.RetrieveResponse{Success: false}, nil
@@ -54,25 +56,28 @@ func (*RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) (*
 	return &response, nil
 }
 
-func (*RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
 	if req.Everything {
-		return &pb.DeleteResponse{Success: DeleteAllArtifacts() == nil}, nil
+		return &pb.DeleteResponse{Success: r.cache.DeleteAllArtifacts() == nil}, nil
 	}
 	success := true
 	arch := req.Os + "_" + req.Arch
 	for _, artifact := range req.Artifacts {
-		success = success && (DeleteArtifact(path.Join(arch, artifact.Package, artifact.Target)) == nil)
+		if r.cache.DeleteArtifact(path.Join(arch, artifact.Package, artifact.Target)) != nil {
+			success = false
+		}
 	}
 	return &pb.DeleteResponse{Success: success}, nil
 }
 
-func ServeGrpcForever(port int) {
+func ServeGrpcForever(port int, cache *Cache) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("Failed to listen on port %d: %v", port, err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterRpcCacheServer(s, &RpcCacheServer{})
+	r := &RpcCacheServer{cache: cache}
+	pb.RegisterRpcCacheServer(s, r)
 	healthserver := health.NewHealthServer()
 	healthserver.SetServingStatus("plz-rpc-cache", healthpb.HealthCheckResponse_SERVING)
 	healthpb.RegisterHealthServer(s, healthserver)

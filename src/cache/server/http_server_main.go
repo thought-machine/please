@@ -26,9 +26,9 @@ func main() {
 	output.ParseFlagsOrDie("Please RPC cache server", &opts)
 	output.InitLogging(opts.Verbosity, opts.LogFile, opts.Verbosity)
 	log.Notice("Initialising cache server...")
-	server.Init(opts.Dir, opts.CleanFrequency, int64(opts.LowWaterMark), int64(opts.HighWaterMark))
+	cache := server.NewCache(opts.Dir, opts.CleanFrequency, int64(opts.LowWaterMark), int64(opts.HighWaterMark))
 	log.Notice("Starting up http cache server on port %d...", opts.Port)
-	router := server.BuildRouter()
+	router := server.BuildRouter(cache)
 	http.Handle("/", router)
 	http.ListenAndServe(fmt.Sprintf(":%d", opts.Port), router)
 }

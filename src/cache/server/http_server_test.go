@@ -23,8 +23,11 @@ var (
 	reader       io.Reader
 )
 
+const cachePath = "plz-cache"
+
 func init() {
-	server = httptest.NewServer(BuildRouter())
+	c := newCache(cachePath)
+	server = httptest.NewServer(BuildRouter(c))
 	if !core.PathExists(cachePath + "/darwin_amd64/pack/label/hash/") {
 		_ = os.MkdirAll(cachePath+"/darwin_amd64/pack/label/hash/", core.DirPermissions)
 		_, _ = os.Create(cachePath + "/darwin_amd64/pack/label/hash/" + "label.ext")
@@ -37,9 +40,6 @@ func init() {
 		_ = os.MkdirAll(cachePath+"/linux_amd64/extrapack/label/hash/", core.DirPermissions)
 		_, _ = os.Create(cachePath + "/linux_amd64/extrapack/label/hash/" + "label.ext")
 	}
-
-	// Don't call init to kick off the cleaner goroutine
-	scan(cachePath)
 
 	realURL = fmt.Sprintf("%s/artifact/darwin_amd64/pack/label/hash/label.ext", server.URL)
 	otherRealURL = fmt.Sprintf("%s/artifact/linux_amd64/otherpack/label/hash/label.ext", server.URL)
