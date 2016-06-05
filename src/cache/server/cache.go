@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"cache/tools"
 	"core"
 )
 
@@ -76,7 +77,7 @@ func (cache *Cache) scan() {
 			log.Debug("Found file %s", name)
 			size := info.Size()
 			cache.cachedFiles[name] = &cachedFile{
-				lastReadTime: time.Now(),
+				lastReadTime: time.Unix(tools.AccessTime(info), 0),
 				readCount:    0,
 				size:         size,
 			}

@@ -1,21 +1,20 @@
+go_library(
+    name = 'tools',
+    # We need to use things from syscall that vary by platform.
+    srcs = ['tools_linux.go' if CONFIG.OS == 'linux' else 'tools.go'],
+    visibility = ['//src/cache/...'],
+)
+
 go_binary(
     name = 'cache_cleaner',
-    main = ':cache_cleaner_platform',
+    main = 'cache_cleaner.go',
     deps = [
+        ':tools',
         '//src/output',
         '//third_party/go:logging',
         '//third_party/go:humanize',
     ],
     visibility = ['PUBLIC'],
-)
-
-# Bit of a fiddle to do conditional compilation (weirdly, Go's isn't working for me).
-genrule(
-    name = 'cache_cleaner_platform',
-    srcs = ['cache_cleaner.go'],
-    outs = ['cache_cleaner_platform.go'],
-    cmd = ('cat $SRC | sed -e "s/stat.Atim.Sec/stat.Atimespec.Sec/g" > $OUT'
-           if CONFIG.OS == 'darwin' else 'cp $SRC $OUT')
 )
 
 cgo_test(
