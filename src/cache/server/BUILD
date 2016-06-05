@@ -41,6 +41,7 @@ go_test(
     deps = [
         ':server',
     ],
+    data = [':test_data'],
 )
 
 go_test(
@@ -49,6 +50,7 @@ go_test(
     deps = [
         ':server',
     ],
+    data = [':test_data'],
 )
 
 go_test(
@@ -58,4 +60,11 @@ go_test(
         ':server',
         '//third_party/go:testify',
     ],
+    data = [':test_data'],
+)
+
+filegroup(
+    name = 'test_data',
+    srcs = glob(['test_data/**']),
+    test_only = True,
 )

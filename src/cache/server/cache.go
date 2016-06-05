@@ -27,6 +27,7 @@ type cachedFile struct {
 	size int64
 }
 
+// A Cache is the underlying implementation of our HTTP and RPC caches that handles storing & retrieving artifacts.
 type Cache struct {
 	cachedFiles map[string]*cachedFile
 	mutex       sync.RWMutex
@@ -37,8 +38,6 @@ type Cache struct {
 // NewCache initialises the cache and fires off a background cleaner goroutine which runs every
 // cleanFrequency seconds. The high and low water marks control a (soft) max size and a (harder)
 // minimum size.
-// This causes an initial scan of the directory and is needed to retrieve any preexisting artifacts.
-// If it's not called the cache will still function but won't know about anything existing beforehand.
 func NewCache(path string, cleanFrequency int, lowWaterMark, highWaterMark int64) *Cache {
 	log.Notice("Initialising cache with settings:\n  Path: %s\n  Clean frequency: %d\n  Low water mark: %d\n  High water mark: %d",
 		path, cleanFrequency, lowWaterMark, highWaterMark)
@@ -101,9 +100,8 @@ func (cache *Cache) lockFile(path string, write bool, size int64) *cachedFile {
 			return nil
 		}
 		file = &cachedFile{
-			lastReadTime: time.Now(),
-			readCount:    0,
-			size:         size,
+			readCount: 0,
+			size:      size,
 		}
 		cache.cachedFiles[path] = file
 		cache.totalSize += size
@@ -114,6 +112,7 @@ func (cache *Cache) lockFile(path string, write bool, size int64) *cachedFile {
 		file.RLock()
 		file.readCount++
 	}
+	file.lastReadTime = time.Now()
 	return file
 }
 

@@ -25,16 +25,15 @@ func init() {
 	label = core.NewBuildLabel("pkg/name", "label_name")
 	target = core.NewBuildTarget(label)
 
+	// Arbitrary large numbers so the cleaner never needs to run.
+	cache := server.NewCache("src/cache/test_data", 100000, 100000000, 1000000000)
 	key, _ = ioutil.ReadFile("src/cache/test_data/testfile")
-	testServer := httptest.NewServer(server.BuildRouter())
+	testServer := httptest.NewServer(server.BuildRouter(cache))
 
 	config := core.DefaultConfiguration()
 	config.Cache.HttpUrl = testServer.URL
 	config.Cache.HttpWriteable = true
 	httpcache = newHttpCache(config)
-
-	// Arbitrary large numbers so the cleaner never needs to run.
-	server.Init("src/cache/test_data", 100000, 100000000, 1000000000)
 }
 
 func TestStore(t *testing.T) {
