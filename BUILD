@@ -8,7 +8,7 @@ filegroup(
     srcs = [
         '//src/build/python:please_pex',
         '//src/build/java:junit_runner',
-        '//src/cache/tools:cache_cleaner',
+        '//src/cache/main:cache_cleaner',
         '//src/cache/server:http_cache_server_bin',
         '//src/cache/server:rpc_cache_server_bin',
         '//src/build/go:please_go_test',
