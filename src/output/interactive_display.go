@@ -129,22 +129,24 @@ func windowSize() (int, int) {
 	ws := new(winsize)
 	if ret, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(syscall.Stderr),
-		uintptr(magicNumber()),
+		uintptr(tiocgwinsz()),
 		uintptr(unsafe.Pointer(ws)),
 	); int(ret) == -1 {
 		log.Errorf("error %d getting window size", int(errno))
-		return 80, 25
+		return 25, 80
 	} else {
 		return int(ws.Row), int(ws.Col)
 	}
 }
 
-func magicNumber() int {
-	// Found these on an internet somewhere.
-	if runtime.GOOS == "darwin" {
-		return 1074295912
-	} else {
+// tiocgwinsz returns the ioctl number corresponding to TIOCGWINSZ.
+// We could determine this using cgo which would be more robust, but I'd really
+// rather not invoke cgo for something as static as this.
+func tiocgwinsz() int {
+	if runtime.GOOS == "linux" {
 		return 0x5413
+	} else {
+		return 1074295912 // OSX and FreeBSD.
 	}
 }
 
