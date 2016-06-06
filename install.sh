@@ -28,7 +28,7 @@ else
     chmod 0775 /opt/please/jarcat
     cp plz-out/bin/src/build/java/please_maven /opt/please/please_maven
     chmod 0775 /opt/please/please_maven
-    cp plz-out/bin/src/cache/tools/cache_cleaner /opt/please/cache_cleaner
+    cp plz-out/bin/src/cache/main/cache_cleaner /opt/please/cache_cleaner
     chmod 0775 /opt/please/cache_cleaner
     cp plz-out/bin/src/misc/plz_diff_graphs /opt/please/please_diff_graphs
     chmod 0775 /opt/please/please_diff_graphs

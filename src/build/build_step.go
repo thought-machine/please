@@ -270,7 +270,11 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 		}
 		changed = changed || outputChanged
 	}
-	log.Debug("Outputs for %s are unchanged", target.Label)
+	if changed {
+		log.Debug("Outputs for %s have changed", target.Label)
+	} else {
+		log.Debug("Outputs for %s are unchanged", target.Label)
+	}
 	return changed, nil
 }
 
