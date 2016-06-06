@@ -4,6 +4,7 @@ Version 3.1.1
     * Fixed `plz run` on java_binary rules not marked as self_executable.
     * Various minor cache fixes. Access times should be correctly regenerated
       on restart now.
+    * Initial work on FreeBSD port; is now mostly buildable there.
 
 
 Version 3.1.0
