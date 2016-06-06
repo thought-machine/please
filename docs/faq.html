@@ -12,8 +12,24 @@
     <h3>Can I run it on my computer?</h3>
 
     <p>If you're running Linux or OSX, definitely; we actively support both those platforms.<br/>
-      We primarily test on Ubuntu but other distros should work fine too.<br/>
-      It's probably possible to port to BSD with a little work.</p>
+      We primarily test on Ubuntu but other distros should work fine too.</p>
+
+    <p>It can self-host and passes all the core tests on FreeBSD. A little more work is required
+      to set everything up; it'd be nice to streamline this at some point. Notable issues include:
+      <ul>
+        <li>The RPC cache is unavailable because gRPC does not compile on FreeBSD yet.
+          See <a href="https://github.com/grpc/grpc/issues/1035">the upstream issue</a>
+          for more details.<br/>
+          This should have no notable downsides for clients other than them not being able
+          to communicate with such a cache.</li>
+        <li>You'll need Bash installed for the bootstrap script to run.</li>
+        <li><code>go tool link</code> appears to invoke <code>gcc</code> instead of <code>cc</code>,
+          so you'll either need it installed or to provide a symlink.</li>
+        <li>The ports install of Python doesn't provide some of the symlinks we'd like
+          (specifically it only has <code>python2.7</code> and we'd like <code>python2</code> and
+          <code>python</code>).</li>
+      </ul>
+    </p>
 
     <p>Windows is unfortunately not supported natively, since it's just too different from the
       Unix environment Please is designed for. It might well be possible to make it work using

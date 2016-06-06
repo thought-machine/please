@@ -120,7 +120,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.GoVersion = "1.6"
 	config.Go.GoPath = "${TMP_DIR}:${TMP_DIR}/third_party/go"
 	config.Python.PipTool = "pip"
-	config.Python.DefaultInterpreter = "/usr/bin/python"
+	config.Python.DefaultInterpreter = "python"
 	config.Python.UsePyPI = true
 	config.Java.JavacTool = "javac"
 	config.Java.DefaultTestPackage = ""

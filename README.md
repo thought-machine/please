@@ -7,6 +7,9 @@ See http://please.build for more information.
 
 TODO(all): Set up the website.
 
+Currently Linux (tested on Ubuntu) and OSX are actively supported,
+and FreeBSD is known to work with a little setup (see FAQ for details).
+
 
 Getting Started
 ===============
