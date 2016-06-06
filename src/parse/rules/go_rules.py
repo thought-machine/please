@@ -272,6 +272,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         },
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
         requires=['go'],
+        test_only=True,
         tools=tools,
         post_build=_replace_test_package,
     )
