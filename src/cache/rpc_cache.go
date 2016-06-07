@@ -33,6 +33,7 @@ type rpcCache struct {
 	Connecting bool
 	OSName     string
 	numErrors  int32
+	timeout    time.Duration
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
@@ -91,7 +92,9 @@ func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*
 
 func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artifacts []*pb.Artifact) {
 	req := pb.StoreRequest{Artifacts: artifacts, Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
-	resp, err := cache.client.Store(context.Background(), &req)
+	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
+	defer cancel()
+	resp, err := cache.client.Store(ctx, &req)
 	if err != nil {
 		log.Warning("Error communicating with RPC cache server: %s", err)
 		cache.error()
@@ -129,7 +132,9 @@ func (cache *rpcCache) RetrieveExtra(target *core.BuildTarget, key []byte, file 
 }
 
 func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.RetrieveRequest) bool {
-	response, err := cache.client.Retrieve(context.Background(), req)
+	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
+	defer cancel()
+	response, err := cache.client.Retrieve(ctx, req)
 	if err != nil {
 		log.Warning("Failed to retrieve artifacts for %s", target.Label)
 		cache.error()
@@ -175,8 +180,7 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
 	// TODO(pebers): Add support for communicating over https.
-	timeout := time.Duration(config.Cache.RpcTimeout) * time.Second
-	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(), grpc.WithTimeout(timeout))
+	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(), grpc.WithTimeout(cache.timeout))
 	if err != nil {
 		cache.Connecting = false
 		log.Warning("Failed to connect to RPC cache: %s", err)
@@ -186,7 +190,7 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	// Dial() only seems to return errors for superficial failures like syntactically invalid addresses,
 	// it will return essentially immediately even if the server doesn't exist.
 	healthclient := healthpb.NewHealthClient(connection)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
 	resp, err := healthclient.Check(ctx, &healthpb.HealthCheckRequest{Service: "plz-rpc-cache"})
 	if err != nil {
@@ -232,7 +236,11 @@ func (cache *rpcCache) error() {
 }
 
 func newRpcCache(config *core.Configuration) (*rpcCache, error) {
-	cache := &rpcCache{Writeable: config.Cache.RpcWriteable, Connecting: true}
+	cache := &rpcCache{
+		Writeable:  config.Cache.RpcWriteable,
+		Connecting: true,
+		timeout:    time.Duration(config.Cache.RpcTimeout) * time.Second,
+	}
 	go cache.connect(config)
 	return cache, nil
 }
