@@ -132,6 +132,7 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 	response, err := cache.client.Retrieve(context.Background(), req)
 	if err != nil {
 		log.Warning("Failed to retrieve artifacts for %s", target.Label)
+		cache.error()
 		return false
 	} else if !response.Success {
 		// Quiet, this is almost certainly just a 'not found'
@@ -185,8 +186,9 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	// Dial() only seems to return errors for superficial failures like syntactically invalid addresses,
 	// it will return essentially immediately even if the server doesn't exist.
 	healthclient := healthpb.NewHealthClient(connection)
-	resp, err := healthclient.Check(context.Background().WithTimeout(timeout),
-		&healthpb.HealthCheckRequest{Service: "plz-rpc-cache"})
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	resp, err := healthclient.Check(ctx, &healthpb.HealthCheckRequest{Service: "plz-rpc-cache"})
 	if err != nil {
 		cache.Connecting = false
 		log.Warning("Failed to contact RPC cache: %s", err)
