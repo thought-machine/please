@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/context"
@@ -22,6 +23,8 @@ import (
 	pb "cache/proto/rpc_cache"
 )
 
+const maxErrors = 5
+
 type rpcCache struct {
 	connection *grpc.ClientConn
 	client     pb.RpcCacheClient
@@ -29,6 +32,7 @@ type rpcCache struct {
 	Connected  bool
 	Connecting bool
 	OSName     string
+	numErrors  int32
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
@@ -39,6 +43,7 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
 			artifacts2, err := cache.loadArtifacts(target, out)
 			if err != nil {
 				log.Warning("RPC cache failed to load artifact %s: %s", out, err)
+				cache.error()
 				return
 			}
 			artifacts = append(artifacts, artifacts2...)
@@ -53,6 +58,7 @@ func (cache *rpcCache) StoreExtra(target *core.BuildTarget, key []byte, file str
 		artifacts, err := cache.loadArtifacts(target, file)
 		if err != nil {
 			log.Warning("RPC cache failed to load artifact %s: %s", file, err)
+			cache.error()
 			return
 		}
 		cache.sendArtifacts(target, key, artifacts)
@@ -88,6 +94,7 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 	resp, err := cache.client.Store(context.Background(), &req)
 	if err != nil {
 		log.Warning("Error communicating with RPC cache server: %s", err)
+		cache.error()
 	} else if !resp.Success {
 		log.Warning("Failed to store artifacts in RPC cache for %s", target.Label)
 	}
@@ -167,8 +174,8 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
 	// TODO(pebers): Add support for communicating over https.
-	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(),
-		grpc.WithTimeout(time.Duration(config.Cache.RpcTimeout)*time.Second))
+	timeout := time.Duration(config.Cache.RpcTimeout) * time.Second
+	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(), grpc.WithTimeout(timeout))
 	if err != nil {
 		cache.Connecting = false
 		log.Warning("Failed to connect to RPC cache: %s", err)
@@ -178,7 +185,8 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	// Dial() only seems to return errors for superficial failures like syntactically invalid addresses,
 	// it will return essentially immediately even if the server doesn't exist.
 	healthclient := healthpb.NewHealthClient(connection)
-	resp, err := healthclient.Check(context.Background(), &healthpb.HealthCheckRequest{Service: "plz-rpc-cache"})
+	resp, err := healthclient.Check(context.Background().WithTimeout(timeout),
+		&healthpb.HealthCheckRequest{Service: "plz-rpc-cache"})
 	if err != nil {
 		cache.Connecting = false
 		log.Warning("Failed to contact RPC cache: %s", err)
@@ -208,6 +216,17 @@ func (cache *rpcCache) isConnected() bool {
 	}
 	ticker.Stop()
 	return cache.Connected
+}
+
+// error increments the error counter on the cache, and disables it if it gets too high.
+// Note that after this it won't reconnect; we could try that but it probably isn't worth it
+// (it's unlikely to restart in time if it's got a nontrivial set of artifacts to scan) and
+// the user has probably been pestered by enough messages already.
+func (cache *rpcCache) error() {
+	if atomic.AddInt32(&cache.numErrors, 1) >= maxErrors {
+		log.Warning("Disabling RPC cache, looks like the connection has been lost")
+		cache.Connected = false
+	}
 }
 
 func newRpcCache(config *core.Configuration) (*rpcCache, error) {
