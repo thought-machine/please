@@ -1,3 +1,12 @@
+Version 3.1.2
+-------------
+
+    * When a target fails, plz now waits for all other building targets to conclude
+      before terminating. We expect that over repeated builds this will be faster
+      because it won't keep abandoning half-complete tasks.
+      Compiler feedback should show immediately, and you can Ctrl+C it to stop whenever.
+
+
 Version 3.1.1
 -------------
 
