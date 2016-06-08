@@ -264,13 +264,14 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
       hashes (list): List of acceptable hashes for this target.
       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
       outs (list): List of output files / directories. Defaults to [name].
+      test_only (bool): If True, can only be used by test rules or other test_only libraries.
       env (dict): Environment variables to provide during pip install, as a dict (or similar).
       deps (list): List of rules this library depends on.
       post_install_commands (list): Commands run after pip install has completed.
       install_subdirectory (bool): Forces the package to install into a subdirectory with this name.
       repo (str): Allows specifying a custom repo to fetch from.
       use_pypi (bool): If True, will check PyPI as well for packages.
-      patch (str): A patch file to be applied after install.
+      patch (str | list): A patch file or files to be applied after install.
       visibility (list): Visibility declaration for this rule.
       zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
       licences (list): Licences this rule is subject to. Default attempts to detect from package metadata.

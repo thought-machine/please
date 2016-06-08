@@ -24,7 +24,7 @@ genrule(
 go_bindata(
     name = 'builtin_rules',
     srcs = [':type_checked_rules'],
-    prefix = '${PKG}/rules',
+    prefix = '${PKG}',
 )
 
 cgo_test(

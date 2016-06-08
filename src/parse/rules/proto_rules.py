@@ -31,7 +31,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
       plugins (dict): Plugins to invoke for code generation.
       deps (list): Dependencies
       visibility (list): Visibility specification for the rule.
-      labels(list): List of labels to apply to this rule.
+      labels (list): List of labels to apply to this rule.
       python_deps (list): Additional deps to add to the python_library rules
       cc_deps (list): Additional deps to add to the cc_library rules
       java_deps (list): Additional deps to add to the java_library rules

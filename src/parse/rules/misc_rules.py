@@ -31,9 +31,9 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
              SRC: the source of this rule. Only present when there is only one source.
              SRCS_<suffix>: Present when you've defined named sources on a rule. Each group
                             creates one of these these variables with paths to those sources.
-      srcs (list): Sources of this rule. Can be a list of files or rules, or a dict of names to similar
-            lists. In the latter case they can be accessed separately which is useful when you
-            have separate kinds of things in a rule.
+      srcs (list | dict): Sources of this rule. Can be a list of files or rules, or a dict of names
+                          to lists. In the latter case they can be accessed separately which is useful
+                          to be able to refer to them distinctly in the command.
       outs (list): Outputs of this rule.
       out (str): A single output of this rule, as a string. Discouraged in favour of 'outs'.
       deps (list): Dependencies of this rule.
@@ -226,11 +226,11 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
     into the build tree, you must add additional rules if compilation is necessary.
 
     Args:
-      name: Name of the rule.
-      srcs: System-level sources. Should all be absolute paths.
-      deps: Dependencies of the rule.
-      hashes: List of hashes; the output must match at least one of these. This is not required
-              but could be used to assert that the system lib is of some known version.
+      name (str): Name of the rule.
+      srcs (list): System-level sources. Should all be absolute paths.
+      deps (list): Dependencies of the rule.
+      hashes (list): List of hashes; the output must match at least one of these. This is not required
+                     but could be used to assert that the system lib is of some known version.
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If true the rule is only visible to test targets.
     """
@@ -275,11 +275,11 @@ def github_file(name, repo, file, revision='master', hash=None, visibility=None,
     This is just a convenience wrapper around remote_file but is somewhat clearer to write.
 
     Args:
-      name: Name of the rule.
-      repo: Repository to fetch from (e.g. thought-machine/please).
-      file: File in the repo to fetch (e.g. src/parse/rules/misc_rules.py).
-      revision: Git revision to fetch from. Defaults to most recent on master.
-      hash: Hash of downloaded file.
+      name (str): Name of the rule.
+      repo (str): Repository to fetch from (e.g. thought-machine/please).
+      file (str): File in the repo to fetch (e.g. src/parse/rules/misc_rules.py).
+      revision (str): Git revision to fetch from. Defaults to most recent on master.
+      hash (str): Hash of downloaded file.
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If true the rule is only visible to test targets.
     """

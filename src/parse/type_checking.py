@@ -31,7 +31,7 @@ def arg_checks(node):
     for i, arg in enumerate(arg.id for arg in node.args.args):
         assert arg in docs, 'Missing docstring for argument %s to %s()' % (arg, node.name)
         doc = docs[arg]
-        if i > min_default:
+        if i >= min_default:
             if '|' in doc:
                 types = doc.split(' | ')
                 yield 'assert not %s or isinstance(%s, (%s)), "Argument %s to %s must be a %s"' % (
@@ -49,7 +49,7 @@ def process(filename):
     with open(filename) as f, open(os.path.basename(filename), 'w') as f2:
         for i, line in enumerate(f):
             if i in checks:
-                f2.write('\n'.join(indent * ' ' + check for check in checks[i]))
+                f2.write('\n'.join(indent * ' ' + check for check in checks[i]) + '\n\n')
             f2.write(line)
             indent = len(line) - len(line.lstrip())
 
