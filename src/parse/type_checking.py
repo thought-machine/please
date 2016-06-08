@@ -36,6 +36,11 @@ def arg_checks(node):
                 types = doc.split(' | ')
                 yield 'assert not %s or isinstance(%s, (%s)), "Argument %s to %s must be a %s"' % (
                     arg, arg, ', '.join(types), arg, node.name, ' or '.join(types))
+            elif doc == 'function':
+                # Have to check functions a bit specially. Maybe we should document them
+                # as 'callable' instead of 'function'?
+                yield 'assert not %s or callable(%s), "Argument %s to %s must be callable"' % (
+                    arg, arg, arg, node.name)
             else:
                 yield 'assert not %s or isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
                     arg, arg, doc, arg, node.name, doc)
