@@ -194,6 +194,7 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
       provides (dict): Kinds of output that this provides for other rules (see genrule() for a more
                        in-depth discussion of this).
       test_only (bool): If true the exported file can only be used by test targets.
+      link (bool): Deprecated, no longer has any effect.
     """
     build_rule(
         name=name,

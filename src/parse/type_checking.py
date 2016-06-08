@@ -28,19 +28,20 @@ def arg_checks(node):
     """Yields a sequence of checks on the given ast function node."""
     docs = {m.group(1): m.group(2) for m in DOCSTRING_RE.finditer(ast.get_docstring(node))}
     min_default = len(node.args.args) - len(node.args.defaults)
-    for i, arg in enumerate(node.args.args):
-        doc = docs[arg.id]
+    for i, arg in enumerate(arg.id for arg in node.args.args):
+        assert arg in docs, 'Missing docstring for argument %s to %s()' % (arg, node.name)
+        doc = docs[arg]
         if i > min_default:
             if '|' in doc:
                 types = doc.split(' | ')
                 yield 'assert not %s or isinstance(%s, (%s)), "Argument %s to %s must be a %s"' % (
-                    arg.id, arg.id, ', '.join(types), arg.id, node.name, ' or '.join(types))
+                    arg, arg, ', '.join(types), arg, node.name, ' or '.join(types))
             else:
                 yield 'assert not %s or isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
-                    arg.id, arg.id, doc, arg.id, node.name, doc)
+                    arg, arg, doc, arg, node.name, doc)
         else:
             yield'assert isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
-                arg.id, doc, arg.id, node.name, doc)
+                arg, doc, arg, node.name, doc)
 
 
 def process(filename):

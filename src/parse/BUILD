@@ -14,9 +14,16 @@ cgo_library(
     visibility = ['PUBLIC'],
 )
 
+genrule(
+    name = 'type_checked_rules',
+    srcs = ['type_checking.py'] + glob(['rules/*.py']),
+    outs = [basename(x) for x in glob(['rules/*.py'])],
+    cmd = 'python $SRCS',
+)
+
 go_bindata(
     name = 'builtin_rules',
-    srcs = glob(['rules/*.py']),
+    srcs = [':type_checked_rules'],
     prefix = '${PKG}/rules',
 )
 
