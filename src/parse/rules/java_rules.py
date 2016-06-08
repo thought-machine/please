@@ -31,8 +31,10 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
       visibility (list): Visibility declaration of this rule.
       source (int): Java source level to compile sources as. Defaults to whatever's set in the config,
                     which itself defaults to 8.
+                    Deprecated, will be removed in a future version in favour of control via package().
       target (int): Java bytecode level to target after compile. Defaults to whatever's set in the
                     config, which itself defaults to 8.
+                    Deprecated, will be removed in a future version in favour of control via package().
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
     """
