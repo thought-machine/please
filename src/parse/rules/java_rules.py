@@ -38,6 +38,10 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
     """
+    if source:
+        log.warning('`source` argument to java_library is deprecated and will be removed soon')
+    if target:
+        log.warning('`target` argument to java_library is deprecated and will be removed soon')
     all_srcs = (srcs or []) + (resources or [])
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
     if srcs:

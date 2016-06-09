@@ -526,14 +526,32 @@ func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 	return []BuildLabel{target.Label}
 }
 
+// AddSource adds a source to the build target, deduplicating against existing entries.
+func (target *BuildTarget) AddSource(source BuildInput) {
+	target.Sources = target.addSource(target.Sources, source)
+}
+
+func (target *BuildTarget) addSource(sources []BuildInput, source BuildInput) []BuildInput {
+	for _, src := range sources {
+		if source == src {
+			return sources
+		}
+	}
+	// Add a dependency if this is not just a file.
+	if label := source.Label(); label != nil {
+		target.AddDependency(*label)
+	}
+	return append(sources, source)
+}
+
 // AddNamedSource adds a source to the target which is tagged with a particular name.
 // For example, C++ rules add sources tagged as "sources" and "headers" to distinguish
 // two conceptually different kinds of input.
 func (target *BuildTarget) AddNamedSource(name string, source BuildInput) {
 	if target.NamedSources == nil {
-		target.NamedSources = map[string][]BuildInput{name: []BuildInput{source}}
+		target.NamedSources = map[string][]BuildInput{name: target.addSource(nil, source)}
 	} else {
-		target.NamedSources[name] = append(target.NamedSources[name], source)
+		target.NamedSources[name] = target.addSource(target.NamedSources[name], source)
 	}
 }
 

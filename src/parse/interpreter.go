@@ -415,10 +415,7 @@ func AddSource(cTarget uintptr, cSource *C.char) *C.char {
 	if err != nil {
 		return C.CString(err.Error())
 	}
-	target.Sources = append(target.Sources, source)
-	if label := source.Label(); label != nil {
-		target.AddDependency(*label)
-	}
+	target.AddSource(source)
 	return nil
 }
 
@@ -455,9 +452,6 @@ func AddNamedSource(cTarget uintptr, cName *C.char, cSource *C.char) *C.char {
 		return C.CString(err.Error())
 	}
 	target.AddNamedSource(C.GoString(cName), source)
-	if label := source.Label(); label != nil {
-		target.AddDependency(*label)
-	}
 	return nil
 }
 
