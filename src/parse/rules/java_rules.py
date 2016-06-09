@@ -31,8 +31,10 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
       visibility (list): Visibility declaration of this rule.
       source (int): Java source level to compile sources as. Defaults to whatever's set in the config,
                     which itself defaults to 8.
+                    Deprecated, will be removed in a future version in favour of control via package().
       target (int): Java bytecode level to target after compile. Defaults to whatever's set in the
                     config, which itself defaults to 8.
+                    Deprecated, will be removed in a future version in favour of control via package().
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
     """
@@ -224,7 +226,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
       exclude (list): Dependencies to ignore when fetching this one.
       hashes (dict): Map of Maven id -> rule hash for each rule produced.
       combine (bool): If True, we combine all downloaded .jar files into one uberjar.
-      hash (string|list): Hash of final produced .jar. For brevity, implies combine=True.
+      hash (str | list): Hash of final produced .jar. For brevity, implies combine=True.
       deps (list): Labels of dependencies, as usual.
       visibility (list): Visibility label.
       filename (str): Filename we attempt to download. Defaults to standard Maven name.

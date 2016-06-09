@@ -1,3 +1,13 @@
+Version 3.2.0
+-------------
+
+    * Added type checks on arguments to build rules, because the errors can be
+      obtuse if you get them wrong.
+      Strictly speaking this is compatible with the previous release since it simply
+      enforces documentation, although there are subtle cases that would have been
+      accepted before that no longer are.
+
+
 Version 3.1.3
 -------------
 

@@ -297,10 +297,6 @@ def run_post_build_function(handle, package, name, output):
 
 def _add_strings(target, func, lst, name):
     if lst:
-        if isinstance(lst, str):
-            # We don't want to enforce this is a list (any sequence should be fine) but it's
-            # easy to use a string by mistake, which tends to cause some weird cffi errors later.
-            raise ValueError('"%s" argument should be a list of strings, not a string' % name)
         for x in lst:
             _check_c_error(func(target, ffi.new('char[]', x)))
 
