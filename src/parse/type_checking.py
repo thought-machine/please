@@ -45,7 +45,7 @@ def arg_checks(node):
                 yield 'assert not %s or isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
                     arg, arg, doc, arg, node.name, doc)
         else:
-            yield'assert isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
+            yield 'assert isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
                 arg, doc, arg, node.name, doc)
 
 
