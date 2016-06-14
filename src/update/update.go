@@ -58,8 +58,8 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 		downloadPlease(config)
 	}
 	linkNewPlease(config)
-	args := append([]string{newPlease}, os.Args[1:]...)
-	args = append(args, "--assert_version", config.Please.Version)
+	args := append([]string{newPlease}, "--assert_version", config.Please.Version)
+	args = append(args, os.Args[1:]...)
 	log.Info("Executing %s", strings.Join(args, " "))
 	if err := syscall.Exec(newPlease, args, os.Environ()); err != nil {
 		log.Fatalf("Failed to exec new Please version %s: %s", newPlease, err)
