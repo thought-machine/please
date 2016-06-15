@@ -24,7 +24,7 @@ func TestQuerySingleTarget(t *testing.T) {
 	graph := makeJSONGraph(makeGraph(), []core.BuildLabel{core.ParseBuildLabel("//package1:target2", "")})
 	assert.Equal(t, 1, len(graph.Packages))
 	pkg1 := graph.Packages["package1"]
-	assert.Equal(t, 1, len(pkg1.Targets))
+	assert.Equal(t, 2, len(pkg1.Targets))
 	assert.Equal(t, []string{"//package1:target1"}, pkg1.Targets["target2"].Deps)
 }
 
@@ -50,6 +50,8 @@ func makeGraph() *core.BuildGraph {
 	pkg2.Targets["target3"] = makeTarget("//package2:target3", "//package1:target2")
 	graph.AddPackage(pkg2)
 	graph.AddTarget(pkg2.Targets["target3"])
+	graph.AddDependency(core.ParseBuildLabel("//package1:target2", ""), core.ParseBuildLabel("//package1:target1", ""))
+	graph.AddDependency(core.ParseBuildLabel("//package2:target3", ""), core.ParseBuildLabel("//package1:target2", ""))
 	return graph
 }
 
