@@ -143,7 +143,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
 	replacedCmd := replaceSequences(target)
-	cmd := exec.Command("bash", "-u", "-c", replacedCmd)
+	cmd := exec.Command("bash", "-u", "-o", "pipefail", "-c", replacedCmd)
 	cmd.Dir = target.TmpDir()
 	cmd.Env = core.StampedBuildEnvironment(state, target, false, cacheKey)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(cmd.Env, "\n"), replacedCmd)
