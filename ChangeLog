@@ -1,3 +1,11 @@
+Version 4.0.0
+-------------
+
+    * Build / test commands are now run with "-o pipefail" so you don't have to specify
+      yourself. This could potentially break any rules that relied on the default
+      behaviour although it's unlikely that anything did that deliberately.
+
+
 Version 3.2.0
 -------------
 
