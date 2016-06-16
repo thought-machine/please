@@ -226,7 +226,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                     _check_c_error(_add_named_src(target, src_name, src))
     elif srcs:
         for src in srcs:
-            if src.startswith('/') and not src.startswith('//'):
+            if src and src.startswith('/') and not src.startswith('//'):
                 raise ValueError('Entry "%s" in srcs of %s has an absolute path; that\'s not allowed. '
                                  'You might want to try system_srcs instead' % (src, name))
         _add_strings(target, _add_src, srcs, 'srcs')
@@ -298,7 +298,8 @@ def run_post_build_function(handle, package, name, output):
 def _add_strings(target, func, lst, name):
     if lst:
         for x in lst:
-            _check_c_error(func(target, ffi.new('char[]', x)))
+            if x:
+                _check_c_error(func(target, ffi.new('char[]', x)))
 
 
 def _check_c_error(error):
