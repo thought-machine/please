@@ -7,7 +7,6 @@ _JAVA_EXCLUDE_FILES = ','.join([
     'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.LIST',
 ])
 
-_MAVEN_CENTRAL = "https://repo1.maven.org/maven2"
 _maven_packages = defaultdict(dict)
 
 
@@ -213,7 +212,7 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
     )
 
 
-def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, combine=False,
+def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=False,
                hash=None, deps=None, visibility=None, filename=None, deps_only=False,
                optional=None):
     """Fetches a transitive set of dependencies from Maven.
@@ -244,6 +243,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
     exclude = exclude or []
     combine = combine or hash
     source_name = '_%s#src' % name
+    repository = repository or CONFIG.DEFAULT_MAVEN_REPO
 
     def get_hash(id, artifact=None):
         if hashes is None:
@@ -349,7 +349,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
 
 
-def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, hashes=None, deps=None,
+def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
               exclude_paths=None, native=False):
     """Fetches a single Java dependency from Maven.
@@ -379,6 +379,7 @@ def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, hashes=None, 
         if licence and not licences:
             licences = licence.split('|')
     filename = filename or '%s-%s.jar' % (artifact, version)
+    repository = repository or CONFIG.DEFAULT_MAVEN_REPO
     bin_url = '/'.join([
         repository,
         group.replace('.', '/'),
@@ -393,12 +394,12 @@ def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, hashes=None, 
         arch = 'x86_64' if CONFIG.ARCH == 'amd64' else CONFIG.ARCH
         bin_url = bin_url.replace('.jar', '-%s-%s.jar' % (os, arch))
     outs = [name + '.jar']
-    cmd = 'curl -fsSL %s -o %s' % (bin_url, outs[0])
+    cmd = 'curl -fSL %s -o %s' % (bin_url, outs[0])
     if exclude_paths:
         cmd += ' && zip -d %s %s' % (outs[0], ' '.join(exclude_paths))
     if sources:
         outs.append(name + '_src.jar')
-        cmd += ' && curl -fsSL %s -o %s' % (src_url, outs[1])
+        cmd += ' && curl -fSL %s -o %s' % (src_url, outs[1])
     build_rule(
         name=name,
         outs=outs,

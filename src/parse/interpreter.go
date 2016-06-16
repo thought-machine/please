@@ -88,6 +88,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("PLEASE_MAVEN_TOOL", config.Java.PleaseMavenTool)
 	setConfigValue("JAVA_SOURCE_LEVEL", config.Java.SourceLevel)
 	setConfigValue("JAVA_TARGET_LEVEL", config.Java.TargetLevel)
+	setConfigValue("DEFAULT_MAVEN_REPO", config.Java.DefaultMavenRepo)
 	setConfigValue("CC_TOOL", config.Cpp.CCTool)
 	setConfigValue("LD_TOOL", config.Cpp.LdTool)
 	setConfigValue("AR_TOOL", config.Cpp.ArTool)

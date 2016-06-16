@@ -126,6 +126,7 @@ func DefaultConfiguration() *Configuration {
 	config.Java.DefaultTestPackage = ""
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"
+	config.Java.DefaultMavenRepo = "https://repo1.maven.org/maven2"
 	config.Cpp.CCTool = "g++"
 	config.Cpp.LdTool = "ld"
 	config.Cpp.ArTool = "ar"
@@ -217,6 +218,7 @@ type Configuration struct {
 		DefaultTestPackage string
 		SourceLevel        string
 		TargetLevel        string
+		DefaultMavenRepo   string
 	}
 	Cpp struct {
 		CCTool           string
