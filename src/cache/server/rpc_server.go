@@ -70,7 +70,9 @@ func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb
 	return &pb.DeleteResponse{Success: success}, nil
 }
 
-func ServeGrpcForever(port int, cache *Cache) {
+// BuildGrpcServer creates a new, unstarted grpc.Server and returns it.
+// It also returns a net.Listener to start it on.
+func BuildGrpcServer(port int, cache *Cache) (*grpc.Server, net.Listener) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("Failed to listen on port %d: %v", port, err)
@@ -81,6 +83,12 @@ func ServeGrpcForever(port int, cache *Cache) {
 	healthserver := health.NewHealthServer()
 	healthserver.SetServingStatus("plz-rpc-cache", healthpb.HealthCheckResponse_SERVING)
 	healthpb.RegisterHealthServer(s, healthserver)
+	return s, lis
+}
+
+// ServeGrpcForever constructs a new server on the given port and serves until killed.
+func ServeGrpcForever(port int, cache *Cache) {
+	s, lis := BuildGrpcServer(port, cache)
 	log.Notice("Serving RPC cache on port %d", port)
 	s.Serve(lis)
 }
