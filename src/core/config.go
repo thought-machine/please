@@ -96,7 +96,7 @@ func defaultPath(conf *string, dir, file string) {
 
 func DefaultConfiguration() *Configuration {
 	config := Configuration{}
-	config.Please.Version = PleaseVersion
+	config.Please.Version = ""
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.DownloadLocation = "https://s3-eu-west-1.amazonaws.com/please-build"
