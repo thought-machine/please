@@ -352,7 +352,7 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
 
 def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
-              exclude_paths=None, native=False):
+              exclude_paths=None, native=False, artifact_type=None):
     """Fetches a single Java dependency from Maven.
 
     Args:
@@ -368,18 +368,22 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
       licences (list): Licences this package is subject to.
       exclude_paths (list): Paths to remove from the downloaded .jar.
       native (bool): Attempt to download a native jar (i.e. add "-linux-x86_64" etc to the URL).
+      artifact_type (str): Type of artifact to download (defaults to jar but could be e.g. aar).
     """
     if hash and hashes:
         raise ParseError('You can pass only one of hash or hashes to maven_jar')
     _maven_packages[get_base_path()][name] = id
     # TODO(pebers): Handle exclusions, packages with no source available and packages with no version.
+    if not artifact_type:
+        id, _, artifact_type = id.partition('@')
+        artifact_type = artifact_type or 'jar'
     try:
         group, artifact, version = id.split(':')
     except ValueError:
         group, artifact, version, licence = id.split(':')
         if licence and not licences:
             licences = licence.split('|')
-    filename = filename or '%s-%s.jar' % (artifact, version)
+    filename = filename or '%s-%s.%s' % (artifact, version, artifact_type)
     repository = repository or CONFIG.DEFAULT_MAVEN_REPO
     bin_url = '/'.join([
         repository,
@@ -388,12 +392,12 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         version,
         filename or '%s-%s.jar' % (artifact, version),
     ])
-    src_url = bin_url.replace('.jar', '-sources.jar')  # is this always predictable?
+    src_url = bin_url.replace('.' + artifact_type, '-sources.jar')  # is this always predictable?
     if native:
         # Maven has slightly different names for these.
         os = 'osx' if CONFIG.OS == 'darwin' else CONFIG.OS
         arch = 'x86_64' if CONFIG.ARCH == 'amd64' else CONFIG.ARCH
-        bin_url = bin_url.replace('.jar', '-%s-%s.jar' % (os, arch))
+        bin_url = bin_url.replace('.' + artifact_type, '-%s-%s.jar' % (os, arch))
     outs = [name + '.jar']
     cmd = 'curl -fSL %s -o %s' % (bin_url, outs[0])
     if exclude_paths:
