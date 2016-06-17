@@ -107,13 +107,14 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
         )
 
 
-def java_binary(name, main_class=None, srcs=None, deps=None, data=None, visibility=None,
+def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None, visibility=None,
                 jvm_args=None, self_executable=False):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
       name (str): Name of the rule.
       main_class (str): Main class to set in the manifest.
+      out (str): Name of output .jar file. Defaults to name + .jar.
       srcs (list): Source files to compile.
       deps (list): Dependencies of this rule.
       data (list): Runtime data files for this rule.
@@ -140,7 +141,7 @@ def java_binary(name, main_class=None, srcs=None, deps=None, data=None, visibili
         name=name,
         deps=deps,
         data=data,
-        outs=[name + '.jar'],
+        outs=[out or name + '.jar'],
         cmd=cmd,
         needs_transitive_deps=True,
         output_is_complete=True,
