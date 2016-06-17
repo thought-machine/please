@@ -34,7 +34,7 @@ import (
 
 /*
 #cgo CFLAGS: --std=c99 -Werror
-#cgo LDFLAGS: -ldl
+#cgo !freebsd LDFLAGS: -ldl
 #include "interpreter.h"
 */
 import "C"
@@ -74,6 +74,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("PLZ_VERSION", config.Please.Version)
 	setConfigValue("GO_VERSION", config.Go.GoVersion)
 	setConfigValue("GO_TEST_TOOL", config.Go.TestTool)
+	setConfigValue("GOPATH", config.Go.GoPath)
 	setConfigValue("PIP_TOOL", config.Python.PipTool)
 	setConfigValue("PEX_TOOL", config.Python.PexTool)
 	setConfigValue("DEFAULT_PYTHON_INTERPRETER", config.Python.DefaultInterpreter)
@@ -87,6 +88,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("PLEASE_MAVEN_TOOL", config.Java.PleaseMavenTool)
 	setConfigValue("JAVA_SOURCE_LEVEL", config.Java.SourceLevel)
 	setConfigValue("JAVA_TARGET_LEVEL", config.Java.TargetLevel)
+	setConfigValue("DEFAULT_MAVEN_REPO", config.Java.DefaultMavenRepo)
 	setConfigValue("CC_TOOL", config.Cpp.CCTool)
 	setConfigValue("LD_TOOL", config.Cpp.LdTool)
 	setConfigValue("AR_TOOL", config.Cpp.ArTool)
@@ -414,10 +416,7 @@ func AddSource(cTarget uintptr, cSource *C.char) *C.char {
 	if err != nil {
 		return C.CString(err.Error())
 	}
-	target.Sources = append(target.Sources, source)
-	if label := source.Label(); label != nil {
-		target.AddDependency(*label)
-	}
+	target.AddSource(source)
 	return nil
 }
 
@@ -454,9 +453,6 @@ func AddNamedSource(cTarget uintptr, cName *C.char, cSource *C.char) *C.char {
 		return C.CString(err.Error())
 	}
 	target.AddNamedSource(C.GoString(cName), source)
-	if label := source.Label(); label != nil {
-		target.AddDependency(*label)
-	}
 	return nil
 }
 

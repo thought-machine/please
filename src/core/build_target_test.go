@@ -75,6 +75,15 @@ func TestAddOutput(t *testing.T) {
 	}
 }
 
+func TestAddSource(t *testing.T) {
+	target := makeTarget("//src/test/python:lib1", "")
+	target.AddSource(ParseBuildLabel("//src/test/python:lib2", ""))
+	target.AddSource(ParseBuildLabel("//src/test/python:lib3", ""))
+	target.AddSource(ParseBuildLabel("//src/test/python:lib2", ""))
+	assert.Equal(t, 2, len(target.Sources))
+	assert.Equal(t, 2, len(target.DeclaredDependencies()))
+}
+
 func TestSetContainerSettings(t *testing.T) {
 	target := makeTarget("//src/test/python:lib1", "")
 

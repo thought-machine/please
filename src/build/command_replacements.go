@@ -13,6 +13,12 @@
 //   Equivalent to $(location ...) for rules with a single output.
 //
 // $(exe //path/to:target)
+//   Expands to a command to run the output of the given target from within a
+//   genrule or test directory. For example,
+//   java -jar path/to/target.jar.
+//   The rule must be tagged as 'binary'.
+//
+// $(out_exe //path/to:target)
 //   Expands to a command to run the output of the given target. For example,
 //   java -jar plz-out/bin/path/to/target.jar.
 //   The rule must be tagged as 'binary'.
@@ -44,6 +50,7 @@ import (
 var locationReplacement = regexp.MustCompile("\\$\\(location ([^\\)]+)\\)")
 var locationsReplacement = regexp.MustCompile("\\$\\(locations ([^\\)]+)\\)")
 var exeReplacement = regexp.MustCompile("\\$\\(exe ([^\\)]+)\\)")
+var outExeReplacement = regexp.MustCompile("\\$\\(out_exe ([^\\)]+)\\)")
 var outReplacement = regexp.MustCompile("\\$\\(out_location ([^\\)]+)\\)")
 var dirReplacement = regexp.MustCompile("\\$\\(dir ([^\\)]+)\\)")
 
@@ -80,11 +87,14 @@ func replaceSequencesInternal(target *core.BuildTarget, command string, test boo
 	cmd = outReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
 		return replaceSequence(target, in[15:len(in)-1], false, false, false, true, test)
 	})
+	cmd = outExeReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
+		return replaceSequence(target, in[10:len(in)-1], true, false, false, true, test)
+	})
 	cmd = dirReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
 		return replaceSequence(target, in[6:len(in)-1], false, true, true, false, test)
 	})
-	// TODO(pebers): We should check for this when doing matches above, but not easy in
-	//               Go since its regular expressions are actually regular and principled.
+	// We would ideally check for this when doing matches above, but not easy in
+	// Go since its regular expressions are actually regular and principled.
 	return strings.Replace(cmd, "\\$", "$", -1)
 }
 
@@ -141,6 +151,10 @@ func checkAndReplaceSequence(target, dep *core.BuildTarget, in string, runnable,
 				break
 			}
 		}
+	}
+	if runnable && dep.HasLabel("java_non_exe") {
+		// The target is a Java target that isn't self-executable, hence it needs something to run it.
+		output = "java -jar " + output
 	}
 	return strings.TrimRight(output, " ")
 }

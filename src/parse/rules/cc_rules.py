@@ -223,20 +223,28 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
       test_only (bool): If True, this rule can only be used by tests.
     """
-    srcs = srcs or []
-    hdrs = hdrs or []
     linker_flags = linker_flags or []
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
     cmd = {
-        'dbg': '%s -o ${OUT} -I . ${SRCS_SRCS:=} %s' % (CONFIG.CC_TOOL, dbg_flags),
-        'opt': '%s -o ${OUT} -I . ${SRCS_SRCS:=} %s' % (CONFIG.CC_TOOL, opt_flags),
+        'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
+        'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
     }
+    deps = deps or []
+    if srcs:
+        cc_library(
+            name='_%s#lib' % name,
+            srcs=srcs,
+            hdrs=hdrs,
+            deps=deps,
+            compiler_flags=compiler_flags,
+            test_only=test_only,
+        )
+        deps.append(':_%s#lib' % name)
     build_rule(
         name=name,
-        srcs={'srcs': srcs, 'hdrs': hdrs},
         outs=[name],
         deps=deps,
         visibility=visibility,
@@ -251,7 +259,7 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
     )
 
 
-def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None,
+def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None,
             deps=None, data=None, visibility=None, labels=None, flaky=0, test_outputs=None,
             size=None, timeout=0, container=False, write_main=not CONFIG.BAZEL_COMPATIBILITY):
     """Defines a C++ test using UnitTest++.
@@ -262,6 +270,7 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
     Args:
       name (str): Name of the rule
       srcs (list): C or C++ source files to compile.
+      hdrs (list): Header files.
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
@@ -293,12 +302,22 @@ def cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_
         )
         srcs.append(':_%s#main' % name)
     cmd = {
-        'dbg': '%s -o ${OUT} -I . ${SRCS} %s' % (CONFIG.CC_TOOL, dbg_flags),
-        'opt': '%s -o ${OUT} -I . ${SRCS} %s' % (CONFIG.CC_TOOL, opt_flags),
+        'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
+        'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
     }
+    if srcs:
+        cc_library(
+            name='_%s#lib' % name,
+            srcs=srcs,
+            hdrs=hdrs,
+            deps=deps,
+            compiler_flags=compiler_flags,
+            test_only=True,
+        )
+        deps = deps or []
+        deps.append(':_%s#lib' % name)
     build_rule(
         name=name,
-        srcs=srcs,
         outs=[name],
         deps=deps,
         data=data,
@@ -472,9 +491,8 @@ def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflag
     linker_flags = ['-Xlinker ' + flag for flag in (linker_flags or [])]
     pkg_config_cmd = ' '.join('`pkg-config --cflags --libs %s`' % x for x in pkg_config_libs or [])
     pkg_config_cmd_2 = ' '.join('`pkg-config --cflags %s`' % x for x in pkg_config_cflags or [])
-    postamble = '`find . -name "*.o" -or -name "*.a" | sort`' if binary else ''
-    return ' '.join([' '.join(compiler_flags), ' '.join(linker_flags),
-                     pkg_config_cmd, pkg_config_cmd_2, postamble])
+    objs = '-Wl,--start-group `find . -name "*.o" -or -name "*.a" | sort` -Wl,--end-group' if binary else ''
+    return ' '.join([' '.join(compiler_flags), objs, ' '.join(linker_flags), pkg_config_cmd, pkg_config_cmd_2])
 
 
 def _apply_transitive_labels(command_map, link=True, archive=False):

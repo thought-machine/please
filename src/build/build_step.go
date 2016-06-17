@@ -85,7 +85,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		// If a post-build function ran it may modify the rule definition. In that case we
 		// need to check again whether the rule needs building.
 		if target.PostBuildFunction == 0 || !needsBuilding(state, target, true) {
-			target.SetState(core.Unchanged)
+			target.SetState(core.Reused)
 			state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
 			return nil // Nothing needs to be done.
 		} else {
@@ -105,8 +105,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		if _, retrieved := retrieveFromCache(state, target); retrieved {
 			log.Debug("Retrieved artifacts for %s from cache", target.Label)
 			checkLicences(state, target)
-			newOutputHash := calculateAndCheckRuleHash(state, target)
-			if outputHashErr != nil || !bytes.Equal(oldOutputHash, newOutputHash) {
+			newOutputHash, err := calculateAndCheckRuleHash(state, target)
+			if err != nil { // Most likely hash verification failure
+				log.Warning("Error retrieving cached artifacts for %s: %s", target.Label, err)
+				RemoveOutputs(target)
+				return false
+			} else if outputHashErr != nil || !bytes.Equal(oldOutputHash, newOutputHash) {
 				target.SetState(core.Built)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 			} else {
@@ -139,7 +143,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
 	replacedCmd := replaceSequences(target)
-	cmd := exec.Command("bash", "-u", "-c", replacedCmd)
+	cmd := exec.Command("bash", "-u", "-o", "pipefail", "-c", replacedCmd)
 	cmd.Dir = target.TmpDir()
 	cmd.Env = core.StampedBuildEnvironment(state, target, false, cacheKey)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(cmd.Env, "\n"), replacedCmd)
@@ -167,7 +171,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if err != nil {
 		return fmt.Errorf("Error moving outputs for target %s: %s", target.Label, err)
 	}
-	calculateAndCheckRuleHash(state, target)
+	if _, err = calculateAndCheckRuleHash(state, target); err != nil {
+		return err
+	}
 	if outputsChanged {
 		target.SetState(core.Built)
 	} else {
@@ -264,7 +270,11 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 		}
 		changed = changed || outputChanged
 	}
-	log.Debug("Outputs for %s are unchanged", target.Label)
+	if changed {
+		log.Debug("Outputs for %s have changed", target.Label)
+	} else {
+		log.Debug("Outputs for %s are unchanged", target.Label)
+	}
 	return changed, nil
 }
 
@@ -337,24 +347,24 @@ func RemoveOutputs(target *core.BuildTarget) error {
 }
 
 // calculateAndCheckRuleHash checks the output hash for a rule.
-func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) []byte {
+func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	hash, err := OutputHash(target)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if err = checkRuleHashes(target, hash); err != nil {
 		if state.NeedHashesOnly && state.IsOriginalTarget(target.Label) {
-			panic(stopTarget)
+			return nil, stopTarget
 		} else if state.VerifyHashes {
-			panic(err)
+			return nil, err
 		} else {
 			log.Warning("%s", err)
 		}
 	}
 	if err := writeRuleHashFile(state, target); err != nil {
-		panic(fmt.Errorf("Attempting to create hash file: %s", err))
+		return nil, fmt.Errorf("Attempting to create hash file: %s", err)
 	}
-	return hash
+	return hash, nil
 }
 
 // OutputHash calculates the hash of a target's outputs.
@@ -453,8 +463,9 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 			changed = changed || c
 		}
 	}
-	calculateAndCheckRuleHash(state, target)
-	if changed {
+	if _, err := calculateAndCheckRuleHash(state, target); err != nil {
+		return err
+	} else if changed {
 		target.SetState(core.Built)
 	} else {
 		target.SetState(core.Unchanged)

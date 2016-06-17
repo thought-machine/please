@@ -13,12 +13,6 @@ but is drastically faster for building many targets with similar dependencies or
 a target which has only had small changes.
 """
 
-# Commands used in python_library.
-_ZIP_CMD = '%s -d -o ${OUTS} -i .'
-_COMPILE_CMD = 'find . -name "*.py" | xargs %s -O -m py_compile'
-_RM_CMD = 'find . -name "*.py" -delete'
-_STRIP_CMD = ' && '.join([_COMPILE_CMD, _RM_CMD, _ZIP_CMD])
-
 
 def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
                    test_only=False, zip_safe=True, labels=None,
@@ -53,16 +47,14 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
     if not zip_safe:
         labels.append('py:zip-unsafe')
     if all_srcs:
-        jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
+        pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
+        jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
         # Pre-zip the files for later collection by python_binary.
         build_rule(
             name='_%s#zip' % name,
             srcs=all_srcs,
             outs=['.%s.pex.zip' % name],
-            cmd={
-                'opt': _ZIP_CMD % jarcat_tool,
-                'stripped': _STRIP_CMD % (interpreter, jarcat_tool),
-            },
+            cmd='%s --compile && %s -d -o ${OUTS} -i .' % (pex_tool, jarcat_tool),
             building_description='Compressing...',
             requires=['py'],
             test_only=test_only,
@@ -135,7 +127,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         name='_%s#pex' % name,
         outs=['.%s_main.pex.zip' % name],  # just call it .zip so everything has the same extension
         cmd=cmd,
-        requires=['py'],
+        requires=['py', 'pex'],
         pre_build=pre_build,
         tools=tools,
     )
@@ -272,13 +264,14 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
       hashes (list): List of acceptable hashes for this target.
       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
       outs (list): List of output files / directories. Defaults to [name].
+      test_only (bool): If True, can only be used by test rules or other test_only libraries.
       env (dict): Environment variables to provide during pip install, as a dict (or similar).
       deps (list): List of rules this library depends on.
       post_install_commands (list): Commands run after pip install has completed.
       install_subdirectory (bool): Forces the package to install into a subdirectory with this name.
       repo (str): Allows specifying a custom repo to fetch from.
       use_pypi (bool): If True, will check PyPI as well for packages.
-      patch (str): A patch file to be applied after install.
+      patch (str | list): A patch file or files to be applied after install.
       visibility (list): Visibility declaration for this rule.
       zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
       licences (list): Licences this rule is subject to. Default attempts to detect from package metadata.
@@ -304,7 +297,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
     environment = ' '.join('%s=%s' % (k, v) for k, v in sorted((env or {}).items()))
     target = name if install_subdirectory else '.'
 
-    cmd = '%s install --no-deps --no-compile --default-timeout=60 --target=%s' % (CONFIG.PIP_TOOL, target)
+    cmd = '%s install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=%s' % (CONFIG.PIP_TOOL, target)
     cmd += ' -b build %s %s %s' % (repo_flag, index_flag, package_name)
     cmd += ' && find . -name "*.pyc" -or -name "tests" | xargs rm -rf'
 
@@ -316,7 +309,13 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
 
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
-        cmd += ' && ' + ' && '.join('patch -p0 < $(location %s)' % patch for patch in patches)
+        if CONFIG.OS == 'freebsd':
+            # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
+            # files for hashes to match correctly.
+            cmd += ' && ' + ' && '.join('patch -p0 < $(location %s)' % patch for patch in patches)
+            cmd += ' && find . -name "*.orig" | xargs rm'
+        else:
+            cmd += ' && ' + ' && '.join('patch -p0 --no-backup-if-mismatch < $(location %s)' % patch for patch in patches)
 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)

@@ -22,19 +22,17 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+
+	"gopkg.in/op/go-logging.v1"
+
+	"core"
 )
-
-import "core"
-
-import "gopkg.in/op/go-logging.v1"
 
 var log = logging.MustGetLogger("update")
 
 func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) {
 	if config.Please.Version == core.PleaseVersion {
 		return // Version matches, nothing to do here.
-	} else if config.Please.Version == "" {
-		return // No version specified, auto-update disabled.
 	} else if (!shouldUpdate || !config.Please.SelfUpdate) && !forceUpdate {
 		log.Warning("Update to Please version %s skipped (current version: %s)", config.Please.Version, core.PleaseVersion)
 		return
@@ -45,6 +43,16 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 		log.Warning("Please download location not set in config, cannot auto-update.")
 		return
 	}
+	if config.Please.Version == "" {
+		if !forceUpdate {
+			config.Please.Version = core.PleaseVersion
+			return
+		}
+		config.Please.Version = findLatestVersion(config)
+		CheckAndUpdate(config, shouldUpdate, forceUpdate)
+		return
+	}
+
 	// Okay, now we're past all that...
 	log.Warning("Updating to Please version %s (currently %s)", config.Please.Version, core.PleaseVersion)
 
@@ -58,8 +66,8 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 		downloadPlease(config)
 	}
 	linkNewPlease(config)
-	args := append([]string{newPlease}, os.Args[1:]...)
-	args = append(args, "--assert_version", config.Please.Version)
+	args := append([]string{newPlease}, "--assert_version", config.Please.Version)
+	args = append(args, os.Args[1:]...)
 	log.Info("Executing %s", strings.Join(args, " "))
 	if err := syscall.Exec(newPlease, args, os.Environ()); err != nil {
 		log.Fatalf("Failed to exec new Please version %s: %s", newPlease, err)
@@ -171,4 +179,20 @@ func handleSignals(newDir string) {
 	log.Notice("Got signal %s", s)
 	cleanDir(newDir)
 	log.Fatalf("Got signal %s", s)
+}
+
+// findLatestVersion attempts to find the latest available version of plz.
+func findLatestVersion(config *core.Configuration) string {
+	url := config.Please.DownloadLocation + "/latest_version"
+	log.Info("Downloading %s", url)
+	response, err := http.Get(url)
+	if err != nil {
+		log.Fatalf("Failed to find latest plz version: %s", err)
+	}
+	defer response.Body.Close()
+	data, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatalf("Failed to find latest plz version: %s", err)
+	}
+	return strings.TrimSpace(string(data))
 }

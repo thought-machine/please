@@ -3,12 +3,10 @@ package(default_visibility=['PUBLIC'])
 pip_library(
     name = 'pex',
     version = '1.1.1',
-    hashes = ['sha1: 44358d1ae57d75518346b3f913cabec5bcd6db49'],
+    hashes = ['sha1: 74d1cc64aab1d8ae5bea69822d690ef0eb4ecd53'],
     patch = [
-        # TODO(pebers): send this patch upstream so we don't have to have it here.
-        'dont_recompress.patch',
-        # This one would need a lot more work to be generally usable.
         'never_cache_pex.patch',
+        'bytecode_timestamps.patch',
     ],
 )
 

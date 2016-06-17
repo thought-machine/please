@@ -59,13 +59,8 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	aggregatedResults := core.TestResults{}
 	failedTargets := []core.BuildLabel{}
 	failedNonTests := []core.BuildLabel{}
-	for {
-		result, ok := <-state.Results
-		if ok {
-			processResult(state, result, buildingTargets, &aggregatedResults, plainOutput, keepGoing, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
-		} else {
-			break
-		}
+	for result := range state.Results {
+		processResult(state, result, buildingTargets, &aggregatedResults, plainOutput, keepGoing, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
 	}
 	if !plainOutput {
 		stop <- struct{}{}
@@ -75,6 +70,14 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 		writeTrace(traceFile)
 	}
 	duration := time.Since(startTime).Seconds()
+	if len(failedNonTests) > 0 { // Something failed in the build step.
+		if state.Verbosity > 0 {
+			printFailedBuildResults(failedNonTests, failedTargetMap, duration)
+		}
+		// Die immediately and unsuccessfully, this avoids awkward interactions with
+		// --failing_tests_ok later on.
+		os.Exit(1)
+	}
 	// Check all the targets we wanted to build actually have been built.
 	for _, label := range state.ExpandOriginalTargets() {
 		if target := state.Graph.Target(label); target == nil {
@@ -87,9 +90,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 		}
 	}
 	if state.Verbosity > 0 && shouldBuild {
-		if len(failedNonTests) > 0 { // We didn't get to the tests, something failed in the build step.
-			printFailedBuildResults(failedNonTests, failedTargetMap, duration)
-		} else if shouldTest { // Got to the test phase, report their results.
+		if shouldTest { // Got to the test phase, report their results.
 			printTestResults(state.Graph, aggregatedResults, failedTargets, duration)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
@@ -123,10 +124,11 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		failedTargetMap[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
 		if !keepGoing && result.Status != core.TargetTestFailed {
-			// Reset colour so the entire compiler error output doesn't appear purple.
-			log.Fatalf("%s failed:${RESET}\n%s\n", result.Label, result.Err)
+			// Reset colour so the entire compiler error output doesn't appear red.
+			log.Errorf("%s failed:${RESET}\n%s", result.Label, result.Err)
+			state.KillAll()
 		} else if !plainOutput { // plain output will have already logged this
-			log.Errorf("%s failed: %s\n", result.Label, result.Err)
+			log.Errorf("%s failed: %s", result.Label, result.Err)
 		}
 		*failedTargets = append(*failedTargets, label)
 		if result.Status != core.TargetTestFailed {
@@ -219,16 +221,16 @@ func testResultMessage(results core.TestResults, failedTargets []core.BuildLabel
 func printBuildResults(state *core.BuildState, duration float64) {
 	// Count incrementality.
 	totalBuilt := 0
-	totalUnchanged := 0
+	totalReused := 0
 	for _, target := range state.Graph.AllTargets() {
 		if target.State() == core.Built {
 			totalBuilt++
-		} else if target.State() == core.Unchanged {
-			totalUnchanged++
+		} else if target.State() == core.Reused {
+			totalReused++
 		}
 	}
-	incrementality := 100.0 * float64(totalUnchanged) / float64(totalBuilt+totalUnchanged)
-	if totalBuilt+totalUnchanged == 0 {
+	incrementality := 100.0 * float64(totalReused) / float64(totalBuilt+totalReused)
+	if totalBuilt+totalReused == 0 {
 		incrementality = 100 // avoid NaN
 	}
 	// Print this stuff so we always see it.
@@ -278,11 +280,11 @@ func buildResult(target *core.BuildTarget) []string {
 }
 
 func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap map[core.BuildLabel]error, duration float64) {
-	printf("${WHITE_ON_RED}Build stopped after %0.2fs. Some targets failed:${RESET}\n", duration)
+	printf("${WHITE_ON_RED}Build stopped after %0.2fs. %s failed:${RESET}\n", duration, pluralise(len(failedTargetMap), "target", "targets"))
 	for _, label := range failedTargets {
 		err := failedTargetMap[label]
 		if err != nil {
-			printf("    ${BOLD_RED}%s\n${RESET}${RED}%s${RESET}\n", label, err)
+			printf("    ${BOLD_RED}%s\n${RESET}%s${RESET}\n", label, err)
 		} else {
 			printf("    ${BOLD_RED}%s${RESET}\n", label)
 		}
@@ -292,7 +294,7 @@ func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap ma
 func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buildingTarget, label core.BuildLabel,
 	active bool, failed bool, cached bool, description string, err error, colour string) {
 	updateTarget2(buildingTarget, label, active, failed, cached, description, err, colour)
-	if plainOutput || failed {
+	if plainOutput {
 		if failed {
 			log.Errorf("%s: %s", label.String(), description)
 		} else {

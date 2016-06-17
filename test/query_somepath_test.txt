@@ -1,4 +1,4 @@
 Found path:
-  //src/build/python:bootstrap_pexer
-  //src/build/python:main_files
-  //third_party/python:coverage
+  //src/build/java:junit_runner
+  //src/build/java/net/thoughtmachine/please/test:junit_runner
+  //third_party/java:guava

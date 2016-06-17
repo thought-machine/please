@@ -350,7 +350,7 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 	for {
 		label, dependor, t := state.NextTask()
 		switch t {
-		case core.Stop:
+		case core.Stop, core.Kill:
 			return
 		case core.Parse, core.SubincludeParse:
 			parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude)
@@ -563,8 +563,7 @@ func main() {
 		command = activeCommand(parser)
 	}
 
-	if buildFunctions[command]() {
-		os.Exit(0)
+	if !buildFunctions[command]() {
+		os.Exit(1)
 	}
-	os.Exit(1)
 }

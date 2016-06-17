@@ -1,3 +1,56 @@
+Version 4.0.0
+-------------
+
+    * Build / test commands are now run with "-o pipefail" so you don't have to specify
+      yourself. This could potentially break any rules that relied on the default
+      behaviour although it's unlikely that anything did that deliberately.
+
+
+Version 3.2.0
+-------------
+
+    * Added type checks on arguments to build rules, because the errors can be
+      obtuse if you get them wrong.
+      Strictly speaking this is compatible with the previous release since it simply
+      enforces documentation, although there are subtle cases that would have been
+      accepted before that no longer are.
+
+
+Version 3.1.3
+-------------
+
+    * Die immediately after a build finishes with unsuccessful targets; this matches
+      previous behaviour in the face of --failing_tests_ok.
+
+
+Version 3.1.2
+-------------
+
+    * When a target fails, plz now waits for all other building targets to conclude
+      before terminating. We expect that over repeated builds this will be faster
+      because it won't keep abandoning half-complete tasks.
+      Compiler feedback should show immediately, and you can Ctrl+C it to stop whenever.
+
+
+Version 3.1.1
+-------------
+
+    * Fixed `plz run` on java_binary rules not marked as self_executable.
+    * Various minor cache fixes. Access times should be correctly regenerated
+      on restart now.
+    * Initial work on FreeBSD port; is now mostly buildable there.
+
+
+Version 3.1.0
+-------------
+
+    * Extra GOPATH additions for cgo_library / cgo_test are configurable through
+      [go]gopath setting. We typically use third_party/go for this.
+    * pip_library commands changed a bit to try to make it more deterministic.
+    * When artifacts fail hash verification after cache retrieval, attempt to build
+      locally instead of failing.
+
+
 Version 3.0.2
 -------------
 

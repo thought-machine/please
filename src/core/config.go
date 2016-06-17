@@ -96,7 +96,7 @@ func defaultPath(conf *string, dir, file string) {
 
 func DefaultConfiguration() *Configuration {
 	config := Configuration{}
-	config.Please.Version = PleaseVersion
+	config.Please.Version = ""
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.DownloadLocation = "https://s3-eu-west-1.amazonaws.com/please-build"
@@ -118,13 +118,15 @@ func DefaultConfiguration() *Configuration {
 	config.Docker.ResultsTimeout = 20 // Twenty seconds
 	config.Docker.RemoveTimeout = 20  // Twenty seconds
 	config.Go.GoVersion = "1.6"
+	config.Go.GoPath = "${TMP_DIR}:${TMP_DIR}/third_party/go"
 	config.Python.PipTool = "pip"
-	config.Python.DefaultInterpreter = "/usr/bin/python"
+	config.Python.DefaultInterpreter = "python"
 	config.Python.UsePyPI = true
 	config.Java.JavacTool = "javac"
 	config.Java.DefaultTestPackage = ""
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"
+	config.Java.DefaultMavenRepo = "https://repo1.maven.org/maven2"
 	config.Cpp.CCTool = "g++"
 	config.Cpp.LdTool = "ld"
 	config.Cpp.ArTool = "ar"
@@ -197,6 +199,7 @@ type Configuration struct {
 		GoVersion string
 		GoRoot    string
 		TestTool  string
+		GoPath    string
 	}
 	Python struct {
 		PipTool            string
@@ -215,6 +218,7 @@ type Configuration struct {
 		DefaultTestPackage string
 		SourceLevel        string
 		TargetLevel        string
+		DefaultMavenRepo   string
 	}
 	Cpp struct {
 		CCTool           string

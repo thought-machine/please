@@ -27,7 +27,6 @@ go get gopkg.in/gcfg.v1
 go get github.com/jteeuwen/go-bindata/...
 go get github.com/jessevdk/go-flags
 go get github.com/dustin/go-humanize
-go get google.golang.org/grpc
 go get github.com/kardianos/osext
 go get github.com/Songmu/prompter
 go get github.com/texttheater/golang-levenshtein/levenshtein

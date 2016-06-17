@@ -7,7 +7,6 @@ _JAVA_EXCLUDE_FILES = ','.join([
     'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.LIST',
 ])
 
-_MAVEN_CENTRAL = "https://repo1.maven.org/maven2"
 _maven_packages = defaultdict(dict)
 
 
@@ -31,11 +30,17 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
       visibility (list): Visibility declaration of this rule.
       source (int): Java source level to compile sources as. Defaults to whatever's set in the config,
                     which itself defaults to 8.
+                    Deprecated, will be removed in a future version in favour of control via package().
       target (int): Java bytecode level to target after compile. Defaults to whatever's set in the
                     config, which itself defaults to 8.
+                    Deprecated, will be removed in a future version in favour of control via package().
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
     """
+    if source:
+        log.warning('`source` argument to java_library is deprecated and will be removed soon')
+    if target:
+        log.warning('`target` argument to java_library is deprecated and will be removed soon')
     all_srcs = (srcs or []) + (resources or [])
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
     if srcs:
@@ -102,13 +107,14 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
         )
 
 
-def java_binary(name, main_class=None, srcs=None, deps=None, data=None, visibility=None,
+def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None, visibility=None,
                 jvm_args=None, self_executable=False):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
       name (str): Name of the rule.
       main_class (str): Main class to set in the manifest.
+      out (str): Name of output .jar file. Defaults to name + .jar.
       srcs (list): Source files to compile.
       deps (list): Dependencies of this rule.
       data (list): Runtime data files for this rule.
@@ -135,7 +141,7 @@ def java_binary(name, main_class=None, srcs=None, deps=None, data=None, visibili
         name=name,
         deps=deps,
         data=data,
-        outs=[name + '.jar'],
+        outs=[out or name + '.jar'],
         cmd=cmd,
         needs_transitive_deps=True,
         output_is_complete=True,
@@ -144,6 +150,7 @@ def java_binary(name, main_class=None, srcs=None, deps=None, data=None, visibili
         requires=['java'],
         visibility=visibility,
         tools=tools,
+        labels=None if self_executable else ['java_non_exe'],
     )
 
 
@@ -179,7 +186,7 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
     )
     # As above, would be nicer if we could make the jars self-executing again.
     cmd, tools = _jarcat_cmd('net.thoughtmachine.please.test.TestMain')
-    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools)
+    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools, binary=False)
     cmd = 'ln -s %s . && %s' % (junit_runner, cmd)
     test_cmd = 'java -Dnet.thoughtmachine.please.testpackage=%s %s -jar $(location :%s) ' % (
         test_package, jvm_args, name)
@@ -206,7 +213,7 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
     )
 
 
-def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, combine=False,
+def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=False,
                hash=None, deps=None, visibility=None, filename=None, deps_only=False,
                optional=None):
     """Fetches a transitive set of dependencies from Maven.
@@ -223,7 +230,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
       exclude (list): Dependencies to ignore when fetching this one.
       hashes (dict): Map of Maven id -> rule hash for each rule produced.
       combine (bool): If True, we combine all downloaded .jar files into one uberjar.
-      hash (string|list): Hash of final produced .jar. For brevity, implies combine=True.
+      hash (str | list): Hash of final produced .jar. For brevity, implies combine=True.
       deps (list): Labels of dependencies, as usual.
       visibility (list): Visibility label.
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
@@ -237,6 +244,7 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
     exclude = exclude or []
     combine = combine or hash
     source_name = '_%s#src' % name
+    repository = repository or CONFIG.DEFAULT_MAVEN_REPO
 
     def get_hash(id, artifact=None):
         if hashes is None:
@@ -342,9 +350,9 @@ def maven_jars(name, id, repository=_MAVEN_CENTRAL, exclude=None, hashes=None, c
         )
 
 
-def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, hashes=None, deps=None,
+def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
-              exclude_paths=None, native=False):
+              exclude_paths=None, native=False, artifact_type=None):
     """Fetches a single Java dependency from Maven.
 
     Args:
@@ -360,18 +368,23 @@ def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, hashes=None, 
       licences (list): Licences this package is subject to.
       exclude_paths (list): Paths to remove from the downloaded .jar.
       native (bool): Attempt to download a native jar (i.e. add "-linux-x86_64" etc to the URL).
+      artifact_type (str): Type of artifact to download (defaults to jar but could be e.g. aar).
     """
     if hash and hashes:
         raise ParseError('You can pass only one of hash or hashes to maven_jar')
     _maven_packages[get_base_path()][name] = id
     # TODO(pebers): Handle exclusions, packages with no source available and packages with no version.
+    if not artifact_type:
+        id, _, artifact_type = id.partition('@')
+        artifact_type = artifact_type or 'jar'
     try:
         group, artifact, version = id.split(':')
     except ValueError:
         group, artifact, version, licence = id.split(':')
         if licence and not licences:
             licences = licence.split('|')
-    filename = filename or '%s-%s.jar' % (artifact, version)
+    filename = filename or '%s-%s.%s' % (artifact, version, artifact_type)
+    repository = repository or CONFIG.DEFAULT_MAVEN_REPO
     bin_url = '/'.join([
         repository,
         group.replace('.', '/'),
@@ -379,19 +392,19 @@ def maven_jar(name, id=None, repository=_MAVEN_CENTRAL, hash=None, hashes=None, 
         version,
         filename or '%s-%s.jar' % (artifact, version),
     ])
-    src_url = bin_url.replace('.jar', '-sources.jar')  # is this always predictable?
+    src_url = bin_url.replace('.' + artifact_type, '-sources.jar')  # is this always predictable?
     if native:
         # Maven has slightly different names for these.
         os = 'osx' if CONFIG.OS == 'darwin' else CONFIG.OS
         arch = 'x86_64' if CONFIG.ARCH == 'amd64' else CONFIG.ARCH
-        bin_url = bin_url.replace('.jar', '-%s-%s.jar' % (os, arch))
+        bin_url = bin_url.replace('.' + artifact_type, '-%s-%s.jar' % (os, arch))
     outs = [name + '.jar']
-    cmd = 'curl -fsSL %s -o %s' % (bin_url, outs[0])
+    cmd = 'curl -fSL %s -o %s' % (bin_url, outs[0])
     if exclude_paths:
         cmd += ' && zip -d %s %s' % (outs[0], ' '.join(exclude_paths))
     if sources:
         outs.append(name + '_src.jar')
-        cmd += ' && curl -fsSL %s -o %s' % (src_url, outs[1])
+        cmd += ' && curl -fSL %s -o %s' % (src_url, outs[1])
     build_rule(
         name=name,
         outs=outs,
@@ -410,7 +423,7 @@ def _java_binary_cmd(main_class, jvm_args, test_package=None):
     prop = '-Dnet.thoughtmachine.please.testpackage=' + test_package if test_package else ''
     preamble = '#!/bin/sh\nexec java %s %s -jar $0 $@' % (prop, jvm_args or '')
     jarcat_cmd, tools = _jarcat_cmd(main_class, preamble)
-    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools)
+    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools, binary=False)
     return ('ln -s %s . && %s' % (junit_runner, jarcat_cmd) if test_package else jarcat_cmd), tools
 
 

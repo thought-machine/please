@@ -18,20 +18,24 @@ import (
 
 var log = logging.MustGetLogger("server")
 
+type httpServer struct {
+	cache *Cache
+}
+
 // The pingHandler will return a 200 Accepted status
 // This handler will handle ping endpoint requests, in order to confirm whether the server can be accessed
-func pingHandler(w http.ResponseWriter, r *http.Request) {
+func (s *httpServer) pingHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Server connection established successfully.")
 }
 
 // The getHandler function handles the GET endpoint for the artifact path.
 // It calls the RetrieveArtifact function, and then either returns the found artifact, or logs the error
 // returned by RetrieveArtifact.
-func getHandler(w http.ResponseWriter, r *http.Request) {
+func (s *httpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	log.Debug("GET %s", r.URL.Path)
 	artifactPath := strings.TrimPrefix(r.URL.Path, "/artifact/")
 
-	art, err := RetrieveArtifact(artifactPath)
+	art, err := s.cache.RetrieveArtifact(artifactPath)
 	if err != nil && os.IsNotExist(err) {
 		w.WriteHeader(http.StatusNotFound)
 		log.Debug("%s doesn't exist in http cache", artifactPath)
@@ -65,12 +69,12 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 // It reads the request body and sends it to the StoreArtifact function, along with the path where it should
 // be stored.
 // The handler will either return an error or display a message confirming the file has been created.
-func postHandler(w http.ResponseWriter, r *http.Request) {
+func (s *httpServer) postHandler(w http.ResponseWriter, r *http.Request) {
 	log.Debug("POST %s", r.URL.Path)
 	artifact, err := ioutil.ReadAll(r.Body)
 	filePath, fileName := path.Split(strings.TrimPrefix(r.URL.Path, "/artifact"))
 	if err == nil {
-		if err := StoreArtifact(strings.TrimPrefix(r.URL.Path, "/artifact"), artifact); err != nil {
+		if err := s.cache.StoreArtifact(strings.TrimPrefix(r.URL.Path, "/artifact"), artifact); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Errorf("Failed to store artifact %s: %s", fileName, err)
 			return
@@ -87,8 +91,8 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 // The deleteAllHandler function handles the DELETE endpoint for the general server path.
 // It calls the DeleteAllArtifacts function.
 // The handler will either return an error or display a message confirming the files have been removed.
-func deleteAllHandler(w http.ResponseWriter, r *http.Request) {
-	if err := DeleteAllArtifacts(); err != nil {
+func (s *httpServer) deleteAllHandler(w http.ResponseWriter, r *http.Request) {
+	if err := s.cache.DeleteAllArtifacts(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Failed to clean http cache: %s", err)
 		return
@@ -101,9 +105,9 @@ func deleteAllHandler(w http.ResponseWriter, r *http.Request) {
 // The deleteHandler function handles the DELETE endpoint for the artifact path.
 // It calls the DeleteArtifact function, sending the path of the artifact as a parameter.
 // The handler will either return an error or display a message confirming the artifact has been removed.
-func deleteHandler(w http.ResponseWriter, r *http.Request) {
+func (s *httpServer) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	artifactPath := strings.TrimPrefix(r.URL.Path, "/artifact")
-	if err := DeleteArtifact(artifactPath); err != nil {
+	if err := s.cache.DeleteArtifact(artifactPath); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Failed to remove %s from http cache: %s", artifactPath, err)
 		return
@@ -115,12 +119,13 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 
 // The BuildRouter function creates a router, sets the base FileServer directory and the Handler Functions
 // for each endpoint, and then returns the router.
-func BuildRouter() *mux.Router {
+func BuildRouter(cache *Cache) *mux.Router {
+	s := &httpServer{cache: cache}
 	r := mux.NewRouter()
-	r.HandleFunc("/ping", pingHandler).Methods("GET")
-	r.HandleFunc("/artifact/{os_name}/{artifact:.*}", getHandler).Methods("GET")
-	r.HandleFunc("/artifact/{os_name}/{artifact:.*}", postHandler).Methods("POST")
-	r.HandleFunc("/artifact/{artifact:.*}", deleteHandler).Methods("DELETE")
-	r.HandleFunc("/", deleteAllHandler).Methods("DELETE")
+	r.HandleFunc("/ping", s.pingHandler).Methods("GET")
+	r.HandleFunc("/artifact/{os_name}/{artifact:.*}", s.getHandler).Methods("GET")
+	r.HandleFunc("/artifact/{os_name}/{artifact:.*}", s.postHandler).Methods("POST")
+	r.HandleFunc("/artifact/{artifact:.*}", s.deleteHandler).Methods("DELETE")
+	r.HandleFunc("/", s.deleteAllHandler).Methods("DELETE")
 	return r
 }

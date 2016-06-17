@@ -66,6 +66,10 @@ func parseTestSources(sources []string) (testDescr, error) {
 			return descr, err
 		}
 		descr.Package = f.Name.Name
+		// If we're testing main, we will get errors from it clashing with func main.
+		if descr.Package == "main" {
+			descr.Package = "_main"
+		}
 		for _, d := range f.Decls {
 			if fd, ok := d.(*ast.FuncDecl); ok && fd.Recv == nil {
 				name := fd.Name.String()
