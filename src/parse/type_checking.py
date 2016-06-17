@@ -28,7 +28,9 @@ def arg_checks(node):
     """Yields a sequence of checks on the given ast function node."""
     docs = {m.group(1): m.group(2) for m in DOCSTRING_RE.finditer(ast.get_docstring(node))}
     min_default = len(node.args.args) - len(node.args.defaults)
-    for i, arg in enumerate(arg.id for arg in node.args.args):
+    # ast in python 3 looks a bit different.
+    arg_name = lambda arg: arg.id if hasattr(arg, 'id') else arg.arg
+    for i, arg in enumerate(arg_name(arg) for arg in node.args.args):
         assert arg in docs, 'Missing docstring for argument %s to %s()' % (arg, node.name)
         doc = docs[arg]
         if i >= min_default:
