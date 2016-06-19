@@ -23,13 +23,13 @@ import (
 
 type RpcCacheServer struct {
 	cache        *Cache
-	readonlyKeys map[[]byte]bool
-	writableKeys map[[]byte]bool
+	readonlyKeys map[string]bool
+	writableKeys map[string]bool
 }
 
 func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
 	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
-		return err
+		return nil, err
 	}
 	arch := req.Os + "_" + req.Arch
 	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
@@ -80,14 +80,23 @@ func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb
 	return &pb.DeleteResponse{Success: success}, nil
 }
 
-func (r *RpcCacheServer) authenticateClient(keys map[[]byte]bool, ctx context.Context) error {
+func (r *RpcCacheServer) authenticateClient(keys map[string]bool, ctx context.Context) error {
 	if len(keys) == 0 {
 		return nil // Open to anyone.
 	}
-	_, ok := peer.FromContext(ctx)
+	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return fmt.Errorf("Missing client certificate")
 	}
+	info, ok := p.AuthInfo.(credentials.TLSInfo)
+	if !ok {
+		return fmt.Errorf("Could not extract auth info")
+	}
+	if len(info.State.PeerCertificates) == 0 {
+		return fmt.Errorf("No peer certificate available")
+	}
+	cert := info.State.PeerCertificates[0]
+	log.Debug("incoming cert, subject: %s", string(cert.RawSubject))
 	return nil
 }
 
@@ -111,8 +120,8 @@ func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, read
 }
 
 // ServeGrpcForever constructs a new server on the given port and serves until killed.
-func ServeGrpcForever(port int, cache *Cache, keyFile, certFile, caCertFile string) {
-	s, lis := BuildGrpcServer(port, cache, keyFile, certFile, caCertFile)
+func ServeGrpcForever(port int, cache *Cache, keyFile, certFile, caCertFile, readonlyKeys, writableKeys string) {
+	s, lis := BuildGrpcServer(port, cache, keyFile, certFile, caCertFile, readonlyKeys, writableKeys)
 	log.Notice("Serving RPC cache on port %d", port)
 	s.Serve(lis)
 }
