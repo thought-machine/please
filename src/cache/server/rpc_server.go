@@ -102,6 +102,7 @@ func serverWithAuth(keyFile, certFile, caCertFile string) *grpc.Server {
 	if keyFile == "" {
 		return grpc.NewServer() // No auth.
 	}
+	log.Debug("Loading x509 key pair from key: %s cert: %s", keyFile, certFile)
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		log.Fatalf("Failed to load x509 key pair: %s", err)

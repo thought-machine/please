@@ -184,7 +184,7 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
 	opts := []grpc.DialOption{grpc.WithTimeout(cache.timeout)}
-	if config.Cache.RpcPublicKey != "" {
+	if config.Cache.RpcPublicKey != "" || config.Cache.RpcCACert != "" {
 		auth, err := loadAuth(config.Cache.RpcCACert, config.Cache.RpcPublicKey, config.Cache.RpcPrivateKey)
 		if err != nil {
 			log.Warning("Failed to load RPC cache auth keys: %s", err)
@@ -271,29 +271,34 @@ func (g *grpcLogMabob) Println(args ...interface{})               { log.Warning(
 
 // loadAuth loads authentication credentials from a given pair of public / private key files.
 func loadAuth(caCert, publicKey, privateKey string) (grpc.DialOption, error) {
-	// Some awkwardness follows to allow users to use their SSH keypairs which they likely already
-	// have sitting about; forcing everyone to issue a new key in PEM format is not very helpful.
-	publicData, err := ioutil.ReadFile(core.ExpandHomePath(publicKey))
-	if err != nil {
-		return nil, err
+	config := tls.Config{}
+	if publicKey != "" {
+		log.Debug("Loading client certificate from %s, key %s", publicKey, privateKey)
+		// Some awkwardness follows to allow users to use their SSH keypairs which they likely already
+		// have sitting about; forcing everyone to issue a new key in PEM format is not very helpful.
+		publicData, err := ioutil.ReadFile(core.ExpandHomePath(publicKey))
+		if err != nil {
+			return nil, err
+		}
+		privateData, err := ioutil.ReadFile(core.ExpandHomePath(privateKey))
+		if err != nil {
+			return nil, err
+		}
+		// convertSSHPublicKey(publicData)
+		cert, err := tls.X509KeyPair(publicData, privateData)
+		if err != nil {
+			return nil, err
+		}
+		config.Certificates = []tls.Certificate{cert}
 	}
-	privateData, err := ioutil.ReadFile(core.ExpandHomePath(privateKey))
-	if err != nil {
-		return nil, err
-	}
-	// convertSSHPublicKey(publicData)
-	cert, err := tls.X509KeyPair(publicData, privateData)
-	if err != nil {
-		return nil, err
-	}
-	config := tls.Config{Certificates: []tls.Certificate{cert}}
 	if caCert != "" {
-		caCertificate, err := ioutil.ReadFile(caCert)
+		log.Debug("Reading CA cert file from %s", caCert)
+		cert, err := ioutil.ReadFile(caCert)
 		if err != nil {
 			return nil, err
 		}
 		config.RootCAs = x509.NewCertPool()
-		if !config.RootCAs.AppendCertsFromPEM(caCertificate) {
+		if !config.RootCAs.AppendCertsFromPEM(cert) {
 			return nil, fmt.Errorf("Failed to add any PEM certificates from %s", caCert)
 		}
 	}
