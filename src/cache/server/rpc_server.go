@@ -3,13 +3,17 @@
 package server
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"path"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
@@ -72,12 +76,12 @@ func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb
 
 // BuildGrpcServer creates a new, unstarted grpc.Server and returns it.
 // It also returns a net.Listener to start it on.
-func BuildGrpcServer(port int, cache *Cache) (*grpc.Server, net.Listener) {
+func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile string) (*grpc.Server, net.Listener) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("Failed to listen on port %d: %v", port, err)
 	}
-	s := grpc.NewServer()
+	s := serverWithAuth(keyFile, certFile, caCertFile)
 	r := &RpcCacheServer{cache: cache}
 	pb.RegisterRpcCacheServer(s, r)
 	healthserver := health.NewHealthServer()
@@ -87,8 +91,34 @@ func BuildGrpcServer(port int, cache *Cache) (*grpc.Server, net.Listener) {
 }
 
 // ServeGrpcForever constructs a new server on the given port and serves until killed.
-func ServeGrpcForever(port int, cache *Cache) {
-	s, lis := BuildGrpcServer(port, cache)
+func ServeGrpcForever(port int, cache *Cache, keyFile, certFile, caCertFile string) {
+	s, lis := BuildGrpcServer(port, cache, keyFile, certFile, caCertFile)
 	log.Notice("Serving RPC cache on port %d", port)
 	s.Serve(lis)
+}
+
+// serverWithAuth builds a gRPC server, possibly with authentication if key / cert files are given.
+func serverWithAuth(keyFile, certFile, caCertFile string) *grpc.Server {
+	if keyFile == "" {
+		return grpc.NewServer() // No auth.
+	}
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		log.Fatalf("Failed to load x509 key pair: %s", err)
+	}
+	config := tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientAuth:   tls.RequestClientCert,
+	}
+	if caCertFile != "" {
+		cert, err := ioutil.ReadFile(caCertFile)
+		if err != nil {
+			log.Fatalf("Failed to read CA cert file: %s", err)
+		}
+		config.ClientCAs = x509.NewCertPool()
+		if !config.ClientCAs.AppendCertsFromPEM(cert) {
+			log.Fatalf("Failed to find any PEM certificates in CA cert")
+		}
+	}
+	return grpc.NewServer(grpc.Creds(credentials.NewTLS(&config)))
 }

@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -285,20 +286,16 @@ func loadAuth(caCert, publicKey, privateKey string) (grpc.DialOption, error) {
 	if err != nil {
 		return nil, err
 	}
-	if caCert == "" {
-		// Lucky user does not need to load a CA cert.
-		return grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
-			Certificates: []tls.Certificate{cert},
-		})), nil
+	config := tls.Config{Certificates: []tls.Certificate{cert}}
+	if caCert != "" {
+		caCertificate, err := ioutil.ReadFile(caCert)
+		if err != nil {
+			return nil, err
+		}
+		config.RootCAs = x509.NewCertPool()
+		if !config.RootCAs.AppendCertsFromPEM(caCertificate) {
+			return nil, fmt.Errorf("Failed to add any PEM certificates from %s", caCert)
+		}
 	}
-	caCertificate, err := ioutil.ReadFile(caCert)
-	if err != nil {
-		return nil, err
-	}
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCertificate)
-	return grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
-	})), nil
+	return grpc.WithTransportCredentials(credentials.NewTLS(&config)), nil
 }
