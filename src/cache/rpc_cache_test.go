@@ -122,3 +122,10 @@ func TestDisconnectAfterEnoughErrors(t *testing.T) {
 	}
 	assert.False(t, c.Connected)
 }
+
+func TestLoadCertificates(t *testing.T) {
+	_, err := loadAuth("", "src/cache/test_data/cert.pem", "src/cache/test_data/key.pem")
+	assert.NoError(t, err, "Trivial case with PEM files already")
+	_, err = loadAuth("", "id_rsa.pub", "id_rsa")
+	assert.Error(t, err, "Fails because files don't exist")
+}

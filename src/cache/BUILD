@@ -35,8 +35,8 @@ else:
             '//third_party/go:logging',
             '//third_party/go:testify',
         ],
-        data = ['test_data/linux_amd64', 'test_data/darwin_amd64', 'test_data/plz-out'],
-        container = True,  # Brings up an internal server
+        data = ['test_data'],
+#        container = True,  # Brings up an internal server
     )
 
 go_test(

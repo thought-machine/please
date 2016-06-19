@@ -6,6 +6,8 @@ package cache
 import (
 	"bytes"
 	"core"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"io/ioutil"
 	"os"
@@ -17,6 +19,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
@@ -179,8 +182,18 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	// Change grpc to log using our implementation
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
-	// TODO(pebers): Add support for communicating over https.
-	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(), grpc.WithTimeout(cache.timeout))
+	opts := []grpc.DialOption{grpc.WithTimeout(cache.timeout)}
+	if config.Cache.RpcPublicKey != "" {
+		auth, err := loadAuth(config.Cache.RpcCACert, config.Cache.RpcPublicKey, config.Cache.RpcPrivateKey)
+		if err != nil {
+			log.Warning("Failed to load RPC cache auth keys: %s", err)
+			return
+		}
+		opts = append(opts, auth)
+	} else {
+		opts = append(opts, grpc.WithInsecure())
+	}
+	connection, err := grpc.Dial(config.Cache.RpcUrl, opts...)
 	if err != nil {
 		cache.Connecting = false
 		log.Warning("Failed to connect to RPC cache: %s", err)
@@ -254,3 +267,38 @@ func (g *grpcLogMabob) Fatalln(args ...interface{})               { log.Fatal(ar
 func (g *grpcLogMabob) Print(args ...interface{})                 { log.Warning("%s", args) }
 func (g *grpcLogMabob) Printf(format string, args ...interface{}) { log.Warning(format, args...) }
 func (g *grpcLogMabob) Println(args ...interface{})               { log.Warning("%s", args) }
+
+// loadAuth loads authentication credentials from a given pair of public / private key files.
+func loadAuth(caCert, publicKey, privateKey string) (grpc.DialOption, error) {
+	// Some awkwardness follows to allow users to use their SSH keypairs which they likely already
+	// have sitting about; forcing everyone to issue a new key in PEM format is not very helpful.
+	publicData, err := ioutil.ReadFile(core.ExpandHomePath(publicKey))
+	if err != nil {
+		return nil, err
+	}
+	privateData, err := ioutil.ReadFile(core.ExpandHomePath(privateKey))
+	if err != nil {
+		return nil, err
+	}
+	// convertSSHPublicKey(publicData)
+	cert, err := tls.X509KeyPair(publicData, privateData)
+	if err != nil {
+		return nil, err
+	}
+	if caCert == "" {
+		// Lucky user does not need to load a CA cert.
+		return grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+			Certificates: []tls.Certificate{cert},
+		})), nil
+	}
+	caCertificate, err := ioutil.ReadFile(caCert)
+	if err != nil {
+		return nil, err
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCertificate)
+	return grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	})), nil
+}
