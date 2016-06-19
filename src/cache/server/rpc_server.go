@@ -16,15 +16,21 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/peer"
 
 	pb "cache/proto/rpc_cache"
 )
 
 type RpcCacheServer struct {
-	cache *Cache
+	cache        *Cache
+	readonlyKeys map[[]byte]bool
+	writableKeys map[[]byte]bool
 }
 
 func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
+	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
+		return err
+	}
 	arch := req.Os + "_" + req.Arch
 	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
 	for _, artifact := range req.Artifacts {
@@ -74,15 +80,29 @@ func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb
 	return &pb.DeleteResponse{Success: success}, nil
 }
 
+func (r *RpcCacheServer) authenticateClient(keys map[[]byte]bool, ctx context.Context) error {
+	if len(keys) == 0 {
+		return nil // Open to anyone.
+	}
+	_, ok := peer.FromContext(ctx)
+	if !ok {
+		return fmt.Errorf("Missing client certificate")
+	}
+	return nil
+}
+
 // BuildGrpcServer creates a new, unstarted grpc.Server and returns it.
 // It also returns a net.Listener to start it on.
-func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile string) (*grpc.Server, net.Listener) {
+func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, readonlyKeys, writableKeys string) (*grpc.Server, net.Listener) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("Failed to listen on port %d: %v", port, err)
 	}
 	s := serverWithAuth(keyFile, certFile, caCertFile)
 	r := &RpcCacheServer{cache: cache}
+	if readonlyKeys != "" {
+		//		r.readonlyKeys =
+	}
 	pb.RegisterRpcCacheServer(s, r)
 	healthserver := health.NewHealthServer()
 	healthserver.SetServingStatus("plz-rpc-cache", healthpb.HealthCheckResponse_SERVING)
