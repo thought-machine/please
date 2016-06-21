@@ -12,7 +12,8 @@ _maven_packages = defaultdict(dict)
 
 def java_library(name, srcs=None, resources=None, resources_root=None, deps=None,
                  exported_deps=None, visibility=None, source=None,
-                 target=None, test_only=False, javac_flags=None):
+                 target=None, test_only=False, javac_flags=None,
+                 plugins=None, exported_plugins=None):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -36,43 +37,54 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
                     Deprecated, will be removed in a future version in favour of control via package().
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
+      plugins (list): List of Java compiler plugins to run when this library is compiled.
+      exported_plugins (list): List of Java compiler plugins to run when this library is compiled,
+                               and for any java_library which transitively depends on this one.
     """
     if source:
         log.warning('`source` argument to java_library is deprecated and will be removed soon')
     if target:
         log.warning('`target` argument to java_library is deprecated and will be removed soon')
-    all_srcs = (srcs or []) + (resources or [])
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
     if srcs:
         # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
         # it doesn't mean anything to us so we must filter it out.
         javac_flags = [flag for flag in javac_flags or [] if flag != '-extra_checks:off']
+        plugins = plugins or []
+        exported_plugins = exported_plugins or []
+        # TODO(pebers): Rewrite this once the system deps stuff lands to be a bit more efficient
+        #               (i.e. don't have a massive command repeated for every single library).
+        cmd = ' && '.join([
+            'mkdir _tmp _tmp/META-INF',
+            '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp -g $SRCS_SRCS %s %s' % (
+                CONFIG.JAVAC_TOOL,
+                source or CONFIG.JAVA_SOURCE_LEVEL,
+                target or CONFIG.JAVA_TARGET_LEVEL,
+                r'`find . -name "*.jar" ! -name "*src.jar" | tr \\\\n :`',
+                ' '.join(javac_flags),
+                ' '.join('-processorpath $(location %s)' % plugin for plugin in plugins + exported_plugins),
+            ),
+            'mv ${PKG}/%s/* _tmp' % resources_root if resources_root else 'true',
+            'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g"  > _tmp/META-INF/please_sourcemap',
+            'cd _tmp',
+            jarcat_tool + ' -d -o $OUT -i .',
+        ])
         build_rule(
             name=name,
-            srcs=all_srcs,
+            srcs={
+                'srcs': srcs,
+                'res': resources,
+            },
             deps=deps,
             exported_deps=exported_deps,
             outs=[name + '.jar'],
             visibility=visibility,
-            cmd=' && '.join([
-                'mkdir _tmp _tmp/META-INF',
-                '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp -g %s %s' % (
-                    CONFIG.JAVAC_TOOL,
-                    source or CONFIG.JAVA_SOURCE_LEVEL,
-                    target or CONFIG.JAVA_TARGET_LEVEL,
-                    r'`find . -name "*.jar" ! -name "*src.jar" | tr \\\\n :`',
-                    ' '.join('$(locations %s)' % src for src in srcs),
-                    ' '.join(javac_flags),
-                ),
-                'mv ${PKG}/%s/* _tmp' % resources_root if resources_root else 'true',
-                'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g"  > _tmp/META-INF/please_sourcemap',
-                'cd _tmp',
-                jarcat_tool + ' -d -o $OUT -i .',
-            ]),
+            cmd=cmd,
             building_description="Compiling...",
             requires=['java'],
             test_only=test_only,
-            tools=tools,
+            pre_build=_discover_java_plugins(cmd),
+            tools=tools + plugins + exported_plugins,
         )
     elif resources:
         # Can't run javac since there are no java files.
@@ -82,7 +94,7 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
             cmd = '%s -d -o ${OUTS} -i ${PKG}' % jarcat_tool
         build_rule(
             name=name,
-            srcs=all_srcs,
+            srcs=resources,
             deps=deps,
             exported_deps=exported_deps,
             outs=[name + '.jar'],
@@ -108,7 +120,7 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
 
 
 def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None, visibility=None,
-                jvm_args=None, self_executable=False):
+                jvm_args=None, self_executable=False, labels=None):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
@@ -121,6 +133,7 @@ def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None
       visibility (list): Visibility declaration of this rule.
       jvm_args (str): Arguments to pass to the JVM in the run script.
       self_executable (bool): True to make the jar self executable.
+      labels (list): Labels to apply to this rule.
     """
     if srcs:
         lib_name = '_%s#lib' % name
@@ -137,6 +150,7 @@ def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None
         # This is essentially a hack to get past some Java things (notably Jersey) failing
         # in subtle ways when the jar has a preamble (srsly...).
         cmd, tools = _jarcat_cmd(main_class)
+        labels = (labels or []) + ['java_non_exe']
     build_rule(
         name=name,
         deps=deps,
@@ -150,7 +164,39 @@ def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None
         requires=['java'],
         visibility=visibility,
         tools=tools,
-        labels=None if self_executable else ['java_non_exe'],
+        labels=labels,
+    )
+
+
+def java_plugin(name, processor_class=None, out=None, srcs=None, deps=None, data=None,
+                visibility=None, jvm_args=None, self_executable=False):
+    """Compiles a .jar which will perform annotation processing for java_library rules.
+
+    This is essentially a very thin wrapper around java_binary since conceptually the two
+    produce very similar outputs.
+
+    Args:
+      name (str): Name of the rule.
+      processor_class (str): Class that forms the entry point for the annotation processor.
+      out (str): Name of output .jar file. Defaults to name + .jar.
+      srcs (list): Source files to compile.
+      deps (list): Dependencies of this rule.
+      data (list): Runtime data files for this rule.
+      visibility (list): Visibility declaration of this rule.
+      jvm_args (str): Arguments to pass to the JVM in the run script.
+      self_executable (bool): True to make the jar self executable.
+    """
+    java_binary(
+        name = name,
+        main_class = processor_class,
+        out = out,
+        srcs = srcs,
+        deps = deps,
+        data = data,
+        visibility = visibility,
+        jvm_args = jvm_args,
+        self_executable = self_executable,
+        labels = ['java_plugin://%s:%s' % (get_base_path(), name)],
     )
 
 
@@ -436,6 +482,18 @@ def _jarcat_cmd(main_class=None, preamble=None):
     if preamble:
         return cmd + " -p '%s'" % preamble, tools
     return cmd, tools
+
+
+def _discover_java_plugins(cmd):
+    """Returns a pre-build function for java_library rules to discover compiler plugins."""
+    def _discover_plugins(name):
+        labels = get_labels(name, 'java_plugin:')
+        if labels:
+            plugins = ' '.join('-processorpath $(location %s)' % label for label in labels)
+            set_command(name, cmd.replace('-encoding utf8', '-encoding utf8 ' + plugins))
+            for label in labels:
+                # TODO(pebers): we should add an add_tool callback as well and use that.
+                add_dep(name, label)
 
 
 if CONFIG.BAZEL_COMPATIBILITY:

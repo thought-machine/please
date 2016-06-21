@@ -437,7 +437,7 @@ def _tool_path(tool, tools=None, binary=True):
     """
     if tool.startswith('//'):
         return '$(%s %s)' % ('exe' if binary else 'location', tool), [tool] + (tools or [])
-    return tool, tools
+    return tool, tools or []
 
 
 def _test_size_and_timeout(size, timeout, labels):
