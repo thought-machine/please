@@ -85,6 +85,7 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
             test_only=test_only,
             pre_build=_discover_java_plugins(cmd),
             tools=tools + plugins + exported_plugins,
+            labels=['java_plugin:%s' % plugin for plugin in exported_plugins],
         )
     elif resources:
         # Can't run javac since there are no java files.
@@ -200,7 +201,7 @@ def java_plugin(name, processor_class=None, out=None, srcs=None, deps=None, data
     )
 
 
-def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
+def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, visibility=None,
               container=False, timeout=0, flaky=0, test_outputs=None, size=None,
               test_package=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args=''):
     """Defines a Java test.
@@ -208,6 +209,7 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
     Args:
       name (str): Name of the rule.
       srcs (list): Java files containing the tests.
+      resources (list): Resources to include for this test.
       data (list): Runtime data files for this rule.
       deps (list): Dependencies of this rule.
       labels (list): Labels to attach to this test.
@@ -226,6 +228,7 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
     java_library(
         name='_%s#lib' % name,
         srcs=srcs,
+        resources=resources,
         deps=deps,
         test_only=True,
         # Deliberately not visible outside this package.
