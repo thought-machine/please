@@ -32,6 +32,21 @@ func FindRepoRoot(die bool) {
 	RepoRoot, initialPackage = getRepoRoot(die)
 }
 
+// InitialPackage returns a label corresponding to the initial package we started in.
+func InitialPackage() []BuildLabel {
+	// It's possible to start off in directories that aren't legal package names, because
+	// our package naming is stricter than directory naming requirements.
+	// In that case move up until we find somewhere we can run from.
+	dir := initialPackage
+	for dir != "." {
+		if label, err := TryNewBuildLabel(dir, "..."); err == nil {
+			return []BuildLabel{label}
+		}
+		dir = filepath.Dir(dir)
+	}
+	return WholeGraph
+}
+
 // getRepoRoot returns the root directory of the current repo and the initial package.
 func getRepoRoot(die bool) (string, string) {
 	dir, err := os.Getwd()
