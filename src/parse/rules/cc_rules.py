@@ -70,15 +70,13 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     }
     a_rules = []
     for src in srcs:
-        if len(srcs) > 1:
-            a_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_'))
-        else:
-            a_name = '_%s#a' % name
+        a_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_'))
         build_rule(
             name=a_name,
             srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
             outs=[a_name + '.a'],
             deps=deps,
+            visibility=visibility,
             cmd=cmds,
             building_description='Compiling...',
             requires=['cc', 'cc_hdrs'],
@@ -87,21 +85,6 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
         )
         a_rules.append(':' + a_name)
-    # Combine the archives into one, if there's more than one.
-    if len(a_rules) > 1:
-        a_name = '_%s#a' % name
-        build_rule(
-            name=a_name,
-            srcs=a_rules,
-            outs=[name + '.a'],
-            cmd='ls ${PKG}/*.a | xargs -n 1 %s x && %s rcs%s $OUT ${PKG}/*.o' %
-                (CONFIG.AR_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
-            building_description='Archiving...',
-            test_only=test_only,
-            labels=labels,
-            output_is_complete=True,
-        )
-        a_rules = [':' + a_name]
     hdrs_rule = ':_%s#hdrs' % name
     filegroup(
         name=name,

@@ -36,10 +36,6 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		// in PATH entries.
 		"PATH=" + ExpandHomePath(strings.Join(state.Config.Build.Path, ":")),
 	}
-	// It's easier for rules to handle if this variable doesn't sometimes become empty.
-	if target.Label.PackageName == "" {
-		env[0] = "PKG=."
-	}
 	if state.Config.Go.GoRoot != "" {
 		env = append(env, "GOROOT="+state.Config.Go.GoRoot)
 	}
