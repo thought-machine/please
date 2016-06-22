@@ -50,8 +50,10 @@ go_test(
     srcs = ['rpc_server_test.go'],
     deps = [
         ':server',
+        '//third_party/go:testify',
     ],
-    data = [':test_data'],
+    data = [':test_data', '//src/cache:test_data'],
+    container = True,
 )
 
 go_test(

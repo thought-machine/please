@@ -6,10 +6,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
 	"path"
+	"path/filepath"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -23,12 +26,12 @@ import (
 
 type RpcCacheServer struct {
 	cache        *Cache
-	readonlyKeys map[string]bool
-	writableKeys map[string]bool
+	readonlyKeys map[string]*x509.Certificate
+	writableKeys map[string]*x509.Certificate
 }
 
 func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
-	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
+	if err := r.authenticateClient(r.writableKeys, ctx); err != nil {
 		return nil, err
 	}
 	arch := req.Os + "_" + req.Arch
@@ -43,6 +46,9 @@ func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.S
 }
 
 func (r *RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) (*pb.RetrieveResponse, error) {
+	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
+		return nil, err
+	}
 	response := pb.RetrieveResponse{Success: true}
 	arch := req.Os + "_" + req.Arch
 	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
@@ -80,8 +86,8 @@ func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb
 	return &pb.DeleteResponse{Success: success}, nil
 }
 
-func (r *RpcCacheServer) authenticateClient(keys map[string]bool, ctx context.Context) error {
-	if len(keys) == 0 {
+func (r *RpcCacheServer) authenticateClient(certs map[string]*x509.Certificate, ctx context.Context) error {
+	if len(certs) == 0 {
 		return nil // Open to anyone.
 	}
 	p, ok := peer.FromContext(ctx)
@@ -96,8 +102,37 @@ func (r *RpcCacheServer) authenticateClient(keys map[string]bool, ctx context.Co
 		return fmt.Errorf("No peer certificate available")
 	}
 	cert := info.State.PeerCertificates[0]
-	log.Debug("incoming cert, subject: %s", string(cert.RawSubject))
-	return nil
+	if okCert := certs[string(cert.RawSubject)]; okCert != nil && okCert.Equal(cert) {
+		return nil
+	}
+	return fmt.Errorf("Invalid or unknown certificate")
+}
+
+func loadKeys(filename string) map[string]*x509.Certificate {
+	ret := map[string]*x509.Certificate{}
+	if err := filepath.Walk(filename, func(name string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		} else if !info.IsDir() {
+			data, err := ioutil.ReadFile(filename)
+			if err != nil {
+				log.Fatalf("Failed to read cert from %s: %s", filename, err)
+			}
+			p, _ := pem.Decode(data)
+			if p == nil {
+				log.Fatalf("Couldn't decode PEM data from %s: %s", filename, err)
+			}
+			cert, err := x509.ParseCertificate(p.Bytes)
+			if err != nil {
+				log.Fatalf("Couldn't parse certificate from %s: %s", filename, err)
+			}
+			ret[string(cert.RawSubject)] = cert
+		}
+		return nil
+	}); err != nil {
+		log.Fatalf("%s", err)
+	}
+	return ret
 }
 
 // BuildGrpcServer creates a new, unstarted grpc.Server and returns it.
@@ -110,7 +145,10 @@ func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, read
 	s := serverWithAuth(keyFile, certFile, caCertFile)
 	r := &RpcCacheServer{cache: cache}
 	if readonlyKeys != "" {
-		//		r.readonlyKeys =
+		r.readonlyKeys = loadKeys(readonlyKeys)
+	}
+	if writableKeys != "" {
+		r.writableKeys = loadKeys(writableKeys)
 	}
 	pb.RegisterRpcCacheServer(s, r)
 	healthserver := health.NewHealthServer()
