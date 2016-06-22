@@ -1,9 +1,26 @@
-Version 4.0.0
+Version 3.4.0
+-------------
+
+    * `plz run` and `plz test` now default to the current package + subpackages when run
+      without arguments. `plz clean` and `plz query` still retain the old semantics of the
+      entire repo.
+
+
+Version 3.3.0
 -------------
 
     * Build / test commands are now run with "-o pipefail" so you don't have to specify
       yourself. This could potentially break any rules that relied on the default
       behaviour although it's unlikely that anything did that deliberately.
+    * Sources are deduplicated on build rules.
+    * Fixed a minor bug where plz run would incorrectly pass the --assert_version flag to
+      the target if it updated automatically.
+    * RPC cache now gives up after a sufficient number of failures so it doesn't drown
+      you in messages on long builds.
+    * If any of the entries in `srcs` in a build rule are None, they're skipped. This makes
+      it easier to write some rules with optional inputs.
+    * Added a config property for the default maven repo.
+    * Output file from java_binary is now configurable.
 
 
 Version 3.2.0

@@ -33,11 +33,12 @@ def arg_checks(node):
     for i, arg in enumerate(arg_name(arg) for arg in node.args.args):
         assert arg in docs, 'Missing docstring for argument %s to %s()' % (arg, node.name)
         doc = docs[arg]
+        rtype = doc.replace('bool', 'int')  # Bools are ints so an int is acceptable.
         if i >= min_default:
             if '|' in doc:
-                types = doc.split(' | ')
+                types = rtype.split(' | ')
                 yield 'assert not %s or isinstance(%s, (%s)), "Argument %s to %s must be a %s"' % (
-                    arg, arg, ', '.join(types), arg, node.name, ' or '.join(types))
+                    arg, arg, ', '.join(types), arg, node.name, doc.replace('|', 'or'))
             elif doc == 'function':
                 # Have to check functions a bit specially. Maybe we should document them
                 # as 'callable' instead of 'function'?
@@ -45,10 +46,10 @@ def arg_checks(node):
                     arg, arg, arg, node.name)
             else:
                 yield 'assert not %s or isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
-                    arg, arg, doc, arg, node.name, doc)
+                    arg, arg, rtype, arg, node.name, doc)
         else:
             yield 'assert isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
-                arg, doc, arg, node.name, doc)
+                arg, rtype, arg, node.name, doc)
 
 
 def process(filename):
