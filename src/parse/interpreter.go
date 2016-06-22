@@ -337,7 +337,7 @@ func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget uintptr) 
 }
 
 //export AddDependency
-func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported bool) *C.char {
+func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported bool, tool bool) *C.char {
 	target, err := getTargetPost(cPackage, cTarget)
 	if err != nil {
 		return C.CString(err.Error())
@@ -345,6 +345,8 @@ func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported boo
 	dep, err := core.TryParseBuildLabel(C.GoString(cDep), target.Label.PackageName)
 	if err != nil {
 		return C.CString(err.Error())
+	} else if tool {
+		target.Tools = append(target.Tools, dep)
 	}
 	target.AddMaybeExportedDependency(dep, exported)
 	core.State.Graph.AddDependency(target.Label, dep)

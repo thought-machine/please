@@ -495,8 +495,7 @@ def _discover_java_plugins(cmd):
             plugins = ' '.join('-processorpath $(location %s)' % label for label in labels)
             set_command(name, cmd.replace('-encoding utf8', '-encoding utf8 ' + plugins))
             for label in labels:
-                # TODO(pebers): we should add an add_tool callback as well and use that.
-                add_dep(name, label)
+                add_tool(name, label)
 
 
 if CONFIG.BAZEL_COMPATIBILITY:

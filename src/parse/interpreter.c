@@ -72,7 +72,7 @@ int InitialiseInterpreter(char* parser_location) {
   reg("_get_labels", "char** (*)(size_t, char*, char*)", GetLabels);
   reg("_set_pre_build_callback", "char** (*)(void*, char*, size_t)", SetPreBuildFunction);
   reg("_set_post_build_callback", "char** (*)(void*, char*, size_t)", SetPostBuildFunction);
-  reg("_add_dependency", "char* (*)(size_t, char*, char*, uint8)", AddDependency);
+  reg("_add_dependency", "char* (*)(size_t, char*, char*, uint8, uint8)", AddDependency);
   reg("_add_output", "char* (*)(size_t, char*, char*)", AddOutputPost);
   reg("_add_licence_post", "char* (*)(size_t, char*, char*)", AddLicencePost);
   reg("_set_command", "char* (*)(size_t, char*, char*, char*)", SetCommand);
