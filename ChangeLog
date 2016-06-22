@@ -1,3 +1,11 @@
+Version 3.4.0
+-------------
+
+    * `plz run` and `plz test` now default to the current package + subpackages when run
+      without arguments. `plz clean` and `plz query` still retain the old semantics of the
+      entire repo.
+
+
 Version 3.3.0
 -------------
 
