@@ -1,3 +1,11 @@
+Version 3.4.1
+-------------
+
+    * fix for type checking script when run through python3
+    * Don't try to retrieve results from containerised tests that have no_test_output = True.
+    * Private targets are omitted from `plz query somepath`.
+
+
 Version 3.4.0
 -------------
 
