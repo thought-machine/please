@@ -246,7 +246,8 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
     )
 
 
-def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None, test_only=False):
+def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
+                licences=None, test_only=False):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -256,15 +257,17 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
       out (str): Output name of the file. Chosen automatically if not given.
       binary (bool): True to mark the output as binary and runnable.
       visibility (list): Visibility declaration of the rule.
+      licences (list): List of licences that apply to this rule.
       test_only (bool): If true the rule is only visible to test targets.
     """
     build_rule(
         name=name,
-        cmd='curl -fSL %s -o $OUT' % url,
+        cmd='echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (url, url),
         outs=[out or url[url.rfind('/') + 1:]],
         binary=binary,
         visibility=visibility,
         hashes=hashes,
+        licences=licences,
         building_description='Fetching...',
     )
 

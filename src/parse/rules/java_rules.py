@@ -399,12 +399,12 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         arch = 'x86_64' if CONFIG.ARCH == 'amd64' else CONFIG.ARCH
         bin_url = bin_url.replace('.' + artifact_type, '-%s-%s.jar' % (os, arch))
     outs = [name + '.jar']
-    cmd = 'curl -fSL %s -o %s' % (bin_url, outs[0])
+    cmd = 'echo "Fetching %s..." && curl -fsSL %s -o %s' % (bin_url, bin_url, outs[0])
     if exclude_paths:
         cmd += ' && zip -d %s %s' % (outs[0], ' '.join(exclude_paths))
     if sources:
         outs.append(name + '_src.jar')
-        cmd += ' && curl -fSL %s -o %s' % (src_url, outs[1])
+        cmd += ' && echo "Fetching %s..." && curl -fsSL %s -o %s' % (src_url, src_url, outs[1])
     build_rule(
         name=name,
         outs=outs,
