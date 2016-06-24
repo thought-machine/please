@@ -398,13 +398,33 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         os = 'osx' if CONFIG.OS == 'darwin' else CONFIG.OS
         arch = 'x86_64' if CONFIG.ARCH == 'amd64' else CONFIG.ARCH
         bin_url = bin_url.replace('.' + artifact_type, '-%s-%s.jar' % (os, arch))
-    outs = [name + '.jar']
+    outs = [name + '.' + artifact_type]
     cmd = 'echo "Fetching %s..." && curl -fsSL %s -o %s' % (bin_url, bin_url, outs[0])
     if exclude_paths:
         cmd += ' && zip -d %s %s' % (outs[0], ' '.join(exclude_paths))
     if sources:
-        outs.append(name + '_src.jar')
+        outs.append(name + '_src.' + artifact_type)
         cmd += ' && echo "Fetching %s..." && curl -fsSL %s -o %s' % (src_url, src_url, outs[1])
+
+    # .aar's have an embedded classes.jar in them. Pull that out so other rules can use it.
+    provides = None
+    if artifact_type == 'aar':
+        build_rule(
+            name = '_%s#classes' % name,
+            # It's easier just to refetch it than to try to make dependencies work.
+            # Only fetching once would be more efficient though.
+            cmd = ' && '.join([
+                'echo "Fetching %s..."' % bin_url,
+                'curl -fsSL %s -o package.aar' % bin_url,
+                'unzip package.aar classes.jar',
+                'mv classes.jar $OUT',
+            ]),
+            outs = [name + '.jar'],
+            visibility = visibility,
+            licences = licences,
+            exported_deps = deps,
+        )
+        provides = {'java': ':_%s#classes' % name}
     build_rule(
         name=name,
         outs=outs,
@@ -415,6 +435,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         visibility=visibility,
         building_description='Fetching...',
         requires=['java'],
+        provides=provides,
     )
 
 
