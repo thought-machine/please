@@ -57,12 +57,12 @@ bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/mi
 echo "Building Please..."
 SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
 ENGINE="${SCRIPT_DIR}/src/parse/cffi/libplease_parser_${INTERPRETER}.*"
-go run src/please.go --engine $ENGINE --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/build.log --log_file_level 4
+go run src/please.go --engine $ENGINE --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/bootstrap_build.log --log_file_level 4
 # Use it to build the rest of the tools that come with it.
 # NB. We can't do the tarballs here because they depend on all the interpreters, which some
 #     users might not have installed.
 echo "Building the tools..."
-plz-out/bin/src/please --plain_output build //src:please //:all_tools --log_file plz-out/log/build.log --log_file_level 4
+plz-out/bin/src/please --plain_output build //src:please //:all_tools --log_file plz-out/log/tools_build.log --log_file_level 4
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
@@ -108,4 +108,4 @@ if [ ! -d "/usr/include/google/protobuf" ]; then
     EXCLUDES="${EXCLUDES} --exclude=proto"
 fi
 
-plz-out/bin/src/please test ... --exclude cycle $EXCLUDES --log_file plz-out/log/build.log --log_file_level 4 $@
+plz-out/bin/src/please test ... --exclude cycle $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 $@
