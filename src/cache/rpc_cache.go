@@ -276,18 +276,7 @@ func loadAuth(caCert, publicKey, privateKey string) (grpc.DialOption, error) {
 	config := tls.Config{}
 	if publicKey != "" {
 		log.Debug("Loading client certificate from %s, key %s", publicKey, privateKey)
-		// Some awkwardness follows to allow users to use their SSH keypairs which they likely already
-		// have sitting about; forcing everyone to issue a new key in PEM format is not very helpful.
-		publicData, err := ioutil.ReadFile(core.ExpandHomePath(publicKey))
-		if err != nil {
-			return nil, err
-		}
-		privateData, err := ioutil.ReadFile(core.ExpandHomePath(privateKey))
-		if err != nil {
-			return nil, err
-		}
-		// convertSSHPublicKey(publicData)
-		cert, err := tls.X509KeyPair(publicData, privateData)
+		cert, err := tls.LoadX509KeyPair(publicKey, privateKey)
 		if err != nil {
 			return nil, err
 		}
