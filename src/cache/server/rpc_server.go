@@ -73,6 +73,9 @@ func (r *RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) 
 }
 
 func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+	if err := r.authenticateClient(r.writableKeys, ctx); err != nil {
+		return nil, err
+	}
 	if req.Everything {
 		return &pb.DeleteResponse{Success: r.cache.DeleteAllArtifacts() == nil}, nil
 	}

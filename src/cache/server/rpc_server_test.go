@@ -109,3 +109,23 @@ func TestWritableAuth(t *testing.T) {
 	_, err = c.Store(ctx, &pb.StoreRequest{})
 	assert.NoError(t, err)
 }
+
+func TestDeleteNoAuth(t *testing.T) {
+	s := startServer(7681, true, testCert, testCert2)
+	defer s.Stop()
+	c := buildClient(t, 7681, true)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := c.Delete(ctx, &pb.DeleteRequest{})
+	assert.Error(t, err, "Fails because the client isn't authenticated")
+}
+
+func TestDeleteAuth(t *testing.T) {
+	s := startServer(7682, true, testCert, testCert)
+	defer s.Stop()
+	c := buildClient(t, 7682, true)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := c.Delete(ctx, &pb.DeleteRequest{})
+	assert.NoError(t, err)
+}
