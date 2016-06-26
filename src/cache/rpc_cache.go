@@ -38,6 +38,7 @@ type rpcCache struct {
 	OSName     string
 	numErrors  int32
 	timeout    time.Duration
+	startTime  time.Time
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
@@ -218,7 +219,7 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 		cache.client = pb.NewRpcCacheClient(connection)
 		cache.Connected = true
 		cache.Connecting = false
-		log.Info("RPC cache connected")
+		log.Info("RPC cache connected after %0.2fs", time.Since(cache.startTime).Seconds())
 	}
 }
 
@@ -254,6 +255,7 @@ func newRpcCache(config *core.Configuration) (*rpcCache, error) {
 		Writeable:  config.Cache.RpcWriteable,
 		Connecting: true,
 		timeout:    time.Duration(config.Cache.RpcTimeout) * time.Second,
+		startTime:  time.Now(),
 	}
 	go cache.connect(config)
 	return cache, nil
