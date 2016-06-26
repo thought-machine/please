@@ -1,5 +1,3 @@
-// Test only at this point to make sure we can build grpc correctly.
-// Later this will turn into a proper RPC cache server implementation.
 package server
 
 import (
