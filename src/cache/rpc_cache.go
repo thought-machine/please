@@ -184,7 +184,7 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
 	opts := []grpc.DialOption{grpc.WithTimeout(cache.timeout)}
-	if config.Cache.RpcPublicKey != "" || config.Cache.RpcCACert != "" {
+	if config.Cache.RpcPublicKey != "" || config.Cache.RpcCACert != "" || config.Cache.RpcSecure {
 		auth, err := loadAuth(config.Cache.RpcCACert, config.Cache.RpcPublicKey, config.Cache.RpcPrivateKey)
 		if err != nil {
 			log.Warning("Failed to load RPC cache auth keys: %s", err)

@@ -185,6 +185,7 @@ type Configuration struct {
 		RpcPublicKey          string
 		RpcPrivateKey         string
 		RpcCACert             string
+		RpcSecure             bool
 	}
 	Test struct {
 		Timeout          int
