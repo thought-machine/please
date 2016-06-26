@@ -73,7 +73,7 @@ var opts struct {
 	} `command:"build" description:"Builds one or more targets"`
 
 	Rebuild struct {
-		Args struct { // Inner nesting is necessary to make positional-args work :(
+		Args struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to rebuild"`
 		} `positional-args:"true" required:"true"`
 	} `command:"rebuild" description:"Forces a rebuild of one or more targets"`
