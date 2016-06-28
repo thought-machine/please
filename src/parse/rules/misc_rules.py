@@ -9,7 +9,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
 
     Args:
       name (str): Name of the rule
-      cmd (str): Command to run. It's subject to various sequence replacements:
+      cmd (str | dict): Command to run. It's subject to various sequence replacements:
              $(location //path/to:target) expands to the location of the given build rule, which
                                           must have a single output only.
              $(locations //path/to:target) expands to the locations of the outputs of the given
