@@ -88,6 +88,8 @@ type BuildState struct {
 	PrintCommands bool
 	// True to clean working directories after successful builds.
 	CleanWorkdirs bool
+	// True if we're forcing a rebuild of the original targets.
+	ForceRebuild bool
 	// Number of running workers
 	numWorkers int
 	// Used to count the number of currently active/pending targets
