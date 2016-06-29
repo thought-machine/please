@@ -247,7 +247,7 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
 
 
 def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
-                licences=None, test_only=False):
+                licences=None, test_only=False, deps=None):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -259,6 +259,7 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
       visibility (list): Visibility declaration of the rule.
       licences (list): List of licences that apply to this rule.
       test_only (bool): If true the rule is only visible to test targets.
+      deps (list): List of extra dependencies for this rule.
     """
     build_rule(
         name=name,
@@ -269,6 +270,8 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
         hashes=hashes,
         licences=licences,
         building_description='Fetching...',
+        deps=deps,
+        test_only=test_only,
     )
 
 
