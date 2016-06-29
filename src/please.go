@@ -252,6 +252,9 @@ var buildFunctions = map[string]func() bool{
 			opts.OutputFlags.PlainOutput = true // No need for interactive display, we won't parse anything.
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false, true); success {
+			if len(opts.Clean.Args.Targets) == 0 {
+				state.OriginalTargets = nil // It interprets an empty target list differently.
+			}
 			clean.Clean(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
 			return true
 		}
