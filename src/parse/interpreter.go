@@ -18,6 +18,7 @@ package parse
 import (
 	"crypto/sha1"
 	"fmt"
+	"os"
 	"path"
 	"runtime"
 	"sort"
@@ -58,6 +59,11 @@ func initializeInterpreter(config *core.Configuration) {
 	// its initialisation. Force it to stay on this one thread for now.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
+
+	// Set the hash seed for Python dicts / sets; there isn't a DoS security concern in our context,
+	// and it's much more useful to us that they are consistent between runs since it's not that hard
+	// to accidentally write rules that are nondeterministic via {}.items() etc.
+	os.Setenv("PYTHONHASHSEED", "42")
 
 	// If an engine has been explicitly set, by flag or config, we honour it here.
 	if config.Please.ParserEngine != "" {

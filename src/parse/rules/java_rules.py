@@ -10,7 +10,7 @@ _JAVA_EXCLUDE_FILES = ','.join([
 _maven_packages = defaultdict(dict)
 
 
-def java_library(name, srcs=None, resources=None, resources_root=None, deps=None,
+def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=None, deps=None,
                  exported_deps=None, visibility=None, source=None,
                  target=None, test_only=False, javac_flags=None):
     """Compiles Java source to a .jar which can be collected by other rules.
@@ -18,6 +18,7 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
     Args:
       name (str): Name of the rule
       srcs (list): Java source files to compile for this library
+      src_dir (str): Directory containing Java source files to compile.
       resources (list): Resources to include in the .jar file
       resources_root (str): Root directory to treat resources relative to; ie. if we are in
                             //project/main/resources and resources_root is project/main then
@@ -41,15 +42,20 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
         log.warning('`source` argument to java_library is deprecated and will be removed soon')
     if target:
         log.warning('`target` argument to java_library is deprecated and will be removed soon')
+    if srcs and src_dir:
+        raise ParseError('You cannot pass both srcs and src_dir to java_library')
     all_srcs = (srcs or []) + (resources or [])
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
-    if srcs:
+    if srcs or src_dir:
         # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
         # it doesn't mean anything to us so we must filter it out.
         javac_flags = [flag for flag in javac_flags or [] if flag != '-extra_checks:off']
         build_rule(
             name=name,
-            srcs=all_srcs,
+            srcs={
+                'srcs': srcs or [src_dir],
+                'res': resources,
+            },
             deps=deps,
             exported_deps=exported_deps,
             outs=[name + '.jar'],
@@ -61,7 +67,7 @@ def java_library(name, srcs=None, resources=None, resources_root=None, deps=None
                     source or CONFIG.JAVA_SOURCE_LEVEL,
                     target or CONFIG.JAVA_TARGET_LEVEL,
                     r'`find . -name "*.jar" ! -name "*src.jar" | tr \\\\n :`',
-                    ' '.join('$(locations %s)' % src for src in srcs),
+                    '$SRCS_SRCS' if srcs else '`find $SRCS_SRCS -name "*.java"`',
                     ' '.join(javac_flags),
                 ),
                 'mv ${PKG}/%s/* _tmp' % resources_root if resources_root else 'true',
@@ -398,13 +404,34 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         os = 'osx' if CONFIG.OS == 'darwin' else CONFIG.OS
         arch = 'x86_64' if CONFIG.ARCH == 'amd64' else CONFIG.ARCH
         bin_url = bin_url.replace('.' + artifact_type, '-%s-%s.jar' % (os, arch))
-    outs = [name + '.jar']
-    cmd = 'curl -fSL %s -o %s' % (bin_url, outs[0])
+    outs = [name + '.' + artifact_type]
+    cmd = 'echo "Fetching %s..." && curl -fsSL %s -o %s' % (bin_url, bin_url, outs[0])
     if exclude_paths:
         cmd += ' && zip -d %s %s' % (outs[0], ' '.join(exclude_paths))
     if sources:
-        outs.append(name + '_src.jar')
-        cmd += ' && curl -fSL %s -o %s' % (src_url, outs[1])
+        outs.append(name + '_src.' + artifact_type)
+        cmd += ' && echo "Fetching %s..." && curl -fsSL %s -o %s' % (src_url, src_url, outs[1])
+
+    # .aar's have an embedded classes.jar in them. Pull that out so other rules can use it.
+    provides = None
+    if artifact_type == 'aar':
+        build_rule(
+            name = '_%s#classes' % name,
+            # It's easier just to refetch it than to try to make dependencies work.
+            # Only fetching once would be more efficient though.
+            cmd = ' && '.join([
+                'echo "Fetching %s..."' % bin_url,
+                'curl -fsSL %s -o package.aar' % bin_url,
+                'unzip package.aar classes.jar',
+                'mv classes.jar $OUT',
+            ]),
+            outs = [name + '.jar'],
+            visibility = visibility,
+            licences = licences,
+            requires = ['java'],
+            exported_deps = deps,
+        )
+        provides = {'java': ':_%s#classes' % name}
     build_rule(
         name=name,
         outs=outs,
@@ -415,6 +442,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         visibility=visibility,
         building_description='Fetching...',
         requires=['java'],
+        provides=provides,
     )
 
 

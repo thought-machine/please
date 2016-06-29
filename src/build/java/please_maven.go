@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
+	"text/template"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -21,6 +23,17 @@ import (
 var log = logging.MustGetLogger("please_maven")
 
 var currentIndent = 0
+
+var mavenJarTemplate = template.Must(template.New("maven_jar").Parse(`
+maven_jar(
+    name = '{{ .ArtifactId }}',
+    id = '{{ .GroupId }}:{{ .ArtifactId }}:{{ .Version }}',
+    hash = '',{{ if .Dependencies.Dependency }}
+    deps = [
+{{ range .Dependencies.Dependency }}        ':{{ .ArtifactId }}',
+{{ end }}    ],{{ end }}
+)
+`))
 
 type pomXml struct {
 	GroupId              string          `xml:"groupId"`
@@ -83,6 +96,7 @@ var opts struct {
 	Exclude    []string `short:"e" long:"exclude" description:"Artifacts to exclude from download"`
 	Indent     bool     `short:"i" long:"indent" description:"Indent stdout lines appropriately"`
 	Optional   []string `short:"o" long:"optional" description:"Optional dependencies to fetch"`
+	BuildRules bool     `short:"b" long:"build_rules" description:"Print individual maven_jar build rules for each artifact"`
 	Args       struct {
 		Package []string
 	} `positional-args:"yes" required:"yes"`
@@ -136,8 +150,20 @@ func process(pom *pomXml, group, artifact, version string) {
 	properties["project.groupId"] = group
 	properties["project.version"] = version
 	// Arbitrarily, some pom files have this different structure with the extra "dependencyManagement" level.
-	handleDependencies(pom.Dependencies, properties, group, version)
-	handleDependencies(pom.DependencyManagement.Dependencies, properties, group, version)
+	handleDependencies(pom.Dependencies, properties, group, artifact, version)
+	handleDependencies(pom.DependencyManagement.Dependencies, properties, group, artifact, version)
+	if opts.BuildRules {
+		if err := mavenJarTemplate.Execute(os.Stdout, pomXml{
+			GroupId:    group,
+			ArtifactId: artifact,
+			Version:    version,
+			Dependencies: pomDependencies{
+				append(pom.Dependencies.Dependency, pom.DependencyManagement.Dependencies.Dependency...),
+			},
+		}); err != nil {
+			log.Fatalf("Error executing template: %s", err)
+		}
+	}
 }
 
 func fetchLicences(group, artifact, version string) []string {
@@ -159,7 +185,7 @@ func shouldFetchOptionalDep(artifact string) bool {
 	return false
 }
 
-func handleDependencies(deps pomDependencies, properties map[string]string, group, version string) {
+func handleDependencies(deps pomDependencies, properties map[string]string, group, artifact, version string) {
 	for _, dep := range deps.Dependency {
 		// This is a bit of a hack; our build model doesn't distinguish these in the way Maven does.
 		// TODO(pebers): Consider allowing specifying these to this tool to produce test-only deps.
@@ -194,14 +220,17 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 				dep.Version = fetchMetadata(dep.GroupId, dep.ArtifactId).LatestVersion()
 			}
 		}
-		licences := strings.Join(fetchLicences(dep.GroupId, dep.ArtifactId, dep.Version), "|")
+		licences := fetchLicences(dep.GroupId, dep.ArtifactId, dep.Version)
 		if opts.Indent {
 			fmt.Printf(strings.Repeat(" ", currentIndent))
 		}
-		if licences != "" {
-			fmt.Printf("%s:%s:%s:%s\n", dep.GroupId, dep.ArtifactId, dep.Version, licences)
-		} else {
-			fmt.Printf("%s:%s:%s\n", dep.GroupId, dep.ArtifactId, dep.Version)
+		// Print in forward order if we're not doing build rules
+		if !opts.BuildRules {
+			if len(licences) > 0 {
+				fmt.Printf("%s:%s:%s:%s\n", dep.GroupId, dep.ArtifactId, dep.Version, strings.Join(licences, "|"))
+			} else {
+				fmt.Printf("%s:%s:%s\n", dep.GroupId, dep.ArtifactId, dep.Version)
+			}
 		}
 		opts.Exclude = append(opts.Exclude, dep.ArtifactId) // Don't do this one again.
 		// Recurse so we get all transitive dependencies

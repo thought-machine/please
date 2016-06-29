@@ -9,7 +9,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
 
     Args:
       name (str): Name of the rule
-      cmd (str): Command to run. It's subject to various sequence replacements:
+      cmd (str | dict): Command to run. It's subject to various sequence replacements:
              $(location //path/to:target) expands to the location of the given build rule, which
                                           must have a single output only.
              $(locations //path/to:target) expands to the locations of the outputs of the given
@@ -246,7 +246,8 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
     )
 
 
-def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None, test_only=False):
+def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
+                licences=None, test_only=False, deps=None):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -256,16 +257,21 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
       out (str): Output name of the file. Chosen automatically if not given.
       binary (bool): True to mark the output as binary and runnable.
       visibility (list): Visibility declaration of the rule.
+      licences (list): List of licences that apply to this rule.
       test_only (bool): If true the rule is only visible to test targets.
+      deps (list): List of extra dependencies for this rule.
     """
     build_rule(
         name=name,
-        cmd='curl -fSL %s -o $OUT' % url,
+        cmd='echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (url, url),
         outs=[out or url[url.rfind('/') + 1:]],
         binary=binary,
         visibility=visibility,
         hashes=hashes,
+        licences=licences,
         building_description='Fetching...',
+        deps=deps,
+        test_only=test_only,
     )
 
 

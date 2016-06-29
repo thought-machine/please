@@ -72,6 +72,12 @@ var opts struct {
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
 
+	Rebuild struct {
+		Args struct {
+			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to rebuild"`
+		} `positional-args:"true" required:"true"`
+	} `command:"rebuild" description:"Forces a rebuild of one or more targets"`
+
 	Hash struct {
 		Args struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
@@ -194,6 +200,14 @@ var buildFunctions = map[string]func() bool{
 		success, _ := runBuild(opts.Build.Args.Targets, true, false, false)
 		return success
 	},
+	"rebuild": func() bool {
+		// It would be more pure to require --nocache for this, but in basically any context that
+		// you use 'plz rebuild', you don't want the cache coming in and mucking things up.
+		// 'plz clean' followed by 'plz build' would still work in those cases, anyway.
+		opts.FeatureFlags.NoCache = true
+		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false, false)
+		return success
+	},
 	"hash": func() bool {
 		success, _ := runBuild(opts.Hash.Args.Targets, true, false, false)
 		return success
@@ -238,6 +252,9 @@ var buildFunctions = map[string]func() bool{
 			opts.OutputFlags.PlainOutput = true // No need for interactive display, we won't parse anything.
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false, true); success {
+			if len(opts.Clean.Args.Targets) == 0 {
+				state.OriginalTargets = nil // It interprets an empty target list differently.
+			}
 			clean.Clean(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
 			return true
 		}
@@ -397,6 +414,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
+	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {

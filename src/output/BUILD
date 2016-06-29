@@ -28,14 +28,14 @@ TEMPLATED_FILES = {
     'shell_output.go': 'shell_output_templated',
     'interactive_display.go': 'interactive_display_templated',
 }
-TEMPLATED_FILES_DEPS = [':' + x for x in TEMPLATED_FILES.values()]
+TEMPLATED_FILES_DEPS = [':' + x for x in sorted(TEMPLATED_FILES.values())]
 
-for file_name, rule_name in TEMPLATED_FILES.items():
+for file_name, rule_name in sorted(TEMPLATED_FILES.items()):
     genrule(
         name = rule_name,
         srcs = [file_name],
         outs = [rule_name + '.go'],
-        cmd = 'cat $SRC | %s > $OUT' % ' | '.join(r'sed -e "s/\\${%s}/%s/g"' % (k, v) for k, v in REPLACEMENTS.items())
+        cmd = 'cat $SRC | %s > $OUT' % ' | '.join(r'sed -e "s/\\${%s}/%s/g"' % (k, v) for k, v in sorted(REPLACEMENTS.items()))
     )
 
 go_library(
