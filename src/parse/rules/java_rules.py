@@ -412,28 +412,9 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         outs.append(name + '_src.' + artifact_type)
         cmd += ' && echo "Fetching %s..." && curl -fsSL %s -o %s' % (src_url, src_url, outs[1])
 
-    # .aar's have an embedded classes.jar in them. Pull that out so other rules can use it.
-    provides = None
-    if artifact_type == 'aar':
-        build_rule(
-            name = '_%s#classes' % name,
-            # It's easier just to refetch it than to try to make dependencies work.
-            # Only fetching once would be more efficient though.
-            cmd = ' && '.join([
-                'echo "Fetching %s..."' % bin_url,
-                'curl -fsSL %s -o package.aar' % bin_url,
-                'unzip package.aar classes.jar',
-                'mv classes.jar $OUT',
-            ]),
-            outs = [name + '.jar'],
-            visibility = visibility,
-            licences = licences,
-            requires = ['java'],
-            exported_deps = deps,
-        )
-        provides = {'java': ':_%s#classes' % name}
-    build_rule(
+    main_rule = build_rule(
         name=name,
+        tag='aar' if artifact_type == 'aar' else None,
         outs=outs,
         cmd=cmd,
         hashes=hashes if hashes else [hash] if hash else None,
@@ -442,8 +423,29 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         visibility=visibility,
         building_description='Fetching...',
         requires=['java'],
-        provides=provides,
     )
+    # .aar's have an embedded classes.jar in them. Pull that out so other rules can use it.
+    if artifact_type == 'aar':
+        classes_rule = build_rule(
+            name = name,
+            tag = 'classes',
+            srcs = [main_rule],
+            # TODO(pebers): This would be easier (and many others would be too) if we split up
+            #               sources into a separate rule.
+            cmd = 'unzip ${PKG}/%s classes.jar && mv classes.jar $OUT' % outs[0],
+            outs = [name + '.jar'],
+            visibility = visibility,
+            licences = licences,
+            requires = ['java'],
+            exported_deps = deps,
+        )
+        filegroup(
+            name = name,
+            srcs = [':_%s#aar' % name],
+            deps = [classes_rule],
+            provides = {'java': classes_rule, 'android': main_rule},
+            visibility = visibility,
+        )
 
 
 def _java_binary_cmd(main_class, jvm_args, test_package=None):

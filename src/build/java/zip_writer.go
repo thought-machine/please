@@ -19,7 +19,7 @@ import (
 var log = logging.MustGetLogger("zip_writer")
 
 // AddZipFile copies the contents of a zip file into an existing zip writer.
-func AddZipFile(w *zip.Writer, path string, exclude []string, whitelist []string, strict bool) error {
+func AddZipFile(w *zip.Writer, path string, include, exclude []string, stripPrefix string, strict bool) error {
 	r, err := zip.OpenReader(path)
 	if err != nil {
 		return err
@@ -45,26 +45,14 @@ outer:
 			}
 			continue
 		}
-		for _, excl := range exclude {
-			if matched, _ := filepath.Match(excl, f.Name); matched {
-				log.Info("Skipping %s (excluded by %s)", f.Name, excl)
-				continue outer
-			} else if matched, _ := filepath.Match(excl, filepath.Base(f.Name)); matched {
-				log.Info("Skipping %s (excluded by %s)", f.Name, excl)
-				continue outer
-			}
+		if !shouldInclude(f.Name, include, exclude) {
+			continue outer
 		}
 		if existing, present := getExistingFile(w, f.Name); present {
 			// Allow duplicates of directories. Seemingly the best way to identify them is that
 			// they end in a trailing slash.
 			if strings.HasSuffix(f.Name, "/") {
 				continue
-			}
-			// Check if this file is whitelisted.
-			for _, wl := range whitelist {
-				if strings.HasPrefix(f.Name, wl) {
-					continue outer
-				}
 			}
 			// Allow skipping existing files that are exactly the same as the added ones.
 			// It's unnecessarily awkward to insist on not ever doubling up on a dependency.
@@ -78,6 +66,7 @@ outer:
 			}
 			continue
 		}
+		f.Name = strings.TrimPrefix(f.Name, stripPrefix)
 		log.Debug("%s: %s", path, f.Name)
 		// Java tools don't seem to like writing a data descriptor for stored items.
 		// Unsure if this is a limitation of the format or a problem of those tools.
@@ -99,6 +88,28 @@ outer:
 		}
 	}
 	return nil
+}
+
+func shouldInclude(name string, include, exclude []string) bool {
+	for _, excl := range exclude {
+		if matched, _ := filepath.Match(excl, name); matched {
+			log.Info("Skipping %s (excluded by %s)", name, excl)
+			return false
+		} else if matched, _ := filepath.Match(excl, filepath.Base(name)); matched {
+			log.Info("Skipping %s (excluded by %s)", name, excl)
+			return false
+		}
+	}
+	if len(include) == 0 {
+		return true
+	}
+	for _, incl := range include {
+		if matched, _ := filepath.Match(incl, name); matched || strings.HasPrefix(name, incl) {
+			return true
+		}
+	}
+	log.Info("Skipping %s (didn't match any includes)", name)
+	return false
 }
 
 // AddInitPyFiles adds an __init__.py file to every directory in the zip file that doesn't already have one.
