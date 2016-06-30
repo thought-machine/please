@@ -145,11 +145,19 @@ func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, read
 	}
 	s := serverWithAuth(keyFile, certFile, caCertFile)
 	r := &RpcCacheServer{cache: cache}
-	if readonlyKeys != "" {
-		r.readonlyKeys = loadKeys(readonlyKeys)
-	}
 	if writableKeys != "" {
 		r.writableKeys = loadKeys(writableKeys)
+	}
+	if readonlyKeys != "" {
+		r.readonlyKeys = loadKeys(readonlyKeys)
+		if len(r.readonlyKeys) > 0 {
+			// This saves duplication when checking later; writable keys are implicitly readable too.
+			for k, v := range r.writableKeys {
+				if _, present := r.readonlyKeys[k]; !present {
+					r.readonlyKeys[k] = v
+				}
+			}
+		}
 	}
 	pb.RegisterRpcCacheServer(s, r)
 	healthserver := health.NewHealthServer()
