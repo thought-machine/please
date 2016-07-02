@@ -8,7 +8,10 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"reflect"
 	"runtime"
+	"strconv"
+	"strings"
 
 	"gopkg.in/gcfg.v1"
 )
@@ -290,4 +293,50 @@ func (config *Configuration) ContainerisationHash() []byte {
 		panic(err)
 	}
 	return h.Sum(nil)
+}
+
+// ApplyOverrides applies a set of overrides to the config.
+// The keys of the given map are dot notation for the config setting.
+func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
+	match := func(s1 string) func(string) bool {
+		return func(s2 string) bool {
+			return strings.ToLower(s2) == s1
+		}
+	}
+	for k, v := range overrides {
+		split := strings.Split(strings.ToLower(k), ".")
+		if len(split) != 2 {
+			return fmt.Errorf("Bad option format: %s", k)
+		}
+		field := reflect.ValueOf(config).Elem().FieldByNameFunc(match(split[0]))
+		if !field.IsValid() {
+			return fmt.Errorf("Unknown config field: %s", split[0])
+		} else if field.Kind() != reflect.Struct {
+			return fmt.Errorf("Unsettable config field: %s", split[0])
+		}
+		field = field.FieldByNameFunc(match(split[1]))
+		if !field.IsValid() {
+			return fmt.Errorf("Unknown config field: %s", split[1])
+		}
+		switch field.Kind() {
+		case reflect.String:
+			field.Set(reflect.ValueOf(v))
+		case reflect.Bool:
+			v = strings.ToLower(v)
+			// Mimics the set of truthy things gcfg accepts in our config file.
+			field.SetBool(v == "true" || v == "yes" || v == "on" || v == "1")
+		case reflect.Int:
+			i, err := strconv.Atoi(v)
+			if err != nil {
+				return fmt.Errorf("Invalid value for an integer field: %s", v)
+			}
+			field.Set(reflect.ValueOf(i))
+		case reflect.Slice:
+			// We only have to worry about slices of strings. Comma-separated values are accepted.
+			field.Set(reflect.ValueOf(strings.Split(v, ",")))
+		default:
+			return fmt.Errorf("Can't override config field %s", k)
+		}
+	}
+	return nil
 }

@@ -32,13 +32,14 @@ var config *core.Configuration
 
 var opts struct {
 	BuildFlags struct {
-		Config     string   `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
-		RepoRoot   string   `short:"r" long:"repo_root" description:"Root of repository to build."`
-		KeepGoing  bool     `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
-		NumThreads int      `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
-		Include    []string `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
-		Exclude    []string `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
-		Engine     string   `long:"engine" hidden:"true" description:"Parser engine .so / .dylib to load"`
+		Config     string            `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
+		RepoRoot   string            `short:"r" long:"repo_root" description:"Root of repository to build."`
+		KeepGoing  bool              `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
+		NumThreads int               `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
+		Include    []string          `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
+		Exclude    []string          `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
+		Engine     string            `long:"engine" hidden:"true" description:"Parser engine .so / .dylib to load"`
+		Option     map[string]string `short:"o" long:"override" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
@@ -499,6 +500,9 @@ func readConfig(forceUpdate bool) *core.Configuration {
 		core.MachineConfigFileName,
 		path.Join(core.RepoRoot, core.LocalConfigFileName),
 	})
+	if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
+		log.Fatalf("Can't override requested config setting: %s", err)
+	}
 	// This is kinda weird, but we need to check for an update before handling errors, because the
 	// error may be for a missing config value that we don't know about yet. If we error first it's
 	// essentially impossible to add new fields to the config because gcfg doesn't permit unknown fields.
