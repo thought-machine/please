@@ -72,6 +72,12 @@ var opts struct {
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
 
+	Rebuild struct {
+		Args struct {
+			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to rebuild"`
+		} `positional-args:"true" required:"true"`
+	} `command:"rebuild" description:"Forces a rebuild of one or more targets"`
+
 	Hash struct {
 		Args struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
@@ -191,17 +197,25 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() bool{
 	"build": func() bool {
-		success, _ := runBuild(opts.Build.Args.Targets, true, false, true)
+		success, _ := runBuild(opts.Build.Args.Targets, true, false, false)
+		return success
+	},
+	"rebuild": func() bool {
+		// It would be more pure to require --nocache for this, but in basically any context that
+		// you use 'plz rebuild', you don't want the cache coming in and mucking things up.
+		// 'plz clean' followed by 'plz build' would still work in those cases, anyway.
+		opts.FeatureFlags.NoCache = true
+		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false, false)
 		return success
 	},
 	"hash": func() bool {
-		success, _ := runBuild(opts.Hash.Args.Targets, true, false, true)
+		success, _ := runBuild(opts.Hash.Args.Targets, true, false, false)
 		return success
 	},
 	"test": func() bool {
 		os.RemoveAll(opts.Test.TestResultsFile)
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args)
-		success, state := runBuild(targets, true, true, true)
+		success, state := runBuild(targets, true, true, false)
 		test.WriteResultsToFileOrDie(state.Graph, opts.Test.TestResultsFile)
 		return success || opts.Test.FailingTestsOk
 	},
@@ -214,7 +228,7 @@ var buildFunctions = map[string]func() bool{
 		os.RemoveAll(opts.Cover.TestResultsFile)
 		os.RemoveAll(opts.Cover.CoverageResultsFile)
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
-		success, state := runBuild(targets, true, true, true)
+		success, state := runBuild(targets, true, true, false)
 		test.WriteResultsToFileOrDie(state.Graph, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
@@ -237,7 +251,10 @@ var buildFunctions = map[string]func() bool{
 		if len(opts.Clean.Args.Targets) == 0 {
 			opts.OutputFlags.PlainOutput = true // No need for interactive display, we won't parse anything.
 		}
-		if success, state := runBuild(opts.Clean.Args.Targets, false, false, false); success {
+		if success, state := runBuild(opts.Clean.Args.Targets, false, false, true); success {
+			if len(opts.Clean.Args.Targets) == 0 {
+				state.OriginalTargets = nil // It interprets an empty target list differently.
+			}
 			clean.Clean(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
 			return true
 		}
@@ -397,6 +414,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
+	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
@@ -453,10 +471,10 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel) {
 
 // testTargets handles test targets which can be given in two formats; a list of targets or a single
 // target with a list of trailing arguments.
-// Alternatively they can be completely omitted in which case we test everything.
+// Alternatively they can be completely omitted in which case we test everything under the working dir.
 func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
 	if target.Name == "" {
-		return core.WholeGraph
+		return core.InitialPackage()
 	} else if len(args) > 0 && core.LooksLikeABuildLabel(args[0]) {
 		opts.Cover.Args.Args = []string{}
 		opts.Test.Args.Args = []string{}
@@ -494,8 +512,12 @@ func readConfig(forceUpdate bool) *core.Configuration {
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
 func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, defaultToAllTargets bool) (bool, *core.BuildState) {
-	if len(targets) == 0 && defaultToAllTargets {
-		targets = core.WholeGraph
+	if len(targets) == 0 {
+		if defaultToAllTargets {
+			targets = core.WholeGraph
+		} else {
+			targets = core.InitialPackage()
+		}
 	}
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
 	return Please(targets, config, pretty, shouldBuild, shouldTest)

@@ -21,7 +21,7 @@ import (
 
 var log = logging.MustGetLogger("jarcat")
 
-func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInternalPrefix string, strict, includeOther, addInitPy bool) error {
+func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInternalPrefix string, strict, includeOther, addInitPy, dirEntries bool) error {
 	f, err := os.Create(out)
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInterna
 					}
 				}
 			}
-		} else if (suffix == "" || addInitPy) && path != "." { // Only add directory entries in "dumb" mode.
+		} else if (suffix == "" || addInitPy) && path != "." && dirEntries { // Only add directory entries in "dumb" mode.
 			log.Debug("Adding directory entry %s/", path)
 			if err := java.WriteDir(w, path); err != nil {
 				return err
@@ -109,6 +109,7 @@ var opts struct {
 	IncludeOther          bool   `long:"include_other" description:"Add files that are not jar files as well"`
 	AddInitPy             bool   `long:"add_init_py" description:"Adds __init__.py files to all directories"`
 	DumbMode              bool   `short:"d" long:"dumb" description:"Dumb mode, an alias for --suffix='' --exclude_suffix='' --include_other"`
+	NoDirEntries          bool   `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
 }
 
 func main() {
@@ -119,7 +120,7 @@ func main() {
 		opts.IncludeOther = true
 	}
 	output.InitLogging(opts.Verbosity, "", 0)
-	if err := combine(opts.Out, opts.In, opts.Suffix, opts.ExcludeSuffix, opts.Preamble, opts.MainClass, opts.ExcludeInternalPrefix, opts.Strict, opts.IncludeOther, opts.AddInitPy); err != nil {
+	if err := combine(opts.Out, opts.In, opts.Suffix, opts.ExcludeSuffix, opts.Preamble, opts.MainClass, opts.ExcludeInternalPrefix, opts.Strict, opts.IncludeOther, opts.AddInitPy, !opts.NoDirEntries); err != nil {
 		log.Fatalf("Error combining zip files: %s\n", err)
 	}
 	os.Exit(0)

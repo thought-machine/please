@@ -110,10 +110,13 @@ def compile_bytecode():
         for filename in filenames:
             if filename.endswith('.py'):
                 filename = os.path.join(dirpath, filename)
-                py_compile.compile(filename, doraise=True)
+                path = py_compile.compile(filename, doraise=True)
+                if not path:
+                    # In python3 we already have a path to the .pyc file. py_compile in python2
+                    # does not return anything so we have to work it out ourselves.
+                    path = filename + ('o' if sys.flags.optimize else 'c')
                 # Overwrite the timestamp in the .pyc file with 2000-01-01 so it's deterministic.
-                extension = 'o' if sys.flags.optimize else 'c'
-                with open(filename + extension, 'r+b') as f:
+                with open(path, 'r+b') as f:
                     f.seek(4)
                     f.write(b'\\x80Cm8')
 
