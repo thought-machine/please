@@ -19,15 +19,15 @@ import (
 var log = logging.MustGetLogger("zip_writer")
 
 // AddZipFile copies the contents of a zip file into an existing zip writer.
-func AddZipFile(w *zip.Writer, path string, include, exclude []string, stripPrefix string, strict bool) error {
-	r, err := zip.OpenReader(path)
+func AddZipFile(w *zip.Writer, filepath string, include, exclude []string, stripPrefix string, strict bool, renameDirs map[string]string) error {
+	r, err := zip.OpenReader(filepath)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 
 	// Reopen file to get a directly readable version without decompression.
-	r2, err := os.Open(path)
+	r2, err := os.Open(filepath)
 	if err != nil {
 		return err
 	}
@@ -57,21 +57,27 @@ outer:
 			// Allow skipping existing files that are exactly the same as the added ones.
 			// It's unnecessarily awkward to insist on not ever doubling up on a dependency.
 			if existing.CRC32 == f.CRC32 {
-				log.Info("Skipping %s / %s: already added (from %s)", path, f.Name, existing.ZipFile)
+				log.Info("Skipping %s / %s: already added (from %s)", filepath, f.Name, existing.ZipFile)
 				continue
 			}
 			if strict {
-				log.Error("Duplicate file %s (from %s, already added from %s); crc %d / %d", f.Name, path, existing.ZipFile, f.CRC32, existing.CRC32)
+				log.Error("Duplicate file %s (from %s, already added from %s); crc %d / %d", f.Name, filepath, existing.ZipFile, f.CRC32, existing.CRC32)
 				return fmt.Errorf("File %s already added to destination zip file (from %s)", f.Name, existing.ZipFile)
 			}
 			continue
 		}
+		for before, after := range renameDirs {
+			if strings.HasPrefix(f.Name, before) {
+				f.Name = path.Join(after, strings.TrimPrefix(f.Name, before))
+				break
+			}
+		}
 		f.Name = strings.TrimPrefix(f.Name, stripPrefix)
-		log.Debug("%s: %s", path, f.Name)
+		log.Debug("%s: %s", filepath, f.Name)
 		// Java tools don't seem to like writing a data descriptor for stored items.
 		// Unsure if this is a limitation of the format or a problem of those tools.
 		f.Flags = 0
-		addExistingFile(w, f.Name, path, f.CompressedSize64, f.UncompressedSize64, f.CRC32)
+		addExistingFile(w, f.Name, filepath, f.CompressedSize64, f.UncompressedSize64, f.CRC32)
 
 		start, err := f.DataOffset()
 		if err != nil {
