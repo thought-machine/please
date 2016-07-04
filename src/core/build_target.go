@@ -20,6 +20,9 @@ const BinDir string = "plz-out/bin"
 const filegroupCommand = "__FILEGROUP__"
 const linkFilegroupCommand = "__LINK_FILEGROUP__"
 
+// Default when this isn't otherwise specified.
+const DefaultBuildingDescription = "Building..."
+
 // Representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 
@@ -208,7 +211,7 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 	target.state = int32(Inactive)
 	target.IsBinary = false
 	target.IsTest = false
-	target.BuildingDescription = "Building..."
+	target.BuildingDescription = DefaultBuildingDescription
 	return target
 }
 

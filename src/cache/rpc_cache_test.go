@@ -32,22 +32,23 @@ func init() {
 		log.Fatalf("Failed to prepare test directory: %s\n", err)
 	}
 
-	startServer(7677)
-	rpccache = buildClient(7677)
+	startServer(7677, "", "", "")
+	rpccache = buildClient(7677, "")
 }
 
-func startServer(port int) *grpc.Server {
+func startServer(port int, keyFile, certFile, caCertFile string) *grpc.Server {
 	// Arbitrary large numbers so the cleaner never needs to run.
 	cache := server.NewCache("src/cache/test_data", 100000, 100000000, 1000000000)
-	s, lis := server.BuildGrpcServer(port, cache)
+	s, lis := server.BuildGrpcServer(port, cache, keyFile, certFile, caCertFile, "", "")
 	go s.Serve(lis)
 	return s
 }
 
-func buildClient(port int) *rpcCache {
+func buildClient(port int, ca string) *rpcCache {
 	config := core.DefaultConfiguration()
 	config.Cache.RpcUrl = fmt.Sprintf("localhost:%d", port)
 	config.Cache.RpcWriteable = true
+	config.Cache.RpcCACert = ca
 
 	cache, err := newRpcCache(config)
 	if err != nil {
@@ -55,7 +56,7 @@ func buildClient(port int) *rpcCache {
 	}
 
 	// Busy-wait sucks but this isn't supposed to be visible from outside.
-	for i := 0; i < 100 && !cache.Connected; i++ {
+	for i := 0; i < 10 && !cache.Connected && cache.Connecting; i++ {
 		time.Sleep(100 * time.Millisecond)
 	}
 	return cache
@@ -106,8 +107,8 @@ func TestClean(t *testing.T) {
 
 func TestDisconnectAfterEnoughErrors(t *testing.T) {
 	// Need a separate cache for this so we don't interfere with the other tests.
-	s := startServer(7676)
-	c := buildClient(7676)
+	s := startServer(7676, "", "", "")
+	c := buildClient(7676, "")
 
 	target := core.NewBuildTarget(label)
 	target.AddOutput("testfile4")
@@ -121,4 +122,21 @@ func TestDisconnectAfterEnoughErrors(t *testing.T) {
 		assert.False(t, c.Retrieve(target, key))
 	}
 	assert.False(t, c.Connected)
+}
+
+func TestLoadCertificates(t *testing.T) {
+	_, err := loadAuth("", "src/cache/test_data/cert.pem", "src/cache/test_data/key.pem")
+	assert.NoError(t, err, "Trivial case with PEM files already")
+	_, err = loadAuth("", "id_rsa.pub", "id_rsa")
+	assert.Error(t, err, "Fails because files don't exist")
+}
+
+func TestRetrieveSSL(t *testing.T) {
+	// Need a separate cache for this so we don't interfere with the other tests.
+	s := startServer(7675, "src/cache/test_data/key.pem", "src/cache/test_data/cert_signed.pem", "src/cache/test_data/ca.pem")
+	defer s.Stop()
+	c := buildClient(7675, "")
+	assert.False(t, c.Connected, "Should fail to connect without giving the client a CA cert")
+	c = buildClient(7675, "src/cache/test_data/ca.pem")
+	assert.True(t, c.Connected, "Connects OK this time")
 }

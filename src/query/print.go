@@ -10,12 +10,20 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 	for _, label := range labels {
 		target := graph.TargetOrDie(label)
 		fmt.Printf("%s:\n", label)
-		fmt.Printf("  build_rule(\n")
+		if target.IsFilegroup() {
+			fmt.Printf("  filegroup(\n")
+		} else {
+			fmt.Printf("  build_rule(\n")
+		}
 		fmt.Printf("      name = '%s'\n", target.Label.Name)
 		if len(target.Sources) > 0 {
 			fmt.Printf("      srcs = [\n")
 			for _, src := range target.Sources {
-				fmt.Printf("          '%s',\n", src)
+				if src.Label() != nil {
+					printLabel(*src.Label(), target)
+				} else {
+					fmt.Printf("          '%s',\n", src)
+				}
 			}
 			fmt.Printf("      ],\n")
 		} else if target.NamedSources != nil {
@@ -29,7 +37,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			}
 			fmt.Printf("      },\n")
 		}
-		if len(target.DeclaredOutputs()) > 0 {
+		if len(target.DeclaredOutputs()) > 0 && !target.IsFilegroup() {
 			fmt.Printf("      outs = [\n")
 			for _, out := range target.DeclaredOutputs() {
 				fmt.Printf("          '%s',\n", out)
@@ -43,7 +51,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			}
 			fmt.Printf("      },\n")
 
-		} else {
+		} else if !target.IsFilegroup() {
 			fmt.Printf("      cmd = '%s'\n", target.Command)
 		}
 		if target.TestCommand != "" {
@@ -52,7 +60,13 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		pythonBool("binary", target.IsBinary)
 		pythonBool("test", target.IsTest)
 		pythonBool("needs_transitive_deps", target.NeedsTransitiveDependencies)
-		pythonBool("output_is_complete", target.OutputIsComplete)
+		if !target.IsFilegroup() {
+			pythonBool("output_is_complete", target.OutputIsComplete)
+			pythonBool("skip_cache", target.SkipCache)
+			if target.BuildingDescription != core.DefaultBuildingDescription {
+				fmt.Printf("      building_description = '%s',\n", target.BuildingDescription)
+			}
+		}
 		pythonBool("stamp", target.Stamp)
 		if target.ContainerSettings != nil {
 			fmt.Printf("      container = {\n")
@@ -64,8 +78,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		}
 		pythonBool("no_test_output", target.NoTestOutput)
 		pythonBool("test_only", target.TestOnly)
-		pythonBool("skip_cache", target.SkipCache)
-		labelList("deps", excludeLabels(target.DeclaredDependencies(), target.ExportedDependencies()), target)
+		labelList("deps", excludeLabels(target.DeclaredDependencies(), target.ExportedDependencies(), sourceLabels(target)), target)
 		labelList("exported_deps", target.ExportedDependencies(), target)
 		labelList("tools", target.Tools, target)
 		if len(target.Data) > 0 {
@@ -111,7 +124,6 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			}
 			fmt.Printf("      ],\n")
 		}
-		fmt.Printf("      building_description = '%s',\n", target.BuildingDescription)
 		if target.PreBuildFunction != 0 {
 			fmt.Printf("      pre_build = <python ref>,\n") // Don't have any sensible way of printing this.
 		}
@@ -132,14 +144,20 @@ func labelList(s string, l []core.BuildLabel, target *core.BuildTarget) {
 	if len(l) > 0 {
 		fmt.Printf("      %s = [\n", s)
 		for _, d := range l {
-			if d.PackageName == target.Label.PackageName {
-				fmt.Printf("          ':%s',\n", d.Name)
-			} else {
-				fmt.Printf("          '%s',\n", d)
-			}
+			printLabel(d, target)
 		}
 		fmt.Printf("      ],\n")
 	}
+}
+
+// printLabel prints a single label relative to a given target.
+func printLabel(label core.BuildLabel, target *core.BuildTarget) {
+	if label.PackageName == target.Label.PackageName {
+		fmt.Printf("          ':%s',\n", label.Name)
+	} else {
+		fmt.Printf("          '%s',\n", label)
+	}
+
 }
 
 func stringList(s string, l []string) {
@@ -153,14 +171,16 @@ func stringList(s string, l []string) {
 }
 
 // excludeLabels returns a filtered slice of labels from l that are not in excl.
-func excludeLabels(l, excl []core.BuildLabel) []core.BuildLabel {
+func excludeLabels(l []core.BuildLabel, excl ...[]core.BuildLabel) []core.BuildLabel {
 	var ret []core.BuildLabel
 	// This is obviously quadratic but who cares, the lists will not be long.
 outer:
 	for _, x := range l {
 		for _, y := range excl {
-			if x == y {
-				continue outer
+			for _, z := range y {
+				if x == z {
+					continue outer
+				}
 			}
 		}
 		ret = append(ret, x)
@@ -179,6 +199,17 @@ outer:
 			}
 		}
 		ret = append(ret, x)
+	}
+	return ret
+}
+
+// sourceLabels returns all the labels that are sources of this target.
+func sourceLabels(target *core.BuildTarget) []core.BuildLabel {
+	ret := make([]core.BuildLabel, 0, len(target.Sources))
+	for _, src := range target.Sources {
+		if src.Label() != nil {
+			ret = append(ret, *src.Label())
+		}
 	}
 	return ret
 }
