@@ -242,21 +242,11 @@ func (target *BuildTarget) TestDir() string {
 	return path.Join(TmpDir, target.Label.PackageName, target.Label.Name+"#.test")
 }
 
-// Returns all the source paths for this target
+// AllSourcePaths returns all the source paths for this target
 func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
 	ret := make([]string, 0, len(target.Sources))
 	for _, source := range target.AllSources() {
-		if label := source.Label(); label != nil {
-			for _, providedLabel := range graph.TargetOrDie(*label).ProvideFor(target) {
-				for _, file := range providedLabel.Paths(graph) {
-					ret = append(ret, file)
-				}
-			}
-		} else {
-			for _, file := range source.Paths(graph) {
-				ret = append(ret, file)
-			}
-		}
+		ret = append(ret, target.sourcePaths(graph, source)...)
 	}
 	return ret
 }
@@ -341,11 +331,23 @@ func (target *BuildTarget) findOutputTarget(label BuildLabel, out string) []stri
 func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) []string {
 	ret := make([]string, 0, len(sources))
 	for _, source := range sources {
-		for _, file := range source.Paths(graph) {
-			ret = append(ret, file)
-		}
+		ret = append(ret, target.sourcePaths(graph, source)...)
 	}
 	return ret
+}
+
+// sourcePaths returns the source paths for a single source.
+func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput) []string {
+	if label := source.Label(); label != nil {
+		ret := []string{}
+		for _, providedLabel := range graph.TargetOrDie(*label).ProvideFor(target) {
+			for _, file := range providedLabel.Paths(graph) {
+				ret = append(ret, file)
+			}
+		}
+		return ret
+	}
+	return source.Paths(graph)
 }
 
 // allDepsBuilt returns true if all the dependencies of a target are built.
