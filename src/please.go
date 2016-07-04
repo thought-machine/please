@@ -190,6 +190,12 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to render graph for"`
 			} `positional-args:"true"`
 		} `command:"graph" description:"Prints a JSON representation of the build graph."`
+		WhatOutputs struct {
+			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
+			Args      struct {
+				Files []string `positional-arg-name:"files" description:"Files to query targets responsible for"`
+			} `positional-args:"true"`
+		} `command:"whatoutputs" description:"Prints out target(s) responsible for outputting provided file(s)"`
 	} `command:"query" description:"Queries information about the build graph"`
 }
 
@@ -345,6 +351,15 @@ var buildFunctions = map[string]func() bool{
 	"graph": func() bool {
 		return runQuery(true, opts.Query.Graph.Args.Targets, func(state *core.BuildState) {
 			query.QueryGraph(state.Graph, state.ExpandOriginalTargets())
+		})
+	},
+	"whatoutputs": func() bool {
+		files := opts.Query.WhatOutputs.Args.Files
+		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+			if len(files) == 1 && files[0] == "-" {
+				files = utils.ReadAllStdin()
+			}
+			query.WhatOutputs(state.Graph, files, opts.Query.WhatOutputs.EchoFiles)
 		})
 	},
 }
