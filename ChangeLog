@@ -1,3 +1,14 @@
+Version 3.6.0
+-------------
+
+    * add a `src_dir` argument to java_library
+    * allow attaching deps to a remote_file
+    * fix `plz clean` background bug
+    * #107 Introduce https and mutual auth support to RPC cache
+    * #108 New query subcommand, `plz query whatoutputs`, which queries the current graph and returns the
+      target responsible for the provided file(s)
+
+
 Version 3.5.0
 -------------
 
