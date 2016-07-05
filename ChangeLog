@@ -1,3 +1,10 @@
+Version 3.6.1
+-------------
+
+    * Update SRCS for named sources as well as unnamed ones when affected by require/provide.
+    * Jarcat has an extra flag to allow renaming directories within a zip file (currently
+      not used by any builtin rules).
+
 Version 3.6.0
 -------------
 
