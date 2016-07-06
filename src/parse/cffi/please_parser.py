@@ -175,7 +175,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                deps=None, exported_deps=None, tools=None, labels=None, visibility=None, hashes=None,
                binary=False, test=False, test_only=None, building_description='Building...',
                needs_transitive_deps=False, output_is_complete=False, container=False,
-               skip_cache=False, no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
+               no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
                test_outputs=None, system_srcs=None, stamp=False, tag=''):
     if name == 'all':
@@ -210,7 +210,6 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                          output_is_complete,
                          bool(container),
                          no_test_output,
-                         skip_cache,
                          test_only or test,  # Tests are implicitly test_only
                          stamp,
                          3 if flaky is True else flaky,  # Default is to rerun three times.

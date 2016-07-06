@@ -210,7 +210,6 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
         output_is_complete=output_is_complete,
         # This just symlinks its inputs so it's faster not to copy to the cache and back,
         # especially if the files it's collecting are large.
-        skip_cache=True,
         requires=requires,
         provides=provides,
         test_only=test_only,

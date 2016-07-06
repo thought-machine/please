@@ -110,10 +110,6 @@ type BuildTarget struct {
 	// Timeouts for build/test actions, in seconds.
 	BuildTimeout int
 	TestTimeout  int
-	// Indication that we should skip caching this rule. This shouldn't be used as an out for
-	// making targets indeterminate, it's a hint for rules like filegroup which simply symlink
-	// their inputs - so it's faster to relink them than copying their contents.
-	SkipCache bool
 	// Indicates that the target can only be depended on by tests or other rules with this set.
 	// Used to restrict non-deployable code and also affects coverage detection.
 	TestOnly bool

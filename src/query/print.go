@@ -62,7 +62,6 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		pythonBool("needs_transitive_deps", target.NeedsTransitiveDependencies)
 		if !target.IsFilegroup() {
 			pythonBool("output_is_complete", target.OutputIsComplete)
-			pythonBool("skip_cache", target.SkipCache)
 			if target.BuildingDescription != core.DefaultBuildingDescription {
 				fmt.Printf("      building_description = '%s',\n", target.BuildingDescription)
 			}
