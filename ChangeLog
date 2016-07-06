@@ -1,3 +1,10 @@
+Version 3.6.2
+-------------
+
+    * Remove undocumented skip_cache argument to build_rule; filegroups implicitly have this
+      and it's nicer not to expose it to anyone else.
+
+
 Version 3.6.1
 -------------
 

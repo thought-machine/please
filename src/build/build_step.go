@@ -123,7 +123,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 
 	cacheKey := mustShortTargetHash(state, target)
-	if state.Cache != nil && !target.SkipCache {
+	if state.Cache != nil {
 		// Note that ordering here is quite sensitive since the post-build function can modify
 		// what we would retrieve from the cache.
 		if target.PostBuildFunction != 0 {
@@ -179,7 +179,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	} else {
 		target.SetState(core.Unchanged)
 	}
-	if state.Cache != nil && !target.SkipCache {
+	if state.Cache != nil {
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
 		(*state.Cache).Store(target, mustShortTargetHash(state, target))
 		if target.PostBuildFunction != 0 {

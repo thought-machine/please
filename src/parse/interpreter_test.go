@@ -60,7 +60,7 @@ func TestAddTarget(t *testing.T) {
 	pkg := core.NewPackage("src/parse")
 	addTargetTest1 := func(name string, binary, container, test bool, testCmd string) *core.BuildTarget {
 		return addTarget(uintptr(unsafe.Pointer(pkg)), name, "true", testCmd, binary, test,
-			false, false, container, false, false, false, false, 0, 0, 0, "Building...")
+			false, false, container, false, false, false, 0, 0, 0, "Building...")
 	}
 	addTargetTest := func(name string, binary, container bool) *core.BuildTarget {
 		return addTargetTest1(name, binary, container, false, "")
