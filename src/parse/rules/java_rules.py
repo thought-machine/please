@@ -523,7 +523,10 @@ def _discover_java_plugins(cmd):
             plugins = ' '.join('-processorpath $(location %s)' % label for label in labels)
             set_command(name, cmd.replace('-encoding utf8', '-encoding utf8 ' + plugins))
             for label in labels:
-                add_tool(name, label)
+                # This needs to be a dep, not a tool, because it might need to be on the
+                # classpath at compile time.
+                add_dep(name, label)
+    return _discover_plugins
 
 
 if CONFIG.BAZEL_COMPATIBILITY:
