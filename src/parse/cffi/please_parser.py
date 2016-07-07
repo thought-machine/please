@@ -177,7 +177,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                needs_transitive_deps=False, output_is_complete=False, container=False,
                skip_cache=False, no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
-               test_outputs=None, system_srcs=None, stamp=False):
+               test_outputs=None, system_srcs=None, stamp=False, tag=''):
     if name == 'all':
         raise ValueError('"all" is a reserved build target name.')
     if '/' in name or ':' in name:
@@ -186,6 +186,11 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         raise ValueError('Only tests can have container=True')
     if test_cmd and not test:
         raise ValueError('Target %s has been given a test command but isn\'t a test' % name)
+    if tag:
+        name = ''.join(['_' if not name.startswith('_') else '',
+                        name,
+                        '_' if '#' in name else '#',
+                        tag])
     if not _is_valid_target_name(ffi.new('char[]', name)):
         raise ValueError('"%s" is not a valid target name' % name)
     if visibility is None:
@@ -269,6 +274,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     if isinstance(container, dict):
         for k, v in container.items():
             _set_container_setting(target, k, v)
+    return ':' + name
 
 
 @ffi.def_extern('PreBuildFunctionRunner')

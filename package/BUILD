@@ -64,7 +64,7 @@ tarball(
         '//src/parse/cffi:all_engines',
     ],
     subdir = 'please',
-    out = 'please.tar.gz',
+    out = 'please_%s.tar.gz' % CONFIG.PLZ_VERSION,
 )
 
 tarball(
@@ -74,7 +74,7 @@ tarball(
         '//src/cache/server:rpc_cache_server_bin',
     ],
     subdir = 'please',
-    out = 'please_servers.tar.gz',
+    out = 'please_servers_%s.tar.gz' % CONFIG.PLZ_VERSION,
 )
 
 filegroup(

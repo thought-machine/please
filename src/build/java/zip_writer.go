@@ -19,15 +19,15 @@ import (
 var log = logging.MustGetLogger("zip_writer")
 
 // AddZipFile copies the contents of a zip file into an existing zip writer.
-func AddZipFile(w *zip.Writer, path string, exclude []string, whitelist []string, strict bool) error {
-	r, err := zip.OpenReader(path)
+func AddZipFile(w *zip.Writer, filepath string, include, exclude []string, stripPrefix string, strict bool, renameDirs map[string]string) error {
+	r, err := zip.OpenReader(filepath)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 
 	// Reopen file to get a directly readable version without decompression.
-	r2, err := os.Open(path)
+	r2, err := os.Open(filepath)
 	if err != nil {
 		return err
 	}
@@ -45,14 +45,8 @@ outer:
 			}
 			continue
 		}
-		for _, excl := range exclude {
-			if matched, _ := filepath.Match(excl, f.Name); matched {
-				log.Info("Skipping %s (excluded by %s)", f.Name, excl)
-				continue outer
-			} else if matched, _ := filepath.Match(excl, filepath.Base(f.Name)); matched {
-				log.Info("Skipping %s (excluded by %s)", f.Name, excl)
-				continue outer
-			}
+		if !shouldInclude(f.Name, include, exclude) {
+			continue outer
 		}
 		if existing, present := getExistingFile(w, f.Name); present {
 			// Allow duplicates of directories. Seemingly the best way to identify them is that
@@ -60,29 +54,30 @@ outer:
 			if strings.HasSuffix(f.Name, "/") {
 				continue
 			}
-			// Check if this file is whitelisted.
-			for _, wl := range whitelist {
-				if strings.HasPrefix(f.Name, wl) {
-					continue outer
-				}
-			}
 			// Allow skipping existing files that are exactly the same as the added ones.
 			// It's unnecessarily awkward to insist on not ever doubling up on a dependency.
 			if existing.CRC32 == f.CRC32 {
-				log.Info("Skipping %s / %s: already added (from %s)", path, f.Name, existing.ZipFile)
+				log.Info("Skipping %s / %s: already added (from %s)", filepath, f.Name, existing.ZipFile)
 				continue
 			}
 			if strict {
-				log.Error("Duplicate file %s (from %s, already added from %s); crc %d / %d", f.Name, path, existing.ZipFile, f.CRC32, existing.CRC32)
+				log.Error("Duplicate file %s (from %s, already added from %s); crc %d / %d", f.Name, filepath, existing.ZipFile, f.CRC32, existing.CRC32)
 				return fmt.Errorf("File %s already added to destination zip file (from %s)", f.Name, existing.ZipFile)
 			}
 			continue
 		}
-		log.Debug("%s: %s", path, f.Name)
+		for before, after := range renameDirs {
+			if strings.HasPrefix(f.Name, before) {
+				f.Name = path.Join(after, strings.TrimPrefix(f.Name, before))
+				break
+			}
+		}
+		f.Name = strings.TrimPrefix(f.Name, stripPrefix)
+		log.Debug("%s: %s", filepath, f.Name)
 		// Java tools don't seem to like writing a data descriptor for stored items.
 		// Unsure if this is a limitation of the format or a problem of those tools.
 		f.Flags = 0
-		addExistingFile(w, f.Name, path, f.CompressedSize64, f.UncompressedSize64, f.CRC32)
+		addExistingFile(w, f.Name, filepath, f.CompressedSize64, f.UncompressedSize64, f.CRC32)
 
 		start, err := f.DataOffset()
 		if err != nil {
@@ -99,6 +94,28 @@ outer:
 		}
 	}
 	return nil
+}
+
+func shouldInclude(name string, include, exclude []string) bool {
+	for _, excl := range exclude {
+		if matched, _ := filepath.Match(excl, name); matched {
+			log.Info("Skipping %s (excluded by %s)", name, excl)
+			return false
+		} else if matched, _ := filepath.Match(excl, filepath.Base(name)); matched {
+			log.Info("Skipping %s (excluded by %s)", name, excl)
+			return false
+		}
+	}
+	if len(include) == 0 {
+		return true
+	}
+	for _, incl := range include {
+		if matched, _ := filepath.Match(incl, name); matched || strings.HasPrefix(name, incl) {
+			return true
+		}
+	}
+	log.Info("Skipping %s (didn't match any includes)", name)
+	return false
 }
 
 // AddInitPyFiles adds an __init__.py file to every directory in the zip file that doesn't already have one.

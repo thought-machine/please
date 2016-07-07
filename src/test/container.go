@@ -83,7 +83,9 @@ func retrieveResultsAndRemoveContainer(target *core.BuildTarget, containerFile s
 		log.Warning("Failed to read Docker container file %s", containerFile)
 		return
 	}
-	retrieveFile(target, cid, "test.results", warn)
+	if !target.NoTestOutput {
+		retrieveFile(target, cid, "test.results", warn)
+	}
 	if core.State.NeedCoverage {
 		retrieveFile(target, cid, "test.coverage", false)
 	}

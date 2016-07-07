@@ -1,3 +1,49 @@
+Version 3.6.1
+-------------
+
+    * Update SRCS for named sources as well as unnamed ones when affected by require/provide.
+    * Jarcat has an extra flag to allow renaming directories within a zip file (currently
+      not used by any builtin rules).
+
+Version 3.6.0
+-------------
+
+    * add a `src_dir` argument to java_library
+    * allow attaching deps to a remote_file
+    * fix `plz clean` background bug
+    * #107 Introduce https and mutual auth support to RPC cache
+    * #108 New query subcommand, `plz query whatoutputs`, which queries the current graph and returns the
+      target responsible for the provided file(s)
+
+
+Version 3.5.0
+-------------
+
+    * New command, `plz rebuild`, which behaves like `plz build` except that the named targets
+      (but not their dependencies) are always rebuilt.
+    * `remote_file` and `maven_jar` rules now print the URL before fetching, to make it a
+      bit easier to follow what they're actually trying to do if they fail.
+    * The Python hash seed is fixed before initialising the interpreter, so dict / set iteration
+      order should be deterministic between runs. The security implications aren't really a
+      concern in this context but repeatability is.
+
+
+Version 3.4.1
+-------------
+
+    * fix for type checking script when run through python3
+    * Don't try to retrieve results from containerised tests that have no_test_output = True.
+    * Private targets are omitted from `plz query somepath`.
+
+
+Version 3.4.0
+-------------
+
+    * `plz run` and `plz test` now default to the current package + subpackages when run
+      without arguments. `plz clean` and `plz query` still retain the old semantics of the
+      entire repo.
+
+
 Version 3.3.0
 -------------
 

@@ -28,3 +28,13 @@ go_test(
         '//third_party/go:testify',
     ],
 )
+
+go_test(
+    name = 'whatoutputs_test',
+    srcs = ['whatoutputs_test.go'],
+    deps = [
+        ':query',
+        '//src/core',
+        '//third_party/go:testify',
+    ],
+)

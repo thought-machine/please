@@ -35,9 +35,16 @@ else:
             '//third_party/go:logging',
             '//third_party/go:testify',
         ],
-        data = ['test_data/linux_amd64', 'test_data/darwin_amd64', 'test_data/plz-out'],
+        data = [':test_data'],
         container = True,  # Brings up an internal server
     )
+
+filegroup(
+    name = 'test_data',
+    srcs = ['test_data'],
+    visibility = ['//src/cache/...'],
+    test_only = True,
+)
 
 go_test(
     name = 'http_cache_test',

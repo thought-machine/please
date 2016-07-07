@@ -6,7 +6,10 @@ package cache
 import (
 	"bytes"
 	"core"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -17,6 +20,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
@@ -34,6 +38,7 @@ type rpcCache struct {
 	OSName     string
 	numErrors  int32
 	timeout    time.Duration
+	startTime  time.Time
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
@@ -179,8 +184,18 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	// Change grpc to log using our implementation
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
-	// TODO(pebers): Add support for communicating over https.
-	connection, err := grpc.Dial(config.Cache.RpcUrl, grpc.WithInsecure(), grpc.WithTimeout(cache.timeout))
+	opts := []grpc.DialOption{grpc.WithTimeout(cache.timeout)}
+	if config.Cache.RpcPublicKey != "" || config.Cache.RpcCACert != "" || config.Cache.RpcSecure {
+		auth, err := loadAuth(config.Cache.RpcCACert, config.Cache.RpcPublicKey, config.Cache.RpcPrivateKey)
+		if err != nil {
+			log.Warning("Failed to load RPC cache auth keys: %s", err)
+			return
+		}
+		opts = append(opts, auth)
+	} else {
+		opts = append(opts, grpc.WithInsecure())
+	}
+	connection, err := grpc.Dial(config.Cache.RpcUrl, opts...)
 	if err != nil {
 		cache.Connecting = false
 		log.Warning("Failed to connect to RPC cache: %s", err)
@@ -204,7 +219,7 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 		cache.client = pb.NewRpcCacheClient(connection)
 		cache.Connected = true
 		cache.Connecting = false
-		log.Info("RPC cache connected")
+		log.Info("RPC cache connected after %0.2fs", time.Since(cache.startTime).Seconds())
 	}
 }
 
@@ -240,6 +255,7 @@ func newRpcCache(config *core.Configuration) (*rpcCache, error) {
 		Writeable:  config.Cache.RpcWriteable,
 		Connecting: true,
 		timeout:    time.Duration(config.Cache.RpcTimeout) * time.Second,
+		startTime:  time.Now(),
 	}
 	go cache.connect(config)
 	return cache, nil
@@ -254,3 +270,28 @@ func (g *grpcLogMabob) Fatalln(args ...interface{})               { log.Fatal(ar
 func (g *grpcLogMabob) Print(args ...interface{})                 { log.Warning("%s", args) }
 func (g *grpcLogMabob) Printf(format string, args ...interface{}) { log.Warning(format, args...) }
 func (g *grpcLogMabob) Println(args ...interface{})               { log.Warning("%s", args) }
+
+// loadAuth loads authentication credentials from a given pair of public / private key files.
+func loadAuth(caCert, publicKey, privateKey string) (grpc.DialOption, error) {
+	config := tls.Config{}
+	if publicKey != "" {
+		log.Debug("Loading client certificate from %s, key %s", publicKey, privateKey)
+		cert, err := tls.LoadX509KeyPair(publicKey, privateKey)
+		if err != nil {
+			return nil, err
+		}
+		config.Certificates = []tls.Certificate{cert}
+	}
+	if caCert != "" {
+		log.Debug("Reading CA cert file from %s", caCert)
+		cert, err := ioutil.ReadFile(caCert)
+		if err != nil {
+			return nil, err
+		}
+		config.RootCAs = x509.NewCertPool()
+		if !config.RootCAs.AppendCertsFromPEM(cert) {
+			return nil, fmt.Errorf("Failed to add any PEM certificates from %s", caCert)
+		}
+	}
+	return grpc.WithTransportCredentials(credentials.NewTLS(&config)), nil
+}

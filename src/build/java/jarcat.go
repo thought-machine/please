@@ -21,7 +21,8 @@ import (
 
 var log = logging.MustGetLogger("jarcat")
 
-func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInternalPrefix string, strict, includeOther, addInitPy bool) error {
+func combine(out, in, excludeSuffix, preamble, stripPrefix, mainClass, excludeInternalPrefix string,
+	suffix, includeInternalPrefixes []string, strict, includeOther, addInitPy, dirEntries bool, renameDirs map[string]string) error {
 	f, err := os.Create(out)
 	if err != nil {
 		return err
@@ -60,9 +61,9 @@ func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInterna
 			return nil
 		} else if !info.IsDir() {
 			if excludeSuffix == "" || !strings.HasSuffix(path, excludeSuffix) {
-				if suffix != "" && strings.HasSuffix(path, suffix) {
+				if matchesSuffix(path, suffix) {
 					log.Debug("Adding zip file %s", path)
-					if err := java.AddZipFile(w, path, excludeInternalPrefixes, []string{}, strict); err != nil {
+					if err := java.AddZipFile(w, path, includeInternalPrefixes, excludeInternalPrefixes, stripPrefix, strict, renameDirs); err != nil {
 						return fmt.Errorf("Error adding %s to zipfile: %s", path, err)
 					}
 				} else if includeOther && !java.HasExistingFile(w, path) {
@@ -74,7 +75,7 @@ func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInterna
 					}
 				}
 			}
-		} else if (suffix == "" || addInitPy) && path != "." { // Only add directory entries in "dumb" mode.
+		} else if (len(suffix) == 0 || addInitPy) && path != "." && dirEntries { // Only add directory entries in "dumb" mode.
 			log.Debug("Adding directory entry %s/", path)
 			if err := java.WriteDir(w, path); err != nil {
 				return err
@@ -96,30 +97,45 @@ func combine(out, in, suffix, excludeSuffix, preamble, mainClass, excludeInterna
 	return nil
 }
 
+func matchesSuffix(path string, suffixes []string) bool {
+	for _, suffix := range suffixes {
+		if suffix != "" && strings.HasSuffix(path, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
 var opts struct {
-	Out                   string `short:"o" long:"output" description:"Output filename" required:"true"`
-	In                    string `short:"i" long:"input" description:"Input directory" required:"true"`
-	Suffix                string `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
-	ExcludeSuffix         string `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
-	ExcludeInternalPrefix string `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
-	Preamble              string `short:"p" long:"preamble" description:"Leading string to prepend to written zip file"`
-	MainClass             string `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
-	Verbosity             int    `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
-	Strict                bool   `long:"strict" description:"Disallow duplicate files"`
-	IncludeOther          bool   `long:"include_other" description:"Add files that are not jar files as well"`
-	AddInitPy             bool   `long:"add_init_py" description:"Adds __init__.py files to all directories"`
-	DumbMode              bool   `short:"d" long:"dumb" description:"Dumb mode, an alias for --suffix='' --exclude_suffix='' --include_other"`
+	Out                   string            `short:"o" long:"output" description:"Output filename" required:"true"`
+	In                    string            `short:"i" long:"input" description:"Input directory" required:"true"`
+	Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
+	ExcludeSuffix         string            `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
+	ExcludeInternalPrefix string            `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
+	IncludeInternalPrefix []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
+	StripPrefix           string            `long:"strip_prefix" description:"Prefix to strip off file names"`
+	Preamble              string            `short:"p" long:"preamble" description:"Leading string to prepend to written zip file"`
+	MainClass             string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
+	Verbosity             int               `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
+	Strict                bool              `long:"strict" description:"Disallow duplicate files"`
+	IncludeOther          bool              `long:"include_other" description:"Add files that are not jar files as well"`
+	AddInitPy             bool              `long:"add_init_py" description:"Adds __init__.py files to all directories"`
+	DumbMode              bool              `short:"d" long:"dumb" description:"Dumb mode, an alias for --suffix='' --exclude_suffix='' --include_other"`
+	NoDirEntries          bool              `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
+	RenameDirs            map[string]string `short:"r" long:"rename_dir" description:"Rename directories within zip file"`
 }
 
 func main() {
 	output.ParseFlagsOrDie("Jarcat", &opts)
 	if opts.DumbMode {
-		opts.Suffix = ""
+		opts.Suffix = nil
 		opts.ExcludeSuffix = ""
 		opts.IncludeOther = true
 	}
 	output.InitLogging(opts.Verbosity, "", 0)
-	if err := combine(opts.Out, opts.In, opts.Suffix, opts.ExcludeSuffix, opts.Preamble, opts.MainClass, opts.ExcludeInternalPrefix, opts.Strict, opts.IncludeOther, opts.AddInitPy); err != nil {
+	if err := combine(opts.Out, opts.In, opts.ExcludeSuffix, opts.Preamble, opts.StripPrefix,
+		opts.MainClass, opts.ExcludeInternalPrefix, opts.Suffix, opts.IncludeInternalPrefix,
+		opts.Strict, opts.IncludeOther, opts.AddInitPy, !opts.NoDirEntries, opts.RenameDirs); err != nil {
 		log.Fatalf("Error combining zip files: %s\n", err)
 	}
 	os.Exit(0)

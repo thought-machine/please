@@ -80,6 +80,35 @@ func TestIterSources(t *testing.T) {
 	}, iterSources("//src/parse:target2"))
 }
 
+func TestInitialPackageSimple(t *testing.T) {
+	initialPackage = "src/core"
+	p := InitialPackage()
+	assert.Equal(t, []BuildLabel{{PackageName: "src/core", Name: "..."}}, p)
+}
+
+func TestInitialPackageIllegalLabel(t *testing.T) {
+	// Moves up a directory because the last component isn't a legal package name.
+	// This is not that common but does make our existing test work at least :)
+	initialPackage = "plz-out/tmp/test/query_alltargets_test#.test"
+	p := InitialPackage()
+	assert.Equal(t, []BuildLabel{{PackageName: "plz-out/tmp/test", Name: "..."}}, p)
+}
+
+func TestInitialPackageRoot(t *testing.T) {
+	// Test that we don't get stuck in an infinite loop or do anything similarly weird
+	// when the input is empty.
+	initialPackage = ""
+	p := InitialPackage()
+	assert.Equal(t, []BuildLabel{{PackageName: "", Name: "..."}}, p)
+}
+
+func TestInitialPackageUpToRoot(t *testing.T) {
+	// Similar to above but when we don't start out at the root but back up to it.
+	initialPackage = "query_alltargets_test#.test"
+	p := InitialPackage()
+	assert.Equal(t, []BuildLabel{{PackageName: "", Name: "..."}}, p)
+}
+
 // buildGraph builds a test graph which we use to test IterSources etc.
 func buildGraph() *BuildGraph {
 	graph := NewGraph()

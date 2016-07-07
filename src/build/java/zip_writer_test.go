@@ -19,7 +19,7 @@ func TestZipWriter(t *testing.T) {
 	filename := f.Name()
 	defer os.Remove(filename)
 	w := zip.NewWriter(f)
-	if err := AddZipFile(w, "src/build/java/test_data/test.zip", []string{}, []string{}, true); err != nil {
+	if err := AddZipFile(w, "src/build/java/test_data/test.zip", nil, nil, "", true, nil); err != nil {
 		t.Fatalf("Failed to add zip file: %s", err)
 	}
 	if err := w.Close(); err != nil {

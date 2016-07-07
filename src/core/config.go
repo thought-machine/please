@@ -69,6 +69,10 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
 
+	if (config.Cache.RpcPrivateKey == "") != (config.Cache.RpcPublicKey == "") {
+		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
+	}
+
 	// TODO(pebers): Remove in please v4.0+
 	if len(config.Please.PyPyLocation) > 0 {
 		log.Warning("pypylocation config property is deprecated and will go away soon")
@@ -178,6 +182,10 @@ type Configuration struct {
 		RpcUrl                string
 		RpcWriteable          bool
 		RpcTimeout            int
+		RpcPublicKey          string
+		RpcPrivateKey         string
+		RpcCACert             string
+		RpcSecure             bool
 	}
 	Test struct {
 		Timeout          int

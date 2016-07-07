@@ -34,12 +34,12 @@ def arg_checks(node):
         assert arg in docs, 'Missing docstring for argument %s to %s()' % (arg, node.name)
         doc = docs[arg]
         rtype = doc.replace('bool', 'int')  # Bools are ints so an int is acceptable.
-        if i >= min_default:
-            if '|' in doc:
-                types = rtype.split(' | ')
-                yield 'assert not %s or isinstance(%s, (%s)), "Argument %s to %s must be a %s"' % (
-                    arg, arg, ', '.join(types), arg, node.name, doc.replace('|', 'or'))
-            elif doc == 'function':
+        if '|' in doc:
+            types = rtype.split(' | ')
+            yield 'assert not %s or isinstance(%s, (%s)), "Argument %s to %s must be a %s"' % (
+                arg, arg, ', '.join(types), arg, node.name, doc.replace('|', 'or'))
+        elif i >= min_default:
+            if doc == 'function':
                 # Have to check functions a bit specially. Maybe we should document them
                 # as 'callable' instead of 'function'?
                 yield 'assert not %s or callable(%s), "Argument %s to %s must be callable"' % (
