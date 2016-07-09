@@ -8,22 +8,14 @@ _GO_COMPILE_TOOL = 'compile' if CONFIG.GO_VERSION >= "1.5" else '6g'
 _GO_LINK_TOOL = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
 _GOPATH = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
 
-# This is the command we use to provide include directories to the Go compiler.
-# It's fairly brutal but since our model is that we completely specify all the dependencies
-# it's valid to essentially allow it to pick up any of them.
-_SRC_DIRS_CMD = 'SRC_DIRS=`find . -type d | grep -v "^\\.$" | sed -E -e "s|^./|-I |g"`'
-
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
 _LINK_PKGS_CMD = 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done'
 
 # Commands for go_binary and go_test.
-_ALL_GO_BINARY_CMDS = ' && '.join([
-    _LINK_PKGS_CMD,
-    'go tool %s -tmpdir $TMP_DIR %s -L . -o ${OUT} ' % (_GO_LINK_TOOL, _GOPATH.replace('-I ', '-L ')),
-])
+_LINK_CMD = 'go tool %s -tmpdir $TMP_DIR %s -L . -o ${OUT} ' % (_GO_LINK_TOOL, _GOPATH.replace('-I ', '-L '))
 _GO_BINARY_CMDS = {
-    'dbg': _ALL_GO_BINARY_CMDS + ' $SRCS',
-    'opt': _ALL_GO_BINARY_CMDS + '-s -w $SRCS',
+    'dbg': '%s && %s $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
+    'opt': '%s && %s -s -w $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
 }
 
 # Commands for go_library, which differ a bit more by config.
