@@ -1,3 +1,26 @@
+Version 4.0.0
+-------------
+
+    * Some rewrites of Go rules with several advantages:
+      - Now compatible with Go 1.7. Previously the linker would panic, apparently when doing
+        a dead code pass related to x/net/context. Still a little unsure of details.
+      - Should be faster, does some linking instead of copying & gives the compiler / linker
+        fewer directories to search.
+      - Compilation of binary / test code is separated from the linking step for better
+        incrementality.
+      There are some consequences from this:
+      - The gopath config entry must be set appropriately for libraries to be found.
+        Normally the defaults will be adequate here.
+      - Similarly, `src` subdirs are no longer implicitly searched in some circumstances.
+      - A go_binary rule must declare all dependencies used in its main package explicitly;
+        previously it was possible to pick them up transitively.
+      These will likely break some code that relied on the old behaviour; although such
+      code was probably technically incorrect, it's reasonable to consider this a breaking
+      change, hence the major version bump.
+    * Config options can be dynamically overridden on the command line,
+      e.g. `plz build -o go.version:1.7`
+
+
 Version 3.6.2
 -------------
 

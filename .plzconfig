@@ -22,7 +22,6 @@ blacklistdirs = gopkg.in
 
 [go]
 testtool = //src/build/go:please_go_test
-gopath = $TMP_DIR:$TMP_DIR/src:$TMP_DIR/third_party/go
 
 [cpp]
 defaultnamespace = thought_machine
