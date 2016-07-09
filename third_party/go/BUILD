@@ -62,7 +62,7 @@ go_get(
 go_get(
     name = 'grpc',
     get = 'google.golang.org/grpc',
-    revision = '262ed2bd6d1c8cbaa14b43c3815d2e01e4f65ca8',
+    revision = '461dac99975b211ed3eda7eb45b997d82da4345a',
     install = ['google.golang.org/grpc/health'],
     deps = [
         ':protobuf',
@@ -72,14 +72,14 @@ go_get(
 go_get(
     name = 'protoc-gen-go',
     get = 'github.com/golang/protobuf/protoc-gen-go',
-    revision = 'bf531ff1a004f24ee53329dfd5ce0b41bfdc17df',
+    revision = '3852dcfda249c2097355a6aabb199a28d97b30df',
     binary = True,
 )
 
 go_get(
     name = 'protobuf',
     get = 'github.com/golang/protobuf/proto',
-    revision = '2402d76f3d41f928c7902a765dfc872356dd3aad',
+    revision = '3852dcfda249c2097355a6aabb199a28d97b30df',
 )
 
 go_get(
