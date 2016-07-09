@@ -6,7 +6,8 @@ the complex build environment C++ has, so some issues may remain.
 
 
 def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False,
-               compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None, defines=None):
+               compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None, defines=None,
+               alwayslink=False):
     """Generate a C++ library target.
 
     Args:
@@ -26,6 +27,9 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
                               will be picked up by cc_binary or cc_test rules.
       includes (list): List of include directories to be added to the compiler's path.
       defines (list): List of tokens to define in the preprocessor.
+      alwayslink (bool): If True, any binaries / tests using this library will link in all symbols,
+                         even if they don't directly reference them. This is useful for e.g. having
+                         static members that register themselves at construction time.
     """
     srcs = srcs or []
     hdrs = hdrs or []
@@ -85,6 +89,10 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
         )
         a_rules.append(':' + a_name)
+        if alwayslink:
+            labels.append('cc:al:%s/%s' % (get_base_path(), a_name + '.a'))
+    # TODO(pebers): it would be nice to combine multiple .a files into one here,
+    #               it'd be easier for other rules to handle in a sensible way.
     hdrs_rule = ':_%s#hdrs' % name
     filegroup(
         name=name,
@@ -296,6 +304,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
             deps=deps,
             compiler_flags=compiler_flags,
             test_only=True,
+            alwayslink=True,
         )
         deps = deps or []
         deps.append(':_%s#lib' % name)
@@ -306,7 +315,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         data=data,
         visibility=visibility,
         cmd=cmd,
-        test_cmd='$(exe :%s) > test.results' % name,
+        test_cmd='$(exe :%s) | tee test.results' % name,
         building_description='Linking...',
         binary=True,
         test=True,
@@ -502,6 +511,12 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
         if link:
             flags += ' '.join('-Xlinker ' + l[3:] for l in labels if l.startswith('ld:'))
             flags += ' '.join('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
+            alwayslink = ' '.join(l[3:] for l in labels if l.startswith('al:'))
+            if alwayslink:
+                alwayslink = ' -Wl,--whole-archive %s -Wl,--no-whole-archive ' % alwayslink
+                for k, v in command_map.items():
+                    # These need to come *before* the others but within the group flags...
+                    command_map[k] = v.replace('`find', alwayslink + '`find')
         if archive:
             flags += ar_cmd
         set_command(name, 'dbg', command_map['dbg'] + ' ' + flags)
