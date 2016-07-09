@@ -27,13 +27,15 @@ _GO_BINARY_CMDS = {
     'opt': _ALL_GO_BINARY_CMDS + '-s -w ${OUT}.6',
 }
 
+_gopath = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
 # Commands for go_library, which differ a bit more by config.
 _ALL_GO_LIBRARY_CMDS = {
-    # Copies archives up a directory; this is needed in some cases depending on whether
+    # Links archives up a directory; this is needed in some cases depending on whether
     # the library matches the name of the directory it's in or not.
+    'link_cmd': 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done',
     'copy_cmd': 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done',
     # Invokes the Go compiler.
-    'compile_cmd': 'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -pack -o $OUT ' % _GO_COMPILE_TOOL,
+    'compile_cmd': 'go tool %s -trimpath $TMP_DIR -complete %s -pack -o $OUT ' % (_GO_COMPILE_TOOL, _gopath),
     # Annotates files for coverage
     'cover_cmd': 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done',
     'src_dirs_cmd': _SRC_DIRS_CMD,
@@ -41,7 +43,7 @@ _ALL_GO_LIBRARY_CMDS = {
 # String it all together.
 _GO_LIBRARY_CMDS = {
     'dbg': '%(src_dirs_cmd)s; %(copy_cmd)s && %(compile_cmd)s -N -l $SRCS' % _ALL_GO_LIBRARY_CMDS,
-    'opt': '%(src_dirs_cmd)s; %(copy_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
+    'opt': '%(link_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
     'cover': '%(src_dirs_cmd)s; %(copy_cmd)s && %(cover_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
 }
 
