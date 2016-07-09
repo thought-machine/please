@@ -16,9 +16,8 @@ const TmpDir string = "plz-out/tmp"
 const GenDir string = "plz-out/gen"
 const BinDir string = "plz-out/bin"
 
-// Placeholder commands for filegroups.
+// Placeholder command for filegroups.
 const filegroupCommand = "__FILEGROUP__"
-const linkFilegroupCommand = "__LINK_FILEGROUP__"
 
 // Default when this isn't otherwise specified.
 const DefaultBuildingDescription = "Building..."
@@ -716,12 +715,7 @@ func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
 
 // IsFilegroup returns true if this target is a filegroup rule.
 func (target *BuildTarget) IsFilegroup() bool {
-	return target.Command == filegroupCommand || target.Command == linkFilegroupCommand
-}
-
-// IsLinkFilegroup returns true if this target is a filegroup rule that links its outputs.
-func (target *BuildTarget) IsLinkFilegroup() bool {
-	return target.Command == linkFilegroupCommand
+	return target.Command == filegroupCommand
 }
 
 // Make slices of these guys sortable.

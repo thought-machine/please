@@ -202,14 +202,12 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
         deps=deps,
         exported_deps=exported_deps,
         outs=srcs,
-        cmd='__LINK_FILEGROUP__' if link else '__FILEGROUP__',
+        cmd='__FILEGROUP__',
         visibility=visibility,
-        building_description='Symlinking...' if link else 'Copying...',
+        building_description='Copying...',
         # This fixes some issues; I think it's reasonable that the outputs of filegroups
         # are treated just as files without any transitive deps.
         output_is_complete=output_is_complete,
-        # This just symlinks its inputs so it's faster not to copy to the cache and back,
-        # especially if the files it's collecting are large.
         requires=requires,
         provides=provides,
         test_only=test_only,
