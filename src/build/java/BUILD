@@ -12,7 +12,7 @@ go_library(
     srcs = ['zip_writer.go'],
     deps = [
         '//third_party/go:logging',
-        '//third_party/go/src/zip',
+        '//third_party/go/zip',
     ],
 )
 
@@ -40,7 +40,7 @@ go_test(
     srcs = ['zip_writer_test.go'],
     deps = [
         ':java',
-        '//third_party/go/src/zip',
+        '//third_party/go/zip',
     ],
     data = glob(['test_data/*.zip']),
 )
