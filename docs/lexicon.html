@@ -305,10 +305,12 @@ will be picked up by cc_binary or cc_test rules.</td>
       </tr>
 
       <tr>
-	<td>archive</td>
+	<td>alwayslink</td>
 	<td>False</td>
 	<td>bool</td>
-	<td>Deprecated, has no effect.</td>
+	<td>If True, any binaries / tests using this library will link in all symbols,
+	  even if they don't directly reference them. This is useful for e.g. having
+          static members that register themselves at construction time.</td>
       </tr>
 
       </tbody>
