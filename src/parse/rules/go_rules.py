@@ -33,7 +33,6 @@ _ALL_GO_LIBRARY_CMDS = {
     # Links archives up a directory; this is needed in some cases depending on whether
     # the library matches the name of the directory it's in or not.
     'link_cmd': 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done',
-    'copy_cmd': 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done',
     # Invokes the Go compiler.
     'compile_cmd': 'go tool %s -trimpath $TMP_DIR -complete %s -pack -o $OUT ' % (_GO_COMPILE_TOOL, _gopath),
     # Annotates files for coverage
@@ -42,9 +41,9 @@ _ALL_GO_LIBRARY_CMDS = {
 }
 # String it all together.
 _GO_LIBRARY_CMDS = {
-    'dbg': '%(src_dirs_cmd)s; %(copy_cmd)s && %(compile_cmd)s -N -l $SRCS' % _ALL_GO_LIBRARY_CMDS,
+    'dbg': '%(link_cmd)s && %(compile_cmd)s -N -l $SRCS' % _ALL_GO_LIBRARY_CMDS,
     'opt': '%(link_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
-    'cover': '%(src_dirs_cmd)s; %(copy_cmd)s && %(cover_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
+    'cover': '%(link_cmd)s && %(cover_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
 }
 
 def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False, go_tools=None):
