@@ -38,3 +38,50 @@ func TestConfigSlicesOverwrite(t *testing.T) {
 	// This should still get the defaults.
 	assert.Equal(t, []string{"BUILD"}, config.Please.BuildFileName)
 }
+
+func TestConfigOverrideString(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"python.pextool": "pexinator"})
+	assert.NoError(t, err)
+	assert.Equal(t, "pexinator", config.Python.PexTool)
+}
+
+func TestConfigOverrideUppercase(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"Python.PexTool": "pexinator"})
+	assert.NoError(t, err)
+	assert.Equal(t, "pexinator", config.Python.PexTool)
+}
+
+func TestConfigOverrideInt(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"build.timeout": "15"})
+	assert.NoError(t, err)
+	assert.Equal(t, 15, config.Build.Timeout)
+}
+
+func TestConfigOverrideBool(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"cache.rpcwriteable": "yes"})
+	assert.NoError(t, err)
+	assert.True(t, config.Cache.RpcWriteable)
+}
+
+func TestConfigOverrideSlice(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"build.path": "/mnt/bin,/mnt/sbin"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"/mnt/bin", "/mnt/sbin"}, config.Build.Path)
+}
+
+func TestConfigOverrideMap(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"aliases.blah": "run //blah:blah"})
+	assert.Error(t, err, "Can't override map fields, but should handle it nicely.")
+}
+
+func TestConfigOverrideUnknownName(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"build.blah": "whatevs"})
+	assert.Error(t, err)
+}
