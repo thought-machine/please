@@ -16,6 +16,7 @@ go_binary(
     main = 'go_rules_test_bin.go',
     deps = [
         ':go_rules_test_lib',
+        '//test/go_rules/test',
     ],
     test_only = True,
 )

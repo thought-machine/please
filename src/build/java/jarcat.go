@@ -15,7 +15,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"java"
+	"build/java"
 	"output"
 )
 

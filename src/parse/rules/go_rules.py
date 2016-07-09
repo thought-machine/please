@@ -6,38 +6,35 @@ rules to Go packages.
 
 _GO_COMPILE_TOOL = 'compile' if CONFIG.GO_VERSION >= "1.5" else '6g'
 _GO_LINK_TOOL = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
+_GOPATH = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
 
 # This is the command we use to provide include directories to the Go compiler.
 # It's fairly brutal but since our model is that we completely specify all the dependencies
 # it's valid to essentially allow it to pick up any of them.
 _SRC_DIRS_CMD = 'SRC_DIRS=`find . -type d | grep -v "^\\.$" | sed -E -e "s|^./|-I |g"`'
 
-# This copies all the .a files up one level. This is necessary for some Go tools to find them.
-_COPY_PKGS_CMD = 'for i in `find . -name "*.a"`; do cp $i $(dirname $(dirname $i)); done'
+# This links all the .a files up one level. This is necessary for some Go tools to find them.
+_LINK_PKGS_CMD = 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done'
 
 # Commands for go_binary and go_test.
 _ALL_GO_BINARY_CMDS = ' && '.join([
-    _SRC_DIRS_CMD,
-    _COPY_PKGS_CMD,
-    'go tool %s -trimpath $TMP_DIR -complete $SRC_DIRS -I . -o ${OUT}.6 $SRC' % _GO_COMPILE_TOOL,
-    'go tool %s -tmpdir $TMP_DIR ${SRC_DIRS//-I/-L} -L . -o ${OUT} ' % _GO_LINK_TOOL,
+    _LINK_PKGS_CMD,
+    'go tool %s -tmpdir $TMP_DIR %s -L . -o ${OUT} ' % (_GO_LINK_TOOL, _GOPATH.replace('-I ', '-L ')),
 ])
 _GO_BINARY_CMDS = {
-    'dbg': _ALL_GO_BINARY_CMDS + ' ${OUT}.6',
-    'opt': _ALL_GO_BINARY_CMDS + '-s -w ${OUT}.6',
+    'dbg': _ALL_GO_BINARY_CMDS + ' $SRCS',
+    'opt': _ALL_GO_BINARY_CMDS + '-s -w $SRCS',
 }
 
-_gopath = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
 # Commands for go_library, which differ a bit more by config.
 _ALL_GO_LIBRARY_CMDS = {
     # Links archives up a directory; this is needed in some cases depending on whether
     # the library matches the name of the directory it's in or not.
-    'link_cmd': 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done',
+    'link_cmd': _LINK_PKGS_CMD,
     # Invokes the Go compiler.
-    'compile_cmd': 'go tool %s -trimpath $TMP_DIR -complete %s -pack -o $OUT ' % (_GO_COMPILE_TOOL, _gopath),
+    'compile_cmd': 'go tool %s -trimpath $TMP_DIR -complete %s -pack -o $OUT ' % (_GO_COMPILE_TOOL, _GOPATH),
     # Annotates files for coverage
     'cover_cmd': 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done',
-    'src_dirs_cmd': _SRC_DIRS_CMD,
 }
 # String it all together.
 _GO_LIBRARY_CMDS = {
@@ -126,7 +123,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
     cmd = ' && '.join([
         # It's essential that we copy all .a files up a directory as well; we tend to output them one level
         # down from where Go expects them to be.
-        _COPY_PKGS_CMD,
+        _LINK_PKGS_CMD,
         # It's also essential that the compiled .a files are under this prefix, otherwise gcimporter won't find them.
         'mkdir pkg',
         'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
@@ -202,23 +199,30 @@ def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=Fals
     )
 
 
-def go_binary(name, main=None, deps=None, visibility=None, test_only=False):
+def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=False):
     """Compiles a Go binary.
 
     Args:
       name (str): Name of the rule.
       main (str): Go source file containing the main function.
+      srcs (list): Go source files, one of which contains the main function.
       deps (list): Dependencies
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
     """
+    go_library(
+        name='_%s#lib' % name,
+        srcs=srcs or [main or name + '.go'],
+        deps=deps,
+        test_only=test_only,
+    )
     build_rule(
         name=name,
-        srcs=[main or name + '.go'],
+        srcs=[':_%s#lib' % name],
         deps=deps,
         outs=[name],
         cmd=_GO_BINARY_CMDS,
-        building_description="Compiling...",
+        building_description="Linking...",
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
@@ -245,6 +249,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
       labels (list): Labels for this rule.
       size (str): Test size (enormous, large, medium or small).
     """
+    deps = deps or []
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # Unfortunately we have to recompile this to build the test together with its library.
     build_rule(
@@ -277,11 +282,18 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         tools=tools,
         post_build=_replace_test_package,
     )
+    deps.append(':_%s#lib' % name)
+    go_library(
+        name='_%s#main_lib' % name,
+        srcs=[':_%s#main' % name],
+        deps=deps,
+        test_only=True,
+    )
     build_rule(
         name=name,
-        srcs=[':_%s#main' % name],
+        srcs=[':_%s#main_lib' % name],
         data=data,
-        deps=(deps or []) + [':_%s#lib' % name],
+        deps=deps,
         outs=[name],
         cmd=_GO_BINARY_CMDS,
         test_cmd='$(exe :%s) | tee test.results' % name,
@@ -428,8 +440,11 @@ def _replace_test_package(name, output):
     """
     if not name.endswith('#main') or not name.startswith('_'):
         raise ValueError('unexpected rule name: ' + name)
+    lib = name[:-5] + '#main_lib'
     name = name[1:-5]
     for line in output:
         if line.startswith('Package: '):
             for k, v in _GO_BINARY_CMDS.items():
                 set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
+            for k, v in _GO_LIBRARY_CMDS.items():
+                set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))

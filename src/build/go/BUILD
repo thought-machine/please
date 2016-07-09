@@ -12,6 +12,7 @@ go_binary(
     main = 'plz_go_test.go',
     deps = [
         ':buildgo',
+        '//src/output',
         '//third_party/go:logging',
     ],
     visibility = ['PUBLIC'],

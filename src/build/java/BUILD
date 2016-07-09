@@ -22,6 +22,7 @@ go_binary(
         ':java',
         '//src/output',
         '//third_party/go:logging',
+        '//third_party/go/zip',
     ],
     visibility = ['PUBLIC'],
 )

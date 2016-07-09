@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"buildgo"
+	"build/buildgo"
 	"output"
 )
 
