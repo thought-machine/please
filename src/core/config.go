@@ -303,12 +303,13 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 			return strings.ToLower(s2) == s1
 		}
 	}
+	elem := reflect.ValueOf(config).Elem()
 	for k, v := range overrides {
 		split := strings.Split(strings.ToLower(k), ".")
 		if len(split) != 2 {
 			return fmt.Errorf("Bad option format: %s", k)
 		}
-		field := reflect.ValueOf(config).Elem().FieldByNameFunc(match(split[0]))
+		field := elem.FieldByNameFunc(match(split[0]))
 		if !field.IsValid() {
 			return fmt.Errorf("Unknown config field: %s", split[0])
 		} else if field.Kind() != reflect.Struct {
