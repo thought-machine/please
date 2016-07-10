@@ -1,6 +1,11 @@
 # Wrapper script invoked from Please to parse build files.
 
-import __builtin__
+try:
+    import __builtin__ as builtins
+    is_py3 = False
+except ImportError:
+    import builtins
+    is_py3 = True
 import ast
 import imp
 import os
@@ -18,7 +23,7 @@ _c_subinclude_package_name = None
 _subinclude_package_name = None
 _subinclude_package = None
 
-# List of everything we keep in the __builtin__ module. This is a pretty agricultural way
+# List of everything we keep in the builtins module. This is a pretty agricultural way
 # of restricting what build files can do - no doubt there'd be clever ways of working
 # around it - but at least it will give people the sense that they shouldn't use some of these.
 # We also implicitly keep all the exception types.
@@ -30,42 +35,52 @@ _WHITELISTED_BUILTINS = {
     'len', 'list', 'locals', 'long', 'map', 'max', 'min', 'next', 'object', 'oct', 'ord',
     'bytearray', 'pow', 'print', 'property', 'range', 'reduce', 'repr', 'reversed', 'round',
     'sequenceiterator', 'set', 'setattr', 'slice', 'sorted', 'staticmethod', 'str', 'sum',
-    'super', 'tuple', 'type', 'unichr', 'unicode', 'vars', 'xrange', 'zip', '__name__',
+    'super', 'tuple', 'type', 'unichr', 'unicode', 'vars', 'zip', '__name__',
     'NotImplemented',
     'compile', '__import__',  # We disallow importing separately, it's too hard to do here
     '__cffi_backend_extern_py',  # This gets added with cpython / cffi 1.6+ and is pretty crucial.
 }
+if is_py3:
+    _WHITELISTED_BUILTINS |= {'bytes', 'exec'}  # These are needed too
+    # Have to be more careful with encodings in python 3.
+    ffi_to_string = lambda c: ffi.string(c).decode('utf-8')
+    ffi_from_string = lambda s: ffi.new('char[]', s.encode('utf-8'))
+    _xrange = range
+else:
+    ffi_to_string = ffi.string
+    ffi_from_string = lambda s: ffi.new('char[]', s)
+    _xrange = xrange
 
 # Used to indicate that parsing of a target is deferred because it requires another target.
 _DEFER_PARSE = '_DEFER_'
-_FFI_DEFER_PARSE = ffi.new('char[]', _DEFER_PARSE)
+_FFI_DEFER_PARSE = ffi_from_string(_DEFER_PARSE)
 
 
 @ffi.def_extern('ParseFile')
 def parse_file(c_filename, c_package_name, c_package):
     try:
-        filename = ffi.string(c_filename)
-        package_name = ffi.string(c_package_name)
+        filename = ffi_to_string(c_filename)
+        package_name = ffi_to_string(c_package_name)
         builtins = _get_globals(c_package, c_package_name)
         _parse_build_code(filename, builtins)
         return ffi.NULL
     except DeferParse as err:
         return _FFI_DEFER_PARSE
     except Exception as err:
-        return ffi.new('char[]', str(err))
+        return ffi_from_string(str(err))
 
 
 @ffi.def_extern('ParseCode')
 def parse_code(c_code, c_filename, c_package):
     if c_package != 0:
         global _subinclude_package, _subinclude_package_name, _c_subinclude_package_name
-        _subinclude_package_name = ffi.string(c_filename)
+        _subinclude_package_name = ffi_to_string(c_filename)
         _c_subinclude_package_name = c_filename
         _subinclude_package = c_package
         return ffi.NULL
     try:
-        filename = ffi.string(c_filename)
-        code = ffi.string(c_code)
+        filename = ffi_to_string(c_filename)
+        code = ffi_to_string(c_code)
         # Note we don't go through _parse_build_code - there's no need to perform the ast
         # walk on code that we control internally. This conceptually means that we *could*
         # import in those files, but we will not do that because it would be sheer peasantry.
@@ -73,7 +88,7 @@ def parse_code(c_code, c_filename, c_package):
         exec(code, _please_globals)
         return ffi.NULL
     except Exception as err:
-        return ffi.new('char[]', str(err))
+        return ffi_from_string(str(err))
 
 
 def _parse_build_code(filename, globals_dict, cache=False):
@@ -85,9 +100,9 @@ def _parse_build_code(filename, globals_dict, cache=False):
         for node in ast.iter_child_nodes(tree):
             if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
                 raise SyntaxError('import not allowed')
-            if isinstance(node, ast.Exec):
+            if not is_py3 and isinstance(node, ast.Exec):
                 raise SyntaxError('exec not allowed')
-            if isinstance(node, ast.Print):
+            if not is_py3 and isinstance(node, ast.Print):
                 raise SyntaxError('print not allowed, use log functions instead')
         code = _compile(tree, filename, 'exec')
         _build_code_cache[filename] = code
@@ -97,7 +112,7 @@ def _parse_build_code(filename, globals_dict, cache=False):
 def bazel_wrapper(func):
     """Rewrites incoming argument names when we're in Bazel compatibility mode."""
     def _inner(*args, **kwargs):
-        for k, v in _BAZEL_KEYWORD_REWRITES.iteritems():
+        for k, v in _BAZEL_KEYWORD_REWRITES.items():
             if k in kwargs:
                 if v in kwargs:
                     raise ValueError('You must pass at most one of %s and %s' % (k, v))
@@ -121,8 +136,8 @@ _BAZEL_KEYWORD_REWRITES = {
 
 @ffi.def_extern('SetConfigValue')
 def set_config_value(c_name, c_value):
-    name = ffi.string(c_name)
-    value = ffi.string(c_value)
+    name = ffi_to_string(c_name)
+    value = ffi_to_string(c_value)
     config = _please_globals['CONFIG']
     existing = config.get(name)
     # A little gentle hack to make it convenient to set repeated config values; we could
@@ -137,7 +152,7 @@ def set_config_value(c_name, c_value):
 
 def include_defs(package, dct, target):
     _log(2, package, 'include_defs is deprecated, use subinclude() instead')
-    filename = ffi.string(_get_include_file(package, ffi.new('char[]', target)))
+    filename = ffi_to_string(_get_include_file(package, ffi_from_string(target)))
     # Dodgy in-band signalling of errors follows.
     if filename.startswith('__'):
         raise ParseError(filename.lstrip('_'))
@@ -148,7 +163,7 @@ def subinclude(package, dct, target, hash=None):
     """Includes the output of a build target as extra rules in this one."""
     if target.startswith('http'):
         target = _get_subinclude_target(target, hash)
-    filename = ffi.string(_get_subinclude_file(package, ffi.new('char[]', target)))
+    filename = ffi_to_string(_get_subinclude_file(package, ffi_from_string(target)))
     if filename == _DEFER_PARSE:
         raise DeferParse(filename)
     elif filename.startswith('__'):
@@ -191,7 +206,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                         name,
                         '_' if '#' in name else '#',
                         tag])
-    if not _is_valid_target_name(ffi.new('char[]', name)):
+    if not _is_valid_target_name(ffi_from_string(name)):
         raise ValueError('"%s" is not a valid target name' % name)
     if visibility is None:
         visibility = globals_dict['CONFIG'].get('DEFAULT_VISIBILITY')
@@ -199,7 +214,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         licences = globals_dict['CONFIG'].get('DEFAULT_LICENCES')
     if test_only is None:
         test_only = globals_dict['CONFIG'].get('DEFAULT_TESTONLY')
-    ffi_string = lambda x: ffi.NULL if x is None else ffi.new('char[]', x)
+    ffi_string = lambda x: ffi.NULL if x is None else ffi_from_string(x)
     target = _add_target(package,
                          ffi_string(name),
                          ffi_string('' if isinstance(cmd, Mapping) else cmd.strip()),
@@ -221,7 +236,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         # the target name earlier. Bit hacky but will have to do for now.
         raise DuplicateTargetError('Duplicate target %s' % name)
     if isinstance(srcs, Mapping):
-        for src_name, src_list in srcs.iteritems():
+        for src_name, src_list in srcs.items():
             if isinstance(src_list, str):
                 raise ValueError('Value in named_srcs for target %s is a string, you probably '
                                  'meant to use a list of strings instead' % name)
@@ -258,7 +273,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         if not isinstance(provides, Mapping):
             raise ValueError('"provides" argument for rule %s is not a mapping' % name)
         for lang, rule in provides.items():
-            _check_c_error(_add_provide(target, ffi.new('char[]', lang), ffi.new('char[]', rule)))
+            _check_c_error(_add_provide(target, ffi_from_string(lang), ffi_from_string(rule)))
     if pre_build:
         # Must manually ensure we keep these objects from being gc'd.
         handle = ffi.new_handle(pre_build)
@@ -280,58 +295,58 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
 def run_pre_build_function(handle, package, name):
     try:
         callback = ffi.from_handle(handle)
-        callback(ffi.string(name))
+        callback(ffi_to_string(name))
         return ffi.NULL
     except DeferParse:
-        return ffi.new('char[]', "Don't try to subinclude() from inside a pre-build function")
+        return ffi_from_string("Don't try to subinclude() from inside a pre-build function")
     except Exception as err:
-        return ffi.new('char[]', str(err))
+        return ffi_from_string(str(err))
 
 
 @ffi.def_extern('PostBuildFunctionRunner')
 def run_post_build_function(handle, package, name, output):
     try:
         callback = ffi.from_handle(handle)
-        callback(ffi.string(name), ffi.string(output).strip().split('\n'))
+        callback(ffi_to_string(name), ffi_to_string(output).strip().split('\n'))
         return ffi.NULL
     except DeferParse:
-        return ffi.new('char[]', "Don't try to subinclude() from inside a post-build function")
+        return ffi_from_string("Don't try to subinclude() from inside a post-build function")
     except Exception as err:
-        return ffi.new('char[]', str(err))
+        return ffi_from_string(str(err))
 
 
 def _add_strings(target, func, lst, name):
     if lst:
         for x in lst:
             if x:
-                _check_c_error(func(target, ffi.new('char[]', x)))
+                _check_c_error(func(target, ffi_from_string(x)))
 
 
 def _check_c_error(error):
     """Converts returned errors from cffi to exceptions."""
     if error:
-        raise ParseError(ffi.string(error))
+        raise ParseError(ffi_to_string(error))
 
 
 def glob(package, includes, excludes=None, exclude=None, hidden=False):
     if isinstance(includes, str):
         raise TypeError('The first argument to glob() should be a list')
     excludes = excludes or exclude
-    includes_keepalive = [ffi.new('char[]', include) for include in includes]
-    excludes_keepalive = [ffi.new('char[]', exclude) for exclude in excludes or []]
-    filenames = _glob(ffi.new('char[]', package),
+    includes_keepalive = [ffi_from_string(include) for include in includes]
+    excludes_keepalive = [ffi_from_string(exclude) for exclude in excludes or []]
+    filenames = _glob(ffi_from_string(package),
                       ffi.new('char*[]', includes_keepalive),
                       len(includes_keepalive),
                       ffi.new('char*[]', excludes_keepalive),
                       len(excludes_keepalive),
                       hidden)
-    return [ffi.string(filename) for filename in _null_terminated_array(filenames)]
+    return [ffi_to_string(filename) for filename in _null_terminated_array(filenames)]
 
 
 def get_labels(package, target, prefix):
     """Gets the transitive set of labels for a rule. Should be called from a pre-build function."""
-    labels = _get_labels(package, ffi.new('char[]', target), ffi.new('char[]', prefix))
-    return [ffi.string(label) for label in _null_terminated_array(labels)]
+    labels = _get_labels(package, ffi_from_string(target), ffi_from_string(prefix))
+    return [ffi_to_string(label) for label in _null_terminated_array(labels)]
 
 
 def has_label(package, target, prefix):
@@ -357,7 +372,7 @@ def licenses(globals_dict, licenses):
 
 
 def _null_terminated_array(arr):
-    for i in xrange(1000000):
+    for i in _xrange(1000000):
         if arr[i] == ffi.NULL:
             break
         yield arr[i]
@@ -373,14 +388,14 @@ def _get_globals(c_package, c_package_name):
     """
     local_globals = {}
     bazel_compat = _please_globals.get('CONFIG', {}).get('BAZEL_COMPATIBILITY')
-    for k, v in _please_globals.iteritems():
+    for k, v in _please_globals.items():
         if callable(v) and type(v) == FunctionType:
             func = FunctionType(v.__code__, local_globals, k, v.__defaults__, v.__closure__)
             local_globals[k] = bazel_wrapper(func) if bazel_compat else func
         else:
             local_globals[k] = v
     # Need to pass some hidden arguments to these guys.
-    package_name = ffi.string(c_package_name)
+    package_name = ffi_to_string(c_package_name)
     local_globals['include_defs'] = lambda *args, **kwargs: include_defs(c_package, local_globals, *args, **kwargs)
     local_globals['subinclude'] = lambda *args, **kwargs: subinclude(c_package, local_globals, *args, **kwargs)
     local_globals['build_rule'] = lambda *args, **kwargs: build_rule(local_globals, c_package, *args, **kwargs)
@@ -418,7 +433,7 @@ def _get_globals(c_package, c_package_name):
 @ffi.def_extern('RegisterCallback')
 def register_callback(name, c_type, callback):
     """Called at initialisation time to register a single callback."""
-    globals()[ffi.string(name)] = ffi.cast(ffi.string(c_type), callback)
+    globals()[ffi_to_string(name)] = ffi.cast(ffi_to_string(c_type), callback)
 
 
 class ParseError(Exception):
@@ -452,11 +467,11 @@ _please_globals['DuplicateTargetError'] = DuplicateTargetError
 # We'll need these guys locally. Unfortunately exec is a statement so we
 # can't do it for that.
 _compile, _open = compile, open
-for k, v in __builtin__.__dict__.items():  # YOLO
+for k, v in list(builtins.__dict__.items()):  # YOLO
     try:
         if issubclass(v, BaseException):
             continue
     except:
         pass
     if k not in _WHITELISTED_BUILTINS:
-        del __builtin__.__dict__[k]
+        del builtins.__dict__[k]
