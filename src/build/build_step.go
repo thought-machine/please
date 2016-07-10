@@ -161,20 +161,21 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		}
 	}
 	if target.PostBuildFunction != 0 {
+		sout := strings.TrimSpace(string(out))
 		if postBuildOutput != "" {
 			// We've already run the post-build function once, it's not safe to do it again (e.g. if adding new
 			// targets, it will likely fail). Theoretically it should get the same output this time and hence would
 			// do the same thing, since it had all the same inputs.
 			// Obviously we can't be 100% sure that will be the case, so issue a warning if not...
-			if postBuildOutput != string(out) {
+			if postBuildOutput != sout {
 				log.Warning("The build output for %s differs from what we got back from the cache earlier.\n"+
 					"This implies your target's output is nondeterministic; Please won't re-run the\n"+
 					"post-build function, which will *probably* be okay, but Please can't be sure.\n"+
 					"See https://github.com/thought-machine/please/issues/113 for more information.", target.Label)
 				log.Debug("Cached build output for %s: %s\n\nNew build output: %s",
-					target.Label, postBuildOutput, string(out))
+					target.Label, postBuildOutput, sout)
 			}
-		} else if err := parse.RunPostBuildFunction(tid, state, target, string(out)); err != nil {
+		} else if err := parse.RunPostBuildFunction(tid, state, target, sout); err != nil {
 			return err
 		}
 		storePostBuildOutput(state, target, out)

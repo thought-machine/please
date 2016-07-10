@@ -9,6 +9,7 @@ package build
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -19,6 +20,8 @@ import (
 
 	"core"
 )
+
+var cache core.Cache
 
 func TestBuildTargetWithNoDeps(t *testing.T) {
 	state, target := newState("//package1:target1")
@@ -98,20 +101,69 @@ func TestPreBuildFunction(t *testing.T) {
 func TestPostBuildFunction(t *testing.T) {
 	// Test modifying a command in the post-build function.
 	state, target := newState("//package1:target7")
-	target.Command = "echo 'wibble wibble wibble' > file7"
-	f := func() error {
+	target.Command = "echo 'wibble wibble wibble' | tee file7"
+	f := func(s string) error {
 		target.AddOutput("file7")
+		assert.Equal(t, "wibble wibble wibble", s)
 		return nil
 	}
-	target.PreBuildFunction = uintptr(unsafe.Pointer(&f))
+	target.PostBuildFunction = uintptr(unsafe.Pointer(&f))
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 }
 
-func TestPostBuildFunctionAndCache(t *testing.T) {
+func TestCacheRetrieval(t *testing.T) {
+	// Test retrieving stuff from the cache
+	state, target := newState("//package1:target8")
+	target.AddOutput("file8")
+	target.Command = "false" // Will fail if we try to build it.
+	state.Cache = &cache
+	err := buildTarget(1, state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, core.Built, target.State())
+}
 
+func TestPostBuildFunctionAndCache(t *testing.T) {
+	// Test the often subtle and quick to anger interaction of post-build function and cache.
+	// In this case when it fails to retrieve the post-build output it should still call the function after building.
+	state, target := newState("//package1:target9")
+	target.AddOutput("file9")
+	target.Command = "echo 'wibble wibble wibble' | tee $OUT"
+	called := false
+	f := func(s string) error {
+		called = true
+		assert.Equal(t, "wibble wibble wibble", s)
+		return nil
+	}
+	target.PostBuildFunction = uintptr(unsafe.Pointer(&f))
+	state.Cache = &cache
+	err := buildTarget(1, state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, core.Built, target.State())
+	assert.True(t, called)
+}
+
+func TestPostBuildFunctionAndCache2(t *testing.T) {
+	// Test the often subtle and quick to anger interaction of post-build function and cache.
+	// In this case it succeeds in retrieving the post-build output but must still call the function.
+	state, target := newState("//package1:target10")
+	target.AddOutput("file10")
+	target.Command = "echo 'wibble wibble wibble' | tee $OUT"
+	called := false
+	f := func(s string) error {
+		assert.False(t, called, "Must only call post-build function once (issue #113)")
+		called = true
+		assert.Equal(t, "retrieved from cache", s) // comes from implementation below
+		return nil
+	}
+	target.PostBuildFunction = uintptr(unsafe.Pointer(&f))
+	state.Cache = &cache
+	err := buildTarget(1, state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, core.Built, target.State())
+	assert.True(t, called)
 }
 
 func newState(label string) (*core.BuildState, *core.BuildTarget) {
@@ -123,7 +175,39 @@ func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	return state, target
 }
 
+// Fake cache implementation with hardcoded behaviour for the various tests above.
+type mockCache struct{}
+
+func (*mockCache) Store(target *core.BuildTarget, key []byte) {
+}
+
+func (*mockCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
+}
+
+func (*mockCache) Retrieve(target *core.BuildTarget, key []byte) bool {
+	if target.Label.Name == "target8" {
+		ioutil.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
+		return true
+	} else if target.Label.Name == "target10" {
+		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
+		return true
+	}
+	return false
+}
+
+func (*mockCache) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {
+	if target.Label.Name == "target10" && file == core.PostBuildOutputFileName(target) {
+		ioutil.WriteFile(postBuildOutputFileName(target), []byte("retrieved from cache"), 0664)
+		return true
+	}
+	return false
+}
+
+func (*mockCache) Clean(target *core.BuildTarget) {
+}
+
 func TestMain(m *testing.M) {
+	cache = &mockCache{}
 	backend := logging.NewLogBackend(os.Stderr, "", 0)
 	backendLeveled := logging.AddModuleLevel(backend)
 	backendLeveled.SetLevel(logging.DEBUG, "")

@@ -39,4 +39,5 @@ go_test(
         'parse': '//src/mock:parse',
     },
     data = ['test_data'],
+    flaky = True,  # Probably we have done things we shouldn't with unsafe.Pointers.
 )
