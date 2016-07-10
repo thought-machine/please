@@ -202,7 +202,8 @@ func main() {
 		Blocks: coverBlocks,
 		CoveredPackages: "",
 	})
-    args := []string{os.Args[0], "-test.v", "-test.coverprofile", "test.coverage"}
+    coverfile := os.Getenv("COVERAGE_FILE")
+    args := []string{os.Args[0], "-test.v", "-test.coverprofile", coverfile}
 {{else}}
     args := []string{os.Args[0], "-test.v"}
 {{end}}

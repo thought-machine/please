@@ -38,7 +38,7 @@ import org.w3c.dom.Element;
 public class TestCoverage {
   // Class handling coverage instrumentation using Jacoco.
   // This is very heavily based on the example given with Jacoco.
-  private static final String OUTPUT_FILE = "test.coverage";
+  private static final String OUTPUT_FILE = System.getenv("COVERAGE_FILE");
 
   public static void RunTestClasses(Set<Class> classes, Set<Class> allClasses) throws Exception {
     IRuntime runtime = new LoggerRuntime();
