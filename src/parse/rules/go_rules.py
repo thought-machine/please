@@ -35,7 +35,8 @@ _GO_LIBRARY_CMDS = {
     'cover': '%(link_cmd)s && %(cover_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
 }
 
-def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False, go_tools=None):
+def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False,
+               go_tools=None, _needs_transitive_deps=False):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -82,6 +83,7 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         provides={'go': ':' + name, 'go_src': ':_%s#srcs' % name},
         test_only=test_only,
         tools=go_tools,
+        needs_transitive_deps=_needs_transitive_deps,
     )
 
 
@@ -279,6 +281,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         name='_%s#main_lib' % name,
         srcs=[':_%s#main' % name],
         deps=deps,
+        _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
     )
     build_rule(

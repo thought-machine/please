@@ -31,6 +31,8 @@ def arg_checks(node):
     # ast in python 3 looks a bit different.
     arg_name = lambda arg: arg.id if hasattr(arg, 'id') else arg.arg
     for i, arg in enumerate(arg_name(arg) for arg in node.args.args):
+        if arg.startswith('_'):  # Private, undocumented arguments.
+            continue
         assert arg in docs, 'Missing docstring for argument %s to %s()' % (arg, node.name)
         doc = docs[arg]
         rtype = doc.replace('bool', 'int')  # Bools are ints so an int is acceptable.
