@@ -25,3 +25,15 @@ go_test(
         ':build',
     ],
 )
+
+go_test(
+    name = 'build_step_test',
+    srcs = ['build_step_test.go'],
+    deps = [
+        ':build',
+        '//src/core',
+        '//src/output',
+        '//third_party/go:testify',
+    ],
+    data = ['test_data'],
+)
