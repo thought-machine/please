@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/op/go-logging.v1"
@@ -25,6 +26,13 @@ func TestBuildTargetWithNoDeps(t *testing.T) {
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
+}
+
+func TestFailedBuildTarget(t *testing.T) {
+	state, target := newState("//package1:target1a")
+	target.Command = "false"
+	err := buildTarget(1, state, target)
+	assert.Error(t, err)
 }
 
 func TestBuildTargetWhichNeedsRebuilding(t *testing.T) {
@@ -70,6 +78,40 @@ func TestSymlinkedOutputs(t *testing.T) {
 	assert.NoError(t, err)
 	// Unchanged because input and output are the same.
 	assert.Equal(t, core.Unchanged, target.State())
+}
+
+func TestPreBuildFunction(t *testing.T) {
+	// Test modifying a command in the pre-build function.
+	state, target := newState("//package1:target6")
+	target.AddOutput("file6")
+	target.Command = "" // Target now won't produce the needed output
+	f := func() error {
+		target.Command = "echo 'wibble wibble wibble' > $OUT"
+		return nil
+	}
+	target.PreBuildFunction = uintptr(unsafe.Pointer(&f))
+	err := buildTarget(1, state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, core.Built, target.State())
+}
+
+func TestPostBuildFunction(t *testing.T) {
+	// Test modifying a command in the post-build function.
+	state, target := newState("//package1:target7")
+	target.Command = "echo 'wibble wibble wibble' > file7"
+	f := func() error {
+		target.AddOutput("file7")
+		return nil
+	}
+	target.PreBuildFunction = uintptr(unsafe.Pointer(&f))
+	err := buildTarget(1, state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, core.Built, target.State())
+	assert.Equal(t, []string{"file7"}, target.Outputs())
+}
+
+func TestPostBuildFunctionAndCache(t *testing.T) {
+
 }
 
 func newState(label string) (*core.BuildState, *core.BuildTarget) {

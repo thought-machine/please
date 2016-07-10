@@ -35,5 +35,8 @@ go_test(
         '//src/output',
         '//third_party/go:testify',
     ],
+    mocks = {
+        'parse': '//src/mock:parse',
+    },
     data = ['test_data'],
 )
