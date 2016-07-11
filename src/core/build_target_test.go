@@ -265,6 +265,15 @@ func TestParent(t *testing.T) {
 	assert.Equal(t, (*BuildTarget)(nil), parent.Parent(graph))
 }
 
+func TestOutMode(t *testing.T) {
+	// Check that output modes match the binary flag correctly.
+	// This feels a little fatuous but it's hard to have any less specific assertions on it.
+	target := makeTarget("//src/core:target1", "")
+	assert.Equal(t, os.FileMode(0444), target.OutMode())
+	target.IsBinary = true
+	assert.Equal(t, os.FileMode(0555), target.OutMode())
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
