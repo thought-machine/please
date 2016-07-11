@@ -321,12 +321,12 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 			return true, err
 		}
 	} else {
-		if err := core.RecursiveCopyFile(tmpOutput, realOutput, 0, filegroup); err != nil {
+		if err := core.RecursiveCopyFile(tmpOutput, realOutput, target.OutMode(), filegroup); err != nil {
 			return true, err
 		}
 	}
 	if target.IsBinary {
-		if err := os.Chmod(realOutput, 0775); err != nil {
+		if err := os.Chmod(realOutput, target.OutMode()); err != nil {
 			return true, err
 		}
 	}

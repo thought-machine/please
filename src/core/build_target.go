@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"reflect"
@@ -699,6 +700,14 @@ func (target *BuildTarget) SetContainerSetting(name, value string) error {
 		}
 	}
 	return fmt.Errorf("Field %s isn't a valid container setting", name)
+}
+
+// OutMode returns the mode to set outputs of a target to.
+func (target *BuildTarget) OutMode() os.FileMode {
+	if target.IsBinary {
+		return 0555
+	}
+	return 0444
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.
