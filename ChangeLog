@@ -19,6 +19,9 @@ Version 4.0.0
       change, hence the major version bump.
     * Config options can be dynamically overridden on the command line,
       e.g. `plz build -o go.version:1.7`
+    * Output files are made read-only in most cases.
+    * Post-build functions are run once only since it's quite tough to require them to be
+      idempotent.
 
 
 Version 3.6.2
