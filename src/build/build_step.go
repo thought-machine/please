@@ -79,9 +79,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			return err
 		}
 	}
+	var postBuildOutput string
 	if !needsBuilding(state, target, false) {
 		log.Debug("Not rebuilding %s, nothing's changed", target.Label)
-		runPostBuildFunctionIfNeeded(tid, state, target)
+		postBuildOutput = runPostBuildFunctionIfNeeded(tid, state, target)
 		// If a post-build function ran it may modify the rule definition. In that case we
 		// need to check again whether the rule needs building.
 		if target.PostBuildFunction == 0 || !needsBuilding(state, target, true) {
@@ -129,7 +130,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		if target.PostBuildFunction != 0 {
 			log.Debug("Checking for post-build output file for %s in cache...", target.Label)
 			if (*state.Cache).RetrieveExtra(target, cacheKey, core.PostBuildOutputFileName(target)) {
-				runPostBuildFunctionIfNeeded(tid, state, target)
+				postBuildOutput = runPostBuildFunctionIfNeeded(tid, state, target)
 				if retrieveArtifacts() {
 					return nil
 				}
@@ -160,7 +161,21 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		}
 	}
 	if target.PostBuildFunction != 0 {
-		if err := parse.RunPostBuildFunction(tid, state, target, string(out)); err != nil {
+		sout := strings.TrimSpace(string(out))
+		if postBuildOutput != "" {
+			// We've already run the post-build function once, it's not safe to do it again (e.g. if adding new
+			// targets, it will likely fail). Theoretically it should get the same output this time and hence would
+			// do the same thing, since it had all the same inputs.
+			// Obviously we can't be 100% sure that will be the case, so issue a warning if not...
+			if postBuildOutput != sout {
+				log.Warning("The build output for %s differs from what we got back from the cache earlier.\n"+
+					"This implies your target's output is nondeterministic; Please won't re-run the\n"+
+					"post-build function, which will *probably* be okay, but Please can't be sure.\n"+
+					"See https://github.com/thought-machine/please/issues/113 for more information.", target.Label)
+				log.Debug("Cached build output for %s: %s\n\nNew build output: %s",
+					target.Label, postBuildOutput, sout)
+			}
+		} else if err := parse.RunPostBuildFunction(tid, state, target, sout); err != nil {
 			return err
 		}
 		storePostBuildOutput(state, target, out)
@@ -412,13 +427,15 @@ func retrieveFromCache(state *core.BuildState, target *core.BuildTarget) ([]byte
 }
 
 // Runs the post-build function for a target if it's got one.
-func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) {
+func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) string {
 	if target.PostBuildFunction != 0 {
 		out := loadPostBuildOutput(state, target)
 		if err := parse.RunPostBuildFunction(tid, state, target, out); err != nil {
 			panic(err)
 		}
+		return out
 	}
+	return ""
 }
 
 // checkLicences checks the licences for the target match what we've accepted / rejected in the config

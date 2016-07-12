@@ -25,3 +25,19 @@ go_test(
         ':build',
     ],
 )
+
+go_test(
+    name = 'build_step_test',
+    srcs = ['build_step_test.go'],
+    deps = [
+        ':build',
+        '//src/core',
+        '//src/output',
+        '//third_party/go:testify',
+    ],
+    mocks = {
+        'parse': '//src/mock:parse',
+    },
+    data = ['test_data'],
+    flaky = True,  # Probably we have done things we shouldn't with unsafe.Pointers.
+)

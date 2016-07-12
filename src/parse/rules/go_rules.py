@@ -227,7 +227,7 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
 
 
 def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
-            timeout=0, flaky=0, test_outputs=None, labels=None, size=None):
+            timeout=0, flaky=0, test_outputs=None, labels=None, size=None, mocks=None):
     """Defines a Go test rule.
 
     Args:
@@ -242,6 +242,9 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
       test_outputs (list): Extra test output files to generate from this test.
       labels (list): Labels for this rule.
       size (str): Test size (enormous, large, medium or small).
+      mocks (dict): Dictionary of packages to mock, e.g. {"os": "//mocks:mock_os"}
+                    They are replaced at link time, so it's only possible to mock complete packages.
+                    Each build rule should be a go_library (or something equivalent).
     """
     deps = deps or []
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
@@ -284,13 +287,22 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
     )
+    cmds = _GO_BINARY_CMDS
+    if mocks:
+        cmds = cmds.copy()
+        mocks = sorted(mocks.items())
+        deps.extend(v for _, v in mocks)
+        dirs = 'mkdir -p ' + ' '.join('$(dirname %s)' % k for k, _ in mocks)
+        mvs = ' && '.join('mv $(location %s) %s.a' % (v, k) for k, v in mocks)
+        for k, v in cmds.items():
+            cmds[k] = ' && '.join([dirs, mvs, v])
     build_rule(
         name=name,
         srcs=[':_%s#main_lib' % name],
         data=data,
         deps=deps,
         outs=[name],
-        cmd=_GO_BINARY_CMDS,
+        cmd=cmds,
         test_cmd='$(exe :%s) | tee test.results' % name,
         visibility=visibility,
         container=container,
