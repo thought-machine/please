@@ -174,7 +174,7 @@ def export_file(name, src, visibility=None, binary=False, test_only=False):
 
 
 def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, labels=None, binary=False,
-              output_is_complete=True, requires=None, provides=None, link=True, test_only=False):
+              output_is_complete=True, requires=None, provides=None, link=False, test_only=False):
     """Defines a collection of files which other rules can depend on.
 
     Sources can be omitted entirely in which case it acts simply as a rule to collect other rules,
@@ -196,6 +196,8 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
       test_only (bool): If true the exported file can only be used by test targets.
       link (bool): Deprecated, no longer has any effect.
     """
+    if link:
+        log.warning('link attribute on filegroup is deprecated and will go away soon.')
     build_rule(
         name=name,
         srcs=srcs,

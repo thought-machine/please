@@ -75,15 +75,6 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	if (config.Cache.RpcPrivateKey == "") != (config.Cache.RpcPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
 	}
-
-	// TODO(pebers): Remove in please v4.0+
-	if len(config.Please.PyPyLocation) > 0 {
-		log.Warning("pypylocation config property is deprecated and will go away soon")
-	}
-	if config.Java.JarTool != "" {
-		log.Warning("jartool config property is deprecated and will go away soon")
-	}
-
 	return config, nil
 }
 
