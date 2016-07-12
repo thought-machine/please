@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -218,5 +219,8 @@ func TestMain(m *testing.M) {
 	if err := os.Chdir(core.RepoRoot); err != nil {
 		panic(err)
 	}
+	// This is not at all nice but it keeps the GC from collecting the
+	// pre- and post-build functions in tests before they get called.
+	debug.SetGCPercent(-1)
 	os.Exit(m.Run())
 }
