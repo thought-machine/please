@@ -12,8 +12,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"reflect"
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/op/go-logging.v1"
@@ -92,7 +92,7 @@ func TestPreBuildFunction(t *testing.T) {
 		target.Command = "echo 'wibble wibble wibble' > $OUT"
 		return nil
 	}
-	target.PreBuildFunction = uintptr(unsafe.Pointer(&f))
+	target.PreBuildFunction = reflect.ValueOf(&f).Pointer()
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
@@ -107,7 +107,7 @@ func TestPostBuildFunction(t *testing.T) {
 		assert.Equal(t, "wibble wibble wibble", s)
 		return nil
 	}
-	target.PostBuildFunction = uintptr(unsafe.Pointer(&f))
+	target.PostBuildFunction = reflect.ValueOf(&f).Pointer()
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
@@ -137,7 +137,7 @@ func TestPostBuildFunctionAndCache(t *testing.T) {
 		assert.Equal(t, "wibble wibble wibble", s)
 		return nil
 	}
-	target.PostBuildFunction = uintptr(unsafe.Pointer(&f))
+	target.PostBuildFunction = reflect.ValueOf(&f).Pointer()
 	state.Cache = &cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
@@ -158,7 +158,7 @@ func TestPostBuildFunctionAndCache2(t *testing.T) {
 		assert.Equal(t, "retrieved from cache", s) // comes from implementation below
 		return nil
 	}
-	target.PostBuildFunction = uintptr(unsafe.Pointer(&f))
+	target.PostBuildFunction = reflect.ValueOf(&f).Pointer()
 	state.Cache = &cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
