@@ -1,3 +1,9 @@
+Version 4.0.1
+-------------
+
+    * Fixes some containerised Java tests when calculating coverage.
+
+
 Version 4.0.0
 -------------
 

@@ -21,7 +21,7 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 		containerName = target.ContainerSettings.DockerImage
 	}
 	// Gentle hack: remove the absolute path from the command
-	replacedCmd = strings.Replace(replacedCmd, path.Join(core.RepoRoot, target.TestDir()), "/tmp/test", -1)
+	replacedCmd = strings.Replace(replacedCmd, testDir, "/tmp/test", -1)
 	// Fiddly hack follows to handle docker run --rm failing saying "Cannot destroy container..."
 	// "Driver aufs failed to remove root filesystem... device or resource busy"
 	cidfile := path.Join(testDir, ".container_id")
@@ -39,7 +39,7 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 		command = append(command, state.Config.Docker.RunArgs...)
 	}
 	for _, env := range core.BuildEnvironment(state, target, true) {
-		command = append(command, "-e", env)
+		command = append(command, "-e", strings.Replace(env, testDir, "/tmp/test", -1))
 	}
 	replacedCmd = "mkdir -p /tmp/test && cp -r /tmp/test_in/* /tmp/test && cd /tmp/test && " + replacedCmd
 	command = append(command, "-v", testDir+":/tmp/test_in", "-w", "/tmp/test_in", containerName, "bash", "-o", "pipefail", "-c", replacedCmd)
