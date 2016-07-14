@@ -605,6 +605,6 @@ func main() {
 	}
 
 	if !buildFunctions[command]() {
-		os.Exit(1)
+		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
 	}
 }
