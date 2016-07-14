@@ -96,7 +96,7 @@ func retrieveResultsAndRemoveContainer(target *core.BuildTarget, containerFile s
 	// to shut down immediately.
 	timeout := core.State.Config.Docker.RemoveTimeout
 	for i := 0; i < 5; i++ {
-		cmd := exec.Command("docker", "rm", string(cid))
+		cmd := exec.Command("docker", "rm", "-f", string(cid))
 		if _, err := core.ExecWithTimeout(cmd, timeout, timeout); err == nil {
 			return
 		}
