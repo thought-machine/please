@@ -3,6 +3,7 @@ Version 4.0.2
 
     * Remove Docker containers more forcibly.
     * Exit code of fatal build failures changed slightly.
+    * python_binary now correctly accepts a rule for its `main`.
 
 
 Version 4.0.1
