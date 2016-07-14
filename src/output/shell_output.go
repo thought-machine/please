@@ -76,7 +76,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 		}
 		// Die immediately and unsuccessfully, this avoids awkward interactions with
 		// --failing_tests_ok later on.
-		os.Exit(1)
+		os.Exit(-1)
 	}
 	// Check all the targets we wanted to build actually have been built.
 	for _, label := range state.ExpandOriginalTargets() {
