@@ -27,3 +27,20 @@ python_test(
     name = 'empty_test',
     srcs = ['empty_test.py'],
 )
+
+# Test that the build rules accept a python_binary that has a rule as the main.
+filegroup(
+    name = 'rule_main',
+    srcs = ['rule_main.py'],
+)
+
+python_binary(
+    name = 'rule_main_pex',
+    main = ':rule_main',
+)
+
+sh_test(
+    name = 'rule_main_test',
+    src = 'rule_main_test.sh',
+    data = [':rule_main_pex'],
+)
