@@ -161,6 +161,9 @@ def main(args):
         pex_builder.info.zip_safe = args.zip_safe
 
         # Set the entry point.
+        args.entry_point = args.entry_point.replace('/', '.')
+        if args.entry_point.endswith('.py'):
+            args.entry_point = args.entry_point[:-3]
         pex_main = add_main(args.module_dir, args.entry_point, args.src_dir)
         if args.test_package:
             # Stick with the test main, it knows what to do.

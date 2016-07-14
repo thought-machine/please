@@ -76,7 +76,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
 
 
 def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=None,
-                  interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
+                  interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER, labels=None):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -97,16 +97,17 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
+      labels (list): Labels to apply to this rule.
     """
-    main_mod = main[:-3] if main.endswith('.py') else main
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
     deps = deps or []
     cmd = ' '.join([
+        'rm -f $SRCS &&',
         pex_tool,
         '--src_dir=${TMP_DIR}',
         '--out=temp.pex',
-        '--entry_point=${PKG//\//.}.' + main_mod,
+        '--entry_point=$SRCS',
         '--interpreter=' + interpreter,
         '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
         '--zip_safe',
@@ -125,6 +126,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
     build_rule(
         name='_%s#pex' % name,
+        srcs=[main],
         outs=['.%s_main.pex.zip' % name],  # just call it .zip so everything has the same extension
         cmd=cmd,
         requires=['py', 'pex'],
@@ -151,6 +153,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         # file rather than trying to pack into a pex. Can be worked around with an
         # intermediary filegroup rule if really needed.
         provides={'py': ':_%s#lib' % name},
+        labels=labels,
     )
 
 
