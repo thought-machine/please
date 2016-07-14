@@ -1,3 +1,10 @@
+Version 4.0.2
+-------------
+
+    * Remove Docker containers more forcibly.
+    * Exit code of fatal build failures changed slightly.
+
+
 Version 4.0.1
 -------------
 

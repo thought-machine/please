@@ -86,7 +86,7 @@ var opts struct {
 	} `command:"hash" description:"Calculates hash for one or more targets"`
 
 	Test struct {
-		FailingTestsOk  bool   `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		FailingTestsOk  bool   `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NumRuns         int    `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		TestResultsFile string `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
@@ -97,7 +97,7 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
-		FailingTestsOk      bool     `long:"failing_tests_ok" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		FailingTestsOk      bool     `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NoCoverageReport    bool     `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
 		LineCoverageReport  bool     `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
 		NumRuns             int      `short:"n" long:"num_runs" description:"Number of times to run each test target."`
