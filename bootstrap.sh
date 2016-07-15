@@ -36,6 +36,7 @@ go get github.com/kardianos/osext
 go get github.com/Songmu/prompter
 go get github.com/texttheater/golang-levenshtein/levenshtein
 go get github.com/Workiva/go-datastructures/queue
+go get github.com/fsnotify/fsnotify
 
 # Determine which interpreter engines we'll build.
 INTERPRETERS="$(interpreter_target pypy)$(interpreter_target python2)$(interpreter_target python3)"
