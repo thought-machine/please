@@ -48,10 +48,15 @@ outer:
 		if !shouldInclude(f.Name, include, exclude) {
 			continue outer
 		}
+		hasTrailingSlash := strings.HasSuffix(f.Name, "/")
+		isDir := hasTrailingSlash || f.FileInfo().IsDir()
+		if isDir && !hasTrailingSlash {
+			f.Name = f.Name + "/"
+		}
 		if existing, present := getExistingFile(w, f.Name); present {
 			// Allow duplicates of directories. Seemingly the best way to identify them is that
 			// they end in a trailing slash.
-			if strings.HasSuffix(f.Name, "/") {
+			if isDir {
 				continue
 			}
 			// Allow skipping existing files that are exactly the same as the added ones.
@@ -73,7 +78,6 @@ outer:
 			}
 		}
 		f.Name = strings.TrimPrefix(f.Name, stripPrefix)
-		log.Debug("%s: %s", filepath, f.Name)
 		// Java tools don't seem to like writing a data descriptor for stored items.
 		// Unsure if this is a limitation of the format or a problem of those tools.
 		f.Flags = 0
@@ -99,10 +103,10 @@ outer:
 func shouldInclude(name string, include, exclude []string) bool {
 	for _, excl := range exclude {
 		if matched, _ := filepath.Match(excl, name); matched {
-			log.Info("Skipping %s (excluded by %s)", name, excl)
+			log.Debug("Skipping %s (excluded by %s)", name, excl)
 			return false
 		} else if matched, _ := filepath.Match(excl, filepath.Base(name)); matched {
-			log.Info("Skipping %s (excluded by %s)", name, excl)
+			log.Debug("Skipping %s (excluded by %s)", name, excl)
 			return false
 		}
 	}
@@ -114,7 +118,7 @@ func shouldInclude(name string, include, exclude []string) bool {
 			return true
 		}
 	}
-	log.Info("Skipping %s (didn't match any includes)", name)
+	log.Debug("Skipping %s (didn't match any includes)", name)
 	return false
 }
 

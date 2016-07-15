@@ -21,8 +21,9 @@ import (
 
 var log = logging.MustGetLogger("jarcat")
 
-func combine(out, in, excludeSuffix, preamble, stripPrefix, mainClass, excludeInternalPrefix string,
-	suffix, includeInternalPrefixes []string, strict, includeOther, addInitPy, dirEntries bool, renameDirs map[string]string) error {
+func combine(out, in, preamble, stripPrefix, mainClass, excludeInternalPrefix string,
+	excludeSuffixes, suffix, includeInternalPrefixes []string,
+	strict, includeOther, addInitPy, dirEntries bool, renameDirs map[string]string) error {
 	f, err := os.Create(out)
 	if err != nil {
 		return err
@@ -60,7 +61,7 @@ func combine(out, in, excludeSuffix, preamble, stripPrefix, mainClass, excludeIn
 		if path == out {
 			return nil
 		} else if !info.IsDir() {
-			if excludeSuffix == "" || !strings.HasSuffix(path, excludeSuffix) {
+			if !matchesSuffix(path, excludeSuffixes) {
 				if matchesSuffix(path, suffix) {
 					log.Debug("Adding zip file %s", path)
 					if err := java.AddZipFile(w, path, includeInternalPrefixes, excludeInternalPrefixes, stripPrefix, strict, renameDirs); err != nil {
@@ -110,7 +111,7 @@ var opts struct {
 	Out                   string            `short:"o" long:"output" description:"Output filename" required:"true"`
 	In                    string            `short:"i" long:"input" description:"Input directory" required:"true"`
 	Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
-	ExcludeSuffix         string            `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
+	ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
 	ExcludeInternalPrefix string            `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
 	IncludeInternalPrefix []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
 	StripPrefix           string            `long:"strip_prefix" description:"Prefix to strip off file names"`
@@ -129,12 +130,12 @@ func main() {
 	output.ParseFlagsOrDie("Jarcat", &opts)
 	if opts.DumbMode {
 		opts.Suffix = nil
-		opts.ExcludeSuffix = ""
+		opts.ExcludeSuffix = nil
 		opts.IncludeOther = true
 	}
 	output.InitLogging(opts.Verbosity, "", 0)
-	if err := combine(opts.Out, opts.In, opts.ExcludeSuffix, opts.Preamble, opts.StripPrefix,
-		opts.MainClass, opts.ExcludeInternalPrefix, opts.Suffix, opts.IncludeInternalPrefix,
+	if err := combine(opts.Out, opts.In, opts.Preamble, opts.StripPrefix, opts.MainClass,
+		opts.ExcludeInternalPrefix, opts.ExcludeSuffix, opts.Suffix, opts.IncludeInternalPrefix,
 		opts.Strict, opts.IncludeOther, opts.AddInitPy, !opts.NoDirEntries, opts.RenameDirs); err != nil {
 		log.Fatalf("Error combining zip files: %s\n", err)
 	}
