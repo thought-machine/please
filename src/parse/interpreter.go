@@ -601,13 +601,11 @@ func SetContainerSetting(cTarget uintptr, cName, cValue *C.char) *C.char {
 // We use in-band signalling for some errors since C can't handle multiple return values :)
 //export GetIncludeFile
 func GetIncludeFile(cPackage uintptr, cLabel *C.char) *C.char {
-	pkg := unsizep(cPackage)
 	label := C.GoString(cLabel)
 	if !strings.HasPrefix(label, "//") {
 		return C.CString("__include_defs argument must be an absolute path (ie. start with //)")
 	}
 	relPath := strings.TrimLeft(label, "/")
-	pkg.RegisterSubinclude(relPath)
 	return C.CString(path.Join(core.RepoRoot, relPath))
 }
 
@@ -645,6 +643,7 @@ func getSubincludeFile(pkg *core.Package, labelStr string) string {
 			return pyDeferParse // Again, they'll have to wait for this guy to build.
 		}
 	}
+	pkg.RegisterSubinclude(target.Label)
 	// Well if we made it to here it's actually ready to go, so tell them where to get it.
 	return path.Join(target.OutDir(), target.Outputs()[0])
 }

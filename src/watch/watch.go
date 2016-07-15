@@ -116,7 +116,9 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 		for _, dep := range target.Dependencies() {
 			startWatch(dep)
 		}
-		// TODO(pebers): Check subincludes, but we need to make that more robust.
+		for _, subinclude := range state.Graph.PackageOrDie(target.Label.PackageName).Subincludes {
+			startWatch(state.Graph.TargetOrDie(subinclude))
+		}
 	}
 
 	for _, label := range labels {

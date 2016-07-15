@@ -44,9 +44,11 @@ func QueryAffectedTargets(graph *core.BuildGraph, files, include, exclude []stri
 				invalidatePackage(pkg)
 			} else {
 				for _, subinclude := range pkg.Subincludes {
-					if _, present := filePaths[subinclude]; present {
-						invalidatePackage(pkg)
-						break
+					for _, source := range graph.TargetOrDie(subinclude).AllSourcePaths(graph) {
+						if _, present := filePaths[source]; present {
+							invalidatePackage(pkg)
+							break
+						}
 					}
 				}
 			}
