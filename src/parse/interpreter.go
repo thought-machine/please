@@ -111,6 +111,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("PROTOC_GO_PLUGIN", config.Proto.ProtocGoPlugin)
 	setConfigValue("GRPC_PYTHON_PLUGIN", config.Proto.GrpcPythonPlugin)
 	setConfigValue("GRPC_JAVA_PLUGIN", config.Proto.GrpcJavaPlugin)
+	setConfigValue("GRPC_CC_PLUGIN", config.Proto.GrpcCCPlugin)
 	setConfigValue("PROTOC_VERSION", config.Proto.ProtocVersion)
 	setConfigValue("PROTO_PYTHON_DEP", config.Proto.PythonDep)
 	setConfigValue("PROTO_JAVA_DEP", config.Proto.JavaDep)
