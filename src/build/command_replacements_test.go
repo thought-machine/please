@@ -7,8 +7,14 @@ import (
 	"path"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"core"
 )
+
+func init() {
+	core.NewBuildState(1, nil, 1, core.DefaultConfiguration())
+}
 
 func TestLocation(t *testing.T) {
 	target2 := makeTarget("//path/to:target2", "", nil)
@@ -153,6 +159,21 @@ func TestToolDirReplacement(t *testing.T) {
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
+}
+func TestBazelCompatReplacements(t *testing.T) {
+	// Check that we don't do any of these things normally.
+	target := makeTarget("//path/to:target", "cp $< $@", nil)
+	assert.Equal(t, "cp $< $@", replaceSequences(target))
+	// In Bazel compat mode we do though.
+	state := core.NewBuildState(1, nil, 1, core.DefaultConfiguration())
+	state.Config.Bazel.Compatibility = true
+	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(target))
+	// @D is the output dir, for us it's the tmp dir.
+	target.Command = "cp $SRCS $@D"
+	assert.Equal(t, "cp $SRCS $TMP_DIR", replaceSequences(target))
+	// This parenthesised syntax seems to be allowed too.
+	target.Command = "cp $(<) $(@)"
+	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(target))
 }
 
 func makeTarget(name string, command string, dep *core.BuildTarget) *core.BuildTarget {
