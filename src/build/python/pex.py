@@ -74,10 +74,11 @@ def add_test_files(test_sources, out_dir):
     extract_directory('third_party.python', 'coverage', out_dir, '.bootstrap/coverage', True)
 
 
-def add_main(module_dir, entry_point, out_dir):
+def add_main(module_dir, entry_point, out_dir, zip_safe):
     """Add pex_main.py as the entry point to a pex."""
     contents = pkg_resources.resource_string('src.build.python', 'pex_main.py').decode('utf-8')
     contents = contents.replace('__MODULE_DIR__', module_dir).replace('__ENTRY_POINT__', entry_point)
+    contents = contents.replace('__ZIP_SAFE__', str(zip_safe))
     with open(os.path.join(out_dir, 'pex_main.py'), 'w') as f:
         write_file(f, contents)
     return 'pex_main'
@@ -164,7 +165,7 @@ def main(args):
         args.entry_point = args.entry_point.replace('/', '.')
         if args.entry_point.endswith('.py'):
             args.entry_point = args.entry_point[:-3]
-        pex_main = add_main(args.module_dir, args.entry_point, args.src_dir)
+        pex_main = add_main(args.module_dir, args.entry_point, args.src_dir, args.zip_safe)
         if args.test_package:
             # Stick with the test main, it knows what to do.
             pex_builder.info.entry_point = args.entry_point

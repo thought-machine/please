@@ -358,7 +358,7 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
 
 def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
-              exclude_paths=None, native=False, artifact_type=None):
+              exclude_paths=None, native=False, artifact_type=None, test_only=False):
     """Fetches a single Java dependency from Maven.
 
     Args:
@@ -375,6 +375,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
       exclude_paths (list): Paths to remove from the downloaded .jar.
       native (bool): Attempt to download a native jar (i.e. add "-linux-x86_64" etc to the URL).
       artifact_type (str): Type of artifact to download (defaults to jar but could be e.g. aar).
+      test_only (bool): If True, this target can only be used by tests or other test_only rules.
     """
     if hash and hashes:
         raise ParseError('You can pass only one of hash or hashes to maven_jar')
@@ -423,6 +424,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         visibility=visibility,
         building_description='Fetching...',
         requires=['java'],
+        test_only=test_only,
     )
     # .aar's have an embedded classes.jar in them. Pull that out so other rules can use it.
     if artifact_type == 'aar':
@@ -438,6 +440,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
             licences = licences,
             requires = ['java'],
             exported_deps = deps,
+            test_only=test_only,
         )
         filegroup(
             name = name,
@@ -445,6 +448,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
             deps = [classes_rule],
             provides = {'java': classes_rule, 'android': main_rule},
             visibility = visibility,
+            test_only=test_only,
         )
 
 
