@@ -84,7 +84,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
 
     if 'cc' in languages:
         languages = ['cc_hdrs'] + languages  # Order is important
-        plugins['cc_hdrs'] = plugins.get('cc')
+        plugins['cc_hdrs'] = plugins.get('cc', [])
     for language in languages:
         gen_name = '_%s#protoc_%s' % (name, language)
         gen_dep = ':' + gen_name
