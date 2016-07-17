@@ -178,8 +178,13 @@ def main(args):
             sys.path.append(os.path.join(sys.argv[0], 'third_party/python'))
             add_test_files(args.test_srcs, args.src_dir)
 
-        # Add everything under the input dir.
-        add_directory(args.src_dir, '.', pex_builder)
+        if args.scan:
+            # Add everything under the input dir.
+            add_directory(args.src_dir, '.', pex_builder)
+        else:
+            # Just add bootstrap dir and main.
+            add_directory(args.src_dir, '.bootstrap', pex_builder)
+            pex_builder.add_source(pex_main + '.py', pex_main + '.py')
 
         # This function does some setuptools malarkey which is vexing me, so
         # I'm just gonna cheekily disable it for now.
@@ -209,6 +214,8 @@ if __name__ == '__main__':
     parser.add_argument('--module_dir', default='')
     parser.add_argument('--zip_safe', dest='zip_safe', action='store_true')
     parser.add_argument('--nozip_safe', dest='zip_safe', action='store_false')
+    parser.add_argument('--scan', dest='scan', action='store_true')
+    parser.add_argument('--noscan', dest='scan', action='store_false')
     parser.add_argument('--compile', dest='compile', action='store_true')
-    parser.set_defaults(zip_safe=True, compile=False)
+    parser.set_defaults(zip_safe=True, compile=False, scan=True)
     main(parser.parse_args())
