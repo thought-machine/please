@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 )
 
@@ -71,4 +72,18 @@ func (pkg *Package) MustRegisterOutput(fileName string, target *BuildTarget) {
 	if err := pkg.RegisterOutput(fileName, target); err != nil {
 		panic(err)
 	}
+}
+
+// AllChildren returns all child targets of the given one.
+// The given target is included as well.
+func (pkg *Package) AllChildren(target *BuildTarget) []*BuildTarget {
+	ret := BuildTargets{}
+	parent := target.Label.Parent()
+	for _, t := range pkg.Targets {
+		if t.Label.Parent() == parent {
+			ret = append(ret, t)
+		}
+	}
+	sort.Sort(ret)
+	return ret
 }

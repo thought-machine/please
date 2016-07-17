@@ -29,3 +29,18 @@ func TestRegisterOutput(t *testing.T) {
 	pkg.RegisterOutput("file3.go", target1)
 	assert.Error(t, pkg.RegisterOutput("file3.go", target2))
 }
+
+func TestAllChildren(t *testing.T) {
+	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
+	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
+	target2a := NewBuildTarget(ParseBuildLabel("//src/core:_target2#a", ""))
+	pkg := NewPackage("src/core")
+	pkg.Targets[target1.Label.Name] = target1
+	pkg.Targets[target2.Label.Name] = target2
+	pkg.Targets[target2a.Label.Name] = target2a
+	children := pkg.AllChildren(target2)
+	expected := []*BuildTarget{target2a, target2}
+	assert.Equal(t, expected, children)
+	children = pkg.AllChildren(target2a)
+	assert.Equal(t, expected, children)
+}

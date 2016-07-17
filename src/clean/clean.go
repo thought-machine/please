@@ -35,16 +35,12 @@ func Clean(state *core.BuildState, labels []core.BuildLabel, cleanCache, backgro
 		clean(core.OutDir)
 	} else {
 		for _, label := range labels {
-			cleanTarget(state, state.Graph.TargetOrDie(label), cleanCache)
-			// Now clean any sub-targets of this target.
+			// Clean any and all sub-targets of this target.
 			// This is not super efficient; we potentially repeat this walk multiple times if
 			// we have several targets to clean in a package. It's unlikely to be a big concern though
 			// unless we have lots of targets to clean and their packages are very large.
-			pkg := state.Graph.PackageOrDie(label.PackageName)
-			for _, target := range pkg.Targets {
-				if parent := target.Parent(state.Graph); parent != nil && parent.Label == label {
-					cleanTarget(state, target, cleanCache)
-				}
+			for _, target := range state.Graph.PackageOrDie(label.PackageName).AllChildren(state.Graph.TargetOrDie(label)) {
+				cleanTarget(state, target, cleanCache)
 			}
 		}
 	}
