@@ -121,3 +121,9 @@ go_get(
     get = 'github.com/Workiva/go-datastructures/queue',
     revision = '064f3ea06ab2337e6eaf42052392d14f779e91cb',
 )
+
+go_get(
+    name = 'fsnotify',
+    get = 'github.com/fsnotify/fsnotify',
+    revision = 'a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb',
+)

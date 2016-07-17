@@ -8,10 +8,12 @@ import (
 
 func TestRegisterSubinclude(t *testing.T) {
 	pkg := NewPackage("src/core")
-	pkg.RegisterSubinclude("src/js.build_defs")
-	pkg.RegisterSubinclude("src/go.build_defs")
-	pkg.RegisterSubinclude("src/js.build_defs")
-	assert.Equal(t, []string{"src/js.build_defs", "src/go.build_defs"}, pkg.Subincludes)
+	label1 := ParseBuildLabel("//build_defs:js", "")
+	label2 := ParseBuildLabel("//build_defs:go", "")
+	pkg.RegisterSubinclude(label1)
+	pkg.RegisterSubinclude(label2)
+	pkg.RegisterSubinclude(label1)
+	assert.Equal(t, []BuildLabel{label1, label2}, pkg.Subincludes)
 }
 
 func TestRegisterOutput(t *testing.T) {

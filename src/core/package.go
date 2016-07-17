@@ -14,7 +14,7 @@ type Package struct {
 	// Filename of the build file that defined this package
 	Filename string
 	// Subincluded build defs files that this package imported
-	Subincludes []string
+	Subincludes []BuildLabel
 	// Targets contained within the package
 	Targets map[string]*BuildTarget
 	// Set of output files from rules.
@@ -35,14 +35,14 @@ func NewPackage(name string) *Package {
 	return pkg
 }
 
-func (pkg *Package) RegisterSubinclude(filename string) {
+func (pkg *Package) RegisterSubinclude(label BuildLabel) {
 	// Ensure these are unique.
-	for _, fn := range pkg.Subincludes {
-		if fn == filename {
+	for _, l := range pkg.Subincludes {
+		if l == label {
 			return
 		}
 	}
-	pkg.Subincludes = append(pkg.Subincludes, filename)
+	pkg.Subincludes = append(pkg.Subincludes, label)
 }
 
 // RegisterOutput registers a new output file in the map.
