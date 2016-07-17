@@ -1,3 +1,13 @@
+Version 4.1.0
+-------------
+
+    * Support for generating C++ gRPC code in grpc_library.
+    * maven_jar now has a `binary` argument which prompts it to download a
+      native binary (.exe in Maven parlance).
+    * Some subtle changes to pexes to make them work better when not zip_safe.
+    * Bazel compatibility mode now supports $@, $<, etc.
+
+
 Version 4.0.2
 -------------
 
