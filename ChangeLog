@@ -1,6 +1,8 @@
 Version 4.1.0
 -------------
 
+    * New command, `plz watch`, which watches the sources of a set of targets for
+      changes and rebuilds / re-tests them when they do.
     * Support for generating C++ gRPC code in grpc_library.
     * maven_jar now has a `binary` argument which prompts it to download a
       native binary (.exe in Maven parlance).
