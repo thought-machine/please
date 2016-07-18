@@ -465,6 +465,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
             provides = {'java': classes_rule, 'android': main_rule},
             visibility = visibility,
             test_only=test_only,
+            output_is_complete = False,
         )
 
 

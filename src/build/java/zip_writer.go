@@ -35,6 +35,7 @@ func AddZipFile(w *zip.Writer, filepath string, include, exclude []string, strip
 
 outer:
 	for _, f := range r.File {
+		log.Debug("Found file %s (from %s)", f.Name, filepath)
 		// This directory is very awkward. We need to merge the contents by concatenating them,
 		// we can't replace them or leave them out.
 		if strings.HasPrefix(f.Name, "META-INF/services/") ||
@@ -74,6 +75,9 @@ outer:
 		for before, after := range renameDirs {
 			if strings.HasPrefix(f.Name, before) {
 				f.Name = path.Join(after, strings.TrimPrefix(f.Name, before))
+				if isDir {
+					f.Name = f.Name + "/"
+				}
 				break
 			}
 		}
