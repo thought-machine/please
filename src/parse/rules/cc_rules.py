@@ -506,11 +506,11 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
     def update_commands(name):
         base_path = get_base_path()
         labels = get_labels(name, 'cc:')
-        flags = ' '.join('-isystem %s' % l[4:] for l in labels if l.startswith('inc:'))
-        flags += ' '.join('-D' + l[4:] for l in labels if l.startswith('def:'))
+        flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
+        flags.extend('-D' + l[4:] for l in labels if l.startswith('def:'))
         if link:
-            flags += ' '.join('-Xlinker ' + l[3:] for l in labels if l.startswith('ld:'))
-            flags += ' '.join('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
+            flags.extend('-Xlinker ' + l[3:] for l in labels if l.startswith('ld:'))
+            flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
             alwayslink = ' '.join(l[3:] for l in labels if l.startswith('al:'))
             if alwayslink:
                 alwayslink = ' -Wl,--whole-archive %s -Wl,--no-whole-archive ' % alwayslink
@@ -518,7 +518,8 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
                     # These need to come *before* the others but within the group flags...
                     command_map[k] = v.replace('`find', alwayslink + '`find')
         if archive:
-            flags += ar_cmd
-        set_command(name, 'dbg', command_map['dbg'] + ' ' + flags)
-        set_command(name, 'opt', command_map['opt'] + ' ' + flags)
+            flags.append(ar_cmd)
+        flags = ' ' + ' '.join(flags)
+        set_command(name, 'dbg', command_map['dbg'] + flags)
+        set_command(name, 'opt', command_map['opt'] + flags)
     return update_commands

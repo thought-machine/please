@@ -108,6 +108,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         '--src_dir=${TMP_DIR}',
         '--out=temp.pex',
         '--entry_point=$SRCS',
+        '--noscan',
         '--interpreter=' + interpreter,
         '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
         '--zip_safe',
@@ -131,6 +132,8 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
         cmd=cmd,
         requires=['py', 'pex'],
         pre_build=pre_build,
+        deps=deps,
+        needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
         tools=tools,
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.

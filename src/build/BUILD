@@ -14,7 +14,8 @@ go_test(
     name = 'command_replacements_test',
     srcs = ['command_replacements_test.go'],
     deps = [
-        ':build'
+        ':build',
+        '//third_party/go:testify',
     ]
 )
 

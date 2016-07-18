@@ -14,6 +14,7 @@ except ImportError:
 # These will get templated in by the build rules.
 MODULE_DIR = '__MODULE_DIR__'
 ENTRY_POINT = '__ENTRY_POINT__'
+ZIP_SAFE = __ZIP_SAFE__
 
 ABSOLUTE_IMPORT_ONLY = 0
 DEFAULT_IMPORT_LEVEL = -1 if sys.version_info[0] < 3 else 0
@@ -37,7 +38,7 @@ def override_import(package=MODULE_DIR):
         return  # nothing to do
 
     def _override_import(name, globals=None, locals=None, fromlist=None, level=DEFAULT_IMPORT_LEVEL):
-        module_name = name.partition('.')[0]
+        module_name, _, _ = name.partition('.')
         if module_name in modules and level < 1:
             prefix = modules[module_name] + '.'
             fq_name = prefix + name
@@ -64,6 +65,9 @@ def clean_sys_path():
     """
     sys.path = [x for x in sys.path if 'dist-packages' not in x and
                 ('.pex' in x or 'please_pex' in x or x.startswith(os.path.split(os.__file__)[0]))]
+    if not ZIP_SAFE:
+        # Strip the pex paths if we're not zip safe so nothing accidentally imports from there.
+        sys.path = [x for x in sys.path if not x.endswith('.pex')]
 
 
 if __name__ == '__main__':

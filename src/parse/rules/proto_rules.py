@@ -63,6 +63,10 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         'go': find_outs('go', '.pb.go'),
         'cc': find_outs('cc', '.pb.cc'),
         'cc_hdrs': find_outs('cc', '.pb.h'),
+        'grpc_py': find_outs('py', '_pb2.py'),
+        'grpc_go': find_outs('go', '.pb.go'),
+        'grpc_cc': find_outs('cc', '.pb.cc') + find_outs('cc', '.grpc.pb.cc'),
+        'grpc_cc_hdrs': find_outs('cc', '.pb.h') + find_outs('cc', '.grpc.pb.h'),
     }
     need_post_build = file_srcs != srcs
     provides = {'proto': ':_%s#proto' % name}
@@ -80,6 +84,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
 
     if 'cc' in languages:
         languages = ['cc_hdrs'] + languages  # Order is important
+        plugins['cc_hdrs'] = plugins.get('cc', [])
     for language in languages:
         gen_name = '_%s#protoc_%s' % (name, language)
         gen_dep = ':' + gen_name
@@ -111,6 +116,9 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             labels += ['proto:go-map: %s/%s=%s/%s' % (base_path, src, base_path, name) for src in srcs
                        if not src.startswith(':') and not src.startswith('/')]
 
+        is_grpc = 'grpc' in protoc_version
+        grpc_language = ('grpc_' + language) if is_grpc else language
+
         cmd = ' && '.join(cmds)
         if protoc_version:
             cmd += ' # protoc v%s' % protoc_version
@@ -118,11 +126,11 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         build_rule(
             name = gen_name,
             srcs = srcs,
-            outs = outs.get(language, None),
+            outs = outs.get(grpc_language),
             cmd = cmd,
             deps = lang_deps,
             requires = ['proto'],
-            pre_build = _go_path_mapping(cmd, 'grpc' in protoc_version) if language == 'go' else None,
+            pre_build = _go_path_mapping(cmd, is_grpc) if language == 'go' else None,
             post_build = post_build,
             labels = labels,
             needs_transitive_deps = True,
@@ -137,6 +145,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 hdrs = [':_%s#protoc_cc_hdrs' % name],
                 deps = deps + cc_deps,
                 visibility = visibility,
+                compiler_flags = ['-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
+                pkg_config_libs = ['grpc++', 'grpc', 'protobuf'] if is_grpc else ['protobuf'],
             )
             provides['cc_hdrs'] = ':__%s#cc#hdrs' % name  # Must wire this up by hand
 
@@ -229,6 +239,11 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
         java_deps = (java_deps or []) + [CONFIG.GRPC_JAVA_DEP]
     if 'go' in languages:
         go_deps = (go_deps or []) + [CONFIG.GRPC_GO_DEP]
+    if 'cc' in languages:
+        plugins['cc'] = [
+            '--plugin=protoc-gen-grpc-cc=' + _plugin(CONFIG.GRPC_CC_PLUGIN, deps),
+            '--grpc-cc_out=$TMP_DIR',
+        ]
     proto_library(
         name = name,
         srcs = srcs,

@@ -93,6 +93,20 @@ func replaceSequencesInternal(target *core.BuildTarget, command string, test boo
 	cmd = dirReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
 		return replaceSequence(target, in[6:len(in)-1], false, true, true, false, test)
 	})
+	if core.State.Config.Bazel.Compatibility {
+		// Bazel allows several obscure Make-style variable expansions.
+		// Our replacement here is not very principled but should work better than not doing it at all.
+		cmd = strings.Replace(cmd, "$<", "$SRCS", -1)
+		cmd = strings.Replace(cmd, "$(<)", "$SRCS", -1)
+		cmd = strings.Replace(cmd, "$@D", "$TMP_DIR", -1)
+		cmd = strings.Replace(cmd, "$(@D)", "$TMP_DIR", -1)
+		cmd = strings.Replace(cmd, "$@", "$OUTS", -1)
+		cmd = strings.Replace(cmd, "$(@)", "$OUTS", -1)
+		// It also seemingly allows you to get away with this syntax, which means something
+		// fairly different in Bash, but never mind.
+		cmd = strings.Replace(cmd, "$(SRCS)", "$SRCS", -1)
+		cmd = strings.Replace(cmd, "$(OUTS)", "$OUTS", -1)
+	}
 	// We would ideally check for this when doing matches above, but not easy in
 	// Go since its regular expressions are actually regular and principled.
 	return strings.Replace(cmd, "\\$", "$", -1)

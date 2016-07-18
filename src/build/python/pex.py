@@ -74,10 +74,11 @@ def add_test_files(test_sources, out_dir):
     extract_directory('third_party.python', 'coverage', out_dir, '.bootstrap/coverage', True)
 
 
-def add_main(module_dir, entry_point, out_dir):
+def add_main(module_dir, entry_point, out_dir, zip_safe):
     """Add pex_main.py as the entry point to a pex."""
     contents = pkg_resources.resource_string('src.build.python', 'pex_main.py').decode('utf-8')
     contents = contents.replace('__MODULE_DIR__', module_dir).replace('__ENTRY_POINT__', entry_point)
+    contents = contents.replace('__ZIP_SAFE__', str(zip_safe))
     with open(os.path.join(out_dir, 'pex_main.py'), 'w') as f:
         write_file(f, contents)
     return 'pex_main'
@@ -164,7 +165,7 @@ def main(args):
         args.entry_point = args.entry_point.replace('/', '.')
         if args.entry_point.endswith('.py'):
             args.entry_point = args.entry_point[:-3]
-        pex_main = add_main(args.module_dir, args.entry_point, args.src_dir)
+        pex_main = add_main(args.module_dir, args.entry_point, args.src_dir, args.zip_safe)
         if args.test_package:
             # Stick with the test main, it knows what to do.
             pex_builder.info.entry_point = args.entry_point
@@ -177,8 +178,13 @@ def main(args):
             sys.path.append(os.path.join(sys.argv[0], 'third_party/python'))
             add_test_files(args.test_srcs, args.src_dir)
 
-        # Add everything under the input dir.
-        add_directory(args.src_dir, '.', pex_builder)
+        if args.scan:
+            # Add everything under the input dir.
+            add_directory(args.src_dir, '.', pex_builder)
+        else:
+            # Just add bootstrap dir and main.
+            add_directory(args.src_dir, '.bootstrap', pex_builder)
+            pex_builder.add_source(pex_main + '.py', pex_main + '.py')
 
         # This function does some setuptools malarkey which is vexing me, so
         # I'm just gonna cheekily disable it for now.
@@ -208,6 +214,8 @@ if __name__ == '__main__':
     parser.add_argument('--module_dir', default='')
     parser.add_argument('--zip_safe', dest='zip_safe', action='store_true')
     parser.add_argument('--nozip_safe', dest='zip_safe', action='store_false')
+    parser.add_argument('--scan', dest='scan', action='store_true')
+    parser.add_argument('--noscan', dest='scan', action='store_false')
     parser.add_argument('--compile', dest='compile', action='store_true')
-    parser.set_defaults(zip_safe=True, compile=False)
+    parser.set_defaults(zip_safe=True, compile=False, scan=True)
     main(parser.parse_args())

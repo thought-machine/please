@@ -424,9 +424,10 @@ def _get_globals(c_package, c_package_name):
         'info': lambda message, *args: _log(4, c_package, message % args),
         'debug': lambda message, *args: _log(5, c_package, message % args),
     })
-    if local_globals.get('CONFIG').BAZEL_COMPATIBILITY:
+    if bazel_compat:
         local_globals['native'] = DotDict(local_globals)
         local_globals['licenses'] = lambda l: licenses(local_globals, l)
+        local_globals['PACKAGE_NAME'] = package_name
     return local_globals
 
 

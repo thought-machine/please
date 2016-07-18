@@ -284,10 +284,13 @@ def github_file(name, repo, file, revision='master', hash=None, visibility=None,
       repo (str): Repository to fetch from (e.g. thought-machine/please).
       file (str): File in the repo to fetch (e.g. src/parse/rules/misc_rules.py).
       revision (str): Git revision to fetch from. Defaults to most recent on master.
-      hash (str): Hash of downloaded file.
+      hash (str): Hash of downloaded file. You should set 'revision' if you set this.
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If true the rule is only visible to test targets.
     """
+    if revision == 'master' and hash:
+        log.warning('Your github_file rule fetches from master but is hash verified; this '
+                    'is prone to breaking if upstream changes at any point.')
     remote_file(
         name = name,
         url = join_path('https://raw.githubusercontent.com', repo, revision, file),
@@ -295,6 +298,45 @@ def github_file(name, repo, file, revision='master', hash=None, visibility=None,
         visibility = visibility,
         test_only = test_only,
     )
+
+
+def git_repo(name, repo, revision='master', files=None, hash=None, visibility=None, test_only=False):
+    """Defines a rule to fetch a remote Git repository.
+
+    Optionally the contents returned can be filtered to a specific set of files. This won't
+    of course improve the efficiency of the fetch.
+
+    Args:
+      name (str): Name of the rule.
+      repo (str): Repository to fetch from (e.g. https://github.com/thought-machine/please.git).
+      files (list): File in the repo to fetch (e.g. ['src']).
+      revision (str): Git revision to fetch from. Defaults to most recent on master.
+      hash (str): Hash of downloaded file. You should set 'revision' if you set this.
+      visibility (list): Visibility declaration of the rule.
+      test_only (bool): If true the rule is only visible to test targets.
+    """
+    if revision == 'master' and hash:
+        log.warning('Your git_repo rule fetches from master but is hash verified; this '
+                    'is prone to breaking if upstream changes at any point.')
+    files = files or [name]
+    build_rule(
+        name = name,
+        cmd = ' && '.join([
+            'git clone -q %s %s' % (repo, name),
+            '(cd %s && git checkout -q %s)' % (name, revision),
+            'rm -rf %s/.git' % name,
+            'find ' + ' '.join(files),
+        ]),
+        post_build=_find_git_repo_files,
+        hashes = [hash] if hash else None,
+        visibility = visibility,
+        test_only = test_only,
+    )
+
+
+def _find_git_repo_files(name, output):
+    for line in output:
+        add_out(name, line)
 
 
 def fpm_package(name, files, version, package_type, links=None, package_name=None, options='',

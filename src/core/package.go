@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 )
 
@@ -13,7 +14,7 @@ type Package struct {
 	// Filename of the build file that defined this package
 	Filename string
 	// Subincluded build defs files that this package imported
-	Subincludes []string
+	Subincludes []BuildLabel
 	// Targets contained within the package
 	Targets map[string]*BuildTarget
 	// Set of output files from rules.
@@ -34,14 +35,14 @@ func NewPackage(name string) *Package {
 	return pkg
 }
 
-func (pkg *Package) RegisterSubinclude(filename string) {
+func (pkg *Package) RegisterSubinclude(label BuildLabel) {
 	// Ensure these are unique.
-	for _, fn := range pkg.Subincludes {
-		if fn == filename {
+	for _, l := range pkg.Subincludes {
+		if l == label {
 			return
 		}
 	}
-	pkg.Subincludes = append(pkg.Subincludes, filename)
+	pkg.Subincludes = append(pkg.Subincludes, label)
 }
 
 // RegisterOutput registers a new output file in the map.
@@ -71,4 +72,18 @@ func (pkg *Package) MustRegisterOutput(fileName string, target *BuildTarget) {
 	if err := pkg.RegisterOutput(fileName, target); err != nil {
 		panic(err)
 	}
+}
+
+// AllChildren returns all child targets of the given one.
+// The given target is included as well.
+func (pkg *Package) AllChildren(target *BuildTarget) []*BuildTarget {
+	ret := BuildTargets{}
+	parent := target.Label.Parent()
+	for _, t := range pkg.Targets {
+		if t.Label.Parent() == parent {
+			ret = append(ret, t)
+		}
+	}
+	sort.Sort(ret)
+	return ret
 }

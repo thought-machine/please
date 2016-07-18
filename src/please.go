@@ -24,6 +24,7 @@ import (
 	"test"
 	"update"
 	"utils"
+	"watch"
 )
 
 var log = logging.MustGetLogger("plz")
@@ -124,6 +125,12 @@ var opts struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
+
+	Watch struct {
+		Args struct {
+			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to watch the sources of for changes"`
+		} `positional-args:"true" required:"true"`
+	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
 	Update struct {
 	} `command:"update" description:"Checks for an update and updates if needed."`
@@ -266,6 +273,13 @@ var buildFunctions = map[string]func() bool{
 			return true
 		}
 		return false
+	},
+	"watch": func() bool {
+		success, state := runBuild(opts.Watch.Args.Targets, false, false, false)
+		if success {
+			watch.Watch(state, state.ExpandOriginalTargets())
+		}
+		return success
 	},
 	"update": func() bool {
 		log.Info("Up to date.")
