@@ -45,8 +45,8 @@ const (
 	dataDescriptor64Len      = 24         // descriptor with 8 byte sizes
 	directory64LocLen        = 20         //
 	directory64EndLen        = 56         // + extra
-	
-	dataDescriptorFlag       = 0x8        // Flag indicating that there's a trailing data descriptor.
+
+	dataDescriptorFlag = 0x8 // Flag indicating that there's a trailing data descriptor.
 
 	// Constants for the first byte in CreatorVersion
 	creatorFAT    = 0

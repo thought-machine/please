@@ -135,11 +135,41 @@ func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string) {
 		out.Tests[label.String()] = convertCoverage(coverage)
 	}
 	out.Files = convertCoverage(coverage.Files)
+	out.Stats = getStats(coverage)
 	if b, err := json.MarshalIndent(out, "", "    "); err != nil {
 		log.Fatalf("Failed to encode json: %s", err)
 	} else if err := ioutil.WriteFile(filename, b, 0644); err != nil {
 		log.Fatalf("Failed to write coverage results to %s: %s", filename, err)
 	}
+}
+
+// CountCoverage counts the number of lines covered and the total number coverable in a single file.
+func CountCoverage(lines []core.LineCoverage) (int, int) {
+	covered := 0
+	total := 0
+	for _, line := range lines {
+		if line == core.Covered {
+			total++
+			covered++
+		} else if line != core.NotExecutable {
+			total++
+		}
+	}
+	return covered, total
+}
+
+func getStats(coverage core.TestCoverage) stats {
+	stats := stats{CoverageByFile: map[string]string{}}
+	totalLinesCovered := 0
+	totalCoverableLines := 0
+	for _, file := range coverage.OrderedFiles() {
+		covered, total := CountCoverage(coverage.Files[file])
+		totalLinesCovered += covered
+		totalCoverableLines += total
+		stats.CoverageByFile[file] = fmt.Sprintf("%2.1f%%", 100.0*float32(covered)/float32(total))
+	}
+	stats.TotalCoverage = fmt.Sprintf("%2.1f%%", 100.0*float32(totalLinesCovered)/float32(totalCoverableLines))
+	return stats
 }
 
 func convertCoverage(in map[string][]core.LineCoverage) map[string]string {
@@ -154,6 +184,13 @@ func convertCoverage(in map[string][]core.LineCoverage) map[string]string {
 type jsonCoverage struct {
 	Tests map[string]map[string]string `json:"tests"`
 	Files map[string]string            `json:"files"`
+	Stats stats                        `json:"stats"`
+}
+
+// stats is a struct describing summarised coverage stats.
+type stats struct {
+	TotalCoverage  string            `json:"total_coverage"`
+	CoverageByFile map[string]string `json:"coverage_by_file"`
 }
 
 // RemoveFilesFromCoverage removes any files with extensions matching the given set from coverage.
