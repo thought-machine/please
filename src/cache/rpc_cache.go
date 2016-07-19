@@ -244,7 +244,7 @@ func (cache *rpcCache) isConnected() bool {
 // (it's unlikely to restart in time if it's got a nontrivial set of artifacts to scan) and
 // the user has probably been pestered by enough messages already.
 func (cache *rpcCache) error() {
-	if atomic.AddInt32(&cache.numErrors, 1) >= maxErrors {
+	if atomic.AddInt32(&cache.numErrors, 1) >= maxErrors && cache.Connected {
 		log.Warning("Disabling RPC cache, looks like the connection has been lost")
 		cache.Connected = false
 	}

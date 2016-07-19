@@ -460,7 +460,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         )
         filegroup(
             name = name,
-            srcs = [':_%s#aar' % name],
+            srcs = [main_rule],
             deps = [classes_rule],
             provides = {'java': classes_rule, 'android': main_rule},
             visibility = visibility,
