@@ -160,6 +160,7 @@ func TestToolDirReplacement(t *testing.T) {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
 }
+
 func TestBazelCompatReplacements(t *testing.T) {
 	// Check that we don't do any of these things normally.
 	target := makeTarget("//path/to:target", "cp $< $@", nil)
@@ -174,6 +175,16 @@ func TestBazelCompatReplacements(t *testing.T) {
 	// This parenthesised syntax seems to be allowed too.
 	target.Command = "cp $(<) $(@)"
 	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(target))
+}
+
+func TestHashReplacement(t *testing.T) {
+	target2 := makeTarget("//path/to:target2", "cp $< $@", nil)
+	target := makeTarget("//path/to:target", "echo $(hash //path/to:target2)", target2)
+	assert.Panics(t, func() { replaceSequences(target) }, "Can't use $(hash ) on a non-stamped target")
+	target.Stamp = true
+	// Note that this hash is determined arbitrarily, it doesn't matter for this test
+	// precisely what its value is.
+	assert.Equal(t, "echo atEv6JE4Af62tnNvDkjWmnWRY5I", replaceSequences(target))
 }
 
 func makeTarget(name string, command string, dep *core.BuildTarget) *core.BuildTarget {
