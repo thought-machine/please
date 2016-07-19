@@ -159,16 +159,16 @@ func CountCoverage(lines []core.LineCoverage) (int, int) {
 }
 
 func getStats(coverage core.TestCoverage) stats {
-	stats := stats{CoverageByFile: map[string]string{}}
+	stats := stats{CoverageByFile: map[string]float32{}}
 	totalLinesCovered := 0
 	totalCoverableLines := 0
 	for _, file := range coverage.OrderedFiles() {
 		covered, total := CountCoverage(coverage.Files[file])
 		totalLinesCovered += covered
 		totalCoverableLines += total
-		stats.CoverageByFile[file] = fmt.Sprintf("%2.1f%%", 100.0*float32(covered)/float32(total))
+		stats.CoverageByFile[file] = 100.0 * float32(covered) / float32(total)
 	}
-	stats.TotalCoverage = fmt.Sprintf("%2.1f%%", 100.0*float32(totalLinesCovered)/float32(totalCoverableLines))
+	stats.TotalCoverage = 100.0 * float32(totalLinesCovered) / float32(totalCoverableLines)
 	return stats
 }
 
@@ -189,8 +189,8 @@ type jsonCoverage struct {
 
 // stats is a struct describing summarised coverage stats.
 type stats struct {
-	TotalCoverage  string            `json:"total_coverage"`
-	CoverageByFile map[string]string `json:"coverage_by_file"`
+	TotalCoverage  float32            `json:"total_coverage"`
+	CoverageByFile map[string]float32 `json:"coverage_by_file"`
 }
 
 // RemoveFilesFromCoverage removes any files with extensions matching the given set from coverage.
