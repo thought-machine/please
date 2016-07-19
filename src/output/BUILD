@@ -44,10 +44,11 @@ go_library(
     deps = TEMPLATED_FILES_DEPS + [
         '//src/build',
         '//src/core',
-	'//third_party/go:go-flags',
-	'//third_party/go:humanize',
-	'//third_party/go:logging',
-	'//third_party/go:terminal',
+        '//src/test',
+        '//third_party/go:go-flags',
+        '//third_party/go:humanize',
+        '//third_party/go:logging',
+        '//third_party/go:terminal',
     ],
     visibility = ['PUBLIC'],
 )
