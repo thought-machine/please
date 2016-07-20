@@ -149,6 +149,16 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 		log.Debug("Couldn't retrieve artifacts for %s [key %s] from RPC cache", target.Label, base64.RawURLEncoding.EncodeToString(req.Hash))
 		return false
 	}
+	// Remove any existing outputs first; this is important for cases where the output is a
+	// directory, because we get back individual artifacts, and we need to make sure that
+	// only the retrieved artifacts are present in the output.
+	for _, out := range target.Outputs() {
+		out := path.Join(target.OutDir(), out)
+		if err := os.RemoveAll(out); err != nil {
+			log.Error("Failed to remove artifact %s: %s", out, err)
+			return false
+		}
+	}
 	for _, artifact := range response.Artifacts {
 		if !cache.writeFile(target, artifact.File, artifact.Body) {
 			return false
