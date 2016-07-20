@@ -1,3 +1,10 @@
+Version 4.2.1
+-------------
+
+    * The RPC cache now deletes outputs of a target to fix a rare case around targets
+      that have an output that is a directory and items in it are later removed.
+
+
 Version 4.2.0
 -------------
 
