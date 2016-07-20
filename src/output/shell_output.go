@@ -19,6 +19,7 @@ import (
 
 	"build"
 	"core"
+	"test"
 )
 
 var startTime = time.Now()
@@ -397,7 +398,7 @@ func PrintCoverage(state *core.BuildState, includeFiles []string) {
 			printf("${WHITE}%s:${RESET}\n", strings.TrimRight(dir, "/"))
 		}
 		lastDir = dir
-		covered, total := countCoverage(state.Coverage.Files[file])
+		covered, total := test.CountCoverage(state.Coverage.Files[file])
 		printf("  %s\n", coveragePercentage(covered, total, file[len(dir)+1:]))
 		totalCovered += covered
 		totalTotal += total
@@ -420,7 +421,7 @@ func PrintLineCoverageReport(state *core.BuildState, includeFiles []string) {
 			continue
 		}
 		coverage := state.Coverage.Files[file]
-		covered, total := countCoverage(coverage)
+		covered, total := test.CountCoverage(coverage)
 		printf("${BOLD_WHITE}%s: %s${RESET}\n", file, coveragePercentage(covered, total, ""))
 		f, err := os.Open(file)
 		if err != nil {
@@ -454,21 +455,6 @@ func shouldInclude(file string, files []string) bool {
 		}
 	}
 	return false
-}
-
-// countCoverage counts the number of lines covered and the total number coverable in a single file.
-func countCoverage(lines []core.LineCoverage) (int, int) {
-	covered := 0
-	total := 0
-	for _, line := range lines {
-		if line == core.Covered {
-			total++
-			covered++
-		} else if line != core.NotExecutable {
-			total++
-		}
-	}
-	return covered, total
 }
 
 // Returns some appropriate ANSI colour code for a coverage percentage.
