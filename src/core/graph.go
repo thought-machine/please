@@ -4,7 +4,6 @@
 
 package core
 
-import "fmt"
 import "sort"
 import "sync"
 
@@ -174,11 +173,6 @@ func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
 // This is complicated somewhat by the require/provide mechanism which is resolved at this
 // point, but some of the dependencies may not yet exist.
 func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
-	if !fromTarget.CanSee(toTarget) {
-		panic(fmt.Sprintf("Target %s isn't visible to %s", toTarget.Label, fromTarget.Label))
-	} else if toTarget.TestOnly && !(fromTarget.IsTest || fromTarget.TestOnly) {
-		panic(fmt.Sprintf("Target %s can't depend on %s, it's marked test_only", fromTarget.Label, toTarget.Label))
-	}
 	for _, label := range toTarget.ProvideFor(fromTarget) {
 		target, present := graph.targets[label]
 		if present {

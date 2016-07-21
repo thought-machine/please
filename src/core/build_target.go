@@ -386,16 +386,15 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 	return false
 }
 
-// CheckDependencyVisibility checks that all dependencies of this target are visible to it.
+// CheckDependencyVisibility checks that all declared dependencies of this target are visible to it.
 // Returns an error if not, or nil if all's well.
-func (target *BuildTarget) CheckDependencyVisibility() error {
-	for _, deps := range target.dependencies {
-		for _, dep := range deps.deps {
-			if !target.CanSee(dep) {
-				return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
-			} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
-				return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
-			}
+func (target *BuildTarget) CheckDependencyVisibility(graph *BuildGraph) error {
+	for d := range target.dependencies {
+		dep := graph.TargetOrDie(d)
+		if !target.CanSee(dep) {
+			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
+		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
+			return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
 		}
 	}
 	return nil
