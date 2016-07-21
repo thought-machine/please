@@ -168,7 +168,9 @@ func getStats(coverage core.TestCoverage) stats {
 		totalCoverableLines += total
 		stats.CoverageByFile[file] = 100.0 * float32(covered) / float32(total)
 	}
-	stats.TotalCoverage = 100.0 * float32(totalLinesCovered) / float32(totalCoverableLines)
+	if totalCoverableLines > 0 {
+		stats.TotalCoverage = 100.0 * float32(totalLinesCovered) / float32(totalCoverableLines)
+	}
 	return stats
 }
 
