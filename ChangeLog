@@ -1,3 +1,10 @@
+Version 4.2.2
+-------------
+
+    * Another RPC cache fix, do not delete outputs when retrieving other files, only
+      when retrieving the main ones in the build step.
+
+
 Version 4.2.1
 -------------
 
