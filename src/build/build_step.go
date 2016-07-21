@@ -65,7 +65,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}()
 
 	if err := target.CheckDependencyVisibility(); err != nil {
-		return err
+		log.Fatalf("Visibility fail, shouldn't get here")
 	}
 	// We can't do this check until build time, until then we don't know what all the outputs
 	// will be (eg. for filegroups that collect outputs of other rules).
