@@ -46,23 +46,32 @@ func TestCheckDependencyVisibility(t *testing.T) {
 	target7 := makeTarget("//src/test/python:test1", "", target5, target4)
 	target7.IsTest = true
 
+	graph := NewGraph()
+	graph.AddTarget(target1)
+	graph.AddTarget(target2)
+	graph.AddTarget(target3)
+	graph.AddTarget(target4)
+	graph.AddTarget(target5)
+	graph.AddTarget(target6)
+	graph.AddTarget(target7)
+
 	// Deps should all be correct at this point
-	assert.NoError(t, target1.CheckDependencyVisibility())
-	assert.NoError(t, target2.CheckDependencyVisibility())
-	assert.NoError(t, target3.CheckDependencyVisibility())
-	assert.NoError(t, target4.CheckDependencyVisibility())
-	assert.NoError(t, target5.CheckDependencyVisibility())
-	assert.NoError(t, target6.CheckDependencyVisibility())
-	assert.NoError(t, target7.CheckDependencyVisibility())
+	assert.NoError(t, target1.CheckDependencyVisibility(graph))
+	assert.NoError(t, target2.CheckDependencyVisibility(graph))
+	assert.NoError(t, target3.CheckDependencyVisibility(graph))
+	assert.NoError(t, target4.CheckDependencyVisibility(graph))
+	assert.NoError(t, target5.CheckDependencyVisibility(graph))
+	assert.NoError(t, target6.CheckDependencyVisibility(graph))
+	assert.NoError(t, target7.CheckDependencyVisibility(graph))
 
 	// Now if we add a dep on this mock library, lib2 will fail because it's not a test.
 	target2.resolveDependency(target5.Label, target5)
-	assert.Error(t, target2.CheckDependencyVisibility())
+	assert.Error(t, target2.CheckDependencyVisibility(graph))
 
 	// Similarly to above test, if we add a dep on something that can't be seen, we should
 	// get errors back from this function.
 	target3.resolveDependency(target1.Label, target1)
-	assert.Error(t, target3.CheckDependencyVisibility())
+	assert.Error(t, target3.CheckDependencyVisibility(graph))
 }
 
 func TestAddOutput(t *testing.T) {
