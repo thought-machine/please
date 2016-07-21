@@ -269,10 +269,11 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 	if target.State() >= core.Active && !rescan && !forceBuild {
 		return // Target is already tagged to be built and likely on the queue.
 	}
-	// Only do this bit if we actually need to build the targe
+	// Only do this bit if we actually need to build the target
 	if !target.SyncUpdateState(core.Inactive, core.Semiactive) && !rescan && !forceBuild {
 		return
 	}
+	log.Debug("Activating target %s (depended on by %s)", label, dependor)
 	if state.NeedBuild || forceBuild {
 		if target.SyncUpdateState(core.Semiactive, core.Active) {
 			state.AddActiveTarget()
