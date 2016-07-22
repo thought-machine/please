@@ -131,6 +131,9 @@ func replaceSequence(target *core.BuildTarget, in string, runnable, multiple, di
 			return replaceSequenceLabel(target, *label, in, runnable, multiple, dir, outPrefix, hash, test, false)
 		}
 	}
+	if hash {
+		return base64.RawURLEncoding.EncodeToString(mustPathHash(path.Join(target.Label.PackageName, in)))
+	}
 	return quote(path.Join(target.Label.PackageName, in))
 }
 

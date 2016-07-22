@@ -168,6 +168,14 @@ func pathHash(path string, recalc bool) ([]byte, error) {
 	return result, err
 }
 
+func mustPathHash(path string) []byte {
+	hash, err := pathHash(path, false)
+	if err != nil {
+		panic(err)
+	}
+	return hash
+}
+
 func pathHashImpl(path string) ([]byte, error) {
 	h := sha1.New()
 	info, err := os.Lstat(path)
