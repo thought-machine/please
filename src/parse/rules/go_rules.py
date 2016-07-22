@@ -161,7 +161,7 @@ def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=Fals
     env_cmd = ' '.join('export %s="%s";' % (k, v) for k, v in sorted(env.items()))
     cmd = ' && '.join([
         'if [ ! -d src ]; then ln -s . src; fi',
-        'go install ${PKG#*src/}',
+        'go install -gcflags "-trimpath $TMP_DIR" ${PKG#*src/}',
         'mv pkg/${OS}_${ARCH}/${PKG#*src/}.a $OUT',
     ])
 
