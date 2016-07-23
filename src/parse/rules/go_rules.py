@@ -402,9 +402,9 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
         cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
     if patch:
         cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$(location %s)' % (subdir, patch))
-    cmd.append('go install ' + get)
+    cmd.append('go install -gcflags "-trimpath $TMP_DIR" ' + get)
     if install:
-        cmd.extend('go install %s' % lib for lib in install)
+        cmd.extend('go install -gcflags "-trimpath $TMP_DIR" %s' % lib for lib in install)
     if not binary:
         cmd.extend([
             'find . -name .git | xargs rm -rf',
