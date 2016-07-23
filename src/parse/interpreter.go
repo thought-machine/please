@@ -353,6 +353,8 @@ func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported boo
 		return C.CString(err.Error())
 	}
 	target.AddMaybeExportedDependency(dep, exported)
+	// Note that here we're in a post-build function so we must call this explicitly
+	// (in other callbacks it's handled after the package parses all at once).
 	core.State.Graph.AddDependency(target.Label, dep)
 	return nil
 }
