@@ -22,21 +22,21 @@ func init() {
 
 func TestFilesToClean(t *testing.T) {
 	c := newCache("test_files_to_clean")
-	c.cachedFiles["test/artifact/1"] = &cachedFile{
+	c.cachedFiles.Set("test/artifact/1", &cachedFile{
 		lastReadTime: time.Now().AddDate(0, 0, -2),
 		readCount:    0,
 		size:         1000,
-	}
-	c.cachedFiles["test/artifact/2"] = &cachedFile{
+	})
+	c.cachedFiles.Set("test/artifact/2", &cachedFile{
 		lastReadTime: time.Now().AddDate(0, 0, -5),
 		readCount:    0,
 		size:         1000,
-	}
-	c.cachedFiles["test/artifact/3"] = &cachedFile{
+	})
+	c.cachedFiles.Set("test/artifact/3", &cachedFile{
 		lastReadTime: time.Now().AddDate(0, 0, -1),
 		readCount:    0,
 		size:         1000,
-	}
+	})
 	c.totalSize = 3000
 
 	paths := c.filesToClean(1700)

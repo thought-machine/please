@@ -5,6 +5,7 @@ go_library(
         '//src/cache/proto:rpc_cache',
         '//src/cache/tools',
         '//src/core',
+        '//third_party/go:concurrent-map',
         '//third_party/go:mux',
         '//third_party/go:logging',
         '//third_party/go:humanize',
@@ -64,6 +65,15 @@ go_test(
         '//third_party/go:testify',
     ],
     data = [':test_data'],
+)
+
+go_test(
+    name = 'cache_stress_test',
+    srcs = ['cache_stress_test.go'],
+    deps = [
+        ':server',
+        '//third_party/go:testify',
+    ],
 )
 
 filegroup(

@@ -127,3 +127,9 @@ go_get(
     get = 'github.com/fsnotify/fsnotify',
     revision = 'a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb',
 )
+
+go_get(
+    name = 'concurrent-map',
+    get = 'github.com/streamrail/concurrent-map',
+    revision = '5fc745307dc80a1883243b978f7e7c0fd5ce7206',
+)

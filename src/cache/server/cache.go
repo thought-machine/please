@@ -10,7 +10,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/streamrail/concurrent-map"
 
 	"cache/tools"
 	"core"
@@ -30,8 +33,7 @@ type cachedFile struct {
 
 // A Cache is the underlying implementation of our HTTP and RPC caches that handles storing & retrieving artifacts.
 type Cache struct {
-	cachedFiles map[string]*cachedFile
-	mutex       sync.RWMutex
+	cachedFiles cmap.ConcurrentMap
 	totalSize   int64
 	rootPath    string
 }
@@ -56,9 +58,7 @@ func newCache(path string) *Cache {
 
 // scan scans the directory tree for files.
 func (cache *Cache) scan() {
-	cache.mutex.Lock()
-	defer cache.mutex.Unlock()
-	cache.cachedFiles = map[string]*cachedFile{}
+	cache.cachedFiles = cmap.New()
 	cache.totalSize = 0
 
 	if !core.PathExists(cache.rootPath) {
@@ -76,25 +76,24 @@ func (cache *Cache) scan() {
 			name = name[len(cache.rootPath)+1 : len(name)]
 			log.Debug("Found file %s", name)
 			size := info.Size()
-			cache.cachedFiles[name] = &cachedFile{
+			cache.cachedFiles.Set(name, &cachedFile{
 				lastReadTime: time.Unix(tools.AccessTime(info), 0),
 				readCount:    0,
 				size:         size,
-			}
+			})
 			cache.totalSize += size
 		}
 		return nil
 	})
-	log.Info("Scan complete, found %d entries", len(cache.cachedFiles))
+	log.Info("Scan complete, found %d entries", cache.cachedFiles.Count())
 }
 
 // lockFile locks a file for reading or writing.
 // It returns a locked mutex corresponding to that file or nil if there is none.
 // The caller should .Unlock() the mutex once they're done with it.
 func (cache *Cache) lockFile(path string, write bool, size int64) *cachedFile {
-	cache.mutex.Lock()
-	defer cache.mutex.Unlock()
-	file, present := cache.cachedFiles[path]
+	filei, present := cache.cachedFiles.Get(path)
+	var file *cachedFile
 	if !present {
 		// If we're writing we insert a new one, if we're reading we don't.
 		if !write {
@@ -104,29 +103,30 @@ func (cache *Cache) lockFile(path string, write bool, size int64) *cachedFile {
 			readCount: 0,
 			size:      size,
 		}
-		cache.cachedFiles[path] = file
-		cache.totalSize += size
-	}
-	if write {
 		file.Lock()
+		cache.cachedFiles.Set(path, file)
+		atomic.AddInt64(&cache.totalSize, size)
 	} else {
-		file.RLock()
-		file.readCount++
+		file = filei.(*cachedFile)
+		if write {
+			file.Lock()
+		} else {
+			file.RLock()
+			file.readCount++
+		}
 	}
 	file.lastReadTime = time.Now()
 	return file
 }
 
 // removeFile deletes a file from the cache map. It does not remove the on-disk file.
-// Caller should already hold the mutex before calling this
 func (cache *Cache) removeFile(path string, file *cachedFile) {
-	delete(cache.cachedFiles, path)
-	cache.totalSize -= file.size
+	cache.cachedFiles.Remove(path)
+	atomic.AddInt64(&cache.totalSize, -file.size)
 	log.Debug("Removing file %s, saves %d, new size will be %d", path, file.size, cache.totalSize)
 }
 
 // removeAndDeleteFile deletes a file from the cache map and on-disk.
-// Caller should already hold the mutex before calling this
 func (cache *Cache) removeAndDeleteFile(p string, file *cachedFile) {
 	cache.removeFile(p, file)
 	p = path.Join(cache.rootPath, p)
@@ -222,16 +222,22 @@ func (cache *Cache) StoreArtifact(artPath string, key []byte) error {
 // DeleteArtifact takes in the artifact path as a parameter and removes the artifact from disk.
 // The function will return the first error found in the process, or nil if the process is successful.
 func (cache *Cache) DeleteArtifact(artPath string) error {
+	log.Info("Deleting artifact %s", artPath)
 	// We need to search the entire map for prefixes. Pessimism follows...
-	cache.mutex.Lock()
-	for p, file := range cache.cachedFiles {
-		if strings.HasPrefix(p, artPath) {
-			file.Lock()
-			cache.removeFile(p, file)
-			file.Unlock()
+	paths := cachedFilePaths{}
+	for t := range cache.cachedFiles.IterBuffered() {
+		if strings.HasPrefix(t.Key, artPath) {
+			paths = append(paths, cachedFilePath{file: t.Val.(*cachedFile), path: t.Key})
 		}
 	}
-	cache.mutex.Unlock()
+	// NB. We can't do this in the loop above because there's a risk of deadlock.
+	//     We create the temporary slice in preference to calling .Items() and duplicating
+	//     the entire map.
+	for _, p := range paths {
+		p.file.Lock()
+		cache.removeFile(p.path, p.file)
+		p.file.Unlock()
+	}
 	return os.RemoveAll(path.Join(cache.rootPath, artPath))
 }
 
@@ -239,44 +245,38 @@ func (cache *Cache) DeleteArtifact(artPath string) error {
 // The function will return the first error found in the process, or nil if the process is successful.
 func (cache *Cache) DeleteAllArtifacts() error {
 	// Empty entire cache now.
-	cache.mutex.Lock()
-	cache.cachedFiles = map[string]*cachedFile{}
-	cache.mutex.Unlock()
-	defer cache.scan() // Rescan whatever's left afterwards.
-
-	files, err := ioutil.ReadDir(cache.rootPath)
-	if err != nil && os.IsNotExist(err) {
-		log.Warning("%s directory does not exist, nothing to delete.", cache.rootPath)
-		return nil
-	} else if err != nil {
-		log.Errorf("Error reading cache directory: %s", err)
+	cache.cachedFiles = cmap.New()
+	cache.totalSize = 0
+	// Move directory somewhere else
+	tempPath := cache.rootPath + "_deleting"
+	if err := os.Rename(cache.rootPath, tempPath); err != nil {
 		return err
 	}
-	for _, file := range files {
-		p := path.Join(cache.rootPath, file.Name())
-		if err := os.RemoveAll(p); err != nil {
-			log.Errorf("Failed to remove directory %s: %s", p, err)
-			return err
-		}
-	}
-	return nil
+	return os.RemoveAll(tempPath)
 }
 
 // clean implements a periodic clean of the cache to remove old artifacts.
 func (cache *Cache) clean(cleanFrequency int, lowWaterMark, highWaterMark int64) {
 	for _ = range time.NewTicker(time.Duration(cleanFrequency) * time.Second).C {
-		log.Debug("Total size: %d High water mark: %d", cache.totalSize, highWaterMark)
-		if cache.totalSize > highWaterMark {
-			log.Info("Cleaning cache...")
-			files := cache.filesToClean(lowWaterMark)
-			log.Info("Identified %d files to clean...", len(files))
-			for _, file := range files {
-				lock := cache.lockFile(file.path, true, file.file.size)
-				cache.removeAndDeleteFile(file.path, file.file)
-				lock.Unlock()
-			}
-		}
+		cache.singleClean(lowWaterMark, highWaterMark)
 	}
+}
+
+// singleClean runs a single clean of the cache. It's split out for testing purposes.
+func (cache *Cache) singleClean(lowWaterMark, highWaterMark int64) bool {
+	log.Debug("Total size: %d High water mark: %d", cache.totalSize, highWaterMark)
+	if cache.totalSize > highWaterMark {
+		log.Info("Cleaning cache...")
+		files := cache.filesToClean(lowWaterMark)
+		log.Info("Identified %d files to clean...", len(files))
+		for _, file := range files {
+			lock := cache.lockFile(file.path, true, file.file.size)
+			cache.removeAndDeleteFile(file.path, file.file)
+			lock.Unlock()
+		}
+		return true
+	}
+	return false
 }
 
 // cachedFilePath embeds a cachedFile but with the path too.
@@ -297,12 +297,10 @@ func (c cachedFilePaths) Less(i, j int) bool {
 // artifacts in the cache according to some heuristic. Removing all of them will be
 // sufficient to reduce the cache size below lowWaterMark.
 func (cache *Cache) filesToClean(lowWaterMark int64) cachedFilePaths {
-	cache.mutex.Lock()
 	ret := make(cachedFilePaths, 0, len(cache.cachedFiles))
-	for path, file := range cache.cachedFiles {
-		ret = append(ret, cachedFilePath{file: file, path: path})
+	for t := range cache.cachedFiles.IterBuffered() {
+		ret = append(ret, cachedFilePath{file: t.Val.(*cachedFile), path: t.Key})
 	}
-	cache.mutex.Unlock()
 	sort.Sort(&ret)
 
 	sizeToDelete := cache.totalSize - lowWaterMark
