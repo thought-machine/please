@@ -32,7 +32,7 @@ type BuildTarget struct {
 	// Dependencies of this target.
 	// Maps the original declaration to whatever dependencies actually got attached,
 	// which may be more than one in some cases. Also contains info about exporting etc.
-	dependencies map[BuildLabel]depInfo
+	dependencies []depInfo
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
 	// Source files of this rule. Can refer to build rules themselves.
@@ -119,6 +119,7 @@ type BuildTarget struct {
 }
 
 type depInfo struct {
+	declared BuildLabel     // the originally declared dependency
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
@@ -250,10 +251,9 @@ func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
 // DeclaredDependencies returns the original declaration of this target's dependencies.
 func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 	ret := make(BuildLabels, 0, len(target.dependencies))
-	for dep := range target.dependencies {
-		ret = append(ret, dep)
+	for _, dep := range target.dependencies {
+		ret = append(ret, dep.declared)
 	}
-	sort.Sort(ret)
 	return ret
 }
 
@@ -272,18 +272,21 @@ func (target *BuildTarget) Dependencies() []*BuildTarget {
 // ExportedDependencies returns any exported dependencies of this target.
 func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	ret := make(BuildLabels, 0, len(target.dependencies))
-	for dep, info := range target.dependencies {
+	for _, info := range target.dependencies {
 		if info.exported {
-			ret = append(ret, dep)
+			ret = append(ret, info.declared)
 		}
 	}
-	sort.Sort(ret)
 	return ret
 }
 
 // DependenciesFor returns the dependencies that relate to a given label.
 func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
-	return target.dependencies[label].deps
+	info := target.dependencyInfo(label)
+	if info != nil {
+		return info.deps
+	}
+	return nil
 }
 
 // DeclaredOutputs returns the outputs from this target's original declaration.
@@ -311,8 +314,8 @@ func (target *BuildTarget) Outputs() []string {
 // findOutputTarget finds, among this target's dependencies, the target that outputs
 // the given label, and returns its outputs.
 func (target *BuildTarget) findOutputTarget(label BuildLabel, out string) []string {
-	for declared, deps := range target.dependencies {
-		if declared == label {
+	for _, deps := range target.dependencies {
+		if deps.declared == label {
 			ret := []string{}
 			for _, dep := range deps.deps {
 				ret = append(ret, dep.Outputs()...)
@@ -389,8 +392,8 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 // CheckDependencyVisibility checks that all declared dependencies of this target are visible to it.
 // Returns an error if not, or nil if all's well.
 func (target *BuildTarget) CheckDependencyVisibility(graph *BuildGraph) error {
-	for d := range target.dependencies {
-		dep := graph.TargetOrDie(d)
+	for _, d := range target.dependencies {
+		dep := graph.TargetOrDie(d.declared)
 		if !target.CanSee(dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
 		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
@@ -415,32 +418,36 @@ func (target *BuildTarget) CheckDuplicateOutputs() error {
 
 // HasDependency checks if a target already depends on this label.
 func (target *BuildTarget) HasDependency(label BuildLabel) bool {
-	for dep := range target.dependencies {
-		if dep == label {
-			return true
-		}
-	}
-	return false
+	return target.dependencyInfo(label) != nil
 }
 
 // hasResolvedDependency returns true if a particular dependency has been resolved to real targets yet.
 func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
-	for declared, deps := range target.dependencies {
-		if declared == label {
-			return deps.resolved
-		}
-	}
-	return false
+	info := target.dependencyInfo(label)
+	return info != nil && info.resolved
 }
 
 // resolveDependency resolves a particular dependency on a target.
 func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget) {
-	info := target.dependencies[label]
+	info := target.dependencyInfo(label)
+	if info == nil {
+		target.dependencies = append(target.dependencies, depInfo{declared: label})
+		info = &target.dependencies[len(target.dependencies)-1]
+	}
 	if dep != nil {
 		info.deps = append(info.deps, dep)
 	}
 	info.resolved = true
-	target.dependencies[label] = info
+}
+
+// dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.
+func (target *BuildTarget) dependencyInfo(label BuildLabel) *depInfo {
+	for i, info := range target.dependencies {
+		if info.declared == label {
+			return &target.dependencies[i]
+		}
+	}
+	return nil
 }
 
 // State returns the target's current state.
@@ -632,15 +639,11 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported b
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
 	}
-	if target.dependencies == nil {
-		target.dependencies = map[BuildLabel]depInfo{dep: depInfo{exported: exported}}
-	} else if !target.HasDependency(dep) {
-		target.dependencies[dep] = depInfo{exported: exported}
+	info := target.dependencyInfo(dep)
+	if info == nil {
+		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported})
 	} else if exported {
-		// Make sure this is set in case it was already added as a non-exported dependency.
-		info := target.dependencies[dep]
-		info.exported = true
-		target.dependencies[dep] = info
+		info.exported = exported
 	}
 }
 

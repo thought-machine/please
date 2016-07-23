@@ -41,3 +41,17 @@ go_test(
     },
     data = ['test_data'],
 )
+
+go_test(
+    name = 'build_step_stress_test',
+    srcs = ['build_step_stress_test.go'],
+    deps = [
+        ':build',
+        '//src/core',
+        '//src/output',
+        '//third_party/go:testify',
+    ],
+    mocks = {
+        'parse': '//src/mock:parse',
+    },
+)
