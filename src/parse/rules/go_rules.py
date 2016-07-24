@@ -425,6 +425,28 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
     )
 
 
+def go_yacc(name, src, out=None, visibility=None, labels=None):
+    """Defines a rule that invokes 'go tool yacc' to generate Go source using yacc.
+
+    Args:
+      name (str): Name of the rule.
+      src (str): Source file for the rule. There can be only one.
+      out (str): Output file for the rule. Defaults to name + '.yacc.go'.
+      visibility (list): Visibility specification.
+      labels (list): Labels for this rule.
+    """
+    build_rule(
+        name = name,
+        srcs = [src],
+        outs = [out or name + '.yacc.go'],
+        cmd = 'go tool yacc -o $OUT $SRC',
+        building_description = 'yaccing...',
+        visibility = visibility,
+        labels = labels,
+        requires = ['go'],
+    )
+
+
 def _extra_outs(get):
     """Attaches extra outputs to go_get rules."""
     def _inner(name, output):
