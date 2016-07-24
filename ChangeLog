@@ -1,3 +1,13 @@
+Version 4.3.0
+-------------
+
+    * Default compiler options for javac are now settable in config file.
+    * Fixes to rare, subtle & quick to anger panics from concurrent map accesses in
+      plz and the cache servers.
+    * Fix to C++ tests where very rarely the output file got overwritten.
+    * Work paths are correctly stripped from cgo_library and go_get rules.
+
+
 Version 4.2.2
 -------------
 
