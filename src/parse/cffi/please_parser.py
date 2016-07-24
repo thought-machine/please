@@ -403,8 +403,9 @@ def _get_globals(c_package, c_package_name):
     local_globals['get_labels'] = lambda name, prefix: get_labels(c_package, name, prefix)
     local_globals['has_label'] = lambda name, prefix: has_label(c_package, name, prefix)
     local_globals['get_base_path'] = lambda: package_name
-    local_globals['add_dep'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, False))
-    local_globals['add_exported_dep'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, True))
+    local_globals['add_dep'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, False, False))
+    local_globals['add_exported_dep'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, True, False))
+    local_globals['add_tool'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, False, True))
     local_globals['add_out'] = lambda target, out: _check_c_error(_add_output(c_package, target, out))
     local_globals['add_licence'] = lambda name, licence: _check_c_error(_add_licence_post(c_package, name, licence))
     local_globals['set_command'] = lambda name, config, command='': _check_c_error(_set_command(c_package, name, config, command))
