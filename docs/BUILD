@@ -1,4 +1,5 @@
 deps = []
+
 for src in glob(['*.html'], excludes=['header.html']):
     name = src.replace('.', '_')
     genrule(

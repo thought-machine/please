@@ -21,15 +21,15 @@ go_get(
 go_get(
     name = 'gcfg',
     get = 'gopkg.in/gcfg.v1',
-    revision = 'a3bc0742e3bbfd16123e6cee742cadec9a3301d2',
     patch = 'gcfg_dynamic_fields.patch',
+    revision = 'a3bc0742e3bbfd16123e6cee742cadec9a3301d2',
 )
 
 go_get(
     name = 'go-bindata',
+    binary = True,
     get = 'github.com/jteeuwen/go-bindata/...',
     revision = 'a0ff2567cfb70903282db057e799fd826784d41d',
-    binary = True,
 )
 
 go_get(
@@ -62,8 +62,8 @@ go_get(
 go_get(
     name = 'grpc',
     get = 'google.golang.org/grpc',
-    revision = '461dac99975b211ed3eda7eb45b997d82da4345a',
     install = ['google.golang.org/grpc/health'],
+    revision = '461dac99975b211ed3eda7eb45b997d82da4345a',
     deps = [
         ':protobuf',
     ],
@@ -71,9 +71,9 @@ go_get(
 
 go_get(
     name = 'protoc-gen-go',
+    binary = True,
     get = 'github.com/golang/protobuf/protoc-gen-go',
     revision = '3852dcfda249c2097355a6aabb199a28d97b30df',
-    binary = True,
 )
 
 go_get(
@@ -105,9 +105,9 @@ go_get(
 
 go_get(
     name = 'stringer',
+    binary = True,
     get = 'golang.org/x/tools/cmd/stringer',
     revision = 'f8ecfdb6b66ec67ca930b39806519a2b72d1eaca',
-    binary = True,
 )
 
 go_get(

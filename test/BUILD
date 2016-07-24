@@ -20,11 +20,13 @@ plz_e2e_test(
     cmd = 'plz query somepath //src/build/java:junit_runner //third_party/java:guava',
     expected_output = 'query_somepath_test.txt',
 )
+
 plz_e2e_test(
     name = 'query_somepath_reverse_test',
     cmd = 'plz query somepath //third_party/java:guava //src/build/java:junit_runner',
     expected_output = 'query_somepath_test.txt',  # Output should be the same as above
 )
+
 plz_e2e_test(
     name = 'query_somepath_nopath_test',
     cmd = 'plz query somepath //src:please //third_party/java:guava',
@@ -38,6 +40,7 @@ plz_e2e_test(
     expect_output_contains = "//test:failed_dep can't use //src/core; doesn't depend on target //src/core",
     expected_failure = True,
 )
+
 build_rule(
     name = 'failed_dep',
     cmd = 'echo $(location //src/core)',
@@ -48,23 +51,25 @@ build_rule(
 # Note that we're stripping coloured output for now. Later we should probably have a flag or something.
 plz_e2e_test(
     name = 'test_output_test',
-    cmd = 'plz test //test:test_output_test_1 //test:test_output_test_2 | sed "s/\x1B\[[0-9;]*[a-zA-Z]//g"',
+    cmd = 'plz test //test:test_output_test_1 //test:test_output_test_2 | sed "s/\033\\[[0-9;]*[a-zA-Z]//g"',
     expect_output_contains = '6 tests run; 6 passed.',
     # Invokes a containerised test although it's not itself.
     labels = ['container'],
 )
+
 gentest(
     name = 'test_output_test_1',
     data = ['test_output_test_1.txt'],
-    test_cmd = 'cp $(location test_output_test_1.txt) test.results',
     labels = ['manual'],
+    test_cmd = 'cp $(location test_output_test_1.txt) test.results',
 )
+
 gentest(
     name = 'test_output_test_2',
-    data = ['test_output_test_2.xml'],
-    test_cmd = 'cp $(location test_output_test_2.xml) test.results',
     container = True,
+    data = ['test_output_test_2.xml'],
     labels = ['manual'],
+    test_cmd = 'cp $(location test_output_test_2.xml) test.results',
 )
 
 # Test that on re-running a test it is cached.
@@ -73,12 +78,13 @@ plz_e2e_test(
     cmd = 'plz test //test:caching_test && plz test -v 4 //test:caching_test',
     expect_output_contains = 'Not re-running test //test:caching_test',
 )
+
 gentest(
     name = 'caching_test',
+    labels = ['manual'],
+    no_test_output = True,
     test_cmd = 'true',
     deps = ['//src:please'],
-    no_test_output = True,
-    labels = ['manual'],
 )
 
 # Test that we don't generate coverage on running a test normally (because it's slower).
@@ -87,17 +93,20 @@ python_test(
     srcs = ['coverage_output_test.py'],
     labels = ['manual'],
 )
+
 plz_e2e_test(
     name = 'no_coverage_output_test',
     cmd = 'plz test //test:_no_coverage_output_test',
     expect_file_doesnt_exist = '../../../bin/test/.test_coverage__no_coverage_output_test*',
 )
+
 # Test that we do generate it when using plz cover.
 python_test(
     name = '_coverage_output_test',
     srcs = ['coverage_output_test.py'],
     labels = ['manual'],
 )
+
 plz_e2e_test(
     name = 'coverage_output_test',
     cmd = 'plz cover //test:_coverage_output_test',
@@ -127,6 +136,7 @@ plz_e2e_test(
     cmd = 'plz query output //test:query_output_filegroup',
     expected_output = 'query_output_test.txt',
 )
+
 filegroup(
     name = 'query_output_filegroup',
     srcs = ['//src:please'],
@@ -137,12 +147,13 @@ plz_e2e_test(
     name = 'test_nocache_test',
     cmd = 'plz test --nocache //test:nocache_test',
 )
+
 gentest(
     name = 'nocache_test',
+    labels = ['manual'],
+    no_test_output = True,
     test_cmd = 'true',
     deps = ['//src:please'],
-    no_test_output = True,
-    labels = ['manual'],
 )
 
 # Simulates a code generating rule to test the require / provide mechanism.
@@ -158,11 +169,13 @@ python_test(
     srcs = ['individual_test_run.py'],
     labels = ['manual'],
 )
+
 plz_e2e_test(
     name = 'individual_python_test',
     cmd = 'plz test //test:individual_test_run_py TestRunningIndividualTests.test_first_thing',
     expect_output_contains = '1 test target and 1 test run',
 )
+
 java_test(
     name = 'individual_test_run_java',
     srcs = ['IndividualTestRun.java'],
@@ -171,11 +184,13 @@ java_test(
         '//third_party/java:junit',
     ],
 )
+
 plz_e2e_test(
     name = 'individual_java_test',
     cmd = 'plz test //test:individual_test_run_java testFirstThing',
     expect_output_contains = '1 test target and 1 test run',
 )
+
 java_test(
     name = 'no_test_run_java',
     srcs = ['NoTestRun.java'],
@@ -184,6 +199,7 @@ java_test(
         '//third_party/java:junit',
     ],
 )
+
 plz_e2e_test(
     name = 'no_java_test',
     cmd = 'plz test -p //test:no_test_run_java wibblewobble',
@@ -197,6 +213,7 @@ go_test(
     srcs = ['num_runs_test.go'],
     labels = ['manual'],
 )
+
 plz_e2e_test(
     name = 'num_runs_test',
     cmd = 'plz test -p --num_runs=5 //test:_num_runs_test',
@@ -209,15 +226,18 @@ plz_e2e_test(
     cmd = 'plz query affectedtargets --tests -p test/affectedtests_test.go',
     expected_output = 'query_affectedtests_test.txt',
 )
+
 plz_e2e_test(
     name = 'query_affectedtests_stdin_test',
     cmd = 'echo test/affectedtests_test.go | plz query affectedtargets --tests -p -',
     expected_output = 'query_affectedtests_test.txt',
 )
+
 go_test(
     name = '_affectedtests_test',
     srcs = ['affectedtests_test.go'],
 )
+
 go_test(
     name = '_affectedtests_manual_test',
     srcs = ['affectedtests_test.go'],
@@ -230,16 +250,19 @@ plz_e2e_test(
     cmd = 'plz query completions //test/completions: | sort',
     expected_output = 'basic_completions.txt',
 )
+
 plz_e2e_test(
     name = 'build_completion_test',
     cmd = 'plz query completions //test/completions: --cmd build | sort',
     expected_output = 'basic_completions.txt',
 )
+
 plz_e2e_test(
     name = 'test_completion_test',
     cmd = 'plz query completions //test/completions: --cmd test | sort',
     expected_output = 'test_completions.txt',
 )
+
 plz_e2e_test(
     name = 'run_completion_test',
     cmd = 'plz query completions //test/completions: --cmd run | sort',
@@ -260,13 +283,15 @@ genrule(
     cmd = 'echo hello > _add_out_gen.txt',
     post_build = lambda name, _: add_out(name, '_add_out_gen.txt'),
 )
+
 gentest(
     name = '_add_out_test',
     data = [':_add_out_gen'],
-    test_cmd = 'ls test/_add_out_gen.txt',
-    no_test_output = True,
     labels = ['manual'],
+    no_test_output = True,
+    test_cmd = 'ls test/_add_out_gen.txt',
 )
+
 plz_e2e_test(
     name = 'add_out_test',
     cmd = 'plz build //test:_add_out_test && plz clean //test:_add_out_gen && plz test //test:_add_out_test',
@@ -276,10 +301,11 @@ plz_e2e_test(
 go_test(
     name = '_extra_test_output_test',
     srcs = ['extra_test_output_test.go'],
-    test_outputs = ['truth.txt'],
-    labels = ['manual'],
     container = True,
+    labels = ['manual'],
+    test_outputs = ['truth.txt'],
 )
+
 plz_e2e_test(
     name = 'extra_test_output_test',
     cmd = 'plz test //test:_extra_test_output_test',
@@ -293,6 +319,7 @@ plz_e2e_test(
     cmd = 'plz query alltargets //test/moar/...',
     expected_output = 'query_alltargets_1.txt',
 )
+
 plz_e2e_test(
     name = 'query_alltargets_2_test',
     cmd = 'plz query alltargets //test/moar/... --include test',
@@ -321,6 +348,7 @@ plz_e2e_test(
     expect_output_contains = 'Unknown command',
     expected_failure = True,
 )
+
 plz_e2e_test(
     name = 'unknown_flag_test',
     cmd = 'plz build --wibble',
@@ -334,15 +362,16 @@ plz_e2e_test(
 build_rule(
     name = 'stamp_negative_test',
     cmd = '[ -z ${STAMP+x} ]',
-    test_cmd = 'true',
-    test = True,
     no_test_output = True,
+    test = True,
+    test_cmd = 'true',
 )
+
 build_rule(
     name = 'stamp_positive_test',
     cmd = '[ ! -z ${STAMP+x} ]',
-    test_cmd = 'true',
-    test = True,
-    stamp = True,
     no_test_output = True,
+    stamp = True,
+    test = True,
+    test_cmd = 'true',
 )

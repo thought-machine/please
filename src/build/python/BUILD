@@ -1,21 +1,24 @@
 python_binary(
     name = 'please_pex',
     main = 'pex.py',
+    visibility = ['PUBLIC'],
     deps = [
         ':main_files',
         '//third_party/python:pex',
         '//third_party/python:pkg_resources',
     ],
-    visibility = ['PUBLIC'],
 )
 
 python_library(
     name = 'main_files',
-    srcs = ['test_main.py', 'pex_main.py'],
+    srcs = [
+        'pex_main.py',
+        'test_main.py',
+    ],
     deps = [
+        '//third_party/python:coverage',
         '//third_party/python:six',
         '//third_party/python:xmlrunner',
-        '//third_party/python:coverage',
     ],
 )
 
@@ -27,16 +30,30 @@ python_test(
 python_test(
     name = 'custom_interpreter_test',
     srcs = ['custom_interpreter_test.py'],
+    interpreter = '/usr/bin/pypy',
     labels = ['manual'],
-    interpreter = '/usr/bin/pypy'
 )
 
 # This is needed for bootstrapping the build system: we have to be
 # able to build a .pex with the pex builder which is itself a pex.
 build_rule(
     name = 'bootstrap_pexer',
-    srcs = ['pex.py', 'test_main.py', 'pex_main.py'],
+    srcs = [
+        'pex.py',
+        'pex_main.py',
+        'test_main.py',
+    ],
     outs = ['bootstrap_pexer.pex'],
+    binary = True,
+    cmd = ' && '.join([
+        # Have to make sure these exist.
+        'touch third_party/__init__.py third_party/python/__init__.py',
+        'touch src/__init__.py src/build/__init__.py src/build/python/__init__.py',
+        'PYTHONPATH="." python -O src/build/python/pex.py --src_dir=${TMP_DIR} --out=${OUT} --entry_point=${PKG//\//.}.pex --interpreter ' + CONFIG.DEFAULT_PYTHON_INTERPRETER,
+    ]),
+    needs_transitive_deps = True,
+    output_is_complete = True,
+    visibility = ['PUBLIC'],
     deps = [
         # Depending on these private targets is not nice, but works around
         # a circular dependency because this tool is used to precompile the library.
@@ -46,16 +63,6 @@ build_rule(
         '//third_party/python:_xmlrunner#install',
         '//third_party/python:_coverage#install',
     ],
-    cmd = ' && '.join([
-        # Have to make sure these exist.
-        'touch third_party/__init__.py third_party/python/__init__.py',
-        'touch src/__init__.py src/build/__init__.py src/build/python/__init__.py',
-        'PYTHONPATH="." python -O src/build/python/pex.py --src_dir=${TMP_DIR} --out=${OUT} --entry_point=${PKG//\//.}.pex --interpreter ' + CONFIG.DEFAULT_PYTHON_INTERPRETER,
-    ]),
-    needs_transitive_deps = True,
-    binary = True,
-    output_is_complete = True,
-    visibility = ['PUBLIC']
 )
 
 python_test(
@@ -71,10 +78,10 @@ python_test(
 python_test(
     name = 'zip_unsafe_test',
     srcs = ['zip_unsafe_test.py'],
-    deps = [
-        '//src/build/cc:so_test_py'
-    ],
     labels = ['cc'],  # Depends on cc rules to build
+    deps = [
+        '//src/build/cc:so_test_py',
+    ],
 )
 
 # Tests for a subtle case where python_test rules should get a pex when
@@ -87,6 +94,6 @@ python_binary(
 python_test(
     name = 'data_dep_test',
     srcs = ['data_dep_test.py'],
-    deps = [':data_dep'],
     data = [':data_dep'],
+    deps = [':data_dep'],
 )

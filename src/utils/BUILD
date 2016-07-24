@@ -2,13 +2,19 @@ subinclude('//build_defs:go_bindata')
 
 go_library(
     name = 'utils',
-    srcs = glob(['*.go'], excludes=['wrapper_script.go', '*_test.go']) + [':wrapper_script'],
+    srcs = glob(
+        ['*.go'],
+        excludes = [
+            'wrapper_script.go',
+            '*_test.go',
+        ],
+    ) + [':wrapper_script'],
+    visibility = ['PUBLIC'],
     deps = [
         '//src/core',
-        '//third_party/go:prompter',
         '//third_party/go:logging',
+        '//third_party/go:prompter',
     ],
-    visibility = ['PUBLIC'],
 )
 
 go_bindata(

@@ -2,7 +2,10 @@
 # (Note that this only controls the tools we invoke directly, not what they
 # might use underneath - ie. we are not passing -fuse-ld or similar).
 
-package(cc_tool = 'clang++', ld_tool = 'gold')
+package(
+    cc_tool = 'clang++',
+    ld_tool = 'gold',
+)
 
 cc_embed_binary(
     name = 'embedded_file_1',
@@ -12,7 +15,7 @@ cc_embed_binary(
 genrule(
     name = 'embedded_file_3_gen',
     outs = ['embedded_file_3.txt'],
-    cmd = 'echo "testing message 3" > $OUT'
+    cmd = 'echo "testing message 3" > $OUT',
 )
 
 cc_embed_binary(
@@ -24,11 +27,14 @@ cc_embed_binary(
 cc_test(
     name = 'embed_file_test',
     srcs = ['embed_file_test.cc'],
+    labels = [
+        'clang',
+        'gold',
+    ],
     deps = [
         ':embedded_file_1',
         ':embedded_file_3',
     ],
-    labels = ['clang', 'gold'],
 )
 
 # This is a little chain of tests to exercise the cc_shared_object rule.
@@ -45,20 +51,24 @@ cc_library(
 cc_shared_object(
     name = 'so_test',
     srcs = ['so_test.cc'],
+    pkg_config_libs = ['python'],
     deps = [
         ':embedded_files',
     ],
-    pkg_config_libs = ['python'],
 )
 
 python_test(
     name = 'shared_object_test',
     srcs = ['shared_object_test.py'],
+    labels = [
+        'cc',
+        'clang',
+        'gold',
+    ],
+    zip_safe = False,
     deps = [
         ':so_test',
     ],
-    labels = ['cc', 'clang', 'gold'],
-    zip_safe = False,
 )
 
 # Make sure we have at least one working cc_binary rule.
@@ -73,7 +83,11 @@ cc_binary(
 gentest(
     name = 'cc_binary_test',
     data = [':test_binary'],
-    test_cmd = '$(exe :test_binary)',
-    labels = ['cc', 'clang', 'gold'],
+    labels = [
+        'cc',
+        'clang',
+        'gold',
+    ],
     no_test_output = True,
+    test_cmd = '$(exe :test_binary)',
 )

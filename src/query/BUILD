@@ -1,13 +1,16 @@
 go_library(
     name = 'query',
-    srcs = glob(['*.go'], excludes=['*_test.go']),
+    srcs = glob(
+        ['*.go'],
+        excludes = ['*_test.go'],
+    ),
+    visibility = ['PUBLIC'],
     deps = [
         '//src/build',
         '//src/core',
         '//src/utils',
-	'//third_party/go:logging',
+        '//third_party/go:logging',
     ],
-    visibility = ['PUBLIC'],
 )
 
 go_test(

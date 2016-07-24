@@ -17,20 +17,20 @@ go_library(
 go_binary(
     name = 'plz_diff_graphs',
     main = 'plz_diff_graphs_main.go',
+    visibility = ['PUBLIC'],
     deps = [
         ':misc',
         '//src/output',
     ],
-    visibility = ['PUBLIC'],
 )
 
 go_test(
     name = 'plz_diff_graphs_test',
     srcs = ['plz_diff_graphs_test.go'],
+    data = glob(['test_data/*.json']),
     deps = [
         ':misc',
         '//src/core',
         '//third_party/go:testify',
     ],
-    data = glob(['test_data/*.json']),
 )

@@ -1,22 +1,25 @@
 go_library(
     name = 'test',
-    srcs = glob(['*.go'], excludes=['*_test.go']),
-    deps = [
-        '//src/core',
-	'//src/build',
-	'//third_party/go:cover',
-	'//third_party/go:logging',
-    ],
+    srcs = glob(
+        ['*.go'],
+        excludes = ['*_test.go'],
+    ),
     visibility = ['PUBLIC'],
+    deps = [
+        '//src/build',
+        '//src/core',
+        '//third_party/go:cover',
+        '//third_party/go:logging',
+    ],
 )
 
 go_test(
     name = 'results_test',
     srcs = ['results_test.go'],
+    data = glob(['test_data/*']),
     deps = [
         ':test',
     ],
-    data = glob(['test_data/*'])
 )
 
 go_test(
@@ -31,8 +34,8 @@ go_test(
 go_test(
     name = 'container_test',
     srcs = ['container_test.go'],
+    container = True,
     data = ['test_data/container_data.txt'],
-    container = True
 )
 
 go_test(
@@ -40,17 +43,17 @@ go_test(
     srcs = ['container_args_test.go'],
     container = {
         'docker_run_args': '-e TEST_VALUE=WIBBLE',
-    }
+    },
 )
 
 go_test(
     name = 'coverage_test',
     srcs = ['coverage_test.go'],
     data = [
-        'test_data/python-coverage.xml',
         'test_data/go_coverage.txt',
         'test_data/go_coverage_2.txt',
         'test_data/go_coverage_3.txt',
+        'test_data/python-coverage.xml',
     ],
     deps = [
         ':test',
@@ -61,8 +64,8 @@ go_test(
 # plz would report a test failure because results were missing.
 gentest(
     name = 'no_test_output_test',
+    no_test_output = True,
     test_cmd = 'echo SUCCESS',
-    no_test_output = True
 )
 
 # This tests that data files exist in the correct location, and

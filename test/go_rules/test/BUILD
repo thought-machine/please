@@ -3,8 +3,8 @@
 go_library(
     name = 'test',
     srcs = ['test.go'],
-    visibility = ['//test/...'],
     test_only = True,
+    visibility = ['//test/...'],
 )
 
 go_library(

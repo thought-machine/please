@@ -42,18 +42,21 @@ else:
 filegroup(
     name = 'test_data',
     srcs = ['test_data'],
-    visibility = ['//src/cache/...'],
     test_only = True,
+    visibility = ['//src/cache/...'],
 )
 
 go_test(
     name = 'http_cache_test',
     srcs = ['http_cache_test.go'],
+    container = True,  # Brings up an internal server
+    data = [
+        'test_data/darwin_amd64',
+        'test_data/linux_amd64',
+    ],
     deps = [
         ':cache',
         '//src/cache/server',
         '//third_party/go:logging',
     ],
-    data = ['test_data/linux_amd64', 'test_data/darwin_amd64'],
-    container = True,  # Brings up an internal server
 )

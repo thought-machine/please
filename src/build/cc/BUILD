@@ -8,7 +8,7 @@ cc_embed_binary(
 genrule(
     name = 'embedded_file_3_gen',
     outs = ['embedded_file_3.txt'],
-    cmd = 'echo "testing message 3" > $OUT'
+    cmd = 'echo "testing message 3" > $OUT',
 )
 
 cc_embed_binary(
@@ -40,10 +40,10 @@ cc_library(
 cc_shared_object(
     name = 'so_test',
     srcs = ['so_test.cc'],
+    pkg_config_libs = ['python'],
     deps = [
         ':embedded_files',
     ],
-    pkg_config_libs = ['python'],
 )
 
 # Used by Python build code as a convenient way of testing itself.
@@ -58,11 +58,11 @@ python_library(
 python_test(
     name = 'shared_object_test',
     srcs = ['shared_object_test.py'],
+    labels = ['cc'],
+    zip_safe = False,
     deps = [
         ':so_test',
     ],
-    labels = ['cc'],
-    zip_safe = False,
 )
 
 # Make sure we have at least one working cc_binary rule.
@@ -77,7 +77,7 @@ cc_binary(
 gentest(
     name = 'cc_binary_test',
     data = [':test_binary'],
-    test_cmd = '$(exe :test_binary)',
     labels = ['cc'],
     no_test_output = True,
+    test_cmd = '$(exe :test_binary)',
 )

@@ -1,4 +1,4 @@
-package(default_visibility=['PUBLIC'])
+package(default_visibility = ['PUBLIC'])
 
 pip_library(
     name = 'pex',
@@ -55,14 +55,14 @@ pip_library(
     hashes = [
         'sha1: 62b97c332a2c118b8957d324d7ad3cbcc1f4f9eb',
     ],
-    deps = [':six'],
     test_only = True,  # Not used by plz itself.
+    deps = [':six'],
 )
 
 pip_library(
     name = 'protobuf',
-    outs = ['google'],
     version = '3.0.0b1.post2',
+    outs = ['google'],
     hashes = [
         'sha1: 4b74638c35f417ab33c3fe3a337f0bb18f0ff1ab',
         'sha1: 6d4c66f719238c058d3d5d1fbe7b2484eb0fe89d',
@@ -73,19 +73,22 @@ pip_library(
 
 pip_library(
     name = 'enum',
+    package_name = 'enum34',
     version = '1.0.4',
+    outs = ['enum'],
     hashes = [
         'sha1: ce61fd8ab8ec1390ce3c42d3d042d7dded9ed205',
     ],
-    package_name = 'enum34',
-    outs = ['enum'],
 )
 
 pip_library(
     name = 'futures',
     version = '2.2.0',
+    outs = [
+        'concurrent',
+        'futures',
+    ],
     hashes = [
         'sha1: 3bb16f7c2ad9e13623349bd3f876c02d7e2e39f7',
     ],
-    outs = ['futures', 'concurrent']
 )

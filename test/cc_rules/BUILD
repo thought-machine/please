@@ -43,7 +43,10 @@ plz_e2e_test(
 # These rules test that cc_library correctly accepts multiple srcs.
 cc_library(
     name = 'multisrc_lib',
-    srcs = ['multisrc_1.cc', 'multisrc_2.cc'],
+    srcs = [
+        'multisrc_1.cc',
+        'multisrc_2.cc',
+    ],
     hdrs = ['multisrc.h'],
 )
 
@@ -56,7 +59,10 @@ cc_test(
 # This tests that cc_library works correctly with inputs that are multiple sources.
 filegroup(
     name = 'cc_multiple_srcs',
-    srcs = ['multisrc_1.cc', 'multisrc_2.cc'],
+    srcs = [
+        'multisrc_1.cc',
+        'multisrc_2.cc',
+    ],
 )
 
 cc_library(

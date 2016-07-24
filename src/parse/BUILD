@@ -2,16 +2,25 @@ subinclude('//build_defs:go_bindata')
 
 cgo_library(
     name = 'parse',
-    srcs = glob(['*.go', 'interpreter.*'], excludes=['*_test.go', 'builtin_rules.go']) + [':builtin_rules'],
+    srcs = glob(
+        [
+            '*.go',
+            'interpreter.*',
+        ],
+        excludes = [
+            '*_test.go',
+            'builtin_rules.go',
+        ],
+    ) + [':builtin_rules'],
+    visibility = ['PUBLIC'],
     deps = [
         ':builtin_rules',
         '//src/core',
-        '//third_party/go:logging',
         '//third_party/go:gcfg',
         '//third_party/go:levenshtein',
+        '//third_party/go:logging',
         '//third_party/go:osext',
     ],
-    visibility = ['PUBLIC'],
 )
 
 genrule(
@@ -30,12 +39,12 @@ go_bindata(
 cgo_test(
     name = 'glob_test',
     srcs = ['glob_test.go'],
+    data = glob(['test_data/**/*.txt']),
     deps = [
         ':parse',
         '//src/core',
         '//third_party/go:testify',
     ],
-    data = glob(['test_data/**/*.txt']),
 )
 
 cgo_test(
@@ -51,11 +60,14 @@ cgo_test(
 cgo_test(
     name = 'interpreter_test',
     srcs = ['interpreter_test.go'],
+    data = glob([
+        'test_data/**/TEST_BUILD',
+        'test_data/**/test.py',
+    ]),
     deps = [
         ':parse',
         '//third_party/go:testify',
     ],
-    data = glob(['test_data/**/TEST_BUILD', 'test_data/**/test.py']),
 )
 
 cgo_test(

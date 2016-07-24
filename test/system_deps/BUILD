@@ -11,17 +11,17 @@ proto_library(
 python_test(
     name = 'system_dep_test',
     srcs = ['system_dep_test.py'],
+    labels = ['proto'],
     deps = [
         ':source_context',
     ],
-    labels = ['proto'],
 )
 
 go_test(
     name = 'go_system_dep_test',
     srcs = ['system_dep_test.go'],
+    labels = ['proto'],
     deps = [
         ':source_context',
     ],
-    labels = ['proto'],
 )

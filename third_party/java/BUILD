@@ -18,12 +18,13 @@ maven_jars(
     exclude = ['jsr305'],
     hashes = {
         'guava': 'sha1: 8908f57125132a4468ea9977705a83f61b94fa89',
-    }
+    },
 )
 
 maven_jars(
     name = 'jacoco',
     id = 'org.jacoco:jacoco:0.7.6.201602180812',
+    deps_only = True,
     exclude = [
         'org.jacoco.ant',
         'org.jacoco.doc',
@@ -36,7 +37,6 @@ maven_jars(
         'org.jacoco.core': 'sha1: ecd020a32fdfc96c6c845422978b362e11bdde5d',
     },
     deps = [':asm'],
-    deps_only = True,
 )
 
 maven_jar(
@@ -52,7 +52,7 @@ maven_jar(
     deps = [
         ':logback-core',
         ':slf4j-api',
-    ]
+    ],
 )
 
 maven_jar(

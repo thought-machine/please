@@ -6,6 +6,7 @@ genrule(
 )
 
 duplicate = False
+
 try:
     genrule(
         name = 'duplicate_target',
@@ -17,7 +18,6 @@ except DuplicateTargetError:
 if not duplicate:
     raise ParseError('Should have found a duplicate target')
 
-
 # Simulates a code generating rule to test the require / provide mechanism.
 genrule(
     name = 'test_require_py',
@@ -25,22 +25,31 @@ genrule(
     cmd = 'touch $OUT',
     test_only = True,
 )
+
 genrule(
     name = 'test_require_go',
     outs = ['test_require.go'],
     cmd = 'touch $OUT',
     test_only = True,
 )
+
 filegroup(
     name = 'test_require',
-    srcs = [':test_require_py', ':test_require_go'],
-    deps = [':test_require_py', ':test_require_go'],
+    srcs = [
+        ':test_require_go',
+        ':test_require_py',
+    ],
     provides = {
         'py': ':test_require_py',
         'go': ':test_require_go',
     },
     test_only = True,
+    deps = [
+        ':test_require_go',
+        ':test_require_py',
+    ],
 )
+
 python_test(
     name = 'require_provide_test',
     srcs = ['require_provide_test.py'],
@@ -53,8 +62,12 @@ python_test(
 genrule(
     name = '_gen_output_name',
     cmd = 'echo test_additional_output.txt',
-    post_build = lambda _, output: add_out('_gen_output', ''.join(output).strip()),
+    post_build = lambda _, output: add_out(
+        '_gen_output',
+        ''.join(output).strip(),
+    ),
 )
+
 genrule(
     name = '_gen_output',
     cmd = 'echo -n "kittens" > $OUT',
@@ -62,6 +75,7 @@ genrule(
         ':_gen_output_name',
     ],
 )
+
 cgo_test(
     name = 'additional_output_test',
     srcs = ['additional_output_test.go'],

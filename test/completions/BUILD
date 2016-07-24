@@ -9,14 +9,14 @@ genrule(
 genrule(
     name = 'binary',
     outs = ['bin.sh'],
-    cmd = 'touch $OUT',
     binary = True,
+    cmd = 'touch $OUT',
 )
 
 gentest(
     name = 'test',
     outs = ['test.sh'],
     cmd = 'touch $OUT',
-    test_cmd = 'true',
     labels = ['manual'],
+    test_cmd = 'true',
 )

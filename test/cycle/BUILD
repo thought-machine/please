@@ -13,8 +13,11 @@ python_library(
 
 gentest(
     name = 'cycle_test',
-    test_cmd = 'true',
-    no_test_output = True,
-    deps = [':cycle_1', ':cycle_2'],
     labels = ['cycle'],
+    no_test_output = True,
+    test_cmd = 'true',
+    deps = [
+        ':cycle_1',
+        ':cycle_2',
+    ],
 )

@@ -1,4 +1,8 @@
-ENGINES = ['pypy', 'python2', 'python3']
+ENGINES = [
+    'pypy',
+    'python2',
+    'python3',
+]
 
 for interpreter in ENGINES:
     extension = 'dylib' if CONFIG.OS == 'darwin' else 'so'

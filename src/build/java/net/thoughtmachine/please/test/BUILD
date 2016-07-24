@@ -1,13 +1,16 @@
 java_library(
     name = 'junit_runner',
-    srcs = glob(['*.java'], excludes=['*Test.java']),
-    visibility = ['//src/build/java/...'],
+    srcs = glob(
+        ['*.java'],
+        excludes = ['*Test.java'],
+    ),
     exported_deps = [
-        '//third_party/java:junit',
-        '//third_party/java:hamcrest',
         '//third_party/java:guava',
+        '//third_party/java:hamcrest',
         '//third_party/java:jacoco',
+        '//third_party/java:junit',
     ],
+    visibility = ['//src/build/java/...'],
 )
 
 java_test(
@@ -16,7 +19,7 @@ java_test(
     deps = [
         ':junit_runner',
         '//third_party/java:junit',
-    ]
+    ],
 )
 
 java_test(
@@ -25,7 +28,7 @@ java_test(
     deps = [
         ':junit_runner',
         '//third_party/java:junit',
-    ]
+    ],
 )
 
 java_test(
@@ -34,7 +37,7 @@ java_test(
     deps = [
         ':junit_runner',
         '//third_party/java:junit',
-    ]
+    ],
 )
 
 java_test(
@@ -44,7 +47,7 @@ java_test(
         ':junit_runner',
         ':logback_test_xml',
         '//third_party/java:logback-classic',
-    ]
+    ],
 )
 
 java_test(
@@ -52,7 +55,7 @@ java_test(
     srcs = ['TestCoverageTest.java'],
     deps = [
         ':junit_runner',
-    ]
+    ],
 )
 
 java_library(

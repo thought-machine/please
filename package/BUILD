@@ -14,11 +14,11 @@ fpm_deb(
         '/opt/please/libplease_parser_python2.so': '//src/parse/cffi:please_parser_python2',
         '/opt/please/libplease_parser_python3.so': '//src/parse/cffi:please_parser_python3',
     },
+    labels = ['manual'],
     links = {
         '/usr/bin/plz': '/opt/please/please',
         '/usr/bin/plz_diff_graphs': '/opt/please/please_diff_graphs',
     },
-    labels = ['manual'],
 )
 
 fpm_deb(
@@ -46,25 +46,25 @@ genrule(
     name = 'please_pex',
     srcs = ['//src/build/python:please_pex'],
     outs = ['please_pex'],
-    cmd = 'cp $SRC $OUT',
     binary = True,
+    cmd = 'cp $SRC $OUT',
 )
 
 tarball(
     name = 'please_tarball',
     srcs = [
-        '//src:please',
         ':please_pex',
-        '//src/build/java:junit_runner',
-        '//src/cache/main:cache_cleaner',
-        '//src/build/java:jarcat',
-        '//src/build/java:please_maven',
-        '//src/misc:plz_diff_graphs',
+        '//src:please',
         '//src/build/go:please_go_test',
+        '//src/build/java:jarcat',
+        '//src/build/java:junit_runner',
+        '//src/build/java:please_maven',
+        '//src/cache/main:cache_cleaner',
+        '//src/misc:plz_diff_graphs',
         '//src/parse/cffi:all_engines',
     ],
-    subdir = 'please',
     out = 'please_%s.tar.gz' % CONFIG.PLZ_VERSION,
+    subdir = 'please',
 )
 
 tarball(
@@ -73,11 +73,14 @@ tarball(
         '//src/cache/server:http_cache_server_bin',
         '//src/cache/server:rpc_cache_server_bin',
     ],
-    subdir = 'please',
     out = 'please_servers_%s.tar.gz' % CONFIG.PLZ_VERSION,
+    subdir = 'please',
 )
 
 filegroup(
     name = 'tarballs',
-    deps = [':please_tarball', ':servers_tarball'],
+    deps = [
+        ':please_tarball',
+        ':servers_tarball',
+    ],
 )
