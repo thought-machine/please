@@ -69,7 +69,8 @@ var opts struct {
 	NoCacheCleaner   bool   `description:"Don't start a cleaning process for the directory cache" no-flag:"true"`
 
 	Build struct {
-		Args struct { // Inner nesting is necessary to make positional-args work :(
+		Prepare bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		Args    struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
@@ -442,6 +443,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
+	state.PrepareOnly = opts.Build.Prepare
 	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0

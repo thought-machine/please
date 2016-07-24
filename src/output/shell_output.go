@@ -83,7 +83,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	for _, label := range state.ExpandOriginalTargets() {
 		if target := state.Graph.Target(label); target == nil {
 			log.Fatalf("Target %s doesn't exist in build graph", label)
-		} else if state.NeedHashesOnly && target.State() == core.Stopped {
+		} else if (state.NeedHashesOnly || state.PrepareOnly) && target.State() == core.Stopped {
 			// Do nothing, we will output about this shortly.
 		} else if shouldBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 {
 			cycle := graphCycleMessage(state.Graph, target)
@@ -95,6 +95,8 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 			printTestResults(state.Graph, aggregatedResults, failedTargets, duration)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
+		} else if state.PrepareOnly {
+			printTempDirs(state, duration)
 		} else { // Must be plz build or similar, report build outputs.
 			printBuildResults(state, duration)
 		}
@@ -263,6 +265,15 @@ func printHashes(state *core.BuildState, duration float64) {
 		} else {
 			fmt.Printf("  %s: %s\n", label, hex.EncodeToString(hash))
 		}
+	}
+}
+
+func printTempDirs(state *core.BuildState, duration float64) {
+	fmt.Printf("Temp directories prepared, total time %0.2fs:\n", duration)
+	for _, label := range state.ExpandOriginalTargets() {
+		target := state.Graph.TargetOrDie(label)
+		fmt.Printf("  %s: %s\n", label, target.TmpDir())
+		fmt.Printf("    Command: %s\n", build.ReplaceSequences(target, target.Command))
 	}
 }
 

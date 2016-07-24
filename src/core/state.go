@@ -82,6 +82,8 @@ type BuildState struct {
 	NeedTests bool
 	// True if we want to calculate target hashes (ie. 'plz hash').
 	NeedHashesOnly bool
+	// True if we only want to prepare build directories (ie. 'plz build --prepare')
+	PrepareOnly bool
 	// Number of times to run each test target. 0 == once each, plus flakes if necessary.
 	NumTestRuns int
 	// True to print the build / test commands as they're run

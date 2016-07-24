@@ -80,6 +80,18 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		}
 	}
 	var postBuildOutput string
+	if state.PrepareOnly && state.IsOriginalTarget(target.Label) {
+		if target.IsFilegroup() {
+			return fmt.Errorf("Filegroup targets don't have temporary directories")
+		}
+		if err := prepareDirectories(target); err != nil {
+			return err
+		}
+		if err := prepareSources(state.Graph, target); err != nil {
+			return err
+		}
+		return stopTarget
+	}
 	if !needsBuilding(state, target, false) {
 		log.Debug("Not rebuilding %s, nothing's changed", target.Label)
 		postBuildOutput = runPostBuildFunctionIfNeeded(tid, state, target)
@@ -139,7 +151,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			return nil
 		}
 	}
-	if err := prepareSources(state.Graph, target, target, map[core.BuildLabel]bool{}); err != nil {
+	if err := prepareSources(state.Graph, target); err != nil {
 		return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
@@ -250,7 +262,7 @@ func prepareDirectory(directory string, remove bool) error {
 }
 
 // Symlinks the source files of this rule into its temp directory.
-func prepareSources(graph *core.BuildGraph, target *core.BuildTarget, dependency *core.BuildTarget, done map[core.BuildLabel]bool) error {
+func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
 	for source := range core.IterSources(graph, target) {
 		if err := core.PrepareSourcePair(source); err != nil {
 			return err
