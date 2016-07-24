@@ -44,12 +44,29 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         log.warning('`target` argument to java_library is deprecated and will be removed soon')
     if srcs and src_dir:
         raise ParseError('You cannot pass both srcs and src_dir to java_library')
-    all_srcs = (srcs or []) + (resources or [])
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
     if srcs or src_dir:
-        # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
-        # it doesn't mean anything to us so we must filter it out.
-        javac_flags = [flag for flag in javac_flags or [] if flag != '-extra_checks:off']
+        if javac_flags:
+            # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
+            # it doesn't mean anything to us so we must filter it out.
+            javac_flags = ' '.join(flag for flag in javac_flags if flag != '-extra_checks:off')
+        else:
+            javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
+        cmd = ' && '.join([
+            'mkdir _tmp _tmp/META-INF',
+            '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp %%s %s %s' % (
+                CONFIG.JAVAC_TOOL,
+                source or CONFIG.JAVA_SOURCE_LEVEL,
+                target or CONFIG.JAVA_TARGET_LEVEL,
+                r'`find . -name "*.jar" ! -name "*src.jar" | tr \\\\n :`',
+                '$SRCS_SRCS' if srcs else '`find $SRCS_SRCS -name "*.java"`',
+                javac_flags,
+            ),
+            'mv ${PKG}/%s/* _tmp' % resources_root if resources_root else 'true',
+            'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g"  > _tmp/META-INF/please_sourcemap',
+            'cd _tmp',
+            jarcat_tool + ' -d -o $OUT -i .',
+        ])
         build_rule(
             name=name,
             srcs={
@@ -60,21 +77,10 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             exported_deps=exported_deps,
             outs=[name + '.jar'],
             visibility=visibility,
-            cmd=' && '.join([
-                'mkdir _tmp _tmp/META-INF',
-                '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp -g %s %s' % (
-                    CONFIG.JAVAC_TOOL,
-                    source or CONFIG.JAVA_SOURCE_LEVEL,
-                    target or CONFIG.JAVA_TARGET_LEVEL,
-                    r'`find . -name "*.jar" ! -name "*src.jar" | tr \\\\n :`',
-                    '$SRCS_SRCS' if srcs else '`find $SRCS_SRCS -name "*.java"`',
-                    ' '.join(javac_flags),
-                ),
-                'mv ${PKG}/%s/* _tmp' % resources_root if resources_root else 'true',
-                'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g"  > _tmp/META-INF/please_sourcemap',
-                'cd _tmp',
-                jarcat_tool + ' -d -o $OUT -i .',
-            ]),
+            cmd={
+                'opt': cmd % '-g:none',
+                'dbg': cmd % '-g',
+            },
             building_description="Compiling...",
             requires=['java'],
             test_only=test_only,
@@ -88,7 +94,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             cmd = '%s -d -o ${OUTS} -i ${PKG}' % jarcat_tool
         build_rule(
             name=name,
-            srcs=all_srcs,
+            srcs=resources,
             deps=deps,
             exported_deps=exported_deps,
             outs=[name + '.jar'],

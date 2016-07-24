@@ -125,6 +125,7 @@ func DefaultConfiguration() *Configuration {
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"
 	config.Java.DefaultMavenRepo = "https://repo1.maven.org/maven2"
+	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
 	config.Cpp.CCTool = "g++"
 	config.Cpp.LdTool = "ld"
 	config.Cpp.ArTool = "ar"
@@ -221,6 +222,8 @@ type Configuration struct {
 		DefaultTestPackage string
 		SourceLevel        string
 		TargetLevel        string
+		JavacFlags         string
+		JavacTestFlags     string
 		DefaultMavenRepo   string
 	}
 	Cpp struct {
