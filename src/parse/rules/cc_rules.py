@@ -315,7 +315,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         data=data,
         visibility=visibility,
         cmd=cmd,
-        test_cmd='$(exe :%s) | tee test.results' % name,
+        test_cmd='$TEST',
         building_description='Linking...',
         binary=True,
         test=True,
@@ -449,13 +449,16 @@ _CC_TEST_MAIN_CONTENTS = """
 #include "unittest++/XmlTestReporter.h"
 int main(int argc, char const *argv[]) {
     auto run_named = [argc, argv](UnitTest::Test* test) {
-        if (argc <= 1) { return true; }
-        return std::any_of(argv + 1, argv + argc, [test](const char* name) {
+        return argc <= 1 || std::any_of(argv + 1, argv + argc, [test](const char* name) {
             return strcmp(test->m_details.testName, name) == 0;
         });
     };
 
     std::ofstream f("test.results");
+    if (!f.good()) {
+      fprintf(stderr, "Failed to open results file\\n");
+      return -1;
+    }
     UnitTest::XmlTestReporter reporter(f);
     UnitTest::TestRunner runner(reporter);
     return runner.RunTestsIf(UnitTest::Test::GetTestList(),
