@@ -61,6 +61,7 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 	core.AcquireRepoLock()
 	defer core.ReleaseRepoLock()
 
+	config.Please.Location = core.ExpandHomePath(config.Please.Location)
 	newPlease := path.Join(config.Please.Location, config.Please.Version, "please")
 	if !core.PathExists(newPlease) {
 		downloadPlease(config)
