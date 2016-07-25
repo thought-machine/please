@@ -1,3 +1,11 @@
+Version 4.3.1
+-------------
+
+    * Fix to java configs from previous version where opt didn't have debug info,
+      we have an example of a test that fails in that configuration, so disabling
+      until we have more info.
+
+
 Version 4.3.0
 -------------
 

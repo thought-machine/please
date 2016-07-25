@@ -54,7 +54,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
         cmd = ' && '.join([
             'mkdir _tmp _tmp/META-INF',
-            '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp %%s %s %s' % (
+            '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp -g %s %s' % (
                 CONFIG.JAVAC_TOOL,
                 source or CONFIG.JAVA_SOURCE_LEVEL,
                 target or CONFIG.JAVA_TARGET_LEVEL,
@@ -77,10 +77,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             exported_deps=exported_deps,
             outs=[name + '.jar'],
             visibility=visibility,
-            cmd={
-                'opt': cmd % '-g:none',
-                'dbg': cmd % '-g',
-            },
+            cmd=cmd,
             building_description="Compiling...",
             requires=['java'],
             test_only=test_only,
