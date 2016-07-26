@@ -3,6 +3,8 @@
   <head>
     <title>Please FAQ</title>
     <link rel="stylesheet" type="text/css" href="skeleton.css">
+    <link rel="stylesheet" type="text/css" href="asciinema-player.css" />
+    <script src="asciinema-player.js"></script>
   </head>
   <body>
     <!-- HEADER -->
@@ -22,7 +24,7 @@
           for more details.<br/>
           This should have no notable downsides for clients other than them not being able
           to communicate with such a cache.</li>
-        <li>You'll need Bash installed for the bootstrap script to run.</li>
+        <li>You'll need Bash installed.</li>
         <li><code>go tool link</code> appears to invoke <code>gcc</code> instead of <code>cc</code>,
           so you'll either need it installed or to provide a symlink.</li>
         <li>The ports install of Python doesn't provide some of the symlinks we'd like
@@ -33,13 +35,14 @@
 
     <p>Windows is unfortunately not supported natively, since it's just too different from the
       Unix environment Please is designed for. It might well be possible to make it work using
-      Cygwin or MinGW / MSYS though. We aren't doing this work ourselves because we don't
-      have any Windows machines at work, but we're happy to accept PRs in that direction.</p>
+      Cygwin or MinGW / MSYS, or the recent Ubuntu on Windows development though. We aren't
+      doing this work ourselves because we don't have any Windows machines at work, but we're
+      happy to accept PRs in that direction.</p>
 
 
     <h3>What's the licence?</h3>
 
-    <p>TODO(all): decide! I suggest Apache-2.0 which both Buck and Bazel use.</p>
+    <p><a href="http://www.apache.org/licenses/">Apache 2.0</a></p>
 
 
     <h3>Why use Please instead of go build / Maven / Gradle?</h3>
@@ -101,7 +104,7 @@
     <h3>Why is it so fast?</h3>
 
     <p>Firstly, all the rules explicitly declare their dependencies, so Please can aggressively
-      parallelise build rules wherever possible. It can also cche & reuse previous outputs when
+      parallelise build rules wherever possible. It can also cache & reuse previous outputs when
       they haven't changed, and it hashes all input files to make sure it's correct.</p>
 
     <p>Also BUILD files encourage you to break projects into smaller components, which can then
@@ -123,12 +126,12 @@
 
     <h3>How do you parse the BUILD files? What format are they?</h3>
 
-    <p>The BUILD files are a (slightly) restricted dialect of Python. Please uses
+    <p>The BUILD files are a (slightly) restricted dialect of Python. Please prefers to use
       <a href="http://pypy.org">PyPy</a> to parse them which is done in-process,
       allowing a tight integration and a rich API with things like callbacks.<br/>
-      Possibly surprisingly we're using PyPy more for its straightforward embedding API than
-      any performance benefit over CPython, and swapping the implementation would be far
-      too much work to perform benchmarks between the two.</p>
+      It can also use CPython if you have cffi installed via their embedding API. So far we
+      haven't done any detailed performance benchmarks between the two.<br/>
+      Python 3 isn't supported yet but we plan to make it work sometime in the future.</p>
 
     <p>The restrictions on the format are essentially that <code>import</code> and <code>print</code>
       are banned, and a number of the normal builtins are not available.<br/>
@@ -140,6 +143,9 @@
     <p>One down side to this is that the BUILD files are a little hard to automatically edit or
       update compared to a data format like XML, Yaml or JSON. We think this is worth the tradeoff
       for giving the developer more power and (in our opinion) a significantly nicer format.</p>
+
+    <p>We suggest investigating <a href="https://github.com/bazelbuild/buildifier">buildifier</a>
+      if you'd like a pretty-printer / autoformatter for them.</p>
 
 
     <h3>How does Please build itself? Do I need Please to build Please?</h3>
@@ -187,10 +193,15 @@
 
     <h3>How does the versioning scheme work? What are the compatibility guarantees?</h3>
 
-    <p>At the moment we're not quite doing <a href="http://semver.org">semver</a> because
-      we're one level down (essentially all versions have a preceding "1." on the front from
-      how they'd have us work). We might change to that soon to make it a bit easier to know
-      what to expect.</p>
+    <p>We are using <a href="http://semver.org">semantic versioning</a> so essentially:
+      <ul>
+        <li>Changes to the major version number mean you might have to make an active change
+          to your BUILD files or project config.</li>
+        <li>Changes to the minor version number indicate additional features that shouldn't
+          require any changes on your part.</li>
+        <li>Changes to the patch version number are bugfixes.</li>
+      </ul>
+    </p>
 
     <p>In a somewhat similar way to the Go project, we consider some things to have stronger
       compatibility guarantees than others. Specifically the command-line interface and flags,
@@ -206,6 +217,15 @@
       since it's aggravating (for us too!) but since it doesn't affect eventual correctness
       it can change in minor releases.</p>
 
+
+    <h3>What does it look like when I'm running it?</h3>
+
+    <p>Like this:</p>
+
+    <div id="output-player"></div>
+    <script>
+      asciinema.player.js.CreatePlayer('output-player', 'plz-recording.json');
+    </script>
 
     <h3>What do the colours in the console output mean?</h3>
 
