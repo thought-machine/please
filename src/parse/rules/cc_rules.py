@@ -343,8 +343,8 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
       filename_start_nc(): returns a char* pointing to the beginning of the data.
                            This is a convenience wrapper using const_cast, you should not
                            mutate the contents of the returned pointer.
-      filename_end(): returns a char* pointing to the end of the data.
-                      Again, don't mutate the contents of the pointer.
+      filename_end_nc(): returns a char* pointing to the end of the data.
+                         Again, don't mutate the contents of the pointer.
     You don't own the contents of any of these pointers so don't try to delete them :)
 
     NB. Does not work on OSX at present due to missing options in Apple's ld.

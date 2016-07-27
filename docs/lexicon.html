@@ -1,12 +1,3 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Please Lexicon</title>
-    <link rel="stylesheet" type="text/css" href="skeleton.css">
-  </head>
-  <body>
-    <!-- HEADER -->
-
     <h1>The Lexicon of Please</h1>
 
     <p>This is the reference for the complete set of builtin rules & functions.</p>
@@ -15,7 +6,7 @@
 
     <h3><a name="subinclude">subinclude</a></h3>
 
-    <p><code>subinclude(target)</code></p>
+    <p><pre class="rule"><code>subinclude(target)</code></pre></p>
 
     <p>Includes the output of a build target as extra rules in this one.</p>
 
@@ -28,18 +19,21 @@
       <a href="#filegroup">filegroup</a> or <a href="export_file">export_file</a> rule, but
       it is possible to have more complex rules generating your BUILD definitions.</p>
 
+    <p>For example:
 
-    <h3><a name="include_defs">include_defs</a></h3>
+    <pre><code>subinclude('//build_defs:my_build_rules')</code></pre>
+    </p>
 
-    <p><code>include_defs(package, dct, target)</code></p>
+    <p>Note that you can also <code>subinclude</code> remote files as follows:
 
-    <p><code>include_defs</code> is a deprecated function with similar behaviour to subinclude.</p>
+    <pre><code>subinclude('https://raw.githubusercontent.com/thought-machine/pleasings/master/grm/grm.build_defs')</code></pre>
 
-    <p>It will be removed completely in a forthcoming version of Please.</p>
+    These are deduplicated internally so they're only downloaded & parsed once, so it's reasonably
+    performant, although it's still often preferable to vendorise them yourself.</p>
 
     <h3><a name="glob">glob</a></h3>
 
-    <p><code>glob(includes, excludes=None, hidden=False)</code></p>
+    <p><pre class="rule"><code>glob(includes, excludes=None, hidden=False)</code></pre></p>
 
     <p>Matches all filenames by a pattern, in a manner reminiscent of shell-style pattern
       expansion or Python's builtin <a href="https://docs.python.org/3/library/glob.html">glob</a>
@@ -97,7 +91,7 @@
 
     <h3><a name="get_labels">get_labels</a></h3>
 
-    <p><code>get_labels(target, prefix)</code></p>
+    <p><pre class="rule"><code>get_labels(target, prefix)</code></pre></p>
 
     <p>Gets the unique set of labels for a rule and all its transitive dependencies.</p>
 
@@ -140,7 +134,7 @@
 
     <h3><a name="has_label">has_label</a></h3>
 
-    <p><code>has_label(target, prefix)</code></p>
+    <p><pre class="rule"><code>has_label(target, prefix)</code></pre></p>
 
     <p>Returns True if the target has any matching label that would be returned by get_labels.</p>
 
@@ -174,7 +168,7 @@
 
     <h3><a name="package">package</a></h3>
 
-    <p><code>package(**kwargs)</code></p>
+    <p><pre class="rule"><code>package(**kwargs)</code></pre></p>
 
     <p>Defines settings affecting the current package - for example, default visibility.</p>
 
@@ -187,7 +181,7 @@
 
     <h3><a name="log">log</a></h3>
 
-    <p><code>log.warning(message, [args...])</code></p>
+    <p><pre class="rule"><code>log.warning(message, [args...])</code></pre></p>
 
     <p>Logs an arbitrary message at some given level. The available levels, from most quiet
       to most severe, are:
@@ -208,12 +202,6 @@
     <p>The message and arguments together are interpolated like Python's normal string
       interpolation, similar to the builtin <code>logging</code> package.</p>
 
-    <h3><a name="licenses">licenses</a></h3>
-
-    <p><code>licenses(licenses)</code></p>
-
-    <p>Defines default licenses for the package. Provided for nominal Bazel compatibility.</p>
-
     <h2><a name="cc">C++ rules</a></h2>
 
     <p>Rules to build C++ targets (or likely C although we've not tested that extensively).</p>
@@ -223,7 +211,7 @@ the complex build environment C++ has, so some issues may remain.</p>
 
     <h3><a name="cc_library">cc_library</a></h3>
 
-    <p><code>cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only=False, compiler_flags=None, linker_flags=None, pkg_config_libs=None, archive=False)</code></p>
+    <p><pre class="rule"><code>cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only=False, compiler_flags=None, linker_flags=None, pkg_config_libs=None, archive=False)</code></pre></p>
 
     <p>Generate a C++ library target.</p>
 
@@ -318,7 +306,7 @@ will be picked up by cc_binary or cc_test rules.</td>
 
     <h3><a name="cc_static_library">cc_static_library</a></h3>
 
-    <p><code>cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None)</code></p>
+    <p><pre class="rule"><code>cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None)</code></pre></p>
 
     <p>Generates a C++ static library (.a).</p>
     <p>
@@ -405,7 +393,7 @@ it as a collection of other rules.</p>
 
     <h3><a name="cc_shared_object">cc_shared_object</a></h3>
 
-    <p><code>cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None)</code></p>
+    <p><pre class="rule"><code>cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None)</code></pre></p>
 
     <p>Generates a C++ shared object with its dependencies linked in.</p>
 
@@ -489,7 +477,7 @@ between srcs and hdrs is important.</td>
 
     <h3><a name="cc_binary">cc_binary</a></h3>
 
-    <p><code>cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, pkg_config_libs=None)</code></p>
+    <p><pre class="rule"><code>cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, pkg_config_libs=None)</code></pre></p>
 
     <p>Builds a binary from a collection of C++ rules.</p>
 
@@ -565,12 +553,12 @@ between srcs and hdrs is important.</td>
 
     <h3><a name="cc_test">cc_test</a></h3>
 
-    <p><code>cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None, deps=None, data=None, visibility=None, labels=None, flaky, test_outputs=None, timeout, container=False)</code></p>
+    <p><pre class="rule"><code>cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None, deps=None, data=None, visibility=None, labels=None, flaky=False, test_outputs=None, timeout=0, container=False, write_main=True)</code></pre></p>
 
     <p>Defines a C++ test using UnitTest++.</p>
-    <p>
-We template in a main file so you don't have to supply your own.</p>
-    <p>(Later we might allow that to be configured to help support other unit test frameworks).</p>
+    <p>If <code>write_main</code> is true (the default) then we template in a main file so you don't have to supply your own.</p>
+    <p>Later we might add support for other test frameworks, for now you can add your own by setting <code>write_main=False</code>
+      and writing your own <code>main</code> function.</p>
 
     <table>
       <thead>
@@ -674,28 +662,38 @@ We template in a main file so you don't have to supply your own.</p>
 	<td>If true the test is run in a container (eg. Docker).</td>
       </tr>
 
+      <tr>
+	<td>write_main</td>
+	<td>True</td>
+	<td>bool</td>
+	<td>If true then a <code>main</code> function is written automatically for you.</td>
+      </tr>
+
       </tbody>
     </table>
 
     <h3><a name="cc_embed_binary">cc_embed_binary</a></h3>
 
-    <p><code>cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, namespace=None)</code></p>
+    <p><pre class="rule"><code>cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, namespace=None)</code></pre></p>
 
     <p>Build rule to embed an arbitrary binary file into a C library.</p>
     <p>
 You can depend on the output of this as though it were a cc_library rule.</p>
     <p>There are five functions available to access the data once compiled, all of which are
-prefixed with the file's basename:
-filename_start(): returns a const char* pointing to the beginning of the data.</p>
-    <p>filename_end(): returns a const char* pointing to the end of the data.</p>
-    <p>filename_size(): returns the length of the data in bytes.</p>
-    <p>filename_start_nc(): returns a char* pointing to the beginning of the data.</p>
-    <p>This is a convenience wrapper using const_cast, you should not
-mutate the contents of the returned pointer.</p>
-    <p>filename_end(): returns a char* pointing to the end of the data.</p>
-    <p>Again, don't mutate the contents of the pointer.</p>
+      prefixed with the file's basename:<br/>
+      <ul>
+	<li><code>filename_start()</code>: returns a const char* pointing to the beginning of the data.</li>
+	<li><code>filename_end()</code>: returns a const char* pointing to the end of the data.</li>
+	<li><code>filename_size()</code>: returns the length of the data in bytes.</li>
+	<li><code>filename_start_nc()</code>: returns a char* pointing to the beginning of the data.<br/>
+	  This is a convenience wrapper using const_cast, you should not
+	  mutate the contents of the returned pointer.</li>
+	<li><code>filename_end_nc()</code>: returns a char* pointing to the end of the data.<br/>
+	  Again, don't mutate the contents of the pointer.</li>
+      </ul>
+    </p>
     <p>You don't own the contents of any of these pointers so don't try to delete them :)</p>
-    <p>NB. Does not work on OSX at present due to missing options in Apple's ld.</p>
+    <p>N.B. Does not work on OSX at present due to missing options in Apple's ld.</p>
 
     <table>
       <thead>
@@ -747,7 +745,8 @@ mutate the contents of the returned pointer.</p>
 	<td>namespace</td>
 	<td>None</td>
 	<td>str</td>
-	<td>Allows specifying the namespace the symbols will be available in.</td>
+	<td>Allows specifying the namespace the symbols will be available in.<br/>
+	  If not given you'll have to set it in <code>.plzconfig</code></td>
       </tr>
 
       </tbody>
@@ -762,7 +761,7 @@ rules to Go packages.</p>
 
     <h3><a name="go_library">go_library</a></h3>
 
-    <p><code>go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False, go_tools=None)</code></p>
+    <p><pre class="rule"><code>go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False, go_tools=None)</code></pre></p>
 
     <p>Generates a Go library which can be reused by other rules.</p>
 
@@ -831,7 +830,7 @@ rules to Go packages.</p>
 
     <h3><a name="go_generate">go_generate</a></h3>
 
-    <p><code>go_generate(name, srcs, tools, deps=None, visibility=None)</code></p>
+    <p><pre class="rule"><code>go_generate(name, srcs, tools, deps=None, visibility=None)</code></pre></p>
 
     <p>Generates a `go generate` rule.</p>
 
@@ -886,7 +885,7 @@ rules to Go packages.</p>
 
     <h3><a name="cgo_library">cgo_library</a></h3>
 
-    <p><code>cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=False, package)</code></p>
+    <p><pre class="rule"><code>cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=False, package)</code></pre></p>
 
     <p>Generates a Go library which can be reused by other rules.</p>
     <p>
@@ -961,7 +960,7 @@ hard to mimic what 'go build' does well enough to actually work.</p>
 
     <h3><a name="go_binary">go_binary</a></h3>
 
-    <p><code>go_binary(name, main=None, deps=None, visibility=None, test_only=False)</code></p>
+    <p><pre class="rule"><code>go_binary(name, main=None, deps=None, visibility=None, test_only=False)</code></pre></p>
 
     <p>Compiles a Go binary.</p>
 
@@ -1016,7 +1015,7 @@ hard to mimic what 'go build' does well enough to actually work.</p>
 
     <h3><a name="go_test">go_test</a></h3>
 
-    <p><code>go_test(name, srcs, data=None, deps=None, visibility=None, container=False, timeout, flaky, test_outputs=None, labels=None)</code></p>
+    <p><pre class="rule"><code>go_test(name, srcs, data=None, deps=None, visibility=None, container=False, timeout=0, flaky=False, test_outputs=None, labels=None)</code></pre></p>
 
     <p>Defines a Go test rule.</p>
 
@@ -1106,7 +1105,7 @@ hard to mimic what 'go build' does well enough to actually work.</p>
 
     <h3><a name="cgo_test">cgo_test</a></h3>
 
-    <p><code>cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False, timeout, flaky, test_outputs=None, labels=None, tags=None)</code></p>
+    <p><pre class="rule"><code>cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False, timeout=0, flaky=False, test_outputs=None, labels=None, tags=None)</code></pre></p>
 
     <p>Defines a Go test rule for a library that uses cgo.</p>
     <p>
@@ -1207,7 +1206,7 @@ as your test.</p>
 
     <h3><a name="go_get">go_get</a></h3>
 
-    <p><code>go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None, binary=False, test_only=False, install=None, revision=None)</code></p>
+    <p><pre class="rule"><code>go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None, binary=False, test_only=False, install=None, revision=None)</code></pre></p>
 
     <p>Defines a dependency on a third-party Go library.</p>
 
@@ -1303,7 +1302,7 @@ not for other version control systems.</td>
 
     <h3><a name="java_library">java_library</a></h3>
 
-    <p><code>java_library(name, srcs=None, resources=None, resources_root=None, deps=None, exported_deps=None, visibility=None, source=None, target=None, test_only=False)</code></p>
+    <p><pre class="rule"><code>java_library(name, srcs=None, resources=None, resources_root=None, deps=None, exported_deps=None, visibility=None, source=None, target=None, test_only=False)</code></pre></p>
 
     <p>Compiles Java source to a .jar which can be collected by other rules.</p>
 
@@ -1400,7 +1399,7 @@ config, which itself defaults to 8.</td>
 
     <h3><a name="java_binary">java_binary</a></h3>
 
-    <p><code>java_binary(name, main_class, deps=None, data=None, visibility=None, jvm_args=None, self_executable=False)</code></p>
+    <p><pre class="rule"><code>java_binary(name, main_class, deps=None, data=None, visibility=None, jvm_args=None, self_executable=False)</code></pre></p>
 
     <p>Compiles a .jar from a set of Java libraries.</p>
 
@@ -1469,7 +1468,7 @@ config, which itself defaults to 8.</td>
 
     <h3><a name="java_test">java_test</a></h3>
 
-    <p><code>java_test(name, srcs, data=None, deps=None, labels=None, visibility=None, container=False, timeout, flaky, test_outputs=None, test_package=Set in config, jvm_args)</code></p>
+    <p><pre class="rule"><code>java_test(name, srcs, data=None, deps=None, labels=None, visibility=None, container=False, timeout=0, flaky=False, test_outputs=None, test_package=Set in config, jvm_args)</code></pre></p>
 
     <p>Defines a Java test.</p>
 
@@ -1573,7 +1572,7 @@ config, which itself defaults to 8.</td>
 
     <h3><a name="maven_jars">maven_jars</a></h3>
 
-    <p><code>maven_jars(name, id, repository='https://repo1.maven.org/maven2', exclude=None, hashes=None, combine=False, hash=None, deps=None, visibility=None, filename=None, deps_only=False, optional=None)</code></p>
+    <p><pre class="rule"><code>maven_jars(name, id, repository='https://repo1.maven.org/maven2', exclude=None, hashes=None, combine=False, hash=None, deps=None, visibility=None, filename=None, deps_only=False, optional=None)</code></pre></p>
 
     <p>Fetches a transitive set of dependencies from Maven.</p>
     <p>
@@ -1685,7 +1684,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
 
     <h3><a name="maven_jar">maven_jar</a></h3>
 
-    <p><code>maven_jar(name, id, repository='https://repo1.maven.org/maven2', hash=None, hashes=None, deps=None, visibility=None, filename=None, sources=True, licences=None, exclude_paths=None, native=False)</code></p>
+    <p><pre class="rule"><code>maven_jar(name, id, repository='https://repo1.maven.org/maven2', hash=None, hashes=None, deps=None, visibility=None, filename=None, sources=True, licences=None, exclude_paths=None, native=False)</code></pre></p>
 
     <p>Fetches a single Java dependency from Maven.</p>
 
@@ -1795,7 +1794,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
 
     <h3><a name="genrule">genrule</a></h3>
 
-    <p><code>genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None, building_description=Building..., hashes=None, timeout, binary=False, needs_transitive_deps=False, output_is_complete=True, test_only=False, requires=None, provides=None, pre_build=None, post_build=None, tools=None)</code></p>
+    <p><pre class="rule"><code>genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None, building_description=Building..., hashes=None, timeout=0, binary=False, needs_transitive_deps=False, output_is_complete=True, test_only=False, requires=None, provides=None, pre_build=None, post_build=None, tools=None)</code></pre></p>
 
     <p>A general build rule which allows the user to specify a command.</p>
 
@@ -2004,7 +2003,7 @@ build directory. Should be accessed via $(exe //path/to:tool) or similar.</td>
 
     <h3><a name="gentest">gentest</a></h3>
 
-    <p><code>gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None, tools=None, data=None, visibility=None, timeout, needs_transitive_deps=False, flaky, no_test_output=False, output_is_complete=True, requires=None, container=False)</code></p>
+    <p><pre class="rule"><code>gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None, tools=None, data=None, visibility=None, timeout=0, needs_transitive_deps=False, flaky=False, no_test_output=False, output_is_complete=True, requires=None, container=False)</code></pre></p>
 
     <p>A rule which creates a test with an arbitrary command.</p>
     <p>
@@ -2151,7 +2150,7 @@ dependencies by other rules.</td>
 
     <h3><a name="export_file">export_file</a></h3>
 
-    <p><code>export_file(name, src, visibility=None, binary=False, test_only=False)</code></p>
+    <p><pre class="rule"><code>export_file(name, src, visibility=None, binary=False, test_only=False)</code></pre></p>
 
     <p>Essentially a single-file alias for filegroup.</p>
 
@@ -2206,7 +2205,7 @@ dependencies by other rules.</td>
 
     <h3><a name="filegroup">filegroup</a></h3>
 
-    <p><code>filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, labels=None, binary=False, output_is_complete=True, requires=None, provides=None, link=True, test_only=False)</code></p>
+    <p><pre class="rule"><code>filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, labels=None, binary=False, output_is_complete=True, requires=None, provides=None, link=True, test_only=False)</code></pre></p>
 
     <p>Defines a collection of files which other rules can depend on.</p>
     <p>
@@ -2315,7 +2314,7 @@ in-depth discussion of this).</td>
 
     <h3><a name="system_library">system_library</a></h3>
 
-    <p><code>system_library(name, srcs, deps=None, hashes=None, visibility=None, test_only=False)</code></p>
+    <p><pre class="rule"><code>system_library(name, srcs, deps=None, hashes=None, visibility=None, test_only=False)</code></pre></p>
 
     <p>Defines a rule to collect some dependencies from outside the build tree.</p>
     <p>
@@ -2380,7 +2379,7 @@ into the build tree, you must add additional rules if compilation is necessary.<
 
     <h3><a name="remote_file">remote_file</a></h3>
 
-    <p><code>remote_file(name, url, hashes=None, out=None, binary=False, visibility=None, test_only=False)</code></p>
+    <p><pre class="rule"><code>remote_file(name, url, hashes=None, out=None, binary=False, visibility=None, test_only=False)</code></pre></p>
 
     <p>Defines a rule to fetch a file over HTTP(S).</p>
 
@@ -2449,7 +2448,7 @@ into the build tree, you must add additional rules if compilation is necessary.<
 
     <h3><a name="github_file">github_file</a></h3>
 
-    <p><code>github_file(name, repo, file, revision=master, hash=None, visibility=None, test_only=False)</code></p>
+    <p><pre class="rule"><code>github_file(name, repo, file, revision=master, hash=None, visibility=None, test_only=False)</code></pre></p>
 
     <p>Defines a rule to fetch a file from Github.</p>
     <p>
@@ -2520,7 +2519,7 @@ This is just a convenience wrapper around remote_file but is somewhat clearer to
 
     <h3><a name="fpm_package">fpm_package</a></h3>
 
-    <p><code>fpm_package(name, files, version, package_type, links=None, package_name=None, options, srcs=None, deps=None, visibility=None, labels=None)</code></p>
+    <p><pre class="rule"><code>fpm_package(name, files, version, package_type, links=None, package_name=None, options, srcs=None, deps=None, visibility=None, labels=None)</code></pre></p>
 
     <p>Defines a rule to build a package using fpm.</p>
 
@@ -2625,7 +2624,7 @@ This is just a convenience wrapper around remote_file but is somewhat clearer to
 
     <h3><a name="fpm_deb">fpm_deb</a></h3>
 
-    <p><code>fpm_deb(name, files, version, links=None, package_name=None, options, srcs=None, deps=None, visibility=None, labels=None)</code></p>
+    <p><pre class="rule"><code>fpm_deb(name, files, version, links=None, package_name=None, options, srcs=None, deps=None, visibility=None, labels=None)</code></pre></p>
 
     <p>Convenience wrapper around fpm_package that always builds a .deb package.</p>
 
@@ -2723,7 +2722,7 @@ This is just a convenience wrapper around remote_file but is somewhat clearer to
 
     <h3><a name="tarball">tarball</a></h3>
 
-    <p><code>tarball(name, srcs, out=None, deps=None, subdir=None, compression=gzip, visibility=None, labels=None)</code></p>
+    <p><pre class="rule"><code>tarball(name, srcs, out=None, deps=None, subdir=None, compression=gzip, visibility=None, labels=None)</code></pre></p>
 
     <p>Defines a rule to create a tarball containing outputs of other rules.</p>
 
@@ -2811,7 +2810,7 @@ the proto_library rule to get its appropriate outputs.</p>
 
     <h3><a name="proto_library">proto_library</a></h3>
 
-    <p><code>proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None, python_deps=None, cc_deps=None, java_deps=None, go_deps=None, protoc_version=Set in config, languages=None)</code></p>
+    <p><pre class="rule"><code>proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None, python_deps=None, cc_deps=None, java_deps=None, go_deps=None, protoc_version=Set in config, languages=None)</code></pre></p>
 
     <p>Compile a .proto file to generated code for various languages.</p>
 
@@ -2917,7 +2916,7 @@ labels(list): List of labels to apply to this rule.</td>
 
     <h3><a name="grpc_library">grpc_library</a></h3>
 
-    <p><code>grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_deps=None, java_deps=None, go_deps=None)</code></p>
+    <p><pre class="rule"><code>grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_deps=None, java_deps=None, go_deps=None)</code></pre></p>
 
     <p>Defines a rule for a grpc library.</p>
 
@@ -3012,7 +3011,7 @@ a target which has only had small changes.</p>
 
     <h3><a name="python_library">python_library</a></h3>
 
-    <p><code>python_library(name, srcs=None, resources=None, deps=None, visibility=None, test_only=False, zip_safe=True, labels=None)</code></p>
+    <p><pre class="rule"><code>python_library(name, srcs=None, resources=None, deps=None, visibility=None, test_only=False, zip_safe=True, labels=None)</code></pre></p>
 
     <p>Generates a Python library target, which collects Python files for use by dependent rules.</p>
     <p>
@@ -3099,7 +3098,7 @@ See python_binary for more information.</td>
 
     <h3><a name="python_binary">python_binary</a></h3>
 
-    <p><code>python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=None, interpreter=Set in config)</code></p>
+    <p><pre class="rule"><code>python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=None, interpreter=Set in config)</code></pre></p>
 
     <p>Generates a Python binary target.</p>
     <p>
@@ -3179,7 +3178,7 @@ which is normally just 'python', but could be 'python3' or
 
     <h3><a name="python_test">python_test</a></h3>
 
-    <p><code>python_test(name, srcs, data=None, resources=None, deps=None, labels=None, visibility=None, container=False, timeout, flaky, test_outputs=None, zip_safe=None, interpreter=Set in config)</code></p>
+    <p><pre class="rule"><code>python_test(name, srcs, data=None, resources=None, deps=None, labels=None, visibility=None, container=False, timeout=0, flaky=False, test_outputs=None, zip_safe=None, interpreter=Set in config)</code></pre></p>
 
     <p>Generates a Python test target.</p>
     <p>
@@ -3301,7 +3300,7 @@ which is normally just 'python', but could be 'python3' or
 
     <h3><a name="pip_library">pip_library</a></h3>
 
-    <p><code>pip_library(name, version, hashes=None, package_name=None, outs=None, test_only=False, env=None, deps=None, post_install_commands=None, install_subdirectory=False, repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True, licences=None)</code></p>
+    <p><pre class="rule"><code>pip_library(name, version, hashes=None, package_name=None, outs=None, test_only=False, env=None, deps=None, post_install_commands=None, install_subdirectory=False, repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True, licences=None)</code></pre></p>
 
     <p>Provides a build rule for third-party dependencies to be installed by pip.</p>
 
@@ -3440,7 +3439,7 @@ implement something more advanced (ala .sar files or whatever).</p>
 
     <h3><a name="sh_library">sh_library</a></h3>
 
-    <p><code>sh_library(name, src, deps=None, visibility=None, link=True)</code></p>
+    <p><pre class="rule"><code>sh_library(name, src, deps=None, visibility=None, link=True)</code></pre></p>
 
     <p>Generates a shell script binary, essentially just the given source.</p>
     <p>
@@ -3498,7 +3497,7 @@ Note that these are individually executable so can only have one source file eac
 
     <h3><a name="sh_binary">sh_binary</a></h3>
 
-    <p><code>sh_binary(name, main, deps=None, visibility=None, link=True)</code></p>
+    <p><pre class="rule"><code>sh_binary(name, main, deps=None, visibility=None, link=True)</code></pre></p>
 
     <p>Generates a shell binary, essentially just the shell script itself.</p>
 
@@ -3553,7 +3552,7 @@ Note that these are individually executable so can only have one source file eac
 
     <h3><a name="sh_test">sh_test</a></h3>
 
-    <p><code>sh_test(name, src=None, args=None, labels=None, data=None, deps=None, visibility=None, flaky, test_outputs=None, timeout, container=False)</code></p>
+    <p><pre class="rule"><code>sh_test(name, src=None, args=None, labels=None, data=None, deps=None, visibility=None, flaky=False, test_outputs=None, timeout=0, container=False)</code></pre></p>
 
     <p>Generates a shell test. Note that these aren't packaged in a useful way.</p>
 
@@ -3647,6 +3646,3 @@ Note that these are individually executable so can only have one source file eac
 
       </tbody>
     </table>
-
-  </body>
-</html>

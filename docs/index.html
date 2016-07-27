@@ -1,48 +1,68 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Please</title>
-    <link rel="stylesheet" type="text/css" href="skeleton.css">
-  </head>
-  <body>
 
-    <!-- HEADER -->
-
-    <h1>Please</h1>
-
-    <p>Please is a cross-language build system with an emphasis on high performance, extensibility and reproduceability.
+    <p class="index-open"><span class="green">Please</span> is a cross-language build system with an emphasis on high performance, extensibility and reproduceability.
       It supports a number of popular languages and can automate nearly any aspect of your build process.
     </p>
 
-    <h2>What can it do for you?</h2>
-
-    <ul>
-      <li><b>Speed up your builds.</b> Please is designed to parallelise builds & tests to make the most of your CPU.
-	It's written in Go so it's fast & efficient itself, and it can build just the required parts of your code
-	on each invocation.</li>
-
-      <li><b>Help your deployment.</b> All your code & dependencies get packed into a single file which can easily be
-	deployed & run on a server. This helps us deploy languages like Python which don't do this naturally.</li>
-
-      <li><b>Unify your build process.</b> Because Please can build many languages already (and you can easily write rules
-	to teach it about others) you always invoke one tool to build any language or run any test, simplifying
-	your continuous integration and development processes.</li>
-
-      <li><b>Continuous integration & pre-merge testing.</b> We've developed Please in tandem with our internal integration
-	tools, so whenever any of our engineers merges a pull request, we invoke it to make sure any affected tests are
-	passing before merging it in. Because Please allows fine-grained dependencies and knows them for every test, we
-	can run just the affected ones to keep this step fast & lightweight.</li>
-
-      <li><b>Isolate your tests.</b> Got integration tests that need to spin up servers, write files, and find ports?
-	No problem, by setting a flag on the test they can be run inside a Docker container to keep them from
-	clashing with one another.</li>
-    </ul>
-
-    <p>
-      <a class="button button-primary" href="quickstart.html">Get Please</a>
-      <a class="button button-primary" href="basics.html">Do stuff with it</a>
-      <a class="button button-primary" href="https://github.com/thought-machine/please">Get the source</a>
-    </p>
-
-  </body>
-</html>
+    <div class="index-layout">
+      <div>
+        <div>
+          <h1>What can Please do?</h1>
+        </div>
+        <div>
+        </div>
+      </div>
+      <div>
+        <div>
+          <img src="images/white3.png">
+          <h2>Speed up your builds.</h2>
+          <p>Please is designed to parallelise builds & tests to make the most of your CPU.
+	        It's written in Go so it's fast & efficient itself, and it can build just the required
+            parts of your code on each invocation.</p>
+        </div>
+        <div>
+          <img src="images/white2.png">
+          <h2>Help your deployment</h2>
+          <p>All your code & dependencies get packed into a single file which can easily be
+	        deployed & run on a server. This helps deploy languages like Python which don't
+            do this naturally.</p>
+        </div>
+      </div>
+      <div>
+        <div>
+          <img src="images/white4.png">
+          <h2>Unify your build process.</h2>
+          <p>Because Please can build many languages already (and you can easily write rules
+	        to teach it about others) you always invoke one tool to build any language or run
+            any test, simplifying your continuous integration and development processes.</p>
+        </div>
+        <div>
+          <img src="images/white5.png">
+          <h2>Continuous integration & pre-merge testing.</h2>
+          <p>We've developed Please in tandem with our internal integration	tools, so whenever
+            any of our engineers merges a pull request, we invoke it to make sure any affected
+            tests are passing before merging it in. Because Please allows fine-grained dependencies
+            and knows them for every test, we can run just the affected ones to keep this step
+            fast & lightweight.</p>
+        </div>
+      </div>
+      <div>
+        <div>
+          <img src="images/white6.png">
+          <h2>Isolate your tests.</h2>
+          <p>Got integration tests that need to spin up servers, write files, and find ports?
+	        No problem, by setting a flag on the test they can be run inside a Docker container
+            to keep them from clashing with one another.</p>
+        </div>
+        <div>
+        </div>
+      </div>
+      <div>
+        <div>
+          <p><a href="quickstart.html">Yes please, get Please</a></p>
+          <p><a href="basics.html">Please: Do stuff</a></p>
+        </div>
+        <div>
+          <p><a href="https://github.com/thought-machine/please">Get the source</a></p>
+        </div>
+      </div>
+    </div>

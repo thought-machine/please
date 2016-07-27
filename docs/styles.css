@@ -1,0 +1,248 @@
+/*
+Fonts
+
+Note that these are commercially licensed, we have bought a licence for them for use on the site
+but as a result they're not checked into Git.
+*/
+@font-face {
+    font-family: 'EssentialPragmataPro-Bold';
+    src: url('fonts/31B6AC_0_0.eot');
+    src: url('fonts/31B6AC_0_0.eot?#iefix') format('embedded-opentype'),
+         url('fonts/31B6AC_0_0.woff2') format('woff2'),
+         url('fonts/31B6AC_0_0.woff') format('woff'),
+         url('fonts/31B6AC_0_0.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'EssentialPragmataPro';
+    src: url('fonts/31B6AC_1_0.eot');
+    src: url('fonts/31B6AC_1_0.eot?#iefix') format('embedded-opentype'),
+         url('fonts/31B6AC_1_0.woff2') format('woff2'),
+         url('fonts/31B6AC_1_0.woff') format('woff'),
+         url('fonts/31B6AC_1_0.ttf') format('truetype');
+}
+
+/* General */
+body {
+    background: #202328;
+    color: #666666;
+    font-family: "EssentialPragmataPro", monospace;
+}
+a {
+    color: white;
+    text-decoration: none;
+}
+.body a:link {
+    color: #29ABE2;
+}
+.body a:visited {
+    color: #29ABE2;
+}
+h1, h2, h3, h4 {
+    color: white;
+    font-size: medium;
+    text-transform: uppercase;
+}
+.green {
+    color: #00FFA9;
+}
+.caps {
+    text-transform: uppercase;
+}
+pre {
+    border: 1px #00FFA9 solid;
+    border-right: 0px #00FFA9 solid;
+    border-radius: 3px;
+    padding: 2px;
+    color: white;
+}
+:not(pre) > code {
+    border: 1px #666666 solid;
+    color: white;
+    padding: 2px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+pre.rule {
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: normal;
+}
+p, li, td {
+    line-height: 130%;
+}
+hr {
+    border-color: #00FFA9;
+    margin-top: 10em;
+}
+
+/* Body uses flex to split left menu from rest of page */
+.above {
+    display: flex;
+    flex-direction: row;
+}
+.left {
+    flex: 1 4 25%;
+}
+.right {
+    flex: 3 4 75%;
+}
+
+/* Header row */
+.header {
+    display: flex;
+    flex-direction: row;
+    margin: 4px;
+    padding: 0px;
+    min-height: 7em;
+}
+.header > div {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    vertical-align: middle;
+    padding: 15px;
+}
+.header > div > div {
+    flex: 1 1;
+}
+
+/* Left menu */
+.left-container {
+    display: flex;
+    flex-direction: column;
+}
+.left .logo {
+    flex: 1 4 25%;
+}
+.logo h1 {
+    text-transform: none;
+}
+.left .menu {
+    flex: 3 4 75%;
+}
+.left .menu > ul {
+    list-style: none;
+    padding-left: 2em;
+}
+.left .menu > ul ul {
+    list-style: none;
+    padding-left: 3em;
+}
+.left .menu > ul > li {
+    color: white;
+    margin: 0.8em 0;
+}
+.left .menu > ul > li:before {
+    content: "\2192";
+    padding-right: 1em;
+}
+.left .menu > ul > li.selected:before {
+    content: "\2193";
+    padding-right: 1em;
+    color: #00FFA9;
+}
+.left .menu > ul > li:hover:before {
+    color: #00FFA9;
+}
+.left .menu > ul > li > ul > li, .left .menu > ul > li > ul > li > a {
+    color: #666666;
+}
+.left .menu li {
+    text-transform: uppercase;
+}
+.menu .selected a, .left .menu > ul > li > ul > li > a.selected, .left .menu > ul > li > ul > li.selected > a {
+    color: #00FFA9;
+}
+
+/* Main body */
+.body {
+    margin-left: 31%;
+}
+.body h1 {
+    padding: 5em 0;
+}
+.body h2, .body h3, .body h2 a, .body h3 a {
+    color: #00FFA9;
+    text-indent: -10%;
+    padding: 1em 0 2em 0;
+}
+.body ul {
+    list-style: none;
+    padding:0;
+    margin:0;
+}
+.body li {
+    text-indent: -2em;
+}
+.body li:before {
+    content: "\2022 ";
+    color: #00FFA9;
+    padding-right: 1.8em;
+}
+table {
+    border-spacing: 0;
+}
+th {
+    color: #00FFA9;
+    text-transform: uppercase;
+    border-bottom: 1px white solid;
+    text-align: left;
+}
+td {
+    border-bottom: 1px #666666 solid;
+    padding: 4px;
+    min-width: 8em;
+}
+
+/* Footer */
+footer {
+    display: flex;
+    flex-direction: column;
+}
+footer > div {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: row;
+    padding-top: 1em;
+}
+footer > div > div {
+    margin-top: auto;
+    flex: 1 1 50%;
+}
+footer a {
+    color: #29ABE2;
+}
+
+/* Index page has a custom layout */
+.index-layout {
+    display: flex;
+    flex-direction: column;
+}
+.index-layout > div {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: row;
+}
+.index-layout > div > div {
+    flex: 1 1 50%;
+    padding: 20px 40px 20px 0;
+    color: white;
+}
+.index-layout h2 {
+    text-indent: 0;
+}
+.index-layout img {
+    display: block;
+}
+.index-layout a:link, .index-layout a:visited {
+    text-transform: uppercase;
+    color: white;
+}
+.index-layout p {
+    margin-bottom: 5em;
+}
+.index-open {
+    color: white;
+    margin: 8em 8em 8em 0;
+}

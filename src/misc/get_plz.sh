@@ -16,7 +16,7 @@ else
     exit 1
 fi
 
-PLEASE_URL="https://s3-eu-west-1.amazonaws.com/please-build/${GOOS}_amd64/${VERSION}/please.tar.gz"
+PLEASE_URL="https://s3-eu-west-1.amazonaws.com/please-build/${GOOS}_amd64/${VERSION}/please_${VERSION}.tar.gz"
 
 LOCATION="${HOME}/.please"
 DIR="${LOCATION}/${VERSION}"

@@ -1,20 +1,38 @@
 deps = []
 
-for src in glob(['*.html'], excludes=['header.html']):
+for src in glob(['*.html'], excludes=['template.html']):
     name = src.replace('.', '_')
     genrule(
         name = name,
-	srcs = {
-            'src': [src],
-            'header': ['header.html'],
-            'templater': ['template.py'],
-        },
+	srcs = ['template.html', src],
+        tools = [':templater'],
         outs = [src],
-        cmd = 'cat $SRCS_SRC | python $SRCS_TEMPLATER $SRCS_HEADER > $OUT',
+        cmd = '$TOOL $SRCS > $OUT',
     )
     deps.append(':' + name)
 
+# Downscale images from original resolution
+for colour, scale in [('teal', '50%'), ('white', '20%')]:
+    for src in glob(['images/%s*.png' % colour]):
+        name = src.replace('.', '_').replace('/', '_')
+        genrule(
+            name = name,
+            srcs = [src],
+            outs = [src],
+            cmd = 'convert $SRC -crop 500x510+230+30 -resize %s $OUT' % scale,
+        )
+        deps.append(':' + name)
+
 filegroup(
     name = 'docs',
-    srcs = deps + ['skeleton.css'],
+    srcs = deps + [
+        'styles.css',
+        'action.js',
+        'images/thoughtmachine.png',
+    ],
+)
+
+go_binary(
+    name = 'templater',
+    main = 'template.go',
 )

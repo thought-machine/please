@@ -1,11 +1,3 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Please quickstart</title>
-    <link rel="stylesheet" type="text/css" href="skeleton.css">
-  </head>
-  <body>
-    <!-- HEADER -->
 
     <h1>Please quickstart</h1>
 
@@ -16,11 +8,15 @@
     <h2>Installing</h2>
     <p><code>curl https://s3-eu-west-1.amazonaws.com/please-build/get_plz.sh | bash</code></p>
     <p>This will download and install the latest version of Please on your system.</p>
-    <p>You'll also need PyPy installed, including the .so which is not present in many packaged versions of it.<br/>
-      We have a .deb compatible with Ubuntu 14.04 which you can fetch from
-      <a href="https://s3-eu-west-1.amazonaws.com/please-build/tm-pypy_5.1.0_amd64.deb">https://s3-eu-west-1.amazonaws.com/please-build/tm-pypy_5.1.0_amd64.deb</a>.
+    <p>You'll also need PyPy installed, including the .so which is not present in the usual
+      Debian / Ubuntu packages of it. We suggest downloading the latest version from
+      <a href="http://pypy.org/download.html">pypy.org</a> and following their instructions.<br/>
+      If you're using another distro that has a packaged version, make sure you add the shared
+      library (e.g. <code>USE=shared</code> on Gentoo).<br/>
       <code>brew install pypy</code> should work on OSX though.
     </p>
+    <p>Alternatively you can use CPython (currently only version 2 is supported) as long as you
+      have cffi installed; <code>pip install cffi>=1.5.0</code> should take care of it.</p>
 
     <h2>Shell completion</h2>
     <p>There are a couple of shell completion scripts available:<p>
@@ -40,5 +36,3 @@
     <p>You will need to write some BUILD files to define how to compile your code.
       Carry on to <a href="basics.html">Please Basics</a> which will explain more about it.
     </p>
-  </body>
-</html>
