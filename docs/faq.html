@@ -224,7 +224,10 @@
 
     <div id="output-player"></div>
     <script>
-      asciinema.player.js.CreatePlayer('output-player', 'plz-recording.json');
+      asciinema.player.js.CreatePlayer('output-player', 'plz-recording.json', {
+        autoPlay: true,
+        loop: true
+      });
     </script>
 
     <h3>What do the colours in the console output mean?</h3>
