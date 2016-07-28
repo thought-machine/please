@@ -23,11 +23,20 @@ cgo_library(
     ],
 )
 
+# Note that because these scripts are used during the bootstrap process, they can't
+# be python_binary rules because we haven't built anything to pex them with yet.
 genrule(
     name = 'type_checked_rules',
     srcs = ['type_checking.py'] + glob(['rules/*.py']),
     outs = [basename(x) for x in glob(['rules/*.py'])],
     cmd = 'python $SRCS',
+)
+
+genrule(
+    name = 'rule_args',
+    srcs = ['extract_rule_args.py'] + glob(['rules/*.py']),
+    outs = ['rule_args.json'],
+    cmd = 'python $SRCS > $OUT',
 )
 
 go_bindata(
