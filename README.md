@@ -5,8 +5,6 @@ nearly any aspect of your build process.
 
 See http://please.build for more information.
 
-TODO(all): Set up the website.
-
 Currently Linux (tested on Ubuntu) and OSX are actively supported,
 and FreeBSD is known to work with a little setup (see FAQ for details).
 
@@ -16,7 +14,7 @@ Getting Started
 
 The easiest way to install it on your own machine is to run:
 ```bash
-curl -s https://s3-eu-west-1.amazonaws.com/please-build/get_plz.sh | bash
+curl -s https://www.please.build/download/get_plz.sh | bash
 ```
 In order for it to run you will need a Python interpreter available.
 You can use either PyPy or CPython with cffi. On OSX PyPy is fairly

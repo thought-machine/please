@@ -3,7 +3,7 @@
 # Downloads a precompiled copy of Please from our s3 bucket and installs it.
 set -eu
 
-VERSION=`curl -fsSL https://s3-eu-west-1.amazonaws.com/please-build/latest_version`
+VERSION=`curl -fsSL https://www.please.build/download/latest_version`
 # Find the os / arch to download. You can do this quite nicely with go env
 # but we use this script on machines that don't necessarily have Go itself.
 OS=`uname`
@@ -16,7 +16,7 @@ else
     exit 1
 fi
 
-PLEASE_URL="https://s3-eu-west-1.amazonaws.com/please-build/${GOOS}_amd64/${VERSION}/please.tar.gz"
+PLEASE_URL="https://www.please.build/download/${GOOS}_amd64/${VERSION}/please.tar.gz"
 
 LOCATION="${HOME}/.please"
 DIR="${LOCATION}/${VERSION}"

@@ -97,7 +97,7 @@ func DefaultConfiguration() *Configuration {
 	config.Please.Version = ""
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
-	config.Please.DownloadLocation = "https://s3-eu-west-1.amazonaws.com/please-build"
+	config.Please.DownloadLocation = "https://www.please.build/download"
 	config.Please.Lang = "en_GB.UTF-8"  // Not the language of the UI, the language passed to rules.
 	config.Please.Nonce = "1402"        // Arbitrary nonce to invalidate config when needed.
 	config.Build.Timeout = 600          // Ten minutes

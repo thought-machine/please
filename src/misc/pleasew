@@ -6,7 +6,7 @@ GREEN="$(tput setaf 2)"
 YELLOW="$(tput setaf 3)"
 RESET="$(tput sgr0)"
 
-DEFAULT_URL_BASE="https://s3-eu-west-1.amazonaws.com/please-build"
+DEFAULT_URL_BASE="https://www.please.build/download"
 # We might already have it downloaded...
 LOCATION=`grep -i "^location" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
 if [ -z "$LOCATION" ]; then
