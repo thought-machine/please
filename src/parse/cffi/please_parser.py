@@ -218,7 +218,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     target = _add_target(package,
                          ffi_string(name),
                          ffi_string('' if isinstance(cmd, Mapping) else cmd.strip()),
-                         ffi_string(test_cmd),
+                         ffi_string('' if isinstance(test_cmd, Mapping) else test_cmd.strip() if test_cmd else None),
                          binary,
                          test,
                          needs_transitive_deps,
@@ -252,6 +252,9 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     if isinstance(cmd, Mapping):
         for config, command in cmd.items():
             _check_c_error(_add_command(target, config, command.strip()))
+    if isinstance(test_cmd, Mapping):
+        for config, command in test_cmd.items():
+            _check_c_error(_add_test_command(target, config, command.strip()))
     if system_srcs:
         for src in system_srcs:
             if not src.startswith('/') or src.startswith('//'):

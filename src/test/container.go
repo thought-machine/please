@@ -14,7 +14,7 @@ import "core"
 
 func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	testDir := path.Join(core.RepoRoot, target.TestDir())
-	replacedCmd := build.ReplaceTestSequences(target, target.TestCommand)
+	replacedCmd := build.ReplaceTestSequences(target, target.GetTestCommand())
 	replacedCmd += " " + strings.Join(state.TestArgs, " ")
 	containerName := state.Config.Docker.DefaultImage
 	if target.ContainerSettings != nil && target.ContainerSettings.DockerImage != "" {

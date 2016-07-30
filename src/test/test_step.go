@@ -265,7 +265,7 @@ func prepareTestDir(graph *core.BuildGraph, target *core.BuildTarget) error {
 }
 
 func runTest(state *core.BuildState, target *core.BuildTarget, timeout int) ([]byte, error) {
-	replacedCmd := build.ReplaceTestSequences(target, target.TestCommand)
+	replacedCmd := build.ReplaceTestSequences(target, target.GetTestCommand())
 	env := core.BuildEnvironment(state, target, true)
 	if len(state.TestArgs) > 0 {
 		args := strings.Join(state.TestArgs, " ")
