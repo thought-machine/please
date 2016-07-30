@@ -2,16 +2,13 @@ subinclude('//build_defs:go_bindata')
 
 cgo_library(
     name = 'parse',
-    srcs = glob(
-        [
-            '*.go',
-            'interpreter.*',
-        ],
-        excludes = [
-            '*_test.go',
-            'builtin_rules.go',
-        ],
-    ) + [':builtin_rules'],
+    srcs = glob([
+        '*.go',
+        'interpreter.*',
+    ], excludes = [
+        '*_test.go',
+        'builtin_rules.go',
+    ]) + [':builtin_rules'],
     visibility = ['PUBLIC'],
     deps = [
         ':builtin_rules',
