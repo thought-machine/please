@@ -1,9 +1,6 @@
 java_library(
     name = 'junit_runner',
-    srcs = glob(
-        ['*.java'],
-        excludes = ['*Test.java'],
-    ),
+    srcs = glob(['*.java'], excludes = ['*Test.java']),
     exported_deps = [
         '//third_party/java:guava',
         '//third_party/java:hamcrest',

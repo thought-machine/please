@@ -33,9 +33,9 @@ var BuildLabelStdin = BuildLabel{PackageName: "", Name: "_STDIN"}
 var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // This is a little strict; doesn't allow for non-ascii names, for example.
-const packagePart = "[A-Za-z0-9\\._-]+"
+const packagePart = "[A-Za-z0-9\\._\\+-]+"
 const packageName = "(" + packagePart + "(?:/" + packagePart + ")*)"
-const targetName = "([A-Za-z0-9\\._+-]+(?:#[A-Za-z0-9_+-]+)*)"
+const targetName = "([A-Za-z0-9\\._\\+-]+(?:#[A-Za-z0-9_\\+-]+)*)"
 
 // Regexes for matching the various ways of writing a build label.
 // Fully specified labels, e.g. //src/core:core

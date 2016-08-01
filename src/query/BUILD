@@ -1,9 +1,6 @@
 go_library(
     name = 'query',
-    srcs = glob(
-        ['*.go'],
-        excludes = ['*_test.go'],
-    ),
+    srcs = glob(['*.go'], excludes = ['*_test.go']),
     visibility = ['PUBLIC'],
     deps = [
         '//src/build',
