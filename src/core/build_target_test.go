@@ -201,6 +201,25 @@ func TestGetCommand(t *testing.T) {
 	assert.Equal(t, "test3", target.GetCommand(), "Default config is opt, should fall back to that")
 }
 
+func TestGetTestCommand(t *testing.T) {
+	state := NewBuildState(10, nil, 2, DefaultConfiguration())
+	state.Config.Build.Config = "dbg"
+	state.Config.Build.FallbackConfig = "opt"
+	target := makeTarget("//src/core:target1", "PUBLIC")
+	target.TestCommand = "test1"
+	assert.Equal(t, "test1", target.GetTestCommand())
+	assert.Panics(t, func() { target.AddTestCommand("opt", "test2") },
+		"Should panic when adding a config command to a target with a command already")
+	target.TestCommand = ""
+	target.AddTestCommand("opt", "test3")
+	target.AddTestCommand("dbg", "test4")
+	assert.Equal(t, "test4", target.GetTestCommand(), "Current config is dbg")
+	state.Config.Build.Config = "opt"
+	assert.Equal(t, "test3", target.GetTestCommand(), "Current config is opt")
+	state.Config.Build.Config = "fast"
+	assert.Equal(t, "test3", target.GetTestCommand(), "Default config is opt, should fall back to that")
+}
+
 func TestHasSource(t *testing.T) {
 	target := makeTarget("//src/core:target1", "")
 	target.Sources = append(target.Sources, FileLabel{File: "file1.go"})

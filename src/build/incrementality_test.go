@@ -25,6 +25,7 @@ var KnownFields = map[string]bool{
 	"Command":                     true,
 	"Commands":                    true,
 	"TestCommand":                 true,
+	"TestCommands":                true,
 	"NeedsTransitiveDependencies": true,
 	"OutputIsComplete":            true,
 	"Requires":                    true,

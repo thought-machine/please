@@ -44,16 +44,11 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			}
 			fmt.Printf("      ],\n")
 		}
-		if target.Commands != nil {
-			fmt.Printf("      cmd = {\n")
-			for config, command := range target.Commands {
-				fmt.Printf("          '%s': '%s',\n", config, command)
-			}
-			fmt.Printf("      },\n")
-
-		} else if !target.IsFilegroup() {
+		pythonDict(target.Commands, "cmd")
+		if !target.IsFilegroup() {
 			fmt.Printf("      cmd = '%s'\n", target.Command)
 		}
+		pythonDict(target.TestCommands, "test_cmd")
 		if target.TestCommand != "" {
 			fmt.Printf("      test_cmd = '%s'\n", target.TestCommand)
 		}
@@ -136,6 +131,16 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 func pythonBool(s string, b bool) {
 	if b {
 		fmt.Printf("      %s = True,\n", s)
+	}
+}
+
+func pythonDict(m map[string]string, name string) {
+	if m != nil {
+		fmt.Printf("      %s = {\n", name)
+		for config, command := range m {
+			fmt.Printf("          '%s': '%s',\n", config, command)
+		}
+		fmt.Printf("      },\n")
 	}
 }
 

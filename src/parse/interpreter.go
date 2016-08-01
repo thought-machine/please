@@ -468,8 +468,13 @@ func AddNamedSource(cTarget uintptr, cName *C.char, cSource *C.char) *C.char {
 
 //export AddCommand
 func AddCommand(cTarget uintptr, cConfig *C.char, cCommand *C.char) *C.char {
-	target := unsizet(cTarget)
-	target.AddCommand(C.GoString(cConfig), C.GoString(cCommand))
+	unsizet(cTarget).AddCommand(C.GoString(cConfig), C.GoString(cCommand))
+	return nil
+}
+
+//export AddTestCommand
+func AddTestCommand(cTarget uintptr, cConfig *C.char, cCommand *C.char) *C.char {
+	unsizet(cTarget).AddTestCommand(C.GoString(cConfig), C.GoString(cCommand))
 	return nil
 }
 

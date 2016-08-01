@@ -37,6 +37,7 @@ var KnownFields = map[string]bool{
 	"Sources":                     true,
 	"Stamp":                       true,
 	"TestCommand":                 true,
+	"TestCommands":                true,
 	"TestOnly":                    true,
 	"TestOutputs":                 true,
 	"TestTimeout":                 true,

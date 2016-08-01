@@ -65,6 +65,7 @@ int InitialiseInterpreter(char* parser_location) {
   reg("_add_provide", "char* (*)(size_t, char*, char*)", AddProvide);
   reg("_add_named_src", "char* (*)(size_t, char*, char*)", AddNamedSource);
   reg("_add_command", "char* (*)(size_t, char*, char*)", AddCommand);
+  reg("_add_test_command", "char* (*)(size_t, char*, char*)", AddTestCommand);
   reg("_set_container_setting", "char* (*)(size_t, char*, char*)", SetContainerSetting);
   reg("_glob", "char** (*)(char*, char**, long long, char**, long long, uint8)", Glob);
   reg("_get_include_file", "char* (*)(size_t, char*)", GetIncludeFile);

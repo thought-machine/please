@@ -51,6 +51,8 @@ type BuildTarget struct {
 	Commands map[string]string
 	// Shell command to run for test targets.
 	TestCommand string
+	// Per-configuration test commands to run.
+	TestCommands map[string]string
 	// Represents the state of this build target (see below)
 	state int32
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
@@ -574,20 +576,41 @@ func (target *BuildTarget) AddCommand(config, command string) {
 	}
 }
 
+// AddTestCommand adds a new config-specific test command to this build target.
+// Adding a general command is still done by simply setting the TestCommand member.
+func (target *BuildTarget) AddTestCommand(config, command string) {
+	if target.TestCommand != "" {
+		panic(fmt.Sprintf("Adding named test command %s to %s, but it already has a general test command set", config, target.Label))
+	} else if target.TestCommands == nil {
+		target.TestCommands = map[string]string{config: command}
+	} else {
+		target.TestCommands[config] = command
+	}
+}
+
 // GetCommand returns the command we should use to build this target for the current config.
 func (target *BuildTarget) GetCommand() string {
-	if target.Commands == nil {
-		return target.Command
-	} else if command, present := target.Commands[State.Config.Build.Config]; present {
+	return target.getCommand(target.Commands, target.Command)
+}
+
+// GetTestCommand returns the command we should use to test this target for the current config.
+func (target *BuildTarget) GetTestCommand() string {
+	return target.getCommand(target.TestCommands, target.TestCommand)
+}
+
+func (target *BuildTarget) getCommand(commands map[string]string, singleCommand string) string {
+	if commands == nil {
+		return singleCommand
+	} else if command, present := commands[State.Config.Build.Config]; present {
 		return command // Has command for current config, good
-	} else if command, present := target.Commands[State.Config.Build.FallbackConfig]; present {
+	} else if command, present := commands[State.Config.Build.FallbackConfig]; present {
 		return command // Has command for default config, fall back to that
 	}
 	// Oh dear, target doesn't have any matching config. Panicking is a bit heavy here, instead
 	// fall back to an arbitrary (but consistent) one.
 	highestCommand := ""
 	highestConfig := ""
-	for config, command := range target.Commands {
+	for config, command := range commands {
 		if config > highestConfig {
 			highestConfig = config
 			highestCommand = command

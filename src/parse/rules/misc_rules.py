@@ -110,9 +110,10 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
 
     Args:
       name (str): Name of the rule
-      test_cmd (str): Command to run for the test.
+      test_cmd (str | dict): Command to run for the test. It works similarly to the cmd attribute;
+                             see genrule for a more detailed discussion of its properties.
       labels (list): Labels to apply to this test.
-      cmd (str): Command to run to build the test.
+      cmd (str | dict): Command to run to build the test.
       srcs (list): Source files for this rule.
       outs (list): Output files of this rule.
       deps (list): Dependencies of this rule.
