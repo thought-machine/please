@@ -84,3 +84,20 @@ filegroup(
         ':servers_tarball',
     ],
 )
+
+# This generates a stamped version of the various inputs which will have a unique name.
+# We don't really use it here, it's for testing purposes really.
+hash_filegroup(
+    name = 'hash_tools',
+    srcs = [
+        '//src:please',
+        ':please_pex',
+        '//src/build/java:junit_runner',
+        '//src/cache/main:cache_cleaner',
+        '//src/build/java:jarcat',
+        '//src/build/java:please_maven',
+        '//src/misc:plz_diff_graphs',
+        '//src/build/go:please_go_test',
+        '//src/parse/cffi:all_engines',
+    ],
+)
