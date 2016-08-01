@@ -32,6 +32,7 @@ var pageTitles = map[string]string{
 	"commands.html":         "Please commands",
 	"config.html":           "Please config file reference",
 	"faq.html":              "Please FAQ",
+	"index.html":            "Please",
 	"intermediate.html":     "Intermediate Please",
 	"language.html":         "The Please BUILD language",
 	"lexicon.html":          "Please Lexicon",
