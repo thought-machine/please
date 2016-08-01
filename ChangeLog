@@ -1,3 +1,11 @@
+Version 4.4.0
+-------------
+
+    * Added support for multiple per-config test commands in the same way as build commands.
+    * Added hash_filegroup rule which acts like a normal filegroup but creates outputs with
+      a name based on their hash, which facilitates having immutable names for artifacts.
+
+
 Version 4.3.2
 -------------
 
