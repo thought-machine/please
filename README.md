@@ -14,7 +14,7 @@ Getting Started
 
 The easiest way to install it on your own machine is to run:
 ```bash
-curl -s https://www.please.build/download/get_plz.sh | bash
+curl -s https://get.plz.build | bash
 ```
 In order for it to run you will need a Python interpreter available.
 You can use either PyPy or CPython with cffi. On OSX PyPy is fairly
