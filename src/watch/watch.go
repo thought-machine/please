@@ -97,6 +97,7 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 		if _, present := targets[target]; present {
 			return
 		}
+		targets[target] = struct{}{}
 		for _, source := range target.Sources {
 			if source.Label() == nil {
 				for _, src := range source.Paths(state.Graph) {
