@@ -33,7 +33,7 @@ distros (e.g. Trusty) may not package something new enough.
 
 Then you simply run `plz init` at the root of your project to set up
 a default config and you're good to start adding BUILD files.
-See [the website](https://please.build) for more instructions about
+See [the website](http://please.build) for more instructions about
 how to write them.
 
 
