@@ -72,13 +72,15 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if err := target.CheckDuplicateOutputs(); err != nil {
 		return err
 	}
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
 	// This must run before we can leave this function successfully by any path.
 	if target.PreBuildFunction != 0 {
+		log.Debug("Running pre-build function for %s", target.Label)
 		if err := parse.RunPreBuildFunction(tid, state, target); err != nil {
 			return err
 		}
+		log.Debug("Finished pre-build function for %s", target.Label)
 	}
+	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
 	var postBuildOutput string
 	if state.PrepareOnly && state.IsOriginalTarget(target.Label) {
 		if target.IsFilegroup() {
