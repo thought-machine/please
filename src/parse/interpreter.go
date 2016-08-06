@@ -755,6 +755,7 @@ func GetLabels(cPackage uintptr, cTarget *C.char, cPrefix *C.char) **C.char {
 		log.Fatalf("get_labels called for %s incorrectly; the only time this is safe to call is from its own pre-build function.", target.Label)
 	}
 	labels := map[string]bool{}
+	done := map[*core.BuildTarget]bool{}
 	var getLabels func(*core.BuildTarget)
 	getLabels = func(target *core.BuildTarget) {
 		for _, label := range target.Labels {
@@ -762,8 +763,11 @@ func GetLabels(cPackage uintptr, cTarget *C.char, cPrefix *C.char) **C.char {
 				labels[strings.TrimSpace(strings.TrimPrefix(label, prefix))] = true
 			}
 		}
+		done[target] = true
 		for _, dep := range target.Dependencies() {
-			getLabels(dep)
+			if !done[dep] {
+				getLabels(dep)
+			}
 		}
 	}
 	getLabels(target)
