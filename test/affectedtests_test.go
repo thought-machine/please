@@ -4,6 +4,5 @@ package test
 
 import "testing"
 
-
 func TestAffectedTests(t *testing.T) {
 }
