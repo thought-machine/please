@@ -3,7 +3,7 @@ package query
 import "core"
 import "fmt"
 
-// Produces a Python call which would (hopefully) regenerate the same build rule if run.
+// QueryPrint produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
 func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {

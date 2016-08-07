@@ -10,8 +10,8 @@ import (
 	"core"
 )
 
-func makeTarget(g *core.BuildGraph, packageName string, label_name string, outputs []string) *core.BuildTarget {
-	l := core.ParseBuildLabel(fmt.Sprintf("//%s:%s", packageName, label_name), "")
+func makeTarget(g *core.BuildGraph, packageName string, labelName string, outputs []string) *core.BuildTarget {
+	l := core.ParseBuildLabel(fmt.Sprintf("//%s:%s", packageName, labelName), "")
 	t := core.NewBuildTarget(l)
 
 	p := g.Package(packageName)
@@ -23,7 +23,7 @@ func makeTarget(g *core.BuildGraph, packageName string, label_name string, outpu
 		t.AddOutput(out)
 		p.MustRegisterOutput(out, t)
 	}
-	p.Targets[label_name] = t
+	p.Targets[labelName] = t
 	g.AddTarget(t)
 	return t
 }

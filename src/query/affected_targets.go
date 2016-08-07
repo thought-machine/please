@@ -3,7 +3,7 @@ package query
 import "core"
 import "fmt"
 
-// Walks over the build graph and identifies all targets that have a transitive
+// QueryAffectedTargets walks over the build graph and identifies all targets that have a transitive
 // dependency on the given set of files.
 // Targets are filtered by given include / exclude labels and if 'tests' is true only
 // test targets will be returned.

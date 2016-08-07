@@ -3,6 +3,7 @@ package query
 import "core"
 import "fmt"
 
+// QueryDeps prints all transitive dependencies of a set of targets.
 func QueryDeps(graph *core.BuildGraph, labels []core.BuildLabel) {
 	for _, label := range labels {
 		printTarget(graph, graph.TargetOrDie(label), "")

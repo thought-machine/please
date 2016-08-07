@@ -10,7 +10,7 @@ import (
 	"utils"
 )
 
-// Produces a set of labels that complete a given input.
+// QueryCompletionLabels produces a set of labels that complete a given input.
 func QueryCompletionLabels(config *core.Configuration, args []string, repoRoot string) []core.BuildLabel {
 	if len(args) == 0 {
 		queryCompletionPackages(config, ".", repoRoot)

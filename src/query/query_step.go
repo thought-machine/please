@@ -1,4 +1,4 @@
-// Basic query language for Please.
+// Package query implements a simple query language for Please.
 //
 // Currently supported operations:
 //   'deps': 'plz query deps //src:please'
@@ -12,11 +12,15 @@
 //            produces a python-like function call that would define the rule.
 //   'completions': 'plz query completions //sr'
 //            produces a list of possible completions for the given stem.
-//   'affectedtests': 'plz query affectedtests path/to/changed_file.py'
+//   'affectedtargets': 'plz query affectedtargets path/to/changed_file.py'
 //            produces a list of test targets which have a transitive dependency on
 //            the given file.
 //   'input': 'plz query input //src:label' produces a list of all the files
 //            (including transitive deps) that are referenced by this rule.
+//   'output': 'plz query output //src:label' produces a list of all the files
+//             that are output by this rule.
+//   'graph': 'plz query graph' produces a JSON representation of the build graph
+//            that other programs can interpret for their own uses.
 package query
 
 import "gopkg.in/op/go-logging.v1"

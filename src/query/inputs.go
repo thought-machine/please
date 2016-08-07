@@ -3,6 +3,7 @@ package query
 import "fmt"
 import "core"
 
+// QueryTargetInputs prints all inputs for a single target.
 func QueryTargetInputs(graph *core.BuildGraph, labels []core.BuildLabel) {
 	inputPaths := map[string]bool{}
 	for _, label := range labels {

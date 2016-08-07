@@ -4,7 +4,7 @@ import "fmt"
 
 import "core"
 
-// Finds and returns a path between two targets.
+// QuerySomePath finds and returns a path between two targets.
 // Useful for a "why on earth do I depend on this thing" type query.
 func QuerySomePath(graph *core.BuildGraph, label1 core.BuildLabel, label2 core.BuildLabel) {
 	// Awkwardly either target can be :all. This is an extremely useful idiom though so despite
@@ -31,9 +31,8 @@ func querySomePath1(graph *core.BuildGraph, target1 *core.BuildTarget, label2 co
 			}
 		}
 		return false
-	} else {
-		return querySomePath2(graph, target1, graph.TargetOrDie(label2), print)
 	}
+	return querySomePath2(graph, target1, graph.TargetOrDie(label2), print)
 }
 
 func querySomePath2(graph *core.BuildGraph, target1, target2 *core.BuildTarget, print bool) bool {
