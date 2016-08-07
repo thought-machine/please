@@ -8,10 +8,8 @@
 // actual C code; nearly all of it is in interpreter.h and is just declarations. What remains in
 // interpreter.c is essentially just glue to handle limitations of cgo and the way we're using
 // callbacks etc.
-// The setup isn't actually extremely complex but some care is needed; it's relatively rare to need
-// to modify it (generally only when adding new properties to build targets) but when you do you
-// must make sure this file, defs.h / interpreter.h and cffi/please_parser.py all agree about struct
-// definitions etc. Bad Things will happen if you do not.
+// When changing callbacks or adding new ones, you will need to alter interpreter.c as well.
+// Bad Things will obviously happen if the types declared there don't agree with the real ones.
 
 package parse
 
