@@ -20,9 +20,7 @@ curl -s https://get.plz.build | bash
 ```
 In order for it to run you will need a Python interpreter available.
 You can use either PyPy or CPython with cffi. On OSX PyPy is fairly
-straightforward with Homebrew, simply run `brew install pypy`. You may
-need to link the headers into /usr/local/include/pypy, at time of writing
-Homebrew doesn't seem to do this automatically.
+straightforward with Homebrew, simply run `brew install pypy`.
 
 Unfortunately at the time of writing the Ubuntu and Debian PyPy packages
 don't have the shared libraries. For now we suggest that you use the
@@ -53,7 +51,8 @@ can target 1.4+.
 Similarly to the instructions above, you'll need a python interpreter.
 Having PyPy, python2 and python3 installed will allow you to build
 all the possible engines & therefore packages etc, but just python2
-is enough for the build to succeed.
+is enough for the build to succeed, as long as you have cffi installed
+as mentioned above.
 
 You'll need to have dependencies for the various helper programs
 of Please installed in order to build it. At the moment the minimal
