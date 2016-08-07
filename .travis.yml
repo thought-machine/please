@@ -16,6 +16,7 @@ script:
   - echo "goroot = $GOROOT" >> .plzconfig.local
   - echo "[cpp]" >> .plzconfig.local
   - echo "cctool = g++-4.8" >> .plzconfig.local
+  - echo "defaultoptcflags = --std=c++11 -O2 -DNDEBUG" >> .plzconfig.local
   - echo "[proto]" >> .plzconfig.local
   - echo "protoctool = ${HOME}/protoc" >> .plzconfig.local
   - ./bootstrap.sh --plain_output
