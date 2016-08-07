@@ -1,3 +1,11 @@
+Version 4.4.1
+-------------
+
+    * Fix to `plz watch` which wasn't deduplicating dependencies correctly, so could take
+      a very long time to start on deep dependency trees.
+    * Performance improvements to `get_labels()`.
+
+
 Version 4.4.0
 -------------
 
