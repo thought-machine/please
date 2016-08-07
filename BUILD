@@ -15,7 +15,6 @@ filegroup(
         '//src/cache/server:http_cache_server_bin',
         '//src/cache/server:rpc_cache_server_bin',
         '//src/misc:plz_diff_graphs',
-        '//src/parse/cffi:all_engines',
     ],
     deps = [
         '//:please',
