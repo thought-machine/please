@@ -1,4 +1,4 @@
-# Please [![Build Status](https://travis-ci.org/thought-machine/please.svg?branch=master)](https://travis-ci.org/thought-machine/please)
+# Please [![Build Status](https://travis-ci.org/thought-machine/please.svg?branch=master)](https://travis-ci.org/thought-machine/please) [![Go Report Card](https://goreportcard.com/badge/github.com/thought-machine/please)](https://goreportcard.com/report/github.com/thought-machine/please)
 
 Please is a cross-language build system with an emphasis on
 high performance, extensibility and reproduceability.
