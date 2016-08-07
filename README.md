@@ -1,3 +1,5 @@
+# Please [![Build Status](https://travis-ci.org/thought-machine/please.svg?branch=master)](https://travis-ci.org/thought-machine/please)
+
 Please is a cross-language build system with an emphasis on
 high performance, extensibility and reproduceability.
 It supports a number of popular languages and can automate
