@@ -148,7 +148,7 @@ func (backend *logBackend) lineWrap(msg string) []string {
 	wrappedLines := make([]string, 0, len(lines))
 	for _, line := range lines {
 		for i := 0; i < len(line); {
-			split := i + findSplit(line[i:len(line)], backend.Cols)
+			split := i + findSplit(line[i:], backend.Cols)
 			wrappedLines = append(wrappedLines, line[i:split])
 			i = split
 		}

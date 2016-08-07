@@ -73,7 +73,7 @@ func (cache *Cache) scan() {
 		if err != nil {
 			log.Fatalf("%s", err)
 		} else if !info.IsDir() { // We don't have directory entries.
-			name = name[len(cache.rootPath)+1 : len(name)]
+			name = name[len(cache.rootPath)+1:]
 			log.Debug("Found file %s", name)
 			size := info.Size()
 			cache.cachedFiles.Set(name, &cachedFile{
@@ -161,7 +161,7 @@ func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) 
 			if err != nil {
 				return err
 			}
-			ret[name[len(cache.rootPath)+1:len(name)]] = body
+			ret[name[len(cache.rootPath)+1:]] = body
 		}
 		return nil
 	}); err != nil {
@@ -257,7 +257,7 @@ func (cache *Cache) DeleteAllArtifacts() error {
 
 // clean implements a periodic clean of the cache to remove old artifacts.
 func (cache *Cache) clean(cleanFrequency int, lowWaterMark, highWaterMark int64) {
-	for _ = range time.NewTicker(time.Duration(cleanFrequency) * time.Second).C {
+	for range time.NewTicker(time.Duration(cleanFrequency) * time.Second).C {
 		cache.singleClean(lowWaterMark, highWaterMark)
 	}
 }

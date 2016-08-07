@@ -86,7 +86,7 @@ func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*
 			artifacts = append(artifacts, &pb.Artifact{
 				Package: target.Label.PackageName,
 				Target:  target.Label.Name,
-				File:    name[len(outDir)+1 : len(name)],
+				File:    name[len(outDir)+1:],
 				Body:    content,
 			})
 		}

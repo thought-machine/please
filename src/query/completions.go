@@ -30,7 +30,7 @@ func QueryCompletionLabels(config *core.Configuration, args []string, repoRoot s
 	args[0] = strings.Replace(args[0], "\\:", ":", -1)
 	labels := core.ParseBuildLabels([]string{args[0]})
 	// Return this label without the trailing bit.
-	return []core.BuildLabel{core.BuildLabel{PackageName: labels[0].PackageName, Name: "all"}}
+	return []core.BuildLabel{{PackageName: labels[0].PackageName, Name: "all"}}
 }
 
 func queryCompletionPackages(config *core.Configuration, query, repoRoot string) {

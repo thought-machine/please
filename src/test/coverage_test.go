@@ -140,7 +140,7 @@ func TestGoResults3(t *testing.T) {
 // Direct test on the block-parsing function.
 func TestParseBlocks(t *testing.T) {
 	lines := parseBlocks([]cover.ProfileBlock{
-		cover.ProfileBlock{StartLine: 2, EndLine: 3, Count: 1},
+		{StartLine: 2, EndLine: 3, Count: 1},
 	})
 	if len(lines) != 3 {
 		t.Errorf("Wrong number of lines, should have been %d, was %d", 3, len(lines))

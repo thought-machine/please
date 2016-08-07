@@ -118,7 +118,7 @@ func firstToParse(label, dependor core.BuildLabel) bool {
 		pkg[label.Name] = append(pkg[label.Name], dependor)
 		return false
 	}
-	pendingTargets[label.PackageName] = map[string][]core.BuildLabel{label.Name: []core.BuildLabel{dependor}}
+	pendingTargets[label.PackageName] = map[string][]core.BuildLabel{label.Name: {dependor}}
 	return true
 }
 
@@ -134,7 +134,7 @@ func deferParse(label core.BuildLabel, pkg *core.Package) bool {
 	if m, present := deferredParses[label.PackageName]; present {
 		m[label.Name] = append(m[label.Name], pkg.Name)
 	} else {
-		deferredParses[label.PackageName] = map[string][]string{label.Name: []string{pkg.Name}}
+		deferredParses[label.PackageName] = map[string][]string{label.Name: {pkg.Name}}
 	}
 	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkg.Name, Name: "all"}, true)
 	return true

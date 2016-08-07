@@ -62,7 +62,7 @@ func (r *RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) 
 			response.Artifacts = append(response.Artifacts, &pb.Artifact{
 				Package: artifact.Package,
 				Target:  artifact.Target,
-				File:    name[len(root)+1 : len(name)],
+				File:    name[len(root)+1:],
 				Body:    body,
 			})
 		}

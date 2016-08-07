@@ -10,7 +10,7 @@ func TestAddTarget(t *testing.T) {
 	graph := NewGraph()
 	target := makeTarget("//src/core:target1")
 	graph.AddTarget(target)
-	assert.Equal(t, target, graph.TargetOrDie(target.Label))	
+	assert.Equal(t, target, graph.TargetOrDie(target.Label))
 }
 
 func TestAddPackage(t *testing.T) {
@@ -69,7 +69,7 @@ func TestAllDepsResolved(t *testing.T) {
 	graph.AddTarget(target2)
 	assert.False(t, graph.AllDependenciesResolved(target2), "Haven't added a proper dep for target2 yet.")
 	graph.AddTarget(target1)
-	assert.True(t, graph.AllDependenciesResolved(target1), "Has no dependencies so they're all resolved")	
+	assert.True(t, graph.AllDependenciesResolved(target1), "Has no dependencies so they're all resolved")
 	assert.True(t, graph.AllDependenciesResolved(target1), "Should be resolved now we've added target1.")
 }
 
