@@ -269,7 +269,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         mocks = sorted(mocks.items())
         deps.extend(v for _, v in mocks)
         dirs = 'mkdir -p ' + ' '.join('$(dirname %s)' % k for k, _ in mocks)
-        mvs = ' && '.join('cp -f $(location %s) %s.a' % (v, k) for k, v in mocks)
+        mvs = ' && '.join('mv $(location %s) %s.a' % (v, k) for k, v in mocks)
         for k, v in cmds.items():
             cmds[k] = ' && '.join([dirs, mvs, v])
     build_rule(
