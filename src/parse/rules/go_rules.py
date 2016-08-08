@@ -9,7 +9,7 @@ _GO_LINK_TOOL = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
 _GOPATH = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
 
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
-_LINK_PKGS_CMD = 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -sf $TMP_DIR/$i ${j%/*}; done'
+_LINK_PKGS_CMD = 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done'
 
 # Commands for go_binary and go_test.
 _LINK_CMD = 'go tool %s -tmpdir $TMP_DIR %s -L . -o ${OUT} ' % (_GO_LINK_TOOL, _GOPATH.replace('-I ', '-L '))
@@ -264,7 +264,6 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
     )
     go_test_tool, tools = _tool_path(CONFIG.GO_TEST_TOOL)
     cmds = _GO_BINARY_CMDS
-    cover_excludes = ''
     if mocks:
         cmds = cmds.copy()
         mocks = sorted(mocks.items())
@@ -273,7 +272,6 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         mvs = ' && '.join('cp -f $(location %s) %s.a' % (v, k) for k, v in mocks)
         for k, v in cmds.items():
             cmds[k] = ' && '.join([dirs, mvs, v])
-        cover_excludes = ' '.join('-x ' + k for k, _ in mocks)
     build_rule(
         name='_%s#main' % name,
         srcs=srcs,
@@ -282,7 +280,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         cmd={
             'dbg': go_test_tool + ' -o $OUT $SRCS',
             'opt': go_test_tool + ' -o $OUT $SRCS',
-            'cover': go_test_tool + ' -d . -o $OUT $SRCS ' + cover_excludes,
+            'cover': go_test_tool + ' -d . -o $OUT $SRCS ',
         },
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
         requires=['go'],
