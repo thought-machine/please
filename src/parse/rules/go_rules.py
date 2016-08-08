@@ -263,15 +263,6 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         needs_transitive_deps=True,
     )
     go_test_tool, tools = _tool_path(CONFIG.GO_TEST_TOOL)
-    cmds = _GO_BINARY_CMDS
-    if mocks:
-        cmds = cmds.copy()
-        mocks = sorted(mocks.items())
-        deps.extend(v for _, v in mocks)
-        dirs = 'mkdir -p ' + ' '.join('$(dirname %s)' % k for k, _ in mocks)
-        mvs = ' && '.join('mv $(location %s) %s.a' % (v, k) for k, v in mocks)
-        for k, v in cmds.items():
-            cmds[k] = ' && '.join([dirs, mvs, v])
     build_rule(
         name='_%s#main' % name,
         srcs=srcs,
@@ -286,7 +277,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         requires=['go'],
         test_only=True,
         tools=tools,
-        post_build=_replace_test_package(cmds),
+        post_build=_replace_test_package,
     )
     deps.append(':_%s#lib' % name)
     go_library(
@@ -296,6 +287,15 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
     )
+    cmds = _GO_BINARY_CMDS
+    if mocks:
+        cmds = cmds.copy()
+        mocks = sorted(mocks.items())
+        deps.extend(v for _, v in mocks)
+        dirs = 'mkdir -p ' + ' '.join('$(dirname %s)' % k for k, _ in mocks)
+        mvs = ' && '.join('mv $(location %s) %s.a' % (v, k) for k, v in mocks)
+        for k, v in cmds.items():
+            cmds[k] = ' && '.join([dirs, mvs, v])
     build_rule(
         name=name,
         srcs=[':_%s#main_lib' % name],
@@ -461,21 +461,19 @@ def _extra_outs(get):
     return _inner
 
 
-def _replace_test_package(cmds):
-    def _replace_package(name, output):
-        """Post-build function, called after we template the main function.
+def _replace_test_package(name, output):
+    """Post-build function, called after we template the main function.
 
-        The purpose is to replace the real library with the specific one we've
-        built for this test which has the actual test functions in it.
-        """
-        if not name.endswith('#main') or not name.startswith('_'):
-            raise ValueError('unexpected rule name: ' + name)
-        lib = name[:-5] + '#main_lib'
-        name = name[1:-5]
-        for line in output:
-            if line.startswith('Package: '):
-                for k, v in cmds.items():
-                    set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
-                for k, v in _GO_LIBRARY_CMDS.items():
-                    set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
-    return _replace_package
+    The purpose is to replace the real library with the specific one we've
+    built for this test which has the actual test functions in it.
+    """
+    if not name.endswith('#main') or not name.startswith('_'):
+        raise ValueError('unexpected rule name: ' + name)
+    lib = name[:-5] + '#main_lib'
+    name = name[1:-5]
+    for line in output:
+        if line.startswith('Package: '):
+            for k, v in _GO_BINARY_CMDS.items():
+                set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
+            for k, v in _GO_LIBRARY_CMDS.items():
+                set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
