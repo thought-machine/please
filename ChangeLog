@@ -1,3 +1,10 @@
+Version 4.5.0
+-------------
+
+    * `plz build` now outputs more information about what target produced what files, and
+      prints to stdout so other programs can consume it if needed.
+
+
 Version 4.4.1
 -------------
 
