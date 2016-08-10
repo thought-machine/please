@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -238,20 +237,11 @@ func printBuildResults(state *core.BuildState, duration float64) {
 	}
 	// Print this stuff so we always see it.
 	printf("Build finished; total time %0.2fs, incrementality %.1f%%. Outputs:\n", duration, incrementality)
-	results := []string{}
 	for _, label := range state.ExpandOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
-		// This is slightly dodgy; really we should check if it was included in the original query
-		// or not, but we don't have the include/exclude labels here. Instead we assume whether
-		// it was actually built as a proxy for it.
-		if target.State() >= core.Built {
-			results = append(results, buildResult(target)...)
-		}
-	}
-	sort.Strings(results)
-	for i, result := range results {
-		if i == 0 || result != results[i-1] { // Don't repeat results.
-			printf("  %s\n", result)
+		fmt.Printf("%s:\n", label)
+		for _, result := range buildResult(target) {
+			fmt.Printf("  %s\n", result)
 		}
 	}
 }
