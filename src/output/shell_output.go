@@ -47,7 +47,7 @@ type buildingTargetData struct {
 	Colour      string
 }
 
-func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest bool, traceFile string) bool {
+func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest, shouldRun bool, traceFile string) bool {
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads, numThreads)
 
@@ -96,7 +96,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 			printHashes(state, duration)
 		} else if state.PrepareOnly {
 			printTempDirs(state, duration)
-		} else { // Must be plz build or similar, report build outputs.
+		} else if !shouldRun { // Must be plz build or similar, report build outputs.
 			printBuildResults(state, duration)
 		}
 	}

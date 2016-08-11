@@ -439,7 +439,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.NumTestRuns = opts.Test.NumRuns + opts.Cover.NumRuns            // Only one of these can be passed.
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
-	state.NeedCoverage = opts.Cover.Args.Target != core.BuildLabel{}
+	state.NeedCoverage = !opts.Cover.Args.Target.IsEmpty()
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
@@ -473,7 +473,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 		close(state.Results) // This will signal MonitorState (below) to stop.
 	}()
 	// Draw stuff to the screen while there are still results coming through.
-	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, opts.OutputFlags.TraceFile)
+	shouldRun := !opts.Run.Args.Target.IsEmpty()
+	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.OutputFlags.TraceFile)
 	return success, state
 }
 

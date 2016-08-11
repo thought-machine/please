@@ -1,3 +1,10 @@
+Version 4.5.1
+-------------
+
+    * `plz run` does not print to stdout any more, so things can consume stdout of it
+      and only get that of the running target.
+
+
 Version 4.5.0
 -------------
 

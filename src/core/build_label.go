@@ -276,6 +276,11 @@ func (label BuildLabel) Parent() BuildLabel {
 	return label
 }
 
+// IsEmpty returns true if this is an empty build label, i.e. nothing's populated it yet.
+func (label BuildLabel) IsEmpty() bool {
+	return label.PackageName == "" && label.Name == ""
+}
+
 // LooksLikeABuildLabel returns true if the string appears to be a build label, false if not.
 // Useful for cases like rule sources where sources can be a filename or a label.
 func LooksLikeABuildLabel(str string) bool {
