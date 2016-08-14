@@ -201,8 +201,6 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         raise ValueError('Only tests can have container=True')
     if test_cmd and not test:
         raise ValueError('Target %s has been given a test command but isn\'t a test' % name)
-    if tools and not all(tool.startswith('//') or tool.startswith(':') for tool in tools):
-        raise ValueError('Tool arguments to %s must all be build labels' % name)
     if tag:
         name = ''.join(['_' if not name.startswith('_') else '',
                         name,

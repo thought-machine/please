@@ -128,7 +128,7 @@ func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error
 	for source := range core.IterSources(graph, target) {
 		result, err := pathHash(source.Src, false)
 		if err != nil {
-			return result, err
+			return nil, err
 		}
 		h.Write(result)
 	}
@@ -137,7 +137,15 @@ func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error
 	// impractical for some cases (notably npm) where tools can be very large.
 	// Instead we assume calculating the target hash is sufficient.
 	for _, tool := range target.Tools {
-		h.Write(mustTargetHash(core.State, graph.TargetOrDie(tool)))
+		if label := tool.Label(); label != nil {
+			h.Write(mustTargetHash(core.State, graph.TargetOrDie(*label)))
+		} else {
+			result, err := pathHash(tool.Paths(graph)[0], false)
+			if err != nil {
+				return nil, err
+			}
+			h.Write(result)
+		}
 	}
 	return h.Sum(nil), nil
 }

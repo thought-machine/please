@@ -105,7 +105,7 @@ type BuildTarget struct {
 	RuleHash []byte
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
 	// copied into its source directory.
-	Tools []BuildLabel
+	Tools []BuildInput
 	// Flakiness of test, ie. number of times we will rerun it before giving up. 0 is the default and
 	// is interpreted the same way as 1 would be (ie. one run only).
 	Flakiness int
