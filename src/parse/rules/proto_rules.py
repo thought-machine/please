@@ -90,13 +90,13 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         lang_name = '_%s#%s' % (name, language)
 
         plugin_cmds = ''
-        lang_deps = deps[:]
+        lang_tools = []
         lang_plugins = plugins.get(language, [])
         if language == 'go' and not lang_plugins:
             # Go doesn't come by default, so add it here.
-            lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, lang_deps))
+            lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, lang_tools))
         cmds = [
-            '%s --%s_out=$TMP_DIR %s ${SRCS}' % (_plugin(CONFIG.PROTOC_TOOL, lang_deps),
+            '%s --%s_out=$TMP_DIR %s ${SRCS}' % (_plugin(CONFIG.PROTOC_TOOL, lang_tools),
                                                  _PROTO_LANGUAGES[language],
                                                  ' '.join(lang_plugins)),
             'mv -f ${PKG}/* .',
@@ -123,7 +123,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             srcs = srcs,
             outs = outs.get(grpc_language),
             cmd = cmd,
-            deps = lang_deps,
+            deps = deps,
+            tools = lang_tools,
             requires = ['proto'],
             pre_build = _go_path_mapping(cmd, _is_grpc) if language == 'go' else None,
             post_build = post_build,
@@ -255,7 +256,7 @@ def _plugin(plugin, deps):
     """Handles plugins that are build labels by annotating them with $(exe ) and adds to deps."""
     if plugin.startswith('//'):
         deps.append(plugin)
-        return '$(exe %s)' % plugin
+        return '$(location %s)' % plugin
     return plugin
 
 
