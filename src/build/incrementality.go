@@ -344,10 +344,6 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	// Obviously we don't include the code pointer because it's a pointer.
 	h.Write(target.PreBuildHash)
 	h.Write(target.PostBuildHash)
-	// The Go version affects the hash for Go targets only.
-	if target.HasLabel("go") {
-		h.Write([]byte(core.State.Config.Go.GoVersion))
-	}
 	return h.Sum(nil)
 }
 
