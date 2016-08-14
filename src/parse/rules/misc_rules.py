@@ -39,6 +39,9 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
       deps (list): Dependencies of this rule.
       tools (list): Tools used to build this rule; similar to srcs but are not copied to the temporary
                     build directory. Should be accessed via $(exe //path/to:tool) or similar.
+                    Entries that are not build labels are assumed to be system-level commands and
+                    resolved within the path given in the config file (note that the value of $PATH
+                    in the outside environment is not propagated to the build rule).
       visibility (list): Visibility declaration of this rule
       building_description (str): Description to display to the user while the rule is building.
       hashes (list): List of hashes; if given the outputs must match one of these. They can be
