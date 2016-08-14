@@ -140,7 +140,7 @@ func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error
 			// Instead we assume calculating the target hash is sufficient.
 			h.Write(mustTargetHash(core.State, graph.TargetOrDie(*label)))
 		} else {
-			result, err := pathHash(tool.Paths(graph)[0], false)
+			result, err := pathHash(tool.FullPaths(graph)[0], false)
 			if err != nil {
 				return nil, err
 			}

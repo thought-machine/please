@@ -71,7 +71,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		labelList("deps", excludeLabels(target.DeclaredDependencies(), target.ExportedDependencies(), sourceLabels(target)), target)
 		labelList("exported_deps", target.ExportedDependencies(), target)
 		if len(target.Tools) > 0 {
-			fmt.Printf("      data = [\n")
+			fmt.Printf("      tools = [\n")
 			for _, tool := range target.Tools {
 				fmt.Printf("          '%s',\n", tool)
 			}
