@@ -22,7 +22,7 @@ _PROTO_FILE_EXTENSIONS = {
 
 def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None,
                   python_deps=None, cc_deps=None, java_deps=None, go_deps=None,
-                  protoc_version=CONFIG.PROTOC_VERSION, languages=None):
+                  languages=None, _is_grpc=False):
     """Compile a .proto file to generated code for various languages.
 
     Args:
@@ -36,7 +36,6 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
       cc_deps (list): Additional deps to add to the cc_library rules
       java_deps (list): Additional deps to add to the java_library rules
       go_deps (list): Additional deps to add to the go_library rules
-      protoc_version (str): Version of protoc compiler, used to invalidate build rules when it changes.
       languages (list): List of languages to generate rules for, chosen from the set {cc, py, go, java}.
     """
     if languages:
@@ -116,12 +115,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             labels += ['proto:go-map: %s/%s=%s/%s' % (base_path, src, base_path, name) for src in srcs
                        if not src.startswith(':') and not src.startswith('/')]
 
-        is_grpc = 'grpc' in protoc_version
-        grpc_language = ('grpc_' + language) if is_grpc else language
-
+        grpc_language = ('grpc_' + language) if _is_grpc else language
         cmd = ' && '.join(cmds)
-        if protoc_version:
-            cmd += ' # protoc v%s' % protoc_version
 
         build_rule(
             name = gen_name,
@@ -130,7 +125,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             cmd = cmd,
             deps = lang_deps,
             requires = ['proto'],
-            pre_build = _go_path_mapping(cmd, is_grpc) if language == 'go' else None,
+            pre_build = _go_path_mapping(cmd, _is_grpc) if language == 'go' else None,
             post_build = post_build,
             labels = labels,
             needs_transitive_deps = True,
@@ -146,7 +141,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 deps = deps + cc_deps,
                 visibility = visibility,
                 compiler_flags = ['-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
-                pkg_config_libs = ['grpc++', 'grpc', 'protobuf'] if is_grpc else ['protobuf'],
+                pkg_config_libs = ['grpc++', 'grpc', 'protobuf'] if _is_grpc else ['protobuf'],
             )
             provides['cc_hdrs'] = ':__%s#cc#hdrs' % name  # Must wire this up by hand
 
@@ -218,8 +213,6 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
       go_deps (list): Additional deps to add to the go_library rules
       visibility (list): Visibility specification for the rule.
       languages (list): List of languages to generate rules for, chosen from the set {cc, py, go, java}.
-                        At present this will not create any service definitions for C++, but 'cc' is
-                        still accepted for forwards compatibility.
     """
     # No plugin for Go, that's handled above since it's merged into the go_out argument.
     deps = deps or []
@@ -254,7 +247,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
         go_deps=go_deps,
         languages=languages,
         visibility=visibility,
-        protoc_version='%s, grpc v%s' % (CONFIG.PROTOC_VERSION, CONFIG.GRPC_VERSION),
+        _is_grpc=True,
     )
 
 
