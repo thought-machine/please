@@ -35,6 +35,11 @@ maven_jar(
 )
 `))
 
+type pomProperty struct {
+	XMLName xml.Name
+	Value   string `xml:",chardata"`
+}
+
 type pomXml struct {
 	GroupId              string          `xml:"groupId"`
 	ArtifactId           string          `xml:"artifactId"`
@@ -44,16 +49,19 @@ type pomXml struct {
 		Dependencies pomDependencies `xml:"dependencies"`
 	} `xml:"dependencyManagement"`
 	Properties struct {
-		Property []struct {
-			XMLName xml.Name
-			Value   string `xml:",chardata"`
-		} `xml:",any"`
+		Property []pomProperty `xml:",any"`
 	} `xml:"properties"`
 	Licences struct {
 		Licence []struct {
 			Name string `xml:"name"`
 		} `xml:"license"`
 	} `xml:"licenses"`
+	Parent struct {
+		GroupId    string `xml:"groupId"`
+		ArtifactId string `xml:"artifactId"`
+		Version    string `xml:"version"`
+	} `xml:"parent"`
+	PropertiesMap map[string]string
 }
 
 type pomDependencies struct {
@@ -104,6 +112,14 @@ func (metadata *mavenMetadataXml) HasVersion(version string) bool {
 	return false
 }
 
+// AddProperty adds a property (typically from a parent or wherever), without overwriting.
+func (pom *pomXml) AddProperty(property pomProperty) {
+	if _, present := pom.PropertiesMap[property.XMLName.Local]; !present {
+		pom.PropertiesMap[property.XMLName.Local] = property.Value
+		pom.Properties.Property = append(pom.Properties.Property, property)
+	}
+}
+
 var opts struct {
 	Repository string   `short:"r" long:"repository" description:"Location of Maven repo" default:"https://repo1.maven.org/maven2"`
 	Verbosity  int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
@@ -144,6 +160,26 @@ func parse(response []byte, group, artifact, version string) *pomXml {
 	for i, licence := range pom.Licences.Licence {
 		pom.Licences.Licence[i].Name = strings.TrimSpace(licence.Name)
 	}
+	// Handle properties nonsense, because of course it doesn't work this out for us...
+	pom.PropertiesMap = map[string]string{}
+	for _, prop := range pom.Properties.Property {
+		pom.PropertiesMap[prop.XMLName.Local] = prop.Value
+	}
+	// There are also some properties that aren't described by the above - "project" is a bit magic.
+	pom.PropertiesMap["groupId"] = group
+	pom.PropertiesMap["artifactId"] = artifact
+	pom.PropertiesMap["version"] = version
+	pom.PropertiesMap["project.groupId"] = group
+	pom.PropertiesMap["project.version"] = version
+	if pom.Parent.ArtifactId != "" {
+		// Must inherit variables from the parent.
+		parent := fetchAndParse(pom.Parent.GroupId, pom.Parent.ArtifactId, pom.Parent.Version)
+		for _, prop := range parent.Properties.Property {
+			pom.AddProperty(prop)
+		}
+	}
+	pom.Version = replaceVariables(pom.Version, pom.PropertiesMap)
+	// Sanity check, but must happen after we resolve variables.
 	if (pom.GroupId != "" && group != pom.GroupId) ||
 		(pom.ArtifactId != "" && artifact != pom.ArtifactId) ||
 		(pom.Version != "" && version != "" && version != pom.Version) {
@@ -155,17 +191,9 @@ func parse(response []byte, group, artifact, version string) *pomXml {
 
 // process takes a downloaded and parsed pom.xml and prints details of dependencies to fetch.
 func process(pom *pomXml, group, artifact, version string) {
-	// Handle properties nonsense, because of course it doesn't work this out for us...
-	properties := map[string]string{}
-	for _, prop := range pom.Properties.Property {
-		properties[prop.XMLName.Local] = prop.Value
-	}
-	// There are also some nonsense properties that aren't described by the above.
-	properties["project.groupId"] = group
-	properties["project.version"] = version
 	// Arbitrarily, some pom files have this different structure with the extra "dependencyManagement" level.
-	handleDependencies(pom.Dependencies, properties, group, artifact, version)
-	handleDependencies(pom.DependencyManagement.Dependencies, properties, group, artifact, version)
+	handleDependencies(pom.Dependencies, pom.PropertiesMap, group, artifact, version)
+	handleDependencies(pom.DependencyManagement.Dependencies, pom.PropertiesMap, group, artifact, version)
 	if opts.BuildRules {
 		if err := mavenJarTemplate.Execute(os.Stdout, pomXml{
 			GroupId:    group,
@@ -203,17 +231,20 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 	for _, dep := range deps.Dependency {
 		// This is a bit of a hack; our build model doesn't distinguish these in the way Maven does.
 		// TODO(pebers): Consider allowing specifying these to this tool to produce test-only deps.
-		if dep.Scope == "test" {
+		// Similarly system deps don't actually get fetched from Maven.
+		if dep.Scope == "test" || dep.Scope == "system" {
+			log.Debug("Not fetching %s:%s because of scope", dep.GroupId, dep.ArtifactId)
 			continue
 		}
 		if dep.Optional && !shouldFetchOptionalDep(dep.ArtifactId) {
 			log.Debug("Not fetching optional dependency %s:%s", dep.GroupId, dep.ArtifactId)
 			continue
 		}
+		log.Debug("Fetching %s:%s:%s (depended on by %s:%s:%s)", dep.GroupId, dep.ArtifactId, dep.Version, group, artifact, version)
 		dep.GroupId = replaceVariables(dep.GroupId, properties)
 		dep.ArtifactId = replaceVariables(dep.ArtifactId, properties)
 		// Not sure what this is about; httpclient seems to do this. It seems completely unhelpful but
-		// no doubt there's some highly obscure case where Maven aficionados consider this useful.
+		// no doubt there's some highly obscure case where it's considered useful.
 		properties[dep.ArtifactId+".version"] = ""
 		properties[strings.Replace(dep.ArtifactId, "-", ".", -1)+".version"] = ""
 		dep.Version = strings.Trim(replaceVariables(dep.Version, properties), "[]")
@@ -270,7 +301,6 @@ func isExcluded(artifact string) bool {
 func buildPomUrl(group, artifact, version string) string {
 	if version == "" {
 		// This is kind of exciting - we just assume the latest version if one isn't available.
-		// Not sure what we're really meant to do but I'm losing the will to live over all this so #yolo
 		version = fetchMetadata(group, artifact).LatestVersion()
 		log.Notice("Version not specified for %s:%s, decided to use %s", group, artifact, version)
 	}
@@ -280,7 +310,7 @@ func buildPomUrl(group, artifact, version string) string {
 
 // fetchOrDie fetches a URL and returns the content, dying if it can't be found.
 func fetchOrDie(url string) []byte {
-	log.Debug("Downloading %s...", url)
+	log.Notice("Downloading %s...", url)
 	response, err := http.Get(url)
 	if err != nil {
 		log.Fatalf("Error downloading %s: %s\n", url, err)
