@@ -132,12 +132,12 @@ func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error
 		}
 		h.Write(result)
 	}
-	// Note that really it would be more correct to hash the outputs of these rules
-	// in the same way we calculate a hash of sources for the rule, but that is
-	// impractical for some cases (notably npm) where tools can be very large.
-	// Instead we assume calculating the target hash is sufficient.
 	for _, tool := range target.Tools {
 		if label := tool.Label(); label != nil {
+			// Note that really it would be more correct to hash the outputs of these rules
+			// in the same way we calculate a hash of sources for the rule, but that is
+			// impractical for some cases (notably npm) where tools can be very large.
+			// Instead we assume calculating the target hash is sufficient.
 			h.Write(mustTargetHash(core.State, graph.TargetOrDie(*label)))
 		} else {
 			result, err := pathHash(tool.Paths(graph)[0], false)

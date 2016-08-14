@@ -520,9 +520,8 @@ def _tool_path(tool, tools=None, binary=True):
 
     Used for tools like pex_tool and jarcat_tool which might be repo rules or just filesystem paths.
     """
-    if tool.startswith('//'):
-        return '$(%s %s)' % ('exe' if binary else 'location', tool), [tool] + (tools or [])
-    return tool, tools
+    tools = [tool] + (tools or [])
+    return ('$(%s %s)' % ('exe' if binary else 'location', tool) if tool.startswith('//') else tool), tools
 
 
 def _test_size_and_timeout(size, timeout, labels):

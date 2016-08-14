@@ -19,11 +19,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		if len(target.Sources) > 0 {
 			fmt.Printf("      srcs = [\n")
 			for _, src := range target.Sources {
-				if src.Label() != nil {
-					printLabel(*src.Label(), target)
-				} else {
-					fmt.Printf("          '%s',\n", src)
-				}
+				fmt.Printf("          '%s',\n", src)
 			}
 			fmt.Printf("      ],\n")
 		} else if target.NamedSources != nil {
@@ -74,7 +70,13 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		pythonBool("test_only", target.TestOnly)
 		labelList("deps", excludeLabels(target.DeclaredDependencies(), target.ExportedDependencies(), sourceLabels(target)), target)
 		labelList("exported_deps", target.ExportedDependencies(), target)
-		labelList("tools", target.Tools, target)
+		if len(target.Tools) > 0 {
+			fmt.Printf("      data = [\n")
+			for _, tool := range target.Tools {
+				fmt.Printf("          '%s',\n", tool)
+			}
+			fmt.Printf("      ],\n")
+		}
 		if len(target.Data) > 0 {
 			fmt.Printf("      data = [\n")
 			for _, datum := range target.Data {
