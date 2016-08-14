@@ -136,11 +136,9 @@ func DefaultConfiguration() *Configuration {
 	config.Proto.GrpcPythonPlugin = "protoc-gen-grpc-python"
 	config.Proto.GrpcJavaPlugin = "protoc-gen-grpc-java"
 	config.Proto.GrpcCCPlugin = "grpc_cpp_plugin"
-	config.Proto.ProtocVersion = ""
 	config.Proto.PythonDep = "//third_party/python:protobuf"
 	config.Proto.JavaDep = "//third_party/java:protobuf"
 	config.Proto.GoDep = "//third_party/go:protobuf"
-	config.Proto.GrpcVersion = ""
 	config.Proto.PythonGrpcDep = "//third_party/python:grpc"
 	config.Proto.JavaGrpcDep = "//third_party/java:grpc-all"
 	config.Proto.GoGrpcDep = "//third_party/go:grpc"
@@ -242,11 +240,9 @@ type Configuration struct {
 		GrpcJavaPlugin   string
 		GrpcCCPlugin     string
 		Language         []string
-		ProtocVersion    string
 		PythonDep        string
 		JavaDep          string
 		GoDep            string
-		GrpcVersion      string
 		PythonGrpcDep    string
 		JavaGrpcDep      string
 		GoGrpcDep        string
