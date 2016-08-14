@@ -337,6 +337,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
         requires=['py'],
         test_only=test_only,
         licences=licences,
+        tools=[CONFIG.PIP_TOOL],
         post_build=None if licences else _add_licences,
     )
     # Get this to do the pex pre-zipping stuff.
