@@ -1,6 +1,6 @@
 # Rules for end-to-end tests on Please itself.
 
-def plz_e2e_test(name, cmd, expected_output=None, expected_failure=False,
+def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure=False,
                  expect_output_contains=None, expect_output_doesnt_contain=None,
                  deps=None, data=None, labels=None,
                  expect_file_exists=None, expect_file_doesnt_exist=None):
@@ -18,15 +18,17 @@ def plz_e2e_test(name, cmd, expected_output=None, expected_failure=False,
         test_cmd += 'diff -au output $(location %s)' % expected_output
         data.append(expected_output)
     elif expect_output_contains:
-        test_cmd += 'if [ ! grep -v "%s" output ]; then cat output; exit 1; fi' % expect_output_contains
+        test_cmd += 'if [ ! grep -v "%s" output; then cat output; exit 1 ]; fi' % expect_output_contains
     elif expect_output_doesnt_contain:
-        test_cmd += 'if [ ! grep "%s" output ]; then cat output; exit 1; fi' % expect_output_doesnt_contain
+        test_cmd += 'if [ ! grep "%s" output; then cat output; exit 1 ]; fi' % expect_output_doesnt_contain
     elif expect_file_exists:
         test_cmd += 'if [ ! -f %s ]; then cat output; exit 1; fi' % expect_file_exists
     elif expect_file_doesnt_exist:
         test_cmd += 'if [ -f %s ]; then cat output; exit 1; fi' % expect_file_doesnt_exist
     else:
         test_cmd += 'true'
+    if pre_cmd:
+        test_cmd = pre_cmd + ' && ' + test_cmd
 
     gentest(
         name = name,

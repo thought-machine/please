@@ -114,4 +114,4 @@ if [ ! -d "/usr/include/google/protobuf" ]; then
     EXCLUDES="${EXCLUDES} --exclude=proto"
 fi
 
-plz-out/bin/src/please test ... --exclude cycle $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 $@
+plz-out/bin/src/please test ... $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 $@
