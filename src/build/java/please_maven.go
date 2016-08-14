@@ -70,13 +70,17 @@ type pomDependencies struct {
 type mavenMetadataXml struct {
 	Version    string `xml:"version"`
 	Versioning struct {
-		Latest  string `xml:"latest"`
-		Release string `xml:"release"`
+		Latest   string `xml:"latest"`
+		Release  string `xml:"release"`
+		Versions struct {
+			Version []string `xml:"version"`
+		} `xml:"versions"`
 	} `xml:"versioning"`
 	Group, Artifact string
 }
 
-func (metadata mavenMetadataXml) LatestVersion() string {
+// LatestVersion returns the latest available version of a package
+func (metadata *mavenMetadataXml) LatestVersion() string {
 	if metadata.Versioning.Release != "" {
 		return metadata.Versioning.Release
 	} else if metadata.Versioning.Latest != "" {
@@ -88,6 +92,16 @@ func (metadata mavenMetadataXml) LatestVersion() string {
 	}
 	log.Fatalf("Can't find a version for %s:%s", metadata.Group, metadata.Artifact)
 	return ""
+}
+
+// HasVersion returns true if the given package has the specified version.
+func (metadata *mavenMetadataXml) HasVersion(version string) bool {
+	for _, v := range metadata.Versioning.Versions.Version {
+		if v == version {
+			return true
+		}
+	}
+	return false
 }
 
 var opts struct {
@@ -212,12 +226,14 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 		if dep.Version == "" {
 			// Not 100% sure what the logic should really be here; for example, jacoco
 			// seems to leave these underspecified and expects the same version, but other
-			// things (e.g. netty) expect the latest. Possibly we should try the same one then
-			// fall back to latest if it doesn't exist. This is easier but no doubt incorrect somewhere.
-			if dep.GroupId == group {
+			// things seem to expect the latest. Most likely it is some complex resolution
+			// logic, but we'll take a stab at the same if the group matches and the same
+			// version exists, otherwise we'll take the latest.
+			metadata := fetchMetadata(dep.GroupId, dep.ArtifactId)
+			if dep.GroupId == group && metadata.HasVersion(version) {
 				dep.Version = version
 			} else {
-				dep.Version = fetchMetadata(dep.GroupId, dep.ArtifactId).LatestVersion()
+				dep.Version = metadata.LatestVersion()
 			}
 		}
 		licences := fetchLicences(dep.GroupId, dep.ArtifactId, dep.Version)
