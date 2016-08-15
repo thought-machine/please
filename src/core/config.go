@@ -34,7 +34,7 @@ const TestContainerDocker = "docker"
 const TestContainerNone = "none"
 
 func readConfigFile(config *Configuration, filename string) error {
-	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
+	if err := gcfg.FatalOnly(gcfg.ReadFileInto(config, filename)); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
 	} else if err != nil {
 		return err

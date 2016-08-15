@@ -22,7 +22,7 @@ go_get(
     name = 'gcfg',
     get = 'gopkg.in/gcfg.v1',
     patch = 'gcfg_dynamic_fields.patch',
-    revision = 'a3bc0742e3bbfd16123e6cee742cadec9a3301d2',
+    revision = '27e4946190b4a327b539185f2b5b1f7c84730728',
 )
 
 go_get(

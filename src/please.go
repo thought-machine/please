@@ -532,16 +532,12 @@ func readConfig(forceUpdate bool) *core.Configuration {
 		core.MachineConfigFileName,
 		path.Join(core.RepoRoot, core.LocalConfigFileName),
 	})
-	if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
-		log.Fatalf("Can't override requested config setting: %s", err)
-	}
-	// This is kinda weird, but we need to check for an update before handling errors, because the
-	// error may be for a missing config value that we don't know about yet. If we error first it's
-	// essentially impossible to add new fields to the config because gcfg doesn't permit unknown fields.
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
+	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
+		log.Fatalf("Can't override requested config setting: %s", err)
 	}
+	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate)
 	return config
 }
 
