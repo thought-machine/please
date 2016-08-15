@@ -58,20 +58,21 @@ func Watch(state *core.BuildState, labels []core.BuildLabel) {
 					break outer
 				}
 			}
-			runBuild(command, labels)
+			runBuild(state, command, labels)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
 	}
 }
 
-func runBuild(command string, labels []core.BuildLabel) {
+func runBuild(state *core.BuildState, command string, labels []core.BuildLabel) {
 	binary, err := osext.Executable()
 	if err != nil {
 		log.Warning("Can't determine current executable, will assume 'plz'")
 		binary = "plz"
 	}
 	cmd := exec.Command(binary, command)
+	cmd.Args = append(cmd.Args, "-c", state.Config.Build.Config)
 	for _, label := range labels {
 		cmd.Args = append(cmd.Args, label.String())
 	}
