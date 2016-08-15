@@ -46,6 +46,16 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         raise ParseError('You cannot pass both srcs and src_dir to java_library')
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
     if srcs or src_dir:
+        if resources:
+            # Split up resources into a separate rule so we don't have to try to build them here.
+            deps = (deps or []) + [':_%s#res' % name]
+            java_library(
+                name = '_%s#res' % name,
+                resources = resources,
+                resources_root = resources_root,
+                test_only=test_only,
+            )
+
         if javac_flags:
             # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
             # it doesn't mean anything to us so we must filter it out.
@@ -59,7 +69,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
                 source or CONFIG.JAVA_SOURCE_LEVEL,
                 target or CONFIG.JAVA_TARGET_LEVEL,
                 r'`find . -name "*.jar" ! -name "*src.jar" | tr \\\\n :`',
-                '$SRCS_SRCS' if srcs else '`find $SRCS_SRCS -name "*.java"`',
+                '$SRCS' if srcs else '`find $SRCS -name "*.java"`',
                 javac_flags,
             ),
             'mv ${PKG}/%s/* _tmp' % resources_root if resources_root else 'true',
@@ -69,10 +79,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         ])
         build_rule(
             name=name,
-            srcs={
-                'srcs': srcs or [src_dir],
-                'res': resources,
-            },
+            srcs=srcs or [src_dir],
             deps=deps,
             exported_deps=exported_deps,
             outs=[name + '.jar'],
@@ -88,7 +95,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         if resources_root:
             cmd = 'cd ${PKG}/%s && %s -d -o ${OUT} -i .' % (resources_root, jarcat_tool)
         else:
-            cmd = '%s -d -o ${OUTS} -i ${PKG}' % jarcat_tool
+            cmd = '%s -d -o ${OUTS} -i .' % jarcat_tool
         build_rule(
             name=name,
             srcs=resources,
