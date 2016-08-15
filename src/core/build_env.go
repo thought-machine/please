@@ -48,7 +48,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		)
 		tools := make([]string, len(target.Tools))
 		for i, tool := range target.Tools {
-			tools[i] = state.Graph.TargetOrDie(tool).toolPath()
+			tools[i] = toolPath(state, tool)
 		}
 		env = append(env, "TOOLS="+strings.Join(tools, " "))
 		// The OUT variable is only available on rules that have a single output.
@@ -61,7 +61,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		}
 		// Similarly, TOOL is only available on rules with a single tool.
 		if len(target.Tools) == 1 {
-			env = append(env, "TOOL="+state.Graph.TargetOrDie(target.Tools[0]).toolPath())
+			env = append(env, "TOOL="+toolPath(state, target.Tools[0]))
 		}
 		// Named source groups if the target declared any.
 		for name, srcs := range target.NamedSources {
@@ -96,4 +96,12 @@ func StampedBuildEnvironment(state *BuildState, target *BuildTarget, test bool, 
 		return append(env, "STAMP="+base64.RawURLEncoding.EncodeToString(stamp))
 	}
 	return env
+}
+
+func toolPath(state *BuildState, tool BuildInput) string {
+	label := tool.Label()
+	if label != nil {
+		return state.Graph.TargetOrDie(*label).toolPath()
+	}
+	return tool.Paths(state.Graph)[0]
 }

@@ -1995,7 +1995,10 @@ to dynamically create new rules based on the output of another.</td>
 	<td>None</td>
 	<td>list</td>
 	<td>Tools used to build this rule; similar to srcs but are not copied to the temporary
-build directory. Should be accessed via $(exe //path/to:tool) or similar.</td>
+          build directory. Should be accessed via $(exe //path/to:tool) or similar.<br/>
+          Entries that are not build labels are assumed to be system-level commands and
+          resolved within the path given in the config file (note that the value of $PATH
+          in the outside environment is not propagated to the build rule).</td>
       </tr>
 
       </tbody>

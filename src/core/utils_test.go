@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -107,6 +108,31 @@ func TestInitialPackageUpToRoot(t *testing.T) {
 	initialPackage = "query_alltargets_test#.test"
 	p := InitialPackage()
 	assert.Equal(t, []BuildLabel{{PackageName: "", Name: "..."}}, p)
+}
+
+func TestLookPath(t *testing.T) {
+	// Assume this will be present on the path somewhere (you've really got to have bash for plz)
+	path, err := LookPath("bash", []string{"/usr/local/bin", "/usr/bin", "/bin"})
+	assert.NoError(t, err)
+	assert.Contains(t, []string{"/usr/local/bin/bash", "/usr/bin/bash", "/bin/bash"}, path)
+	info, err := os.Stat(path)
+	assert.NoError(t, err)
+	assert.Equal(t, "bash", info.Name())
+}
+
+func TestLookPathColons(t *testing.T) {
+	// We support having colons inside the path elements because people might find that more natural.
+	path, err := LookPath("bash", []string{"/usr/local/bin:/usr/bin:/bin"})
+	assert.NoError(t, err)
+	assert.Contains(t, []string{"/usr/local/bin/bash", "/usr/bin/bash", "/bin/bash"}, path)
+	info, err := os.Stat(path)
+	assert.NoError(t, err)
+	assert.Equal(t, "bash", info.Name())
+}
+
+func TestLookPathDoesntExist(t *testing.T) {
+	_, err := LookPath("wibblewobbleflibble", []string{"/usr/local/bin", "/usr/bin", "/bin"})
+	assert.Error(t, err)
 }
 
 // buildGraph builds a test graph which we use to test IterSources etc.

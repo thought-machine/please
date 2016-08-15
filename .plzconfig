@@ -40,8 +40,6 @@ targetlevel = 7
 
 [proto]
 pythonpackage = third_party.python.google.protobuf
-; TODO(pebers): Remove these once we rationalise our package names
-grpcpythonplugin = `which grpc_python_plugin`
 grpcjavaplugin = //third_party/java:protoc-gen-grpc-java
 protocgoplugin = //third_party/go:protoc-gen-go
 

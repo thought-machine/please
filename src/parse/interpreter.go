@@ -112,12 +112,10 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("GRPC_PYTHON_PLUGIN", config.Proto.GrpcPythonPlugin)
 	setConfigValue("GRPC_JAVA_PLUGIN", config.Proto.GrpcJavaPlugin)
 	setConfigValue("GRPC_CC_PLUGIN", config.Proto.GrpcCCPlugin)
-	setConfigValue("PROTOC_VERSION", config.Proto.ProtocVersion)
 	setConfigValue("PROTO_PYTHON_DEP", config.Proto.PythonDep)
 	setConfigValue("PROTO_JAVA_DEP", config.Proto.JavaDep)
 	setConfigValue("PROTO_GO_DEP", config.Proto.GoDep)
 	setConfigValue("PROTO_PYTHON_PACKAGE", config.Proto.PythonPackage)
-	setConfigValue("GRPC_VERSION", config.Proto.GrpcVersion)
 	setConfigValue("GRPC_PYTHON_DEP", config.Proto.PythonGrpcDep)
 	setConfigValue("GRPC_JAVA_DEP", config.Proto.JavaGrpcDep)
 	setConfigValue("GRPC_GO_DEP", config.Proto.GoGrpcDep)
@@ -522,12 +520,25 @@ func AddExportedDep(cTarget uintptr, cDep *C.char) *C.char {
 //export AddTool
 func AddTool(cTarget uintptr, cTool *C.char) *C.char {
 	target := unsizet(cTarget)
-	tool, err := core.TryParseBuildLabel(C.GoString(cTool), target.Label.PackageName)
+	src := C.GoString(cTool)
+	if !core.LooksLikeABuildLabel(src) && !strings.Contains(src, "/") {
+		// non-specified paths like "bash" are turned into absolute ones based on plz's PATH.
+		// awkwardly this means we can't use the builtin exec.LookPath because the current
+		// environment variable isn't necessarily the same as what's in our config.
+		var err error
+		src, err = core.LookPath(src, core.State.Config.Build.Path)
+		if err != nil {
+			return C.CString(err.Error())
+		}
+	}
+	tool, err := parseSource(src, target.Label.PackageName, true)
 	if err != nil {
 		return C.CString(err.Error())
 	}
 	target.Tools = append(target.Tools, tool)
-	target.AddDependency(tool)
+	if label := tool.Label(); label != nil {
+		target.AddDependency(*label)
+	}
 	return nil
 }
 
