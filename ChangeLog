@@ -1,3 +1,15 @@
+Version 5.0.0
+-------------
+
+    * `tools` can now accept non-build rule labels which are interpreted as system binaries.
+      They are then hashed into the rule so it will rebuild appropriately.
+    * Corollary to above: grpcversion and protocversion properties have been removed from config.
+      goversion remains since it identifies some compatibility changes for 1.4.
+    * please_maven better supports more esoteric details of Maven.
+    * `plz watch` honours the previously set build config (i.e. `plz watch -c dbg` invokes
+      its subprocesses with `-c dbg` as well).
+
+
 Version 4.5.1
 -------------
 
