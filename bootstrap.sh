@@ -28,7 +28,7 @@ export GOPATH="${PWD}"
 go get golang.org/x/crypto/ssh/terminal
 go get golang.org/x/tools/cover
 go get gopkg.in/op/go-logging.v1
-go get gopkg.in/gcfg.v1
+go get -u gopkg.in/gcfg.v1
 go get github.com/jteeuwen/go-bindata/...
 go get github.com/jessevdk/go-flags
 go get github.com/dustin/go-humanize
