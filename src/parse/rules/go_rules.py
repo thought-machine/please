@@ -34,6 +34,9 @@ _GO_LIBRARY_CMDS = {
     'opt': '%(link_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
     'cover': '%(link_cmd)s && %(cover_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
 }
+# Applied to various rules to treat 'go' as a tool.
+_GO_TOOL = ['go']
+
 
 def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False,
                go_tools=None, _needs_transitive_deps=False):
@@ -82,7 +85,7 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         requires=['go'],
         provides={'go': ':' + name, 'go_src': ':_%s#srcs' % name},
         test_only=test_only,
-        tools=go_tools,
+        tools=_GO_TOOL,
         needs_transitive_deps=_needs_transitive_deps,
     )
 
@@ -129,7 +132,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
         name=name,
         srcs=srcs,
         deps=deps,
-        tools=tools,
+        tools=_go_tool(tools),
         cmd=cmd,
         visibility=visibility,
         test_only=test_only,
@@ -188,6 +191,7 @@ def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=Fals
             'go': ':' + name,
             'go_src': ':_%s#srcs' % name,
         },
+        tools=_GO_TOOL,
         test_only=test_only,
         needs_transitive_deps=True,
     )
@@ -221,6 +225,7 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
         binary=True,
         output_is_complete=True,
         test_only=test_only,
+        tools=_GO_TOOL,
         visibility=visibility,
         requires=['go'],
     )
@@ -254,6 +259,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         srcs=srcs,
         deps=deps,
         outs=[name + '.a'],
+        tools=_GO_TOOL,
         cmd={k: 'SRCS=${PKG}/*.go; ' + v for k, v in _GO_LIBRARY_CMDS.items()},
         building_description="Compiling...",
         requires=['go', 'go_src'],
@@ -302,6 +308,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         data=data,
         deps=deps,
         outs=[name],
+        tools=_GO_TOOL,
         cmd=cmds,
         test_cmd='$(exe :%s) | tee test.results' % name,
         visibility=visibility,
@@ -349,6 +356,7 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         data=data,
         deps=deps,
         outs=[name],
+        tools=_GO_TOOL,
         cmd='export GOPATH="%s"; ln -s $TMP_DIR src; go test ${PKG#*src/} %s -c -test.cover -o $OUT' % (CONFIG.GOPATH, tag_cmd),
         test_cmd='$(exe :%s) -test.v -test.coverprofile test.coverage | tee test.results' % name,
         visibility=visibility,
@@ -415,6 +423,7 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
         srcs=[patch] if patch else [],
         outs=outs,
         deps=deps,
+        tools=_GO_TOOL,
         visibility=visibility,
         building_description='Fetching...',
         cmd=' && '.join(cmd),
@@ -439,6 +448,7 @@ def go_yacc(name, src, out=None, visibility=None, labels=None):
         name = name,
         srcs = [src],
         outs = [out or name + '.yacc.go'],
+        tools = _GO_TOOL,
         cmd = 'go tool yacc -o $OUT $SRC',
         building_description = 'yaccing...',
         visibility = visibility,
@@ -477,3 +487,11 @@ def _replace_test_package(name, output):
                 set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
             for k, v in _GO_LIBRARY_CMDS.items():
                 set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
+
+
+def _go_tool(tools):
+    """Returns the given list annotated with the 'go' tool.
+
+    Currently the tool invoked for 'go' is not configurable.
+    """
+    return (tools or []) + ['go']

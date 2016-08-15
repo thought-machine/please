@@ -128,16 +128,24 @@ func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error
 	for source := range core.IterSources(graph, target) {
 		result, err := pathHash(source.Src, false)
 		if err != nil {
-			return result, err
+			return nil, err
 		}
 		h.Write(result)
 	}
-	// Note that really it would be more correct to hash the outputs of these rules
-	// in the same way we calculate a hash of sources for the rule, but that is
-	// impractical for some cases (notably npm) where tools can be very large.
-	// Instead we assume calculating the target hash is sufficient.
 	for _, tool := range target.Tools {
-		h.Write(mustTargetHash(core.State, graph.TargetOrDie(tool)))
+		if label := tool.Label(); label != nil {
+			// Note that really it would be more correct to hash the outputs of these rules
+			// in the same way we calculate a hash of sources for the rule, but that is
+			// impractical for some cases (notably npm) where tools can be very large.
+			// Instead we assume calculating the target hash is sufficient.
+			h.Write(mustTargetHash(core.State, graph.TargetOrDie(*label)))
+		} else {
+			result, err := pathHash(tool.FullPaths(graph)[0], false)
+			if err != nil {
+				return nil, err
+			}
+			h.Write(result)
+		}
 	}
 	return h.Sum(nil), nil
 }
@@ -336,10 +344,6 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	// Obviously we don't include the code pointer because it's a pointer.
 	h.Write(target.PreBuildHash)
 	h.Write(target.PostBuildHash)
-	// The Go version affects the hash for Go targets only.
-	if target.HasLabel("go") {
-		h.Write([]byte(core.State.Config.Go.GoVersion))
-	}
 	return h.Sum(nil)
 }
 

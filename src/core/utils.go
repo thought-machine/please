@@ -423,3 +423,18 @@ func CollapseHash(key []byte) []byte {
 	}
 	return short[:]
 }
+
+// LookPath does roughly the same as exec.LookPath, i.e. looks for the named file on the path.
+// The main difference is that it looks based on our config which isn't necessarily the same
+// as the external environment variable.
+func LookPath(filename string, paths []string) (string, error) {
+	for _, p := range paths {
+		for _, p2 := range strings.Split(p, ":") {
+			p3 := path.Join(p2, filename)
+			if _, err := os.Stat(p3); err == nil {
+				return p3, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("%s not found in PATH %s", filename, strings.Join(paths, ":"))
+}
