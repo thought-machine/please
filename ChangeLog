@@ -1,3 +1,9 @@
+Version 5.0.1
+-------------
+
+    * Fix bug in java_library which would fail when given both srcs and resources.
+
+
 Version 5.0.0
 -------------
 
