@@ -132,8 +132,10 @@ func DefaultConfiguration() *Configuration {
 	config.Cpp.DefaultOptCflags = "--std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror"
 	config.Cpp.DefaultDbgCflags = "--std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror"
 	config.Proto.ProtocTool = "protoc"
+	// We're using the most common names for these; typically gRPC installs the builtin plugins
+	// as grpc_python_plugin etc.
 	config.Proto.ProtocGoPlugin = "protoc-gen-go"
-	config.Proto.GrpcPythonPlugin = "protoc-gen-grpc-python"
+	config.Proto.GrpcPythonPlugin = "grpc_python_plugin"
 	config.Proto.GrpcJavaPlugin = "protoc-gen-grpc-java"
 	config.Proto.GrpcCCPlugin = "grpc_cpp_plugin"
 	config.Proto.PythonDep = "//third_party/python:protobuf"
