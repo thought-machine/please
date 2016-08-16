@@ -108,9 +108,14 @@ def extract_file(in_pkg, out_dir, filename, duplicates_allowed=False):
 def compile_bytecode():
     """Walks the temp dir and precompiles bytecode for all .py files there."""
     for dirpath, dirnames, filenames in os.walk('.'):
-        for filename in filenames:
+        paths = [os.path.join(dirpath, filename) for filename in filenames]
+        # Must remove any .pyc files first in case they turn out to be present but readonly.
+        # This seems to happen on some rare cases, we're not 100% sure why yet.
+        for filename in paths:
+            if filename.endswith('.pyc'):
+                os.remove(filename)
+        for filename in paths:
             if filename.endswith('.py'):
-                filename = os.path.join(dirpath, filename)
                 path = py_compile.compile(filename, doraise=True)
                 if not path:
                     # In python3 we already have a path to the .pyc file. py_compile in python2
