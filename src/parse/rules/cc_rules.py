@@ -71,6 +71,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     cmds = {
         'dbg': cmd_template % (CONFIG.CC_TOOL, dbg_flags),
         'opt': cmd_template % (CONFIG.CC_TOOL, opt_flags),
+        'cover': cmd_template % (CONFIG.CC_TOOL, dbg_flags) + ' -ftest-coverage -fprofile-arcs -fprofile-dir=.',
     }
     a_rules = []
     for src in srcs:
@@ -79,6 +80,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             name=a_name,
             srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
             outs=[a_name + '.a'],
+            optional_outs=['*.gcno'],
             deps=deps,
             visibility=visibility,
             cmd=cmds,
@@ -222,6 +224,7 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
     cmd = {
         'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
         'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
+        'cover': '%s -o ${OUT} %s -ftest-coverage -fprofile-arcs -fprofile-dir=.' % (CONFIG.CC_TOOL, dbg_flags),
     }
     deps = deps or []
     if srcs:
@@ -295,6 +298,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
     cmd = {
         'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
         'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
+        'cover': '%s -o ${OUT} %s -ftest-coverage -fprofile-arcs -fprofile-dir=.' % (CONFIG.CC_TOOL, dbg_flags),
     }
     if srcs:
         cc_library(
@@ -325,7 +329,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         labels=labels,
         pre_build=_apply_transitive_labels(cmd),
         flaky=flaky,
-        test_outputs=test_outputs,
+        test_outputs=(test_outputs or []) + ['*.gcda'],
         test_timeout=timeout,
         container=container,
     )
@@ -525,4 +529,6 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
         flags = ' ' + ' '.join(flags)
         set_command(name, 'dbg', command_map['dbg'] + flags)
         set_command(name, 'opt', command_map['opt'] + flags)
+        cover_cmd = command_map.get('cover') or command_map['opt']
+        set_command(name, 'cover', cover_cmd + flags)
     return update_commands
