@@ -55,7 +55,9 @@ func shouldExcludeMatch(match string, excludes []string) bool {
 func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]string, error) {
 	// Go's Glob function doesn't handle Ant-style ** patterns. Do it ourselves if we have to,
 	// but we prefer not since our solution will have to do a potentially inefficient walk.
-	if !strings.Contains(pattern, "**") {
+	if !strings.Contains(pattern, "*") {
+		return path.Join(rootPath, pattern)
+	} else if !strings.Contains(pattern, "**") {
 		return filepath.Glob(path.Join(rootPath, pattern))
 	}
 

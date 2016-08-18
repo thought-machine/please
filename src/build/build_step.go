@@ -310,8 +310,9 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 	// Glob patterns are supported on these.
 	for _, output := range parse.GlobAll(tmpDir, target.OptionalOutputs, nil, nil, true) {
 		log.Debug("Discovered optional output %s", output)
-		realOutput := path.Join(outDir, output[len(tmpDir)+1:]) // +1 to strip slash too
-		if _, err := moveOutput(target, output, realOutput, false); err != nil {
+		tmpOutput := path.Join(tmpDir, output)
+		realOutput := path.Join(outDir, output)
+		if _, err := moveOutput(target, tmpOutput, realOutput, false); err != nil {
 			return changed, err
 		}
 	}
