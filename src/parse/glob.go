@@ -14,10 +14,12 @@ import (
 // Used to identify the fixed part at the start of a glob pattern.
 var initialFixedPart = regexp.MustCompile("([^\\*]+)/(.*)")
 
-func globall(packageName string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
+// GlobAll implements matching using Go's built-in filepath.Glob, but extends it to support
+// Ant-style patterns using **.
+func GlobAll(rootPath string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
 	filenames := []string{}
 	for _, include := range includes {
-		matches, err := glob(packageName, include, includeHidden, prefixedExcludes)
+		matches, err := glob(rootPath, include, includeHidden, prefixedExcludes)
 		if err != nil {
 			panic(err)
 		}
@@ -29,8 +31,8 @@ func globall(packageName string, includes, prefixedExcludes, excludes []string, 
 					continue
 				}
 			}
-			if strings.HasPrefix(filename, packageName) && packageName != "" {
-				filename = filename[len(packageName)+1:] // +1 to strip the slash too
+			if strings.HasPrefix(filename, rootPath) && rootPath != "" {
+				filename = filename[len(rootPath)+1:] // +1 to strip the slash too
 			}
 			if !shouldExcludeMatch(filename, excludes) {
 				filenames = append(filenames, filename)

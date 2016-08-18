@@ -31,3 +31,8 @@ func RunPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTar
 // UndeferAnyParses does nothing, it just allows linking this function.
 func UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
 }
+
+// GlobAll also does nothing.
+func GlobAll(rootPath string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
+	return nil
+}

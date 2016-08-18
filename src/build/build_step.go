@@ -280,9 +280,11 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 		return true, err
 	}
 	changed := false
+	tmpDir := target.TmpDir()
+	outDir := target.OutDir()
 	for _, output := range target.Outputs() {
-		tmpOutput := path.Join(target.TmpDir(), output)
-		realOutput := path.Join(target.OutDir(), output)
+		tmpOutput := path.Join(tmpDir, output)
+		realOutput := path.Join(outDir, output)
 		if !core.PathExists(tmpOutput) {
 			return true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
 		}
@@ -305,13 +307,11 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 		log.Debug("Outputs for %s are unchanged", target.Label)
 	}
 	// Optional outputs get moved but don't contribute to the hash or for incrementality.
-	for _, output := range target.OptionalOutputs {
-		realOutput := path.Join(target.OutDir(), output)
-		tmpOutput, err := filepath.EvalSymlinks(path.Join(target.TmpDir(), output))
-		if err != nil {
-			return changed, err
-		}
-		if _, err := moveOutput(target, tmpOutput, realOutput, false); err != nil {
+	// Glob patterns are supported on these.
+	for _, output := range parse.GlobAll(tmpDir, target.OptionalOutputs, nil, nil, true) {
+		log.Debug("Discovered optional output %s", output)
+		realOutput := path.Join(outDir, output[len(tmpDir)+1:]) // +1 to strip slash too
+		if _, err := moveOutput(target, output, realOutput, false); err != nil {
 			return changed, err
 		}
 	}
