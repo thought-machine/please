@@ -266,7 +266,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     _add_strings(target, _add_exported_dep, exported_deps, 'exported_deps')
     _add_strings(target, _add_tool, tools, 'tools')
     _add_strings(target, _add_out, outs, 'outs')
-    _add_strings(target, _add_optional_out, outs, 'outs')
+    _add_strings(target, _add_optional_out, optional_outs, 'optional_outs')
     _add_strings(target, _add_vis, visibility, 'visibility')
     _add_strings(target, _add_label, labels, 'labels')
     _add_strings(target, _add_hash, hashes, 'hashes')
