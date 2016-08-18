@@ -43,6 +43,9 @@ type BuildTarget struct {
 	Data []BuildInput
 	// Output files of this rule. All are paths relative to this package.
 	outputs []string
+	// Optional output files of this rule. Same as outs but aren't required to be produced always.
+	// Can be glob patterns.
+	OptionalOutputs []string
 	// Optional labels applied to this rule. Used for including/excluding rules.
 	Labels []string
 	// Shell command to run.

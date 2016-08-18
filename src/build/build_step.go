@@ -304,6 +304,17 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 	} else {
 		log.Debug("Outputs for %s are unchanged", target.Label)
 	}
+	// Optional outputs get moved but don't contribute to the hash or for incrementality.
+	for _, output := range target.OptionalOutputs {
+		realOutput := path.Join(target.OutDir(), output)
+		tmpOutput, err := filepath.EvalSymlinks(path.Join(target.TmpDir(), output))
+		if err != nil {
+			return changed, err
+		}
+		if _, err := moveOutput(target, tmpOutput, realOutput, false); err != nil {
+			return changed, err
+		}
+	}
 	return changed, nil
 }
 

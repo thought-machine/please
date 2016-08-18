@@ -495,6 +495,13 @@ func AddOutput(cTarget uintptr, cOutput *C.char) *C.char {
 	return nil
 }
 
+//export AddOptionalOutput
+func AddOptionalOutput(cTarget uintptr, cOutput *C.char) *C.char {
+	target := unsizet(cTarget)
+	target.OptionalOutputs = append(target.OptionalOutputs, C.GoString(cOutput))
+	return nil
+}
+
 //export AddDep
 func AddDep(cTarget uintptr, cDep *C.char) *C.char {
 	target := unsizet(cTarget)

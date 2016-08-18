@@ -192,7 +192,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                needs_transitive_deps=False, output_is_complete=False, container=False,
                no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
-               test_outputs=None, system_srcs=None, stamp=False, tag=''):
+               test_outputs=None, system_srcs=None, stamp=False, tag='', optional_outs=None):
     if name == 'all':
         raise ValueError('"all" is a reserved build target name.')
     if '/' in name or ':' in name:
@@ -266,6 +266,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     _add_strings(target, _add_exported_dep, exported_deps, 'exported_deps')
     _add_strings(target, _add_tool, tools, 'tools')
     _add_strings(target, _add_out, outs, 'outs')
+    _add_strings(target, _add_optional_out, outs, 'outs')
     _add_strings(target, _add_vis, visibility, 'visibility')
     _add_strings(target, _add_label, labels, 'labels')
     _add_strings(target, _add_hash, hashes, 'hashes')

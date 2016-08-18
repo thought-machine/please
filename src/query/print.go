@@ -88,6 +88,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		stringList("hashes", target.Hashes)
 		stringList("licences", target.Licences)
 		stringList("test_outputs", target.TestOutputs)
+		stringList("optional_outs", target.OptionalOutputs)
 		stringList("requires", target.Requires)
 		if len(target.Provides) > 0 {
 			fmt.Printf("      provides = {\n")
