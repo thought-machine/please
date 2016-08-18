@@ -308,7 +308,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 	}
 	// Optional outputs get moved but don't contribute to the hash or for incrementality.
 	// Glob patterns are supported on these.
-	for _, output := range parse.GlobAll(tmpDir, target.OptionalOutputs, nil, nil, true) {
+	for _, output := range core.GlobAll(tmpDir, target.OptionalOutputs, nil, nil, true) {
 		log.Debug("Discovered optional output %s", output)
 		tmpOutput := path.Join(tmpDir, output)
 		realOutput := path.Join(outDir, output)

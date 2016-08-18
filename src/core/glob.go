@@ -1,4 +1,4 @@
-package parse
+package core
 
 import (
 	"os"
@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-
-	"core"
 )
 
 // Used to identify the fixed part at the start of a glob pattern.
@@ -56,7 +54,7 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 	// Go's Glob function doesn't handle Ant-style ** patterns. Do it ourselves if we have to,
 	// but we prefer not since our solution will have to do a potentially inefficient walk.
 	if !strings.Contains(pattern, "*") {
-		return path.Join(rootPath, pattern)
+		return []string{path.Join(rootPath, pattern)}, nil
 	} else if !strings.Contains(pattern, "**") {
 		return filepath.Glob(path.Join(rootPath, pattern))
 	}
@@ -72,7 +70,7 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 		rootPath = path.Join(rootPath, submatches[1])
 		pattern = submatches[2]
 	}
-	if !core.PathExists(rootPath) {
+	if !PathExists(rootPath) {
 		return nil, nil
 	}
 
@@ -92,7 +90,7 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 			return err
 		}
 		if info.IsDir() {
-			if name != rootPath && isPackage(name) {
+			if name != rootPath && IsPackage(name) {
 				return filepath.SkipDir // Can't glob past a package boundary
 			} else if !includeHidden && strings.HasPrefix(info.Name(), ".") {
 				return filepath.SkipDir // Don't descend into hidden directories
@@ -111,7 +109,8 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 var isPackageMemo = map[string]bool{}
 var isPackageMutex sync.RWMutex
 
-func isPackage(name string) bool {
+// IsPackage returns true if the given directory name is a package (i.e. contains a build file)
+func IsPackage(name string) bool {
 	isPackageMutex.RLock()
 	ret, present := isPackageMemo[name]
 	isPackageMutex.RUnlock()
@@ -126,8 +125,8 @@ func isPackage(name string) bool {
 }
 
 func isPackageInternal(name string) bool {
-	for _, buildFileName := range core.State.Config.Please.BuildFileName {
-		if core.FileExists(path.Join(name, buildFileName)) {
+	for _, buildFileName := range State.Config.Please.BuildFileName {
+		if FileExists(path.Join(name, buildFileName)) {
 			return true
 		}
 	}
