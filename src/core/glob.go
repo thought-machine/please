@@ -58,6 +58,7 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 	} else if !strings.Contains(pattern, "**") {
 		return filepath.Glob(path.Join(rootPath, pattern))
 	}
+	log.Warning("glob %s %s", rootPath, pattern)
 
 	// Optimisation: when we have a fixed part at the start, add that to the root path.
 	// e.g. glob(["src/**/*"]) should start walking in src and not at the current directory,

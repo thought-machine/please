@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"core"
 )
 
 var cache *Cache
@@ -18,6 +20,7 @@ const cachePath = "src/cache/server/test_data"
 
 func init() {
 	cache = newCache(cachePath)
+	core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
 }
 
 func TestFilesToClean(t *testing.T) {
@@ -61,6 +64,13 @@ func TestRetrieveError(t *testing.T) {
 	}
 }
 
+func TestGlob(t *testing.T) {
+	ret, err := cache.RetrieveArtifact("darwin_amd64/**/*.ext")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ret))
+	assert.Contains(t, ret, "darwin_amd64/pack/label/hash/label.ext")
+}
+
 func TestStore(t *testing.T) {
 	fileContent := "This is a newly created file."
 	reader := strings.NewReader(fileContent)
@@ -90,12 +100,4 @@ func TestDeleteAll(t *testing.T) {
 		t.Error(files[0].Name())
 		t.Error("The cache was not cleaned.")
 	}
-}
-
-func TestGlob(t *testing.T) {
-	ret, err := cache.RetrieveArtifact("linux_amd64/**/*.ext")
-	assert.NoError(t, err)
-	assert.Equal(t, 2, len(ret))
-	assert.Contains(t, ret, "linux_amd64/otherpack/label/hash/label.ext")
-	assert.Contains(t, ret, "linux_amd64/extrapack/label/hash/label.ext")
 }

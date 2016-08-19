@@ -146,7 +146,9 @@ func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) 
 			fullPath := path.Join(cache.rootPath, art)
 			lock := cache.lockFile(fullPath, false, 0)
 			body, err := ioutil.ReadFile(fullPath)
-			lock.RUnlock()
+			if lock != nil {
+				lock.RUnlock()
+			}
 			if err != nil {
 				return nil, err
 			}
