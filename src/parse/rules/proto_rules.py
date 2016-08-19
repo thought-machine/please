@@ -20,8 +20,8 @@ _PROTO_FILE_EXTENSIONS = {
 }
 
 
-DEFAULT_PROTO_LABELS = ['protobuf']
-DEFAULT_GRPC_LABELS = DEFAULT_PROTO_LABELS + ['grpc']
+_DEFAULT_PROTO_LABELS = ['protobuf']
+_DEFAULT_GRPC_LABELS = ['grpc']
 
 
 def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None,
@@ -48,7 +48,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 raise ValueError('Unknown language for proto_library: %s' % language)
     else:
         languages = CONFIG.PROTO_LANGUAGES
-    labels = (labels or []) + DEFAULT_PROTO_LABELS
+    labels = (labels or []) + _DEFAULT_PROTO_LABELS
     plugins = plugins or {}
     python_deps = python_deps or []
     cc_deps = cc_deps or []
@@ -254,7 +254,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
         go_deps=go_deps,
         languages=languages,
         visibility=visibility,
-        labels=labels or DEFAULT_GRPC_LABELS,
+        labels=(labels or []) + _DEFAULT_GRPC_LABELS,
         _is_grpc=True,
     )
 
