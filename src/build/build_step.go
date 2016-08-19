@@ -320,7 +320,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		if _, err := moveOutput(target, tmpOutput, realOutput, false); err != nil {
 			return nil, changed, err
 		}
-		extraOuts = append(extraOuts, realOutput)
+		extraOuts = append(extraOuts, output)
 	}
 	return extraOuts, changed, nil
 }
