@@ -1,4 +1,5 @@
-// +build prometheus
+// +build ignore
+
 // Package metrics contains support for reporting metrics to an external server,
 // currently a Prometheus pushgateway. Because plz runs as a transient process
 // we can't wait around for Prometheus to call us, we've got to push to them.
@@ -98,19 +99,31 @@ func InitFromConfig(config *core.Configuration) {
 		ConstLabels: constLabels,
 	}, []string{"target"})
 
+	prometheus.MustRegister(m.buildCounter)
+	prometheus.MustRegister(m.cacheCounter)
+	prometheus.MustRegister(m.testCounter)
+	prometheus.MustRegister(m.buildHistogram)
+	prometheus.MustRegister(m.cacheHistogram)
+	prometheus.MustRegister(m.testHistogram)
+
 	go m.keepPushing()
 }
 
 // Stop shuts down the metrics and ensures the final ones are sent before returning.
 func Stop() {
-	m.stop = true
-	if m.newMetrics {
-		m.pushMetrics()
+	if m != nil {
+		m.stop = true
+		if m.newMetrics {
+			m.pushMetrics()
+		}
 	}
 }
 
 // Record records metrics for the given target.
 func Record(target *core.BuildTarget, duration time.Duration) {
+	if m == nil {
+		return
+	}
 	label := target.Label.String()
 	if target.Results.NumTests > 0 {
 		// Tests have run

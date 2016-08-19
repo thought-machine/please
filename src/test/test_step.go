@@ -15,6 +15,7 @@ import (
 
 	"build"
 	"core"
+	"metrics"
 )
 
 var log = logging.MustGetLogger("test")
@@ -26,6 +27,12 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
 	startTime := time.Now()
 	target := state.Graph.TargetOrDie(label)
+	test(tid, state, label, target)
+	metrics.Record(target, time.Since(startTime))
+}
+
+func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget) {
+	startTime := time.Now()
 	hash, err := build.RuntimeHash(state, target)
 	if err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to calculate target hash")

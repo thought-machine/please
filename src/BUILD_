@@ -6,6 +6,7 @@ go_binary(
         '//src/cache',
         '//src/clean',
         '//src/core',
+        '//src/metrics',
         '//src/output',
         '//src/parse',
         '//src/query',
