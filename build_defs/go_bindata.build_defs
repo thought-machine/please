@@ -13,7 +13,7 @@ def go_bindata(name, srcs, package=None, input_dir=None, prefix=None, out=None,
     build_rule(
         name = name,
         srcs = srcs,
-        outs = [out or name + '.go'],
+        outs = [out or name + '_bindata.go'],
         cmd = cmd,
         tools = [
             '//third_party/go:go-bindata',

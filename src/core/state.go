@@ -86,8 +86,6 @@ type BuildState struct {
 	PrepareOnly bool
 	// Number of times to run each test target. 0 == once each, plus flakes if necessary.
 	NumTestRuns int
-	// True to print the build / test commands as they're run
-	PrintCommands bool
 	// True to clean working directories after successful builds.
 	CleanWorkdirs bool
 	// True if we're forcing a rebuild of the original targets.
