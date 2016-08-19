@@ -45,10 +45,7 @@ func TestFilesToClean(t *testing.T) {
 
 func TestRetrieve(t *testing.T) {
 	artifact, err := cache.RetrieveArtifact("darwin_amd64/pack/label/hash/label.ext")
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	assert.NoError(t, err)
 	if artifact == nil {
 		t.Error("Expected artifact and found nil.")
 	}
@@ -77,9 +74,7 @@ func TestStore(t *testing.T) {
 
 func TestDeleteArtifact(t *testing.T) {
 	err := cache.DeleteArtifact("/linux_amd64/otherpack/label")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	absPath, _ := filepath.Abs(cachePath + "/linux_amd64/otherpack/label")
 	if _, err := os.Stat(absPath); err == nil {
 		t.Errorf("%s was not removed from cache.", absPath)
@@ -88,13 +83,19 @@ func TestDeleteArtifact(t *testing.T) {
 
 func TestDeleteAll(t *testing.T) {
 	err := cache.DeleteAllArtifacts()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	absPath, _ := filepath.Abs(cachePath)
 	if files, _ := ioutil.ReadDir(absPath); len(files) != 0 {
 
 		t.Error(files[0].Name())
 		t.Error("The cache was not cleaned.")
 	}
+}
+
+func TestGlob(t *testing.T) {
+	ret, err := cache.RetrieveArtifact("linux_amd64/**/*.ext")
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(ret))
+	assert.Contains(t, ret, "linux_amd64/otherpack/label/hash/label.ext")
+	assert.Contains(t, ret, "linux_amd64/extrapack/label/hash/label.ext")
 }
