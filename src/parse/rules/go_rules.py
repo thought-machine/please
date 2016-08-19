@@ -375,7 +375,7 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
 
 
 def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
-           binary=False, test_only=False, install=None, revision=None):
+           binary=False, test_only=False, install=None, revision=None, strip=None):
     """Defines a dependency on a third-party Go library.
 
     Args:
@@ -391,6 +391,7 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
                       want to go get something with an extra subpackage.
       revision (str): Git hash to check out before building. Only works for git at present,
                       not for other version control systems.
+      strip (list): List of paths to strip from the installed target.
     """
     post_build = None
     if binary and outs and len(outs) != 1:
@@ -418,6 +419,8 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
             'find . -name .git | xargs rm -rf',
             'find pkg -name "*.a"',
         ])
+    if strip:
+        cmd.extend('rm -rf %s/%s' % (subdir, s) for s in strip)
     build_rule(
         name=name,
         srcs=[patch] if patch else [],
