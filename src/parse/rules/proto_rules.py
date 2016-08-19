@@ -20,6 +20,10 @@ _PROTO_FILE_EXTENSIONS = {
 }
 
 
+DEFAULT_PROTO_LABELS = ['protobuf']
+DEFAULT_GRPC_LABELS = DEFAULT_PROTO_LABELS + ['grpc']
+
+
 def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None,
                   python_deps=None, cc_deps=None, java_deps=None, go_deps=None,
                   languages=None, _is_grpc=False):
@@ -44,7 +48,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 raise ValueError('Unknown language for proto_library: %s' % language)
     else:
         languages = CONFIG.PROTO_LANGUAGES
-    labels = labels or []
+    labels = (labels or []) + DEFAULT_PROTO_LABELS
     plugins = plugins or {}
     python_deps = python_deps or []
     cc_deps = cc_deps or []
@@ -198,11 +202,12 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         deps = provides.values(),
         provides = provides,
         visibility = visibility,
+        labels = labels,
     )
 
 
 def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
-                 python_deps=None, java_deps=None, go_deps=None):
+                 python_deps=None, java_deps=None, go_deps=None, labels=None):
     """Defines a rule for a grpc library.
 
     Args:
@@ -214,6 +219,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
       go_deps (list): Additional deps to add to the go_library rules
       visibility (list): Visibility specification for the rule.
       languages (list): List of languages to generate rules for, chosen from the set {cc, py, go, java}.
+      labels (list): List of labels to apply to this rule.
     """
     # No plugin for Go, that's handled above since it's merged into the go_out argument.
     deps = deps or []
@@ -248,6 +254,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
         go_deps=go_deps,
         languages=languages,
         visibility=visibility,
+        labels=labels or DEFAULT_GRPC_LABELS,
         _is_grpc=True,
     )
 
