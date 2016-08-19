@@ -126,7 +126,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 				RemoveOutputs(target)
 				return false
 			} else if outputHashErr != nil || !bytes.Equal(oldOutputHash, newOutputHash) {
-				target.SetState(core.Built)
+				target.SetState(core.Cached)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 			} else {
 				target.SetState(core.Unchanged)

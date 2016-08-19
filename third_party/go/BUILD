@@ -133,3 +133,9 @@ go_get(
     get = 'github.com/streamrail/concurrent-map',
     revision = '5fc745307dc80a1883243b978f7e7c0fd5ce7206',
 )
+
+go_get(
+    name = 'prometheus',
+    get = 'github.com/prometheus/client_golang/prometheus',
+    revision = 'c5b7fccd204277076155f10851dad72b76a49317',
+)

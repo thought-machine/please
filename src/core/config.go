@@ -183,6 +183,9 @@ type Configuration struct {
 		RpcCACert             string
 		RpcSecure             bool
 	}
+	Metrics struct {
+		PushGatewayURL string
+	}
 	Test struct {
 		Timeout          int
 		DefaultContainer string
