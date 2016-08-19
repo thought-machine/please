@@ -19,8 +19,6 @@ _PROTO_FILE_EXTENSIONS = {
     'java': ['.java'],
 }
 
-
-_DEFAULT_PROTO_LABELS = ['protobuf']
 _DEFAULT_GRPC_LABELS = ['grpc']
 
 
@@ -48,7 +46,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 raise ValueError('Unknown language for proto_library: %s' % language)
     else:
         languages = CONFIG.PROTO_LANGUAGES
-    labels = (labels or []) + _DEFAULT_PROTO_LABELS
+    labels = labels or []
     plugins = plugins or {}
     python_deps = python_deps or []
     cc_deps = cc_deps or []
