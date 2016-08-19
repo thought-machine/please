@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/push"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
@@ -27,8 +28,8 @@ type metrics struct {
 	newMetrics                                    bool
 	stop                                          bool
 	errors                                        int
-	buildCounter, cacheCounter, testCounter       prometheus.CounterVec
-	buildHistogram, cacheHistogram, testHistogram prometheus.HistogramVec
+	buildCounter, cacheCounter, testCounter       *prometheus.CounterVec
+	buildHistogram, cacheHistogram, testHistogram *prometheus.HistogramVec
 }
 
 // m is the singleton metrics instance. Nothing else deals with this.
@@ -40,13 +41,13 @@ func InitFromConfig(config *core.Configuration) {
 		return // Metrics not enabled
 	}
 
-	user, err := user.Current()
+	u, err := user.Current()
 	if err != nil {
 		log.Warning("Can't determine current user name for metrics")
-		user = &os.User{Username: "unknown"}
+		u = &user.User{Username: "unknown"}
 	}
 	constLabels := prometheus.Labels{
-		"user": user.Username,
+		"user": u.Username,
 		"arch": runtime.GOOS + "_" + runtime.GOARCH,
 	}
 
@@ -114,20 +115,21 @@ func Record(target *core.BuildTarget, duration time.Duration) {
 	if target.Results.NumTests > 0 {
 		// Tests have run
 		m.cacheCounter.WithLabelValues(label, b(target.Results.Cached)).Inc()
-		m.testCounter.WithLabelValues(label, b(target.Results.NumFailures == 0)).Inc()
+		m.testCounter.WithLabelValues(label, b(target.Results.Failed == 0)).Inc()
 		if target.Results.Cached {
-			m.cacheHistogram.GetMetricWithLabelValues(label).Observe(duration.Seconds())
-		} else {
-			m.testHistogram.GetMetricWithLabelValues(label).Observe(duration.Seconds())
+			m.cacheHistogram.WithLabelValues(label).Observe(duration.Seconds())
+		} else if target.Results.Failed == 0 {
+			m.testHistogram.WithLabelValues(label).Observe(duration.Seconds())
 		}
 	} else {
 		// Build has run
-		m.cacheCounter.WithLabelValues(label, b(target.State == core.Cached)).Inc()
-		m.buildCounter.WithLabelValues(label, b(target.State != core.Failed), b(target.State != core.Reused)).Inc()
+		state := target.State()
+		m.cacheCounter.WithLabelValues(label, b(state == core.Cached)).Inc()
+		m.buildCounter.WithLabelValues(label, b(state != core.Failed), b(state != core.Reused)).Inc()
 		if target.Results.Cached {
-			m.cacheHistogram.GetMetricWithLabelValues(label).Observe(duration.Seconds())
-		} else {
-			m.buildHistogram.GetMetricWithLabelValues(label).Observe(duration.Seconds())
+			m.cacheHistogram.WithLabelValues(label).Observe(duration.Seconds())
+		} else if state != core.Failed && state >= core.Built {
+			m.buildHistogram.WithLabelValues(label).Observe(duration.Seconds())
 		}
 	}
 }
@@ -142,7 +144,7 @@ func b(value bool) string {
 func (m *metrics) keepPushing() {
 	for !m.stop {
 		if !m.newMetrics {
-			time.Sleep(m.sleepDuration)
+			time.Sleep(sleepDuration)
 		}
 		m.newMetrics = false
 		m.errors = m.pushMetrics()

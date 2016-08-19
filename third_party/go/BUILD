@@ -137,6 +137,7 @@ go_get(
 go_get(
     name = 'prometheus',
     get = 'github.com/prometheus/client_golang/prometheus',
+    install = ['github.com/prometheus/client_golang/prometheus/push'],
     revision = 'c5b7fccd204277076155f10851dad72b76a49317',
     deps = [
         ':procfs',
