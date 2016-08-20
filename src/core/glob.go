@@ -13,7 +13,7 @@ import (
 var initialFixedPart = regexp.MustCompile("([^\\*]+)/(.*)")
 
 // IsGlob returns true if the given pattern requires globbing (i.e. contains characters that would be expanded by it)
-func IsGlob(pattern string) {
+func IsGlob(pattern string) bool {
 	return strings.ContainsAny(pattern, "*?[")
 }
 
