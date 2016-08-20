@@ -448,6 +448,7 @@ inline char* ${BINARY_NAME}_end_nc() {
 _CC_TEST_MAIN_CONTENTS = """
 #include <algorithm>
 #include <fstream>
+#include <stdlib.h>
 #include <string.h>
 #include "unittest++/UnitTest++.h"
 #include "unittest++/XmlTestReporter.h"
@@ -462,6 +463,10 @@ int main(int argc, char const *argv[]) {
     if (!f.good()) {
       fprintf(stderr, "Failed to open results file\\n");
       return -1;
+    }
+    if (getenv("COVERAGE")) {
+      std::ofstream c("test.coverage");
+      c << "gcov";
     }
     UnitTest::XmlTestReporter reporter(f);
     UnitTest::TestRunner runner(reporter);
