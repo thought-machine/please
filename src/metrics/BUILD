@@ -8,3 +8,12 @@ go_library(
         '//third_party/go:prometheus',
     ],
 )
+
+go_test(
+    name = 'prometheus_test',
+    srcs = ['prometheus_test.go'],
+    deps = [
+        ':metrics',
+        '//third_party/go:testify',
+    ],
+)

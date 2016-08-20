@@ -24,9 +24,10 @@ const maxErrors = 3
 type metrics struct {
 	url                                           string
 	newMetrics                                    bool
-	stop                                          chan bool
+	stopChan                                      chan bool
 	cancelled                                     bool
 	errors                                        int
+	pushes                                        int
 	buildCounter, cacheCounter, testCounter       *prometheus.CounterVec
 	buildHistogram, cacheHistogram, testHistogram *prometheus.HistogramVec
 }
@@ -36,10 +37,20 @@ var m *metrics
 
 // InitFromConfig sets up the initial metrics from the configuration.
 func InitFromConfig(config *core.Configuration) {
-	if config.Metrics.PushGatewayURL == "" {
-		return // Metrics not enabled
+	if config.Metrics.PushGatewayURL != "" {
+		m = initMetrics(config.Metrics.PushGatewayURL, config.Metrics.PushFrequency)
+		prometheus.MustRegister(m.buildCounter)
+		prometheus.MustRegister(m.cacheCounter)
+		prometheus.MustRegister(m.testCounter)
+		prometheus.MustRegister(m.buildHistogram)
+		prometheus.MustRegister(m.cacheHistogram)
+		prometheus.MustRegister(m.testHistogram)
 	}
+}
 
+// initMetrics initialises a new metrics instance.
+// This is deliberately not exposed but is useful for testing.
+func initMetrics(url string, frequency int) *metrics {
 	u, err := user.Current()
 	if err != nil {
 		log.Warning("Can't determine current user name for metrics")
@@ -51,8 +62,8 @@ func InitFromConfig(config *core.Configuration) {
 	}
 
 	m = &metrics{
-		url:  config.Metrics.PushGatewayURL,
-		stop: make(chan bool),
+		url:      url,
+		stopChan: make(chan bool),
 	}
 
 	// Count of builds for each target.
@@ -100,31 +111,33 @@ func InitFromConfig(config *core.Configuration) {
 		ConstLabels: constLabels,
 	}, []string{"target"})
 
-	prometheus.MustRegister(m.buildCounter)
-	prometheus.MustRegister(m.cacheCounter)
-	prometheus.MustRegister(m.testCounter)
-	prometheus.MustRegister(m.buildHistogram)
-	prometheus.MustRegister(m.cacheHistogram)
-	prometheus.MustRegister(m.testHistogram)
+	go m.keepPushing(time.Duration(frequency) * time.Millisecond)
 
-	go m.keepPushing(time.Duration(config.Metrics.PushFrequency) * time.Millisecond)
+	return m
 }
 
 // Stop shuts down the metrics and ensures the final ones are sent before returning.
 func Stop() {
 	if m != nil {
-		m.stop <- true
-		if m.newMetrics && !m.cancelled {
-			m.pushMetrics()
-		}
+		m.stop()
+	}
+}
+
+func (m *metrics) stop() {
+	if !m.cancelled {
+		m.stopChan <- true
+		m.errors = m.pushMetrics()
 	}
 }
 
 // Record records metrics for the given target.
 func Record(target *core.BuildTarget, duration time.Duration) {
-	if m == nil {
-		return
+	if m != nil {
+		m.record(target, duration)
 	}
+}
+
+func (m *metrics) record(target *core.BuildTarget, duration time.Duration) {
 	label := target.Label.String()
 	if target.Results.NumTests > 0 {
 		// Tests have run
@@ -140,7 +153,7 @@ func Record(target *core.BuildTarget, duration time.Duration) {
 		state := target.State()
 		m.cacheCounter.WithLabelValues(label, b(state == core.Cached)).Inc()
 		m.buildCounter.WithLabelValues(label, b(state != core.Failed), b(state != core.Reused)).Inc()
-		if target.Results.Cached {
+		if state == core.Cached {
 			m.cacheHistogram.WithLabelValues(label).Observe(duration.Seconds())
 		} else if state != core.Failed && state >= core.Built {
 			m.buildHistogram.WithLabelValues(label).Observe(duration.Seconds())
@@ -161,27 +174,33 @@ func (m *metrics) keepPushing(d time.Duration) {
 	for {
 		select {
 		case <-t.C:
-			if m.newMetrics {
-				m.newMetrics = false
-				m.errors = m.pushMetrics()
-				if m.errors >= maxErrors {
-					log.Warning("Metrics don't seem to be working, giving up")
-					t.Stop()
-					m.cancelled = true
-					return
-				}
+			m.errors = m.pushMetrics()
+			if m.errors >= maxErrors {
+				log.Warning("Metrics don't seem to be working, giving up")
+				t.Stop()
+				m.cancelled = true
+				return
 			}
-		case <-m.stop:
+		case <-m.stopChan:
 			t.Stop()
 			return
 		}
 	}
 }
 
+// pushMetrics attempts to send some new metrics to the server. It returns the new number of errors.
 func (m *metrics) pushMetrics() int {
+	if !m.newMetrics {
+		return m.errors
+	}
+	start := time.Now()
+	m.newMetrics = false
 	if err := push.AddFromGatherer("please", push.HostnameGroupingKey(), m.url, prometheus.DefaultGatherer); err != nil {
 		log.Warning("Could not push metrics to the repository: %s", err)
+		m.newMetrics = true
 		return m.errors + 1
 	}
+	m.pushes += 1
+	log.Debug("Push #%d of metrics in %0.3fs", m.pushes, time.Since(start).Seconds())
 	return 0
 }
