@@ -1,0 +1,15 @@
+=== RUN   TestSubTests
+=== RUN   TestSubTests/subtest1
+=== RUN   TestSubTests/subtest1/subsubtest1
+=== RUN   TestSubTests/subtest1/subsubtest2
+=== RUN   TestSubTests/subtest2
+=== RUN   TestSubTests/subtest2/subsubtest3
+=== RUN   TestSubTests/subtest2/subsubtest4
+--- PASS: TestSubTests (0.00s)
+    --- PASS: TestSubTests/subtest1 (0.00s)
+        --- PASS: TestSubTests/subtest1/subsubtest1 (0.00s)
+        --- PASS: TestSubTests/subtest1/subsubtest2 (0.00s)
+    --- PASS: TestSubTests/subtest2 (0.00s)
+        --- PASS: TestSubTests/subtest2/subsubtest3 (0.00s)
+        --- PASS: TestSubTests/subtest2/subsubtest4 (0.00s)
+PASS
