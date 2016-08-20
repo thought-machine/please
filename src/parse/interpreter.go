@@ -435,11 +435,11 @@ func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, 
 		return nil, fmt.Errorf("Empty source path (in package %s)", packageName)
 	} else if strings.Contains(src, "../") {
 		return nil, fmt.Errorf("'%s' (in package %s) is an invalid path; build target paths can't contain ../", src, packageName)
-	} else if src[0] == '/' {
+	} else if src[0] == '/' || src[0] == '~' {
 		if !systemAllowed {
 			return nil, fmt.Errorf("'%s' (in package %s) is an absolute path; that's not allowed.", src, packageName)
 		}
-		return core.SystemFileLabel{Path: src}, nil
+		return core.SystemFileLabel{Path: core.ExpandHomePath(src)}, nil
 	} else if strings.Contains(src, "/") {
 		// Target is in a subdirectory, check nobody else owns that.
 		for dir := path.Dir(path.Join(packageName, src)); dir != packageName && dir != "."; dir = path.Dir(dir) {
