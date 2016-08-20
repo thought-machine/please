@@ -12,9 +12,14 @@ import (
 // Used to identify the fixed part at the start of a glob pattern.
 var initialFixedPart = regexp.MustCompile("([^\\*]+)/(.*)")
 
-// GlobAll implements matching using Go's built-in filepath.Glob, but extends it to support
+// IsGlob returns true if the given pattern requires globbing (i.e. contains characters that would be expanded by it)
+func IsGlob(pattern string) {
+	return strings.ContainsAny(pattern, "*?[")
+}
+
+// Glob implements matching using Go's built-in filepath.Glob, but extends it to support
 // Ant-style patterns using **.
-func GlobAll(rootPath string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
+func Glob(rootPath string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
 	filenames := []string{}
 	for _, include := range includes {
 		matches, err := glob(rootPath, include, includeHidden, prefixedExcludes)

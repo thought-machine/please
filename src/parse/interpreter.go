@@ -728,7 +728,7 @@ func Glob(cPackage *C.char, cIncludes **C.char, numIncludes int, cExcludes **C.c
 	includes := cStringArrayToStringSlice(cIncludes, numIncludes, "")
 	prefixedExcludes := cStringArrayToStringSlice(cExcludes, numExcludes, packageName)
 	excludes := cStringArrayToStringSlice(cExcludes, numExcludes, "")
-	filenames := core.GlobAll(packageName, includes, prefixedExcludes, excludes, includeHidden)
+	filenames := core.Glob(packageName, includes, prefixedExcludes, excludes, includeHidden)
 	return stringSliceToCStringArray(filenames)
 }
 

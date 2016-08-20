@@ -141,8 +141,8 @@ func (cache *Cache) removeAndDeleteFile(p string, file *cachedFile) {
 // multiple files to be returned.
 func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) {
 	ret := map[string][]byte{}
-	if strings.Contains(artPath, "*") {
-		for _, art := range core.GlobAll(cache.rootPath, []string{artPath}, nil, nil, true) {
+	if core.IsGlob(artPath) {
+		for _, art := range core.Glob(cache.rootPath, []string{artPath}, nil, nil, true) {
 			fullPath := path.Join(cache.rootPath, art)
 			lock := cache.lockFile(fullPath, false, 0)
 			body, err := ioutil.ReadFile(fullPath)
