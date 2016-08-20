@@ -15,8 +15,6 @@ import (
 	"core"
 )
 
-var gcov = []byte("gcov")
-
 // Parses test coverage for a single target from its output file.
 func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCoverage, error) {
 	coverage := core.NewTestCoverage()
@@ -27,11 +25,11 @@ func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCo
 		return coverage, err
 	} else if len(data) == 0 {
 		return coverage, fmt.Errorf("Empty coverage output")
-	} else if bytes.Equal(data, gcov) {
-		return coverage, parseGcovCoverageResults(target, &coverage)
 	} else if looksLikeGoCoverageResults(data) {
 		// TODO(pebers): this is a little wasteful, we've already read the file once and we must do it again.
 		return coverage, parseGoCoverageResults(target, &coverage, outputFile)
+	} else if looksLikeGcovCoverageResults(data) {
+		return coverage, parseGcovCoverageResults(target, &coverage, data)
 	} else {
 		return coverage, parseXmlCoverageResults(target, &coverage, data)
 	}

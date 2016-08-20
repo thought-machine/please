@@ -1,8 +1,6 @@
 package test
 
 import (
-	"os"
-	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,10 +11,13 @@ import (
 
 var target = &core.BuildTarget{Label: core.BuildLabel{PackageName: "src/test", Name: "coverage_test"}}
 
-const pythonCoverageFile = "src/test/test_data/python-coverage.xml"
-const goCoverageFile = "src/test/test_data/go_coverage.txt"
-const goCoverageFile2 = "src/test/test_data/go_coverage_2.txt"
-const goCoverageFile3 = "src/test/test_data/go_coverage_3.txt"
+const (
+	pythonCoverageFile = "src/test/test_data/python-coverage.xml"
+	goCoverageFile     = "src/test/test_data/go_coverage.txt"
+	goCoverageFile2    = "src/test/test_data/go_coverage_2.txt"
+	goCoverageFile3    = "src/test/test_data/go_coverage_3.txt"
+	gcovCoverageFile   = "src/test/test_data/gcov_coverage.gcov"
+)
 
 // Test that tests aren't required to produce coverage, ie. it's not an error if the file doesn't exist.
 func TestCoverageNotRequired(t *testing.T) {
@@ -161,11 +162,21 @@ func assertLine(t *testing.T, lines []core.LineCoverage, i int, expected core.Li
 }
 
 func TestGcovParsing(t *testing.T) {
-	// Need this to be set
-	dir, _ := os.Getwd()
-	core.RepoRoot = path.Join(dir, "src/test/test_data")
 	target := &core.BuildTarget{Label: core.BuildLabel{PackageName: "test", Name: "gcov_test"}}
-	coverage := core.TestCoverage{}
-	assert.NoError(t, parseGcovCoverageResults(target, &coverage))
-	assert.Contains(t, coverage.Files, "test/gcov_test.cc")
+	coverage, err := parseTestCoverage(target, gcovCoverageFile)
+	assert.NoError(t, err)
+	assert.Contains(t, coverage.Files, "test/cc_rules/deps_test.cc")
+	lines := coverage.Files["test/cc_rules/deps_test.cc"]
+	assertLine(t, lines, 1, core.NotExecutable)
+	assertLine(t, lines, 2, core.NotExecutable)
+	assertLine(t, lines, 9, core.NotExecutable)
+	assertLine(t, lines, 10, core.Covered)
+	assertLine(t, lines, 11, core.Covered)
+	assertLine(t, lines, 12, core.Covered)
+	assertLine(t, lines, 13, core.NotExecutable)
+	assertLine(t, lines, 14, core.Covered)
+	assertLine(t, lines, 15, core.Covered)
+	assertLine(t, lines, 16, core.Covered)
+	assertLine(t, lines, 17, core.NotExecutable)
+	assertLine(t, lines, 18, core.Covered)
 }
