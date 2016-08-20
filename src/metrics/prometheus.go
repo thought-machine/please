@@ -1,4 +1,4 @@
-// +build ignore
+// +build prometheus
 
 // Package metrics contains support for reporting metrics to an external server,
 // currently a Prometheus pushgateway. Because plz runs as a transient process
@@ -19,21 +19,19 @@ import (
 
 var log = logging.MustGetLogger("metrics")
 
-const (
-	sleepDuration = 100 * time.Millisecond
-	maxErrors     = 3
-)
+const maxErrors = 3
 
 type metrics struct {
 	url                                           string
 	newMetrics                                    bool
-	stop                                          bool
+	stop                                          chan bool
+	cancelled                                     bool
 	errors                                        int
 	buildCounter, cacheCounter, testCounter       *prometheus.CounterVec
 	buildHistogram, cacheHistogram, testHistogram *prometheus.HistogramVec
 }
 
-// m is the singleton metrics instance. Nothing else deals with this.
+// m is the singleton metrics instance.
 var m *metrics
 
 // InitFromConfig sets up the initial metrics from the configuration.
@@ -52,7 +50,10 @@ func InitFromConfig(config *core.Configuration) {
 		"arch": runtime.GOOS + "_" + runtime.GOARCH,
 	}
 
-	m = &metrics{url: config.Metrics.PushGatewayURL}
+	m = &metrics{
+		url:  config.Metrics.PushGatewayURL,
+		stop: make(chan bool),
+	}
 
 	// Count of builds for each target.
 	m.buildCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -106,14 +107,14 @@ func InitFromConfig(config *core.Configuration) {
 	prometheus.MustRegister(m.cacheHistogram)
 	prometheus.MustRegister(m.testHistogram)
 
-	go m.keepPushing()
+	go m.keepPushing(time.Duration(config.Metrics.PushFrequency) * time.Millisecond)
 }
 
 // Stop shuts down the metrics and ensures the final ones are sent before returning.
 func Stop() {
 	if m != nil {
-		m.stop = true
-		if m.newMetrics {
+		m.stop <- true
+		if m.newMetrics && !m.cancelled {
 			m.pushMetrics()
 		}
 	}
@@ -145,6 +146,7 @@ func Record(target *core.BuildTarget, duration time.Duration) {
 			m.buildHistogram.WithLabelValues(label).Observe(duration.Seconds())
 		}
 	}
+	m.newMetrics = true
 }
 
 func b(value bool) string {
@@ -154,15 +156,23 @@ func b(value bool) string {
 	return "false"
 }
 
-func (m *metrics) keepPushing() {
-	for !m.stop {
-		if !m.newMetrics {
-			time.Sleep(sleepDuration)
-		}
-		m.newMetrics = false
-		m.errors = m.pushMetrics()
-		if m.errors >= maxErrors {
-			log.Warning("Metrics don't seem to be working, giving up")
+func (m *metrics) keepPushing(d time.Duration) {
+	t := time.NewTicker(d)
+	for {
+		select {
+		case <-t.C:
+			if m.newMetrics {
+				m.newMetrics = false
+				m.errors = m.pushMetrics()
+				if m.errors >= maxErrors {
+					log.Warning("Metrics don't seem to be working, giving up")
+					t.Stop()
+					m.cancelled = true
+					return
+				}
+			}
+		case <-m.stop:
+			t.Stop()
 			return
 		}
 	}
