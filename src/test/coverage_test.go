@@ -1,8 +1,11 @@
 package test
 
 import (
+	"os"
+	"path"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/tools/cover"
 
 	"core"
@@ -155,4 +158,14 @@ func assertLine(t *testing.T, lines []core.LineCoverage, i int, expected core.Li
 	if lines[i] != expected {
 		t.Errorf("Line %d incorrect, should be %d, was %d", i, expected, lines[i])
 	}
+}
+
+func TestGcovParsing(t *testing.T) {
+	// Need this to be set
+	dir, _ := os.Getwd()
+	core.RepoRoot = path.Join(dir, "src/test/test_data")
+	target := &core.BuildTarget{Label: core.BuildLabel{PackageName: "test", Name: "gcov_test"}}
+	coverage := core.TestCoverage{}
+	assert.NoError(t, parseGcovCoverageResults(target, &coverage))
+	assert.Contains(t, coverage.Files, "test/gcov_test.cc")
 }

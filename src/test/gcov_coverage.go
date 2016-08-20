@@ -23,7 +23,7 @@ func parseGcovCoverageResults(target *core.BuildTarget, coverage *core.TestCover
 	gcdaDir := path.Join(core.RepoRoot, gcdaLocation(target))
 	// The intermediate format might actually be better for us since it wouldn't need to read sources.
 	// Unfortunately my gcov segfaults if I pass -i and more than one filename...
-	args := append([]string{"-o", pkgDir, gcdaDir}, gcdaFiles(gcdaDir, ".gcda")...)
+	args := append([]string{"-o", pkgDir}, gcdaFiles(gcdaDir, ".gcda")...)
 	cmd := exec.Command("gcov", args...)
 	// gcov generates lots of files in the current dir, so must run it in the test dir.
 	// At this point we aren't guaranteed that exists if the test didn't actually run though.
@@ -31,6 +31,7 @@ func parseGcovCoverageResults(target *core.BuildTarget, coverage *core.TestCover
 	if err := os.MkdirAll(cmd.Dir, core.DirPermissions); err != nil {
 		return err
 	}
+	log.Debug("Running command gcov %s in %s", strings.Join(args, " "), cmd.Dir)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -48,18 +49,18 @@ func parseGcovFile(target *core.BuildTarget, coverage *core.TestCoverage, filena
 	if err != nil {
 		return err
 	}
-	lines := bytes.Split(contents, []byte{'\n'})
-	if len(lines) == 0 {
+	data := bytes.Split(contents, []byte{'\n'})
+	if len(data) == 0 {
 		return fmt.Errorf("Empty coverage file: %s", filename)
 	}
-	line1 := bytes.Split(lines[0], []byte{':'})
+	line1 := bytes.Split(data[0], []byte{':'})
 	if len(line1) < 4 {
 		return fmt.Errorf("unknown preamble on file %s", filename)
 	}
 	maxLine := 0
 	hits := []string{}
 	lines := []int{}
-	for _, line := range lines[1:] {
+	for _, line := range data[1:] {
 		parts := bytes.Split(line, []byte{':'})
 		if len(line) >= 2 {
 			if i, err := strconv.Atoi(strings.TrimSpace(string(parts[1]))); err == nil {
@@ -81,7 +82,7 @@ func parseGcovFile(target *core.BuildTarget, coverage *core.TestCoverage, filena
 			cov[line] = core.Uncovered
 		}
 	}
-	coverage.Files[line1[3]] = cov
+	coverage.Files[string(line1[3])] = cov
 	return nil
 }
 
