@@ -160,7 +160,7 @@ func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, read
 		}
 	}
 	pb.RegisterRpcCacheServer(s, r)
-	healthserver := health.NewHealthServer()
+	healthserver := health.NewServer()
 	healthserver.SetServingStatus("plz-rpc-cache", healthpb.HealthCheckResponse_SERVING)
 	healthpb.RegisterHealthServer(s, healthserver)
 	return s, lis

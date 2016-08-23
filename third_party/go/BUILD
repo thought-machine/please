@@ -60,26 +60,36 @@ go_get(
 )
 
 go_get(
+    name = 'context',
+    get = 'golang.org/x/net/context',
+    revision = '7394c112eae4dba7e96bfcfe738e6373d61772b4',
+)
+
+go_get(
     name = 'grpc',
     get = 'google.golang.org/grpc',
     install = ['google.golang.org/grpc/health'],
-    revision = '461dac99975b211ed3eda7eb45b997d82da4345a',
+    revision = 'v1.0.1-GA',
     deps = [
+        ':context',
         ':protobuf',
     ],
 )
 
 go_get(
-    name = 'protoc-gen-go',
-    binary = True,
-    get = 'github.com/golang/protobuf/protoc-gen-go',
-    revision = '3852dcfda249c2097355a6aabb199a28d97b30df',
+    name = 'protobuf',
+    get = 'github.com/golang/protobuf/proto',
+    revision = 'f592bd283e9ef86337a432eb50e592278c3d534d',
 )
 
 go_get(
-    name = 'protobuf',
-    get = 'github.com/golang/protobuf/proto',
-    revision = '3852dcfda249c2097355a6aabb199a28d97b30df',
+    name = 'protoc-gen-go',
+    get = 'github.com/golang/protobuf/protoc-gen-go',
+    revision = 'f592bd283e9ef86337a432eb50e592278c3d534d',
+    binary = True,
+    deps = [
+        ':protobuf',
+    ],
 )
 
 go_get(
