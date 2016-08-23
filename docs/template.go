@@ -66,10 +66,14 @@ func main() {
 			return ""
 		},
 	}
-	data := struct{ Title, Header, Contents string }{
+	data := struct {
+		Title, Header, Contents string
+		Player                  bool
+	}{
 		Title:    pageTitles[basename],
 		Header:   mustRead(os.Args[1]),
 		Contents: mustRead(filename),
+		Player:   basename == "faq.html",
 	}
 
 	tmpl := template.Must(template.New("tmpl").Funcs(funcs).Parse(mustRead(os.Args[1])))
