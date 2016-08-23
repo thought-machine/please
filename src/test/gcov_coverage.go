@@ -44,7 +44,7 @@ func parseGcovCoverageResults(target *core.BuildTarget, coverage *core.TestCover
 // AFAICT the format is:
 //       -: Not executable
 //   #####: Not covered
-//      32: line 32
+//      32: line was hit 32 times
 func translateGcovCount(gcov []byte) core.LineCoverage {
 	if len(gcov) > 0 && gcov[0] == '-' {
 		return core.NotExecutable
