@@ -61,13 +61,8 @@ pip_library(
 
 pip_library(
     name = 'protobuf',
-    version = '3.0.0b1.post2',
+    version = '3.0.0',
     outs = ['google'],
-    hashes = [
-        'sha1: 4b74638c35f417ab33c3fe3a337f0bb18f0ff1ab',
-        'sha1: 6d4c66f719238c058d3d5d1fbe7b2484eb0fe89d',
-        'sha1: 4b74638c35f417ab33c3fe3a337f0bb18f0ff1ab',
-    ],
     deps = [':six'],
 )
 
