@@ -6,7 +6,7 @@ GREEN="$(tput setaf 2)"
 YELLOW="$(tput setaf 3)"
 RESET="$(tput sgr0)"
 
-DEFAULT_URL_BASE="https://get.please.build/"
+DEFAULT_URL_BASE="https://get.please.build"
 # We might already have it downloaded...
 LOCATION=`grep -i "^location" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
 if [ -z "$LOCATION" ]; then
@@ -26,6 +26,7 @@ URL_BASE=`grep -i "^downloadlocation" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
 if [ -z "$URL_BASE" ]; then
     URL_BASE=$DEFAULT_URL_BASE
 fi
+URL_BASE="${URL_BASE%/}"
 
 VERSION=`grep -i "^version" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
 if [ -z "$VERSION" ]; then

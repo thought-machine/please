@@ -3,6 +3,10 @@
     <title>{{ .Title }}</title>
     <link rel="stylesheet" type="text/css" href="styles.css">
     <script src="action.js"></script>
+    {{ if .Player }}
+    <link rel="stylesheet" type="text/css" href="asciinema-player.css" />
+    <script src="asciinema-player.js"></script>
+    {{ end }}
   </head>
   <body>
     <div class="above">

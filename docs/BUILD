@@ -29,7 +29,18 @@ filegroup(
         'styles.css',
         'action.js',
         'images/thoughtmachine.png',
+        'plz-recording.json',
+        ':asciinema-js',
+        '//third_party/js:asciinema-css',
     ],
+)
+
+# Append our player js onto the end of this one so it runs on load.
+genrule(
+    name = 'asciinema-js',
+    srcs = ['//third_party/js:asciinema-js', 'player.js'],
+    outs = ['asciinema-player.js'],
+    cmd = 'cat $SRCS > $OUT',
 )
 
 go_binary(

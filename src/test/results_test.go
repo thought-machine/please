@@ -56,6 +56,16 @@ func TestGoSkipped(t *testing.T) {
 	assert(t, results.ExpectedFailures, 0, "expected failures")
 }
 
+func TestGoSubtests(t *testing.T) {
+	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_subtests.txt", false)
+	if err != nil {
+		t.Errorf("Unable to parse file: %s", err)
+		return
+	}
+	assert(t, results.NumTests, 7, "tests")
+	assert(t, results.Passed, 7, "passes")
+}
+
 func TestBuckXML(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/junit.xml", false)
 	if err != nil {
@@ -114,8 +124,8 @@ func TestGoSuite(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 6, "tests")
-	assert(t, results.Passed, 4, "passes")
+	assert(t, results.NumTests, 7, "tests")
+	assert(t, results.Passed, 5, "passes")
 	assert(t, results.Failed, 1, "failures")
 	assert(t, results.Skipped, 1, "skipped tests")
 	assert(t, results.ExpectedFailures, 0, "expected failures")

@@ -444,7 +444,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedTests = shouldTest
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrepareOnly = opts.Build.Prepare
-	state.PrintCommands = opts.OutputFlags.PrintCommands
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
@@ -571,10 +570,6 @@ func main() {
 	if opts.OutputFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other errors if --version was passed.
-	}
-	// PrintCommands implies verbosity of at least 2, because commands are logged at that level
-	if opts.OutputFlags.PrintCommands && opts.OutputFlags.Verbosity < 2 {
-		opts.OutputFlags.Verbosity = 2
 	}
 	if opts.OutputFlags.Colour {
 		output.SetColouredOutput(true)

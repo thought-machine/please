@@ -6,20 +6,20 @@ but as a result they're not checked into Git.
 */
 @font-face {
     font-family: 'EssentialPragmataPro-Bold';
-    src: url('https://www.please.build/fonts/31B6AC_0_0.eot');
-    src: url('https://www.please.build/fonts/31B6AC_0_0.eot?#iefix') format('embedded-opentype'),
-         url('https://www.please.build/fonts/31B6AC_0_0.woff2') format('woff2'),
-         url('https://www.please.build/fonts/31B6AC_0_0.woff') format('woff'),
-         url('https://www.please.build/fonts/31B6AC_0_0.ttf') format('truetype');
+    src: url('/fonts/31B6AC_0_0.eot');
+    src: url('/fonts/31B6AC_0_0.eot?#iefix') format('embedded-opentype'),
+         url('/fonts/31B6AC_0_0.woff2') format('woff2'),
+         url('/fonts/31B6AC_0_0.woff') format('woff'),
+         url('/fonts/31B6AC_0_0.ttf') format('truetype');
 }
 
 @font-face {
     font-family: 'EssentialPragmataPro';
-    src: url('https://www.please.build/fonts/31B6AC_1_0.eot');
-    src: url('https://www.please.build/fonts/31B6AC_1_0.eot?#iefix') format('embedded-opentype'),
-         url('https://www.please.build/fonts/31B6AC_1_0.woff2') format('woff2'),
-         url('https://www.please.build/fonts/31B6AC_1_0.woff') format('woff'),
-         url('https://www.please.build/fonts/31B6AC_1_0.ttf') format('truetype');
+    src: url('/fonts/31B6AC_1_0.eot');
+    src: url('/fonts/31B6AC_1_0.eot?#iefix') format('embedded-opentype'),
+         url('/fonts/31B6AC_1_0.woff2') format('woff2'),
+         url('/fonts/31B6AC_1_0.woff') format('woff'),
+         url('/fonts/31B6AC_1_0.ttf') format('truetype');
 }
 
 /* General */

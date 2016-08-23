@@ -184,11 +184,13 @@ func handleSignals(newDir string) {
 
 // findLatestVersion attempts to find the latest available version of plz.
 func findLatestVersion(config *core.Configuration) string {
-	url := config.Please.DownloadLocation + "/latest_version"
+	url := strings.TrimRight(config.Please.DownloadLocation, "/") + "/latest_version"
 	log.Info("Downloading %s", url)
 	response, err := http.Get(url)
 	if err != nil {
 		log.Fatalf("Failed to find latest plz version: %s", err)
+	} else if response.StatusCode < 200 || response.StatusCode > 299 {
+		log.Fatalf("Failed to find latest plz version: %s", response.Status)
 	}
 	defer response.Body.Close()
 	data, err := ioutil.ReadAll(response.Body)

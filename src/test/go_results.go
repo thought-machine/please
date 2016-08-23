@@ -22,20 +22,20 @@ func looksLikeGoTestResults(results []byte) bool {
 
 // Not sure what the -6 suffixes are about.
 var testStart = regexp.MustCompile("^=== RUN (.*)(?:-6)?$")
-var testResult = regexp.MustCompile("^--- (PASS|FAIL|SKIP): (.*)(?:-6)? \\((.*)s\\)$")
+var testResult = regexp.MustCompile("^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \\((.*)s\\)$")
 
 func parseGoTestResults(data []byte) (core.TestResults, error) {
 	results := core.TestResults{}
 	lines := bytes.Split(data, []byte{'\n'})
-	lastTestStarted := ""
-	for i := 0; i < len(lines); i++ {
-		testStartMatches := testStart.FindSubmatch(lines[i])
-		testResultMatches := testResult.FindSubmatch(lines[i])
+	testsStarted := map[string]bool{}
+	for i, line := range lines {
+		testStartMatches := testStart.FindSubmatch(line)
+		testResultMatches := testResult.FindSubmatch(line)
 		if testStartMatches != nil {
-			lastTestStarted = strings.TrimSpace(string(testStartMatches[1]))
+			testsStarted[strings.TrimSpace(string(testStartMatches[1]))] = true
 		} else if testResultMatches != nil {
 			testName := strings.TrimSpace(string(testResultMatches[2]))
-			if testName != lastTestStarted {
+			if !testsStarted[testName] {
 				continue
 			}
 			results.NumTests++
@@ -56,9 +56,9 @@ func parseGoTestResults(data []byte) (core.TestResults, error) {
 					Name: testName, Type: "FAILURE", Traceback: output, Stdout: "", Stderr: "",
 				})
 			}
-		} else if bytes.Equal(lines[i], []byte("PASS")) {
+		} else if bytes.Equal(line, []byte("PASS")) {
 			// Do nothing, all's well.
-		} else if bytes.Equal(lines[i], []byte("FAIL")) {
+		} else if bytes.Equal(line, []byte("FAIL")) {
 			if results.Failed == 0 {
 				return results, fmt.Errorf("Test indicated final failure but no failures found yet")
 			}

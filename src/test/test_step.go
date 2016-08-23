@@ -276,9 +276,6 @@ func runTest(state *core.BuildState, target *core.BuildTarget, timeout int) ([]b
 	cmd.Dir = target.TestDir()
 	cmd.Env = env
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(cmd.Env, "\n"), replacedCmd)
-	if state.PrintCommands {
-		log.Notice("Running test %s: %s", target.Label, replacedCmd)
-	}
 	return core.ExecWithTimeout(cmd, target.TestTimeout, timeout)
 }
 

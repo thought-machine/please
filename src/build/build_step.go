@@ -162,9 +162,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	cmd.Dir = target.TmpDir()
 	cmd.Env = core.StampedBuildEnvironment(state, target, false, cacheKey)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(cmd.Env, "\n"), replacedCmd)
-	if state.PrintCommands {
-		log.Notice("Building %s: %s", target.Label, replacedCmd)
-	}
 	out, err := core.ExecWithTimeout(cmd, target.BuildTimeout, state.Config.Build.Timeout)
 	if err != nil {
 		if state.Verbosity >= 4 {
