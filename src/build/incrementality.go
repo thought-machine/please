@@ -292,6 +292,9 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	for _, output := range target.TestOutputs {
 		h.Write([]byte(output))
 	}
+	for _, output := range target.OptionalOutputs {
+		h.Write([]byte(output))
+	}
 	for _, label := range target.Labels {
 		h.Write([]byte(label))
 	}

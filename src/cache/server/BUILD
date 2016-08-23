@@ -70,6 +70,7 @@ go_test(
     data = [':test_data'],
     deps = [
         ':server',
+        '//src/core',
         '//third_party/go:testify',
     ],
 )

@@ -1,4 +1,4 @@
-package parse
+package core
 
 import (
 	"os"
@@ -7,17 +7,22 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-
-	"core"
 )
 
 // Used to identify the fixed part at the start of a glob pattern.
 var initialFixedPart = regexp.MustCompile("([^\\*]+)/(.*)")
 
-func globall(packageName string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
+// IsGlob returns true if the given pattern requires globbing (i.e. contains characters that would be expanded by it)
+func IsGlob(pattern string) bool {
+	return strings.ContainsAny(pattern, "*?[")
+}
+
+// Glob implements matching using Go's built-in filepath.Glob, but extends it to support
+// Ant-style patterns using **.
+func Glob(rootPath string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
 	filenames := []string{}
 	for _, include := range includes {
-		matches, err := glob(packageName, include, includeHidden, prefixedExcludes)
+		matches, err := glob(rootPath, include, includeHidden, prefixedExcludes)
 		if err != nil {
 			panic(err)
 		}
@@ -29,8 +34,8 @@ func globall(packageName string, includes, prefixedExcludes, excludes []string, 
 					continue
 				}
 			}
-			if strings.HasPrefix(filename, packageName) && packageName != "" {
-				filename = filename[len(packageName)+1:] // +1 to strip the slash too
+			if strings.HasPrefix(filename, rootPath) && rootPath != "" {
+				filename = filename[len(rootPath)+1:] // +1 to strip the slash too
 			}
 			if !shouldExcludeMatch(filename, excludes) {
 				filenames = append(filenames, filename)
@@ -53,7 +58,9 @@ func shouldExcludeMatch(match string, excludes []string) bool {
 func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]string, error) {
 	// Go's Glob function doesn't handle Ant-style ** patterns. Do it ourselves if we have to,
 	// but we prefer not since our solution will have to do a potentially inefficient walk.
-	if !strings.Contains(pattern, "**") {
+	if !strings.Contains(pattern, "*") {
+		return []string{path.Join(rootPath, pattern)}, nil
+	} else if !strings.Contains(pattern, "**") {
 		return filepath.Glob(path.Join(rootPath, pattern))
 	}
 
@@ -68,7 +75,7 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 		rootPath = path.Join(rootPath, submatches[1])
 		pattern = submatches[2]
 	}
-	if !core.PathExists(rootPath) {
+	if !PathExists(rootPath) {
 		return nil, nil
 	}
 
@@ -88,7 +95,7 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 			return err
 		}
 		if info.IsDir() {
-			if name != rootPath && isPackage(name) {
+			if name != rootPath && IsPackage(name) {
 				return filepath.SkipDir // Can't glob past a package boundary
 			} else if !includeHidden && strings.HasPrefix(info.Name(), ".") {
 				return filepath.SkipDir // Don't descend into hidden directories
@@ -107,7 +114,8 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 var isPackageMemo = map[string]bool{}
 var isPackageMutex sync.RWMutex
 
-func isPackage(name string) bool {
+// IsPackage returns true if the given directory name is a package (i.e. contains a build file)
+func IsPackage(name string) bool {
 	isPackageMutex.RLock()
 	ret, present := isPackageMemo[name]
 	isPackageMutex.RUnlock()
@@ -122,8 +130,8 @@ func isPackage(name string) bool {
 }
 
 func isPackageInternal(name string) bool {
-	for _, buildFileName := range core.State.Config.Please.BuildFileName {
-		if core.FileExists(path.Join(name, buildFileName)) {
+	for _, buildFileName := range State.Config.Please.BuildFileName {
+		if FileExists(path.Join(name, buildFileName)) {
 			return true
 		}
 	}

@@ -193,7 +193,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 	checkLicences(state, target)
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
-	outputsChanged, err := moveOutputs(state, target)
+	extraOuts, outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
 		return fmt.Errorf("Error moving outputs for target %s: %s", target.Label, err)
 	}
@@ -207,11 +207,15 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 	if state.Cache != nil {
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
-		(*state.Cache).Store(target, mustShortTargetHash(state, target))
+		newCacheKey := mustShortTargetHash(state, target)
+		(*state.Cache).Store(target, newCacheKey)
 		if target.PostBuildFunction != 0 {
 			// NB. Important this is stored with the earlier hash - if we calculate the hash
 			//     now, it might be different, and we could of course never retrieve it again.
 			(*state.Cache).StoreExtra(target, cacheKey, core.PostBuildOutputFileName(target))
+		}
+		for _, out := range extraOuts {
+			(*state.Cache).StoreExtra(target, newCacheKey, out)
 		}
 	}
 	// Clean up the temporary directory once it's done.
@@ -270,29 +274,31 @@ func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
 	return nil
 }
 
-func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error) {
+func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bool, error) {
 	// Before we write any outputs, we must remove the old hash file to avoid it being
 	// left in an inconsistent state.
 	if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
-		return true, err
+		return nil, true, err
 	}
 	changed := false
+	tmpDir := target.TmpDir()
+	outDir := target.OutDir()
 	for _, output := range target.Outputs() {
-		tmpOutput := path.Join(target.TmpDir(), output)
-		realOutput := path.Join(target.OutDir(), output)
+		tmpOutput := path.Join(tmpDir, output)
+		realOutput := path.Join(outDir, output)
 		if !core.PathExists(tmpOutput) {
-			return true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
+			return nil, true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
 		}
 		// If output is a symlink, dereference it. Otherwise, for efficiency,
 		// we can just move it without a full copy (saves copying large .jar files etc).
 		dereferencedPath, err := filepath.EvalSymlinks(tmpOutput)
 		if err != nil {
-			return true, err
+			return nil, true, err
 		}
 		// NB. false -> not filegroup, we wouldn't be here if it was.
 		outputChanged, err := moveOutput(target, dereferencedPath, realOutput, false)
 		if err != nil {
-			return true, err
+			return nil, true, err
 		}
 		changed = changed || outputChanged
 	}
@@ -301,7 +307,19 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) (bool, error)
 	} else {
 		log.Debug("Outputs for %s are unchanged", target.Label)
 	}
-	return changed, nil
+	// Optional outputs get moved but don't contribute to the hash or for incrementality.
+	// Glob patterns are supported on these.
+	extraOuts := []string{}
+	for _, output := range core.Glob(tmpDir, target.OptionalOutputs, nil, nil, true) {
+		log.Debug("Discovered optional output %s", output)
+		tmpOutput := path.Join(tmpDir, output)
+		realOutput := path.Join(outDir, output)
+		if _, err := moveOutput(target, tmpOutput, realOutput, false); err != nil {
+			return nil, changed, err
+		}
+		extraOuts = append(extraOuts, output)
+	}
+	return extraOuts, changed, nil
 }
 
 func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegroup bool) (bool, error) {

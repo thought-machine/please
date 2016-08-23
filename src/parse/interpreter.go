@@ -443,7 +443,7 @@ func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, 
 	} else if strings.Contains(src, "/") {
 		// Target is in a subdirectory, check nobody else owns that.
 		for dir := path.Dir(path.Join(packageName, src)); dir != packageName && dir != "."; dir = path.Dir(dir) {
-			if isPackage(dir) {
+			if core.IsPackage(dir) {
 				return nil, fmt.Errorf("Package %s tries to use file %s, but that belongs to another package (%s).", packageName, src, dir)
 			}
 		}
@@ -492,6 +492,13 @@ func AddData(cTarget uintptr, cData *C.char) *C.char {
 func AddOutput(cTarget uintptr, cOutput *C.char) *C.char {
 	target := unsizet(cTarget)
 	target.AddOutput(C.GoString(cOutput))
+	return nil
+}
+
+//export AddOptionalOutput
+func AddOptionalOutput(cTarget uintptr, cOutput *C.char) *C.char {
+	target := unsizet(cTarget)
+	target.OptionalOutputs = append(target.OptionalOutputs, C.GoString(cOutput))
 	return nil
 }
 
@@ -721,7 +728,7 @@ func Glob(cPackage *C.char, cIncludes **C.char, numIncludes int, cExcludes **C.c
 	includes := cStringArrayToStringSlice(cIncludes, numIncludes, "")
 	prefixedExcludes := cStringArrayToStringSlice(cExcludes, numExcludes, packageName)
 	excludes := cStringArrayToStringSlice(cExcludes, numExcludes, "")
-	filenames := globall(packageName, includes, prefixedExcludes, excludes, includeHidden)
+	filenames := core.Glob(packageName, includes, prefixedExcludes, excludes, includeHidden)
 	return stringSliceToCStringArray(filenames)
 }
 

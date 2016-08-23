@@ -56,6 +56,7 @@ int InitialiseInterpreter(char* parser_location) {
   reg("_add_exported_dep", "char* (*)(size_t, char*)", AddExportedDep);
   reg("_add_tool", "char* (*)(size_t, char*)", AddTool);
   reg("_add_out", "char* (*)(size_t, char*)", AddOutput);
+  reg("_add_optional_out", "char* (*)(size_t, char*)", AddOptionalOutput);
   reg("_add_vis", "char* (*)(size_t, char*)", AddVis);
   reg("_add_label", "char* (*)(size_t, char*)", AddLabel);
   reg("_add_hash", "char* (*)(size_t, char*)", AddHash);

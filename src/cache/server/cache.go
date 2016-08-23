@@ -140,6 +140,23 @@ func (cache *Cache) removeAndDeleteFile(p string, file *cachedFile) {
 // return whatever's been stored there, which might be a directory and therefore contain
 // multiple files to be returned.
 func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) {
+	ret := map[string][]byte{}
+	if core.IsGlob(artPath) {
+		for _, art := range core.Glob(cache.rootPath, []string{artPath}, nil, nil, true) {
+			fullPath := path.Join(cache.rootPath, art)
+			lock := cache.lockFile(fullPath, false, 0)
+			body, err := ioutil.ReadFile(fullPath)
+			if lock != nil {
+				lock.RUnlock()
+			}
+			if err != nil {
+				return nil, err
+			}
+			ret[art] = body
+		}
+		return ret, nil
+	}
+
 	fullPath := path.Join(cache.rootPath, artPath)
 	lock := cache.lockFile(artPath, false, 0)
 	if lock == nil {
@@ -152,7 +169,6 @@ func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) 
 	}
 	defer lock.RUnlock()
 
-	ret := map[string][]byte{}
 	if err := filepath.Walk(fullPath, func(name string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

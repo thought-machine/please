@@ -2,13 +2,16 @@ subinclude('//build_defs:go_bindata')
 
 cgo_library(
     name = 'parse',
-    srcs = glob([
-        '*.go',
-        'interpreter.*',
-    ], excludes = [
-        '*_test.go',
-        'builtin_rules.go',
-    ]) + [':builtin_rules'],
+    srcs = glob(
+        [
+            '*.go',
+            'interpreter.*',
+        ],
+        excludes = [
+            '*_test.go',
+            'builtin_rules.go',
+        ],
+    ) + [':builtin_rules'],
     visibility = ['PUBLIC'],
     deps = [
         ':builtin_rules',
@@ -40,17 +43,6 @@ go_bindata(
     name = 'builtin_rules',
     srcs = [':type_checked_rules'],
     prefix = '${PKG}',
-)
-
-cgo_test(
-    name = 'glob_test',
-    srcs = ['glob_test.go'],
-    data = glob(['test_data/**/*.txt']),
-    deps = [
-        ':parse',
-        '//src/core',
-        '//third_party/go:testify',
-    ],
 )
 
 cgo_test(

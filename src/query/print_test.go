@@ -28,6 +28,7 @@ var KnownFields = map[string]bool{
 	"NamedSources":                true,
 	"NeedsTransitiveDependencies": true,
 	"NoTestOutput":                true,
+	"OptionalOutputs":             true,
 	"OutputIsComplete":            true,
 	"outputs":                     true,
 	"PreBuildFunction":            true,

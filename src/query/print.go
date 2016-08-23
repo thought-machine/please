@@ -40,6 +40,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			}
 			fmt.Printf("      ],\n")
 		}
+		stringList("optional_outs", target.OptionalOutputs)
 		pythonDict(target.Commands, "cmd")
 		if !target.IsFilegroup() {
 			fmt.Printf("      cmd = '%s'\n", target.Command)

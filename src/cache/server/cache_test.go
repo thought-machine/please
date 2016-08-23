@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"core"
 )
 
 var cache *Cache
@@ -18,6 +20,7 @@ const cachePath = "src/cache/server/test_data"
 
 func init() {
 	cache = newCache(cachePath)
+	core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
 }
 
 func TestFilesToClean(t *testing.T) {
@@ -45,10 +48,7 @@ func TestFilesToClean(t *testing.T) {
 
 func TestRetrieve(t *testing.T) {
 	artifact, err := cache.RetrieveArtifact("darwin_amd64/pack/label/hash/label.ext")
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	assert.NoError(t, err)
 	if artifact == nil {
 		t.Error("Expected artifact and found nil.")
 	}
@@ -64,6 +64,13 @@ func TestRetrieveError(t *testing.T) {
 	}
 }
 
+func TestGlob(t *testing.T) {
+	ret, err := cache.RetrieveArtifact("darwin_amd64/**/*.ext")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ret))
+	assert.Contains(t, ret, "darwin_amd64/pack/label/hash/label.ext")
+}
+
 func TestStore(t *testing.T) {
 	fileContent := "This is a newly created file."
 	reader := strings.NewReader(fileContent)
@@ -77,9 +84,7 @@ func TestStore(t *testing.T) {
 
 func TestDeleteArtifact(t *testing.T) {
 	err := cache.DeleteArtifact("/linux_amd64/otherpack/label")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	absPath, _ := filepath.Abs(cachePath + "/linux_amd64/otherpack/label")
 	if _, err := os.Stat(absPath); err == nil {
 		t.Errorf("%s was not removed from cache.", absPath)
@@ -88,9 +93,7 @@ func TestDeleteArtifact(t *testing.T) {
 
 func TestDeleteAll(t *testing.T) {
 	err := cache.DeleteAllArtifacts()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	absPath, _ := filepath.Abs(cachePath)
 	if files, _ := ioutil.ReadDir(absPath); len(files) != 0 {
 
