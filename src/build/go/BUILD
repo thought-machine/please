@@ -25,6 +25,7 @@ go_test(
     name = 'find_cover_vars_test',
     srcs = ['find_cover_vars_test.go'],
     data = [
+        'test_data/binary/core.a',
         'test_data/core.a',
         ':test_excluded_archive',
     ],
