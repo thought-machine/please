@@ -4,6 +4,8 @@ In general these have received somewhat less testing than would really be requir
 the complex build environment C++ has, so some issues may remain.
 """
 
+_COVERAGE_FLAGS = ' -ftest-coverage -fprofile-arcs -fprofile-dir=.'
+
 
 def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False,
                compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None, defines=None,
@@ -71,7 +73,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     cmds = {
         'dbg': cmd_template % (CONFIG.CC_TOOL, dbg_flags),
         'opt': cmd_template % (CONFIG.CC_TOOL, opt_flags),
-        'cover': cmd_template % (CONFIG.CC_TOOL, dbg_flags) + ' -ftest-coverage -fprofile-arcs -fprofile-dir=.',
+        'cover': cmd_template % (CONFIG.CC_TOOL, dbg_flags) + _COVERAGE_FLAGS,
     }
     a_rules = []
     for src in srcs:
@@ -224,7 +226,7 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
     cmd = {
         'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
         'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
-        'cover': '%s -o ${OUT} %s -ftest-coverage -fprofile-arcs -fprofile-dir=.' % (CONFIG.CC_TOOL, dbg_flags),
+        'cover': '%s -o ${OUT} %s %s' % (CONFIG.CC_TOOL, dbg_flags, _COVERAGE_FLAGS),
     }
     deps = deps or []
     if srcs:
@@ -298,7 +300,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
     cmd = {
         'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
         'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
-        'cover': '%s -o ${OUT} %s -ftest-coverage -fprofile-arcs -fprofile-dir=.' % (CONFIG.CC_TOOL, dbg_flags),
+        'cover': '%s -o ${OUT} %s %s' % (CONFIG.CC_TOOL, dbg_flags, _COVERAGE_FLAGS),
     }
     if srcs:
         cc_library(
