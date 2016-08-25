@@ -183,7 +183,10 @@ def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=Fals
         srcs=srcs,
         deps=(deps or []) + [':_%s#srcs' % name],
         outs=[package + '.a'],
-        cmd=env_cmd + cmd,
+        cmd={
+            'opt': env_cmd + cmd,
+            'cover': env_cmd + cmd.replace('go install', 'go install -tags cover'),
+        },
         visibility=visibility,
         building_description="Compiling...",
         requires=['go', 'go_src', 'cc', 'cc_hdrs'],
@@ -350,6 +353,8 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     tag_cmd = '-tags "%s"' % ' '.join(tags) if tags else ''
+    cmd = 'export GOPATH="%s"; ln -s $TMP_DIR src; go test ${PKG#*src/} %s -c -o $OUT' % (CONFIG.GOPATH, tag_cmd)
+    test_cmd = '$TEST -test.v -test.coverprofile test.coverage | tee test.results'
     build_rule(
         name=name,
         srcs=srcs,
@@ -357,8 +362,14 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         deps=deps,
         outs=[name],
         tools=_GO_TOOL,
-        cmd='export GOPATH="%s"; ln -s $TMP_DIR src; go test ${PKG#*src/} %s -c -test.cover -o $OUT' % (CONFIG.GOPATH, tag_cmd),
-        test_cmd='$(exe :%s) -test.v -test.coverprofile test.coverage | tee test.results' % name,
+        cmd={
+            'cover': cmd + ' -test.cover -tags cover',
+            'opt': cmd,
+        },
+        test_cmd={
+            'cover': '$TEST -test.v -test.coverprofile test.coverage | tee test.results',
+            'opt': '$TEST -test.v | tee test.results',
+        },
         visibility=visibility,
         container=container,
         test_timeout=timeout,
