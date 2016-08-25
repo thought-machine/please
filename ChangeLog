@@ -1,3 +1,13 @@
+Version 5.1.0
+-------------
+
+    * Initial C++ coverage support
+    * Support for coverage in Go 1.7
+    * Support for Go 1.7 style subtests
+    * Added identifying labels to grpc_library rules
+    * Support for optional additional outputs on rules.
+
+
 Version 5.0.1
 -------------
 
