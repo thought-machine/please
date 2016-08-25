@@ -125,7 +125,7 @@ func TestCacheRetrieval(t *testing.T) {
 	state.Cache = &cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
-	assert.Equal(t, core.Built, target.State())
+	assert.Equal(t, core.Cached, target.State())
 }
 
 func TestPostBuildFunctionAndCache(t *testing.T) {

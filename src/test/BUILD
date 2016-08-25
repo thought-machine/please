@@ -8,6 +8,7 @@ go_library(
     deps = [
         '//src/build',
         '//src/core',
+        '//src/metrics',
         '//third_party/go:cover',
         '//third_party/go:logging',
     ],

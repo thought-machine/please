@@ -143,3 +143,20 @@ go_get(
     get = 'github.com/streamrail/concurrent-map',
     revision = '5fc745307dc80a1883243b978f7e7c0fd5ce7206',
 )
+
+go_get(
+    name = 'prometheus',
+    get = 'github.com/prometheus/client_golang/prometheus',
+    install = ['github.com/prometheus/client_golang/prometheus/push'],
+    revision = 'c5b7fccd204277076155f10851dad72b76a49317',
+    deps = [
+        ':procfs',
+    ],
+)
+
+go_get(
+    name = 'procfs',
+    get = 'github.com/prometheus/procfs',
+    revision = 'abf152e5f3e97f2fafac028d2cc06c1feb87ffa5',
+    strip = ['fixtures'],  # Test fixture has a symlink to /usr/bin/vim which might not exist
+)

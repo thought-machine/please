@@ -16,6 +16,7 @@ import (
 	"cache"
 	"clean"
 	"core"
+	"metrics"
 	"output"
 	"parse"
 	"query"
@@ -447,6 +448,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+	metrics.InitFromConfig(config)
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
@@ -474,6 +476,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	// Draw stuff to the screen while there are still results coming through.
 	shouldRun := !opts.Run.Args.Target.IsEmpty()
 	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.OutputFlags.TraceFile)
+	metrics.Stop()
 	return success, state
 }
 

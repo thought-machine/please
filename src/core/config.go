@@ -108,6 +108,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
+	config.Metrics.PushFrequency = 100 // push every 100ms
 	config.Test.Timeout = 600
 	config.Test.DefaultContainer = TestContainerDocker
 	config.Docker.DefaultImage = "ubuntu:trusty"
@@ -182,6 +183,10 @@ type Configuration struct {
 		RpcPrivateKey         string
 		RpcCACert             string
 		RpcSecure             bool
+	}
+	Metrics struct {
+		PushGatewayURL string
+		PushFrequency  int
 	}
 	Test struct {
 		Timeout          int

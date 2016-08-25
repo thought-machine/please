@@ -11,10 +11,12 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"metrics"
 	"parse"
 )
 
@@ -24,6 +26,7 @@ var log = logging.MustGetLogger("build")
 var stopTarget = fmt.Errorf("stopping build")
 
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
+	start := time.Now()
 	target := state.Graph.TargetOrDie(label)
 	target.SetState(core.Building)
 	if err := buildTarget(tid, state, target); err != nil {
@@ -39,6 +42,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 		target.SetState(core.Failed)
 		return
 	}
+	metrics.Record(target, time.Since(start))
 
 	// Add any of the reverse deps that are now fully built to the queue.
 	for _, reverseDep := range state.Graph.ReverseDependencies(target) {
@@ -126,7 +130,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 				RemoveOutputs(target)
 				return false
 			} else if outputHashErr != nil || !bytes.Equal(oldOutputHash, newOutputHash) {
-				target.SetState(core.Built)
+				target.SetState(core.Cached)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 			} else {
 				target.SetState(core.Unchanged)
