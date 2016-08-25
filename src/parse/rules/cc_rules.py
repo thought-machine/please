@@ -187,6 +187,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
     cmd = {
         'dbg': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, dbg_flags),
         'opt': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, opt_flags),
+        'cover': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s %s' % (CONFIG.CC_TOOL, dbg_flags, _COVERAGE_FLAGS),
     }
     build_rule(
         name=name,
