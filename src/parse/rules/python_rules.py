@@ -75,7 +75,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
     )
 
 
-def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=None,
+def python_binary(name, main, resources=None, out=None, deps=None, visibility=None, zip_safe=None,
                   interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER, labels=None):
     """Generates a Python binary target.
 
@@ -87,6 +87,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
     Args:
       name (str): Name of the rule.
       main (str): Python file which is the entry point and __main__ module.
+      resources (list): List of static resources to include in the .pex.
       out (str): Name of the output file. Default to name + .pex
       deps (list): Dependencies of this rule.
       visibility (list): Visibility specification.
@@ -120,6 +121,7 @@ def python_binary(name, main, out=None, deps=None, visibility=None, zip_safe=Non
     python_library(
         name='_%s#lib' % name,
         srcs=[main],
+        resources=resources,
         deps=deps,
         visibility=visibility,
     )
