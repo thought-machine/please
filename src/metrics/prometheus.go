@@ -19,6 +19,7 @@ import (
 
 var log = logging.MustGetLogger("metrics")
 
+// This is the maximum number of errors after which plz will stop attempting to send metrics.
 const maxErrors = 3
 
 type metrics struct {
