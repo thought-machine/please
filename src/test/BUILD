@@ -1,6 +1,9 @@
 go_library(
     name = 'test',
-    srcs = glob(['*.go'], excludes = ['*_test.go']),
+    srcs = glob(
+        ['*.go'],
+        excludes = ['*_test.go'],
+    ),
     visibility = ['PUBLIC'],
     deps = [
         '//src/build',
@@ -47,6 +50,7 @@ go_test(
     name = 'coverage_test',
     srcs = ['coverage_test.go'],
     data = [
+        'test_data/gcov_coverage.gcov',
         'test_data/go_coverage.txt',
         'test_data/go_coverage_2.txt',
         'test_data/go_coverage_3.txt',
@@ -54,6 +58,7 @@ go_test(
     ],
     deps = [
         ':test',
+        '//third_party/go:testify',
     ],
 )
 

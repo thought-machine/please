@@ -201,7 +201,9 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 			pkg.MustRegisterOutput(out, target)
 		}
 		for _, out := range target.TestOutputs {
-			pkg.MustRegisterOutput(out, target)
+			if !core.IsGlob(out) {
+				pkg.MustRegisterOutput(out, target)
+			}
 		}
 	}
 	// Do this in a separate loop so we get intra-package dependencies right now.

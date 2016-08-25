@@ -1,0 +1,299 @@
+        -:    0:Source:/usr/include/unittest++/Checks.h
+        -:    0:Programs:3
+        -:    1:#ifndef UNITTEST_CHECKS_H
+        -:    2:#define UNITTEST_CHECKS_H
+        -:    3:
+        -:    4:#include "Config.h"
+        -:    5:#include "TestResults.h"
+        -:    6:#include "MemoryOutStream.h"
+        -:    7:
+        -:    8:namespace UnitTest {
+        -:    9:
+        -:   10:
+        -:   11:   template< typename Value >
+        -:   12:   bool Check(Value const value)
+        -:   13:   {
+        -:   14:      return !!value; // doing double negative to avoid silly VS warnings
+        -:   15:   }
+        -:   16:
+        -:   17:
+        -:   18:   template< typename Expected, typename Actual >
+        2:   19:   void CheckEqual(TestResults& results, Expected const& expected, Actual const& actual, TestDetails const& details)
+        -:   20:   {
+        2:   21:      if (!(expected == actual))
+        -:   22:      {
+    #####:   23:         UnitTest::MemoryOutStream stream;
+    #####:   24:         stream << "Expected " << expected << " but was " << actual;
+        -:   25:
+    #####:   26:         results.OnTestFailure(details, stream.GetText());
+        -:   27:      }
+        2:   28:   }
+        -:   29:
+        -:   30:   UNITTEST_LINKAGE void CheckEqual(TestResults& results, char const* expected, char const* actual, TestDetails const& details);
+        -:   31:
+        -:   32:   UNITTEST_LINKAGE void CheckEqual(TestResults& results, char* expected, char* actual, TestDetails const& details);
+        -:   33:
+        -:   34:   UNITTEST_LINKAGE void CheckEqual(TestResults& results, char* expected, char const* actual, TestDetails const& details);
+        -:   35:
+        -:   36:   UNITTEST_LINKAGE void CheckEqual(TestResults& results, char const* expected, char* actual, TestDetails const& details);
+        -:   37:
+        -:   38:   template< typename Expected, typename Actual, typename Tolerance >
+        -:   39:   bool AreClose(Expected const& expected, Actual const& actual, Tolerance const& tolerance)
+        -:   40:   {
+        -:   41:      return (actual >= (expected - tolerance)) && (actual <= (expected + tolerance));
+        -:   42:   }
+        -:   43:
+        -:   44:   template< typename Expected, typename Actual, typename Tolerance >
+        -:   45:   void CheckClose(TestResults& results, Expected const& expected, Actual const& actual, Tolerance const& tolerance,
+        -:   46:                   TestDetails const& details)
+        -:   47:   {
+        -:   48:      if (!AreClose(expected, actual, tolerance))
+        -:   49:      {
+        -:   50:         UnitTest::MemoryOutStream stream;
+        -:   51:         stream << "Expected " << expected << " +/- " << tolerance << " but was " << actual;
+        -:   52:
+        -:   53:         results.OnTestFailure(details, stream.GetText());
+        -:   54:      }
+        -:   55:   }
+        -:   56:
+        -:   57:
+        -:   58:   template< typename Expected, typename Actual >
+        -:   59:   void CheckArrayEqual(TestResults& results, Expected const& expected, Actual const& actual,
+        -:   60:                        int const count, TestDetails const& details)
+        -:   61:   {
+        -:   62:      bool equal = true;
+        -:   63:      for (int i = 0; i < count; ++i)
+        -:   64:         equal &= (expected[i] == actual[i]);
+        -:   65:
+        -:   66:      if (!equal)
+        -:   67:      {
+        -:   68:         UnitTest::MemoryOutStream stream;
+        -:   69:
+        -:   70:         stream << "Expected [ ";
+        -:   71:
+        -:   72:         for (int expectedIndex = 0; expectedIndex < count; ++expectedIndex)
+        -:   73:            stream << expected[expectedIndex] << " ";
+        -:   74:
+        -:   75:         stream << "] but was [ ";
+        -:   76:
+        -:   77:         for (int actualIndex = 0; actualIndex < count; ++actualIndex)
+        -:   78:            stream << actual[actualIndex] << " ";
+        -:   79:
+        -:   80:         stream << "]";
+        -:   81:
+        -:   82:         results.OnTestFailure(details, stream.GetText());
+        -:   83:      }
+        -:   84:   }
+        -:   85:
+        -:   86:   template< typename Expected, typename Actual, typename Tolerance >
+        -:   87:   bool ArrayAreClose(Expected const& expected, Actual const& actual, int const count, Tolerance const& tolerance)
+        -:   88:   {
+        -:   89:      bool equal = true;
+        -:   90:      for (int i = 0; i < count; ++i)
+        -:   91:         equal &= AreClose(expected[i], actual[i], tolerance);
+        -:   92:      return equal;
+        -:   93:   }
+        -:   94:
+        -:   95:   template< typename Expected, typename Actual, typename Tolerance >
+        -:   96:   void CheckArrayClose(TestResults& results, Expected const& expected, Actual const& actual,
+        -:   97:                        int const count, Tolerance const& tolerance, TestDetails const& details)
+        -:   98:   {
+        -:   99:      bool equal = ArrayAreClose(expected, actual, count, tolerance);
+        -:  100:
+        -:  101:      if (!equal)
+        -:  102:      {
+        -:  103:         UnitTest::MemoryOutStream stream;
+        -:  104:
+        -:  105:         stream << "Expected [ ";
+        -:  106:         for (int expectedIndex = 0; expectedIndex < count; ++expectedIndex)
+        -:  107:            stream << expected[expectedIndex] << " ";
+        -:  108:         stream << "] +/- " << tolerance << " but was [ ";
+        -:  109:
+        -:  110:         for (int actualIndex = 0; actualIndex < count; ++actualIndex)
+        -:  111:            stream << actual[actualIndex] << " ";
+        -:  112:         stream << "]";
+        -:  113:
+        -:  114:         results.OnTestFailure(details, stream.GetText());
+        -:  115:      }
+        -:  116:   }
+        -:  117:
+        -:  118:   template< typename Expected, typename Actual, typename Tolerance >
+        -:  119:   void CheckArray2DClose(TestResults& results, Expected const& expected, Actual const& actual,
+        -:  120:                          int const rows, int const columns, Tolerance const& tolerance, TestDetails const& details)
+        -:  121:   {
+        -:  122:      bool equal = true;
+        -:  123:      for (int i = 0; i < rows; ++i)
+        -:  124:         equal &= ArrayAreClose(expected[i], actual[i], columns, tolerance);
+        -:  125:
+        -:  126:      if (!equal)
+        -:  127:      {
+        -:  128:         UnitTest::MemoryOutStream stream;
+        -:  129:
+        -:  130:         stream << "Expected [ ";
+        -:  131:
+        -:  132:         for (int expectedRow = 0; expectedRow < rows; ++expectedRow)
+        -:  133:         {
+        -:  134:            stream << "[ ";
+        -:  135:            for (int expectedColumn = 0; expectedColumn < columns; ++expectedColumn)
+        -:  136:               stream << expected[expectedRow][expectedColumn] << " ";
+        -:  137:            stream << "] ";
+        -:  138:         }
+        -:  139:
+        -:  140:         stream << "] +/- " << tolerance << " but was [ ";
+        -:  141:
+        -:  142:         for (int actualRow = 0; actualRow < rows; ++actualRow)
+        -:  143:         {
+        -:  144:            stream << "[ ";
+        -:  145:            for (int actualColumn = 0; actualColumn < columns; ++actualColumn)
+        -:  146:               stream << actual[actualRow][actualColumn] << " ";
+        -:  147:            stream << "] ";
+        -:  148:         }
+        -:  149:
+        -:  150:         stream << "]";
+        -:  151:
+        -:  152:         results.OnTestFailure(details, stream.GetText());
+        -:  153:      }
+        -:  154:   }
+        -:  155:
+        -:  156:}
+        -:  157:
+        -:  158:#endif
+        -:    0:Source:test/cc_rules/deps_test.cc
+        -:    0:Programs:3
+        -:    1:/*EOF*/
+        -:    2:/*EOF*/
+        -:    3:/*EOF*/
+        -:    4:/*EOF*/
+        -:    5:/*EOF*/
+        -:    6:/*EOF*/
+        -:    7:/*EOF*/
+        -:    8:/*EOF*/
+        -:    9:/*EOF*/
+        3:   10:/*EOF*/
+        1:   11:/*EOF*/
+        1:   12:/*EOF*/
+        -:   13:/*EOF*/
+        3:   14:/*EOF*/
+        1:   15:/*EOF*/
+        1:   16:/*EOF*/
+        -:   17:/*EOF*/
+        3:   18:/*EOF*/
+        -:    0:Source:test/cc_rules/lib1.cc
+        -:    0:Programs:3
+        -:    1:/*EOF*/
+        -:    2:/*EOF*/
+        -:    3:/*EOF*/
+        -:    4:/*EOF*/
+        1:    5:/*EOF*/
+        1:    6:/*EOF*/
+        -:    0:Source:test/cc_rules/lib2.cc
+        -:    0:Programs:3
+        -:    1:/*EOF*/
+        -:    2:/*EOF*/
+        -:    3:/*EOF*/
+        -:    4:/*EOF*/
+        1:    5:/*EOF*/
+        1:    6:/*EOF*/
+        -:    0:Source:/usr/include/unittest++/MemoryOutStream.h
+        -:    0:Programs:3
+        -:    1:#ifndef UNITTEST_MEMORYOUTSTREAM_H
+        -:    2:#define UNITTEST_MEMORYOUTSTREAM_H
+        -:    3:
+        -:    4:#include "Config.h"
+        -:    5:#include "HelperMacros.h"
+        -:    6:
+        -:    7:#ifdef UNITTEST_MEMORYOUTSTREAM_IS_STD_OSTRINGSTREAM
+        -:    8:
+        -:    9:#include <sstream>
+        -:   10:
+        -:   11:namespace UnitTest
+        -:   12:{
+        -:   13:
+        -:   14:   class UNITTEST_LINKAGE MemoryOutStream : public std::ostringstream
+        -:   15:   {
+        -:   16:   public:
+    #####:   17:      MemoryOutStream() {}
+    #####:   18:      ~MemoryOutStream() {}
+        -:   19:      void Clear();
+        -:   20:      char const* GetText() const;
+        -:   21:
+        -:   22:   private:
+        -:   23:      MemoryOutStream(MemoryOutStream const&);
+        -:   24:      void operator =(MemoryOutStream const&);
+        -:   25:
+        -:   26:      mutable std::string m_text;
+        -:   27:   };
+        -:   28:
+        -:   29:#ifdef UNITTEST_COMPILER_IS_MSVC6
+        -:   30:   std::ostream& operator<<(std::ostream& stream, __int64 const n);
+        -:   31:   std::ostream& operator<<(std::ostream& stream, unsigned __int64 const n);
+        -:   32:#endif
+        -:   33:
+        -:   34:}
+        -:   35:
+        -:   36:#else
+        -:   37:
+        -:   38:#include <cstddef>
+        -:   39:
+        -:   40:#ifdef UNITTEST_COMPILER_IS_MSVC6
+        -:   41:namespace std {}
+        -:   42:#endif
+        -:   43:
+        -:   44:namespace UnitTest
+        -:   45:{
+        -:   46:
+        -:   47:   class UNITTEST_LINKAGE MemoryOutStream
+        -:   48:   {
+        -:   49:   public:
+        -:   50:      explicit MemoryOutStream(int const size = 256);
+        -:   51:      ~MemoryOutStream();
+        -:   52:
+        -:   53:      void Clear();
+        -:   54:      char const* GetText() const;
+        -:   55:
+        -:   56:      MemoryOutStream& operator <<(char const* txt);
+        -:   57:      MemoryOutStream& operator <<(int n);
+        -:   58:      MemoryOutStream& operator <<(long n);
+        -:   59:      MemoryOutStream& operator <<(unsigned long n);
+        -:   60:#ifdef UNITTEST_COMPILER_IS_MSVC6
+        -:   61:      MemoryOutStream& operator <<(__int64 n);
+        -:   62:      MemoryOutStream& operator <<(unsigned __int64 n);
+        -:   63:#else
+        -:   64:      MemoryOutStream& operator <<(long long n);
+        -:   65:      MemoryOutStream& operator <<(unsigned long long n);
+        -:   66:#endif
+        -:   67:      MemoryOutStream& operator <<(float f);
+        -:   68:      MemoryOutStream& operator <<(double d);
+        -:   69:      MemoryOutStream& operator <<(void const* p);
+        -:   70:      MemoryOutStream& operator <<(unsigned int s);
+        -:   71:
+        -:   72:      enum { GROW_CHUNK_SIZE = 32 };
+        -:   73:      int GetCapacity() const;
+        -:   74:
+        -:   75:   private:
+        -:   76:      void operator= (MemoryOutStream const&);
+        -:   77:      void GrowBuffer(int capacity);
+        -:   78:
+        -:   79:      int m_capacity;
+        -:   80:      char* m_buffer;
+        -:   81:   };
+        -:   82:
+        -:   83:}
+        -:   84:
+        -:   85:#endif
+        -:   86:
+        -:   87:#endif
+        -:    0:Source:/usr/include/unittest++/TestSuite.h
+        -:    0:Programs:3
+        -:    1:#ifndef UNITTEST_TESTSUITE_H
+        -:    2:#define UNITTEST_TESTSUITE_H
+        -:    3:
+        -:    4:namespace UnitTestSuite
+        -:    5:{
+        2:    6:   inline char const* GetSuiteName ()
+        -:    7:   {
+        2:    8:      return "DefaultSuite";
+        -:    9:   }
+        -:   10:}
+        -:   11:
+        -:   12:#endif

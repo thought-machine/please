@@ -84,6 +84,10 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		if len(target.Outputs()) > 0 {
 			env = append(env, "TEST="+path.Join(RepoRoot, target.TestDir(), target.Outputs()[0]))
 		}
+		// Bit of a hack for gcov which needs access to its .gcno files.
+		if target.HasLabel("cc") {
+			env = append(env, "GCNO_DIR="+path.Join(RepoRoot, GenDir, target.Label.PackageName))
+		}
 	}
 	return env
 }

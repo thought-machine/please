@@ -28,6 +28,8 @@ func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCo
 	} else if looksLikeGoCoverageResults(data) {
 		// TODO(pebers): this is a little wasteful, we've already read the file once and we must do it again.
 		return coverage, parseGoCoverageResults(target, &coverage, outputFile)
+	} else if looksLikeGcovCoverageResults(data) {
+		return coverage, parseGcovCoverageResults(target, &coverage, data)
 	} else {
 		return coverage, parseXmlCoverageResults(target, &coverage, data)
 	}

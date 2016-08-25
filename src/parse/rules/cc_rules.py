@@ -4,6 +4,8 @@ In general these have received somewhat less testing than would really be requir
 the complex build environment C++ has, so some issues may remain.
 """
 
+_COVERAGE_FLAGS = ' -ftest-coverage -fprofile-arcs -fprofile-dir=.'
+
 
 def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False,
                compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None, defines=None,
@@ -71,6 +73,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     cmds = {
         'dbg': cmd_template % (CONFIG.CC_TOOL, dbg_flags),
         'opt': cmd_template % (CONFIG.CC_TOOL, opt_flags),
+        'cover': cmd_template % (CONFIG.CC_TOOL, dbg_flags) + _COVERAGE_FLAGS,
     }
     a_rules = []
     for src in srcs:
@@ -79,6 +82,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             name=a_name,
             srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
             outs=[a_name + '.a'],
+            optional_outs=['*.gcno'],
             deps=deps,
             visibility=visibility,
             cmd=cmds,
@@ -222,6 +226,7 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
     cmd = {
         'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
         'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
+        'cover': '%s -o ${OUT} %s %s' % (CONFIG.CC_TOOL, dbg_flags, _COVERAGE_FLAGS),
     }
     deps = deps or []
     if srcs:
@@ -295,6 +300,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
     cmd = {
         'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
         'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
+        'cover': '%s -o ${OUT} %s %s' % (CONFIG.CC_TOOL, dbg_flags, _COVERAGE_FLAGS),
     }
     if srcs:
         cc_library(
@@ -315,7 +321,11 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         data=data,
         visibility=visibility,
         cmd=cmd,
-        test_cmd='$TEST',
+        test_cmd={
+            'opt': '$TEST',
+            'dbg': '$TEST',
+            'cover': '$TEST && cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage',
+        },
         building_description='Linking...',
         binary=True,
         test=True,
@@ -444,6 +454,7 @@ inline char* ${BINARY_NAME}_end_nc() {
 _CC_TEST_MAIN_CONTENTS = """
 #include <algorithm>
 #include <fstream>
+#include <stdlib.h>
 #include <string.h>
 #include "unittest++/UnitTest++.h"
 #include "unittest++/XmlTestReporter.h"
@@ -458,6 +469,10 @@ int main(int argc, char const *argv[]) {
     if (!f.good()) {
       fprintf(stderr, "Failed to open results file\\n");
       return -1;
+    }
+    if (getenv("COVERAGE")) {
+      std::ofstream c("test.coverage");
+      c << "gcov";
     }
     UnitTest::XmlTestReporter reporter(f);
     UnitTest::TestRunner runner(reporter);
@@ -525,4 +540,6 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
         flags = ' ' + ' '.join(flags)
         set_command(name, 'dbg', command_map['dbg'] + flags)
         set_command(name, 'opt', command_map['opt'] + flags)
+        cover_cmd = command_map.get('cover') or command_map['opt']
+        set_command(name, 'cover', cover_cmd + flags)
     return update_commands
