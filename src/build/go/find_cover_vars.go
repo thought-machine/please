@@ -120,6 +120,8 @@ func readTextFormat(rbuf *bufio.Reader, dir, importPath string) ([]CoverVar, err
 }
 
 // readBinaryFormat reads variables from the 1.7+ binary format for .a files.
+// This is pretty fragile; there doesn't seem to be anything in the standard library to do
+// this for us :(
 func readBinaryFormat(contents []byte, dir, importPath string) ([]CoverVar, error) {
 	contents = contents[7:] // Strip preamble
 	u, i := binary.Varint(contents)
@@ -132,7 +134,13 @@ func readBinaryFormat(contents []byte, dir, importPath string) ([]CoverVar, erro
 	for i := bytes.Index(contents, prefix); i != -1; i = bytes.Index(contents, prefix) {
 		contents = contents[i:]
 		end := bytes.IndexByte(contents, 0)
-		ret = append(ret, coverVar(dir, importPath, pkg, string(contents[:end])))
+		v := bytes.TrimRight(bytes.TrimSuffix(contents[:end], []byte{15, 6}), "\x01\x02\x03\x04\x05\x06\x07\x08\x09")
+		cv := coverVar(dir, importPath, pkg, string(v))
+		if _, err := os.Stat(cv.File); os.IsNotExist(err) {
+			log.Warning("Derived cover variable %s but file doesn't exist, skipping", cv.File)
+		} else {
+			ret = append(ret, cv)
+		}
 		contents = contents[end:]
 	}
 	return ret, nil
