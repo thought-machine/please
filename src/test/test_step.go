@@ -212,6 +212,10 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 				numFlakes++
 			} else {
 				numSucceeded++
+				if !state.ShowTestOutput {
+					// Save a bit of memory, if we're not printing results on success we will never use them again.
+					target.Results.Output = ""
+				}
 			}
 		}
 	}
