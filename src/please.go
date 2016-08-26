@@ -92,6 +92,7 @@ var opts struct {
 		FailingTestsOk  bool   `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NumRuns         int    `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		TestResultsFile string `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		ShowOutput      bool   `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -108,6 +109,7 @@ var opts struct {
 		IncludeFile         []string `long:"include_file" description:"Filenames to filter coverage display to"`
 		TestResultsFile     string   `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		CoverageResultsFile string   `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
+		ShowOutput          bool     `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -447,6 +449,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.PrepareOnly = opts.Build.Prepare
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
+	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	metrics.InitFromConfig(config)
 	// Acquire the lock before we start building

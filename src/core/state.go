@@ -90,6 +90,8 @@ type BuildState struct {
 	CleanWorkdirs bool
 	// True if we're forcing a rebuild of the original targets.
 	ForceRebuild bool
+	// True to always show test output, even on success.
+	ShowTestOutput bool
 	// Number of running workers
 	numWorkers int
 	// Used to count the number of currently active/pending targets

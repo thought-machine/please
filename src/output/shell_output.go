@@ -91,7 +91,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	}
 	if state.Verbosity > 0 && shouldBuild {
 		if shouldTest { // Got to the test phase, report their results.
-			printTestResults(state.Graph, aggregatedResults, failedTargets, duration)
+			printTestResults(state, aggregatedResults, failedTargets, duration)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
 		} else if state.PrepareOnly {
@@ -121,7 +121,8 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	if buildingTargets[result.ThreadId].Active && !active {
 		aggregatedResults.Aggregate(result.Tests)
 	}
-	updateTarget(state, plainOutput, &buildingTargets[result.ThreadId], label, active, failed, cached, result.Description, result.Err, targetColour(state.Graph.Target(label)))
+	target := state.Graph.Target(label)
+	updateTarget(state, plainOutput, &buildingTargets[result.ThreadId], label, active, failed, cached, result.Description, result.Err, targetColour(target))
 	if failed {
 		failedTargetMap[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
@@ -138,13 +139,16 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		}
 	} else if stopped {
 		failedTargetMap[result.Label] = nil
+	} else if plainOutput && state.ShowTestOutput && result.Status == core.TargetTested {
+		// If using interactive output we'll print it afterwards.
+		printf("Finished test %s:\n%s\n", label, target.Results.Output)
 	}
 }
 
-func printTestResults(graph *core.BuildGraph, aggregatedResults core.TestResults, failedTargets []core.BuildLabel, duration float64) {
+func printTestResults(state *core.BuildState, aggregatedResults core.TestResults, failedTargets []core.BuildLabel, duration float64) {
 	if len(failedTargets) > 0 {
 		for _, failed := range failedTargets {
-			target := graph.TargetOrDie(failed)
+			target := state.Graph.TargetOrDie(failed)
 			if len(target.Results.Failures) == 0 {
 				if target.Results.TimedOut {
 					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
@@ -175,12 +179,15 @@ func printTestResults(graph *core.BuildGraph, aggregatedResults core.TestResults
 	}
 	// Print individual test results
 	i := 0
-	for _, target := range graph.AllTargets() {
+	for _, target := range state.Graph.AllTargets() {
 		if target.IsTest && target.Results.NumTests > 0 {
 			if target.Results.Failed > 0 {
 				printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, failedTargets))
 			} else {
 				printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, failedTargets))
+			}
+			if state.ShowTestOutput && target.Results.Output != "" {
+				printf("Test output:\n%s\n", target.Results.Output)
 			}
 			i++
 		}
