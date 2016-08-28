@@ -15,7 +15,7 @@ const verySlow = 10000000 // Long duration so it never actually reports anything
 var label = core.BuildLabel{PackageName: "src/metrics", Name: "prometheus"}
 
 func TestNoMetrics(t *testing.T) {
-	m := initMetrics(url, verySlow)
+	m := initMetrics(url, verySlow, nil)
 	assert.Equal(t, 0, m.errors)
 	assert.Equal(t, 0, m.pushes)
 	m.stop()
@@ -23,7 +23,7 @@ func TestNoMetrics(t *testing.T) {
 }
 
 func TestSomeMetrics(t *testing.T) {
-	m := initMetrics(url, verySlow)
+	m := initMetrics(url, verySlow, nil)
 	assert.Equal(t, 0, m.errors)
 	assert.Equal(t, 0, m.pushes)
 	m.record(core.NewBuildTarget(label), time.Millisecond)
@@ -32,7 +32,7 @@ func TestSomeMetrics(t *testing.T) {
 }
 
 func TestTargetStates(t *testing.T) {
-	m := initMetrics(url, verySlow)
+	m := initMetrics(url, verySlow, nil)
 	assert.Equal(t, 0, m.errors)
 	assert.Equal(t, 0, m.pushes)
 	target := core.NewBuildTarget(label)
@@ -52,7 +52,7 @@ func TestTargetStates(t *testing.T) {
 }
 
 func TestPushAttempts(t *testing.T) {
-	m := initMetrics(url, 1) // Fast push attempts
+	m := initMetrics(url, 1, nil) // Fast push attempts
 	assert.Equal(t, 0, m.errors)
 	assert.Equal(t, 0, m.pushes)
 	m.record(core.NewBuildTarget(label), time.Millisecond)
@@ -61,6 +61,40 @@ func TestPushAttempts(t *testing.T) {
 	assert.True(t, m.cancelled)
 	m.stop()
 	assert.Equal(t, maxErrors, m.errors, "Should not push again if it's hit the max errors")
+}
+
+func TestCustomLabels(t *testing.T) {
+	m := initMetrics(url, verySlow, map[string]string{
+		"mylabel": "echo hello",
+	})
+	// It's a little bit fiddly to observe that the const label has been set as expected.
+	c := m.cacheCounter.WithLabelValues("//src/metrics:metrics_test", "false")
+	assert.Contains(t, c.Desc().String(), `mylabel="hello"`)
+}
+
+func TestCustomLabelsShlex(t *testing.T) {
+	// Naive splitting will not produce good results here.
+	m := initMetrics(url, verySlow, map[string]string{
+		"mylabel": "bash -c 'echo hello'",
+	})
+	c := m.cacheCounter.WithLabelValues("//src/metrics:metrics_test", "false")
+	assert.Contains(t, c.Desc().String(), `mylabel="hello"`)
+}
+
+func TestCustomLabelsShlexInvalid(t *testing.T) {
+	m := initMetrics(url, verySlow, map[string]string{
+		"mylabel": "bash -c 'echo hello", // missing trailing quote
+	})
+	c := m.cacheCounter.WithLabelValues("//src/metrics:metrics_test", "false")
+	assert.Contains(t, c.Desc().String(), `mylabel=""`)
+}
+
+func TestCustomLabelsCommandFails(t *testing.T) {
+	m := initMetrics(url, verySlow, map[string]string{
+		"mylabel": "wibble",
+	})
+	c := m.cacheCounter.WithLabelValues("//src/metrics:metrics_test", "false")
+	assert.Contains(t, c.Desc().String(), `mylabel=""`)
 }
 
 func TestExportedFunctions(t *testing.T) {

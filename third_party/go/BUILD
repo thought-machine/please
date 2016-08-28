@@ -84,9 +84,9 @@ go_get(
 
 go_get(
     name = 'protoc-gen-go',
+    binary = True,
     get = 'github.com/golang/protobuf/protoc-gen-go',
     revision = 'f592bd283e9ef86337a432eb50e592278c3d534d',
-    binary = True,
     deps = [
         ':protobuf',
     ],
@@ -159,4 +159,10 @@ go_get(
     get = 'github.com/prometheus/procfs',
     revision = 'abf152e5f3e97f2fafac028d2cc06c1feb87ffa5',
     strip = ['fixtures'],  # Test fixture has a symlink to /usr/bin/vim which might not exist
+)
+
+go_get(
+    name = 'shlex',
+    get = 'github.com/google/shlex',
+    revision = '6f45313302b9c56850fc17f99e40caebce98c716',
 )
