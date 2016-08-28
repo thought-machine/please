@@ -45,11 +45,10 @@ if is_py3:
     # Have to be more careful with encodings in python 3.
     ffi_to_string = lambda c: ffi.string(c).decode('utf-8')
     ffi_from_string = lambda s: ffi.new('char[]', s.encode('utf-8'))
-    _xrange = range
 else:
     ffi_to_string = ffi.string
     ffi_from_string = lambda s: ffi.new('char[]', s)
-    _xrange = xrange
+    builtins.range = builtins.xrange
 
 # Used to indicate that parsing of a target is deferred because it requires another target.
 _DEFER_PARSE = '_DEFER_'
@@ -376,7 +375,7 @@ def licenses(globals_dict, licenses):
 
 
 def _null_terminated_array(arr):
-    for i in _xrange(1000000):
+    for i in range(1000000):
         if arr[i] == ffi.NULL:
             break
         yield arr[i]
