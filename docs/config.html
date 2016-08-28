@@ -191,6 +191,33 @@
         <code>.pb.go</code>, <code>_pb2.py</code>, etc.</li>
     </ul>
 
+    <h3>[Metrics]</h3>
+
+    <p>Options related to metric collection. Currently the only metrics implementation pushes
+      to a <a href="https://prometheus.io/">Prometheus</a>
+      <a href="https://github.com/prometheus/pushgateway">pushgateway</a> for collection.</p>
+
+    <ul>
+      <li><b>PushGatewayURL</b><br/>
+	The URL of the pushgateway to send metrics to.</li>
+
+      <li><b>PushFrequency</b> (integer)<br/>
+	The frequency, in milliseconds, to push statistics at. Defaults to 100.</li>
+    </ul>
+
+    <h3>[CustomMetricLabels]</h3>
+
+    <p>Describes optional labels to attach to metrics.<br/>
+      For technical reasons this is a separate section to the main metrics options.</p>
+
+    <p>These are defined as key-value pairs, where the key is the label attached to the metric
+      and the value is a command to run on the system that defines the value to attach.<br/>
+      Hence these labels are constant across all build targets.</p>
+
+    <p>For example:<br/>
+      <pre><code>branch = git rev-parse --abbrev-ref HEAD</code></pre>
+      to attach the current git branch to all metrics reported.</p>
+
     <h3>[Docker]</h3>
 
     <p>Options relating to tests that are run inside Docker containers.</p>
@@ -484,4 +511,3 @@
 
     <p>There is a <code>--bazel_compat</code> flag to <code>plz init</code> which sets this
       on initialising a new repo.</p>
-
