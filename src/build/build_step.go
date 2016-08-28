@@ -503,14 +503,25 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 		return err
 	}
 	changed := false
+	isPy := target.HasLabel("py")
 	for _, source := range target.Sources {
 		fullPaths := source.FullPaths(state.Graph)
 		for i, sourcePath := range source.LocalPaths(state.Graph) {
-			c, err := moveOutput(target, fullPaths[i], path.Join(target.OutDir(), sourcePath), true)
+			outPath := path.Join(target.OutDir(), sourcePath)
+			c, err := moveOutput(target, fullPaths[i], outPath, true)
 			if err != nil {
 				return err
 			}
 			changed = changed || c
+			if isPy {
+				// Pre-emptively create __init__.py files so the outputs can be loaded dynamically.
+				// It's a bit cheeky to do non-essential language-specific logic but this enables
+				// a lot of relatively normal Python workflows.
+				// Errors are deliberately ignored.
+				if f, err := os.OpenFile(path.Join(path.Dir(outPath), "__init__.py"), os.O_RDONLY|os.O_CREATE, 0444); err == nil {
+					f.Close()
+				}
+			}
 		}
 	}
 	if _, err := calculateAndCheckRuleHash(state, target); err != nil {

@@ -14,6 +14,7 @@ import (
 	"path"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -171,6 +172,18 @@ func TestPostBuildFunctionAndCache2(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestInitPyCreation(t *testing.T) {
+	state, _ := newState("//pypkg:wevs")
+	target1 := newPyFilegroup(state, "//pypkg:target1", "file1.py")
+	target2 := newPyFilegroup(state, "//pypkg:target2", "__init__.py")
+	assert.NoError(t, buildFilegroup(0, state, target1))
+	assert.True(t, core.FileExists("plz-out/gen/pypkg/__init__.py"))
+	assert.NoError(t, buildFilegroup(0, state, target2))
+	d, err := ioutil.ReadFile("plz-out/gen/pypkg/__init__.py")
+	assert.NoError(t, err)
+	assert.Equal(t, `"""output from //pypkg:target2"""`, strings.TrimSpace(string(d)))
+}
+
 func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	config, _ := core.ReadConfigFiles(nil)
 	state := core.NewBuildState(1, nil, 4, config)
@@ -178,6 +191,16 @@ func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	target.Command = fmt.Sprintf("echo 'output of %s' > $OUT", target.Label)
 	state.Graph.AddTarget(target)
 	return state, target
+}
+
+func newPyFilegroup(state *core.BuildState, label, filename string) *core.BuildTarget {
+	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
+	target.AddSource(core.FileLabel{File: filename, Package: target.Label.PackageName})
+	target.AddOutput(filename)
+	target.AddLabel("py")
+	target.Command = "__FILEGROUP__" // magic
+	state.Graph.AddTarget(target)
+	return target
 }
 
 // Fake cache implementation with hardcoded behaviour for the various tests above.

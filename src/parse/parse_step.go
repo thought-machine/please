@@ -8,9 +8,7 @@ package parse
 
 import (
 	"fmt"
-	"os"
 	"path"
-	"strings"
 	"sync"
 
 	"core"
@@ -213,34 +211,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 		}
 	}
 	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
-	createInitPyIfNeeded(pkg, packageName)
 	return pkg
-}
-
-// Pre-emptively create __init__.py files so we can load generated modules dynamically.
-// It's a bit cheeky to do language-specific logic here but it's hard to find another way.
-func createInitPyIfNeeded(pkg *core.Package, packagePath string) {
-	for _, target := range pkg.Targets {
-		for _, require := range target.Requires {
-			if require == "py" {
-				dir := path.Join(core.RepoRoot, "plz-out/gen", packagePath)
-				for i := 0; i < len(strings.Split(packagePath, "/")); i++ {
-					initPy := path.Join(dir, "__init__.py")
-					if !core.PathExists(initPy) {
-						if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
-							panic(fmt.Sprintf("Failed to create directory %s: %s", dir, err))
-						} else if file, err := os.Create(initPy); err != nil {
-							panic(fmt.Sprintf("Failed to create file %s: %s", initPy, err))
-						} else {
-							file.Close()
-						}
-					}
-					dir = path.Dir(dir)
-				}
-				return
-			}
-		}
-	}
 }
 
 func buildFileName(state *core.BuildState, pkgName string) string {
