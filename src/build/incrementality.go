@@ -1,8 +1,7 @@
 // Utilities to help with incremental builds.
 //
 // There are four things we consider for each rule:
-//  - the global config, any change to which invalidates artifacts
-//    (it's too hard to work out which bits affect which rules)
+//  - the global config, some parts of which affect all rules
 //  - the rule definition itself (the command to run, etc)
 //  - any input files it might have
 //  - any dependencies.
