@@ -82,19 +82,27 @@ func TestCustomLabelsShlex(t *testing.T) {
 }
 
 func TestCustomLabelsShlexInvalid(t *testing.T) {
-	m := initMetrics(url, verySlow, map[string]string{
-		"mylabel": "bash -c 'echo hello", // missing trailing quote
+	assert.Panics(t, func() {
+		initMetrics(url, verySlow, map[string]string{
+			"mylabel": "bash -c 'echo hello", // missing trailing quote
+		})
 	})
-	c := m.cacheCounter.WithLabelValues("//src/metrics:metrics_test", "false")
-	assert.Contains(t, c.Desc().String(), `mylabel=""`)
 }
 
 func TestCustomLabelsCommandFails(t *testing.T) {
-	m := initMetrics(url, verySlow, map[string]string{
-		"mylabel": "wibble",
+	assert.Panics(t, func() {
+		initMetrics(url, verySlow, map[string]string{
+			"mylabel": "wibble",
+		})
 	})
-	c := m.cacheCounter.WithLabelValues("//src/metrics:metrics_test", "false")
-	assert.Contains(t, c.Desc().String(), `mylabel=""`)
+}
+
+func TestCustomLabelsCommandNewlines(t *testing.T) {
+	assert.Panics(t, func() {
+		initMetrics(url, verySlow, map[string]string{
+			"mylabel": "echo 'hello\nworld\n'",
+		})
+	})
 }
 
 func TestExportedFunctions(t *testing.T) {

@@ -212,11 +212,17 @@
 
     <p>These are defined as key-value pairs, where the key is the label attached to the metric
       and the value is a command to run on the system that defines the value to attach.<br/>
-      Hence these labels are constant across all build targets.</p>
+      Hence these labels are run once at startup and constant across all build targets.</p>
 
     <p>For example:<br/>
       <pre><code>branch = git rev-parse --abbrev-ref HEAD</code></pre>
       to attach the current git branch to all metrics reported.</p>
+
+    <p>In general it's a good idea not to let the cardinality of your labels become too large,
+      so in the example above, we might decide that we mostly care about whether the user is
+      on master or not, and express it as follows:
+      <pre><code>branch = bash -c "[[ `git rev-parse --abbrev-ref HEAD` == 'master' ]] && echo 'master' || echo 'not_master'"</code></pre>
+      </p>
 
     <h3>[Docker]</h3>
 

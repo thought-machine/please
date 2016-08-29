@@ -6,6 +6,7 @@
 package metrics
 
 import (
+	"fmt"
 	"os/exec"
 	"os/user"
 	"runtime"
@@ -42,6 +43,11 @@ var m *metrics
 // InitFromConfig sets up the initial metrics from the configuration.
 func InitFromConfig(config *core.Configuration) {
 	if config.Metrics.PushGatewayURL != "" {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Fatalf("%s", r)
+			}
+		}()
 		m = initMetrics(config.Metrics.PushGatewayURL, config.Metrics.PushFrequency, config.CustomMetricLabels)
 		prometheus.MustRegister(m.buildCounter)
 		prometheus.MustRegister(m.cacheCounter)
@@ -217,15 +223,17 @@ func (m *metrics) pushMetrics() int {
 func deriveLabelValue(cmd string) string {
 	parts, err := shlex.Split(cmd)
 	if err != nil {
-		log.Error("Invalid custom metric command [%s]: %s", cmd, err)
-		return ""
+		panic(fmt.Sprintf("Invalid custom metric command [%s]: %s", cmd, err))
 	}
 	log.Debug("Running custom label command: %s", cmd)
 	b, err := exec.Command(parts[0], parts[1:]...).Output()
 	log.Debug("Got output: %s", b)
 	if err != nil {
-		log.Warning("Custom metric command [%s] failed: %s", cmd, err)
-		return ""
+		panic(fmt.Sprintf("Custom metric command [%s] failed: %s", cmd, err))
 	}
-	return strings.TrimSpace(string(b))
+	value := strings.TrimSpace(string(b))
+	if strings.Contains(value, "\n") {
+		panic(fmt.Sprintf("Return value of custom metric command [%s] contains spaces: %s", cmd, value))
+	}
+	return value
 }
