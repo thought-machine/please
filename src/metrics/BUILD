@@ -6,6 +6,7 @@ go_library(
         '//src/core',
         '//third_party/go:logging',
         '//third_party/go:prometheus',
+        '//third_party/go:shlex',
     ],
 )
 

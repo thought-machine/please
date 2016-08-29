@@ -188,7 +188,8 @@ type Configuration struct {
 		PushGatewayURL string
 		PushFrequency  int
 	}
-	Test struct {
+	CustomMetricLabels map[string]string
+	Test               struct {
 		Timeout          int
 		DefaultContainer string
 	}

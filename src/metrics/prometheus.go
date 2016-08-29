@@ -6,10 +6,14 @@
 package metrics
 
 import (
+	"fmt"
+	"os/exec"
 	"os/user"
 	"runtime"
+	"strings"
 	"time"
 
+	"github.com/google/shlex"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"gopkg.in/op/go-logging.v1"
@@ -39,7 +43,12 @@ var m *metrics
 // InitFromConfig sets up the initial metrics from the configuration.
 func InitFromConfig(config *core.Configuration) {
 	if config.Metrics.PushGatewayURL != "" {
-		m = initMetrics(config.Metrics.PushGatewayURL, config.Metrics.PushFrequency)
+		defer func() {
+			if r := recover(); r != nil {
+				log.Fatalf("%s", r)
+			}
+		}()
+		m = initMetrics(config.Metrics.PushGatewayURL, config.Metrics.PushFrequency, config.CustomMetricLabels)
 		prometheus.MustRegister(m.buildCounter)
 		prometheus.MustRegister(m.cacheCounter)
 		prometheus.MustRegister(m.testCounter)
@@ -51,7 +60,7 @@ func InitFromConfig(config *core.Configuration) {
 
 // initMetrics initialises a new metrics instance.
 // This is deliberately not exposed but is useful for testing.
-func initMetrics(url string, frequency int) *metrics {
+func initMetrics(url string, frequency int, customLabels map[string]string) *metrics {
 	u, err := user.Current()
 	if err != nil {
 		log.Warning("Can't determine current user name for metrics")
@@ -60,6 +69,9 @@ func initMetrics(url string, frequency int) *metrics {
 	constLabels := prometheus.Labels{
 		"user": u.Username,
 		"arch": runtime.GOOS + "_" + runtime.GOARCH,
+	}
+	for k, v := range customLabels {
+		constLabels[k] = deriveLabelValue(v)
 	}
 
 	m = &metrics{
@@ -204,4 +216,24 @@ func (m *metrics) pushMetrics() int {
 	m.pushes += 1
 	log.Debug("Push #%d of metrics in %0.3fs", m.pushes, time.Since(start).Seconds())
 	return 0
+}
+
+// deriveLabelValue runs a command and returns its output.
+// It returns the empty string on error; we assume it's better to keep the set of labels constant on failure.
+func deriveLabelValue(cmd string) string {
+	parts, err := shlex.Split(cmd)
+	if err != nil {
+		panic(fmt.Sprintf("Invalid custom metric command [%s]: %s", cmd, err))
+	}
+	log.Debug("Running custom label command: %s", cmd)
+	b, err := exec.Command(parts[0], parts[1:]...).Output()
+	log.Debug("Got output: %s", b)
+	if err != nil {
+		panic(fmt.Sprintf("Custom metric command [%s] failed: %s", cmd, err))
+	}
+	value := strings.TrimSpace(string(b))
+	if strings.Contains(value, "\n") {
+		panic(fmt.Sprintf("Return value of custom metric command [%s] contains spaces: %s", cmd, value))
+	}
+	return value
 }

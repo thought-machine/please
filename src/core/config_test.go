@@ -85,3 +85,24 @@ func TestConfigOverrideUnknownName(t *testing.T) {
 	err := config.ApplyOverrides(map[string]string{"build.blah": "whatevs"})
 	assert.Error(t, err)
 }
+
+func TestDynamicSection(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/aliases.plzconfig"})
+	assert.NoError(t, err)
+	expected := map[string]string{
+		"deploy":      "run //deployment:deployer --",
+		"deploy dev":  "run //deployment:deployer -- --env=dev",
+		"deploy prod": "run //deployment:deployer -- --env=prod",
+	}
+	assert.Equal(t, expected, config.Aliases)
+}
+
+func TestDynamicSubsection(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/metrics.plzconfig"})
+	assert.NoError(t, err)
+	assert.Equal(t, "http://localhost:9091", config.Metrics.PushGatewayURL)
+	expected := map[string]string{
+		"branch": "git rev-parse --abbrev-ref HEAD",
+	}
+	assert.Equal(t, expected, config.CustomMetricLabels)
+}
