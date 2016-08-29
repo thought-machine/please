@@ -219,10 +219,7 @@
       to attach the current git branch to all metrics reported.</p>
 
     <p>In general it's a good idea not to let the cardinality of your labels become too large,
-      so in the example above, we might decide that we mostly care about whether the user is
-      on master or not, and express it as follows:
-      <pre><code>branch = bash -c "[[ `git rev-parse --abbrev-ref HEAD` == 'master' ]] && echo 'master' || echo 'not_master'"</code></pre>
-      </p>
+      so you might want to filter it to only print whether the user is on master or not.</p>
 
     <h3>[Docker]</h3>
 
