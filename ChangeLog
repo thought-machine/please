@@ -5,6 +5,7 @@ Version 5.2.0
     * New flag --show_output / -s for plz test (+cover) to show the output of tests
       even when successful.
     * __init__.py writing moved from parse time to build time.
+    * Releases now built with Go 1.7
 
 
 Version 5.1.0
