@@ -1,3 +1,11 @@
+Version 5.2.1
+-------------
+
+    * Reduced cardinality of labels sent to Prometheus so pushgateways don't get
+      overwhelmed so quickly.
+    * Licence matching is now case-insensitive.
+
+
 Version 5.2.0
 -------------
 
