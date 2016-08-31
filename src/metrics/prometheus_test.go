@@ -68,7 +68,7 @@ func TestCustomLabels(t *testing.T) {
 		"mylabel": "echo hello",
 	})
 	// It's a little bit fiddly to observe that the const label has been set as expected.
-	c := m.cacheCounter.WithLabelValues("//src/metrics:metrics_test", "false")
+	c := m.cacheCounter.WithLabelValues("false")
 	assert.Contains(t, c.Desc().String(), `mylabel="hello"`)
 }
 
@@ -77,7 +77,7 @@ func TestCustomLabelsShlex(t *testing.T) {
 	m := initMetrics(url, verySlow, map[string]string{
 		"mylabel": "bash -c 'echo hello'",
 	})
-	c := m.cacheCounter.WithLabelValues("//src/metrics:metrics_test", "false")
+	c := m.cacheCounter.WithLabelValues("false")
 	assert.Contains(t, c.Desc().String(), `mylabel="hello"`)
 }
 

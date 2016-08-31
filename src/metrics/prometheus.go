@@ -84,21 +84,21 @@ func initMetrics(url string, frequency int, customLabels map[string]string) *met
 		Name:        "build_counts",
 		Help:        "Count of number of times each target is built",
 		ConstLabels: constLabels,
-	}, []string{"target", "success", "incremental"})
+	}, []string{"success", "incremental"})
 
 	// Count of cache hits for each target
 	m.cacheCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name:        "cache_hits",
 		Help:        "Count of number of times we successfully retrieve from the cache",
 		ConstLabels: constLabels,
-	}, []string{"target", "hit"})
+	}, []string{"hit"})
 
 	// Count of test runs for each target
 	m.testCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name:        "test_runs",
 		Help:        "Count of number of times we run each test",
 		ConstLabels: constLabels,
-	}, []string{"target", "pass"})
+	}, []string{"pass"})
 
 	// Build durations for each target
 	m.buildHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -106,7 +106,7 @@ func initMetrics(url string, frequency int, customLabels map[string]string) *met
 		Help:        "Durations of individual build targets",
 		Buckets:     prometheus.LinearBuckets(0, 0.1, 100),
 		ConstLabels: constLabels,
-	}, []string{"target"})
+	}, []string{})
 
 	// Cache retrieval durations for each target
 	m.cacheHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -114,7 +114,7 @@ func initMetrics(url string, frequency int, customLabels map[string]string) *met
 		Help:        "Durations to retrieve artifacts from the cache",
 		Buckets:     prometheus.LinearBuckets(0, 0.1, 100),
 		ConstLabels: constLabels,
-	}, []string{"target"})
+	}, []string{})
 
 	// Test durations for each target
 	m.testHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -122,7 +122,7 @@ func initMetrics(url string, frequency int, customLabels map[string]string) *met
 		Help:        "Durations to run tests",
 		Buckets:     prometheus.LinearBuckets(0, 1, 100),
 		ConstLabels: constLabels,
-	}, []string{"target"})
+	}, []string{})
 
 	go m.keepPushing(time.Duration(frequency) * time.Millisecond)
 
@@ -151,25 +151,24 @@ func Record(target *core.BuildTarget, duration time.Duration) {
 }
 
 func (m *metrics) record(target *core.BuildTarget, duration time.Duration) {
-	label := target.Label.String()
 	if target.Results.NumTests > 0 {
 		// Tests have run
-		m.cacheCounter.WithLabelValues(label, b(target.Results.Cached)).Inc()
-		m.testCounter.WithLabelValues(label, b(target.Results.Failed == 0)).Inc()
+		m.cacheCounter.WithLabelValues(b(target.Results.Cached)).Inc()
+		m.testCounter.WithLabelValues(b(target.Results.Failed == 0)).Inc()
 		if target.Results.Cached {
-			m.cacheHistogram.WithLabelValues(label).Observe(duration.Seconds())
+			m.cacheHistogram.WithLabelValues().Observe(duration.Seconds())
 		} else if target.Results.Failed == 0 {
-			m.testHistogram.WithLabelValues(label).Observe(duration.Seconds())
+			m.testHistogram.WithLabelValues().Observe(duration.Seconds())
 		}
 	} else {
 		// Build has run
 		state := target.State()
-		m.cacheCounter.WithLabelValues(label, b(state == core.Cached)).Inc()
-		m.buildCounter.WithLabelValues(label, b(state != core.Failed), b(state != core.Reused)).Inc()
+		m.cacheCounter.WithLabelValues(b(state == core.Cached)).Inc()
+		m.buildCounter.WithLabelValues(b(state != core.Failed), b(state != core.Reused)).Inc()
 		if state == core.Cached {
-			m.cacheHistogram.WithLabelValues(label).Observe(duration.Seconds())
+			m.cacheHistogram.WithLabelValues().Observe(duration.Seconds())
 		} else if state != core.Failed && state >= core.Built {
-			m.buildHistogram.WithLabelValues(label).Observe(duration.Seconds())
+			m.buildHistogram.WithLabelValues().Observe(duration.Seconds())
 		}
 	}
 	m.newMetrics = true
