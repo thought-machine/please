@@ -476,12 +476,12 @@ func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.
 func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 	for _, licence := range target.Licences {
 		for _, reject := range state.Config.Licences.Reject {
-			if reject == licence {
+			if strings.EqualFold(reject, licence) {
 				panic(fmt.Sprintf("Target %s is licensed %s, which is explicitly rejected for this repository", target.Label, licence))
 			}
 		}
 		for _, accept := range state.Config.Licences.Accept {
-			if accept == licence {
+			if strings.EqualFold(accept, licence) {
 				log.Info("Licence %s is accepted in this repository", licence)
 				return // Note licences are assumed to be an 'or', ie. any one of them can be accepted.
 			}

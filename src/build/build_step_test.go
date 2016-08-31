@@ -184,6 +184,36 @@ func TestInitPyCreation(t *testing.T) {
 	assert.Equal(t, `"""output from //pypkg:target2"""`, strings.TrimSpace(string(d)))
 }
 
+func TestLicenceEnforcement(t *testing.T) {
+	state, target := newState("//pkg:good")
+	state.Config.Licences.Reject = append(state.Config.Licences.Reject, "gpl")
+	state.Config.Licences.Accept = append(state.Config.Licences.Accept, "mit")
+
+	// Target specifying no licence should not panic.
+	checkLicences(state, target)
+
+	// A license (non case sensitive) that is not in the list of accepted licenses will panic.
+	assert.Panics(t, func() {
+		target.Licences = append(target.Licences, "Bsd")
+		checkLicences(state, target)
+	}, "A target with a non-accepted licence will panic")
+
+	// Accepting bsd should resolve the panic
+	state.Config.Licences.Accept = append(state.Config.Licences.Accept, "BSD")
+	checkLicences(state, target)
+
+	// Now construct a new "bad" target.
+	state, target = newState("//pkg:bad")
+	state.Config.Licences.Reject = append(state.Config.Licences.Reject, "gpl")
+	state.Config.Licences.Accept = append(state.Config.Licences.Accept, "mit")
+
+	// Adding an explicitly rejected licence should panic no matter what.
+	target.Licences = append(target.Licences, "GPL")
+	assert.Panics(t, func() {
+		checkLicences(state, target)
+	}, "Trying to add GPL should panic (case insensitive)")
+}
+
 func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	config, _ := core.ReadConfigFiles(nil)
 	state := core.NewBuildState(1, nil, 4, config)
