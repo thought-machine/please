@@ -15,8 +15,7 @@ a target which has only had small changes.
 
 
 def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
-                   test_only=False, zip_safe=True, labels=None,
-                   interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
+                   test_only=False, zip_safe=True, labels=None, interpreter=None):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
     Note that each python_library performs some pre-zipping of its inputs before they're combined
@@ -44,6 +43,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
     all_srcs = (srcs or []) + (resources or [])
     deps = deps or []
     labels = labels or []
+    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     if not zip_safe:
         labels.append('py:zip-unsafe')
     if all_srcs:
@@ -54,7 +54,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
             name='_%s#zip' % name,
             srcs=all_srcs,
             outs=['.%s.pex.zip' % name],
-            cmd='%s --compile && %s -d -o ${OUTS} -i .' % (pex_tool, jarcat_tool),
+            cmd='%s %s --compile && %s -d -o ${OUTS} -i .' % (interpreter, pex_tool, jarcat_tool),
             building_description='Compressing...',
             requires=['py'],
             test_only=test_only,
@@ -76,7 +76,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
 
 
 def python_binary(name, main, resources=None, out=None, deps=None, visibility=None, zip_safe=None,
-                  interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER, labels=None):
+                  interpreter=None, labels=None):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -100,11 +100,13 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
                          'pypy' or whatever.
       labels (list): Labels to apply to this rule.
     """
+    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
     deps = deps or []
     cmd = ' '.join([
         'rm -f $SRCS &&',
+        interpreter,
         pex_tool,
         '--src_dir=${TMP_DIR}',
         '--out=temp.pex',
@@ -164,7 +166,7 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
 
 def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, size=None,
                 visibility=None, container=False, timeout=0, flaky=0, test_outputs=None,
-                zip_safe=None, interpreter=CONFIG.DEFAULT_PYTHON_INTERPRETER):
+                zip_safe=None, interpreter=None):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
@@ -193,11 +195,13 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
                          which is normally just 'python', but could be 'python3' or
                         'pypy' or whatever.
     """
+    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     deps = deps or []
     pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
     cmd=' '.join([
+        interpreter,
         pex_tool,
         '--src_dir=${TMP_DIR}',
         '--out=temp.pex',
