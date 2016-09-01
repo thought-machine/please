@@ -184,6 +184,14 @@ func TestInitPyCreation(t *testing.T) {
 	assert.Equal(t, `"""output from //pypkg:target2"""`, strings.TrimSpace(string(d)))
 }
 
+func TestRecursiveInitPyCreation(t *testing.T) {
+	state, _ := newState("//package1/package2:wevs")
+	target1 := newPyFilegroup(state, "//package1/package2:target1", "file1.py")
+	assert.NoError(t, buildFilegroup(0, state, target1))
+	assert.True(t, core.FileExists("plz-out/gen/package1/package2/__init__.py"))
+	assert.True(t, core.FileExists("plz-out/gen/package1/__init__.py"))
+}
+
 func TestLicenceEnforcement(t *testing.T) {
 	state, target := newState("//pkg:good")
 	state.Config.Licences.Reject = append(state.Config.Licences.Reject, "gpl")
