@@ -1,3 +1,12 @@
+Version 5.2.3
+-------------
+
+    * Correct a small bug where visibility labels sometimes incorrectly applied too widely
+    * Various Python rules now respect package() directives correctly
+    * Fix to pip_library for rules with install_subdirectory=True and names not matching
+      the package name.
+
+
 Version 5.2.2
 -------------
 
