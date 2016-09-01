@@ -515,14 +515,12 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 			changed = changed || c
 		}
 	}
-	if target.HasLabel("py") {
+	if target.HasLabel("py") && !target.IsBinary {
 		// Pre-emptively create __init__.py files so the outputs can be loaded dynamically.
 		// It's a bit cheeky to do non-essential language-specific logic but this enables
 		// a lot of relatively normal Python workflows.
 		// Errors are deliberately ignored.
-		if f, err := os.OpenFile(path.Join(outDir, "__init__.py"), os.O_RDONLY|os.O_CREATE, 0444); err == nil {
-			f.Close()
-		}
+		createInitPy(outDir)
 	}
 	if _, err := calculateAndCheckRuleHash(state, target); err != nil {
 		return err
@@ -533,4 +531,17 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
 	return nil
+}
+
+func createInitPy(dir string) {
+	if core.PathExists(path.Join(dir, "__init__.py")) {
+		return
+	}
+	if f, err := os.OpenFile(path.Join(dir, "__init__.py"), os.O_RDONLY|os.O_CREATE, 0444); err == nil {
+		f.Close()
+	}
+	dir = path.Dir(dir)
+	if dir != core.GenDir && dir != "." && !core.PathExists(path.Join(dir, "__init__.py")) {
+		createInitPy(dir)
+	}
 }
