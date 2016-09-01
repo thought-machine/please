@@ -151,7 +151,7 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
         output_is_complete=True,
         building_description="Creating pex...",
         visibility=visibility,
-        requires=['py'],
+        requires=['py', interpreter],
         tools=tools,
         # This makes the python_library rule the dependency for other python_library or
         # python_test rules that try to import it. Does mean that they cannot collect a .pex
@@ -260,14 +260,15 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         test_timeout=timeout,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['py'],
+        requires=['py', interpreter],
         tools=tools,
     )
 
 
 def pip_library(name, version, hashes=None, package_name=None, outs=None, test_only=False,
                 env=None, deps=None, post_install_commands=None, install_subdirectory=False,
-                repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True, licences=None):
+                repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True,
+                licences=None):
     """Provides a build rule for third-party dependencies to be installed by pip.
 
     Args:
@@ -307,7 +308,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
 
     # Environment variables. Must sort in case we were given a dict.
     environment = ' '.join('%s=%s' % (k, v) for k, v in sorted((env or {}).items()))
-    target = name if install_subdirectory else '.'
+    target = outs[0] if install_subdirectory else '.'
 
     cmd = '%s install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=%s' % (CONFIG.PIP_TOOL, target)
     cmd += ' -b build %s %s %s' % (repo_flag, index_flag, package_name)
@@ -317,7 +318,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat'
 
     if install_subdirectory:
-        cmd += ' && rm -rf %s/*.egg-info %s/*.dist-info' % (name, name)
+        cmd += ' && touch %s/__init__.py && rm -rf %s/*.egg-info %s/*.dist-info' % (target, target, target)
 
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
