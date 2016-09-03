@@ -64,7 +64,6 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     filegroup(
         name='_%s#hdrs' % name,
         srcs=hdrs,
-        visibility=visibility,
         requires=['cc_hdrs'],
         exported_deps=deps,
         labels=labels,
@@ -82,12 +81,11 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             name=a_name,
             srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
             outs=[a_name + '.a'],
-            optional_outs=['*.gcno'],
+            optional_outs=['*.gcno'],  # For coverage
             deps=deps,
-            visibility=visibility,
             cmd=cmds,
             building_description='Compiling...',
-            requires=['cc', 'cc_hdrs'],
+            requires=['cc_hdrs'],
             test_only=test_only,
             labels=labels,
             pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
@@ -95,16 +93,28 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         a_rules.append(':' + a_name)
         if alwayslink:
             labels.append('cc:al:%s/%s' % (get_base_path(), a_name + '.a'))
-    # TODO(pebers): it would be nice to combine multiple .a files into one here,
-    #               it'd be easier for other rules to handle in a sensible way.
+
+    # Combine the archives into one.
     hdrs_rule = ':_%s#hdrs' % name
+    a_rule = build_rule(
+        name = name,
+        tag = 'ar',
+        srcs = a_rules,
+        outs = [name + '.a'],
+        cmd = 'echo $SRCS | xargs -n 1 %s xo && %s rcs%s $OUT *.o' % (CONFIG.AR_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
+        building_description = 'Archiving...',
+        test_only = test_only,
+        labels = labels,
+        deps = (deps or []) + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
+    )
+
     filegroup(
         name=name,
-        srcs=[hdrs_rule] + a_rules,
+        srcs=[hdrs_rule, a_rule],
         provides={
             'cc_hdrs': hdrs_rule,
+            'cc': a_rule,
         },
-        deps=deps,
         test_only=test_only,
         visibility=visibility,
         output_is_complete=False,
@@ -373,9 +383,10 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
     namespace = namespace or CONFIG.DEFAULT_NAMESPACE
     if not namespace:
         raise ValueError('You must either pass namespace= to cc_library or set the default namespace in .plzconfig')
-    build_rule(
-        name='_%s#hdr' % name,
-        srcs=[],
+
+    hdr_rule = build_rule(
+        name=name,
+        tag='hdr',
         outs=[name + '.h'],
         deps=deps,
         cmd='; '.join([
@@ -389,19 +400,19 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         requires=['cc'],
         test_only=test_only,
     )
-    build_rule(
-        name='_%s#lib' % name,
+    lib_rule = build_rule(
+        name=name,
+        tag='lib',
         srcs=[src],
         outs=['lib%s.a' % name],
         deps=deps,
-        cmd='%s -r --format binary -o $OUT $SRC' % CONFIG.LD_TOOL,
+        cmd='%s -r --format binary -o ${OUT/.a/.o} $SRC && %s rcs%s $OUT ${OUT/.a/.o}' %
+            (CONFIG.LD_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
         visibility=visibility,
         building_description='Embedding...',
         requires=['cc'],
         test_only=test_only,
     )
-    lib_rule = ':_%s#lib' % name
-    hdr_rule = ':_%s#hdr' % name
     filegroup(
         name=name,
         srcs=[lib_rule, hdr_rule],
@@ -409,6 +420,7 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         test_only=test_only,
         provides={
             'cc_hdrs': hdr_rule,
+            'cc': lib_rule,
         },
     )
 
