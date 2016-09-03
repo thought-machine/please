@@ -213,6 +213,7 @@ type Configuration struct {
 	}
 	Python struct {
 		PipTool            string
+		PipFlags           string
 		PexTool            string
 		DefaultInterpreter string
 		ModuleDir          string

@@ -80,6 +80,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("GO_TEST_TOOL", config.Go.TestTool)
 	setConfigValue("GOPATH", config.Go.GoPath)
 	setConfigValue("PIP_TOOL", config.Python.PipTool)
+	setConfigValue("PIP_FLAGS", config.Python.PipFlags)
 	setConfigValue("PEX_TOOL", config.Python.PexTool)
 	setConfigValue("DEFAULT_PYTHON_INTERPRETER", config.Python.DefaultInterpreter)
 	setConfigValue("PYTHON_MODULE_DIR", config.Python.ModuleDir)

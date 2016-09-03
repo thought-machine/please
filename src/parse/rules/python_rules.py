@@ -268,7 +268,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
 def pip_library(name, version, hashes=None, package_name=None, outs=None, test_only=False,
                 env=None, deps=None, post_install_commands=None, install_subdirectory=False,
                 repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True,
-                licences=None):
+                licences=None, pip_flags=None):
     """Provides a build rule for third-party dependencies to be installed by pip.
 
     Args:
@@ -288,6 +288,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
       visibility (list): Visibility declaration for this rule.
       zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
       licences (list): Licences this rule is subject to. Default attempts to detect from package metadata.
+      pip_flags (str): List of additional flags to pass to pip.
     """
     package_name = '%s==%s' % (package_name or name, version)
     outs = outs or [name]
@@ -296,6 +297,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
     post_build = None
     use_pypi = CONFIG.USE_PYPI if use_pypi is None else use_pypi
     index_flag = '' if use_pypi else '--no-index'
+    pip_flags = pip_flags or CONFIG.PIP_FLAGS
 
     repo_flag = ''
     repo = repo or CONFIG.PYTHON_DEFAULT_PIP_REPO
@@ -310,8 +312,8 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
     environment = ' '.join('%s=%s' % (k, v) for k, v in sorted((env or {}).items()))
     target = outs[0] if install_subdirectory else '.'
 
-    cmd = '%s install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=%s' % (CONFIG.PIP_TOOL, target)
-    cmd += ' -b build %s %s %s' % (repo_flag, index_flag, package_name)
+    cmd = '%s install --no-deps --no-compile --no-cache-dir --default-timeout=60 --isolated --target=%s' % (CONFIG.PIP_TOOL, target)
+    cmd += ' -b build %s %s %s %s' % (repo_flag, index_flag, pip_flags, package_name)
     cmd += ' && find . -name "*.pyc" -or -name "tests" | xargs rm -rf'
 
     if not licences:
