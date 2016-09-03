@@ -121,7 +121,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             tag = 'lib',
             srcs = a_rules,
             outs = [name + '.a'],
-            cmd = 'echo $SRCS | xargs -n 1 %s xo && %s rcs%s $OUT *.o' % (CONFIG.AR_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
+            cmd = 'echo $SRCS | xargs -n 1 %s xo && %s rcs $OUT *.o' % (CONFIG.AR_TOOL, CONFIG.AR_TOOL),
             building_description = 'Archiving...',
             test_only = test_only,
             labels = labels,
@@ -203,8 +203,8 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         name = name,
         deps = deps,
         outs = ['lib%s.a' % name],
-        cmd = '(find . -name "*.a" | xargs -n 1 %s x) && %s rcs%s $OUT `find . -name "*.o" | sort`' %
-            (CONFIG.AR_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
+        cmd = '(find . -name "*.a" | xargs -n 1 %s x) && %s rcs $OUT `find . -name "*.o" | sort`' %
+            (CONFIG.AR_TOOL, CONFIG.AR_TOOL),
         needs_transitive_deps = True,
         output_is_complete = True,
         visibility = visibility,
@@ -446,8 +446,8 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         srcs=[src],
         outs=['lib%s.a' % name],
         deps=deps,
-        cmd='%s -r --format binary -o ${OUT/.a/.o} $SRC && %s rcs%s $OUT ${OUT/.a/.o}' %
-            (CONFIG.LD_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
+        cmd='%s -r --format binary -o ${OUT/.a/.o} $SRC && %s rcs $OUT ${OUT/.a/.o}' %
+            (CONFIG.LD_TOOL, CONFIG.AR_TOOL),
         visibility=visibility,
         building_description='Embedding...',
         requires=['cc'],
@@ -463,10 +463,6 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
             'cc': lib_rule,
         },
     )
-
-
-# ar D doesn't exist on OSX :(
-_AR_FLAG = '' if CONFIG.OS == 'darwin' else 'D'
 
 
 _CC_HEADER_CONTENTS = """\
@@ -573,7 +569,7 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
     that use it. The solution to this is here; we collect the set of linker flags from all
     dependencies and apply them to the binary rule that needs them.
     """
-    ar_cmd = '&& %s rcs%s $OUT *.o' % (CONFIG.AR_TOOL, _AR_FLAG)
+    ar_cmd = '&& %s rcs $OUT *.o' % CONFIG.AR_TOOL
     def update_commands(name):
         base_path = get_base_path()
         labels = get_labels(name, 'cc:')
