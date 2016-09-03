@@ -60,6 +60,22 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
               ['cc:pc:' + lib for lib in pkg_config_libs] +
               ['cc:inc:%s/%s' % (get_base_path(), include) for include in includes] +
               ['cc:def:' + define for define in defines])
+
+
+    if not srcs:
+        # Header-only library, no compilation needed.
+        filegroup(
+            name=name,
+            srcs=hdrs,
+            requires=['cc_hdrs'],
+            exported_deps=deps,
+            labels=labels,
+            test_only=test_only,
+            visibility=visibility,
+            output_is_complete=False,
+        )
+        return
+
     # Collect the headers for other rules
     filegroup(
         name='_%s#hdrs' % name,
@@ -68,21 +84,59 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         exported_deps=deps,
         labels=labels,
     )
+    hdrs_rule = ':_%s#hdrs' % name
     cmd_template = '%s -c -I . ${SRCS_SRCS} %s'
     cmds = {
         'dbg': cmd_template % (CONFIG.CC_TOOL, dbg_flags),
         'opt': cmd_template % (CONFIG.CC_TOOL, opt_flags),
         'cover': cmd_template % (CONFIG.CC_TOOL, dbg_flags) + _COVERAGE_FLAGS,
     }
-    a_rules = []
-    for src in srcs:
-        a_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_'))
-        build_rule(
-            name=a_name,
-            srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
-            outs=[a_name + '.a'],
+
+    if len(srcs) > 1:
+        # Compile all the sources separately, this is much faster for large numbers of files
+        # than giving them all to gcc in one invocation.
+        a_rules = []
+        for src in srcs:
+            a_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_'))
+            build_rule(
+                name=a_name,
+                srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
+                outs=[a_name + '.a'],
+                optional_outs=['*.gcno'],  # For coverage
+                deps=deps,
+                cmd=cmds,
+                building_description='Compiling...',
+                requires=['cc_hdrs'],
+                test_only=test_only,
+                labels=labels,
+                pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
+            )
+            a_rules.append(':' + a_name)
+            if alwayslink:
+                labels.append('cc:al:%s/%s.a' % (get_base_path(), a_name))
+
+        # Combine the archives into one.
+        a_rule = build_rule(
+            name = name,
+            tag = 'lib',
+            srcs = a_rules,
+            outs = [name + '.a'],
+            cmd = 'echo $SRCS | xargs -n 1 %s xo && %s rcs%s $OUT *.o' % (CONFIG.AR_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
+            building_description = 'Archiving...',
+            test_only = test_only,
+            labels = labels,
+            deps = (deps or []) + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
+        )
+
+    else:
+        # Single source file, optimise slightly by generating only one rule.
+        a_rule = build_rule(
+            name=name,
+            tag='lib',
+            srcs={'srcs': srcs, 'hdrs': hdrs, 'priv': private_hdrs},
+            outs=[name + '.a'],
             optional_outs=['*.gcno'],  # For coverage
-            deps=deps,
+            exported_deps=deps,
             cmd=cmds,
             building_description='Compiling...',
             requires=['cc_hdrs'],
@@ -90,23 +144,8 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             labels=labels,
             pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
         )
-        a_rules.append(':' + a_name)
         if alwayslink:
-            labels.append('cc:al:%s/%s' % (get_base_path(), a_name + '.a'))
-
-    # Combine the archives into one.
-    hdrs_rule = ':_%s#hdrs' % name
-    a_rule = build_rule(
-        name = name,
-        tag = 'ar',
-        srcs = a_rules,
-        outs = [name + '.a'],
-        cmd = 'echo $SRCS | xargs -n 1 %s xo && %s rcs%s $OUT *.o' % (CONFIG.AR_TOOL, CONFIG.AR_TOOL, _AR_FLAG),
-        building_description = 'Archiving...',
-        test_only = test_only,
-        labels = labels,
-        deps = (deps or []) + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
-    )
+            labels.append('cc:al:%s/%s.a' % (get_base_path(), name))
 
     filegroup(
         name=name,
@@ -118,6 +157,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         test_only=test_only,
         visibility=visibility,
         output_is_complete=False,
+        deps=deps,
     )
 
 
@@ -209,7 +249,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
         building_description='Linking...',
         needs_transitive_deps=True,
         output_is_complete=True,
-        requires=['cc'],
+        requires=['cc', 'cc_hdrs'],
         pre_build=_apply_transitive_labels(cmd),
     )
 
@@ -342,7 +382,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         test=True,
         needs_transitive_deps=True,
         output_is_complete=True,
-        requires=['cc'],
+        requires=['cc', 'cc_hdrs'],
         labels=labels,
         pre_build=_apply_transitive_labels(cmd),
         flaky=flaky,
