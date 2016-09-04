@@ -294,7 +294,7 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"update": func() bool {
-		log.Info("Up to date.")
+		fmt.Printf("Up to date (version %s).\n", core.PleaseVersion)
 		return true // We'd have died already if something was wrong.
 	},
 	"op": func() bool {

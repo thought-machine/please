@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path"
 	"runtime"
@@ -31,31 +32,15 @@ import (
 
 var log = logging.MustGetLogger("update")
 
-func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) {
-	if config.Please.Version == core.PleaseVersion {
-		return // Version matches, nothing to do here.
-	} else if (!shouldUpdate || !config.Please.SelfUpdate) && !forceUpdate {
-		word := describe(config.Please.Version, core.PleaseVersion, false)
-		log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, core.PleaseVersion)
-		return
-	} else if config.Please.Location == "" {
-		log.Warning("Please location not set in config, cannot auto-update.")
-		return
-	} else if config.Please.DownloadLocation == "" {
-		log.Warning("Please download location not set in config, cannot auto-update.")
+// CheckAndUpdate checks whether we should update Please and does so if needed.
+// If it requires an update it will never return, it will either die on failure or on success will exec the new Please.
+// Conversely, if an update isn't required it will return. It may adjust the version in the configuration.
+// updatesEnabled indicates whether updates are enabled (i.e. not run with --noupdate)
+// forceUpdate indicates whether an update is specifically requested (due to e.g. `plz update`)
+func CheckAndUpdate(config *core.Configuration, updatesEnabled, forceUpdate bool) {
+	if !shouldUpdate(config, updatesEnabled, forceUpdate) {
 		return
 	}
-	if config.Please.Version.Major == 0 {
-		if !forceUpdate {
-			config.Please.Version = core.PleaseVersion
-			return
-		}
-		config.Please.Version = findLatestVersion(config)
-		CheckAndUpdate(config, shouldUpdate, forceUpdate)
-		return
-	}
-
-	// Okay, now we're past all that...
 	word := describe(config.Please.Version, core.PleaseVersion, true)
 	log.Warning("%s to Please version %s (currently %s)", word, config.Please.Version, core.PleaseVersion)
 
@@ -64,20 +49,61 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 	core.AcquireRepoLock()
 	defer core.ReleaseRepoLock()
 
-	config.Please.Location = core.ExpandHomePath(config.Please.Location)
-	newPlease := path.Join(config.Please.Location, config.Please.Version.String(), "please")
-	if !core.PathExists(newPlease) {
-		downloadPlease(config)
-	}
-	linkNewPlease(config)
-	args := append([]string{newPlease}, "--assert_version", config.Please.Version.String())
-	args = append(args, os.Args[1:]...)
+	// Download it.
+	newPlease := downloadAndLinkPlease(config)
+
+	// Now run the new one.
+	args := append([]string{newPlease}, os.Args[1:]...)
 	log.Info("Executing %s", strings.Join(args, " "))
 	if err := syscall.Exec(newPlease, args, os.Environ()); err != nil {
 		log.Fatalf("Failed to exec new Please version %s: %s", newPlease, err)
 	}
 	// Shouldn't ever get here. We should have either exec'd or died above.
 	panic("please update failed in an an unexpected and exciting way")
+}
+
+// shouldUpdate determines whether we should run an update or not. It returns true iff one is required.
+func shouldUpdate(config *core.Configuration, updatesEnabled, forceUpdate bool) bool {
+	if config.Please.Version == core.PleaseVersion {
+		return false // Version matches, nothing to do here.
+	} else if (!updatesEnabled || !config.Please.SelfUpdate) && !forceUpdate {
+		// Update is required but has been skipped (--noupdate or whatever)
+		word := describe(config.Please.Version, core.PleaseVersion, true)
+		log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, core.PleaseVersion)
+		return false
+	} else if config.Please.Location == "" {
+		log.Warning("Please location not set in config, cannot auto-update.")
+		return false
+	} else if config.Please.DownloadLocation == "" {
+		log.Warning("Please download location not set in config, cannot auto-update.")
+		return false
+	}
+	if config.Please.Version.Major == 0 {
+		// Specific version isn't set, only update on `plz update`.
+		if !forceUpdate {
+			config.Please.Version = core.PleaseVersion
+			return false
+		}
+		config.Please.Version = findLatestVersion(config.Please.DownloadLocation)
+		return shouldUpdate(config, updatesEnabled, forceUpdate)
+	}
+	return true
+}
+
+// downloadAndLinkPlease downloads a new Please version and links it into place, if needed.
+// It returns the new location and dies on failure.
+func downloadAndLinkPlease(config *core.Configuration) string {
+	config.Please.Location = core.ExpandHomePath(config.Please.Location)
+	newPlease := path.Join(config.Please.Location, config.Please.Version.String(), "please")
+	if !core.PathExists(newPlease) {
+		downloadPlease(config)
+	}
+	if !verifyNewPlease(newPlease, config.Please.Version.String()) {
+		cleanDir(path.Join(config.Please.Location, config.Please.Version.String()))
+		log.Fatalf("Not continuing.")
+	}
+	linkNewPlease(config)
+	return newPlease
 }
 
 func downloadPlease(config *core.Configuration) {
@@ -161,11 +187,10 @@ func linkNewFile(config *core.Configuration, file string) {
 }
 
 func fileMode(filename string) os.FileMode {
-	if strings.HasSuffix(filename, ".jar") {
+	if strings.HasSuffix(filename, ".jar") || strings.HasSuffix(filename, ".so") {
 		return 0664 // The .jar files obviously aren't executable
-	} else {
-		return 0775 // Everything else we download is.
 	}
+	return 0775 // Everything else we download is.
 }
 
 func cleanDir(newDir string) {
@@ -186,8 +211,8 @@ func handleSignals(newDir string) {
 }
 
 // findLatestVersion attempts to find the latest available version of plz.
-func findLatestVersion(config *core.Configuration) semver.Version {
-	url := strings.TrimRight(config.Please.DownloadLocation, "/") + "/latest_version"
+func findLatestVersion(downloadLocation string) semver.Version {
+	url := strings.TrimRight(downloadLocation, "/") + "/latest_version"
 	log.Info("Downloading %s", url)
 	response, err := http.Get(url)
 	if err != nil {
@@ -213,4 +238,21 @@ func describe(a, b semver.Version, verb bool) string {
 		return "Downgrade"
 	}
 	return "Upgrade"
+}
+
+// verifyNewPlease calls a newly downloaded Please version to verify it's the expected version.
+// It returns true iff the version is as expected.
+func verifyNewPlease(newPlease, version string) bool {
+	version = "Please version " + version // Output is prefixed with this.
+	cmd := exec.Command(newPlease, "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		log.Errorf("Failed to run new Please: %s", err)
+		return false
+	}
+	if strings.TrimSpace(string(output)) != version {
+		log.Errorf("Bad version of Please downloaded: expected %s, but it's actually %s", version, string(output))
+		return false
+	}
+	return true
 }
