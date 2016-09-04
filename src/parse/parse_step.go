@@ -246,7 +246,6 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 	if !target.SyncUpdateState(core.Inactive, core.Semiactive) && !rescan && !forceBuild {
 		return
 	}
-	log.Debug("Activating target %s (depended on by %s)", label, dependor)
 	if state.NeedBuild || forceBuild {
 		if target.SyncUpdateState(core.Semiactive, core.Active) {
 			state.AddActiveTarget()
@@ -312,7 +311,7 @@ func RunPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTar
 	pkg := state.Graph.Package(target.Label.PackageName)
 	pkg.BuildCallbackMutex.Lock()
 	defer pkg.BuildCallbackMutex.Unlock()
-	log.Debug("Running post-build function for %s. Build output:\n%s\n", target.Label, out)
+	log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, out)
 	if err := runPostBuildFunction(pkg, target, out); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed post-build function for %s", target.Label)
 		return err
