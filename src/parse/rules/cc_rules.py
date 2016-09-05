@@ -317,7 +317,7 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
 
 
 def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None,
-            deps=None, data=None, visibility=None, labels=None, flaky=0, test_outputs=None,
+            deps=None, data=None, visibility=None, flags='', labels=None, flaky=0, test_outputs=None,
             size=None, timeout=0, container=False, write_main=not CONFIG.BAZEL_COMPATIBILITY):
     """Defines a C++ test using UnitTest++.
 
@@ -334,6 +334,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
       deps (list): Dependent rules.
       data (list): Runtime data files for this test.
       visibility (list): Visibility declaration for this rule.
+      flags (str): Flags to apply to the test invocation.
       labels (list): Labels to attach to this test.
       flaky (bool | int): If true the test will be marked as flaky and automatically retried.
       test_outputs (list): Extra test output files to generate from this test.
@@ -383,9 +384,9 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         visibility=visibility,
         cmd=cmd,
         test_cmd={
-            'opt': '$TEST',
-            'dbg': '$TEST',
-            'cover': '$TEST && cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage',
+            'opt': '$TEST ' + flags,
+            'dbg': '$TEST ' + flags,
+            'cover': '$TEST %s && cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage' % flags,
         },
         building_description='Linking...',
         binary=True,

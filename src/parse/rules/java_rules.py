@@ -169,7 +169,7 @@ def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None
     )
 
 
-def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
+def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None, flags='',
               container=False, timeout=0, flaky=0, test_outputs=None, size=None,
               test_package=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args=''):
     """Defines a Java test.
@@ -181,6 +181,7 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
       deps (list): Dependencies of this rule.
       labels (list): Labels to attach to this test.
       visibility (list): Visibility declaration of this rule.
+      flags (str): Flags to pass to the test invocation.
       container (bool | dict): True to run this test within a container (eg. Docker).
       timeout (int): Maximum length of time, in seconds, to allow this test to run for.
       flaky (int | bool): True to mark this as flaky and automatically rerun.
@@ -203,8 +204,8 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None,
     cmd, tools = _jarcat_cmd('net.thoughtmachine.please.test.TestMain')
     junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools, binary=False)
     cmd = 'ln -s %s . && %s' % (junit_runner, cmd)
-    test_cmd = 'java -Dnet.thoughtmachine.please.testpackage=%s %s -jar $(location :%s) ' % (
-        test_package, jvm_args, name)
+    test_cmd = 'java -Dnet.thoughtmachine.please.testpackage=%s %s -jar $(location :%s) %s' % (
+        test_package, jvm_args, name, flags)
     build_rule(
         name=name,
         cmd=cmd,
