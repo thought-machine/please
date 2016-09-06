@@ -177,8 +177,9 @@ def export_file(name, src, visibility=None, binary=False, test_only=False):
     )
 
 
-def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, labels=None, binary=False,
-              output_is_complete=True, requires=None, provides=None, link=False, test_only=False):
+def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility=None,
+              labels=None, binary=False, output_is_complete=True, requires=None, provides=None,
+              link=False, test_only=False):
     """Defines a collection of files which other rules can depend on.
 
     Sources can be omitted entirely in which case it acts simply as a rule to collect other rules,
@@ -186,6 +187,8 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
 
     Args:
       name (str): Name of the rule
+      tag (str): Tag applied to name; generates a private rule, for example name='a',tag='b' gives
+                 _a#b. Typically used for "private" rules.
       srcs (list): Source files for the rule.
       deps (list): Dependencies of the rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
@@ -202,8 +205,9 @@ def filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, l
     """
     if link:
         log.warning('link attribute on filegroup is deprecated and will go away soon.')
-    build_rule(
+    return build_rule(
         name=name,
+        tag=tag,
         srcs=srcs,
         deps=deps,
         exported_deps=exported_deps,

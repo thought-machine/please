@@ -77,14 +77,14 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         return
 
     # Collect the headers for other rules
-    filegroup(
-        name='_%s#hdrs' % name,
+    hdrs_rule = filegroup(
+        name = name,
+        tag = 'hdrs',
         srcs=hdrs,
         requires=['cc_hdrs'],
         exported_deps=deps,
         labels=labels,
     )
-    hdrs_rule = ':_%s#hdrs' % name
     cmd_template = '%s -c -I . ${SRCS_SRCS} %s'
     cmds = {
         'dbg': cmd_template % (CONFIG.CC_TOOL, dbg_flags),
@@ -116,7 +116,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
                 labels.append('cc:al:%s/%s.a' % (get_base_path(), a_name))
 
         # Combine the archives into one.
-        a_rule = build_rule(
+        lib_rule = build_rule(
             name = name,
             tag = 'lib',
             srcs = a_rules,
@@ -129,14 +129,14 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         )
 
     else:
-        # Single source file, optimise slightly by generating only one rule.
-        a_rule = build_rule(
+        # Single source file, optimise slightly by not extracting & remerging the archive.
+        cc_rule = build_rule(
             name=name,
-            tag='lib',
+            tag='cc',
             srcs={'srcs': srcs, 'hdrs': hdrs, 'priv': private_hdrs},
             outs=[name + '.a'],
             optional_outs=['*.gcno'],  # For coverage
-            exported_deps=deps,
+            deps=deps,
             cmd=cmds,
             building_description='Compiling...',
             requires=['cc_hdrs'],
@@ -146,18 +146,28 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         )
         if alwayslink:
             labels.append('cc:al:%s/%s.a' % (get_base_path(), name))
+        # Need another rule to cover require / provide stuff. This is getting a bit complicated...
+        lib_rule = filegroup(
+            name = name,
+            tag = 'lib',
+            srcs = [cc_rule],
+            deps = deps,
+            test_only = test_only,
+            labels = labels,
+            output_is_complete=False,
+        )
 
     filegroup(
         name=name,
-        srcs=[hdrs_rule, a_rule],
+        srcs=[lib_rule],
+        deps=[hdrs_rule],
         provides={
             'cc_hdrs': hdrs_rule,
-            'cc': a_rule,
+            'cc': lib_rule,
         },
         test_only=test_only,
         visibility=visibility,
         output_is_complete=False,
-        deps=deps,
     )
 
 

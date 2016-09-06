@@ -146,7 +146,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 compiler_flags = ['-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'] if _is_grpc else ['protobuf'],
             )
-            provides['cc_hdrs'] = ':__%s#cc#hdrs' % name  # Must wire this up by hand
+            provides['cc_hdrs'] = ':_%s#cc_hdrs' % name  # Must wire this up by hand
 
         elif language == 'py':
             python_library(
