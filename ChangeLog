@@ -1,3 +1,11 @@
+Version 5.3.0
+-------------
+
+    * Some fairly extensive tweaks / cleanups to C++ rules.
+    * Added config options for configuring flags for pip in pip_library rules.
+    * Fixed generation of __init__.py files.
+
+
 Version 5.2.3
 -------------
 
