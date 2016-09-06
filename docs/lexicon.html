@@ -628,6 +628,13 @@ between srcs and hdrs is important.</td>
       </tr>
 
       <tr>
+	<td>flags</td>
+	<td></td>
+	<td>str</td>
+	<td>Flags to apply to the test invocation - i.e. passed on the command line when it's run.</td>
+      </tr>
+
+      <tr>
 	<td>labels</td>
 	<td>None</td>
 	<td>list</td>
@@ -1066,6 +1073,13 @@ hard to mimic what 'go build' does well enough to actually work.</p>
       </tr>
 
       <tr>
+	<td>flags</td>
+	<td></td>
+	<td>str</td>
+	<td>Flags to apply to the test invocation - i.e. passed on the command line when it's run.</td>
+      </tr>
+
+      <tr>
 	<td>container</td>
 	<td>False</td>
 	<td>bool | dict</td>
@@ -1157,6 +1171,13 @@ as your test.</p>
 	<td>None</td>
 	<td>list</td>
 	<td>Visibility specification</td>
+      </tr>
+
+      <tr>
+	<td>flags</td>
+	<td></td>
+	<td>str</td>
+	<td>Flags to apply to the test invocation - i.e. passed on the command line when it's run.</td>
       </tr>
 
       <tr>
@@ -1523,6 +1544,13 @@ config, which itself defaults to 8.</td>
 	<td>None</td>
 	<td>list</td>
 	<td>Visibility declaration of this rule.</td>
+      </tr>
+
+      <tr>
+	<td>flags</td>
+	<td></td>
+	<td>str</td>
+	<td>Flags to apply to the test invocation - i.e. passed on the command line when it's run.</td>
       </tr>
 
       <tr>
@@ -3258,6 +3286,13 @@ and it may or may not be happy if given non-Python files.</td>
       </tr>
 
       <tr>
+	<td>flags</td>
+	<td></td>
+	<td>str</td>
+	<td>Flags to apply to the test invocation - i.e. passed on the command line when it's run.</td>
+      </tr>
+
+      <tr>
 	<td>container</td>
 	<td>False</td>
 	<td>bool | dict</td>
@@ -3595,7 +3630,15 @@ Note that these are individually executable so can only have one source file eac
 	<td>args</td>
 	<td>None</td>
 	<td>list</td>
-	<td>Arguments that will be passed to this test when run.</td>
+	<td>Arguments that will be passed to this test when run.<br/>
+      Deprecated in favour of <code>flags</code>.</td>
+      </tr>
+
+      <tr>
+	<td>flags</td>
+	<td></td>
+	<td>str</td>
+	<td>Flags to apply to the test invocation - i.e. passed on the command line when it's run.</td>
       </tr>
 
       <tr>

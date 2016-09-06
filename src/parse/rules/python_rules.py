@@ -165,7 +165,7 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
 
 
 def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, size=None,
-                visibility=None, container=False, timeout=0, flaky=0, test_outputs=None,
+                flags='', visibility=None, container=False, timeout=0, flaky=0, test_outputs=None,
                 zip_safe=None, interpreter=None):
     """Generates a Python test target.
 
@@ -182,6 +182,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
       deps (list): Dependencies of this rule.
       labels (list): Labels for this rule.
       size (str): Test size (enormous, large, medium or small).
+      flags (str): Flags to apply to the test command.
       visibility (list): Visibility specification.
       container (bool | dict): If True, the test will be run in a container (eg. Docker).
       timeout (int): Maximum time this test is allowed to run for, in seconds.
@@ -249,7 +250,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         outs=['%s.pex' % name],
         labels=labels or [],
         cmd=_python_binary_cmds(name, jarcat_tool),
-        test_cmd = '$(exe :%s)' % name,
+        test_cmd = '$TEST ' + flags,
         needs_transitive_deps=True,
         output_is_complete=True,
         binary=True,

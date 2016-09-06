@@ -234,7 +234,7 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
     )
 
 
-def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
+def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False,
             timeout=0, flaky=0, test_outputs=None, labels=None, size=None, mocks=None):
     """Defines a Go test rule.
 
@@ -244,6 +244,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
       data (list): Runtime data files for the test.
       deps (list): Dependencies
       visibility (list): Visibility specification
+      flags (str): Flags to apply to the test invocation.
       container (bool | dict): True to run this test in a container.
       timeout (int): Timeout in seconds to allow the test to run for.
       flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
@@ -313,7 +314,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
         outs=[name],
         tools=_GO_TOOL,
         cmd=cmds,
-        test_cmd='$(exe :%s) | tee test.results' % name,
+        test_cmd='$TEST %s | tee test.results' % flags,
         visibility=visibility,
         container=container,
         test_timeout=timeout,
@@ -329,7 +330,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, container=False,
     )
 
 
-def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
+def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False,
              timeout=0, flaky=0, test_outputs=None, labels=None, tags=None, size=None):
     """Defines a Go test rule for a library that uses cgo.
 
@@ -343,6 +344,7 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
       data (list): Runtime data files for the test.
       deps (list): Dependencies
       visibility (list): Visibility specification
+      flags (str): Flags to apply to the test invocation.
       container (bool | dict): True to run this test in a container.
       timeout (int): Timeout in seconds to allow the test to run for.
       flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
@@ -367,8 +369,8 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False,
             'opt': cmd,
         },
         test_cmd={
-            'cover': '$TEST -test.v -test.coverprofile test.coverage | tee test.results',
-            'opt': '$TEST -test.v | tee test.results',
+            'cover': '$TEST -test.v -test.coverprofile test.coverage %s | tee test.results' % flags,
+            'opt': '$TEST -test.v %s | tee test.results' % flags,
         },
         visibility=visibility,
         container=container,
