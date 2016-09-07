@@ -224,17 +224,17 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
     languages = languages or CONFIG.PROTO_LANGUAGES
     plugins = {}
     if 'py' in languages:
+        python_deps = [CONFIG.GRPC_PYTHON_DEP]
         plugins['py'] = [
-            '--plugin=protoc-gen-grpc-python=' + _plugin(CONFIG.GRPC_PYTHON_PLUGIN, deps),
+            '--plugin=protoc-gen-grpc-python=' + _plugin(CONFIG.GRPC_PYTHON_PLUGIN, python_deps),
             '--grpc-python_out=$TMP_DIR',
         ]
-        python_deps = (python_deps or []) + [CONFIG.GRPC_PYTHON_DEP]
     if 'java' in languages:
+        java_deps = [CONFIG.GRPC_JAVA_DEP]
         plugins['java'] = [
-            '--plugin=protoc-gen-grpc-java=' + _plugin(CONFIG.GRPC_JAVA_PLUGIN, deps),
+            '--plugin=protoc-gen-grpc-java=' + _plugin(CONFIG.GRPC_JAVA_PLUGIN, java_deps),
             '--grpc-java_out=$TMP_DIR',
         ]
-        java_deps = (java_deps or []) + [CONFIG.GRPC_JAVA_DEP]
     if 'go' in languages:
         go_deps = (go_deps or []) + [CONFIG.GRPC_GO_DEP]
     if 'cc' in languages:
