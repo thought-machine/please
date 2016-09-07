@@ -69,6 +69,12 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         'grpc_cc': find_outs('cc', '.pb.cc') + find_outs('cc', '.grpc.pb.cc'),
         'grpc_cc_hdrs': find_outs('cc', '.pb.h') + find_outs('cc', '.grpc.pb.h'),
     }
+    deps_by_lang = {
+        'cc': cc_deps,
+        'py': python_deps,
+        'go': go_deps,
+        'java': java_deps,
+    }
     need_post_build = file_srcs != srcs
     provides = {'proto': ':_%s#proto' % name}
 
@@ -126,7 +132,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             outs = outs.get(grpc_language),
             cmd = cmd,
             deps = deps,
-            tools = lang_tools,
+            tools = lang_tools + deps_by_lang.get(language, []),
             requires = ['proto'],
             pre_build = _go_path_mapping(cmd, _is_grpc) if language == 'go' else None,
             post_build = post_build,
@@ -205,7 +211,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
 
 
 def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
-                 python_deps=None, java_deps=None, go_deps=None, labels=None):
+                 python_deps=None, java_deps=None, go_deps=None, cc_deps=None, labels=None):
     """Defines a rule for a grpc library.
 
     Args:
@@ -215,6 +221,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
       python_deps (list): Additional deps to add to the python_library rules
       java_deps (list): Additional deps to add to the java_library rules
       go_deps (list): Additional deps to add to the go_library rules
+      cc_deps (list): Additional deps to add to the cc_library rules
       visibility (list): Visibility specification for the rule.
       languages (list): List of languages to generate rules for, chosen from the set {cc, py, go, java}.
       labels (list): List of labels to apply to this rule.
@@ -224,13 +231,13 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
     languages = languages or CONFIG.PROTO_LANGUAGES
     plugins = {}
     if 'py' in languages:
-        python_deps = [CONFIG.GRPC_PYTHON_DEP]
+        python_deps = (python_deps or []) + [CONFIG.GRPC_PYTHON_DEP]
         plugins['py'] = [
             '--plugin=protoc-gen-grpc-python=' + _plugin(CONFIG.GRPC_PYTHON_PLUGIN, python_deps),
             '--grpc-python_out=$TMP_DIR',
         ]
     if 'java' in languages:
-        java_deps = [CONFIG.GRPC_JAVA_DEP]
+        java_deps = (java_deps or []) + [CONFIG.GRPC_JAVA_DEP]
         plugins['java'] = [
             '--plugin=protoc-gen-grpc-java=' + _plugin(CONFIG.GRPC_JAVA_PLUGIN, java_deps),
             '--grpc-java_out=$TMP_DIR',
@@ -238,8 +245,9 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
     if 'go' in languages:
         go_deps = (go_deps or []) + [CONFIG.GRPC_GO_DEP]
     if 'cc' in languages:
+        cc_deps = cc_deps or []
         plugins['cc'] = [
-            '--plugin=protoc-gen-grpc-cc=' + _plugin(CONFIG.GRPC_CC_PLUGIN, deps),
+            '--plugin=protoc-gen-grpc-cc=' + _plugin(CONFIG.GRPC_CC_PLUGIN, cc_deps),
             '--grpc-cc_out=$TMP_DIR',
         ]
     proto_library(
@@ -250,6 +258,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
         python_deps=python_deps,
         java_deps=java_deps,
         go_deps=go_deps,
+        cc_deps=cc_deps,
         languages=languages,
         visibility=visibility,
         labels=(labels or []) + _DEFAULT_GRPC_LABELS,
