@@ -72,7 +72,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
                 '$SRCS' if srcs else '`find $SRCS -name "*.java"`',
                 javac_flags,
             ),
-            'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g"  > _tmp/META-INF/please_sourcemap',
+            'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g" | sort > _tmp/META-INF/please_sourcemap',
             'cd _tmp',
             jarcat_tool + ' -d -o $OUT -i .',
         ])
