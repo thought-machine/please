@@ -204,9 +204,9 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
             pkg_config_libs = pkg_config_libs,
         )
         deps.append(':_%s#lib' % name)
-        deps.append(':__%s#lib#hdrs' % name)
+        deps.append(':_%s#lib_hdrs' % name)
         provides = {
-            'cc_hdrs': ':__%s#lib#hdrs' % name,
+            'cc_hdrs': ':_%s#lib_hdrs' % name,
             'cc': ':' + name,
         }
     build_rule(
