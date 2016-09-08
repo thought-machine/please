@@ -42,11 +42,11 @@ type Cache struct {
 // NewCache initialises the cache and fires off a background cleaner goroutine which runs every
 // cleanFrequency seconds. The high and low water marks control a (soft) max size and a (harder)
 // minimum size.
-func NewCache(path string, cleanFrequency time.Duration, lowWaterMark, highWaterMark uint64) *Cache {
-	log.Notice("Initialising cache with settings:\n  Path: %s\n  Clean frequency: %s\n  Low water mark: %s\n  High water mark: %s",
-		path, cleanFrequency, humanize.Bytes(lowWaterMark), humanize.Bytes(highWaterMark))
+func NewCache(path string, cleanFrequency, maxArtifactAge time.Duration, lowWaterMark, highWaterMark uint64) *Cache {
+	log.Notice("Initialising cache with settings:\n  Path: %s\n  Clean frequency: %s\n  Max artifact age: %s\n  Low water mark: %s\n  High water mark: %s",
+		path, cleanFrequency, maxArtifactAge, humanize.Bytes(lowWaterMark), humanize.Bytes(highWaterMark))
 	cache := newCache(path)
-	go cache.clean(cleanFrequency, int64(lowWaterMark), int64(highWaterMark))
+	go cache.clean(cleanFrequency, maxArtifactAge, int64(lowWaterMark), int64(highWaterMark))
 	return cache
 }
 
@@ -273,10 +273,31 @@ func (cache *Cache) DeleteAllArtifacts() error {
 }
 
 // clean implements a periodic clean of the cache to remove old artifacts.
-func (cache *Cache) clean(cleanFrequency time.Duration, lowWaterMark, highWaterMark int64) {
+func (cache *Cache) clean(cleanFrequency, maxArtifactAge time.Duration, lowWaterMark, highWaterMark int64) {
 	for range time.NewTicker(cleanFrequency).C {
+		cache.cleanOldFiles(maxArtifactAge)
 		cache.singleClean(lowWaterMark, highWaterMark)
 	}
+}
+
+// cleanOldFiles cleans any files whose last access time is older than the given duration.
+func (cache *Cache) cleanOldFiles(maxArtifactAge time.Duration) bool {
+	log.Debug("Searching for old files...")
+	oldestTime := time.Now().Add(-maxArtifactAge)
+	cleaned := 0
+	for t := range cache.cachedFiles.IterBuffered() {
+		f := t.Val.(*cachedFile)
+		if f.lastReadTime.Before(oldestTime) {
+			lock := cache.lockFile(t.Key, true, f.size)
+			cache.removeAndDeleteFile(t.Key, f)
+			lock.Unlock()
+			cleaned++
+		}
+	}
+	if cleaned > 0 {
+		log.Notice("Removed %d old files", cleaned)
+	}
+	return cleaned > 0
 }
 
 // singleClean runs a single clean of the cache. It's split out for testing purposes.

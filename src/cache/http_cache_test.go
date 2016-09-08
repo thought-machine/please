@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"cache/server"
 	"core"
@@ -26,7 +27,7 @@ func init() {
 	target = core.NewBuildTarget(label)
 
 	// Arbitrary large numbers so the cleaner never needs to run.
-	cache := server.NewCache("src/cache/test_data", 100000, 100000000, 1000000000)
+	cache := server.NewCache("src/cache/test_data", 20*time.Hour, 100000, 100000000, 1000000000)
 	key, _ = ioutil.ReadFile("src/cache/test_data/testfile")
 	testServer := httptest.NewServer(server.BuildRouter(cache))
 

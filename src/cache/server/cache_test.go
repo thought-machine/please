@@ -46,6 +46,28 @@ func TestFilesToClean(t *testing.T) {
 	assert.Equal(t, 2, len(paths))
 }
 
+func TestCleanOldFiles(t *testing.T) {
+	c := newCache("test_clean_old_files")
+	c.cachedFiles.Set("test/artifact/1", &cachedFile{
+		lastReadTime: time.Now().AddDate(0, 0, -2),
+		readCount:    0,
+		size:         1000,
+	})
+	c.cachedFiles.Set("test/artifact/2", &cachedFile{
+		lastReadTime: time.Now().AddDate(0, 0, -5),
+		readCount:    0,
+		size:         1000,
+	})
+	c.cachedFiles.Set("test/artifact/3", &cachedFile{
+		lastReadTime: time.Now().AddDate(0, 0, -1),
+		readCount:    0,
+		size:         1000,
+	})
+	c.totalSize = 3000
+	assert.True(t, c.cleanOldFiles(72*time.Hour))
+	assert.Equal(t, 2, c.cachedFiles.Count())
+}
+
 func TestRetrieve(t *testing.T) {
 	artifact, err := cache.RetrieveArtifact("darwin_amd64/pack/label/hash/label.ext")
 	assert.NoError(t, err)

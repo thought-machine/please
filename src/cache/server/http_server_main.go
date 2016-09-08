@@ -23,6 +23,7 @@ var opts struct {
 		LowWaterMark   output.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"18G"`
 		HighWaterMark  output.ByteSize `short:"i" long:"high_water_mark" description:"Max size of cache to clean at" default:"20G"`
 		CleanFrequency output.Duration `short:"f" long:"clean_frequency" description:"Frequency to clean cache at" default:"10m"`
+		MaxArtifactAge output.Duration `short:"m" long:"max_artifact_age" description:"Clean any artifact that's not been read in this long" default:"720h"`
 	} `group:"Options controlling when to clean the cache"`
 }
 
@@ -31,6 +32,7 @@ func main() {
 	output.InitLogging(opts.Verbosity, opts.LogFile, opts.Verbosity)
 	log.Notice("Initialising cache server...")
 	cache := server.NewCache(opts.Dir, time.Duration(opts.CleanFlags.CleanFrequency),
+		time.Duration(opts.CleanFlags.MaxArtifactAge),
 		uint64(opts.CleanFlags.LowWaterMark), uint64(opts.CleanFlags.HighWaterMark))
 	log.Notice("Starting up http cache server on port %d...", opts.Port)
 	router := server.BuildRouter(cache)
