@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/streamrail/concurrent-map"
 
 	"cache/tools"
@@ -41,11 +42,11 @@ type Cache struct {
 // NewCache initialises the cache and fires off a background cleaner goroutine which runs every
 // cleanFrequency seconds. The high and low water marks control a (soft) max size and a (harder)
 // minimum size.
-func NewCache(path string, cleanFrequency int, lowWaterMark, highWaterMark int64) *Cache {
-	log.Notice("Initialising cache with settings:\n  Path: %s\n  Clean frequency: %d\n  Low water mark: %d\n  High water mark: %d",
-		path, cleanFrequency, lowWaterMark, highWaterMark)
+func NewCache(path string, cleanFrequency time.Duration, lowWaterMark, highWaterMark uint64) *Cache {
+	log.Notice("Initialising cache with settings:\n  Path: %s\n  Clean frequency: %s\n  Low water mark: %s\n  High water mark: %s",
+		path, cleanFrequency, humanize.Bytes(lowWaterMark), humanize.Bytes(highWaterMark))
 	cache := newCache(path)
-	go cache.clean(cleanFrequency, lowWaterMark, highWaterMark)
+	go cache.clean(cleanFrequency, int64(lowWaterMark), int64(highWaterMark))
 	return cache
 }
 
@@ -272,8 +273,8 @@ func (cache *Cache) DeleteAllArtifacts() error {
 }
 
 // clean implements a periodic clean of the cache to remove old artifacts.
-func (cache *Cache) clean(cleanFrequency int, lowWaterMark, highWaterMark int64) {
-	for range time.NewTicker(time.Duration(cleanFrequency) * time.Second).C {
+func (cache *Cache) clean(cleanFrequency time.Duration, lowWaterMark, highWaterMark int64) {
+	for range time.NewTicker(cleanFrequency).C {
 		cache.singleClean(lowWaterMark, highWaterMark)
 	}
 }

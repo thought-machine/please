@@ -70,3 +70,12 @@ go_test(
         '//src/core',
     ],
 )
+
+go_test(
+    name = 'flags_test',
+    srcs = ['flags_test.go'],
+    deps = [
+        ':output',
+        '//third_party/go:testify',
+    ],
+)

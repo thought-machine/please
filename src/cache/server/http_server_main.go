@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -13,20 +14,24 @@ import (
 var log = logging.MustGetLogger("http_cache_server")
 
 var opts struct {
-	Verbosity      int             `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
-	Port           int             `short:"p" long:"port" description:"Port to serve on" default:"8080"`
-	Dir            string          `short:"d" long:"dir" description:"Directory to write into" default:"plz-http-cache"`
-	LowWaterMark   output.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"18G"`
-	HighWaterMark  output.ByteSize `short:"i" long:"high_water_mark" description:"Max size of cache to clean at" default:"20G"`
-	CleanFrequency int             `short:"f" long:"clean_frequency" description:"Frequency to clean cache at, in seconds" default:"10"`
-	LogFile        string          `long:"log_file" description:"File to log to (in addition to stdout)"`
+	Verbosity int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
+	Port      int    `short:"p" long:"port" description:"Port to serve on" default:"8080"`
+	Dir       string `short:"d" long:"dir" description:"Directory to write into" default:"plz-http-cache"`
+	LogFile   string `long:"log_file" description:"File to log to (in addition to stdout)"`
+
+	CleanFlags struct {
+		LowWaterMark   output.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"18G"`
+		HighWaterMark  output.ByteSize `short:"i" long:"high_water_mark" description:"Max size of cache to clean at" default:"20G"`
+		CleanFrequency output.Duration `short:"f" long:"clean_frequency" description:"Frequency to clean cache at" default:"10m"`
+	} `group:"Options controlling when to clean the cache"`
 }
 
 func main() {
 	output.ParseFlagsOrDie("Please RPC cache server", &opts)
 	output.InitLogging(opts.Verbosity, opts.LogFile, opts.Verbosity)
 	log.Notice("Initialising cache server...")
-	cache := server.NewCache(opts.Dir, opts.CleanFrequency, int64(opts.LowWaterMark), int64(opts.HighWaterMark))
+	cache := server.NewCache(opts.Dir, time.Duration(opts.CleanFlags.CleanFrequency),
+		uint64(opts.CleanFlags.LowWaterMark), uint64(opts.CleanFlags.HighWaterMark))
 	log.Notice("Starting up http cache server on port %d...", opts.Port)
 	router := server.BuildRouter(cache)
 	http.Handle("/", router)

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/jessevdk/go-flags"
@@ -61,10 +63,29 @@ func ParseFlagsFromArgsOrDie(appname string, data interface{}, args []string) *f
 
 // A ByteSize is used for flags that represent some quantity of bytes that can be
 // passed as human-readable quantities (eg. "10G").
-type ByteSize int64
+type ByteSize uint64
 
+// UnmarshalFlag implements the flags.Unmarshaler interface.
 func (b *ByteSize) UnmarshalFlag(in string) error {
 	b2, err := humanize.ParseBytes(in)
 	*b = ByteSize(b2)
+	return err
+}
+
+// A Duration is used for flags that represent a time duration; it's just a wrapper
+// around time.Duration that implements the flags.Unmarshaler interface.
+type Duration time.Duration
+
+// UnmarshalFlag implements the flags.Unmarshaler interface.
+func (d *Duration) UnmarshalFlag(in string) error {
+	d2, err := time.ParseDuration(in)
+	// For backwards compatibility, treat missing units as seconds.
+	if err != nil {
+		if d3, err := strconv.Atoi(in); err == nil {
+			*d = Duration(time.Duration(d3) * time.Second)
+			return nil
+		}
+	}
+	*d = Duration(d2)
 	return err
 }
