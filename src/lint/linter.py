@@ -22,6 +22,10 @@ current things searched for are:
  - Calling builtin build rules through non-keyword arguments.
    We don't specifically guarantee argument order and suggest that they should
    always be called with keyword arguments, but it is possible to call them without.
+ - Deprecation warnings for functions that are retained but no longer recommended.
+   The most obvious case here is include_defs which we haven't removed because it's
+   used internally for some Bazel compatibility, and it might be useful for Buck
+   compatibility.
 """
 
 import argparse
@@ -39,6 +43,7 @@ ITERKEYS_USED = 'iterkeys-used'
 UNSORTED_SET_ITERATION = 'unsorted-set-iteration'
 UNSORTED_DICT_ITERATION = 'unsorted-dict-iteration'
 NON_KEYWORD_CALL = 'non-keyword-call'
+DEPRECATED_FUNCTION = 'deprecated-function'
 
 
 ERROR_DESCRIPTIONS = {
@@ -49,6 +54,7 @@ ERROR_DESCRIPTIONS = {
     UNSORTED_SET_ITERATION: 'Iteration of sets is not ordered, use sorted()',
     UNSORTED_DICT_ITERATION: 'Iteration of dicts is not ordered, use sorted()',
     NON_KEYWORD_CALL: 'Call to builtin rule without using keyword arguments',
+    DEPRECATED_FUNCTION: 'The function include_defs is deprecated, use subinclude() instead'
 }
 
 BANNED_ATTRS = {
@@ -65,6 +71,7 @@ UNSORTED_CALLS = {
 JSON = json.loads(pkg_resources.resource_string('src.parse', 'rule_args.json'))
 WHITELISTED_FUNCTIONS = {'subinclude', 'glob', 'include_defs', 'licenses'}
 BUILTIN_FUNCTIONS = {k: v for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
+DEPRECATED_FUNCTIONS = {'include_defs'}
 
 
 def is_suppressed(code, line):
@@ -99,6 +106,9 @@ def _lint(contents):
         if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
             if n.args or n.starargs:
                 yield n.lineno, NON_KEYWORD_CALL
+        # Deprecated functions
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in DEPRECATED_FUNCTIONS:
+            yield n.lineno, DEPRECATED_FUNCTION
 
 
 def lint(filename, suppress=None):
@@ -116,7 +126,7 @@ def print_lint(filename, suppress=None):
     """Lint the given file and print results. Returns True if no errors were found."""
     success = True
     for lineno, code in lint(filename, suppress):
-        sys.stdout.write('L%d:%s: %s\n' % (lineno, code, ERROR_DESCRIPTIONS[code]))
+        sys.stdout.write('%s,L%d: %s: %s\n' % (filename, lineno, code, ERROR_DESCRIPTIONS[code]))
         success = False
     return success
 

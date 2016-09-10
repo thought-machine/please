@@ -41,3 +41,7 @@ class TestLinter(unittest.TestCase):
         """Test detection of builtin functions being called without keywords."""
         self.assertEqual([(2, linter.NON_KEYWORD_CALL), (5, linter.NON_KEYWORD_CALL)],
                          lint('src/lint/test_data/test_non_keyword_calls'))
+
+    def test_deprecated_functions(self):
+        """Test detection of deprecated functions."""
+        self.assertEqual([(1, linter.DEPRECATED_FUNCTION)], lint('src/lint/test_data/test_deprecated_functions'))
