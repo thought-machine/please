@@ -1,6 +1,7 @@
 python_binary(
     name = 'plz_build_linter',
     main = 'linter.py',
+    visibility = ['PUBLIC'],
 )
 
 python_test(

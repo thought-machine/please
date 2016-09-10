@@ -28,3 +28,8 @@ class TestLinter(unittest.TestCase):
         """Test errors are suppressed correctly."""
         self.assertEqual([(6, linter.ITERITEMS_USED), (9, linter.ITERKEYS_USED)],
                          lint('src/lint/test_data/test_suppressions'))
+
+    def test_unsorted_iteration(self):
+        """Test unsorted iteration of set() and dict()."""
+        self.assertEqual([(1, linter.UNSORTED_SET_ITERATION), (3, linter.UNSORTED_DICT_ITERATION)],
+                         lint('src/lint/test_data/test_unsorted_iteration'))

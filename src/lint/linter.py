@@ -23,6 +23,8 @@ SYNTAX_ERROR = 'syntax-error'
 ITERITEMS_USED = 'iteritems-used'
 ITERVALUES_USED = 'itervalues-used'
 ITERKEYS_USED = 'iterkeys-used'
+UNSORTED_SET_ITERATION = 'unsorted-set-iteration'
+UNSORTED_DICT_ITERATION = 'unsorted-dict-iteration'
 
 
 ERROR_DESCRIPTIONS = {
@@ -30,12 +32,19 @@ ERROR_DESCRIPTIONS = {
     ITERITEMS_USED: 'dict.iteritems called, use dict.items instead',
     ITERVALUES_USED: 'dict.itervalues called, use dict.values instead',
     ITERKEYS_USED: 'dict.iterkeys called, use dict.keys instead (or just iterate the dict)',
+    UNSORTED_SET_ITERATION: 'Iteration of sets is not ordered, use sorted()',
+    UNSORTED_DICT_ITERATION: 'Iteration of dicts is not ordered, use sorted()',
 }
 
 BANNED_ATTRS = {
     'iteritems': ITERITEMS_USED,
     'itervalues': ITERVALUES_USED,
     'iterkeys': ITERKEYS_USED,
+}
+
+UNSORTED_CALLS = {
+    'set': UNSORTED_SET_ITERATION,
+    'dict': UNSORTED_DICT_ITERATION,
 }
 
 
@@ -56,23 +65,34 @@ def is_suppressed(code, line):
     return 'nolint' in comment or re.search('lint: *disable=' + code, comment)
 
 
+def _lint(contents):
+    try:
+        tree = ast.parse(contents)
+    except SyntaxError as err:
+        yield err.lineno, SYNTAX_ERROR
+        return
+
+    for n in ast.walk(tree):
+        # .iteritems and so forth
+        if isinstance(n, ast.Call) and hasattr(n.func, 'attr') and n.func.attr in BANNED_ATTRS:
+            yield n.lineno, BANNED_ATTRS[n.func.attr]
+        # Iteration of non-sorted structures
+        if isinstance(n, ast.For):
+            if isinstance(n.iter, ast.Call) and isinstance(n.iter.func, ast.Name):
+                if n.iter.func.id in UNSORTED_CALLS:
+                    yield n.lineno, UNSORTED_CALLS[n.iter.func.id]
+
+
+
 def lint(filename, suppress=None):
     """Lint the given file. Yields the error codes found."""
     with open(filename) as f:
         contents = f.read()
         # ast discards comments, but we use those to suppress messages.
         lines = contents.split('\n')
-        try:
-            tree = ast.parse(contents, filename)
-        except SyntaxError as err:
-            yield err.lineno, SYNTAX_ERROR
-            return
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and node.func.attr in BANNED_ATTRS:
-            if not is_suppressed(BANNED_ATTRS[node.func.attr], lines[node.lineno - 1]):
-                yield node.lineno, BANNED_ATTRS[node.func.attr]
-
+    for lineno, code in _lint(contents):
+        if not is_suppressed(code, lines[lineno - 1]):
+            yield lineno, code
 
 
 def print_lint(filename, suppress=None):
