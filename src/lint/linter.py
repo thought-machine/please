@@ -81,6 +81,11 @@ def _lint(contents):
             if isinstance(n.iter, ast.Call) and isinstance(n.iter.func, ast.Name):
                 if n.iter.func.id in UNSORTED_CALLS:
                     yield n.lineno, UNSORTED_CALLS[n.iter.func.id]
+            elif isinstance(n.iter, (ast.Dict, ast.DictComp)):
+                yield n.lineno, UNSORTED_DICT_ITERATION
+            elif isinstance(n.iter, (ast.Set, ast.SetComp)):
+                yield n.lineno, UNSORTED_SET_ITERATION
+
 
 
 

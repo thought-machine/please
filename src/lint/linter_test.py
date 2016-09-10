@@ -32,5 +32,7 @@ class TestLinter(unittest.TestCase):
 
     def test_unsorted_iteration(self):
         """Test unsorted iteration of set() and dict()."""
-        self.assertEqual([(1, linter.UNSORTED_SET_ITERATION), (3, linter.UNSORTED_DICT_ITERATION)],
+        self.assertEqual([(1, linter.UNSORTED_SET_ITERATION), (3, linter.UNSORTED_DICT_ITERATION),
+                          (14, linter.UNSORTED_SET_ITERATION), (16, linter.UNSORTED_DICT_ITERATION),
+                          (20, linter.UNSORTED_SET_ITERATION), (22, linter.UNSORTED_DICT_ITERATION)],
                          lint('src/lint/test_data/test_unsorted_iteration'))

@@ -9,3 +9,15 @@ for x in sorted(set([1, 2, 3])):
     pass
 for k in sorted(dict(key='value')):
     pass
+
+# Literals have a different AST structure
+for x in {1, 2, 3}:
+    pass
+for k in {1:2, 3:4}:
+    pass
+
+# Similarly for comprehensions
+for x in {y for y in [1, 2, 3]}:
+    pass
+for k in {x: x**2 for x in [1, 2, 3]}:
+    pass
