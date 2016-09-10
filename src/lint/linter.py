@@ -7,10 +7,18 @@ identified then (e.g. use of dict.iteritems in a python 2 based interpreter).
 
 This script attempts to identify such stylistic things as a linter. The
 current things searched for are:
+ - Syntax errors - obviously these are caught at build time too, but we have
+   to handle them here, and it's useful in some workflows to have lint prompt
+   for this as well.
  - Use of dict.iteritems, dict.itervalues and dict.iterkeys; you should
    prefer .items, .values and .keys respectively.
    These are conceptually not supported and would be removed from the
    BUILD language, but that has proven technically difficult.
+ - Iteration of sets and dicts without using sorted() - their order is
+   undetermined, and while we attempt to keep it consistent between runs,
+   it might not be the same between implementations. In a system where
+   determinism is important you're better off using sorted().
+   This check isn't 100% reliable, it's very complex to catch all possible cases.
 """
 
 import argparse
@@ -48,15 +56,6 @@ UNSORTED_CALLS = {
 }
 
 
-def walk(n):
-    for node in ast.iter_child_nodes(n):
-        print('%s %s' % (getattr(node, 'lineno', '?'), node))
-        if isinstance(node, (ast.Attribute, ast.Call)):
-            print dir(node)
-            print node.value
-        walk(node)
-
-
 def is_suppressed(code, line):
     """Returns True if the given code is suppressed on this line."""
     if '#' not in line:
@@ -85,8 +84,6 @@ def _lint(contents):
                 yield n.lineno, UNSORTED_DICT_ITERATION
             elif isinstance(n.iter, (ast.Set, ast.SetComp)):
                 yield n.lineno, UNSORTED_SET_ITERATION
-
-
 
 
 def lint(filename, suppress=None):
