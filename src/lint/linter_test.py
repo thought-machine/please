@@ -10,7 +10,8 @@ class TestLinter(unittest.TestCase):
 
     def test_iteritems(self):
         """Test that the linter finds dict.iteritems calls correctly."""
-        self.assertEqual([(2, linter.ITERITEMS_USED)], lint('src/lint/test_data/test_iteritems'))
+        self.assertEqual([(2, linter.ITERITEMS_USED), (7, linter.ITERITEMS_USED)],
+                         lint('src/lint/test_data/test_iteritems'))
 
     def test_itervalues(self):
         """Test that the linter finds dict.itervalues calls correctly."""

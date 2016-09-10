@@ -1,3 +1,7 @@
 d = {1: 2}
 for k, v in d.iteritems():
     pass
+
+# A snippet from some builtin rules which should fail.
+def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=False, package=''):
+    env_cmd = ' '.join('export %s="%s";' % (k, v) for k, v in sorted(env.iteritems()))
