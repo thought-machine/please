@@ -30,6 +30,13 @@ current things searched for are:
    doing typechecking on them - that's done at runtime anyway more accurately than
    we can here. This is somewhat unnecessary but again may help some workflows
    where the linter might hint you not to commit with obvious problems.
+ - Detection of duplicates in argument lists - most usually this is useful for deps,
+   but it applies to anything since there's no reason to have a duplicate in any
+   argument list to any builtin Please function.
+
+Lint warnings can be suppressed on a per-line basis by adding a trailing comment
+saying either `# nolint` or `# lint:disable=iterkeys-used`.
+At present there is no way to disable it by scope or completely for a file.
 """
 
 import argparse
