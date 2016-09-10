@@ -430,7 +430,7 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
     if not binary:
         cmd.extend([
             'find . -name .git | xargs rm -rf',
-            'find pkg -name "*.a"',
+            'find pkg -name "*.a" | sort',
         ])
     if strip:
         cmd.extend('rm -rf %s/%s' % (subdir, s) for s in strip)
@@ -477,7 +477,7 @@ def _extra_outs(get):
     """Attaches extra outputs to go_get rules."""
     def _inner(name, output):
         last = '<>'
-        for archive in sorted(output):
+        for archive in output:
             add_out(name, archive)
             subpath = archive[archive.find('/', 6) + 1:-2]
             if (not subpath.startswith(get) and not subpath.startswith(last) and
