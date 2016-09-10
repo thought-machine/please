@@ -37,6 +37,7 @@ genrule(
     srcs = ['extract_rule_args.py'] + glob(['rules/*.build_defs']),
     outs = ['rule_args.json'],
     cmd = 'python $SRCS > $OUT',
+    visibility = ['PUBLIC'],
 )
 
 go_bindata(

@@ -19,10 +19,15 @@ current things searched for are:
    it might not be the same between implementations. In a system where
    determinism is important you're better off using sorted().
    This check isn't 100% reliable, it's very complex to catch all possible cases.
+ - Calling builtin build rules through non-keyword arguments.
+   We don't specifically guarantee argument order and suggest that they should
+   always be called with keyword arguments, but it is possible to call them without.
 """
 
 import argparse
 import ast
+import json
+import pkg_resources
 import re
 import sys
 
@@ -33,6 +38,7 @@ ITERVALUES_USED = 'itervalues-used'
 ITERKEYS_USED = 'iterkeys-used'
 UNSORTED_SET_ITERATION = 'unsorted-set-iteration'
 UNSORTED_DICT_ITERATION = 'unsorted-dict-iteration'
+NON_KEYWORD_CALL = 'non-keyword-call'
 
 
 ERROR_DESCRIPTIONS = {
@@ -42,6 +48,7 @@ ERROR_DESCRIPTIONS = {
     ITERKEYS_USED: 'dict.iterkeys called, use dict.keys instead (or just iterate the dict)',
     UNSORTED_SET_ITERATION: 'Iteration of sets is not ordered, use sorted()',
     UNSORTED_DICT_ITERATION: 'Iteration of dicts is not ordered, use sorted()',
+    NON_KEYWORD_CALL: 'Call to builtin rule without using keyword arguments',
 }
 
 BANNED_ATTRS = {
@@ -54,6 +61,10 @@ UNSORTED_CALLS = {
     'set': UNSORTED_SET_ITERATION,
     'dict': UNSORTED_DICT_ITERATION,
 }
+
+JSON = json.loads(pkg_resources.resource_string('src.parse', 'rule_args.json'))
+WHITELISTED_FUNCTIONS = {'subinclude', 'glob', 'include_defs', 'licenses'}
+BUILTIN_FUNCTIONS = {k: v for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
 
 
 def is_suppressed(code, line):
@@ -84,6 +95,10 @@ def _lint(contents):
                 yield n.lineno, UNSORTED_DICT_ITERATION
             elif isinstance(n.iter, (ast.Set, ast.SetComp)):
                 yield n.lineno, UNSORTED_SET_ITERATION
+        # Builtin argument calls
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
+            if n.args or n.starargs:
+                yield n.lineno, NON_KEYWORD_CALL
 
 
 def lint(filename, suppress=None):

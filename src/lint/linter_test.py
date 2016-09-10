@@ -36,3 +36,8 @@ class TestLinter(unittest.TestCase):
                           (14, linter.UNSORTED_SET_ITERATION), (16, linter.UNSORTED_DICT_ITERATION),
                           (20, linter.UNSORTED_SET_ITERATION), (22, linter.UNSORTED_DICT_ITERATION)],
                          lint('src/lint/test_data/test_unsorted_iteration'))
+
+    def test_non_keyword_calls(self):
+        """Test detection of builtin functions being called without keywords."""
+        self.assertEqual([(2, linter.NON_KEYWORD_CALL), (5, linter.NON_KEYWORD_CALL)],
+                         lint('src/lint/test_data/test_non_keyword_calls'))
