@@ -26,6 +26,10 @@ current things searched for are:
    The most obvious case here is include_defs which we haven't removed because it's
    used internally for some Bazel compatibility, and it might be useful for Buck
    compatibility.
+ - Detection of incorrect arguments to builtin functions. Note that we don't bother
+   doing typechecking on them - that's done at runtime anyway more accurately than
+   we can here. This is somewhat unnecessary but again may help some workflows
+   where the linter might hint you not to commit with obvious problems.
 """
 
 import argparse
@@ -44,6 +48,7 @@ UNSORTED_SET_ITERATION = 'unsorted-set-iteration'
 UNSORTED_DICT_ITERATION = 'unsorted-dict-iteration'
 NON_KEYWORD_CALL = 'non-keyword-call'
 DEPRECATED_FUNCTION = 'deprecated-function'
+INCORRECT_ARGUMENT = 'incorrect-argument'
 
 
 ERROR_DESCRIPTIONS = {
@@ -54,7 +59,8 @@ ERROR_DESCRIPTIONS = {
     UNSORTED_SET_ITERATION: 'Iteration of sets is not ordered, use sorted()',
     UNSORTED_DICT_ITERATION: 'Iteration of dicts is not ordered, use sorted()',
     NON_KEYWORD_CALL: 'Call to builtin rule without using keyword arguments',
-    DEPRECATED_FUNCTION: 'The function include_defs is deprecated, use subinclude() instead'
+    DEPRECATED_FUNCTION: 'The function include_defs is deprecated, use subinclude() instead',
+    INCORRECT_ARGUMENT: 'Unknown argument to built-in function',
 }
 
 BANNED_ATTRS = {
@@ -106,6 +112,10 @@ def _lint(contents):
         if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
             if n.args or n.starargs:
                 yield n.lineno, NON_KEYWORD_CALL
+            args = {arg['name'] for arg in BUILTIN_FUNCTIONS[n.func.id]['args']}
+            for kwd in n.keywords or []:
+                if kwd.arg not in args and not kwd.arg.startswith('_'):
+                    yield kwd.value.lineno, INCORRECT_ARGUMENT
         # Deprecated functions
         if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in DEPRECATED_FUNCTIONS:
             yield n.lineno, DEPRECATED_FUNCTION

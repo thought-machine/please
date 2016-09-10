@@ -44,4 +44,10 @@ class TestLinter(unittest.TestCase):
 
     def test_deprecated_functions(self):
         """Test detection of deprecated functions."""
-        self.assertEqual([(1, linter.DEPRECATED_FUNCTION)], lint('src/lint/test_data/test_deprecated_functions'))
+        self.assertEqual([(1, linter.DEPRECATED_FUNCTION)],
+                         lint('src/lint/test_data/test_deprecated_functions'))
+
+    def test_incorrect_args(self):
+        """Test detection of deprecated functions."""
+        self.assertEqual([(7, linter.INCORRECT_ARGUMENT)],
+                         lint('src/lint/test_data/test_incorrect_args'))
