@@ -27,14 +27,14 @@ cgo_library(
 # be python_binary rules because we haven't built anything to pex them with yet.
 genrule(
     name = 'type_checked_rules',
-    srcs = ['type_checking.py'] + glob(['rules/*.py']),
-    outs = [basename(x) for x in glob(['rules/*.py'])],
+    srcs = ['type_checking.py'] + glob(['rules/*.build_defs']),
+    outs = [basename(x) for x in glob(['rules/*.build_defs'])],
     cmd = 'python $SRCS',
 )
 
 genrule(
     name = 'rule_args',
-    srcs = ['extract_rule_args.py'] + glob(['rules/*.py']),
+    srcs = ['extract_rule_args.py'] + glob(['rules/*.build_defs']),
     outs = ['rule_args.json'],
     cmd = 'python $SRCS > $OUT',
 )
