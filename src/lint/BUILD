@@ -1,5 +1,6 @@
 python_binary(
     name = 'plz_build_linter',
+    out = 'plz_build_linter',
     main = 'linter.py',
     resources = ['//src/parse:rule_args'],
     visibility = ['PUBLIC'],
