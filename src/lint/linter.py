@@ -49,6 +49,7 @@ UNSORTED_DICT_ITERATION = 'unsorted-dict-iteration'
 NON_KEYWORD_CALL = 'non-keyword-call'
 DEPRECATED_FUNCTION = 'deprecated-function'
 INCORRECT_ARGUMENT = 'incorrect-argument'
+UNNECESSARY_DUPLICATE = 'unnecessary-duplicate'
 
 
 ERROR_DESCRIPTIONS = {
@@ -61,6 +62,7 @@ ERROR_DESCRIPTIONS = {
     NON_KEYWORD_CALL: 'Call to builtin rule without using keyword arguments',
     DEPRECATED_FUNCTION: 'The function include_defs is deprecated, use subinclude() instead',
     INCORRECT_ARGUMENT: 'Unknown argument to built-in function',
+    UNNECESSARY_DUPLICATE: 'Unnecessary duplicate in argument',
 }
 
 BANNED_ATTRS = {
@@ -119,6 +121,16 @@ def _lint(contents):
         # Deprecated functions
         if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in DEPRECATED_FUNCTIONS:
             yield n.lineno, DEPRECATED_FUNCTION
+        # Duplicates in deps, srcs etc
+        if isinstance(n, ast.Call):
+            for kwd in n.keywords or []:
+                if isinstance(kwd.value, ast.List):
+                    seen = set()
+                    for s in kwd.value.elts:
+                        if isinstance(s, ast.Str):
+                            if s.s in seen:
+                                yield s.lineno, UNNECESSARY_DUPLICATE
+                            seen.add(s.s)
 
 
 def lint(filename, suppress=None):

@@ -48,6 +48,11 @@ class TestLinter(unittest.TestCase):
                          lint('src/lint/test_data/test_deprecated_functions'))
 
     def test_incorrect_args(self):
-        """Test detection of deprecated functions."""
+        """Test detection of incorrect arguments."""
         self.assertEqual([(7, linter.INCORRECT_ARGUMENT)],
                          lint('src/lint/test_data/test_incorrect_args'))
+
+    def test_incorrect_args(self):
+        """Test detection of duplicates in arguments."""
+        self.assertEqual([(9, linter.UNNECESSARY_DUPLICATE)],
+                         lint('src/lint/test_data/test_duplicate_args'))
