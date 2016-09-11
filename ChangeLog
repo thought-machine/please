@@ -5,7 +5,7 @@ Version 5.3.0
     * Added config options for configuring flags for pip in pip_library rules.
     * Fixed generation of __init__.py files.
     * Various _test rules now support being passed flags which are added to their test_cmd.
-	* Fixed some indeterminacy in some Java rules
+    * Fixed some indeterminacy in some Java rules
     * Fixed some deps being incorrectly attached to proto rules of the wrong language.
     * Cache servers now accept durations in the form "3m", "10h25m", etc.
     * Cache servers have a parameter to clean artifacts that haven't been accessed in
