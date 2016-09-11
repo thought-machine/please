@@ -3,6 +3,7 @@ python_binary(
     out = 'plz_build_linter',
     main = 'linter.py',
     resources = ['//src/parse:rule_args'],
+    shebang = '/usr/bin/env python',
     visibility = ['PUBLIC'],
 )
 
