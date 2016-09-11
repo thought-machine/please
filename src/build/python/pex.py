@@ -166,6 +166,9 @@ def main(args):
         pex_builder = PEXBuilder(path=tmp_dir, interpreter=interpreter)
         pex_builder.info.zip_safe = args.zip_safe
 
+        if args.shebang:
+            pex_builder.set_shebang(args.shebang)
+
         # Set the entry point.
         args.entry_point = args.entry_point.replace('/', '.')
         if args.entry_point.endswith('.py'):
@@ -216,6 +219,7 @@ if __name__ == '__main__':
     parser.add_argument('--interpreter', default=sys.executable)
     parser.add_argument('--test_package')
     parser.add_argument('--test_srcs')
+    parser.add_argument('--shebang')
     parser.add_argument('--module_dir', default='')
     parser.add_argument('--zip_safe', dest='zip_safe', action='store_true')
     parser.add_argument('--nozip_safe', dest='zip_safe', action='store_false')

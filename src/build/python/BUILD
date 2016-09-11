@@ -1,6 +1,7 @@
 python_binary(
     name = 'please_pex',
     main = 'pex.py',
+    shebang = '/usr/bin/env python',
     visibility = ['PUBLIC'],
     deps = [
         ':main_files',

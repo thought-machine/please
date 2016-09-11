@@ -76,7 +76,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
 
 
 def python_binary(name, main, resources=None, out=None, deps=None, visibility=None, zip_safe=None,
-                  interpreter=None, labels=None):
+                  interpreter=None, shebang=None, labels=None):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -98,6 +98,8 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
+      shebang (str): Exact shebang to apply to the generated file. By default pex will
+                     determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
     """
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
@@ -112,6 +114,7 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
         '--out=temp.pex',
         '--entry_point=$SRCS',
         '--noscan',
+        '--shebang="%s"' % shebang if shebang else '',
         '--interpreter=' + interpreter,
         '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
         '--zip_safe',
