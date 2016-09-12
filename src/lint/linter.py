@@ -97,47 +97,70 @@ def is_suppressed(code, line):
     return 'nolint' in comment or re.search('lint: *disable=' + code, comment)
 
 
+def _lint_iteritems(n):
+    """Lints for calls to dict.iteritems and so forth."""
+    if isinstance(n, ast.Call) and hasattr(n.func, 'attr') and n.func.attr in BANNED_ATTRS:
+        yield n.lineno, BANNED_ATTRS[n.func.attr]
+
+
+def _lint_unsorted_iteration(n):
+    """Lints for iteration of unsorted structures."""
+    if isinstance(n, ast.For):
+        if isinstance(n.iter, ast.Call) and isinstance(n.iter.func, ast.Name):
+            if n.iter.func.id in UNSORTED_CALLS:
+                yield n.lineno, UNSORTED_CALLS[n.iter.func.id]
+        elif isinstance(n.iter, (ast.Dict, ast.DictComp)):
+            yield n.lineno, UNSORTED_DICT_ITERATION
+        elif isinstance(n.iter, (ast.Set, ast.SetComp)):
+            yield n.lineno, UNSORTED_SET_ITERATION
+
+
+def _lint_builtin_functions(n):
+    """Lints for incorrect calls to builtin functions."""
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
+        if n.args or n.starargs:
+            yield n.lineno, NON_KEYWORD_CALL
+        args = {arg['name'] for arg in BUILTIN_FUNCTIONS[n.func.id]['args']}
+        for kwd in n.keywords or []:
+            if kwd.arg not in args and not kwd.arg.startswith('_'):
+                yield kwd.value.lineno, INCORRECT_ARGUMENT
+
+
+def _lint_deprecated_functions(n):
+    """Lints for calls to deprecated functions."""
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in DEPRECATED_FUNCTIONS:
+        yield n.lineno, DEPRECATED_FUNCTION
+
+
+def _lint_duplicates(n):
+    """Lints for duplicates in deps, srcs etc."""
+    if isinstance(n, ast.Call):
+        for kwd in n.keywords or []:
+            if isinstance(kwd.value, ast.List):
+                seen = set()
+                for s in kwd.value.elts:
+                    if isinstance(s, ast.Str):
+                        if s.s in seen:
+                            yield s.lineno, UNNECESSARY_DUPLICATE
+                        seen.add(s.s)
+
+
 def _lint(contents):
     try:
         tree = ast.parse(contents)
     except SyntaxError as err:
         yield err.lineno, SYNTAX_ERROR
         return
-
     for n in ast.walk(tree):
-        # .iteritems and so forth
-        if isinstance(n, ast.Call) and hasattr(n.func, 'attr') and n.func.attr in BANNED_ATTRS:
-            yield n.lineno, BANNED_ATTRS[n.func.attr]
-        # Iteration of non-sorted structures
-        if isinstance(n, ast.For):
-            if isinstance(n.iter, ast.Call) and isinstance(n.iter.func, ast.Name):
-                if n.iter.func.id in UNSORTED_CALLS:
-                    yield n.lineno, UNSORTED_CALLS[n.iter.func.id]
-            elif isinstance(n.iter, (ast.Dict, ast.DictComp)):
-                yield n.lineno, UNSORTED_DICT_ITERATION
-            elif isinstance(n.iter, (ast.Set, ast.SetComp)):
-                yield n.lineno, UNSORTED_SET_ITERATION
-        # Builtin argument calls
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
-            if n.args or n.starargs:
-                yield n.lineno, NON_KEYWORD_CALL
-            args = {arg['name'] for arg in BUILTIN_FUNCTIONS[n.func.id]['args']}
-            for kwd in n.keywords or []:
-                if kwd.arg not in args and not kwd.arg.startswith('_'):
-                    yield kwd.value.lineno, INCORRECT_ARGUMENT
-        # Deprecated functions
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in DEPRECATED_FUNCTIONS:
-            yield n.lineno, DEPRECATED_FUNCTION
-        # Duplicates in deps, srcs etc
-        if isinstance(n, ast.Call):
-            for kwd in n.keywords or []:
-                if isinstance(kwd.value, ast.List):
-                    seen = set()
-                    for s in kwd.value.elts:
-                        if isinstance(s, ast.Str):
-                            if s.s in seen:
-                                yield s.lineno, UNNECESSARY_DUPLICATE
-                            seen.add(s.s)
+        for fn in LINT_FUNCTIONS:
+            for error in fn(n):
+                yield error
+
+
+LINT_FUNCTIONS = [
+    _lint_iteritems, _lint_unsorted_iteration, _lint_builtin_functions,
+    _lint_deprecated_functions, _lint_duplicates,
+]
 
 
 def lint(filename, suppress=None):
