@@ -82,12 +82,12 @@ filegroup(
 hash_filegroup(
     name = 'hash_tools',
     srcs = [
-        ':please_pex',
         '//src:please',
         '//src/build/go:please_go_test',
         '//src/build/java:jarcat',
         '//src/build/java:junit_runner',
         '//src/build/java:please_maven',
+        '//src/build/python:please_pex',
         '//src/cache/main:cache_cleaner',
         '//src/misc:plz_diff_graphs',
         '//src/parse/cffi:all_engines',

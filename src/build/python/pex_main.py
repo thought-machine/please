@@ -66,7 +66,7 @@ def clean_sys_path():
     sys_path = os.path.split(os.__file__)[0]
     local_path = os.path.abspath(sys.argv[0])
     sys.path = [x for x in sys.path if 'dist-packages' not in x
-                and (x.startswith(sys_path) or x.startswith(local_path))]
+                and (x.startswith(sys_path) or x.startswith(local_path) or '/.pex/code/' in x)]
     if not ZIP_SAFE:
         # Strip the pex paths if we're not zip safe so nothing accidentally imports from there.
         sys.path = [x for x in sys.path if not x.endswith('.pex')]
