@@ -151,12 +151,13 @@ def lint(filename, suppress=None):
             yield lineno, code
 
 
-def print_lint(filename, suppress=None):
-    """Lint the given file and print results. Returns True if no errors were found."""
+def print_lint(filenames, suppress=None):
+    """Lint the given files and print results. Returns True on success."""
     success = True
-    for lineno, code in lint(filename, suppress):
-        sys.stdout.write('%s,L%d: %s: %s\n' % (filename, lineno, code, ERROR_DESCRIPTIONS[code]))
-        success = False
+    for filename in filenames:
+        for lineno, code in lint(filename, suppress):
+            sys.stdout.write('%s,L%d: %s: %s\n' % (filename, lineno, code, ERROR_DESCRIPTIONS[code]))
+            success = False
     return success
 
 
@@ -167,5 +168,5 @@ if __name__ == '__main__':
     parser.add_argument('--exit_zero', dest='exit_zero', action='store_true')
     parser.set_defaults(exit_zero=False)
     args = parser.parse_args()
-    success = all(print_lint(f, args.suppress) for f in args.files)
+    success = print_lint(args.files, args.suppress)
     sys.exit(0 if success or args.exit_zero else 1)
