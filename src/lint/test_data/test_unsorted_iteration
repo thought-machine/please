@@ -1,0 +1,23 @@
+for x in set([1, 2, 3]):
+    pass
+for k in dict(key='value'):
+    pass
+# These should pass OK. Actually wrapping it in any function call will
+# suffice to confound the linter, but it's important to test that our
+# suggested fix specifically does work.
+for x in sorted(set([1, 2, 3])):
+    pass
+for k in sorted(dict(key='value')):
+    pass
+
+# Literals have a different AST structure
+for x in {1, 2, 3}:
+    pass
+for k in {1:2, 3:4}:
+    pass
+
+# Similarly for comprehensions
+for x in {y for y in [1, 2, 3]}:
+    pass
+for k in {x: x**2 for x in [1, 2, 3]}:
+    pass

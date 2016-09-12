@@ -1,0 +1,1 @@
+include_defs('//build_defs/go_bindata.build_defs')

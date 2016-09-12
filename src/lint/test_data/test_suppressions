@@ -1,0 +1,10 @@
+d = {1: 2}
+for k, v in d.iteritems(): # nolint
+    pass
+for k, v in d.iteritems(): # lint:disable=iteritems-used
+    pass
+for k, v in d.iteritems():
+    pass
+nolint = d
+for k, v in nolint.iterkeys():  # This should still issue an error
+    pass

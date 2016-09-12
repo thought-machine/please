@@ -1,5 +1,6 @@
 python_binary(
     name = 'please_pex',
+    out = 'please_pex',
     main = 'pex.py',
     shebang = '/usr/bin/env python',
     visibility = ['PUBLIC'],
