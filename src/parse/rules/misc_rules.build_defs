@@ -1,5 +1,6 @@
 """Miscellaneous rules that aren't language-specific."""
 
+
 def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None,
             building_description='Building...', hashes=None, timeout=0, binary=False,
             needs_transitive_deps=False, output_is_complete=True, test_only=False,
@@ -100,6 +101,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
         test_only=test_only,
     )
 
+
 def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None, tools=None,
             data=None, visibility=None, timeout=0, needs_transitive_deps=False, flaky=0,
             no_test_output=False, output_is_complete=True, requires=None, container=False):
@@ -155,6 +157,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
         flaky=flaky,
     )
 
+
 def export_file(name, src, visibility=None, binary=False, test_only=False):
     """Essentially a single-file alias for filegroup.
 
@@ -172,6 +175,7 @@ def export_file(name, src, visibility=None, binary=False, test_only=False):
         binary = binary,
         test_only = test_only,
     )
+
 
 def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility=None,
               labels=None, binary=False, output_is_complete=True, requires=None, provides=None,
@@ -221,6 +225,7 @@ def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility
         binary=binary,
     )
 
+
 def hash_filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None,
                    labels=None, test_only=False, requires=None):
     """Copies a set of files to output names which are uniquely hashed based on their contents.
@@ -257,6 +262,7 @@ def hash_filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=No
         stamp=True,
     )
 
+
 def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_only=False):
     """Defines a rule to collect some dependencies from outside the build tree.
 
@@ -282,6 +288,7 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
         visibility = visibility,
         test_only = test_only,
     )
+
 
 def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
                 licences=None, test_only=False, deps=None):
@@ -311,6 +318,7 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
         test_only=test_only,
     )
 
+
 def github_file(name, repo, file, revision='master', hash=None, visibility=None, test_only=False):
     """Defines a rule to fetch a file from Github.
 
@@ -335,6 +343,7 @@ def github_file(name, repo, file, revision='master', hash=None, visibility=None,
         visibility = visibility,
         test_only = test_only,
     )
+
 
 def git_repo(name, repo, revision='master', files=None, hash=None, visibility=None, test_only=False):
     """Defines a rule to fetch a remote Git repository.
@@ -369,9 +378,11 @@ def git_repo(name, repo, revision='master', files=None, hash=None, visibility=No
         test_only = test_only,
     )
 
+
 def _find_git_repo_files(name, output):
     for line in output:
         add_out(name, line)
+
 
 def fpm_package(name, files, version, package_type, links=None, package_name=None, options='',
                 srcs=None, deps=None, visibility=None, labels=None):
@@ -417,6 +428,7 @@ def fpm_package(name, files, version, package_type, links=None, package_name=Non
         requires=['fpm'],
     )
 
+
 def fpm_deb(name, files, version, links=None, package_name=None, options='',
             srcs=None, deps=None, visibility=None, labels=None):
     """Convenience wrapper around fpm_package that always builds a .deb package.
@@ -454,6 +466,7 @@ def fpm_deb(name, files, version, links=None, package_name=None, options='',
         visibility=visibility,
         labels=labels,
     )
+
 
 def tarball(name, srcs, out=None, deps=None, subdir=None,
             compression='gzip', visibility=None, labels=None):
@@ -499,6 +512,7 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
         labels=(labels or []) + ['tar'],
     )
 
+
 _COMPRESSION = {
     'gzip': ('-z', '.gz'),
     'bzip2': ('-j', '.bz2'),
@@ -507,6 +521,7 @@ _COMPRESSION = {
     'compress': ('-Z', '.Z'),
 }
 
+
 def _tool_path(tool, tools=None, binary=True):
     """Returns the invocation of a tool and the list of tools for a rule to depend on.
 
@@ -514,6 +529,7 @@ def _tool_path(tool, tools=None, binary=True):
     """
     tools = [tool] + (tools or [])
     return ('$(%s %s)' % ('exe' if binary else 'location', tool) if tool.startswith('//') else tool), tools
+
 
 def _test_size_and_timeout(size, timeout, labels):
     """Resolves size and timeout arguments for a test. For Buck compatibility."""
@@ -525,6 +541,7 @@ def _test_size_and_timeout(size, timeout, labels):
     if isinstance(timeout, str):
         timeout = _TIMEOUT_NAMES[timeout]
     return timeout, labels
+
 
 _SIZE_TIMEOUTS = {
     'enormous': 600,
@@ -539,6 +556,7 @@ _TIMEOUT_NAMES = {
     'moderate': 300,
     'short': 60,
 }
+
 
 if CONFIG.BAZEL_COMPATIBILITY:
     def bind(name, actual=None, **kwargs):
