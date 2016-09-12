@@ -587,9 +587,9 @@ if CONFIG.BAZEL_COMPATIBILITY:
         if name.startswith('//'):
             subinclude(name)
         elif name.startswith('/'):
-            include_defs('//%s.bzl' % name)
+            include_defs('//%s.bzl' % name)  # lint:disable=deprecated-function
         else:
-            include_defs('//%s/%s.bzl' % (get_base_path(), name))
+            include_defs('//%s/%s.bzl' % (get_base_path(), name))  # lint:disable=deprecated-function
 
     def exports_files(srcs, visibility=None, licenses=None):
         """No-op implementation to allow parsing to continue.
