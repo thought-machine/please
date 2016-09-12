@@ -22,6 +22,8 @@ import (
 
 var log = logging.MustGetLogger("please_maven")
 
+var client http.Client
+
 var currentIndent = 0
 
 var mavenJarTemplate = template.Must(template.New("maven_jar").Parse(`
@@ -311,7 +313,11 @@ func buildPomUrl(group, artifact, version string) string {
 // fetchOrDie fetches a URL and returns the content, dying if it can't be found.
 func fetchOrDie(url string) []byte {
 	log.Notice("Downloading %s...", url)
-	response, err := http.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		log.Fatalf("Bad request: %s", err)
+	}
+	response, err := client.Do(req)
 	if err != nil {
 		log.Fatalf("Error downloading %s: %s\n", url, err)
 	} else if response.StatusCode < 200 || response.StatusCode > 299 {
