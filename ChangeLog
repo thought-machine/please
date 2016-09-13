@@ -1,3 +1,11 @@
+Version 5.4.0
+-------------
+
+    * Now ships with a linter to identify potential problems in BUILD / build_defs files.
+    * Minor determinism fix to go_get
+    * please_pex now only specifies 'python', not the version it was built with.
+
+
 Version 5.3.0
 -------------
 
