@@ -1,4 +1,5 @@
 # Test on the builtin go rules
+subinclude('//build_defs:plz_e2e_test')
 
 go_library(
     name = 'go_rules_test_lib',
@@ -51,4 +52,16 @@ gentest(
 go_test(
     name = 'empty_test',
     srcs = ['empty_test.go'],
+)
+
+# Test in which only one case passes
+go_test(
+    name = 'single_test',
+    srcs = ['single_test.go'],
+    labels = ['manual'],
+)
+
+plz_e2e_test(
+    name = 'go_test_spec_test',
+    cmd = 'plz test //test/go_rules:single_test Test2',
 )
