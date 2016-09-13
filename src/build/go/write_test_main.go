@@ -130,7 +130,6 @@ package main
 
 import (
 	"os"
-    "strings"
 	"testing"
 
 {{range .Imports}}
@@ -182,16 +181,7 @@ func coverRegisterFile(fileName string, counter []uint32, pos []uint32, numStmts
 {{end}}
 
 func matchString(pat, str string) (bool, error) {
-    tests := os.Getenv("TESTS")
-    if tests == "" {
-        return true, nil
-    }
-    for _, arg := range strings.Split(tests, " ") {
-        if arg == str {
-            return true, nil
-        }
-    }
-    return false, nil
+    return pat == str, nil
 }
 
 func main() {
@@ -207,6 +197,10 @@ func main() {
 {{else}}
     args := []string{os.Args[0], "-test.v"}
 {{end}}
+    testVar := os.Getenv("TESTS")
+    if testVar != "" {
+        args = append(args, "-test.run", testVar)
+    }
     os.Args = append(args, os.Args[1:]...)
 	benchmarks := []testing.InternalBenchmark{}
 	var examples = []testing.InternalExample{}
