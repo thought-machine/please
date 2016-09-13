@@ -10,6 +10,7 @@ fpm_deb(
         '/opt/please/jarcat': '//src/build/java:jarcat',
         '/opt/please/please_diff_graphs': '//src/misc:plz_diff_graphs',
         '/opt/please/please_go_test': '//src/build/go:please_go_test',
+        '/opt/please/please_build_linter': '//src/lint:plz_build_linter',
         '/opt/please/libplease_parser_pypy.so': '//src/parse/cffi:please_parser_pypy',
         '/opt/please/libplease_parser_python2.so': '//src/parse/cffi:please_parser_python2',
         '/opt/please/libplease_parser_python3.so': '//src/parse/cffi:please_parser_python3',
