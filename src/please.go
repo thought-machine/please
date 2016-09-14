@@ -46,8 +46,8 @@ var opts struct {
 
 	OutputFlags struct {
 		Verbosity         int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)" default:"1"`
-		LogFile           string `long:"log_file" description:"File to echo full logging output to"`
-		LogFileLevel      int    `long:"log_file_level" description:"Log level for file output" default:"2"`
+		LogFile           string `long:"log_file" description:"File to echo full logging output to" default:"plz-out/log/build.log"`
+		LogFileLevel      int    `long:"log_file_level" description:"Log level for file output" default:"4"`
 		InteractiveOutput bool   `long:"interactive_output" description:"Show interactive output in a terminal"`
 		PlainOutput       bool   `short:"p" long:"plain_output" description:"Don't show interactive output."`
 		Colour            bool   `long:"colour" description:"Forces coloured output from logging & other shell output."`
@@ -582,7 +582,8 @@ func main() {
 	} else if opts.OutputFlags.NoColour {
 		output.SetColouredOutput(false)
 	}
-	output.InitLogging(opts.OutputFlags.Verbosity, opts.OutputFlags.LogFile, opts.OutputFlags.LogFileLevel)
+	// Init logging, but don't do file output until we've chdir'd.
+	output.InitLogging(opts.OutputFlags.Verbosity, "", 0)
 
 	command := activeCommand(parser)
 	if command == "init" {
@@ -604,6 +605,8 @@ func main() {
 	if err := os.Chdir(core.RepoRoot); err != nil {
 		log.Fatalf("%s", err)
 	}
+	// Reset this now we're at the repo root.
+	output.InitLogging(opts.OutputFlags.Verbosity, opts.OutputFlags.LogFile, opts.OutputFlags.LogFileLevel)
 
 	config = readConfig(command == "update")
 

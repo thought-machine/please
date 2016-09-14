@@ -56,6 +56,7 @@ func InitLogging(verbosity int, logFile string, logFileLevel int) {
 	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
 
 	if logFile != "" {
+		logFile = path.Join(core.RepoRoot, logFile)
 		if err := os.MkdirAll(path.Dir(logFile), core.DirPermissions); err != nil {
 			log.Fatalf("Error creating log file directory: %s", err)
 		}
