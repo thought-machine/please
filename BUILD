@@ -14,8 +14,8 @@ filegroup(
         '//src/cache/main:cache_cleaner',
         '//src/cache/server:http_cache_server_bin',
         '//src/cache/server:rpc_cache_server_bin',
-        '//src/lint:plz_build_linter',
-        '//src/misc:plz_diff_graphs',
+        '//src/lint:please_build_linter',
+        '//src/misc:please_diff_graphs',
     ],
     deps = [
         '//:please',

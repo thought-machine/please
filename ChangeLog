@@ -1,3 +1,9 @@
+Version 5.4.1
+-------------
+
+    * Fixed name of please_build_linter to be consistent between .deb and tarballs.
+
+
 Version 5.4.0
 -------------
 

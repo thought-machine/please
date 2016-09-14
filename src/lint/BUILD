@@ -1,6 +1,6 @@
 python_binary(
-    name = 'plz_build_linter',
-    out = 'plz_build_linter',
+    name = 'please_build_linter',
+    out = 'please_build_linter',
     main = 'linter.py',
     resources = ['//src/parse:rule_args'],
     shebang = '/usr/bin/env python',
@@ -12,6 +12,6 @@ python_test(
     srcs = ['linter_test.py'],
     data = ['test_data'],
     deps = [
-        ':plz_build_linter',
+        ':please_build_linter',
     ],
 )

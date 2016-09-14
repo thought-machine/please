@@ -2,16 +2,13 @@ subinclude('//build_defs:go_bindata')
 
 cgo_library(
     name = 'parse',
-    srcs = glob(
-        [
-            '*.go',
-            'interpreter.*',
-        ],
-        excludes = [
-            '*_test.go',
-            'builtin_rules.go',
-        ],
-    ) + [':builtin_rules'],
+    srcs = glob([
+        '*.go',
+        'interpreter.*',
+    ], excludes = [
+        '*_test.go',
+        'builtin_rules.go',
+    ]) + [':builtin_rules'],
     visibility = ['PUBLIC'],
     deps = [
         ':builtin_rules',
@@ -80,7 +77,7 @@ cgo_test(
 
 gentest(
     name = 'lint_builtin_rules_test',
-    data = glob(['rules/*.build_defs']) + ['//src/lint:plz_build_linter'],
+    data = glob(['rules/*.build_defs']) + ['//src/lint:please_build_linter'],
     no_test_output = True,
-    test_cmd = '$(location //src/lint:plz_build_linter) src/parse/rules/*.build_defs',
+    test_cmd = '$(location //src/lint:please_build_linter) src/parse/rules/*.build_defs',
 )

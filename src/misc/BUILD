@@ -15,7 +15,7 @@ go_library(
 )
 
 go_binary(
-    name = 'plz_diff_graphs',
+    name = 'please_diff_graphs',
     main = 'plz_diff_graphs_main.go',
     visibility = ['PUBLIC'],
     deps = [
