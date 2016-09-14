@@ -22,6 +22,11 @@ import (
 	pb "cache/proto/rpc_cache"
 )
 
+// maxMsgSize is the maximum message size our gRPC server accepts.
+// We deliberately set this to something high since we don't want to limit artifact size here.
+// TODO(pebers): we should limit it on the client side though.
+const maxMsgSize = 200 * 1024 * 1024
+
 type RpcCacheServer struct {
 	cache        *Cache
 	readonlyKeys map[string]*x509.Certificate
@@ -197,5 +202,5 @@ func serverWithAuth(keyFile, certFile, caCertFile string) *grpc.Server {
 			log.Fatalf("Failed to find any PEM certificates in CA cert")
 		}
 	}
-	return grpc.NewServer(grpc.Creds(credentials.NewTLS(&config)))
+	return grpc.NewServer(grpc.Creds(credentials.NewTLS(&config)), grpc.MaxMsgSize(maxMsgSize))
 }
