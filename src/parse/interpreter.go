@@ -121,6 +121,9 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("GRPC_JAVA_DEP", config.Proto.JavaGrpcDep)
 	setConfigValue("GRPC_GO_DEP", config.Proto.GoGrpcDep)
 	setConfigValue("BAZEL_COMPATIBILITY", pythonBool(config.Bazel.Compatibility))
+	for k, v := range config.BuildConfig {
+		setConfigValue(strings.Replace(strings.ToUpper(k), "-", "_", -1), v)
+	}
 
 	// Load all the builtin rules
 	log.Debug("Loading builtin build rules...")

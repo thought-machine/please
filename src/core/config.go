@@ -175,7 +175,8 @@ type Configuration struct {
 		Config         string
 		FallbackConfig string
 	}
-	Cache struct {
+	BuildConfig map[string]string
+	Cache       struct {
 		Dir                   string
 		DirCacheCleaner       string
 		DirCacheHighWaterMark string
