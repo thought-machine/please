@@ -56,3 +56,8 @@ class TestLinter(unittest.TestCase):
         """Test detection of duplicates in arguments."""
         self.assertEqual([(9, linter.UNNECESSARY_DUPLICATE)],
                          lint('src/lint/test_data/test_duplicate_args'))
+
+    def test_file_suppressions(self):
+        """Test suppressing lint warnings for a whole file."""
+        self.assertEqual([(5, linter.ITERKEYS_USED)],
+                         lint('src/lint/test_data/test_file_suppressions'))

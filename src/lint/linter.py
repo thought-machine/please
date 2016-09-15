@@ -89,8 +89,10 @@ BUILTIN_FUNCTIONS = {k: v for k, v in JSON['functions'].items() if k not in WHIT
 DEPRECATED_FUNCTIONS = {'include_defs'}
 
 
-def is_suppressed(code, line):
+def is_suppressed(code, line, file_suppressions):
     """Returns True if the given code is suppressed on this line."""
+    if code in file_suppressions:
+        return True
     if '#' not in line:
         return False
     comment = line[line.index('#') + 1:]
@@ -167,10 +169,13 @@ def lint(filename, suppress=None):
     """Lint the given file. Yields the error codes found."""
     with open(filename) as f:
         contents = f.read()
-        # ast discards comments, but we use those to suppress messages.
-        lines = contents.split('\n')
+    # ast discards comments, but we use those to suppress messages.
+    lines = contents.split('\n')
+    # Find any lines that fully suppress messages.
+    matches = [re.match('^ *# lint: *disable=(.*)$', line) for line in lines]
+    suppressions = {match.group(1) for match in matches if match}
     for lineno, code in _lint(contents):
-        if not is_suppressed(code, lines[lineno - 1]):
+        if not is_suppressed(code, lines[lineno - 1], suppressions):
             yield lineno, code
 
 
