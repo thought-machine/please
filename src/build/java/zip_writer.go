@@ -129,7 +129,12 @@ func shouldInclude(name string, include, exclude []string) bool {
 // AddInitPyFiles adds an __init__.py file to every directory in the zip file that doesn't already have one.
 func AddInitPyFiles(w *zip.Writer) error {
 	m := files[w]
+	s := make([]string, 0, len(m))
 	for p := range m {
+		s = append(s, p)
+	}
+	sort.Strings(s)
+	for _, p := range s {
 		d := filepath.Dir(p)
 		if filepath.Base(d) == "__pycache__" {
 			continue // Don't need to add an __init__.py here.
@@ -144,6 +149,7 @@ func AddInitPyFiles(w *zip.Writer) error {
 			}
 			// Don't write one at the root, it's not necessary.
 			if initPyPath != "__init__.py" {
+				log.Debug("Adding %s", initPyPath)
 				m[initPyPath] = fileRecord{}
 				if err := WriteFile(w, initPyPath, []byte{}); err != nil {
 					return err

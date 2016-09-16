@@ -121,6 +121,14 @@ func anyDependencyHasChanged(target *core.BuildTarget) bool {
 	return inner(target)
 }
 
+func mustSourceHash(graph *core.BuildGraph, target *core.BuildTarget) []byte {
+	b, err := sourceHash(graph, target)
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	return b
+}
+
 // Calculate the hash of all sources of this rule
 func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
@@ -488,8 +496,9 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 	fmt.Printf("%s:\n", target.Label)
 	fmt.Printf("  Config: %s\n", b64(state.Hashes.Config))
-	fmt.Printf("  Rule (pre-build): %s\n", b64(RuleHash(target, false, false)))
-	fmt.Printf("  Rule (post-build): %s\n", b64(RuleHash(target, false, true)))
+	fmt.Printf("    Rule: %s (pre-build)\n", b64(RuleHash(target, false, false)))
+	fmt.Printf("    Rule: %s (post-build)\n", b64(RuleHash(target, false, true)))
+	fmt.Printf("  Source: %s\n", b64(mustSourceHash(state.Graph, target)))
 	// Note that the logic here mimics sourceHash, but I don't want to pollute that with
 	// optional printing nonsense since it's on our hot path.
 	for source := range core.IterSources(state.Graph, target) {
@@ -497,9 +506,9 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 	}
 	for _, tool := range target.Tools {
 		if label := tool.Label(); label != nil {
-			fmt.Printf("  Tool: %s: %s\n", *label, b64(mustTargetHash(state, state.Graph.TargetOrDie(*label))))
+			fmt.Printf("    Tool: %s: %s\n", *label, b64(mustShortTargetHash(state, state.Graph.TargetOrDie(*label))))
 		} else {
-			fmt.Printf("  Tool: %s: %s\n", tool, b64(mustPathHash(tool.FullPaths(state.Graph)[0])))
+			fmt.Printf("    Tool: %s: %s\n", tool, b64(mustPathHash(tool.FullPaths(state.Graph)[0])))
 		}
 	}
 }
