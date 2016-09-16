@@ -23,6 +23,14 @@ func ReverseDeps(graph *core.BuildGraph, labels []core.BuildLabel) {
 			}
 		}
 	}
+	// Check for anything subincluding this guy too
+	for _, pkg := range graph.PackageMap() {
+		for _, label := range labels {
+			if pkg.HasSubinclude(label) {
+				uniqueTargets[core.BuildLabel{PackageName: pkg.Name, Name: "all"}] = struct{}{}
+			}
+		}
+	}
 
 	targets := make(core.BuildLabels, 0, len(uniqueTargets))
 	for target := range uniqueTargets {

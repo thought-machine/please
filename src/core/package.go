@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// Representation of a package, ie. the part of the system (one or more
+// Package is a representation of a package, ie. the part of the system (one or more
 // directories) covered by a single build file.
 type Package struct {
 	// Name of the package, ie. //spam/eggs
@@ -27,6 +27,7 @@ type Package struct {
 	BuildCallbackMutex sync.Mutex
 }
 
+// NewPackage constructs a new package with the given name.
 func NewPackage(name string) *Package {
 	pkg := new(Package)
 	pkg.Name = name
@@ -35,14 +36,21 @@ func NewPackage(name string) *Package {
 	return pkg
 }
 
+// RegisterSubinclude adds a new subinclude to this package, guaranteeing uniqueness.
 func (pkg *Package) RegisterSubinclude(label BuildLabel) {
-	// Ensure these are unique.
+	if !pkg.HasSubinclude(label) {
+		pkg.Subincludes = append(pkg.Subincludes, label)
+	}
+}
+
+// HasSubinclude returns true if the package has subincluded the given label.
+func (pkg *Package) HasSubinclude(label BuildLabel) bool {
 	for _, l := range pkg.Subincludes {
 		if l == label {
-			return
+			return true
 		}
 	}
-	pkg.Subincludes = append(pkg.Subincludes, label)
+	return false
 }
 
 // RegisterOutput registers a new output file in the map.
