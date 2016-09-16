@@ -17,7 +17,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"output"
+	"cli"
 )
 
 var log = logging.MustGetLogger("please_maven")
@@ -366,8 +366,8 @@ func fetchMetadata(group, artifact string) *mavenMetadataXml {
 }
 
 func main() {
-	output.ParseFlagsOrDie("please_maven", "5.5.0", &opts)
-	output.InitLogging(opts.Verbosity, "", 0)
+	cli.ParseFlagsOrDie("please_maven", "5.5.0", &opts)
+	cli.InitLogging(opts.Verbosity)
 	for _, pkg := range opts.Args.Package {
 		split := strings.Split(pkg, ":")
 		if len(split) != 3 {

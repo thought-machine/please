@@ -1,6 +1,5 @@
-// Contains helper functions related to flag parsing.
-
-package output
+// Package cli contains helper functions related to flag parsing and logging.
+package cli
 
 import (
 	"fmt"

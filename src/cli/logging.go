@@ -1,6 +1,6 @@
 // Contains various utility functions related to logging.
 
-package output
+package cli
 
 import (
 	"bytes"
@@ -13,12 +13,13 @@ import (
 	"strings"
 	"sync"
 
+	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/op/go-logging.v1"
-
-	"core"
 )
 
-var log = logging.MustGetLogger("output")
+var log = logging.MustGetLogger("cli")
+var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
+var StripAnsi = regexp.MustCompile("\x1b[^m]+m")
 
 var logLevel = logging.WARNING
 var fileLogLevel = logging.WARNING
@@ -29,7 +30,7 @@ type logFileWriter struct {
 }
 
 func (writer logFileWriter) Write(p []byte) (n int, err error) {
-	return writer.file.Write(stripAnsi.ReplaceAllLiteral(p, []byte{}))
+	return writer.file.Write(StripAnsi.ReplaceAllLiteral(p, []byte{}))
 }
 
 // translateLogLevel translates our verbosity flags to logging levels.
@@ -47,25 +48,24 @@ func translateLogLevel(verbosity int) logging.Level {
 	}
 }
 
-// InitLogging initialises logging backends. verbosity controls output to shell,
-// logFile and logFileLevel what's (optionally) logged to a file as well.
-func InitLogging(verbosity int, logFile string, logFileLevel int) {
+// InitLogging initialises logging backends.
+func InitLogging(verbosity int) {
 	logLevel = translateLogLevel(verbosity)
-	fileLogLevel = translateLogLevel(logFileLevel)
 	logging.SetFormatter(logFormatter())
 	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
+}
 
-	if logFile != "" {
-		logFile = path.Join(core.RepoRoot, logFile)
-		if err := os.MkdirAll(path.Dir(logFile), core.DirPermissions); err != nil {
-			log.Fatalf("Error creating log file directory: %s", err)
-		}
-		if file, err := os.Create(logFile); err != nil {
-			log.Fatalf("Error opening log file: %s", err)
-		} else {
-			fileBackend = logging.NewLogBackend(logFileWriter{file: file}, "", 0)
-			setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
-		}
+// InitFileLogging initialises an optional logging backend to a file.
+func InitFileLogging(logFile string, logFileLevel int) {
+	fileLogLevel = translateLogLevel(logFileLevel)
+	if err := os.MkdirAll(path.Dir(logFile), os.ModeDir|0775); err != nil {
+		log.Fatalf("Error creating log file directory: %s", err)
+	}
+	if file, err := os.Create(logFile); err != nil {
+		log.Fatalf("Error opening log file: %s", err)
+	} else {
+		fileBackend = logging.NewLogBackend(logFileWriter{file: file}, "", 0)
+		setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
 	}
 }
 
@@ -90,7 +90,7 @@ func setLogBackend(backend logging.Backend) {
 }
 
 type logBackendFacade struct {
-	realBackend *logBackend // To work around the logging interface requiring us to pass by value.
+	realBackend *LogBackend // To work around the logging interface requiring us to pass by value.
 }
 
 func (backend logBackendFacade) Log(level logging.Level, calldepth int, rec *logging.Record) error {
@@ -100,22 +100,23 @@ func (backend logBackendFacade) Log(level logging.Level, calldepth int, rec *log
 		fmt.Print(b.String()) // Don't capture critical messages, just die immediately.
 		os.Exit(1)
 	}
-	backend.realBackend.mutex.Lock()
-	defer backend.realBackend.mutex.Unlock()
+	backend.realBackend.Lock()
+	defer backend.realBackend.Unlock()
 	backend.realBackend.LogMessages.PushBack(strings.TrimSpace(b.String()))
 	backend.realBackend.RecalcLines()
 	return nil
 }
 
-type logBackend struct {
+// LogBackend is the backend we use for logging during the interactive console display.
+type LogBackend struct {
+	sync.Mutex                                                            // Protects access to LogMessages
 	Rows, Cols, MaxRecords, InteractiveRows, MaxInteractiveRows, maxLines int
 	Output                                                                []string
 	LogMessages                                                           *list.List
-	mutex                                                                 sync.Mutex        // Protects access to LogMessages
 	Formatter                                                             logging.Formatter // TODO(pebers): seems a bit weird that we have to have this here, but it doesn't
 } //               seem to be possible to retrieve the formatter from outside the package?
 
-func (backend *logBackend) RecalcLines() {
+func (backend *LogBackend) RecalcLines() {
 	for backend.LogMessages.Len() >= backend.MaxRecords {
 		backend.LogMessages.Remove(backend.LogMessages.Front())
 	}
@@ -129,7 +130,17 @@ func (backend *logBackend) RecalcLines() {
 	backend.MaxInteractiveRows = backend.Rows - len(backend.Output) - 1
 }
 
-func (backend *logBackend) calcOutput() []string {
+// NewLogBackend constructs a new logging backend.
+func NewLogBackend(interactiveRows int) *LogBackend {
+	return &LogBackend{
+		InteractiveRows: interactiveRows,
+		MaxRecords:      10,
+		LogMessages:     list.New(),
+		Formatter:       logFormatter(),
+	}
+}
+
+func (backend *LogBackend) calcOutput() []string {
 	ret := []string{}
 	for e := backend.LogMessages.Back(); e != nil; e = e.Prev() {
 		new := backend.lineWrap(e.Value.(string))
@@ -143,8 +154,18 @@ func (backend *logBackend) calcOutput() []string {
 	return reverse(ret)
 }
 
+// SetActive sets this backend as the currently active log backend.
+func (backend *LogBackend) SetActive() {
+	setLogBackend(logBackendFacade{backend})
+}
+
+// Deactivate removes this backend as the currently active log backend.
+func (backend *LogBackend) Deactivate() {
+	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
+}
+
 // Wraps a string across multiple lines. Returned slice is reversed.
-func (backend *logBackend) lineWrap(msg string) []string {
+func (backend *LogBackend) lineWrap(msg string) []string {
 	lines := strings.Split(msg, "\n")
 	wrappedLines := make([]string, 0, len(lines))
 	for _, line := range lines {

@@ -5,8 +5,6 @@ go_library(
         'http_server.go',
         'rpc_server.go',
     ],
-    # Exposed for a test only.
-    visibility = ['//src/cache/...'],
     deps = [
         '//src/cache/proto:rpc_cache',
         '//src/cache/tools',
@@ -17,28 +15,30 @@ go_library(
         '//third_party/go:logging',
         '//third_party/go:mux',
     ],
+    # Exposed for a test only.
+    visibility = ['//src/cache/...'],
 )
 
 go_binary(
     name = 'http_cache_server_bin',
     main = 'http_server_main.go',
-    visibility = ['PUBLIC'],
     deps = [
         ':server',
-        '//src/output',
+        '//src/cli',
         '//third_party/go:logging',
     ],
+    visibility = ['PUBLIC'],
 )
 
 go_binary(
     name = 'rpc_cache_server_bin',
     main = 'rpc_server_main.go',
-    visibility = ['PUBLIC'],
     deps = [
         ':server',
-        '//src/output',
+        '//src/cli',
         '//third_party/go:logging',
     ],
+    visibility = ['PUBLIC'],
 )
 
 go_test(

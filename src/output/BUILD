@@ -42,9 +42,9 @@ for file_name, rule_name in sorted(TEMPLATED_FILES.items()):
 go_library(
     name = 'output',
     srcs = glob(['*.go'], excludes = TEMPLATED_FILES.keys() + ['*_test.go']) + TEMPLATED_FILES_DEPS,
-    visibility = ['PUBLIC'],
     deps = TEMPLATED_FILES_DEPS + [
         '//src/build',
+        '//src/cli',
         '//src/core',
         '//src/test',
         '//third_party/go:go-flags',
@@ -52,6 +52,7 @@ go_library(
         '//third_party/go:logging',
         '//third_party/go:terminal',
     ],
+    visibility = ['PUBLIC'],
 )
 
 go_test(
@@ -68,14 +69,5 @@ go_test(
     deps = [
         ':output',
         '//src/core',
-    ],
-)
-
-go_test(
-    name = 'flags_test',
-    srcs = ['flags_test.go'],
-    deps = [
-        ':output',
-        '//third_party/go:testify',
     ],
 )

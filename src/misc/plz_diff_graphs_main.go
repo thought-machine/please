@@ -14,8 +14,8 @@ import (
 	"os"
 	"strings"
 
+	"cli"
 	"misc"
-	"output"
 )
 
 var opts struct {
@@ -48,8 +48,8 @@ func readStdin() []string {
 }
 
 func main() {
-	output.ParseFlagsOrDie("Please graph differ", "5.5.0", &opts)
-	output.InitLogging(opts.Verbosity, "", 0)
+	cli.ParseFlagsOrDie("Please graph differ", "5.5.0", &opts)
+	cli.InitLogging(opts.Verbosity)
 	before := misc.ParseGraphOrDie(opts.Before)
 	after := misc.ParseGraphOrDie(opts.After)
 	if len(opts.ChangedFiles.Files) == 1 && opts.ChangedFiles.Files[0] == "-" {

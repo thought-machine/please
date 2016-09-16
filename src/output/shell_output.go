@@ -14,19 +14,21 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"gopkg.in/op/go-logging.v1"
 
 	"build"
+	"cli"
 	"core"
 	"test"
 )
 
+var log = logging.MustGetLogger("output")
+
 var startTime = time.Now()
-var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
 
 // SetColouredOutput forces on or off coloured output in logging and other console output.
 func SetColouredOutput(on bool) {
-	StdErrIsATerminal = on
+	cli.StdErrIsATerminal = on
 }
 
 // Used to track currently building targets.
@@ -372,9 +374,9 @@ var stripFormatting = regexp.MustCompile("\\$\\{[^\\}]+\\}")
 // printf is used throughout this package to print something to stderr with some niceties
 // around ANSI formatting codes.
 func printf(format string, args ...interface{}) {
-	if "${WHITE}"[0] == '$' || !StdErrIsATerminal {
+	if "${WHITE}"[0] == '$' || !cli.StdErrIsATerminal {
 		msg := stripFormatting.ReplaceAllString(fmt.Sprintf(format, args...), "")
-		fmt.Fprint(os.Stderr, stripAnsi.ReplaceAllString(msg, ""))
+		fmt.Fprint(os.Stderr, cli.StripAnsi.ReplaceAllString(msg, ""))
 	} else {
 		fmt.Fprintf(os.Stderr, format, args...)
 	}

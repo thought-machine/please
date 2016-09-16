@@ -2,19 +2,16 @@ package output
 
 import (
 	"bytes"
-	"container/list"
 	"fmt"
 	"os"
 	"os/signal"
-	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
 	"time"
 	"unsafe"
 
-	"gopkg.in/op/go-logging.v1"
-
+	"cli"
 	"core"
 )
 
@@ -23,17 +20,17 @@ import (
 var terminalClaimsToBeXterm = strings.HasPrefix(os.Getenv("TERM"), "xterm")
 
 func display(state *core.BuildState, buildingTargets *[]buildingTarget, stop <-chan interface{}, done chan<- interface{}) {
-	backend := logBackend{InteractiveRows: len(*buildingTargets), MaxRecords: 10, LogMessages: list.New(), Formatter: logFormatter()}
+	backend := cli.NewLogBackend(len(*buildingTargets))
 	go func() {
 		sig := make(chan os.Signal, 10)
 		signal.Notify(sig, syscall.SIGWINCH)
 		for {
 			<-sig
-			recalcWindowSize(&backend)
+			recalcWindowSize(backend)
 		}
 	}()
-	recalcWindowSize(&backend)
-	setLogBackend(logBackendFacade{&backend})
+	recalcWindowSize(backend)
+	backend.SetActive()
 
 	printLines(state, *buildingTargets, backend.MaxInteractiveRows, backend.Cols)
 	outputLines := len(backend.Output)
@@ -58,7 +55,7 @@ loop:
 	// Clear it all out.
 	moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows)
 	printf("\x1b[0J") // Clear out to end of screen.
-	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
+	backend.Deactivate()
 	done <- struct{}{}
 }
 
@@ -150,10 +147,10 @@ func tiocgwinsz() int {
 	}
 }
 
-func recalcWindowSize(backend *logBackend) {
+func recalcWindowSize(backend *cli.LogBackend) {
 	rows, cols := windowSize()
-	backend.mutex.Lock()
-	defer backend.mutex.Unlock()
+	backend.Lock()
+	defer backend.Unlock()
 	backend.Rows = rows - 4 // Give a little space at the edge for any off-by-ones
 	backend.Cols = cols
 	backend.RecalcLines()
@@ -164,9 +161,6 @@ func recalcWindowSize(backend *logBackend) {
 func lprintf(cols int, format string, args ...interface{}) {
 	printf(lprintfPrepare(cols, format, args...))
 }
-
-// Implementation of above. Split out to make testing easier.
-var stripAnsi = regexp.MustCompile("\x1b[^m]+m")
 
 func lprintfPrepare(cols int, format string, args ...interface{}) string {
 	s := fmt.Sprintf(format, args...)
@@ -211,7 +205,7 @@ func setWindowTitle(state *core.BuildState) {
 
 // SetWindowTitle sets the title of the current shell window.
 func SetWindowTitle(title string) {
-	if StdErrIsATerminal && terminalClaimsToBeXterm {
+	if cli.StdErrIsATerminal && terminalClaimsToBeXterm {
 		os.Stderr.Write([]byte(fmt.Sprintf("\033]0;%s\007", title)))
 	}
 }

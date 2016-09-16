@@ -1,13 +1,13 @@
 go_binary(
     name = 'cache_cleaner',
     main = 'cache_cleaner.go',
-    visibility = ['PUBLIC'],
     deps = [
         '//src/cache/tools',
-        '//src/output',
+        '//src/cli',
         '//third_party/go:humanize',
         '//third_party/go:logging',
     ],
+    visibility = ['PUBLIC'],
 )
 
 go_test(
@@ -18,7 +18,7 @@ go_test(
     ],
     deps = [
         '//src/cache/tools',
-        '//src/output',
+        '//src/cli',
         '//third_party/go:humanize',
         '//third_party/go:logging',
         '//third_party/go:testify',

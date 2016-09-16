@@ -13,12 +13,12 @@ go_library(
 go_binary(
     name = 'please_go_test',
     main = 'plz_go_test.go',
-    visibility = ['PUBLIC'],
     deps = [
         ':buildgo',
-        '//src/output',
+        '//src/cli',
         '//third_party/go:logging',
     ],
+    visibility = ['PUBLIC'],
 )
 
 go_test(

@@ -1,10 +1,10 @@
 go_binary(
     name = 'please',
-    visibility = ['PUBLIC'],
     deps = [
         '//src/build',
         '//src/cache',
         '//src/clean',
+        '//src/cli',
         '//src/core',
         '//src/metrics',
         '//src/output',
@@ -19,6 +19,7 @@ go_binary(
         '//third_party/go:logging',
         '//third_party/go:osext',
     ],
+    visibility = ['PUBLIC'],
 )
 
 for engine in ['pypy', 'python2', 'python3']:

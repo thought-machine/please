@@ -16,7 +16,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"build/java"
-	"output"
+	"cli"
 )
 
 var log = logging.MustGetLogger("jarcat")
@@ -127,13 +127,13 @@ var opts struct {
 }
 
 func main() {
-	output.ParseFlagsOrDie("Jarcat", "5.5.0", &opts)
+	cli.ParseFlagsOrDie("Jarcat", "5.5.0", &opts)
 	if opts.DumbMode {
 		opts.Suffix = nil
 		opts.ExcludeSuffix = nil
 		opts.IncludeOther = true
 	}
-	output.InitLogging(opts.Verbosity, "", 0)
+	cli.InitLogging(opts.Verbosity)
 	if err := combine(opts.Out, opts.In, opts.Preamble, opts.StripPrefix, opts.MainClass,
 		opts.ExcludeInternalPrefix, opts.ExcludeSuffix, opts.Suffix, opts.IncludeInternalPrefix,
 		opts.Strict, opts.IncludeOther, opts.AddInitPy, !opts.NoDirEntries, opts.RenameDirs); err != nil {

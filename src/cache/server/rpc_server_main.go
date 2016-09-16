@@ -6,7 +6,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"cache/server"
-	"output"
+	"cli"
 )
 
 var log = logging.MustGetLogger("rpc_cache_server")
@@ -18,10 +18,10 @@ var opts struct {
 	LogFile   string `long:"log_file" description:"File to log to (in addition to stdout)"`
 
 	CleanFlags struct {
-		LowWaterMark   output.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"18G"`
-		HighWaterMark  output.ByteSize `short:"i" long:"high_water_mark" description:"Max size of cache to clean at" default:"20G"`
-		CleanFrequency output.Duration `short:"f" long:"clean_frequency" description:"Frequency to clean cache at" default:"10m"`
-		MaxArtifactAge output.Duration `short:"m" long:"max_artifact_age" description:"Clean any artifact that's not been read in this long" default:"720h"`
+		LowWaterMark   cli.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"18G"`
+		HighWaterMark  cli.ByteSize `short:"i" long:"high_water_mark" description:"Max size of cache to clean at" default:"20G"`
+		CleanFrequency cli.Duration `short:"f" long:"clean_frequency" description:"Frequency to clean cache at" default:"10m"`
+		MaxArtifactAge cli.Duration `short:"m" long:"max_artifact_age" description:"Clean any artifact that's not been read in this long" default:"720h"`
 	} `group:"Options controlling when to clean the cache"`
 
 	TLSFlags struct {
@@ -34,8 +34,9 @@ var opts struct {
 }
 
 func main() {
-	output.ParseFlagsOrDie("Please RPC cache server", "5.5.0", &opts)
-	output.InitLogging(opts.Verbosity, opts.LogFile, opts.Verbosity)
+	cli.ParseFlagsOrDie("Please RPC cache server", "5.5.0", &opts)
+	cli.InitLogging(opts.Verbosity)
+	cli.InitFileLogging(opts.LogFile, opts.Verbosity)
 	if (opts.TLSFlags.KeyFile == "") != (opts.TLSFlags.CertFile == "") {
 		log.Fatalf("Must pass both --key_file and --cert_file if you pass one")
 	} else if opts.TLSFlags.KeyFile == "" && (opts.TLSFlags.WritableCerts != "" || opts.TLSFlags.ReadonlyCerts != "") {

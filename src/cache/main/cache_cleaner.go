@@ -16,7 +16,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"cache/tools"
-	"output"
+	"cli"
 )
 
 var log = logging.MustGetLogger("cache_cleaner")
@@ -108,15 +108,15 @@ func start(directory string, highWaterMark, lowWaterMark int64) {
 }
 
 var opts struct {
-	Verbosity     int             `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
-	LowWaterMark  output.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"8G"`
-	HighWaterMark output.ByteSize `short:"i" long:"high_water_mark" description:"Max size of cache to clean at" default:"10G"`
-	Directory     string          `short:"d" long:"dir" required:"true" description:"Location of cache directory"`
+	Verbosity     int          `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
+	LowWaterMark  cli.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"8G"`
+	HighWaterMark cli.ByteSize `short:"i" long:"high_water_mark" description:"Max size of cache to clean at" default:"10G"`
+	Directory     string       `short:"d" long:"dir" required:"true" description:"Location of cache directory"`
 }
 
 func main() {
-	output.ParseFlagsOrDie("Please directory cache cleaner", "5.5.0", &opts)
-	output.InitLogging(opts.Verbosity, "", 0)
+	cli.ParseFlagsOrDie("Please directory cache cleaner", "5.5.0", &opts)
+	cli.InitLogging(opts.Verbosity)
 	start(opts.Directory, int64(opts.HighWaterMark), int64(opts.LowWaterMark))
 	os.Exit(0)
 }

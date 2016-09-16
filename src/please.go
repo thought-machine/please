@@ -15,6 +15,7 @@ import (
 	"build"
 	"cache"
 	"clean"
+	"cli"
 	"core"
 	"metrics"
 	"output"
@@ -425,7 +426,7 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool 
 	if interactiveOutput && plainOutput {
 		log.Fatal("Can't pass both --interactive_output and --plain_output")
 	}
-	return interactiveOutput || (!plainOutput && output.StdErrIsATerminal && verbosity < 4)
+	return interactiveOutput || (!plainOutput && cli.StdErrIsATerminal && verbosity < 4)
 }
 
 func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
@@ -577,7 +578,7 @@ func activeCommand(parser *flags.Parser) string {
 }
 
 func main() {
-	parser, extraArgs, flagsErr := output.ParseFlags("Please", &opts, os.Args)
+	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.OutputFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
@@ -589,12 +590,12 @@ func main() {
 		output.SetColouredOutput(false)
 	}
 	// Init logging, but don't do file output until we've chdir'd.
-	output.InitLogging(opts.OutputFlags.Verbosity, "", 0)
+	cli.InitLogging(opts.OutputFlags.Verbosity)
 
 	command := activeCommand(parser)
 	if command == "init" {
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
-			output.ParseFlagsFromArgsOrDie("Please", &opts, os.Args)
+			cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion, &opts, os.Args)
 		}
 		// If we're running plz init then we obviously don't expect to read a config file.
 		utils.InitConfig(opts.Init.Dir, opts.Init.BazelCompatibility)
@@ -612,7 +613,9 @@ func main() {
 		log.Fatalf("%s", err)
 	}
 	// Reset this now we're at the repo root.
-	output.InitLogging(opts.OutputFlags.Verbosity, opts.OutputFlags.LogFile, opts.OutputFlags.LogFileLevel)
+	if opts.OutputFlags.LogFile != "" {
+		cli.InitFileLogging(path.Join(core.RepoRoot, opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel)
+	}
 
 	config = readConfig(command == "update")
 
@@ -623,7 +626,7 @@ func main() {
 		for k, v := range config.Aliases {
 			argv = strings.Replace(argv, k, v, 1)
 		}
-		parser = output.ParseFlagsFromArgsOrDie("Please", &opts, strings.Fields(argv))
+		parser = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion, &opts, strings.Fields(argv))
 		command = activeCommand(parser)
 	}
 

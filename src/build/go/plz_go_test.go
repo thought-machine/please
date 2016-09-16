@@ -10,7 +10,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"build/buildgo"
-	"output"
+	"cli"
 )
 
 var log = logging.MustGetLogger("plz_go_test")
@@ -27,8 +27,8 @@ var opts struct {
 }
 
 func main() {
-	output.ParseFlagsOrDie("plz_go_test", "5.5.0", &opts)
-	output.InitLogging(opts.Verbosity, "", 0)
+	cli.ParseFlagsOrDie("plz_go_test", "5.5.0", &opts)
+	cli.InitLogging(opts.Verbosity)
 	coverVars, err := buildgo.FindCoverVars(opts.Dir, opts.Exclude)
 	if err != nil {
 		log.Fatalf("Error scanning for coverage: %s", err)

@@ -1,9 +1,10 @@
 package output
 
-import "strings"
-import "testing"
+import (
+	"testing"
 
-import "core"
+	"core"
+)
 
 func TestLimitedPrintfSimple(t *testing.T) {
 	assertEquals(t, "wibble wobble", lprintfPrepare(20, "wibble wobble"))
@@ -27,19 +28,6 @@ func TestLimitedPrintfAnsiNotCountedWhenReducing(t *testing.T) {
 func TestNewlinesStillWritte(t *testing.T) {
 	// Test that newline still gets written (it doesn't count as horizontal space and is Very Important)
 	assertEquals(t, "\x1b[30mwibble ...\x1b[1m\n", lprintfPrepare(10, "%s %s\n", "\x1b[30mwibble", "wobble\x1b[1m"))
-}
-
-func TestLineWrap(t *testing.T) {
-	backend := logBackend{Cols: 80, maxLines: 2}
-
-	s := backend.lineWrap(strings.Repeat("a", 40))
-	assertEquals(t, strings.Repeat("a", 40), strings.Join(s, "\n"))
-
-	s = backend.lineWrap(strings.Repeat("a", 100))
-	assertEquals(t, strings.Repeat("a", 20)+"\n"+strings.Repeat("a", 80), strings.Join(s, "\n"))
-
-	s = backend.lineWrap(strings.Repeat("a", 80))
-	assertEquals(t, strings.Repeat("a", 80), strings.Join(s, "\n"))
 }
 
 func assertEquals(t *testing.T, expected, actual string) {
