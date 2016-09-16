@@ -6,7 +6,7 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
                  expect_file_exists=None, expect_file_doesnt_exist=None):
     # Please isn't really designed to work this way (running a test against the entire source repo)
     # but we can make it do it and it's a convenient way of testing the tool itself.
-    cmd = cmd.replace('plz', '$(location //src:please) --nolock --log_file build.log --log_file_level 4')
+    cmd = cmd.replace('plz', '$(location //src:please) --nolock')
     data = (data or []) + ['//src:please', '//src:please_parser_python2']
     if expected_failure:
         test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd
