@@ -83,7 +83,8 @@ var opts struct {
 	} `command:"rebuild" description:"Forces a rebuild of one or more targets"`
 
 	Hash struct {
-		Args struct {
+		Detailed bool `long:"detailed" description:"Produces a detailed breakdown of the hash"`
+		Args     struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"hash" description:"Calculates hash for one or more targets"`
@@ -227,7 +228,12 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"hash": func() bool {
-		success, _ := runBuild(opts.Hash.Args.Targets, true, false, false)
+		success, state := runBuild(opts.Hash.Args.Targets, true, false, false)
+		if opts.Hash.Detailed {
+			for _, target := range state.ExpandOriginalTargets() {
+				build.PrintHashes(state, state.Graph.TargetOrDie(target))
+			}
+		}
 		return success
 	},
 	"test": func() bool {

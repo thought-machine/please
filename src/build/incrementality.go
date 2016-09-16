@@ -482,3 +482,24 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 	}
 	return append(hash, h.Sum(nil)...), nil
 }
+
+// PrintHashes prints the various hashes for a target to stdout.
+// It's used by plz hash --detailed to show a breakdown of the input hashes of a target.
+func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
+	fmt.Printf("%s:\n", target.Label)
+	fmt.Printf("  Config: %s\n", b64(state.Hashes.Config))
+	fmt.Printf("  Rule (pre-build): %s\n", b64(RuleHash(target, false, false)))
+	fmt.Printf("  Rule (post-build): %s\n", b64(RuleHash(target, false, true)))
+	// Note that the logic here mimics sourceHash, but I don't want to pollute that with
+	// optional printing nonsense since it's on our hot path.
+	for source := range core.IterSources(state.Graph, target) {
+		fmt.Printf("  Source: %s: %s\n", source.Src, b64(mustPathHash(source.Src)))
+	}
+	for _, tool := range target.Tools {
+		if label := tool.Label(); label != nil {
+			fmt.Printf("  Tool: %s: %s\n", *label, b64(mustTargetHash(state, state.Graph.TargetOrDie(*label))))
+		} else {
+			fmt.Printf("  Tool: %s: %s\n", tool, b64(mustPathHash(tool.FullPaths(state.Graph)[0])))
+		}
+	}
+}
