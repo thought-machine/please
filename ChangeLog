@@ -1,3 +1,9 @@
+Version 5.5.1
+-------------
+
+    * Fixed several potential sources of nondeterminism in various places.
+
+
 Version 5.5.0
 -------------
 
