@@ -366,7 +366,7 @@ func fetchMetadata(group, artifact string) *mavenMetadataXml {
 }
 
 func main() {
-	output.ParseFlagsOrDie("please_maven", &opts)
+	output.ParseFlagsOrDie("please_maven", "5.5.0", &opts)
 	output.InitLogging(opts.Verbosity, "", 0)
 	for _, pkg := range opts.Args.Package {
 		split := strings.Split(pkg, ":")

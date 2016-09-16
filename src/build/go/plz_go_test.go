@@ -27,7 +27,7 @@ var opts struct {
 }
 
 func main() {
-	output.ParseFlagsOrDie("plz_go_test", &opts)
+	output.ParseFlagsOrDie("plz_go_test", "5.5.0", &opts)
 	output.InitLogging(opts.Verbosity, "", 0)
 	coverVars, err := buildgo.FindCoverVars(opts.Dir, opts.Exclude)
 	if err != nil {

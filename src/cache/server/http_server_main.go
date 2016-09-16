@@ -28,7 +28,7 @@ var opts struct {
 }
 
 func main() {
-	output.ParseFlagsOrDie("Please RPC cache server", &opts)
+	output.ParseFlagsOrDie("Please HTTP cache server", "5.5.0", &opts)
 	output.InitLogging(opts.Verbosity, opts.LogFile, opts.Verbosity)
 	log.Notice("Initialising cache server...")
 	cache := server.NewCache(opts.Dir, time.Duration(opts.CleanFlags.CleanFrequency),

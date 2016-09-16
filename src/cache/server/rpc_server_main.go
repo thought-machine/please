@@ -34,7 +34,7 @@ var opts struct {
 }
 
 func main() {
-	output.ParseFlagsOrDie("Please RPC cache server", &opts)
+	output.ParseFlagsOrDie("Please RPC cache server", "5.5.0", &opts)
 	output.InitLogging(opts.Verbosity, opts.LogFile, opts.Verbosity)
 	if (opts.TLSFlags.KeyFile == "") != (opts.TLSFlags.CertFile == "") {
 		log.Fatalf("Must pass both --key_file and --cert_file if you pass one")

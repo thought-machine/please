@@ -48,7 +48,7 @@ func readStdin() []string {
 }
 
 func main() {
-	output.ParseFlagsOrDie("Please graph differ", &opts)
+	output.ParseFlagsOrDie("Please graph differ", "5.5.0", &opts)
 	output.InitLogging(opts.Verbosity, "", 0)
 	before := misc.ParseGraphOrDie(opts.Before)
 	after := misc.ParseGraphOrDie(opts.After)

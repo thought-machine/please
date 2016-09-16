@@ -115,7 +115,7 @@ var opts struct {
 }
 
 func main() {
-	output.ParseFlagsOrDie("Please directory cache cleaner", &opts)
+	output.ParseFlagsOrDie("Please directory cache cleaner", "5.5.0", &opts)
 	output.InitLogging(opts.Verbosity, "", 0)
 	start(opts.Directory, int64(opts.HighWaterMark), int64(opts.LowWaterMark))
 	os.Exit(0)

@@ -127,7 +127,7 @@ var opts struct {
 }
 
 func main() {
-	output.ParseFlagsOrDie("Jarcat", &opts)
+	output.ParseFlagsOrDie("Jarcat", "5.5.0", &opts)
 	if opts.DumbMode {
 		opts.Suffix = nil
 		opts.ExcludeSuffix = nil
