@@ -369,7 +369,9 @@ func AddOutputPost(cPackage uintptr, cTarget *C.char, cOut *C.char) *C.char {
 	}
 	out := C.GoString(cOut)
 	pkg := unsizep(cPackage)
-	pkg.RegisterOutput(out, target)
+	if err := pkg.RegisterOutput(out, target); err != nil {
+		return C.CString(err.Error())
+	}
 	target.AddOutput(out)
 	return nil
 }

@@ -67,13 +67,11 @@ go_get(
 
 go_get(
     name = 'grpc',
+    exported_deps = [':context'],
     get = 'google.golang.org/grpc',
     install = ['google.golang.org/grpc/health'],
     revision = 'v1.0.1-GA',
-    deps = [
-        ':context',
-        ':protobuf',
-    ],
+    deps = [':protobuf'],
 )
 
 go_get(
@@ -151,6 +149,7 @@ go_get(
     revision = 'c5b7fccd204277076155f10851dad72b76a49317',
     deps = [
         ':procfs',
+        ':protobuf',
     ],
 )
 

@@ -387,7 +387,7 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
     )
 
 
-def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
+def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=None, patch=None,
            binary=False, test_only=False, install=None, revision=None, strip=None):
     """Defines a dependency on a third-party Go library.
 
@@ -396,6 +396,7 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
       get (str): Target to get (eg. "github.com/gorilla/mux")
       outs (list): Output files from the rule. Default autodetects.
       deps (list): Dependencies
+      exported_deps (list): Dependencies to make available to anything using this rule.
       visibility (list): Visibility specification
       patch (str): Patch file to apply
       binary (bool): True if the output of the rule is a binary.
@@ -424,9 +425,9 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
         cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
     if patch:
         cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$(location %s)' % (subdir, patch))
-    cmd.append('go install -gcflags "-trimpath $TMP_DIR" ' + get)
-    if install:
-        cmd.extend('go install -gcflags "-trimpath $TMP_DIR" %s' % lib for lib in install)
+    cmd.append('go install -gcflags "-trimpath $TMP_DIR" ' + ' '.join([get] + (install or [])))
+    # Remove anything that was there already.
+    cmd.append('if [ -d $PKG ]; then find $PKG -name "*.a" | sed -e "s|$PKG/||g" | xargs rm -f; fi')
     if not binary:
         cmd.extend([
             'find . -name .git | xargs rm -rf',
@@ -439,6 +440,7 @@ def go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None,
         srcs=[patch] if patch else [],
         outs=outs,
         deps=deps,
+        exported_deps=exported_deps,
         tools=_GO_TOOL,
         visibility=visibility,
         building_description='Fetching...',
@@ -478,11 +480,17 @@ def _extra_outs(get):
     def _inner(name, output):
         last = '<>'
         for archive in output:
-            add_out(name, archive)
-            subpath = archive[archive.find('/', 6) + 1:-2]
-            if (not subpath.startswith(get) and not subpath.startswith(last) and
-                not get.startswith(subpath) and not last.startswith(subpath)):
-                add_out(name, 'src/' + subpath)
+            try:
+                add_out(name, archive)
+                subpath = archive[archive.find('/', 6) + 1:-2]
+                if (not subpath.startswith(get) and not subpath.startswith(last) and
+                    not get.startswith(subpath) and not last.startswith(subpath)):
+                        add_out(name, 'src/' + subpath)
+            except ParseError:
+                log.error("Looks like you have two go_get rules trying to output the "
+                          "same file; most likely you need to add some dependencies so "
+                          "that shared file is built independently.")
+                raise
             last = subpath
     return _inner
 
