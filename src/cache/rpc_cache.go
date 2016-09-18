@@ -172,6 +172,10 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 
 func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []byte) bool {
 	out := path.Join(target.OutDir(), file)
+	if err := os.MkdirAll(path.Dir(out), core.DirPermissions); err != nil {
+		log.Warning("Failed to create directory for artifacts: %s", err)
+		return false
+	}
 	if err := core.WriteFile(bytes.NewReader(body), out, fileMode(target)); err != nil {
 		log.Warning("RPC cache failed to write file %s", err)
 		return false

@@ -176,7 +176,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		}
 	}
 	if target.PostBuildFunction != 0 {
-		sout := strings.TrimSpace(string(out))
+		out = bytes.TrimSpace(out)
+		sout := string(out)
 		if postBuildOutput != "" {
 			// We've already run the post-build function once, it's not safe to do it again (e.g. if adding new
 			// targets, it will likely fail). Theoretically it should get the same output this time and hence would
