@@ -71,6 +71,7 @@ The core contributors so far are:
  * [Will Montgomery](https://github.com/csdigi)
  * [Fabian Siddiqi](https://github.com/FS89)
  * [Diana-Maria Costea](https://github.com/dianacostea)
+ * [Dimitar Pavlov](https://github.com/dimpavloff)
 
 Progress has been slightly hindered by our fearless leader Paul
 who continually insists that we should "get on with our work" and
