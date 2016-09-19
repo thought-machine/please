@@ -31,14 +31,13 @@ def sh_library(name, src, deps=None, visibility=None, link=True):
       src (str): Source file for the rule
       deps (list): Dependencies of this rule
       visibility (list): Visibility declaration of the rule.
-      link (bool): If True, outputs will be linked in plz-out; if False they'll be copied.
+      link (bool): Deprecated, has no effect.
     """
     filegroup(
         name=name,
         srcs=[src],
         deps=deps,
         visibility=visibility,
-        link=link,
         binary=True,
     )
 
