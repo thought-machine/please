@@ -24,7 +24,7 @@ _DEFAULT_GRPC_LABELS = ['grpc']
 
 def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None,
                   python_deps=None, cc_deps=None, java_deps=None, go_deps=None,
-                  languages=None, _is_grpc=False):
+                  languages=None, _is_grpc=False, test_only=False):
     """Compile a .proto file to generated code for various languages.
 
     Args:
@@ -39,6 +39,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
       java_deps (list): Additional deps to add to the java_library rules
       go_deps (list): Additional deps to add to the go_library rules
       languages (list): List of languages to generate rules for, chosen from the set {cc, py, go, java}.
+      test_only (bool): If True, can only be used in test rules.
     """
     if languages:
         for language in languages:
@@ -138,6 +139,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             post_build = post_build,
             labels = labels,
             needs_transitive_deps = True,
+            test_only = test_only,
             visibility = visibility,
         )
         provides[language] = ':' + lang_name
@@ -149,6 +151,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 hdrs = [':_%s#protoc_cc_hdrs' % name],
                 deps = deps + cc_deps,
                 visibility = visibility,
+                test_only = test_only,
                 compiler_flags = ['-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'] if _is_grpc else ['protobuf'],
             )
@@ -160,6 +163,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 srcs = [gen_dep],
                 deps = [CONFIG.PROTO_PYTHON_DEP] + deps + python_deps,
                 visibility = visibility,
+                test_only = test_only,
             )
 
         elif language == 'java':
@@ -168,6 +172,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 srcs = [gen_dep],
                 exported_deps = [CONFIG.PROTO_JAVA_DEP] + deps + java_deps,
                 visibility = visibility,
+                test_only = test_only,
             )
 
         elif language == 'go':
@@ -177,6 +182,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 out = name + '.a',
                 deps = [CONFIG.PROTO_GO_DEP] + deps + go_deps,
                 visibility = visibility,
+                test_only = test_only,
             )
             # Needed for things like cgo_test / cgo_library that need the source in expected places
             build_rule(
@@ -187,6 +193,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 cmd = 'mkdir -p $OUT && cp ${PKG}/*.go $OUT',
                 visibility = visibility,
                 requires = ['go_src'],
+                test_only = test_only,
             )
             provides['go_src'] = ':_%s#go_src' % name
 
@@ -199,6 +206,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         labels = labels,
         requires = ['proto'],
         output_is_complete = False,
+        test_only = test_only,
     )
     # This is the final rule that directs dependencies to the appropriate language.
     filegroup(
@@ -207,11 +215,12 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         provides = provides,
         visibility = visibility,
         labels = labels,
+        test_only = test_only,
     )
 
 
-def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
-                 python_deps=None, java_deps=None, go_deps=None, cc_deps=None, labels=None):
+def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_deps=None,
+                 java_deps=None, go_deps=None, cc_deps=None, labels=None, test_only=False):
     """Defines a rule for a grpc library.
 
     Args:
@@ -225,6 +234,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
       visibility (list): Visibility specification for the rule.
       languages (list): List of languages to generate rules for, chosen from the set {cc, py, go, java}.
       labels (list): List of labels to apply to this rule.
+      test_only (bool): If True, this rule can only be used by test rules.
     """
     # No plugin for Go, that's handled above since it's merged into the go_out argument.
     deps = deps or []
@@ -263,6 +273,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None,
         visibility=visibility,
         labels=(labels or []) + _DEFAULT_GRPC_LABELS,
         _is_grpc=True,
+        test_only=test_only,
     )
 
 
