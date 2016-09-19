@@ -8,8 +8,8 @@ implement something more advanced (ala .sar files or whatever).
 _TARBALL_BOUNDARY = '__TARFILE_FOLLOWS__'
 
 # NB: This string is formatted strangely due to bash variable expansion being a massive pain.
-_SH_BINARY_TMPL_PREFIX = """\
-#!%(shell_binary)s\n\
+_SH_EXEC="#!%s\n"
+_SH_BINARY_TMPL_PREFIX = """
 SKIP=\\\$(awk '/^%(tarball_boundary)s/ { print NR + 1; exit 0; }' \\\$0)\n\
 THIS=\\\$0\n\
 tail -n +\\\$SKIP \\\$THIS | tar -xz
@@ -59,19 +59,25 @@ def sh_binary(name, main, deps=None, visibility=None, shell='/bin/sh'):
     """
     tmpl_vars = {
         'tarball_boundary': _TARBALL_BOUNDARY,
-        'shell_binary': shell,
     }
 
-    cmds = ' && '.join([
-        # Inject bash code to untar the compressed files.
-        'echo "%s" > $OUT' % (_SH_BINARY_TMPL_PREFIX % tmpl_vars),
-        # Inject the user defined script.
-        'cat $SRCS >> $OUT',
-        # Inject the tar ball boundary.
-        'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_SUFFIX % tmpl_vars),
-        # Compress the dependent files and dump out into the bash script.
-        'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\.\///g" | tar zc -f - --files-from - >> $OUT',
-    ])
+    if deps:
+        cmds = ' && '.join([
+            # Inject bash code to untar the compressed files.
+            'echo "%s" > $OUT' % (_SH_EXEC % shell),
+            'echo "%s" > $OUT' % (_SH_BINARY_TMPL_PREFIX % tmpl_vars),
+            # Inject the user defined script.
+            'cat $SRCS >> $OUT',
+            # Inject the tar ball boundary.
+            'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_SUFFIX % tmpl_vars),
+            # Compress the dependent files and dump out into the bash script.
+            'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\.\///g" | tar zc -f - --files-from - >> $OUT',
+        ])
+    else:
+        cmds = ' && '.join([
+            'echo "%s" > $OUT' % (_SH_EXEC % shell),
+            'cat $SRCS >> $OUT',
+        ])
 
     build_rule(
         name = name,
