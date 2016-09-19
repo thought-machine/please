@@ -4,13 +4,11 @@
 # and retrieve everything from the cache.
 # This script assumes the initial bootstrap has already run.
 
-set -eu
-
 N="${1:-10}"
 
 for i in `seq 1 $N`; do
     echo "Round $i"
-    ./bootstrap.sh --plain_output
+    ./bootstrap.sh --plain_output || { echo "Bootstrap failed"; exit 1; }
     BUILDING="$(grep "Building target" plz-out/log/*.log)"
     if [ -n "$BUILDING" ]; then
         echo "Found building targets:"
