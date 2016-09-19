@@ -99,7 +99,7 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 			return
 		}
 		targets[target] = struct{}{}
-		for _, source := range target.Sources {
+		for _, source := range target.AllSources() {
 			if source.Label() == nil {
 				for _, src := range source.Paths(state.Graph) {
 					if info, err := os.Stat(src); err == nil && !info.IsDir() {

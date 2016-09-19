@@ -3,6 +3,7 @@ Version 5.5.2
 
     * Increased maximum message size limit on RPC cache server to 100MB since at some
       point gRPC started limiting it, and their 4MB default is too low for this case.
+    * Small fix for plz watch for targets with named sources.
 
 
 Version 5.5.1
