@@ -181,7 +181,7 @@ func ServeGrpcForever(port int, cache *Cache, keyFile, certFile, caCertFile, rea
 // serverWithAuth builds a gRPC server, possibly with authentication if key / cert files are given.
 func serverWithAuth(keyFile, certFile, caCertFile string) *grpc.Server {
 	if keyFile == "" {
-		return grpc.NewServer() // No auth.
+		return grpc.NewServer(grpc.MaxMsgSize(maxMsgSize)) // No auth.
 	}
 	log.Debug("Loading x509 key pair from key: %s cert: %s", keyFile, certFile)
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)

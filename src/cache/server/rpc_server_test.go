@@ -2,10 +2,12 @@
 package server
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"runtime"
 	"testing"
 	"time"
 
@@ -127,5 +129,27 @@ func TestDeleteAuth(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, err := c.Delete(ctx, &pb.DeleteRequest{})
+	assert.NoError(t, err)
+}
+
+func TestMaxMessageSize(t *testing.T) {
+	s := startServer(7677, false, "", "")
+	defer s.Stop()
+	c := buildClient(t, 7677, false)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := c.Store(ctx, &pb.StoreRequest{
+		Os:   runtime.GOOS,
+		Arch: runtime.GOARCH,
+		Hash: bytes.Repeat([]byte{'a'}, 28),
+		Artifacts: []*pb.Artifact{
+			{
+				Package: "src/cache/server",
+				Target:  "size_test",
+				File:    "size_test.txt",
+				Body:    bytes.Repeat([]byte{'a'}, 5*1024*1024),
+			},
+		},
+	})
 	assert.NoError(t, err)
 }
