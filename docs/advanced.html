@@ -103,7 +103,7 @@
       which will calculate it for you, and you can enter it in the BUILD file. At some point in the future we'd like
       to provide better tooling around this (eg. automatically updating the build file with a particular hash).</p>
 
-    <p>The reason for allowing multiple is for rules that generate different outputs on different architectures;
+    <p>The reason for allowing multiple hashes is for rules that generate different outputs on different architectures;
       this is common for Python libraries which have a compiled component, for example.</p>
 
     <p>For testing purposes you can run Please with the <code>--nohash_verification</code> flag which will reduce hash

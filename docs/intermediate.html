@@ -44,7 +44,7 @@
 	      genrule(
 	          name = '_%s_%s#translate' % (name, language),
 	          srcs=srcs,
-                  outs = ['_%s_%s_translated.txt' % (name, language),
+                  outs = ['_%s_%s_translated.txt' % (name, language)],
 	          cmd = 'cat $SRC | $(exe //tools:translate_tool) --language %s > $OUT' % language,
 	      )
 	      genrule(
