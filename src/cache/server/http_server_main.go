@@ -30,7 +30,9 @@ var opts struct {
 func main() {
 	cli.ParseFlagsOrDie("Please HTTP cache server", "5.5.0", &opts)
 	cli.InitLogging(opts.Verbosity)
-	cli.InitFileLogging(opts.LogFile, opts.Verbosity)
+	if opts.LogFile != "" {
+		cli.InitFileLogging(opts.LogFile, opts.Verbosity)
+	}
 	log.Notice("Initialising cache server...")
 	cache := server.NewCache(opts.Dir, time.Duration(opts.CleanFlags.CleanFrequency),
 		time.Duration(opts.CleanFlags.MaxArtifactAge),
