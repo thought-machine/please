@@ -8,11 +8,10 @@ implement something more advanced (ala .sar files or whatever).
 _TARBALL_BOUNDARY = '__TARFILE_FOLLOWS__'
 
 # NB: This string is formatted strangely due to bash variable expansion being a massive pain.
-_SH_EXEC="#!%s\n"
 _SH_BINARY_TMPL_PREFIX = """
 SKIP=\\\$(awk '/^%(tarball_boundary)s/ { print NR + 1; exit 0; }' \\\$0)\n\
 THIS=\\\$0\n\
-tail -n +\\\$SKIP \\\$THIS | tar -xz
+tail -n +\\\$SKIP \\\$THIS | tar -xz -C \\\$(dirname \\\$0)
 """
 
 _SH_BINARY_TMPL_SUFFIX = """
@@ -42,7 +41,7 @@ def sh_library(name, src, deps=None, visibility=None, link=True):
     )
 
 
-def sh_binary(name, main, deps=None, visibility=None, shell='/bin/sh'):
+def sh_binary(name, main, deps=None, visibility=None):
     """Generates a shell script binary.
 
     The resulting script will contain three things:
@@ -55,17 +54,18 @@ def sh_binary(name, main, deps=None, visibility=None, shell='/bin/sh'):
       main (str): The script to execute after all files have been uncompressed
       deps (list): Dependencies of this rule
       visibility (list): Visibility declaration of the rule.
-      shell (str): The shell to use when executing the produced script
     """
     tmpl_vars = {
         'tarball_boundary': _TARBALL_BOUNDARY,
     }
 
+    # No need to go through tar/untar and injecting code if there are no dependencies
     if deps:
         cmds = ' && '.join([
+            # Use the same shebang as the original script
+            'head -1 $SRCS > $OUT',
             # Inject bash code to untar the compressed files.
-            'echo "%s" > $OUT' % (_SH_EXEC % shell),
-            'echo "%s" > $OUT' % (_SH_BINARY_TMPL_PREFIX % tmpl_vars),
+            'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_PREFIX % tmpl_vars),
             # Inject the user defined script.
             'cat $SRCS >> $OUT',
             # Inject the tar ball boundary.
@@ -74,10 +74,7 @@ def sh_binary(name, main, deps=None, visibility=None, shell='/bin/sh'):
             'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\.\///g" | tar zc -f - --files-from - >> $OUT',
         ])
     else:
-        cmds = ' && '.join([
-            'echo "%s" > $OUT' % (_SH_EXEC % shell),
-            'cat $SRCS >> $OUT',
-        ])
+        cmds = 'cp $SRCS $OUT'
 
     build_rule(
         name = name,
