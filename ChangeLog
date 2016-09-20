@@ -1,8 +1,13 @@
+Version 5.5.4
+-------------
+
+    * Fix a bug where multiple filegroups writing the same file could race with one another.
+
 Version 5.5.3
 -------------
 
     * bugfix: make sh_binary work with and without dependencies
-    * sh_binary switched to use the same shebang as the original script (when there 
+    * sh_binary switched to use the same shebang as the original script (when there
       are dependencies)
 
 Version 5.5.2
