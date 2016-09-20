@@ -9,10 +9,9 @@ _TARBALL_BOUNDARY = '__TARFILE_FOLLOWS__'
 
 # NB: This string is formatted strangely due to bash variable expansion being a massive pain.
 _SH_BINARY_TMPL_PREFIX = """
-#!/bin/sh\n\
 SKIP=\\\$(awk '/^%(tarball_boundary)s/ { print NR + 1; exit 0; }' \\\$0)\n\
-THIS=\\\$(pwd)/\\\$0\n\
-tail -n +\\\$SKIP \\\$THIS | tar -xz
+THIS=\\\$0\n\
+tail -n +\\\$SKIP \\\$THIS | tar -xz -C \\\$(dirname \\\$0)
 """
 
 _SH_BINARY_TMPL_SUFFIX = """
@@ -57,19 +56,25 @@ def sh_binary(name, main, deps=None, visibility=None):
       visibility (list): Visibility declaration of the rule.
     """
     tmpl_vars = {
-        'tarball_boundary': _TARBALL_BOUNDARY
+        'tarball_boundary': _TARBALL_BOUNDARY,
     }
 
-    cmds = ' && '.join([
-        # Inject bash code to untar the compressed files.
-        'echo "%s" > $OUT' % (_SH_BINARY_TMPL_PREFIX % tmpl_vars),
-        # Inject the user defined script.
-        'cat $SRCS >> $OUT',
-        # Inject the tar ball boundary.
-        'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_SUFFIX % tmpl_vars),
-        # Compress the dependent files and dump out into the bash script.
-        'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\.\///g" | tar zc -f - --files-from - >> $OUT',
-    ])
+    # No need to go through tar/untar and injecting code if there are no dependencies
+    if deps:
+        cmds = ' && '.join([
+            # Use the same shebang as the original script
+            'head -1 $SRCS > $OUT',
+            # Inject bash code to untar the compressed files.
+            'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_PREFIX % tmpl_vars),
+            # Inject the user defined script.
+            'cat $SRCS >> $OUT',
+            # Inject the tar ball boundary.
+            'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_SUFFIX % tmpl_vars),
+            # Compress the dependent files and dump out into the bash script.
+            'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\.\///g" | tar zc -f - --files-from - >> $OUT',
+        ])
+    else:
+        cmds = 'cp $SRCS $OUT'
 
     build_rule(
         name = name,
