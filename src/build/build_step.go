@@ -112,6 +112,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		}
 	}
 	if target.IsFilegroup() {
+		log.Debug("Building %s...", target.Label)
 		return buildFilegroup(tid, state, target)
 	}
 	oldOutputHash, outputHashErr := OutputHash(target)
@@ -340,6 +341,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 	// TODO(pebers): The logic here is quite tortured, consider a (very careful) rewrite.
 	dereferencedOutput, _ := filepath.EvalSymlinks(realOutput)
 	if absOutput, _ := filepath.Abs(realOutput); tmpOutput == absOutput || realOutput == tmpOutput || dereferencedOutput == tmpOutput {
+		log.Debug("%s and %s are the same file, nothing to do", tmpOutput, realOutput)
 		return false, nil
 	}
 	if core.PathExists(realOutput) {
