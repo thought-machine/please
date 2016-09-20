@@ -1,4 +1,4 @@
-Version 5.5.2
+Version 5.5.3
 -------------
 
     * bugfix: make sh_binary work with and without dependencies
