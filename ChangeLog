@@ -1,3 +1,10 @@
+Version 5.5.5
+-------------
+
+    * Outputs are ordered canonically before hashing so tools like buildifier don't change
+      rule hashes.
+
+
 Version 5.5.4
 -------------
 

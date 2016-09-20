@@ -302,6 +302,20 @@ func TestOutMode(t *testing.T) {
 	assert.Equal(t, os.FileMode(0555), target.OutMode())
 }
 
+func TestOutputOrdering(t *testing.T) {
+	// Check that outputs come out ordered, this is important for hash stability; previously
+	// we preseved the original order, but tools like buildifier may reorder them assuming
+	// that the order of arguments is not important.
+	target1 := makeTarget("//src/core:target1", "")
+	target1.AddOutput("file1.txt")
+	target1.AddOutput("file2.txt")
+	target2 := makeTarget("//src/core:target2", "")
+	target2.AddOutput("file2.txt")
+	target2.AddOutput("file1.txt")
+	assert.Equal(t, target1.DeclaredOutputs(), target2.DeclaredOutputs())
+	assert.Equal(t, target1.Outputs(), target2.Outputs())
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
