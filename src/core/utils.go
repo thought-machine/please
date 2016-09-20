@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -127,8 +128,7 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 }
 
 // Copies either a single file or a directory.
-// If 'link' is true then we'll attempt to hardlink files instead of copying them
-// (on failure we still attempt a copy).
+// If 'link' is true then we'll hardlink files instead of copying them.
 func RecursiveCopyFile(from string, to string, mode os.FileMode, link bool) error {
 	if info, err := os.Stat(from); err == nil && info.IsDir() {
 		return filepath.Walk(from, func(name string, info os.FileInfo, err error) error {
@@ -159,11 +159,29 @@ func RecursiveCopyFile(from string, to string, mode os.FileMode, link bool) erro
 // Either copies or hardlinks a file based on the link argument.
 func copyOrLinkFile(from, to string, mode os.FileMode, link bool) error {
 	if link {
-		if err := os.Link(from, to); err == nil {
-			return nil
-		}
+		return os.Link(from, to)
 	}
 	return CopyFile(from, to, mode)
+}
+
+// IsSameFile returns true if two filenames describe the same underlying file (i.e. inode)
+func IsSameFile(a, b string) bool {
+	i1, err1 := getInode(a)
+	i2, err2 := getInode(b)
+	return err1 == nil && err2 == nil && i1 == i2
+}
+
+// getInode returns the inode of a file.
+func getInode(filename string) (uint64, error) {
+	fi, err := os.Stat(filename)
+	if err != nil {
+		return 0, err
+	}
+	s, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, fmt.Errorf("Not a syscall.Stat_t")
+	}
+	return s.Ino, nil
 }
 
 // TimeoutError is the type of error that's issued when a command times out.

@@ -353,9 +353,9 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 			log.Debug("Checking %s vs. %s, hashes match", tmpOutput, realOutput)
 			return false, nil
 		}
-	}
-	if err := os.RemoveAll(realOutput); err != nil {
-		return true, err
+		if err := os.RemoveAll(realOutput); err != nil {
+			return true, err
+		}
 	}
 	movePathHash(tmpOutput, realOutput, filegroup)
 	// Check if we need a directory for this output.
@@ -373,6 +373,12 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 		}
 	} else {
 		if err := core.RecursiveCopyFile(tmpOutput, realOutput, target.OutMode(), filegroup); err != nil {
+			if filegroup && os.IsExist(err) && core.IsSameFile(tmpOutput, realOutput) {
+				// It's possible for two filegroups to race building simultaneously. In that
+				// case one will fail with an ErrExist, which is OK as far as we're concerned
+				// here as long as the file we tried to write really is the same as the input.
+				return true, nil
+			}
 			return true, err
 		}
 	}
