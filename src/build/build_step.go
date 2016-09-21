@@ -372,7 +372,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 			return true, err
 		}
 	} else {
-		if err := core.RecursiveCopyFile(tmpOutput, realOutput, target.OutMode(), filegroup); err != nil {
+		if err := core.RecursiveCopyFile(tmpOutput, realOutput, target.OutMode(), filegroup, false); err != nil {
 			if filegroup && os.IsExist(err) && core.IsSameFile(tmpOutput, realOutput) {
 				// It's possible for two filegroups to race building simultaneously. In that
 				// case one will fail with an ErrExist, which is OK as far as we're concerned

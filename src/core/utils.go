@@ -129,7 +129,8 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 
 // Copies either a single file or a directory.
 // If 'link' is true then we'll hardlink files instead of copying them.
-func RecursiveCopyFile(from string, to string, mode os.FileMode, link bool) error {
+// If 'fallback' is true then we'll fall back to a copy if linking fails.
+func RecursiveCopyFile(from string, to string, mode os.FileMode, link, fallback bool) error {
 	if info, err := os.Stat(from); err == nil && info.IsDir() {
 		return filepath.Walk(from, func(name string, info os.FileInfo, err error) error {
 			dest := path.Join(to, name[len(from):])
@@ -143,23 +144,26 @@ func RecursiveCopyFile(from string, to string, mode os.FileMode, link bool) erro
 					return err
 				}
 				if fi.IsDir() {
-					return RecursiveCopyFile(name+"/", dest+"/", mode, link)
+					return RecursiveCopyFile(name+"/", dest+"/", mode, link, fallback)
 				} else {
-					return copyOrLinkFile(name, dest, mode, link)
+					return copyOrLinkFile(name, dest, mode, link, fallback)
 				}
 			} else {
-				return copyOrLinkFile(name, dest, mode, link)
+				return copyOrLinkFile(name, dest, mode, link, fallback)
 			}
 		})
 	} else {
-		return copyOrLinkFile(from, to, mode, link)
+		return copyOrLinkFile(from, to, mode, link, fallback)
 	}
 }
 
 // Either copies or hardlinks a file based on the link argument.
-func copyOrLinkFile(from, to string, mode os.FileMode, link bool) error {
+// Falls back to a copy if link fails and fallback is true.
+func copyOrLinkFile(from, to string, mode os.FileMode, link, fallback bool) error {
 	if link {
-		return os.Link(from, to)
+		if err := os.Link(from, to); err == nil || !fallback {
+			return err
+		}
 	}
 	return CopyFile(from, to, mode)
 }
@@ -414,7 +418,7 @@ func PrepareSource(sourcePath string, tmpPath string) error {
 	if !PathExists(sourcePath) {
 		return fmt.Errorf("Source file %s doesn't exist", sourcePath)
 	}
-	return RecursiveCopyFile(sourcePath, tmpPath, 0, true)
+	return RecursiveCopyFile(sourcePath, tmpPath, 0, true, true)
 }
 
 func PrepareSourcePair(pair sourcePair) error {

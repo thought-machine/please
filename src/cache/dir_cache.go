@@ -55,7 +55,7 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 	} else if err := os.MkdirAll(cacheDir, core.DirPermissions); err != nil {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 		return
-	} else if err := core.RecursiveCopyFile(outFile, cachedFile, fileMode(target), true); err != nil {
+	} else if err := core.RecursiveCopyFile(outFile, cachedFile, fileMode(target), true, true); err != nil {
 		// Cannot hardlink files into the cache, must copy them for reals.
 		log.Warning("Failed to store cache file %s: %s", cachedFile, err)
 	}
@@ -98,7 +98,7 @@ func (cache *dirCache) RetrieveExtra(target *core.BuildTarget, key []byte, out s
 		return false
 	}
 	// Recursively hardlink files back out of the cache
-	if err := core.RecursiveCopyFile(cachedOut, realOut, fileMode(target), true); err != nil {
+	if err := core.RecursiveCopyFile(cachedOut, realOut, fileMode(target), true, true); err != nil {
 		log.Warning("Failed to move cached file to output: %s -> %s: %s", cachedOut, realOut, err)
 		return false
 	}
