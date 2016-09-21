@@ -1,8 +1,13 @@
-Version 5.5.5
+Version 5.6.0
 -------------
 
     * Outputs are ordered canonically before hashing so tools like buildifier don't change
       rule hashes.
+    * maven_jar is split into separate rules for binary & source artifacts, for better
+      incrementality & being easier to consume by other rules (since source artifacts are
+      generally not part of the build and only there for help for IDEs).
+    * plz watch now discards events that do not relate to source files it cares about
+      (previously it would fire on any event in a relevant directory).
 
 
 Version 5.5.4
