@@ -298,7 +298,9 @@ func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
 // DeclaredOutputs returns the outputs from this target's original declaration.
 // Hence it's similar to Outputs() but without the resolving of other rule names.
 func (target *BuildTarget) DeclaredOutputs() []string {
-	return target.outputs
+	ret := target.outputs[:]
+	sort.Strings(ret)
+	return ret
 }
 
 // Outputs returns a slice of all the outputs of this rule.
@@ -314,6 +316,7 @@ func (target *BuildTarget) Outputs() []string {
 			ret = append(ret, out)
 		}
 	}
+	sort.Strings(ret)
 	return ret
 }
 
