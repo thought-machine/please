@@ -1,3 +1,5 @@
+// +build watch
+
 // Package watch provides a filesystem watcher that is used to rebuild affected targets.
 package watch
 
