@@ -10,6 +10,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/kardianos/osext"
+	"github.com/streamrail/concurrent-map"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
@@ -28,7 +29,8 @@ func Watch(state *core.BuildState, labels []core.BuildLabel) {
 		log.Fatalf("Error setting up watcher: %s", err)
 	}
 	// This sets up the actual watches. It must be done in a separate goroutine.
-	go startWatching(watcher, state, labels)
+	files := cmap.New()
+	go startWatching(watcher, state, labels, files)
 
 	// If any of the targets are tests, we'll run plz test, otherwise just plz build.
 	command := "build"
@@ -43,12 +45,11 @@ func Watch(state *core.BuildState, labels []core.BuildLabel) {
 	for {
 		select {
 		case event := <-watcher.Events:
-			// TODO(pebers): A nice, but surprisingly tricky enhancement here would be to actually
-			//               get the complete list of sources and check against that, rather than
-			//               triggering off any event in the directory. It probably doesn't matter
-			//               *that* much though because rebuilds will be fast if the changes are
-			//               irrelevant.
-			log.Notice("Event: %s", event)
+			log.Info("Event: %s", event)
+			if !files.Has(event.Name) {
+				log.Notice("Skipping notification for %s", event.Name)
+				continue
+			}
 			// Quick debounce; poll and discard all events for the next brief period.
 		outer:
 			for {
@@ -88,7 +89,7 @@ func runBuild(state *core.BuildState, command string, labels []core.BuildLabel) 
 	}
 }
 
-func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel) {
+func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel, files cmap.ConcurrentMap) {
 	// Deduplicate seen targets & sources.
 	targets := map[*core.BuildTarget]struct{}{}
 	dirs := map[string]struct{}{}
@@ -102,6 +103,7 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 		for _, source := range target.AllSources() {
 			if source.Label() == nil {
 				for _, src := range source.Paths(state.Graph) {
+					files.Set(src, struct{}{})
 					if info, err := os.Stat(src); err == nil && !info.IsDir() {
 						src = path.Dir(src)
 					}
