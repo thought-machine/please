@@ -115,8 +115,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                         CONFIG.PROTO_PYTHON_PACKAGE)
         post_build = None
         if need_post_build or language == 'java':
-            cmds.append('find . ' + ' -or '.join('-name "*%s"' % ext
-                                                 for ext in _PROTO_FILE_EXTENSIONS[language]))
+            cmds.append('find . %s | sort' % ' -or '.join('-name "*%s"' % ext
+                                                          for ext in _PROTO_FILE_EXTENSIONS[language]))
             post_build = _annotate_outs(language, _PROTO_FILE_EXTENSIONS[language])
 
         if language == 'go':
