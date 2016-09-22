@@ -84,6 +84,24 @@ func TestAddOutput(t *testing.T) {
 	}
 }
 
+func TestAddOutputSorting(t *testing.T) {
+	target := makeTarget("//src/test/python:lib1", "")
+	target.AddOutput("1.py")
+	target.AddOutput("2.py")
+	target.AddOutput("1.py")
+	target.AddOutput("3.py")
+	target.AddOutput("1.pyx")
+	target.AddOutput("x.pyx")
+	expected := []string{
+		"1.py",
+		"1.pyx",
+		"2.py",
+		"3.py",
+		"x.pyx",
+	}
+	assert.Equal(t, expected, target.Outputs())
+}
+
 func TestAddSource(t *testing.T) {
 	target := makeTarget("//src/test/python:lib1", "")
 	target.AddSource(ParseBuildLabel("//src/test/python:lib2", ""))

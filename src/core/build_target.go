@@ -298,9 +298,7 @@ func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
 // DeclaredOutputs returns the outputs from this target's original declaration.
 // Hence it's similar to Outputs() but without the resolving of other rule names.
 func (target *BuildTarget) DeclaredOutputs() []string {
-	ret := target.outputs[:]
-	sort.Strings(ret)
-	return ret
+	return target.outputs
 }
 
 // Outputs returns a slice of all the outputs of this rule.
@@ -699,8 +697,14 @@ func (target *BuildTarget) toolPath() string {
 
 // AddOutput adds a new output to the target if it's not already there.
 func (target *BuildTarget) AddOutput(output string) {
-	for _, out := range target.outputs {
+	for i, out := range target.outputs {
 		if out == output {
+			return
+		} else if out > output {
+			// Insert in sorted order, with an attempt to be efficient.
+			target.outputs = append(target.outputs, "")
+			copy(target.outputs[i+1:], target.outputs[i:])
+			target.outputs[i] = output
 			return
 		}
 	}
