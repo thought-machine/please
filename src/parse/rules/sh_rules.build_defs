@@ -128,3 +128,32 @@ def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=N
         test_timeout=timeout,
         container=container,
     )
+
+
+def sh_cmd(name, cmd, out=None, shell='/bin/sh', labels=None, deps=None, visibility=None):
+    """Generates a runnable shell script from a command.
+
+    This is doable with a genrule with a little effort but it's awkward enough to be nice
+    to have a builtin.
+    The command is subject to Please's usual variable expansion at build time. Note that if
+    you want `plz run` to transparently work and refer to other files, you may need to use
+    $(out_location ...) instead of $(location ...).
+
+    Args:
+      name (str): Name of the rule.
+      cmd (str): Command to write into the output script file.
+      out (str): Name of the output file to create. Defaults to name + .sh.
+      shell (str): Shell to invoke in, by default /bin/sh.
+      labels (list): Labels to apply to this rule.
+      deps (list): Any dependencies for this rule.
+      visibility (list): Visibility declaration of the rule.
+    """
+    build_rule(
+        name = name,
+        outs = [out or name + '.sh'],
+        cmd = 'cat > $OUT << EOF\n#!%s\n%s\nEOF' % (shell, cmd),
+        labels = labels,
+        deps = deps,
+        visibility = visibility,
+        binary = True,
+    )
