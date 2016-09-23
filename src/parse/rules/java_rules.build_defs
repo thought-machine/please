@@ -272,11 +272,7 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
         for line in output:
             if not line:
                 continue
-            try:
-                group, artifact, version, licences = line.split(':')
-            except ValueError:
-                group, artifact, version = line.split(':')
-                licences = None
+            group, artifact, version, sources, licences = _parse_maven_artifact(line)
             if artifact in exclude:
                 continue
             # Deduplicate packages
@@ -290,7 +286,8 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
                     id=line,
                     repository=repository,
                     hash=get_hash(id, artifact),
-                    licences=licences.split('|') if licences else None,
+                    licences=licences,
+                    sources=sources,
                     # We deliberately don't make this rule visible externally.
                 )
             add_exported_dep(name, ':' + artifact)
@@ -396,12 +393,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
     if not artifact_type:
         id, _, artifact_type = id.partition('@')
         artifact_type = artifact_type or 'jar'
-    try:
-        group, artifact, version = id.split(':')
-    except ValueError:
-        group, artifact, version, licence = id.split(':')
-        if licence and not licences:
-            licences = licence.split('|')
+    group, artifact, version, sources, licences = _parse_maven_artifact(id, sources, licences)
     artifact_type = '.' + artifact_type
     out_artifact_type = artifact_type
     if binary:
@@ -486,6 +478,23 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         test_only=test_only,
         output_is_complete = False,
     )
+
+
+def _parse_maven_artifact(id, sources=True, licences=None):
+    """Parses a Maven artifact in group:artifact:version format, with possibly some extras."""
+    parts = id.split(':')
+    if len(parts) == 5:
+        group, artifact, version = parts[:3]
+        sources = parts[3] == 'src'
+        licences = parts[4].split('|')
+    elif len(parts) == 4:
+        group, artifact, version = parts[:3]
+        sources = parts[3] == 'src'
+    elif len(parts) == 3:
+        group, artifact, version = parts
+    else:
+        raise ParseError('Unknown artifact format: %s (should be group:artifact:version)' % id)
+    return group, artifact, version, sources, licences
 
 
 def _java_binary_cmd(main_class, jvm_args, test_package=None):

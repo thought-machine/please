@@ -275,11 +275,12 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 		}
 		// Print in forward order if we're not doing build rules
 		if !opts.BuildRules {
+			s := hasSource(dep.GroupId, dep.ArtifactId, dep.Version)
+			fmt.Printf("%s:%s:%s:%s", dep.GroupId, dep.ArtifactId, dep.Version, s)
 			if len(licences) > 0 {
-				fmt.Printf("%s:%s:%s:%s\n", dep.GroupId, dep.ArtifactId, dep.Version, strings.Join(licences, "|"))
-			} else {
-				fmt.Printf("%s:%s:%s\n", dep.GroupId, dep.ArtifactId, dep.Version)
+				fmt.Printf(":%s", strings.Join(licences, "|"))
 			}
+			fmt.Print("\n")
 		}
 		opts.Exclude = append(opts.Exclude, dep.ArtifactId) // Don't do this one again.
 		// Recurse so we get all transitive dependencies
@@ -288,6 +289,25 @@ func handleDependencies(deps pomDependencies, properties map[string]string, grou
 		process(pom, dep.GroupId, dep.ArtifactId, dep.Version)
 		currentIndent -= 2
 	}
+}
+
+// hasSource returns a string describing whether the given target has sources or not.
+func hasSource(group, artifact, version string) string {
+	url := buildUrl(group, artifact, version, "-sources.jar")
+	// Somewhat irritatingly it doesn't seem to work to send a HEAD or similar to determine
+	// presence without downloading the whole shebang.
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		log.Fatalf("Bad request: %s", err)
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		log.Warning("Error finding sources: %s", err)
+		return "no_src"
+	} else if response.StatusCode >= 400 {
+		return "no_src"
+	}
+	return "src"
 }
 
 // isExcluded returns true if this artifact should be excluded from the download.
@@ -300,14 +320,14 @@ func isExcluded(artifact string) bool {
 	return false
 }
 
-func buildPomUrl(group, artifact, version string) string {
+func buildUrl(group, artifact, version, suffix string) string {
 	if version == "" {
 		// This is kind of exciting - we just assume the latest version if one isn't available.
 		version = fetchMetadata(group, artifact).LatestVersion()
 		log.Notice("Version not specified for %s:%s, decided to use %s", group, artifact, version)
 	}
 	slashGroup := strings.Replace(group, ".", "/", -1)
-	return opts.Repository + "/" + slashGroup + "/" + artifact + "/" + version + "/" + artifact + "-" + version + ".pom"
+	return opts.Repository + "/" + slashGroup + "/" + artifact + "/" + version + "/" + artifact + "-" + version + suffix
 }
 
 // fetchOrDie fetches a URL and returns the content, dying if it can't be found.
@@ -339,7 +359,7 @@ func fetchAndParse(group, artifact, version string) *pomXml {
 	if ret := fetchAndParseMemo[key]; ret != nil {
 		return ret
 	}
-	url := buildPomUrl(group, artifact, version)
+	url := buildUrl(group, artifact, version, ".pom")
 	content := fetchOrDie(url)
 	ret := parse(content, group, artifact, version)
 	fetchAndParseMemo[key] = ret
