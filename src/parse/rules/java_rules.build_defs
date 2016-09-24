@@ -290,7 +290,9 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
                     sources=sources,
                     # We deliberately don't make this rule visible externally.
                 )
-            add_exported_dep(name, ':' + artifact)
+            # Have to account for require/provide on final rule if it's a jar
+            final_name = name if deps_only else '_%s#bin' % name
+            add_exported_dep(final_name, ':' + artifact)
             if combine:
                 add_exported_dep(source_name, ':' + artifact)
 

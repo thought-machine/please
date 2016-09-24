@@ -184,8 +184,9 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"completions" description:"Prints possible completions for a string."`
 		AffectedTargets struct {
-			Tests bool `long:"tests" description:"Shows only affected tests, no other targets."`
-			Args  struct {
+			Tests        bool `long:"tests" description:"Shows only affected tests, no other targets."`
+			Intransitive bool `long:"intransitive" description:"Shows only immediately affected targets, not transitive dependencies."`
+			Args         struct {
 				Files []string `positional-arg-name:"files" description:"Files to query affected tests for"`
 			} `positional-args:"true"`
 		} `command:"affectedtargets" description:"Prints any targets affected by a set of files."`
@@ -342,7 +343,7 @@ var buildFunctions = map[string]func() bool{
 			if len(files) == 1 && files[0] == "-" {
 				files = utils.ReadAllStdin()
 			}
-			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests)
+			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
 		})
 	},
 	"input": func() bool {
