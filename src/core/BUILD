@@ -10,10 +10,13 @@ genrule(
 
 go_library(
     name = 'core',
-    srcs = glob(['*.go'], excludes = [
-        '*_test.go',
-        'version.go',
-    ]) + [':version'],
+    srcs = glob(
+        ['*.go'],
+        excludes = [
+            '*_test.go',
+            'version.go',
+        ],
+    ) + [':version'],
     visibility = ['PUBLIC'],
     deps = [
         '//third_party/go:gcfg',
@@ -70,6 +73,7 @@ go_test(
 go_test(
     name = 'package_test',
     srcs = ['package_test.go'],
+    data = ['test_data'],
     deps = [
         ':core',
         '//third_party/go:testify',

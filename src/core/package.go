@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"path"
 	"sort"
 	"sync"
 )
@@ -94,4 +95,26 @@ func (pkg *Package) AllChildren(target *BuildTarget) []*BuildTarget {
 	}
 	sort.Sort(ret)
 	return ret
+}
+
+// FindOwningPackages returns build labels corresponding to the packages that own each of the given files.
+func FindOwningPackages(files []string) []BuildLabel {
+	ret := make([]BuildLabel, len(files))
+	for i, file := range files {
+		ret[i] = FindOwningPackage(file)
+	}
+	return ret
+}
+
+// FindOwningPackage returns a build label identifying the package that owns a given file.
+func FindOwningPackage(file string) BuildLabel {
+	f := file
+	for f != "." {
+		f = path.Dir(f)
+		if IsPackage(f) {
+			return BuildLabel{PackageName: f, Name: "all"}
+		}
+	}
+	log.Fatalf("No BUILD file owns file %s", file)
+	return BuildLabel{}
 }

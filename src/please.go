@@ -339,7 +339,11 @@ var buildFunctions = map[string]func() bool{
 	},
 	"affectedtargets": func() bool {
 		files := opts.Query.AffectedTargets.Args.Files
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+		targets := core.WholeGraph
+		if opts.Query.AffectedTargets.Intransitive {
+			targets = core.FindOwningPackages(files)
+		}
+		return runQuery(true, targets, func(state *core.BuildState) {
 			if len(files) == 1 && files[0] == "-" {
 				files = utils.ReadAllStdin()
 			}
@@ -619,6 +623,8 @@ func main() {
 	}
 
 	config = readConfig(command == "update")
+	// Set this in case anything wants to use it soon
+	core.NewBuildState(config.Please.NumThreads, nil, opts.OutputFlags.Verbosity, config)
 
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.

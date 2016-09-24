@@ -46,3 +46,10 @@ func TestAllChildren(t *testing.T) {
 	children = pkg.AllChildren(target2a)
 	assert.Equal(t, expected, children)
 }
+
+func TestFindOwningPackages(t *testing.T) {
+	state := NewBuildState(1, nil, 1, DefaultConfiguration())
+	state.Config.Please.BuildFileName = []string{"TEST_BUILD"}
+	pkgs := FindOwningPackages([]string{"src/core/test_data/test_subfolder1/whatever.txt"})
+	assert.Equal(t, []BuildLabel{ParseBuildLabel("//src/core/test_data:all", "")}, pkgs)
+}
