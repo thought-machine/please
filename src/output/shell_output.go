@@ -272,7 +272,7 @@ func printTempDirs(state *core.BuildState, duration float64) {
 	for _, label := range state.ExpandOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		fmt.Printf("  %s: %s\n", label, target.TmpDir())
-		fmt.Printf("    Command: %s\n", build.ReplaceSequences(target, target.Command))
+		fmt.Printf("    Command: %s\n", build.ReplaceSequences(target, target.GetCommand()))
 	}
 }
 
