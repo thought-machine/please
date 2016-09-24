@@ -7,7 +7,7 @@ import "fmt"
 // dependency on the given set of files.
 // Targets are filtered by given include / exclude labels and if 'tests' is true only
 // test targets will be returned.
-func QueryAffectedTargets(graph *core.BuildGraph, files, include, exclude []string, tests bool) {
+func QueryAffectedTargets(graph *core.BuildGraph, files, include, exclude []string, tests, transitive bool) {
 	affectedTargets := make(chan *core.BuildTarget, 100)
 	done := make(chan bool)
 
@@ -56,7 +56,7 @@ func QueryAffectedTargets(graph *core.BuildGraph, files, include, exclude []stri
 		done <- true
 	}()
 
-	go handleAffectedTargets(graph, affectedTargets, done, include, exclude, tests)
+	go handleAffectedTargets(graph, affectedTargets, done, include, exclude, tests, transitive)
 
 	<-done
 	<-done
@@ -64,15 +64,17 @@ func QueryAffectedTargets(graph *core.BuildGraph, files, include, exclude []stri
 	<-done
 }
 
-func handleAffectedTargets(graph *core.BuildGraph, affectedTargets <-chan *core.BuildTarget, done chan<- bool, include, exclude []string, tests bool) {
+func handleAffectedTargets(graph *core.BuildGraph, affectedTargets <-chan *core.BuildTarget, done chan<- bool, include, exclude []string, tests, transitive bool) {
 	seenTargets := map[*core.BuildTarget]bool{}
 
 	var inner func(*core.BuildTarget)
 	inner = func(target *core.BuildTarget) {
 		if !seenTargets[target] {
 			seenTargets[target] = true
-			for _, revdep := range graph.ReverseDependencies(target) {
-				inner(revdep)
+			if transitive {
+				for _, revdep := range graph.ReverseDependencies(target) {
+					inner(revdep)
+				}
 			}
 			if (!tests || target.IsTest) && target.ShouldInclude(include, exclude) {
 				fmt.Printf("%s\n", target.Label)
