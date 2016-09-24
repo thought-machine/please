@@ -304,7 +304,9 @@ func hasSource(group, artifact, version string) string {
 	if err != nil {
 		log.Warning("Error finding sources: %s", err)
 		return "no_src"
-	} else if response.StatusCode >= 400 {
+	}
+	response.Body.Close()
+	if response.StatusCode >= 400 {
 		return "no_src"
 	}
 	return "src"
