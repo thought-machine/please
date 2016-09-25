@@ -116,6 +116,7 @@ func DefaultConfiguration() *Configuration {
 	config.Docker.Timeout = 1200      // Twenty minutes
 	config.Docker.ResultsTimeout = 20 // Twenty seconds
 	config.Docker.RemoveTimeout = 20  // Twenty seconds
+	config.Go.CgoCCTool = "gcc"
 	config.Go.GoVersion = "1.6"
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/third_party/go"
 	config.Python.PipTool = "pip"
@@ -218,6 +219,7 @@ type Configuration struct {
 		GoRoot    string
 		TestTool  string
 		GoPath    string
+		CgoCCTool string
 	}
 	Python struct {
 		PipTool            string

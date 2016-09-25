@@ -252,10 +252,8 @@
     <ul>
       <li><b>GoVersion</b><br/>
         String identifying the version of the Go compiler.<br/>
-	The most important function of this is forcing rebuilds of Go rules on compiler upgrades since
-	artifacts can't be reused between different versions.<br/>
-	It is also essential to set it to something appropriate if you want to compile with a Go version
-	older than 1.5 since some of the tool names have changed (<code>6g</code> and <code>6l</code>
+	This is only now really important for anyone targeting versions of Go earlier than 1.5 since
+	some of the tool names have changed (<code>6g</code> and <code>6l</code>
 	became <code>compile</code> and <code>link</code> in Go 1.5).<br/>
 	We're pretty sure that targeting Go 1.4 works; we're not sure about 1.3 (never tried) but
 	1.2 certainly doesn't since some of the flags to <code>go tool pack</code> are different.
@@ -265,9 +263,16 @@
       <li><b>GoRoot</b><br/>
         If set, will set the GOROOT environment variable appropriately during build actions.</li>
 
+      <li><b>GoPath</b><br/>
+        If set, will set the GOPATH environment variable appropriately during build actions.</li>
+
       <li><b>TestTool</b><br/>
         Sets the location of the <code>please_go_test</code> tool that is used to template the test
         main for <code>go_test</code> rules.</li>
+
+      <li><b>CgoCCTool</b><br/>
+        Sets the location of <code>CC</code> while building <code>cgo_library</code> and <code>cgo_test</code>
+	rules. Defaults to <code>gcc</code></li>
     </ul>
 
     <h3>[Python]</h3>
@@ -514,3 +519,7 @@
 
     <p>There is a <code>--bazel_compat</code> flag to <code>plz init</code> which sets this
       on initialising a new repo.</p>
+
+    <p>We don't have a separate setting for it, but switching this on will also allow limited
+      Buck compatibility. Specifically <code>include_defs</code> becomes available and the
+      various C++ rules gain <code>cxx_</code> aliases.</p>

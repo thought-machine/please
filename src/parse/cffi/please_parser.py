@@ -150,7 +150,6 @@ def set_config_value(c_name, c_value):
 
 
 def include_defs(package, dct, target):
-    _log(2, package, 'include_defs is deprecated, use subinclude() instead')
     filename = ffi_to_string(_get_include_file(package, ffi_from_string(target)))
     # Dodgy in-band signalling of errors follows.
     if filename.startswith('__'):
@@ -399,7 +398,6 @@ def _get_globals(c_package, c_package_name):
             local_globals[k] = v
     # Need to pass some hidden arguments to these guys.
     package_name = ffi_to_string(c_package_name)
-    local_globals['include_defs'] = lambda *args, **kwargs: include_defs(c_package, local_globals, *args, **kwargs)
     local_globals['subinclude'] = lambda *args, **kwargs: subinclude(c_package, local_globals, *args, **kwargs)
     local_globals['build_rule'] = lambda *args, **kwargs: build_rule(local_globals, c_package, *args, **kwargs)
     local_globals['glob'] = lambda *args, **kwargs: glob(package_name, *args, **kwargs)
@@ -428,6 +426,8 @@ def _get_globals(c_package, c_package_name):
         'debug': lambda message, *args: _log(5, c_package, message % args),
     })
     if bazel_compat:
+        # include_defs is used indirectly. It's also nice to switch this on for limited Buck compatibility too.
+        local_globals['include_defs'] = lambda *args, **kwargs: include_defs(c_package, local_globals, *args, **kwargs)
         local_globals['native'] = DotDict(local_globals)
         local_globals['licenses'] = lambda l: licenses(local_globals, l)
         local_globals['PACKAGE_NAME'] = package_name

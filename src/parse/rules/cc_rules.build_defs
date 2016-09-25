@@ -43,9 +43,10 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     defines = defines or []
     dbg_flags = _build_flags(compiler_flags[:], [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
     opt_flags = _build_flags(compiler_flags[:], [], [], pkg_config_cflags=pkg_config_libs)
+    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
 
-    # Bazel suggests passing nonexported header files in 'srcs'. Detect that here.
-    # For the moment I'd rather not do this automatically in other cases.
+    # Bazel suggests passing nonexported header files in 'srcs'. We however treat
+    # srcs as things to actually compile and must mark a distinction.
     if CONFIG.BAZEL_COMPATIBILITY:
         src_hdrs = [src for src in srcs if src.endswith('.h')]
         private_hdrs = (private_hdrs or []) + src_hdrs
@@ -87,9 +88,9 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     )
     cmd_template = '%s -c -I . ${SRCS_SRCS} %s'
     cmds = {
-        'dbg': cmd_template % (CONFIG.CC_TOOL, dbg_flags),
-        'opt': cmd_template % (CONFIG.CC_TOOL, opt_flags),
-        'cover': cmd_template % (CONFIG.CC_TOOL, dbg_flags) + _COVERAGE_FLAGS,
+        'dbg': cmd_template % (cc_tool, dbg_flags),
+        'opt': cmd_template % (cc_tool, opt_flags),
+        'cover': cmd_template % (cc_tool, dbg_flags) + _COVERAGE_FLAGS,
     }
 
     if len(srcs) > 1:
@@ -109,6 +110,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
                 requires=['cc_hdrs'],
                 test_only=test_only,
                 labels=labels,
+                tools=tools,
                 pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
             )
             a_rules.append(':' + a_name)
@@ -244,10 +246,11 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
     hdrs = hdrs or []
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
+    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
     cmd = {
-        'dbg': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, dbg_flags),
-        'opt': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (CONFIG.CC_TOOL, opt_flags),
-        'cover': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s %s' % (CONFIG.CC_TOOL, dbg_flags, _COVERAGE_FLAGS),
+        'dbg': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (cc_tool, dbg_flags),
+        'opt': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (cc_tool, opt_flags),
+        'cover': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
     }
     build_rule(
         name=name,
@@ -259,6 +262,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
         building_description='Linking...',
         needs_transitive_deps=True,
         output_is_complete=True,
+        tools=tools,
         requires=['cc', 'cc_hdrs'],
         pre_build=_apply_transitive_labels(cmd),
     )
@@ -284,10 +288,11 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
+    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
     cmd = {
-        'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
-        'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
-        'cover': '%s -o ${OUT} %s %s' % (CONFIG.CC_TOOL, dbg_flags, _COVERAGE_FLAGS),
+        'dbg': '%s -o ${OUT} %s' % (cc_tool, dbg_flags),
+        'opt': '%s -o ${OUT} %s' % (cc_tool, opt_flags),
+        'cover': '%s -o ${OUT} %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
     }
     deps = deps or []
     if srcs:
@@ -311,6 +316,7 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
         needs_transitive_deps=True,
         output_is_complete=True,
         requires=['cc'],
+        tools=tools,
         pre_build=_apply_transitive_labels(cmd),
         test_only=test_only,
     )
@@ -351,6 +357,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
+    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
     if write_main:
         genrule(
             name='_%s#main' % name,
@@ -360,9 +367,9 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         )
         srcs.append(':_%s#main' % name)
     cmd = {
-        'dbg': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, dbg_flags),
-        'opt': '%s -o ${OUT} %s' % (CONFIG.CC_TOOL, opt_flags),
-        'cover': '%s -o ${OUT} %s %s' % (CONFIG.CC_TOOL, dbg_flags, _COVERAGE_FLAGS),
+        'dbg': '%s -o ${OUT} %s' % (cc_tool, dbg_flags),
+        'opt': '%s -o ${OUT} %s' % (cc_tool, opt_flags),
+        'cover': '%s -o ${OUT} %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
     }
     if srcs:
         cc_library(
@@ -395,6 +402,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         output_is_complete=True,
         requires=['cc', 'cc_hdrs'],
         labels=labels,
+        tools=tools,
         pre_build=_apply_transitive_labels(cmd),
         flaky=flaky,
         test_outputs=test_outputs,
@@ -544,10 +552,11 @@ int main(int argc, char const *argv[]) {
 """
 
 
-# For nominal Buck compatibility. The cc_ forms are preferred.
-cxx_binary = cc_binary
-cxx_library = cc_library
-cxx_test = cc_test
+if CONFIG.BAZEL_COMPATIBILITY:
+    # For nominal Buck compatibility. The cc_ forms are preferred.
+    cxx_binary = cc_binary
+    cxx_library = cc_library
+    cxx_test = cc_test
 
 
 def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, defines=None, dbg=False):

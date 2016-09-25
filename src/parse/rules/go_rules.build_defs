@@ -140,10 +140,15 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
     )
 
 
-def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=False, package=''):
+def cgo_library(name, srcs, out=None, env=None, flags=None, deps=None, visibility=None,
+                test_only=False):
     """Generates a Go library which can be reused by other rules.
 
-    Note that this is a little experimental and hasn't yet received extensive testing.
+    Note that by its nature this is something of a hybrid of Go and C rules. It can depend
+    on C / C++ rules, given the limitations of cgo (i.e. you will have to interact with them
+    through a C interface, although the objects themselves can contain C++). As mentioned
+    below, you will likely be better off wrapping your dependencies into a cc_static_library
+    rule and depending on that rather than depending directly on cc_library rules.
 
     It also has a slightly interesting approach in that it recompiles all the input
     Go sources. It'd be nicer to use go tool cgo/compile, but it's excruciatingly
@@ -152,15 +157,19 @@ def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=Fals
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to compile.
+      out (str): Name of output file. Defaults to name + '.a'.
       env (dict): Dict of environment variables to control the Go build.
-      deps (list): Dependencies
+      flags (list): List of additional flags to pass to the go command.
+      deps (list): Dependencies. Note that if you intend to depend on cc_library rules,
+                   you will likely be better off wrapping them into a cc_static_library
+                   and depending on that.
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
-      package (str): Name of the package to output (defaults to same as name).
     """
+    cc_tool, tools = _tool_path(CONFIG.CGO_CC_TOOL, _GO_TOOL)
     env = env or {}
-    package = package or name
     env.setdefault('GOPATH', CONFIG.GOPATH)
+    env['CC'] = cc_tool
     env_cmd = ' '.join('export %s="%s";' % (k, v) for k, v in sorted(env.items()))
     cmd = ' && '.join([
         'if [ ! -d src ]; then ln -s . src; fi',
@@ -182,7 +191,7 @@ def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=Fals
         name=name,
         srcs=srcs,
         deps=(deps or []) + [':_%s#srcs' % name],
-        outs=[package + '.a'],
+        outs=[out or name + '.a'],
         cmd={
             'opt': env_cmd + cmd,
             'cover': env_cmd + cmd.replace('go install', 'go install -tags cover'),
@@ -194,7 +203,7 @@ def cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=Fals
             'go': ':' + name,
             'go_src': ':_%s#srcs' % name,
         },
-        tools=_GO_TOOL,
+        tools=tools,
         test_only=test_only,
         needs_transitive_deps=True,
     )
@@ -353,9 +362,10 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
       tags (list): Tags to pass to go build (see 'go help build' for details).
       size (str): Test size (enormous, large, medium or small).
     """
+    cc_tool, tools = _tool_path(CONFIG.CGO_CC_TOOL, _GO_TOOL)
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     tag_cmd = '-tags "%s"' % ' '.join(tags) if tags else ''
-    cmd = 'export GOPATH="%s"; ln -s $TMP_DIR src; go test ${PKG#*src/} %s -c -o $OUT' % (CONFIG.GOPATH, tag_cmd)
+    cmd = 'export GOPATH="%s"; ln -s $TMP_DIR src; CC="%s" go test ${PKG#*src/} %s -c -o $OUT' % (CONFIG.GOPATH, cc_tool, tag_cmd)
     test_cmd = '$TEST -test.v -test.coverprofile test.coverage | tee test.results'
     build_rule(
         name=name,
@@ -363,7 +373,7 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
         data=data,
         deps=deps,
         outs=[name],
-        tools=_GO_TOOL,
+        tools=tools,
         cmd={
             'cover': cmd + ' -test.cover -tags cover',
             'opt': cmd,

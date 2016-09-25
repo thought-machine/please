@@ -896,7 +896,11 @@ rules to Go packages.</p>
 
     <p>Generates a Go library which can be reused by other rules.</p>
     <p>
-Note that this is a little experimental and hasn't yet received extensive testing.</p>
+    Note that by its nature this is something of a hybrid of Go and C rules. It can depend
+    on C / C++ rules, given the limitations of cgo (i.e. you will have to interact with them
+    through a C interface, although the objects themselves can contain C++). As mentioned
+    below, you will likely be better off wrapping your dependencies into a cc_static_library
+    rule and depending on that rather than depending directly on cc_library rules.</p>
     <p>
 It also has a slightly interesting approach in that it recompiles all the input
 Go sources. It'd be nicer to use go tool cgo/compile, but it's excruciatingly
@@ -935,10 +939,20 @@ hard to mimic what 'go build' does well enough to actually work.</p>
       </tr>
 
       <tr>
+	<td>flags</td>
+	<td>None</td>
+	<td>list</td>
+	<td>List of additional flags to pass to the go command.</td>
+      </tr>
+
+      <tr>
 	<td>deps</td>
 	<td>None</td>
 	<td>list</td>
-	<td>Dependencies</td>
+	<td>Dependencies<br/>
+	  Note that if you intend to depend on cc_library rules,
+          you will likely be better off wrapping them into a cc_static_library
+          and depending on that.</td>
       </tr>
 
       <tr>
