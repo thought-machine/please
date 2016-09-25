@@ -1031,6 +1031,17 @@ hard to mimic what 'go build' does well enough to actually work.</p>
 	<td>If True, is only visible to test rules.</td>
       </tr>
 
+      <tr>
+	<td>static</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>If True, passes flags to the linker to try to force fully static linking.
+      (specifically -linkmode external -extldflags static).
+      Typically this increases size & link time a little but in return the binary
+      has absolutely no external dependencies.
+      Not yet tested against cgo.</td>
+      </tr>
+
       </tbody>
     </table>
 

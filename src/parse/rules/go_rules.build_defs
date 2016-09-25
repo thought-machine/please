@@ -17,6 +17,10 @@ _GO_BINARY_CMDS = {
     'dbg': '%s && %s $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
     'opt': '%s && %s -s -w $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
 }
+_GO_STATIC_BINARY_CMDS = {
+    'dbg': '%s && %s -linkmode external -extldflags "-static" $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
+    'opt': '%s && %s -linkmode external -extldflags "-static" -s -w $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
+}
 
 # Commands for go_library, which differ a bit more by config.
 _ALL_GO_LIBRARY_CMDS = {
@@ -209,7 +213,8 @@ def cgo_library(name, srcs, out=None, env=None, flags=None, deps=None, visibilit
     )
 
 
-def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=False):
+def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=False,
+              static=False):
     """Compiles a Go binary.
 
     Args:
@@ -219,6 +224,11 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
       deps (list): Dependencies
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
+      static (bool): If True, passes flags to the linker to try to force fully static linking.
+                     (specifically -linkmode external -extldflags static).
+                     Typically this increases size & link time a little but in return the binary
+                     has absolutely no external dependencies.
+                     Not yet tested against cgo.
     """
     go_library(
         name='_%s#lib' % name,
@@ -231,7 +241,7 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
         srcs=[':_%s#lib' % name],
         deps=deps,
         outs=[name],
-        cmd=_GO_BINARY_CMDS,
+        cmd=_GO_STATIC_BINARY_CMDS if static else _GO_BINARY_CMDS,
         building_description="Linking...",
         needs_transitive_deps=True,
         binary=True,

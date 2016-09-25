@@ -10,6 +10,8 @@ Version 6.0.0
       other rules (most notably go_library).
     * cgo_library and cgo_test now have a setting in the config describing what they should
       use for CC.
+    * go_binary now accepts a 'static' flag that attempts to completely statically link
+      the target.
     * plz watch now discards events that do not relate to source files it cares about
       (previously it would fire on any event in a relevant directory).
     * include_defs and the cxx_ forms of the cc_* rules are now only available in Bazel
