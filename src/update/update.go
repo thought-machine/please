@@ -43,7 +43,7 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 		log.Warning("Please download location not set in config, cannot auto-update.")
 		return
 	}
-	if config.Please.Version == "" {
+	if config.Please.Version.Major == 0 {
 		if !forceUpdate {
 			config.Please.Version = core.PleaseVersion
 			return
@@ -62,12 +62,12 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 	defer core.ReleaseRepoLock()
 
 	config.Please.Location = core.ExpandHomePath(config.Please.Location)
-	newPlease := path.Join(config.Please.Location, config.Please.Version, "please")
+	newPlease := path.Join(config.Please.Location, config.Please.Version.String(), "please")
 	if !core.PathExists(newPlease) {
 		downloadPlease(config)
 	}
 	linkNewPlease(config)
-	args := append([]string{newPlease}, "--assert_version", config.Please.Version)
+	args := append([]string{newPlease}, "--assert_version", config.Please.Version.String())
 	args = append(args, os.Args[1:]...)
 	log.Info("Executing %s", strings.Join(args, " "))
 	if err := syscall.Exec(newPlease, args, os.Environ()); err != nil {
@@ -78,7 +78,7 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 }
 
 func downloadPlease(config *core.Configuration) {
-	newDir := path.Join(config.Please.Location, config.Please.Version)
+	newDir := path.Join(config.Please.Location, config.Please.Version.String())
 	if err := os.MkdirAll(newDir, core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory %s: %s", newDir, err)
 	}
@@ -135,7 +135,7 @@ func downloadPlease(config *core.Configuration) {
 }
 
 func linkNewPlease(config *core.Configuration) {
-	if files, err := ioutil.ReadDir(path.Join(config.Please.Location, config.Please.Version)); err != nil {
+	if files, err := ioutil.ReadDir(path.Join(config.Please.Location, config.Please.Version.String())); err != nil {
 		log.Fatalf("Failed to read directory: %s", err)
 	} else {
 		for _, file := range files {
@@ -145,7 +145,7 @@ func linkNewPlease(config *core.Configuration) {
 }
 
 func linkNewFile(config *core.Configuration, file string) {
-	newDir := path.Join(config.Please.Location, config.Please.Version)
+	newDir := path.Join(config.Please.Location, config.Please.Version.String())
 	globalFile := path.Join(config.Please.Location, file)
 	downloadedFile := path.Join(newDir, file)
 	if err := os.RemoveAll(globalFile); err != nil {
@@ -183,7 +183,7 @@ func handleSignals(newDir string) {
 }
 
 // findLatestVersion attempts to find the latest available version of plz.
-func findLatestVersion(config *core.Configuration) string {
+func findLatestVersion(config *core.Configuration) core.Version {
 	url := strings.TrimRight(config.Please.DownloadLocation, "/") + "/latest_version"
 	log.Info("Downloading %s", url)
 	response, err := http.Get(url)
@@ -197,5 +197,5 @@ func findLatestVersion(config *core.Configuration) string {
 	if err != nil {
 		log.Fatalf("Failed to find latest plz version: %s", err)
 	}
-	return strings.TrimSpace(string(data))
+	return core.NewVersion(strings.TrimSpace(string(data)))
 }

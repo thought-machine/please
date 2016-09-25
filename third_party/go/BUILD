@@ -166,3 +166,9 @@ go_get(
     get = 'github.com/google/shlex',
     revision = '6f45313302b9c56850fc17f99e40caebce98c716',
 )
+
+go_get(
+    name = 'semver',
+    get = 'github.com/coreos/go-semver/semver',
+    revision = '8ab6407b697782a06568d4b7f1db25550ec2e4c6',
+)

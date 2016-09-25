@@ -75,7 +75,7 @@ func initializeInterpreter(config *core.Configuration) {
 			log.Fatalf("Can't initialise any Please parser engine. Please is putting itself out of its misery.")
 		}
 	}
-	setConfigValue("PLZ_VERSION", config.Please.Version)
+	setConfigValue("PLZ_VERSION", config.Please.Version.String())
 	setConfigValue("GO_VERSION", config.Go.GoVersion)
 	setConfigValue("GO_TEST_TOOL", config.Go.TestTool)
 	setConfigValue("GOPATH", config.Go.GoPath)

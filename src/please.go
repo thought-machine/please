@@ -536,7 +536,7 @@ func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
 
 // readConfig sets various things up and reads the initial configuration.
 func readConfig(forceUpdate bool) *core.Configuration {
-	if opts.AssertVersion != "" && core.PleaseVersion != opts.AssertVersion {
+	if opts.AssertVersion != "" && core.PleaseVersion.String() != opts.AssertVersion {
 		log.Fatalf("Requested Please version %s, but this is version %s", opts.AssertVersion, core.PleaseVersion)
 	}
 	if opts.FeatureFlags.NoHashVerification {
@@ -600,7 +600,7 @@ func main() {
 	command := activeCommand(parser)
 	if command == "init" {
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
-			cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion, &opts, os.Args)
+			cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, os.Args)
 		}
 		// If we're running plz init then we obviously don't expect to read a config file.
 		utils.InitConfig(opts.Init.Dir, opts.Init.BazelCompatibility)
@@ -633,7 +633,7 @@ func main() {
 		for k, v := range config.Aliases {
 			argv = strings.Replace(argv, k, v, 1)
 		}
-		parser = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion, &opts, strings.Fields(argv))
+		parser = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, strings.Fields(argv))
 		command = activeCommand(parser)
 	}
 

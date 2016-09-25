@@ -35,7 +35,7 @@ func writeTrace(traceFile string) {
 
 func formatTrace() []byte {
 	var out traceObjectFormat
-	out.OtherData.Version = "Please v" + core.PleaseVersion
+	out.OtherData.Version = "Please v" + core.PleaseVersion.String()
 	out.TraceEvents = traces
 	data, err := json.Marshal(out)
 	if err != nil {

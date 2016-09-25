@@ -106,3 +106,13 @@ func TestDynamicSubsection(t *testing.T) {
 	}
 	assert.Equal(t, expected, config.CustomMetricLabels)
 }
+
+func TestReadSemver(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/version_good.plzconfig"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, 2, config.Please.Version.Major)
+	assert.EqualValues(t, 3, config.Please.Version.Minor)
+	assert.EqualValues(t, 4, config.Please.Version.Patch)
+	config, err = ReadConfigFiles([]string{"src/core/test_data/version_bad.plzconfig"})
+	assert.Error(t, err)
+}
