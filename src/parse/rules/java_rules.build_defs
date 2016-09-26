@@ -475,6 +475,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         name = name,
         srcs = srcs,
         provides = provides,
+        exported_deps=deps,  # easiest to assume these are always exported.
         hashes = hashes if hashes else [hash] if hash else None,
         visibility = visibility,
         test_only=test_only,
