@@ -17,7 +17,7 @@
 /src/parse/cffi/libplease_parser_python2.so
 /src/parse/cffi/libplease_parser_python2.dylib
 /src/parse/cffi/libplease_parser_pypy.so
-/src/parse/cffi/libplease_parser_pypy.dyilb
+/src/parse/cffi/libplease_parser_pypy.dylib
 /src/parse/rules/embedded_parser.py
 # Local config file
 .plzconfig.local
