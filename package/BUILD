@@ -42,6 +42,16 @@ fpm_deb(
     labels = ['manual'],
 )
 
+fpm_deb(
+    name = 'plz_build_linter',
+    package_name = 'please-build-lint',
+    version = CONFIG.PLZ_VERSION,
+    files = {
+        '/opt/please/please_build_linter': '//src/lint:please_build_linter',
+    },
+    labels = ['manual'],
+)
+
 tarball(
     name = 'please_tarball',
     srcs = [
