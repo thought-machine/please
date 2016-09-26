@@ -23,6 +23,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/coreos/go-semver/semver"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
@@ -34,7 +35,8 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 	if config.Please.Version == core.PleaseVersion {
 		return // Version matches, nothing to do here.
 	} else if (!shouldUpdate || !config.Please.SelfUpdate) && !forceUpdate {
-		log.Warning("Update to Please version %s skipped (current version: %s)", config.Please.Version, core.PleaseVersion)
+		word := describe(config.Please.Version, core.PleaseVersion, false)
+		log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, core.PleaseVersion)
 		return
 	} else if config.Please.Location == "" {
 		log.Warning("Please location not set in config, cannot auto-update.")
@@ -54,7 +56,8 @@ func CheckAndUpdate(config *core.Configuration, shouldUpdate, forceUpdate bool) 
 	}
 
 	// Okay, now we're past all that...
-	log.Warning("Updating to Please version %s (currently %s)", config.Please.Version, core.PleaseVersion)
+	word := describe(config.Please.Version, core.PleaseVersion, true)
+	log.Warning("%s to Please version %s (currently %s)", word, config.Please.Version, core.PleaseVersion)
 
 	// Must lock here so that the update process doesn't race when running two instances
 	// simultaneously.
@@ -183,7 +186,7 @@ func handleSignals(newDir string) {
 }
 
 // findLatestVersion attempts to find the latest available version of plz.
-func findLatestVersion(config *core.Configuration) core.Version {
+func findLatestVersion(config *core.Configuration) semver.Version {
 	url := strings.TrimRight(config.Please.DownloadLocation, "/") + "/latest_version"
 	log.Info("Downloading %s", url)
 	response, err := http.Get(url)
@@ -197,5 +200,17 @@ func findLatestVersion(config *core.Configuration) core.Version {
 	if err != nil {
 		log.Fatalf("Failed to find latest plz version: %s", err)
 	}
-	return core.NewVersion(strings.TrimSpace(string(data)))
+	return *semver.New(strings.TrimSpace(string(data)))
+}
+
+// describe returns a word describing the process we're about to do ("update", "downgrading", etc)
+func describe(a, b semver.Version, verb bool) string {
+	if verb && a.LessThan(b) {
+		return "Downgrading"
+	} else if verb {
+		return "Upgrading"
+	} else if a.LessThan(b) {
+		return "Downgrade"
+	}
+	return "Upgrade"
 }

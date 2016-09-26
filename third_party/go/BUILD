@@ -170,5 +170,6 @@ go_get(
 go_get(
     name = 'semver',
     get = 'github.com/coreos/go-semver/semver',
+    patch = 'semver_text_unmarshaler.patch',
     revision = '8ab6407b697782a06568d4b7f1db25550ec2e4c6',
 )

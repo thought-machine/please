@@ -156,33 +156,9 @@ func DefaultConfiguration() *Configuration {
 	return &config
 }
 
-// Version extends semver.Version to implement the encoding.UnmarshalText interface.
-// TODO(pebers): send PR upstream so we don't have to do this?
-type Version semver.Version
-
-// UnmarshalText implements the encoding.TextUnmarshaler interface
-func (version *Version) UnmarshalText(text []byte) error {
-	v, err := semver.NewVersion(string(text))
-	if err == nil {
-		*version = Version(*v)
-	}
-	return err
-}
-
-// String delegates to semver.Version.String
-func (version *Version) String() string {
-	v := version.(*semver.Version)
-	return v.String()
-}
-
-// NewVersion creates a new version from the given string, or dies if it's not valid.
-func NewVersion(text string) Version {
-	return Version(*semver.New(text))
-}
-
 type Configuration struct {
 	Please struct {
-		Version          Version
+		Version          semver.Version
 		Location         string
 		SelfUpdate       bool
 		DownloadLocation string
