@@ -16,6 +16,9 @@ Version 6.0.0
       (previously it would fire on any event in a relevant directory).
     * include_defs and the cxx_ forms of the cc_* rules are now only available in Bazel
       compatibility mode (which essentially also covers Buck now too).
+    * The version in .plzconfig is now parsed as a semver so must be valid by those rules.
+      Shouldn't be a major problem since there haven't been any versions for a long time
+      that wouldn't be valid.
 
 
 Version 5.5.4
