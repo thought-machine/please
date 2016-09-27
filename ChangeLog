@@ -1,3 +1,10 @@
+Version 6.0.2
+-------------
+
+    * Another small maven_jar fix, related to Android this time
+    * plz query deps now filters its outputs by --include and --exclude
+
+
 Version 6.0.1
 -------------
 
