@@ -103,7 +103,7 @@ public class TestCoverage {
           return cls;
         } else if (instrumentedClasses.containsKey(name)) {
           byte[] instrumented = instrumenter.instrument(getTargetClass(MemoryClassLoader.class, name), name);
-          cls = defineClass(name, instrumented, 0, instrumented.length);
+          cls = defineClass(name, instrumented, 0, instrumented.length, this.getClass().getProtectionDomain());
           instrumentedClasses.put(name, cls);
           return cls;
         }
