@@ -470,12 +470,16 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
             'java': classes_rule,
             'android': bin_rule,
         }
+        local_deps = [classes_rule]
+    else:
+        local_deps = None
 
     filegroup(
         name = name,
         srcs = srcs,
         provides = provides,
         exported_deps=deps,  # easiest to assume these are always exported.
+        deps = local_deps,  # ensure the classes_rule gets built correctly if there is one.
         hashes = hashes if hashes else [hash] if hash else None,
         visibility = visibility,
         test_only=test_only,
