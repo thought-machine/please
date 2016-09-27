@@ -138,6 +138,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cpp.CCTool = "g++"
 	config.Cpp.LdTool = "ld"
 	config.Cpp.ArTool = "ar"
+	config.Cpp.AsmTool = "nasm"
 	config.Cpp.DefaultOptCflags = "--std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror"
 	config.Cpp.DefaultDbgCflags = "--std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror"
 	config.Proto.ProtocTool = "protoc"
@@ -247,6 +248,7 @@ type Configuration struct {
 		CCTool           string
 		LdTool           string
 		ArTool           string
+		AsmTool          string
 		DefaultOptCflags string
 		DefaultDbgCflags string
 		DefaultLdflags   string

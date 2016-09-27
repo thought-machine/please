@@ -427,8 +427,6 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
                          Again, don't mutate the contents of the pointer.
     You don't own the contents of any of these pointers so don't try to delete them :)
 
-    NB. Does not work on OSX at present due to missing options in Apple's ld.
-
     Args:
       name (str): Name of the rule.
       src (str): Source file to embed.
@@ -442,31 +440,48 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
     namespace = namespace or CONFIG.DEFAULT_NAMESPACE
     if not namespace:
         raise ValueError('You must either pass namespace= to cc_library or set the default namespace in .plzconfig')
+    darwin = CONFIG.OS == 'darwin'
 
     hdr_rule = build_rule(
         name=name,
         tag='hdr',
         outs=[name + '.h'],
+        srcs=[src],
         deps=deps,
         cmd='; '.join([
-            'ENCODED_FILENAME=$(location %s)' % src,
-            'BINARY_NAME=' + name,
-            'NAMESPACE=' + namespace,
-            'echo "%s" | sed -E -e "s/([^/ ])[/\\.-]([^/ ])/\\1_\\2/g" > $OUT' % _CC_HEADER_CONTENTS,
+            # This replacement roughly mimics what ld will do to munge it into a symbol name.
+            'export ENCODED_FILENAME="${SRCS//[\/\.]/_}"',
+            'export BINARY_NAME=' + name,
+            'export NAMESPACE=' + namespace,
+            'echo "%s" > $OUT' % _CC_HEADER_CONTENTS,
         ]),
         visibility=visibility,
         building_description='Writing header...',
         requires=['cc'],
         test_only=test_only,
     )
+
+    if darwin:
+        # OSX's ld doesn't support '--format binary', and this is the least fiddly
+        # alternative. Requiring an additional tool is a bit suboptimal but probably
+        # in the end easier than the alternatives.
+        cmd = ' && '.join([
+            'export ENCODED_FILENAME=${SRCS//[\/\.]/_}',
+            'echo "%s" > embedded.asm' % _CC_DARWIN_ASM_CONTENTS,
+            '%s -fmacho64 embedded.asm -o ${OUTS/.a/.o}' % CONFIG.ASM_TOOL,
+            '%s rcs $OUT ${OUTS/.a/.o}' % CONFIG.AR_TOOL,
+        ])
+    else:
+        cmd = '%s -r --format binary -o ${OUTS/.a/.o} $SRC && %s rcs $OUT ${OUTS/.a/.o}' % (
+            CONFIG.LD_TOOL, CONFIG.AR_TOOL)
+
     lib_rule = build_rule(
-        name=name,
-        tag='lib',
+        name = name,
+        tag = 'lib',
         srcs=[src],
         outs=['lib%s.a' % name],
         deps=deps,
-        cmd='%s -r --format binary -o ${OUT/.a/.o} $SRC && %s rcs $OUT ${OUT/.a/.o}' %
-            (CONFIG.LD_TOOL, CONFIG.AR_TOOL),
+        cmd=cmd,
         visibility=visibility,
         building_description='Embedding...',
         requires=['cc'],
@@ -514,6 +529,28 @@ inline char* ${BINARY_NAME}_end_nc() {
 #ifdef __cplusplus
 }  // namespace ${NAMESPACE}
 #endif  // __cplusplus
+"""
+
+# We duplicate the symbols with _ and __ preceding, the compiler fails if _ is not
+# present and the linker fails if __ isn't.
+_CC_DARWIN_ASM_CONTENTS = r"""
+bits 64
+
+section .rodata
+
+global _binary_${ENCODED_FILENAME}_start
+global __binary_${ENCODED_FILENAME}_start
+global _binary_${ENCODED_FILENAME}_end
+global __binary_${ENCODED_FILENAME}_end
+global _binary_${ENCODED_FILENAME}_size
+global __binary_${ENCODED_FILENAME}_size
+
+_binary_${ENCODED_FILENAME}_start:    incbin \"${SRCS}\"
+__binary_${ENCODED_FILENAME}_start:   incbin \"${SRCS}\"
+_binary_${ENCODED_FILENAME}_end:
+__binary_${ENCODED_FILENAME}_end:
+_binary_${ENCODED_FILENAME}_size:     dd \\$-_binary_${ENCODED_FILENAME}_start
+__binary_${ENCODED_FILENAME}_size:    dd \\$-_binary_${ENCODED_FILENAME}_start
 """
 
 
