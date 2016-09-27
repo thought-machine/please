@@ -194,12 +194,12 @@ var opts struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to display inputs for" required:"true"`
 			} `positional-args:"true" required:"true"`
-		} `command:"input" description:"Prints all transitive inputs of a target."`
+		} `command:"input" alias:"inputs" description:"Prints all transitive inputs of a target."`
 		Output struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to display outputs for" required:"true"`
 			} `positional-args:"true" required:"true"`
-		} `command:"output" description:"Prints all outputs of a target."`
+		} `command:"output" alias:"outputs" description:"Prints all outputs of a target."`
 		Graph struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to render graph for"`
@@ -310,7 +310,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.QueryDeps(state.Graph, state.ExpandOriginalTargets())
+			query.QueryDeps(state, state.ExpandOriginalTargets())
 		})
 	},
 	"reverseDeps": func() bool {
