@@ -650,6 +650,7 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
         flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
         flags.extend('-D' + l[4:] for l in labels if l.startswith('def:'))
         if link:
+            flags.append('-Wl,--build-id=none')
             flags.extend('-Xlinker ' + l[3:] for l in labels if l.startswith('ld:'))
             flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
             alwayslink = ' '.join(l[3:] for l in labels if l.startswith('al:'))
