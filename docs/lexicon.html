@@ -95,10 +95,15 @@
 
     <p>Gets the unique set of labels for a rule and all its transitive dependencies.</p>
 
-    <p>The only time it's safe to call this is in the pre-build function of the target you're
-      calling it for. Any time before that (especially when the package is first parsed)
-      does not guarantee to have the full set of labels available and will cause the build
-      to terminate.</p>
+    <p>Two formats are accepted for target: the first is a string containing just the target name,
+      which is resolved in the current package. This facilitates calling them from a pre-build
+      function, which is in fact the only time it's safe to call this way.<br/>
+      The other is a full build target, which should be a transitive dependency of the target
+      whose pre/post build function you're in. If the target isn't built when you ask for the
+      labels the build will terminate.<br/>
+      In either case this is only safe to call from a pre / post-build function and should
+      never be called at initial parse time, because at that point you generally don't have
+      the full set of labels available yet.</p>
 
     <p>Uses for this are normally fairly language-specific. The clearest example is maybe the
       builtin Python rules, where <code>python_binary</code> and <code>python_test</code> use
