@@ -28,11 +28,11 @@ curl -fsSL "${PLEASE_URL}" | tar -xzpf- --strip-components=1 -C "$DIR"
 for x in `ls "$DIR"`; do
     ln -sf "${DIR}/${x}" "$LOCATION"
 done
-ln -sf "${DIR}/please" "${LOCATION}/plz"
+ln -sf "${LOCATION}/please" "${LOCATION}/plz"
 
 if [ ! -f /usr/local/bin/plz ]; then
     echo "Creating a symlink in /usr/local/bin..."
-    sudo ln -sf "${LOCATION}/plz" /usr/local/bin/plz
+    sudo ln -sf "${LOCATION}/please" /usr/local/bin/plz
 fi
 echo "Please installed."
 plz --help
