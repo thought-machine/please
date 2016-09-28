@@ -113,6 +113,30 @@ func TestGetSubincludeFile(t *testing.T) {
 	assert.Equal(t, "plz-out/gen/src/core/test.py", getSubincludeFile(pkg, "//src/core:target"), "Success at last")
 }
 
+func TestGetLabels(t *testing.T) {
+	state := core.NewBuildState(10, nil, 2, core.DefaultConfiguration())
+	target1 := core.NewBuildTarget(core.ParseBuildLabel("//src/parse:target1", ""))
+	target2 := core.NewBuildTarget(core.ParseBuildLabel("//src/parse:target2", ""))
+	target3 := core.NewBuildTarget(core.ParseBuildLabel("//src/parse:target3", ""))
+	target1.AddLabel("go")
+	target2.AddLabel("py")
+	target3.AddLabel("cc")
+	target1.AddDependency(target2.Label)
+	target1.AddDependency(target3.Label)
+	target2.AddDependency(target3.Label)
+	state.Graph.AddTarget(target1)
+	state.Graph.AddTarget(target2)
+	state.Graph.AddTarget(target3)
+	state.Graph.AddDependency(target1.Label, target2.Label)
+	state.Graph.AddDependency(target1.Label, target3.Label)
+	state.Graph.AddDependency(target2.Label, target3.Label)
+	// Note labels always come out in sorted order.
+	assert.Equal(t, []string{"cc", "go", "py"}, getLabels(target1, "", core.Inactive))
+	assert.Equal(t, []string{"cc", "py"}, getLabels(target2, "", core.Inactive))
+	assert.Equal(t, []string{"cc"}, getLabels(target3, "", core.Inactive))
+	assert.Equal(t, []string{"y"}, getLabels(target1, "p", core.Inactive))
+}
+
 func TestMain(m *testing.M) {
 	core.NewBuildState(10, nil, 2, core.DefaultConfiguration())
 	// Need to set this before calling parseSource.

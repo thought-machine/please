@@ -770,13 +770,27 @@ func cStringArrayToStringSlice(a **C.char, n int, prefix string) []string {
 
 //export GetLabels
 func GetLabels(cPackage uintptr, cTarget *C.char, cPrefix *C.char) **C.char {
+	// Two formats are supported here: either passing just the name of a target in the current
+	// package, or a build label referring specifically to one.
+	lbl := C.GoString(cTarget)
+	prefix := C.GoString(cPrefix)
+	if core.LooksLikeABuildLabel(lbl) {
+		label, err := core.TryParseBuildLabel(lbl, unsizep(cPackage).Name)
+		if err != nil {
+			log.Fatalf("%s", err) // TODO(pebers): report proper errors here and below
+		}
+		return stringSliceToCStringArray(getLabels(core.State.Graph.TargetOrDie(label), prefix, core.Built))
+	}
 	target, err := getTargetPost(cPackage, cTarget)
 	if err != nil {
-		log.Fatalf("%s", err) // TODO(pebers): report proper errors here and below
+		log.Fatalf("%s", err)
 	}
-	prefix := C.GoString(cPrefix)
-	if target.State() != core.Building {
-		log.Fatalf("get_labels called for %s incorrectly; the only time this is safe to call is from its own pre-build function.", target.Label)
+	return stringSliceToCStringArray(getLabels(target, prefix, core.Building))
+}
+
+func getLabels(target *core.BuildTarget, prefix string, minState core.BuildTargetState) []string {
+	if target.State() < minState {
+		log.Fatalf("get_labels called on a target that is not yet built.", target.Label)
 	}
 	labels := map[string]bool{}
 	done := map[*core.BuildTarget]bool{}
@@ -802,5 +816,5 @@ func GetLabels(cPackage uintptr, cTarget *C.char, cPrefix *C.char) **C.char {
 		i++
 	}
 	sort.Strings(ret)
-	return stringSliceToCStringArray(ret)
+	return ret
 }
