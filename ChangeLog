@@ -1,3 +1,9 @@
+Version 6.0.4
+-------------
+
+    * Fix cc_shared_object when srcs is empty.
+
+
 Version 6.0.3
 -------------
 

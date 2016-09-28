@@ -263,10 +263,11 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
     cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
+    # Note that --whole-archive is important for
     cmd = {
-        'dbg': '%s -o ${OUT} -shared %s' % (cc_tool, dbg_flags),
-        'opt': '%s -o ${OUT} -shared %s' % (cc_tool, opt_flags),
-        'cover': '%s -o ${OUT} -shared %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
+        'dbg': '%s -shared -o ${OUT} -Wl,--whole-archive %s -Wl,--no-whole-archive' % (cc_tool, dbg_flags),
+        'opt': '%s -shared -o ${OUT} -Wl,--whole-archive %s -Wl,--no-whole-archive' % (cc_tool, opt_flags),
+        'cover': '%s -shared -o ${OUT} -Wl,--whole-archive %s -Wl,--no-whole-archive %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
     }
     build_rule(
         name=name,
