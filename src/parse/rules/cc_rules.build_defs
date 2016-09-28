@@ -242,15 +242,31 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
     """
     deps = deps or []
-    srcs = srcs or []
-    hdrs = hdrs or []
+    provides = None
+    if srcs:
+        cc_library(
+            name = '_%s#lib' % name,
+            srcs = srcs,
+            hdrs = hdrs,
+            compiler_flags = compiler_flags,
+            linker_flags = linker_flags,
+            deps = deps,
+            test_only = test_only,
+            pkg_config_libs = pkg_config_libs,
+        )
+        deps.append(':_%s#lib' % name)
+        deps.append(':_%s#lib_hdrs' % name)
+        provides = {
+            'cc_hdrs': ':_%s#lib_hdrs' % name,
+            'cc': ':' + name,
+        }
+    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
     dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
     opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
-    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
     cmd = {
-        'dbg': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (cc_tool, dbg_flags),
-        'opt': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s' % (cc_tool, opt_flags),
-        'cover': '%s -o ${OUT} -shared -I . ${SRCS_SRCS} %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
+        'dbg': '%s -o ${OUT} -shared %s' % (cc_tool, dbg_flags),
+        'opt': '%s -o ${OUT} -shared %s' % (cc_tool, opt_flags),
+        'cover': '%s -o ${OUT} -shared %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
     }
     build_rule(
         name=name,
