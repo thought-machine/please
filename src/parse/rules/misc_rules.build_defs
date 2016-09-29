@@ -385,8 +385,8 @@ def _find_git_repo_files(name, output):
         add_out(name, line)
 
 
-def fpm_package(name, files, version, package_type, links=None, package_name=None, options='',
-                srcs=None, deps=None, visibility=None, labels=None):
+def fpm_package(name, version, package_type, files=None, dirs=None, links=None, package_name=None,
+                options='', srcs=None, deps=None, visibility=None, labels=None):
     """Defines a rule to build a package using fpm.
 
     Args:
@@ -396,6 +396,11 @@ def fpm_package(name, files, version, package_type, links=None, package_name=Non
                  '/usr/bin/plz': '//src:please',
                  '/usr/share/plz/junit_runner': '//src/build/java:junit_runner',
                  '/usr/share/plz/some_file': 'some_file',  # file in this package
+             }
+      dirs (dict): Dict of directories -> rules to move into that directory, for example:
+             {
+                 '/usr/bin': ['//src:please'],
+                 '/usr/share/plz': ['//src/build/java:junit_runner', 'some_file'],
              }
       links (dict): Dict of locations -> file to link to, for example:
              {
@@ -411,18 +416,28 @@ def fpm_package(name, files, version, package_type, links=None, package_name=Non
       labels (list): Labels associated with this rule.
     """
     package_name = package_name or name
-    cmd = ' && '.join('mkdir -p $(dirname %s) && cp -r ../$(location %s) %s' %
-                      (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(files.items()))
+    cmds = ['mkdir _tmp']
+    srcs = srcs or []
+    if files:
+        cmds.extend('mkdir -p _tmp/$(dirname %s) && cp -r $(location %s) _tmp/%s' %
+                    (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(files.items()))
+        srcs.extend(sorted(files.values()))
+    if dirs:
+        cmds.extend('mkdir -p _tmp/%s && cp -r %s _tmp/%s' %
+                    (k, ' '.join('$(locations %s)' % x for x in v), k)
+                    for k, v in sorted(dirs.items()))
+        srcs.extend(x for v in sorted(dirs.values()) for x in v)
+    cmds.append('cd _tmp')
     if links:
-        cmd += ' && ' + ' && '.join('mkdir -p $(dirname %s) && ln -s %s %s' %
-                                    (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(links.items()))
-    cmd = 'mkdir _tmp && cd _tmp && %s && fpm -s dir -t %s -n "%s" -v "%s" %s -p $OUT .' % (
-        cmd, package_type, package_name, version, options)
+        cmds.extend('mkdir -p $(dirname %s) && ln -s %s %s' %
+                    (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(links.items()))
+    cmds.append('fpm -s dir -t %s -n "%s" -v "%s" %s -p $OUT .' % (package_type, package_name,
+                                                                   version, options))
     build_rule(
         name=name,
-        srcs=sorted(files.values()) + (srcs or []),
+        srcs=srcs,
         outs=['%s_%s_%s.deb' % (package_name, version, CONFIG.ARCH)],
-        cmd=cmd,
+        cmd=' && '.join(cmds),
         deps=deps,
         visibility=visibility,
         building_description='Packaging...',
@@ -430,7 +445,7 @@ def fpm_package(name, files, version, package_type, links=None, package_name=Non
     )
 
 
-def fpm_deb(name, files, version, links=None, package_name=None, options='',
+def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None, options='',
             srcs=None, deps=None, visibility=None, labels=None):
     """Convenience wrapper around fpm_package that always builds a .deb package.
 
@@ -441,6 +456,11 @@ def fpm_deb(name, files, version, links=None, package_name=None, options='',
                  '/usr/bin/plz': '//src:please',
                  '/usr/share/plz/junit_runner': '//src/build/java:junit_runner',
                  '/usr/share/plz/some_file': 'some_file',  # file in this package
+             }
+      dirs (dict): Dict of directories -> rules to move into that directory, for example:
+             {
+                 '/usr/bin': ['//src:please'],
+                 '/usr/share/plz': ['//src/build/java:junit_runner', 'some_file'],
              }
       links (dict): Dict of locations -> file to link to, for example:
              {
@@ -457,6 +477,7 @@ def fpm_deb(name, files, version, links=None, package_name=None, options='',
     fpm_package(
         name=name,
         files=files,
+        dirs=dirs,
         version=version,
         package_type='deb',
         links=links,
