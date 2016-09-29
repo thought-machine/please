@@ -553,6 +553,21 @@ between srcs and hdrs is important.</td>
 	<td>Libraries to declare a dependency on using pkg-config.</td>
       </tr>
 
+      <tr>
+	<td>test_only</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>If True, this binary can only be used by test rules or other test_only rules.</td>
+      </tr>
+
+      <tr>
+	<td>static</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>Attempts to compile a static binary. Default is false for dynamic linking, but note that
+      in either case the repo-internal libraries will still be linked statically.</td>
+      </tr>
+
       </tbody>
     </table>
 
