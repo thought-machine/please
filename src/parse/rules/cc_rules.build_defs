@@ -229,8 +229,10 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         name = name,
         deps = deps,
         outs = ['lib%s.a' % name],
-        cmd = '(find . -name "*.a" | xargs -n 1 %s x) && %s rcs $OUT `find . -name "*.o" | sort`' %
-            (CONFIG.AR_TOOL, CONFIG.AR_TOOL),
+        cmd = (
+            'for a in `find . -name "*.a"`; do (cd $(dirname $a) && %s x $(basename $a)); done;'
+            '%s rcs $OUT `find . -name "*.o" | sort`' % (CONFIG.AR_TOOL, CONFIG.AR_TOOL)
+        ),
         needs_transitive_deps = True,
         output_is_complete = True,
         visibility = visibility,
