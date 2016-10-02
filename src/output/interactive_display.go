@@ -76,7 +76,7 @@ func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLin
 		// while we do potentially blocking things like printing.
 		target := buildingTargets[i].buildingTargetData
 		buildingTargets[i].Unlock()
-		label := displayLabel(target.Label)
+		label := target.Label.Parent()
 		if target.Active {
 			lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${ERASE_AFTER}\n",
 				now.Sub(target.Started).Seconds(), target.Colour, label, target.Description)
@@ -98,19 +98,6 @@ func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLin
 		}
 	}
 	printf("${RESET}")
-}
-
-// displayLabel returns the label that we'll display to the user; this is often just the label
-// but in some cases rules define extra rules in the form _<name>#thing. For anything matching that
-// we strip the leading _ and trailing hashtag to make it look like it's all the same rule.
-// Note that this is only a nicety for display, all log messages etc will still display the real names.
-func displayLabel(label core.BuildLabel) string {
-	if len(label.Name) > 0 && label.Name[0] == '_' {
-		if index := strings.IndexRune(label.Name, '#'); index != -1 {
-			return core.BuildLabel{PackageName: label.PackageName, Name: strings.TrimLeft(label.Name[1:index], "_")}.String()
-		}
-	}
-	return label.String()
 }
 
 // For calculating the size of the console window; this is pretty important when we're writing
