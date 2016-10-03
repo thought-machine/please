@@ -1,7 +1,13 @@
-Version 6.0.4
+Version 6.1.0
 -------------
 
+    * Added a static flag to cc_binary to attempt to link it statically.
     * Fix cc_shared_object when srcs is empty.
+    * Suppress gcc build ids to reduce nondetermism
+    * Can now call HasLabel on an arbitrary build label, but it should be a transitive
+      dependency of the currently building rule to be safe.
+    * All sub-rules of a rule are rebuilt on 'plz rebuild'
+    * fpm_deb and fpm_package take a 'dirs' argument allowing passing rules with multiple outputs
 
 
 Version 6.0.3
