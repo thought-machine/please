@@ -277,13 +277,13 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
             'cc': ':' + name,
         }
     cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
-    dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
-    opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
+    dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True, shared=True)
+    opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, shared=True)
     # Note that --whole-archive is important for
     cmd = {
-        'dbg': '%s -shared -o ${OUT} -Wl,--whole-archive %s -Wl,--no-whole-archive' % (cc_tool, dbg_flags),
-        'opt': '%s -shared -o ${OUT} -Wl,--whole-archive %s -Wl,--no-whole-archive' % (cc_tool, opt_flags),
-        'cover': '%s -shared -o ${OUT} -Wl,--whole-archive %s -Wl,--no-whole-archive %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
+        'dbg': '%s -shared -o ${OUT} %s' % (cc_tool, dbg_flags),
+        'opt': '%s -shared -o ${OUT} %s' % (cc_tool, opt_flags),
+        'cover': '%s -shared -o ${OUT} %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
     }
     build_rule(
         name=name,
@@ -297,7 +297,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
         output_is_complete=True,
         tools=tools,
         requires=['cc', 'cc_hdrs'],
-        pre_build=_apply_transitive_labels(cmd),
+        pre_build=_apply_transitive_labels(cmd, shared=True),
     )
 
 
@@ -633,7 +633,8 @@ if CONFIG.BAZEL_COMPATIBILITY:
     cxx_test = cc_test
 
 
-def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None, binary=False, defines=None, dbg=False):
+def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None,
+                 binary=False, defines=None, dbg=False, shared=False):
     """Builds flags that we'll pass to the compiler invocation."""
     compiler_flags = compiler_flags or []
     compiler_flags.append(CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS)
@@ -651,10 +652,12 @@ def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflag
         # support those flags; in many cases it will work without, so try that.
         # Ordering them would be ideal but we lack a convenient way of working that out from here.
         objs = '-Wl,--start-group %s -Wl,--end-group' % objs
+    if shared:
+        objs = '-Wl,--whole-archive %s -Wl,--no-whole-archive' % objs
     return ' '.join([' '.join(compiler_flags), objs, ' '.join(linker_flags), pkg_config_cmd, pkg_config_cmd_2])
 
 
-def _apply_transitive_labels(command_map, link=True, archive=False):
+def _apply_transitive_labels(command_map, link=True, archive=False, shared=False):
     """Acquires the required linker flags from all transitive labels of a rule.
 
     This is how we handle libraries sensibly for C++ rules; you might write a rule that
@@ -674,7 +677,7 @@ def _apply_transitive_labels(command_map, link=True, archive=False):
             flags.extend('-Xlinker ' + l[3:] for l in labels if l.startswith('ld:'))
             flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
             alwayslink = ' '.join(l[3:] for l in labels if l.startswith('al:'))
-            if alwayslink:
+            if alwayslink and not shared:
                 alwayslink = ' -Wl,--whole-archive %s -Wl,--no-whole-archive ' % alwayslink
                 for k, v in command_map.items():
                     # These need to come *before* the others but within the group flags...
