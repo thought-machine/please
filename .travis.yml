@@ -28,7 +28,7 @@ addons:
       - unzip
 
 install:
-  - pip install --user cffi==1.8.2
+  - pip install --user cffi==1.7.0
 
 git:
   depth: 3
