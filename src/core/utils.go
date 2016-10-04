@@ -261,7 +261,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
 			for _, dep := range dependency.Dependencies() {
-				for _, dep2 := range recursivelyProvideFor(graph, target, dep.Label) {
+				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
 					if !done[dep2] && !dependency.IsTool(dep2) {
 						inner(graph.TargetOrDie(dep2))
 					}
@@ -269,7 +269,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 			}
 		} else {
 			for _, dep := range dependency.ExportedDependencies() {
-				for _, dep2 := range recursivelyProvideFor(graph, target, dep) {
+				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
 					if !done[dep2] {
 						inner(graph.TargetOrDie(dep2))
 					}
@@ -285,17 +285,22 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 }
 
 // recursivelyProvideFor recursively applies ProvideFor to a target.
-func recursivelyProvideFor(graph *BuildGraph, target *BuildTarget, dep BuildLabel) []BuildLabel {
-	ret := graph.TargetOrDie(dep).ProvideFor(target)
+func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, dep BuildLabel) []BuildLabel {
+	depTarget := graph.TargetOrDie(dep)
+	ret := depTarget.ProvideFor(dependency)
 	if len(ret) == 1 && ret[0] == dep {
-		return ret // Providing itself, don't recurse
+		// Providing itself, check the top-level target
+		ret = depTarget.ProvideFor(target)
+		if len(ret) == 1 && ret[0] == dep {
+			return ret
+		}
 	}
 	ret2 := make([]BuildLabel, 0, len(ret))
 	for _, r := range ret {
 		if r == dep {
 			ret2 = append(ret2, r) // Providing itself, don't recurse
 		} else {
-			ret2 = append(ret2, recursivelyProvideFor(graph, target, r)...)
+			ret2 = append(ret2, recursivelyProvideFor(graph, target, dependency, r)...)
 		}
 	}
 	return ret2
