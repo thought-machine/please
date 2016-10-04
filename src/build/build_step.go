@@ -410,7 +410,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 		return nil, err
 	}
 	if err = checkRuleHashes(target, hash); err != nil {
-		if state.NeedHashesOnly && state.IsOriginalTarget(target.Label.Parent()) {
+		if state.NeedHashesOnly && (state.IsOriginalTarget(target.Label) || state.IsOriginalTarget(target.Label.Parent())) {
 			return nil, stopTarget
 		} else if state.VerifyHashes {
 			return nil, err
