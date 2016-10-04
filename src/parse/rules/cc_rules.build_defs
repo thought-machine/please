@@ -84,6 +84,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         srcs=hdrs,
         requires=['cc_hdrs'],
         exported_deps=deps,
+        test_only=test_only,
         labels=labels,
     )
     cmd_template = '%s -c -I . ${SRCS_SRCS} %s'
@@ -236,6 +237,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         needs_transitive_deps = True,
         output_is_complete = True,
         visibility = visibility,
+        test_only = test_only,
         building_description = 'Archiving...',
         provides = provides,
     )
@@ -296,6 +298,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
         needs_transitive_deps=True,
         output_is_complete=True,
         tools=tools,
+        test_only=test_only,
         requires=['cc', 'cc_hdrs'],
         pre_build=_apply_transitive_labels(cmd, shared=True),
     )
