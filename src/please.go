@@ -151,7 +151,8 @@ var opts struct {
 
 	Query struct {
 		Deps struct {
-			Args struct {
+			Unique bool `long:"unique" short:"u" description:"Only output each dependency once"`
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"deps" description:"Queries the dependencies of a target."`
@@ -310,7 +311,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.QueryDeps(state, state.ExpandOriginalTargets())
+			query.QueryDeps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Unique)
 		})
 	},
 	"reverseDeps": func() bool {
