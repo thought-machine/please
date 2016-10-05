@@ -289,7 +289,9 @@ func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, d
 	depTarget := graph.TargetOrDie(dep)
 	ret := depTarget.ProvideFor(dependency)
 	if len(ret) == 1 && ret[0] == dep {
-		// Providing itself, check the top-level target
+		// Dependency doesn't have a require/provide directly on this guy, up to the top-level
+		// target. We have to check the dep first to keep things consistent with what targets
+		// have actually been built.
 		ret = depTarget.ProvideFor(target)
 		if len(ret) == 1 && ret[0] == dep {
 			return ret
