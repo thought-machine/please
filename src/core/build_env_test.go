@@ -3,6 +3,8 @@ package core
 import (
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExpandHomePath(t *testing.T) {
@@ -18,9 +20,18 @@ func TestExpandHomePath(t *testing.T) {
 			"/bin:" + HOME + "/bin:" + HOME + "/script:/usr/local/bin"},
 	}
 	for _, c := range cases {
-		got := ExpandHomePath(c.in)
-		if got != c.want {
-			t.Errorf("ExpandHomePath(%q) == %q, want %q", c.in, got, c.want)
-		}
+		assert.Equal(t, c.want, ExpandHomePath(c.in))
 	}
+}
+
+func TestReplaceEnvironment(t *testing.T) {
+	r := ReplaceEnvironment([]string{
+		"TMP_DIR=/home/user/please/src/core",
+		"PKG=src/core",
+		"SRCS=core.go build_env.go",
+	})
+	assert.Equal(t,
+		"/home/user/please/src/core src/core core.go build_env.go",
+		os.Expand("$TMP_DIR ${PKG} ${SRCS}", r))
+	assert.Equal(t, "", os.Expand("$WIBBLE", r))
 }

@@ -109,3 +109,16 @@ func toolPath(state *BuildState, tool BuildInput) string {
 	}
 	return tool.Paths(state.Graph)[0]
 }
+
+// ReplaceEnvironment returns a function suitable for passing to os.Expand to replace environment
+// variables from an earlier call to BuildEnvironment.
+func ReplaceEnvironment(env []string) func(string) string {
+	return func(s string) string {
+		for _, e := range env {
+			if strings.HasPrefix(e, s+"=") {
+				return e[len(s)+1:]
+			}
+		}
+		return ""
+	}
+}
