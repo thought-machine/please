@@ -169,14 +169,15 @@ def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None
     )
 
 
-def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None, flags='',
-              container=False, timeout=0, flaky=0, test_outputs=None, size=None,
+def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, visibility=None,
+              flags='', container=False, timeout=0, flaky=0, test_outputs=None, size=None,
               test_package=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args=''):
     """Defines a Java test.
 
     Args:
       name (str): Name of the rule.
       srcs (list): Java files containing the tests.
+      resources (list): Resources to include in the .jar file
       data (list): Runtime data files for this rule.
       deps (list): Dependencies of this rule.
       labels (list): Labels to attach to this test.
@@ -196,6 +197,7 @@ def java_test(name, srcs, data=None, deps=None, labels=None, visibility=None, fl
     java_library(
         name='_%s#lib' % name,
         srcs=srcs,
+        resources=resources,
         deps=deps,
         test_only=True,
         # Deliberately not visible outside this package.
@@ -327,7 +329,6 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
             building_description="Creating source jar...",
             deps=[':' + download_name, ':_%s#deps' % name] + deps,
             outs=[name + '_src.jar'],
-            requires=['java'],
             cmd=cmd + ' -s src.jar -e ""',
             tools=tools,
         )
@@ -341,7 +342,7 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
             outs=[name + '.jar'],
             requires=['java'],
             visibility=visibility,
-            cmd=cmd,
+            cmd=cmd + ' -e "_src.jar"',
             tools=tools,
         )
     elif not deps_only:
