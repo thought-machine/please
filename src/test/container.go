@@ -2,15 +2,17 @@
 
 package test
 
-import "fmt"
-import "io/ioutil"
-import "os/exec"
-import "path"
-import "strings"
-import "time"
+import (
+	"fmt"
+	"io/ioutil"
 
-import "build"
-import "core"
+	"path"
+	"strings"
+	"time"
+
+	"build"
+	"core"
+)
 
 func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	testDir := path.Join(core.RepoRoot, target.TestDir())
@@ -44,9 +46,7 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 	replacedCmd = "mkdir -p /tmp/test && cp -r /tmp/test_in/* /tmp/test && cd /tmp/test && " + replacedCmd
 	command = append(command, "-v", testDir+":/tmp/test_in", "-w", "/tmp/test_in", containerName, "bash", "-o", "pipefail", "-c", replacedCmd)
 	log.Debug("Running containerised test %s: docker %s", target.Label, strings.Join(command, " "))
-	cmd := exec.Command("docker", command...)
-	cmd.Dir = target.TestDir()
-	out, err := core.ExecWithTimeout(cmd, target.TestTimeout, state.Config.Test.Timeout)
+	out, err := core.ExecWithTimeoutShell(target.TestDir(), nil, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, command...)
 	_, isTimeout := err.(core.TimeoutError)
 	retrieveResultsAndRemoveContainer(target, cidfile, !isTimeout)
 	return out, err
@@ -92,8 +92,8 @@ func retrieveResultsAndRemoveContainer(target *core.BuildTarget, containerFile s
 	// to shut down immediately.
 	timeout := core.State.Config.Docker.RemoveTimeout
 	for i := 0; i < 5; i++ {
-		cmd := exec.Command("docker", "rm", "-f", string(cid))
-		if _, err := core.ExecWithTimeout(cmd, timeout, timeout); err == nil {
+		cmd := []string{"docker", "rm", "-f", string(cid)}
+		if _, err := core.ExecWithTimeoutSimple(timeout, cmd...); err == nil {
 			return
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -104,8 +104,8 @@ func retrieveResultsAndRemoveContainer(target *core.BuildTarget, containerFile s
 func retrieveFile(target *core.BuildTarget, cid []byte, filename string, warn bool) {
 	log.Debug("Attempting to retrieve file %s for %s...", filename, target.Label)
 	timeout := core.State.Config.Docker.ResultsTimeout
-	cmd := exec.Command("docker", "cp", string(cid)+":/tmp/test/"+filename, target.TestDir())
-	if out, err := core.ExecWithTimeout(cmd, timeout, timeout); err != nil {
+	cmd := []string{"docker", "cp", string(cid) + ":/tmp/test/" + filename, target.TestDir()}
+	if out, err := core.ExecWithTimeoutSimple(timeout, cmd...); err != nil {
 		if warn {
 			log.Warning("Failed to retrieve results for %s: %s [%s]", target.Label, err, out)
 		} else {

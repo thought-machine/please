@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 	"time"
@@ -283,11 +282,8 @@ func runTest(state *core.BuildState, target *core.BuildTarget, timeout int) ([]b
 		replacedCmd += " " + args
 		env = append(env, "TESTS="+args)
 	}
-	cmd := exec.Command("bash", "-o", "pipefail", "-c", replacedCmd)
-	cmd.Dir = target.TestDir()
-	cmd.Env = env
-	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(cmd.Env, "\n"), replacedCmd)
-	return core.ExecWithTimeout(cmd, target.TestTimeout, timeout)
+	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
+	return core.ExecWithTimeoutShell(target.TestDir(), env, target.TestTimeout, timeout, state.ShowAllOutput, replacedCmd)
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.

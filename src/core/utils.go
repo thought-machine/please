@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"io"
@@ -196,26 +197,35 @@ func (i TimeoutError) Error() string {
 	return fmt.Sprintf("Timeout (%d seconds) exceeded", i)
 }
 
-// ExecWithTimeout runs an external command with a timeout.
+// execWithTimeout runs an external command with a timeout.
 // If the command times out the returned error will be a TimeoutError.
-func ExecWithTimeout(cmd *exec.Cmd, timeout int, defaultTimeout int) ([]byte, error) {
-	var out bytes.Buffer
+// If showOutput is true then output will be printed to stderr as well as returned.
+func execWithTimeout(dir string, env []string, timeout, defaultTimeout int, showOutput bool, argv []string) ([]byte, error) {
 	if timeout == 0 {
 		timeout = defaultTimeout
 	}
-	cmd.Stdout = &out
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd.Dir = dir
+	cmd.Env = env
+
+	var out bytes.Buffer
 	cmd.Stderr = &out
-	ch := make(chan error)
-	go func() { ch <- cmd.Run() }()
-	select {
-	case <-time.After(time.Duration(timeout) * time.Second):
-		if err := cmd.Process.Kill(); err != nil {
-			log.Errorf("Process %d could not be killed after exceeding timeout of %d seconds", cmd.Process.Pid, timeout)
-		}
-		return out.Bytes(), TimeoutError(timeout)
-	case err := <-ch:
-		return out.Bytes(), err
-	}
+	return cmd.Output()
+}
+
+// ExecWithTimeoutShell runs an external command within a Bash shell.
+// Other arguments are as ExecWithTimeout.
+func ExecWithTimeoutShell(dir string, env []string, timeout, defaultTimeout int, showOutput bool, cmd ...string) ([]byte, error) {
+	cmd = append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd...)
+	return execWithTimeout(dir, env, timeout, defaultTimeout, showOutput, cmd)
+}
+
+// ExecWithTimeoutSimple runs an external command with a timeout.
+// It's a simpler version of ExecWithTimeout that gives less control.
+func ExecWithTimeoutSimple(timeout int, cmd ...string) ([]byte, error) {
+	return execWithTimeout("", nil, timeout, timeout, false, cmd)
 }
 
 type sourcePair struct{ Src, Tmp string }
