@@ -54,7 +54,7 @@ var opts struct {
 		Colour            bool   `long:"colour" description:"Forces coloured output from logging & other shell output."`
 		NoColour          bool   `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
 		TraceFile         string `long:"trace_file" description:"File to write Chrome tracing output into"`
-		PrintCommands     bool   `long:"print_commands" description:"Print each build / test command as they're run" hidden:"true"`
+		ShowAllOutput     bool   `long:"show_all_output" description:"Show all output live from all commands. Implies --plain_output."`
 		Version           bool   `long:"version" description:"Print the version of the tool"`
 	} `group:"Options controlling output & logging"`
 
@@ -463,6 +463,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
+	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	metrics.InitFromConfig(config)
 	// Acquire the lock before we start building
@@ -594,6 +595,9 @@ func main() {
 		output.SetColouredOutput(true)
 	} else if opts.OutputFlags.NoColour {
 		output.SetColouredOutput(false)
+	}
+	if opts.OutputFlags.ShowAllOutput {
+		opts.OutputFlags.PlainOutput = true
 	}
 	// Init logging, but don't do file output until we've chdir'd.
 	cli.InitLogging(opts.OutputFlags.Verbosity)

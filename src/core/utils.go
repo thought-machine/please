@@ -211,8 +211,16 @@ func execWithTimeout(dir string, env []string, timeout, defaultTimeout int, show
 	cmd.Env = env
 
 	var out bytes.Buffer
-	cmd.Stderr = &out
-	return cmd.Output()
+	if showOutput {
+		w := io.MultiWriter(os.Stderr, &out)
+		cmd.Stderr = w
+		cmd.Stdout = w
+	} else {
+		cmd.Stderr = &out
+		cmd.Stdout = &out
+	}
+	err := cmd.Run()
+	return out.Bytes(), err
 }
 
 // ExecWithTimeoutShell runs an external command within a Bash shell.
