@@ -165,14 +165,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	replacedCmd := replaceSequences(target)
 	env := core.StampedBuildEnvironment(state, target, false, cacheKey)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	out, err := core.ExecWithTimeoutShell(target.TmpDir(), env, target.BuildTimeout, state.Config.Build.Timeout, state.ShowAllOutput, replacedCmd)
+	out, combined, err := core.ExecWithTimeoutShell(target.TmpDir(), env, target.BuildTimeout, state.Config.Build.Timeout, state.ShowAllOutput, replacedCmd)
 	if err != nil {
 		if state.Verbosity >= 4 {
 			return fmt.Errorf("Error building target %s: %s\nENVIRONMENT:\n%s\n%s\n%s",
-				target.Label, err, strings.Join(env, "\n"), target.GetCommand(), out)
-		} else {
-			return fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, out)
+				target.Label, err, strings.Join(env, "\n"), target.GetCommand(), combined)
 		}
+		return fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
 	if target.PostBuildFunction != 0 {
 		out = bytes.TrimSpace(out)

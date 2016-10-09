@@ -197,10 +197,11 @@ func (i TimeoutError) Error() string {
 	return fmt.Sprintf("Timeout (%d seconds) exceeded", i)
 }
 
-// execWithTimeout runs an external command with a timeout.
+// ExecWithTimeout runs an external command with a timeout.
 // If the command times out the returned error will be a TimeoutError.
 // If showOutput is true then output will be printed to stderr as well as returned.
-func execWithTimeout(dir string, env []string, timeout, defaultTimeout int, showOutput bool, argv []string) ([]byte, error) {
+// It returns the stdout only, combined stdout and stderr and any error that occurred.
+func ExecWithTimeout(dir string, env []string, timeout, defaultTimeout int, showOutput bool, argv []string) ([]byte, []byte, error) {
 	if timeout == 0 {
 		timeout = defaultTimeout
 	}
@@ -210,30 +211,30 @@ func execWithTimeout(dir string, env []string, timeout, defaultTimeout int, show
 	cmd.Dir = dir
 	cmd.Env = env
 
-	var out bytes.Buffer
+	var out, outerr bytes.Buffer
 	if showOutput {
-		w := io.MultiWriter(os.Stderr, &out)
-		cmd.Stderr = w
-		cmd.Stdout = w
+		cmd.Stderr = io.MultiWriter(os.Stderr, &out, &outerr)
+		cmd.Stdout = io.MultiWriter(os.Stderr, &out)
 	} else {
-		cmd.Stderr = &out
-		cmd.Stdout = &out
+		cmd.Stdout = io.MultiWriter(&out, &outerr)
+		cmd.Stderr = &outerr
 	}
 	err := cmd.Run()
-	return out.Bytes(), err
+	return out.Bytes(), outerr.Bytes(), err
 }
 
 // ExecWithTimeoutShell runs an external command within a Bash shell.
 // Other arguments are as ExecWithTimeout.
-func ExecWithTimeoutShell(dir string, env []string, timeout, defaultTimeout int, showOutput bool, cmd ...string) ([]byte, error) {
+func ExecWithTimeoutShell(dir string, env []string, timeout, defaultTimeout int, showOutput bool, cmd ...string) ([]byte, []byte, error) {
 	cmd = append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd...)
-	return execWithTimeout(dir, env, timeout, defaultTimeout, showOutput, cmd)
+	return ExecWithTimeout(dir, env, timeout, defaultTimeout, showOutput, cmd)
 }
 
 // ExecWithTimeoutSimple runs an external command with a timeout.
 // It's a simpler version of ExecWithTimeout that gives less control.
 func ExecWithTimeoutSimple(timeout int, cmd ...string) ([]byte, error) {
-	return execWithTimeout("", nil, timeout, timeout, false, cmd)
+	_, out, err := ExecWithTimeout("", nil, timeout, timeout, false, cmd)
+	return out, err
 }
 
 type sourcePair struct{ Src, Tmp string }

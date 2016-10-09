@@ -283,7 +283,8 @@ func runTest(state *core.BuildState, target *core.BuildTarget, timeout int) ([]b
 		env = append(env, "TESTS="+args)
 	}
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	return core.ExecWithTimeoutShell(target.TestDir(), env, target.TestTimeout, timeout, state.ShowAllOutput, replacedCmd)
+	_, out, err := core.ExecWithTimeoutShell(target.TestDir(), env, target.TestTimeout, timeout, state.ShowAllOutput, replacedCmd)
+	return out, err
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.

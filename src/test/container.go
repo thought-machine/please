@@ -29,7 +29,7 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 	cidfile := path.Join(testDir, ".container_id")
 	// Using C.UTF-8 for LC_ALL because it works. Not sure it's strictly
 	// correct to mix that with LANG=en_GB.UTF-8
-	command := []string{"run", "--cidfile", cidfile, "-e", "LC_ALL=C.UTF-8"}
+	command := []string{"docker", "run", "--cidfile", cidfile, "-e", "LC_ALL=C.UTF-8"}
 	if target.ContainerSettings != nil {
 		if target.ContainerSettings.DockerRunArgs != "" {
 			command = append(command, strings.Split(target.ContainerSettings.DockerRunArgs, " ")...)
@@ -45,8 +45,8 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 	}
 	replacedCmd = "mkdir -p /tmp/test && cp -r /tmp/test_in/* /tmp/test && cd /tmp/test && " + replacedCmd
 	command = append(command, "-v", testDir+":/tmp/test_in", "-w", "/tmp/test_in", containerName, "bash", "-o", "pipefail", "-c", replacedCmd)
-	log.Debug("Running containerised test %s: docker %s", target.Label, strings.Join(command, " "))
-	out, err := core.ExecWithTimeoutShell(target.TestDir(), nil, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, command...)
+	log.Debug("Running containerised test %s: %s", target.Label, strings.Join(command, " "))
+	_, out, err := core.ExecWithTimeout(target.TestDir(), nil, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, command)
 	_, isTimeout := err.(core.TimeoutError)
 	retrieveResultsAndRemoveContainer(target, cidfile, !isTimeout)
 	return out, err
