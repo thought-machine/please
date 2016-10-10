@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -197,6 +198,25 @@ func (i TimeoutError) Error() string {
 	return fmt.Sprintf("Timeout (%d seconds) exceeded", i)
 }
 
+// safeBuffer is an io.Writer that ensures that only one thread writes to it at a time.
+// This is important because we potentially have both stdout and stderr writing to the same
+// buffer, and os.exec only guarantees goroutine-safety if both are the same writer, which in
+// our case they're not (but are both ultimately causing writes to the same buffer)
+type safeBuffer struct {
+	sync.Mutex
+	buf bytes.Buffer
+}
+
+func (sb *safeBuffer) Write(b []byte) (int, error) {
+	sb.Lock()
+	defer sb.Unlock()
+	return sb.buf.Write(b)
+}
+
+func (sb *safeBuffer) Bytes() []byte {
+	return sb.buf.Bytes()
+}
+
 // ExecWithTimeout runs an external command with a timeout.
 // If the command times out the returned error will be a TimeoutError.
 // If showOutput is true then output will be printed to stderr as well as returned.
@@ -211,10 +231,11 @@ func ExecWithTimeout(dir string, env []string, timeout, defaultTimeout int, show
 	cmd.Dir = dir
 	cmd.Env = env
 
-	var out, outerr bytes.Buffer
+	var out bytes.Buffer
+	var outerr safeBuffer
 	if showOutput {
-		cmd.Stderr = io.MultiWriter(os.Stderr, &out, &outerr)
-		cmd.Stdout = io.MultiWriter(os.Stderr, &out)
+		cmd.Stdout = io.MultiWriter(os.Stderr, &out, &outerr)
+		cmd.Stderr = io.MultiWriter(os.Stderr, &outerr)
 	} else {
 		cmd.Stdout = io.MultiWriter(&out, &outerr)
 		cmd.Stderr = &outerr
