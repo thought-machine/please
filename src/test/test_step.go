@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -153,9 +154,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if err != nil && target.Results.Output == "" {
 			target.Results.Output = err.Error()
 		}
-		if err != nil {
-			_, target.Results.TimedOut = err.(core.TimeoutError)
-		}
+		target.Results.TimedOut = err == context.DeadlineExceeded
 		coverage = parseCoverageFile(target, coverageFile)
 		target.Results.Duration += duration
 		if !core.PathExists(outputFile) {
