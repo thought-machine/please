@@ -334,19 +334,30 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 	if err != nil {
 		return true, err
 	}
-	// The tmp output can be a symlink back to the real one; this is allowed for rules like
-	// filegroups that attempt to link outputs of other rules. In that case we can't
-	// remove the original because that'd break the link, but by definition we don't need
-	// to actually do anything more.
-	// TODO(pebers): The logic here is quite tortured, consider a (very careful) rewrite.
-	dereferencedOutput, _ := filepath.EvalSymlinks(realOutput)
-	if absOutput, _ := filepath.Abs(realOutput); tmpOutput == absOutput || realOutput == tmpOutput || dereferencedOutput == tmpOutput {
-		log.Debug("%s and %s are the same file, nothing to do", tmpOutput, realOutput)
+	realOutputExists := core.PathExists(realOutput)
+	// If this is a filegroup we hardlink the outputs over and so the two files may actually be
+	// the same file. If so don't do anything else and especially don't delete & recreate the
+	// file because other things might be using it already (because more than one filegroup can
+	// own the same file).
+	if filegroup && realOutputExists && core.IsSameFile(tmpOutput, realOutput) {
+		movePathHash(tmpOutput, realOutput, filegroup) // make sure this is updated regardless
 		return false, nil
 	}
-	if core.PathExists(realOutput) {
-		oldHash, err := pathHash(realOutput, false)
-		if err != nil {
+	if realOutputExists {
+		// The tmp output can be a symlink back to the real one; this is allowed for rules like
+		// filegroups that attempt to link outputs of other rules. In that case we can't
+		// remove the original because that'd break the link, but by definition we don't need
+		// to actually do anything more.
+		// TODO(pebers): The logic here is quite tortured, consider a (very careful) rewrite.
+		// TODO(pebers): Is this still needed? Filegroups no longer work that way and nothing
+		//               else should have the same file as input and output?
+		dereferencedOutput, _ := filepath.EvalSymlinks(realOutput)
+		if absOutput, _ := filepath.Abs(realOutput); tmpOutput == absOutput || realOutput == tmpOutput || dereferencedOutput == tmpOutput {
+			log.Debug("%s and %s are the same file, nothing to do", tmpOutput, realOutput)
+			return false, nil
+		}
+
+		if oldHash, err := pathHash(realOutput, false); err != nil {
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
 			// We already have the same file in the current location. Don't bother moving it.
