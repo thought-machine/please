@@ -1,3 +1,11 @@
+Version 6.1.2
+-------------
+
+    * Some small fixes to Java rules
+    * Fixed a bug where two filegroup rules outputting the same rule would sometimes fail
+      when built simultaneously.
+
+
 Version 6.1.0
 -------------
 
