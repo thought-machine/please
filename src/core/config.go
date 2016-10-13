@@ -97,7 +97,7 @@ func DefaultConfiguration() *Configuration {
 	config := Configuration{}
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
-	config.Please.DownloadLocation = "https://get.please.build/"
+	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.Lang = "en_GB.UTF-8"  // Not the language of the UI, the language passed to rules.
 	config.Please.Nonce = "1402"        // Arbitrary nonce to invalidate config when needed.
 	config.Build.Timeout = 600          // Ten minutes
