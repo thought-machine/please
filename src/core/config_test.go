@@ -2,6 +2,7 @@ package core
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -114,5 +115,14 @@ func TestReadSemver(t *testing.T) {
 	assert.EqualValues(t, 3, config.Please.Version.Minor)
 	assert.EqualValues(t, 4, config.Please.Version.Patch)
 	config, err = ReadConfigFiles([]string{"src/core/test_data/version_bad.plzconfig"})
+	assert.Error(t, err)
+}
+
+func TestReadDurations(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/duration_good.plzconfig"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, 500*time.Millisecond, config.Metrics.PushTimeout)
+	assert.EqualValues(t, 5*time.Second, config.Metrics.PushFrequency)
+	config, err = ReadConfigFiles([]string{"src/core/test_data/duration_bad.plzconfig"})
 	assert.Error(t, err)
 }
