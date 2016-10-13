@@ -36,9 +36,11 @@ var log = logging.MustGetLogger("update")
 // If it requires an update it will never return, it will either die on failure or on success will exec the new Please.
 // Conversely, if an update isn't required it will return. It may adjust the version in the configuration.
 // updatesEnabled indicates whether updates are enabled (i.e. not run with --noupdate)
-// forceUpdate indicates whether an update is specifically requested (due to e.g. `plz update`)
-func CheckAndUpdate(config *core.Configuration, updatesEnabled, forceUpdate bool) {
-	if !shouldUpdate(config, updatesEnabled, forceUpdate) {
+// updateCommand indicates whether an update is specifically requested (due to e.g. `plz update`)
+// forceUpdate indicates whether the user passed --force on the command line, in which case we
+// will always update even if the version exists.
+func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate bool) {
+	if !forceUpdate && !shouldUpdate(config, updatesEnabled, updateCommand) {
 		return
 	}
 	word := describe(config.Please.Version, core.PleaseVersion, true)
@@ -48,6 +50,15 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, forceUpdate bool
 	// simultaneously.
 	core.AcquireRepoLock()
 	defer core.ReleaseRepoLock()
+
+	// If the destination exists and the user passed --force, remove it to force a redownload.
+	newDir := core.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.String()))
+	log.Notice("%s", newDir)
+	if forceUpdate && core.PathExists(newDir) {
+		if err := os.RemoveAll(newDir); err != nil {
+			log.Fatalf("Failed to remove existing directory: %s", err)
+		}
+	}
 
 	// Download it.
 	newPlease := downloadAndLinkPlease(config)
@@ -63,10 +74,10 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, forceUpdate bool
 }
 
 // shouldUpdate determines whether we should run an update or not. It returns true iff one is required.
-func shouldUpdate(config *core.Configuration, updatesEnabled, forceUpdate bool) bool {
+func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool) bool {
 	if config.Please.Version == core.PleaseVersion {
 		return false // Version matches, nothing to do here.
-	} else if (!updatesEnabled || !config.Please.SelfUpdate) && !forceUpdate {
+	} else if (!updatesEnabled || !config.Please.SelfUpdate) && !updateCommand {
 		// Update is required but has been skipped (--noupdate or whatever)
 		word := describe(config.Please.Version, core.PleaseVersion, true)
 		log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, core.PleaseVersion)
@@ -80,12 +91,12 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, forceUpdate bool) 
 	}
 	if config.Please.Version.Major == 0 {
 		// Specific version isn't set, only update on `plz update`.
-		if !forceUpdate {
+		if !updateCommand {
 			config.Please.Version = core.PleaseVersion
 			return false
 		}
 		config.Please.Version = findLatestVersion(config.Please.DownloadLocation)
-		return shouldUpdate(config, updatesEnabled, forceUpdate)
+		return shouldUpdate(config, updatesEnabled, updateCommand)
 	}
 	return true
 }
@@ -95,6 +106,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, forceUpdate bool) 
 func downloadAndLinkPlease(config *core.Configuration) string {
 	config.Please.Location = core.ExpandHomePath(config.Please.Location)
 	newPlease := path.Join(config.Please.Location, config.Please.Version.String(), "please")
+
 	if !core.PathExists(newPlease) {
 		downloadPlease(config)
 	}

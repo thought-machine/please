@@ -139,6 +139,7 @@ var opts struct {
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
 	Update struct {
+		Force bool `long:"force" description:"Forces a re-download of the new version."`
 	} `command:"update" description:"Checks for an update and updates if needed."`
 
 	Op struct {
@@ -555,7 +556,7 @@ func readConfig(forceUpdate bool) *core.Configuration {
 	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
 		log.Fatalf("Can't override requested config setting: %s", err)
 	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate)
+	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force)
 	return config
 }
 
