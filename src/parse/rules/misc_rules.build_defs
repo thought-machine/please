@@ -386,7 +386,7 @@ def _find_git_repo_files(name, output):
 
 
 def fpm_package(name, version, package_type, files=None, dirs=None, links=None, package_name=None,
-                options='', srcs=None, deps=None, visibility=None, labels=None):
+                options='', srcs=None, deps=None, visibility=None, labels=None, _apply_deb_deps=False):
     """Defines a rule to build a package using fpm.
 
     Args:
@@ -433,15 +433,18 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
                     (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(links.items()))
     cmds.append('fpm -s dir -t %s -n "%s" -v "%s" %s -p $OUT .' % (package_type, package_name,
                                                                    version, options))
+    cmd = ' && '.join(cmds)
     build_rule(
         name=name,
         srcs=srcs,
         outs=['%s_%s_%s.deb' % (package_name, version, CONFIG.ARCH)],
-        cmd=' && '.join(cmds),
+        cmd=cmd,
         deps=deps,
         visibility=visibility,
         building_description='Packaging...',
         requires=['fpm'],
+        pre_build=_deb_deps(cmd) if _apply_deb_deps else None,
+        output_is_complete=True,
     )
 
 
@@ -486,8 +489,17 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
         srcs=srcs,
         deps=deps,
         visibility=visibility,
-        labels=labels,
+        labels=(labels or []) + ['_deb_dep:%s=%s' % (package_name or name, version)],
+        _apply_deb_deps=True,
     )
+
+
+def _deb_deps(cmd):
+    """Returns a pre-build function that updates the fpm command to add .deb dependencies."""
+    def _find_deb_deps(name):
+        deps = ' '.join('--deb-build-depends ' + label for label in get_labels(name, '_deb_dep:'))
+        set_command(name, cmd + ' ' + deps)
+    return _find_deb_deps
 
 
 def tarball(name, srcs, out=None, deps=None, subdir=None,
