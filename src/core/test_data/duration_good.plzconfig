@@ -1,0 +1,3 @@
+[metrics]
+pushtimeout = 500ms
+pushfrequency = 5

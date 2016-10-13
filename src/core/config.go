@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/coreos/go-semver/semver"
 	"gopkg.in/gcfg.v1"
@@ -108,7 +109,8 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
-	config.Metrics.PushFrequency = 100 // push every 100ms
+	config.Metrics.PushFrequency = Duration(400 * time.Millisecond)
+	config.Metrics.PushTimeout = Duration(500 * time.Millisecond)
 	config.Test.Timeout = 600
 	config.Test.DefaultContainer = TestContainerDocker
 	config.Docker.DefaultImage = "ubuntu:trusty"
@@ -196,7 +198,8 @@ type Configuration struct {
 	}
 	Metrics struct {
 		PushGatewayURL string
-		PushFrequency  int
+		PushFrequency  Duration
+		PushTimeout    Duration
 	}
 	CustomMetricLabels map[string]string
 	Test               struct {
@@ -353,4 +356,27 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		}
 	}
 	return nil
+}
+
+// A Duration is an extension to time.Duration to implement the TextUnmarshaler interface
+// TODO(pebers): We should use this more widely across Config for other timeouts etc.
+type Duration time.Duration
+
+// UnmarshalText implements the TextUnmarshaler interface
+func (duration *Duration) UnmarshalText(text []byte) error {
+	d, err := time.ParseDuration(string(text))
+	// For backwards compatibility with other fields, assume an unadorned number is an int.
+	if err != nil {
+		if i, err := strconv.Atoi(string(text)); err == nil {
+			*duration = Duration(time.Duration(i) * time.Second)
+			return nil
+		}
+	}
+	*duration = Duration(d)
+	return err
+}
+
+// ToTimeDuration converts this Duration to a time.Duration
+func (duration Duration) ToTimeDuration() time.Duration {
+	return time.Duration(duration)
 }
