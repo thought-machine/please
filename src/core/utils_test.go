@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/base64"
 	"io/ioutil"
@@ -146,6 +147,39 @@ func TestIsSameFile(t *testing.T) {
 func TestLookPathDoesntExist(t *testing.T) {
 	_, err := LookPath("wibblewobbleflibble", []string{"/usr/local/bin", "/usr/bin", "/bin"})
 	assert.Error(t, err)
+}
+
+func TestExecWithTimeout(t *testing.T) {
+	out, err := ExecWithTimeoutSimple(10, "true")
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(out))
+}
+
+func TestExecWithTimeoutFailure(t *testing.T) {
+	out, err := ExecWithTimeoutSimple(10, "false")
+	assert.Error(t, err)
+	assert.Equal(t, 0, len(out))
+}
+
+func TestExecWithTimeoutDeadline(t *testing.T) {
+	out, err := ExecWithTimeoutSimple(0, "sleep", "10")
+	assert.Error(t, err)
+	assert.True(t, err == context.DeadlineExceeded)
+	assert.Equal(t, 0, len(out))
+}
+
+func TestExecWithTimeoutOutput(t *testing.T) {
+	out, stderr, err := ExecWithTimeoutShell("", nil, 10, 10, false, "echo hello")
+	assert.NoError(t, err)
+	assert.Equal(t, "hello\n", string(out))
+	assert.Equal(t, "hello\n", string(stderr))
+}
+
+func TestExecWithTimeoutStderr(t *testing.T) {
+	out, stderr, err := ExecWithTimeoutShell("", nil, 10, 10, false, "echo hello 1>&2")
+	assert.NoError(t, err)
+	assert.Equal(t, "", string(out))
+	assert.Equal(t, "hello\n", string(stderr))
 }
 
 // buildGraph builds a test graph which we use to test IterSources etc.

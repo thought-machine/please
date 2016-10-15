@@ -1,12 +1,12 @@
 package test
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"math"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 	"time"
@@ -154,9 +154,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if err != nil && target.Results.Output == "" {
 			target.Results.Output = err.Error()
 		}
-		if err != nil {
-			_, target.Results.TimedOut = err.(core.TimeoutError)
-		}
+		target.Results.TimedOut = err == context.DeadlineExceeded
 		coverage = parseCoverageFile(target, coverageFile)
 		target.Results.Duration += duration
 		if !core.PathExists(outputFile) {
@@ -283,11 +281,9 @@ func runTest(state *core.BuildState, target *core.BuildTarget, timeout int) ([]b
 		replacedCmd += " " + args
 		env = append(env, "TESTS="+args)
 	}
-	cmd := exec.Command("bash", "-o", "pipefail", "-c", replacedCmd)
-	cmd.Dir = target.TestDir()
-	cmd.Env = env
-	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(cmd.Env, "\n"), replacedCmd)
-	return core.ExecWithTimeout(cmd, target.TestTimeout, timeout)
+	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
+	_, out, err := core.ExecWithTimeoutShell(target.TestDir(), env, target.TestTimeout, timeout, state.ShowAllOutput, replacedCmd)
+	return out, err
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.

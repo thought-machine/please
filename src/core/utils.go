@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -188,34 +190,65 @@ func getInode(filename string) (uint64, error) {
 	return s.Ino, nil
 }
 
-// TimeoutError is the type of error that's issued when a command times out.
-type TimeoutError int
+// safeBuffer is an io.Writer that ensures that only one thread writes to it at a time.
+// This is important because we potentially have both stdout and stderr writing to the same
+// buffer, and os.exec only guarantees goroutine-safety if both are the same writer, which in
+// our case they're not (but are both ultimately causing writes to the same buffer)
+type safeBuffer struct {
+	sync.Mutex
+	buf bytes.Buffer
+}
 
-// Error formats this error as a string.
-func (i TimeoutError) Error() string {
-	return fmt.Sprintf("Timeout (%d seconds) exceeded", i)
+func (sb *safeBuffer) Write(b []byte) (int, error) {
+	sb.Lock()
+	defer sb.Unlock()
+	return sb.buf.Write(b)
+}
+
+func (sb *safeBuffer) Bytes() []byte {
+	return sb.buf.Bytes()
 }
 
 // ExecWithTimeout runs an external command with a timeout.
-// If the command times out the returned error will be a TimeoutError.
-func ExecWithTimeout(cmd *exec.Cmd, timeout int, defaultTimeout int) ([]byte, error) {
-	var out bytes.Buffer
+// If the command times out the returned error will be a context.DeadlineExceeded error.
+// If showOutput is true then output will be printed to stderr as well as returned.
+// It returns the stdout only, combined stdout and stderr and any error that occurred.
+func ExecWithTimeout(dir string, env []string, timeout, defaultTimeout int, showOutput bool, argv []string) ([]byte, []byte, error) {
 	if timeout == 0 {
 		timeout = defaultTimeout
 	}
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	ch := make(chan error)
-	go func() { ch <- cmd.Run() }()
-	select {
-	case <-time.After(time.Duration(timeout) * time.Second):
-		if err := cmd.Process.Kill(); err != nil {
-			log.Errorf("Process %d could not be killed after exceeding timeout of %d seconds", cmd.Process.Pid, timeout)
-		}
-		return out.Bytes(), TimeoutError(timeout)
-	case err := <-ch:
-		return out.Bytes(), err
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd.Dir = dir
+	cmd.Env = env
+
+	var out bytes.Buffer
+	var outerr safeBuffer
+	if showOutput {
+		cmd.Stdout = io.MultiWriter(os.Stderr, &out, &outerr)
+		cmd.Stderr = io.MultiWriter(os.Stderr, &outerr)
+	} else {
+		cmd.Stdout = io.MultiWriter(&out, &outerr)
+		cmd.Stderr = &outerr
 	}
+	err := cmd.Run()
+	return out.Bytes(), outerr.Bytes(), err
+}
+
+// ExecWithTimeoutShell runs an external command within a Bash shell.
+// Other arguments are as ExecWithTimeout.
+// Note that the command is deliberately a single string.
+func ExecWithTimeoutShell(dir string, env []string, timeout, defaultTimeout int, showOutput bool, cmd string) ([]byte, []byte, error) {
+	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
+	return ExecWithTimeout(dir, env, timeout, defaultTimeout, showOutput, c)
+}
+
+// ExecWithTimeoutSimple runs an external command with a timeout.
+// It's a simpler version of ExecWithTimeout that gives less control.
+func ExecWithTimeoutSimple(timeout int, cmd ...string) ([]byte, error) {
+	_, out, err := ExecWithTimeout("", nil, timeout, timeout, false, cmd)
+	return out, err
 }
 
 type sourcePair struct{ Src, Tmp string }

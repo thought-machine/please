@@ -92,6 +92,8 @@ type BuildState struct {
 	ForceRebuild bool
 	// True to always show test output, even on success.
 	ShowTestOutput bool
+	// True to print all output of all tasks to stderr.
+	ShowAllOutput bool
 	// Number of running workers
 	numWorkers int
 	// Used to count the number of currently active/pending targets

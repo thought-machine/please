@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -161,20 +160,18 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if err := prepareSources(state.Graph, target); err != nil {
 		return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
 	}
+
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
 	replacedCmd := replaceSequences(target)
-	cmd := exec.Command("bash", "-u", "-o", "pipefail", "-c", replacedCmd)
-	cmd.Dir = target.TmpDir()
-	cmd.Env = core.StampedBuildEnvironment(state, target, false, cacheKey)
-	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(cmd.Env, "\n"), replacedCmd)
-	out, err := core.ExecWithTimeout(cmd, target.BuildTimeout, state.Config.Build.Timeout)
+	env := core.StampedBuildEnvironment(state, target, false, cacheKey)
+	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
+	out, combined, err := core.ExecWithTimeoutShell(target.TmpDir(), env, target.BuildTimeout, state.Config.Build.Timeout, state.ShowAllOutput, replacedCmd)
 	if err != nil {
 		if state.Verbosity >= 4 {
 			return fmt.Errorf("Error building target %s: %s\nENVIRONMENT:\n%s\n%s\n%s",
-				target.Label, err, strings.Join(cmd.Env, "\n"), target.GetCommand(), out)
-		} else {
-			return fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, out)
+				target.Label, err, strings.Join(env, "\n"), target.GetCommand(), combined)
 		}
+		return fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
 	if target.PostBuildFunction != 0 {
 		out = bytes.TrimSpace(out)
