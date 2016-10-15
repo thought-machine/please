@@ -307,7 +307,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
     )
 
 
-def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None,
+def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None, linker_flags=None,
               deps=None, visibility=None, pkg_config_libs=None, test_only=False, static=False):
     """Builds a binary from a collection of C++ rules.
 
@@ -315,6 +315,8 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
       name (str): Name of the rule
       srcs (list): C or C++ source files to compile.
       hdrs (list): Header files.
+      private_hdrs (list): Header files that are available only to this rule and not exported to
+                           dependent rules.
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker.
       deps (list): Dependent rules.
@@ -343,6 +345,7 @@ def cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None
             name='_%s#lib' % name,
             srcs=srcs,
             hdrs=hdrs,
+            private_hdrs=private_hdrs,
             deps=deps,
             compiler_flags=compiler_flags,
             test_only=test_only,
