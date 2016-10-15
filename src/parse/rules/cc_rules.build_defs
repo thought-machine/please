@@ -244,7 +244,8 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
 
 
 def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None,
-                     deps=None, visibility=None, test_only=False, pkg_config_libs=None):
+                     deps=None, visibility=None, test_only=False, pkg_config_libs=None,
+                     includes=None):
     """Generates a C++ shared object with its dependencies linked in.
 
     Args:
@@ -258,6 +259,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
       visibility (list): Visibility declaration for this rule.
       test_only (bool): If True, is only available to other test rules.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      includes (list): Include directories to be added to the compiler's lookup path.
     """
     deps = deps or []
     provides = None
@@ -271,6 +273,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
             deps = deps,
             test_only = test_only,
             pkg_config_libs = pkg_config_libs,
+            includes = includes,
         )
         deps.append(':_%s#lib' % name)
         deps.append(':_%s#lib_hdrs' % name)

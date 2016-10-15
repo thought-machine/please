@@ -24,7 +24,7 @@ _DEFAULT_GRPC_LABELS = ['grpc']
 
 def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None,
                   python_deps=None, cc_deps=None, java_deps=None, go_deps=None,
-                  languages=None, _is_grpc=False, test_only=False):
+                  languages=None, _is_grpc=False, test_only=False, root_dir=''):
     """Compile a .proto file to generated code for various languages.
 
     Args:
@@ -40,6 +40,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
       go_deps (list): Additional deps to add to the go_library rules
       languages (list): List of languages to generate rules for, chosen from the set {cc, py, go, java}.
       test_only (bool): If True, can only be used in test rules.
+      root_dir (str): The directory that the protos are compiled relative to. Useful if your
+                      proto files have import statements that are not relative to the repo root.
     """
     if languages:
         for language in languages:
@@ -104,12 +106,16 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         if language == 'go' and not lang_plugins:
             # Go doesn't come by default, so add it here.
             lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, lang_tools))
-        cmds = [
-            '%s --%s_out=$TMP_DIR %s ${SRCS}' % (_plugin(CONFIG.PROTOC_TOOL, lang_tools),
-                                                 _PROTO_LANGUAGES[language],
-                                                 ' '.join(lang_plugins)),
-            'mv -f ${PKG}/* .',
-        ]
+        cmd = ' '.join([
+            _plugin(CONFIG.PROTOC_TOOL, lang_tools),
+            '--%s_out=$TMP_DIR' % _PROTO_LANGUAGES[language],
+            ' '.join(lang_plugins),
+        ])
+        if root_dir:
+            cmd = 'export RD="%s"; cd $RD; %s ${SRCS//$RD\\//} && cd $TMP_DIR' % (root_dir, cmd.replace('$TMP_DIR', '.'))
+        else:
+            cmd += ' ${SRCS}'
+        cmds = [cmd, 'mv -f ${PKG}/* .']
         if language == 'py' and CONFIG.PROTO_PYTHON_PACKAGE:
             cmds.append('sed -i -e "s/from google.protobuf/from %s/g" *_pb2.py' %
                         CONFIG.PROTO_PYTHON_PACKAGE)
@@ -220,7 +226,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
 
 
 def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_deps=None,
-                 java_deps=None, go_deps=None, cc_deps=None, labels=None, test_only=False):
+                 java_deps=None, go_deps=None, cc_deps=None, labels=None, test_only=False,
+                 root_dir=''):
     """Defines a rule for a grpc library.
 
     Args:
@@ -235,6 +242,8 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_
       languages (list): List of languages to generate rules for, chosen from the set {cc, py, go, java}.
       labels (list): List of labels to apply to this rule.
       test_only (bool): If True, this rule can only be used by test rules.
+      root_dir (str): The directory that the protos are compiled relative to. Useful if your
+                      proto files have import statements that are not relative to the repo root.
     """
     # No plugin for Go, that's handled above since it's merged into the go_out argument.
     deps = deps or []
@@ -274,6 +283,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_
         labels=(labels or []) + _DEFAULT_GRPC_LABELS,
         _is_grpc=True,
         test_only=test_only,
+        root_dir=root_dir,
     )
 
 
