@@ -266,11 +266,13 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 		if target == dependency {
 			// This is the current build rule, so link its sources.
 			for _, source := range dependency.AllSources() {
-				fullPaths := source.FullPaths(graph)
-				for i, sourcePath := range source.Paths(graph) {
-					tmpPath := path.Join(tmpDir, sourcePath)
-					ch <- sourcePair{fullPaths[i], tmpPath}
-					donePaths[tmpPath] = true
+				for _, providedSource := range recursivelyProvideSource(graph, target, source) {
+					fullPaths := providedSource.FullPaths(graph)
+					for i, sourcePath := range providedSource.Paths(graph) {
+						tmpPath := path.Join(tmpDir, sourcePath)
+						ch <- sourcePair{fullPaths[i], tmpPath}
+						donePaths[tmpPath] = true
+					}
 				}
 			}
 		} else {
@@ -339,6 +341,20 @@ func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, d
 		}
 	}
 	return ret2
+}
+
+// maybeRecursivelyProvideFor is similar to recursivelyProvideFor but operates on a BuildInput.
+func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildInput) []BuildInput {
+	if label := src.Label(); label != nil {
+		dep := graph.TargetOrDie(*label)
+		provided := recursivelyProvideFor(graph, target, dep, dep.Label)
+		ret := make([]BuildInput, len(provided))
+		for i, p := range provided {
+			ret[i] = p
+		}
+		return ret
+	}
+	return []BuildInput{src}
 }
 
 // Yields all the runtime files for a rule (outputs & data files), similar to above.
