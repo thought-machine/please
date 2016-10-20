@@ -159,6 +159,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             requires=['cc_hdrs'],
             test_only=test_only,
             labels=labels,
+            tools=tools,
             pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
         )
         if alwayslink:
