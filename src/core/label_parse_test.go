@@ -109,6 +109,6 @@ func TestDoubleSlashes(t *testing.T) {
 
 // Test that labels can't match reserved suffixes used for temp dirs.
 func TestReservedTempDirs(t *testing.T) {
-	assertNotLabel(t, "//src/core:core#.build", "#.build is a reserved suffix")
-	assertNotLabel(t, "//src/core:core#.test", "#.test is a reserved suffix")
+	assertNotLabel(t, "//src/core:core._build", "._build is a reserved suffix")
+	assertNotLabel(t, "//src/core:core._test", "._test is a reserved suffix")
 }

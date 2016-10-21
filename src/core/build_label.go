@@ -89,6 +89,12 @@ func TryNewBuildLabel(pkgName string, name string) (BuildLabel, error) {
 		return BuildLabel{}, fmt.Errorf("Invalid package name: %s", pkgName)
 	} else if !targetNameOnly.MatchString(name) {
 		return BuildLabel{}, fmt.Errorf("Invalid target name: %s", name)
+	} else if strings.HasSuffix(name, buildDirSuffix) ||
+		strings.HasSuffix(name, testDirSuffix) ||
+		strings.HasSuffix(pkgName, buildDirSuffix) ||
+		strings.HasSuffix(pkgName, testDirSuffix) {
+
+		return BuildLabel{}, fmt.Errorf("._build and ._test are reserved suffixes")
 	}
 	return BuildLabel{PackageName: pkgName, Name: name}, nil
 }

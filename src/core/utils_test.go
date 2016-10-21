@@ -42,44 +42,44 @@ func TestIterSources(t *testing.T) {
 	}
 
 	assert.Equal(t, []sourcePair{
-		{"src/core/target1.go", "plz-out/tmp/src/core/target1#.build/src/core/target1.go"},
+		{"src/core/target1.go", "plz-out/tmp/src/core/target1._build/src/core/target1.go"},
 	}, iterSources("//src/core:target1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/core/target2.go", "plz-out/tmp/src/core/target2#.build/src/core/target2.go"},
-		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/core/target2#.build/src/core/target1.a"},
+		{"src/core/target2.go", "plz-out/tmp/src/core/target2._build/src/core/target2.go"},
+		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/core/target2._build/src/core/target1.a"},
 	}, iterSources("//src/core:target2"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/build/target1.go", "plz-out/tmp/src/build/target1#.build/src/build/target1.go"},
-		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/build/target1#.build/src/core/target1.a"},
+		{"src/build/target1.go", "plz-out/tmp/src/build/target1._build/src/build/target1.go"},
+		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/build/target1._build/src/core/target1.a"},
 	}, iterSources("//src/build:target1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/output/output1.go", "plz-out/tmp/src/output/output1#.build/src/output/output1.go"},
-		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1#.build/src/build/target1.a"},
+		{"src/output/output1.go", "plz-out/tmp/src/output/output1._build/src/output/output1.go"},
+		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1._build/src/build/target1.a"},
 	}, iterSources("//src/output:output1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/output/output1.go", "plz-out/tmp/src/output/output1#.build/src/output/output1.go"},
-		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1#.build/src/build/target1.a"},
+		{"src/output/output1.go", "plz-out/tmp/src/output/output1._build/src/output/output1.go"},
+		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1._build/src/build/target1.a"},
 	}, iterSources("//src/output:output1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/output/output2.go", "plz-out/tmp/src/output/output2#.build/src/output/output2.go"},
-		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/output/output2#.build/src/core/target2.a"},
-		{"plz-out/gen/src/output/output1.a", "plz-out/tmp/src/output/output2#.build/src/output/output1.a"},
+		{"src/output/output2.go", "plz-out/tmp/src/output/output2._build/src/output/output2.go"},
+		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/output/output2._build/src/core/target2.a"},
+		{"plz-out/gen/src/output/output1.a", "plz-out/tmp/src/output/output2._build/src/output/output1.a"},
 	}, iterSources("//src/output:output2"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/parse/target1.go", "plz-out/tmp/src/parse/target1#.build/src/parse/target1.go"},
-		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/parse/target1#.build/src/core/target2.a"},
-		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/parse/target1#.build/src/core/target1.a"},
+		{"src/parse/target1.go", "plz-out/tmp/src/parse/target1._build/src/parse/target1.go"},
+		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/parse/target1._build/src/core/target2.a"},
+		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/parse/target1._build/src/core/target1.a"},
 	}, iterSources("//src/parse:target1"))
 
 	assert.Equal(t, []sourcePair{
-		{"src/parse/target2.go", "plz-out/tmp/src/parse/target2#.build/src/parse/target2.go"},
-		{"plz-out/gen/src/parse/target1.a", "plz-out/tmp/src/parse/target2#.build/src/parse/target1.a"},
+		{"src/parse/target2.go", "plz-out/tmp/src/parse/target2._build/src/parse/target2.go"},
+		{"plz-out/gen/src/parse/target1.a", "plz-out/tmp/src/parse/target2._build/src/parse/target1.a"},
 	}, iterSources("//src/parse:target2"))
 }
 
@@ -92,7 +92,7 @@ func TestInitialPackageSimple(t *testing.T) {
 func TestInitialPackageIllegalLabel(t *testing.T) {
 	// Moves up a directory because the last component isn't a legal package name.
 	// This is not that common but does make our existing test work at least :)
-	initialPackage = "plz-out/tmp/test/query_alltargets_test#.test"
+	initialPackage = "plz-out/tmp/test/query_alltargets_test._test"
 	p := InitialPackage()
 	assert.Equal(t, []BuildLabel{{PackageName: "plz-out/tmp/test", Name: "..."}}, p)
 }
@@ -107,7 +107,7 @@ func TestInitialPackageRoot(t *testing.T) {
 
 func TestInitialPackageUpToRoot(t *testing.T) {
 	// Similar to above but when we don't start out at the root but back up to it.
-	initialPackage = "query_alltargets_test#.test"
+	initialPackage = "query_alltargets_test._test"
 	p := InitialPackage()
 	assert.Equal(t, []BuildLabel{{PackageName: "", Name: "..."}}, p)
 }
