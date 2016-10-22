@@ -83,7 +83,7 @@ UNSORTED_CALLS = {
     'dict': UNSORTED_DICT_ITERATION,
 }
 
-JSON = json.loads(pkg_resources.resource_string('src.parse', 'rule_args.json'))
+JSON = json.loads(pkg_resources.resource_string('src.parse', 'rule_args.json').decode('utf-8'))
 WHITELISTED_FUNCTIONS = {'subinclude', 'glob', 'include_defs', 'licenses'}
 BUILTIN_FUNCTIONS = {k: v for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
 DEPRECATED_FUNCTIONS = {'include_defs'}
