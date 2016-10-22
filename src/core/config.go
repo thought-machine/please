@@ -249,6 +249,7 @@ type Configuration struct {
 		LdTool           string
 		ArTool           string
 		AsmTool          string
+		LinkWithLdTool   bool
 		DefaultOptCflags string
 		DefaultDbgCflags string
 		DefaultLdflags   string

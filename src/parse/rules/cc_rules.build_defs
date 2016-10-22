@@ -41,8 +41,8 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     pkg_config_libs = pkg_config_libs or []
     includes = includes or []
     defines = defines or []
-    dbg_flags = _build_flags(compiler_flags[:], [], [], pkg_config_cflags=pkg_config_libs, dbg=True)
-    opt_flags = _build_flags(compiler_flags[:], [], [], pkg_config_cflags=pkg_config_libs)
+    dbg_flags = _build_flags(compiler_flags[:], pkg_config_libs, dbg=True)
+    opt_flags = _build_flags(compiler_flags[:], pkg_config_libs)
     cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
 
     # Bazel suggests passing nonexported header files in 'srcs'. We however treat
@@ -94,6 +94,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         'cover': cmd_template % (cc_tool, dbg_flags) + _COVERAGE_FLAGS,
     }
 
+    ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
     if len(srcs) > 1:
         # Compile all the sources separately, this is much faster for large numbers of files
         # than giving them all to gcc in one invocation.
@@ -122,12 +123,13 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             tag = 'a',
             srcs = a_rules,
             outs = [name + '.a'],
-            cmd = 'echo $SRCS | xargs -n 1 %s xo && %s rcs $OUT *.o' % (CONFIG.AR_TOOL, CONFIG.AR_TOOL),
+            cmd = 'echo $SRCS | xargs -n 1 %s xo && %s rcs $OUT *.o' % (ar_tool, ar_tool),
             building_description = 'Archiving...',
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
             deps = (deps or []) + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
+            tools = tools,
         )
         if alwayslink:
             labels.append('cc:al:%s/%s.a' % (get_base_path(), name))
@@ -227,13 +229,14 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
             'cc_hdrs': ':_%s#lib_hdrs' % name,
             'cc': ':' + name,
         }
+    ar_tool, tools = _tool_path(CONFIG.AR_TOOL)
     build_rule(
         name = name,
         deps = deps,
         outs = ['lib%s.a' % name],
         cmd = (
             'for a in `find . -name "*.a"`; do (cd $(dirname $a) && %s x $(basename $a)); done;'
-            '%s rcs $OUT `find . -name "*.o" | sort`' % (CONFIG.AR_TOOL, CONFIG.AR_TOOL)
+            '%s rcs $OUT `find . -name "*.o" | sort`' % (ar_tool, ar_tool)
         ),
         needs_transitive_deps = True,
         output_is_complete = True,
@@ -241,6 +244,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         test_only = test_only,
         building_description = 'Archiving...',
         provides = provides,
+        tools = tools,
     )
 
 
@@ -282,14 +286,12 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
             'cc_hdrs': ':_%s#lib_hdrs' % name,
             'cc': ':' + name,
         }
-    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
-    dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True, shared=True)
-    opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, shared=True)
-    # Note that --whole-archive is important for
+    tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL)
+    flags = _binary_build_flags(linker_flags, pkg_config_libs, shared=True)
     cmd = {
-        'dbg': '%s -shared -o ${OUT} %s' % (cc_tool, dbg_flags),
-        'opt': '%s -shared -o ${OUT} %s' % (cc_tool, opt_flags),
-        'cover': '%s -shared -o ${OUT} %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
+        'dbg': '%s -shared -o ${OUT} %s' % (tool, flags),
+        'opt': '%s -shared -o ${OUT} %s' % (tool, flags),
+        'cover': '%s -shared -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS),
     }
     build_rule(
         name=name,
@@ -332,13 +334,12 @@ def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None
     if static:
         compiler_flags = compiler_flags or []
         compiler_flags.append('-static -static-libgcc')
-    dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
-    opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
-    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
+    flags = _binary_build_flags(linker_flags, pkg_config_libs)
+    tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL)
     cmd = {
-        'dbg': '%s -o ${OUT} %s' % (cc_tool, dbg_flags),
-        'opt': '%s -o ${OUT} %s' % (cc_tool, opt_flags),
-        'cover': '%s -o ${OUT} %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
+        'dbg': '%s -o ${OUT} %s' % (tool, flags),
+        'opt': '%s -o ${OUT} %s' % (tool, flags),
+        'cover': '%s -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS),
     }
     deps = deps or []
     if srcs:
@@ -402,9 +403,8 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
     linker_flags.extend(linker_flags or [])
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
-    dbg_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True, dbg=True)
-    opt_flags = _build_flags(compiler_flags, linker_flags, pkg_config_libs, binary=True)
-    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
+    flags = _binary_build_flags(linker_flags, pkg_config_libs)
+    tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL)
     if write_main:
         genrule(
             name='_%s#main' % name,
@@ -414,9 +414,9 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         )
         srcs.append(':_%s#main' % name)
     cmd = {
-        'dbg': '%s -o ${OUT} %s' % (cc_tool, dbg_flags),
-        'opt': '%s -o ${OUT} %s' % (cc_tool, opt_flags),
-        'cover': '%s -o ${OUT} %s %s' % (cc_tool, dbg_flags, _COVERAGE_FLAGS),
+        'dbg': '%s -o ${OUT} %s' % (tool, flags),
+        'opt': '%s -o ${OUT} %s' % (tool, flags),
+        'cover': '%s -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS),
     }
     if srcs:
         cc_library(
@@ -508,6 +508,7 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         test_only=test_only,
     )
 
+    ar_tool, tools = _tool_path(CONFIG.AR_TOOL)
     if darwin:
         # OSX's ld doesn't support '--format binary', and this is the least fiddly
         # alternative. Requiring an additional tool is a bit suboptimal but probably
@@ -516,11 +517,12 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
             'export ENCODED_FILENAME=${SRCS//[\/\.]/_}',
             'echo "%s" > embedded.asm' % _CC_DARWIN_ASM_CONTENTS,
             '%s -fmacho64 embedded.asm -o ${OUTS/.a/.o}' % CONFIG.ASM_TOOL,
-            '%s rcs $OUT ${OUTS/.a/.o}' % CONFIG.AR_TOOL,
+            '%s rcs $OUT ${OUTS/.a/.o}' % ar_tool,
         ])
     else:
+        ld_tool, tools = _tool_path(CONFIG.LD_TOOL, tools)
         cmd = '%s -r --format binary -o ${OUTS/.a/.o} $SRC && %s rcs $OUT ${OUTS/.a/.o}' % (
-            CONFIG.LD_TOOL, CONFIG.AR_TOOL)
+            ld_tool, ar_tool)
 
     lib_rule = build_rule(
         name = name,
@@ -532,6 +534,7 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         visibility=visibility,
         building_description='Embedding...',
         requires=['cc'],
+        tools=tools,
         test_only=test_only,
     )
     filegroup(
@@ -643,20 +646,22 @@ if CONFIG.BAZEL_COMPATIBILITY:
     cxx_test = cc_test
 
 
-def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflags=None,
-                 binary=False, defines=None, dbg=False, shared=False):
+def _build_flags(compiler_flags, pkg_config_libs, defines=None, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
     compiler_flags = compiler_flags or []
     compiler_flags.append(CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS)
     compiler_flags.append('-fPIC')
     if defines:
         compiler_flags.extend('-D' + define for define in defines)
-    # Linker flags may need this leading -Xlinker mabob.
-    linker_flags = ['-Xlinker ' + flag for flag in (linker_flags or [])]
-    pkg_config_cmd = ' '.join('`pkg-config --cflags --libs %s`' % x for x in pkg_config_libs or [])
-    pkg_config_cmd_2 = ' '.join('`pkg-config --cflags %s`' % x for x in pkg_config_cflags or [])
-    objs = '`find . -name "*.o" -or -name "*.a" | sort`' if binary else ''
-    if binary and CONFIG.OS != 'darwin':
+    pkg_config_cmd = ' '.join('`pkg-config --cflags %s`' % x for x in pkg_config_libs or [])
+    return ' '.join(compiler_flags) + ' ' + pkg_config_cmd
+
+
+def _binary_build_flags(linker_flags, pkg_config_libs, shared=False):
+    """Builds flags that we'll pass to the linker invocation."""
+    pkg_config_cmd = ' '.join('`pkg-config --libs %s`' % x for x in pkg_config_libs or [])
+    objs = '`find . -name "*.o" -or -name "*.a" | sort`'
+    if CONFIG.OS != 'darwin':
         # We don't order libraries in a way that is especially useful for the linker, which is
         # nicely solved by --start-group / --end-group. Unfortunately the OSX linker doesn't
         # support those flags; in many cases it will work without, so try that.
@@ -664,7 +669,9 @@ def _build_flags(compiler_flags, linker_flags, pkg_config_libs, pkg_config_cflag
         objs = '-Wl,--start-group %s -Wl,--end-group' % objs
     if shared:
         objs = '-Wl,--whole-archive %s -Wl,--no-whole-archive' % objs
-    return ' '.join([' '.join(compiler_flags), objs, ' '.join(linker_flags), pkg_config_cmd, pkg_config_cmd_2])
+    linker_flags = ' '.join('-Wl,' + f for f in (linker_flags or []))
+    flags = ' '.join([objs, linker_flags, pkg_config_cmd])
+    return flags.replace('-Wl,', '') if CONFIG.LINK_WITH_LD_TOOL else flags
 
 
 def _apply_transitive_labels(command_map, link=True, archive=False, shared=False):
@@ -676,22 +683,27 @@ def _apply_transitive_labels(command_map, link=True, archive=False, shared=False
     that use it. The solution to this is here; we collect the set of linker flags from all
     dependencies and apply them to the binary rule that needs them.
     """
-    ar_cmd = '&& %s rcs $OUT *.o' % CONFIG.AR_TOOL
+    ar_tool, _ = _tool_path(CONFIG.AR_TOOL)
+    ar_cmd = '&& %s rcs $OUT *.o' % ar_tool
     def update_commands(name):
         base_path = get_base_path()
         labels = get_labels(name, 'cc:')
-        flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
-        flags.extend('-D' + l[4:] for l in labels if l.startswith('def:'))
         if link:
-            flags.append('-Wl,--build-id=none')
-            flags.extend('-Xlinker ' + l[3:] for l in labels if l.startswith('ld:'))
+            flags = ['--build-id=none' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,--build-id=none']
+            flags.extend(l[3:] for l in labels if l.startswith('ld:'))
             flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
             alwayslink = ' '.join(l[3:] for l in labels if l.startswith('al:'))
             if alwayslink and not shared:
-                alwayslink = ' -Wl,--whole-archive %s -Wl,--no-whole-archive ' % alwayslink
+                if CONFIG.LINK_WITH_LD_TOOL:
+                    alwayslink = ' --whole-archive %s --no-whole-archive ' % alwayslink
+                else:
+                    alwayslink = ' -Wl,--whole-archive %s -Wl,--no-whole-archive ' % alwayslink
                 for k, v in command_map.items():
                     # These need to come *before* the others but within the group flags...
                     command_map[k] = v.replace('`find', alwayslink + '`find')
+        else:
+            flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
+            flags.extend('-D' + l[4:] for l in labels if l.startswith('def:'))
         if archive:
             flags.append(ar_cmd)
         flags = ' ' + ' '.join(flags)

@@ -101,6 +101,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("LD_TOOL", config.Cpp.LdTool)
 	setConfigValue("AR_TOOL", config.Cpp.ArTool)
 	setConfigValue("ASM_TOOL", config.Cpp.AsmTool)
+	setConfigValue("LINK_WITH_LD_TOOL", pythonBool(config.Cpp.LinkWithLdTool))
 	setConfigValue("DEFAULT_OPT_CFLAGS", config.Cpp.DefaultOptCflags)
 	setConfigValue("DEFAULT_DBG_CFLAGS", config.Cpp.DefaultDbgCflags)
 	setConfigValue("DEFAULT_LDFLAGS", config.Cpp.DefaultLdflags)
