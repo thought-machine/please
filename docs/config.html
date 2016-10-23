@@ -362,6 +362,20 @@
         The tool invoked to link object files. Defaults to <code>ld</code> but you could
         also set it to <code>gold</code>, for example.</li>
 
+      <li><b>ArTool</b><br/>
+        The tool invoked to archive static libraries. Defaults to <code>ar</code>.</li>
+
+      <li><b>AsmTool</b><br/>
+        The tool invoked as an assembler. Currently only used on OSX for
+	<code>cc_embed_binary</code> rules and so defaults to <code>nasm</code>.</li>
+
+      <li><b>LinkWithLdTool</b><br/>
+	If true, instructs Please to use the tool set earlier in <code>ldtool</code>
+	to link binaries instead of <code>cctool</code>.<br/>
+	This is an esoteric setting that most people don't want; a vanilla <code>ld</code>
+	will not perform all steps necessary here (you'll get lots of missing symbol messages
+	from having no libc etc). Generally best to leave this disabled.</li>
+
       <li><b>DefaultOptCflags</b><br/>
         Compiler flags passed to all C++ rules during <code>opt</code> builds;
 	these are typically pretty basic things like
