@@ -13,8 +13,10 @@ path = $PATH
 goroot = $GOROOT
 
 [cpp]
-cctool = g++-4.8
-defaultoptcflags = --std=c++11 -O2 -DNDEBUG
+cctool = gcc-4.8
+cpptool = g++-4.8
+defaultoptcflags = --std=c99 -O2 -DNDEBUG
+defaultoptcppflags = --std=c++11 -O2 -DNDEBUG
 
 [proto]
 protoctool = ${HOME}/protoc
