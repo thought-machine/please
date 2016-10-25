@@ -192,7 +192,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
 
 
 def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None,
-                     deps=None, visibility=None, test_only=False, pkg_config_libs=None):
+                      deps=None, visibility=None, test_only=False, pkg_config_libs=None, _c=False):
     """Generates a C++ static library (.a).
 
     This is essentially just a collection of other cc_library rules into a single archive.
@@ -222,6 +222,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
             deps = deps,
             test_only = test_only,
             pkg_config_libs = pkg_config_libs,
+            _c=_c,
         )
         deps.append(':_%s#lib' % name)
         deps.append(':_%s#lib_hdrs' % name)
@@ -279,6 +280,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
             test_only = test_only,
             pkg_config_libs = pkg_config_libs,
             includes = includes,
+            _c=_c,
         )
         deps.append(':_%s#lib' % name)
         deps.append(':_%s#lib_hdrs' % name)
@@ -353,6 +355,7 @@ def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None
             deps=deps,
             compiler_flags=compiler_flags,
             test_only=test_only,
+            _c=_c,
         )
         deps.append(':_%s#lib' % name)
     build_rule(
@@ -430,6 +433,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
             compiler_flags=compiler_flags,
             test_only=True,
             alwayslink=True,
+            _c=_c,
         )
         deps = deps or []
         deps.append(':_%s#lib' % name)
