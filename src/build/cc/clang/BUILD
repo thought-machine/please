@@ -3,7 +3,7 @@
 # might use underneath - ie. we are not passing -fuse-ld or similar).
 
 package(
-    cc_tool = 'clang++',
+    cpp_tool = 'clang++',
     ld_tool = 'gold',
 )
 

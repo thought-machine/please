@@ -25,8 +25,8 @@ testtool = //src/build/go:please_go_test
 
 [cpp]
 defaultnamespace = thought_machine
-defaultoptcflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
-defaultdbgcflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
+defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
+defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 
 [java]
 jarcattool = //src/build/java:jarcat

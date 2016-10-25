@@ -135,12 +135,15 @@ func DefaultConfiguration() *Configuration {
 	config.Java.TargetLevel = "8"
 	config.Java.DefaultMavenRepo = "https://repo1.maven.org/maven2"
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
-	config.Cpp.CCTool = "g++"
+	config.Cpp.CCTool = "gcc"
+	config.Cpp.CppTool = "g++"
 	config.Cpp.LdTool = "ld"
 	config.Cpp.ArTool = "ar"
 	config.Cpp.AsmTool = "nasm"
-	config.Cpp.DefaultOptCflags = "--std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror"
-	config.Cpp.DefaultDbgCflags = "--std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror"
+	config.Cpp.DefaultOptCflags = "--std=c99 -O3 -DNDEBUG -Wall -Wextra -Werror"
+	config.Cpp.DefaultDbgCflags = "--std=c99 -g3 -DDEBUG -Wall -Wextra -Werror"
+	config.Cpp.DefaultOptCppflags = "--std=c++11 -O3 -DNDEBUG -Wall -Wextra -Werror"
+	config.Cpp.DefaultDbgCppflags = "--std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror"
 	config.Proto.ProtocTool = "protoc"
 	// We're using the most common names for these; typically gRPC installs the builtin plugins
 	// as grpc_python_plugin etc.
@@ -245,15 +248,18 @@ type Configuration struct {
 		DefaultMavenRepo   string
 	}
 	Cpp struct {
-		CCTool           string
-		LdTool           string
-		ArTool           string
-		AsmTool          string
-		LinkWithLdTool   bool
-		DefaultOptCflags string
-		DefaultDbgCflags string
-		DefaultLdflags   string
-		DefaultNamespace string
+		CCTool             string
+		CppTool            string
+		LdTool             string
+		ArTool             string
+		AsmTool            string
+		LinkWithLdTool     bool
+		DefaultOptCflags   string
+		DefaultDbgCflags   string
+		DefaultOptCppflags string
+		DefaultDbgCppflags string
+		DefaultLdflags     string
+		DefaultNamespace   string
 	}
 	Proto struct {
 		ProtocTool       string
