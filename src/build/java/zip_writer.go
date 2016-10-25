@@ -254,6 +254,7 @@ func WriteFile(w *zip.Writer, filename string, data []byte) error {
 	} else if _, err := fw.Write(data); err != nil {
 		return err
 	}
+	addExistingFile(w, filename, filename, 0, 0, 0)
 	return nil
 }
 
