@@ -5,7 +5,8 @@ Version 7.0.0
       share most of the implementation.
     * cctool config setting renamed to cpptool, cctool now defines the compiler used for new
       c_library etc rules. This is a breaking change.
-    * Similarly defaultoptcppflags and defaultdbgcppflags introduced.
+  	* Similarly defaultoptcppflags and defaultdbgcppflags introduced.
+	* The defines argument to cc_library now accepts a dict of token name -> value.
 
 
 Version 6.1.2

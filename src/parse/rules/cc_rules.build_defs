@@ -28,7 +28,9 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
       includes (list): List of include directories to be added to the compiler's path.
-      defines (list): List of tokens to define in the preprocessor.
+      defines (list | dict): List of tokens to define in the preprocessor.
+                             Alternatively can be a dict of name -> value to define, in which case
+                             values are surrounded by quotes.
       alwayslink (bool): If True, any binaries / tests using this library will link in all symbols,
                          even if they don't directly reference them. This is useful for e.g. having
                          static members that register themselves at construction time.
@@ -56,6 +58,10 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         hdrs += src_hdrs
         # Found this in a few cases... can't pass -pthread to the linker.
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
+
+    # Handle defines being passed as a dict, as a nicety for the user.
+    if isinstance(defines, dict):
+        defines = [k if v is None else r'%s=\"%s\"' % (k, v) for k, v in sorted(defines.items())]
 
     labels = (['cc:ld:' + flag for flag in linker_flags] +
               ['cc:pc:' + lib for lib in pkg_config_libs] +
