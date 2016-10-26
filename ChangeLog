@@ -1,3 +1,13 @@
+Version 7.0.0
+-------------
+
+    * Introduced a set of c_library, c_binary rules etc. These parallel the cc_ versions and
+      share most of the implementation.
+    * cctool config setting renamed to cpptool, cctool now defines the compiler used for new
+      c_library etc rules. This is a breaking change.
+    * Similarly defaultoptcppflags and defaultdbgcppflags introduced.
+
+
 Version 6.1.2
 -------------
 

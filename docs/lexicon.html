@@ -207,14 +207,16 @@
     <p>The message and arguments together are interpolated like Python's normal string
       interpolation, similar to the builtin <code>logging</code> package.</p>
 
-    <h2><a name="cc">C++ rules</a></h2>
+    <h2><a name="cc">C and C++ rules</a></h2>
 
-    <p>Rules to build C++ targets (or likely C although we've not tested that extensively).</p>
-    <p>
-In general these have received somewhat less testing than would really be required for
-the complex build environment C++ has, so some issues may remain.</p>
+    <p>Rules to build C and C++ targets.</p>
+    <p>The process of building C or C++ code is fairly complex so while these rules do their best
+      to keep things reasonably simple, there's a lot of scope for things going wrong.</p>
+    <p>There is very little difference between the <code>c_</code> and <code>cc_</code> variants
+      of each rule, in nearly all cases they simply use different tools and flags in the
+      <a href="config.html#cpp">relevant config section</a>.</p>
 
-    <h3><a name="cc_library">cc_library</a></h3>
+    <h3><a name="cc_library">c_library / cc_library</a></h3>
 
     <p><pre class="rule"><code>cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only=False, compiler_flags=None, linker_flags=None, pkg_config_libs=None, archive=False)</code></pre></p>
 
@@ -309,7 +311,7 @@ will be picked up by cc_binary or cc_test rules.</td>
       </tbody>
     </table>
 
-    <h3><a name="cc_static_library">cc_static_library</a></h3>
+    <h3><a name="cc_static_library">c_static_library / cc_static_library</a></h3>
 
     <p><pre class="rule"><code>cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None)</code></pre></p>
 
@@ -396,7 +398,7 @@ it as a collection of other rules.</p>
       </tbody>
     </table>
 
-    <h3><a name="cc_shared_object">cc_shared_object</a></h3>
+    <h3><a name="cc_shared_object">c_shared_object / cc_shared_object</a></h3>
 
     <p><pre class="rule"><code>cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None)</code></pre></p>
 
@@ -480,7 +482,7 @@ between srcs and hdrs is important.</td>
       </tbody>
     </table>
 
-    <h3><a name="cc_binary">cc_binary</a></h3>
+    <h3><a name="cc_binary">c_binary / cc_binary</a></h3>
 
     <p><pre class="rule"><code>cc_binary(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, pkg_config_libs=None)</code></pre></p>
 
@@ -571,12 +573,12 @@ between srcs and hdrs is important.</td>
       </tbody>
     </table>
 
-    <h3><a name="cc_test">cc_test</a></h3>
+    <h3><a name="cc_test">c_test / cc_test</a></h3>
 
     <p><pre class="rule"><code>cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None, deps=None, data=None, visibility=None, labels=None, flaky=False, test_outputs=None, timeout=0, container=False, write_main=True)</code></pre></p>
 
     <p>Defines a C++ test using UnitTest++.</p>
-    <p>If <code>write_main</code> is true (the default) then we template in a main file so you don't have to supply your own.</p>
+    <p>If <code>write_main</code> is true (the default for C++) then we template in a main file so you don't have to supply your own.</p>
     <p>Later we might add support for other test frameworks, for now you can add your own by setting <code>write_main=False</code>
       and writing your own <code>main</code> function.</p>
 
@@ -691,15 +693,16 @@ between srcs and hdrs is important.</td>
 
       <tr>
 	<td>write_main</td>
-	<td>True</td>
+	<td>True for <code>cc_test</code>, False for <code>c_test</code></td>
 	<td>bool</td>
-	<td>If true then a <code>main</code> function is written automatically for you.</td>
+	<td>If true then a <code>main</code> function is written automatically for you.<br/>
+      This will only work in C++ mode since it uses UnitTest++.</td>
       </tr>
 
       </tbody>
     </table>
 
-    <h3><a name="cc_embed_binary">cc_embed_binary</a></h3>
+    <h3><a name="cc_embed_binary">c_embed_binary / cc_embed_binary</a></h3>
 
     <p><pre class="rule"><code>cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, namespace=None)</code></pre></p>
 

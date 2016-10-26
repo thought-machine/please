@@ -51,8 +51,8 @@ python_library(
     name = 'so_test_py',
     srcs = ['__init__.py'],
     resources = [':so_test'],
-    visibility = ['//src/build/python/...'],
     zip_safe = False,
+    visibility = ['//src/build/python/...'],
 )
 
 python_test(
@@ -80,4 +80,10 @@ gentest(
     labels = ['cc'],
     no_test_output = True,
     test_cmd = '$(exe :test_binary)',
+)
+
+# Tests on the C family of functions.
+c_test(
+    name = 'c_test',
+    srcs = ['test.c'],
 )
