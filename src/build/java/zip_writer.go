@@ -62,7 +62,9 @@ outer:
 			}
 			// Allow skipping existing files that are exactly the same as the added ones.
 			// It's unnecessarily awkward to insist on not ever doubling up on a dependency.
-			if existing.CRC32 == f.CRC32 {
+			// TODO(pebers): Bit of a hack ignoring it when CRC is 0, would be better to add
+			//               the correct CRC when added through WriteFile.
+			if existing.CRC32 == f.CRC32 || existing.CRC32 == 0 {
 				log.Info("Skipping %s / %s: already added (from %s)", filepath, f.Name, existing.ZipFile)
 				continue
 			}
