@@ -270,7 +270,7 @@ func newRpcCache(config *core.Configuration) (*rpcCache, error) {
 	cache := &rpcCache{
 		Writeable:  config.Cache.RpcWriteable,
 		Connecting: true,
-		timeout:    time.Duration(config.Cache.RpcTimeout) * time.Second,
+		timeout:    time.Duration(config.Cache.RpcTimeout),
 		startTime:  time.Now(),
 	}
 	go cache.connect(config)
