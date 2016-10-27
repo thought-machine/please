@@ -715,7 +715,7 @@ def _apply_transitive_labels(command_map, link=True, archive=False, shared=False
                 flags = ['--build-id=none' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,--build-id=none']
             flags.extend(l[3:] for l in labels if l.startswith('ld:'))
             flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
-            alwayslink = ' '.join(l[3:] for l in labels if l.startswith('al:'))
+            alwayslink = ' '.join('./' + l[3:] for l in labels if l.startswith('al:'))
             if alwayslink and not shared:
                 ldflag = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
                 alwayslink = ' %s%s %s %s%s ' % (ldflag, _WHOLE_ARCHIVE, alwayslink, ldflag, _NO_WHOLE_ARCHIVE)
