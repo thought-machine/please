@@ -3,7 +3,6 @@
 package cache
 
 import (
-	"core"
 	"encoding/base64"
 	"io"
 	"mime"
@@ -13,12 +12,15 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"time"
+
+	"core"
 )
 
 type httpCache struct {
 	Url       string
 	Writeable bool
-	Timeout   int
+	Timeout   time.Duration
 	OSName    string
 }
 
@@ -167,6 +169,6 @@ func newHttpCache(config *core.Configuration) *httpCache {
 	cache.OSName = runtime.GOOS + "_" + runtime.GOARCH
 	cache.Url = config.Cache.HttpUrl
 	cache.Writeable = config.Cache.HttpWriteable
-	cache.Timeout = config.Cache.HttpTimeout
+	cache.Timeout = time.Duration(config.Cache.HttpTimeout)
 	return cache
 }

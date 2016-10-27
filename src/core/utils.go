@@ -213,11 +213,11 @@ func (sb *safeBuffer) Bytes() []byte {
 // If the command times out the returned error will be a context.DeadlineExceeded error.
 // If showOutput is true then output will be printed to stderr as well as returned.
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
-func ExecWithTimeout(dir string, env []string, timeout, defaultTimeout int, showOutput bool, argv []string) ([]byte, []byte, error) {
+func ExecWithTimeout(dir string, env []string, timeout, defaultTimeout Duration, showOutput bool, argv []string) ([]byte, []byte, error) {
 	if timeout == 0 {
 		timeout = defaultTimeout
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout))
 	defer cancel()
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
@@ -239,14 +239,14 @@ func ExecWithTimeout(dir string, env []string, timeout, defaultTimeout int, show
 // ExecWithTimeoutShell runs an external command within a Bash shell.
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
-func ExecWithTimeoutShell(dir string, env []string, timeout, defaultTimeout int, showOutput bool, cmd string) ([]byte, []byte, error) {
+func ExecWithTimeoutShell(dir string, env []string, timeout, defaultTimeout Duration, showOutput bool, cmd string) ([]byte, []byte, error) {
 	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
 	return ExecWithTimeout(dir, env, timeout, defaultTimeout, showOutput, c)
 }
 
 // ExecWithTimeoutSimple runs an external command with a timeout.
 // It's a simpler version of ExecWithTimeout that gives less control.
-func ExecWithTimeoutSimple(timeout int, cmd ...string) ([]byte, error) {
+func ExecWithTimeoutSimple(timeout Duration, cmd ...string) ([]byte, error) {
 	_, out, err := ExecWithTimeout("", nil, timeout, timeout, false, cmd)
 	return out, err
 }

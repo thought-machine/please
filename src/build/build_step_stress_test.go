@@ -56,7 +56,7 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 	state.Graph.AddTarget(target)
 	if i <= size {
 		if i > 10 {
-			target.TestTimeout = i // Stash this here, will be useful later.
+			target.Flakiness = i // Stash this here, will be useful later.
 			target.PostBuildFunction = reflect.ValueOf(&postBuildFunc).Pointer()
 		}
 		if i < size/10 {
@@ -98,11 +98,11 @@ func please(tid int, state *core.BuildState) {
 // Post-build function that adds new targets & ties in dependencies.
 func postBuild(target *core.BuildTarget, out string) error {
 	// Add a target corresponding to this one to its 'parent'
-	if target.TestTimeout == 0 {
+	if target.Flakiness == 0 {
 		return fmt.Errorf("shouldn't be calling a post-build function on %s", target.Label)
 	}
-	parent := label(target.TestTimeout / 10)
-	newTarget := addTarget(core.State, target.TestTimeout+size)
+	parent := label(target.Flakiness / 10)
+	newTarget := addTarget(core.State, target.Flakiness+size)
 
 	// This mimics what interpreter.go does.
 	core.State.Graph.TargetOrDie(parent).AddMaybeExportedDependency(newTarget.Label, false)
