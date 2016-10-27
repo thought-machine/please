@@ -7,9 +7,12 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+var tenSeconds = Duration(10 * time.Second)
 
 func TestCollapseHash(t *testing.T) {
 	// Test that these two come out differently
@@ -150,33 +153,33 @@ func TestLookPathDoesntExist(t *testing.T) {
 }
 
 func TestExecWithTimeout(t *testing.T) {
-	out, err := ExecWithTimeoutSimple(10, "true")
+	out, err := ExecWithTimeoutSimple(tenSeconds, "true")
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutFailure(t *testing.T) {
-	out, err := ExecWithTimeoutSimple(10, "false")
+	out, err := ExecWithTimeoutSimple(tenSeconds, "false")
 	assert.Error(t, err)
 	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutDeadline(t *testing.T) {
-	out, err := ExecWithTimeoutSimple(0, "sleep", "10")
+	out, err := ExecWithTimeoutSimple(Duration(0*time.Second), "sleep", "10")
 	assert.Error(t, err)
 	assert.True(t, err == context.DeadlineExceeded)
 	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutOutput(t *testing.T) {
-	out, stderr, err := ExecWithTimeoutShell("", nil, 10, 10, false, "echo hello")
+	out, stderr, err := ExecWithTimeoutShell("", nil, tenSeconds, tenSeconds, false, "echo hello")
 	assert.NoError(t, err)
 	assert.Equal(t, "hello\n", string(out))
 	assert.Equal(t, "hello\n", string(stderr))
 }
 
 func TestExecWithTimeoutStderr(t *testing.T) {
-	out, stderr, err := ExecWithTimeoutShell("", nil, 10, 10, false, "echo hello 1>&2")
+	out, stderr, err := ExecWithTimeoutShell("", nil, tenSeconds, tenSeconds, false, "echo hello 1>&2")
 	assert.NoError(t, err)
 	assert.Equal(t, "", string(out))
 	assert.Equal(t, "hello\n", string(stderr))

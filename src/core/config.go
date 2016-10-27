@@ -99,25 +99,25 @@ func DefaultConfiguration() *Configuration {
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.DownloadLocation = "https://get.please.build"
-	config.Please.Lang = "en_GB.UTF-8"  // Not the language of the UI, the language passed to rules.
-	config.Please.Nonce = "1402"        // Arbitrary nonce to invalidate config when needed.
-	config.Build.Timeout = 600          // Ten minutes
+	config.Please.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
+	config.Please.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
+	config.Build.Timeout = Duration(10 * time.Minute)
 	config.Build.Config = "opt"         // Optimised builds by default
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
-	config.Cache.HttpTimeout = 5        // Five seconds
-	config.Cache.RpcTimeout = 5         // Five seconds
+	config.Cache.HttpTimeout = Duration(5 * time.Second)
+	config.Cache.RpcTimeout = Duration(5 * time.Second)
 	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
 	config.Metrics.PushFrequency = Duration(400 * time.Millisecond)
 	config.Metrics.PushTimeout = Duration(500 * time.Millisecond)
-	config.Test.Timeout = 600
+	config.Test.Timeout = Duration(10 * time.Minute)
 	config.Test.DefaultContainer = TestContainerDocker
 	config.Docker.DefaultImage = "ubuntu:trusty"
 	config.Docker.AllowLocalFallback = false
-	config.Docker.Timeout = 1200      // Twenty minutes
-	config.Docker.ResultsTimeout = 20 // Twenty seconds
-	config.Docker.RemoveTimeout = 20  // Twenty seconds
+	config.Docker.Timeout = Duration(20 * time.Minute)
+	config.Docker.ResultsTimeout = Duration(20 * time.Second)
+	config.Docker.RemoveTimeout = Duration(20 * time.Second)
 	config.Go.CgoCCTool = "gcc"
 	config.Go.GoVersion = "1.6"
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/third_party/go"
@@ -177,7 +177,7 @@ type Configuration struct {
 		NumThreads       int
 	}
 	Build struct {
-		Timeout        int
+		Timeout        Duration
 		Path           []string
 		Config         string
 		FallbackConfig string
@@ -190,10 +190,10 @@ type Configuration struct {
 		DirCacheLowWaterMark  string
 		HttpUrl               string
 		HttpWriteable         bool
-		HttpTimeout           int
+		HttpTimeout           Duration
 		RpcUrl                string
 		RpcWriteable          bool
-		RpcTimeout            int
+		RpcTimeout            Duration
 		RpcPublicKey          string
 		RpcPrivateKey         string
 		RpcCACert             string
@@ -206,7 +206,7 @@ type Configuration struct {
 	}
 	CustomMetricLabels map[string]string
 	Test               struct {
-		Timeout          int
+		Timeout          Duration
 		DefaultContainer string
 	}
 	Cover struct {
@@ -216,9 +216,9 @@ type Configuration struct {
 	Docker struct {
 		DefaultImage       string
 		AllowLocalFallback bool
-		Timeout            int
-		ResultsTimeout     int
-		RemoveTimeout      int
+		Timeout            Duration
+		ResultsTimeout     Duration
+		RemoveTimeout      Duration
 		RunArgs            []string
 	}
 	Go struct {
@@ -355,11 +355,17 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 				return fmt.Errorf("Invalid value for an integer field: %s", v)
 			}
 			field.Set(reflect.ValueOf(i))
+		case reflect.Int64:
+			var d Duration
+			if err := d.UnmarshalText([]byte(v)); err != nil {
+				return fmt.Errorf("Invalid value for a duration field: %s", v)
+			}
+			field.Set(reflect.ValueOf(d))
 		case reflect.Slice:
 			// We only have to worry about slices of strings. Comma-separated values are accepted.
 			field.Set(reflect.ValueOf(strings.Split(v, ",")))
 		default:
-			return fmt.Errorf("Can't override config field %s", k)
+			return fmt.Errorf("Can't override config field %s (is %s)", k, field.Kind())
 		}
 	}
 	return nil

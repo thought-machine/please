@@ -273,7 +273,7 @@ func prepareTestDir(graph *core.BuildGraph, target *core.BuildTarget) error {
 	return nil
 }
 
-func runTest(state *core.BuildState, target *core.BuildTarget, timeout int) ([]byte, error) {
+func runTest(state *core.BuildState, target *core.BuildTarget, timeout core.Duration) ([]byte, error) {
 	replacedCmd := build.ReplaceTestSequences(target, target.GetTestCommand())
 	env := core.BuildEnvironment(state, target, true)
 	if len(state.TestArgs) > 0 {

@@ -116,9 +116,9 @@ type BuildTarget struct {
 	// Flakiness of test, ie. number of times we will rerun it before giving up. 0 is the default and
 	// is interpreted the same way as 1 would be (ie. one run only).
 	Flakiness int
-	// Timeouts for build/test actions, in seconds.
-	BuildTimeout int
-	TestTimeout  int
+	// Timeouts for build/test actions
+	BuildTimeout Duration
+	TestTimeout  Duration
 	// Indicates that the target can only be depended on by tests or other rules with this set.
 	// Used to restrict non-deployable code and also affects coverage detection.
 	TestOnly bool

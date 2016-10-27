@@ -54,11 +54,18 @@ func TestConfigOverrideUppercase(t *testing.T) {
 	assert.Equal(t, "pexinator", config.Python.PexTool)
 }
 
-func TestConfigOverrideInt(t *testing.T) {
+func TestConfigOverrideDuration(t *testing.T) {
 	config := DefaultConfiguration()
 	err := config.ApplyOverrides(map[string]string{"build.timeout": "15"})
 	assert.NoError(t, err)
-	assert.Equal(t, 15, config.Build.Timeout)
+	assert.EqualValues(t, 15*time.Second, config.Build.Timeout)
+}
+
+func TestConfigOverrideNonIntDuration(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"build.timeout": "10m"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, 10*time.Minute, config.Build.Timeout)
 }
 
 func TestConfigOverrideBool(t *testing.T) {
