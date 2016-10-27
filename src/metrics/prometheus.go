@@ -33,6 +33,7 @@ type metrics struct {
 	cancelled                                     bool
 	errors                                        int
 	pushes                                        int
+	timeout                                       time.Duration
 	buildCounter, cacheCounter, testCounter       *prometheus.CounterVec
 	buildHistogram, cacheHistogram, testHistogram *prometheus.HistogramVec
 }
@@ -48,7 +49,8 @@ func InitFromConfig(config *core.Configuration) {
 				log.Fatalf("%s", r)
 			}
 		}()
-		m = initMetrics(config.Metrics.PushGatewayURL, config.Metrics.PushFrequency, config.CustomMetricLabels)
+		m = initMetrics(config.Metrics.PushGatewayURL, config.Metrics.PushFrequency.ToTimeDuration(),
+			config.Metrics.PushTimeout.ToTimeDuration(), config.CustomMetricLabels)
 		prometheus.MustRegister(m.buildCounter)
 		prometheus.MustRegister(m.cacheCounter)
 		prometheus.MustRegister(m.testCounter)
@@ -60,7 +62,7 @@ func InitFromConfig(config *core.Configuration) {
 
 // initMetrics initialises a new metrics instance.
 // This is deliberately not exposed but is useful for testing.
-func initMetrics(url string, frequency int, customLabels map[string]string) *metrics {
+func initMetrics(url string, frequency, timeout time.Duration, customLabels map[string]string) *metrics {
 	u, err := user.Current()
 	if err != nil {
 		log.Warning("Can't determine current user name for metrics")
@@ -77,6 +79,7 @@ func initMetrics(url string, frequency int, customLabels map[string]string) *met
 	m = &metrics{
 		url:      url,
 		stopChan: make(chan bool),
+		timeout:  timeout,
 	}
 
 	// Count of builds for each target.
@@ -124,7 +127,7 @@ func initMetrics(url string, frequency int, customLabels map[string]string) *met
 		ConstLabels: constLabels,
 	}, []string{})
 
-	go m.keepPushing(time.Duration(frequency) * time.Millisecond)
+	go m.keepPushing(frequency)
 
 	return m
 }
@@ -200,6 +203,21 @@ func (m *metrics) keepPushing(d time.Duration) {
 	}
 }
 
+// deadline applies a deadline to an arbitrary function and returns when either the function
+// completes or the deadline expires.
+func deadline(f func() error, timeout time.Duration) error {
+	c := make(chan error)
+	go func() {
+		c <- f()
+	}()
+	select {
+	case err := <-c:
+		return err
+	case <-time.After(timeout):
+		return fmt.Errorf("Metrics push timed out")
+	}
+}
+
 // pushMetrics attempts to send some new metrics to the server. It returns the new number of errors.
 func (m *metrics) pushMetrics() int {
 	if !m.newMetrics {
@@ -207,7 +225,9 @@ func (m *metrics) pushMetrics() int {
 	}
 	start := time.Now()
 	m.newMetrics = false
-	if err := push.AddFromGatherer("please", push.HostnameGroupingKey(), m.url, prometheus.DefaultGatherer); err != nil {
+	if err := deadline(func() error {
+		return push.AddFromGatherer("please", push.HostnameGroupingKey(), m.url, prometheus.DefaultGatherer)
+	}, 500*time.Millisecond); err != nil {
 		log.Warning("Could not push metrics to the repository: %s", err)
 		m.newMetrics = true
 		return m.errors + 1
