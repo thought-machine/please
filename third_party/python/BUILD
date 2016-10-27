@@ -20,9 +20,9 @@ pip_library(
 
 pip_library(
     name = 'six',
-    version = '1.9.0',
+    version = '1.10.0',
     outs = ['six.py'],
-    hashes = ['sha1: 0c31ab7cf1a2761efa32d9a7e891ddeadc0d8673'],
+    hashes = ['sha1: 460beba667fbd2b7a050df6a456e0269260b385a'],
 )
 
 pip_library(
@@ -73,17 +73,5 @@ pip_library(
     outs = ['enum'],
     hashes = [
         'sha1: ce61fd8ab8ec1390ce3c42d3d042d7dded9ed205',
-    ],
-)
-
-pip_library(
-    name = 'futures',
-    version = '2.2.0',
-    outs = [
-        'concurrent',
-        'futures',
-    ],
-    hashes = [
-        'sha1: 3bb16f7c2ad9e13623349bd3f876c02d7e2e39f7',
     ],
 )
