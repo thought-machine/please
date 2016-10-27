@@ -5,6 +5,9 @@ the complex build environment C++ has, so some issues may remain.
 """
 
 _COVERAGE_FLAGS = ' -ftest-coverage -fprofile-arcs -fprofile-dir=.'
+# OSX's ld uses --all_load / --noall_load instead of --whole-archive.
+_WHOLE_ARCHIVE = '--all_load' if CONFIG.OS == 'darwin' else '--whole-archive'
+_NO_WHOLE_ARCHIVE = '--noall_load' if CONFIG.OS == 'darwin' else '--no-whole-archive'
 
 
 def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False,
@@ -684,7 +687,7 @@ def _binary_build_flags(linker_flags, pkg_config_libs, shared=False):
         # Ordering them would be ideal but we lack a convenient way of working that out from here.
         objs = '-Wl,--start-group %s -Wl,--end-group' % objs
     if shared:
-        objs = '-Wl,--whole-archive %s -Wl,--no-whole-archive' % objs
+        objs = '-Wl,%s %s -Wl,%s' % (_WHOLE_ARCHIVE, objs, _NO_WHOLE_ARCHIVE)
     linker_flags = ' '.join('-Wl,' + f for f in (linker_flags or []))
     flags = ' '.join([objs, linker_flags, pkg_config_cmd])
     return flags.replace('-Wl,', '') if CONFIG.LINK_WITH_LD_TOOL else flags
@@ -710,10 +713,8 @@ def _apply_transitive_labels(command_map, link=True, archive=False, shared=False
             flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
             alwayslink = ' '.join(l[3:] for l in labels if l.startswith('al:'))
             if alwayslink and not shared:
-                if CONFIG.LINK_WITH_LD_TOOL:
-                    alwayslink = ' --whole-archive %s --no-whole-archive ' % alwayslink
-                else:
-                    alwayslink = ' -Wl,--whole-archive %s -Wl,--no-whole-archive ' % alwayslink
+                ldflag = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
+                alwayslink = ' %s%s %s %s%s ' % (ldflag, _WHOLE_ARCHIVE, alwayslink, ldflag, _NO_WHOLE_ARCHIVE)
                 for k, v in command_map.items():
                     # These need to come *before* the others but within the group flags...
                     command_map[k] = v.replace('`find', alwayslink + '`find')
