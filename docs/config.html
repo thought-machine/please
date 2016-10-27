@@ -409,6 +409,14 @@
         by the <code>namespace</code> argument to that rule.<br/>
         Not set by default, if you want to use those rules you'll need to set it or
         pass it explicitly to each one.</li>
+
+      <li><b>Coverage</b><br/>
+        If true (the default), coverage will be available for C and C++ build rules.<br/>
+        This is still a little experimental but should work for GCC. Right now it does
+        <b>not</b> work for Clang (it likely will in Clang 4.0 which will likely support
+        <code>--fprofile-dir</code>) and so this can be useful to disable it.<br/>
+        It's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead,
+        since the tests have to be compiled with extra instrumentation and without optimisation.</li>
     </ul>
 
     <h3>[Proto]</h3>

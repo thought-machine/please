@@ -109,6 +109,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("DEFAULT_DBG_CPPFLAGS", config.Cpp.DefaultDbgCppflags)
 	setConfigValue("DEFAULT_LDFLAGS", config.Cpp.DefaultLdflags)
 	setConfigValue("DEFAULT_NAMESPACE", config.Cpp.DefaultNamespace)
+	setConfigValue("CPP_COVERAGE", pythonBool(config.Cpp.Coverage))
 	setConfigValue("OS", runtime.GOOS)
 	setConfigValue("ARCH", runtime.GOARCH)
 	for _, language := range config.Proto.Language {

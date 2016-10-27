@@ -100,8 +100,9 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     cmds = {
         'dbg': cmd_template % (cc_tool, dbg_flags),
         'opt': cmd_template % (cc_tool, opt_flags),
-        'cover': cmd_template % (cc_tool, dbg_flags) + _COVERAGE_FLAGS,
     }
+    if CONFIG.CPP_COVERAGE:
+        cmds['cover'] = cmd_template % (cc_tool, dbg_flags) + _COVERAGE_FLAGS
 
     ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
     if len(srcs) > 1:
@@ -303,8 +304,9 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
     cmd = {
         'dbg': '%s -shared -o ${OUT} %s' % (tool, flags),
         'opt': '%s -shared -o ${OUT} %s' % (tool, flags),
-        'cover': '%s -shared -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS),
     }
+    if CONFIG.CPP_COVERAGE:
+        cmd['cover'] = '%s -shared -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS)
     build_rule(
         name=name,
         srcs={'srcs': srcs, 'hdrs': hdrs},
@@ -352,8 +354,9 @@ def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None
     cmd = {
         'dbg': '%s -o ${OUT} %s' % (tool, flags),
         'opt': '%s -o ${OUT} %s' % (tool, flags),
-        'cover': '%s -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS),
     }
+    if CONFIG.CPP_COVERAGE:
+        cmd['cover'] = '%s -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS)
     deps = deps or []
     if srcs:
         cc_library(
@@ -431,8 +434,15 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
     cmd = {
         'dbg': '%s -o ${OUT} %s' % (tool, flags),
         'opt': '%s -o ${OUT} %s' % (tool, flags),
-        'cover': '%s -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS),
     }
+    test_cmd = None
+    if CONFIG.CPP_COVERAGE:
+        cmd['cover'] = '%s -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS)
+        test_cmd = {
+            'opt': '$TEST',
+            'dbg': '$TEST',
+            'cover': '$TEST; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R',
+        }
     if srcs:
         cc_library(
             name='_%s#lib' % name,
@@ -453,11 +463,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         data=data,
         visibility=visibility,
         cmd=cmd,
-        test_cmd={
-            'opt': '$TEST ',
-            'dbg': '$TEST ',
-            'cover': '$TEST; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R',
-        },
+        test_cmd=test_cmd,
         building_description='Linking...',
         binary=True,
         test=True,
