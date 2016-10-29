@@ -807,9 +807,11 @@ func getLabels(target *core.BuildTarget, prefix string, minState core.BuildTarge
 			}
 		}
 		done[target] = true
-		for _, dep := range target.Dependencies() {
-			if !done[dep] {
-				getLabels(dep)
+		if !target.OutputIsComplete {
+			for _, dep := range target.Dependencies() {
+				if !done[dep] {
+					getLabels(dep)
+				}
 			}
 		}
 	}
