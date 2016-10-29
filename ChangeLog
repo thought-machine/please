@@ -1,3 +1,10 @@
+Version 7.0.1
+-------------
+
+    * Fixed a small bug where get_labels and has_label would return labels below a target
+      marked output_is_complete, which would cause some build rules to then fail.
+
+
 Version 7.0.0
 -------------
 
