@@ -3,6 +3,7 @@ Version 7.0.1
 
     * Fixed a small bug where get_labels and has_label would return labels below a target
       marked output_is_complete, which would cause some build rules to then fail.
+    * Fixed fpm_package which was not correctly honouring the `labels` argument.
 
 
 Version 7.0.0

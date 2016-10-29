@@ -443,7 +443,8 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
         visibility=visibility,
         building_description='Packaging...',
         requires=['fpm'],
-        pre_build=_deb_deps(cmd) if _apply_deb_deps else None,
+        labels=labels,
+        pre_build=_deb_deps(cmd, '%s=%s' % (package_name, version)) if _apply_deb_deps else None,
         output_is_complete=True,
     )
 
@@ -489,16 +490,21 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
         srcs=srcs,
         deps=deps,
         visibility=visibility,
-        labels=(labels or []) + ['_deb_dep:%s=%s' % (package_name or name, version)],
+        labels=(labels or []) + [
+            'deb',
+            'deb_pkg:%s=%s' % (package_name or name, version),
+        ],
         _apply_deb_deps=True,
     )
 
 
-def _deb_deps(cmd):
+def _deb_deps(cmd, current_label):
     """Returns a pre-build function that updates the fpm command to add .deb dependencies."""
     def _find_deb_deps(name):
-        deps = ' '.join('--deb-build-depends ' + label for label in get_labels(name, '_deb_dep:'))
-        set_command(name, cmd + ' ' + deps)
+        deps = ' '.join('--deb-build-depends ' + label for label in get_labels(name, 'deb_pkg:')
+                        if label != current_label)
+        # Insert immediately after fpm, because it doesn't honour flags after positional arguments.
+        set_command(name, cmd.replace(' && fpm ', ' && fpm %s ' % deps))
     return _find_deb_deps
 
 

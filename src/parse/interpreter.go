@@ -800,15 +800,15 @@ func getLabels(target *core.BuildTarget, prefix string, minState core.BuildTarge
 	labels := map[string]bool{}
 	done := map[*core.BuildTarget]bool{}
 	var getLabels func(*core.BuildTarget)
-	getLabels = func(target *core.BuildTarget) {
-		for _, label := range target.Labels {
+	getLabels = func(t *core.BuildTarget) {
+		for _, label := range t.Labels {
 			if strings.HasPrefix(label, prefix) {
 				labels[strings.TrimSpace(strings.TrimPrefix(label, prefix))] = true
 			}
 		}
-		done[target] = true
-		if !target.OutputIsComplete {
-			for _, dep := range target.Dependencies() {
+		done[t] = true
+		if !t.OutputIsComplete || t == target {
+			for _, dep := range t.Dependencies() {
 				if !done[dep] {
 					getLabels(dep)
 				}
