@@ -200,9 +200,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         test_only = test_only,
         deps = deps,
     )
-    # Recompile the output of the C rule into an ELF (or Mach-O or whatever) object.
-    # Weirdly cgo has already generated something, but AFAICT Go's normal compilation
-    # process basically ignores that and overwrites it again.
+    # Recompile the output of the C rule into an object suitable for Go's linker.
     cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
     ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
     cgo_o_rule = build_rule(
@@ -214,7 +212,6 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         requires = ['cc'],
         tools = tools,
     )
-    # Now we can finally compile the Go code with this new file
     go_library(
         name = '_%s#go' % name,
         srcs = [gen_go] + go_srcs,
