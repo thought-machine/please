@@ -140,7 +140,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
 
 
 def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, flags=None,
-                linker_flags=None, deps=None, visibility=None, test_only=False):
+                compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -157,6 +157,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
       c_hdrs (list): Any C header files to include.
       out (str): Name of output file. Defaults to name + '.a'.
       flags (list): List of additional flags to pass to the go command.
+      compiler_flags (list): List of compiler flags to be passed when compiling the C code.
       linker_flags (list): List of linker flags to be passed when linking a Go binary.
       deps (list): Dependencies. Note that if you intend to depend on cc_library rules,
                    you will likely be better off wrapping them into a cc_static_library
@@ -168,6 +169,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     go_srcs = go_srcs or []
     c_srcs = c_srcs or []
     c_hdrs = c_hdrs or []
+    compiler_flags = compiler_flags or []
     linker_flags = linker_flags or []
     generated_go_srcs = [src.replace('.go', '.cgo1.go') for src in srcs] + ['_cgo_gotypes.go']
     generated_c_srcs = [src.replace('.go', '.cgo2.c') for src in srcs] + ['_cgo_export.c']
@@ -191,9 +193,9 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         name = '_%s#c' % name,
         srcs = [gen_c] + c_srcs,
         hdrs = [gen_h] + c_hdrs,
-        compiler_flags = [
+        compiler_flags = compiler_flags + [
+            '-Wno-error',
             '-Wno-unused-parameter',  # Generated code doesn't compile clean
-            '-no-pie',  # go build passes this
         ],
         test_only = test_only,
         deps = deps,
