@@ -180,7 +180,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     c_srcs = c_srcs or []
     c_hdrs = c_hdrs or []
     generated_go_srcs = [src.replace('.go', '.cgo1.go') for src in srcs] + ['_cgo_gotypes.go']
-    generated_c_srcs = [src.replace('.go', '.cgo2.c') for src in srcs] + ['_cgo_export.c', '_cgo_main.c']
+    generated_c_srcs = [src.replace('.go', '.cgo2.c') for src in srcs] + ['_cgo_export.c']
     generated_hdrs = ['_cgo_export.h']
     cgo_rule = build_rule(
         name = name,
@@ -201,7 +201,10 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         name = '_%s#c' % name,
         srcs = [gen_c] + c_srcs,
         hdrs = [gen_h] + c_hdrs,
-        compiler_flags = ['-Wno-unused-parameter'],  # Generated code doesn't compile clean
+        compiler_flags = [
+            '-Wno-unused-parameter',  # Generated code doesn't compile clean
+            '-no-pie',  # go build passes this
+        ],
         test_only = test_only,
         deps = deps,
     )
@@ -209,13 +212,15 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     # Weirdly cgo has already generated something, but AFAICT Go's normal compilation
     # process basically ignores that and overwrites it again.
     cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
+    ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
     cgo_o_rule = build_rule(
         name = name,
         tag = 'cgo_o',
         srcs = [':_%s#c' % name],
         outs = [name + '_cgo.o'],
-        cmd = '%s -o $OUT $SRCS' % cc_tool,
+        cmd = '%s x $SRCS && %s -o $OUT -Wl,-r -fPIC -nostdlib *.o' % (ar_tool, cc_tool),
         requires = ['cc'],
+        tools = tools,
     )
     # Now we run cgo *again* to produce the _cgo_import.go file.
     cgo_import_rule = build_rule(
@@ -229,7 +234,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     # Now we can finally compile the Go code with this new file
     go_library(
         name = '_%s#go' % name,
-        srcs = [gen_go, cgo_import_rule] + go_srcs,
+        srcs = [gen_go] + go_srcs,
         test_only = test_only,
         complete = False,
         deps = deps,
