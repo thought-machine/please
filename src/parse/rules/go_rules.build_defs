@@ -43,7 +43,7 @@ _GO_TOOL = ['go']
 
 
 def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False,
-               go_tools=None, _needs_transitive_deps=False):
+               go_tools=None, complete=True, _needs_transitive_deps=False):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -54,6 +54,9 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
       go_tools (list): A list of targets to pre-process your src files with go generate.
+      complete (bool): Indicates whether the library is complete or not (ie. buildable with
+                       'go tool build -complete'). In nearly all cases this is True (the main
+                       exception being for cgo).
     """
     deps = deps or []
     # go_test and cgo_library need access to the sources as well.
@@ -78,12 +81,16 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         )
         srcs += [':_%s#gen' % name]
 
+    cmds = _GO_LIBRARY_CMDS
+    if not complete:
+        cmds = {k: v.replace('-complete ', '') for k, v in cmds.items()}
+
     build_rule(
         name=name,
         srcs=srcs,
         deps=deps + [':_%s#srcs' % name],
         outs=[out or name + '.a'],
-        cmd=_GO_LIBRARY_CMDS,
+        cmd=cmds,
         visibility=visibility,
         building_description="Compiling...",
         requires=['go'],
@@ -144,8 +151,8 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
     )
 
 
-def cgo_library(name, srcs, out=None, env=None, flags=None, deps=None, visibility=None,
-                test_only=False):
+def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, flags=None,
+                deps=None, visibility=None, test_only=False):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -154,15 +161,13 @@ def cgo_library(name, srcs, out=None, env=None, flags=None, deps=None, visibilit
     below, you will likely be better off wrapping your dependencies into a cc_static_library
     rule and depending on that rather than depending directly on cc_library rules.
 
-    It also has a slightly interesting approach in that it recompiles all the input
-    Go sources. It'd be nicer to use go tool cgo/compile, but it's excruciatingly
-    hard to mimic what 'go build' does well enough to actually work.
-
     Args:
       name (str): Name of the rule.
-      srcs (list): Go source files to compile.
+      srcs (list): Go source files to compile that have 'import "C"' declarations in them.
+      go_srcs (list): Any Go source files that do *not* have 'import "C"' declarations.
+      c_srcs (list): Any C source files to include.
+      c_hdrs (list): Any C header files to include.
       out (str): Name of output file. Defaults to name + '.a'.
-      env (dict): Dict of environment variables to control the Go build.
       flags (list): List of additional flags to pass to the go command.
       deps (list): Dependencies. Note that if you intend to depend on cc_library rules,
                    you will likely be better off wrapping them into a cc_static_library
@@ -170,46 +175,72 @@ def cgo_library(name, srcs, out=None, env=None, flags=None, deps=None, visibilit
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
     """
-    cc_tool, tools = _tool_path(CONFIG.CGO_CC_TOOL, _GO_TOOL)
-    env = env or {}
-    env.setdefault('GOPATH', CONFIG.GOPATH)
-    env['CC'] = cc_tool
-    env_cmd = ' '.join('export %s="%s";' % (k, v) for k, v in sorted(env.items()))
-    cmd = ' && '.join([
-        'if [ ! -d src ]; then ln -s . src; fi',
-        'go install -gcflags "-trimpath $TMP_DIR" ${PKG#*src/}',
-        'mv pkg/${OS}_${ARCH}/${PKG#*src/}.a $OUT',
-    ])
-
-    filegroup(
-        name='_%s#srcs' % name,
-        srcs=srcs,
-        deps=deps,
-        visibility=visibility,
-        output_is_complete=False,
-        requires=['go'],
-        test_only=test_only,
+    deps = deps or []
+    go_srcs = go_srcs or []
+    c_srcs = c_srcs or []
+    c_hdrs = c_hdrs or []
+    generated_go_srcs = [src.replace('.go', '.cgo1.go') for src in srcs] + ['_cgo_gotypes.go']
+    generated_c_srcs = [src.replace('.go', '.cgo2.c') for src in srcs] + ['_cgo_export.c', '_cgo_main.c']
+    generated_hdrs = ['_cgo_export.h']
+    cgo_rule = build_rule(
+        name = name,
+        tag = 'cgo',
+        srcs = srcs + c_hdrs,
+        outs = [name + '_cgo'],
+        cmd = 'mkdir $OUT && cd $PKG && $TOOL tool cgo -objdir $OUT -importpath ${PKG#*src/} *.go',
+        tools = _GO_TOOL,
     )
-
-    build_rule(
-        name=name,
-        srcs=srcs,
-        deps=(deps or []) + [':_%s#srcs' % name],
-        outs=[out or name + '.a'],
-        cmd={
-            'opt': env_cmd + cmd,
-            'cover': env_cmd + cmd.replace('go install', 'go install -tags cover'),
-        },
-        visibility=visibility,
-        building_description="Compiling...",
-        requires=['go', 'go_src', 'cc', 'cc_hdrs'],
-        provides={
-            'go': ':' + name,
-            'go_src': ':_%s#srcs' % name,
-        },
-        tools=tools,
-        test_only=test_only,
-        needs_transitive_deps=True,
+    # Break up the outputs of the cgo rule into relevant bits.
+    # TODO(pebers): This would be easier if we could indicate a dependency on a single
+    #               output of a rule somehow...
+    gen_go = _collect_files(name, 'gen_go', cgo_rule, generated_go_srcs)
+    gen_c = _collect_files(name, 'gen_c', cgo_rule, generated_c_srcs)
+    gen_h = _collect_files(name, 'gen_hdr', cgo_rule, generated_hdrs)
+    # Compile the various bits
+    c_library(
+        name = '_%s#c' % name,
+        srcs = [gen_c] + c_srcs,
+        hdrs = [gen_h] + c_hdrs,
+        compiler_flags = ['-Wno-unused-parameter'],  # Generated code doesn't compile clean
+        test_only = test_only,
+        deps = deps,
+    )
+    # Recompile the output of the C rule into an ELF (or Mach-O or whatever) object.
+    # Weirdly cgo has already generated something, but AFAICT Go's normal compilation
+    # process basically ignores that and overwrites it again.
+    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
+    cgo_o_rule = build_rule(
+        name = name,
+        tag = 'cgo_o',
+        srcs = [':_%s#c' % name],
+        outs = [name + '_cgo.o'],
+        cmd = '%s -o $OUT $SRCS' % cc_tool,
+        requires = ['cc'],
+    )
+    # Now we run cgo *again* to produce the _cgo_import.go file.
+    cgo_import_rule = build_rule(
+        name = name,
+        tag = 'cgo_import',
+        srcs = [cgo_o_rule],
+        outs = [name + '_cgo_import.go'],
+        cmd = '$TOOL tool cgo -objdir . -dynpackage ${PKG#*src/} -dynimport $SRCS -dynout $OUT',
+        tools = _GO_TOOL,
+    )
+    # Now we can finally compile the Go code with this new file
+    go_library(
+        name = '_%s#go' % name,
+        srcs = [gen_go, cgo_import_rule] + go_srcs,
+        out = name + '.a',
+        test_only = test_only,
+        complete = False,
+        deps = deps,
+    )
+    filegroup(
+        name = name,
+        srcs = [':_%s#c' % name, ':_%s#go' % name],
+        visibility = visibility,
+        test_only = test_only,
+        output_is_complete = False,
     )
 
 
@@ -539,3 +570,17 @@ def _go_tool(tools):
     Currently the tool invoked for 'go' is not configurable.
     """
     return (tools or []) + ['go']
+
+
+def _collect_files(name, tag, dep, outs):
+    """Defines a rule to collect a subset of outputs from another rule.
+
+    Used mostly for cgo which spits out many different kinds of thing.
+    """
+    return build_rule(
+        name = name,
+        tag = tag,
+        srcs = [dep],
+        outs = outs,
+        cmd = 'mv $PKG/%s_cgo/* .' % name,
+    )
