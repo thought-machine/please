@@ -12,7 +12,8 @@ _GOPATH = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for 
 _LINK_PKGS_CMD = 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done'
 
 # Commands for go_binary and go_test.
-_LINK_CMD = 'go tool %s -tmpdir $TMP_DIR %s -L . -o ${OUT} ' % (_GO_LINK_TOOL, _GOPATH.replace('-I ', '-L '))
+_EXTLD_TOOL = CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL
+_LINK_CMD = 'go tool %s -tmpdir $TMP_DIR -extld %s %s -L . -o ${OUT} ' % (_GO_LINK_TOOL, _EXTLD_TOOL, _GOPATH.replace('-I ', '-L '))
 _GO_BINARY_CMDS = {
     'dbg': '%s && %s $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
     'opt': '%s && %s -s -w $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
