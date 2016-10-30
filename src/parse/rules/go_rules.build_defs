@@ -370,6 +370,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         building_description="Compiling...",
         needs_transitive_deps=True,
         output_is_complete=True,
+        pre_build=_collect_linker_flags(static=False),
     )
 
 
@@ -551,7 +552,8 @@ def _replace_test_package(name, output):
     name = name[1:-5]
     for line in output:
         if line.startswith('Package: '):
-            for k, v in _go_binary_cmds():
+            binary_cmds, _ = _go_binary_cmds()
+            for k, v in binary_cmds.items():
                 set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
             for k, v in _GO_LIBRARY_CMDS.items():
                 set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
