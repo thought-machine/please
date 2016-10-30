@@ -230,17 +230,22 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     go_library(
         name = '_%s#go' % name,
         srcs = [gen_go, cgo_import_rule] + go_srcs,
-        out = name + '.a',
         test_only = test_only,
         complete = False,
         deps = deps,
     )
-    filegroup(
+    # And finally combine the compiled C code into the Go archive object so go tool link can find it later.
+    build_rule(
         name = name,
-        srcs = [':_%s#c' % name, ':_%s#go' % name],
+        srcs = {
+            'a': [':_%s#go' % name],
+            'o': [cgo_o_rule],
+        },
+        outs = [name + '.a'],
+        cmd = '$TOOL tool pack r $SRCS_A $SRCS_O && mv $SRCS_A $OUT',
+        tools = _GO_TOOL,
         visibility = visibility,
         test_only = test_only,
-        output_is_complete = False,
     )
 
 
