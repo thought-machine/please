@@ -5,23 +5,10 @@ rules to Go packages.
 """
 
 _GO_COMPILE_TOOL = 'compile' if CONFIG.GO_VERSION >= "1.5" else '6g'
-_GO_LINK_TOOL = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
 _GOPATH = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
 
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
 _LINK_PKGS_CMD = 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done'
-
-# Commands for go_binary and go_test.
-_EXTLD_TOOL = CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL
-_LINK_CMD = 'go tool %s -tmpdir $TMP_DIR -extld %s %s -L . -o ${OUT} ' % (_GO_LINK_TOOL, _EXTLD_TOOL, _GOPATH.replace('-I ', '-L '))
-_GO_BINARY_CMDS = {
-    'dbg': '%s && %s $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
-    'opt': '%s && %s -s -w $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
-}
-_GO_STATIC_BINARY_CMDS = {
-    'dbg': '%s && %s -linkmode external -extldflags "-static" $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
-    'opt': '%s && %s -linkmode external -extldflags "-static" -s -w $SRCS' % (_LINK_PKGS_CMD, _LINK_CMD),
-}
 
 # Commands for go_library, which differ a bit more by config.
 _ALL_GO_LIBRARY_CMDS = {
@@ -153,7 +140,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
 
 
 def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, flags=None,
-                deps=None, visibility=None, test_only=False):
+                linker_flags=None, deps=None, visibility=None, test_only=False):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -170,6 +157,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
       c_hdrs (list): Any C header files to include.
       out (str): Name of output file. Defaults to name + '.a'.
       flags (list): List of additional flags to pass to the go command.
+      linker_flags (list): List of linker flags to be passed when linking a Go binary.
       deps (list): Dependencies. Note that if you intend to depend on cc_library rules,
                    you will likely be better off wrapping them into a cc_static_library
                    and depending on that.
@@ -180,6 +168,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     go_srcs = go_srcs or []
     c_srcs = c_srcs or []
     c_hdrs = c_hdrs or []
+    linker_flags = linker_flags or []
     generated_go_srcs = [src.replace('.go', '.cgo1.go') for src in srcs] + ['_cgo_gotypes.go']
     generated_c_srcs = [src.replace('.go', '.cgo2.c') for src in srcs] + ['_cgo_export.c']
     generated_hdrs = ['_cgo_export.h']
@@ -223,15 +212,6 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         requires = ['cc'],
         tools = tools,
     )
-    # Now we run cgo *again* to produce the _cgo_import.go file.
-    cgo_import_rule = build_rule(
-        name = name,
-        tag = 'cgo_import',
-        srcs = [cgo_o_rule],
-        outs = [name + '_cgo_import.go'],
-        cmd = '$TOOL tool cgo -objdir . -dynpackage ${PKG#*src/} -dynimport $SRCS -dynout $OUT',
-        tools = _GO_TOOL,
-    )
     # Now we can finally compile the Go code with this new file
     go_library(
         name = '_%s#go' % name,
@@ -252,6 +232,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         tools = _GO_TOOL,
         visibility = visibility,
         test_only = test_only,
+        labels = ['cc:ld:' + flag for flag in linker_flags],
     )
 
 
@@ -278,20 +259,22 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
         deps=deps,
         test_only=test_only,
     )
+    cmds, tools = _go_binary_cmds(static=static)
     build_rule(
         name=name,
         srcs=[':_%s#lib' % name],
         deps=deps,
         outs=[name],
-        cmd=_GO_STATIC_BINARY_CMDS if static else _GO_BINARY_CMDS,
+        cmd=cmds,
         building_description="Linking...",
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
         test_only=test_only,
-        tools=_GO_TOOL,
+        tools=tools,
         visibility=visibility,
         requires=['go'],
+        pre_build=_collect_linker_flags(static),
     )
 
 
@@ -358,7 +341,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
     )
-    cmds = _GO_BINARY_CMDS
+    cmds, tools = _go_binary_cmds()
     if mocks:
         cmds = cmds.copy()
         mocks = sorted(mocks.items())
@@ -373,7 +356,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         data=data,
         deps=deps,
         outs=[name],
-        tools=_GO_TOOL,
+        tools=tools,
         cmd=cmds,
         test_cmd='$TEST %s | tee test.results' % flags,
         visibility=visibility,
@@ -569,7 +552,7 @@ def _replace_test_package(name, output):
     name = name[1:-5]
     for line in output:
         if line.startswith('Package: '):
-            for k, v in _GO_BINARY_CMDS.items():
+            for k, v in _go_binary_cmds():
                 set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
             for k, v in _GO_LIBRARY_CMDS.items():
                 set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
@@ -595,3 +578,32 @@ def _collect_files(name, tag, dep, outs):
         outs = outs,
         cmd = 'mv $PKG/%s_cgo/* .' % name,
     )
+
+
+def _go_binary_cmds(static=False, ldflags=''):
+    """Returns the commands to run for linking a Go binary."""
+    _go_link_tool = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
+    extld_tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL, _GO_TOOL)
+    _link_cmd = 'go tool %s -tmpdir $TMP_DIR -extld %s %s -L . -o ${OUT} ' % (_go_link_tool, extld_tool, _GOPATH.replace('-I ', '-L '))
+
+    if static:
+        flags = '-linkmode external -extldflags "-static %s"' % ldflags
+    elif ldflags:
+        flags = '-extldflags "%s"' % ldflags
+    else:
+        flags = ''
+
+    return {
+        'dbg': '%s && %s %s $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
+        'opt': '%s && %s %s -s -w $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
+    }, tools
+
+
+def _collect_linker_flags(static):
+    """Returns a pre-build function to apply transitive linker flags to a go_binary rule."""
+    def collect_linker_flags(name):
+        ldflags = ' '.join(get_labels(name, 'cc:ld:'))
+        cmds, _ =  _go_binary_cmds(static=static, ldflags=ldflags)
+        for k, v in cmds.items():
+            set_command(name, k, v)
+    return collect_linker_flags

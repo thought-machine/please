@@ -10,6 +10,7 @@ cgo_library(
         'builtin_rules.go',
         'interpreter.go',
     ]) + [':builtin_rules'],
+    linker_flags = ['-ldl'],
     deps = [
         ':builtin_rules',
         '//src/core',
