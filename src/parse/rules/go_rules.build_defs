@@ -216,6 +216,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         visibility = visibility,
         test_only = test_only,
         linker_flags = linker_flags,
+        out=out,
         provides = {
             'go': ':' + name,
             'go_src': srcs_rule,
@@ -225,7 +226,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
 
 
 def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag=None,
-                   linker_flags=None, deps=None, provides=None):
+                   linker_flags=None, deps=None, provides=None, out=None):
     """Defines a rule to merge a cgo object into a Go library."""
     return build_rule(
         name = name,
@@ -234,7 +235,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
             'a': [a_rule],
             'o': [o_rule] if o_rule else [],
         },
-        outs = [name + '.a'],
+        outs = [out or name + '.a'],
         cmd = 'cp $SRCS_A $OUT && $TOOL tool pack r $OUT $PKG/*_cgo.o',
         tools = _GO_TOOL,
         visibility = visibility,
