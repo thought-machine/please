@@ -795,7 +795,7 @@ func GetLabels(cPackage uintptr, cTarget *C.char, cPrefix *C.char) **C.char {
 
 func getLabels(target *core.BuildTarget, prefix string, minState core.BuildTargetState) []string {
 	if target.State() < minState {
-		log.Fatalf("get_labels called on a target that is not yet built.", target.Label)
+		log.Fatalf("get_labels called on a target that is not yet built: %s", target.Label)
 	}
 	labels := map[string]bool{}
 	done := map[*core.BuildTarget]bool{}

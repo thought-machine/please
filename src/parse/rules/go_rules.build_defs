@@ -370,7 +370,6 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         building_description="Compiling...",
         needs_transitive_deps=True,
         output_is_complete=True,
-        pre_build=_collect_linker_flags(static=False),
     )
 
 
@@ -549,14 +548,14 @@ def _replace_test_package(name, output):
     if not name.endswith('#main') or not name.startswith('_'):
         raise ValueError('unexpected rule name: ' + name)
     lib = name[:-5] + '#main_lib'
-    name = name[1:-5]
+    new_name = name[1:-5]
     for line in output:
         if line.startswith('Package: '):
-            binary_cmds, _ = _go_binary_cmds()
+            binary_cmds, _ = _go_binary_cmds(ldflags=' '.join(get_labels(name, 'cc:ld:')))
             for k, v in binary_cmds.items():
-                set_command(name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
+                set_command(new_name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (new_name, line[9:], v))
             for k, v in _GO_LIBRARY_CMDS.items():
-                set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (name, line[9:], v))
+                set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (new_name, line[9:], v))
 
 
 def _go_tool(tools):
