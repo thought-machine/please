@@ -264,6 +264,7 @@ func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 	for _, dep := range target.dependencies {
 		ret = append(ret, dep.declared)
 	}
+	sort.Sort(ret)
 	return ret
 }
 
