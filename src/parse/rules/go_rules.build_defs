@@ -179,7 +179,13 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         tag = 'cgo',
         srcs = srcs + c_hdrs,
         outs = [name + '_cgo'],
-        cmd = 'mkdir $OUT && cd $PKG && $TOOL tool cgo -objdir $OUT -importpath ${PKG#*src/} *.go',
+        cmd = ' && '.join([
+            'mkdir $OUT',
+            'cd $PKG',
+            '$TOOL tool cgo -objdir $OUT -importpath ${PKG#*src/} *.go',
+            # cgo leaves absolute paths in these files which we must get rid of :(
+            'find $OUT -type f | xargs sed -i -e "s|$TMP_DIR/||g"',
+        ]),
         tools = _GO_TOOL,
     )
     # Break up the outputs of the cgo rule into relevant bits.
