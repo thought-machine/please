@@ -169,9 +169,9 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     # Break up the outputs of the cgo rule into relevant bits.
     # TODO(pebers): This would be easier if we could indicate a dependency on a single
     #               output of a rule somehow...
-    gen_go = _collect_files(name, 'gen_go', cgo_rule, generated_go_srcs)
-    gen_c = _collect_files(name, 'gen_c', cgo_rule, generated_c_srcs)
-    gen_h = _collect_files(name, 'gen_hdr', cgo_rule, generated_hdrs)
+    gen_go = _collect_files(name, 'gen_go', cgo_rule, generated_go_srcs, '.go')
+    gen_c = _collect_files(name, 'gen_c', cgo_rule, generated_c_srcs, '.c')
+    gen_h = _collect_files(name, 'gen_hdr', cgo_rule, generated_hdrs, '.h')
     # Compile the various bits
     c_library(
         name = '_%s#c' % name,
@@ -565,18 +565,28 @@ def _go_tool(tools):
     return (tools or []) + ['go']
 
 
-def _collect_files(name, tag, dep, outs):
+def _collect_files(name, tag, dep, outs, extension):
     """Defines a rule to collect a subset of outputs from another rule.
 
     Used mostly for cgo which spits out many different kinds of thing.
     """
+    # Handle sources that are actually build rules.
+    # TODO(pebers): This is overly awkward to need to use a post-build rule for, can we do
+    #               something more lightweight?
+    file_outs = [out for out in outs if not out.startswith('/') and not out.startswith(':')]
     return build_rule(
         name = name,
         tag = tag,
         srcs = [dep],
-        outs = outs,
-        cmd = 'mv $PKG/%s_cgo/* .' % name,
+        outs = file_outs,
+        cmd = 'mv $PKG/%s_cgo/* . && ls *%s' % (name, extension),
+        post_build = _collect_rule_outs if file_outs != outs else None,
     )
+
+
+def _collect_rule_outs(name, output):
+    for line in output:
+        add_out(name, line)
 
 
 def _go_library_cmds(complete=True, all_srcs=False):
