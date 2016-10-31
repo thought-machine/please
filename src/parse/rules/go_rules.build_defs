@@ -395,8 +395,9 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
             timeout=0, flaky=0, test_outputs=None, labels=None, size=None):
     """Defines a Go test rule over a cgo_library.
 
-    Note that you only need this if the library you're testing is a cgo_library, you can (and
-    should) use go_test otherwise.
+    If the library you are testing is a cgo_library, you must use this instead of go_test.
+    It's ok to depend on a cgo_library though as long as it's not the same package
+    as your test; in that (any any other case of testing a go_library) you must use go_test.
 
     Args:
       name (str): Name of the rule.
