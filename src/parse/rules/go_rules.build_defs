@@ -4,34 +4,16 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 
-_GO_COMPILE_TOOL = 'compile' if CONFIG.GO_VERSION >= "1.5" else '6g'
 _GOPATH = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
-
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
 _LINK_PKGS_CMD = 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done'
 
-# Commands for go_library, which differ a bit more by config.
-_ALL_GO_LIBRARY_CMDS = {
-    # Links archives up a directory; this is needed in some cases depending on whether
-    # the library matches the name of the directory it's in or not.
-    'link_cmd': _LINK_PKGS_CMD,
-    # Invokes the Go compiler.
-    'compile_cmd': 'go tool %s -trimpath $TMP_DIR -complete %s -pack -o $OUT ' % (_GO_COMPILE_TOOL, _GOPATH),
-    # Annotates files for coverage
-    'cover_cmd': 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done',
-}
-# String it all together.
-_GO_LIBRARY_CMDS = {
-    'dbg': '%(link_cmd)s && %(compile_cmd)s -N -l $SRCS' % _ALL_GO_LIBRARY_CMDS,
-    'opt': '%(link_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
-    'cover': '%(link_cmd)s && %(cover_cmd)s && %(compile_cmd)s $SRCS' % _ALL_GO_LIBRARY_CMDS,
-}
 # Applied to various rules to treat 'go' as a tool.
 _GO_TOOL = ['go']
 
 
 def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False,
-               go_tools=None, complete=True, _needs_transitive_deps=False):
+               go_tools=None, complete=True, _needs_transitive_deps=False, _all_srcs=False):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -69,19 +51,15 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         )
         srcs += [':_%s#gen' % name]
 
-    cmds = _GO_LIBRARY_CMDS
-    if not complete:
-        cmds = {k: v.replace('-complete ', '') for k, v in cmds.items()}
-
     build_rule(
         name=name,
         srcs=srcs,
         deps=deps + [':_%s#srcs' % name],
         outs=[out or name + '.a'],
-        cmd=cmds,
+        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs),
         visibility=visibility,
         building_description="Compiling...",
-        requires=['go'],
+        requires=['go', 'go_src'] if _all_srcs else ['go'],
         provides={'go': ':' + name, 'go_src': ':_%s#srcs' % name},
         test_only=test_only,
         tools=_GO_TOOL,
@@ -218,26 +196,53 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         requires = ['cc'],
         tools = tools,
     )
+    srcs_rule = filegroup(
+        name = name,
+        tag = 'go_src',
+        srcs = [gen_go] + go_srcs,
+    )
     go_library(
         name = '_%s#go' % name,
-        srcs = [gen_go] + go_srcs,
+        srcs = [srcs_rule],
         test_only = test_only,
         complete = False,
         deps = deps,
     )
     # And finally combine the compiled C code into the Go archive object so go tool link can find it later.
-    build_rule(
+    _merge_cgo_obj(
         name = name,
+        a_rule = ':_%s#go' % name,
+        o_rule = cgo_o_rule,
+        visibility = visibility,
+        test_only = test_only,
+        linker_flags = linker_flags,
+        provides = {
+            'go': ':' + name,
+            'go_src': srcs_rule,
+            'cgo_obj': cgo_o_rule,
+        },
+    )
+
+
+def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag=None,
+                   linker_flags=None, deps=None, provides=None):
+    """Defines a rule to merge a cgo object into a Go library."""
+    return build_rule(
+        name = name,
+        tag = tag,
         srcs = {
-            'a': [':_%s#go' % name],
-            'o': [cgo_o_rule],
+            'a': [a_rule],
+            'o': [o_rule] if o_rule else [],
         },
         outs = [name + '.a'],
-        cmd = 'cp $SRCS_A $OUT && $TOOL tool pack r $OUT $SRCS_O',
+        cmd = 'cp $SRCS_A $OUT && $TOOL tool pack r $OUT $PKG/*_cgo.o',
         tools = _GO_TOOL,
         visibility = visibility,
         test_only = test_only,
-        labels = ['cc:ld:' + flag for flag in linker_flags],
+        labels = ['cc:ld:' + flag for flag in (linker_flags or [])],
+        requires = ['go', 'cgo_obj'],
+        provides = provides,
+        deps = deps,
     )
 
 
@@ -283,7 +288,7 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
     )
 
 
-def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False,
+def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False, cgo=False,
             timeout=0, flaky=0, test_outputs=None, labels=None, size=None, mocks=None):
     """Defines a Go test rule.
 
@@ -295,6 +300,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
       visibility (list): Visibility specification
       flags (str): Flags to apply to the test invocation.
       container (bool | dict): True to run this test in a container.
+      cgo (bool): True if this test depends on a cgo_library.
       timeout (int): Timeout in seconds to allow the test to run for.
       flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
       test_outputs (list): Extra test output files to generate from this test.
@@ -307,20 +313,26 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
     deps = deps or []
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # Unfortunately we have to recompile this to build the test together with its library.
-    build_rule(
-        name='_%s#lib' % name,
-        srcs=srcs,
-        deps=deps,
-        outs=[name + '.a'],
-        tools=_GO_TOOL,
-        cmd={k: 'SRCS=${PKG}/*.go; ' + v for k, v in _GO_LIBRARY_CMDS.items()},
-        building_description="Compiling...",
-        requires=['go', 'go_src'],
-        test_only=True,
-        # TODO(pebers): We should be able to get away without this via a judicious
-        #               exported_deps in go_library, but it doesn't seem to be working.
-        needs_transitive_deps=True,
+    go_library(
+        name = '_%s#lib' % name,
+        srcs = srcs,
+        out = name + ('_lib.a' if cgo else '.a'),
+        deps = deps,
+        test_only = True,
+        _all_srcs = True,
+        _needs_transitive_deps = True,  # Need deps of our deps as well. Not ideal though.
+        complete = False,
     )
+    lib_rule = ':_%s#lib' % name
+    if cgo:
+        lib_rule = _merge_cgo_obj(
+            name = name,
+            tag = 'cgo',
+            a_rule = lib_rule,
+            visibility = visibility,
+            test_only = True,
+            deps = deps,
+        )
     go_test_tool, tools = _tool_path(CONFIG.GO_TEST_TOOL)
     build_rule(
         name='_%s#main' % name,
@@ -338,7 +350,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         tools=tools,
         post_build=_replace_test_package,
     )
-    deps.append(':_%s#lib' % name)
+    deps.append(lib_rule)
     go_library(
         name='_%s#main_lib' % name,
         srcs=[':_%s#main' % name],
@@ -380,12 +392,11 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
 
 
 def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False,
-             timeout=0, flaky=0, test_outputs=None, labels=None, tags=None, size=None):
-    """Defines a Go test rule for a library that uses cgo.
+            timeout=0, flaky=0, test_outputs=None, labels=None, size=None):
+    """Defines a Go test rule over a cgo_library.
 
-    If the library you are testing is a cgo_library, you must use this instead of go_test.
-    It's ok to depend on a cgo_library though as long as it's not the same package
-    as your test.
+    Note that you only need this if the library you're testing is a cgo_library, you can (and
+    should) use go_test otherwise.
 
     Args:
       name (str): Name of the rule.
@@ -399,41 +410,22 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
       flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
       test_outputs (list): Extra test output files to generate from this test.
       labels (list): Labels for this rule.
-      tags (list): Tags to pass to go build (see 'go help build' for details).
       size (str): Test size (enormous, large, medium or small).
     """
-    cc_tool, tools = _tool_path(CONFIG.CGO_CC_TOOL, _GO_TOOL)
-    timeout, labels = _test_size_and_timeout(size, timeout, labels)
-    tag_cmd = '-tags "%s"' % ' '.join(tags) if tags else ''
-    cmd = 'export GOPATH="%s"; ln -s $TMP_DIR src; CC="%s" go test ${PKG#*src/} %s -c -o $OUT' % (CONFIG.GOPATH, cc_tool, tag_cmd)
-    test_cmd = '$TEST -test.v -test.coverprofile test.coverage | tee test.results'
-    build_rule(
-        name=name,
-        srcs=srcs,
-        data=data,
-        deps=deps,
-        outs=[name],
-        tools=tools,
-        cmd={
-            'cover': cmd + ' -test.cover -tags cover',
-            'opt': cmd,
-        },
-        test_cmd={
-            'cover': '$TEST -test.v -test.coverprofile test.coverage %s | tee test.results' % flags,
-            'opt': '$TEST -test.v %s | tee test.results' % flags,
-        },
-        visibility=visibility,
-        container=container,
-        test_timeout=timeout,
-        flaky=flaky,
-        test_outputs=test_outputs,
-        requires=['go', 'go_src'],
-        labels=labels,
-        binary=True,
-        test=True,
-        building_description="Compiling...",
-        needs_transitive_deps=True,
-        output_is_complete=True,
+    go_test(
+        name = name,
+        srcs = srcs,
+        data = data,
+        deps = deps,
+        cgo = True,
+        visibility = visibility,
+        flags = flags,
+        container = container,
+        timeout = timeout,
+        flaky = flaky,
+        test_outputs = test_outputs,
+        labels = labels,
+        size = size,
     )
 
 
@@ -560,7 +552,7 @@ def _replace_test_package(name, output):
             binary_cmds, _ = _go_binary_cmds(ldflags=' '.join(get_labels(name, 'cc:ld:')))
             for k, v in binary_cmds.items():
                 set_command(new_name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (new_name, line[9:], v))
-            for k, v in _GO_LIBRARY_CMDS.items():
+            for k, v in _go_library_cmds().items():
                 set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (new_name, line[9:], v))
 
 
@@ -584,6 +576,22 @@ def _collect_files(name, tag, dep, outs):
         outs = outs,
         cmd = 'mv $PKG/%s_cgo/* .' % name,
     )
+
+
+def _go_library_cmds(complete=True, all_srcs=False):
+    """Returns the commands to run for building a Go library."""
+    go_compile_tool = 'compile' if CONFIG.GO_VERSION >= "1.5" else '6g'
+    # Invokes the Go compiler.
+    complete_flag = '-complete ' if complete else ''
+    compile_cmd = 'go tool %s -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (go_compile_tool, complete_flag, _GOPATH)
+    # Annotates files for coverage
+    cover_cmd = 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
+    srcs = 'export SRCS="$PKG/*.go"; ' if all_srcs else ''
+    return {
+        'dbg': '%s%s && %s -N -l $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),
+        'opt': '%s%s && %s $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),
+        'cover': '%s%s && %s && %s $SRCS' % (srcs, _LINK_PKGS_CMD, cover_cmd, compile_cmd),
+    }
 
 
 def _go_binary_cmds(static=False, ldflags=''):
