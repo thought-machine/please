@@ -15,7 +15,6 @@ fpm_deb(
         '/opt/please/libplease_parser_python2.so': '//src/parse/cffi:please_parser_python2',
         '/opt/please/libplease_parser_python3.so': '//src/parse/cffi:please_parser_python3',
     },
-    labels = ['manual'],
     links = {
         '/usr/bin/plz': '/opt/please/please',
         '/usr/bin/plz_diff_graphs': '/opt/please/please_diff_graphs',
@@ -29,7 +28,6 @@ fpm_deb(
     files = {
         '/usr/bin/plz_rpc_cache_server': '//src/cache/server:rpc_cache_server_bin',
     },
-    labels = ['manual'],
 )
 
 fpm_deb(
@@ -39,7 +37,6 @@ fpm_deb(
     files = {
         '/usr/bin/plz_http_cache_server': '//src/cache/server:http_cache_server_bin',
     },
-    labels = ['manual'],
 )
 
 fpm_deb(
@@ -49,7 +46,6 @@ fpm_deb(
     files = {
         '/opt/please/please_build_linter': '//src/lint:please_build_linter',
     },
-    labels = ['manual'],
 )
 
 tarball(
