@@ -117,8 +117,8 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
     )
 
 
-def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, flags=None,
-                compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False):
+def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, compiler_flags=None,
+                linker_flags=None, deps=None, visibility=None, test_only=False):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -127,6 +127,10 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, flag
     below, you will likely be better off wrapping your dependencies into a cc_static_library
     rule and depending on that rather than depending directly on cc_library rules.
 
+    Note also that this does not honour Go's syntactic comments; you have to explicitly
+    specify which Go files are cgo vs. which are not, as well as C headers & sources and
+    any required cflags or ldflags.
+
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to compile that have 'import "C"' declarations in them.
@@ -134,7 +138,6 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, flag
       c_srcs (list): Any C source files to include.
       hdrs (list): Any C header files to include.
       out (str): Name of output file. Defaults to name + '.a'.
-      flags (list): List of additional flags to pass to the go command.
       compiler_flags (list): List of compiler flags to be passed when compiling the C code.
       linker_flags (list): List of linker flags to be passed when linking a Go binary.
       deps (list): Dependencies. Note that if you intend to depend on cc_library rules,

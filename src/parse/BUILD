@@ -5,12 +5,13 @@ cgo_library(
     srcs = ['interpreter.go'],
     hdrs = ['interpreter.h'],
     c_srcs = ['interpreter.c'],
+    compiler_flags = ['--std=c99 -Werror'],
     go_srcs = glob(['*.go'], excludes = [
         '*_test.go',
         'builtin_rules.go',
         'interpreter.go',
     ]) + [':builtin_rules'],
-    linker_flags = ['-ldl'],
+    linker_flags = ([] if (CONFIG.OS == 'freebsd') else ['-ldl']),
     deps = [
         ':builtin_rules',
         '//src/core',
