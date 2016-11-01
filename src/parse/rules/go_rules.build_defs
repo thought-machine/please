@@ -168,6 +168,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
             'find $OUT -type f | xargs sed -i -e "s|$TMP_DIR/||g"',
         ]),
         tools = _GO_TOOL,
+        requires = ['go', 'cc_hdrs'],
     )
     # Break up the outputs of the cgo rule into relevant bits.
     # TODO(pebers): This would be easier if we could indicate a dependency on a single
