@@ -117,7 +117,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
     )
 
 
-def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, flags=None,
+def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, flags=None,
                 compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False):
     """Generates a Go library which can be reused by other rules.
 
@@ -132,7 +132,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
       srcs (list): Go source files to compile that have 'import "C"' declarations in them.
       go_srcs (list): Any Go source files that do *not* have 'import "C"' declarations.
       c_srcs (list): Any C source files to include.
-      c_hdrs (list): Any C header files to include.
+      hdrs (list): Any C header files to include.
       out (str): Name of output file. Defaults to name + '.a'.
       flags (list): List of additional flags to pass to the go command.
       compiler_flags (list): List of compiler flags to be passed when compiling the C code.
@@ -146,7 +146,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     deps = deps or []
     go_srcs = go_srcs or []
     c_srcs = c_srcs or []
-    c_hdrs = c_hdrs or []
+    hdrs = hdrs or []
     compiler_flags = compiler_flags or []
     linker_flags = linker_flags or []
     generated_go_srcs = [src.replace('.go', '.cgo1.go') for src in srcs] + ['_cgo_gotypes.go']
@@ -155,7 +155,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     cgo_rule = build_rule(
         name = name,
         tag = 'cgo',
-        srcs = srcs + c_hdrs,
+        srcs = srcs + hdrs,
         outs = [name + '_cgo'],
         cmd = ' && '.join([
             'mkdir $OUT',
@@ -176,7 +176,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
     c_library(
         name = '_%s#c' % name,
         srcs = [gen_c] + c_srcs,
-        hdrs = [gen_h] + c_hdrs,
+        hdrs = [gen_h] + hdrs,
         compiler_flags = compiler_flags + [
             '-Wno-error',
             '-Wno-unused-parameter',  # Generated code doesn't compile clean
@@ -185,14 +185,15 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, c_hdrs=None, out=None, fl
         deps = deps,
     )
     # Recompile the output of the C rule into an object suitable for Go's linker.
-    cc_tool, tools = _tool_path(CONFIG.CC_TOOL)
+    ld_tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL)
     ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
+    ld_flag = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
     cgo_o_rule = build_rule(
         name = name,
         tag = 'cgo_o',
         srcs = [':_%s#c' % name],
         outs = [name + '_cgo.o'],
-        cmd = '%s x $SRCS && %s -o $OUT -Wl,-r -fPIC -nostdlib *.o' % (ar_tool, cc_tool),
+        cmd = '%s x $SRCS && %s -o $OUT %s-r -nostdlib *.o' % (ar_tool, ld_tool, ld_flag),
         requires = ['cc'],
         tools = tools,
     )
@@ -587,7 +588,8 @@ def _collect_files(name, tag, dep, outs, extension):
 
 def _collect_rule_outs(name, output):
     for line in output:
-        add_out(name, line)
+        if line != '_cgo_main.c':
+            add_out(name, line)
 
 
 def _go_library_cmds(complete=True, all_srcs=False):

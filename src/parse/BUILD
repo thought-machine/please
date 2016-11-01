@@ -3,7 +3,7 @@ subinclude('//build_defs:go_bindata')
 cgo_library(
     name = 'parse',
     srcs = ['interpreter.go'],
-    c_hdrs = ['interpreter.h'],
+    hdrs = ['interpreter.h'],
     c_srcs = ['interpreter.c'],
     go_srcs = glob(['*.go'], excludes = [
         '*_test.go',
