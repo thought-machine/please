@@ -1,7 +1,12 @@
-"""Rules to build C++ targets (or likely C although we've not tested that extensively).
+"""Rules to build C and C++ targets.
 
-In general these have received somewhat less testing than would really be required for
-the complex build environment C++ has, so some issues may remain.
+Note that the C / C++ build process is complex with many options; we attempt to keep things
+as high-level as possible here but expose flags to tune things as needed.
+
+As a general note, most of the rules work by attaching labels indicating various flags etc which
+later rules need to know about. These get picked up by later rules to adjust commands; this way
+you can write a cc_library rule specifying e.g. linker_flags = ['-lz'] and not have to re-specify
+that on every single cc_binary / cc_test that transitively depends on that library.
 """
 
 _COVERAGE_FLAGS = ' -ftest-coverage -fprofile-arcs -fprofile-dir=.'
@@ -46,9 +51,6 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     pkg_config_libs = pkg_config_libs or []
     includes = includes or []
     defines = defines or []
-    dbg_flags = _build_flags(compiler_flags[:], pkg_config_libs, c=_c, dbg=True)
-    opt_flags = _build_flags(compiler_flags[:], pkg_config_libs, c=_c)
-    cc_tool, tools = _tool_path(CONFIG.CC_TOOL if _c else CONFIG.CPP_TOOL)
 
     # Bazel suggests passing nonexported header files in 'srcs'. We however treat
     # srcs as things to actually compile and must mark a distinction.
@@ -96,15 +98,8 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         test_only=test_only,
         labels=labels,
     )
-    cmd_template = '%s -c -I . ${SRCS_SRCS} %s'
-    cmds = {
-        'dbg': cmd_template % (cc_tool, dbg_flags),
-        'opt': cmd_template % (cc_tool, opt_flags),
-    }
-    if CONFIG.CPP_COVERAGE:
-        cmds['cover'] = cmd_template % (cc_tool, dbg_flags) + _COVERAGE_FLAGS
 
-    ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
+    cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs)
     if len(srcs) > 1:
         # Compile all the sources separately, this is much faster for large numbers of files
         # than giving them all to gcc in one invocation.
@@ -123,11 +118,13 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
                 test_only=test_only,
                 labels=labels,
                 tools=tools,
-                pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
+                # TODO(pebers): handle includes and defines in _library_cmds as well.
+                pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs) if (deps or includes or defines) else None,
             )
             a_rules.append(':' + a_name)
 
         # Combine the archives into one.
+        ar_tool, tools = _tool_path(CONFIG.AR_TOOL)
         a_rule = build_rule(
             name = name,
             tag = 'a',
@@ -172,7 +169,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             test_only=test_only,
             labels=labels,
             tools=tools,
-            pre_build=_apply_transitive_labels(cmds, link=False, archive=True),
+            pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs) if deps else None,
         )
         if alwayslink:
             labels.append('cc:al:%s/%s.a' % (get_base_path(), name))
@@ -298,29 +295,21 @@ def cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_fla
             'cc_hdrs': ':_%s#lib_hdrs' % name,
             'cc': ':' + name,
         }
-    tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
-                             CONFIG.CC_TOOL if _c else CONFIG.CPP_TOOL)
-    flags = _binary_build_flags(linker_flags, pkg_config_libs, shared=True)
-    cmd = {
-        'dbg': '%s -shared -o ${OUT} %s' % (tool, flags),
-        'opt': '%s -shared -o ${OUT} %s' % (tool, flags),
-    }
-    if CONFIG.CPP_COVERAGE:
-        cmd['cover'] = '%s -shared -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS)
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, shared=True)
     build_rule(
         name=name,
         srcs={'srcs': srcs, 'hdrs': hdrs},
         outs=[name + '.so'],
         deps=deps,
         visibility=visibility,
-        cmd=cmd,
+        cmd=cmds,
         building_description='Linking...',
         needs_transitive_deps=True,
         output_is_complete=True,
         tools=tools,
         test_only=test_only,
         requires=['cc', 'cc_hdrs'],
-        pre_build=_apply_transitive_labels(cmd, shared=True),
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, shared=True) if deps else None,
     )
 
 
@@ -346,19 +335,12 @@ def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     if static:
-        compiler_flags = compiler_flags or []
-        compiler_flags.append('-static -static-libgcc')
-    flags = _binary_build_flags(linker_flags, pkg_config_libs)
-    tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
-                             CONFIG.CC_TOOL if _c else CONFIG.CPP_TOOL)
-    cmd = {
-        'dbg': '%s -o ${OUT} %s' % (tool, flags),
-        'opt': '%s -o ${OUT} %s' % (tool, flags),
-    }
-    if CONFIG.CPP_COVERAGE:
-        cmd['cover'] = '%s -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS)
-    deps = deps or []
+        linker_flags.append('-static')
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
     if srcs:
+        if static:
+            compiler_flags = compiler_flags or []
+            compiler_flags.append('-static -static-libgcc')
         cc_library(
             name='_%s#lib' % name,
             srcs=srcs,
@@ -369,20 +351,21 @@ def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None
             test_only=test_only,
             _c=_c,
         )
+        deps = deps or []
         deps.append(':_%s#lib' % name)
     build_rule(
         name=name,
         outs=[name],
         deps=deps,
         visibility=visibility,
-        cmd=cmd,
+        cmd=cmds,
         building_description='Linking...',
         binary=True,
         needs_transitive_deps=True,
         output_is_complete=True,
         requires=['cc'],
         tools=tools,
-        pre_build=_apply_transitive_labels(cmd),
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs),
         test_only=test_only,
     )
 
@@ -416,14 +399,11 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     srcs = srcs or []
-    linker_flags = ['-lunittest++']
-    linker_flags.extend(linker_flags or [])
+    linker_flags = linker_flags or []
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
-    flags = _binary_build_flags(linker_flags, pkg_config_libs)
-    tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
-                             CONFIG.CC_TOOL if _c else CONFIG.CPP_TOOL)
     if write_main:
+        linker_flags.append('-lunittest++')
         genrule(
             name='_%s#main' % name,
             outs=['_%s_main.cc' % name],
@@ -431,18 +411,12 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
             test_only=True,
         )
         srcs.append(':_%s#main' % name)
-    cmd = {
-        'dbg': '%s -o ${OUT} %s' % (tool, flags),
-        'opt': '%s -o ${OUT} %s' % (tool, flags),
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
+    test_cmd = None if not CONFIG.CPP_COVERAGE else {
+        'opt': '$TEST',
+        'dbg': '$TEST',
+        'cover': '$TEST; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R',
     }
-    test_cmd = None
-    if CONFIG.CPP_COVERAGE:
-        cmd['cover'] = '%s -o ${OUT} %s %s' % (tool, flags, _COVERAGE_FLAGS)
-        test_cmd = {
-            'opt': '$TEST',
-            'dbg': '$TEST',
-            'cover': '$TEST; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R',
-        }
     if srcs:
         cc_library(
             name='_%s#lib' % name,
@@ -462,7 +436,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         deps=deps,
         data=data,
         visibility=visibility,
-        cmd=cmd,
+        cmd=cmds,
         test_cmd=test_cmd,
         building_description='Linking...',
         binary=True,
@@ -472,7 +446,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         requires=['cc', 'cc_hdrs'],
         labels=labels,
         tools=tools,
-        pre_build=_apply_transitive_labels(cmd),
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs),
         flaky=flaky,
         test_outputs=test_outputs,
         test_timeout=timeout,
@@ -661,13 +635,6 @@ int main(int argc, char const *argv[]) {
 """
 
 
-if CONFIG.BAZEL_COMPATIBILITY:
-    # For nominal Buck compatibility. The cc_ forms are preferred.
-    cxx_binary = cc_binary
-    cxx_library = cc_library
-    cxx_test = cc_test
-
-
 def _build_flags(compiler_flags, pkg_config_libs, defines=None, c=False, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
     compiler_flags = compiler_flags or []
@@ -682,63 +649,86 @@ def _build_flags(compiler_flags, pkg_config_libs, defines=None, c=False, dbg=Fal
     return ' '.join(compiler_flags) + ' ' + pkg_config_cmd
 
 
-def _binary_build_flags(linker_flags, pkg_config_libs, shared=False):
+def _binary_build_flags(linker_flags, pkg_config_libs, shared=False, alwayslink=''):
     """Builds flags that we'll pass to the linker invocation."""
     pkg_config_cmd = ' '.join('`pkg-config --libs %s`' % x for x in pkg_config_libs or [])
-    objs = '`find . -name "*.o" -or -name "*.a" | sort`'
+    objs = alwayslink + ' `find . -name "*.o" -or -name "*.a" | sort`'
+    linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
+    build_id_flag = ''
     if CONFIG.OS != 'darwin':
         # We don't order libraries in a way that is especially useful for the linker, which is
         # nicely solved by --start-group / --end-group. Unfortunately the OSX linker doesn't
         # support those flags; in many cases it will work without, so try that.
         # Ordering them would be ideal but we lack a convenient way of working that out from here.
         objs = '-Wl,--start-group %s -Wl,--end-group' % objs
+        # OSX's ld doesn't have --build-id
+        # TODO(pebers): Not sure about other OS's / linkers? This might be GNU specific?
+        build_id_flag = linker_prefix + '--build-id=none'
     if shared:
-        objs = '-Wl,%s %s -Wl,%s' % (_WHOLE_ARCHIVE, objs, _NO_WHOLE_ARCHIVE)
-    linker_flags = ' '.join('-Wl,' + f for f in (linker_flags or []))
-    flags = ' '.join([objs, linker_flags, pkg_config_cmd])
-    return flags.replace('-Wl,', '') if CONFIG.LINK_WITH_LD_TOOL else flags
+        objs = '-shared %s%s %s %s%s' % (linker_prefix, _WHOLE_ARCHIVE, objs, linker_prefix, _NO_WHOLE_ARCHIVE)
+    linker_flags = ' '.join(linker_prefix + f for f in (linker_flags or []))
+    return ' '.join([objs, build_id_flag, linker_flags, pkg_config_cmd])
 
 
-def _apply_transitive_labels(command_map, link=True, archive=False, shared=False):
-    """Acquires the required linker flags from all transitive labels of a rule.
+def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags=''):
+    """Returns the commands needed for a cc_library rule."""
+    dbg_flags = _build_flags(compiler_flags, pkg_config_libs, c=c, dbg=True)
+    opt_flags = _build_flags(compiler_flags, pkg_config_libs, c=c)
+    cc_tool, tools = _tool_path(CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL)
+    ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
+    cmd_template = '%s -c -I . ${SRCS_SRCS} %s%s && %s rcs $OUT *.o'
+    cmds = {
+        'dbg': cmd_template % (cc_tool, dbg_flags, extra_flags, ar_tool),
+        'opt': cmd_template % (cc_tool, opt_flags, extra_flags, ar_tool),
+    }
+    if CONFIG.CPP_COVERAGE:
+        cmds['cover'] = cmd_template % (cc_tool, dbg_flags + _COVERAGE_FLAGS, extra_flags, ar_tool)
+    return cmds, tools
 
-    This is how we handle libraries sensibly for C++ rules; you might write a rule that
-    depends on some extra library and needs a linker flag. You'd obviously like to specify
-    that on the cc_library rule and not on all the transitive cc_binary and cc_test targets
-    that use it. The solution to this is here; we collect the set of linker flags from all
-    dependencies and apply them to the binary rule that needs them.
-    """
-    ar_tool, _ = _tool_path(CONFIG.AR_TOOL)
-    ar_cmd = '&& %s rcs $OUT *.o' % ar_tool
-    def update_commands(name):
-        base_path = get_base_path()
+
+def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False, alwayslink=''):
+    """Returns the commands needed for a cc_binary, cc_test or cc_shared_object rule."""
+    tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
+                             CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL)
+    flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink)
+    cmds = {
+        'dbg': '%s -o ${OUT} %s %s' % (tool, flags, extra_flags),
+        'opt': '%s -o ${OUT} %s %s' % (tool, flags, extra_flags),
+    }
+    if CONFIG.CPP_COVERAGE:
+        cmds['cover'] = '%s -o ${OUT} %s %s %s' % (tool, flags, extra_flags, _COVERAGE_FLAGS)
+    return cmds, tools
+
+
+def _library_transitive_labels(c, compiler_flags, pkg_config_libs):
+    """Applies commands from transitive labels to a cc_library rule."""
+    def apply_transitive_labels(name):
         labels = get_labels(name, 'cc:')
-        if link:
-            if CONFIG.OS == 'darwin':
-                # OSX's ld doesn't have --build-id
-                flags = []
-            else:
-                flags = ['--build-id=none' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,--build-id=none']
-            flags.extend(l[3:] for l in labels if l.startswith('ld:'))
-            flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
-            alwayslink = ' '.join('./' + l[3:] for l in labels if l.startswith('al:'))
-            if alwayslink and not shared:
-                ldflag = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
-                alwayslink = ' %s%s %s %s%s ' % (ldflag, _WHOLE_ARCHIVE, alwayslink, ldflag, _NO_WHOLE_ARCHIVE)
-                for k, v in command_map.items():
-                    # These need to come *before* the others but within the group flags...
-                    command_map[k] = v.replace('`find', alwayslink + '`find')
-        else:
-            flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
-            flags.extend('-D' + l[4:] for l in labels if l.startswith('def:'))
-        if archive:
-            flags.append(ar_cmd)
-        flags = ' ' + ' '.join(flags)
-        set_command(name, 'dbg', command_map['dbg'] + flags)
-        set_command(name, 'opt', command_map['opt'] + flags)
-        cover_cmd = command_map.get('cover') or command_map['opt']
-        set_command(name, 'cover', cover_cmd + flags)
-    return update_commands
+        flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
+        flags.extend('-D' + l[4:] for l in labels if l.startswith('def:'))
+        if flags:  # Don't update if there aren't any relevant labels
+            cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, ' '.join(flags))
+            for k, v in cmds.items():
+                set_command(name, k, v)
+    return apply_transitive_labels
+
+
+def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
+    """Applies commands from transitive labels to a cc_binary, cc_test or cc_shared_object rule."""
+    def apply_transitive_labels(name):
+        labels = get_labels(name, 'cc:')
+        flags = [l[3:] for l in labels if l.startswith('ld:')]
+        flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
+        # ./ here because some weak linkers don't realise ./lib.a is the same file as lib.a
+        # and report duplicate symbol errors as a result.
+        alwayslink = ' '.join('./' + l[3:] for l in labels if l.startswith('al:'))
+        # Probably a little optimistic to check this (most binaries are likely to have *some*
+        # kind of linker flags to apply), but we might as well.
+        if flags or alwayslink:
+            cmds, _ = _binary_cmds(c, linker_flags, pkg_config_libs, ' '.join(flags), shared, alwayslink)
+            for k, v in cmds.items():
+                set_command(name, k, v)
+    return apply_transitive_labels
 
 
 # C rules. These call straight through to the c++ versions and just set a flag.
@@ -759,3 +749,10 @@ def c_test(write_main=False, **kwargs):
 
 def c_embed_binary(**kwargs):
     cc_embed_binary(**kwargs)
+
+
+if CONFIG.BAZEL_COMPATIBILITY:
+    # For nominal Buck compatibility. The cc_ forms are preferred.
+    cxx_binary = cc_binary
+    cxx_library = cc_library
+    cxx_test = cc_test
