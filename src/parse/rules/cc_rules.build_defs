@@ -672,9 +672,9 @@ def _build_flags(compiler_flags, pkg_config_libs, defines=None, c=False, dbg=Fal
     """Builds flags that we'll pass to the compiler invocation."""
     compiler_flags = compiler_flags or []
     if c:
-        compiler_flags.append(CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS)
+        compiler_flags = [CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS] + compiler_flags
     else:
-        compiler_flags.append(CONFIG.DEFAULT_DBG_CPPFLAGS if dbg else CONFIG.DEFAULT_OPT_CPPFLAGS)
+        compiler_flags = [CONFIG.DEFAULT_DBG_CPPFLAGS if dbg else CONFIG.DEFAULT_OPT_CPPFLAGS] + compiler_flags
     compiler_flags.append('-fPIC')
     if defines:
         compiler_flags.extend('-D' + define for define in defines)

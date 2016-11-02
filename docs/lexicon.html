@@ -915,7 +915,7 @@ rules to Go packages.</p>
 
     <h3><a name="cgo_library">cgo_library</a></h3>
 
-    <p><pre class="rule"><code>cgo_library(name, srcs, env=None, deps=None, visibility=None, test_only=False, package)</code></pre></p>
+    <p><pre class="rule"><code>cgo_library(name, srcs, go_srcs, c_srcs, hdrs, env=None, deps=None, visibility=None, test_only=False, package)</code></pre></p>
 
     <p>Generates a Go library which can be reused by other rules.</p>
     <p>
@@ -924,10 +924,10 @@ rules to Go packages.</p>
     through a C interface, although the objects themselves can contain C++). As mentioned
     below, you will likely be better off wrapping your dependencies into a cc_static_library
     rule and depending on that rather than depending directly on cc_library rules.</p>
-    <p>
-It also has a slightly interesting approach in that it recompiles all the input
-Go sources. It'd be nicer to use go tool cgo/compile, but it's excruciatingly
-hard to mimic what 'go build' does well enough to actually work.</p>
+
+    <p>Note also that this does not honour Go's syntactic comments; you have to explicitly
+    specify which Go files are cgo vs. which are not, as well as C headers & sources and
+    any required cflags or ldflags.</p>
 
     <table>
       <thead>
@@ -951,21 +951,51 @@ hard to mimic what 'go build' does well enough to actually work.</p>
 	<td>srcs</td>
 	<td></td>
 	<td>list</td>
-	<td>Go source files to compile.</td>
+	<td>Go source files to compile that have 'import "C"' declarations in them.</td>
       </tr>
 
       <tr>
-	<td>env</td>
+	<td>go_srcs</td>
+	<td></td>
+	<td>list</td>
+	<td>Go source files to compile that do <b>not</b> have 'import "C"' declarations.</td>
+      </tr>
+
+      <tr>
+	<td>hdrs</td>
+	<td></td>
+	<td>list</td>
+	<td>Any C header files to include.</td>
+      </tr>
+
+      <tr>
+	<td>c_srcs</td>
+	<td></td>
+	<td>list</td>
+	<td>Any C source files to include.</td>
+      </tr>
+
+      <tr>
+	<td>out</td>
 	<td>None</td>
-	<td>dict</td>
-	<td>Dict of environment variables to control the Go build.</td>
+	<td>str</td>
+	<td>Name of the output file. Defaults to name + '.a'.</td>
       </tr>
 
       <tr>
-	<td>flags</td>
+	<td>compiler_flags</td>
 	<td>None</td>
 	<td>list</td>
-	<td>List of additional flags to pass to the go command.</td>
+	<td>List of compiler flags to be passed when compiling the C code.<br/>
+      Roughly equivalent to <code>cgo CFLAGS</code> directives in source files.</td>
+      </tr>
+
+      <tr>
+	<td>linker_flags</td>
+	<td>None</td>
+	<td>list</td>
+	<td>List of linker flags to be passed when linking the C code.<br/>
+      Roughly equivalent to <code>cgo LDFLAGS</code> directives in source files.</td>
       </tr>
 
       <tr>
@@ -990,13 +1020,6 @@ hard to mimic what 'go build' does well enough to actually work.</p>
 	<td>False</td>
 	<td>bool</td>
 	<td>If True, is only visible to test rules.</td>
-      </tr>
-
-      <tr>
-	<td>package</td>
-	<td></td>
-	<td>str</td>
-	<td>Name of the package to output (defaults to same as name).</td>
       </tr>
 
       </tbody>

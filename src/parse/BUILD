@@ -2,14 +2,16 @@ subinclude('//build_defs:go_bindata')
 
 cgo_library(
     name = 'parse',
-    srcs = glob([
-        '*.go',
-        'interpreter.*',
-    ], excludes = [
+    srcs = ['interpreter.go'],
+    hdrs = ['interpreter.h'],
+    c_srcs = ['interpreter.c'],
+    compiler_flags = ['--std=c99 -Werror'],
+    go_srcs = glob(['*.go'], excludes = [
         '*_test.go',
         'builtin_rules.go',
+        'interpreter.go',
     ]) + [':builtin_rules'],
-    visibility = ['PUBLIC'],
+    linker_flags = ([] if (CONFIG.OS == 'freebsd') else ['-ldl']),
     deps = [
         ':builtin_rules',
         '//src/core',
@@ -18,6 +20,7 @@ cgo_library(
         '//third_party/go:logging',
         '//third_party/go:osext',
     ],
+    visibility = ['PUBLIC'],
 )
 
 # Note that because these scripts are used during the bootstrap process, they can't

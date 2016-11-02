@@ -76,7 +76,7 @@ genrule(
     ],
 )
 
-cgo_test(
+go_test(
     name = 'additional_output_test',
     srcs = ['additional_output_test.go'],
     data = [':_gen_output'],
