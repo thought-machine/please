@@ -1,3 +1,9 @@
+Version 7.0.2
+-------------
+
+    * Fixed dependencies on fpm_deb rules so they have Depends, not Build-Depends.
+
+
 Version 7.0.1
 -------------
 
@@ -15,6 +21,9 @@ Version 7.0.0
       c_library etc rules. This is a breaking change.
     * Similarly defaultoptcppflags and defaultdbgcppflags introduced.
     * The defines argument to cc_library now accepts a dict of token name -> value.
+    * cgo_library has been extensively rewritten, and now takes separate arguments for srcs,
+      go_srcs (Go files that don't import "C"), c_srcs and hdrs. This allows better integration
+      with other native rules since it now honours the compiler and linker settings correctly.
     * Timeouts in .plzconfig are now given as durations instead of plain ints.
       The default is seconds but they can be suffixed with units (m, s, ms, etc).
       Interpretation of any existing values is unchanged apart from metrics.frequency which
