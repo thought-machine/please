@@ -1,3 +1,9 @@
+Version 7.0.3
+-------------
+
+    * Fixed dependencies on fpm_deb again, pray I do not fix them further.
+
+
 Version 7.0.2
 -------------
 
