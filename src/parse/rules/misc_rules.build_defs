@@ -492,7 +492,7 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
         visibility=visibility,
         labels=(labels or []) + [
             'deb',
-            'deb_pkg:%s=%s' % (package_name or name, version),
+            'deb_pkg:%s' % (package_name or name),
         ],
         _apply_deb_deps=True,
     )
@@ -501,7 +501,7 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
 def _deb_deps(cmd, current_label):
     """Returns a pre-build function that updates the fpm command to add .deb dependencies."""
     def _find_deb_deps(name):
-        deps = ' '.join('--deb-build-depends ' + label for label in get_labels(name, 'deb_pkg:')
+        deps = ' '.join('-d ' + label for label in get_labels(name, 'deb_pkg:')
                         if label != current_label)
         # Insert immediately after fpm, because it doesn't honour flags after positional arguments.
         set_command(name, cmd.replace(' && fpm ', ' && fpm %s ' % deps))
