@@ -155,7 +155,7 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
         output_is_complete=True,
         building_description="Creating pex...",
         visibility=visibility,
-        requires=['py', interpreter],
+        requires=['py', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
         tools=tools,
         # This makes the python_library rule the dependency for other python_library or
         # python_test rules that try to import it. Does mean that they cannot collect a .pex
@@ -265,7 +265,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         test_timeout=timeout,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['py', interpreter],
+        requires=['py', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
         tools=tools,
     )
 

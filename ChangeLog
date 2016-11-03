@@ -1,3 +1,9 @@
+Version 7.0.5
+-------------
+
+    * Fixed a requires statement on python_binary / python_test rules.
+
+
 Version 7.0.4
 -------------
 
