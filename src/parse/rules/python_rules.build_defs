@@ -43,18 +43,18 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
     all_srcs = (srcs or []) + (resources or [])
     deps = deps or []
     labels = labels or []
-    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     if not zip_safe:
         labels.append('py:zip-unsafe')
     if all_srcs:
-        pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
+        interpreter_tool, tools = _tool_path(interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER)
+        pex_tool, tools = _tool_path(CONFIG.PEX_TOOL, tools)
         jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
         # Pre-zip the files for later collection by python_binary.
         build_rule(
             name='_%s#zip' % name,
             srcs=all_srcs,
             outs=['.%s.pex.zip' % name],
-            cmd='%s %s --compile && %s -d -o ${OUTS} -i .' % (interpreter, pex_tool, jarcat_tool),
+            cmd='%s %s --compile && %s -d -o ${OUTS} -i .' % (interpreter_tool, pex_tool, jarcat_tool),
             building_description='Compressing...',
             requires=['py'],
             test_only=test_only,
@@ -102,20 +102,20 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
                      determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
     """
-    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
+    interpreter_tool, tools = _tool_path(interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER)
+    pex_tool, tools = _tool_path(CONFIG.PEX_TOOL, tools)
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
     deps = deps or []
     cmd = ' '.join([
         'rm -f $SRCS &&',
-        interpreter,
+        interpreter_tool,
         pex_tool,
         '--src_dir=${TMP_DIR}',
         '--out=temp.pex',
         '--entry_point=$SRCS',
         '--noscan',
         '--shebang="%s"' % shebang if shebang else '',
-        '--interpreter=' + interpreter,
+        '--interpreter=' + interpreter_tool,
         '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
         '--zip_safe',
         # Run it through jarcat to normalise the timestamps.
@@ -127,6 +127,7 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
         name='_%s#lib' % name,
         srcs=[main],
         resources=resources,
+        interpreter=interpreter,
         deps=deps,
         visibility=visibility,
     )
@@ -199,20 +200,20 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
                          which is normally just 'python', but could be 'python3' or
                         'pypy' or whatever.
     """
-    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     deps = deps or []
-    pex_tool, tools = _tool_path(CONFIG.PEX_TOOL)
+    interpreter_tool, tools = _tool_path(interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER)
+    pex_tool, tools = _tool_path(CONFIG.PEX_TOOL, tools)
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
     cmd=' '.join([
-        interpreter,
+        interpreter_tool,
         pex_tool,
         '--src_dir=${TMP_DIR}',
         '--out=temp.pex',
         '--entry_point=test_main',
         '--test_package=${PKG//\//.}',
         '--test_srcs=${SRCS_SRCS// /,}',
-        '--interpreter=' + interpreter,
+        '--interpreter=' + interpreter_tool,
         '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
         '--zip_safe',
         # Run it through jarcat to normalise the timestamps.

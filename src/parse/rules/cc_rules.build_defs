@@ -660,7 +660,7 @@ def _binary_build_flags(linker_flags, pkg_config_libs, shared=False, alwayslink=
         # nicely solved by --start-group / --end-group. Unfortunately the OSX linker doesn't
         # support those flags; in many cases it will work without, so try that.
         # Ordering them would be ideal but we lack a convenient way of working that out from here.
-        objs = '-Wl,--start-group %s -Wl,--end-group' % objs
+        objs = '%s--start-group %s %s--end-group' % (linker_prefix, objs, linker_prefix)
         # OSX's ld doesn't have --build-id
         # TODO(pebers): Not sure about other OS's / linkers? This might be GNU specific?
         build_id_flag = linker_prefix + '--build-id=none'
