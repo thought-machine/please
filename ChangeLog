@@ -1,3 +1,9 @@
+Version 7.0.4
+-------------
+
+    * Fixed some small issues around coverage for cgo_test rules.
+
+
 Version 7.0.3
 -------------
 

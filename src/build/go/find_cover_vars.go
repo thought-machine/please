@@ -49,7 +49,21 @@ func FindCoverVars(dir string, exclude []string) ([]CoverVar, error) {
 			if err != nil {
 				return err
 			}
-			ret = append(ret, vars...)
+			for _, v := range vars {
+				if strings.ContainsRune(v.ImportPath, '#') {
+					log.Debug("Skipping cover variable with internal import path %s", v.ImportPath)
+					continue
+				}
+				// Bit of a hack to avoid double-importing some cgo variables in rare cases.
+				// TODO(pebers): This overgenerates a bit, find a better solution.
+				dir, file := path.Split(v.ImportPath)
+				cgoPath := path.Join(dir, "_"+file+"#c.a")
+				if _, err := os.Stat(cgoPath); err == nil {
+					log.Debug("Skipping cover variable which appears to have an associated cgo library: %s", cgoPath)
+					continue
+				}
+				ret = append(ret, v)
+			}
 		}
 		return nil
 	})
@@ -147,6 +161,7 @@ func readBinaryFormat(contents []byte, dir, importPath string) ([]CoverVar, erro
 }
 
 func coverVar(dir, importPath, pkg, v string) CoverVar {
+	log.Info("Found cover variable: %s %s %s %s", dir, importPath, pkg, v)
 	f := path.Join(dir, strings.TrimPrefix(v, "GoCover_"))
 	if strings.HasSuffix(f, "_go") {
 		f = f[:len(f)-3] + ".go"
