@@ -15,6 +15,11 @@ type asyncCache struct {
 	requests  chan cacheRequest
 	realCache core.Cache
 	wg        sync.WaitGroup
+	mutex     sync.Mutex
+	// queuedRequests handles the awkward case of storing multiple things for one
+	// build target, which isn't necessarily safe to do in parallel. This blocks
+	// further requests from handling that target and queues them here until it's ready.
+	queuedRequests map[*core.BuildTarget][]cacheRequest
 }
 
 // A cacheRequest models an incoming cache request on our queue.
@@ -26,8 +31,9 @@ type cacheRequest struct {
 
 func newAsyncCache(realCache core.Cache, config *core.Configuration) core.Cache {
 	c := &asyncCache{
-		requests:  make(chan cacheRequest),
-		realCache: realCache,
+		requests:       make(chan cacheRequest),
+		realCache:      realCache,
+		queuedRequests: make(map[*core.BuildTarget][]cacheRequest),
 	}
 	c.wg.Add(config.Cache.Workers)
 	for i := 0; i < config.Cache.Workers; i++ {
@@ -72,12 +78,35 @@ func (c *asyncCache) Shutdown() {
 // run implements the actual async logic.
 func (c *asyncCache) run() {
 	for r := range c.requests {
-		if r.file != "" {
-			c.realCache.StoreExtra(r.target, r.key, r.file)
-		} else {
-			c.realCache.Store(r.target, r.key)
+		// Ensure only one goroutine handles each target at a time.
+		c.mutex.Lock()
+		q, present := c.queuedRequests[r.target]
+		if present {
+			c.queuedRequests[r.target] = append(q, r)
+			c.mutex.Unlock()
+			continue
+		}
+		c.queuedRequests[r.target] = nil
+		c.mutex.Unlock()
+		c.runOne(r)
+		// Now handle any queued requests that happened while we were dealing with it.
+		c.mutex.Lock()
+		q = c.queuedRequests[r.target]
+		delete(c.queuedRequests, r.target)
+		c.mutex.Unlock()
+		for _, r := range q {
+			c.runOne(r)
 		}
 	}
 	log.Debug("Cache worker finished")
 	c.wg.Done()
+}
+
+// runOne runs a single cache request.
+func (c *asyncCache) runOne(r cacheRequest) {
+	if r.file != "" {
+		c.realCache.StoreExtra(r.target, r.key, r.file)
+	} else {
+		c.realCache.Store(r.target, r.key)
+	}
 }
