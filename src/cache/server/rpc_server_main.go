@@ -34,6 +34,7 @@ var opts struct {
 	} `group:"Options controlling TLS communication & authentication"`
 
 	ClusterFlags struct {
+		ClusterPort      int    `long:"cluster_port" default:"7946" description:"Port to gossip among cluster nodes on"`
 		SeedCluster      bool   `long:"seed_cluster" description:"Seeds a new cache cluster."`
 		ClusterAddresses string `short:"c" long:"cluster_addresses" description:"Comma-separated addresses of one or more nodes to join a cluster"`
 	} `group:"Options controlling clustering behaviour"`
@@ -52,9 +53,9 @@ func main() {
 	}
 
 	if opts.ClusterFlags.SeedCluster {
-		server.InitCluster()
+		server.InitCluster(opts.ClusterFlags.ClusterPort)
 	} else if opts.ClusterFlags.ClusterAddresses != "" {
-		server.JoinCluster(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
+		server.JoinCluster(opts.ClusterFlags.ClusterPort, strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
 	}
 
 	log.Notice("Scanning existing cache directory %s...", opts.Dir)

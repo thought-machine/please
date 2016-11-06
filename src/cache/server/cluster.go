@@ -19,15 +19,15 @@ import (
 var list *memberlist.Memberlist
 
 // JoinCluster joins an existing plz cache cluster.
-func JoinCluster(members []string) {
-	if _, err := initCluster().Join(members); err != nil {
+func JoinCluster(port int, members []string) {
+	if _, err := initCluster(port).Join(members); err != nil {
 		log.Fatalf("Failed to join cluster: %s", err)
 	}
 }
 
 // InitCluster seeds a new plz cache cluster.
-func InitCluster() {
-	initCluster()
+func InitCluster(port int) {
+	initCluster(port)
 }
 
 // GetMembers returns the set of currently known cache members.
@@ -48,9 +48,12 @@ func IsClustered() bool {
 	return list != nil
 }
 
-func initCluster() *memberlist.Memberlist {
+func initCluster(port int) *memberlist.Memberlist {
 	var err error
-	list, err = memberlist.Create(memberlist.DefaultLANConfig())
+	c := memberlist.DefaultLANConfig()
+	c.BindPort = port
+	c.AdvertisePort = port
+	list, err = memberlist.Create(c)
 	if err != nil {
 		log.Fatalf("Failed to create new memberlist: %s", err)
 	}
