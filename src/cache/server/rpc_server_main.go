@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"time"
 
 	"gopkg.in/op/go-logging.v1"
@@ -31,6 +32,11 @@ var opts struct {
 		WritableCerts string `long:"writable_certs" description:"File or directory containing certificates that are allowed to write to the cache"`
 		ReadonlyCerts string `long:"readonly_certs" description:"File or directory containing certificates that are allowed to read from the cache"`
 	} `group:"Options controlling TLS communication & authentication"`
+
+	ClusterFlags struct {
+		SeedCluster      bool   `long:"seed_cluster" description:"Seeds a new cache cluster."`
+		ClusterAddresses string `short:"c" long:"cluster_addresses" description:"Comma-separated addresses of one or more nodes to join a cluster"`
+	} `group:"Options controlling clustering behaviour"`
 }
 
 func main() {
@@ -44,6 +50,13 @@ func main() {
 	} else if opts.TLSFlags.KeyFile == "" && (opts.TLSFlags.WritableCerts != "" || opts.TLSFlags.ReadonlyCerts != "") {
 		log.Fatalf("You can only use --writable_certs / --readonly_certs with https (--key_file and --cert_file)")
 	}
+
+	if opts.ClusterFlags.SeedCluster {
+		server.InitCluster()
+	} else if opts.ClusterFlags.ClusterAddresses != "" {
+		server.JoinCluster(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
+	}
+
 	log.Notice("Scanning existing cache directory %s...", opts.Dir)
 	cache := server.NewCache(opts.Dir, time.Duration(opts.CleanFlags.CleanFrequency),
 		time.Duration(opts.CleanFlags.MaxArtifactAge),

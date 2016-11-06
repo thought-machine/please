@@ -92,6 +92,16 @@ func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb
 	return &pb.DeleteResponse{Success: success}, nil
 }
 
+func (r *RpcCacheServer) ListNodes(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
+	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
+		return nil, err
+	}
+	if !IsClustered() {
+		return &pb.ListResponse{}, nil
+	}
+	return &pb.ListResponse{Nodes: GetMembers()}, nil
+}
+
 func (r *RpcCacheServer) authenticateClient(certs map[string]*x509.Certificate, ctx context.Context) error {
 	if len(certs) == 0 {
 		return nil // Open to anyone.

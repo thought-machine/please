@@ -173,3 +173,9 @@ go_get(
     patch = 'semver_text_unmarshaler.patch',
     revision = '8ab6407b697782a06568d4b7f1db25550ec2e4c6',
 )
+
+go_get(
+    name = 'memberlist',
+    get = 'github.com/hashicorp/memberlist',
+    revision = '7ad712f5f34ec40aebe6ca47756d07898486a8d2',
+)

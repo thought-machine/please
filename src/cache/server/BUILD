@@ -2,6 +2,7 @@ go_library(
     name = 'server',
     srcs = [
         'cache.go',
+        'cluster.go',
         'http_server.go',
         'rpc_server.go',
     ],
@@ -13,6 +14,7 @@ go_library(
         '//third_party/go:grpc',
         '//third_party/go:humanize',
         '//third_party/go:logging',
+        '//third_party/go:memberlist',
         '//third_party/go:mux',
     ],
     # Exposed for a test only.
