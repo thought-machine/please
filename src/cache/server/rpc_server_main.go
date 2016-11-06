@@ -35,8 +35,9 @@ var opts struct {
 
 	ClusterFlags struct {
 		ClusterPort      int    `long:"cluster_port" default:"7946" description:"Port to gossip among cluster nodes on"`
-		SeedCluster      bool   `long:"seed_cluster" description:"Seeds a new cache cluster."`
 		ClusterAddresses string `short:"c" long:"cluster_addresses" description:"Comma-separated addresses of one or more nodes to join a cluster"`
+		SeedCluster      bool   `long:"seed_cluster" description:"Seeds a new cache cluster."`
+		ClusterSize      int    `long:"cluster_size" description:"Number of nodes to expect in the cluster.\nMust be passed if --seed_cluster is, has no effect otherwise."`
 	} `group:"Options controlling clustering behaviour"`
 }
 
@@ -53,7 +54,10 @@ func main() {
 	}
 
 	if opts.ClusterFlags.SeedCluster {
-		server.InitCluster(opts.ClusterFlags.ClusterPort)
+		if opts.ClusterFlags.ClusterSize < 2 {
+			log.Fatalf("You must pass a cluster size of > 1 when initialising the seed node.")
+		}
+		server.InitCluster(opts.ClusterFlags.ClusterPort, opts.ClusterFlags.ClusterSize)
 	} else if opts.ClusterFlags.ClusterAddresses != "" {
 		server.JoinCluster(opts.ClusterFlags.ClusterPort, strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
 	}

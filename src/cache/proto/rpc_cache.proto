@@ -89,9 +89,9 @@ message ListResponse {
         // IP address of this node
 	string address = 2;
 	// Beginning of the hash space for this node
-	int32 hash_begin = 3;
+	uint32 hash_begin = 3;
 	// End of the hash space for this node (exclusive).
-	int32 hash_end = 4;
+	uint32 hash_end = 4;
     }
     // List of known server nodes.
     // If this is empty it indicates that the server is not clustered.

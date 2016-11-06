@@ -1,0 +1,29 @@
+// Defines the inter-server RPC cache interface for running a cluster.
+// Services in here aren't needed to be used by a client.
+
+syntax = "proto3";
+
+option java_package = "net.thoughtmachine.please.cache";
+
+package proto.rpc_cache;
+
+service RpcServer {
+    // Requests to join the cluster. Response indicates whether the client
+    // is allowed to join.
+    rpc Join(JoinRequest) returns (JoinResponse);
+}
+
+message JoinRequest {
+    // Identifier of the machine.
+    string name = 1;
+    // Address of the machine.
+    string address = 2;
+}
+
+message JoinResponse {
+    // True if the caller is allowed to join the cluster.
+    bool success = 1;
+    // The beginning and end (exclusive) of the hash space for this node.
+    uint32 hash_begin = 2;
+    uint32 hash_end = 3;
+}
