@@ -113,6 +113,8 @@ func (cache *dirCache) Clean(target *core.BuildTarget) {
 	}
 }
 
+func (cache *dirCache) Shutdown() {}
+
 func (cache *dirCache) getPath(target *core.BuildTarget, key []byte) string {
 	// NB. Is very important to use a padded encoding here so lengths are consistent for cache_cleaner.
 	return path.Join(cache.Dir, target.Label.PackageName, target.Label.Name, base64.URLEncoding.EncodeToString(key))

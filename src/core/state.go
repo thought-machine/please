@@ -368,6 +368,8 @@ type Cache interface {
 	RetrieveExtra(target *BuildTarget, key []byte, file string) bool
 	// Cleans any artifacts associated with this target from the cache, for any possible key.
 	Clean(target *BuildTarget)
+	// Shuts down the cache, blocking until any potentially pending requests are done.
+	Shutdown()
 }
 
 // This is a pretty simple coverage format; we record one int for each line

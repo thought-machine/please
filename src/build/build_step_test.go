@@ -269,8 +269,8 @@ func (*mockCache) RetrieveExtra(target *core.BuildTarget, key []byte, file strin
 	return false
 }
 
-func (*mockCache) Clean(target *core.BuildTarget) {
-}
+func (*mockCache) Clean(target *core.BuildTarget) {}
+func (*mockCache) Shutdown()                      {}
 
 func TestMain(m *testing.M) {
 	cache = &mockCache{}

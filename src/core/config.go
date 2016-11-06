@@ -109,6 +109,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
+	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
 	config.Metrics.PushFrequency = Duration(400 * time.Millisecond)
 	config.Metrics.PushTimeout = Duration(500 * time.Millisecond)
 	config.Test.Timeout = Duration(10 * time.Minute)
@@ -185,6 +186,7 @@ type Configuration struct {
 	}
 	BuildConfig map[string]string
 	Cache       struct {
+		Workers               int
 		Dir                   string
 		DirCacheCleaner       string
 		DirCacheHighWaterMark string
