@@ -1,3 +1,10 @@
+Version 7.0.6
+-------------
+
+    * Fixex a long-standing but mysteriously unfound bug in incrementality where we did not
+      correctly handle symlinks to directories within a build dir.
+
+
 Version 7.0.5
 -------------
 
