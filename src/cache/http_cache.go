@@ -164,6 +164,8 @@ func (cache *httpCache) Clean(target *core.BuildTarget) {
 	response.Body.Close()
 }
 
+func (cache *httpCache) Shutdown() {}
+
 func newHttpCache(config *core.Configuration) *httpCache {
 	cache := new(httpCache)
 	cache.OSName = runtime.GOOS + "_" + runtime.GOARCH

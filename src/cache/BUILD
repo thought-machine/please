@@ -50,13 +50,19 @@ go_test(
     name = 'http_cache_test',
     srcs = ['http_cache_test.go'],
     container = True,  # Brings up an internal server
-    data = [
-        'test_data/darwin_amd64',
-        'test_data/linux_amd64',
-    ],
+    data = [':test_data'],
     deps = [
         ':cache',
         '//src/cache/server',
         '//third_party/go:logging',
+    ],
+)
+
+go_test(
+    name = 'async_cache_test',
+    srcs = ['async_cache_test.go'],
+    deps = [
+        ':cache',
+        '//third_party/go:testify',
     ],
 )

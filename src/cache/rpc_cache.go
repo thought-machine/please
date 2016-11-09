@@ -196,6 +196,8 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 	}
 }
 
+func (cache *rpcCache) Shutdown() {}
+
 func (cache *rpcCache) connect(config *core.Configuration) {
 	// Change grpc to log using our implementation
 	grpclog.SetLogger(&grpcLogMabob{})

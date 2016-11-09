@@ -12,8 +12,18 @@ import (
 
 var log = logging.MustGetLogger("cache")
 
+// NewCache is the factory function for creating a cache setup from the given config.
 func NewCache(config *core.Configuration) *core.Cache {
-	mplex := new(cacheMultiplexer)
+	c := newSyncCache(config)
+	if config.Cache.Workers > 0 {
+		c := newAsyncCache(*c, config)
+		return &c
+	}
+	return c
+}
+
+func newSyncCache(config *core.Configuration) *core.Cache {
+	mplex := &cacheMultiplexer{}
 	if config.Cache.Dir != "" {
 		mplex.caches = append(mplex.caches, newDirCache(config))
 	}
@@ -43,7 +53,7 @@ func NewCache(config *core.Configuration) *core.Cache {
 	}
 }
 
-// Multiplexes several caches into one.
+// A cacheMultiplexer multiplexes several caches into one.
 // Used when we have several active (eg. http, dir).
 type cacheMultiplexer struct {
 	caches []core.Cache
@@ -124,6 +134,12 @@ func (mplex cacheMultiplexer) RetrieveExtra(target *core.BuildTarget, key []byte
 func (mplex cacheMultiplexer) Clean(target *core.BuildTarget) {
 	for _, cache := range mplex.caches {
 		cache.Clean(target)
+	}
+}
+
+func (mplex cacheMultiplexer) Shutdown() {
+	for _, cache := range mplex.caches {
+		cache.Shutdown()
 	}
 }
 
