@@ -50,11 +50,11 @@ func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.S
 // storeArtifact stores a series of artifacts in the cache.
 // Broken out of above to share with Replicate below.
 func storeArtifact(cache *Cache, os, arch string, hash []byte, artifacts []*pb.Artifact) bool {
-	arch := req.Os + "_" + req.Arch
-	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
-	for _, artifact := range req.Artifacts {
-		path := path.Join(arch, artifact.Package, artifact.Target, hash, artifact.File)
-		if err := r.cache.StoreArtifact(path, artifact.Body); err != nil {
+	arch = os + "_" + arch
+	hashStr := base64.RawURLEncoding.EncodeToString(hash)
+	for _, artifact := range artifacts {
+		path := path.Join(arch, artifact.Package, artifact.Target, hashStr, artifact.File)
+		if err := cache.StoreArtifact(path, artifact.Body); err != nil {
 			return false
 		}
 	}
@@ -109,10 +109,10 @@ func (r *RpcCacheServer) ListNodes(ctx context.Context, req *pb.ListRequest) (*p
 	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
 		return nil, err
 	}
-	if !cluster.IsClustered() {
+	if r.cluster == nil {
 		return &pb.ListResponse{}, nil
 	}
-	return &pb.ListResponse{Nodes: cluster.GetMembers()}, nil
+	return &pb.ListResponse{Nodes: r.cluster.GetMembers()}, nil
 }
 
 func (r *RpcCacheServer) authenticateClient(certs map[string]*x509.Certificate, ctx context.Context) error {
@@ -167,7 +167,7 @@ func loadKeys(filename string) map[string]*x509.Certificate {
 // RPCServer implements the gRPC server for communication between cache nodes.
 type RPCServer struct {
 	cache   *Cache
-	cluster *Cluster
+	cluster *cluster.Cluster
 }
 
 func (r *RPCServer) Join(ctx context.Context, req *pb.JoinRequest) (*pb.JoinResponse, error) {
@@ -178,8 +178,8 @@ func (r *RPCServer) Join(ctx context.Context, req *pb.JoinRequest) (*pb.JoinResp
 func (r *RPCServer) Replicate(ctx context.Context, req *pb.ReplicateRequest) (*pb.ReplicateResponse, error) {
 	// TODO(pebers): Authentication.
 	return &pb.ReplicateResponse{
-		success: storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts),
-	}
+		Success: storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts),
+	}, nil
 }
 
 // BuildGrpcServer creates a new, unstarted grpc.Server and returns it.
@@ -205,7 +205,7 @@ func BuildGrpcServer(port int, cache *Cache, cluster *cluster.Cluster, keyFile, 
 			}
 		}
 	}
-	r2 := &RpcServerServer{cache: cache, cluster: cluster}
+	r2 := &RPCServer{cache: cache, cluster: cluster}
 	pb.RegisterRpcCacheServer(s, r)
 	pb.RegisterRpcServerServer(s, r2)
 	healthserver := health.NewServer()

@@ -12,6 +12,8 @@
 package cluster
 
 import (
+	"context"
+	"net"
 	"sync"
 	"time"
 
@@ -47,17 +49,16 @@ type Cluster struct {
 
 // NewCluster creates a new Cluster object and starts listening on the given port.
 func NewCluster(port int) *Cluster {
-	var err error
 	c := memberlist.DefaultLANConfig()
 	c.BindPort = port
 	c.AdvertisePort = port
-	list, err = memberlist.Create(c)
+	list, err := memberlist.Create(c)
 	if err != nil {
 		log.Fatalf("Failed to create new memberlist: %s", err)
 	}
 	n := list.LocalNode()
 	log.Notice("Memberlist initialised, this node is %s / %s", n.Name, n.Addr)
-	return Cluster{list: list}
+	return &Cluster{list: list}
 }
 
 // JoinCluster joins an existing plz cache cluster.
@@ -67,17 +68,19 @@ func (cluster *Cluster) Join(members []string) {
 		log.Fatalf("Failed to join cluster: %s", err)
 	}
 	for _, node := range cluster.GetMembers() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		if client, err := cluster.getRPCClient(node.Address); err != nil {
 			log.Error("Error getting RPC client for %s: %s", node.Address, err)
-		} else if resp, err := client.Join(pb.JoinRequest{
-			name:    cluster.list.LocalNode().Name,
-			address: cluster.list.LocalNode().Addr,
+		} else if resp, err := client.Join(ctx, &pb.JoinRequest{
+			Name:    cluster.list.LocalNode().Name,
+			Address: cluster.list.LocalNode().Addr.String(),
 		}); err != nil {
 			log.Error("Error communicating with %s: %s", node.Address, err)
 		} else if !resp.Success {
 			log.Fatalf("We have not been allowed to join the cluster :(")
 		} else {
-			cluster.hashStart = resp.HashStart
+			cluster.hashStart = resp.HashBegin
 			cluster.hashEnd = resp.HashEnd
 			cluster.nodes = resp.Nodes
 			return
@@ -91,7 +94,7 @@ func (cluster *Cluster) Init(size int) {
 	// Create the node list
 	cluster.nodes = make([]*pb.Node, size)
 	// We're node 0
-	newNode(list.LocalNode())
+	cluster.newNode(cluster.list.LocalNode())
 	// And there aren't any others yet, so we're done.
 }
 
@@ -99,7 +102,7 @@ func (cluster *Cluster) Init(size int) {
 func (cluster *Cluster) GetMembers() []*pb.Node {
 	// TODO(pebers): this is quadratic so would be bad on large clusters.
 	// We might also want to refresh the members in the background if this proves slow?
-	for _, m := range list.Members() {
+	for _, m := range cluster.list.Members() {
 		cluster.newNode(m)
 	}
 	return cluster.nodes
@@ -118,8 +121,8 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 			}
 			cluster.nodes[i] = &pb.Node{
 				Name:      node.Name,
-				Address:   node.Addr,
-				HashStart: tools.HashPoint(i, len(cluster.nodes)),
+				Address:   node.Addr.String(),
+				HashBegin: tools.HashPoint(i, len(cluster.nodes)),
 				HashEnd:   tools.HashPoint(i+1, len(cluster.nodes)),
 			}
 			return cluster.nodes[i]
@@ -131,11 +134,11 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 
 // getRPCClient returns an RPC client for the given server.
 func (cluster *Cluster) getRPCClient(address string) (pb.RpcServerClient, error) {
-	clientMutex.RLock()
-	client, present := clients[address]
-	clientMutex.RUnlock()
+	cluster.clientMutex.RLock()
+	client, present := cluster.clients[address]
+	cluster.clientMutex.RUnlock()
 	if present {
-		return client
+		return client, nil
 	}
 	// TODO(pebers): add credentials.
 	connection, err := grpc.Dial(address, grpc.WithTimeout(5*time.Second), grpc.WithInsecure())
@@ -143,9 +146,9 @@ func (cluster *Cluster) getRPCClient(address string) (pb.RpcServerClient, error)
 		return nil, err
 	}
 	client = pb.NewRpcServerClient(connection)
-	clientMutex.Lock()
-	clients[address] = client
-	clientMutex.Unlock()
+	cluster.clientMutex.Lock()
+	cluster.clients[address] = client
+	cluster.clientMutex.Unlock()
 	return client, nil
 }
 
@@ -153,13 +156,13 @@ func (cluster *Cluster) getRPCClient(address string) (pb.RpcServerClient, error)
 // we don't really know for sure when calling this if we are the primary or not).
 func (cluster *Cluster) getAlternateNode(hash []byte) string {
 	point := tools.Hash(hash)
-	if point >= cluster.HashStart && point < cluster.HashEnd {
+	if point >= cluster.hashStart && point < cluster.hashEnd {
 		// We've got this point, use the alternate.
 		point = tools.AlternateHash(hash)
 	}
 	for _, n := range cluster.nodes {
-		if hash >= n.HashStart && hash < n.HashEnd {
-			return n.address
+		if point >= n.HashBegin && point < n.HashEnd {
+			return n.Address
 		}
 	}
 	log.Warning("No cluster node found for hash point %d", point)
@@ -178,7 +181,9 @@ func (cluster *Cluster) ReplicateArtifacts(req *pb.StoreRequest) {
 		log.Error("Failed to get RPC client for %s: %s", address, err)
 		return
 	}
-	if resp, err := client.Replicate(&pb.ReplicateRequest{
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if resp, err := client.Replicate(ctx, &pb.ReplicateRequest{
 		Artifacts: req.Artifacts,
 		Os:        req.Os,
 		Arch:      req.Arch,
@@ -194,7 +199,7 @@ func (cluster *Cluster) ReplicateArtifacts(req *pb.StoreRequest) {
 func (cluster *Cluster) AddNode(req *pb.JoinRequest) *pb.JoinResponse {
 	node := cluster.newNode(&memberlist.Node{
 		Name: req.Name,
-		Addr: req.Address,
+		Addr: net.ParseIP(req.Address),
 	})
 	if node == nil {
 		return &pb.JoinResponse{Success: false}

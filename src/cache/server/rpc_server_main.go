@@ -65,14 +65,14 @@ func main() {
 			log.Fatalf("You must pass a cluster size of > 1 when initialising the seed node.")
 		}
 		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort)
-		clusta.InitCluster(opts.ClusterFlags.ClusterSize)
+		clusta.Init(opts.ClusterFlags.ClusterSize)
 	} else if opts.ClusterFlags.ClusterAddresses != "" {
 		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort)
-		clusta.JoinCluster(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
+		clusta.Join(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
 	}
 
 	log.Notice("Starting up RPC cache server on port %d...", opts.Port)
-	s, lis := server.BuildGrpcServer(opts.Port, cache, cluster, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
+	s, lis := server.BuildGrpcServer(opts.Port, cache, clusta, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
 		opts.TLSFlags.CACertFile, opts.TLSFlags.ReadonlyCerts, opts.TLSFlags.WritableCerts)
 
 	server.ServeGrpcForever(s, lis)
