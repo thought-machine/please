@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
+	"cache/cluster"
 	"cache/server"
 	"cli"
 )
@@ -53,20 +54,21 @@ func main() {
 		log.Fatalf("You can only use --writable_certs / --readonly_certs with https (--key_file and --cert_file)")
 	}
 
-	if opts.ClusterFlags.SeedCluster {
-		if opts.ClusterFlags.ClusterSize < 2 {
-			log.Fatalf("You must pass a cluster size of > 1 when initialising the seed node.")
-		}
-		server.InitCluster(opts.ClusterFlags.ClusterPort, opts.ClusterFlags.ClusterSize)
-	} else if opts.ClusterFlags.ClusterAddresses != "" {
-		server.JoinCluster(opts.ClusterFlags.ClusterPort, strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
-	}
-
 	log.Notice("Scanning existing cache directory %s...", opts.Dir)
 	cache := server.NewCache(opts.Dir, time.Duration(opts.CleanFlags.CleanFrequency),
 		time.Duration(opts.CleanFlags.MaxArtifactAge),
 		uint64(opts.CleanFlags.LowWaterMark), uint64(opts.CleanFlags.HighWaterMark))
 	log.Notice("Starting up RPC cache server on port %d...", opts.Port)
-	server.ServeGrpcForever(opts.Port, cache, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
+	s, lis := server.BuildGrpcServer(opts.Port, cache, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
 		opts.TLSFlags.CACertFile, opts.TLSFlags.ReadonlyCerts, opts.TLSFlags.WritableCerts)
+
+	if opts.ClusterFlags.SeedCluster {
+		if opts.ClusterFlags.ClusterSize < 2 {
+			log.Fatalf("You must pass a cluster size of > 1 when initialising the seed node.")
+		}
+		s.cluster = cluster.InitCluster(opts.ClusterFlags.ClusterPort, opts.ClusterFlags.ClusterSize)
+	} else if opts.ClusterFlags.ClusterAddresses != "" {
+		s.cluster = cluster.JoinCluster(opts.ClusterFlags.ClusterPort, strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
+	}
+	server.ServeGrpcForever(s, lis)
 }

@@ -83,17 +83,18 @@ message ListRequest {
 }
 
 message ListResponse {
-    message Node {
-        // A name of this node
-	string name = 1;
-        // IP address of this node
-	string address = 2;
-	// Beginning of the hash space for this node
-	uint32 hash_begin = 3;
-	// End of the hash space for this node (exclusive).
-	uint32 hash_end = 4;
-    }
     // List of known server nodes.
     // If this is empty it indicates that the server is not clustered.
     repeated Node nodes = 1;
+}
+
+message Node {
+    // A name of this node
+    string name = 1;
+    // IP address of this node
+    string address = 2;
+    // Beginning of the hash space for this node
+    uint32 hash_begin = 3;
+    // End of the hash space for this node (exclusive).
+    uint32 hash_end = 4;
 }

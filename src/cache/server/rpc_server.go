@@ -19,6 +19,7 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/peer"
 
+	"cache/cluster"
 	pb "cache/proto/rpc_cache"
 )
 
@@ -31,6 +32,7 @@ type RpcCacheServer struct {
 	cache        *Cache
 	readonlyKeys map[string]*x509.Certificate
 	writableKeys map[string]*x509.Certificate
+	cluster      *cluster.Cluster
 }
 
 func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
@@ -44,6 +46,10 @@ func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.S
 		if err := r.cache.StoreArtifact(path, artifact.Body); err != nil {
 			return &pb.StoreResponse{Success: false}, nil
 		}
+	}
+	if r.cluster != nil {
+		// Replicate this artifact to another node. Doesn't have to be done synchronously.
+		go cluster.ReplicateArtifacts(r.cluster, req)
 	}
 	return &pb.StoreResponse{Success: true}, nil
 }
@@ -96,10 +102,10 @@ func (r *RpcCacheServer) ListNodes(ctx context.Context, req *pb.ListRequest) (*p
 	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
 		return nil, err
 	}
-	if !IsClustered() {
+	if !cluster.IsClustered() {
 		return &pb.ListResponse{}, nil
 	}
-	return &pb.ListResponse{Nodes: GetMembers()}, nil
+	return &pb.ListResponse{Nodes: cluster.GetMembers()}, nil
 }
 
 func (r *RpcCacheServer) authenticateClient(certs map[string]*x509.Certificate, ctx context.Context) error {
@@ -181,11 +187,11 @@ func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, read
 	return s, lis
 }
 
-// ServeGrpcForever constructs a new server on the given port and serves until killed.
-func ServeGrpcForever(port int, cache *Cache, keyFile, certFile, caCertFile, readonlyKeys, writableKeys string) {
-	s, lis := BuildGrpcServer(port, cache, keyFile, certFile, caCertFile, readonlyKeys, writableKeys)
-	log.Notice("Serving RPC cache on port %d", port)
-	s.Serve(lis)
+// ServeGrpcForever serves gRPC until killed using the given server.
+// It's very simple and provided as a convenience so callers don't have to import grpc themselves.
+func ServeGrpcForever(server *grpc.Server, lis net.Listener) {
+	log.Notice("Serving RPC cache on %s", lis.Addr())
+	server.Serve(lis)
 }
 
 // serverWithAuth builds a gRPC server, possibly with authentication if key / cert files are given.

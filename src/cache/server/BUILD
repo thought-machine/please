@@ -2,11 +2,11 @@ go_library(
     name = 'server',
     srcs = [
         'cache.go',
-        'cluster.go',
         'http_server.go',
         'rpc_server.go',
     ],
     deps = [
+        '//src/cache/cluster',
         '//src/cache/proto:rpc_cache',
         '//src/cache/tools',
         '//src/core',
@@ -14,7 +14,6 @@ go_library(
         '//third_party/go:grpc',
         '//third_party/go:humanize',
         '//third_party/go:logging',
-        '//third_party/go:memberlist',
         '//third_party/go:mux',
     ],
     # Exposed for a test only.
@@ -37,6 +36,7 @@ go_binary(
     main = 'rpc_server_main.go',
     deps = [
         ':server',
+        '//src/cache/cluster',
         '//src/cli',
         '//third_party/go:logging',
     ],

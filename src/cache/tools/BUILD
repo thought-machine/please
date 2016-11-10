@@ -4,3 +4,12 @@ go_library(
     srcs = ['tools_linux.go' if (CONFIG.OS == 'linux') else 'tools.go'] + ['hash.go'],
     visibility = ['//src/cache/...'],
 )
+
+go_test(
+    name = 'hash_test',
+    srcs = ['hash_test.go'],
+    deps = [
+        ':tools',
+        '//third_party/go:testify',
+    ],
+)

@@ -5,12 +5,17 @@ syntax = "proto3";
 
 option java_package = "net.thoughtmachine.please.cache";
 
+import "src/cache/proto/rpc_cache.proto";
+
 package proto.rpc_cache;
 
 service RpcServer {
     // Requests to join the cluster. Response indicates whether the client
     // is allowed to join.
     rpc Join(JoinRequest) returns (JoinResponse);
+    // Adds an artifact to this node which has already been added to another.
+    // Used to mirror stored artifacts between replicas.
+    rpc Replicate(ReplicateRequest) returns (ReplicateResponse);
 }
 
 message JoinRequest {
@@ -26,4 +31,23 @@ message JoinResponse {
     // The beginning and end (exclusive) of the hash space for this node.
     uint32 hash_begin = 2;
     uint32 hash_end = 3;
+
+    // List of other known nodes.
+    repeated Node nodes = 4;
+}
+
+message ReplicateRequest {
+    // Sequence of artifacts to store.
+    repeated Artifact artifacts = 1;
+    // OS of requestor
+    string os = 2;
+    // Architecture of requestor
+    string arch = 3;
+    // Hash of rule that generated these artifacts
+    bytes hash = 4;
+}
+
+message ReplicateResponse {
+    // True if store was successful.
+    bool success = 1;
 }
