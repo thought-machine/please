@@ -27,9 +27,6 @@ import (
 
 var log = logging.MustGetLogger("cluster")
 
-// Global singleton. Useful for RPC handlers to be able to access the cluster.
-var singleton *Cluster
-
 // A Cluster handles communication between a set of clustered cache servers.
 type Cluster struct {
 	list *memberlist.Memberlist
@@ -49,16 +46,27 @@ type Cluster struct {
 
 // NewCluster creates a new Cluster object and starts listening on the given port.
 func NewCluster(port int) *Cluster {
+	return newCluster(port, "")
+}
+
+// newCluster is split from the above for testing purposes.
+func newCluster(port int, name string) *Cluster {
 	c := memberlist.DefaultLANConfig()
 	c.BindPort = port
 	c.AdvertisePort = port
+	if name != "" {
+		c.Name = name
+	}
 	list, err := memberlist.Create(c)
 	if err != nil {
 		log.Fatalf("Failed to create new memberlist: %s", err)
 	}
 	n := list.LocalNode()
 	log.Notice("Memberlist initialised, this node is %s / %s", n.Name, n.Addr)
-	return &Cluster{list: list}
+	return &Cluster{
+		list:    list,
+		clients: map[string]pb.RpcServerClient{},
+	}
 }
 
 // JoinCluster joins an existing plz cache cluster.
@@ -112,9 +120,9 @@ func (cluster *Cluster) GetMembers() []*pb.Node {
 // This includes allocating it hash space.
 func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 	for i, n := range cluster.nodes {
-		if n.Name == "" || n.Name == node.Name {
+		if n == nil || n.Name == "" || n.Name == node.Name {
 			// Available slot. Or, if they identified as an existing node, they can take that space over.
-			if n.Name == node.Name {
+			if n != nil && n.Name == node.Name {
 				log.Warning("Node %s / %s is taking over slot %d", node.Name, node.Addr, i)
 			} else {
 				log.Notice("Populating node %d: %s / %s", i, node.Name, node.Addr)
@@ -128,7 +136,7 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 			return cluster.nodes[i]
 		}
 	}
-	log.Warning("Node %s / %s attempted to join, but there is no space available.")
+	log.Warning("Node %s / %s attempted to join, but there is no space available.", node.Name, node.Addr)
 	return nil
 }
 

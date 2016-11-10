@@ -10,3 +10,16 @@ go_library(
     ],
     visibility = ['//src/cache/server:all'],
 )
+
+go_test(
+    name = 'cluster_test',
+    srcs = ['cluster_test.go'],
+    container = True,
+    deps = [
+        ':cluster',
+        '//src/cache/proto:rpc_cache',
+        '//third_party/go:context',
+        '//third_party/go:grpc',
+        '//third_party/go:testify',
+    ],
+)
