@@ -58,17 +58,22 @@ func main() {
 	cache := server.NewCache(opts.Dir, time.Duration(opts.CleanFlags.CleanFrequency),
 		time.Duration(opts.CleanFlags.MaxArtifactAge),
 		uint64(opts.CleanFlags.LowWaterMark), uint64(opts.CleanFlags.HighWaterMark))
-	log.Notice("Starting up RPC cache server on port %d...", opts.Port)
-	s, lis := server.BuildGrpcServer(opts.Port, cache, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
-		opts.TLSFlags.CACertFile, opts.TLSFlags.ReadonlyCerts, opts.TLSFlags.WritableCerts)
 
+	var clusta *cluster.Cluster
 	if opts.ClusterFlags.SeedCluster {
 		if opts.ClusterFlags.ClusterSize < 2 {
 			log.Fatalf("You must pass a cluster size of > 1 when initialising the seed node.")
 		}
-		s.cluster = cluster.InitCluster(opts.ClusterFlags.ClusterPort, opts.ClusterFlags.ClusterSize)
+		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort)
+		clusta.InitCluster(opts.ClusterFlags.ClusterSize)
 	} else if opts.ClusterFlags.ClusterAddresses != "" {
-		s.cluster = cluster.JoinCluster(opts.ClusterFlags.ClusterPort, strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
+		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort)
+		clusta.JoinCluster(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
 	}
+
+	log.Notice("Starting up RPC cache server on port %d...", opts.Port)
+	s, lis := server.BuildGrpcServer(opts.Port, cache, cluster, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
+		opts.TLSFlags.CACertFile, opts.TLSFlags.ReadonlyCerts, opts.TLSFlags.WritableCerts)
+
 	server.ServeGrpcForever(s, lis)
 }

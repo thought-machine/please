@@ -165,3 +165,44 @@ func (cluster *Cluster) getAlternateNode(hash []byte) string {
 	log.Warning("No cluster node found for hash point %d", point)
 	return ""
 }
+
+// ReplicateArtifacts replicates artifacts from this node to another.
+func (cluster *Cluster) ReplicateArtifacts(req *pb.StoreRequest) {
+	address := cluster.getAlternateNode(req.Hash)
+	if address == "" {
+		log.Warning("Couldn't get alternate address, will not replicate artifact")
+		return
+	}
+	client, err := cluster.getRPCClient(address)
+	if err != nil {
+		log.Error("Failed to get RPC client for %s: %s", address, err)
+		return
+	}
+	if resp, err := client.Replicate(&pb.ReplicateRequest{
+		Artifacts: req.Artifacts,
+		Os:        req.Os,
+		Arch:      req.Arch,
+		Hash:      req.Hash,
+	}); err != nil {
+		log.Error("Error replicating artifact: %s", err)
+	} else if !resp.Success {
+		log.Error("Failed to replicate artifact to %s", address)
+	}
+}
+
+// AddNode adds a new node that's applying to join the cluster.
+func (cluster *Cluster) AddNode(req *pb.JoinRequest) *pb.JoinResponse {
+	node := cluster.newNode(&memberlist.Node{
+		Name: req.Name,
+		Addr: req.Address,
+	})
+	if node == nil {
+		return &pb.JoinResponse{Success: false}
+	}
+	return &pb.JoinResponse{
+		Success:   true,
+		HashBegin: node.HashBegin,
+		HashEnd:   node.HashEnd,
+		Nodes:     cluster.GetMembers(),
+	}
+}

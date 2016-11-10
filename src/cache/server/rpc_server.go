@@ -39,19 +39,26 @@ func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.S
 	if err := r.authenticateClient(r.writableKeys, ctx); err != nil {
 		return nil, err
 	}
+	success := storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts)
+	if success && r.cluster != nil {
+		// Replicate this artifact to another node. Doesn't have to be done synchronously.
+		go r.cluster.ReplicateArtifacts(req)
+	}
+	return &pb.StoreResponse{Success: success}, nil
+}
+
+// storeArtifact stores a series of artifacts in the cache.
+// Broken out of above to share with Replicate below.
+func storeArtifact(cache *Cache, os, arch string, hash []byte, artifacts []*pb.Artifact) bool {
 	arch := req.Os + "_" + req.Arch
 	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
 	for _, artifact := range req.Artifacts {
 		path := path.Join(arch, artifact.Package, artifact.Target, hash, artifact.File)
 		if err := r.cache.StoreArtifact(path, artifact.Body); err != nil {
-			return &pb.StoreResponse{Success: false}, nil
+			return false
 		}
 	}
-	if r.cluster != nil {
-		// Replicate this artifact to another node. Doesn't have to be done synchronously.
-		go cluster.ReplicateArtifacts(r.cluster, req)
-	}
-	return &pb.StoreResponse{Success: true}, nil
+	return true
 }
 
 func (r *RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) (*pb.RetrieveResponse, error) {
@@ -157,15 +164,33 @@ func loadKeys(filename string) map[string]*x509.Certificate {
 	return ret
 }
 
+// RPCServer implements the gRPC server for communication between cache nodes.
+type RPCServer struct {
+	cache   *Cache
+	cluster *Cluster
+}
+
+func (r *RPCServer) Join(ctx context.Context, req *pb.JoinRequest) (*pb.JoinResponse, error) {
+	// TODO(pebers): Authentication.
+	return r.cluster.AddNode(req), nil
+}
+
+func (r *RPCServer) Replicate(ctx context.Context, req *pb.ReplicateRequest) (*pb.ReplicateResponse, error) {
+	// TODO(pebers): Authentication.
+	return &pb.ReplicateResponse{
+		success: storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts),
+	}
+}
+
 // BuildGrpcServer creates a new, unstarted grpc.Server and returns it.
 // It also returns a net.Listener to start it on.
-func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, readonlyKeys, writableKeys string) (*grpc.Server, net.Listener) {
+func BuildGrpcServer(port int, cache *Cache, cluster *cluster.Cluster, keyFile, certFile, caCertFile, readonlyKeys, writableKeys string) (*grpc.Server, net.Listener) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("Failed to listen on port %d: %v", port, err)
 	}
 	s := serverWithAuth(keyFile, certFile, caCertFile)
-	r := &RpcCacheServer{cache: cache}
+	r := &RpcCacheServer{cache: cache, cluster: cluster}
 	if writableKeys != "" {
 		r.writableKeys = loadKeys(writableKeys)
 	}
@@ -180,7 +205,9 @@ func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, read
 			}
 		}
 	}
+	r2 := &RpcServerServer{cache: cache, cluster: cluster}
 	pb.RegisterRpcCacheServer(s, r)
+	pb.RegisterRpcServerServer(s, r2)
 	healthserver := health.NewServer()
 	healthserver.SetServingStatus("plz-rpc-cache", healthpb.HealthCheckResponse_SERVING)
 	healthpb.RegisterHealthServer(s, healthserver)
