@@ -14,6 +14,7 @@ package cluster
 import (
 	"context"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -48,15 +49,16 @@ type Cluster struct {
 }
 
 // NewCluster creates a new Cluster object and starts listening on the given port.
-func NewCluster(port int) *Cluster {
-	return newCluster(port, "")
+func NewCluster(port, rpcPort int) *Cluster {
+	return newCluster(port, rpcPort, "")
 }
 
 // newCluster is split from the above for testing purposes.
-func newCluster(port int, name string) *Cluster {
+func newCluster(port, rpcPort int, name string) *Cluster {
 	c := memberlist.DefaultLANConfig()
 	c.BindPort = port
 	c.AdvertisePort = port
+	c.Delegate = &delegate{port: rpcPort}
 	if name != "" {
 		c.Name = name
 	}
@@ -81,7 +83,7 @@ func (cluster *Cluster) Join(members []string) {
 	for _, node := range cluster.list.Members() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if client, err := cluster.getRPCClient(node.Addr.String()); err != nil {
+		if client, err := cluster.getRPCClient(node.Addr.String() + ":" + string(node.Meta)); err != nil {
 			log.Error("Error getting RPC client for %s: %s", node.Addr, err)
 		} else if resp, err := client.Join(ctx, &pb.JoinRequest{
 			Name:    cluster.list.LocalNode().Name,
@@ -125,7 +127,7 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 	newNode := func(i int) *pb.Node {
 		return &pb.Node{
 			Name:      node.Name,
-			Address:   node.Addr.String(),
+			Address:   node.Addr.String() + ":" + string(node.Meta),
 			HashBegin: tools.HashPoint(i, cluster.size),
 			HashEnd:   tools.HashPoint(i+1, cluster.size),
 		}
@@ -231,3 +233,19 @@ func (cluster *Cluster) AddNode(req *pb.JoinRequest) *pb.JoinResponse {
 		Size:      int32(cluster.size),
 	}
 }
+
+// A delegate is our implementation of memberlist's Delegate interface.
+// Somewhat awkwardly we have to implement the whole thing to provide metadata for our node,
+// which we only really need to do to communicate our RPC port.
+type delegate struct {
+	port int
+}
+
+func (d *delegate) NodeMeta(limit int) []byte {
+	return []byte(strconv.Itoa(d.port))
+}
+
+func (d *delegate) NotifyMsg([]byte)                           {}
+func (d *delegate) GetBroadcasts(overhead, limit int) [][]byte { return nil }
+func (d *delegate) LocalState(join bool) []byte                { return nil }
+func (d *delegate) MergeRemoteState(buf []byte, join bool)     {}

@@ -91,7 +91,7 @@ message ListResponse {
 message Node {
     // A name of this node
     string name = 1;
-    // IP address of this node
+    // Network address / port of this node
     string address = 2;
     // Beginning of the hash space for this node
     uint32 hash_begin = 3;

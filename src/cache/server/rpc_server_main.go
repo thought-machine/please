@@ -64,10 +64,10 @@ func main() {
 		if opts.ClusterFlags.ClusterSize < 2 {
 			log.Fatalf("You must pass a cluster size of > 1 when initialising the seed node.")
 		}
-		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort)
+		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort, opts.Port)
 		clusta.Init(opts.ClusterFlags.ClusterSize)
 	} else if opts.ClusterFlags.ClusterAddresses != "" {
-		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort)
+		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort, opts.Port)
 		clusta.Join(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
 	}
 
