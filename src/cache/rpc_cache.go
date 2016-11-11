@@ -20,17 +20,18 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	pb "cache/proto/rpc_cache"
+	"cache/tools"
 )
 
 const maxErrors = 5
+const replicas = 2
 
 type rpcCache struct {
-	connection *grpc.ClientConn
 	client     pb.RpcCacheClient
 	Writeable  bool
 	Connected  bool
@@ -40,6 +41,13 @@ type rpcCache struct {
 	timeout    time.Duration
 	startTime  time.Time
 	maxMsgSize int
+	nodes      []cacheNode
+}
+
+type cacheNode struct {
+	cache     *rpcCache
+	hashStart uint32
+	hashEnd   uint32
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
@@ -232,26 +240,26 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 		log.Warning("Failed to connect to RPC cache: %s", err)
 		return
 	}
-	// Note that we have to actually send it a message here to validate the connection;
-	// Dial() only seems to return errors for superficial failures like syntactically invalid addresses,
-	// it will return essentially immediately even if the server doesn't exist.
-	healthclient := healthpb.NewHealthClient(connection)
+	// Message the server to get its cluster topology.
+	client := pb.NewRpcCacheClient(connection)
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
-	resp, err := healthclient.Check(ctx, &healthpb.HealthCheckRequest{Service: "plz-rpc-cache"})
-	if err != nil {
+	resp, err := client.ListNodes(ctx, &pb.ListRequest{})
+	// For compatibility with older servers, handle an error code of Unimplemented and treat
+	// as an unclustered server (because of course they can't be clustered).
+	if err != nil && grpc.Code(err) != codes.Unimplemented {
 		cache.Connecting = false
 		log.Warning("Failed to contact RPC cache: %s", err)
-	} else if resp.Status != healthpb.HealthCheckResponse_SERVING {
-		cache.Connecting = false
-		log.Warning("RPC cache says it is not serving (%d)", resp.Status)
-	} else {
-		cache.connection = connection
-		cache.client = pb.NewRpcCacheClient(connection)
+		return
+	} else if resp == nil || len(resp.Nodes) == 0 {
+		// Server is not clustered, just use this one directly.
+		cache.client = client
 		cache.Connected = true
 		cache.Connecting = false
 		log.Info("RPC cache connected after %0.2fs", time.Since(cache.startTime).Seconds())
+		return
 	}
+	// If we get here, we are connected and the cache is clustered.
 }
 
 // isConnected checks if the cache is connected. If it's still trying to connect it allows a
@@ -268,6 +276,23 @@ func (cache *rpcCache) isConnected() bool {
 	}
 	ticker.Stop()
 	return cache.Connected
+}
+
+// getInstance grabs a cache instance for the given hash.
+func (cache *rpcCache) getInstance(hash []byte, replica int) *rpcCache {
+	var h uint32
+	if replica == 0 {
+		h = tools.Hash(hash)
+	} else {
+		h = tools.AlternateHash(hash)
+	}
+	for _, n := range cache.nodes {
+		if h >= n.hashStart && h < n.hashEnd {
+			return n.cache
+		}
+	}
+	log.Warning("No RPC cache client available for %d", h)
+	return nil
 }
 
 // error increments the error counter on the cache, and disables it if it gets too high.
