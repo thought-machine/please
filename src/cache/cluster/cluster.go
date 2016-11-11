@@ -196,8 +196,8 @@ func (cluster *Cluster) ReplicateArtifacts(req *pb.StoreRequest) {
 }
 
 // DeleteArtifacts deletes artifacts from another node.
-func (cluster *Cluster) DeleteArtifacts(req *pb.StoreRequest) {
-	cluster.replicate(req.Os, req.Arch, req.Hash, true, req.Artifacts)
+func (cluster *Cluster) DeleteArtifacts(req *pb.DeleteRequest) {
+	cluster.replicate(req.Os, req.Arch, nil, true, req.Artifacts)
 }
 
 func (cluster *Cluster) replicate(os, arch string, hash []byte, delete bool, artifacts []*pb.Artifact) {

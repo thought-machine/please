@@ -116,17 +116,18 @@ func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*
 	return artifacts, totalSize, err
 }
 
-func (cache *rpcCache) sendArtifactsInternal(target *core.BuildTarget, key []byte, artifacts []*pb.Artifact) {
+func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artifacts []*pb.Artifact) {
 	req := pb.StoreRequest{Artifacts: artifacts, Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
-	resp, err := cache.client.Store(ctx, &req)
-	if err != nil {
-		log.Warning("Error communicating with RPC cache server: %s", err)
-		cache.error()
-	} else if !resp.Success {
-		log.Warning("Failed to store artifacts in RPC cache for %s", target.Label)
-	}
+	success, _ := cache.runRpc(key, func(cache *rpcCache) (bool, []*pb.Artifact) {
+		_, err := cache.client.Store(ctx, &req)
+		if err != nil {
+			log.Warning("Error communicating with RPC cache server: %s", err)
+			cache.error()
+		}
+		return err != nil, nil
+	})
 }
 
 func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
@@ -160,14 +161,21 @@ func (cache *rpcCache) RetrieveExtra(target *core.BuildTarget, key []byte, file 
 func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.RetrieveRequest, remove bool) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
-	response, err := cache.client.Retrieve(ctx, req)
-	if err != nil {
-		log.Warning("Failed to retrieve artifacts for %s", target.Label)
-		cache.error()
-		return false
-	} else if !response.Success {
-		// Quiet, this is almost certainly just a 'not found'
-		log.Debug("Couldn't retrieve artifacts for %s [key %s] from RPC cache", target.Label, base64.RawURLEncoding.EncodeToString(req.Hash))
+	success, artifacts := cache.runRpc(req.Hash, func(cache *rpcCache) (bool, []*pb.Artifact) {
+		response, err := cache.client.Retrieve(ctx, req)
+		if err != nil {
+			log.Warning("Failed to retrieve artifacts for %s", target.Label)
+			cache.error()
+			return false, nil
+		} else if !response.Success {
+			// Quiet, this is almost certainly just a 'not found'
+			log.Debug("Couldn't retrieve artifacts for %s [key %s] from RPC cache", target.Label, base64.RawURLEncoding.EncodeToString(req.Hash))
+		}
+		// This always counts as "success" in this context, i.e. do not bother retrying on the
+		// alternate if we were told that the artifact is not there.
+		return true, response.Artifacts
+	})
+	if !success {
 		return false
 	}
 	// Remove any existing outputs first; this is important for cases where the output is a
@@ -182,13 +190,13 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 			}
 		}
 	}
-	for _, artifact := range response.Artifacts {
+	for _, artifact := range artifacts {
 		if !cache.writeFile(target, artifact.File, artifact.Body) {
 			return false
 		}
 	}
 	// Sanity check: if we don't get anything back, assume it probably wasn't really a success.
-	return len(response.Artifacts) > 0
+	return len(artifacts) > 0
 }
 
 func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []byte) bool {
@@ -210,10 +218,14 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 		req := pb.DeleteRequest{Os: runtime.GOOS, Arch: runtime.GOARCH}
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name}
 		req.Artifacts = []*pb.Artifact{&artifact}
-		response, err := cache.client.Delete(context.Background(), &req)
-		if err != nil || !response.Success {
-			log.Errorf("Failed to remove %s from RPC cache", target.Label)
-		}
+		cache.runRpc(key, func(cache *rpcCache) (bool, []*pb.Artifact) {
+			response, err := cache.client.Delete(context.Background(), &req)
+			if err != nil || !response.Success {
+				log.Errorf("Failed to remove %s from RPC cache", target.Label)
+				return false, nil
+			}
+			return true, nil
+		})
 	}
 }
 func (cache *rpcCache) Shutdown() {}
@@ -291,21 +303,32 @@ func (cache *rpcCache) isConnected() bool {
 	return cache.Connected
 }
 
-// getInstance grabs a cache instance for the given hash.
-func (cache *rpcCache) getInstance(hash []byte, replica int) *rpcCache {
-	var h uint32
-	if replica == 0 {
-		h = tools.Hash(hash)
-	} else {
-		h = tools.AlternateHash(hash)
+// runRpc runs one RPC for a cache, with optional fallback to a replica on RPC failure
+// (but not if the RPC completes unsuccessfully).
+func (cache *rpcCache) runRpc(hash []byte, f func(*rpcCache) (bool, []*pb.Artifact)) (bool, []*pb.Artifact) {
+	if len(cache.nodes) == 0 {
+		// No clustering, just call it directly.
+		return f(cache)
 	}
-	for _, n := range cache.nodes {
-		if h >= n.hashStart && h < n.hashEnd {
-			return n.cache
+	try := func(hash uint32) (bool, []*pb.Artifact) {
+		for _, n := range cache.nodes {
+			if hash >= n.hashStart && hash < n.hashEnd {
+				if !n.cache.isConnected() {
+					return false, nil
+				}
+				return f(n.cache)
+			}
 		}
+		log.Warning("No RPC cache client available for %d", hash)
+		return false, nil
 	}
-	log.Warning("No RPC cache client available for %d", h)
-	return nil
+	h := tools.Hash(hash)
+	success, artifacts := try(h)
+	if success {
+		return success, artifacts
+	}
+	log.Info("Initial replica failed for %d, will retry on the alternate", h)
+	return try(tools.AlternateHash(hash))
 }
 
 // error increments the error counter on the cache, and disables it if it gets too high.
@@ -320,7 +343,7 @@ func (cache *rpcCache) error() {
 }
 
 func newRpcCache(config *core.Configuration) (*rpcCache, error) {
-	return newRpcCacheInternal(config.Cache.RpcURL, config, false)
+	return newRpcCacheInternal(config.Cache.RpcUrl, config, false)
 }
 
 func newRpcCacheInternal(url string, config *core.Configuration, isSubnode bool) (*rpcCache, error) {
