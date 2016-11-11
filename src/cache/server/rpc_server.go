@@ -95,14 +95,24 @@ func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb
 	if req.Everything {
 		return &pb.DeleteResponse{Success: r.cache.DeleteAllArtifacts() == nil}, nil
 	}
+	success := deleteArtifact(r.cache, req.Os, req.Arch, req.Artifacts)
+	if success && r.cluster != nil {
+		// Delete this artifact from other nodes. Doesn't have to be done synchronously.
+		go r.cluster.DeleteArtifacts(req)
+	}
+	return &pb.DeleteResponse{Success: success}, nil
+}
+
+// deleteArtifact handles the actual removal of artifacts from the cache.
+// It's split out from Delete to share with replication RPCs below.
+func deleteArtifact(cache *Cache, os, arch string, artifacts []*pb.Artifact) bool {
 	success := true
-	arch := req.Os + "_" + req.Arch
-	for _, artifact := range req.Artifacts {
-		if r.cache.DeleteArtifact(path.Join(arch, artifact.Package, artifact.Target)) != nil {
+	for _, artifact := range artifacts {
+		if cache.DeleteArtifact(path.Join(os+"_"+arch, artifact.Package, artifact.Target)) != nil {
 			success = false
 		}
 	}
-	return &pb.DeleteResponse{Success: success}, nil
+	return success
 }
 
 func (r *RpcCacheServer) ListNodes(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
@@ -177,6 +187,11 @@ func (r *RPCServer) Join(ctx context.Context, req *pb.JoinRequest) (*pb.JoinResp
 
 func (r *RPCServer) Replicate(ctx context.Context, req *pb.ReplicateRequest) (*pb.ReplicateResponse, error) {
 	// TODO(pebers): Authentication.
+	if req.Delete {
+		return &pb.ReplicateResponse{
+			Success: deleteArtifact(r.cache, req.Os, req.Arch, req.Artifacts),
+		}, nil
+	}
 	return &pb.ReplicateResponse{
 		Success: storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts),
 	}, nil

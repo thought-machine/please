@@ -116,7 +116,7 @@ func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*
 	return artifacts, totalSize, err
 }
 
-func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artifacts []*pb.Artifact) {
+func (cache *rpcCache) sendArtifactsInternal(target *core.BuildTarget, key []byte, artifacts []*pb.Artifact) {
 	req := pb.StoreRequest{Artifacts: artifacts, Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
@@ -216,13 +216,12 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 		}
 	}
 }
-
 func (cache *rpcCache) Shutdown() {}
 
-func (cache *rpcCache) connect(config *core.Configuration) {
+func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode bool) {
 	// Change grpc to log using our implementation
 	grpclog.SetLogger(&grpcLogMabob{})
-	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
+	log.Info("Connecting to RPC cache at %s", url)
 	opts := []grpc.DialOption{grpc.WithTimeout(cache.timeout)}
 	if config.Cache.RpcPublicKey != "" || config.Cache.RpcCACert != "" || config.Cache.RpcSecure {
 		auth, err := loadAuth(config.Cache.RpcCACert, config.Cache.RpcPublicKey, config.Cache.RpcPrivateKey)
@@ -234,7 +233,7 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	} else {
 		opts = append(opts, grpc.WithInsecure())
 	}
-	connection, err := grpc.Dial(config.Cache.RpcUrl, opts...)
+	connection, err := grpc.Dial(url, opts...)
 	if err != nil {
 		cache.Connecting = false
 		log.Warning("Failed to connect to RPC cache: %s", err)
@@ -251,8 +250,9 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 		cache.Connecting = false
 		log.Warning("Failed to contact RPC cache: %s", err)
 		return
-	} else if resp == nil || len(resp.Nodes) == 0 {
+	} else if isSubnode || resp == nil || len(resp.Nodes) == 0 {
 		// Server is not clustered, just use this one directly.
+		// Or we're one of the sub-nodes and we are meant to connect directly.
 		cache.client = client
 		cache.Connected = true
 		cache.Connecting = false
@@ -260,6 +260,19 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 		return
 	}
 	// If we get here, we are connected and the cache is clustered.
+	cache.nodes = make([]cacheNode, len(resp.Nodes))
+	for i, n := range resp.Nodes {
+		subCache, _ := newRpcCacheInternal(n.Address, config, true)
+		cache.nodes[i] = cacheNode{
+			cache:     subCache,
+			hashStart: n.HashBegin,
+			hashEnd:   n.HashEnd,
+		}
+	}
+	// We are now connected, the children aren't necessarily yet but that won't matter.
+	cache.Connected = true
+	cache.Connecting = false
+	log.Info("Top-level RPC cache connected after %0.2fs", time.Since(cache.startTime).Seconds())
 }
 
 // isConnected checks if the cache is connected. If it's still trying to connect it allows a
@@ -307,6 +320,10 @@ func (cache *rpcCache) error() {
 }
 
 func newRpcCache(config *core.Configuration) (*rpcCache, error) {
+	return newRpcCacheInternal(config.Cache.RpcURL, config, false)
+}
+
+func newRpcCacheInternal(url string, config *core.Configuration, isSubnode bool) (*rpcCache, error) {
 	cache := &rpcCache{
 		Writeable:  config.Cache.RpcWriteable,
 		Connecting: true,
@@ -314,7 +331,7 @@ func newRpcCache(config *core.Configuration) (*rpcCache, error) {
 		startTime:  time.Now(),
 		maxMsgSize: int(config.Cache.RpcMaxMsgSize),
 	}
-	go cache.connect(config)
+	go cache.connect(url, config, isSubnode)
 	return cache, nil
 }
 

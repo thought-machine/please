@@ -192,7 +192,16 @@ func (cluster *Cluster) getAlternateNode(hash []byte) string {
 
 // ReplicateArtifacts replicates artifacts from this node to another.
 func (cluster *Cluster) ReplicateArtifacts(req *pb.StoreRequest) {
-	address := cluster.getAlternateNode(req.Hash)
+	cluster.replicate(req.Os, req.Arch, req.Hash, false, req.Artifacts)
+}
+
+// DeleteArtifacts deletes artifacts from another node.
+func (cluster *Cluster) DeleteArtifacts(req *pb.StoreRequest) {
+	cluster.replicate(req.Os, req.Arch, req.Hash, true, req.Artifacts)
+}
+
+func (cluster *Cluster) replicate(os, arch string, hash []byte, delete bool, artifacts []*pb.Artifact) {
+	address := cluster.getAlternateNode(hash)
 	if address == "" {
 		log.Warning("Couldn't get alternate address, will not replicate artifact")
 		return
@@ -205,10 +214,11 @@ func (cluster *Cluster) ReplicateArtifacts(req *pb.StoreRequest) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if resp, err := client.Replicate(ctx, &pb.ReplicateRequest{
-		Artifacts: req.Artifacts,
-		Os:        req.Os,
-		Arch:      req.Arch,
-		Hash:      req.Hash,
+		Artifacts: artifacts,
+		Os:        os,
+		Arch:      arch,
+		Hash:      hash,
+		Delete:    delete,
 	}); err != nil {
 		log.Error("Error replicating artifact: %s", err)
 	} else if !resp.Success {

@@ -48,6 +48,8 @@ message ReplicateRequest {
     string arch = 3;
     // Hash of rule that generated these artifacts
     bytes hash = 4;
+    // True to delete the artifact
+    bool delete = 5;
 }
 
 message ReplicateResponse {
