@@ -39,6 +39,9 @@ type Cluster struct {
 	// clientMutex protects concurrent access to clients.
 	clientMutex sync.RWMutex
 
+	// size is the expected number of nodes in the cluster.
+	size int
+
 	// hashStart and hashEnd are the endpoints in the hash space for this client.
 	hashStart uint32
 	hashEnd   uint32
@@ -75,22 +78,23 @@ func (cluster *Cluster) Join(members []string) {
 	if _, err := cluster.list.Join(members); err != nil {
 		log.Fatalf("Failed to join cluster: %s", err)
 	}
-	for _, node := range cluster.GetMembers() {
+	for _, node := range cluster.list.Members() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if client, err := cluster.getRPCClient(node.Address); err != nil {
-			log.Error("Error getting RPC client for %s: %s", node.Address, err)
+		if client, err := cluster.getRPCClient(node.Addr.String()); err != nil {
+			log.Error("Error getting RPC client for %s: %s", node.Addr, err)
 		} else if resp, err := client.Join(ctx, &pb.JoinRequest{
 			Name:    cluster.list.LocalNode().Name,
 			Address: cluster.list.LocalNode().Addr.String(),
 		}); err != nil {
-			log.Error("Error communicating with %s: %s", node.Address, err)
+			log.Error("Error communicating with %s: %s", node.Addr, err)
 		} else if !resp.Success {
 			log.Fatalf("We have not been allowed to join the cluster :(")
 		} else {
 			cluster.hashStart = resp.HashBegin
 			cluster.hashEnd = resp.HashEnd
 			cluster.nodes = resp.Nodes
+			cluster.size = int(resp.Size)
 			return
 		}
 	}
@@ -99,8 +103,7 @@ func (cluster *Cluster) Join(members []string) {
 
 // InitCluster seeds a new plz cache cluster.
 func (cluster *Cluster) Init(size int) {
-	// Create the node list
-	cluster.nodes = make([]*pb.Node, size)
+	cluster.size = size
 	// We're node 0
 	cluster.newNode(cluster.list.LocalNode())
 	// And there aren't any others yet, so we're done.
@@ -119,22 +122,30 @@ func (cluster *Cluster) GetMembers() []*pb.Node {
 // newNode constructs one of our canonical nodes from a memberlist.Node.
 // This includes allocating it hash space.
 func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
+	newNode := func(i int) *pb.Node {
+		return &pb.Node{
+			Name:      node.Name,
+			Address:   node.Addr.String(),
+			HashBegin: tools.HashPoint(i, cluster.size),
+			HashEnd:   tools.HashPoint(i+1, cluster.size),
+		}
+	}
 	for i, n := range cluster.nodes {
-		if n == nil || n.Name == "" || n.Name == node.Name {
+		if n.Name == "" || n.Name == node.Name {
 			// Available slot. Or, if they identified as an existing node, they can take that space over.
-			if n != nil && n.Name == node.Name {
+			if n.Name == node.Name {
 				log.Warning("Node %s / %s is taking over slot %d", node.Name, node.Addr, i)
 			} else {
 				log.Notice("Populating node %d: %s / %s", i, node.Name, node.Addr)
 			}
-			cluster.nodes[i] = &pb.Node{
-				Name:      node.Name,
-				Address:   node.Addr.String(),
-				HashBegin: tools.HashPoint(i, len(cluster.nodes)),
-				HashEnd:   tools.HashPoint(i+1, len(cluster.nodes)),
-			}
+			cluster.nodes[i] = newNode(i)
 			return cluster.nodes[i]
 		}
+	}
+	if len(cluster.nodes) < cluster.size {
+		node := newNode(len(cluster.nodes))
+		cluster.nodes = append(cluster.nodes, node)
+		return node
 	}
 	log.Warning("Node %s / %s attempted to join, but there is no space available.", node.Name, node.Addr)
 	return nil
@@ -217,5 +228,6 @@ func (cluster *Cluster) AddNode(req *pb.JoinRequest) *pb.JoinResponse {
 		HashBegin: node.HashBegin,
 		HashEnd:   node.HashEnd,
 		Nodes:     cluster.GetMembers(),
+		Size:      int32(cluster.size),
 	}
 }
