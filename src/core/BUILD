@@ -15,6 +15,7 @@ go_library(
         'version.go',
     ]) + [':version'],
     deps = [
+        '//src/cli',
         '//third_party/go:gcfg',
         '//third_party/go:logging',
         '//third_party/go:queue',
@@ -92,6 +93,7 @@ go_test(
     srcs = ['utils_test.go'],
     deps = [
         ':core',
+        '//src/cli',
         '//third_party/go:testify',
     ],
 )

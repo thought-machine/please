@@ -301,8 +301,8 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTra
 	target.NoTestOutput = noTestOutput
 	target.TestOnly = testOnly
 	target.Flakiness = flakiness
-	target.BuildTimeout = core.Duration(time.Duration(buildTimeout) * time.Second)
-	target.TestTimeout = core.Duration(time.Duration(testTimeout) * time.Second)
+	target.BuildTimeout = time.Duration(buildTimeout) * time.Second
+	target.TestTimeout = time.Duration(testTimeout) * time.Second
 	target.Stamp = stamp
 	// Automatically label containerised tests.
 	if containerise {

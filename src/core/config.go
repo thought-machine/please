@@ -16,6 +16,8 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"gopkg.in/gcfg.v1"
+
+	"cli"
 )
 
 // File name for the typical repo config - this is normally checked in
@@ -103,24 +105,24 @@ func DefaultConfiguration() *Configuration {
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Please.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
-	config.Build.Timeout = Duration(10 * time.Minute)
+	config.Build.Timeout = cli.Duration(10 * time.Minute)
 	config.Build.Config = "opt"         // Optimised builds by default
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
-	config.Cache.HttpTimeout = Duration(5 * time.Second)
-	config.Cache.RpcTimeout = Duration(5 * time.Second)
+	config.Cache.HttpTimeout = cli.Duration(5 * time.Second)
+	config.Cache.RpcTimeout = cli.Duration(5 * time.Second)
 	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
 	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
-	config.Metrics.PushFrequency = Duration(400 * time.Millisecond)
-	config.Metrics.PushTimeout = Duration(500 * time.Millisecond)
-	config.Test.Timeout = Duration(10 * time.Minute)
+	config.Metrics.PushFrequency = cli.Duration(400 * time.Millisecond)
+	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)
+	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Test.DefaultContainer = TestContainerDocker
 	config.Docker.DefaultImage = "ubuntu:trusty"
 	config.Docker.AllowLocalFallback = false
-	config.Docker.Timeout = Duration(20 * time.Minute)
-	config.Docker.ResultsTimeout = Duration(20 * time.Second)
-	config.Docker.RemoveTimeout = Duration(20 * time.Second)
+	config.Docker.Timeout = cli.Duration(20 * time.Minute)
+	config.Docker.ResultsTimeout = cli.Duration(20 * time.Second)
+	config.Docker.RemoveTimeout = cli.Duration(20 * time.Second)
 	config.Go.CgoCCTool = "gcc"
 	config.Go.GoVersion = "1.6"
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/third_party/go"
@@ -181,7 +183,7 @@ type Configuration struct {
 		NumThreads       int
 	}
 	Build struct {
-		Timeout        Duration
+		Timeout        cli.Duration
 		Path           []string
 		Config         string
 		FallbackConfig string
@@ -195,23 +197,24 @@ type Configuration struct {
 		DirCacheLowWaterMark  string
 		HttpUrl               string
 		HttpWriteable         bool
-		HttpTimeout           Duration
+		HttpTimeout           cli.Duration
 		RpcUrl                string
 		RpcWriteable          bool
-		RpcTimeout            Duration
+		RpcTimeout            cli.Duration
 		RpcPublicKey          string
 		RpcPrivateKey         string
 		RpcCACert             string
 		RpcSecure             bool
+		RpcMaxMsgSize         int
 	}
 	Metrics struct {
 		PushGatewayURL string
-		PushFrequency  Duration
-		PushTimeout    Duration
+		PushFrequency  cli.Duration
+		PushTimeout    cli.Duration
 	}
 	CustomMetricLabels map[string]string
 	Test               struct {
-		Timeout          Duration
+		Timeout          cli.Duration
 		DefaultContainer string
 	}
 	Cover struct {
@@ -221,9 +224,9 @@ type Configuration struct {
 	Docker struct {
 		DefaultImage       string
 		AllowLocalFallback bool
-		Timeout            Duration
-		ResultsTimeout     Duration
-		RemoveTimeout      Duration
+		Timeout            cli.Duration
+		ResultsTimeout     cli.Duration
+		RemoveTimeout      cli.Duration
 		RunArgs            []string
 	}
 	Go struct {
@@ -362,7 +365,7 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 			}
 			field.Set(reflect.ValueOf(i))
 		case reflect.Int64:
-			var d Duration
+			var d cli.Duration
 			if err := d.UnmarshalText([]byte(v)); err != nil {
 				return fmt.Errorf("Invalid value for a duration field: %s", v)
 			}
@@ -375,27 +378,4 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		}
 	}
 	return nil
-}
-
-// A Duration is an extension to time.Duration to implement the TextUnmarshaler interface
-// TODO(pebers): We should use this more widely across Config for other timeouts etc.
-type Duration time.Duration
-
-// UnmarshalText implements the TextUnmarshaler interface
-func (duration *Duration) UnmarshalText(text []byte) error {
-	d, err := time.ParseDuration(string(text))
-	// For backwards compatibility with other fields, assume an unadorned number is an int.
-	if err != nil {
-		if i, err := strconv.Atoi(string(text)); err == nil {
-			*duration = Duration(time.Duration(i) * time.Second)
-			return nil
-		}
-	}
-	*duration = Duration(d)
-	return err
-}
-
-// ToTimeDuration converts this Duration to a time.Duration
-func (duration Duration) ToTimeDuration() time.Duration {
-	return time.Duration(duration)
 }

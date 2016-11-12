@@ -70,7 +70,8 @@ func (b *ByteSize) UnmarshalFlag(in string) error {
 }
 
 // A Duration is used for flags that represent a time duration; it's just a wrapper
-// around time.Duration that implements the flags.Unmarshaler interface.
+// around time.Duration that implements the flags.Unmarshaler and
+// encoding.TextUnmarshaler interfaces.
 type Duration time.Duration
 
 // UnmarshalFlag implements the flags.Unmarshaler interface.
@@ -85,4 +86,9 @@ func (d *Duration) UnmarshalFlag(in string) error {
 	}
 	*d = Duration(d2)
 	return err
+}
+
+// UnmarshalText implements the TextUnmarshaler interface
+func (duration *Duration) UnmarshalText(text []byte) error {
+	return duration.UnmarshalFlag(string(text))
 }

@@ -64,11 +64,11 @@ func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarg
 		if err != nil && state.Config.Docker.AllowLocalFallback {
 			log.Warning("Failed to run %s containerised: %s %s. Falling back to local version.",
 				target.Label, out, err)
-			return runTest(state, target, state.Config.Test.Timeout)
+			return runTest(state, target)
 		}
 		return out, err
 	}
-	return runTest(state, target, state.Config.Test.Timeout)
+	return runTest(state, target)
 }
 
 // retrieveResultsAndRemoveContainer copies the test.results file out of the Docker container and into

@@ -49,8 +49,8 @@ func InitFromConfig(config *core.Configuration) {
 				log.Fatalf("%s", r)
 			}
 		}()
-		m = initMetrics(config.Metrics.PushGatewayURL, config.Metrics.PushFrequency.ToTimeDuration(),
-			config.Metrics.PushTimeout.ToTimeDuration(), config.CustomMetricLabels)
+		m = initMetrics(config.Metrics.PushGatewayURL, time.Duration(config.Metrics.PushFrequency),
+			time.Duration(config.Metrics.PushTimeout), config.CustomMetricLabels)
 		prometheus.MustRegister(m.buildCounter)
 		prometheus.MustRegister(m.cacheCounter)
 		prometheus.MustRegister(m.testCounter)

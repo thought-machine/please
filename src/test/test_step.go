@@ -273,7 +273,7 @@ func prepareTestDir(graph *core.BuildGraph, target *core.BuildTarget) error {
 	return nil
 }
 
-func runTest(state *core.BuildState, target *core.BuildTarget, timeout core.Duration) ([]byte, error) {
+func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	replacedCmd := build.ReplaceTestSequences(target, target.GetTestCommand())
 	env := core.BuildEnvironment(state, target, true)
 	if len(state.TestArgs) > 0 {
@@ -282,7 +282,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, timeout core.Dura
 		env = append(env, "TESTS="+args)
 	}
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	_, out, err := core.ExecWithTimeoutShell(target.TestDir(), env, target.TestTimeout, timeout, state.ShowAllOutput, replacedCmd)
+	_, out, err := core.ExecWithTimeoutShell(target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd)
 	return out, err
 }
 
