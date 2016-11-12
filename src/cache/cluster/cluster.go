@@ -2,13 +2,14 @@
 //
 // Clustering the cache provides redundancy and increased performance
 // for large caches. Right now the functionality is a little limited,
-// there's no online rehashing and the replication factor is fixed at 2.
+// there's no online rehashing so the size must be declared and fixed
+// up front, and the replication factor is fixed at 2. There's an
+// assumption that whilc nodes might restart, they return with the same
+// name which we use to re-identify them.
 //
 // The general approach here errs heavily on the side of simplicity and
 // less on zero-downtime reliability since, at the end of the day, this
-// is only a cache server. It would be a good idea not to be too mean to
-// it by, for example, having many nodes join and leave the cluster rapidly
-// under different names.
+// is only a cache server.
 package cluster
 
 import (
@@ -142,6 +143,10 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 				log.Notice("Populating node %d: %s / %s", i, node.Name, node.Addr)
 			}
 			cluster.nodes[i] = newNode(i)
+			// Remove any client that might exist for this node so we force a reconnection.
+			cluster.clientMutex.Lock()
+			defer cluster.clientMutex.Unlock()
+			delete(cluster.clients, cluster.nodes[i].Address)
 			return cluster.nodes[i]
 		}
 	}
