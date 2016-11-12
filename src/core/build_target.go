@@ -387,16 +387,29 @@ func (target *BuildTarget) allDependenciesResolved() bool {
 	return true
 }
 
+// isExperimental returns true if the given target is in the "experimental" tree
+func isExperimental(target *BuildTarget) bool {
+	return State.experimentalLabel.PackageName != "" && State.experimentalLabel.includes(target.Label)
+}
+
 // CanSee returns true if target can see the given dependency, or false if not.
 func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 	// Targets are always visible to other targets in the same directory.
 	if target.Label.PackageName == dep.Label.PackageName {
 		return true
 	}
+	if isExperimental(dep) && !isExperimental(target) {
+		log.Error("Target %s cannot depend on experimental target %s", target.Label, dep.Label)
+		return false
+	}
 	for _, vis := range dep.Visibility {
 		if vis.includes(target.Label) {
 			return true
 		}
+	}
+	if isExperimental(target) {
+		log.Warning("Visibility restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
+		return true
 	}
 	return false
 }

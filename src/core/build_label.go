@@ -199,7 +199,7 @@ func (label BuildLabel) IsAllTargets() bool {
 	return label.Name == "all"
 }
 
-// covers returns true if label includes the other label (//pkg:target1 is covered by //pkg:all etc).
+// includes returns true if label includes the other label (//pkg:target1 is covered by //pkg:all etc).
 func (label BuildLabel) includes(that BuildLabel) bool {
 	if (label.PackageName == "" && label.IsAllSubpackages()) ||
 		that.PackageName == label.PackageName ||

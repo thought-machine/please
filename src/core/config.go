@@ -179,6 +179,7 @@ type Configuration struct {
 		ParserEngine     string
 		Nonce            string
 		NumThreads       int
+		ExperimentalDir  string
 	}
 	Build struct {
 		Timeout        Duration

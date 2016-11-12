@@ -96,6 +96,8 @@ type BuildState struct {
 	ShowAllOutput bool
 	// Number of running workers
 	numWorkers int
+	// Experimental directory
+	experimentalLabel BuildLabel
 	// Used to count the number of currently active/pending targets
 	numActive  int64
 	numPending int64
@@ -279,18 +281,19 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 
 func NewBuildState(numThreads int, cache *Cache, verbosity int, config *Configuration) *BuildState {
 	State = &BuildState{
-		Graph:        NewGraph(),
-		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
-		Results:      make(chan *BuildResult, numThreads*100),
-		Config:       config,
-		Verbosity:    verbosity,
-		Cache:        cache,
-		VerifyHashes: true,
-		NeedBuild:    true,
-		numActive:    1, // One for the initial target adding on the main thread.
-		numPending:   1,
-		Coverage:     TestCoverage{Files: map[string][]LineCoverage{}},
-		numWorkers:   numThreads,
+		Graph:             NewGraph(),
+		pendingTasks:      queue.NewPriorityQueue(10000, true), // big hint, why not
+		Results:           make(chan *BuildResult, numThreads*100),
+		Config:            config,
+		Verbosity:         verbosity,
+		Cache:             cache,
+		VerifyHashes:      true,
+		NeedBuild:         true,
+		numActive:         1, // One for the initial target adding on the main thread.
+		numPending:        1,
+		Coverage:          TestCoverage{Files: map[string][]LineCoverage{}},
+		numWorkers:        numThreads,
+		experimentalLabel: BuildLabel{PackageName: config.Please.ExperimentalDir, Name: "..."},
 	}
 	State.Hashes.Config = config.Hash()
 	State.Hashes.Containerisation = config.ContainerisationHash()
