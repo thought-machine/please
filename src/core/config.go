@@ -114,6 +114,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
 	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
+	config.Cache.RpcMaxMsgSize.UnmarshalFlag("200MiB")
 	config.Metrics.PushFrequency = cli.Duration(400 * time.Millisecond)
 	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
@@ -205,7 +206,7 @@ type Configuration struct {
 		RpcPrivateKey         string
 		RpcCACert             string
 		RpcSecure             bool
-		RpcMaxMsgSize         int
+		RpcMaxMsgSize         cli.ByteSize
 	}
 	Metrics struct {
 		PushGatewayURL string

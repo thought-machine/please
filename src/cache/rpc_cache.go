@@ -39,20 +39,27 @@ type rpcCache struct {
 	numErrors  int32
 	timeout    time.Duration
 	startTime  time.Time
+	maxMsgSize int
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
 	if cache.isConnected() && cache.Writeable {
 		log.Debug("Storing %s in RPC cache...", target.Label)
 		artifacts := []*pb.Artifact{}
+		totalSize := 0
 		for out := range cacheArtifacts(target) {
-			artifacts2, err := cache.loadArtifacts(target, out)
+			artifacts2, size, err := cache.loadArtifacts(target, out)
 			if err != nil {
 				log.Warning("RPC cache failed to load artifact %s: %s", out, err)
 				cache.error()
 				return
 			}
+			totalSize += size
 			artifacts = append(artifacts, artifacts2...)
+		}
+		if totalSize > cache.maxMsgSize {
+			log.Info("Artifacts for %s exceed maximum message size of %s bytes", target.Label, cache.maxMsgSize)
+			return
 		}
 		cache.sendArtifacts(target, key, artifacts)
 	}
@@ -61,20 +68,25 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
 func (cache *rpcCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
 	if cache.isConnected() && cache.Writeable {
 		log.Debug("Storing %s : %s in RPC cache...", target.Label, file)
-		artifacts, err := cache.loadArtifacts(target, file)
+		artifacts, totalSize, err := cache.loadArtifacts(target, file)
 		if err != nil {
 			log.Warning("RPC cache failed to load artifact %s: %s", file, err)
 			cache.error()
+			return
+		}
+		if totalSize > cache.maxMsgSize {
+			log.Info("Artifact %s for %s exceeds maximum message size of %s bytes", file, target.Label, cache.maxMsgSize)
 			return
 		}
 		cache.sendArtifacts(target, key, artifacts)
 	}
 }
 
-func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*pb.Artifact, error) {
+func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*pb.Artifact, int, error) {
 	artifacts := []*pb.Artifact{}
 	outDir := target.OutDir()
 	root := path.Join(outDir, file)
+	totalSize := 1000 // Allow a little space for encoding overhead.
 	err := filepath.Walk(root, func(name string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -89,10 +101,11 @@ func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*
 				File:    name[len(outDir)+1:],
 				Body:    content,
 			})
+			totalSize += len(content)
 		}
 		return nil
 	})
-	return artifacts, err
+	return artifacts, totalSize, err
 }
 
 func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artifacts []*pb.Artifact) {
@@ -274,6 +287,7 @@ func newRpcCache(config *core.Configuration) (*rpcCache, error) {
 		Connecting: true,
 		timeout:    time.Duration(config.Cache.RpcTimeout),
 		startTime:  time.Now(),
+		maxMsgSize: int(config.Cache.RpcMaxMsgSize),
 	}
 	go cache.connect(config)
 	return cache, nil

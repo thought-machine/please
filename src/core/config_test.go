@@ -133,3 +133,11 @@ func TestReadDurations(t *testing.T) {
 	config, err = ReadConfigFiles([]string{"src/core/test_data/duration_bad.plzconfig"})
 	assert.Error(t, err)
 }
+
+func TestReadByteSizes(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/bytesize_good.plzconfig"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, 500*1000*1000, config.Cache.RpcMaxMsgSize)
+	config, err = ReadConfigFiles([]string{"src/core/test_data/bytesize_bad.plzconfig"})
+	assert.Error(t, err)
+}

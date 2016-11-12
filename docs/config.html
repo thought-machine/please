@@ -162,6 +162,11 @@
       <li><b>RpcTimeout</b> (int)<br/>
         Timeout for operations contacting the RPC cache, in seconds.</li>
 
+      <li><b>RpcMaxMsgSize</b> (bytes)<br/>
+        Maximum size of a single message that we'll send to the RPC server.<br/>
+        This should agree with the server's limit, if it's higher the artifacts will be rejected.<br/>
+        The value is given as a byte size so can be suffixed with M, GB, KiB, etc.</li>
+
     </ul>
 
     <h3>[Test]</h3>
