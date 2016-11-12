@@ -49,12 +49,7 @@ type Cluster struct {
 }
 
 // NewCluster creates a new Cluster object and starts listening on the given port.
-func NewCluster(port, rpcPort int) *Cluster {
-	return newCluster(port, rpcPort, "")
-}
-
-// newCluster is split from the above for testing purposes.
-func newCluster(port, rpcPort int, name string) *Cluster {
+func NewCluster(port, rpcPort int, name string) *Cluster {
 	c := memberlist.DefaultLANConfig()
 	c.BindPort = port
 	c.AdvertisePort = port
@@ -107,7 +102,9 @@ func (cluster *Cluster) Join(members []string) {
 func (cluster *Cluster) Init(size int) {
 	cluster.size = size
 	// We're node 0
-	cluster.newNode(cluster.list.LocalNode())
+	node := cluster.newNode(cluster.list.LocalNode())
+	cluster.hashStart = node.HashBegin
+	cluster.hashEnd = node.HashEnd
 	// And there aren't any others yet, so we're done.
 }
 
@@ -173,7 +170,7 @@ func (cluster *Cluster) getRPCClient(address string) (pb.RpcServerClient, error)
 	return client, nil
 }
 
-// getAddress returns the replica node for the given hash (i.e. whichever one is not us,
+// getAlternateNode returns the replica node for the given hash (i.e. whichever one is not us,
 // we don't really know for sure when calling this if we are the primary or not).
 func (cluster *Cluster) getAlternateNode(hash []byte) string {
 	point := tools.Hash(hash)
@@ -192,26 +189,33 @@ func (cluster *Cluster) getAlternateNode(hash []byte) string {
 
 // ReplicateArtifacts replicates artifacts from this node to another.
 func (cluster *Cluster) ReplicateArtifacts(req *pb.StoreRequest) {
-	cluster.replicate(req.Os, req.Arch, req.Hash, false, req.Artifacts)
-}
-
-// DeleteArtifacts deletes artifacts from another node.
-func (cluster *Cluster) DeleteArtifacts(req *pb.DeleteRequest) {
-	cluster.replicate(req.Os, req.Arch, nil, true, req.Artifacts)
-}
-
-func (cluster *Cluster) replicate(os, arch string, hash []byte, delete bool, artifacts []*pb.Artifact) {
-	address := cluster.getAlternateNode(hash)
+	address := cluster.getAlternateNode(req.Hash)
 	if address == "" {
 		log.Warning("Couldn't get alternate address, will not replicate artifact")
 		return
 	}
+	log.Info("Replicating artifact to node %s", address)
+	cluster.replicate(address, req.Os, req.Arch, req.Hash, false, req.Artifacts)
+}
+
+// DeleteArtifacts deletes artifacts from all other nodes.
+func (cluster *Cluster) DeleteArtifacts(req *pb.DeleteRequest) {
+	for _, node := range cluster.GetMembers() {
+		// Don't forward request to ourselves...
+		if node.HashBegin != cluster.hashStart || node.HashEnd != cluster.hashEnd {
+			log.Info("Forwarding delete request to node %s", node.Address)
+			cluster.replicate(node.Address, req.Os, req.Arch, nil, true, req.Artifacts)
+		}
+	}
+}
+
+func (cluster *Cluster) replicate(address, os, arch string, hash []byte, delete bool, artifacts []*pb.Artifact) {
 	client, err := cluster.getRPCClient(address)
 	if err != nil {
 		log.Error("Failed to get RPC client for %s: %s", address, err)
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if resp, err := client.Replicate(ctx, &pb.ReplicateRequest{
 		Artifacts: artifacts,
@@ -233,6 +237,7 @@ func (cluster *Cluster) AddNode(req *pb.JoinRequest) *pb.JoinResponse {
 		Addr: net.ParseIP(req.Address),
 	})
 	if node == nil {
+		log.Warning("Rejected join request from %s", req.Address)
 		return &pb.JoinResponse{Success: false}
 	}
 	return &pb.JoinResponse{

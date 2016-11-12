@@ -39,6 +39,7 @@ var opts struct {
 		ClusterAddresses string `short:"c" long:"cluster_addresses" description:"Comma-separated addresses of one or more nodes to join a cluster"`
 		SeedCluster      bool   `long:"seed_cluster" description:"Seeds a new cache cluster."`
 		ClusterSize      int    `long:"cluster_size" description:"Number of nodes to expect in the cluster.\nMust be passed if --seed_cluster is, has no effect otherwise."`
+		NodeName         string `long:"node_name" description:"Name of this node in the cluster. Only usually needs to be passed if running multiple nodes on the same machine, when it should be unique."`
 	} `group:"Options controlling clustering behaviour"`
 }
 
@@ -64,10 +65,10 @@ func main() {
 		if opts.ClusterFlags.ClusterSize < 2 {
 			log.Fatalf("You must pass a cluster size of > 1 when initialising the seed node.")
 		}
-		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort, opts.Port)
+		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort, opts.Port, opts.ClusterFlags.NodeName)
 		clusta.Init(opts.ClusterFlags.ClusterSize)
 	} else if opts.ClusterFlags.ClusterAddresses != "" {
-		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort, opts.Port)
+		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort, opts.Port, opts.ClusterFlags.NodeName)
 		clusta.Join(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
 	}
 

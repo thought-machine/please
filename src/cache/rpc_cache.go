@@ -31,6 +31,9 @@ import (
 const maxErrors = 5
 const replicas = 2
 
+// We use zeroKey in cases where we need to supply a hash but it actually doesn't matter.
+var zeroKey = []byte{0, 0, 0, 0}
+
 type rpcCache struct {
 	client     pb.RpcCacheClient
 	Writeable  bool
@@ -120,7 +123,7 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 	req := pb.StoreRequest{Artifacts: artifacts, Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
-	success, _ := cache.runRpc(key, func(cache *rpcCache) (bool, []*pb.Artifact) {
+	cache.runRpc(key, func(cache *rpcCache) (bool, []*pb.Artifact) {
 		_, err := cache.client.Store(ctx, &req)
 		if err != nil {
 			log.Warning("Error communicating with RPC cache server: %s", err)
@@ -218,7 +221,7 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 		req := pb.DeleteRequest{Os: runtime.GOOS, Arch: runtime.GOARCH}
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name}
 		req.Artifacts = []*pb.Artifact{&artifact}
-		cache.runRpc(key, func(cache *rpcCache) (bool, []*pb.Artifact) {
+		cache.runRpc(zeroKey, func(cache *rpcCache) (bool, []*pb.Artifact) {
 			response, err := cache.client.Delete(context.Background(), &req)
 			if err != nil || !response.Success {
 				log.Errorf("Failed to remove %s from RPC cache", target.Label)

@@ -14,12 +14,12 @@ import (
 )
 
 func TestBringUpCluster(t *testing.T) {
-	c1 := newCluster(5995, 6995, "c1")
+	c1 := NewCluster(5995, 6995, "c1")
 	m1 := newRPCServer(c1, 6995)
 	c1.Init(3)
 	log.Notice("Cluster seeded")
 
-	c2 := newCluster(5996, 6996, "c2")
+	c2 := NewCluster(5996, 6996, "c2")
 	m2 := newRPCServer(c2, 6996)
 	c2.Join([]string{"127.0.0.1:5995"})
 	log.Notice("c2 joined cluster")
@@ -42,7 +42,7 @@ func TestBringUpCluster(t *testing.T) {
 	assert.Equal(t, expected, c1.GetMembers())
 	assert.Equal(t, expected, c2.GetMembers())
 
-	c3 := newCluster(5997, 6997, "c3")
+	c3 := NewCluster(5997, 6997, "c3")
 	m3 := newRPCServer(c2, 6997)
 	c3.Join([]string{"127.0.0.1:5995", "127.0.0.1:5996"})
 
@@ -66,6 +66,7 @@ func TestBringUpCluster(t *testing.T) {
 			HashEnd:   tools.HashPoint(3, 3),
 		},
 	}
+
 	// All three nodes should agree about the member list
 	assert.Equal(t, expected, c1.GetMembers())
 	assert.Equal(t, expected, c2.GetMembers())
@@ -74,6 +75,38 @@ func TestBringUpCluster(t *testing.T) {
 	assert.Equal(t, 0, m1.Replications)
 	assert.Equal(t, 0, m2.Replications)
 	assert.Equal(t, 0, m3.Replications)
+
+	// Now test replications.
+	c1.ReplicateArtifacts(&pb.StoreRequest{
+		Hash: []byte{0, 0, 0, 0},
+	})
+	// This replicates onto node 2 because that's got the relevant bit of the hash space.
+	assert.Equal(t, 0, m1.Replications)
+	assert.Equal(t, 1, m2.Replications)
+	assert.Equal(t, 0, m3.Replications)
+
+	// The same request going to node 2 should replicate it onto node 1.
+	c2.ReplicateArtifacts(&pb.StoreRequest{
+		Hash: []byte{0, 0, 0, 0},
+	})
+	assert.Equal(t, 1, m1.Replications)
+	assert.Equal(t, 1, m2.Replications)
+	assert.Equal(t, 0, m3.Replications)
+
+	// Delete requests should get replicated around the whole cluster (because they delete
+	// all hashes of an artifact, and so those could be anywhere).
+	c1.DeleteArtifacts(&pb.DeleteRequest{})
+	assert.Equal(t, 1, m1.Replications)
+	assert.Equal(t, 2, m2.Replications)
+	assert.Equal(t, 1, m3.Replications)
+	c2.DeleteArtifacts(&pb.DeleteRequest{})
+	assert.Equal(t, 2, m1.Replications)
+	assert.Equal(t, 2, m2.Replications)
+	assert.Equal(t, 2, m3.Replications)
+	c3.DeleteArtifacts(&pb.DeleteRequest{})
+	assert.Equal(t, 3, m1.Replications)
+	assert.Equal(t, 3, m2.Replications)
+	assert.Equal(t, 2, m3.Replications)
 }
 
 // mockRPCServer is a fake RPC server we use for this test.
