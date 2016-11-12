@@ -167,7 +167,7 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 	success, artifacts := cache.runRpc(req.Hash, func(cache *rpcCache) (bool, []*pb.Artifact) {
 		response, err := cache.client.Retrieve(ctx, req)
 		if err != nil {
-			log.Warning("Failed to retrieve artifacts for %s", target.Label)
+			log.Warning("Failed to retrieve artifacts for %s: %s", target.Label, err)
 			cache.error()
 			return false, nil
 		} else if !response.Success {
@@ -287,7 +287,7 @@ func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode
 	// We are now connected, the children aren't necessarily yet but that won't matter.
 	cache.Connected = true
 	cache.Connecting = false
-	log.Info("Top-level RPC cache connected after %0.2fs", time.Since(cache.startTime).Seconds())
+	log.Info("Top-level RPC cache connected after %0.2fs with %d known nodes", time.Since(cache.startTime).Seconds(), len(resp.Nodes))
 }
 
 // isConnected checks if the cache is connected. If it's still trying to connect it allows a

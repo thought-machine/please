@@ -12,7 +12,10 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	stdlog "log"
 	"net"
 	"strconv"
 	"sync"
@@ -54,6 +57,7 @@ func NewCluster(port, rpcPort int, name string) *Cluster {
 	c.BindPort = port
 	c.AdvertisePort = port
 	c.Delegate = &delegate{port: rpcPort}
+	c.Logger = stdlog.New(&logWriter{}, "", 0)
 	if name != "" {
 		c.Name = name
 	}
@@ -62,7 +66,7 @@ func NewCluster(port, rpcPort int, name string) *Cluster {
 		log.Fatalf("Failed to create new memberlist: %s", err)
 	}
 	n := list.LocalNode()
-	log.Notice("Memberlist initialised, this node is %s / %s", n.Name, n.Addr)
+	log.Notice("Memberlist initialised, this node is %s / %s:%d", n.Name, n.Addr, port)
 	return &Cluster{
 		list:    list,
 		clients: map[string]pb.RpcServerClient{},
@@ -264,3 +268,26 @@ func (d *delegate) NotifyMsg([]byte)                           {}
 func (d *delegate) GetBroadcasts(overhead, limit int) [][]byte { return nil }
 func (d *delegate) LocalState(join bool) []byte                { return nil }
 func (d *delegate) MergeRemoteState(buf []byte, join bool)     {}
+
+// A logWriter is a wrapper around our logger to decode memberlist's prefixes into our logging levels.
+type logWriter struct{}
+
+// logLevels maps memberlist's prefixes to our logging levels.
+var logLevels = map[string]func(format string, args ...interface{}){
+	"[ERR]":   log.Errorf,
+	"[ERROR]": log.Errorf,
+	"[WARN]":  log.Warning,
+	"[INFO]":  log.Info,
+	"[DEBUG]": log.Debug,
+}
+
+// Write implements the io.Writer interface
+func (w *logWriter) Write(b []byte) (int, error) {
+	for prefix, f := range logLevels {
+		if bytes.HasPrefix(b, []byte(prefix)) {
+			f(string(bytes.TrimSpace(bytes.TrimPrefix(b, []byte(prefix)))))
+			return len(b), nil
+		}
+	}
+	return 0, fmt.Errorf("Couldn't decide how to log %s", string(b))
+}
