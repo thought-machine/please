@@ -212,6 +212,12 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         licences = globals_dict['CONFIG'].get('DEFAULT_LICENCES')
     if test_only is None:
         test_only = globals_dict['CONFIG'].get('DEFAULT_TESTONLY')
+
+    # Further calls to package() are now banned; it's too difficult to ensure pre/post build
+    # functions work as expected if the user changes things after adding the target but before
+    # said function runs.
+    globals_dict['package'] = package_banned
+
     ffi_string = lambda x: ffi.NULL if x is None else ffi_from_string(x)
     target = _add_target(package,
                          ffi_string(name),
@@ -366,6 +372,11 @@ def package(globals_dict, **kwargs):
         else:
             raise KeyError('error calling package(): %s is not a known config value' % k)
     globals_dict['CONFIG'] = config
+
+
+def package_banned(*args, **kwargs):
+    """Replaces package() after the first target is added."""
+    raise ParseError("package() must be called before any build targets are defined")
 
 
 def licenses(globals_dict, licenses):
