@@ -377,3 +377,18 @@ build_rule(
     test = True,
     test_cmd = 'true',
 )
+
+# Test on a build rule that writes a symlink.
+genrule(
+    name = 'symlink_gen',
+    srcs = ['symlink_test.txt'],
+    outs = ['symlink_test.txt'],
+    cmd = 'ln -s $SRCS $OUTS',
+)
+
+gentest(
+    name = 'symlink_test',
+    data = [':symlink_gen'],
+    no_test_output = True,
+    test_cmd = 'test ! -L test/symlink_test.txt',
+)

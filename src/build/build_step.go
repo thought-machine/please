@@ -341,19 +341,6 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 		return false, nil
 	}
 	if realOutputExists {
-		// The tmp output can be a symlink back to the real one; this is allowed for rules like
-		// filegroups that attempt to link outputs of other rules. In that case we can't
-		// remove the original because that'd break the link, but by definition we don't need
-		// to actually do anything more.
-		// TODO(pebers): The logic here is quite tortured, consider a (very careful) rewrite.
-		// TODO(pebers): Is this still needed? Filegroups no longer work that way and nothing
-		//               else should have the same file as input and output?
-		dereferencedOutput, _ := filepath.EvalSymlinks(realOutput)
-		if absOutput, _ := filepath.Abs(realOutput); tmpOutput == absOutput || realOutput == tmpOutput || dereferencedOutput == tmpOutput {
-			log.Debug("%s and %s are the same file, nothing to do", tmpOutput, realOutput)
-			return false, nil
-		}
-
 		if oldHash, err := pathHash(realOutput, false); err != nil {
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
