@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-
 	"path"
 	"strings"
 	"time"
@@ -60,6 +59,11 @@ func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarg
 	}()
 
 	if target.Containerise {
+		if state.Config.Test.DefaultContainer == core.ContainerImplementationNone {
+			log.Warning("Target %s specifies that it should be tested in a container, but test "+
+				"containers are disabled in your .plzconfig.", target.Label)
+			return runTest(state, target)
+		}
 		out, err = runContainerisedTest(state, target)
 		if err != nil && state.Config.Docker.AllowLocalFallback {
 			log.Warning("Failed to run %s containerised: %s %s. Falling back to local version.",

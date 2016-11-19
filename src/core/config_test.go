@@ -141,3 +141,11 @@ func TestReadByteSizes(t *testing.T) {
 	config, err = ReadConfigFiles([]string{"src/core/test_data/bytesize_bad.plzconfig"})
 	assert.Error(t, err)
 }
+
+func TestReadContainers(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/container_good.plzconfig"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, TestContainerDocker, config.Test.DefaultContainer)
+	config, err = ReadConfigFiles([]string{"src/core/test_data/container_bad.plzconfig"})
+	assert.Error(t, err)
+}

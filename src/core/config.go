@@ -38,17 +38,13 @@ const TestContainerDocker = "docker"
 const TestContainerNone = "none"
 
 func readConfigFile(config *Configuration, filename string) error {
+	log.Debug("Reading config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
 	} else if err != nil {
 		log.Warning("Error in config file: %s", err)
-	}
-	log.Debug("Reading config from %s...", filename)
-	// TODO(pebers): Use gcfg's types thingy to parse this once it's finalised.
-	if config.Test.DefaultContainer != TestContainerNone && config.Test.DefaultContainer != TestContainerDocker {
-		return fmt.Errorf("Unknown container type %s", config.Test.DefaultContainer)
 	}
 	return nil
 }
@@ -216,7 +212,7 @@ type Configuration struct {
 	CustomMetricLabels map[string]string
 	Test               struct {
 		Timeout          cli.Duration
-		DefaultContainer string
+		DefaultContainer ContainerImplementation
 	}
 	Cover struct {
 		FileExtension    []string
@@ -380,3 +376,19 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 	}
 	return nil
 }
+
+// ContainerImplementation is an enumerated type for the container engine we'd use.
+type ContainerImplementation string
+
+func (ci *ContainerImplementation) UnmarshalText(text []byte) error {
+	if ContainerImplementation(text) == ContainerImplementationNone || ContainerImplementation(text) == ContainerImplementationDocker {
+		*ci = ContainerImplementation(text)
+		return nil
+	}
+	return fmt.Errorf("Unknown container implementation: %s", string(text))
+}
+
+const (
+	ContainerImplementationNone   ContainerImplementation = "none"
+	ContainerImplementationDocker ContainerImplementation = "docker"
+)
