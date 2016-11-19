@@ -298,7 +298,7 @@ func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap ma
 	for _, label := range failedTargets {
 		err := failedTargetMap[label]
 		if err != nil {
-			printf("    ${BOLD_RED}%s\n${RESET}%s${RESET}\n", label, err)
+			printf("    ${BOLD_RED}%s\n${RESET}%s${RESET}\n", label, colouriseError(err))
 		} else {
 			printf("    ${BOLD_RED}%s${RESET}\n", label)
 		}
@@ -493,7 +493,27 @@ func coveragePercentage(covered, total int, label string) string {
 	}
 }
 
-// Attempts to detect graph cycles and produces a readable message from it.
+// colouriseError adds a splash of colour to a compiler error message.
+// This is a similar effect to -fcolor-diagnostics in Clang, but we attempt to apply it fairly generically.
+func colouriseError(err error) error {
+	msg := []string{}
+	for _, line := range strings.Split(err.Error(), "\n") {
+		if groups := errorMessageRe.FindStringSubmatch(line); groups != nil {
+			if groups[3] != "" {
+				groups[3] = ", column " + groups[3]
+			}
+			msg = append(msg, fmt.Sprintf("${BOLD_WHITE}%s, line %s%s:${RESET} ${BOLD_RED}%s:${RESET} ${BOLD_WHITE}%s${RESET}", groups[1], groups[2], groups[3], groups[4], groups[5]))
+		} else {
+			msg = append(msg, line)
+		}
+	}
+	return fmt.Errorf("%s", strings.Join(msg, "\n"))
+}
+
+// errorMessageRe is a regex to find lines that look like they're specifying a file.
+var errorMessageRe = regexp.MustCompile(`^([^ ]+\.[^ /]+):([0-9]+):(?:([0-9]+):)? ([a-z-_ ]+): (.*)$`)
+
+// graphCycleMessage attempts to detect graph cycles and produces a readable message from it.
 func graphCycleMessage(graph *core.BuildGraph, target *core.BuildTarget) string {
 	if cycle := findGraphCycle(graph, target); len(cycle) > 0 {
 		msg := "Dependency cycle found:\n"
