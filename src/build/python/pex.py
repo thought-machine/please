@@ -116,7 +116,11 @@ def compile_bytecode():
                 os.remove(filename)
         for filename in paths:
             if filename.endswith('.py'):
-                path = py_compile.compile(filename, doraise=True)
+                try:
+                    path = py_compile.compile(filename, doraise=True)
+                except py_compile.PyCompileError as e:
+                    print(e)
+                    sys.exit(1)
                 if not path:
                     # In python3 we already have a path to the .pyc file. py_compile in python2
                     # does not return anything so we have to work it out ourselves.
