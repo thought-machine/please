@@ -227,7 +227,7 @@ func (m *metrics) pushMetrics() int {
 	m.newMetrics = false
 	if err := deadline(func() error {
 		return push.AddFromGatherer("please", push.HostnameGroupingKey(), m.url, prometheus.DefaultGatherer)
-	}, 500*time.Millisecond); err != nil {
+	}, m.timeout); err != nil {
 		log.Warning("Could not push metrics to the repository: %s", err)
 		m.newMetrics = true
 		return m.errors + 1
