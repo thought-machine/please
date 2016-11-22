@@ -4,21 +4,16 @@ set -eu
 
 function interpreter_target {
     if hash $1 2>/dev/null ; then
-	if [ ! `$1 -c 'import cffi'` ]; then
-	    echo " //src:please_parser_$1"
-	else
-	    >&2 echo "$1 doesn't have cffi installed, won't build parser engine for it."
+        $1 -c 'import cffi' 2> /dev/null
+        if [ $? -eq 0 ]; then
+            echo "//src:please_parser_$1"
+        else
+            >&2 echo "$1 doesn't have cffi installed, won't build parser engine for it."
             >&2 echo "You won't be able to build Please packages unless all parsers are present."
-	fi
+        fi
     else
         >&2 echo "$1 not found; won't build parser engine for it."
         >&2 echo "You won't be able to build Please packages unless all parsers are present."
-    fi
-}
-
-function interpreter {
-    if hash $1 2>/dev/null ; then
-	    echo "$1"
     fi
 }
 
@@ -39,16 +34,19 @@ go get github.com/Workiva/go-datastructures/queue
 go get github.com/coreos/go-semver/semver
 
 # Determine which interpreter engines we'll build.
-INTERPRETERS="$(interpreter_target pypy)$(interpreter_target python2)$(interpreter_target python3)"
-if [ -z "$INTERPRETERS" ]; then
+PYPY="$(interpreter_target pypy)"
+PYTHON2="$(interpreter_target python2)"
+PYTHON3="$(interpreter_target python3)"
+INTERPRETERS="$PYPY $PYTHON2"
+if [ -z "${INTERPRETERS// }" ]; then
     echo "No known Python interpreters found, can't build parser engine"
     exit 1
 fi
 # Choose one to build with during bootstrap
-PYPY="$(interpreter pypy)"
-PYTHON2="$(interpreter python2)"
-PYTHON3="$(interpreter python3)"
-INTERPRETER="${PYPY:-${PYTHON2:-${PYTHON3}}}"
+PYPY="${PYPY##*_}"
+PYTHON2="${PYTHON2##*_}"
+PYTHON3="${PYTHON3##*_}"
+INTERPRETER="${PYPY:-${PYTHON2}}"
 
 # Clean out old artifacts.
 rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parser.py
