@@ -164,14 +164,8 @@ func downloadPlease(config *core.Configuration) {
 			break // End of archive
 		} else if err != nil {
 			panic(fmt.Sprintf("Error un-tarring %s: %s", url, err))
-		}
-		filename := path.Base(hdr.Name)
-		destination := path.Join(newDir, filename)
-		log.Info("Extracting %s to %s", filename, destination)
-		if contents, err := ioutil.ReadAll(tarball); err != nil {
-			panic(fmt.Sprintf("Error extracting %s from tarball: %s", filename, err))
-		} else if err := ioutil.WriteFile(destination, contents, fileMode(filename)); err != nil {
-			panic(fmt.Sprintf("Failed to write to %s: %s", destination, err))
+		} else if err := writeTarFile(hdr, tarball, newDir); err != nil {
+			panic(err)
 		}
 	}
 }
@@ -268,4 +262,28 @@ func verifyNewPlease(newPlease, version string) bool {
 		return false
 	}
 	return true
+}
+
+// writeTarFile writes a file from a tarball to the filesystem in the corresponding location.
+func writeTarFile(hdr *tar.Header, r io.Reader, destination string) error {
+	// Strip the first directory component in the tarball
+	stripped := hdr.Name[strings.IndexRune(hdr.Name, os.PathSeparator)+1:]
+	dest := path.Join(destination, stripped)
+	if err := os.MkdirAll(path.Dir(dest), core.DirPermissions); err != nil {
+		return fmt.Errorf("Can't make destination directory: %s", err)
+	}
+	// Handle symlinks, but not other non-file things.
+	if hdr.Typeflag == tar.TypeSymlink {
+		return os.Symlink(hdr.Linkname, dest)
+	} else if hdr.Typeflag != tar.TypeReg {
+		return nil // Don't write directory entries, or rely on them being present.
+	}
+	log.Info("Extracting %s to %s", hdr.Name, dest)
+	f, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE, os.FileMode(hdr.Mode))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = io.Copy(f, r)
+	return err
 }
