@@ -1,4 +1,4 @@
 Found path:
   //src/build/java:junit_runner
-  //src/build/java/net/thoughtmachine/please/test:junit_runner
+  //src/build/java/build/please/test:junit_runner
   //third_party/java:_guava#bin

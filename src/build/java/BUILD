@@ -1,8 +1,8 @@
 java_binary(
     name = 'junit_runner',
-    main_class = 'net.thoughtmachine.please.test.TestMain',
+    main_class = 'build.please.test.TestMain',
     deps = [
-        '//src/build/java/net/thoughtmachine/please/test:junit_runner',
+        '//src/build/java/build/please/test:junit_runner',
     ],
     visibility = ['PUBLIC'],
 )

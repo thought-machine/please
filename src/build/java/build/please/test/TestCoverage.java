@@ -132,7 +132,7 @@ public class TestCoverage {
     pkg.appendChild(classes);
 
     for (final IClassCoverage cc : coverageBuilder.getClasses()) {
-      if (cc.getName().startsWith("build.please/test") || testClassNames.contains(cc.getName().replace("/", "."))) {
+      if (cc.getName().startsWith("build/please/test") || testClassNames.contains(cc.getName().replace("/", "."))) {
         continue;  // keep these out of results
       }
 
@@ -184,23 +184,41 @@ public class TestCoverage {
 
   /**
    * Derives the original file name from the package and class paths.
-   * For example, the package might be src/build/java/build.please/test and
-   * the class would be build.please/test/TestCoverage; we want to
-   * produce src/build/java/build.please/test/TestCoverage.
+   * For example, the package might be src/build/java/build/please/test and
+   * the class would be build/please/test/TestCoverage; we want to
+   * produce src/build/java/build/please/test/TestCoverage.
    */
   static String deriveOriginalFilename(String packageName, String className) {
     String packagePath[] = packageName.split("/");
     String classPath[] = className.split("/");
-    StringBuilder sb = new StringBuilder();
-    for (String s : packagePath) {
-      if (classPath[0].equals(s)) {
-        break;
-      } else if (!s.isEmpty()) {
-        sb.append(s);
-        sb.append("/");
+    for (int size = classPath.length - 1; size > 0; --size) {
+      if (size < packagePath.length && matchArrays(packagePath, classPath, size)) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < packagePath.length; ++i) {
+          sb.append(packagePath[i]);
+          sb.append('/');
+        }
+        for (int i = size; i < classPath.length; ++i) {
+          if (i > size) {
+            sb.append('/');
+          }
+          sb.append(classPath[i]);
+        }
+        return sb.toString();
       }
     }
-    sb.append(className);
-    return sb.toString();
+    if (!packageName.isEmpty()) {
+      return packageName + '/' + className;
+    }
+    return className;
+  }
+
+  private static boolean matchArrays(String[] a, String[] b, int size) {
+    for (int i = 0, j = a.length - size; i < size; ++i, ++j) {
+      if (!a[j].equals(b[i])) {
+        return false;
+      }
+    }
+    return true;
   }
 }
