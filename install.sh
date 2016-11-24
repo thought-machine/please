@@ -35,6 +35,8 @@ cp -f plz-out/bin/src/build/go/please_go_test ${DEST}/please_go_test
 chmod 0775 ${DEST}/please_go_test
 cp -f plz-out/bin/src/lint/please_build_linter ${DEST}/please_build_linter
 chmod 0775 ${DEST}/please_build_linter
+cp -f plz-out/bin/src/build/java/build/please/compile/server.jar ${DEST}/javac_worker
+chmod 0775 ${DEST}/please_build_linter
 echo "Please installed"
 
 if [ ! -f /usr/local/bin/plz ]; then

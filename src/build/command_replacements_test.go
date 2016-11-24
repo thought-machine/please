@@ -12,8 +12,11 @@ import (
 	"core"
 )
 
+var wd string
+
 func init() {
 	core.NewBuildState(1, nil, 1, core.DefaultConfiguration())
+	wd, _ = os.Getwd()
 }
 
 func TestLocation(t *testing.T) {
@@ -185,6 +188,53 @@ func TestHashReplacement(t *testing.T) {
 	// Note that this hash is determined arbitrarily, it doesn't matter for this test
 	// precisely what its value is.
 	assert.Equal(t, "echo atEv6JE4Af62tnNvDkjWmnWRY5I", replaceSequences(target))
+}
+
+func TestWorkerReplacement(t *testing.T) {
+	tool := makeTarget("//path/to:target2", "", nil)
+	tool.IsBinary = true
+	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg", tool)
+	target.Tools = append(target.Tools, tool.Label)
+	worker, remoteArgs, localCmd := workerCommandAndArgs(target)
+	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
+	assert.Equal(t, "--some_arg", remoteArgs)
+	assert.Equal(t, "", localCmd)
+}
+
+func TestSystemWorkerReplacement(t *testing.T) {
+	target := makeTarget("//path/to:target", "$(worker /usr/bin/javac) --some_arg", nil)
+	target.Tools = append(target.Tools, core.SystemFileLabel{Path: "/usr/bin/javac"})
+	worker, remoteArgs, localCmd := workerCommandAndArgs(target)
+	assert.Equal(t, "/usr/bin/javac", worker)
+	assert.Equal(t, "--some_arg", remoteArgs)
+	assert.Equal(t, "", localCmd)
+}
+
+func TestLocalCommandWorker(t *testing.T) {
+	tool := makeTarget("//path/to:target2", "", nil)
+	tool.IsBinary = true
+	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg && find . | xargs rm && echo hello", tool)
+	target.Tools = append(target.Tools, tool.Label)
+	worker, remoteArgs, localCmd := workerCommandAndArgs(target)
+	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
+	assert.Equal(t, "--some_arg", remoteArgs)
+	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
+}
+
+func TestworkerCommandAndArgsMustComeFirst(t *testing.T) {
+	tool := makeTarget("//path/to:target2", "", nil)
+	tool.IsBinary = true
+	target := makeTarget("//path/to:target", "something something $(worker javac)", tool)
+	target.Tools = append(target.Tools, tool.Label)
+	assert.Panics(t, func() { workerCommandAndArgs(target) })
+}
+
+func TestWorkerReplacementWithNoWorker(t *testing.T) {
+	target := makeTarget("//path/to:target", "echo hello", nil)
+	worker, remoteArgs, localCmd := workerCommandAndArgs(target)
+	assert.Equal(t, "", worker)
+	assert.Equal(t, "", remoteArgs)
+	assert.Equal(t, "echo hello", localCmd)
 }
 
 func makeTarget(name string, command string, dep *core.BuildTarget) *core.BuildTarget {

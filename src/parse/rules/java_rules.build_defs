@@ -44,7 +44,9 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         log.warning('`target` argument to java_library is deprecated and will be removed soon')
     if srcs and src_dir:
         raise ParseError('You cannot pass both srcs and src_dir to java_library')
-    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
+    use_worker = not CONFIG.JAVAC_TOOL
+    javac_tool, tools = _tool_path(CONFIG.JAVAC_TOOL or CONFIG.JAVAC_WORKER, worker=use_worker)
+    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
     if srcs or src_dir:
         if resources:
             # Split up resources into a separate rule so we don't have to try to build them here.
@@ -62,16 +64,24 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             javac_flags = ' '.join(flag for flag in javac_flags if flag != '-extra_checks:off')
         else:
             javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
-        cmd = ' && '.join([
-            'mkdir _tmp _tmp/META-INF',
-            '%s -encoding utf8 -source %s -target %s -classpath .:%s -d _tmp -g %s %s' % (
-                CONFIG.JAVAC_TOOL,
-                source or CONFIG.JAVA_SOURCE_LEVEL,
-                target or CONFIG.JAVA_TARGET_LEVEL,
-                r'`find . -name "*.jar" | tr \\\\n :`',
-                '$SRCS' if srcs else '`find $SRCS -name "*.java"`',
+        javac_flags = '-encoding utf8 -source %s -target %s -g %s' % (
+            source or CONFIG.JAVA_SOURCE_LEVEL,
+            target or CONFIG.JAVA_TARGET_LEVEL,
+            javac_flags,
+        )
+
+        if use_worker:
+            javac_cmd = '%s %s %s' % (javac_tool, javac_flags, '--src_dir' if src_dir else '')
+        else:
+            javac_cmd = 'mkdir -p _tmp/META-INF && %s %s -classpath .:%s -d _tmp %s' % (
+                javac_tool,
                 javac_flags,
-            ),
+                r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
+                '$SRCS' if srcs else '`find $SRCS -name "*.java"`',
+            )
+
+        cmd = ' && '.join([
+            javac_cmd,
             'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g" | sort > _tmp/META-INF/please_sourcemap',
             'cd _tmp',
             jarcat_tool + ' -d -o $OUT -i .',
@@ -510,8 +520,10 @@ def _java_binary_cmd(main_class, jvm_args, test_package=None):
     prop = '-Dnet.thoughtmachine.please.testpackage=' + test_package if test_package else ''
     preamble = '#!/bin/sh\nexec java %s %s -jar $0 $@' % (prop, jvm_args or '')
     jarcat_cmd, tools = _jarcat_cmd(main_class, preamble)
+    if not test_package:
+        return jarcat_cmd, tools
     junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools, binary=False)
-    return ('ln -s %s . && %s' % (junit_runner, jarcat_cmd) if test_package else jarcat_cmd), tools
+    return 'ln -s %s . && %s' % (junit_runner, jarcat_cmd), tools
 
 
 def _jarcat_cmd(main_class=None, preamble=None):

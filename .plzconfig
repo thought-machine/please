@@ -35,6 +35,7 @@ defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 
 [java]
+javacworker = //src/build/java/build/please/compile:server
 jarcattool = //src/build/java:jarcat
 junitrunner = //src/build/java:junit_runner
 pleasemaventool = //src/build/java:please_maven
@@ -65,4 +66,5 @@ accept = BSD 3-Clause
 accept = New BSD License
 accept = Apache 2.0
 accept = Apache License, Version 2.0
+accept = The Apache Software License, Version 2.0
 accept = PSF
