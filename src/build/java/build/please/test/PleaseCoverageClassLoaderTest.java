@@ -1,4 +1,4 @@
-package net.thoughtmachine.please.test;
+package build.please.test;
 
 import java.lang.Thread;
 import org.junit.Ignore;
@@ -12,14 +12,14 @@ public class PleaseCoverageClassLoaderTest {
 
   @Test
   public void testForName() throws Exception {
-    Class cls = Class.forName("net.thoughtmachine.please.test.PleaseCoverageClassLoaderTest");
+    Class cls = Class.forName("build.please.test.PleaseCoverageClassLoaderTest");
     assertEquals(this.getClass(), cls);
   }
 
   @Test
   public void testContextClassLoader() throws Exception {
     ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    Class cls = loader.loadClass("net.thoughtmachine.please.test.PleaseCoverageClassLoaderTest");
+    Class cls = loader.loadClass("build.please.test.PleaseCoverageClassLoaderTest");
     assertEquals(this.getClass(), cls);
   }
 }

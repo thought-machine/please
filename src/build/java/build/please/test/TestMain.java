@@ -1,4 +1,4 @@
-package net.thoughtmachine.please.test;
+package build.please.test;
 
 import java.lang.Class;
 import java.lang.reflect.Method;
@@ -48,9 +48,9 @@ public class TestMain {
   private static int numTests = 0;
 
   public static void main(String[] args) throws Exception {
-    String testPackage = System.getProperty("net.thoughtmachine.please.testpackage");
+    String testPackage = System.getProperty("build.please.testpackage");
     if (testPackage == null || testPackage.equals("")) {
-      throw new RuntimeException("Test package not provided (define with -Dnet.thoughtmachine.please.testpackage)");
+      throw new RuntimeException("Test package not provided (define with -Dbuild.please.testpackage)");
     }
     program_args = args;
 

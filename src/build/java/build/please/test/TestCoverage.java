@@ -1,4 +1,4 @@
-package net.thoughtmachine.please.test;
+package build.please.test;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -56,7 +56,7 @@ public class TestCoverage {
     Set<String> testClassNames = new HashSet<>();
     for (Class cls : allClasses) {
       // don't instrument the test runner classes here, nobody else wants to see them.
-      if (!cls.getPackage().getName().equals("net.thoughtmachine.please.test")) {
+      if (!cls.getPackage().getName().equals("build.please.test")) {
         memoryClassLoader.loadClass(cls.getName());
       }
     }
@@ -132,7 +132,7 @@ public class TestCoverage {
     pkg.appendChild(classes);
 
     for (final IClassCoverage cc : coverageBuilder.getClasses()) {
-      if (cc.getName().startsWith("net/thoughtmachine/please/test") || testClassNames.contains(cc.getName().replace("/", "."))) {
+      if (cc.getName().startsWith("build.please/test") || testClassNames.contains(cc.getName().replace("/", "."))) {
         continue;  // keep these out of results
       }
 
@@ -184,9 +184,9 @@ public class TestCoverage {
 
   /**
    * Derives the original file name from the package and class paths.
-   * For example, the package might be src/build/java/net/thoughtmachine/please/test and
-   * the class would be net/thoughtmachine/please/test/TestCoverage; we want to
-   * produce src/build/java/net/thoughtmachine/please/test/TestCoverage.
+   * For example, the package might be src/build/java/build.please/test and
+   * the class would be build.please/test/TestCoverage; we want to
+   * produce src/build/java/build.please/test/TestCoverage.
    */
   static String deriveOriginalFilename(String packageName, String className) {
     String packagePath[] = packageName.split("/");

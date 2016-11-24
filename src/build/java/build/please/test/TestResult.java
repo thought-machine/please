@@ -1,4 +1,4 @@
-package net.thoughtmachine.please.test;
+package build.please.test;
 
 final class TestResult {
   // Result of an individual JUnit test. Heavily based on Buck's version.

@@ -1,4 +1,4 @@
-package net.thoughtmachine.please.test;
+package build.please.test;
 
 import org.junit.Ignore;
 import org.junit.runner.RunWith;
