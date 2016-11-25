@@ -1,4 +1,4 @@
-Version 7.0.7
+Version 7.0.8
 -------------
 
     * Fixed a formatting bug with `plz query print`.
