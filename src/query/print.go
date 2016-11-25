@@ -15,7 +15,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		} else {
 			fmt.Printf("  build_rule(\n")
 		}
-		fmt.Printf("      name = '%s'\n", target.Label.Name)
+		fmt.Printf("      name = '%s',\n", target.Label.Name)
 		if len(target.Sources) > 0 {
 			fmt.Printf("      srcs = [\n")
 			for _, src := range target.Sources {
