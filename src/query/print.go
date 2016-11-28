@@ -15,7 +15,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		} else {
 			fmt.Printf("  build_rule(\n")
 		}
-		fmt.Printf("      name = '%s'\n", target.Label.Name)
+		fmt.Printf("      name = '%s',\n", target.Label.Name)
 		if len(target.Sources) > 0 {
 			fmt.Printf("      srcs = [\n")
 			for _, src := range target.Sources {
@@ -41,13 +41,16 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			fmt.Printf("      ],\n")
 		}
 		stringList("optional_outs", target.OptionalOutputs)
-		pythonDict(target.Commands, "cmd")
 		if !target.IsFilegroup() {
-			fmt.Printf("      cmd = '%s'\n", target.Command)
+			if target.Command == "" {
+				pythonDict(target.Commands, "cmd")
+			} else {
+				fmt.Printf("      cmd = '%s',\n", target.Command)
+			}
 		}
 		pythonDict(target.TestCommands, "test_cmd")
 		if target.TestCommand != "" {
-			fmt.Printf("      test_cmd = '%s'\n", target.TestCommand)
+			fmt.Printf("      test_cmd = '%s',\n", target.TestCommand)
 		}
 		pythonBool("binary", target.IsBinary)
 		pythonBool("test", target.IsTest)
@@ -122,10 +125,10 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			fmt.Printf("      ],\n")
 		}
 		if target.PreBuildFunction != 0 {
-			fmt.Printf("      pre_build = <python ref>,\n") // Don't have any sensible way of printing this.
+			fmt.Printf("      pre_build = '<python ref>',\n") // Don't have any sensible way of printing this.
 		}
 		if target.PostBuildFunction != 0 {
-			fmt.Printf("      post_build = <python ref>,\n") // Don't have any sensible way of printing this.
+			fmt.Printf("      post_build = '<python ref>',\n") // Don't have any sensible way of printing this.
 		}
 		fmt.Printf("  )\n\n")
 	}

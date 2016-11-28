@@ -1,7 +1,13 @@
+Version 7.0.8
+-------------
+
+    * Fixed a formatting bug with `plz query print`.
+
+
 Version 7.0.6
 -------------
 
-    * Fixex a long-standing but mysteriously unfound bug in incrementality where we did not
+    * Fixed a long-standing but mysteriously unfound bug in incrementality where we did not
       correctly handle symlinks to directories within a build dir.
 
 
