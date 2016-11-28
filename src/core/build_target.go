@@ -777,6 +777,11 @@ func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
 	return graph.Target(parent)
 }
 
+// HasParent returns true if the target has a parent rule that's not itself.
+func (target *BuildTarget) HasParent() bool {
+	return target.Label.Parent() != target.Label
+}
+
 // IsFilegroup returns true if this target is a filegroup rule.
 func (target *BuildTarget) IsFilegroup() bool {
 	return target.Command == filegroupCommand

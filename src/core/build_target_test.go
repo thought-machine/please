@@ -326,6 +326,15 @@ func TestParent(t *testing.T) {
 	assert.Equal(t, (*BuildTarget)(nil), parent.Parent(graph))
 }
 
+func TestHasParent(t *testing.T) {
+	grandchild := makeTarget("//src/core:__target1#child#grandchild", "")
+	child := makeTarget("//src/core:_target1#child", "", grandchild)
+	parent := makeTarget("//src/core:target1", "", child)
+	assert.True(t, grandchild.HasParent())
+	assert.True(t, child.HasParent())
+	assert.False(t, parent.HasParent())
+}
+
 func TestOutMode(t *testing.T) {
 	// Check that output modes match the binary flag correctly.
 	// This feels a little fatuous but it's hard to have any less specific assertions on it.

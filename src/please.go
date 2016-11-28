@@ -17,6 +17,7 @@ import (
 	"clean"
 	"cli"
 	"core"
+	"gc"
 	"metrics"
 	"output"
 	"parse"
@@ -149,6 +150,12 @@ var opts struct {
 		Dir                string `long:"dir" description:"Directory to create config in" default:"."`
 		BazelCompatibility bool   `long:"bazel_compat" description:"Initialises config for Bazel compatibility mode."`
 	} `command:"init" description:"Initialises a .plzconfig file in the current directory"`
+
+	Gc struct {
+		Args struct {
+			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to keep in the repo regardless."`
+		} `positional-args:"true"`
+	} `command:"gc" description:"Analyzes the repo to determine unneeded targets."`
 
 	Query struct {
 		Deps struct {
@@ -309,6 +316,13 @@ var buildFunctions = map[string]func() bool{
 		}
 		log.Fatalf("SORRY OP: %s", err) // On success Exec never returns.
 		return false
+	},
+	"gc": func() bool {
+		success, state := runBuild(core.WholeGraph, false, false, false)
+		if success {
+			gc.GarbageCollect(state.Graph, opts.Gc.Args.Targets)
+		}
+		return success
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
