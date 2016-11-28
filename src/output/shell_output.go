@@ -511,7 +511,7 @@ func colouriseError(err error) error {
 }
 
 // errorMessageRe is a regex to find lines that look like they're specifying a file.
-var errorMessageRe = regexp.MustCompile(`^([^ ]+\.[^ /]+):([0-9]+):(?:([0-9]+):)? ([a-z-_ ]+): (.*)$`)
+var errorMessageRe = regexp.MustCompile(`^([^ ]+\.[^ /]+):([0-9]+):(?:([0-9]+):)? *(?:([a-z-_ ]+):)? (.*)$`)
 
 // graphCycleMessage attempts to detect graph cycles and produces a readable message from it.
 func graphCycleMessage(graph *core.BuildGraph, target *core.BuildTarget) string {

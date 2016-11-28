@@ -33,6 +33,9 @@ func ReverseDeps(graph *core.BuildGraph, labels []core.BuildLabel) {
 	}
 
 	targets := make(core.BuildLabels, 0, len(uniqueTargets))
+	for _, label := range labels {
+		delete(uniqueTargets, label)
+	}
 	for target := range uniqueTargets {
 		targets = append(targets, target)
 	}
