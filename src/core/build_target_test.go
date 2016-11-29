@@ -358,6 +358,14 @@ func TestOutputOrdering(t *testing.T) {
 	assert.Equal(t, target1.Outputs(), target2.Outputs())
 }
 
+func TestAllLocalSources(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	target.AddSource(FileLabel{File: "target1.go", Package: "src/core"})
+	target.AddSource(BuildLabel{Name: "target2", PackageName: "src/core"})
+	target.AddSource(SystemFileLabel{Path: "/usr/bin/bash"})
+	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSources())
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {

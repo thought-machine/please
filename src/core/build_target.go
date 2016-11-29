@@ -666,6 +666,18 @@ func (target *BuildTarget) AllSources() []BuildInput {
 	return ret
 }
 
+// AllLocalSources returns all the "local" sources of this rule, i.e. all sources that are
+// actually sources in the repo, not other rules or system srcs etc.
+func (target *BuildTarget) AllLocalSources() []string {
+	ret := []string{}
+	for _, src := range target.AllSources() {
+		if file, ok := src.(FileLabel); ok {
+			ret = append(ret, file.Paths(nil)[0])
+		}
+	}
+	return ret
+}
+
 // HasSource returns true if this target has the given file as a source (named or not).
 func (target *BuildTarget) HasSource(source string) bool {
 	for _, src := range target.AllSources() {
