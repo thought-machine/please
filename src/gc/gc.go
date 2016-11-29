@@ -39,6 +39,12 @@ func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, includeT
 			addTarget(graph, keepTargets, target)
 		}
 	}
+	// Any registered subincludes also count.
+	for _, pkg := range graph.PackageMap() {
+		for _, subinclude := range pkg.Subincludes {
+			addTarget(graph, keepTargets, graph.TargetOrDie(subinclude))
+		}
+	}
 	log.Notice("%d targets to keep from initial scan", len(keepTargets))
 	for _, target := range targets {
 		addTarget(graph, keepTargets, graph.TargetOrDie(target))
