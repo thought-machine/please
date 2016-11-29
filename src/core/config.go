@@ -227,6 +227,9 @@ type Configuration struct {
 		RemoveTimeout      cli.Duration
 		RunArgs            []string
 	}
+	Gc struct {
+		Keep []BuildLabel
+	}
 	Go struct {
 		GoVersion string
 		GoRoot    string

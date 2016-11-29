@@ -20,6 +20,12 @@ blacklistdirs = golang.org
 blacklistdirs = google.golang.org
 blacklistdirs = gopkg.in
 
+[gc]
+keep = //test/...
+keep = //docs:all
+keep = //package:all
+keep = //:all_tools
+
 [go]
 testtool = //src/build/go:please_go_test
 

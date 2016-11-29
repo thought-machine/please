@@ -47,7 +47,18 @@ func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, includeT
 	}
 	log.Notice("%d targets to keep from initial scan", len(keepTargets))
 	for _, target := range targets {
-		addTarget(graph, keepTargets, graph.TargetOrDie(target))
+		if target.IsAllSubpackages() {
+			// For slightly awkward reasons these can't be handled outside :(
+			for _, pkg := range graph.PackageMap() {
+				if pkg.IsIncludedIn(target) {
+					for _, target := range pkg.Targets {
+						addTarget(graph, keepTargets, target)
+					}
+				}
+			}
+		} else {
+			addTarget(graph, keepTargets, graph.TargetOrDie(target))
+		}
 	}
 	log.Notice("%d targets to keep after command-line arguments considered", len(keepTargets))
 	if !includeTests {

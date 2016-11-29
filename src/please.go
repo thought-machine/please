@@ -320,7 +320,8 @@ var buildFunctions = map[string]func() bool{
 	"gc": func() bool {
 		success, state := runBuild(core.WholeGraph, false, false, false)
 		if success {
-			gc.GarbageCollect(state.Graph, opts.Gc.Args.Targets)
+			state.OriginalTargets = append(opts.Gc.Args.Targets, state.Config.Gc.Keep...)
+			gc.GarbageCollect(state.Graph, state.ExpandOriginalTargets())
 		}
 		return success
 	},
