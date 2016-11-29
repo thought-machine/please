@@ -1,3 +1,17 @@
+Version 7.1.0
+-------------
+
+    * Support for an "experimental" directory specified in plzconfig. If set it is subject
+      to the following rules:
+       - Targets in the experimental tree can depend on any other target, regardless
+         of visibility constraints.
+       - Targets outside the experimental tree can't depend on targets in it, again
+         regardless of their visibility declaration.
+       - Please doesn't descend into the experimental tree for commands like `plz test //...`
+         so tests in there wouldn't generally be run.
+    * New command, `plz gc`, which attempts to identify unused targets across the repo.
+
+
 Version 7.0.8
 -------------
 
