@@ -81,12 +81,11 @@ func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, includeT
 		// we've already decided to keep.
 		for _, target := range graph.AllTargets() {
 			if target.IsTest {
-				for _, dep := range target.DeclaredDependencies() {
-					depTarget := graph.TargetOrDie(dep)
-					if keepTargets[depTarget] {
+				for _, dep := range publicDependencies(graph, target) {
+					if keepTargets[dep] {
 						addTarget(graph, keepTargets, target)
-					} else if depTarget.TestOnly {
-						addTarget(graph, keepTargets, depTarget)
+					} else if dep.TestOnly {
+						addTarget(graph, keepTargets, dep)
 					}
 				}
 			}
@@ -113,4 +112,24 @@ func addTarget(graph *core.BuildGraph, m targetMap, target *core.BuildTarget) {
 	for _, dep := range target.DeclaredDependencies() {
 		addTarget(graph, m, graph.TargetOrDie(dep))
 	}
+}
+
+// publicDependencies returns the public dependencies of a target, considering any
+// private targets it might have declared.
+// For example, if we have dependencies as follows:
+//   //src/test:container_test
+//   //src/test:_container_test#lib
+//   //src/test:test
+// it will return //src/test:test for //src/test:container_test.
+func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*core.BuildTarget {
+	ret := []*core.BuildTarget{}
+	for _, dep := range target.DeclaredDependencies() {
+		depTarget := graph.TargetOrDie(dep)
+		if depTarget.Label.Parent() == target.Label.Parent() {
+			ret = append(ret, publicDependencies(graph, depTarget)...)
+		} else {
+			ret = append(ret, depTarget)
+		}
+	}
+	return ret
 }
