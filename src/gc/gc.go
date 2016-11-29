@@ -123,6 +123,9 @@ func addTarget(graph *core.BuildGraph, m targetMap, target *core.BuildTarget) {
 	for _, dep := range target.DeclaredDependencies() {
 		addTarget(graph, m, graph.TargetOrDie(dep))
 	}
+	for _, dep := range target.Dependencies() {
+		addTarget(graph, m, dep)
+	}
 }
 
 // publicDependencies returns the public dependencies of a target, considering any
