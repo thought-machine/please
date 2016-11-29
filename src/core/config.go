@@ -228,7 +228,8 @@ type Configuration struct {
 		RunArgs            []string
 	}
 	Gc struct {
-		Keep []BuildLabel
+		Keep      []BuildLabel
+		KeepLabel []string
 	}
 	Go struct {
 		GoVersion string

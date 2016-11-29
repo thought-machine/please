@@ -155,9 +155,6 @@ var opts struct {
 		Conservative bool `short:"c" long:"conservative" description:"Runs a more conservative / safer GC."`
 		TargetsOnly  bool `short:"t" long:"targets_only" description:"Only print the targets to delete"`
 		SrcsOnly     bool `short:"s" long:"srcs_only" description:"Only print the source files to delete"`
-		Args         struct {
-			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to keep in the repo regardless."`
-		} `positional-args:"true"`
 	} `command:"gc" description:"Analyzes the repo to determine unneeded targets."`
 
 	Query struct {
@@ -323,8 +320,9 @@ var buildFunctions = map[string]func() bool{
 	"gc": func() bool {
 		success, state := runBuild(core.WholeGraph, false, false, false)
 		if success {
-			state.OriginalTargets = append(opts.Gc.Args.Targets, state.Config.Gc.Keep...)
-			gc.GarbageCollect(state.Graph, state.ExpandOriginalTargets(), opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly)
+			state.OriginalTargets = state.Config.Gc.Keep
+			gc.GarbageCollect(state.Graph, state.ExpandOriginalTargets(), state.Config.Gc.KeepLabel,
+				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly)
 		}
 		return success
 	},

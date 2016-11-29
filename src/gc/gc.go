@@ -22,8 +22,8 @@ var log = logging.MustGetLogger("gc")
 type targetMap map[*core.BuildTarget]bool
 
 // GarbageCollect initiates the garbage collection logic.
-func GarbageCollect(graph *core.BuildGraph, targets []core.BuildLabel, conservative, targetsOnly, srcsOnly bool) {
-	if targets := targetsToRemove(graph, targets, conservative); len(targets) > 0 {
+func GarbageCollect(graph *core.BuildGraph, targets []core.BuildLabel, keepLabels []string, conservative, targetsOnly, srcsOnly bool) {
+	if targets := targetsToRemove(graph, targets, keepLabels, conservative); len(targets) > 0 {
 		if !srcsOnly {
 			fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), graph.Len())
 			for _, target := range targets {
@@ -47,10 +47,10 @@ func GarbageCollect(graph *core.BuildGraph, targets []core.BuildLabel, conservat
 }
 
 // targetsToRemove finds the set of targets that are no longer needed.
-func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, includeTests bool) core.BuildLabels {
+func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, keepLabels []string, includeTests bool) core.BuildLabels {
 	keepTargets := targetMap{}
 	for _, target := range graph.AllTargets() {
-		if target.IsBinary && (!target.IsTest || includeTests) {
+		if (target.IsBinary && (!target.IsTest || includeTests)) || target.HasAnyLabel(keepLabels) {
 			addTarget(graph, keepTargets, target)
 		}
 	}
