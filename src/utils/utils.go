@@ -78,13 +78,15 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 		if err := filepath.Walk(rootPath, func(name string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err // stop on any error
-			} else if name == "plz-out" || (info.IsDir() && strings.HasPrefix(info.Name(), ".") && name != ".") {
+			} else if name == core.OutDir || (info.IsDir() && strings.HasPrefix(info.Name(), ".") && name != ".") {
 				return filepath.SkipDir // Don't walk output or hidden directories
 			} else if info.IsDir() && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
 				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
 			} else if isABuildFile(info.Name(), config) && !info.IsDir() {
 				dir, _ := path.Split(name)
 				ch <- strings.TrimRight(dir, "/")
+			} else if name == config.Please.ExperimentalDir {
+				return filepath.SkipDir // Skip the experimental directory if it's set
 			}
 			// Check against blacklist
 			for _, dir := range config.Please.BlacklistDirs {

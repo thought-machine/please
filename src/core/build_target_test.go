@@ -10,6 +10,7 @@ import (
 )
 
 func TestCanSee(t *testing.T) {
+	NewBuildState(1, nil, 1, DefaultConfiguration())
 	target1 := makeTarget("//src/build/python:lib1", "")
 	target2 := makeTarget("//src/build/python:lib2", "PUBLIC")
 	target3 := makeTarget("//src/test/python:lib3", "//src/test/...")
@@ -32,6 +33,20 @@ func TestCanSee(t *testing.T) {
 
 	// Targets in that subtree can though.
 	assert.True(t, target4.CanSee(target3), "couldn't see target within its visibility spec")
+}
+
+func TestCanSeeExperimental(t *testing.T) {
+	config := DefaultConfiguration()
+	config.Please.ExperimentalDir = "experimental"
+	NewBuildState(1, nil, 1, config)
+
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//experimental/user:target2", "PUBLIC")
+
+	// target2 can see target1 since it's in experimental, which suppress normal visibility constraints.
+	assert.True(t, target2.CanSee(target1))
+	// target1 can't see target2 because it's in experimental, even though it's public.
+	assert.False(t, target1.CanSee(target2))
 }
 
 func TestCheckDependencyVisibility(t *testing.T) {
