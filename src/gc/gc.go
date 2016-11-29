@@ -22,18 +22,22 @@ var log = logging.MustGetLogger("gc")
 type targetMap map[*core.BuildTarget]bool
 
 // GarbageCollect initiates the garbage collection logic.
-func GarbageCollect(graph *core.BuildGraph, targets []core.BuildLabel, conservative bool) {
+func GarbageCollect(graph *core.BuildGraph, targets []core.BuildLabel, conservative, targetsOnly, srcsOnly bool) {
 	if targets := targetsToRemove(graph, targets, conservative); len(targets) > 0 {
-		fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), graph.Len())
-		for _, target := range targets {
-			fmt.Printf("  %s\n", target)
+		if !srcsOnly {
+			fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), graph.Len())
+			for _, target := range targets {
+				fmt.Printf("  %s\n", target)
+			}
 		}
-		fmt.Fprintf(os.Stderr, "Corresponding source files to remove:\n")
-		for _, target := range targets {
-			for _, src := range graph.TargetOrDie(target).AllSources() {
-				// Make sure we only check local file labels (not system files or anything)
-				if file, ok := src.(core.FileLabel); ok {
-					fmt.Printf("  %s\n", file.Paths(graph)[0])
+		if !targetsOnly {
+			fmt.Fprintf(os.Stderr, "Corresponding source files to remove:\n")
+			for _, target := range targets {
+				for _, src := range graph.TargetOrDie(target).AllSources() {
+					// Make sure we only check local file labels (not system files or anything)
+					if file, ok := src.(core.FileLabel); ok {
+						fmt.Printf("  %s\n", file.Paths(graph)[0])
+					}
 				}
 			}
 		}
