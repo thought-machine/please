@@ -80,9 +80,9 @@ func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, includeT
 				for _, dep := range target.DeclaredDependencies() {
 					depTarget := graph.TargetOrDie(dep)
 					if keepTargets[depTarget] {
-						keepTargets[target] = true
+						addTarget(graph, keepTargets, target)
 					} else if depTarget.TestOnly {
-						keepTargets[depTarget] = true
+						addTarget(graph, keepTargets, depTarget)
 					}
 				}
 			}
