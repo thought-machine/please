@@ -9,6 +9,7 @@ package gc
 
 import (
 	"fmt"
+	"os"
 	"sort"
 
 	"gopkg.in/op/go-logging.v1"
@@ -21,13 +22,23 @@ var log = logging.MustGetLogger("gc")
 type targetMap map[*core.BuildTarget]bool
 
 // GarbageCollect initiates the garbage collection logic.
-func GarbageCollect(graph *core.BuildGraph, targets []core.BuildLabel) {
-	// First scan - anything that we're sure is garbage (i.e. orphaned libraries with no test)
-	if targets := targetsToRemove(graph, targets, true); len(targets) > 0 {
-		fmt.Printf("Targets that aren't depended on by anything:\n")
+func GarbageCollect(graph *core.BuildGraph, targets []core.BuildLabel, conservative bool) {
+	if targets := targetsToRemove(graph, targets, conservative); len(targets) > 0 {
+		fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), graph.Len())
 		for _, target := range targets {
 			fmt.Printf("  %s\n", target)
 		}
+		fmt.Fprintf(os.Stderr, "Corresponding source files to remove:\n")
+		for _, target := range targets {
+			for _, src := range graph.TargetOrDie(target).AllSources() {
+				// Make sure we only check local file labels (not system files or anything)
+				if file, ok := src.(core.FileLabel); ok {
+					fmt.Printf("  %s\n", file.Paths(graph)[0])
+				}
+			}
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "Nothing to remove\n")
 	}
 }
 

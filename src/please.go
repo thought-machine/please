@@ -152,7 +152,8 @@ var opts struct {
 	} `command:"init" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
-		Args struct {
+		Conservative bool `short:"c" long:"conservative" description:"Runs a more conservative / safer GC."`
+		Args         struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to keep in the repo regardless."`
 		} `positional-args:"true"`
 	} `command:"gc" description:"Analyzes the repo to determine unneeded targets."`
@@ -321,7 +322,7 @@ var buildFunctions = map[string]func() bool{
 		success, state := runBuild(core.WholeGraph, false, false, false)
 		if success {
 			state.OriginalTargets = append(opts.Gc.Args.Targets, state.Config.Gc.Keep...)
-			gc.GarbageCollect(state.Graph, state.ExpandOriginalTargets())
+			gc.GarbageCollect(state.Graph, state.ExpandOriginalTargets(), opts.Gc.Conservative)
 		}
 		return success
 	},
