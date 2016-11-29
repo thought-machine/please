@@ -311,6 +311,17 @@
     trickier since you'd often want to couple that with a VC operation (i.e. <code>git rm</code>)
     and by design plz is unaware of the VCS in use.</p>
 
+  <p>There are a few flags controlling it:
+    <ul>
+	  <li><code>-c</code>, <code>--conservative</code><br/>
+	    Uses a more conservative algorithm (specifically any tests will keep their targets).</li>
+	  <li><code>-t</code>, <code>--targets_only</code><br/>
+	    Only prints the targets to be removed (not sources). Useful to pipe them into another program.</li>
+	  <li><code>-t</code>, <code>--srcs_only</code><br/>
+	    Only prints the sources to be removed (not targets). Useful to pipe them into another program.</li>
+    </ul>
+  </p>
+
   <h2>plz op</h2>
 
     <p>Re-runs whatever the previous command was.</p>

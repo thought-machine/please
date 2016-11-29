@@ -256,8 +256,11 @@
 
     <ul>
       <li><b>Keep</b> (build label)<br/>
-        Marks targets that gc should always keep. Can include meta-labels such as
+        Marks targets that gc should always keep. Can include meta-targets such as
         <code>//test/...</code> and <code>//docs:all</code>.</li>
+      <li><b>KeepLabel</b><br/>
+        Defines a target label to be kept; for example, if you set this to <code>go</code>,
+        no Go targets would ever be considered for deletion.</li>
     </ul>
 
     <h3>[Go]</h3>
