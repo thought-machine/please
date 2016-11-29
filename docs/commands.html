@@ -297,7 +297,20 @@
       </ul>
     </p>
 
+  <h2>plz gc</h2>
+
+  <p>Runs a basic "garbage collection" step, which attempts to identify targets that
+    aren't in use. This is still fairly experimental since the definition of "not used"
+    isn't always very clear (for example, ideally simply having a test on a library that
+    isn't otherwise used would not be enough to keep both of those). Because of this it
+    suggests a set of targets that it's pretty sure aren't used at all, and a secondary
+    set that it's less sure on.</p>
+
+  <p>Right now the name is a bit misleading since it finds but doesn't collect the garbage;
+    ideally it'd be able to rewrite the BUILD files itself. Deleting sources is a little
+    trickier since you'd often want to couple that with a VC operation (i.e. <code>git rm</code>)
+    and by design plz is unaware of the VCS in use.</p>
+
   <h2>plz op</h2>
 
     <p>Re-runs whatever the previous command was.</p>
-
