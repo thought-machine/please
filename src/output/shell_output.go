@@ -502,7 +502,10 @@ func colouriseError(err error) error {
 			if groups[3] != "" {
 				groups[3] = ", column " + groups[3]
 			}
-			msg = append(msg, fmt.Sprintf("${BOLD_WHITE}%s, line %s%s:${RESET} ${BOLD_RED}%s:${RESET} ${BOLD_WHITE}%s${RESET}", groups[1], groups[2], groups[3], groups[4], groups[5]))
+			if groups[4] != "" {
+				groups[4] += ": "
+			}
+			msg = append(msg, fmt.Sprintf("${BOLD_WHITE}%s, line %s%s:${RESET} ${BOLD_RED}%s${RESET}${BOLD_WHITE}%s${RESET}", groups[1], groups[2], groups[3], groups[4], groups[5]))
 		} else {
 			msg = append(msg, line)
 		}
