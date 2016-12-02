@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -95,6 +96,12 @@ func (pkg *Package) AllChildren(target *BuildTarget) []*BuildTarget {
 	}
 	sort.Sort(ret)
 	return ret
+}
+
+// IsIncludedIn returns true if the given build label would include this package.
+// e.g. //src/... includes the packages src and src/core but not src2.
+func (pkg *Package) IsIncludedIn(label BuildLabel) bool {
+	return pkg.Name == label.PackageName || strings.HasPrefix(pkg.Name, label.PackageName+"/")
 }
 
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.

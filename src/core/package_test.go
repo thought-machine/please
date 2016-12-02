@@ -53,3 +53,10 @@ func TestFindOwningPackages(t *testing.T) {
 	pkgs := FindOwningPackages([]string{"src/core/test_data/test_subfolder1/whatever.txt"})
 	assert.Equal(t, []BuildLabel{ParseBuildLabel("//src/core/test_data:all", "")}, pkgs)
 }
+
+func TestIsIncludedIn(t *testing.T) {
+	label := BuildLabel{PackageName: "src", Name: "..."}
+	assert.True(t, NewPackage("src").IsIncludedIn(label))
+	assert.True(t, NewPackage("src/core").IsIncludedIn(label))
+	assert.False(t, NewPackage("src2").IsIncludedIn(label))
+}

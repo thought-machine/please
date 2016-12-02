@@ -34,3 +34,19 @@ func TestParent(t *testing.T) {
 	label3 := BuildLabel{PackageName: "src/core", Name: "_core_something"}
 	assert.Equal(t, label3, label3.Parent())
 }
+
+func TestUnmarshalFlag(t *testing.T) {
+	var label BuildLabel
+	assert.NoError(t, label.UnmarshalFlag("//src/core:core"))
+	assert.Equal(t, label.PackageName, "src/core")
+	assert.Equal(t, label.Name, "core")
+	// N.B. we can't test a failure here because it does a log.Fatalf
+}
+
+func TestUnmarshalText(t *testing.T) {
+	var label BuildLabel
+	assert.NoError(t, label.UnmarshalText([]byte("//src/core:core")))
+	assert.Equal(t, label.PackageName, "src/core")
+	assert.Equal(t, label.Name, "core")
+	assert.Error(t, label.UnmarshalText([]byte(":blahblah:")))
+}

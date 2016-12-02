@@ -17,6 +17,7 @@ import (
 	"clean"
 	"cli"
 	"core"
+	"gc"
 	"metrics"
 	"output"
 	"parse"
@@ -149,6 +150,12 @@ var opts struct {
 		Dir                string `long:"dir" description:"Directory to create config in" default:"."`
 		BazelCompatibility bool   `long:"bazel_compat" description:"Initialises config for Bazel compatibility mode."`
 	} `command:"init" description:"Initialises a .plzconfig file in the current directory"`
+
+	Gc struct {
+		Conservative bool `short:"c" long:"conservative" description:"Runs a more conservative / safer GC."`
+		TargetsOnly  bool `short:"t" long:"targets_only" description:"Only print the targets to delete"`
+		SrcsOnly     bool `short:"s" long:"srcs_only" description:"Only print the source files to delete"`
+	} `command:"gc" description:"Analyzes the repo to determine unneeded targets."`
 
 	Query struct {
 		Deps struct {
@@ -309,6 +316,15 @@ var buildFunctions = map[string]func() bool{
 		}
 		log.Fatalf("SORRY OP: %s", err) // On success Exec never returns.
 		return false
+	},
+	"gc": func() bool {
+		success, state := runBuild(core.WholeGraph, false, false, false)
+		if success {
+			state.OriginalTargets = state.Config.Gc.Keep
+			gc.GarbageCollect(state.Graph, state.ExpandOriginalTargets(), state.Config.Gc.KeepLabel,
+				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly)
+		}
+		return success
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {

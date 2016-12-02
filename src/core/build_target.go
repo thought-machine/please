@@ -666,6 +666,18 @@ func (target *BuildTarget) AllSources() []BuildInput {
 	return ret
 }
 
+// AllLocalSources returns all the "local" sources of this rule, i.e. all sources that are
+// actually sources in the repo, not other rules or system srcs etc.
+func (target *BuildTarget) AllLocalSources() []string {
+	ret := []string{}
+	for _, src := range target.AllSources() {
+		if file, ok := src.(FileLabel); ok {
+			ret = append(ret, file.Paths(nil)[0])
+		}
+	}
+	return ret
+}
+
 // HasSource returns true if this target has the given file as a source (named or not).
 func (target *BuildTarget) HasSource(source string) bool {
 	for _, src := range target.AllSources() {
@@ -775,6 +787,11 @@ func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
 		return nil
 	}
 	return graph.Target(parent)
+}
+
+// HasParent returns true if the target has a parent rule that's not itself.
+func (target *BuildTarget) HasParent() bool {
+	return target.Label.Parent() != target.Label
 }
 
 // IsFilegroup returns true if this target is a filegroup rule.

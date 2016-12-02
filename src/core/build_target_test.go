@@ -326,6 +326,15 @@ func TestParent(t *testing.T) {
 	assert.Equal(t, (*BuildTarget)(nil), parent.Parent(graph))
 }
 
+func TestHasParent(t *testing.T) {
+	grandchild := makeTarget("//src/core:__target1#child#grandchild", "")
+	child := makeTarget("//src/core:_target1#child", "", grandchild)
+	parent := makeTarget("//src/core:target1", "", child)
+	assert.True(t, grandchild.HasParent())
+	assert.True(t, child.HasParent())
+	assert.False(t, parent.HasParent())
+}
+
 func TestOutMode(t *testing.T) {
 	// Check that output modes match the binary flag correctly.
 	// This feels a little fatuous but it's hard to have any less specific assertions on it.
@@ -347,6 +356,14 @@ func TestOutputOrdering(t *testing.T) {
 	target2.AddOutput("file1.txt")
 	assert.Equal(t, target1.DeclaredOutputs(), target2.DeclaredOutputs())
 	assert.Equal(t, target1.Outputs(), target2.Outputs())
+}
+
+func TestAllLocalSources(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	target.AddSource(FileLabel{File: "target1.go", Package: "src/core"})
+	target.AddSource(BuildLabel{Name: "target2", PackageName: "src/core"})
+	target.AddSource(SystemFileLabel{Path: "/usr/bin/bash"})
+	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSources())
 }
 
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {

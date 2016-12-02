@@ -272,6 +272,14 @@ func (label *BuildLabel) UnmarshalFlag(value string) error {
 	return nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+// This is used by gcfg to unmarshal the config files.
+func (label *BuildLabel) UnmarshalText(text []byte) error {
+	l, err := TryParseBuildLabel(string(text), "")
+	*label = l
+	return err
+}
+
 // Parent returns what would be the parent of a build label, or the label itself if it's parentless.
 // Note that there is not a concrete guarantee that the returned label exists in the build graph,
 // and that the label returned is the ultimate ancestor (ie. not necessarily immediate parent).
