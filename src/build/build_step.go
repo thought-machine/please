@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/op/go-logging.v1"
@@ -23,6 +24,13 @@ var log = logging.MustGetLogger("build")
 
 // Type that indicates that we're stopping the build of a target in a nonfatal way.
 var stopTarget = fmt.Errorf("stopping build")
+
+// buildingFilegroupOutputs is used to track any file that's being built by a filegroup right now.
+// This avoids race conditions with them where two filegroups can race to build the same file
+// simultaneously (that's impossible with other targets because we prohibit two rules from
+// outputting the same file, for this and other reasons).
+var buildingFilegroupOutputs = map[string]*sync.Mutex{}
+var buildingFilegroupMutex sync.Mutex
 
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	start := time.Now()
@@ -337,6 +345,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 	// file because other things might be using it already (because more than one filegroup can
 	// own the same file).
 	if filegroup && realOutputExists && core.IsSameFile(tmpOutput, realOutput) {
+		log.Debug("real output %s is same file", realOutput)
 		movePathHash(tmpOutput, realOutput, filegroup) // make sure this is updated regardless
 		return false, nil
 	}
@@ -368,12 +377,6 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 		}
 	} else {
 		if err := core.RecursiveCopyFile(tmpOutput, realOutput, target.OutMode(), filegroup, false); err != nil {
-			if filegroup && os.IsExist(err) && core.IsSameFile(tmpOutput, realOutput) {
-				// It's possible for two filegroups to race building simultaneously. In that
-				// case one will fail with an ErrExist, which is OK as far as we're concerned
-				// here as long as the file we tried to write really is the same as the input.
-				return true, nil
-			}
 			return true, err
 		}
 	}
@@ -512,7 +515,7 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 		fullPaths := source.FullPaths(state.Graph)
 		for i, sourcePath := range source.LocalPaths(state.Graph) {
 			outPath := path.Join(outDir, sourcePath)
-			c, err := moveOutput(target, fullPaths[i], outPath, true)
+			c, err := buildFilegroupFile(target, fullPaths[i], outPath)
 			if err != nil {
 				return err
 			}
@@ -535,6 +538,23 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
 	return nil
+}
+
+func buildFilegroupFile(target *core.BuildTarget, fromPath, toPath string) (bool, error) {
+	buildingFilegroupMutex.Lock()
+	m, present := buildingFilegroupOutputs[toPath]
+	if !present {
+		m = &sync.Mutex{}
+		buildingFilegroupOutputs[toPath] = m
+	}
+	m.Lock()
+	buildingFilegroupMutex.Unlock()
+	changed, err := moveOutput(target, fromPath, toPath, true)
+	m.Unlock()
+	buildingFilegroupMutex.Lock()
+	delete(buildingFilegroupOutputs, toPath)
+	buildingFilegroupMutex.Unlock()
+	return changed, err
 }
 
 func createInitPy(dir string) {
