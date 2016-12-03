@@ -65,13 +65,3 @@ pip_library(
     outs = ['google'],
     deps = [':six'],
 )
-
-pip_library(
-    name = 'enum',
-    package_name = 'enum34',
-    version = '1.0.4',
-    outs = ['enum'],
-    hashes = [
-        'sha1: ce61fd8ab8ec1390ce3c42d3d042d7dded9ed205',
-    ],
-)

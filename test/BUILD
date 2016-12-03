@@ -392,3 +392,28 @@ gentest(
     no_test_output = True,
     test_cmd = 'test ! -L test/symlink_test.txt',
 )
+
+# This rule tests the no_test_output flag. If that isn't honoured
+# plz would report a test failure because results were missing.
+gentest(
+    name = 'no_test_output_test',
+    no_test_output = True,
+    test_cmd = 'echo SUCCESS',
+)
+
+# This tests that data files exist in the correct location, and
+# indirectly performs a basic test of sh_test which we don't use elsewhere.
+sh_test(
+    name = 'data_files_test',
+    src = 'data_files_test.sh',
+    data = ['container_data.txt'],
+)
+
+# This test is here as a convenience to test the flakiness functionality.
+# It's just using random internally so won't pass consistently.
+python_test(
+    name = 'flakiness_test',
+    srcs = ['flakiness_test.py'],
+    flaky = 5,
+    labels = ['manual'],
+)

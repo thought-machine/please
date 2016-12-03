@@ -73,9 +73,3 @@ maven_jar(
     hash = 'ed118aa0276005ca49b18a3a2b77eaacdec95680',
     sources = False,
 )
-
-maven_jar(
-    name = 'protoc-gen-grpc-java',
-    id = 'io.grpc:protoc-gen-grpc-java:0.15.0',
-    binary = True,
-)
