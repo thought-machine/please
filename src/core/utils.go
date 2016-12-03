@@ -279,8 +279,9 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 			}
 		} else {
 			// This is a dependency of the rule, so link its outputs.
+			outDir := dependency.OutDir()
 			for _, dep := range dependency.Outputs() {
-				depPath := path.Join(dependency.OutDir(), dep)
+				depPath := path.Join(outDir, dep)
 				tmpPath := path.Join(tmpDir, dependency.Label.PackageName, dep)
 				if !donePaths[tmpPath] {
 					ch <- sourcePair{depPath, tmpPath}
@@ -382,8 +383,9 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool)
 
 	var inner func(*BuildTarget)
 	inner = func(target *BuildTarget) {
+		outDir := target.OutDir()
 		for _, out := range target.Outputs() {
-			pushOut(path.Join(target.OutDir(), out), out)
+			pushOut(path.Join(outDir, out), out)
 		}
 		for _, data := range target.Data {
 			fullPaths := data.FullPaths(graph)

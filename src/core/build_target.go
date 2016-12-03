@@ -311,6 +311,7 @@ func (target *BuildTarget) DeclaredOutputs() []string {
 func (target *BuildTarget) Outputs() []string {
 	var ret []string
 	if target.IsFilegroup() {
+		ret = make([]string, 0, len(target.Sources))
 		// Filegroups just re-output their inputs.
 		for _, src := range target.Sources {
 			if label := src.Label(); label == nil {
@@ -709,7 +710,7 @@ func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 func (target *BuildTarget) toolPath() string {
 	outputs := target.Outputs()
 	ret := make([]string, len(outputs))
-	for i, o := range target.Outputs() {
+	for i, o := range outputs {
 		ret[i], _ = filepath.Abs(path.Join(target.OutDir(), o))
 	}
 	return strings.Join(ret, " ")
