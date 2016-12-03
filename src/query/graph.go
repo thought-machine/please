@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"sync"
 
 	"build"
 	"core"
@@ -12,11 +13,16 @@ import (
 
 // QueryGraph prints a representation of the build graph as JSON.
 func QueryGraph(graph *core.BuildGraph, targets []core.BuildLabel) {
-	b, err := json.MarshalIndent(makeJSONGraph(graph, targets), "", "    ")
+	log.Notice("Generating graph...")
+	g := makeJSONGraph(graph, targets)
+	log.Notice("Marshalling...")
+	b, err := json.MarshalIndent(g, "", "    ")
 	if err != nil {
 		log.Fatalf("Failed to serialise JSON: %s\n", err)
 	}
+	log.Notice("Writing...")
 	fmt.Println(string(b))
+	log.Notice("Done")
 }
 
 // JSONGraph is an alternate representation of our build graph; will contain different information
@@ -27,6 +33,7 @@ type JSONGraph struct {
 
 // JSONPackage is an alternate representation of a build package
 type JSONPackage struct {
+	name    string                `json:"-"` // Only used internally.
 	Targets map[string]JSONTarget `json:"targets"`
 }
 
@@ -48,8 +55,8 @@ type JSONTarget struct {
 func makeJSONGraph(graph *core.BuildGraph, targets []core.BuildLabel) *JSONGraph {
 	ret := JSONGraph{Packages: map[string]JSONPackage{}}
 	if len(targets) == 0 {
-		for name, pkg := range graph.PackageMap() {
-			ret.Packages[name] = makeJSONPackage(graph, pkg)
+		for pkg := range makeAllPackages(graph) {
+			ret.Packages[pkg.name] = pkg
 		}
 	} else {
 		done := map[core.BuildLabel]struct{}{}
@@ -58,6 +65,25 @@ func makeJSONGraph(graph *core.BuildGraph, targets []core.BuildLabel) *JSONGraph
 		}
 	}
 	return &ret
+}
+
+// makeAllPackages constructs all the JSONPackage objects for this graph in parallel.
+func makeAllPackages(graph *core.BuildGraph) <-chan JSONPackage {
+	ch := make(chan JSONPackage, 100)
+	go func() {
+		packages := graph.PackageMap()
+		var wg sync.WaitGroup
+		wg.Add(len(packages))
+		for _, pkg := range packages {
+			go func(pkg *core.Package) {
+				ch <- makeJSONPackage(graph, pkg)
+				wg.Done()
+			}(pkg)
+		}
+		wg.Wait()
+		close(ch)
+	}()
+	return ch
 }
 
 func addJSONTarget(graph *core.BuildGraph, ret *JSONGraph, label core.BuildLabel, done map[core.BuildLabel]struct{}) {
@@ -92,7 +118,7 @@ func makeJSONPackage(graph *core.BuildGraph, pkg *core.Package) JSONPackage {
 	for name, target := range pkg.Targets {
 		targets[name] = makeJSONTarget(graph, target)
 	}
-	return JSONPackage{Targets: targets}
+	return JSONPackage{name: pkg.Name, Targets: targets}
 }
 
 func makeJSONTarget(graph *core.BuildGraph, target *core.BuildTarget) JSONTarget {

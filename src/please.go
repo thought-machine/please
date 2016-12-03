@@ -400,6 +400,9 @@ var buildFunctions = map[string]func() bool{
 	},
 	"graph": func() bool {
 		return runQuery(true, opts.Query.Graph.Args.Targets, func(state *core.BuildState) {
+			if len(opts.Query.Graph.Args.Targets) == 0 {
+				state.OriginalTargets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
+			}
 			query.QueryGraph(state.Graph, state.ExpandOriginalTargets())
 		})
 	},
