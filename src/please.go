@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"runtime/pprof"
 	"strings"
 	"syscall"
 
@@ -67,7 +68,7 @@ var opts struct {
 		KeepWorkdirs       bool `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 	} `group:"Options that enable / disable certain features"`
 
-	AssertVersion    string `long:"assert_version" hidden:"true" description:"Assert the tool matches this version."`
+	Profile          string `long:"profile" hidden:"true" description:"Write profiling output to this file"`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	NoCacheCleaner   bool   `description:"Don't start a cleaning process for the directory cache" no-flag:"true"`
 
@@ -558,9 +559,6 @@ func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
 
 // readConfig sets various things up and reads the initial configuration.
 func readConfig(forceUpdate bool) *core.Configuration {
-	if opts.AssertVersion != "" && core.PleaseVersion.String() != opts.AssertVersion {
-		log.Fatalf("Requested Please version %s, but this is version %s", opts.AssertVersion, core.PleaseVersion)
-	}
 	if opts.FeatureFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
 	}
@@ -660,6 +658,17 @@ func main() {
 		}
 		parser = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, strings.Fields(argv))
 		command = activeCommand(parser)
+	}
+
+	if opts.Profile != "" {
+		f, err := os.Create(opts.Profile)
+		if err != nil {
+			log.Fatalf("Failed to open profile file: %s", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatalf("could not start profiler: %s", err)
+		}
+		defer pprof.StopCPUProfile()
 	}
 
 	if !buildFunctions[command]() {
