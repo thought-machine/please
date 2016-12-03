@@ -212,7 +212,6 @@ def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility
         srcs=srcs,
         deps=deps,
         exported_deps=exported_deps,
-        outs=srcs,
         cmd='__FILEGROUP__',
         visibility=visibility,
         building_description='Copying...',

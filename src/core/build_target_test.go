@@ -143,12 +143,13 @@ func TestOutputs(t *testing.T) {
 	target1 := makeTarget("//src/core:target1", "PUBLIC")
 	target1.AddOutput("file1.go")
 	target1.AddOutput("file2.go")
-	target2 := makeTarget("//src/test:target2", "PUBLIC", target1)
-	target2.AddOutput("//src/core:target1")
-	target2.AddOutput("file3.go")
-	target3 := makeTarget("//src/test:target3", "PUBLIC", target2)
-	target3.AddOutput(":target2")
-	target3.AddOutput("file4.go")
+	target2 := makeFilegroup("//src/test:target2", "PUBLIC", target1)
+	target2.AddSource(target1.Label)
+	addFilegroupSource(target2, "file3.go")
+	target3 := makeFilegroup("//src/test:target3", "PUBLIC", target2)
+	target3.AddSource(target2.Label)
+	addFilegroupSource(target3, "file4.go")
+	target3.Command = filegroupCommand
 
 	assert.Equal(t, []string{"file1.go", "file2.go"}, target1.Outputs())
 	assert.Equal(t, []string{"file1.go", "file2.go", "file3.go"}, target2.Outputs())
@@ -184,18 +185,18 @@ func TestAddProvide(t *testing.T) {
 }
 
 func TestCheckDuplicateOutputs(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "PUBLIC")
-	target3 := makeTarget("//src/core:target3", "PUBLIC")
-	target2 := makeTarget("//src/core:target2", "PUBLIC", target1, target3)
-	target1.AddOutput("thingy.txt")
-	target3.AddOutput("thingy.txt")
+	target1 := makeFilegroup("//src/core:target1", "PUBLIC")
+	target3 := makeFilegroup("//src/core:target3", "PUBLIC")
+	target2 := makeFilegroup("//src/core:target2", "PUBLIC", target1, target3)
+	addFilegroupSource(target1, "thingy.txt")
+	addFilegroupSource(target3, "thingy.txt")
 	assert.NoError(t, target1.CheckDuplicateOutputs())
-	target2.AddOutput(target1.Label.String())
-	target2.AddOutput(target1.Label.String())
+	target2.AddSource(target1.Label)
+	target2.AddSource(target1.Label)
 	// Not an error yet because AddOutput deduplicates trivially identical outputs.
 	assert.NoError(t, target2.CheckDuplicateOutputs())
 	// Will fail now we add the same output to another target.
-	target2.AddOutput(target3.Label.String())
+	target2.AddSource(target3.Label)
 	assert.Error(t, target2.CheckDuplicateOutputs())
 }
 
@@ -378,4 +379,14 @@ func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 		target.resolveDependency(dep.Label, dep)
 	}
 	return target
+}
+
+func makeFilegroup(label, visibility string, deps ...*BuildTarget) *BuildTarget {
+	target := makeTarget(label, visibility, deps...)
+	target.Command = filegroupCommand
+	return target
+}
+
+func addFilegroupSource(target *BuildTarget, source string) {
+	target.AddSource(FileLabel{Package: target.Label.PackageName, File: source})
 }

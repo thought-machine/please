@@ -308,35 +308,24 @@ func (target *BuildTarget) DeclaredOutputs() []string {
 }
 
 // Outputs returns a slice of all the outputs of this rule.
-// Recall that outputs can be defined as the name of another rule to indicate that
-// a rule collects and re-outputs them; that is expanded here.
 func (target *BuildTarget) Outputs() []string {
-	ret := []string{}
-	for _, out := range target.outputs {
-		if LooksLikeABuildLabel(out) {
-			label := ParseBuildLabel(out, target.Label.PackageName)
-			ret = append(ret, target.findOutputTarget(label, out)...)
-		} else {
-			ret = append(ret, out)
+	var ret []string
+	if target.IsFilegroup() {
+		// Filegroups just re-output their inputs.
+		for _, src := range target.Sources {
+			if label := src.Label(); label == nil {
+				ret = append(ret, src.LocalPaths(nil)[0])
+			} else {
+				for _, dep := range target.DependenciesFor(*label) {
+					ret = append(ret, dep.Outputs()...)
+				}
+			}
 		}
+	} else {
+		ret = target.outputs
 	}
 	sort.Strings(ret)
 	return ret
-}
-
-// findOutputTarget finds, among this target's dependencies, the target that outputs
-// the given label, and returns its outputs.
-func (target *BuildTarget) findOutputTarget(label BuildLabel, out string) []string {
-	for _, deps := range target.dependencies {
-		if deps.declared == label {
-			ret := []string{}
-			for _, dep := range deps.deps {
-				ret = append(ret, dep.Outputs()...)
-			}
-			return ret
-		}
-	}
-	panic(fmt.Sprintf("Target %s declares outputs of %s but they're not a resolved dependency of it", target.Label, out))
 }
 
 // Returns the source paths for a given set of sources.
