@@ -3,12 +3,12 @@ python_binary(
     out = 'please_pex',
     main = 'pex.py',
     shebang = '/usr/bin/env python',
-    visibility = ['PUBLIC'],
     deps = [
         ':main_files',
         '//third_party/python:pex',
         '//third_party/python:pkg_resources',
     ],
+    visibility = ['PUBLIC'],
 )
 
 python_library(
@@ -55,7 +55,6 @@ build_rule(
     ]),
     needs_transitive_deps = True,
     output_is_complete = True,
-    visibility = ['PUBLIC'],
     deps = [
         # Depending on these private targets is not nice, but works around
         # a circular dependency because this tool is used to precompile the library.
@@ -65,6 +64,7 @@ build_rule(
         '//third_party/python:_xmlrunner#install',
         '//third_party/python:_coverage#install',
     ],
+    visibility = ['PUBLIC'],
 )
 
 python_test(
@@ -74,28 +74,4 @@ python_test(
         '//third_party/python:dateutil',
         '//third_party/python:requests',
     ],
-)
-
-# Used to test zip-safety flags.
-python_test(
-    name = 'zip_unsafe_test',
-    srcs = ['zip_unsafe_test.py'],
-    labels = ['cc'],  # Depends on cc rules to build
-    deps = [
-        '//src/build/cc:so_test_py',
-    ],
-)
-
-# Tests for a subtle case where python_test rules should get a pex when
-# specified as data, but not when depending directly.
-python_binary(
-    name = 'data_dep',
-    main = 'data_dep.py',
-)
-
-python_test(
-    name = 'data_dep_test',
-    srcs = ['data_dep_test.py'],
-    data = [':data_dep'],
-    deps = [':data_dep'],
 )

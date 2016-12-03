@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "src/build/cc/clang/embedded_files.h"
+#include "test/cc_rules/clang/embedded_files.h"
 
 
 int main(int argc, char** argv) {

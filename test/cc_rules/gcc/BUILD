@@ -52,7 +52,7 @@ python_library(
     srcs = ['__init__.py'],
     resources = [':so_test'],
     zip_safe = False,
-    visibility = ['//src/build/python/...'],
+    visibility = ['//test/python_rules/...'],
 )
 
 python_test(

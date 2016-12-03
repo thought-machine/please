@@ -44,3 +44,27 @@ sh_test(
     src = 'rule_main_test.sh',
     data = [':rule_main_pex'],
 )
+
+# Used to test zip-safety flags.
+python_test(
+    name = 'zip_unsafe_test',
+    srcs = ['zip_unsafe_test.py'],
+    labels = ['cc'],  # Depends on cc rules to build
+    deps = [
+        '//test/cc_rules/gcc:so_test_py',
+    ],
+)
+
+# Tests for a subtle case where python_test rules should get a pex when
+# specified as data, but not when depending directly.
+python_binary(
+    name = 'data_dep',
+    main = 'data_dep.py',
+)
+
+python_test(
+    name = 'data_dep_test',
+    srcs = ['data_dep_test.py'],
+    data = [':data_dep'],
+    deps = [':data_dep'],
+)

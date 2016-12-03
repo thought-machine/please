@@ -4,7 +4,7 @@
 #include <string>
 #include <Python.h>
 
-#include "src/build/cc/embedded_files.h"
+#include "test/cc_rules/clang/embedded_files.h"
 
 
 namespace thought_machine {
