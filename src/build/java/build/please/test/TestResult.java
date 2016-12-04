@@ -1,7 +1,7 @@
 package build.please.test;
 
 final class TestResult {
-  // Result of an individual JUnit test. Heavily based on Buck's version.
+  // Result of an individual JUnit test.
 
   final String testClassName;
   final String testMethodName;
@@ -28,6 +28,6 @@ final class TestResult {
   }
 
   public boolean isSuccess() {
-    return type == "SUCCESS";
+    return type.equals("SUCCESS");
   }
 }

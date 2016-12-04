@@ -34,6 +34,8 @@ import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 
 public class TestCoverage {
   // Class handling coverage instrumentation using Jacoco.
@@ -168,7 +170,7 @@ public class TestCoverage {
     Map<String, String> sourceMap = new HashMap<>();
     try {
       InputStream is = TestCoverage.class.getClassLoader().getResourceAsStream("META-INF/please_sourcemap");
-      BufferedReader br = new BufferedReader(new InputStreamReader(is));
+      BufferedReader br = new BufferedReader(new InputStreamReader(is, UTF_8));
       for(String line; (line = br.readLine()) != null; ) {
         String[] parts = line.trim().split(" ");
         if (parts.length == 2) {
