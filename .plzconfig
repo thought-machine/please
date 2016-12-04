@@ -35,7 +35,7 @@ defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 
 [java]
-javacworker = //src/build/java/build/please/compile:server
+javacworker = //src/build/java:please_javac
 jarcattool = //src/build/java:jarcat
 junitrunner = //src/build/java:junit_runner
 pleasemaventool = //src/build/java:please_maven

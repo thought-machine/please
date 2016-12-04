@@ -9,12 +9,5 @@ java_library(
         '//src/build/proto:worker',
         '//third_party/java:guava',
     ],
-)
-
-java_binary(
-    name = 'server',
-    main_class = 'build.please.compile.JavaCompiler',
-    self_executable = True,
-    deps = [':compile'],
-    visibility = ['PUBLIC'],
+    visibility = ['//src/build/java:all'],
 )

@@ -29,18 +29,6 @@ public class JavaCompiler {
         ExecutorService executor = Executors.newFixedThreadPool(8);
         final byte[] readBuffer = new byte[4];
         final byte[] writeBuffer = new byte[4];
-        // Periodic heartbeat to the parent, to make sure that we exit when it goes away.
-        /*
-        new Thread(){
-            @Override
-            public void run() {
-                while (true) {
-
-                }
-            }
-        }.run();
-        */
-
         while (true) {
             try {
                 readStdin(readBuffer);

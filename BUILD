@@ -9,6 +9,7 @@ filegroup(
         '//src/build/go:please_go_test',
         '//src/build/java:jarcat',
         '//src/build/java:junit_runner',
+        '//src/build/java:please_javac',
         '//src/build/java:please_maven',
         '//src/build/python:please_pex',
         '//src/cache/main:cache_cleaner',
