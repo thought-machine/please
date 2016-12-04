@@ -2,7 +2,6 @@ package build.please.test;
 
 import java.lang.Class;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.ArrayList;
@@ -29,12 +28,9 @@ import org.w3c.dom.Element;
 
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.internal.builders.JUnit4Builder;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
-import org.junit.runner.Computer;
 import org.junit.runner.Request;
-import org.junit.runner.Runner;
 import org.junit.runner.manipulation.Filter;
 
 import com.google.common.reflect.ClassPath;

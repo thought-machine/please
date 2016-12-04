@@ -4,7 +4,7 @@ java_library(
     exported_deps = [
         '//third_party/java:guava',
         '//third_party/java:hamcrest',
-        '//third_party/java:jacoco',
+        '//third_party/java/jacoco',
         '//third_party/java:junit',
     ],
     visibility = ['//src/build/java/...'],

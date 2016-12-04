@@ -12,37 +12,10 @@ maven_jar(
     hash = 'sha1: 6e72502584462b2d35a7a6a18fc5541c412f08cc',
 )
 
-maven_jars(
-    name = 'guava',
-    id = 'com.google.guava:guava:18.0',
-    exclude = ['jsr305'],
-    hashes = {
-        'guava': 'sha1: 8908f57125132a4468ea9977705a83f61b94fa89',
-    },
-)
-
-maven_jars(
-    name = 'jacoco',
-    id = 'org.jacoco:jacoco:0.7.6.201602180812',
-    deps_only = True,
-    exclude = [
-        'org.jacoco.ant',
-        'org.jacoco.doc',
-        'org.jacoco.examples',
-        'asm-debug-all',
-    ],
-    hashes = {
-        'org.jacoco.report': 'sha1: fe79a683193a3e897e734add5abae9af27eedf13',
-        'org.jacoco.agent': 'sha1: 536da5bb74368a21bf322dff9413c23c7b595b61',
-        'org.jacoco.core': 'sha1: ecd020a32fdfc96c6c845422978b362e11bdde5d',
-    },
-    deps = [':asm'],
-)
-
 maven_jar(
-    name = 'asm',
-    id = 'org.ow2.asm:asm-debug-all:5.0.4',
-    hash = 'sha1: 079196a08a86094763068ac621ba90c73c2efa34',
+    name = 'guava',
+    id = 'com.google.guava:guava:20.0',
+    hash = 'sha1: 8908f57125132a4468ea9977705a83f61b94fa89',
 )
 
 maven_jar(
