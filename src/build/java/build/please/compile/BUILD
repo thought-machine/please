@@ -7,7 +7,6 @@ java_library(
     srcs = glob(['*.java']),
     deps = [
         '//src/build/proto:worker',
-        '//third_party/java:guava',
     ],
     visibility = ['//src/build/java:all'],
 )

@@ -29,4 +29,17 @@ class FileFinder extends SimpleFileVisitor<Path> {
   public List<String> getFiles() {
     return files;
   }
+
+  /**
+   * Returns the list of files, joined by the given delimiter.
+   */
+  public String joinFiles(char delimiter) {
+    StringBuilder sb = new StringBuilder();
+    for (String file : files) {
+      sb.append(file);
+      sb.append(delimiter);
+    }
+    sb.deleteCharAt(sb.length() - 1);
+    return sb.toString();
+  }
 }

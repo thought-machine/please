@@ -1,8 +1,5 @@
 package build.please.compile;
 
-import com.google.common.base.Joiner;
-
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -123,7 +120,7 @@ public class JavaCompiler {
         FileFinder finder = new FileFinder(".jar");
         Files.walkFileTree(new File(request.getTempDir()).toPath(), finder);
         opts.add("-classpath");
-        opts.add(Joiner.on(':').join(finder.getFiles()));
+        opts.add(finder.joinFiles(':'));
         return builder
             .setRule(request.getRule())
             .setSuccess(compiler.getTask(writer, fileManager, reporter, opts, null, compilationUnits).call())
