@@ -10,6 +10,12 @@ Version 7.1.0
        - Please doesn't descend into the experimental tree for commands like `plz test //...`
          so tests in there wouldn't generally be run.
     * New command, `plz gc`, which attempts to identify unused targets across the repo.
+      "GC roots" are inferred from non-test binary targets, but can also be specified in .plzconfig.
+    * `plz query revdeps` no longer prints the targets it was given in the first place.
+    * More careful locking when building filegroups to avoid some race conditions.
+    * `plz query graph` is now better optimised for the case of outputting the entire graph,
+      which should be close to twice as fast as before.
+    * filegroup() now honours the `hashes` argument correctly.
 
 
 Version 7.0.8
