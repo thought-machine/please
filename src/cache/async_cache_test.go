@@ -132,5 +132,7 @@ func makeCaches() (mockCache, core.Cache) {
 		completed: make(map[*core.BuildTarget]bool),
 		stored:    make(map[*core.BuildTarget][]string),
 	}
-	return mCache, newAsyncCache(&mCache, core.DefaultConfiguration())
+	config := core.DefaultConfiguration()
+	config.Cache.Workers = 10
+	return mCache, newAsyncCache(&mCache, config)
 }
