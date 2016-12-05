@@ -1,3 +1,11 @@
+Version 7.1.1
+-------------
+
+    * Reverted an internal update to guava which broke some Java tests.
+      In future we'll look more at compatibility here, ideally it shouldn't matter but it's
+      not fully obvious what is best to do.
+
+
 Version 7.1.0
 -------------
 
