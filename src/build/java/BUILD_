@@ -8,7 +8,7 @@ java_binary(
 )
 
 java_binary(
-    name = 'please_javac',
+    name = 'javac_worker',
     out = 'javac_worker',
     main_class = 'build.please.compile.JavaCompiler',
     self_executable = True,
