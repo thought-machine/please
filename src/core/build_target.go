@@ -323,7 +323,9 @@ func (target *BuildTarget) Outputs() []string {
 			}
 		}
 	} else {
-		ret = target.outputs
+		// Must really copy the slice before sorting it ([:] is too shallow)
+		ret = make([]string, len(target.outputs))
+		copy(ret, target.outputs)
 	}
 	sort.Strings(ret)
 	return ret
