@@ -106,7 +106,6 @@ public class JavaCompiler {
         opts.addAll(Arrays.asList(
             "-d", tmpDir,
             "-s", tmpDir,
-            "-h", tmpDir,
             "-sourcepath", request.getTempDir()));
         opts.addAll(request.getOptsList());
         if (opts.contains("--src_dir")) {
