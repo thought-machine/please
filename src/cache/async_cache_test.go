@@ -78,6 +78,33 @@ func TestConcurrentStores(t *testing.T) {
 	assert.Equal(t, expected, stored)
 }
 
+func TestLotsOfConcurrentStores(t *testing.T) {
+	// Throw a lot of concurrent store / store extra actions at the cache and make sure
+	// it does it in order.
+	const n = 10
+	var wg sync.WaitGroup
+	wg.Add(n)
+	mCache, aCache := makeCaches()
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			target := makeTarget(fmt.Sprintf("//test_pkg:target%03d", i))
+			aCache.Store(target, nil)
+			aCache.StoreExtra(target, nil, fmt.Sprintf("file%03d", i))
+			aCache.StoreExtra(target, nil, fmt.Sprintf("file%03d_2", i))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	assert.Equal(t, n, len(mCache.stored))
+	for target, stored := range mCache.stored {
+		assert.Equal(t, []string{
+			"",
+			"file" + target.Label.Name[len(target.Label.Name)-3:],
+			"file" + target.Label.Name[len(target.Label.Name)-3:] + "_2",
+		}, stored)
+	}
+}
+
 // Fake cache implementation to ensure our async cache behaves itself.
 type mockCache struct {
 	sync.Mutex
