@@ -177,19 +177,19 @@
   font-size: 24px;
 }
 .asciinema-player:hover .control-bar {
-  color: #ffffff;
+  color: #bbbbbb;
 }
 .asciinema-player:hover .control-bar .progressbar .bar .gutter span {
-  background-color: #ffffff;
+  background-color: #bbbbbb;
 }
 .asciinema-player:hover .control-bar svg.icon path {
-  fill: #ffffff;
+  fill: #bbbbbb;
 }
 .asciinema-player .control-bar {
   width: 100%;
   height: 32px;
   background-color: #000;
-  color: #bbbbbb;
+  color: #999999;
   border-top: 1px solid #222;
   box-sizing: content-box;
   line-height: 1;
@@ -199,7 +199,7 @@
   font-size: 0;
 }
 .asciinema-player .control-bar svg.icon path {
-  fill: #bbbbbb;
+  fill: #999999;
 }
 .asciinema-player .control-bar .playback-button {
   display: block;
@@ -259,7 +259,7 @@
 .asciinema-player .control-bar .progressbar .bar .gutter span {
   display: inline-block;
   height: 100%;
-  background-color: #bbbbbb;
+  background-color: #999999;
   border-radius: 3px;
 }
 .asciinema-player .control-bar.live .progressbar .bar {
