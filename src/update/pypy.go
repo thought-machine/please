@@ -17,17 +17,16 @@ const url = "https://bitbucket.org/squeaky/portable-pypy/downloads/pypy-5.6-linu
 // We use this to try to deal with the case where there is no loadable interpreter.
 // It also simplifies installation instructions on Linux where we can't use upstream packages
 // often because they aren't built with --enable-shared.
-// It returns the location of the downloaded libpypy-c.so
-func DownloadPyPy(config *core.Configuration) (string, bool) {
+func DownloadPyPy(config *core.Configuration) bool {
 	log.Notice("Checking if we've got a PyPy instance ready...")
-	dest := core.ExpandHomePath(path.Join(config.Please.Location, "pypy"))
+	dest := core.GenDir + "/_remote/_pypy"
 	so := path.Join(dest, "bin/libpypy-c.so")
 	if core.PathExists(so) {
 		log.Notice("Found PyPy at %s", so)
-		return so, true
+		return false
 	}
 	log.Warning("Attempting to download a portable PyPy distribution...")
-	return so, downloadPyPy(dest)
+	return downloadPyPy(dest)
 }
 
 func downloadPyPy(destination string) bool {

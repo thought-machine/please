@@ -180,16 +180,9 @@ func initialiseInterpreterFrom(enginePath string, attemptDownload bool) bool {
 		// This is a pretty brittle check, but there is no other interface available, and
 		// we don't want to download PyPy unless we think that'll solve the problem.
 		if attemptDownload && strings.Contains(dlerror, "libpypy-c.so: cannot open shared object file") && runtime.GOOS == "linux" {
-			if so, ok := update.DownloadPyPy(core.State.Config); ok {
-				// Downloading PyPy succeeded, try to dlopen the binary.
-				log.Debug("Attempting dlopen of %s", so)
-				if C.dlopen(C.CString(so), C.RTLD_NOW|C.RTLD_GLOBAL) != nil {
-					// dlopen() worked, try to initialise again
-					return initialiseInterpreterFrom(enginePath, false)
-				} else {
-					log.Error("Failed to dlopen() downloaded PyPy instance: %s", C.GoString(C.dlerror()))
-					return false
-				}
+			if update.DownloadPyPy(core.State.Config) {
+				// Downloading PyPy succeeded, try to initialise again
+				return initialiseInterpreterFrom(enginePath, false)
 			}
 		}
 		// Low level of logging because it's allowable to fail on libplease_parser_pypy, which we try first.
