@@ -47,6 +47,10 @@ const subincludePackage = "_remote"
 // we need to wait for another target to build.
 const pyDeferParse = "_DEFER_"
 
+// Communicated back from C to indicate various error states.
+const dlopenError = 1
+const cffiUnavailable = 3
+
 // To ensure we only initialise once.
 var initializeOnce sync.Once
 
@@ -175,7 +179,10 @@ func initialiseInterpreterFrom(enginePath string, attemptDownload bool) bool {
 	cEnginePath := C.CString(enginePath)
 	defer C.free(unsafe.Pointer(cEnginePath))
 	result := C.InitialiseInterpreter(cEnginePath)
-	if result != 0 {
+	if result == 0 {
+		log.Info("Using parser engine from %s", enginePath)
+		return true
+	} else if result == dlopenError {
 		dlerror := C.GoString(C.dlerror())
 		// This is a pretty brittle check, but there is no other interface available, and
 		// we don't want to download PyPy unless we think that'll solve the problem.
@@ -187,10 +194,12 @@ func initialiseInterpreterFrom(enginePath string, attemptDownload bool) bool {
 		}
 		// Low level of logging because it's allowable to fail on libplease_parser_pypy, which we try first.
 		log.Notice("Failed to initialise interpreter from %s: %s", enginePath, dlerror)
-		return false
+	} else if result == cffiUnavailable {
+		log.Warning("cannot use %s, cffi unavailable", enginePath)
+	} else {
+		log.Notice("Failed to initialise interpreter from %s: %s", enginePath, C.GoString(C.dlerror()))
 	}
-	log.Info("Using parser engine from %s", enginePath)
-	return true
+	return false
 }
 
 // libExtension returns the typical extension of shared objects on the current platform.
