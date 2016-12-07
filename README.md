@@ -19,17 +19,13 @@ The easiest way to install it on your own machine is to run:
 curl -s https://get.please.build | bash
 ```
 In order for it to run you will need a Python interpreter available.
-You can use either PyPy or CPython with cffi. On OSX PyPy is fairly
-straightforward with Homebrew, simply run `brew install pypy`.
-
-Unfortunately at the time of writing the Ubuntu and Debian PyPy packages
-don't have the shared libraries. For now we suggest that you use the
-packages from http://pypy.org.
+You can use either PyPy or CPython with cffi; on Linux Please will
+attempt to download a portable version of PyPy if a system one isn't
+available, on OSX installation is fairly straightforward with Homebrew,
+simply run `brew install pypy`.
 
 Alternatively, you've likely got CPython installed already, and installing
-cffi is as simple as `sudo pip install "cffi>=1.5.0"`. You can also use
-apt-get but be sure you are getting a sufficiently recent version, older
-distros (e.g. Trusty) may not package something new enough.
+cffi is as simple as `sudo pip install "cffi>=1.5.0"`.
 
 Then you simply run `plz init` at the root of your project to set up
 a default config and you're good to start adding BUILD files.
