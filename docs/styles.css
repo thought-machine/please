@@ -55,6 +55,9 @@ pre {
     border-radius: 3px;
     padding: 2px;
     color: white;
+    overflow-y: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 :not(pre) > code {
     border: 1px #666666 solid;
