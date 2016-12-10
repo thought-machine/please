@@ -41,13 +41,13 @@
       (Javascript, Python, Java and Go) plus several smaller pieces (some C++ and Thrax grammars) and
       having to invoke different compilers and/or test tools for each one would be extremely tiresome.</p>
 
-    <p>Initially we tried Gradle for a while, since the oldest parts of our codebase are Java and we
-      strongly preferred its file format over Ant and Maven. Extending it to other languages didn't
-      look easy and even for a single-language project, Please is considerably faster.</p>
-
     <p>Please can also integrate many different kinds of build steps; for example a code generation
       step using <code>go generate</code> or <code>protoc</code> can be invoked dynamically without
       having to check the resulting code into the repository.</p>
+
+    <p>We've tried other tools (notably Gradle and Buck) internally and ultimately decided that
+      we could build something that would either better fit our needs, be considerably faster,
+      or both.</p>
 
 
     <h3>Why use Please instead of Bazel, Buck or Pants?</h3>
@@ -59,7 +59,7 @@
       open sourced as Bazel but by then we were already using Please internally. It's a great system but
       we have slightly different goals, specifically we're aiming Please at being lighter weight and
       pushing the boundaries of what can be done within the BUILD language. Since Please is written in
-      Go there's no runtime dependency on the JVM (unless you have Java rules in your repo, of course).
+      Go there's no runtime dependency on the JVM.
     </p>
 
     <p>We actually used Buck for some months internally before deciding to write Please and before it
@@ -177,6 +177,11 @@
       We intend to move them into this repo as we can, but the ones left aren't easy to genericise
       for various reasons.</p>
 
+    <p>There are some additional rules available at
+      <a href="https://github.com/thought-machine/pleasings">https://github.com/thought-machine/pleasings</a>,
+      which are either not well tested enough that we want to build them in, or are
+      sufficiently esoteric that we don't want the build process for Please to require them.</p>
+
 
     <h3>How does the versioning scheme work? What are the compatibility guarantees?</h3>
 
@@ -208,7 +213,10 @@
 
     <p>Like this:</p>
 
-    <div id="output-player"></div>
+    <asciinema-player src="https://please.build/plz-recording.json"></asciinema-player>
+
+    <p>The appearance is somewhat inspired by Buck, although we have put some of our own
+      spin on it as well.</p>
 
     <h3>What do the colours in the console output mean?</h3>
 

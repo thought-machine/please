@@ -33,6 +33,12 @@ func TestCanSee(t *testing.T) {
 
 	// Targets in that subtree can though.
 	assert.True(t, target4.CanSee(target3), "couldn't see target within its visibility spec")
+
+	// Sub-targets can see things visible to their parents.
+	target5 := makeTarget("//src/build/python:lib5", "//src/test/python:test5")
+	target6 := makeTarget("//src/test/python:_test5#pex", "")
+	assert.True(t, target6.CanSee(target5))
+	assert.False(t, target5.CanSee(target6))
 }
 
 func TestCanSeeExperimental(t *testing.T) {

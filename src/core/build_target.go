@@ -396,7 +396,7 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 		return false
 	}
 	for _, vis := range dep.Visibility {
-		if vis.includes(target.Label) {
+		if vis.includes(target.Label.Parent()) {
 			return true
 		}
 	}
