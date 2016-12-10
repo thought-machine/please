@@ -64,6 +64,9 @@ type BuildTarget struct {
 	IsBinary bool
 	// True if this target is a test
 	IsTest bool
+	// Indicates that the target can only be depended on by tests or other rules with this set.
+	// Used to restrict non-deployable code and also affects coverage detection.
+	TestOnly bool
 	// True if we're going to containerise the test.
 	Containerise bool
 	// True if the target is a test and has no output file.
@@ -119,9 +122,6 @@ type BuildTarget struct {
 	// Timeouts for build/test actions
 	BuildTimeout time.Duration
 	TestTimeout  time.Duration
-	// Indicates that the target can only be depended on by tests or other rules with this set.
-	// Used to restrict non-deployable code and also affects coverage detection.
-	TestOnly bool
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string
