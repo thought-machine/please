@@ -275,7 +275,7 @@ func IsValidTargetName(name *C.char) bool {
 
 //export AddTarget
 func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary, test, needsTransitiveDeps,
-	outputIsComplete, containerise, noTestOutput, testOnly, stamp bool,
+	outputIsComplete, containerise, noTestOutput, testOnly, stamp, filegroup bool,
 	flakiness, buildTimeout, testTimeout int, cBuildingDescription *C.char) (ret C.size_t) {
 	buildingDescription := ""
 	if cBuildingDescription != nil {
@@ -283,13 +283,13 @@ func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary, test, need
 	}
 	return sizet(addTarget(pkgPtr, C.GoString(cName), C.GoString(cCmd), C.GoString(cTestCmd),
 		binary, test, needsTransitiveDeps, outputIsComplete, containerise, noTestOutput,
-		testOnly, stamp, flakiness, buildTimeout, testTimeout, buildingDescription))
+		testOnly, stamp, filegroup, flakiness, buildTimeout, testTimeout, buildingDescription))
 }
 
 // addTarget adds a new build target to the graph.
 // Separated from AddTarget to make it possible to test (since you can't mix cgo and go test).
 func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTransitiveDeps,
-	outputIsComplete, containerise, noTestOutput, testOnly, stamp bool,
+	outputIsComplete, containerise, noTestOutput, testOnly, stamp, filegroup bool,
 	flakiness, buildTimeout, testTimeout int, buildingDescription string) *core.BuildTarget {
 	pkg := unsizep(pkgPtr)
 	target := core.NewBuildTarget(core.NewBuildLabel(pkg.Name, name))
@@ -304,6 +304,7 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTra
 	target.BuildTimeout = time.Duration(buildTimeout) * time.Second
 	target.TestTimeout = time.Duration(testTimeout) * time.Second
 	target.Stamp = stamp
+	target.IsFilegroup = filegroup
 	// Automatically label containerised tests.
 	if containerise {
 		target.AddLabel("container")
@@ -318,8 +319,10 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTra
 	if buildingDescription != "" {
 		target.BuildingDescription = buildingDescription
 	}
-	target.Command = cmd
-	target.TestCommand = testCmd
+	if !filegroup {
+		target.Command = cmd
+		target.TestCommand = testCmd
+	}
 	if _, present := pkg.Targets[name]; present {
 		// NB. Not logged as an error because Python is now allowed to catch it.
 		//     It will turn into an error later if the exception is not caught.

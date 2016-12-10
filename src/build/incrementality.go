@@ -352,6 +352,10 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	if target.Stamp {
 		hashBool(h, target.Stamp)
 	}
+	// Similarly here.
+	if target.IsFilegroup {
+		hashBool(h, target.IsFilegroup)
+	}
 	for _, require := range target.Requires {
 		h.Write([]byte(require))
 	}
@@ -438,7 +442,7 @@ func postBuildOutputFileName(target *core.BuildTarget) string {
 // output to feed to it
 func loadPostBuildOutput(state *core.BuildState, target *core.BuildTarget) string {
 	// Normally filegroups don't have post-build functions, but we use this sometimes for testing.
-	if target.IsFilegroup() {
+	if target.IsFilegroup {
 		return ""
 	}
 	out, err := ioutil.ReadFile(postBuildOutputFileName(target))

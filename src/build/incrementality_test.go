@@ -22,6 +22,7 @@ var KnownFields = map[string]bool{
 	"NamedSources":                true,
 	"IsBinary":                    true,
 	"IsTest":                      true,
+	"IsFilegroup":                 true,
 	"Command":                     true,
 	"Commands":                    true,
 	"TestCommand":                 true,

@@ -209,14 +209,12 @@ def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility
     return build_rule(
         name=name,
         tag=tag,
+        cmd='',
         srcs=srcs,
         deps=deps,
         exported_deps=exported_deps,
-        cmd='__FILEGROUP__',
         visibility=visibility,
         building_description='Copying...',
-        # This fixes some issues; I think it's reasonable that the outputs of filegroups
-        # are treated just as files without any transitive deps.
         output_is_complete=output_is_complete,
         requires=requires,
         provides=provides,
@@ -224,6 +222,7 @@ def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility
         labels=labels,
         binary=binary,
         hashes=hashes,
+        _filegroup=True,
     )
 
 

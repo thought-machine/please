@@ -10,7 +10,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 	for _, label := range labels {
 		target := graph.TargetOrDie(label)
 		fmt.Printf("%s:\n", label)
-		if target.IsFilegroup() {
+		if target.IsFilegroup {
 			fmt.Printf("  filegroup(\n")
 		} else {
 			fmt.Printf("  build_rule(\n")
@@ -33,7 +33,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			}
 			fmt.Printf("      },\n")
 		}
-		if len(target.DeclaredOutputs()) > 0 && !target.IsFilegroup() {
+		if len(target.DeclaredOutputs()) > 0 && !target.IsFilegroup {
 			fmt.Printf("      outs = [\n")
 			for _, out := range target.DeclaredOutputs() {
 				fmt.Printf("          '%s',\n", out)
@@ -41,7 +41,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			fmt.Printf("      ],\n")
 		}
 		stringList("optional_outs", target.OptionalOutputs)
-		if !target.IsFilegroup() {
+		if !target.IsFilegroup {
 			if target.Command == "" {
 				pythonDict(target.Commands, "cmd")
 			} else {
@@ -55,7 +55,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 		pythonBool("binary", target.IsBinary)
 		pythonBool("test", target.IsTest)
 		pythonBool("needs_transitive_deps", target.NeedsTransitiveDependencies)
-		if !target.IsFilegroup() {
+		if !target.IsFilegroup {
 			pythonBool("output_is_complete", target.OutputIsComplete)
 			if target.BuildingDescription != core.DefaultBuildingDescription {
 				fmt.Printf("      building_description = '%s',\n", target.BuildingDescription)

@@ -51,7 +51,7 @@ func TestBuildLotsOfTargets(t *testing.T) {
 func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 	// Create and add a new target, with a parent and a dependency.
 	target := core.NewBuildTarget(label(i))
-	target.Command = "__FILEGROUP__" // Will mean it doesn't have to shell out to anything.
+	target.IsFilegroup = true // Will mean it doesn't have to shell out to anything.
 	target.SetState(core.Active)
 	state.Graph.AddTarget(target)
 	if i <= size {

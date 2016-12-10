@@ -236,7 +236,7 @@ func newPyFilegroup(state *core.BuildState, label, filename string) *core.BuildT
 	target.AddSource(core.FileLabel{File: filename, Package: target.Label.PackageName})
 	target.AddOutput(filename)
 	target.AddLabel("py")
-	target.Command = "__FILEGROUP__" // magic
+	target.IsFilegroup = true
 	state.Graph.AddTarget(target)
 	return target
 }

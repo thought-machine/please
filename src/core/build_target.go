@@ -18,9 +18,6 @@ const TmpDir string = "plz-out/tmp"
 const GenDir string = "plz-out/gen"
 const BinDir string = "plz-out/bin"
 
-// Placeholder command for filegroups.
-const filegroupCommand = "__FILEGROUP__"
-
 // Default when this isn't otherwise specified.
 const DefaultBuildingDescription = "Building..."
 
@@ -84,6 +81,8 @@ type BuildTarget struct {
 	// If true, the rule is given an env var at build time that contains the hash of its
 	// transitive dependencies, which can be used to identify the output in a predictable way.
 	Stamp bool
+	// Marks the target as a filegroup.
+	IsFilegroup bool
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings
 	// Results of test, if it is one
@@ -310,7 +309,7 @@ func (target *BuildTarget) DeclaredOutputs() []string {
 // Outputs returns a slice of all the outputs of this rule.
 func (target *BuildTarget) Outputs() []string {
 	var ret []string
-	if target.IsFilegroup() {
+	if target.IsFilegroup {
 		ret = make([]string, 0, len(target.Sources))
 		// Filegroups just re-output their inputs.
 		for _, src := range target.Sources {
@@ -789,11 +788,6 @@ func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
 // HasParent returns true if the target has a parent rule that's not itself.
 func (target *BuildTarget) HasParent() bool {
 	return target.Label.Parent() != target.Label
-}
-
-// IsFilegroup returns true if this target is a filegroup rule.
-func (target *BuildTarget) IsFilegroup() bool {
-	return target.Command == filegroupCommand
 }
 
 // Make slices of these guys sortable.

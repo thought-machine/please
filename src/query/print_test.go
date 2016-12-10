@@ -22,6 +22,7 @@ var KnownFields = map[string]bool{
 	"Hashes":                      true,
 	"IsBinary":                    true,
 	"IsTest":                      true,
+	"IsFilegroup":                 true,
 	"Label":                       true, // this includes the target's name
 	"Labels":                      true,
 	"Licences":                    true,

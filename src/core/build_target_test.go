@@ -155,7 +155,6 @@ func TestOutputs(t *testing.T) {
 	target3 := makeFilegroup("//src/test:target3", "PUBLIC", target2)
 	target3.AddSource(target2.Label)
 	addFilegroupSource(target3, "file4.go")
-	target3.Command = filegroupCommand
 
 	assert.Equal(t, []string{"file1.go", "file2.go"}, target1.Outputs())
 	assert.Equal(t, []string{"file1.go", "file2.go", "file3.go"}, target2.Outputs())
@@ -389,7 +388,7 @@ func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 
 func makeFilegroup(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := makeTarget(label, visibility, deps...)
-	target.Command = filegroupCommand
+	target.IsFilegroup = true
 	return target
 }
 

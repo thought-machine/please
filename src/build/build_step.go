@@ -94,7 +94,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
 	var postBuildOutput string
 	if state.PrepareOnly && state.IsOriginalTarget(target.Label) {
-		if target.IsFilegroup() {
+		if target.IsFilegroup {
 			return fmt.Errorf("Filegroup targets don't have temporary directories")
 		}
 		if err := prepareDirectories(target); err != nil {
@@ -118,7 +118,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			log.Debug("Rebuilding %s after post-build function", target.Label)
 		}
 	}
-	if target.IsFilegroup() {
+	if target.IsFilegroup {
 		log.Debug("Building %s...", target.Label)
 		return buildFilegroup(tid, state, target)
 	}
