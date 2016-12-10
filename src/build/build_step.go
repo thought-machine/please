@@ -155,7 +155,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		// what we would retrieve from the cache.
 		if target.PostBuildFunction != 0 {
 			log.Debug("Checking for post-build output file for %s in cache...", target.Label)
-			if state.Cache.RetrieveExtra(target, cacheKey, core.PostBuildOutputFileName(target)) {
+			if state.Cache.RetrieveExtra(target, cacheKey, target.PostBuildOutputFileName()) {
 				postBuildOutput = runPostBuildFunctionIfNeeded(tid, state, target)
 				if retrieveArtifacts() {
 					return nil
@@ -223,9 +223,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			if !bytes.Equal(newCacheKey, cacheKey) {
 				// NB. Important this is stored with the earlier hash - if we calculate the hash
 				//     now, it might be different, and we could of course never retrieve it again.
-				state.Cache.StoreExtra(target, cacheKey, core.PostBuildOutputFileName(target))
+				state.Cache.StoreExtra(target, cacheKey, target.PostBuildOutputFileName())
 			} else {
-				extraOuts = append(extraOuts, core.PostBuildOutputFileName(target))
+				extraOuts = append(extraOuts, target.PostBuildOutputFileName())
 			}
 		}
 		state.Cache.Store(target, newCacheKey, extraOuts...)

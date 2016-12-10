@@ -488,10 +488,6 @@ func PrepareSourcePair(pair sourcePair) error {
 	return PrepareSource(path.Join(RepoRoot, pair.Src), pair.Tmp)
 }
 
-func PostBuildOutputFileName(target *BuildTarget) string {
-	return ".build_output_" + target.Label.Name
-}
-
 // CollapseHash combines our usual four-part hash into one by XOR'ing them together.
 // This helps keep things short in places where sometimes we get complaints about filenames being too long (?)
 // and where we don't especially care about breaking out the individual parts of hashes, which

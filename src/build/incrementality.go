@@ -431,7 +431,7 @@ func ruleHashFileName(target *core.BuildTarget) string {
 }
 
 func postBuildOutputFileName(target *core.BuildTarget) string {
-	return path.Join(target.OutDir(), core.PostBuildOutputFileName(target))
+	return path.Join(target.OutDir(), target.PostBuildOutputFileName())
 }
 
 // For targets that have post-build functions, we have to store and retrieve the target's

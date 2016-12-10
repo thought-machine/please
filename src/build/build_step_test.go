@@ -262,7 +262,7 @@ func (*mockCache) Retrieve(target *core.BuildTarget, key []byte) bool {
 }
 
 func (*mockCache) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {
-	if target.Label.Name == "target10" && file == core.PostBuildOutputFileName(target) {
+	if target.Label.Name == "target10" && file == target.PostBuildOutputFileName() {
 		ioutil.WriteFile(postBuildOutputFileName(target), []byte("retrieved from cache"), 0664)
 		return true
 	}

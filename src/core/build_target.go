@@ -769,6 +769,11 @@ func (target *BuildTarget) OutMode() os.FileMode {
 	return 0444
 }
 
+// PostBuildOutputFileName returns the post-build output file for this target.
+func (target *BuildTarget) PostBuildOutputFileName() string {
+	return ".build_output_" + target.Label.Name
+}
+
 // Parent finds the parent of a build target, or nil if the target is parentless.
 // Note that this is a fairly informal relationship; we identify it by labels with the convention of
 // a leading _ and trailing hashtag on child rules, rather than storing pointers between them in the graph.
