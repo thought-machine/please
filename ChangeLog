@@ -1,3 +1,12 @@
+Version 7.2.0
+-------------
+
+    * Support for caches to store asynchronously, so further build actions don't have to
+      wait on network latency. Retrieves must still happen synchronously, of course.
+      The cache request scheme is also a little more efficient and will make slightly
+      fewer requests overall.
+
+
 Version 7.1.1
 -------------
 

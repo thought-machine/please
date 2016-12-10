@@ -109,8 +109,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
-	// Temporarily disabled, we are not 100% sure it is working correctly.
-	// config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
+	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
 	config.Cache.RpcMaxMsgSize.UnmarshalFlag("200MiB")
 	config.Metrics.PushFrequency = cli.Duration(400 * time.Millisecond)
 	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)

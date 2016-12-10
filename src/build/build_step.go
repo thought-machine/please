@@ -220,9 +220,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
 		newCacheKey := mustShortTargetHash(state, target)
 		if target.PostBuildFunction != 0 {
-			// NB. Important this is stored with the earlier hash - if we calculate the hash
-			//     now, it might be different, and we could of course never retrieve it again.
-			extraOuts = append(extraOuts, core.PostBuildOutputFileName(target))
+			if !bytes.Equal(newCacheKey, cacheKey) {
+				// NB. Important this is stored with the earlier hash - if we calculate the hash
+				//     now, it might be different, and we could of course never retrieve it again.
+				(*state.Cache).StoreExtra(target, cacheKey, core.PostBuildOutputFileName(target))
+			} else {
+				extraOuts = append(extraOuts, core.PostBuildOutputFileName(target))
+			}
 		}
 		(*state.Cache).Store(target, newCacheKey, extraOuts...)
 	}
