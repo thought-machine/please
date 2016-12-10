@@ -60,7 +60,7 @@ type BuildState struct {
 	// Level of verbosity during the build
 	Verbosity int
 	// Cache to store / retrieve old build results.
-	Cache *Cache
+	Cache Cache
 	// Targets that we were originally requested to build
 	OriginalTargets []BuildLabel
 	// Arguments to tests.
@@ -279,7 +279,7 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 	return ret
 }
 
-func NewBuildState(numThreads int, cache *Cache, verbosity int, config *Configuration) *BuildState {
+func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configuration) *BuildState {
 	State = &BuildState{
 		Graph:             NewGraph(),
 		pendingTasks:      queue.NewPriorityQueue(10000, true), // big hint, why not

@@ -468,7 +468,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config
 	}
-	var c *core.Cache
+	var c core.Cache
 	if !opts.FeatureFlags.NoCache {
 		c = cache.NewCache(config)
 	}
@@ -516,7 +516,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.OutputFlags.TraceFile)
 	metrics.Stop()
 	if c != nil {
-		(*c).Shutdown()
+		c.Shutdown()
 	}
 	return success, state
 }

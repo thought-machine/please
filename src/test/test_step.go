@@ -104,15 +104,14 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if state.Cache == nil {
 			return true
 		}
-		cache := *state.Cache
-		if !cache.RetrieveExtra(target, hash, resultsFileName) {
+		if !state.Cache.RetrieveExtra(target, hash, resultsFileName) {
 			return true
 		}
-		if needCoverage && !cache.RetrieveExtra(target, hash, coverageFileName) {
+		if needCoverage && !state.Cache.RetrieveExtra(target, hash, coverageFileName) {
 			return true
 		}
 		for _, output := range target.TestOutputs {
-			if !cache.RetrieveExtra(target, hash, output) {
+			if !state.Cache.RetrieveExtra(target, hash, output) {
 				return true
 			}
 		}
@@ -353,7 +352,7 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 		return err
 	}
 	if state.Cache != nil {
-		(*state.Cache).StoreExtra(target, hash, filename)
+		state.Cache.StoreExtra(target, hash, filename)
 	}
 	return nil
 }

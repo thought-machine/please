@@ -13,16 +13,15 @@ import (
 var log = logging.MustGetLogger("cache")
 
 // NewCache is the factory function for creating a cache setup from the given config.
-func NewCache(config *core.Configuration) *core.Cache {
+func NewCache(config *core.Configuration) core.Cache {
 	c := newSyncCache(config)
 	if config.Cache.Workers > 0 {
-		c := newAsyncCache(*c, config)
-		return &c
+		return newAsyncCache(c, config)
 	}
 	return c
 }
 
-func newSyncCache(config *core.Configuration) *core.Cache {
+func newSyncCache(config *core.Configuration) core.Cache {
 	mplex := &cacheMultiplexer{}
 	if config.Cache.Dir != "" {
 		mplex.caches = append(mplex.caches, newDirCache(config))
@@ -46,11 +45,9 @@ func newSyncCache(config *core.Configuration) *core.Cache {
 	if len(mplex.caches) == 0 {
 		return nil
 	} else if len(mplex.caches) == 1 {
-		return &mplex.caches[0] // Skip the extra layer of indirection
-	} else {
-		var cache core.Cache = *mplex
-		return &cache
+		return mplex.caches[0] // Skip the extra layer of indirection
 	}
+	return mplex
 }
 
 // A cacheMultiplexer multiplexes several caches into one.

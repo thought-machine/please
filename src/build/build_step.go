@@ -155,7 +155,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		// what we would retrieve from the cache.
 		if target.PostBuildFunction != 0 {
 			log.Debug("Checking for post-build output file for %s in cache...", target.Label)
-			if (*state.Cache).RetrieveExtra(target, cacheKey, core.PostBuildOutputFileName(target)) {
+			if state.Cache.RetrieveExtra(target, cacheKey, core.PostBuildOutputFileName(target)) {
 				postBuildOutput = runPostBuildFunctionIfNeeded(tid, state, target)
 				if retrieveArtifacts() {
 					return nil
@@ -223,12 +223,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			if !bytes.Equal(newCacheKey, cacheKey) {
 				// NB. Important this is stored with the earlier hash - if we calculate the hash
 				//     now, it might be different, and we could of course never retrieve it again.
-				(*state.Cache).StoreExtra(target, cacheKey, core.PostBuildOutputFileName(target))
+				state.Cache.StoreExtra(target, cacheKey, core.PostBuildOutputFileName(target))
 			} else {
 				extraOuts = append(extraOuts, core.PostBuildOutputFileName(target))
 			}
 		}
-		(*state.Cache).Store(target, newCacheKey, extraOuts...)
+		state.Cache.Store(target, newCacheKey, extraOuts...)
 	}
 	// Clean up the temporary directory once it's done.
 	if state.CleanWorkdirs {
@@ -464,7 +464,7 @@ func checkRuleHashes(target *core.BuildTarget, hash []byte) error {
 
 func retrieveFromCache(state *core.BuildState, target *core.BuildTarget) ([]byte, bool) {
 	hash := mustShortTargetHash(state, target)
-	return hash, (*state.Cache).Retrieve(target, hash)
+	return hash, state.Cache.Retrieve(target, hash)
 }
 
 // Runs the post-build function for a target if it's got one.

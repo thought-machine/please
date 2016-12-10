@@ -56,7 +56,7 @@ func cleanTarget(state *core.BuildState, target *core.BuildTarget, cleanCache bo
 		}
 	}
 	if cleanCache && state.Cache != nil {
-		(*state.Cache).Clean(target)
+		state.Cache.Clean(target)
 	}
 }
 

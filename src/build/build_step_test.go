@@ -123,7 +123,7 @@ func TestCacheRetrieval(t *testing.T) {
 	state, target := newState("//package1:target8")
 	target.AddOutput("file8")
 	target.Command = "false" // Will fail if we try to build it.
-	state.Cache = &cache
+	state.Cache = cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Cached, target.State())
@@ -143,7 +143,7 @@ func TestPostBuildFunctionAndCache(t *testing.T) {
 		return nil
 	}
 	target.PostBuildFunction = reflect.ValueOf(&f).Pointer()
-	state.Cache = &cache
+	state.Cache = cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
@@ -165,7 +165,7 @@ func TestPostBuildFunctionAndCache2(t *testing.T) {
 		return nil
 	}
 	target.PostBuildFunction = reflect.ValueOf(&f).Pointer()
-	state.Cache = &cache
+	state.Cache = cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
