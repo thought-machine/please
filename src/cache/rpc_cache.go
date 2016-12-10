@@ -42,12 +42,12 @@ type rpcCache struct {
 	maxMsgSize int
 }
 
-func (cache *rpcCache) Store(target *core.BuildTarget, key []byte) {
+func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, files ...string) {
 	if cache.isConnected() && cache.Writeable {
 		log.Debug("Storing %s in RPC cache...", target.Label)
 		artifacts := []*pb.Artifact{}
 		totalSize := 0
-		for out := range cacheArtifacts(target) {
+		for out := range cacheArtifacts(target, files...) {
 			artifacts2, size, err := cache.loadArtifacts(target, out)
 			if err != nil {
 				log.Warning("RPC cache failed to load artifact %s: %s", out, err)

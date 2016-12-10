@@ -244,7 +244,7 @@ func newPyFilegroup(state *core.BuildState, label, filename string) *core.BuildT
 // Fake cache implementation with hardcoded behaviour for the various tests above.
 type mockCache struct{}
 
-func (*mockCache) Store(target *core.BuildTarget, key []byte) {
+func (*mockCache) Store(target *core.BuildTarget, key []byte, files ...string) {
 }
 
 func (*mockCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {

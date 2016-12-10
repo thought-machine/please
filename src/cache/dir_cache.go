@@ -16,7 +16,7 @@ type dirCache struct {
 	Dir string
 }
 
-func (cache *dirCache) Store(target *core.BuildTarget, key []byte) {
+func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files ...string) {
 	cacheDir := cache.getPath(target, key)
 	tmpDir := cacheDir + "=" // Temp dir which we'll move when it's ready.
 	// Clear out anything that might already be there.
@@ -27,7 +27,7 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte) {
 		log.Warning("Failed to create cache directory %s: %s", tmpDir, err)
 		return
 	}
-	for out := range cacheArtifacts(target) {
+	for out := range cacheArtifacts(target, files...) {
 		cache.storeFile(target, out, tmpDir)
 	}
 	if err := os.Rename(tmpDir, cacheDir); err != nil {

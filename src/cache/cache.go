@@ -59,8 +59,8 @@ type cacheMultiplexer struct {
 	caches []core.Cache
 }
 
-func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte) {
-	mplex.storeUntil(target, key, len(mplex.caches))
+func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte, files ...string) {
+	mplex.storeUntil(target, key, files, len(mplex.caches))
 }
 
 // storeUntil stores artifacts into higher priority caches than the given one.
@@ -68,7 +68,7 @@ func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte) {
 // downloading from the RPC cache.
 // This is a little inefficient since we could write the file to plz-out then copy it to the dir cache,
 // but it's hard to fix that without breaking the cache abstraction.
-func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, stopAt int) {
+func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, files []string, stopAt int) {
 	// Attempt to store on all caches simultaneously.
 	var wg sync.WaitGroup
 	for i, cache := range mplex.caches {
@@ -77,7 +77,7 @@ func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, s
 		}
 		wg.Add(1)
 		go func(cache core.Cache) {
-			cache.Store(target, key)
+			cache.Store(target, key, files...)
 			wg.Done()
 		}(cache)
 	}
@@ -111,7 +111,7 @@ func (mplex cacheMultiplexer) Retrieve(target *core.BuildTarget, key []byte) boo
 	for i, cache := range mplex.caches {
 		if cache.Retrieve(target, key) {
 			// Store this into other caches
-			mplex.storeUntil(target, key, i)
+			mplex.storeUntil(target, key, nil, i)
 			return true
 		}
 	}
@@ -145,11 +145,14 @@ func (mplex cacheMultiplexer) Shutdown() {
 
 // Yields all cacheable artifacts from this target. Useful for cache implementations
 // to not have to reinvent logic around post-build functions etc.
-func cacheArtifacts(target *core.BuildTarget) <-chan string {
+func cacheArtifacts(target *core.BuildTarget, files ...string) <-chan string {
 	ch := make(chan string, 10)
 	go func() {
 		for _, out := range target.Outputs() {
 			ch <- out
+		}
+		for _, file := range files {
+			ch <- file
 		}
 		close(ch)
 	}()

@@ -219,15 +219,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if state.Cache != nil {
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
 		newCacheKey := mustShortTargetHash(state, target)
-		(*state.Cache).Store(target, newCacheKey)
 		if target.PostBuildFunction != 0 {
 			// NB. Important this is stored with the earlier hash - if we calculate the hash
 			//     now, it might be different, and we could of course never retrieve it again.
-			(*state.Cache).StoreExtra(target, cacheKey, core.PostBuildOutputFileName(target))
+			extraOuts = append(extraOuts, core.PostBuildOutputFileName(target))
 		}
-		for _, out := range extraOuts {
-			(*state.Cache).StoreExtra(target, newCacheKey, out)
-		}
+		(*state.Cache).Store(target, newCacheKey, extraOuts...)
 	}
 	// Clean up the temporary directory once it's done.
 	if state.CleanWorkdirs {

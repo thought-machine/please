@@ -5,7 +5,8 @@ package core
 // it's passed around on the BuildState object.
 type Cache interface {
 	// Stores the results of a single build target.
-	Store(target *BuildTarget, key []byte)
+	// Optionally can store extra files against it at the same time.
+	Store(target *BuildTarget, key []byte, files ...string)
 	// Stores an extra file against a build target.
 	// The file name is relative to the target's out directory.
 	StoreExtra(target *BuildTarget, key []byte, file string)

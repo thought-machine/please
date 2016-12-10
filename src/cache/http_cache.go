@@ -24,11 +24,11 @@ type httpCache struct {
 	OSName    string
 }
 
-func (cache *httpCache) Store(target *core.BuildTarget, key []byte) {
+func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files ...string) {
 	// TODO(pebers): Change this to upload using multipart, it's quite slow doing every file separately
 	//               for targets with many files.
 	if cache.Writeable {
-		for out := range cacheArtifacts(target) {
+		for out := range cacheArtifacts(target, files...) {
 			if info, err := os.Stat(out); err == nil && info.IsDir() {
 				filepath.Walk(out, func(name string, info os.FileInfo, err error) error {
 					if err != nil {

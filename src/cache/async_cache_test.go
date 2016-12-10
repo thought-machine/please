@@ -2,7 +2,6 @@ package cache
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -57,44 +56,25 @@ func TestClean(t *testing.T) {
 	assert.True(t, mCache.completed[target])
 }
 
-func TestConcurrentStores(t *testing.T) {
-	// The cache shouldn't run multiple concurrent stores for the same target.
-	// Our mock cache will panic if it detects that, so here we just throw enough
-	// concurrent requests at it to try to make sure that we're likely to exercise that.
-	// It's pretty hard to really guarantee that it does happen though.
-	mCache, aCache := makeCaches()
-	target := makeTarget("//pkg1:test_concurrent")
-	expected := []string{}
-	for i := 0; i < 20; i++ {
-		s := fmt.Sprintf("file%02d", i)
-		aCache.StoreExtra(target, nil, s)
-		expected = append(expected, s)
-	}
-	aCache.Shutdown()
-	assert.False(t, mCache.inFlight[target])
-	assert.True(t, mCache.completed[target])
-	stored := mCache.stored[target]
-	sort.Strings(stored)
-	assert.Equal(t, expected, stored)
-}
-
-func TestLotsOfConcurrentStores(t *testing.T) {
-	// Throw a lot of concurrent store / store extra actions at the cache and make sure
-	// it does it in order.
-	const n = 10
+func TestSimulateBuild(t *testing.T) {
+	// Attempt to simulate what a normal build would do and confirm that the actions come
+	// back out in the correct order.
+	// This is a little obsolete now, it was ultimately solved by adding extra arguments to Store
+	// instead of requiring extra calls to StoreExtra, but that means there isn't that much
+	// left to exercise in this test any more.
+	const n = 100
 	var wg sync.WaitGroup
 	wg.Add(n)
 	mCache, aCache := makeCaches()
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			target := makeTarget(fmt.Sprintf("//test_pkg:target%03d", i))
-			aCache.Store(target, nil)
-			aCache.StoreExtra(target, nil, fmt.Sprintf("file%03d", i))
-			aCache.StoreExtra(target, nil, fmt.Sprintf("file%03d_2", i))
+			aCache.Store(target, nil, fmt.Sprintf("file%03d", i), fmt.Sprintf("file%03d_2", i))
 			wg.Done()
 		}(i)
 	}
 	wg.Wait()
+	aCache.Shutdown()
 	assert.Equal(t, n, len(mCache.stored))
 	for target, stored := range mCache.stored {
 		assert.Equal(t, []string{
@@ -113,11 +93,7 @@ type mockCache struct {
 	stored    map[*core.BuildTarget][]string
 }
 
-func (c *mockCache) Store(target *core.BuildTarget, key []byte) {
-	c.StoreExtra(target, key, "")
-}
-
-func (c *mockCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
+func (c *mockCache) Store(target *core.BuildTarget, key []byte, files ...string) {
 	c.Lock()
 	if c.inFlight[target] {
 		panic("Concurrent store on " + target.Label.String())
@@ -128,8 +104,13 @@ func (c *mockCache) StoreExtra(target *core.BuildTarget, key []byte, file string
 	c.Lock()
 	c.inFlight[target] = false
 	c.completed[target] = true
-	c.stored[target] = append(c.stored[target], file)
+	c.stored[target] = append(c.stored[target], "")
+	c.stored[target] = append(c.stored[target], files...)
 	c.Unlock()
+}
+
+func (c *mockCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
+	c.Store(target, key, file)
 }
 
 func (c *mockCache) Retrieve(target *core.BuildTarget, key []byte) bool {
