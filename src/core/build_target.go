@@ -132,6 +132,7 @@ type depInfo struct {
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
+	tool     bool           // true if the dependency was from a tool
 }
 
 type BuildTargetState int32
@@ -223,21 +224,23 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 }
 
 // TmpDir returns the temporary working directory for this target, eg.
-// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy._build
+// //mickey/donald:goofy -> plz-out/tmp/linux_amd64/mickey/donald/goofy._build
 // Note the extra subdirectory to keep rules separate from one another, and the .build suffix
 // to attempt to keep rules from duplicating the names of sub-packages; obviously that is not
 // 100% reliable but we don't have a better solution right now.
 func (target *BuildTarget) TmpDir() string {
-	return path.Join(TmpDir, target.Label.PackageName, target.Label.Name+buildDirSuffix)
+	return path.Join(TmpDir, target.Label.FullArch(), target.Label.PackageName, target.Label.Name+buildDirSuffix)
 }
 
 // Returns the output directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
+// If the target is not for the host architecture it will have an extra directory after plz-out,
+// e.g. plz-out/linux_amd64/gen/mickey/donald
 func (target *BuildTarget) OutDir() string {
 	if target.IsBinary {
-		return path.Join(BinDir, target.Label.PackageName)
+		return path.Join(OutDir, target.Label.Arch, "bin", target.Label.PackageName)
 	} else {
-		return path.Join(GenDir, target.Label.PackageName)
+		return path.Join(OutDir, target.Label.Arch, "gen", target.Label.PackageName)
 	}
 }
 
@@ -281,6 +284,21 @@ func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, dep := range target.dependencies {
 		ret = append(ret, dep.declared)
+	}
+	sort.Sort(ret)
+	return ret
+}
+
+// DeclaredArchDependencies returns the original declaration of this target's dependencies,
+// adjusted to be the appropriate architecture.
+func (target *BuildTarget) DeclaredArchDependencies() []BuildLabel {
+	ret := make(BuildLabels, 0, len(target.dependencies))
+	for _, dep := range target.dependencies {
+		label := dep.declared
+		if !dep.tool {
+			label = label.toArch(target.Label.Arch)
+		}
+		ret = append(ret, label)
 	}
 	sort.Sort(ret)
 	return ret
@@ -477,6 +495,7 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 
 // dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.
 func (target *BuildTarget) dependencyInfo(label BuildLabel) *depInfo {
+	label = label.noArch() // we never have architecture labels as *declared* dependencies.
 	for i, info := range target.dependencies {
 		if info.declared == label {
 			return &target.dependencies[i]
@@ -581,6 +600,7 @@ func (target *BuildTarget) addSource(sources []BuildInput, source BuildInput) []
 	}
 	// Add a dependency if this is not just a file.
 	if label := source.Label(); label != nil {
+		source = label.toArch(target.Label.Arch)
 		target.AddDependency(*label)
 	}
 	return append(sources, source)
@@ -636,6 +656,8 @@ func (target *BuildTarget) getCommand(commands map[string]string, singleCommand 
 		return singleCommand
 	} else if command, present := commands[State.Config.Build.Config]; present {
 		return command // Has command for current config, good
+	} else if command, present := commands[State.Arch]; present {
+		return command // Has command for current architecture
 	} else if command, present := commands[State.Config.Build.FallbackConfig]; present {
 		return command // Has command for default config, fall back to that
 	}
@@ -699,17 +721,17 @@ func (target *BuildTarget) HasSource(source string) bool {
 
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
-	target.AddMaybeExportedDependency(dep, false)
+	target.AddMaybeExportedDependency(dep, false, false)
 }
 
 // AddMaybeExportedDependency adds a dependency to this target which may be exported. It deduplicates against any existing deps.
-func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported bool) {
+func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, tool bool) {
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
 	}
 	info := target.dependencyInfo(dep)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported})
+		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported, tool: tool})
 	} else if exported {
 		info.exported = exported
 	}
@@ -806,6 +828,15 @@ func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
 // HasParent returns true if the target has a parent rule that's not itself.
 func (target *BuildTarget) HasParent() bool {
 	return target.Label.HasParent()
+}
+
+// toArch returns a new target that's a copy of this one for a different architecture.
+func (target *BuildTarget) toArch(arch string) *BuildTarget {
+	var t BuildTarget
+	// TODO(pebers): do we need a deep copy here or is shallow sufficient?
+	t = *target
+	t.Label.Arch = arch
+	return &t
 }
 
 // Make slices of these guys sortable.

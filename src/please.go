@@ -39,6 +39,7 @@ var config *core.Configuration
 var opts struct {
 	BuildFlags struct {
 		Config     string            `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
+		Arch       string            `short:"a" long:"arch" description:"Architecture to compile for. Defaults to the system Please is compiled for."`
 		RepoRoot   string            `short:"r" long:"repo_root" description:"Root of repository to build."`
 		KeepGoing  bool              `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
 		NumThreads int               `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
@@ -483,6 +484,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 		c = cache.NewCache(config)
 	}
 	state := core.NewBuildState(config.Please.NumThreads, c, opts.OutputFlags.Verbosity, config)
+	state.Arch = opts.BuildFlags.Arch
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.NumTestRuns = opts.Test.NumRuns + opts.Cover.NumRuns            // Only one of these can be passed.
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
@@ -548,9 +550,14 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 func findOriginalTask(state *core.BuildState, target core.BuildLabel) {
 	if target.IsAllSubpackages() {
 		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
-			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"))
+			state.AddOriginalTarget(core.BuildLabel{
+				PackageName: pkg,
+				Name:        "all",
+				Arch:        opts.BuildFlags.Arch,
+			})
 		}
 	} else {
+		target.Arch = opts.BuildFlags.Arch
 		state.AddOriginalTarget(target)
 	}
 }

@@ -414,13 +414,8 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         sources = False
         artifact_type = '.exe'  # Maven always describes them this way, even for Linux :(
         out_artifact_type = ''  # But we're not peasants so we won't do the same.
-    if native:
-        # Maven has slightly different names for these.
-        os = 'osx' if CONFIG.OS == 'darwin' else CONFIG.OS
-        arch = 'x86_64' if CONFIG.ARCH == 'amd64' else CONFIG.ARCH
-        filename = filename or '%s-%s-%s-%s%s' % (artifact, version, os, arch, artifact_type)
-    else:
-        filename = filename or '%s-%s%s' % (artifact, version, artifact_type)
+    arch = '-${ARCH/_/-}' if native else ''
+    filename = filename or '%s-%s%s%s' % (artifact, version, arch, artifact_type)
     url_base = '/'.join([
         repository or CONFIG.DEFAULT_MAVEN_REPO,
         group.replace('.', '/'),
@@ -431,6 +426,9 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
     cmd = 'echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (bin_url, bin_url)
     if exclude_paths:
         cmd += ' && zip -d $OUT ' + ' '.join(exclude_paths)
+    if native:
+        # Maven has slightly different names for these.
+        cmd = 'ARCH=${ARCH/darwin/osx}; ARCH=${ARCH/amd64/x86_64}; ' + cmd
     bin_rule = build_rule(
         name=name,
         tag='bin',

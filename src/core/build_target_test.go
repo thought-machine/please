@@ -297,7 +297,7 @@ func TestAddDependency(t *testing.T) {
 	target2.AddDependency(target1.Label)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
-	target2.AddMaybeExportedDependency(target1.Label, true)
+	target2.AddMaybeExportedDependency(target1.Label, true, false)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ExportedDependencies())
 	assert.Equal(t, []*BuildTarget{}, target2.Dependencies())
@@ -370,6 +370,35 @@ func TestAllLocalSources(t *testing.T) {
 	target.AddSource(BuildLabel{Name: "target2", PackageName: "src/core"})
 	target.AddSource(SystemFileLabel{Path: "/usr/bin/bash"})
 	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSources())
+}
+
+func TestToArch(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	target.AddSource(FileLabel{File: "target1.go", Package: "src/core"})
+	target2 := target.toArch("test_x86")
+	assert.NotEqual(t, target, target2)
+	assert.Equal(t, "", target.Label.Arch)
+	assert.Equal(t, "test_x86", target2.Label.Arch)
+	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSources())
+	assert.Equal(t, []string{"src/core/target1.go"}, target2.AllLocalSources())
+}
+
+func TestTmpDir(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	assert.Equal(t, "plz-out/tmp/"+HostArch+"/src/core/target1._build", target.TmpDir())
+	target.Label.Arch = "test_x86"
+	assert.Equal(t, "plz-out/tmp/test_x86/src/core/target1._build", target.TmpDir())
+}
+
+func TestOutDir(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	assert.Equal(t, "plz-out/gen/src/core", target.OutDir())
+	target.IsBinary = true
+	assert.Equal(t, "plz-out/bin/src/core", target.OutDir())
+	target.Label.Arch = "test_x86"
+	assert.Equal(t, "plz-out/test_x86/bin/src/core", target.OutDir())
+	target.IsBinary = false
+	assert.Equal(t, "plz-out/test_x86/gen/src/core", target.OutDir())
 }
 
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {

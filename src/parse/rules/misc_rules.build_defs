@@ -1,7 +1,7 @@
 """Miscellaneous rules that aren't language-specific."""
 
 
-def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None,
+def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None, arch=None,
             building_description='Building...', hashes=None, timeout=0, binary=False,
             needs_transitive_deps=False, output_is_complete=True, test_only=False,
             requires=None, provides=None, pre_build=None, post_build=None, tools=None):
@@ -43,6 +43,10 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
                     resolved within the path given in the config file (note that the value of $PATH
                     in the outside environment is not propagated to the build rule).
       visibility (list): Visibility declaration of this rule
+      arch (str): Architecture that this rule requires, e.g. "linux_amd64".
+                  Typically this is left empty for most rules, it is only normally set for rules
+                  which require something specific (e.g. maybe a rkt image rule would state
+                  arch='linux_amd64' because it's always  Linux inside the container).
       building_description (str): Description to display to the user while the rule is building.
       hashes (list): List of hashes; if given the outputs must match one of these. They can be
               optionally preceded by their method. Currently the only supported method is sha1.
@@ -86,6 +90,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
         srcs=srcs,
         outs=[out] if out else outs,
         cmd=cmd,
+        arch=arch,
         deps=deps,
         tools=tools,
         visibility = visibility,

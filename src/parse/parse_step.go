@@ -53,6 +53,7 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 		state.LogBuildResult(tid, label, core.PackageParsed, "Deferred")
 		return
 	}
+	activateTarget(state, pkg, label, dependor, noDeps, include, exclude)
 
 	// Now add any lurking pending targets for this package.
 	pendingTargetMutex.Lock()
@@ -61,8 +62,10 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 	pendingTargetMutex.Unlock()                                        // Nothing will look up this package in the map again.
 	for targetName, dependors := range pending {
 		for _, dependor := range dependors {
-			lbl := core.BuildLabel{PackageName: label.PackageName, Name: targetName}
-			activateTarget(state, pkg, lbl, dependor, noDeps, include, exclude)
+			if targetName != label.Name {
+				lbl := core.BuildLabel{PackageName: label.PackageName, Name: targetName}
+				activateTarget(state, pkg, lbl, dependor, noDeps, include, exclude)
+			}
 		}
 	}
 	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed")
@@ -206,7 +209,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 	}
 	// Do this in a separate loop so we get intra-package dependencies right now.
 	for _, target := range pkg.Targets {
-		for _, dep := range target.DeclaredDependencies() {
+		for _, dep := range target.DeclaredArchDependencies() {
 			state.Graph.AddDependency(target.Label, dep)
 		}
 	}
@@ -264,7 +267,7 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 			return
 		}
 	}
-	for _, dep := range target.DeclaredDependencies() {
+	for _, dep := range target.DeclaredArchDependencies() {
 		// Check the require/provide stuff; we may need to add a different target.
 		if len(target.Requires) > 0 {
 			if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
@@ -330,7 +333,7 @@ func rescanDeps(state *core.BuildState, pkg *core.Package) {
 		//               targets that need it but it's not easy to tell we're in a post build
 		//               function at the point we'd need to do that.
 		if !state.Graph.AllDependenciesResolved(target) {
-			for _, dep := range target.DeclaredDependencies() {
+			for _, dep := range target.DeclaredArchDependencies() {
 				state.Graph.AddDependency(target.Label, dep)
 			}
 		}

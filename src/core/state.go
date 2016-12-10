@@ -57,6 +57,8 @@ type BuildState struct {
 		// Hash of the config relating to containerisation for tests.
 		Containerisation []byte
 	}
+	// Architecture we are currently compiling for (i.e. what the command-line flag was).
+	Arch string
 	// Level of verbosity during the build
 	Verbosity int
 	// Cache to store / retrieve old build results.
@@ -187,6 +189,7 @@ func (state *BuildState) IsOriginalTarget(label BuildLabel) bool {
 
 // isOriginalTarget implementsIsOriginalTarget, optionally allowing disabling matching :all labels.
 func (state *BuildState) isOriginalTarget(label BuildLabel, exact bool) bool {
+	label = label.noArch() // Command-line labels can't have architectures specified.
 	for _, original := range state.OriginalTargets {
 		if original == label || (!exact && original.IsAllTargets() && original.PackageName == label.PackageName) {
 			return true

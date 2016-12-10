@@ -1903,7 +1903,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
 
     <h3><a name="genrule">genrule</a></h3>
 
-    <p><pre class="rule"><code>genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None, building_description=Building..., hashes=None, timeout=0, binary=False, needs_transitive_deps=False, output_is_complete=True, test_only=False, requires=None, provides=None, pre_build=None, post_build=None, tools=None)</code></pre></p>
+    <p><pre class="rule"><code>genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None, arch=None, building_description=Building..., hashes=None, timeout=0, binary=False, needs_transitive_deps=False, output_is_complete=True, test_only=False, requires=None, provides=None, pre_build=None, post_build=None, tools=None)</code></pre></p>
 
     <p>A general build rule which allows the user to specify a command.</p>
 
@@ -1941,8 +1941,7 @@ the preceding plz-out/gen etc.</li>
       </ul>
       Also a number of environment variables will be defined:
       <ul>
-        <li><code>ARCH</code>: architecture of the system, eg. amd64</li>
-        <li><code>OS</code>: current operating system (linux, darwin, etc).</li>
+        <li><code>ARCH</code>: architecture we're compiling for, eg. linux_amd64</li>
         <li><code>PATH</code>: usual PATH environment variable as defined in your .plzconfig</li>
         <li><code>TMP_DIR</code>: the temporary directory you're compiling within.</li>
         <li><code>SRCS</code>: the sources of your rule</li>
@@ -1992,6 +1991,16 @@ have separate kinds of things in a rule.</td>
 	<td>None</td>
 	<td>list</td>
 	<td>Visibility declaration of this rule</td>
+      </tr>
+
+      <tr>
+	<td>arch</td>
+	<td>None</td>
+	<td>str</td>
+	<td>Architecture that this rule requires, e.g. &quot;linux_amd64&quot;.<br/>
+          Typically this is left empty for most rules, it is only normally set for rules
+          which require something specific (e.g. maybe a rkt image rule would declare
+          <code>arch = 'linux_amd64'</code> because it's always Linux inside the container).</td>
       </tr>
 
       <tr>
