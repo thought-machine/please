@@ -21,22 +21,19 @@ service RpcServer {
 message JoinRequest {
     // Identifier of the machine.
     string name = 1;
-    // Address of the machine.
+    // Address & port of the machine.
     string address = 2;
 }
 
 message JoinResponse {
     // True if the caller is allowed to join the cluster.
     bool success = 1;
-    // The beginning and end (exclusive) of the hash space for this node.
-    uint32 hash_begin = 2;
-    uint32 hash_end = 3;
-
+    // The node corresponding to the requestor. Will also appear in `nodes`.
+    Node node = 2;
     // List of other known nodes.
-    repeated Node nodes = 4;
-
+    repeated Node nodes = 3;
     // Expected size of the cluster.
-    int32 size = 5;
+    int32 size = 6;
 }
 
 message ReplicateRequest {

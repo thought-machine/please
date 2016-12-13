@@ -4,7 +4,7 @@
 // for large caches. Right now the functionality is a little limited,
 // there's no online rehashing so the size must be declared and fixed
 // up front, and the replication factor is fixed at 2. There's an
-// assumption that whilc nodes might restart, they return with the same
+// assumption that while nodes might restart, they return with the same
 // name which we use to re-identify them.
 //
 // The general approach here errs heavily on the side of simplicity and
@@ -38,6 +38,8 @@ type Cluster struct {
 	// nodes is a list of nodes that is initialised by the original seed
 	// and replicated between any other nodes that join after.
 	nodes []*pb.Node
+	// nodeMutex protects access to nodes
+	nodeMutex sync.RWMutex
 
 	// clients is a pool of gRPC clients to the other cluster nodes.
 	clients map[string]pb.RpcServerClient
@@ -47,9 +49,8 @@ type Cluster struct {
 	// size is the expected number of nodes in the cluster.
 	size int
 
-	// hashStart and hashEnd are the endpoints in the hash space for this client.
-	hashStart uint32
-	hashEnd   uint32
+	// node is the node corresponding to this instance.
+	node *pb.Node
 }
 
 // NewCluster creates a new Cluster object and starts listening on the given port.
@@ -83,7 +84,9 @@ func (cluster *Cluster) Join(members []string) {
 	for _, node := range cluster.list.Members() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if client, err := cluster.getRPCClient(node.Addr.String() + ":" + string(node.Meta)); err != nil {
+		// We don't have the node name here yet.
+		// TODO(pebers): we could maybe gossip that with the metadata?
+		if client, err := cluster.getRPCClient("", node.Addr.String()+":"+string(node.Meta)); err != nil {
 			log.Error("Error getting RPC client for %s: %s", node.Addr, err)
 		} else if resp, err := client.Join(ctx, &pb.JoinRequest{
 			Name:    cluster.list.LocalNode().Name,
@@ -93,9 +96,8 @@ func (cluster *Cluster) Join(members []string) {
 		} else if !resp.Success {
 			log.Fatalf("We have not been allowed to join the cluster :(")
 		} else {
-			cluster.hashStart = resp.HashBegin
-			cluster.hashEnd = resp.HashEnd
 			cluster.nodes = resp.Nodes
+			cluster.node = resp.Node
 			cluster.size = int(resp.Size)
 			return
 		}
@@ -106,10 +108,8 @@ func (cluster *Cluster) Join(members []string) {
 // InitCluster seeds a new plz cache cluster.
 func (cluster *Cluster) Init(size int) {
 	cluster.size = size
-	// We're node 0
-	node := cluster.newNode(cluster.list.LocalNode())
-	cluster.hashStart = node.HashBegin
-	cluster.hashEnd = node.HashEnd
+	// We're node 0. The following will add us to the node list.
+	cluster.node = cluster.newNode(cluster.list.LocalNode())
 	// And there aren't any others yet, so we're done.
 }
 
@@ -120,7 +120,7 @@ func (cluster *Cluster) GetMembers() []*pb.Node {
 	for _, m := range cluster.list.Members() {
 		cluster.newNode(m)
 	}
-	return cluster.nodes
+	return cluster.nodes[:]
 }
 
 // newNode constructs one of our canonical nodes from a memberlist.Node.
@@ -134,6 +134,8 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 			HashEnd:   tools.HashPoint(i+1, cluster.size),
 		}
 	}
+	cluster.nodeMutex.Lock()
+	defer cluster.nodeMutex.Unlock()
 	for i, n := range cluster.nodes {
 		if n.Name == "" || n.Name == node.Name {
 			// Available slot. Or, if they identified as an existing node, they can take that space over.
@@ -146,7 +148,7 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 			// Remove any client that might exist for this node so we force a reconnection.
 			cluster.clientMutex.Lock()
 			defer cluster.clientMutex.Unlock()
-			delete(cluster.clients, cluster.nodes[i].Address)
+			delete(cluster.clients, n.Name)
 			return cluster.nodes[i]
 		}
 	}
@@ -160,9 +162,9 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 }
 
 // getRPCClient returns an RPC client for the given server.
-func (cluster *Cluster) getRPCClient(address string) (pb.RpcServerClient, error) {
+func (cluster *Cluster) getRPCClient(name, address string) (pb.RpcServerClient, error) {
 	cluster.clientMutex.RLock()
-	client, present := cluster.clients[address]
+	client, present := cluster.clients[name]
 	cluster.clientMutex.RUnlock()
 	if present {
 		return client, nil
@@ -173,55 +175,59 @@ func (cluster *Cluster) getRPCClient(address string) (pb.RpcServerClient, error)
 		return nil, err
 	}
 	client = pb.NewRpcServerClient(connection)
-	cluster.clientMutex.Lock()
-	cluster.clients[address] = client
-	cluster.clientMutex.Unlock()
+	if name != "" {
+		cluster.clientMutex.Lock()
+		cluster.clients[name] = client
+		cluster.clientMutex.Unlock()
+	}
 	return client, nil
 }
 
 // getAlternateNode returns the replica node for the given hash (i.e. whichever one is not us,
 // we don't really know for sure when calling this if we are the primary or not).
-func (cluster *Cluster) getAlternateNode(hash []byte) string {
+func (cluster *Cluster) getAlternateNode(hash []byte) (string, string) {
 	point := tools.Hash(hash)
-	if point >= cluster.hashStart && point < cluster.hashEnd {
+	if point >= cluster.node.HashBegin && point < cluster.node.HashEnd {
 		// We've got this point, use the alternate.
 		point = tools.AlternateHash(hash)
 	}
+	cluster.nodeMutex.RLock()
+	defer cluster.nodeMutex.RUnlock()
 	for _, n := range cluster.nodes {
 		if point >= n.HashBegin && point < n.HashEnd {
-			return n.Address
+			return n.Name, n.Address
 		}
 	}
 	log.Warning("No cluster node found for hash point %d", point)
-	return ""
+	return "", ""
 }
 
 // ReplicateArtifacts replicates artifacts from this node to another.
 func (cluster *Cluster) ReplicateArtifacts(req *pb.StoreRequest) {
-	address := cluster.getAlternateNode(req.Hash)
+	name, address := cluster.getAlternateNode(req.Hash)
 	if address == "" {
 		log.Warning("Couldn't get alternate address, will not replicate artifact")
 		return
 	}
 	log.Info("Replicating artifact to node %s", address)
-	cluster.replicate(address, req.Os, req.Arch, req.Hash, false, req.Artifacts)
+	cluster.replicate(name, address, req.Os, req.Arch, req.Hash, false, req.Artifacts)
 }
 
 // DeleteArtifacts deletes artifacts from all other nodes.
 func (cluster *Cluster) DeleteArtifacts(req *pb.DeleteRequest) {
 	for _, node := range cluster.GetMembers() {
 		// Don't forward request to ourselves...
-		if node.HashBegin != cluster.hashStart || node.HashEnd != cluster.hashEnd {
+		if cluster.node.Name != node.Name {
 			log.Info("Forwarding delete request to node %s", node.Address)
-			cluster.replicate(node.Address, req.Os, req.Arch, nil, true, req.Artifacts)
+			cluster.replicate(node.Name, node.Address, req.Os, req.Arch, nil, true, req.Artifacts)
 		}
 	}
 }
 
-func (cluster *Cluster) replicate(address, os, arch string, hash []byte, delete bool, artifacts []*pb.Artifact) {
-	client, err := cluster.getRPCClient(address)
+func (cluster *Cluster) replicate(name, address, os, arch string, hash []byte, delete bool, artifacts []*pb.Artifact) {
+	client, err := cluster.getRPCClient(name, address)
 	if err != nil {
-		log.Error("Failed to get RPC client for %s: %s", address, err)
+		log.Error("Failed to get RPC client for %s %s: %s", name, address, err)
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -250,11 +256,10 @@ func (cluster *Cluster) AddNode(req *pb.JoinRequest) *pb.JoinResponse {
 		return &pb.JoinResponse{Success: false}
 	}
 	return &pb.JoinResponse{
-		Success:   true,
-		HashBegin: node.HashBegin,
-		HashEnd:   node.HashEnd,
-		Nodes:     cluster.GetMembers(),
-		Size:      int32(cluster.size),
+		Success: true,
+		Nodes:   cluster.GetMembers(),
+		Node:    node,
+		Size:    int32(cluster.size),
 	}
 }
 
