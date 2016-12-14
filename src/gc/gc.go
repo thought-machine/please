@@ -46,12 +46,14 @@ func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, keepLabe
 	keepTargets := targetMap{}
 	for _, target := range graph.AllTargets() {
 		if (target.IsBinary && (!target.IsTest || includeTests)) || target.HasAnyLabel(keepLabels) {
+			log.Debug("GC root: %s", target.Label)
 			addTarget(graph, keepTargets, target)
 		}
 	}
 	// Any registered subincludes also count.
 	for _, pkg := range graph.PackageMap() {
 		for _, subinclude := range pkg.Subincludes {
+			log.Debug("GC root: %s", subinclude)
 			addTarget(graph, keepTargets, graph.TargetOrDie(subinclude))
 		}
 	}
@@ -62,6 +64,7 @@ func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, keepLabe
 			for _, pkg := range graph.PackageMap() {
 				if pkg.IsIncludedIn(target) {
 					for _, target := range pkg.Targets {
+						log.Debug("GC root: %s", target.Label)
 						addTarget(graph, keepTargets, target)
 					}
 				}
@@ -70,16 +73,18 @@ func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, keepLabe
 			addTarget(graph, keepTargets, graph.TargetOrDie(target))
 		}
 	}
-	log.Notice("%d targets to keep after command-line arguments considered", len(keepTargets))
+	log.Notice("%d targets to keep after configured GC roots", len(keepTargets))
 	if !includeTests {
 		// This is a bit complex - need to identify any tests that are tests "on" the set of things
 		// we've already decided to keep.
 		for _, target := range graph.AllTargets() {
 			if target.IsTest {
 				for _, dep := range publicDependencies(graph, target) {
-					if keepTargets[dep] {
+					if keepTargets[dep] && !dep.TestOnly {
+						log.Debug("Keeping test %s on %s", target.Label, dep.Label)
 						addTarget(graph, keepTargets, target)
 					} else if dep.TestOnly {
+						log.Debug("Keeping test-only target %s", dep.Label)
 						addTarget(graph, keepTargets, dep)
 					}
 				}
@@ -119,6 +124,7 @@ func addTarget(graph *core.BuildGraph, m targetMap, target *core.BuildTarget) {
 	if m[target] {
 		return
 	}
+	log.Debug("  %s", target.Label)
 	m[target] = true
 	for _, dep := range target.DeclaredDependencies() {
 		addTarget(graph, m, graph.TargetOrDie(dep))
