@@ -19,6 +19,7 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/peer"
 
+	"cache/cluster"
 	pb "cache/proto/rpc_cache"
 )
 
@@ -31,21 +32,33 @@ type RpcCacheServer struct {
 	cache        *Cache
 	readonlyKeys map[string]*x509.Certificate
 	writableKeys map[string]*x509.Certificate
+	cluster      *cluster.Cluster
 }
 
 func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
 	if err := r.authenticateClient(r.writableKeys, ctx); err != nil {
 		return nil, err
 	}
-	arch := req.Os + "_" + req.Arch
-	hash := base64.RawURLEncoding.EncodeToString(req.Hash)
-	for _, artifact := range req.Artifacts {
-		path := path.Join(arch, artifact.Package, artifact.Target, hash, artifact.File)
-		if err := r.cache.StoreArtifact(path, artifact.Body); err != nil {
-			return &pb.StoreResponse{Success: false}, nil
+	success := storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts)
+	if success && r.cluster != nil {
+		// Replicate this artifact to another node. Doesn't have to be done synchronously.
+		go r.cluster.ReplicateArtifacts(req)
+	}
+	return &pb.StoreResponse{Success: success}, nil
+}
+
+// storeArtifact stores a series of artifacts in the cache.
+// Broken out of above to share with Replicate below.
+func storeArtifact(cache *Cache, os, arch string, hash []byte, artifacts []*pb.Artifact) bool {
+	arch = os + "_" + arch
+	hashStr := base64.RawURLEncoding.EncodeToString(hash)
+	for _, artifact := range artifacts {
+		path := path.Join(arch, artifact.Package, artifact.Target, hashStr, artifact.File)
+		if err := cache.StoreArtifact(path, artifact.Body); err != nil {
+			return false
 		}
 	}
-	return &pb.StoreResponse{Success: true}, nil
+	return true
 }
 
 func (r *RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) (*pb.RetrieveResponse, error) {
@@ -82,14 +95,34 @@ func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb
 	if req.Everything {
 		return &pb.DeleteResponse{Success: r.cache.DeleteAllArtifacts() == nil}, nil
 	}
+	success := deleteArtifact(r.cache, req.Os, req.Arch, req.Artifacts)
+	if success && r.cluster != nil {
+		// Delete this artifact from other nodes. Doesn't have to be done synchronously.
+		go r.cluster.DeleteArtifacts(req)
+	}
+	return &pb.DeleteResponse{Success: success}, nil
+}
+
+// deleteArtifact handles the actual removal of artifacts from the cache.
+// It's split out from Delete to share with replication RPCs below.
+func deleteArtifact(cache *Cache, os, arch string, artifacts []*pb.Artifact) bool {
 	success := true
-	arch := req.Os + "_" + req.Arch
-	for _, artifact := range req.Artifacts {
-		if r.cache.DeleteArtifact(path.Join(arch, artifact.Package, artifact.Target)) != nil {
+	for _, artifact := range artifacts {
+		if cache.DeleteArtifact(path.Join(os+"_"+arch, artifact.Package, artifact.Target)) != nil {
 			success = false
 		}
 	}
-	return &pb.DeleteResponse{Success: success}, nil
+	return success
+}
+
+func (r *RpcCacheServer) ListNodes(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
+	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
+		return nil, err
+	}
+	if r.cluster == nil {
+		return &pb.ListResponse{}, nil
+	}
+	return &pb.ListResponse{Nodes: r.cluster.GetMembers()}, nil
 }
 
 func (r *RpcCacheServer) authenticateClient(certs map[string]*x509.Certificate, ctx context.Context) error {
@@ -141,15 +174,38 @@ func loadKeys(filename string) map[string]*x509.Certificate {
 	return ret
 }
 
+// RPCServer implements the gRPC server for communication between cache nodes.
+type RPCServer struct {
+	cache   *Cache
+	cluster *cluster.Cluster
+}
+
+func (r *RPCServer) Join(ctx context.Context, req *pb.JoinRequest) (*pb.JoinResponse, error) {
+	// TODO(pebers): Authentication.
+	return r.cluster.AddNode(req), nil
+}
+
+func (r *RPCServer) Replicate(ctx context.Context, req *pb.ReplicateRequest) (*pb.ReplicateResponse, error) {
+	// TODO(pebers): Authentication.
+	if req.Delete {
+		return &pb.ReplicateResponse{
+			Success: deleteArtifact(r.cache, req.Os, req.Arch, req.Artifacts),
+		}, nil
+	}
+	return &pb.ReplicateResponse{
+		Success: storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts),
+	}, nil
+}
+
 // BuildGrpcServer creates a new, unstarted grpc.Server and returns it.
 // It also returns a net.Listener to start it on.
-func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, readonlyKeys, writableKeys string) (*grpc.Server, net.Listener) {
+func BuildGrpcServer(port int, cache *Cache, cluster *cluster.Cluster, keyFile, certFile, caCertFile, readonlyKeys, writableKeys string) (*grpc.Server, net.Listener) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("Failed to listen on port %d: %v", port, err)
 	}
 	s := serverWithAuth(keyFile, certFile, caCertFile)
-	r := &RpcCacheServer{cache: cache}
+	r := &RpcCacheServer{cache: cache, cluster: cluster}
 	if writableKeys != "" {
 		r.writableKeys = loadKeys(writableKeys)
 	}
@@ -164,18 +220,20 @@ func BuildGrpcServer(port int, cache *Cache, keyFile, certFile, caCertFile, read
 			}
 		}
 	}
+	r2 := &RPCServer{cache: cache, cluster: cluster}
 	pb.RegisterRpcCacheServer(s, r)
+	pb.RegisterRpcServerServer(s, r2)
 	healthserver := health.NewServer()
 	healthserver.SetServingStatus("plz-rpc-cache", healthpb.HealthCheckResponse_SERVING)
 	healthpb.RegisterHealthServer(s, healthserver)
 	return s, lis
 }
 
-// ServeGrpcForever constructs a new server on the given port and serves until killed.
-func ServeGrpcForever(port int, cache *Cache, keyFile, certFile, caCertFile, readonlyKeys, writableKeys string) {
-	s, lis := BuildGrpcServer(port, cache, keyFile, certFile, caCertFile, readonlyKeys, writableKeys)
-	log.Notice("Serving RPC cache on port %d", port)
-	s.Serve(lis)
+// ServeGrpcForever serves gRPC until killed using the given server.
+// It's very simple and provided as a convenience so callers don't have to import grpc themselves.
+func ServeGrpcForever(server *grpc.Server, lis net.Listener) {
+	log.Notice("Serving RPC cache on %s", lis.Addr())
+	server.Serve(lis)
 }
 
 // serverWithAuth builds a gRPC server, possibly with authentication if key / cert files are given.

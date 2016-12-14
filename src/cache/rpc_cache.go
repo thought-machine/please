@@ -20,17 +20,21 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	pb "cache/proto/rpc_cache"
+	"cache/tools"
 )
 
 const maxErrors = 5
+const replicas = 2
+
+// We use zeroKey in cases where we need to supply a hash but it actually doesn't matter.
+var zeroKey = []byte{0, 0, 0, 0}
 
 type rpcCache struct {
-	connection *grpc.ClientConn
 	client     pb.RpcCacheClient
 	Writeable  bool
 	Connected  bool
@@ -40,6 +44,13 @@ type rpcCache struct {
 	timeout    time.Duration
 	startTime  time.Time
 	maxMsgSize int
+	nodes      []cacheNode
+}
+
+type cacheNode struct {
+	cache     *rpcCache
+	hashStart uint32
+	hashEnd   uint32
 }
 
 func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, files ...string) {
@@ -112,13 +123,14 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 	req := pb.StoreRequest{Artifacts: artifacts, Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
-	resp, err := cache.client.Store(ctx, &req)
-	if err != nil {
-		log.Warning("Error communicating with RPC cache server: %s", err)
-		cache.error()
-	} else if !resp.Success {
-		log.Warning("Failed to store artifacts in RPC cache for %s", target.Label)
-	}
+	cache.runRpc(key, func(cache *rpcCache) (bool, []*pb.Artifact) {
+		_, err := cache.client.Store(ctx, &req)
+		if err != nil {
+			log.Warning("Error communicating with RPC cache server: %s", err)
+			cache.error()
+		}
+		return err != nil, nil
+	})
 }
 
 func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
@@ -152,14 +164,21 @@ func (cache *rpcCache) RetrieveExtra(target *core.BuildTarget, key []byte, file 
 func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.RetrieveRequest, remove bool) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
-	response, err := cache.client.Retrieve(ctx, req)
-	if err != nil {
-		log.Warning("Failed to retrieve artifacts for %s", target.Label)
-		cache.error()
-		return false
-	} else if !response.Success {
-		// Quiet, this is almost certainly just a 'not found'
-		log.Debug("Couldn't retrieve artifacts for %s [key %s] from RPC cache", target.Label, base64.RawURLEncoding.EncodeToString(req.Hash))
+	success, artifacts := cache.runRpc(req.Hash, func(cache *rpcCache) (bool, []*pb.Artifact) {
+		response, err := cache.client.Retrieve(ctx, req)
+		if err != nil {
+			log.Warning("Failed to retrieve artifacts for %s: %s", target.Label, err)
+			cache.error()
+			return false, nil
+		} else if !response.Success {
+			// Quiet, this is almost certainly just a 'not found'
+			log.Debug("Couldn't retrieve artifacts for %s [key %s] from RPC cache", target.Label, base64.RawURLEncoding.EncodeToString(req.Hash))
+		}
+		// This always counts as "success" in this context, i.e. do not bother retrying on the
+		// alternate if we were told that the artifact is not there.
+		return true, response.Artifacts
+	})
+	if !success {
 		return false
 	}
 	// Remove any existing outputs first; this is important for cases where the output is a
@@ -174,13 +193,13 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 			}
 		}
 	}
-	for _, artifact := range response.Artifacts {
+	for _, artifact := range artifacts {
 		if !cache.writeFile(target, artifact.File, artifact.Body) {
 			return false
 		}
 	}
 	// Sanity check: if we don't get anything back, assume it probably wasn't really a success.
-	return len(response.Artifacts) > 0
+	return len(artifacts) > 0
 }
 
 func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []byte) bool {
@@ -202,19 +221,22 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 		req := pb.DeleteRequest{Os: runtime.GOOS, Arch: runtime.GOARCH}
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name}
 		req.Artifacts = []*pb.Artifact{&artifact}
-		response, err := cache.client.Delete(context.Background(), &req)
-		if err != nil || !response.Success {
-			log.Errorf("Failed to remove %s from RPC cache", target.Label)
-		}
+		cache.runRpc(zeroKey, func(cache *rpcCache) (bool, []*pb.Artifact) {
+			response, err := cache.client.Delete(context.Background(), &req)
+			if err != nil || !response.Success {
+				log.Errorf("Failed to remove %s from RPC cache", target.Label)
+				return false, nil
+			}
+			return true, nil
+		})
 	}
 }
-
 func (cache *rpcCache) Shutdown() {}
 
-func (cache *rpcCache) connect(config *core.Configuration) {
+func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode bool) {
 	// Change grpc to log using our implementation
 	grpclog.SetLogger(&grpcLogMabob{})
-	log.Info("Connecting to RPC cache at %s", config.Cache.RpcUrl)
+	log.Info("Connecting to RPC cache at %s", url)
 	opts := []grpc.DialOption{grpc.WithTimeout(cache.timeout)}
 	if config.Cache.RpcPublicKey != "" || config.Cache.RpcCACert != "" || config.Cache.RpcSecure {
 		auth, err := loadAuth(config.Cache.RpcCACert, config.Cache.RpcPublicKey, config.Cache.RpcPrivateKey)
@@ -226,32 +248,46 @@ func (cache *rpcCache) connect(config *core.Configuration) {
 	} else {
 		opts = append(opts, grpc.WithInsecure())
 	}
-	connection, err := grpc.Dial(config.Cache.RpcUrl, opts...)
+	connection, err := grpc.Dial(url, opts...)
 	if err != nil {
 		cache.Connecting = false
 		log.Warning("Failed to connect to RPC cache: %s", err)
 		return
 	}
-	// Note that we have to actually send it a message here to validate the connection;
-	// Dial() only seems to return errors for superficial failures like syntactically invalid addresses,
-	// it will return essentially immediately even if the server doesn't exist.
-	healthclient := healthpb.NewHealthClient(connection)
+	// Message the server to get its cluster topology.
+	client := pb.NewRpcCacheClient(connection)
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
-	resp, err := healthclient.Check(ctx, &healthpb.HealthCheckRequest{Service: "plz-rpc-cache"})
-	if err != nil {
+	resp, err := client.ListNodes(ctx, &pb.ListRequest{})
+	// For compatibility with older servers, handle an error code of Unimplemented and treat
+	// as an unclustered server (because of course they can't be clustered).
+	if err != nil && grpc.Code(err) != codes.Unimplemented {
 		cache.Connecting = false
 		log.Warning("Failed to contact RPC cache: %s", err)
-	} else if resp.Status != healthpb.HealthCheckResponse_SERVING {
-		cache.Connecting = false
-		log.Warning("RPC cache says it is not serving (%d)", resp.Status)
-	} else {
-		cache.connection = connection
-		cache.client = pb.NewRpcCacheClient(connection)
+		return
+	} else if isSubnode || resp == nil || len(resp.Nodes) == 0 {
+		// Server is not clustered, just use this one directly.
+		// Or we're one of the sub-nodes and we are meant to connect directly.
+		cache.client = client
 		cache.Connected = true
 		cache.Connecting = false
 		log.Info("RPC cache connected after %0.2fs", time.Since(cache.startTime).Seconds())
+		return
 	}
+	// If we get here, we are connected and the cache is clustered.
+	cache.nodes = make([]cacheNode, len(resp.Nodes))
+	for i, n := range resp.Nodes {
+		subCache, _ := newRpcCacheInternal(n.Address, config, true)
+		cache.nodes[i] = cacheNode{
+			cache:     subCache,
+			hashStart: n.HashBegin,
+			hashEnd:   n.HashEnd,
+		}
+	}
+	// We are now connected, the children aren't necessarily yet but that won't matter.
+	cache.Connected = true
+	cache.Connecting = false
+	log.Info("Top-level RPC cache connected after %0.2fs with %d known nodes", time.Since(cache.startTime).Seconds(), len(resp.Nodes))
 }
 
 // isConnected checks if the cache is connected. If it's still trying to connect it allows a
@@ -270,6 +306,34 @@ func (cache *rpcCache) isConnected() bool {
 	return cache.Connected
 }
 
+// runRpc runs one RPC for a cache, with optional fallback to a replica on RPC failure
+// (but not if the RPC completes unsuccessfully).
+func (cache *rpcCache) runRpc(hash []byte, f func(*rpcCache) (bool, []*pb.Artifact)) (bool, []*pb.Artifact) {
+	if len(cache.nodes) == 0 {
+		// No clustering, just call it directly.
+		return f(cache)
+	}
+	try := func(hash uint32) (bool, []*pb.Artifact) {
+		for _, n := range cache.nodes {
+			if hash >= n.hashStart && hash < n.hashEnd {
+				if !n.cache.isConnected() {
+					return false, nil
+				}
+				return f(n.cache)
+			}
+		}
+		log.Warning("No RPC cache client available for %d", hash)
+		return false, nil
+	}
+	h := tools.Hash(hash)
+	success, artifacts := try(h)
+	if success {
+		return success, artifacts
+	}
+	log.Info("Initial replica failed for %d, will retry on the alternate", h)
+	return try(tools.AlternateHash(hash))
+}
+
 // error increments the error counter on the cache, and disables it if it gets too high.
 // Note that after this it won't reconnect; we could try that but it probably isn't worth it
 // (it's unlikely to restart in time if it's got a nontrivial set of artifacts to scan) and
@@ -282,6 +346,10 @@ func (cache *rpcCache) error() {
 }
 
 func newRpcCache(config *core.Configuration) (*rpcCache, error) {
+	return newRpcCacheInternal(config.Cache.RpcUrl, config, false)
+}
+
+func newRpcCacheInternal(url string, config *core.Configuration, isSubnode bool) (*rpcCache, error) {
 	cache := &rpcCache{
 		Writeable:  config.Cache.RpcWriteable,
 		Connecting: true,
@@ -289,7 +357,7 @@ func newRpcCache(config *core.Configuration) (*rpcCache, error) {
 		startTime:  time.Now(),
 		maxMsgSize: int(config.Cache.RpcMaxMsgSize),
 	}
-	go cache.connect(config)
+	go cache.connect(url, config, isSubnode)
 	return cache, nil
 }
 

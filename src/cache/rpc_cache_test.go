@@ -39,7 +39,7 @@ func init() {
 func startServer(port int, keyFile, certFile, caCertFile string) *grpc.Server {
 	// Arbitrary large numbers so the cleaner never needs to run.
 	cache := server.NewCache("src/cache/test_data", 20*time.Hour, 100000, 100000000, 1000000000)
-	s, lis := server.BuildGrpcServer(port, cache, keyFile, certFile, caCertFile, "", "")
+	s, lis := server.BuildGrpcServer(port, cache, nil, keyFile, certFile, caCertFile, "", "")
 	go s.Serve(lis)
 	return s
 }

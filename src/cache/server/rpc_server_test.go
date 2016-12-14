@@ -30,11 +30,11 @@ const (
 func startServer(port int, auth bool, readonlyCerts, writableCerts string) *grpc.Server {
 	cache := NewCache(testDir, 20*time.Hour, 100, 1000000, 1000000)
 	if !auth {
-		s, lis := BuildGrpcServer(port, cache, "", "", "", readonlyCerts, writableCerts)
+		s, lis := BuildGrpcServer(port, cache, nil, "", "", "", readonlyCerts, writableCerts)
 		go s.Serve(lis)
 		return s
 	}
-	s, lis := BuildGrpcServer(port, cache, testKey, testCert, testCa, readonlyCerts, writableCerts)
+	s, lis := BuildGrpcServer(port, cache, nil, testKey, testCert, testCa, readonlyCerts, writableCerts)
 	go s.Serve(lis)
 	return s
 }

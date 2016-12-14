@@ -1,10 +1,12 @@
 package main
 
 import (
+	"strings"
 	"time"
 
 	"gopkg.in/op/go-logging.v1"
 
+	"cache/cluster"
 	"cache/server"
 	"cli"
 )
@@ -31,6 +33,14 @@ var opts struct {
 		WritableCerts string `long:"writable_certs" description:"File or directory containing certificates that are allowed to write to the cache"`
 		ReadonlyCerts string `long:"readonly_certs" description:"File or directory containing certificates that are allowed to read from the cache"`
 	} `group:"Options controlling TLS communication & authentication"`
+
+	ClusterFlags struct {
+		ClusterPort      int    `long:"cluster_port" default:"7946" description:"Port to gossip among cluster nodes on"`
+		ClusterAddresses string `short:"c" long:"cluster_addresses" description:"Comma-separated addresses of one or more nodes to join a cluster"`
+		SeedCluster      bool   `long:"seed_cluster" description:"Seeds a new cache cluster."`
+		ClusterSize      int    `long:"cluster_size" description:"Number of nodes to expect in the cluster.\nMust be passed if --seed_cluster is, has no effect otherwise."`
+		NodeName         string `long:"node_name" description:"Name of this node in the cluster. Only usually needs to be passed if running multiple nodes on the same machine, when it should be unique."`
+	} `group:"Options controlling clustering behaviour"`
 }
 
 func main() {
@@ -44,11 +54,27 @@ func main() {
 	} else if opts.TLSFlags.KeyFile == "" && (opts.TLSFlags.WritableCerts != "" || opts.TLSFlags.ReadonlyCerts != "") {
 		log.Fatalf("You can only use --writable_certs / --readonly_certs with https (--key_file and --cert_file)")
 	}
+
 	log.Notice("Scanning existing cache directory %s...", opts.Dir)
 	cache := server.NewCache(opts.Dir, time.Duration(opts.CleanFlags.CleanFrequency),
 		time.Duration(opts.CleanFlags.MaxArtifactAge),
 		uint64(opts.CleanFlags.LowWaterMark), uint64(opts.CleanFlags.HighWaterMark))
+
+	var clusta *cluster.Cluster
+	if opts.ClusterFlags.SeedCluster {
+		if opts.ClusterFlags.ClusterSize < 2 {
+			log.Fatalf("You must pass a cluster size of > 1 when initialising the seed node.")
+		}
+		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort, opts.Port, opts.ClusterFlags.NodeName)
+		clusta.Init(opts.ClusterFlags.ClusterSize)
+	} else if opts.ClusterFlags.ClusterAddresses != "" {
+		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort, opts.Port, opts.ClusterFlags.NodeName)
+		clusta.Join(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
+	}
+
 	log.Notice("Starting up RPC cache server on port %d...", opts.Port)
-	server.ServeGrpcForever(opts.Port, cache, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
+	s, lis := server.BuildGrpcServer(opts.Port, cache, clusta, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
 		opts.TLSFlags.CACertFile, opts.TLSFlags.ReadonlyCerts, opts.TLSFlags.WritableCerts)
+
+	server.ServeGrpcForever(s, lis)
 }

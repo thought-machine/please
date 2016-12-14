@@ -19,6 +19,7 @@ else:
         deps = [
             '//src/core',
             '//src/cache/proto:rpc_cache',
+            '//src/cache/tools',
             '//third_party/go:logging',
             '//third_party/go:grpc',
         ],

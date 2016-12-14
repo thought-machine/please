@@ -6,6 +6,7 @@ go_library(
         'rpc_server.go',
     ],
     deps = [
+        '//src/cache/cluster',
         '//src/cache/proto:rpc_cache',
         '//src/cache/tools',
         '//src/core',
@@ -35,6 +36,7 @@ go_binary(
     main = 'rpc_server_main.go',
     deps = [
         ':server',
+        '//src/cache/cluster',
         '//src/cli',
         '//third_party/go:logging',
     ],
