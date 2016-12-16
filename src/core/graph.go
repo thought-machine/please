@@ -135,12 +135,12 @@ func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 }
 
 func NewGraph() *BuildGraph {
-	graph := new(BuildGraph)
-	graph.targets = make(map[BuildLabel]*BuildTarget)
-	graph.packages = make(map[string]*Package)
-	graph.pendingRevDeps = make(map[BuildLabel]map[BuildLabel]*BuildTarget)
-	graph.revDeps = make(map[BuildLabel][]*BuildTarget)
-	return graph
+	return &BuildGraph{
+		targets:        make(map[BuildLabel]*BuildTarget),
+		packages:       make(map[string]*Package),
+		pendingRevDeps: make(map[BuildLabel]map[BuildLabel]*BuildTarget),
+		revDeps:        make(map[BuildLabel][]*BuildTarget),
+	}
 }
 
 // ReverseDependencies returns the set of revdeps on the given target.
