@@ -489,9 +489,10 @@ func PrepareSourcePair(pair sourcePair) error {
 }
 
 // CollapseHash combines our usual four-part hash into one by XOR'ing them together.
-// This helps keep things short in places where sometimes we get complaints about filenames being too long (?)
-// and where we don't especially care about breaking out the individual parts of hashes, which
-// is important for many parts of the system.
+// This helps keep things short in places where sometimes we get complaints about filenames being
+// too long (this is most noticeable on e.g. Ubuntu with an encrypted home directory, but
+// not an entire encrypted disk) and where we don't especially care about breaking out the
+// individual parts of hashes, which is important for many parts of the system.
 func CollapseHash(key []byte) []byte {
 	short := [sha1.Size]byte{}
 	// We store the rule hash twice, if it's repeated we must make sure not to xor it
