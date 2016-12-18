@@ -310,7 +310,7 @@ func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buil
 	updateTarget2(buildingTarget, label, active, failed, cached, description, err, colour)
 	if plainOutput {
 		if failed {
-			log.Errorf("%s: %s", label.String(), description)
+			log.Errorf("%s: %s: %s", label.String(), description, err)
 		} else {
 			if !active {
 				active := pluralise(state.NumActive(), "task", "tasks")
