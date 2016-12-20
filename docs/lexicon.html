@@ -3129,7 +3129,7 @@ a target which has only had small changes.</p>
 
     <h3><a name="python_library">python_library</a></h3>
 
-    <p><pre class="rule"><code>python_library(name, srcs=None, resources=None, deps=None, visibility=None, test_only=False, zip_safe=True, labels=None)</code></pre></p>
+    <p><pre class="rule"><code>python_library(name, srcs=None, resources=None, deps=None, visibility=None, test_only=False, zip_safe=True, labels=None, interpreter=None)</code></pre></p>
 
     <p>Generates a Python library target, which collects Python files for use by dependent rules.</p>
     <p>
@@ -3209,6 +3209,15 @@ See python_binary for more information.</td>
 	<td>None</td>
 	<td>list</td>
 	<td>Labels to apply to this rule.</td>
+      </tr>
+
+      <tr>
+	<td>interpreter</td>
+	<td>Set in config</td>
+	<td>str</td>
+	<td>The Python interpreter to use. Defaults to the config setting
+which is normally just 'python', but could be 'python3' or
+'pypy' or whatever.</td>
       </tr>
 
       </tbody>
