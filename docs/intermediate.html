@@ -84,7 +84,7 @@
       but each of those only has its own set of symbols. The final binary rule must link all of them together to produce
       a working executable.</p>
 
-    <p>Fortunately, this is pretty easy in Please. You can apply <code>needs_transitive_dependencies = True</code> to a
+    <p>Fortunately, this is pretty easy in Please. You can apply <code>needs_transitive_deps = True</code> to a
       <code>genrule</code> to make them all available at build time. This is easy to do but of course shouldn't be taken
       lightly since it will slow the rule down (needs more time to prepare sources) and may harm incrementality.<br/>
       The typical pattern is that <code>_library</code> rules don't need this but <code>_binary</code> and <code>_test</code>
