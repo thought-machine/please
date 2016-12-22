@@ -19,29 +19,32 @@ exit 0\n\
 %(tarball_boundary)s"""
 
 
-def sh_library(name, src, deps=None, visibility=None, link=True):
+def sh_library(name, src, deps=None, visibility=None, link=True, labels=None):
     """Generates a shell script binary, essentially just the given source.
 
     Note that these are individually executable so can only have one source file each.
     This is a bit tedious and would be nice to improve sometime.
 
     Args:
-      name (str): Name of the rule
-      src (str): Source file for the rule
-      deps (list): Dependencies of this rule
+      name (str): Name of the rule.
+      src (str): Source file for the rule.
+      deps (list): Dependencies of this rule.
       visibility (list): Visibility declaration of the rule.
       link (bool): Deprecated, has no effect.
+      labels (list): List of labels.
     """
+    labels = labels or []
     filegroup(
         name=name,
         srcs=[src],
         deps=deps,
         visibility=visibility,
         binary=True,
+        labels=labels,
     )
 
 
-def sh_binary(name, main, deps=None, visibility=None):
+def sh_binary(name, main, deps=None, visibility=None, labels=None):
     """Generates a shell script binary.
 
     The resulting script will contain three things:
@@ -54,7 +57,9 @@ def sh_binary(name, main, deps=None, visibility=None):
       main (str): The script to execute after all files have been uncompressed
       deps (list): Dependencies of this rule
       visibility (list): Visibility declaration of the rule.
+      labels (list): List of labels.
     """
+    labels = labels or []
     tmpl_vars = {
         'tarball_boundary': _TARBALL_BOUNDARY,
     }
@@ -83,7 +88,8 @@ def sh_binary(name, main, deps=None, visibility=None):
         cmd = cmds,
         deps = deps,
         binary = True,
-        needs_transitive_deps = True
+        needs_transitive_deps = True,
+        labels = labels
     )
 
 
