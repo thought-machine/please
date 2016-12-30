@@ -732,7 +732,8 @@ You can depend on the output of this as though it were a cc_library rule.</p>
       </ul>
     </p>
     <p>You don't own the contents of any of these pointers so don't try to delete them :)</p>
-    <p>N.B. Does not work on OSX at present due to missing options in Apple's ld.</p>
+    <p>N.B. The implementation on OSX requires nasm, because Apple's ld doesn't support
+      binary embedding. On other platforms it simply uses ld.</p>
 
     <table>
       <thead>
