@@ -6,7 +6,10 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"os/exec"
 	"path"
+	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"unicode"
@@ -19,16 +22,18 @@ type testDescr struct {
 	Functions []string
 	CoverVars []CoverVar
 	Imports   []string
+	Version18 bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(pkgDir string, sources []string, output string, coverVars []CoverVar) error {
+func WriteTestMain(pkgDir string, version18 bool, sources []string, output string, coverVars []CoverVar) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
 	}
 	testDescr.CoverVars = coverVars
+	testDescr.Version18 = version18
 	if len(testDescr.Functions) > 0 {
 		// Can't set this if there are no test functions, it'll be an unused import.
 		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, coverVars)
@@ -42,6 +47,28 @@ func WriteTestMain(pkgDir string, sources []string, output string, coverVars []C
 	// This might be consumed by other things.
 	fmt.Printf("Package: %s\n", testDescr.Package)
 	return testMainTmpl.Execute(f, testDescr)
+}
+
+// IsVersion18 returns true if the given Go tool is version 1.8 or greater.
+// This is needed because the test main signature has changed - it's not subject to the Go1 compatibility guarantee :(
+func IsVersion18(goTool string) bool {
+	cmd := exec.Command(goTool, "version")
+	out, err := cmd.Output()
+	if err != nil {
+		log.Fatalf("Can't determine Go version: %s", err)
+	}
+	return isVersion18(out)
+}
+
+func isVersion18(version []byte) bool {
+	r := regexp.MustCompile("go version go1.([0-9]+)[^0-9].*")
+	m := r.FindSubmatch(version)
+	if len(m) == 0 {
+		log.Warning("Failed to match %s", version)
+		return false
+	}
+	v, _ := strconv.Atoi(string(m[1]))
+	return v >= 8
 }
 
 // extraImportPaths returns the set of extra import paths that are needed.
@@ -131,6 +158,9 @@ package main
 import (
 	"os"
 	"testing"
+{{if .Version18}}
+        "testing/internal/testdeps"
+{{end}}
 
 {{range .Imports}}
 	{{.}}
@@ -180,9 +210,13 @@ func coverRegisterFile(fileName string, counter []uint32, pos []uint32, numStmts
 }
 {{end}}
 
-func matchString(pat, str string) (bool, error) {
+{{if .Version18}}
+var testDeps = testdeps.TestDeps{}
+{{else}}
+func testDeps(pat, str string) (bool, error) {
     return pat == str, nil
 }
+{{end}}
 
 func main() {
 {{if .CoverVars}}
@@ -204,7 +238,7 @@ func main() {
     os.Args = append(args, os.Args[1:]...)
 	benchmarks := []testing.InternalBenchmark{}
 	var examples = []testing.InternalExample{}
-	m := testing.MainStart(matchString, tests, benchmarks, examples)
+	m := testing.MainStart(testDeps, tests, benchmarks, examples)
 {{if .Main}}
 	{{.Package}}.{{.Main}}(m)
 {{else}}

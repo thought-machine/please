@@ -339,16 +339,16 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
             test_only = True,
             deps = deps,
         )
-    go_test_tool, tools = _tool_path(CONFIG.GO_TEST_TOOL)
+    go_test_tool, tools = _tool_path(CONFIG.GO_TEST_TOOL, _GO_TOOL)
     build_rule(
         name='_%s#main' % name,
         srcs=srcs,
         outs=[name + '_main.go'],
         deps=deps,
         cmd={
-            'dbg': go_test_tool + ' -o $OUT $SRCS',
-            'opt': go_test_tool + ' -o $OUT $SRCS',
-            'cover': go_test_tool + ' -d . -o $OUT $SRCS ',
+            'dbg': '$TOOLS -o $OUT $SRCS',
+            'opt': '$TOOLS -o $OUT $SRCS',
+            'cover': '$TOOLS -d . -o $OUT $SRCS ',
         },
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
         requires=['go'],
