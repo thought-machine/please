@@ -641,6 +641,11 @@ func main() {
 		// If we're running plz init then we obviously don't expect to read a config file.
 		utils.InitConfig(opts.Init.Dir, opts.Init.BazelCompatibility)
 		os.Exit(0)
+	} else if command == "help" {
+		if !buildFunctions[command]() {
+			os.Exit(1)
+		}
+		os.Exit(0)
 	}
 	if opts.BuildFlags.RepoRoot == "" {
 		core.FindRepoRoot(true)
