@@ -7,7 +7,8 @@ import sys
 def main(filename):
     with open(filename) as f:
         data = json.load(f)
-    json.dump({k: v['docstring'] for k, v in data['functions'].items()},
+    m = lambda k, v: '%s(%s)\n\n%s' % (k, ', '.join(a['name'] for a in v['args']), v['docstring'])
+    json.dump({k: m(k, v) for k, v in data['functions'].items()},
               sys.stdout, sort_keys=True)
 
 
