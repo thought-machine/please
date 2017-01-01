@@ -19,6 +19,7 @@ import (
 	"cli"
 	"core"
 	"gc"
+	"help"
 	"metrics"
 	"output"
 	"parse"
@@ -157,6 +158,12 @@ var opts struct {
 		TargetsOnly  bool `short:"t" long:"targets_only" description:"Only print the targets to delete"`
 		SrcsOnly     bool `short:"s" long:"srcs_only" description:"Only print the source files to delete"`
 	} `command:"gc" description:"Analyzes the repo to determine unneeded targets."`
+
+	Help struct {
+		Args struct {
+			Topic string `positional-arg-name:"topic" description:"Topic to display help on" required:"true"`
+		} `positional-args:"true" required:"true"`
+	} `command:"help" alias:"halp" description:"Displays help about various parts of plz or its build rules"`
 
 	Query struct {
 		Deps struct {
@@ -326,6 +333,9 @@ var buildFunctions = map[string]func() bool{
 				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly)
 		}
 		return success
+	},
+	"help": func() bool {
+		return help.Help(opts.Help.Args.Topic)
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
