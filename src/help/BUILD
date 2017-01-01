@@ -28,6 +28,7 @@ go_library(
         ':data',
     ],
     deps = [
+        '//src/utils',
         '//third_party/go:logging',
     ],
     visibility = ['PUBLIC'],
