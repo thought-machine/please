@@ -161,8 +161,8 @@ var opts struct {
 
 	Help struct {
 		Args struct {
-			Topic string `positional-arg-name:"topic" description:"Topic to display help on" required:"true"`
-		} `positional-args:"true" required:"true"`
+			Topic string `positional-arg-name:"topic" description:"Topic to display help on"`
+		} `positional-args:"true"`
 	} `command:"help" alias:"halp" description:"Displays help about various parts of plz or its build rules"`
 
 	Query struct {

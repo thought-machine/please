@@ -34,3 +34,12 @@ func TestConfig(t *testing.T) {
 func TestMisc(t *testing.T) {
 	assert.Contains(t, help("plzconfig"), "plzconfig")
 }
+
+func TestGeneralMessage(t *testing.T) {
+	// Should provide some useful message for just "plz halp"
+	assert.NotEqual(t, "", help(""))
+}
+
+func TestTopics(t *testing.T) {
+	assert.NotEqual(t, "", help("topics"))
+}

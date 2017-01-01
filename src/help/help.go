@@ -6,6 +6,7 @@ package help
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
@@ -27,6 +28,22 @@ const configPreamble = `
 const miscPreamble = `
 %s is a general Please concept.
 
+`
+const defaultHelpMessage = `
+Please is a high-performance language-agnostic build system.
+
+Try plz help <topic> for help on a specific topic;
+plz --help if you want information on flags / options/ commands that it accepts;
+plz help topics if you want to see the list of possible topics to get help on
+or try a few commands like plz build or plz test if your repo is already set up
+and you'd like to see it in action.
+
+Or see the website (https://please.build) for more information.
+`
+const topicsHelpMessage = `
+The following help topics are available:
+
+%s
 `
 
 var allHelpFiles = []string{"rule_defs.json", "config.json", "misc.json"}
@@ -53,6 +70,11 @@ func Help(topic string) bool {
 }
 
 func help(topic string) string {
+	if topic == "" {
+		return defaultHelpMessage
+	} else if topic == "topics" {
+		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(), "\n"))
+	}
 	topic = strings.ToLower(topic)
 	for i, filename := range allHelpFiles {
 		if message, found := halp(topic, filename, allHelpPreambles[i]); found {
@@ -83,11 +105,17 @@ func loadData(filename string) map[string]string {
 
 // suggest looks through all known help topics and tries to make a suggestion about what the user might have meant.
 func suggest(topic string) string {
+	return utils.SuggestMessage(topic, allTopics(), maxSuggestionDistance)
+}
+
+// allTopics returns all the possible topics to get help on.
+func allTopics() []string {
 	topics := []string{}
 	for _, filename := range allHelpFiles {
 		for t := range loadData(filename) {
 			topics = append(topics, t)
 		}
 	}
-	return utils.SuggestMessage(topic, topics, maxSuggestionDistance)
+	sort.Strings(topics)
+	return topics
 }
