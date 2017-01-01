@@ -6,6 +6,7 @@ package help
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -19,9 +20,17 @@ const rulesPreamble = `
 %s is a built-in build rule in Please. Instructions for use & its arguments:
 
 `
+const configPreamble = `
+%s is a config setting defined in the .plzconfig file. See "plz help plzconfig" for more information.
 
-var allHelpFiles = []string{"rule_defs.json"}
-var allHelpPreambles = []string{rulesPreamble}
+`
+const miscPreamble = `
+%s is a general Please concept.
+
+`
+
+var allHelpFiles = []string{"rule_defs.json", "config.json", "misc.json"}
+var allHelpPreambles = []string{rulesPreamble, configPreamble, miscPreamble}
 
 // maxSuggestionDistance is the maximum Levenshtein edit distance we'll suggest help topics at.
 const maxSuggestionDistance = 5
@@ -44,6 +53,7 @@ func Help(topic string) bool {
 }
 
 func help(topic string) string {
+	topic = strings.ToLower(topic)
 	for i, filename := range allHelpFiles {
 		if message, found := halp(topic, filename, allHelpPreambles[i]); found {
 			return message

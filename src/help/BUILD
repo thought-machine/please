@@ -16,7 +16,11 @@ genrule(
 # easy enough.
 go_bindata(
     name = 'data',
-    srcs = [':rule_defs'],
+    srcs = [
+        'config.json',
+        'misc.json',
+        ':rule_defs',
+    ],
     compress = True,
     prefix = '$PKG',
 )

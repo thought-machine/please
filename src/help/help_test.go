@@ -25,3 +25,12 @@ func TestSuggestion(t *testing.T) {
 	assert.Equal(t, "\nMaybe you meant cc_embed_binary ?", suggest("cc_emdbed_binary"))
 	assert.Equal(t, "", suggest("blahdiblahdiblah"))
 }
+
+func TestConfig(t *testing.T) {
+	assert.Contains(t, help("NumThreads"), "config setting")
+	assert.Contains(t, help("numthreads"), "config setting")
+}
+
+func TestMisc(t *testing.T) {
+	assert.Contains(t, help("plzconfig"), "plzconfig")
+}
