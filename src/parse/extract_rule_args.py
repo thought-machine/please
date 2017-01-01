@@ -24,7 +24,7 @@ def read_functions(filenames):
                     # The c_*** family of functions call through to the cc_family. To keep them
                     # simple don't bother applying checks here.
                     if not node.name.startswith('c_'):
-                        yield node.name, arg_checks(node)
+                        yield node.name, ast.get_docstring(node), arg_checks(node)
 
 
 def arg_checks(node):
@@ -44,10 +44,11 @@ def arg_checks(node):
 if __name__ == '__main__':
     json.dump({'functions': {
         func_name: {
+            'docstring': docstring,
             'args': [{
                 'name': arg_name,
                 'required': required,
                 'types': types,
             } for arg_name, required, types in func_info],
-        } for func_name, func_info in read_functions(sys.argv[1:])
+        } for func_name, docstring, func_info in read_functions(sys.argv[1:])
     }}, sys.stdout, sort_keys=True, indent=4)
