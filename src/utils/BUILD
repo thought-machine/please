@@ -6,12 +6,13 @@ go_library(
         'wrapper_script.go',
         '*_test.go',
     ]) + [':wrapper_script'],
-    visibility = ['PUBLIC'],
     deps = [
         '//src/core',
+        '//third_party/go:levenshtein',
         '//third_party/go:logging',
         '//third_party/go:prompter',
     ],
+    visibility = ['PUBLIC'],
 )
 
 go_bindata(
