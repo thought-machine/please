@@ -8,15 +8,12 @@
     <h2>Installing</h2>
     <p><code>curl https://get.please.build | bash</code></p>
     <p>This will download and install the latest version of Please on your system.</p>
-    <p>You'll also need PyPy installed, including the .so which is not present in the usual
-      Debian / Ubuntu packages of it. We suggest downloading the latest version from
-      <a href="http://pypy.org/download.html">pypy.org</a> and following their instructions.<br/>
-      If you're using another distro that has a packaged version, make sure you add the shared
-      library (e.g. <code>USE=shared</code> on Gentoo).<br/>
-      <code>brew install pypy</code> should work on OSX though.
-    </p>
-    <p>Alternatively you can use CPython (currently only version 2 is supported) as long as you
-      have cffi installed; <code>pip install cffi>=1.5.0</code> should take care of it.</p>
+
+    <p>It needs a Python parser to run; it ships with support for CPython (only version 2 for now)
+      and PyPy. On Linux it should automatically attempt to fetch a portable version of PyPy if not
+      available; on OSX you'll need to install it using <code>brew install pypy</code> or similar.<br/>
+      In either case, if you want to use CPython, you'll need cffi installed;
+      <code>pip install cffi>=1.5.0</code> should take care of it.</p>
 
     <h2>Shell completion</h2>
     <p>There are a couple of shell completion scripts available:<p>

@@ -15,6 +15,7 @@ cgo_library(
     deps = [
         ':builtin_rules',
         '//src/core',
+        '//src/update',
         '//third_party/go:gcfg',
         '//third_party/go:levenshtein',
         '//third_party/go:logging',
