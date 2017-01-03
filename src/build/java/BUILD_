@@ -7,6 +7,15 @@ java_binary(
     visibility = ['PUBLIC'],
 )
 
+java_binary(
+    name = 'javac_worker',
+    out = 'javac_worker',
+    main_class = 'build.please.compile.JavaCompiler',
+    self_executable = True,
+    deps = ['//src/build/java/build/please/compile'],
+    visibility = ['PUBLIC'],
+)
+
 go_library(
     name = 'java',
     srcs = ['zip_writer.go'],

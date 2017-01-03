@@ -88,6 +88,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("PYTHON_DEFAULT_PIP_REPO", config.Python.DefaultPipRepo)
 	setConfigValue("USE_PYPI", pythonBool(config.Python.UsePyPI))
 	setConfigValue("JAVAC_TOOL", config.Java.JavacTool)
+	setConfigValue("JAVAC_WORKER", config.Java.JavacWorker)
 	setConfigValue("JARCAT_TOOL", config.Java.JarCatTool)
 	setConfigValue("JUNIT_RUNNER", config.Java.JUnitRunner)
 	setConfigValue("DEFAULT_TEST_PACKAGE", config.Java.DefaultTestPackage)

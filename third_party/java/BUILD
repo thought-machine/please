@@ -42,7 +42,7 @@ maven_jar(
 
 maven_jar(
     name = 'protobuf',
-    id = 'com.google.protobuf:protobuf-java:3.0.0-beta-3',
-    hash = 'ed118aa0276005ca49b18a3a2b77eaacdec95680',
+    id = 'com.google.protobuf:protobuf-java:3.0.0',
+    hash = '88d92d14d257f10971fbb734ffcdd290817045c0',
     sources = False,
 )

@@ -8,6 +8,7 @@ filegroup(
     srcs = [
         '//src/build/go:please_go_test',
         '//src/build/java:jarcat',
+        '//src/build/java:javac_worker',
         '//src/build/java:junit_runner',
         '//src/build/java:please_maven',
         '//src/build/python:please_pex',

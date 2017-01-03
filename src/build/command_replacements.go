@@ -32,6 +32,13 @@
 //   Expands to a path to the output of the given target, with the preceding plz-out/gen
 //   or plz-out/bin etc. Useful when these things will be run by a user.
 //
+// $(worker //path/to:target)
+//   Indicates that this target will be run by a remote worker process. The following
+//   arguments are sent to the remote worker.
+//   This is subject to some additional rules: it must appear initially in the command,
+//   and if "&&" appears subsequently in the command, that part is run locally after
+//   the worker has completed. All workers must be listed as tools of the rule.
+//
 // In general it's a good idea to use these where possible in genrules rather than
 // hardcoding specific paths.
 
@@ -48,13 +55,14 @@ import (
 	"core"
 )
 
-var locationReplacement = regexp.MustCompile("\\$\\(location ([^\\)]+)\\)")
-var locationsReplacement = regexp.MustCompile("\\$\\(locations ([^\\)]+)\\)")
-var exeReplacement = regexp.MustCompile("\\$\\(exe ([^\\)]+)\\)")
-var outExeReplacement = regexp.MustCompile("\\$\\(out_exe ([^\\)]+)\\)")
-var outReplacement = regexp.MustCompile("\\$\\(out_location ([^\\)]+)\\)")
-var dirReplacement = regexp.MustCompile("\\$\\(dir ([^\\)]+)\\)")
-var hashReplacement = regexp.MustCompile("\\$\\(hash ([^\\)]+)\\)")
+var locationReplacement = regexp.MustCompile(`\$\(location ([^\)]+)\)`)
+var locationsReplacement = regexp.MustCompile(`\$\(locations ([^\)]+)\)`)
+var exeReplacement = regexp.MustCompile(`\$\(exe ([^\)]+)\)`)
+var outExeReplacement = regexp.MustCompile(`\$\(out_exe ([^\)]+)\)`)
+var outReplacement = regexp.MustCompile(`\$\(out_location ([^\)]+)\)`)
+var dirReplacement = regexp.MustCompile(`\$\(dir ([^\)]+)\)`)
+var hashReplacement = regexp.MustCompile(`\$\(hash ([^\)]+)\)`)
+var workerReplacement = regexp.MustCompile(`^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`)
 
 // Replace escape sequences in the target's command.
 // For example, $(location :blah) -> the output of rule blah.
@@ -74,6 +82,19 @@ func ReplaceTestSequences(target *core.BuildTarget, command string) string {
 		return replaceSequencesInternal(target, fmt.Sprintf("$(exe :%s)", target.Label.Name), true)
 	}
 	return replaceSequencesInternal(target, command, true)
+}
+
+// workerCommandAndArgs returns the worker & its command (if any) and subsequent local command for the rule.
+func workerCommandAndArgs(target *core.BuildTarget) (string, string, string) {
+	match := workerReplacement.FindStringSubmatch(target.GetCommand())
+	if match == nil {
+		return "", "", ReplaceSequences(target, target.GetCommand())
+	} else if match[1] != "" {
+		panic("$(worker) replacements cannot have any commands preceding them.")
+	}
+	return replaceSequence(target, core.ExpandHomePath(match[2]), true, false, false, false, false, false),
+		replaceSequencesInternal(target, strings.TrimSpace(match[3]), false),
+		replaceSequencesInternal(target, match[4], false)
 }
 
 func replaceSequencesInternal(target *core.BuildTarget, command string, test bool) string {
@@ -120,21 +141,31 @@ func replaceSequencesInternal(target *core.BuildTarget, command string, test boo
 	return strings.Replace(cmd, "\\$", "$", -1)
 }
 
-// Replaces a single escape sequence in a command.
+// replaceSequence replaces a single escape sequence in a command.
 func replaceSequence(target *core.BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test bool) string {
 	if core.LooksLikeABuildLabel(in) {
 		label := core.ParseBuildLabel(in, target.Label.PackageName)
 		return replaceSequenceLabel(target, label, in, runnable, multiple, dir, outPrefix, hash, test, true)
 	}
-	for _, src := range target.AllSources() {
+	for _, src := range sourcesOrTools(target, runnable) {
 		if label := src.Label(); label != nil && src.String() == in {
 			return replaceSequenceLabel(target, *label, in, runnable, multiple, dir, outPrefix, hash, test, false)
+		} else if runnable && src.String() == in {
+			return src.String()
 		}
 	}
 	if hash {
 		return base64.RawURLEncoding.EncodeToString(mustPathHash(path.Join(target.Label.PackageName, in)))
 	}
 	return quote(path.Join(target.Label.PackageName, in))
+}
+
+// sourcesOrTools returns either the tools of a target if runnable is true, otherwise its sources.
+func sourcesOrTools(target *core.BuildTarget, runnable bool) []core.BuildInput {
+	if runnable {
+		return target.Tools
+	}
+	return target.AllSources()
 }
 
 func replaceSequenceLabel(target *core.BuildTarget, label core.BuildLabel, in string, runnable, multiple, dir, outPrefix, hash, test, allOutputs bool) string {
