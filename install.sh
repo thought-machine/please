@@ -36,7 +36,7 @@ chmod 0775 ${DEST}/please_go_test
 cp -f plz-out/bin/src/lint/please_build_linter ${DEST}/please_build_linter
 chmod 0775 ${DEST}/please_build_linter
 cp -f plz-out/bin/src/build/java/javac_worker ${DEST}/javac_worker
-chmod 0775 ${DEST}/please_build_linter
+chmod 0775 ${DEST}/javac_worker
 echo "Please installed"
 
 if [ ! -f /usr/local/bin/plz ]; then
