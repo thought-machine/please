@@ -33,7 +33,6 @@ def sh_library(name, src, deps=None, visibility=None, link=True, labels=None):
       link (bool): Deprecated, has no effect.
       labels (list): List of labels.
     """
-    labels = labels or []
     filegroup(
         name=name,
         srcs=[src],
@@ -59,7 +58,6 @@ def sh_binary(name, main, deps=None, visibility=None, labels=None):
       visibility (list): Visibility declaration of the rule.
       labels (list): List of labels.
     """
-    labels = labels or []
     tmpl_vars = {
         'tarball_boundary': _TARBALL_BOUNDARY,
     }
