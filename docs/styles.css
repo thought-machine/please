@@ -160,7 +160,7 @@ hr {
 
 /* Main body */
 .body {
-    margin-left: 31%;
+    margin-left: 10%;
 }
 .body h1 {
     padding: 5em 0;
@@ -235,9 +235,6 @@ footer a {
 .index-layout h2 {
     text-indent: 0;
 }
-.index-layout img {
-    display: block;
-}
 .index-layout a:link, .index-layout a:visited {
     text-transform: uppercase;
     color: white;
@@ -248,4 +245,7 @@ footer a {
 .index-open {
     color: white;
     margin: 8em 8em 8em 0;
+}
+.icon {
+    float: right;
 }

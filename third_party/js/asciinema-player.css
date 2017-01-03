@@ -1,6 +1,6 @@
 .asciinema-player-wrapper {
   position: relative;
-  text-align: center;
+  text-align: left;
   outline: none;
 }
 .asciinema-player-wrapper .title-bar {
