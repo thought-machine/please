@@ -24,7 +24,7 @@ blacklistdirs = gopkg.in
 keep = //test/...
 keep = //docs:all
 keep = //package:all
-keep = //:all_tools
+keep = //tools
 
 [go]
 testtool = //tools/please_go_test
