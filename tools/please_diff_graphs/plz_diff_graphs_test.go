@@ -9,7 +9,7 @@ import (
 )
 
 func TestDiffGraphsSimple(t *testing.T) {
-	changes := readAndDiffGraphs("src/misc/test_data/before.json", "src/misc/test_data/after.json", nil, nil, nil)
+	changes := readAndDiffGraphs("tools/please_diff_graphs/test_data/before.json", "tools/please_diff_graphs/test_data/after.json", nil, nil, nil)
 	expected := []core.BuildLabel{
 		core.ParseBuildLabel("//src/misc:plz_diff_graphs", ""),
 		core.ParseBuildLabel("//src/misc:plz_diff_graphs_test", ""),
@@ -18,13 +18,13 @@ func TestDiffGraphsSimple(t *testing.T) {
 }
 
 func TestDiffGraphsRemovedPackage(t *testing.T) {
-	changes := readAndDiffGraphs("src/misc/test_data/before.json", "src/misc/test_data/removed_package.json", nil, nil, nil)
+	changes := readAndDiffGraphs("tools/please_diff_graphs/test_data/before.json", "tools/please_diff_graphs/test_data/removed_package.json", nil, nil, nil)
 	expected := []core.BuildLabel{} // Nothing because targets no longer exist
 	assert.Equal(t, expected, changes)
 }
 
 func TestDiffGraphsRemovedPackage2(t *testing.T) {
-	changes := readAndDiffGraphs("src/misc/test_data/removed_package.json", "src/misc/test_data/before.json", nil, nil, nil)
+	changes := readAndDiffGraphs("tools/please_diff_graphs/test_data/removed_package.json", "tools/please_diff_graphs/test_data/before.json", nil, nil, nil)
 	expected := []core.BuildLabel{
 		core.ParseBuildLabel("//:all_tools", ""),
 		core.ParseBuildLabel("//src/cache/tools:cache_cleaner", ""),
@@ -34,7 +34,7 @@ func TestDiffGraphsRemovedPackage2(t *testing.T) {
 }
 
 func TestDiffGraphsChangedHash(t *testing.T) {
-	changes := readAndDiffGraphs("src/misc/test_data/before.json", "src/misc/test_data/changed_hash.json", nil, nil, nil)
+	changes := readAndDiffGraphs("tools/please_diff_graphs/test_data/before.json", "tools/please_diff_graphs/test_data/changed_hash.json", nil, nil, nil)
 	expected := []core.BuildLabel{
 		core.ParseBuildLabel("//:all_tools", ""),
 		core.ParseBuildLabel("//src/cache/server:http_cache_server_bin", ""),
@@ -44,7 +44,7 @@ func TestDiffGraphsChangedHash(t *testing.T) {
 
 func TestDiffGraphsChangedFile(t *testing.T) {
 	changedFile := []string{"src/build/java/net/thoughtmachine/please/test/TestCoverage.java"}
-	changes := readAndDiffGraphs("src/misc/test_data/before.json", "src/misc/test_data/before.json", changedFile, nil, nil)
+	changes := readAndDiffGraphs("tools/please_diff_graphs/test_data/before.json", "tools/please_diff_graphs/test_data/before.json", changedFile, nil, nil)
 	expected := []core.BuildLabel{
 		core.ParseBuildLabel("//:all_tools", ""),
 		core.ParseBuildLabel("//src/build/java:_junit_runner#jar", ""),
@@ -70,13 +70,13 @@ func TestDiffGraphsChangedFile(t *testing.T) {
 }
 
 func TestDiffGraphsExcludeLabels(t *testing.T) {
-	changes := readAndDiffGraphs("src/misc/test_data/before.json", "src/misc/test_data/labels.json", nil, nil, []string{"manual"})
+	changes := readAndDiffGraphs("tools/please_diff_graphs/test_data/before.json", "tools/please_diff_graphs/test_data/labels.json", nil, nil, []string{"manual"})
 	expected := []core.BuildLabel{}
 	assert.Equal(t, expected, changes)
 }
 
 func TestDiffGraphsIncludeLabels(t *testing.T) {
-	changes := readAndDiffGraphs("src/misc/test_data/before.json", "src/misc/test_data/labels2.json", nil, []string{"py"}, nil)
+	changes := readAndDiffGraphs("tools/please_diff_graphs/test_data/before.json", "tools/please_diff_graphs/test_data/labels2.json", nil, []string{"py"}, nil)
 	expected := []core.BuildLabel{
 		core.ParseBuildLabel("//src/build/python:pex_import_test", ""),
 	}

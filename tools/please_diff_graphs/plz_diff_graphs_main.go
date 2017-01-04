@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"cli"
-	"misc"
+	"tools/please_diff_graphs"
 )
 
 var opts struct {
