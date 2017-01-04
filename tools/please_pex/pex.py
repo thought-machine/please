@@ -62,7 +62,7 @@ def add_directory(root_path, path, pex_builder):
 
 def add_test_files(test_sources, out_dir):
     """Add files required for running a test pex."""
-    contents = pkg_resources.resource_string('src.build.python', 'test_main.py').decode('utf-8')
+    contents = pkg_resources.resource_string('tools.please_pex', 'test_main.py').decode('utf-8')
     remove_ext = lambda x: x[:-3] if x.endswith('.py') else x
     test_modules = ','.join(remove_ext(src.replace('/', '.')) for src in test_sources.split(','))
     contents = contents.replace('__TEST_NAMES__', test_modules)
@@ -76,7 +76,7 @@ def add_test_files(test_sources, out_dir):
 
 def add_main(module_dir, entry_point, out_dir, zip_safe):
     """Add pex_main.py as the entry point to a pex."""
-    contents = pkg_resources.resource_string('src.build.python', 'pex_main.py').decode('utf-8')
+    contents = pkg_resources.resource_string('tools.please_pex', 'pex_main.py').decode('utf-8')
     contents = contents.replace('__MODULE_DIR__', module_dir).replace('__ENTRY_POINT__', entry_point)
     contents = contents.replace('__ZIP_SAFE__', str(zip_safe))
     with open(os.path.join(out_dir, 'pex_main.py'), 'w') as f:

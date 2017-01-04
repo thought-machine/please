@@ -4,7 +4,7 @@
 ; compile other python_binary rules within the Please repo itself.
 ;
 ; Other projects using Please wouldn't normally need to do anything like this.
-pextool = //src/build/python:bootstrap_pexer
+pextool = //tools/please_pex:bootstrap_pexer
 defaultpiprepo = https://get.please.build/third_party/python/index.html
 moduledir = third_party.python
 
