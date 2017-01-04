@@ -9,7 +9,7 @@ import (
 )
 
 func TestParseTestSources(t *testing.T) {
-	descr, err := parseTestSources([]string{"src/build/go/test_data/example_test.go"})
+	descr, err := parseTestSources([]string{"tools/please_go_test/test_data/example_test.go"})
 	assert.NoError(t, err)
 	assert.Equal(t, "buildgo", descr.Package)
 	assert.Equal(t, "", descr.Main)
@@ -24,7 +24,7 @@ func TestParseTestSources(t *testing.T) {
 }
 
 func TestParseTestSourcesWithMain(t *testing.T) {
-	descr, err := parseTestSources([]string{"src/build/go/test_data/example_test_main.go"})
+	descr, err := parseTestSources([]string{"tools/please_go_test/test_data/example_test_main.go"})
 	assert.NoError(t, err)
 	assert.Equal(t, "parse", descr.Package)
 	assert.Equal(t, "TestMain", descr.Main)
@@ -47,8 +47,8 @@ func TestParseTestSourcesFailsGracefully(t *testing.T) {
 
 func TestWriteTestMain(t *testing.T) {
 	err := WriteTestMain(
-		"src/build/go/test_data",
-		[]string{"src/build/go/test_data/example_test.go"},
+		"tools/please_go_test/test_data",
+		[]string{"tools/please_go_test/test_data/example_test.go"},
 		"test.go",
 		[]CoverVar{},
 	)
@@ -62,15 +62,15 @@ func TestWriteTestMain(t *testing.T) {
 
 func TestWriteTestMainWithCoverage(t *testing.T) {
 	err := WriteTestMain(
-		"src/build/go/test_data",
-		[]string{"src/build/go/test_data/example_test.go"},
+		"tools/please_go_test/test_data",
+		[]string{"tools/please_go_test/test_data/example_test.go"},
 		"test.go",
 		[]CoverVar{{
-			Dir:        "src/build/go/test_data",
+			Dir:        "tools/please_go_test/test_data",
 			Package:    "core",
 			ImportPath: "core",
 			Var:        "GoCover_lock_go",
-			File:       "src/build/go/test_data/lock.go",
+			File:       "tools/please_go_test/test_data/lock.go",
 		}},
 	)
 	assert.NoError(t, err)

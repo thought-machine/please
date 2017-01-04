@@ -10,7 +10,7 @@ fpm_deb(
         '/opt/please/cache_cleaner': '//src/cache/main:cache_cleaner',
         '/opt/please/jarcat': '//src/build/java:jarcat',
         '/opt/please/please_diff_graphs': '//src/misc:please_diff_graphs',
-        '/opt/please/please_go_test': '//src/build/go:please_go_test',
+        '/opt/please/please_go_test': '//tools/please_go_test',
         '/opt/please/please_build_linter': '//src/lint:please_build_linter',
         '/opt/please/libplease_parser_pypy.so': '//src/parse/cffi:please_parser_pypy',
         '/opt/please/libplease_parser_python2.so': '//src/parse/cffi:please_parser_python2',
@@ -53,7 +53,6 @@ tarball(
     name = 'please_tarball',
     srcs = [
         '//src:please',
-        '//src/build/go:please_go_test',
         '//src/build/java:jarcat',
         '//src/build/java:javac_worker',
         '//src/build/java:junit_runner',
@@ -63,6 +62,7 @@ tarball(
         '//src/lint:please_build_linter',
         '//src/misc:please_diff_graphs',
         '//src/parse/cffi:all_engines',
+        '//tools/please_go_test',
     ],
     out = 'please_%s.tar.gz' % CONFIG.PLZ_VERSION,
     subdir = 'please',
@@ -92,7 +92,6 @@ hash_filegroup(
     name = 'hash_tools',
     srcs = [
         '//src:please',
-        '//src/build/go:please_go_test',
         '//src/build/java:jarcat',
         '//src/build/java:junit_runner',
         '//src/build/java:please_maven',
@@ -101,5 +100,6 @@ hash_filegroup(
         '//src/lint:please_build_linter',
         '//src/misc:please_diff_graphs',
         '//src/parse/cffi:all_engines',
+        '//tools/please_go_test',
     ],
 )

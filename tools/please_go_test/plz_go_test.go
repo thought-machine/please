@@ -9,8 +9,8 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"build/buildgo"
 	"cli"
+	"tools/please_go_test/buildgo"
 )
 
 var log = logging.MustGetLogger("plz_go_test")

@@ -8,35 +8,35 @@ import (
 
 // The library here is a (very) reduced version of core that only has one file in it.
 var coverageVars = []CoverVar{{
-	Dir:        "src/build/go/test_data",
-	ImportPath: "build/go/test_data/core",
+	Dir:        "tools/please_go_test/test_data",
+	ImportPath: "tools/please_go_test/test_data/core",
 	Package:    "core",
 	Var:        "GoCover_lock_go",
-	File:       "src/build/go/test_data/lock.go",
+	File:       "tools/please_go_test/test_data/lock.go",
 }}
 
 func TestReadPkgdef(t *testing.T) {
-	vars, err := readPkgdef("src/build/go/test_data/core.a")
+	vars, err := readPkgdef("tools/please_go_test/test_data/core.a")
 	assert.NoError(t, err)
 	assert.Equal(t, coverageVars, vars)
 }
 
 func TestReadCopiedPkgdef(t *testing.T) {
 	// Sanity check that this file exists.
-	vars, err := readPkgdef("src/build/go/test_data/x/core.a")
+	vars, err := readPkgdef("tools/please_go_test/test_data/x/core.a")
 	assert.NoError(t, err)
 	expected := []CoverVar{{
-		Dir:        "src/build/go/test_data/x",
-		ImportPath: "build/go/test_data/x/core",
+		Dir:        "tools/please_go_test/test_data/x",
+		ImportPath: "tools/please_go_test/test_data/x/core",
 		Package:    "core",
 		Var:        "GoCover_lock_go",
-		File:       "src/build/go/test_data/x/lock.go",
+		File:       "tools/please_go_test/test_data/x/lock.go",
 	}}
 	assert.Equal(t, expected, vars)
 }
 
 func TestFindCoverVars(t *testing.T) {
-	vars, err := FindCoverVars("src/build/go/test_data", []string{"src/build/go/test_data/x", "src/build/go/test_data/binary"})
+	vars, err := FindCoverVars("tools/please_go_test/test_data", []string{"tools/please_go_test/test_data/x", "tools/please_go_test/test_data/binary"})
 	assert.NoError(t, err)
 	assert.Equal(t, coverageVars, vars)
 }
@@ -55,13 +55,13 @@ func TestFindCoverVarsReturnsNothingForEmptyPath(t *testing.T) {
 func TestFindBinaryCoverVars(t *testing.T) {
 	// Test for Go 1.7 binary format.
 	expected := []CoverVar{{
-		Dir:        "src/build/go/test_data/binary",
-		ImportPath: "build/go/test_data/binary/core",
+		Dir:        "tools/please_go_test/test_data/binary",
+		ImportPath: "tools/please_go_test/test_data/binary/core",
 		Package:    "core",
 		Var:        "GoCover_lock_go",
-		File:       "src/build/go/test_data/binary/lock.go",
+		File:       "tools/please_go_test/test_data/binary/lock.go",
 	}}
-	vars, err := FindCoverVars("src/build/go/test_data/binary", nil)
+	vars, err := FindCoverVars("tools/please_go_test/test_data/binary", nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, vars)
 }
