@@ -81,7 +81,7 @@ cgo_test(
 
 gentest(
     name = 'lint_builtin_rules_test',
-    data = glob(['rules/*.build_defs']) + ['//src/lint:please_build_linter'],
+    data = glob(['rules/*.build_defs']) + ['//tools/linter'],
     no_test_output = True,
-    test_cmd = '$(location //src/lint:please_build_linter) src/parse/rules/*.build_defs',
+    test_cmd = '$(location //tools/linter) src/parse/rules/*.build_defs',
 )

@@ -21,7 +21,7 @@ cp -f plz-out/bin/src/libplease_parser_*.so ${DEST}
 chmod 0664 ${DEST}/libplease_parser_*.so
 cp -f plz-out/bin/tools/please_pex/please_pex ${DEST}/please_pex
 chmod 0775 ${DEST}/please_pex
-cp -f plz-out/bin/src/build/java/junit_runner.jar ${DEST}/junit_runner.jar
+cp -f plz-out/bin/tools/junit_runner/junit_runner.jar ${DEST}/junit_runner.jar
 chmod 0664 ${DEST}/junit_runner.jar
 cp -f plz-out/bin/tools/jarcat/jarcat ${DEST}/jarcat
 chmod 0775 ${DEST}/jarcat
@@ -33,9 +33,9 @@ cp -f plz-out/bin/src/misc/please_diff_graphs ${DEST}/please_diff_graphs
 chmod 0775 ${DEST}/please_diff_graphs
 cp -f plz-out/bin/tools/please_go_test/please_go_test ${DEST}/please_go_test
 chmod 0775 ${DEST}/please_go_test
-cp -f plz-out/bin/src/lint/please_build_linter ${DEST}/please_build_linter
+cp -f plz-out/bin/tools/linter/linter ${DEST}/please_build_linter
 chmod 0775 ${DEST}/please_build_linter
-cp -f plz-out/bin/src/build/java/javac_worker ${DEST}/javac_worker
+cp -f plz-out/bin/tools/javac_worker/javac_worker ${DEST}/javac_worker
 chmod 0775 ${DEST}/javac_worker
 echo "Please installed"
 
