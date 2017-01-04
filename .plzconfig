@@ -38,7 +38,7 @@ defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-p
 javacworker = //src/build/java:javac_worker
 jarcattool = //src/build/java:jarcat
 junitrunner = //src/build/java:junit_runner
-pleasemaventool = //src/build/java:please_maven
+pleasemaventool = //tools/please_maven
 defaulttestpackage = build.please
 ; We want the default to remain at java 8 because obviously it's significantly better,
 ; but the builtin packages here support java 7 fine so it's nice not to require more.

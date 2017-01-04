@@ -19,13 +19,13 @@ chmod 0775 ${DEST}/please
 ln -sf ${DEST}/please ${DEST}/plz
 cp -f plz-out/bin/src/libplease_parser_*.so ${DEST}
 chmod 0664 ${DEST}/libplease_parser_*.so
-cp -f plz-out/bin/src/build/python/please_pex ${DEST}/please_pex
+cp -f plz-out/bin/tools/please_pex/please_pex ${DEST}/please_pex
 chmod 0775 ${DEST}/please_pex
 cp -f plz-out/bin/src/build/java/junit_runner.jar ${DEST}/junit_runner.jar
 chmod 0664 ${DEST}/junit_runner.jar
 cp -f plz-out/bin/src/build/java/jarcat ${DEST}/jarcat
 chmod 0775 ${DEST}/jarcat
-cp -f plz-out/bin/src/build/java/please_maven ${DEST}/please_maven
+cp -f plz-out/bin/tools/please_maven/please_maven ${DEST}/please_maven
 chmod 0775 ${DEST}/please_maven
 cp -f plz-out/bin/src/cache/main/cache_cleaner ${DEST}/cache_cleaner
 chmod 0775 ${DEST}/cache_cleaner

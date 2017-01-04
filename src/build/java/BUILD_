@@ -36,15 +36,6 @@ go_binary(
     visibility = ['PUBLIC'],
 )
 
-go_binary(
-    name = 'please_maven',
-    deps = [
-        '//src/cli',
-        '//third_party/go:logging',
-    ],
-    visibility = ['PUBLIC'],
-)
-
 go_test(
     name = 'zip_writer_test',
     srcs = ['zip_writer_test.go'],
