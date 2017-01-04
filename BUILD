@@ -6,9 +6,9 @@ filegroup(
 filegroup(
     name = 'all_tools',
     srcs = [
-        '//src/cache/main:cache_cleaner',
         '//src/cache/server:http_cache_server_bin',
         '//src/cache/server:rpc_cache_server_bin',
+        '//tools/cache_cleaner',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',
