@@ -13,12 +13,12 @@ public class TestCoverageTest {
 
   @Test
   public void testDeriveOriginalFilename() {
-    String filename = TestCoverage.deriveOriginalFilename("src/build/java/build/please/test",
+    String filename = TestCoverage.deriveOriginalFilename("tools/junit_runner/src/build/please/test",
                                                           "build/please/test/TestCoverage");
-    assertEquals("src/build/java/build/please/test/TestCoverage", filename);
+    assertEquals("tools/junit_runner/src/build/please/test/TestCoverage", filename);
 
-    filename = TestCoverage.deriveOriginalFilename("src/build/java", "build/please/test/TestCoverage");
-    assertEquals("src/build/java/build/please/test/TestCoverage", filename);
+    filename = TestCoverage.deriveOriginalFilename("tools/junit_runner/src", "build/please/test/TestCoverage");
+    assertEquals("tools/junit_runner/src/build/please/test/TestCoverage", filename);
 
     filename = TestCoverage.deriveOriginalFilename("", "build/please/test/TestCoverage");
     assertEquals("build/please/test/TestCoverage", filename);
@@ -29,6 +29,6 @@ public class TestCoverageTest {
     // Test we can read our own source map.
     Map<String, String> sourceMap = TestCoverage.readSourceMap();
     assertFalse(sourceMap.isEmpty());
-    assertEquals(sourceMap.get("build/please/test/TestCoverage.java"), "src/build/java/build/please/test/TestCoverage.java");
+    assertEquals(sourceMap.get("build/please/test/TestCoverage.java"), "tools/junit_runner/src/build/please/test/TestCoverage.java");
   }
 }

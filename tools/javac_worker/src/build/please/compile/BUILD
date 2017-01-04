@@ -8,5 +8,5 @@ java_library(
     deps = [
         '//src/build/proto:worker',
     ],
-    visibility = ['//src/build/java:all'],
+    visibility = ['//tools/javac_worker:all'],
 )

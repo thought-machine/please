@@ -8,5 +8,5 @@ proto_library(
         'go',
         'java',
     ],
-    visibility = ['//src/build/...'],
+    visibility = ['PUBLIC'],
 )

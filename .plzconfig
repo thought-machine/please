@@ -35,9 +35,9 @@ defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 
 [java]
-javacworker = //src/build/java:javac_worker
+javacworker = //tools/javac_worker
 jarcattool = //tools/jarcat
-junitrunner = //src/build/java:junit_runner
+junitrunner = //tools/junit_runner
 pleasemaventool = //tools/please_maven
 defaulttestpackage = build.please
 ; We want the default to remain at java 8 because obviously it's significantly better,
