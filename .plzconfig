@@ -36,7 +36,7 @@ defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-p
 
 [java]
 javacworker = //src/build/java:javac_worker
-jarcattool = //src/build/java:jarcat
+jarcattool = //tools/jarcat
 junitrunner = //src/build/java:junit_runner
 pleasemaventool = //tools/please_maven
 defaulttestpackage = build.please

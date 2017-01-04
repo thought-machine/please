@@ -15,8 +15,8 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"build/java"
 	"cli"
+	"tools/jarcat"
 )
 
 var log = logging.MustGetLogger("jarcat")
@@ -32,7 +32,7 @@ func combine(out, in, preamble, stripPrefix, mainClass, excludeInternalPrefix st
 
 	w := zip.NewWriter(f)
 	defer w.Close()
-	defer java.HandleConcatenatedFiles(w)
+	defer jarcat.HandleConcatenatedFiles(w)
 
 	if preamble != "" {
 		if err := w.WritePreamble(preamble + "\n"); err != nil {
@@ -64,21 +64,21 @@ func combine(out, in, preamble, stripPrefix, mainClass, excludeInternalPrefix st
 			if !matchesSuffix(path, excludeSuffixes) {
 				if matchesSuffix(path, suffix) {
 					log.Debug("Adding zip file %s", path)
-					if err := java.AddZipFile(w, path, includeInternalPrefixes, excludeInternalPrefixes, stripPrefix, strict, renameDirs); err != nil {
+					if err := jarcat.AddZipFile(w, path, includeInternalPrefixes, excludeInternalPrefixes, stripPrefix, strict, renameDirs); err != nil {
 						return fmt.Errorf("Error adding %s to zipfile: %s", path, err)
 					}
-				} else if includeOther && !java.HasExistingFile(w, path) {
+				} else if includeOther && !jarcat.HasExistingFile(w, path) {
 					log.Debug("Including existing non-zip file %s", path)
 					if b, err := ioutil.ReadFile(path); err != nil {
 						return fmt.Errorf("Error reading %s to zipfile: %s", path, err)
-					} else if err = java.WriteFile(w, path, b); err != nil {
+					} else if err = jarcat.WriteFile(w, path, b); err != nil {
 						return err
 					}
 				}
 			}
 		} else if (len(suffix) == 0 || addInitPy) && path != "." && dirEntries { // Only add directory entries in "dumb" mode.
 			log.Debug("Adding directory entry %s/", path)
-			if err := java.WriteDir(w, path); err != nil {
+			if err := jarcat.WriteDir(w, path); err != nil {
 				return err
 			}
 		}
@@ -88,12 +88,12 @@ func combine(out, in, preamble, stripPrefix, mainClass, excludeInternalPrefix st
 		return err
 	}
 	if mainClass != "" {
-		if err := java.AddManifest(w, mainClass); err != nil {
+		if err := jarcat.AddManifest(w, mainClass); err != nil {
 			return err
 		}
 	}
 	if addInitPy {
-		return java.AddInitPyFiles(w)
+		return jarcat.AddInitPyFiles(w)
 	}
 	return nil
 }

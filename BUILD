@@ -6,7 +6,6 @@ filegroup(
 filegroup(
     name = 'all_tools',
     srcs = [
-        '//src/build/java:jarcat',
         '//src/build/java:javac_worker',
         '//src/build/java:junit_runner',
         '//src/cache/main:cache_cleaner',
@@ -14,6 +13,7 @@ filegroup(
         '//src/cache/server:rpc_cache_server_bin',
         '//src/lint:please_build_linter',
         '//src/misc:please_diff_graphs',
+        '//tools/jarcat',
         '//tools/please_go_test',
         '//tools/please_maven',
         '//tools/please_pex',

@@ -1,5 +1,5 @@
 // Contains utility functions for helping combine .jar files.
-package java
+package jarcat
 
 import (
 	"bytes"
