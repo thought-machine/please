@@ -1,4 +1,7 @@
 {
-    "licences": "Please has a limited ability to detect licences from third-party code.\nAccepted / rejected licences can be marked in .plzconfig; no action is taken until something is set there.",
-    "plzconfig": "The root of a Please repo is identified by a .plzconfig file. This also has a number of options to control various ways it behaves."
+    "preamble": "%s is a general Please concept.",
+    "topics": {
+        "licences": "Please has a limited ability to detect licences from third-party code.\nAccepted / rejected licences can be marked in .plzconfig; no action is taken until something is set there.",
+        "plzconfig": "The root of a Please repo is identified by a .plzconfig file. This also has a number of options to control various ways it behaves."
+    }
 }

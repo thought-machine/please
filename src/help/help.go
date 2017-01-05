@@ -16,24 +16,11 @@ import (
 
 var log = logging.MustGetLogger("help")
 
-// rulesPreamble is a message we print out before help for any built-in build rules.
-const rulesPreamble = `
-%s is a built-in build rule in Please. Instructions for use & its arguments:
-
-`
-const configPreamble = `
-%s is a config setting defined in the .plzconfig file. See "plz help plzconfig" for more information.
-
-`
-const miscPreamble = `
-%s is a general Please concept.
-
-`
 const defaultHelpMessage = `
 Please is a high-performance language-agnostic build system.
 
 Try plz help <topic> for help on a specific topic;
-plz --help if you want information on flags / options/ commands that it accepts;
+plz --help if you want information on flags / options / commands that it accepts;
 plz help topics if you want to see the list of possible topics to get help on
 or try a few commands like plz build or plz test if your repo is already set up
 and you'd like to see it in action.
@@ -47,7 +34,6 @@ The following help topics are available:
 `
 
 var allHelpFiles = []string{"rule_defs.json", "config.json", "misc.json"}
-var allHelpPreambles = []string{rulesPreamble, configPreamble, miscPreamble}
 
 // maxSuggestionDistance is the maximum Levenshtein edit distance we'll suggest help topics at.
 const maxSuggestionDistance = 5
@@ -70,37 +56,37 @@ func Help(topic string) bool {
 }
 
 func help(topic string) string {
+	topic = strings.ToLower(topic)
 	if topic == "" {
 		return defaultHelpMessage
 	} else if topic == "topics" {
 		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(), "\n"))
 	}
-	topic = strings.ToLower(topic)
-	for i, filename := range allHelpFiles {
-		if message, found := findHelpFromFile(topic, filename, allHelpPreambles[i]); found {
+	for _, filename := range allHelpFiles {
+		if message, found := findHelpFromFile(topic, filename); found {
 			return message
 		}
 	}
 	return ""
 }
 
-func findHelpFromFile(topic, filename, preamble string) (string, bool) {
-	m := loadData(filename)
-	message, found := m[topic]
+func findHelpFromFile(topic, filename string) (string, bool) {
+	preamble, topics := loadData(filename)
+	message, found := topics[topic]
 	if !found {
 		return "", false
 	}
-	return fmt.Sprintf(preamble, topic) + message, true
+	return fmt.Sprintf(preamble+"\n\n", topic) + message, true
 }
 
-func loadData(filename string) map[string]string {
+func loadData(filename string) (string, map[string]string) {
 	log.Debug("Opening help file %s", filename)
 	data := MustAsset(filename)
-	m := map[string]string{}
-	if err := json.Unmarshal(data, &m); err != nil {
+	f := helpFile{}
+	if err := json.Unmarshal(data, &f); err != nil {
 		log.Fatalf("Failed to load help data: %s\n", err)
 	}
-	return m
+	return f.Preamble, f.Topics
 }
 
 // suggest looks through all known help topics and tries to make a suggestion about what the user might have meant.
@@ -112,10 +98,17 @@ func suggest(topic string) string {
 func allTopics() []string {
 	topics := []string{}
 	for _, filename := range allHelpFiles {
-		for t := range loadData(filename) {
+		_, data := loadData(filename)
+		for t := range data {
 			topics = append(topics, t)
 		}
 	}
 	sort.Strings(topics)
 	return topics
+}
+
+// helpFile is a struct we use for unmarshalling.
+type helpFile struct {
+	Preamble string            `json:"preamble"`
+	Topics   map[string]string `json:"topics"`
 }
