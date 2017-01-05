@@ -5,6 +5,8 @@ Version 7.2.0
       These can be used to speed up compile times in cases where the compiler supports this
       and has significant startup overhead. Initial implementation for Java can have up to
       a 4x speedup on sufficiently large build graphs.
+    * Added `plz help` command which can show reference information about built-in build rules,
+      config settings, etc.
     * The Linux implementation will attempt to download a portable PyPy distribution if
       none of the plugins work against the system versions. Should make it easier to get
       up & running since it's not completely trivial to install.
@@ -12,7 +14,6 @@ Version 7.2.0
       wait on network latency. Retrieves must still happen synchronously, of course.
       The cache request scheme is also a little more efficient and will make slightly
 	  fewer requests overall.
-
 
 
 Version 7.1.1
