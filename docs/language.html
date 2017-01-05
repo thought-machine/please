@@ -35,9 +35,9 @@
 
     <h2>Style</h2>
 
-    <p>We normally write BUILD files in a slightly non-standard idiom. The justification is that
-      these are mostly just inherited from working on Blaze, but a brief explanation follows
-      after an example:</p>
+    <p>We normally write BUILD files in an idiom which doesn't quite match standard Python styles.
+      The justification is that these are mostly just inherited from working on Blaze, but a
+      brief explanation follows after an example:</p>
 
     <pre><code>
       # Taken from //src/core/BUILD in the Please repo
@@ -53,7 +53,7 @@
       )
     </code></pre>
 
-    <p><b>All arguments to build rules are passed as keywords.</b>. This is pretty important
+    <p><b>All arguments to build rules are passed as keywords.</b> This is pretty important
       since (1) nobody will be able to read your BUILD file otherwise and (2) while we don't
       normally change the order of function arguments, we might sometimes insert earlier ones
       which will break code using positional arguments.</p>
@@ -79,8 +79,6 @@
 
     <p>We generally try to order lists lexicographically but don't always get this 100%.</p>
 
-    <p>There is no autoformatter for BUILD files at the moment; we've looked at building one
-      but the built-in modules for Python don't work because they don't preserve comments.<br/>
-      We'd like one someday though, several of us have fond memories of Google's one (and we
-      live in hope of being able to borrow that!).</p>
-
+    <p>If you'd like an autoformatter for BUILD files, Google's
+      <a href="https://github.com/bazelbuild/buildifier">Buildifier</a> is very good & fast.
+      We use a slightly modified version of it internally & on the Please repo.</p>
