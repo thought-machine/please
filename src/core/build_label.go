@@ -292,6 +292,11 @@ func (label BuildLabel) Parent() BuildLabel {
 	return label
 }
 
+// HasParent returns true if the build label has a parent that's not itself.
+func (label BuildLabel) HasParent() bool {
+	return label.Parent() != label
+}
+
 // IsEmpty returns true if this is an empty build label, i.e. nothing's populated it yet.
 func (label BuildLabel) IsEmpty() bool {
 	return label.PackageName == "" && label.Name == ""

@@ -246,7 +246,7 @@ func printBuildResults(state *core.BuildState, duration float64) {
 	}
 	// Print this stuff so we always see it.
 	printf("Build finished; total time %0.2fs, incrementality %.1f%%. Outputs:\n", duration, incrementality)
-	for _, label := range state.ExpandOriginalTargets() {
+	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		fmt.Printf("%s:\n", label)
 		for _, result := range buildResult(target) {
@@ -257,7 +257,7 @@ func printBuildResults(state *core.BuildState, duration float64) {
 
 func printHashes(state *core.BuildState, duration float64) {
 	fmt.Printf("Hashes calculated, total time %0.2fs:\n", duration)
-	for _, label := range state.ExpandOriginalTargets() {
+	for _, label := range state.ExpandVisibleOriginalTargets() {
 		hash, err := build.OutputHash(state.Graph.TargetOrDie(label))
 		if err != nil {
 			fmt.Printf("  %s: cannot calculate: %s\n", label, err)
@@ -269,7 +269,7 @@ func printHashes(state *core.BuildState, duration float64) {
 
 func printTempDirs(state *core.BuildState, duration float64) {
 	fmt.Printf("Temp directories prepared, total time %0.2fs:\n", duration)
-	for _, label := range state.ExpandOriginalTargets() {
+	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		cmd := build.ReplaceSequences(target, target.GetCommand())
 		env := core.BuildEnvironment(state, target, false)

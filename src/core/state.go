@@ -182,8 +182,13 @@ func (state *BuildState) KillAll() {
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
 func (state *BuildState) IsOriginalTarget(label BuildLabel) bool {
+	return state.isOriginalTarget(label, false)
+}
+
+// isOriginalTarget implementsIsOriginalTarget, optionally allowing disabling matching :all labels.
+func (state *BuildState) isOriginalTarget(label BuildLabel, exact bool) bool {
 	for _, original := range state.OriginalTargets {
-		if original == label || (original.IsAllTargets() && original.PackageName == label.PackageName) {
+		if original == label || (!exact && original.IsAllTargets() && original.PackageName == label.PackageName) {
 			return true
 		}
 	}
@@ -276,6 +281,18 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 		}
 	}
 	sort.Sort(ret)
+	return ret
+}
+
+// ExpandVisibleOriginalTargets expands any pseudo-targets (ie. :all, ... has already been resolved to a bunch :all targets)
+// from the set of original targets. Hidden targets are not included.
+func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
+	ret := BuildLabels{}
+	for _, target := range state.ExpandOriginalTargets() {
+		if !target.HasParent() || state.isOriginalTarget(target, true) {
+			ret = append(ret, target)
+		}
+	}
 	return ret
 }
 

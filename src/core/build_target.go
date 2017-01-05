@@ -787,7 +787,7 @@ func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
 
 // HasParent returns true if the target has a parent rule that's not itself.
 func (target *BuildTarget) HasParent() bool {
-	return target.Label.Parent() != target.Label
+	return target.Label.HasParent()
 }
 
 // Make slices of these guys sortable.
