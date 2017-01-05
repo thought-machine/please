@@ -25,7 +25,7 @@ but as a result they're not checked into Git.
 /* General */
 body {
     background: #202328;
-    color: #666666;
+    color: #999999;
     font-family: "EssentialPragmataPro", monospace;
 }
 a {
@@ -149,7 +149,7 @@ hr {
     color: #00FFA9;
 }
 .left .menu > ul > li > ul > li, .left .menu > ul > li > ul > li > a {
-    color: #666666;
+    color: #999999;
 }
 .left .menu li {
     text-transform: uppercase;
