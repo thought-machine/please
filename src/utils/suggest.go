@@ -24,7 +24,7 @@ func Suggest(needle string, haystack []string, maxSuggestionDistance int) []stri
 	return ret
 }
 
-// Suggest implements levenshtein-based suggestions on a sequence of items and
+// PrettyPrintSuggestion implements levenshtein-based suggestions on a sequence of items and
 // produces a single message from them.
 func PrettyPrintSuggestion(needle string, haystack []string, maxSuggestionDistance int) string {
 	options := Suggest(needle, haystack, maxSuggestionDistance)
