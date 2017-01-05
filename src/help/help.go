@@ -77,14 +77,14 @@ func help(topic string) string {
 	}
 	topic = strings.ToLower(topic)
 	for i, filename := range allHelpFiles {
-		if message, found := halp(topic, filename, allHelpPreambles[i]); found {
+		if message, found := findHelpFromFile(topic, filename, allHelpPreambles[i]); found {
 			return message
 		}
 	}
 	return ""
 }
 
-func halp(topic, filename, preamble string) (string, bool) {
+func findHelpFromFile(topic, filename, preamble string) (string, bool) {
 	m := loadData(filename)
 	message, found := m[topic]
 	if !found {
@@ -105,7 +105,7 @@ func loadData(filename string) map[string]string {
 
 // suggest looks through all known help topics and tries to make a suggestion about what the user might have meant.
 func suggest(topic string) string {
-	return utils.SuggestMessage(topic, allTopics(), maxSuggestionDistance)
+	return utils.PrettyPrintSuggestion(topic, allTopics(), maxSuggestionDistance)
 }
 
 // allTopics returns all the possible topics to get help on.
