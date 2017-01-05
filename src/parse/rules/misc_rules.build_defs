@@ -561,13 +561,15 @@ _COMPRESSION = {
 }
 
 
-def _tool_path(tool, tools=None, binary=True):
+def _tool_path(tool, tools=None, binary=True, worker=False):
     """Returns the invocation of a tool and the list of tools for a rule to depend on.
 
     Used for tools like pex_tool and jarcat_tool which might be repo rules or just filesystem paths.
     """
     tools = [tool] + (tools or [])
-    return ('$(%s %s)' % ('exe' if binary else 'location', tool) if tool.startswith('//') else tool), tools
+    if worker or tool.startswith('//'):
+        return '$(%s %s)' % ('worker' if worker else 'exe' if binary else 'location', tool), tools
+    return tool, tools
 
 
 def _test_size_and_timeout(size, timeout, labels):

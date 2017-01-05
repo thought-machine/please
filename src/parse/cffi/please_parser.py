@@ -451,6 +451,7 @@ def _get_globals(c_package, c_package_name):
 def register_callback(name, c_type, callback):
     """Called at initialisation time to register a single callback."""
     globals()[ffi_to_string(name)] = ffi.cast(ffi_to_string(c_type), callback)
+    return 1  # used to detect success (must be nonzero)
 
 
 class ParseError(Exception):

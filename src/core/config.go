@@ -70,6 +70,7 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	defaultPath(&config.Cache.DirCacheCleaner, config.Please.Location, "cache_cleaner")
 	defaultPath(&config.Go.TestTool, config.Please.Location, "please_go_test")
 	defaultPath(&config.Python.PexTool, config.Please.Location, "please_pex")
+	defaultPath(&config.Java.JavacWorker, config.Please.Location, "javac_worker")
 	defaultPath(&config.Java.JarCatTool, config.Please.Location, "jarcat")
 	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
@@ -133,7 +134,6 @@ func DefaultConfiguration() *Configuration {
 	if runtime.GOOS != "darwin" {
 		config.Python.PipFlags = "--isolated"
 	}
-	config.Java.JavacTool = "javac"
 	config.Java.DefaultTestPackage = ""
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"
@@ -249,6 +249,7 @@ type Configuration struct {
 	}
 	Java struct {
 		JavacTool          string
+		JavacWorker        string
 		JarTool            string
 		JarCatTool         string
 		PleaseMavenTool    string

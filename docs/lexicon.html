@@ -3590,7 +3590,7 @@ implement something more advanced (ala .sar files or whatever).</p>
 
     <h3><a name="sh_library">sh_library</a></h3>
 
-    <p><pre class="rule"><code>sh_library(name, src, deps=None, visibility=None, link=True)</code></pre></p>
+    <p><pre class="rule"><code>sh_library(name, src, deps=None, visibility=None, link=True, labels=None)</code></pre></p>
 
     <p>Generates a shell script binary, essentially just the given source.</p>
     <p>
@@ -3643,12 +3643,19 @@ Note that these are individually executable so can only have one source file eac
 	<td>Deprecated, has no effect.</td>
       </tr>
 
+      <tr>
+	<td>labels</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Labels to apply to this test.</td>
+      </tr>
+
       </tbody>
     </table>
 
     <h3><a name="sh_binary">sh_binary</a></h3>
 
-    <p><pre class="rule"><code>sh_binary(name, main, deps=None, visibility=None, link=True)</code></pre></p>
+    <p><pre class="rule"><code>sh_binary(name, main, deps=None, visibility=None, link=True, labels=None)</code></pre></p>
 
     <p>Generates a shell binary, essentially just the shell script itself.</p>
 
@@ -3696,6 +3703,13 @@ Note that these are individually executable so can only have one source file eac
 	<td>True</td>
 	<td>bool</td>
 	<td>If True, outputs will be linked in plz-out; if False they'll be copied.</td>
+      </tr>
+
+      <tr>
+	<td>labels</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Labels to apply to this test.</td>
       </tr>
 
       </tbody>

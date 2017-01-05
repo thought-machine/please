@@ -4,7 +4,7 @@
 ; compile other python_binary rules within the Please repo itself.
 ;
 ; Other projects using Please wouldn't normally need to do anything like this.
-pextool = //src/build/python:bootstrap_pexer
+pextool = //tools/please_pex:bootstrap_pexer
 defaultpiprepo = https://get.please.build/third_party/python/index.html
 moduledir = third_party.python
 
@@ -24,10 +24,10 @@ blacklistdirs = gopkg.in
 keep = //test/...
 keep = //docs:all
 keep = //package:all
-keep = //:all_tools
+keep = //tools
 
 [go]
-testtool = //src/build/go:please_go_test
+testtool = //tools/please_go_test
 
 [cpp]
 defaultnamespace = thought_machine
@@ -35,9 +35,10 @@ defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 
 [java]
-jarcattool = //src/build/java:jarcat
-junitrunner = //src/build/java:junit_runner
-pleasemaventool = //src/build/java:please_maven
+javacworker = //tools/javac_worker
+jarcattool = //tools/jarcat
+junitrunner = //tools/junit_runner
+pleasemaventool = //tools/please_maven
 defaulttestpackage = build.please
 ; We want the default to remain at java 8 because obviously it's significantly better,
 ; but the builtin packages here support java 7 fine so it's nice not to require more.
@@ -65,4 +66,5 @@ accept = BSD 3-Clause
 accept = New BSD License
 accept = Apache 2.0
 accept = Apache License, Version 2.0
+accept = The Apache Software License, Version 2.0
 accept = PSF

@@ -1,17 +1,20 @@
 go_library(
     name = 'build',
-    srcs = glob(
-        ['*.go'],
-        excludes = ['*_test.go'],
-    ),
-    visibility = ['PUBLIC'],
+    srcs = glob(['*.go'], excludes = [
+        '*_stub.go',
+        '*_test.go',
+    ]),
     deps = [
+        '//src/build/proto:worker',
         '//src/cache',
         '//src/core',
         '//src/metrics',
         '//src/parse',
         '//third_party/go:logging',
+        '//third_party/go:protobuf',
+        '//third_party/go:shlex',
     ],
+    visibility = ['PUBLIC'],
 )
 
 go_test(

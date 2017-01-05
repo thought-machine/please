@@ -29,6 +29,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"update"
 )
 
 /*
@@ -45,6 +46,10 @@ const subincludePackage = "_remote"
 // Communicated back from PyPy to indicate that a parse has been deferred because
 // we need to wait for another target to build.
 const pyDeferParse = "_DEFER_"
+
+// Communicated back from C to indicate various error states.
+const dlopenError = 1
+const cffiUnavailable = 3
 
 // To ensure we only initialise once.
 var initializeOnce sync.Once
@@ -65,14 +70,15 @@ func initializeInterpreter(config *core.Configuration) {
 
 	// If an engine has been explicitly set, by flag or config, we honour it here.
 	if config.Please.ParserEngine != "" {
-		if !initialiseInterpreter(config.Please.ParserEngine) {
+		if !initialiseInterpreter(config.Please.ParserEngine, false) {
 			log.Fatalf("Failed to initialise requested parser engine [%s]", config.Please.ParserEngine)
 		}
 	} else {
 		// Okay, now try the standard fallbacks.
 		// The python3 interpreter isn't ready yet, so don't try that.
-		if !initialiseInterpreter("pypy") && !initialiseInterpreter("python2") {
-			log.Fatalf("Can't initialise any Please parser engine. Please is putting itself out of its misery.")
+		// Try the python2 interpreter before attempting to download a portable PyPy.
+		if !initialiseInterpreter("pypy", false) && !initialiseInterpreter("python2", false) && !initialiseInterpreter("pypy", true) {
+			log.Fatalf("Can't initialise any Please parser engine. Please is putting itself out of its misery.\n")
 		}
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version.String())
@@ -88,6 +94,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("PYTHON_DEFAULT_PIP_REPO", config.Python.DefaultPipRepo)
 	setConfigValue("USE_PYPI", pythonBool(config.Python.UsePyPI))
 	setConfigValue("JAVAC_TOOL", config.Java.JavacTool)
+	setConfigValue("JAVAC_WORKER", config.Java.JavacWorker)
 	setConfigValue("JARCAT_TOOL", config.Java.JarCatTool)
 	setConfigValue("JUNIT_RUNNER", config.Java.JUnitRunner)
 	setConfigValue("DEFAULT_TEST_PACKAGE", config.Java.DefaultTestPackage)
@@ -153,19 +160,19 @@ func pythonBool(b bool) string {
 	return ""
 }
 
-func initialiseInterpreter(engine string) bool {
+func initialiseInterpreter(engine string, attemptDownload bool) bool {
 	if strings.HasPrefix(engine, "/") {
-		return initialiseInterpreterFrom(engine)
+		return initialiseInterpreterFrom(engine, attemptDownload)
 	}
 	executableDir, err := osext.ExecutableFolder()
 	if err != nil {
 		log.Error("Can't determine current executable: %s", err)
 		return false
 	}
-	return initialiseInterpreterFrom(path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())))
+	return initialiseInterpreterFrom(path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())), attemptDownload)
 }
 
-func initialiseInterpreterFrom(enginePath string) bool {
+func initialiseInterpreterFrom(enginePath string, attemptDownload bool) bool {
 	if !core.PathExists(enginePath) {
 		return false
 	}
@@ -173,13 +180,27 @@ func initialiseInterpreterFrom(enginePath string) bool {
 	cEnginePath := C.CString(enginePath)
 	defer C.free(unsafe.Pointer(cEnginePath))
 	result := C.InitialiseInterpreter(cEnginePath)
-	if result != 0 {
+	if result == 0 {
+		log.Info("Using parser engine from %s", enginePath)
+		return true
+	} else if result == dlopenError {
+		dlerror := C.GoString(C.dlerror())
+		// This is a pretty brittle check, but there is no other interface available, and
+		// we don't want to download PyPy unless we think that'll solve the problem.
+		if attemptDownload && strings.Contains(dlerror, "libpypy-c.so: cannot open shared object file") && runtime.GOOS == "linux" {
+			if update.DownloadPyPy(core.State.Config) {
+				// Downloading PyPy succeeded, try to initialise again
+				return initialiseInterpreterFrom(enginePath, false)
+			}
+		}
 		// Low level of logging because it's allowable to fail on libplease_parser_pypy, which we try first.
+		log.Notice("Failed to initialise interpreter from %s: %s", enginePath, dlerror)
+	} else if result == cffiUnavailable {
+		log.Warning("cannot use %s, cffi unavailable", enginePath)
+	} else {
 		log.Notice("Failed to initialise interpreter from %s: %s", enginePath, C.GoString(C.dlerror()))
-		return false
 	}
-	log.Info("Using parser engine from %s", enginePath)
-	return true
+	return false
 }
 
 // libExtension returns the typical extension of shared objects on the current platform.

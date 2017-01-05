@@ -76,7 +76,7 @@ go run src/please.go --engine $ENGINE --plain_output build //src:please $INTERPR
 # NB. We can't do the tarballs here because they depend on all the interpreters, which some
 #     users might not have installed.
 notice "Building the tools..."
-plz-out/bin/src/please --plain_output build //src:please //:all_tools --log_file plz-out/log/tools_build.log --log_file_level 4
+plz-out/bin/src/please --plain_output build //src:please //tools --log_file plz-out/log/tools_build.log --log_file_level 4
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
