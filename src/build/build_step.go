@@ -240,10 +240,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 // runBuildCommand runs the actual command to build a target.
 // On success it returns the stdout of the target, otherwise an error.
 func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command string, inputHash []byte) ([]byte, error) {
-	replacedCmd := ReplaceSequences(target, command)
 	env := core.StampedBuildEnvironment(state, target, false, inputHash)
-	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	out, combined, err := core.ExecWithTimeoutShell(target.TmpDir(), env, target.BuildTimeout, state.Config.Build.Timeout, state.ShowAllOutput, replacedCmd)
+	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), command)
+	out, combined, err := core.ExecWithTimeoutShell(target.TmpDir(), env, target.BuildTimeout, state.Config.Build.Timeout, state.ShowAllOutput, command)
 	if err != nil {
 		if state.Verbosity >= 4 {
 			return nil, fmt.Errorf("Error building target %s: %s\nENVIRONMENT:\n%s\n%s\n%s",
