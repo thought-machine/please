@@ -112,7 +112,7 @@ public class JavaCompiler {
             // Special flag that indicates that the sources are actually a directory and we should compile everything in it.
             opts.remove("--src_dir");
             FileFinder finder = new FileFinder(".java");
-            Files.walkFileTree(new File(request.getSrcs(0)).toPath(), finder);
+            Files.walkFileTree(new File(request.getTempDir() + "/" + request.getSrcs(0)).toPath(), finder);
             compilationUnits = fileManager.getJavaFileObjectsFromStrings(finder.getFiles());
         }
         // Find any .jar files and add them to the classpath
