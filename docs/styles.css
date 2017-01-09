@@ -51,13 +51,10 @@ h1, h2, h3, h4 {
 }
 pre {
     border: 1px #00FFA9 solid;
-    border-right: 0px #00FFA9 solid;
     border-radius: 3px;
-    padding: 2px;
+    margin-right: -3px;
+    padding: 5px 5px 5px 2px;
     color: white;
-    overflow-y: hidden;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
 }
 :not(pre) > code {
     border: 1px #666666 solid;
@@ -160,7 +157,8 @@ hr {
 
 /* Main body */
 .body {
-    margin-left: 10%;
+    padding-left: 10%;
+    overflow-x: hidden;
 }
 .body h1 {
     padding: 5em 0;
