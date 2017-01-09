@@ -16,7 +16,7 @@ import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
 import build.please.worker.WorkerProto.BuildRequest;
-import build.please.worker.WorkerProto.BuildResponse;;
+import build.please.worker.WorkerProto.BuildResponse;
 
 public class JavaCompiler {
     /**
@@ -69,7 +69,7 @@ public class JavaCompiler {
     /**
      * build handles building a single build rule.
      */
-    public BuildResponse build(BuildRequest request) {
+    public BuildResponse build(BuildRequest request) throws IOException {
         try {
             return reallyBuild(request);
         } catch (Exception ex) {
@@ -101,7 +101,7 @@ public class JavaCompiler {
         for (String src : request.getSrcsList()) {
             srcs.add(src.startsWith("/") ? src : request.getTempDir() + "/" + src);
         }
-        Iterable<? extends JavaFileObject> compilationUnits = fileManager.getJavaFileObjectsFromStrings(srcs);
+        Iterable<? extends JavaFileObject> compilationUnits;
         ArrayList<String> opts = new ArrayList<String>();
         opts.addAll(Arrays.asList(
             "-d", tmpDir,
@@ -114,6 +114,8 @@ public class JavaCompiler {
             FileFinder finder = new FileFinder(".java");
             Files.walkFileTree(new File(request.getTempDir() + "/" + request.getSrcs(0)).toPath(), finder);
             compilationUnits = fileManager.getJavaFileObjectsFromStrings(finder.getFiles());
+        } else {
+            compilationUnits = fileManager.getJavaFileObjectsFromStrings(srcs);
         }
         // Find any .jar files and add them to the classpath
         FileFinder finder = new FileFinder(".jar");
