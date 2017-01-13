@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package proto_rules;
+
+message JsTestMessage {
+    string id = 1;
+}
