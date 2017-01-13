@@ -110,9 +110,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             # Go doesn't come by default, so add it here.
             lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, lang_tools))
 
-        language_out_arguments = ''
-        if language == 'js':
-            language_out_arguments = 'import_style=commonjs:'
+        language_out_arguments = 'import_style=commonjs:' if language == 'js' else ''
 
         cmd = ' '.join([
             _plugin(CONFIG.PROTOC_TOOL, lang_tools),
