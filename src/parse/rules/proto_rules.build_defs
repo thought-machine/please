@@ -9,7 +9,8 @@ the proto_library rule to get its appropriate outputs.
 
 # Languages to generate protos for.
 # We maintain this internal mapping to normalize their names to the same ones we use elsewhere.
-_PROTO_LANGUAGES = {'cc': 'cpp', 'cc_hdrs': 'cpp', 'py': 'python', 'java': 'java', 'go': 'go'}
+_PROTO_LANGUAGES = {'cc': 'cpp', 'cc_hdrs': 'cpp', 'py': 'python', 'java': 'java', 'go': 'go',
+                    'js': 'js'}
 # File extensions that are produced for each language.
 _PROTO_FILE_EXTENSIONS = {
     'cc': ['.pb.cc'],
@@ -17,6 +18,7 @@ _PROTO_FILE_EXTENSIONS = {
     'py': ['_pb2.py'],
     'go': ['.pb.go'],
     'java': ['.java'],
+    'js': ['.js'],
 }
 
 _DEFAULT_GRPC_LABELS = ['grpc']
@@ -71,6 +73,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         'grpc_go': find_outs('go', '.pb.go'),
         'grpc_cc': find_outs('cc', '.pb.cc') + find_outs('cc', '.grpc.pb.cc'),
         'grpc_cc_hdrs': find_outs('cc', '.pb.h') + find_outs('cc', '.grpc.pb.h'),
+        'js': find_outs('js', '_pb.js'),
     }
     deps_by_lang = {
         'cc': cc_deps,
@@ -106,9 +109,12 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         if language == 'go' and not lang_plugins:
             # Go doesn't come by default, so add it here.
             lang_plugins.append('--plugin=protoc-gen-go=' + _plugin(CONFIG.PROTOC_GO_PLUGIN, lang_tools))
+
+        language_out_arguments = 'import_style=commonjs:' if language == 'js' else ''
+
         cmd = ' '.join([
             _plugin(CONFIG.PROTOC_TOOL, lang_tools),
-            '--%s_out=$TMP_DIR' % _PROTO_LANGUAGES[language],
+            '--%s_out=%s$TMP_DIR' % (_PROTO_LANGUAGES[language], language_out_arguments),
             ' '.join(lang_plugins),
         ])
         if root_dir:
@@ -202,6 +208,14 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
                 test_only = test_only,
             )
             provides['go_src'] = ':_%s#go_src' % name
+
+        elif language == 'js':
+            export_file(
+                name = lang_name,
+                src = gen_dep,
+                visibility = visibility,
+                test_only = test_only,
+            )
 
     # This simply collects the sources, it's used for other proto_library rules to depend on.
     filegroup(
