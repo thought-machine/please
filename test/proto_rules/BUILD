@@ -9,6 +9,7 @@ filegroup(
 proto_library(
     name = 'test_proto',
     srcs = [':gen_proto'],
+    visibility = ['//test/misc_rules:all'],  # Used by another test over here too.
 )
 
 python_test(
@@ -30,7 +31,7 @@ proto_library(
 filegroup(
     name = 'js_test_proto_filegroup',
     srcs = [':js_test_proto'],
-    requires = ['js']
+    requires = ['js'],
 )
 
 python_test(
@@ -38,5 +39,5 @@ python_test(
     srcs = ['js_out_test.py'],
     data = [
         ':js_test_proto_filegroup',
-    ]
+    ],
 )
