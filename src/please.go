@@ -648,8 +648,7 @@ func main() {
 		os.Exit(0)
 	}
 	if opts.BuildFlags.RepoRoot == "" {
-		core.FindRepoRoot(true)
-		log.Debug("Found repo root at %s", core.RepoRoot)
+		log.Debug("Found repo root at %s", core.MustFindRepoRoot())
 	} else {
 		core.RepoRoot = opts.BuildFlags.RepoRoot
 	}

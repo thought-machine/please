@@ -148,7 +148,8 @@ func parseMaybeRelativeBuildLabel(target, subdir string) BuildLabel {
 	// Now we need to locate the repo root and initial package.
 	// Deliberately leave this till after the above to facilitate the --repo_root flag.
 	if subdir == "" {
-		_, subdir = getRepoRoot(true)
+		MustFindRepoRoot()
+		subdir = initialPackage
 	}
 	matches := relativeTarget.FindStringSubmatch(target)
 	if matches != nil {

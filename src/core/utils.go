@@ -19,22 +19,44 @@ import (
 	"cli"
 )
 
-// Root of the repository
+// RepoRoot is the root of the Please repository
 var RepoRoot string
 
-// Initial working directory
+// initialWorkingDir is the directory we began in. Early on we chdir() to the repo root but for
+// some things we need to remember this.
 var initialWorkingDir string
 
-// Initial subdir of the working directory, ie. what package did we start in.
+// initialPackage is the initial subdir of the working directory, ie. what package did we start in.
+// This is similar but not identical to initialWorkingDir.
 var initialPackage string
 
+// usingBazelWorkspace is true if we detected a Bazel WORKSPACE file to find our repo root.
+var usingBazelWorkspace bool
+
+// DirPermissions are the default permission bits we apply to directories.
 const DirPermissions = os.ModeDir | 0775
 
 // FindRepoRoot returns the root directory of the current repo and sets the initial working dir.
-// Dies on failure if 'die' is set.
-func FindRepoRoot(die bool) {
+// It returns true if the repo root was found.
+func FindRepoRoot() bool {
 	initialWorkingDir, _ = os.Getwd()
-	RepoRoot, initialPackage = getRepoRoot(die)
+	RepoRoot, initialPackage = getRepoRoot(ConfigFileName, false)
+	return RepoRoot != ""
+}
+
+// MustFindRepoRoot returns the root directory of the current repo and sets the initial working dir.
+// It dies on failure, although will fall back to looking for a Bazel WORKSPACE file first.
+func MustFindRepoRoot() string {
+	if RepoRoot != "" {
+		return RepoRoot
+	}
+	if !FindRepoRoot() {
+		RepoRoot, initialPackage = getRepoRoot("WORKSPACE", true)
+		log.Warning("No .plzconfig file found to define the repo root.")
+		log.Warning("Falling back to Bazel WORKSPACE at %s", path.Join(RepoRoot, "WORKSPACE"))
+		usingBazelWorkspace = true
+	}
+	return RepoRoot
 }
 
 // InitialPackage returns a label corresponding to the initial package we started in.
@@ -53,7 +75,7 @@ func InitialPackage() []BuildLabel {
 }
 
 // getRepoRoot returns the root directory of the current repo and the initial package.
-func getRepoRoot(die bool) (string, string) {
+func getRepoRoot(filename string, die bool) (string, string) {
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Couldn't determine working directory: %s", err)
@@ -61,7 +83,7 @@ func getRepoRoot(die bool) (string, string) {
 	// Walk up directories looking for a .plzconfig file, which we use to identify the root.
 	initial := dir
 	for dir != "" {
-		if PathExists(path.Join(dir, ConfigFileName)) {
+		if PathExists(path.Join(dir, filename)) {
 			return dir, strings.TrimLeft(initial[len(dir):], "/")
 		}
 		dir, _ = path.Split(dir)

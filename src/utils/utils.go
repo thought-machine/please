@@ -37,8 +37,7 @@ const wrapperScriptName = "pleasew"
 // InitConfig initialises a .plzconfig template in the given directory.
 func InitConfig(dir string, bazelCompatibility bool) {
 	if dir == "." {
-		core.FindRepoRoot(false)
-		if core.RepoRoot != "" {
+		if core.FindRepoRoot() {
 			config := path.Join(core.RepoRoot, core.ConfigFileName)
 			if !prompter.YN(fmt.Sprintf("You already seem to be in a plz repo (found %s). Continue?", config), false) {
 				os.Exit(1)
