@@ -144,10 +144,10 @@ func DefaultConfiguration() *Configuration {
 	config.Cpp.LdTool = "ld"
 	config.Cpp.ArTool = "ar"
 	config.Cpp.AsmTool = "nasm"
-	config.Cpp.DefaultOptCflags = "--std=c99 -O3 -pipe -DNDEBUG -Wall -Wextra -Werror"
-	config.Cpp.DefaultDbgCflags = "--std=c99 -g3 -pipe -DDEBUG -Wall -Wextra -Werror"
-	config.Cpp.DefaultOptCppflags = "--std=c++11 -O3 -pipe -DNDEBUG -Wall -Wextra -Werror"
-	config.Cpp.DefaultDbgCppflags = "--std=c++11 -g3 -pipe -DDEBUG -Wall -Wextra -Werror"
+	config.Cpp.DefaultOptCflags = "--std=c99 -O3 -pipe -DNDEBUG -Wall -Werror"
+	config.Cpp.DefaultDbgCflags = "--std=c99 -g3 -pipe -DDEBUG -Wall -Werror"
+	config.Cpp.DefaultOptCppflags = "--std=c++11 -O3 -pipe -DNDEBUG -Wall -Werror"
+	config.Cpp.DefaultDbgCppflags = "--std=c++11 -g3 -pipe -DDEBUG -Wall -Werror"
 	config.Cpp.Coverage = true
 	config.Proto.ProtocTool = "protoc"
 	// We're using the most common names for these; typically gRPC installs the builtin plugins
