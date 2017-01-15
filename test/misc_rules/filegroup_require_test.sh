@@ -1,2 +1,5 @@
 #!/bin/bash
-exec [[ -f test/misc_rules/test_proto.pb.h ]]
+if [ -f test/misc_rules/test.pb.h ]; then
+    exit 0
+fi
+exit 1

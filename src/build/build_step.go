@@ -521,16 +521,13 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 	}
 	changed := false
 	outDir := target.OutDir()
-	for _, source := range target.Sources {
-		fullPaths := source.FullPaths(state.Graph)
-		for i, sourcePath := range source.LocalPaths(state.Graph) {
-			outPath := path.Join(outDir, sourcePath)
-			c, err := buildFilegroupFile(target, fullPaths[i], outPath)
-			if err != nil {
-				return err
-			}
-			changed = changed || c
+	localSources := target.AllLocalSourcePaths(state.Graph)
+	for i, source := range target.AllFullSourcePaths(state.Graph) {
+		c, err := buildFilegroupFile(target, source, path.Join(outDir, localSources[i]))
+		if err != nil {
+			return err
 		}
+		changed = changed || c
 	}
 	if target.HasLabel("py") && !target.IsBinary {
 		// Pre-emptively create __init__.py files so the outputs can be loaded dynamically.

@@ -251,9 +251,27 @@ func (target *BuildTarget) TestDir() string {
 
 // AllSourcePaths returns all the source paths for this target
 func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
+	return target.allSourcePaths(graph, BuildInput.Paths)
+}
+
+// AllFullSourcePaths returns all the source paths for this target, with a leading
+// plz-out/gen etc if appropriate.
+func (target *BuildTarget) AllFullSourcePaths(graph *BuildGraph) []string {
+	return target.allSourcePaths(graph, BuildInput.FullPaths)
+}
+
+// AllLocalSourcePaths returns the local part of all the source paths for this target,
+// i.e. without this target's package in it.
+func (target *BuildTarget) AllLocalSourcePaths(graph *BuildGraph) []string {
+	return target.allSourcePaths(graph, BuildInput.LocalPaths)
+}
+
+type buildPathsFunc func(BuildInput, *BuildGraph) []string
+
+func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc) []string {
 	ret := make([]string, 0, len(target.Sources))
 	for _, source := range target.AllSources() {
-		ret = append(ret, target.sourcePaths(graph, source)...)
+		ret = append(ret, target.sourcePaths(graph, source, full)...)
 	}
 	return ret
 }
@@ -330,27 +348,27 @@ func (target *BuildTarget) Outputs() []string {
 	return ret
 }
 
-// Returns the source paths for a given set of sources.
+// SourcePaths returns the source paths for a given set of sources.
 func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) []string {
 	ret := make([]string, 0, len(sources))
 	for _, source := range sources {
-		ret = append(ret, target.sourcePaths(graph, source)...)
+		ret = append(ret, target.sourcePaths(graph, source, BuildInput.Paths)...)
 	}
 	return ret
 }
 
 // sourcePaths returns the source paths for a single source.
-func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput) []string {
+func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc) []string {
 	if label := source.Label(); label != nil {
 		ret := []string{}
 		for _, providedLabel := range graph.TargetOrDie(*label).ProvideFor(target) {
-			for _, file := range providedLabel.Paths(graph) {
+			for _, file := range f(providedLabel, graph) {
 				ret = append(ret, file)
 			}
 		}
 		return ret
 	}
-	return source.Paths(graph)
+	return f(source, graph)
 }
 
 // allDepsBuilt returns true if all the dependencies of a target are built.
