@@ -606,9 +606,9 @@ def _go_library_cmds(complete=True, all_srcs=False):
     cover_cmd = 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
     srcs = 'export SRCS="$PKG/*.go"; ' if all_srcs else ''
     return {
-        'dbg': '%s%s && %s -N -l $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),
-        'opt': '%s%s && %s $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),
-        'cover': '%s%s && %s && %s $SRCS' % (srcs, _LINK_PKGS_CMD, cover_cmd, compile_cmd),
+        'dbg': '%s%s; %s -N -l $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),
+        'opt': '%s%s; %s $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),
+        'cover': '%s%s; %s && %s $SRCS' % (srcs, _LINK_PKGS_CMD, cover_cmd, compile_cmd),
     }
 
 
