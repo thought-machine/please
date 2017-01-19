@@ -210,9 +210,10 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             provides['go_src'] = ':_%s#go_src' % name
 
         elif language == 'js':
-            export_file(
+            filegroup(
                 name = lang_name,
-                src = gen_dep,
+                srcs = [gen_dep],
+                deps = [CONFIG.PROTO_JS_DEP],
                 visibility = visibility,
                 test_only = test_only,
             )

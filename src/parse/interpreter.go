@@ -130,6 +130,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("PROTO_PYTHON_DEP", config.Proto.PythonDep)
 	setConfigValue("PROTO_JAVA_DEP", config.Proto.JavaDep)
 	setConfigValue("PROTO_GO_DEP", config.Proto.GoDep)
+	setConfigValue("PROTO_JS_DEP", config.Proto.JsDep)
 	setConfigValue("PROTO_PYTHON_PACKAGE", config.Proto.PythonPackage)
 	setConfigValue("GRPC_PYTHON_DEP", config.Proto.PythonGrpcDep)
 	setConfigValue("GRPC_JAVA_DEP", config.Proto.JavaGrpcDep)
