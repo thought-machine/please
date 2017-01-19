@@ -1,3 +1,13 @@
+Version 7.3.0
+-------------
+
+    * Support for generating Javascript files from a proto_library. Currently the
+      generated code is not compiled in any way.
+    * Fix to some obscure cases of building filegroups that weren't working properly.
+    * Removed -Wextra from default CFLAGS, since many repos don't compile cleanly with it.
+    * Falls back to trying to find a Bazel WORKSPACE file if run outside a plz repository.
+
+
 Version 7.2.0
 -------------
 

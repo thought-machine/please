@@ -64,7 +64,7 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	setDefault(&config.Build.Path, []string{"/usr/local/bin", "/usr/bin", "/bin"})
 	setDefault(&config.Cover.FileExtension, []string{".go", ".py", ".java", ".js", ".cc", ".h", ".c"})
 	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc"})
-	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go"})
+	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go", "js"})
 
 	// Default values for these guys depend on config.Please.Location.
 	defaultPath(&config.Cache.DirCacheCleaner, config.Please.Location, "cache_cleaner")
