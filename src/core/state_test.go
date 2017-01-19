@@ -101,11 +101,11 @@ func TestExpandOriginalTestTargets(t *testing.T) {
 
 func TestExpandVisibleOriginalTargets(t *testing.T) {
 	state := NewBuildState(1, nil, 4, DefaultConfiguration())
-	state.OriginalTargets = []BuildLabel{{"src/core", "all"}}
+	state.OriginalTargets = []BuildLabel{NewBuildLabel("src/core", "all")}
 
 	addTarget(state, "//src/core:target1", "py")
 	addTarget(state, "//src/core:_target1#zip", "py")
-	assert.Equal(t, state.ExpandVisibleOriginalTargets(), BuildLabels{{"src/core", "target1"}})
+	assert.Equal(t, state.ExpandVisibleOriginalTargets(), BuildLabels{NewBuildLabel("src/core", "target1")})
 }
 
 func TestComparePendingTasks(t *testing.T) {
