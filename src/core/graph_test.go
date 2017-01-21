@@ -146,6 +146,33 @@ func TestArchitectureChecking(t *testing.T) {
 	assert.Panics(t, func() { graph.AddTarget(target2) })
 }
 
+func TestArchRevdeps(t *testing.T) {
+	target1 := makeTarget("//src/core:target1").toArch("test_x86")
+	target2 := makeTarget("//src/core:target2").toArch("test_x86")
+	target1.AddDependency(target2.Label)
+	graph := NewGraph()
+	graph.AddTarget(target2)
+	graph.AddTarget(target1)
+	graph.AddDependency(target1.Label.noArch(), target2.Label.noArch())
+	revdeps := graph.ReverseDependencies(target2)
+	assert.Equal(t, 1, len(revdeps))
+	assert.Equal(t, target1, revdeps[0])
+}
+
+func TestArchRevdepsInverse(t *testing.T) {
+	// Again, test the same thing in another order.
+	target1 := makeTarget("//src/core:target1").toArch("test_x86")
+	target2 := makeTarget("//src/core:target2").toArch("test_x86")
+	target1.AddDependency(target2.Label)
+	graph := NewGraph()
+	graph.AddTarget(target1)
+	graph.AddDependency(target1.Label, target2.Label)
+	graph.AddTarget(target2)
+	revdeps := graph.ReverseDependencies(target2)
+	assert.Equal(t, 1, len(revdeps))
+	assert.Equal(t, target1, revdeps[0])
+}
+
 // makeTarget creates a new build target for us.
 func makeTarget(label string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))

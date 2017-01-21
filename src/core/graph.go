@@ -205,8 +205,7 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 		toTarget = graph.cloneTargetForArch(toTarget, fromTarget.Label.Arch)
 	}
 	for _, label := range toTarget.ProvideFor(fromTarget) {
-		target, present := graph.targets[label]
-		if present {
+		if target, present := graph.targets[label]; present {
 			fromTarget.resolveDependency(toTarget.Label, target)
 			graph.revDeps[label] = append(graph.revDeps[label], fromTarget)
 		} else {
