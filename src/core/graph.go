@@ -33,20 +33,7 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	}
 	graph.targets[target.Label] = target
 	// Check these reverse deps which may have already been added against this target.
-	graph.linkPendingRevdeps(target.Label, target)
-	if target.Label.Arch != "" {
-		// Helps some stuff out to keep this guy in the graph twice.
-		// TODO(pebers): are other bits of code (e.g. query) liable to be confused by this?
-		noArchTarget := target.toArch("")
-		graph.targets[noArchTarget.Label] = noArchTarget
-		graph.linkPendingRevdeps(noArchTarget.Label, noArchTarget)
-	}
-	return target
-}
-
-// linkPendingRevdeps links up reverse dependencies of a label after it's added.
-func (graph *BuildGraph) linkPendingRevdeps(label BuildLabel, target *BuildTarget) {
-	if revdeps, present := graph.pendingRevDeps[label]; present {
+	if revdeps, present := graph.pendingRevDeps[target.Label]; present {
 		for revdep, originalTarget := range revdeps {
 			if originalTarget != nil {
 				graph.linkDependencies(graph.targets[revdep], originalTarget)
@@ -54,8 +41,9 @@ func (graph *BuildGraph) linkPendingRevdeps(label BuildLabel, target *BuildTarge
 				graph.linkDependencies(graph.targets[revdep], target)
 			}
 		}
-		delete(graph.pendingRevDeps, label) // Don't need any more
+		delete(graph.pendingRevDeps, target.Label) // Don't need any more
 	}
+	return target
 }
 
 // Adds a new package to the graph with given name.
