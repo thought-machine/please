@@ -188,6 +188,14 @@ func TestArchRevdepsInverse(t *testing.T) {
 	assert.Equal(t, target1.Label.toArch("test_x86"), revdeps[0].Label)
 }
 
+func TestCannotCloneTargetForIncompatibleArch(t *testing.T) {
+	target1 := makeTarget("//src/core:target1")
+	target1.Label.Arch = "test_x86"
+	graph := NewGraph()
+	graph.AddTarget(target1)
+	assert.Nil(t, graph.Target(target1.Label.toArch("test_arm64hf")))
+}
+
 // makeTarget creates a new build target for us.
 func makeTarget(label string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))

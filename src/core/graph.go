@@ -270,10 +270,9 @@ func (graph *BuildGraph) maybeCloneTargetForArch(label BuildLabel) *BuildTarget 
 		return nil
 	}
 	target := graph.targets[label.noArch()]
-	if target == nil {
+	if target == nil || target.Label.Arch != "" {
 		return nil
 	}
-
 	return graph.cloneTargetForArch(target, label.Arch)
 }
 
