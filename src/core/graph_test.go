@@ -110,7 +110,7 @@ func TestArchitectures(t *testing.T) {
 	assert.NotNil(t, graph.Target(target3.Label.toArch("test_x86")))
 }
 
-func TestArchitectureRevdeps(t *testing.T) {
+func TestArchitecturesInverse(t *testing.T) {
 	// Same thing as above in another order. There are two fairly distinct codepaths based
 	// on whether we need to remember revdeps or not.
 	target1 := makeTarget("//src/core:target1")
@@ -144,6 +144,20 @@ func TestArchitectureChecking(t *testing.T) {
 	graph.AddTarget(target1)
 	graph.AddDependency(target1.Label, target2.Label.noArch())
 	assert.Panics(t, func() { graph.AddTarget(target2) })
+}
+
+func TestArchitectureCheckingInverse(t *testing.T) {
+	// Again, there's another code path if we do these in another order. Check that works too.
+	target1 := makeTarget("//src/core:target1")
+	target2 := makeTarget("//src/core:target2")
+	target1.Label.Arch = "test_x86"
+	target2.Label.Arch = "test_amd64"
+	target1.AddDependency(target2.Label.noArch())
+
+	graph := NewGraph()
+	graph.AddTarget(target2)
+	graph.AddTarget(target1)
+	assert.Panics(t, func() { graph.AddDependency(target1.Label, target2.Label.noArch()) })
 }
 
 func TestArchRevdeps(t *testing.T) {

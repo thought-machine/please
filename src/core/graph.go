@@ -32,14 +32,20 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
 	graph.targets[target.Label] = target
+	// Check these reverse deps which may have already been added against this target.
+	graph.linkPendingRevdeps(target.Label, target)
+
 	if target.Label.Arch != "" {
 		// Helps some stuff out to keep this guy in the graph twice.
 		// TODO(pebers): are other bits of code (e.g. query) liable to be confused by this?
 		graph.targets[target.Label.noArch()] = target
+		graph.linkPendingRevdeps(target.Label.noArch(), target)
 	}
+	return target
+}
 
-	// Check these reverse deps which may have already been added against this target.
-	if revdeps, present := graph.pendingRevDeps[target.Label]; present {
+func (graph *BuildGraph) linkPendingRevdeps(label BuildLabel, target *BuildTarget) {
+	if revdeps, present := graph.pendingRevDeps[label]; present {
 		for revdep, originalTarget := range revdeps {
 			if originalTarget != nil {
 				graph.linkDependencies(graph.targets[revdep], originalTarget)
@@ -47,9 +53,8 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 				graph.linkDependencies(graph.targets[revdep], target)
 			}
 		}
-		delete(graph.pendingRevDeps, target.Label) // Don't need any more
+		delete(graph.pendingRevDeps, label) // Don't need any more
 	}
-	return target
 }
 
 // Adds a new package to the graph with given name.
@@ -140,6 +145,11 @@ func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 	}
 	toTarget := graph.targets[to]
 	if toTarget == nil {
+		if to.Arch != "" {
+			if target := graph.targets[to.noArch()]; target != nil {
+				checkArchitectureCompatibility(fromTarget, target)
+			}
+		}
 		toTarget = graph.maybeCloneTargetForArch(to)
 	}
 	// The dependency may not exist yet if we haven't parsed its package.
@@ -191,9 +201,7 @@ func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
 // point, but some of the dependencies may not yet exist.
 // Also at this point we resolve any architecture differences if cross-compiling is needed.
 func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
-	if fromTarget.Label.Arch != "" && toTarget.Label.Arch != "" && fromTarget.Label.Arch != toTarget.Label.Arch {
-		panic(fmt.Sprintf("%s requires a dependency on %s, but it's not available for that architecture", fromTarget.Label, toTarget.Label.toArch("")))
-	}
+	checkArchitectureCompatibility(fromTarget, toTarget)
 	if fromTarget.Label.Arch != "" && !fromTarget.IsTool(toTarget.Label) {
 		// Source dependency from a target that's not being built for the host.
 		toTarget = graph.cloneTargetForArch(toTarget, fromTarget.Label.Arch)
@@ -205,6 +213,13 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 		} else {
 			graph.addPendingRevDep(fromTarget.Label, label, toTarget)
 		}
+	}
+}
+
+// checkArchitectureCompatibility checks that two targets have compatible architectures. It panics if they don't.
+func checkArchitectureCompatibility(from, to *BuildTarget) {
+	if from.Label.Arch != "" && to.Label.Arch != "" && from.Label.Arch != to.Label.Arch {
+		panic(fmt.Sprintf("%s requires a dependency on %s, but it's not available for that architecture", from.Label, to.Label.toArch("")))
 	}
 }
 
@@ -258,6 +273,7 @@ func (graph *BuildGraph) maybeCloneTargetForArch(label BuildLabel) *BuildTarget 
 	if target == nil {
 		return nil
 	}
+
 	return graph.cloneTargetForArch(target, label.Arch)
 }
 

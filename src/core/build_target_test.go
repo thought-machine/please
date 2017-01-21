@@ -373,9 +373,10 @@ func TestAllLocalSources(t *testing.T) {
 }
 
 func TestToArch(t *testing.T) {
+	graph := NewGraph()
 	target := makeTarget("//src/core:target1", "")
 	target.AddSource(FileLabel{File: "target1.go", Package: "src/core"})
-	target2 := target.toArch("test_x86")
+	target2 := target.toArch(graph, "test_x86")
 	assert.NotEqual(t, target, target2)
 	assert.Equal(t, "", target.Label.Arch)
 	assert.Equal(t, "test_x86", target2.Label.Arch)
