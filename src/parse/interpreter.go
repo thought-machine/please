@@ -441,8 +441,13 @@ func SetCommand(cPackage uintptr, cTarget *C.char, cConfigOrCommand *C.char, cCo
 func getTargetPost(cPackage uintptr, cTarget *C.char) (*core.BuildTarget, error) {
 	pkg := unsizep(cPackage)
 	name := C.GoString(cTarget)
-	target, present := pkg.Targets[name]
-	if !present {
+	// Try to look up the architecture-specific arch first.
+	target := core.State.Graph.Target(core.BuildLabel{
+		PackageName: pkg.Name,
+		Name:        name,
+		Arch:        pkg.CurrentArch,
+	})
+	if target == nil {
 		return nil, fmt.Errorf("Unknown build target %s in %s", name, pkg.Name)
 	}
 	// It'd be cheating to try to modify targets that're already built.
