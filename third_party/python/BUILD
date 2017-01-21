@@ -28,9 +28,8 @@ pip_library(
 pip_library(
     name = 'pkg_resources',
     package_name = 'setuptools',
-    version = '6.1',
-    outs = ['pkg_resources.py'],
-    hashes = ['sha1: 33c8ea9686a15ca09ce96656d4a2074d75235dfe'],
+    version = '33.1.1',
+    hashes = ['sha1: 05f20a29a5dff7dd5b908afcf37c2b1bea8d3db6'],
 )
 
 pip_library(

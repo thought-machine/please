@@ -59,6 +59,7 @@ dircachecleaner = none
 
 [licences]
 accept = MIT
+accept = MIT License
 accept = BSD
 accept = BSD License
 accept = Simplified BSD

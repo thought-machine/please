@@ -147,13 +147,12 @@ def main(args):
             args.interpreter = spawn.find_executable(args.interpreter)
 
     # Add pkg_resources and the bootstrapper
-    extract_directory('third_party.python',
-                      'pex',
-                      args.src_dir,
-                      '.bootstrap/_pex')
-    extract_file('third_party.python',
-                 os.path.join(args.src_dir, '.bootstrap'),
-                 'pkg_resources.py')
+    extract_directory('third_party.python', 'pex', args.src_dir, '.bootstrap/_pex')
+    extract_directory('third_party.python', 'pkg_resources', args.src_dir, '.bootstrap/pkg_resources')
+    extract_directory('third_party.python.pkg_resources', 'extern', args.src_dir, '.bootstrap/pkg_resources/extern')
+    extract_directory('third_party.python.pkg_resources', '_vendor', args.src_dir, '.bootstrap/pkg_resources/_vendor')
+    extract_directory('third_party.python.pkg_resources._vendor', 'packaging', args.src_dir,
+                      '.bootstrap/pkg_resources/_vendor/packaging')
 
     # Setup a temp dir that the PEX builder will use as its scratch dir.
     tmp_dir = tempfile.mkdtemp()
