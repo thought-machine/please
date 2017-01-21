@@ -32,6 +32,12 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
 	graph.targets[target.Label] = target
+	if target.Label.Arch != "" {
+		// Helps some stuff out to keep this guy in the graph twice.
+		// TODO(pebers): are other bits of code (e.g. query) liable to be confused by this?
+		graph.targets[target.Label.noArch()] = target
+	}
+
 	// Check these reverse deps which may have already been added against this target.
 	if revdeps, present := graph.pendingRevDeps[target.Label]; present {
 		for revdep, originalTarget := range revdeps {
@@ -205,12 +211,40 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 // cloneTargetForArch returns a build target for the given architecture. It's otherwise
 // identical to the original one.
 func (graph *BuildGraph) cloneTargetForArch(target *BuildTarget, arch string) *BuildTarget {
-	t, present := graph.targets[target.Label.toArch(arch)]
+	archLabel := target.Label.toArch(arch)
+	t, present := graph.targets[archLabel]
 	if present {
 		return t
 	}
-	t = target.toArch(arch)
+	graph.targets[archLabel] = target // Sentinel, so we don't recurse into here incorrectly.
+	t = target.toArch(graph, arch)
 	graph.targets[t.Label] = t
+
+	// Clone the revdeps too.
+	existingRevdeps := graph.revDeps[target.Label]
+	newRevdeps := make([]*BuildTarget, len(existingRevdeps))
+	for i, r := range existingRevdeps {
+		newRevdeps[i] = graph.cloneTargetForArch(r, arch)
+	}
+	graph.revDeps[t.Label] = newRevdeps
+
+	// Now if the target has any tools, they don't get cloned, but we need to add the new
+	// arch to their revdeps so this target builds after they do.
+	for _, dep := range t.dependencies {
+		if dep.tool { // Tools remain dependent on the host configuration.
+			if dep.resolved {
+				for _, d := range dep.deps {
+					graph.revDeps[d.Label] = append(graph.revDeps[d.Label], t)
+				}
+			} else {
+				graph.addPendingRevDep(t.Label, dep.declared, nil)
+			}
+		} else {
+			for j, d := range dep.deps {
+				dep.deps[j] = graph.cloneTargetForArch(d, arch)
+			}
+		}
+	}
 	return t
 }
 
@@ -228,7 +262,6 @@ func (graph *BuildGraph) maybeCloneTargetForArch(label BuildLabel) *BuildTarget 
 }
 
 func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {
-	to.Arch = "" // Pending revdeps never have an associated architecture.
 	if deps, present := graph.pendingRevDeps[to]; present {
 		deps[from] = orig
 	} else {

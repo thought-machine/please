@@ -831,11 +831,21 @@ func (target *BuildTarget) HasParent() bool {
 }
 
 // toArch returns a new target that's a copy of this one for a different architecture.
-func (target *BuildTarget) toArch(arch string) *BuildTarget {
+func (target *BuildTarget) toArch(graph *BuildGraph, arch string) *BuildTarget {
+	// Shallow copy of the build target is sufficient for most things, which will not
+	// change later on (dependencies are the exception, see below)
 	var t BuildTarget
-	// TODO(pebers): do we need a deep copy here or is shallow sufficient?
 	t = *target
 	t.Label.Arch = arch
+	// Don't make a target active here if it wasn't already, but if it was already built, this one isn't.
+	if t.state > int32(Active) {
+		t.state = int32(Active)
+	}
+	// Deep-copy dependencies. Note that this is not fully complete; we do not update dependency
+	// architectures here, the graph does that after calling this - it's better not to do it in
+	// here, otherwise we tend to end up recursing on ourselves unnecessarily.
+	t.dependencies = make([]depInfo, len(target.dependencies))
+	copy(t.dependencies, target.dependencies)
 	return &t
 }
 
