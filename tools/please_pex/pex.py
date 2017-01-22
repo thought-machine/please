@@ -5,13 +5,13 @@ import argparse
 import contextlib
 import json
 import os
-import pkg_resources
 import py_compile
 import shutil
 import sys
 import tempfile
 import zipfile
 
+from third_party.python import pkg_resources
 from third_party.python.pex.compatibility import to_bytes
 from third_party.python.pex.pex_builder import PEXBuilder
 from third_party.python.pex.interpreter import PythonInterpreter
