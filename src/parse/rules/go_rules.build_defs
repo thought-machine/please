@@ -604,7 +604,7 @@ def _go_library_cmds(complete=True, all_srcs=False):
     compile_cmd = 'go tool %s -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (go_compile_tool, complete_flag, _GOPATH)
     # Annotates files for coverage
     cover_cmd = 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
-    srcs = 'export SRCS="$PKG/*.go"; ' if all_srcs else ''
+    srcs = 'export SRCS="$PKG_DIR/*.go"; ' if all_srcs else ''
     return {
         'dbg': '%s%s; %s -N -l $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),
         'opt': '%s%s; %s $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),

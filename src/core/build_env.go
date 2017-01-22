@@ -25,6 +25,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 	sources := target.AllSourcePaths(state.Graph)
 	env := []string{
 		"PKG=" + target.Label.PackageName,
+		"PKG_DIR=" + target.Label.PackageDir(),
 		// Need to know these for certain rules, particularly Go rules.
 		"ARCH=" + runtime.GOARCH,
 		"OS=" + runtime.GOOS,
