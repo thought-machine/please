@@ -51,7 +51,9 @@ build_rule(
         # Have to make sure these exist.
         'touch third_party/__init__.py third_party/python/__init__.py',
         'touch tools/__init__.py tools/please_pex/__init__.py',
-        'PYTHONPATH="." python -O tools/please_pex/pex.py --src_dir=${TMP_DIR} --out=${OUT} --entry_point=${PKG//\//.}.pex --interpreter ' + CONFIG.DEFAULT_PYTHON_INTERPRETER,
+        'mv third_party/python .bootstrap',
+        'mv .bootstrap/pex .bootstrap/_pex',
+        'PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=".:./.bootstrap" python -O tools/please_pex/pex.py --src_dir=${TMP_DIR} --out=${OUT} --entry_point=${PKG//\//.}.pex --interpreter ' + CONFIG.DEFAULT_PYTHON_INTERPRETER,
     ]),
     needs_transitive_deps = True,
     output_is_complete = True,
