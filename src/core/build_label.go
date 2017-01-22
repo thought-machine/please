@@ -303,6 +303,16 @@ func (label BuildLabel) IsEmpty() bool {
 	return label.PackageName == "" && label.Name == ""
 }
 
+// PackageDir returns a path to the directory this target is in.
+// This is equivalent to PackageName in all cases except when at the repo root, when this
+// will return . instead. This is often easier to use in build rules.
+func (label BuildLabel) PackageDir() string {
+	if label.PackageName == "" {
+		return "."
+	}
+	return label.PackageName
+}
+
 // LooksLikeABuildLabel returns true if the string appears to be a build label, false if not.
 // Useful for cases like rule sources where sources can be a filename or a label.
 func LooksLikeABuildLabel(str string) bool {
