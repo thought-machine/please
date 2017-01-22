@@ -268,6 +268,20 @@ func TestHasSource(t *testing.T) {
 	assert.False(t, target.HasSource("file3.go"))
 }
 
+func TestAddTool(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	gcc := SystemFileLabel{Path: "/usr/bin/gcc"}
+	target1.AddTool(target2.Label)
+	target1.AddTool(gcc)
+	assert.Equal(t, 2, len(target1.Tools))
+	assert.Equal(t, target2.Label, target1.Tools[0])
+	assert.Equal(t, gcc, target1.Tools[1])
+	deps := target1.DeclaredDependencies()
+	assert.Equal(t, 1, len(deps))
+	assert.Equal(t, target2.Label, deps[0])
+}
+
 func TestToolPath(t *testing.T) {
 	target := makeTarget("//src/core:target1", "")
 	target.AddOutput("file1.go")
@@ -311,6 +325,26 @@ func TestDependencyFor(t *testing.T) {
 	assert.Equal(t, []*BuildTarget{target1}, target2.DependenciesFor(target1.Label))
 	assert.Equal(t, []*BuildTarget(nil), target2.DependenciesFor(target2.Label))
 	assert.Equal(t, 1, len(target2.dependencies))
+}
+
+func TestDeclaredArchDependencies(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	target3 := makeTarget("//src/core:target3", "")
+	target1.Label.Arch = "test_x86"
+	target1.AddDependency(target2.Label)
+	target1.AddTool(target3.Label)
+	deps := target1.DeclaredArchDependencies()
+	assert.Equal(t, 2, len(deps))
+	assert.Equal(t, BuildLabel{
+		PackageName: "src/core",
+		Name:        "target2",
+		Arch:        "test_x86",
+	}, deps[0])
+	assert.Equal(t, BuildLabel{
+		PackageName: "src/core",
+		Name:        "target3",
+	}, deps[1])
 }
 
 func TestParent(t *testing.T) {

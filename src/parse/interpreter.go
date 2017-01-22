@@ -585,10 +585,7 @@ func AddTool(cTarget uintptr, cTool *C.char) *C.char {
 	if err != nil {
 		return C.CString(err.Error())
 	}
-	target.Tools = append(target.Tools, tool)
-	if label := tool.Label(); label != nil {
-		target.AddMaybeExportedDependency(*label, false, true)
-	}
+	target.AddTool(tool)
 	return nil
 }
 

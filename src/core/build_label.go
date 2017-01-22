@@ -328,7 +328,7 @@ func (label BuildLabel) noArch() BuildLabel {
 
 // FullArch returns the full architecture, even if Arch is empty, in which case it will return
 // the host architecture.
-func (label BuildLabel) FullArch() string {
+func (label *BuildLabel) FullArch() string {
 	if label.Arch == "" {
 		return HostArch
 	}
@@ -339,7 +339,7 @@ func (label BuildLabel) FullArch() string {
 // for example linux_amd64 -> (linux, amd64).
 // If that can't be determined (since Please's architectures are freeform) the returned OS
 // will be the empty string.
-func (label BuildLabel) OsArch() (string, string) {
+func (label *BuildLabel) OsArch() (string, string) {
 	arch := label.FullArch()
 	index := strings.IndexRune(arch, '_')
 	if index != -1 {
@@ -351,7 +351,7 @@ func (label BuildLabel) OsArch() (string, string) {
 // PackageDir returns a path to the directory this target is in.
 // This is equivalent to PackageName in all cases except when at the repo root, when this
 // will return . instead. This is often easier to use in build rules.
-func (label BuildLabel) PackageDir() string {
+func (label *BuildLabel) PackageDir() string {
 	if label.PackageName == "" {
 		return "."
 	}
