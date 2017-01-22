@@ -5,16 +5,23 @@ import argparse
 import contextlib
 import json
 import os
-import pkg_resources
 import py_compile
 import shutil
 import sys
 import tempfile
 import zipfile
 
-from third_party.python.pex.compatibility import to_bytes
-from third_party.python.pex.pex_builder import PEXBuilder
-from third_party.python.pex.interpreter import PythonInterpreter
+# We need to load pkg_resources and pex; they must be shipped in .bootstrap
+# for pex to work, but that's already been scrubbed from the path so we must
+# re-add it here.
+# TODO(pebers): remove use of pkg_resources in this file and use zipfile
+#               for all operations.
+sys.path.insert(0, os.path.abspath(os.path.join(sys.argv[0], '.bootstrap')))
+
+import pkg_resources
+from _pex.compatibility import to_bytes
+from _pex.pex_builder import PEXBuilder
+from _pex.interpreter import PythonInterpreter
 
 
 def dereference_symlinks(src):
@@ -96,6 +103,20 @@ def extract_directory(in_pkg, in_req, out_dir, out_path, duplicates_allowed=Fals
             extract_file(full_dir, target_dir, filename)
 
 
+def extract_recursive_dir(dirname, out_dir):
+    """Extracts an entire directory and copies it to the output dir."""
+    try:
+        zf = zipfile.ZipFile(sys.argv[0])
+        for info in zf.infolist():
+            if info.filename.startswith(dirname):
+                zf.extract(info, path=out_dir)
+    except zipfile.BadZipfile:
+        # This happens during bootstrapping when we're not actually in a zipfile.
+        # In that case we might not need to do anything because .bootstrap is already there.
+        if not os.path.isdir(dirname):
+            raise
+
+
 def extract_file(in_pkg, out_dir, filename, duplicates_allowed=False):
     """Extracts a single file from the pex builder and adds it to the staging directory."""
     target = os.path.join(out_dir, filename)
@@ -147,13 +168,7 @@ def main(args):
             args.interpreter = spawn.find_executable(args.interpreter)
 
     # Add pkg_resources and the bootstrapper
-    extract_directory('third_party.python',
-                      'pex',
-                      args.src_dir,
-                      '.bootstrap/_pex')
-    extract_file('third_party.python',
-                 os.path.join(args.src_dir, '.bootstrap'),
-                 'pkg_resources.py')
+    extract_recursive_dir('.bootstrap', args.src_dir)
 
     # Setup a temp dir that the PEX builder will use as its scratch dir.
     tmp_dir = tempfile.mkdtemp()

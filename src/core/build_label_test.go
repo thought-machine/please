@@ -85,3 +85,10 @@ func TestOsArchUnknownOs(t *testing.T) {
 	assert.Equal(t, "", os)
 	assert.Equal(t, "wibble", arch)
 }
+
+func TestPackageDir(t *testing.T) {
+	label := NewBuildLabel("src/core", "core")
+	assert.Equal(t, "src/core", label.PackageDir())
+	label = NewBuildLabel("", "core")
+	assert.Equal(t, ".", label.PackageDir())
+}

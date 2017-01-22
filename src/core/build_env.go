@@ -25,6 +25,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 	os, arch := target.Label.OsArch()
 	env := []string{
 		"PKG=" + target.Label.PackageName,
+		"PKG_DIR=" + target.Label.PackageDir(),
 		// This is set depending on which arch the rule is compiling for.
 		"ARCH=" + target.Label.FullArch(),
 		// These provide cross-compiling support for Go.
