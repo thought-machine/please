@@ -102,7 +102,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
         'mkdir pkg',
         'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
         'PATH="$PATH:%s" GOPATH="$TMP_DIR$(echo ":$(%s)" | sed "s/:$//g")" go generate $SRCS' % (path, gopath),
-        'mv $PKG/*.go .',
+        'mv $PKG_DIR/*.go .',
         'ls *.go'
     ])
     build_rule(
@@ -162,7 +162,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
         outs = [name + '_cgo'],
         cmd = ' && '.join([
             'mkdir $OUT',
-            'cd $PKG',
+            'cd $PKG_DIR',
             '$TOOL tool cgo -objdir $OUT -importpath ${PKG#*src/} *.go',
             # cgo leaves absolute paths in these files which we must get rid of :(
             'find $OUT -type f | xargs sed -i -e "s|$TMP_DIR/||g"',
@@ -241,7 +241,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
             'o': [o_rule] if o_rule else [],
         },
         outs = [out or name + '.a'],
-        cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOL tool pack r $OUT $PKG/*_cgo.o',
+        cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOL tool pack r $OUT $PKG_DIR/*_cgo.o',
         tools = _GO_TOOL,
         visibility = visibility,
         test_only = test_only,
@@ -476,7 +476,7 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$(location %s)' % (subdir, patch))
     cmd.append('go install -gcflags "-trimpath $TMP_DIR" ' + ' '.join([get] + (install or [])))
     # Remove anything that was there already.
-    cmd.append('if [ -d $PKG ]; then find $PKG -name "*.a" | sed -e "s|$PKG/||g" | xargs rm -f; fi')
+    cmd.append('if [ -d $PKG_DIR ]; then find $PKG_DIR -name "*.a" | sed -e "s|$PKG_DIR/||g" | xargs rm -f; fi')
     if not binary:
         cmd.extend([
             'find . -name .git | xargs rm -rf',
@@ -556,11 +556,14 @@ def _replace_test_package(name, output):
     new_name = name[1:-5]
     for line in output:
         if line.startswith('Package: '):
-            binary_cmds, _ = _go_binary_cmds(ldflags=' '.join(get_labels(name, 'cc:ld:')))
-            for k, v in binary_cmds.items():
-                set_command(new_name, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (new_name, line[9:], v))
-            for k, v in _go_library_cmds().items():
-                set_command(lib, k, 'mv -f ${PKG}/%s.a ${PKG}/%s.a && %s' % (new_name, line[9:], v))
+            ldflags = ' '.join(get_labels(name, 'cc:ld:'))
+            binary_cmds, _ = _go_binary_cmds(ldflags=ldflags)
+            pkg_name = line[9:]
+            if pkg_name != new_name or ldflags:  # Might not be necessary if names match already.
+                for k, v in binary_cmds.items():
+                    set_command(new_name, k, 'mv -f ${PKG_DIR}/%s.a ${PKG_DIR}/%s.a && %s' % (new_name, pkg_name, v))
+                for k, v in _go_library_cmds().items():
+                    set_command(lib, k, 'mv -f ${PKG_DIR}/%s.a ${PKG_DIR}/%s.a && %s' % (new_name, pkg_name, v))
 
 
 def _go_tool(tools):
@@ -585,7 +588,7 @@ def _collect_files(name, tag, dep, outs, extension):
         tag = tag,
         srcs = [dep],
         outs = file_outs,
-        cmd = 'mv $PKG/%s_cgo/* . && ls *%s' % (name, extension),
+        cmd = 'mv $PKG_DIR/%s_cgo/* . && ls *%s' % (name, extension),
         post_build = _collect_rule_outs if file_outs != outs else None,
     )
 
@@ -626,8 +629,8 @@ def _go_binary_cmds(static=False, ldflags=''):
         flags = ''
 
     return {
-        'dbg': '%s && %s %s $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
-        'opt': '%s && %s %s -s -w $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
+        'dbg': '%s; %s %s $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
+        'opt': '%s; %s %s -s -w $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
     }, tools
 
 
