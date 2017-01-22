@@ -225,6 +225,7 @@ func checkArchitectureCompatibility(from, to *BuildTarget) {
 
 // cloneTargetForArch returns a build target for the given architecture. It's otherwise
 // identical to the original one.
+// The caller must have already acquired graph.mutex before calling this function.
 func (graph *BuildGraph) cloneTargetForArch(target *BuildTarget, arch string) *BuildTarget {
 	archLabel := target.Label.toArch(arch)
 	t, present := graph.targets[archLabel]
@@ -265,6 +266,7 @@ func (graph *BuildGraph) cloneTargetForArch(target *BuildTarget, arch string) *B
 
 // maybeCloneTargetForArch returns a build target for the given architecture, if a no-arch version
 // exists in the graph already.
+// The caller must have already acquired graph.mutex before calling this function.
 func (graph *BuildGraph) maybeCloneTargetForArch(label BuildLabel) *BuildTarget {
 	if label.Arch == "" {
 		return nil
