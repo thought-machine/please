@@ -5,8 +5,6 @@ python_binary(
     shebang = '/usr/bin/env python',
     deps = [
         ':main_files',
-        '//third_party/python:pex',
-        '//third_party/python:pkg_resources',
     ],
     visibility = ['PUBLIC'],
 )
@@ -16,11 +14,6 @@ python_library(
     srcs = [
         'pex_main.py',
         'test_main.py',
-    ],
-    deps = [
-        '//third_party/python:coverage',
-        '//third_party/python:six',
-        '//third_party/python:xmlrunner',
     ],
 )
 
