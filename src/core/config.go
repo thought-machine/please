@@ -159,6 +159,7 @@ func DefaultConfiguration() *Configuration {
 	config.Proto.PythonDep = "//third_party/python:protobuf"
 	config.Proto.JavaDep = "//third_party/java:protobuf"
 	config.Proto.GoDep = "//third_party/go:protobuf"
+	config.Proto.JsDep = ""
 	config.Proto.PythonGrpcDep = "//third_party/python:grpc"
 	config.Proto.JavaGrpcDep = "//third_party/java:grpc-all"
 	config.Proto.GoGrpcDep = "//third_party/go:grpc"
@@ -287,6 +288,7 @@ type Configuration struct {
 		PythonDep        string
 		JavaDep          string
 		GoDep            string
+		JsDep            string
 		PythonGrpcDep    string
 		JavaGrpcDep      string
 		GoGrpcDep        string
