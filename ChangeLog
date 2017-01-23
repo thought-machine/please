@@ -1,3 +1,11 @@
+Version 7.4.0
+-------------
+
+    * Fixed please_pex for Python 3.6
+    * Fixed go_test rules in the repo root.
+    * Added proto.jsdep config option that gets used when building JS protos (#176)
+
+
 Version 7.3.0
 -------------
 
