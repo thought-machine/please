@@ -213,9 +213,11 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             filegroup(
                 name = lang_name,
                 srcs = [gen_dep],
-                deps = [CONFIG.PROTO_JS_DEP],
+                deps = [CONFIG.PROTO_JS_DEP] + deps,
                 visibility = visibility,
                 test_only = test_only,
+                requires = ['js'],
+                output_is_complete = False,
             )
 
     # This simply collects the sources, it's used for other proto_library rules to depend on.
