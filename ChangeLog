@@ -1,3 +1,9 @@
+Version 7.4.1
+-------------
+
+    * Fixed proto JS rules to correctly pick up transitive dependencies.
+
+
 Version 7.4.0
 -------------
 
