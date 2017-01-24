@@ -1,10 +1,7 @@
 [python]
-; We obviously can't rely on anyone having our pex tool already available,
-; so in this repo we have to build one without it which we can use to
-; compile other python_binary rules within the Please repo itself.
-;
+; We use the in-repo please_pex tool to build other pexes within this repo.
 ; Other projects using Please wouldn't normally need to do anything like this.
-pextool = //tools/please_pex:bootstrap_pexer
+pextool = //tools/please_pex
 defaultpiprepo = https://get.please.build/third_party/python/index.html
 moduledir = third_party.python
 

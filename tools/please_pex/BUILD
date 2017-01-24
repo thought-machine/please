@@ -1,44 +1,13 @@
-python_binary(
-    name = 'please_pex',
-    out = 'please_pex',
-    main = 'pex.py',
-    shebang = '/usr/bin/env python',
-    deps = [
-        ':main_files',
-    ],
-    visibility = ['PUBLIC'],
-)
-
-python_library(
-    name = 'main_files',
-    srcs = [
-        'pex_main.py',
-        'test_main.py',
-    ],
-)
-
-python_test(
-    name = 'pex_test',
-    srcs = ['pex_test.py'],
-)
-
-python_test(
-    name = 'custom_interpreter_test',
-    srcs = ['custom_interpreter_test.py'],
-    interpreter = '/usr/bin/pypy',
-    labels = ['manual'],
-)
-
-# This is needed for bootstrapping the build system: we have to be
-# able to build a .pex with the pex builder which is itself a pex.
+# Bootstrapping please_pex is difficult, because the code essentially needs to run from a zip
+# file. We assemble enough by hand to make it go.
 build_rule(
-    name = 'bootstrap_pexer',
+    name = 'please_pex',
     srcs = [
         'pex.py',
         'pex_main.py',
         'test_main.py',
     ],
-    outs = ['bootstrap_pexer.pex'],
+    outs = ['please_pex'],
     binary = True,
     cmd = ' && '.join([
         # Have to make sure these exist.
@@ -46,6 +15,8 @@ build_rule(
         'touch tools/__init__.py tools/please_pex/__init__.py',
         'mv third_party/python .bootstrap',
         'mv .bootstrap/pex .bootstrap/_pex',
+        # A little cleanup.
+        'rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles',
         'cat tools/please_pex/pex_main.py | sed -e "s/__MODULE_DIR__//" -e "s|__ENTRY_POINT__|tools.please_pex.pex|" -e "s/__ZIP_SAFE__/True/" > pex_main.py',
         'PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=".:./.bootstrap" python -O tools/please_pex/pex.py --src_dir=${TMP_DIR} --out=${OUT} --entry_point=${PKG//\//.}.pex --bootstrap --interpreter ' + CONFIG.DEFAULT_PYTHON_INTERPRETER,
     ]),
@@ -61,6 +32,18 @@ build_rule(
         '//third_party/python:_coverage#install',
     ],
     visibility = ['PUBLIC'],
+)
+
+python_test(
+    name = 'pex_test',
+    srcs = ['pex_test.py'],
+)
+
+python_test(
+    name = 'custom_interpreter_test',
+    srcs = ['custom_interpreter_test.py'],
+    interpreter = '/usr/bin/pypy',
+    labels = ['manual'],
 )
 
 python_test(
