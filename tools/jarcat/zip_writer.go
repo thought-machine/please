@@ -274,6 +274,25 @@ func WriteDir(w *zip.Writer, filename string) error {
 	return nil
 }
 
+// StripBytecodeTimestamp strips a timestamp from a .pyc or .pyo file.
+// This is important so our output is deterministic.
+func StripBytecodeTimestamp(filename string, contents []byte) error {
+	if strings.HasSuffix(filename, ".pyc") || strings.HasSuffix(filename, ".pyo") {
+		if len(contents) < 8 {
+			log.Warning("Invalid bytecode file, will not strip timestamp")
+		} else {
+			// The .pyc format starts with a two-byte magic number, a \r\n, then a four-byte
+			// timestamp. It is that timestamp we are interested in; we overwrite it with
+			// 2000-01-01 so it's deterministic.
+			contents[4] = 92
+			contents[5] = 120
+			contents[6] = 56
+			contents[7] = 48
+		}
+	}
+	return nil
+}
+
 type nopCloser struct {
 	io.Writer
 }

@@ -3,7 +3,6 @@
 
 import argparse
 import os
-import py_compile
 import shutil
 import sys
 import zipfile
@@ -68,45 +67,14 @@ def extract_file(filename, out_dir, out_file=None, replacements=None):
         f.write(contents)
 
 
-def compile_bytecode():
-    """Walks the temp dir and precompiles bytecode for all .py files there."""
-    for dirpath, dirnames, filenames in os.walk('.'):
-        paths = [os.path.join(dirpath, filename) for filename in filenames]
-        # Must remove any .pyc files first in case they turn out to be present but readonly.
-        # This seems to happen on some rare cases, we're not 100% sure why yet.
-        for filename in paths:
-            if filename.endswith('.pyc'):
-                os.remove(filename)
-        for filename in paths:
-            if filename.endswith('.py'):
-                try:
-                    path = py_compile.compile(filename, doraise=True)
-                except py_compile.PyCompileError as e:
-                    print(e)
-                    sys.exit(1)
-                if not path:
-                    # In python3 we already have a path to the .pyc file. py_compile in python2
-                    # does not return anything so we have to work it out ourselves.
-                    path = filename + ('o' if sys.flags.optimize else 'c')
-                # Overwrite the timestamp in the .pyc file with 2000-01-01 so it's deterministic.
-                with open(path, 'r+b') as f:
-                    f.seek(4)
-                    f.write(b'\\x80Cm8')
-
-
 def remove_ext(x):
     """Strip a .py file extension if present."""
     return x[:-3] if x.endswith('.py') else x
 
 
 def main(args):
-    # If --compile is given, we just need to precompile bytecode.
-    if args.compile:
-        compile_bytecode()
-        sys.exit(0)
-
-    if not args.bootstrap:
-        global please_pex_zipfile
+    global please_pex_zipfile
+    if not args.bootstrap and not please_pex_zipfile:
         please_pex_zipfile = zipfile.ZipFile(sys.argv[0])
 
     # Pex doesn't support relative interpreter paths.
@@ -191,7 +159,6 @@ if __name__ == '__main__':
     parser.add_argument('--nozip_safe', dest='zip_safe', action='store_false')
     parser.add_argument('--scan', dest='scan', action='store_true')
     parser.add_argument('--noscan', dest='scan', action='store_false')
-    parser.add_argument('--compile', dest='compile', action='store_true')
     parser.add_argument('--bootstrap', dest='bootstrap', action='store_true')
     parser.set_defaults(zip_safe=True, compile=False, scan=True, bootstrap=False)
     main(parser.parse_args())

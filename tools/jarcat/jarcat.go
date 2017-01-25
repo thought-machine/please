@@ -71,7 +71,9 @@ func combine(out, in, preamble, stripPrefix, mainClass, excludeInternalPrefix st
 					log.Debug("Including existing non-zip file %s", path)
 					if b, err := ioutil.ReadFile(path); err != nil {
 						return fmt.Errorf("Error reading %s to zipfile: %s", path, err)
-					} else if err = jarcat.WriteFile(w, path, b); err != nil {
+					} else if err := jarcat.StripBytecodeTimestamp(path, b); err != nil {
+						return err
+					} else if err := jarcat.WriteFile(w, path, b); err != nil {
 						return err
 					}
 				}
@@ -108,22 +110,23 @@ func matchesSuffix(path string, suffixes []string) bool {
 }
 
 var opts struct {
-	Out                   string            `short:"o" long:"output" description:"Output filename" required:"true"`
-	In                    string            `short:"i" long:"input" description:"Input directory" required:"true"`
-	Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
-	ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
-	ExcludeInternalPrefix string            `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
-	IncludeInternalPrefix []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
-	StripPrefix           string            `long:"strip_prefix" description:"Prefix to strip off file names"`
-	Preamble              string            `short:"p" long:"preamble" description:"Leading string to prepend to written zip file"`
-	MainClass             string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
-	Verbosity             int               `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
-	Strict                bool              `long:"strict" description:"Disallow duplicate files"`
-	IncludeOther          bool              `long:"include_other" description:"Add files that are not jar files as well"`
-	AddInitPy             bool              `long:"add_init_py" description:"Adds __init__.py files to all directories"`
-	DumbMode              bool              `short:"d" long:"dumb" description:"Dumb mode, an alias for --suffix='' --exclude_suffix='' --include_other"`
-	NoDirEntries          bool              `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
-	RenameDirs            map[string]string `short:"r" long:"rename_dir" description:"Rename directories within zip file"`
+	Out                     string            `short:"o" long:"output" description:"Output filename" required:"true"`
+	In                      string            `short:"i" long:"input" description:"Input directory" required:"true"`
+	Suffix                  []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
+	ExcludeSuffix           []string          `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
+	ExcludeInternalPrefix   string            `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
+	IncludeInternalPrefix   []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
+	StripPrefix             string            `long:"strip_prefix" description:"Prefix to strip off file names"`
+	Preamble                string            `short:"p" long:"preamble" description:"Leading string to prepend to written zip file"`
+	MainClass               string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
+	Verbosity               int               `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
+	Strict                  bool              `long:"strict" description:"Disallow duplicate files"`
+	IncludeOther            bool              `long:"include_other" description:"Add files that are not jar files as well"`
+	AddInitPy               bool              `long:"add_init_py" description:"Adds __init__.py files to all directories"`
+	DumbMode                bool              `short:"d" long:"dumb" description:"Dumb mode, an alias for --suffix='' --exclude_suffix='' --include_other"`
+	NoDirEntries            bool              `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
+	RenameDirs              map[string]string `short:"r" long:"rename_dir" description:"Rename directories within zip file"`
+	StripBytecodeTimestamps bool              `short:"b" long:"strip_bytecode_timestamps" description:"Strips timestamps from any .pyc / .pyo files encountered."`
 }
 
 func main() {

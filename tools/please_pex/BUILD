@@ -23,13 +23,11 @@ build_rule(
     needs_transitive_deps = True,
     output_is_complete = True,
     deps = [
-        # Depending on these private targets is not nice, but works around
-        # a circular dependency because this tool is used to precompile the library.
-        '//third_party/python:_pex#install',
-        '//third_party/python:_pkg_resources#install',
-        '//third_party/python:_six#install',
-        '//third_party/python:_xmlrunner#install',
-        '//third_party/python:_coverage#install',
+        '//third_party/python:coverage',
+        '//third_party/python:pex',
+        '//third_party/python:pkg_resources',
+        '//third_party/python:six',
+        '//third_party/python:xmlrunner',
     ],
     visibility = ['PUBLIC'],
 )

@@ -40,21 +40,25 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
     """
-    all_srcs = (srcs or []) + (resources or [])
     deps = deps or []
     labels = labels or []
     if not zip_safe:
         labels.append('py:zip-unsafe')
-    if all_srcs:
+    if srcs or resources:
         interpreter_tool, tools = _tool_path(interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER)
-        pex_tool, tools = _tool_path(CONFIG.PEX_TOOL, tools)
         jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
+        cmd = jarcat_tool + ' -d -o ${OUTS} -i . -b'
+        if srcs:
+            cmd = '%s -m compileall -f $SRCS_SRCS && %s' % (interpreter_tool, cmd)
         # Pre-zip the files for later collection by python_binary.
         build_rule(
             name='_%s#zip' % name,
-            srcs=all_srcs,
+            srcs={
+                'SRCS': srcs,
+                'RES': resources,
+            },
             outs=['.%s.pex.zip' % name],
-            cmd='%s %s --compile && %s -d -o ${OUTS} -i .' % (interpreter_tool, pex_tool, jarcat_tool),
+            cmd=cmd,
             building_description='Compressing...',
             requires=['py'],
             test_only=test_only,
@@ -65,7 +69,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
 
     filegroup(
         name=name,
-        srcs=all_srcs,
+        srcs=(srcs or []) + (resources or []),
         deps=deps,
         visibility=visibility,
         output_is_complete=False,
