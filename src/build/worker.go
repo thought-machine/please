@@ -27,6 +27,7 @@ type workerServer struct {
 	requests      chan *pb.BuildRequest
 	responses     map[string]chan *pb.BuildResponse
 	responseMutex sync.Mutex
+	process       *exec.Cmd
 }
 
 // workerMap contains all the remote workers we've started so far.
@@ -107,6 +108,7 @@ func getOrStartWorker(worker string) (*workerServer, error) {
 	w := &workerServer{
 		requests:  make(chan *pb.BuildRequest),
 		responses: map[string]chan *pb.BuildResponse{},
+		process:   cmd,
 	}
 	go w.sendRequests(stdin)
 	go w.readResponses(stdout)
@@ -162,14 +164,29 @@ func (w *workerServer) readResponses(stdout io.Reader) {
 // stderrLogger is used to log any errors from our worker tools.
 type stderrLogger struct {
 	buffer []byte
+	// suppress will silence any further logging messages when set.
+	suppress bool
 }
 
 // Write implements the io.Writer interface
 func (l *stderrLogger) Write(msg []byte) (int, error) {
 	l.buffer = append(l.buffer, msg...)
 	if len(l.buffer) > 0 && l.buffer[len(l.buffer)-1] == '\n' {
-		log.Error("Error from remote worker: %s", strings.TrimSpace(string(l.buffer)))
+		if !l.suppress {
+			log.Error("Error from remote worker: %s", strings.TrimSpace(string(l.buffer)))
+		}
 		l.buffer = nil
 	}
 	return len(msg), nil
+}
+
+// StopWorkers stops any running worker processes.
+func StopWorkers() {
+	for name, worker := range workerMap {
+		log.Debug("Killing build worker %s", name)
+		if l, ok := worker.process.Stderr.(*stderrLogger); ok {
+			l.suppress = true // Make sure we don't print anything as they die.
+		}
+		worker.process.Process.Kill()
+	}
 }

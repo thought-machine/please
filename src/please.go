@@ -525,6 +525,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	shouldRun := !opts.Run.Args.Target.IsEmpty()
 	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.OutputFlags.TraceFile)
 	metrics.Stop()
+	build.StopWorkers()
 	if c != nil {
 		c.Shutdown()
 	}
