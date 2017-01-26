@@ -28,6 +28,7 @@ type workerServer struct {
 	responses     map[string]chan *pb.BuildResponse
 	responseMutex sync.Mutex
 	process       *exec.Cmd
+	closing       bool
 }
 
 // workerMap contains all the remote workers we've started so far.
@@ -135,17 +136,17 @@ func (w *workerServer) readResponses(stdout io.Reader) {
 	var size int32
 	for {
 		if err := binary.Read(stdout, binary.LittleEndian, &size); err != nil {
-			log.Error("Failed to read response: %s", err)
+			w.Error("Failed to read response: %s", err)
 			break
 		}
 		buf := make([]byte, size)
 		if _, err := stdout.Read(buf); err != nil {
-			log.Error("Failed to read response: %s", err)
+			w.Error("Failed to read response: %s", err)
 			break
 		}
 		response := pb.BuildResponse{}
 		if err := proto.Unmarshal(buf, &response); err != nil {
-			log.Error("Error unmarshaling response: %s", err)
+			w.Error("Error unmarshaling response: %s", err)
 			continue
 		}
 		w.responseMutex.Lock()
@@ -156,8 +157,14 @@ func (w *workerServer) readResponses(stdout io.Reader) {
 			log.Debug("Got response from remote worker for %s, success: %v", response.Rule, response.Success)
 			ch <- &response
 		} else {
-			log.Error("Couldn't find response channel for %s", response.Rule)
+			w.Error("Couldn't find response channel for %s", response.Rule)
 		}
+	}
+}
+
+func (w *workerServer) Error(msg string, args ...interface{}) {
+	if !w.closing {
+		log.Error(msg, args...)
 	}
 }
 
@@ -184,6 +191,7 @@ func (l *stderrLogger) Write(msg []byte) (int, error) {
 func StopWorkers() {
 	for name, worker := range workerMap {
 		log.Debug("Killing build worker %s", name)
+		worker.closing = true // suppress any error messages from worker
 		if l, ok := worker.process.Stderr.(*stderrLogger); ok {
 			l.suppress = true // Make sure we don't print anything as they die.
 		}
