@@ -18,3 +18,6 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 	}
 	return nil, fmt.Errorf("Remote worker support has not been compiled in")
 }
+
+// StopWorkers does nothing, because in the stub we don't have any workers.
+func StopWorkers() {}
