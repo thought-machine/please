@@ -66,7 +66,7 @@ func (c *asyncCache) Clean(target *core.BuildTarget) {
 }
 
 func (c *asyncCache) Shutdown() {
-	log.Notice("Shutting down cache workers...")
+	log.Info("Shutting down cache workers...")
 	close(c.requests)
 	c.wg.Wait()
 }
