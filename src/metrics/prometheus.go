@@ -29,7 +29,7 @@ const maxErrors = 3
 type metrics struct {
 	url                                           string
 	newMetrics                                    bool
-	stopChan                                      chan bool
+	ticker                                        *time.Ticker
 	cancelled                                     bool
 	errors                                        int
 	pushes                                        int
@@ -77,9 +77,9 @@ func initMetrics(url string, frequency, timeout time.Duration, customLabels map[
 	}
 
 	m = &metrics{
-		url:      url,
-		stopChan: make(chan bool),
-		timeout:  timeout,
+		url:     url,
+		timeout: timeout,
+		ticker:  time.NewTicker(frequency),
 	}
 
 	// Count of builds for each target.
@@ -127,7 +127,7 @@ func initMetrics(url string, frequency, timeout time.Duration, customLabels map[
 		ConstLabels: constLabels,
 	}, []string{})
 
-	go m.keepPushing(frequency)
+	go m.keepPushing()
 
 	return m
 }
@@ -140,8 +140,8 @@ func Stop() {
 }
 
 func (m *metrics) stop() {
+	m.ticker.Stop()
 	if !m.cancelled {
-		m.stopChan <- true
 		m.errors = m.pushMetrics()
 	}
 }
@@ -184,20 +184,12 @@ func b(value bool) string {
 	return "false"
 }
 
-func (m *metrics) keepPushing(d time.Duration) {
-	t := time.NewTicker(d)
-	for {
-		select {
-		case <-t.C:
-			m.errors = m.pushMetrics()
-			if m.errors >= maxErrors {
-				log.Warning("Metrics don't seem to be working, giving up")
-				t.Stop()
-				m.cancelled = true
-				return
-			}
-		case <-m.stopChan:
-			t.Stop()
+func (m *metrics) keepPushing() {
+	for range m.ticker.C {
+		m.errors = m.pushMetrics()
+		if m.errors >= maxErrors {
+			log.Warning("Metrics don't seem to be working, giving up")
+			m.cancelled = true
 			return
 		}
 	}
