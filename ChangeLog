@@ -1,3 +1,9 @@
+Version 7.4.5
+-------------
+
+    * Add missing option to JS protos to generate serialisation code.
+
+
 Version 7.4.4
 -------------
 
