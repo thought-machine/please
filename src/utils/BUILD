@@ -4,8 +4,9 @@ go_library(
     name = 'utils',
     srcs = glob(['*.go'], excludes = [
         'wrapper_script.go',
+        'stub.go',
         '*_test.go',
-    ]) + [':wrapper_script'],
+    ]) + [':bindata'],
     deps = [
         '//src/core',
         '//third_party/go:levenshtein',
@@ -16,8 +17,11 @@ go_library(
 )
 
 go_bindata(
-    name = 'wrapper_script',
-    srcs = ['//src/misc:wrapper_script'],
+    name = 'bindata',
+    srcs = [
+        '//src/misc:completion_scripts',
+        '//src/misc:wrapper_script',
+    ],
     prefix = 'src/misc',
 )
 

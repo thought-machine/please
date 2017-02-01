@@ -38,7 +38,6 @@ go get github.com/jteeuwen/go-bindata/...
 go get github.com/jessevdk/go-flags
 go get github.com/dustin/go-humanize
 go get github.com/kardianos/osext
-go get github.com/Songmu/prompter
 go get github.com/texttheater/golang-levenshtein/levenshtein
 go get github.com/Workiva/go-datastructures/queue
 go get github.com/coreos/go-semver/semver
@@ -64,8 +63,6 @@ rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parse
 (cd src/parse/cffi && $INTERPRETER cffi_compiler.py defs.h please_parser.py)
 # Invoke this tool to embed the Python scripts.
 bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
-# Similarly for the wrapper script.
-bin/go-bindata -o src/utils/wrapper_script.go -pkg utils -prefix src/misc src/misc
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."

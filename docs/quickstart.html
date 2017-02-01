@@ -16,14 +16,11 @@
       <code>pip install cffi>=1.5.0</code> should take care of it.</p>
 
     <h2>Shell completion</h2>
-    <p>There are a couple of shell completion scripts available:<p>
+    <p>Please comes with completion scripts for Bash and zsh built-in.<p>
 
-    <p>Bash: <a href="https://get.please.build/plz_complete.sh">https://s3-eu-west-1.amazonaws.com/please-build/plz_complete.sh</a><br/>
-      Download it and <code>source</code> it from your <code>.bashrc</code>.</p>
-
-    <p>zsh: <a href="https://get.please.build/plz_complete.zsh">https://s3-eu-west-1.amazonaws.com/please-build/plz_complete.zsh</a><br/>
-      Download, rename to _plz and put it somewhere in your $fpath,
-      e.g. <code>/usr/local/share/zsh/site-functions</code></p>
+    <p>You can produce them by running <code>plz query completions --bash_script</code> or
+      <code>plz query completions --zsh_script</code>. This is handy to add to your .bashrc, for example:<br/>
+      <pre><code>source <(plz query completions --bash_script)</code></pre></p>
 
     <h2>Getting started</h2>
     <p>Run <code>plz init</code> at the root of your repo to create the .plzconfig file.

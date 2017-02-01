@@ -195,8 +195,10 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"print" description:"Prints a representation of a single target"`
 		Completions struct {
-			Cmd  string `long:"cmd" description:"Command to complete for" default:"build"`
-			Args struct {
+			Cmd        string `long:"cmd" description:"Command to complete for" default:"build"`
+			BashScript bool   `long:"bash_script" description:"Prints the Bash completion script"`
+			ZshScript  bool   `long:"zsh_script" description:"Prints the zsh completion script"`
+			Args       struct {
 				Fragments []string `positional-arg-name:"fragment" description:"Initial fragment to attempt to complete"`
 			} `positional-args:"true"`
 		} `command:"completions" description:"Prints possible completions for a string."`
@@ -646,6 +648,9 @@ func main() {
 		if !buildFunctions[command]() {
 			os.Exit(1)
 		}
+		os.Exit(0)
+	} else if opts.Query.Completions.BashScript || opts.Query.Completions.ZshScript {
+		utils.PrintCompletionScript(opts.Query.Completions.ZshScript)
 		os.Exit(0)
 	}
 	if opts.BuildFlags.RepoRoot == "" {
