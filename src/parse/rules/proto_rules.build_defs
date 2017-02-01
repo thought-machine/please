@@ -69,8 +69,6 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         'go': find_outs('go', '.pb.go'),
         'cc': find_outs('cc', '.pb.cc'),
         'cc_hdrs': find_outs('cc', '.pb.h'),
-        'grpc_py': find_outs('py', '_pb2.py'),
-        'grpc_go': find_outs('go', '.pb.go'),
         'grpc_cc': find_outs('cc', '.pb.cc') + find_outs('cc', '.grpc.pb.cc'),
         'grpc_cc_hdrs': find_outs('cc', '.pb.h') + find_outs('cc', '.grpc.pb.h'),
         'js': find_outs('js', '_pb.js'),
@@ -142,7 +140,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         build_rule(
             name = gen_name,
             srcs = srcs,
-            outs = outs.get(grpc_language),
+            outs = outs.get(grpc_language, outs.get(language)),
             cmd = cmd,
             deps = deps,
             tools = lang_tools + deps_by_lang.get(language, []),
