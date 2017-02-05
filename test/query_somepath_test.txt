@@ -1,4 +1,4 @@
 Found path:
   //tools/junit_runner:junit_runner
   //tools/junit_runner/src/build/please/test:junit_runner
-  //third_party/java:_guava#bin
+  //third_party/java:_junit#bin

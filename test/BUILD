@@ -17,19 +17,19 @@ subinclude('//build_defs:plz_e2e_test')
 # found is not necessarily unique or stable.
 plz_e2e_test(
     name = 'query_somepath_test',
-    cmd = 'plz query somepath //tools/junit_runner //third_party/java:_guava#bin',
+    cmd = 'plz query somepath //tools/junit_runner //third_party/java:_junit#bin',
     expected_output = 'query_somepath_test.txt',
 )
 
 plz_e2e_test(
     name = 'query_somepath_reverse_test',
-    cmd = 'plz query somepath //third_party/java:_guava#bin //tools/junit_runner',
+    cmd = 'plz query somepath //third_party/java:_junit#bin //tools/junit_runner',
     expected_output = 'query_somepath_test.txt',  # Output should be the same as above
 )
 
 plz_e2e_test(
     name = 'query_somepath_nopath_test',
-    cmd = 'plz query somepath //src:please //third_party/java:guava',
+    cmd = 'plz query somepath //src:please //third_party/java:junit',
     expected_output = 'query_somepath_nopath_test.txt',
 )
 
