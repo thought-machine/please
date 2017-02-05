@@ -13,12 +13,6 @@ maven_jar(
 )
 
 maven_jar(
-    name = 'guava',
-    id = 'com.google.guava:guava:19.0',
-    hash = 'sha1: d971ce6b87a6dc5b122b8557da5659c544028853',
-)
-
-maven_jar(
     name = 'logback-classic',
     id = 'ch.qos.logback:logback-classic:1.1.3',
     hash = 'sha1: 245ace75b7a18931f103a79e74d53c66f1f90a9e',

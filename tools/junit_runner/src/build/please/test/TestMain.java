@@ -33,8 +33,6 @@ import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
 import org.junit.runner.manipulation.Filter;
 
-import com.google.common.reflect.ClassPath;
-
 
 public class TestMain {
   // Main class for JUnit tests which writes output to a directory.
@@ -52,17 +50,14 @@ public class TestMain {
 
     Set<Class> classes = new HashSet<>();
     Set<Class> allClasses = new HashSet<>();
-    ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    for (ClassPath.ClassInfo info : ClassPath.from(loader).getAllClasses()) {
-      if (info.getName().startsWith(testPackage)) {
-        Class<?> testClass = info.load();
-        allClasses.add(testClass);
-        if (testClass.getAnnotation(Ignore.class) == null) {
-          for (Method method : testClass.getMethods()) {
-            if (method.getAnnotation(Test.class) != null) {
-              classes.add(testClass);
-              break;
-            }
+    ClassFinder finder = new ClassFinder(Thread.currentThread().getContextClassLoader(), testPackage);
+    for (Class testClass : finder.getClasses()) {
+      allClasses.add(testClass);
+      if (testClass.getAnnotation(Ignore.class) == null) {
+        for (Method method : testClass.getMethods()) {
+          if (method.getAnnotation(Test.class) != null) {
+            classes.add(testClass);
+            break;
           }
         }
       }
