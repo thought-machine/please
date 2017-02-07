@@ -1,3 +1,9 @@
+Version 7.4.7
+-------------
+
+    * Fixed long-standing subtle issue with packaging Guava in junit_runner.
+
+
 Version 7.4.6
 -------------
 
