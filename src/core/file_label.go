@@ -38,15 +38,15 @@ type SystemFileLabel struct {
 }
 
 func (label SystemFileLabel) Paths(graph *BuildGraph) []string {
-	return []string{path.Base(label.Path)}
+	return label.FullPaths(graph)
 }
 
 func (label SystemFileLabel) FullPaths(graph *BuildGraph) []string {
-	return []string{label.Path}
+	return []string{ExpandHomePath(label.Path)}
 }
 
 func (label SystemFileLabel) LocalPaths(graph *BuildGraph) []string {
-	return label.Paths(graph)
+	return label.FullPaths(graph)
 }
 
 func (label SystemFileLabel) Label() *BuildLabel {

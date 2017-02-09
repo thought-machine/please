@@ -477,7 +477,7 @@ func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, 
 		if !systemAllowed {
 			return nil, fmt.Errorf("'%s' (in package %s) is an absolute path; that's not allowed.", src, packageName)
 		}
-		return core.SystemFileLabel{Path: core.ExpandHomePath(src)}, nil
+		return core.SystemFileLabel{Path: src}, nil
 	} else if strings.Contains(src, "/") {
 		// Target is in a subdirectory, check nobody else owns that.
 		for dir := path.Dir(path.Join(packageName, src)); dir != packageName && dir != "."; dir = path.Dir(dir) {
