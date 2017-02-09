@@ -1,3 +1,9 @@
+Version 7.4.8
+-------------
+
+    * Support for Go 1.8 (specifically the changes to testing.MainStart).
+
+
 Version 7.4.7
 -------------
 
