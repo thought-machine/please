@@ -79,12 +79,6 @@
         Sets the language passed to build rules when building. This can be important for some
         tools (although hopefully not many) - we've mostly observed it with Sass.</li>
 
-      <li><b>PyPyLocation</b> (repeated string)<br/>
-        Defines the locations to look in for PyPy, or specifically for the shared object which
-        must be found at runtime to initialise the parser.<br/>
-        Defaults to <code>/usr/lib/libpypy-c.so</code> and <code>/usr/local/lib/libpypy-c.dylib</code>
-        which should work for the most obvious setups on Linux and OSX respectively.</li>
-
       <li><b>Nonce</b><br/>
         This is an arbitrary string that is added to the hash of every build target. It provides
         a way to force a rebuild of everything when it's changed.<br/>
@@ -94,6 +88,17 @@
       <li><b>NumThreads</b> (int)<br/>
         Number of parallel build operations to run.<br/>
         Is overridden by the equivalent command-line flag, if that's passed.</li>
+    </ul>
+
+    <h3>[Display]</h3>
+
+    <p>Contains options relating to display output. These have no impact on build output.</p>
+
+    <ul>
+      <li><b>UpdateTitle</b> (bool)<br/>
+	Whether to update the window title as things are built. This is off by default because while
+	many Linux shells will reset it afterwards, others won't and it's not ideal for us to leave
+	it messed up.</li>
     </ul>
 
     <h3>[Build]</h3>

@@ -47,11 +47,11 @@ loop:
 				printf("\x1b[2K%s\n", line) // erase each line as we go
 			}
 			outputLines = len(backend.Output)
-			setWindowTitle(state)
+			setWindowTitle(state, true)
 		}
 	}
 	ticker.Stop()
-	setWindowTitle(nil)
+	setWindowTitle(state, false)
 	// Clear it all out.
 	moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows)
 	printf("\x1b[0J") // Clear out to end of screen.
@@ -182,8 +182,11 @@ func lprintfPrepare(cols int, format string, args ...interface{}) string {
 }
 
 // setWindowTitle sets the title of the current shell window based on the current build state.
-func setWindowTitle(state *core.BuildState) {
-	if state == nil {
+func setWindowTitle(state *core.BuildState, running bool) {
+	if !state.Config.Display.UpdateTitle {
+		return
+	}
+	if running {
 		SetWindowTitle("plz: finishing up")
 	} else {
 		SetWindowTitle(fmt.Sprintf("plz: %d / %d tasks, %3.1fs", state.NumDone(), state.NumActive(), time.Since(startTime).Seconds()))

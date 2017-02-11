@@ -182,6 +182,9 @@ type Configuration struct {
 		NumThreads       int
 		ExperimentalDir  string
 	}
+	Display struct {
+		UpdateTitle bool
+	}
 	Build struct {
 		Timeout        cli.Duration
 		Path           []string
