@@ -55,6 +55,15 @@ func Help(topic string) bool {
 	return false
 }
 
+// HelpTopics prints the list of help topics beginning with the given prefix.
+func HelpTopics(prefix string) {
+	for _, topic := range allTopics() {
+		if strings.HasPrefix(topic, prefix) {
+			fmt.Println(topic)
+		}
+	}
+}
+
 func help(topic string) string {
 	topic = strings.ToLower(topic)
 	if topic == "" {

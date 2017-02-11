@@ -398,6 +398,15 @@ var buildFunctions = map[string]func() bool{
 		if len(fragments) == 1 && fragments[0] == "-" {
 			fragments = utils.ReadAllStdin()
 		}
+		if opts.Query.Completions.Cmd == "help" {
+			// Special-case completing help topics rather than build targets.
+			if len(fragments) == 0 {
+				help.HelpTopics("")
+			} else {
+				help.HelpTopics(fragments[0])
+			}
+			return true
+		}
 		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
 		}

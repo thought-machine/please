@@ -6,3 +6,6 @@ package help
 func Help(topic string) bool {
 	return false
 }
+
+// HelpTopics is also a stub implementation used only during bootstrap.
+func HelpTopics(prefix string) {}
