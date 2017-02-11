@@ -2,6 +2,6 @@
     "preamble": "%s is a general Please concept.",
     "topics": {
         "licences": "Please has a limited ability to detect licences from third-party code.\nAccepted / rejected licences can be marked in .plzconfig; no action is taken until something is set there.",
-        "plzconfig": "The root of a Please repo is identified by a .plzconfig file. This also has a number of options to control various ways it behaves."
+        "plzconfig": "The root of a Please repo is identified by a .plzconfig file. This also has a number of options to control various ways it behaves.\n\nSee https://please.build/config.html for a detailed reference of all options.\n\nThere are several different .plzconfig files that can be loaded, which override one another. From lowest to highest priority:\n .plzconfig, which identifies the repo root.\n .plzconfig_linux_amd64 (or _darwin_amd64, etc) defines arch-specific options.\n /etc/plzconfig can be used to define machine-specific options (e.g. on a CI server)\n .plzconfig.local is used for non-checked-in config that is bespoke to the user."
     }
 }
