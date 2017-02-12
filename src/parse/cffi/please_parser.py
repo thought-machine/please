@@ -104,7 +104,8 @@ def _parse_build_code(filename, globals_dict, cache=False):
             if not is_py3 and isinstance(node, ast.Print):
                 raise SyntaxError('print not allowed, use log functions instead')
         code = _compile(tree, filename, 'exec')
-        _build_code_cache[filename] = code
+        if cache:
+            _build_code_cache[filename] = code
     exec(code, globals_dict)
 
 
