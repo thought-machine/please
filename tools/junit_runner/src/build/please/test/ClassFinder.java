@@ -114,7 +114,7 @@ class ClassFinder {
     private void loadClass(ClassLoader loader, String filename) {
         int classNameEnd = filename.length() - ".class".length();
         String className = filename.substring(0, classNameEnd).replace('/', '.');
-        if (className.startsWith(prefix) && !className.contains("$") && filename.endsWith(".class")) {
+        if (className.startsWith(prefix) && filename.endsWith(".class")) {
             try {
                 classes.add(loader.loadClass(className));
             } catch (ClassNotFoundException ex) {
