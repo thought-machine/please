@@ -440,16 +440,16 @@ func postBuildOutputFileName(target *core.BuildTarget) string {
 
 // For targets that have post-build functions, we have to store and retrieve the target's
 // output to feed to it
-func loadPostBuildOutput(state *core.BuildState, target *core.BuildTarget) string {
+func loadPostBuildOutput(state *core.BuildState, target *core.BuildTarget) (string, error) {
 	// Normally filegroups don't have post-build functions, but we use this sometimes for testing.
 	if target.IsFilegroup {
-		return ""
+		return "", nil
 	}
 	out, err := ioutil.ReadFile(postBuildOutputFileName(target))
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return string(out)
+	return string(out), nil
 }
 
 func storePostBuildOutput(state *core.BuildState, target *core.BuildTarget, out []byte) {

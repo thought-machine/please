@@ -107,15 +107,18 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 	if !needsBuilding(state, target, false) {
 		log.Debug("Not rebuilding %s, nothing's changed", target.Label)
-		postBuildOutput = runPostBuildFunctionIfNeeded(tid, state, target)
-		// If a post-build function ran it may modify the rule definition. In that case we
-		// need to check again whether the rule needs building.
-		if target.PostBuildFunction == 0 || !needsBuilding(state, target, true) {
-			target.SetState(core.Reused)
-			state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
-			return nil // Nothing needs to be done.
+		if postBuildOutput, err = runPostBuildFunctionIfNeeded(tid, state, target); err != nil {
+			log.Warning("Missing post-build output for %s; will rebuild.", target.Label)
 		} else {
-			log.Debug("Rebuilding %s after post-build function", target.Label)
+			// If a post-build function ran it may modify the rule definition. In that case we
+			// need to check again whether the rule needs building.
+			if target.PostBuildFunction == 0 || !needsBuilding(state, target, true) {
+				target.SetState(core.Reused)
+				state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
+				return nil // Nothing needs to be done.
+			} else {
+				log.Debug("Rebuilding %s after post-build function", target.Label)
+			}
 		}
 	}
 	if target.IsFilegroup {
@@ -156,7 +159,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		if target.PostBuildFunction != 0 {
 			log.Debug("Checking for post-build output file for %s in cache...", target.Label)
 			if state.Cache.RetrieveExtra(target, cacheKey, target.PostBuildOutputFileName()) {
-				postBuildOutput = runPostBuildFunctionIfNeeded(tid, state, target)
+				if postBuildOutput, err = runPostBuildFunctionIfNeeded(tid, state, target); err != nil {
+					panic(err)
+				}
 				if retrieveArtifacts() {
 					return nil
 				}
@@ -477,15 +482,18 @@ func retrieveFromCache(state *core.BuildState, target *core.BuildTarget) ([]byte
 }
 
 // Runs the post-build function for a target if it's got one.
-func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) string {
+func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
 	if target.PostBuildFunction != 0 {
-		out := loadPostBuildOutput(state, target)
+		out, err := loadPostBuildOutput(state, target)
+		if err != nil {
+			return "", err
+		}
 		if err := parse.RunPostBuildFunction(tid, state, target, out); err != nil {
 			panic(err)
 		}
-		return out
+		return out, nil
 	}
-	return ""
+	return "", nil
 }
 
 // checkLicences checks the licences for the target match what we've accepted / rejected in the config
