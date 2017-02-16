@@ -117,7 +117,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
                              see genrule for a more detailed discussion of its properties.
       labels (list): Labels to apply to this test.
       cmd (str | dict): Command to run to build the test.
-      srcs (list): Source files for this rule.
+      srcs (list | dict): Source files for this rule.
       outs (list): Output files of this rule.
       deps (list): Dependencies of this rule.
       tools (list): Tools used to build this rule; similar to srcs but are not copied to the temporary
