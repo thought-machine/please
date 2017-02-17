@@ -18,7 +18,7 @@ build_rule(
         'mv .bootstrap/py3/coverage .bootstrap/coverage',
         'mv .bootstrap/py2/coverage/tracer.so .bootstrap/coverage',
         # A little cleanup.
-        'rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles .bootstrap/py3 .bootstrap/py2',
+        'rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles .bootstrap/py3 .bootstrap/py2 .bootstrap/.*.pex.zip',
         'cat tools/please_pex/pex_main.py | sed -e "s/__MODULE_DIR__//" -e "s|__ENTRY_POINT__|tools.please_pex.pex|" -e "s/__ZIP_SAFE__/True/" > pex_main.py',
         'PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=".:./.bootstrap" python -O tools/please_pex/pex.py --src_dir=${TMP_DIR} --out=${OUT} --entry_point=${PKG//\//.}.pex --bootstrap --interpreter ' + CONFIG.DEFAULT_PYTHON_INTERPRETER,
     ]),
