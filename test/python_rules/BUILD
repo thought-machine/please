@@ -79,6 +79,6 @@ python_test(
 python_test(
     name = 'python3_coverage_test',
     srcs = ['python3_coverage_test.py'],
-    interpreter = 'python3',
+    interpreter = 'python3.5',
     labels = ['py3'],
 )
