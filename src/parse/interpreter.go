@@ -92,6 +92,7 @@ func initializeInterpreter(config *core.Configuration) {
 	setConfigValue("DEFAULT_PYTHON_INTERPRETER", config.Python.DefaultInterpreter)
 	setConfigValue("PYTHON_MODULE_DIR", config.Python.ModuleDir)
 	setConfigValue("PYTHON_DEFAULT_PIP_REPO", config.Python.DefaultPipRepo)
+	setConfigValue("PYTHON_WHEEL_REPO", config.Python.WheelRepo)
 	setConfigValue("USE_PYPI", pythonBool(config.Python.UsePyPI))
 	setConfigValue("JAVAC_TOOL", config.Java.JavacTool)
 	setConfigValue("JAVAC_WORKER", config.Java.JavacWorker)

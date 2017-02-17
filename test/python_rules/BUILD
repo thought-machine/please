@@ -68,3 +68,17 @@ python_test(
     data = [':data_dep'],
     deps = [':data_dep'],
 )
+
+python_test(
+    name = 'python2_coverage_test',
+    srcs = ['python2_coverage_test.py'],
+    interpreter = 'python2',
+    labels = ['py2'],
+)
+
+python_test(
+    name = 'python3_coverage_test',
+    srcs = ['python3_coverage_test.py'],
+    interpreter = 'python3',
+    labels = ['py3'],
+)

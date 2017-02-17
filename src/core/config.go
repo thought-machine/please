@@ -250,6 +250,7 @@ type Configuration struct {
 		DefaultInterpreter string
 		ModuleDir          string
 		DefaultPipRepo     string
+		WheelRepo          string
 		UsePyPI            bool
 	}
 	Java struct {

@@ -112,6 +112,10 @@ if ! hash docker 2>/dev/null ; then
     warn "Docker not found, excluding containerised tests"
     EXCLUDES="${EXCLUDES} --exclude=container"
 fi
+if ! hash python2 2>/dev/null ; then
+    warn "python2 not found, excluding python2 tests"
+    EXCLUDES="${EXCLUDES} --exclude=py2"
+fi
 if ! hash python3 2>/dev/null ; then
     warn "python3 not found, excluding python3 tests"
     EXCLUDES="${EXCLUDES} --exclude=py3"
