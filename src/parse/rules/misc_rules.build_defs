@@ -283,7 +283,7 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
         system_srcs = srcs,
         outs = [basename(src) for src in srcs],
         deps = deps,
-        cmd = 'find . -type f | xargs -I {} mv {} .',
+        cmd = 'cp $SRCS .',
         hashes = hashes,
         visibility = visibility,
         test_only = test_only,
