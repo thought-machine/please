@@ -19,6 +19,7 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
+      - deadsnakes
     packages:
       - libunittest++-dev
       - binutils
