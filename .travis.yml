@@ -26,6 +26,7 @@ addons:
       - gcc-4.8
       - g++-4.8
       - unzip
+      - python3.5
 
 install:
   - pip install --user cffi==1.7.0
