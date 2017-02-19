@@ -62,6 +62,7 @@ func main() {
 	for i := 0; i < t.NumField(); i++ {
 		f := v.Field(i)
 		sectname := strings.ToLower(t.Field(i).Name)
+		subfields := []string{}
 		if f.Type().Kind() == reflect.Struct {
 			for j := 0; j < f.Type().NumField(); j++ {
 				subf := f.Field(j)
@@ -72,10 +73,17 @@ func main() {
 					preamble := fmt.Sprintf("[%s]\n%s = %s\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example))
 					help = strings.Replace(help, "\\n", "\n", -1)
 					o.Topics[name] = preamble + help
+					subfields = append(subfields, "  "+name)
 				} else {
 					panic(fmt.Sprintf("Missing help struct tag on %s.%s", t.Field(i).Name, subt.Name))
 				}
 			}
+		}
+		if help := t.Field(i).Tag.Get("help"); help != "" {
+			if len(subfields) > 0 {
+				help += "\n\nThis option has the following sub-fields:\n" + strings.Join(subfields, "\n")
+			}
+			o.Topics[sectname] = help
 		}
 	}
 	b, _ := json.Marshal(o)

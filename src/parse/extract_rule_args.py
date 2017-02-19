@@ -21,10 +21,12 @@ def read_functions(filenames):
             tree = ast.parse(f.read(), f.name)
             for i, node in enumerate(ast.iter_child_nodes(tree)):
                 if isinstance(node, ast.FunctionDef) and not node.name.startswith('_'):
-                    # The c_*** family of functions call through to the cc_family. To keep them
-                    # simple don't bother applying checks here.
+                    # The c_*** family of functions call through to the cc_family.
+                    # They don't have formal argument lists because most things are delegated.
                     if not node.name.startswith('c_'):
                         yield node.name, ast.get_docstring(node), arg_checks(node)
+                        if node.name.startswith('cc_'):
+                            yield node.name.replace('cc_', 'c_'), ast.get_docstring(node), arg_checks(node)
 
 
 def arg_checks(node):
