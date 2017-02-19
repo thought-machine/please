@@ -7,7 +7,7 @@ set -eu
 
 cat <<EOF > .plzconfig.local
 [build]
-path = $PATH
+path = $HOME:$PATH
 
 [go]
 goroot = $GOROOT
@@ -35,3 +35,4 @@ if [ ! -f "$HOME/protoc" ]; then
 else
     echo 'Using cached protobuf.';
 fi
+ln -sf `which python3.5` $HOME/python3
