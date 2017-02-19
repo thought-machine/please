@@ -17,8 +17,8 @@ genrule(
 go_bindata(
     name = 'data',
     srcs = [
-        'config.json',
         'misc.json',
+        ':config_json',
         ':rule_defs',
     ],
     compress = True,
@@ -45,4 +45,11 @@ go_test(
         ':help',
         '//third_party/go:testify',
     ],
+)
+
+genrule(
+    name = 'config_json',
+    outs = ['config.json'],
+    cmd = '$TOOL > $OUTS',
+    tools = ['//src/help/config:config_help'],
 )

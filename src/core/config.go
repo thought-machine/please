@@ -169,138 +169,185 @@ func DefaultConfiguration() *Configuration {
 
 type Configuration struct {
 	Please struct {
-		Version          semver.Version
-		Location         string
-		SelfUpdate       bool
-		DownloadLocation string
-		BuildFileName    []string
-		BlacklistDirs    []string
-		Lang             string
-		PyPyLocation     []string
-		ParserEngine     string
-		Nonce            string
-		NumThreads       int
-		ExperimentalDir  string
+		Version semver.Version `help:"Defines the version of plz that this repo is supposed to use currently. If it's not present or the version matches the currently running version no special action is taken; otherwise if SelfUpdate is set Please will attempt to download an appropriate version, otherwise it will issue a warning and continue.
+
+ Note that if this is not set, you can run plz update to update to the latest version available on the server."`
+		Location string `help:"Defines the directory Please is installed into.
+ Defaults to ~/.please but you might want it to be somewhere else if you're installing via another method (e.g. the debs and install script still use /opt/please)."`
+		SelfUpdate       bool     `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
+		DownloadLocation string   `help:"Defines the location to download Please from when self-updating. Defaults to the Please web server, but you can point it to some location of your own if you prefer to keep traffic within your network or use home-grown versions."`
+		BuildFileName    []string `help:"Sets the names that Please uses instead of BUILD for its build files.
+ For clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.
+ One case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+."`
+		BlacklistDirs []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).
+ This is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
+		Lang         string `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
+		PyPyLocation []string
+		ParserEngine string
+		Nonce        string `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.
+ We will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
+		NumThreads int `help:"Number of parallel build operations to run.
+ Is overridden by the equivalent command-line flag, if that's passed."`
+		ExperimentalDir string
 	}
 	Display struct {
 		UpdateTitle bool
 	}
 	Build struct {
-		Timeout        cli.Duration
-		Path           []string
-		Config         string
-		FallbackConfig string
+		Timeout cli.Duration `help:"Default timeout for Dockerised tests, in seconds. Default is 1200 (twenty minutes)."`
+		Path    []string     `help:"The PATH variable that will be passed to the build processes.
+ Defaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations."`
+		Config         string `help:"The build config to use when one is not chosen on the command line. Defaults to opt."`
+		FallbackConfig string `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt."`
 	}
 	BuildConfig map[string]string
 	Cache       struct {
-		Workers               int
-		Dir                   string
-		DirCacheCleaner       string
-		DirCacheHighWaterMark string
-		DirCacheLowWaterMark  string
-		HttpUrl               string
-		HttpWriteable         bool
-		HttpTimeout           cli.Duration
-		RpcUrl                string
-		RpcWriteable          bool
-		RpcTimeout            cli.Duration
-		RpcPublicKey          string
-		RpcPrivateKey         string
-		RpcCACert             string
-		RpcSecure             bool
-		RpcMaxMsgSize         cli.ByteSize
+		Workers int
+		Dir     string `help:"Sets the directory to use for the dir cache.
+ The default is .plz-cache, if set to the empty string the dir cache will be disabled."`
+		DirCacheCleaner string `help:"The binary to use for cleaning the directory cache.
+ Defaults to cache_cleaner in the plz install directory.
+ Can also be set to the empty string to disable attempting to run it - note that this will of course lead to the dir cache growing without limit which may ruin your day if it fills your disk :)"`
+		DirCacheHighWaterMark string `help:"Starts cleaning the directory cache when it is over this number of bytes.
+ Can also be given with human-readable suffixes like 10G, 200MB etc."`
+		DirCacheLowWaterMark string `help:"When cleaning the directory cache, it's reduced to at most this size."`
+		HttpUrl              string `help:"Base URL of the HTTP cache.
+ Not set to anything by default which means the cache will be disabled."`
+		HttpWriteable bool `help:"If True this plz instance will write content back to the HTTP cache.
+ By default it runs in read-only mode."`
+		HttpTimeout cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
+		RpcUrl      string       `help:"Base URL of the RPC cache.
+ Not set to anything by default which means the cache will be disabled."`
+		RpcWriteable bool `help:"If True this plz instance will write content back to the RPC cache.
+ By default it runs in read-only mode."`
+		RpcTimeout    cli.Duration `help:"Timeout for operations contacting the RPC cache, in seconds."`
+		RpcPublicKey  string
+		RpcPrivateKey string
+		RpcCACert     string
+		RpcSecure     bool
+		RpcMaxMsgSize cli.ByteSize `help:"Maximum size of a single message that we'll send to the RPC server.
+ This should agree with the server's limit, if it's higher the artifacts will be rejected.
+ The value is given as a byte size so can be suffixed with M, GB, KiB, etc."`
 	}
 	Metrics struct {
-		PushGatewayURL string
-		PushFrequency  cli.Duration
+		PushGatewayURL string       `help:"The URL of the pushgateway to send metrics to."`
+		PushFrequency  cli.Duration `help:"The frequency, in milliseconds, to push statistics at. Defaults to 100."`
 		PushTimeout    cli.Duration
 	}
 	CustomMetricLabels map[string]string
 	Test               struct {
 		Timeout          cli.Duration
-		DefaultContainer ContainerImplementation
+		DefaultContainer ContainerImplementation `help:"Sets the default type of containerisation to use for tests that are given container = True.
+ Currently the only option is 'docker' but we intend to add rkt support at some point."`
 	}
 	Cover struct {
-		FileExtension    []string
-		ExcludeExtension []string
+		FileExtension []string `help:"Extensions of files to consider for coverage.
+ Defaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
+		ExcludeExtension []string `help:"Extensions of files to exclude from coverage.
+ Typically this is for generated code; the default is to exclude protobuf extensions like .pb.go, _pb2.py, etc."`
 	}
 	Docker struct {
-		DefaultImage       string
-		AllowLocalFallback bool
+		DefaultImage       string `help:"The default image used for any test that doesn't specify another."`
+		AllowLocalFallback bool   `help:"If True, will attempt to run the test locally if containerised running fails."`
 		Timeout            cli.Duration
-		ResultsTimeout     cli.Duration
-		RemoveTimeout      cli.Duration
-		RunArgs            []string
+		ResultsTimeout     cli.Duration `help:"Timeout to wait when trying to retrieve results from inside the container. Default is 20 seconds."`
+		RemoveTimeout      cli.Duration `help:"Timeout to wait when trying to remove a container after running a test. Defaults to 20 seconds."`
+		RunArgs            []string     `help:"Arguments passed to docker run when running a test."`
 	}
 	Gc struct {
-		Keep      []BuildLabel
-		KeepLabel []string
+		Keep      []BuildLabel `help:"Marks targets that gc should always keep. Can include meta-targets such as //test/... and //docs:all."`
+		KeepLabel []string     `help:"Defines a target label to be kept; for example, if you set this to go, no Go targets would ever be considered for deletion."`
 	}
 	Go struct {
-		GoVersion string
-		GoRoot    string
-		TestTool  string
-		GoPath    string
-		CgoCCTool string
+		GoVersion string `help:"String identifying the version of the Go compiler.
+ This is only now really important for anyone targeting versions of Go earlier than 1.5 since some of the tool names have changed (6g and 6l became compile and link in Go 1.5).
+ We're pretty sure that targeting Go 1.4 works; we're not sure about 1.3 (never tried) but 1.2 certainly doesn't since some of the flags to go tool pack are different. We assume nobody is terribly bothered about this..."`
+		GoRoot    string `help:"If set, will set the GOROOT environment variable appropriately during build actions."`
+		TestTool  string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules."`
+		GoPath    string `help:"If set, will set the GOPATH environment variable appropriately during build actions."`
+		CgoCCTool string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc"`
 	}
 	Python struct {
-		PipTool            string
+		PipTool            string `help:"The tool that is invoked during pip_library rules. Defaults to, well, pip."`
 		PipFlags           string
-		PexTool            string
-		DefaultInterpreter string
-		ModuleDir          string
-		DefaultPipRepo     string
-		WheelRepo          string
-		UsePyPI            bool
+		PexTool            string `help:"The tool that's invoked to build pexes. Defaults to please_pex in the install directory."`
+		DefaultInterpreter string `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to pypy."`
+		ModuleDir          string `help:"Defines a directory containing modules from which they can be imported at the top level.
+ By default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex."`
+		DefaultPipRepo string `help:"Defines a location for a pip repo to download wheels from.
+ By default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.
+ Is overridden by the repo argument to pip_library."`
+		WheelRepo string
+		UsePyPI   bool `help:"Whether or not to use PyPI for pip_library rules or not. Defaults to true, if you disable this you will presumably want to set DefaultPipRepo to use one of your own.
+ Is overridden by the use_pypi argument to pip_library."`
 	}
 	Java struct {
-		JavacTool          string
-		JavacWorker        string
-		JarTool            string
-		JarCatTool         string
-		PleaseMavenTool    string
-		JUnitRunner        string
-		DefaultTestPackage string
-		SourceLevel        string
-		TargetLevel        string
+		JavacTool       string `help:"Defines the tool used for the Java compiler. Defaults to javac."`
+		JavacWorker     string
+		JarTool         string `help:"Defines the tool used to build a .jar. Defaults to jar."`
+		JarCatTool      string `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary and java_test.Defaults to jarcat in the Please install directory."`
+		PleaseMavenTool string `help:"Defines the tool used to fetch information from Maven in maven_jars rules.
+ Defaults to please_maven in the Please install directory."`
+		JUnitRunner string `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.
+ Defaults to junit_runner.jar in the Please install directory."`
+		DefaultTestPackage string `help:"The Java classpath to search for functions annotated with @Test."`
+		SourceLevel        string `help:"The default Java source level when compiling. Defaults to 8."`
+		TargetLevel        string `help:"The default Java bytecode level to target. Defaults to 8."`
 		JavacFlags         string
 		JavacTestFlags     string
 		DefaultMavenRepo   string
 	}
 	Cpp struct {
-		CCTool             string
-		CppTool            string
-		LdTool             string
-		ArTool             string
-		AsmTool            string
-		LinkWithLdTool     bool
-		DefaultOptCflags   string
-		DefaultDbgCflags   string
-		DefaultOptCppflags string
-		DefaultDbgCppflags string
-		DefaultLdflags     string
-		DefaultNamespace   string
-		Coverage           bool
+		CCTool         string `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example."`
+		CppTool        string `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example."`
+		LdTool         string `help:"The tool invoked to link object files. Defaults to ld but you could also set it to gold, for example."`
+		ArTool         string `help:"The tool invoked to archive static libraries. Defaults to ar."`
+		AsmTool        string `help:"The tool invoked as an assembler. Currently only used on OSX for cc_embed_binary rules and so defaults to nasm."`
+		LinkWithLdTool bool   `help:"If true, instructs Please to use the tool set earlier in ldtool to link binaries instead of cctool.
+ This is an esoteric setting that most people don't want; a vanilla ld will not perform all steps necessary here (you'll get lots of missing symbol messages from having no libc etc). Generally best to leave this disabled."`
+		DefaultOptCflags string `help:"Compiler flags passed to all C rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.
+ Defaults to --std=c99 -O3 -DNDEBUG -Wall -Wextra -Werror"`
+		DefaultDbgCflags string `help:"Compiler rules passed to all C rules during dbg builds.
+ Defaults to --std=c99 -g3 -DDEBUG -Wall -Wextra -Werror."`
+		DefaultOptCppflags string `help:"Compiler flags passed to all C++ rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.
+ Defaults to --std=c++11 -O3 -DNDEBUG -Wall -Wextra -Werror"`
+		DefaultDbgCppflags string `help:"Compiler rules passed to all C++ rules during dbg builds.
+ Defaults to --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror."`
+		DefaultLdflags string `help:"Linker flags passed to all C++ rules.
+ By default this is empty."`
+		DefaultNamespace string `help:"Namespace passed to all cc_embed_binary rules when not overridden by the namespace argument to that rule.
+ Not set by default, if you want to use those rules you'll need to set it or pass it explicitly to each one."`
+		Coverage bool `help:"If true (the default), coverage will be available for C and C++ build rules.
+ This is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.
+ It's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation."`
 	}
 	Proto struct {
-		ProtocTool       string
-		ProtocGoPlugin   string
-		GrpcPythonPlugin string
-		GrpcJavaPlugin   string
-		GrpcCCPlugin     string
-		Language         []string
-		PythonDep        string
-		JavaDep          string
-		GoDep            string
-		JsDep            string
-		PythonGrpcDep    string
-		JavaGrpcDep      string
-		GoGrpcDep        string
-		PythonPackage    string
+		ProtocTool     string `help:"The binary invoked to compile .proto files. Defaults to protoc."`
+		ProtocGoPlugin string `help:"The binary passed to protoc as a plugin to generate Go code. Defaults to protoc-gen-go.
+ We've found this easier to manage with a go_get rule instead though, so you can also pass a build label here. See the Please repo for an example."`
+		GrpcPythonPlugin string `help:"The plugin invoked to compile Python code for grpc_library.
+ Defaults to protoc-gen-grpc-python."`
+		GrpcJavaPlugin string `help:"The plugin invoked to compile Java code for grpc_library.
+ Defaults to protoc-gen-grpc-java."`
+		GrpcCCPlugin string
+		Language     []string `help:"Sets the default set of languages that proto rules are built for.
+ Chosen from the set of {cc, java, go, py}.
+ Defaults to all of them!"`
+		PythonDep     string `help:"An in-repo dependency that's applied to any Python targets built."`
+		JavaDep       string `help:"An in-repo dependency that's applied to any Java targets built."`
+		GoDep         string `help:"An in-repo dependency that's applied to any Go targets built."`
+		JsDep         string
+		PythonGrpcDep string `help:"An in-repo dependency that's applied to any Python gRPC targets built."`
+		JavaGrpcDep   string `help:"An in-repo dependency that's applied to any Java gRPC targets built."`
+		GoGrpcDep     string `help:"An in-repo dependency that's applied to any Go gRPC targets built."`
+		PythonPackage string
 	}
 	Licences struct {
-		Accept []string
-		Reject []string
+		Accept []string `help:"Licences that are accepted in this repository.
+ When this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.
+ There's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
+		Reject []string `help:"Licences that are explicitly rejected in this repository.
+ An astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
 	}
 	Aliases map[string]string
 	Bazel   struct {
