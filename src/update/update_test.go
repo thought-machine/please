@@ -155,7 +155,7 @@ func makeConfig(dir string) *core.Configuration {
 	c := core.DefaultConfiguration()
 	wd, _ := os.Getwd()
 	c.Please.Location = path.Join(wd, dir)
-	c.Please.DownloadLocation = server.URL
+	c.Please.DownloadLocation.UnmarshalFlag(server.URL)
 	c.Please.Version = *semver.New("42.0.0")
 	return c
 }

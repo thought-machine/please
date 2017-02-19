@@ -172,11 +172,10 @@ type Configuration struct {
 		Version          semver.Version `help:"Defines the version of plz that this repo is supposed to use currently. If it's not present or the version matches the currently running version no special action is taken; otherwise if SelfUpdate is set Please will attempt to download an appropriate version, otherwise it will issue a warning and continue.\n\nNote that if this is not set, you can run plz update to update to the latest version available on the server."`
 		Location         string         `help:"Defines the directory Please is installed into.\nDefaults to ~/.please but you might want it to be somewhere else if you're installing via another method (e.g. the debs and install script still use /opt/please)."`
 		SelfUpdate       bool           `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
-		DownloadLocation string         `help:"Defines the location to download Please from when self-updating. Defaults to the Please web server, but you can point it to some location of your own if you prefer to keep traffic within your network or use home-grown versions."`
+		DownloadLocation cli.URL        `help:"Defines the location to download Please from when self-updating. Defaults to the Please web server, but you can point it to some location of your own if you prefer to keep traffic within your network or use home-grown versions."`
 		BuildFileName    []string       `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+."`
 		BlacklistDirs    []string       `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
 		Lang             string         `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
-		PyPyLocation     []string
 		ParserEngine     string
 		Nonce            string `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 		NumThreads       int    `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed."`
@@ -198,10 +197,10 @@ type Configuration struct {
 		DirCacheCleaner       string       `help:"The binary to use for cleaning the directory cache.\nDefaults to cache_cleaner in the plz install directory.\nCan also be set to the empty string to disable attempting to run it - note that this will of course lead to the dir cache growing without limit which may ruin your day if it fills your disk :)"`
 		DirCacheHighWaterMark string       `help:"Starts cleaning the directory cache when it is over this number of bytes.\nCan also be given with human-readable suffixes like 10G, 200MB etc."`
 		DirCacheLowWaterMark  string       `help:"When cleaning the directory cache, it's reduced to at most this size."`
-		HttpUrl               string       `help:"Base URL of the HTTP cache.\nNot set to anything by default which means the cache will be disabled."`
+		HttpUrl               cli.URL      `help:"Base URL of the HTTP cache.\nNot set to anything by default which means the cache will be disabled."`
 		HttpWriteable         bool         `help:"If True this plz instance will write content back to the HTTP cache.\nBy default it runs in read-only mode."`
 		HttpTimeout           cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
-		RpcUrl                string       `help:"Base URL of the RPC cache.\nNot set to anything by default which means the cache will be disabled."`
+		RpcUrl                cli.URL      `help:"Base URL of the RPC cache.\nNot set to anything by default which means the cache will be disabled."`
 		RpcWriteable          bool         `help:"If True this plz instance will write content back to the RPC cache.\nBy default it runs in read-only mode."`
 		RpcTimeout            cli.Duration `help:"Timeout for operations contacting the RPC cache, in seconds."`
 		RpcPublicKey          string
@@ -211,7 +210,7 @@ type Configuration struct {
 		RpcMaxMsgSize         cli.ByteSize `help:"Maximum size of a single message that we'll send to the RPC server.\nThis should agree with the server's limit, if it's higher the artifacts will be rejected.\nThe value is given as a byte size so can be suffixed with M, GB, KiB, etc."`
 	}
 	Metrics struct {
-		PushGatewayURL string       `help:"The URL of the pushgateway to send metrics to."`
+		PushGatewayURL cli.URL      `help:"The URL of the pushgateway to send metrics to."`
 		PushFrequency  cli.Duration `help:"The frequency, in milliseconds, to push statistics at. Defaults to 100."`
 		PushTimeout    cli.Duration
 	}
@@ -246,11 +245,11 @@ type Configuration struct {
 	Python struct {
 		PipTool            string `help:"The tool that is invoked during pip_library rules. Defaults to, well, pip."`
 		PipFlags           string
-		PexTool            string `help:"The tool that's invoked to build pexes. Defaults to please_pex in the install directory."`
-		DefaultInterpreter string `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to pypy."`
-		ModuleDir          string `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex."`
-		DefaultPipRepo     string `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library."`
-		WheelRepo          string
+		PexTool            string  `help:"The tool that's invoked to build pexes. Defaults to please_pex in the install directory."`
+		DefaultInterpreter string  `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to pypy."`
+		ModuleDir          string  `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex."`
+		DefaultPipRepo     cli.URL `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library."`
+		WheelRepo          cli.URL
 		UsePyPI            bool `help:"Whether or not to use PyPI for pip_library rules or not. Defaults to true, if you disable this you will presumably want to set DefaultPipRepo to use one of your own.\nIs overridden by the use_pypi argument to pip_library."`
 	}
 	Java struct {
@@ -265,7 +264,7 @@ type Configuration struct {
 		TargetLevel        string `help:"The default Java bytecode level to target. Defaults to 8."`
 		JavacFlags         string
 		JavacTestFlags     string
-		DefaultMavenRepo   string
+		DefaultMavenRepo   cli.URL
 	}
 	Cpp struct {
 		CCTool             string `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example."`

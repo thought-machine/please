@@ -3,6 +3,7 @@ package cli
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -96,4 +97,27 @@ func (d *Duration) UnmarshalFlag(in string) error {
 // UnmarshalText implements the encoding.TextUnmarshaler interface
 func (duration *Duration) UnmarshalText(text []byte) error {
 	return duration.UnmarshalFlag(string(text))
+}
+
+// A URL is used for flags or config fields that represent a URL.
+// It's just a string because it's more convenient that way; we haven't needed them as a net.URL so far.
+type URL string
+
+// UnmarshalFlag implements the flags.Unmarshaler interface.
+func (u *URL) UnmarshalFlag(in string) error {
+	if _, err := url.Parse(in); err != nil {
+		return err
+	}
+	*u = URL(in)
+	return nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface
+func (u *URL) UnmarshalText(text []byte) error {
+	return u.UnmarshalFlag(string(text))
+}
+
+// String implements the fmt.Stringer interface
+func (u *URL) String() string {
+	return string(*u)
 }

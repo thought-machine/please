@@ -346,7 +346,7 @@ func (cache *rpcCache) error() {
 }
 
 func newRpcCache(config *core.Configuration) (*rpcCache, error) {
-	return newRpcCacheInternal(config.Cache.RpcUrl, config, false)
+	return newRpcCacheInternal(config.Cache.RpcUrl.String(), config, false)
 }
 
 func newRpcCacheInternal(url string, config *core.Configuration, isSubnode bool) (*rpcCache, error) {

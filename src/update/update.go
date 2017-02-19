@@ -95,7 +95,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 			config.Please.Version = core.PleaseVersion
 			return false
 		}
-		config.Please.Version = findLatestVersion(config.Please.DownloadLocation)
+		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String())
 		return shouldUpdate(config, updatesEnabled, updateCommand)
 	}
 	return true
@@ -140,8 +140,8 @@ func downloadPlease(config *core.Configuration) {
 		}
 	}
 
-	config.Please.DownloadLocation = strings.TrimSuffix(config.Please.DownloadLocation, "/")
-	url := fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.gz", config.Please.DownloadLocation, runtime.GOOS, runtime.GOARCH, config.Please.Version, config.Please.Version)
+	url := strings.TrimSuffix(config.Please.DownloadLocation.String(), "/")
+	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.gz", url, runtime.GOOS, runtime.GOARCH, config.Please.Version, config.Please.Version)
 	log.Info("Downloading %s", url)
 	response, err := http.Get(url)
 	if err != nil {

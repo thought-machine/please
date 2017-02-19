@@ -46,7 +46,7 @@ func startServer(port int, keyFile, certFile, caCertFile string) *grpc.Server {
 
 func buildClient(port int, ca string) *rpcCache {
 	config := core.DefaultConfiguration()
-	config.Cache.RpcUrl = fmt.Sprintf("localhost:%d", port)
+	config.Cache.RpcUrl.UnmarshalFlag(fmt.Sprintf("localhost:%d", port))
 	config.Cache.RpcWriteable = true
 	config.Cache.RpcCACert = ca
 

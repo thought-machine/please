@@ -32,7 +32,7 @@ func init() {
 	testServer := httptest.NewServer(server.BuildRouter(cache))
 
 	config := core.DefaultConfiguration()
-	config.Cache.HttpUrl = testServer.URL
+	config.Cache.HttpUrl.UnmarshalFlag(testServer.URL)
 	config.Cache.HttpWriteable = true
 	httpcache = newHttpCache(config)
 }

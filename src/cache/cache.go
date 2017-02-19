@@ -35,7 +35,7 @@ func newSyncCache(config *core.Configuration) core.Cache {
 		}
 	}
 	if config.Cache.HttpUrl != "" {
-		res, err := http.Get(config.Cache.HttpUrl + "/ping")
+		res, err := http.Get(config.Cache.HttpUrl.String() + "/ping")
 		if err == nil && res.StatusCode == 200 {
 			mplex.caches = append(mplex.caches, newHttpCache(config))
 		} else {

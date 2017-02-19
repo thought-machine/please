@@ -169,7 +169,7 @@ func (cache *httpCache) Shutdown() {}
 func newHttpCache(config *core.Configuration) *httpCache {
 	cache := new(httpCache)
 	cache.OSName = runtime.GOOS + "_" + runtime.GOARCH
-	cache.Url = config.Cache.HttpUrl
+	cache.Url = config.Cache.HttpUrl.String()
 	cache.Writeable = config.Cache.HttpWriteable
 	cache.Timeout = time.Duration(config.Cache.HttpTimeout)
 	return cache

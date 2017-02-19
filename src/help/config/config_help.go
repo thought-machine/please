@@ -20,14 +20,14 @@ type output struct {
 func ExampleValue(f reflect.Value, name string, t reflect.Type) string {
 	if t.Kind() == reflect.Slice {
 		return ExampleValue(f, name, t.Elem()) + fmt.Sprintf("\n\n%s can be repeated", name)
-	}
-	// Special case some fields of unusual types.
-	if name == "version" {
+	} else if name == "version" {
 		return core.PleaseVersion.String() // keep it up to date!
-	}
-	if t.Kind() == reflect.String {
+	} else if t.Kind() == reflect.String {
 		if f.String() != "" {
 			return f.String()
+		}
+		if t.Name() == "URL" {
+			return "https://mydomain.com/somepath"
 		}
 		return "<str>"
 	} else if t.Kind() == reflect.Bool {

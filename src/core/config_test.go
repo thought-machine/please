@@ -108,7 +108,7 @@ func TestDynamicSection(t *testing.T) {
 func TestDynamicSubsection(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/metrics.plzconfig"})
 	assert.NoError(t, err)
-	assert.Equal(t, "http://localhost:9091", config.Metrics.PushGatewayURL)
+	assert.EqualValues(t, "http://localhost:9091", config.Metrics.PushGatewayURL)
 	expected := map[string]string{
 		"branch": "git rev-parse --abbrev-ref HEAD",
 	}
