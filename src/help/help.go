@@ -30,8 +30,7 @@ Or see the website (https://please.build) for more information.
 const topicsHelpMessage = `
 The following help topics are available:
 
-%s
-`
+%s`
 
 var allHelpFiles = []string{"rule_defs.json", "config.json", "misc.json"}
 
