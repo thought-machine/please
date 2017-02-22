@@ -1,3 +1,11 @@
+Version 7.5.0
+-------------
+
+    * Support for Istanbul's JSON coverage format.
+    * please_pex now packages multiple versions of coverage.tracer which it attempts to
+      import as appropriate.
+
+
 Version 7.4.8
 -------------
 
