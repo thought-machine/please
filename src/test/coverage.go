@@ -30,6 +30,8 @@ func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCo
 		return coverage, parseGoCoverageResults(target, &coverage, outputFile)
 	} else if looksLikeGcovCoverageResults(data) {
 		return coverage, parseGcovCoverageResults(target, &coverage, data)
+	} else if looksLikeIstanbulCoverageResults(data) {
+		return coverage, parseIstanbulCoverageResults(target, &coverage, data)
 	} else {
 		return coverage, parseXmlCoverageResults(target, &coverage, data)
 	}

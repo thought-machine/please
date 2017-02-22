@@ -12,11 +12,12 @@ import (
 var target = &core.BuildTarget{Label: core.BuildLabel{PackageName: "src/test", Name: "coverage_test"}}
 
 const (
-	pythonCoverageFile = "src/test/test_data/python-coverage.xml"
-	goCoverageFile     = "src/test/test_data/go_coverage.txt"
-	goCoverageFile2    = "src/test/test_data/go_coverage_2.txt"
-	goCoverageFile3    = "src/test/test_data/go_coverage_3.txt"
-	gcovCoverageFile   = "src/test/test_data/gcov_coverage.gcov"
+	pythonCoverageFile   = "src/test/test_data/python-coverage.xml"
+	goCoverageFile       = "src/test/test_data/go_coverage.txt"
+	goCoverageFile2      = "src/test/test_data/go_coverage_2.txt"
+	goCoverageFile3      = "src/test/test_data/go_coverage_3.txt"
+	gcovCoverageFile     = "src/test/test_data/gcov_coverage.gcov"
+	istanbulCoverageFile = "src/test/test_data/istanbul_coverage.json"
 )
 
 // Test that tests aren't required to produce coverage, ie. it's not an error if the file doesn't exist.
@@ -179,4 +180,22 @@ func TestGcovParsing(t *testing.T) {
 	assertLine(t, lines, 16, core.Covered)
 	assertLine(t, lines, 17, core.NotExecutable)
 	assertLine(t, lines, 18, core.Covered)
+}
+
+func TestIstanbulCoverage(t *testing.T) {
+	target := &core.BuildTarget{Label: core.BuildLabel{PackageName: "common/js/components/ActionButton", Name: "test_test_bin"}}
+	coverage, err := parseTestCoverage(target, istanbulCoverageFile)
+	assert.NoError(t, err)
+	assert.Contains(t, coverage.Files, "common/js/components/ActionButton/ActionButton.js")
+	assert.Contains(t, coverage.Files, "common/js/components/LoadingSpinner/LoadingSpinner.js")
+	lines := coverage.Files["common/js/components/LoadingSpinner/LoadingSpinner.js"]
+	assertLine(t, lines, 3, core.NotExecutable)
+	assertLine(t, lines, 4, core.Covered)
+	assertLine(t, lines, 5, core.Covered)
+	assertLine(t, lines, 6, core.Covered)
+	assertLine(t, lines, 7, core.Covered)
+	assertLine(t, lines, 8, core.NotExecutable)
+	assertLine(t, lines, 22, core.NotExecutable)
+	assertLine(t, lines, 23, core.Uncovered)
+	assertLine(t, lines, 24, core.NotExecutable)
 }
