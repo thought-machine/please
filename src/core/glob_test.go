@@ -34,7 +34,7 @@ func TestCannotGlobThirdFile(t *testing.T) {
 }
 
 func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
-	files, err := glob("src/core/test_data/test_subfolder1", "**/*.txt", false, []string{})
+	files, err := glob("src/core/test_data/test_subfolder1", "**/*.txt", false, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"src/core/test_data/test_subfolder1/a.txt"}, files)
 }
@@ -46,4 +46,10 @@ func TestIsGlob(t *testing.T) {
 	assert.True(t, IsGlob("ab/[a-z].txt"))
 	assert.False(t, IsGlob("abc.txt"))
 	assert.False(t, IsGlob("ab/c.txt"))
+}
+
+func TestGlobPlusPlus(t *testing.T) {
+	files, err := glob("src/core/test_data/test_subfolder++", "**/*.txt", false, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"src/core/test_data/test_subfolder++/test.txt"}, files)
 }

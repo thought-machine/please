@@ -85,6 +85,7 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 	pattern = strings.Replace(pattern, "*", "[^/]*", -1)        // handle single (all) * components
 	pattern = strings.Replace(pattern, "[^/]*[^/]*", ".*", -1)  // handle ** components
 	pattern = strings.Replace(pattern, "/.*/", "/(?:.*/)?", -1) // allow /**/ to match nothing
+	pattern = strings.Replace(pattern, "+", "\\+", -1)          // escape +
 	regex, err := regexp.Compile(pattern)
 	if err != nil {
 		return matches, err
