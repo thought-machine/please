@@ -512,6 +512,7 @@ def go_yacc(name, src, out=None, visibility=None, labels=None):
       visibility (list): Visibility specification.
       labels (list): Labels for this rule.
     """
+    log.warning('go_yacc is deprecated since the yacc tool is removed from go 1.8')
     build_rule(
         name = name,
         srcs = [src],
