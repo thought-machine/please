@@ -3,11 +3,12 @@
 package clean
 
 import (
+	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"path"
 	"syscall"
 
 	"gopkg.in/op/go-logging.v1"
@@ -19,29 +20,28 @@ import (
 
 var log = logging.MustGetLogger("clean")
 
-// Clean cleans the output directory and optionally the cache as well.
-// If labels is non-empty then only those specific targets will be wiped, otherwise
-// everything will be removed.
-func Clean(state *core.BuildState, labels []core.BuildLabel, cleanCache, background bool) {
-	if len(labels) == 0 {
-		if background {
-			if err := maybeFork(core.OutDir, state.Config.Cache.Dir, cleanCache); err != nil {
-				log.Warning("Couldn't run clean in background; will do it synchronously: %s", err)
-			}
+// Clean cleans the entire output directory and optionally the cache as well.
+func Clean(config *core.Configuration, cleanCache, background bool) {
+	if background {
+		if err := maybeFork(core.OutDir, config.Cache.Dir, cleanCache); err != nil {
+			log.Warning("Couldn't run clean in background; will do it synchronously: %s", err)
 		}
-		if cleanCache {
-			clean(state.Config.Cache.Dir)
-		}
-		clean(core.OutDir)
-	} else {
-		for _, label := range labels {
-			// Clean any and all sub-targets of this target.
-			// This is not super efficient; we potentially repeat this walk multiple times if
-			// we have several targets to clean in a package. It's unlikely to be a big concern though
-			// unless we have lots of targets to clean and their packages are very large.
-			for _, target := range state.Graph.PackageOrDie(label.PackageName).AllChildren(state.Graph.TargetOrDie(label)) {
-				cleanTarget(state, target, cleanCache)
-			}
+	}
+	if cleanCache {
+		clean(config.Cache.Dir)
+	}
+	clean(core.OutDir)
+}
+
+// CleanTargets cleans a given set of build targets.
+func CleanTargets(state *core.BuildState, labels []core.BuildLabel, cleanCache bool) {
+	for _, label := range labels {
+		// Clean any and all sub-targets of this target.
+		// This is not super efficient; we potentially repeat this walk multiple times if
+		// we have several targets to clean in a package. It's unlikely to be a big concern though
+		// unless we have lots of targets to clean and their packages are very large.
+		for _, target := range state.Graph.PackageOrDie(label.PackageName).AllChildren(state.Graph.TargetOrDie(label)) {
+			cleanTarget(state, target, cleanCache)
 		}
 	}
 }
@@ -106,10 +106,9 @@ func maybeFork(outDir, cacheDir string, cleanCache bool) error {
 
 // moveDir moves a directory to a new location and returns that new location.
 func moveDir(dir string) (string, error) {
-	name, err := ioutil.TempDir(filepath.Dir(dir), ".plz_clean_")
-	if err != nil {
-		return "", err
-	}
+	b := make([]byte, 16)
+	rand.Read(b)
+	name := path.Join(path.Dir(dir), ".plz_clean_"+hex.EncodeToString(b))
 	log.Notice("Moving %s to %s", dir, name)
 	return name, os.Rename(dir, name)
 }

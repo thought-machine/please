@@ -237,7 +237,7 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() bool{
 	"build": func() bool {
-		success, _ := runBuild(opts.Build.Args.Targets, true, false, false)
+		success, _ := runBuild(opts.Build.Args.Targets, true, false)
 		return success
 	},
 	"rebuild": func() bool {
@@ -245,11 +245,11 @@ var buildFunctions = map[string]func() bool{
 		// you use 'plz rebuild', you don't want the cache coming in and mucking things up.
 		// 'plz clean' followed by 'plz build' would still work in those cases, anyway.
 		opts.FeatureFlags.NoCache = true
-		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false, false)
+		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false)
 		return success
 	},
 	"hash": func() bool {
-		success, state := runBuild(opts.Hash.Args.Targets, true, false, false)
+		success, state := runBuild(opts.Hash.Args.Targets, true, false)
 		if opts.Hash.Detailed {
 			for _, target := range state.ExpandOriginalTargets() {
 				build.PrintHashes(state, state.Graph.TargetOrDie(target))
@@ -260,7 +260,7 @@ var buildFunctions = map[string]func() bool{
 	"test": func() bool {
 		os.RemoveAll(opts.Test.TestResultsFile)
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args)
-		success, state := runBuild(targets, true, true, false)
+		success, state := runBuild(targets, true, true)
 		test.WriteResultsToFileOrDie(state.Graph, opts.Test.TestResultsFile)
 		return success || opts.Test.FailingTestsOk
 	},
@@ -273,7 +273,7 @@ var buildFunctions = map[string]func() bool{
 		os.RemoveAll(opts.Cover.TestResultsFile)
 		os.RemoveAll(opts.Cover.CoverageResultsFile)
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
-		success, state := runBuild(targets, true, true, false)
+		success, state := runBuild(targets, true, true)
 		test.WriteResultsToFileOrDie(state.Graph, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
@@ -286,7 +286,7 @@ var buildFunctions = map[string]func() bool{
 		return success || opts.Cover.FailingTestsOk
 	},
 	"run": func() bool {
-		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, false); success {
+		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false); success {
 			run.Run(state.Graph, opts.Run.Args.Target, opts.Run.Args.Args)
 		}
 		return false // We should never return from run.Run so if we make it here something's wrong.
@@ -294,19 +294,18 @@ var buildFunctions = map[string]func() bool{
 	"clean": func() bool {
 		opts.NoCacheCleaner = true
 		if len(opts.Clean.Args.Targets) == 0 {
-			opts.OutputFlags.PlainOutput = true // No need for interactive display, we won't parse anything.
+			// Clean everything, doesn't require parsing at all.
+			clean.Clean(config, !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
+			return true
 		}
-		if success, state := runBuild(opts.Clean.Args.Targets, false, false, true); success {
-			if len(opts.Clean.Args.Targets) == 0 {
-				state.OriginalTargets = nil // It interprets an empty target list differently.
-			}
-			clean.Clean(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
+		if success, state := runBuild(opts.Clean.Args.Targets, false, false); success {
+			clean.CleanTargets(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache)
 			return true
 		}
 		return false
 	},
 	"watch": func() bool {
-		success, state := runBuild(opts.Watch.Args.Targets, false, false, false)
+		success, state := runBuild(opts.Watch.Args.Targets, false, false)
 		if success {
 			watch.Watch(state, state.ExpandOriginalTargets())
 		}
@@ -328,7 +327,7 @@ var buildFunctions = map[string]func() bool{
 		return false
 	},
 	"gc": func() bool {
-		success, state := runBuild(core.WholeGraph, false, false, false)
+		success, state := runBuild(core.WholeGraph, false, false)
 		if success {
 			state.OriginalTargets = state.Config.Gc.Keep
 			gc.GarbageCollect(state.Graph, state.ExpandOriginalTargets(), state.Config.Gc.KeepLabel,
@@ -445,7 +444,10 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 		opts.ParsePackageOnly = true
 		opts.OutputFlags.PlainOutput = true // No point displaying this for one of these queries.
 	}
-	if success, state := runBuild(labels, false, false, true); success {
+	if len(labels) == 0 {
+		labels = core.WholeGraph
+	}
+	if success, state := runBuild(labels, false, false); success {
 		onSuccess(state)
 		return true
 	}
@@ -605,13 +607,9 @@ func readConfig(forceUpdate bool) *core.Configuration {
 
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
-func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, defaultToAllTargets bool) (bool, *core.BuildState) {
+func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if len(targets) == 0 {
-		if defaultToAllTargets {
-			targets = core.WholeGraph
-		} else {
-			targets = core.InitialPackage()
-		}
+		targets = core.InitialPackage()
 	}
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
 	return Please(targets, config, pretty, shouldBuild, shouldTest)
