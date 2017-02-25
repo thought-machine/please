@@ -69,7 +69,6 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 		"test.go",
 		[]CoverVar{{
 			Dir:        "tools/please_go_test/test_data",
-			Package:    "core",
 			ImportPath: "core",
 			Var:        "GoCover_lock_go",
 			File:       "tools/please_go_test/test_data/lock.go",
