@@ -109,7 +109,8 @@ func matchesSuffix(path string, suffixes []string) bool {
 	return false
 }
 
-var opts struct {
+var opts = struct {
+	Usage                   string
 	Out                     string            `short:"o" long:"output" description:"Output filename" required:"true"`
 	In                      string            `short:"i" long:"input" description:"Input directory" required:"true"`
 	Suffix                  []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
@@ -127,6 +128,24 @@ var opts struct {
 	NoDirEntries            bool              `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
 	RenameDirs              map[string]string `short:"r" long:"rename_dir" description:"Rename directories within zip file"`
 	StripBytecodeTimestamps bool              `short:"b" long:"strip_bytecode_timestamps" description:"Strips timestamps from any .pyc / .pyo files encountered."`
+}{
+	Usage: `
+Jarcat is a binary shipped with Please that helps it operate on .jar and .zip files.
+
+Its original and most useful feature is performing efficient concatenation of .jar files
+when compiling Java code. This is possible with zip files because each file is compressed
+individually so it's possible to combine them without decompressing and recompressing each one.
+
+It now has a number of other features to help in compilation and serves as a general-purpose
+zip manipulator for Please. To help us maintain reproduceability of builds it is able to strip
+timestamps from files, and also has a bunch of Python-specific functionality to help with .pex files.
+
+Typically you don't invoke this directly, Please will run it when individual rules need it.
+You're welcome to use it separately if you find it useful, although be aware that we do not
+aim to maintain compatibility very strongly.
+
+Any apparent relationship between the name of this tool and bonsai kittens is completely coincidental.
+`,
 }
 
 func main() {

@@ -61,3 +61,24 @@ func TestURLDefault(t *testing.T) {
 	assert.Equal(t, 0, len(extraArgs))
 	assert.EqualValues(t, "https://localhost:8080", opts.U)
 }
+
+func TestGetUsageTag(t *testing.T) {
+	opts := struct {
+		Usage string `usage:"Test usage"`
+	}{}
+	assert.Equal(t, "Test usage", getUsage(&opts))
+}
+
+func TestGetUsageValue(t *testing.T) {
+	opts := struct {
+		Usage string
+	}{
+		Usage: "Test usage",
+	}
+	assert.Equal(t, "Test usage", getUsage(&opts))
+}
+
+func TestGetUsageNoUsage(t *testing.T) {
+	opts := struct{}{}
+	assert.Equal(t, "", getUsage(&opts))
+}

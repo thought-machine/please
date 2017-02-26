@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -22,12 +23,14 @@ func ParseFlags(appname string, data interface{}, args []string) (*flags.Parser,
 	extraArgs, err := parser.ParseArgs(args[1:])
 	if err != nil {
 		if err.(*flags.Error).Type == flags.ErrHelp {
+			writeUsage(data)
 			fmt.Printf("%s\n", err)
 			os.Exit(0)
 		} else if err.(*flags.Error).Type == flags.ErrUnknownFlag && strings.Contains(err.(*flags.Error).Message, "`halp'") {
 			fmt.Printf("Hmmmmm, hows can I halp you?\n")
+			writeUsage(data)
 			parser.WriteHelp(os.Stderr)
-			os.Exit(1)
+			os.Exit(0)
 		}
 	}
 	return parser, extraArgs, err
@@ -48,15 +51,37 @@ func ParseFlagsFromArgsOrDie(appname, version string, data interface{}, args []s
 		os.Exit(0) // Ignore other errors if --version was passed.
 	}
 	if err != nil {
+		writeUsage(data)
 		parser.WriteHelp(os.Stderr)
 		fmt.Printf("\n%s\n", err)
 		os.Exit(1)
 	} else if len(extraArgs) > 0 {
+		writeUsage(data)
 		fmt.Printf("Unknown option %s\n", extraArgs)
 		parser.WriteHelp(os.Stderr)
 		os.Exit(1)
 	}
 	return parser
+}
+
+// writeUsage prints any usage specified on the flag struct.
+func writeUsage(opts interface{}) {
+	if s := getUsage(opts); s != "" {
+		fmt.Println(s)
+		fmt.Println("") // extra blank line
+	}
+}
+
+// getUsage extracts any usage specified on a flag struct.
+// It is set on a field named Usage, either by value or in a struct tag named usage.
+func getUsage(opts interface{}) string {
+	if field := reflect.ValueOf(opts).Elem().FieldByName("Usage"); field.IsValid() && field.String() != "" {
+		return strings.TrimSpace(field.String())
+	}
+	if field, present := reflect.TypeOf(opts).Elem().FieldByName("Usage"); present {
+		return field.Tag.Get("usage")
+	}
+	return ""
 }
 
 // A ByteSize is used for flags that represent some quantity of bytes that can be

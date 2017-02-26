@@ -37,6 +37,7 @@ var log = logging.MustGetLogger("plz")
 var config *core.Configuration
 
 var opts struct {
+	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
 		Config     string            `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
 		RepoRoot   string            `short:"r" long:"repo_root" description:"Root of repository to build."`

@@ -122,7 +122,8 @@ func (pom *pomXml) AddProperty(property pomProperty) {
 	}
 }
 
-var opts struct {
+var opts = struct {
+	Usage      string
 	Repository string   `short:"r" long:"repository" description:"Location of Maven repo" default:"https://repo1.maven.org/maven2"`
 	Verbosity  int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
 	Exclude    []string `short:"e" long:"exclude" description:"Artifacts to exclude from download"`
@@ -132,6 +133,25 @@ var opts struct {
 	Args       struct {
 		Package []string
 	} `positional-args:"yes" required:"yes"`
+}{
+	Usage: `
+please_maven is a tool shipped with Please that communicates with Maven repositories
+to work out what files to download given a package spec.
+
+Example usage:
+please_maven io.grpc:grpc-all:1.1.2
+> io.grpc:grpc-auth:1.1.2:src:BSD 3-Clause
+> io.grpc:grpc-core:1.1.2:src:BSD 3-Clause
+> ...
+Its output is similarly in the common Maven artifact format which can be used to create
+maven_jar rules in BUILD files. It also outputs some notes on whether sources are
+available and what licence the package is under, if it can find it.
+
+Note that it does not do complex cross-package dependency resolution and doesn't
+necessarily support every aspect of Maven's pom.xml format, which is pretty hard
+to fully grok. The goal is to provide a backend to Please's built-in maven_jars
+rule to make adding dependencies easier.
+`,
 }
 
 // Replaces a Maven variable in the given string.

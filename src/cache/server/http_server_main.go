@@ -14,6 +14,7 @@ import (
 var log = logging.MustGetLogger("http_cache_server")
 
 var opts struct {
+	Usage     string `usage:"http_cache_server is a server for Please's remote HTTP cache.\n\nSee https://please.build/cache.html for more information."`
 	Verbosity int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
 	Port      int    `short:"p" long:"port" description:"Port to serve on" default:"8080"`
 	Dir       string `short:"d" long:"dir" description:"Directory to write into" default:"plz-http-cache"`

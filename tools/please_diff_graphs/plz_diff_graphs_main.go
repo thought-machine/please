@@ -18,7 +18,8 @@ import (
 	"tools/please_diff_graphs"
 )
 
-var opts struct {
+var opts = struct {
+	Usage        string
 	Verbosity    int      `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
 	Before       string   `short:"b" long:"before" required:"true" description:"File containing build graph before changes."`
 	After        string   `short:"a" long:"after" required:"true" description:"File containing build graph after changes."`
@@ -28,6 +29,24 @@ var opts struct {
 	ChangedFiles struct {
 		Files []string `positional-arg-name:"files" description:"Files that have changed. - to read from stdin."`
 	} `positional-args:"true"`
+}{
+	Usage: `
+please_diff_graphs is a small utility to calculate differences between two Please build graphs.
+
+Its inputs are two JSON graph files (produced using 'plz query graph') and any files that have changed.
+It will output a list of all build targets that have changed between the two.
+For example:
+
+please_diff_graphs -b before.json -a after.json src/core/my_file.go
+> //src/core:my_target
+> //src/elsewhere:some_other_target
+
+Note that the 'ordering' of the two graphs matters, hence their labels 'before' and 'after';
+the operation is non-commutative because targets that are added appear and those deleted do not.
+
+please_diff_graphs is mostly useful in conjunction with Please in a CI system; you can use it to
+formally determine what set of targets have changed in a diff and run the minimal set of affected tests.
+`,
 }
 
 func readStdin() []string {

@@ -17,6 +17,15 @@ from _pex.interpreter import PythonInterpreter
 # Global reference to our zipfile, which we extract various bits from.
 please_pex_zipfile = None
 
+USAGE = """please_pex is a tool for Please to build pex files.
+
+Due to some optimisations in how we compile pex files, this is now only used
+to build the entry point and bootstrap code. Other python_library rules are
+concatenated together with it at the last minute to produce the final pex file.
+
+Typically this is not invoked on its own, Please will do it for you.
+"""
+
 
 def dereference_symlinks(src):
     """
@@ -146,10 +155,10 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--src_dir')
-    parser.add_argument('--out')
-    parser.add_argument('--entry_point')
+    parser = argparse.ArgumentParser(description=USAGE)
+    parser.add_argument('--src_dir', required=True)
+    parser.add_argument('--out', required=True)
+    parser.add_argument('--entry_point', required=True)
     parser.add_argument('--interpreter', default=sys.executable)
     parser.add_argument('--test_package')
     parser.add_argument('--test_srcs')
