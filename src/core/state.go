@@ -39,6 +39,19 @@ func (t pendingTask) Compare(that queue.Item) int {
 	return int((t.Type & priorityMask) - (that.(pendingTask).Type & priorityMask))
 }
 
+// A Parser allows performing several parsing tasks directly. This is not used for
+// normal BUILD file parsing, but rather pre/post build callbacks etc to decouple
+// the build package from calling straight into parse (since parse is cgo we attempt
+// to minimise any dependencies on it).
+type Parser interface {
+	// RunPreBuildFunction runs a pre-build function for a target.
+	RunPreBuildFunction(threadId int, state *BuildState, target *BuildTarget) error
+	// RunPostBuildFunction runs a post-build function for a target.
+	RunPostBuildFunction(threadId int, state *BuildState, target *BuildTarget, output string) error
+	// UndeferAnyParses undefers any pending parses that are waiting for this target to build.
+	UndeferAnyParses(state *BuildState, target *BuildTarget)
+}
+
 // Passed about to track the current state of the build.
 type BuildState struct {
 	Graph *BuildGraph
@@ -48,6 +61,8 @@ type BuildState struct {
 	Results chan *BuildResult
 	// Configuration options
 	Config *Configuration
+	// Parser implementation. Other things can call this to perform various external parse tasks.
+	Parser Parser
 	// Hashes of variouts bits of the configuration, used for incrementality.
 	Hashes struct {
 		// Hash of the general config, not including specialised bits.

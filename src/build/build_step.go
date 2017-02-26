@@ -17,7 +17,6 @@ import (
 
 	"core"
 	"metrics"
-	"parse"
 )
 
 var log = logging.MustGetLogger("build")
@@ -60,7 +59,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	if target.IsTest && state.NeedTests {
 		state.AddPendingTest(target.Label)
 	}
-	parse.UndeferAnyParses(state, target)
+	state.Parser.UndeferAnyParses(state, target)
 }
 
 // Builds a single target
@@ -86,7 +85,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	// This must run before we can leave this function successfully by any path.
 	if target.PreBuildFunction != 0 {
 		log.Debug("Running pre-build function for %s", target.Label)
-		if err := parse.RunPreBuildFunction(tid, state, target); err != nil {
+		if err := state.Parser.RunPreBuildFunction(tid, state, target); err != nil {
 			return err
 		}
 		log.Debug("Finished pre-build function for %s", target.Label)
@@ -195,7 +194,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 				log.Debug("Cached build output for %s: %s\n\nNew build output: %s",
 					target.Label, postBuildOutput, sout)
 			}
-		} else if err := parse.RunPostBuildFunction(tid, state, target, sout); err != nil {
+		} else if err := state.Parser.RunPostBuildFunction(tid, state, target, sout); err != nil {
 			return err
 		}
 		storePostBuildOutput(state, target, out)
@@ -488,7 +487,7 @@ func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.
 		if err != nil {
 			return "", err
 		}
-		if err := parse.RunPostBuildFunction(tid, state, target, out); err != nil {
+		if err := state.Parser.RunPostBuildFunction(tid, state, target, out); err != nil {
 			panic(err)
 		}
 		return out, nil

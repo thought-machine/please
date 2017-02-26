@@ -5,7 +5,6 @@ package build
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 	"testing"
 
@@ -17,13 +16,12 @@ import (
 const size = 1000
 const numWorkers = 10
 
-func init() {
-	postBuildFunc = postBuild
-}
-
 func TestBuildLotsOfTargets(t *testing.T) {
 	config, _ := core.ReadConfigFiles(nil)
 	state := core.NewBuildState(numWorkers, nil, 4, config)
+	state.Parser = &fakeParser{
+		PostBuildFunctions: buildFunctionMap{},
+	}
 	pkg := core.NewPackage("pkg")
 	state.Graph.AddPackage(pkg)
 	for i := 1; i <= size; i++ {
@@ -57,7 +55,7 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 	if i <= size {
 		if i > 10 {
 			target.Flakiness = i // Stash this here, will be useful later.
-			target.PostBuildFunction = reflect.ValueOf(&postBuildFunc).Pointer()
+			state.Parser.(*fakeParser).PostBuildFunctions[target] = postBuild
 		}
 		if i < size/10 {
 			for j := 0; j < 10; j++ {
@@ -110,5 +108,22 @@ func postBuild(target *core.BuildTarget, out string) error {
 	return nil
 }
 
-// Don't ask.
-var postBuildFunc func(*core.BuildTarget, string) error
+type buildFunctionMap map[*core.BuildTarget]func(*core.BuildTarget, string) error
+
+type fakeParser struct {
+	PostBuildFunctions buildFunctionMap
+}
+
+func (fake *fakeParser) RunPreBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget) error {
+	return nil
+}
+
+func (fake *fakeParser) RunPostBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget, output string) error {
+	if f, present := fake.PostBuildFunctions[target]; present {
+		return f(target, output)
+	}
+	return nil
+}
+
+func (fake *fakeParser) UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
+}

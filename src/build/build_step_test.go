@@ -12,8 +12,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"reflect"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -86,32 +84,30 @@ func TestSymlinkedOutputs(t *testing.T) {
 }
 
 func TestPreBuildFunction(t *testing.T) {
-	t.Skip("Still working on getting these to work reliably")
 	// Test modifying a command in the pre-build function.
 	state, target := newState("//package1:target6")
 	target.AddOutput("file6")
-	target.Command = "" // Target now won't produce the needed output
-	f := func() error {
+	target.Command = ""                // Target now won't produce the needed output
+	target.PreBuildFunction = 12345678 // Needs to be nonzero so build knows to do something with it.
+	state.Parser.(*fakeParser).PreBuildFunctions[target] = func(target *core.BuildTarget, output string) error {
 		target.Command = "echo 'wibble wibble wibble' > $OUT"
 		return nil
 	}
-	target.PreBuildFunction = reflect.ValueOf(&f).Pointer()
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
 
 func TestPostBuildFunction(t *testing.T) {
-	t.Skip("Still working on getting these to work reliably")
 	// Test modifying a command in the post-build function.
 	state, target := newState("//package1:target7")
 	target.Command = "echo 'wibble wibble wibble' | tee file7"
-	f := func(s string) error {
+	target.PostBuildFunction = 12345678 // Again, needs to be nonzero.
+	state.Parser.(*fakeParser).PostBuildFunctions[target] = func(target *core.BuildTarget, output string) error {
 		target.AddOutput("file7")
-		assert.Equal(t, "wibble wibble wibble", s)
+		assert.Equal(t, "wibble wibble wibble", output)
 		return nil
 	}
-	target.PostBuildFunction = reflect.ValueOf(&f).Pointer()
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
@@ -130,19 +126,18 @@ func TestCacheRetrieval(t *testing.T) {
 }
 
 func TestPostBuildFunctionAndCache(t *testing.T) {
-	t.Skip("Still working on getting these to work reliably")
 	// Test the often subtle and quick to anger interaction of post-build function and cache.
 	// In this case when it fails to retrieve the post-build output it should still call the function after building.
 	state, target := newState("//package1:target9")
 	target.AddOutput("file9")
 	target.Command = "echo 'wibble wibble wibble' | tee $OUT"
+	target.PostBuildFunction = 12345678
 	called := false
-	f := func(s string) error {
+	state.Parser.(*fakeParser).PostBuildFunctions[target] = func(target *core.BuildTarget, output string) error {
 		called = true
-		assert.Equal(t, "wibble wibble wibble", s)
+		assert.Equal(t, "wibble wibble wibble", output)
 		return nil
 	}
-	target.PostBuildFunction = reflect.ValueOf(&f).Pointer()
 	state.Cache = cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
@@ -151,24 +146,23 @@ func TestPostBuildFunctionAndCache(t *testing.T) {
 }
 
 func TestPostBuildFunctionAndCache2(t *testing.T) {
-	t.Skip("Still working on getting these to work reliably")
 	// Test the often subtle and quick to anger interaction of post-build function and cache.
 	// In this case it succeeds in retrieving the post-build output but must still call the function.
 	state, target := newState("//package1:target10")
 	target.AddOutput("file10")
 	target.Command = "echo 'wibble wibble wibble' | tee $OUT"
+	target.PostBuildFunction = 12345678
 	called := false
-	f := func(s string) error {
+	state.Parser.(*fakeParser).PostBuildFunctions[target] = func(target *core.BuildTarget, output string) error {
 		assert.False(t, called, "Must only call post-build function once (issue #113)")
 		called = true
-		assert.Equal(t, "retrieved from cache", s) // comes from implementation below
+		assert.Equal(t, "retrieved from cache", output) // comes from implementation below
 		return nil
 	}
-	target.PostBuildFunction = reflect.ValueOf(&f).Pointer()
 	state.Cache = cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
-	assert.Equal(t, core.Built, target.State())
+	assert.Equal(t, core.Cached, target.State())
 	assert.True(t, called)
 }
 
@@ -228,6 +222,10 @@ func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 	target.Command = fmt.Sprintf("echo 'output of %s' > $OUT", target.Label)
 	state.Graph.AddTarget(target)
+	state.Parser = &fakeParser{
+		PostBuildFunctions: buildFunctionMap{},
+		PreBuildFunctions:  buildFunctionMap{},
+	}
 	return state, target
 }
 
@@ -272,6 +270,30 @@ func (*mockCache) RetrieveExtra(target *core.BuildTarget, key []byte, file strin
 func (*mockCache) Clean(target *core.BuildTarget) {}
 func (*mockCache) Shutdown()                      {}
 
+type buildFunctionMap map[*core.BuildTarget]func(*core.BuildTarget, string) error
+
+type fakeParser struct {
+	PostBuildFunctions buildFunctionMap
+	PreBuildFunctions  buildFunctionMap
+}
+
+func (fake *fakeParser) RunPreBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget) error {
+	if f, present := fake.PreBuildFunctions[target]; present {
+		return f(target, "")
+	}
+	return nil
+}
+
+func (fake *fakeParser) RunPostBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget, output string) error {
+	if f, present := fake.PostBuildFunctions[target]; present {
+		return f(target, output)
+	}
+	return nil
+}
+
+func (fake *fakeParser) UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
+}
+
 func TestMain(m *testing.M) {
 	cache = &mockCache{}
 	backend := logging.NewLogBackend(os.Stderr, "", 0)
@@ -284,8 +306,5 @@ func TestMain(m *testing.M) {
 	if err := os.Chdir(core.RepoRoot); err != nil {
 		panic(err)
 	}
-	// This is not at all nice but it keeps the GC from collecting the
-	// pre- and post-build functions in tests before they get called.
-	debug.SetGCPercent(-1)
 	os.Exit(m.Run())
 }

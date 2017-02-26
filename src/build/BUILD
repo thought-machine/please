@@ -9,7 +9,6 @@ go_library(
         '//src/cache',
         '//src/core',
         '//src/metrics',
-        '//src/parse',
         '//third_party/go:logging',
         '//third_party/go:protobuf',
         '//third_party/go:shlex',
@@ -38,9 +37,6 @@ go_test(
     name = 'build_step_test',
     srcs = ['build_step_test.go'],
     data = ['test_data'],
-    mocks = {
-        'parse': '//src/mock:parse',
-    },
     deps = [
         ':build',
         '//src/core',
@@ -52,9 +48,6 @@ go_test(
 go_test(
     name = 'build_step_stress_test',
     srcs = ['build_step_stress_test.go'],
-    mocks = {
-        'parse': '//src/mock:parse',
-    },
     deps = [
         ':build',
         '//src/core',

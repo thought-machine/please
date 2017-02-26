@@ -54,9 +54,28 @@ const cffiUnavailable = 3
 // To ensure we only initialise once.
 var initializeOnce sync.Once
 
+// pythonParser is our implementation of core.Parser. It has no actual state because our parser is a global.
+type pythonParser struct{}
+
+// RunPreBuildFunction runs a pre-build function for a target.
+func (p *pythonParser) RunPreBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget) error {
+	return RunPreBuildFunction(threadId, state, target)
+}
+
+// RunPostBuildFunction runs a post-build function for a target.
+func (p *pythonParser) RunPostBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget, output string) error {
+	return RunPostBuildFunction(threadId, state, target, output)
+}
+
+// UndeferAnyParses undefers any pending parses that are waiting for this target to build.
+func (p *pythonParser) UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
+	UndeferAnyParses(state, target)
+}
+
 // Code to initialise the Python interpreter.
-func initializeInterpreter(config *core.Configuration) {
+func initializeInterpreter(state *core.BuildState) {
 	log.Debug("Initialising interpreter...")
+	config := state.Config
 
 	// PyPy becomes very unhappy if Go schedules it to a different OS thread during
 	// its initialisation. Force it to stay on this one thread for now.
@@ -149,6 +168,7 @@ func initializeInterpreter(config *core.Configuration) {
 		loadBuiltinRules(filename)
 	}
 	loadSubincludePackage()
+	state.Parser = &pythonParser{}
 	log.Debug("Interpreter ready")
 }
 
@@ -267,7 +287,7 @@ func unsizep(u uintptr) *core.Package { return (*core.Package)(unsafe.Pointer(u)
 func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package) bool {
 	log.Debug("Parsing package file %s", filename)
 	start := time.Now()
-	initializeOnce.Do(func() { initializeInterpreter(state.Config) })
+	initializeOnce.Do(func() { initializeInterpreter(state) })
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	// TODO(pebers): It seems like we should be calling C.pypy_attach_thread here once per OS thread.
