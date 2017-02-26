@@ -5,7 +5,6 @@ go_library(
         'write_test_main.go',
     ],
     deps = [
-        '//src/output',
         '//third_party/go:logging',
     ],
 )
