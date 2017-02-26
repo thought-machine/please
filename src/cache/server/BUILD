@@ -8,8 +8,8 @@ go_library(
     deps = [
         '//src/cache/cluster',
         '//src/cache/proto:rpc_cache',
-        '//src/cache/tools',
         '//src/core',
+        '//third_party/go:atime',
         '//third_party/go:concurrent-map',
         '//third_party/go:grpc',
         '//third_party/go:humanize',

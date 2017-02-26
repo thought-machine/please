@@ -13,10 +13,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/djherbis/atime"
 	"github.com/dustin/go-humanize"
 	"github.com/streamrail/concurrent-map"
 
-	"cache/tools"
 	"core"
 )
 
@@ -78,7 +78,7 @@ func (cache *Cache) scan() {
 			log.Debug("Found file %s", name)
 			size := info.Size()
 			cache.cachedFiles.Set(name, &cachedFile{
-				lastReadTime: time.Unix(tools.AccessTime(info), 0),
+				lastReadTime: atime.Get(info),
 				readCount:    0,
 				size:         size,
 			})

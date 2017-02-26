@@ -179,3 +179,9 @@ go_get(
     get = 'github.com/hashicorp/memberlist',
     revision = '7ad712f5f34ec40aebe6ca47756d07898486a8d2',
 )
+
+go_get(
+    name = 'atime',
+    get = 'github.com/djherbis/atime',
+    revision = '89517e96e10b93292169a79fd4523807bdc5d5fa',
+)

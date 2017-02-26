@@ -12,10 +12,10 @@ import (
 	"sort"
 	"time"
 
+	"github.com/djherbis/atime"
 	"github.com/dustin/go-humanize"
 	"gopkg.in/op/go-logging.v1"
 
-	"cache/tools"
 	"cli"
 )
 
@@ -72,7 +72,7 @@ func start(directory string, highWaterMark, lowWaterMark int64) {
 			if size, err := findSize(path); err != nil {
 				return err
 			} else {
-				entries = append(entries, CacheEntry{path, size, tools.AccessTime(info)})
+				entries = append(entries, CacheEntry{path, size, atime.Get(info).Unix()})
 				totalSize += size
 				return filepath.SkipDir
 			}

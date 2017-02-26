@@ -1,9 +1,9 @@
 go_binary(
     name = 'cache_cleaner',
-    main = 'cache_cleaner.go',
+    srcs = ['cache_cleaner.go'],
     deps = [
-        '//src/cache/tools',
         '//src/cli',
+        '//third_party/go:atime',
         '//third_party/go:humanize',
         '//third_party/go:logging',
     ],
@@ -17,8 +17,8 @@ go_test(
         'cache_cleaner_test.go',
     ],
     deps = [
-        '//src/cache/tools',
         '//src/cli',
+        '//third_party/go:atime',
         '//third_party/go:humanize',
         '//third_party/go:logging',
         '//third_party/go:testify',
