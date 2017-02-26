@@ -125,3 +125,12 @@ go_test(
         '//third_party/go:testify',
     ],
 )
+
+go_test(
+    name = 'test_results_test',
+    srcs = ['test_results_test.go'],
+    deps = [
+        ':core',
+        '//third_party/go:testify',
+    ],
+)

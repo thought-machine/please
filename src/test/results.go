@@ -14,7 +14,7 @@ import (
 func parseTestResults(target *core.BuildTarget, outputFile string, cached bool) (core.TestResults, error) {
 	results, err := parseTestResultsDir(target, outputFile)
 	results.Cached = cached
-	target.Results.Aggregate(results)
+	target.Results.Aggregate(&results)
 	// Ensure that the target has a failure if we encountered an error
 	if err != nil && target.Results.Failed == 0 {
 		target.Results.NumTests++
@@ -55,7 +55,7 @@ func parseTestResultsDir(target *core.BuildTarget, outputDir string) (core.TestR
 			if err != nil {
 				return fmt.Errorf("Error parsing %s: %s", path, err)
 			}
-			results.Aggregate(fileResults)
+			results.Aggregate(&fileResults)
 		}
 		return nil
 	})

@@ -60,11 +60,11 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		} else if results.Failed > 0 {
 			panic("Test results with failures shouldn't be cached.")
 		} else {
-			logTestSuccess(state, tid, label, results, coverage)
+			logTestSuccess(state, tid, label, &results, &coverage)
 		}
 	}
 
-	moveAndCacheOutputFiles := func(results core.TestResults, coverage core.TestCoverage) bool {
+	moveAndCacheOutputFiles := func(results *core.TestResults, coverage *core.TestCoverage) bool {
 		// Never cache test results when given arguments; the results may be incomplete.
 		if len(state.TestArgs) > 0 {
 			log.Debug("Not caching results for %s, we passed it arguments", label)
@@ -223,8 +223,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			target.Results.Flakes = numFlakes
 		}
 		// Success, clean things up
-		if moveAndCacheOutputFiles(target.Results, coverage) {
-			logTestSuccess(state, tid, label, target.Results, coverage)
+		if moveAndCacheOutputFiles(&target.Results, &coverage) {
+			logTestSuccess(state, tid, label, &target.Results, &coverage)
 		}
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
@@ -233,11 +233,11 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			}
 		}
 	} else {
-		state.LogTestResult(tid, label, core.TargetTestFailed, target.Results, coverage, resultErr, resultMsg)
+		state.LogTestResult(tid, label, core.TargetTestFailed, &target.Results, &coverage, resultErr, resultMsg)
 	}
 }
 
-func logTestSuccess(state *core.BuildState, tid int, label core.BuildLabel, results core.TestResults, coverage core.TestCoverage) {
+func logTestSuccess(state *core.BuildState, tid int, label core.BuildLabel, results *core.TestResults, coverage *core.TestCoverage) {
 	var description string
 	tests := pluralise("test", results.NumTests)
 	if results.Skipped != 0 || results.ExpectedFailures != 0 {

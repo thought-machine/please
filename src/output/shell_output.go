@@ -121,7 +121,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	}
 	// Only aggregate test results the first time it finishes.
 	if buildingTargets[result.ThreadId].Active && !active {
-		aggregatedResults.Aggregate(result.Tests)
+		aggregatedResults.Aggregate(&result.Tests)
 	}
 	target := state.Graph.Target(label)
 	updateTarget(state, plainOutput, &buildingTargets[result.ThreadId], label, active, failed, cached, result.Description, result.Err, targetColour(target))

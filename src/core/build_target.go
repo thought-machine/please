@@ -150,43 +150,6 @@ const (
 	Failed                             // Target failed for some reason
 )
 
-type TestResults struct {
-	NumTests         int // Total number of test cases in the test target.
-	Passed           int // Number of tests that passed outright.
-	Failed           int // Number of tests that failed.
-	ExpectedFailures int // Number of tests that were expected to fail (counts as a pass, but displayed differently)
-	Skipped          int // Number of tests skipped (also count as passes)
-	Flakes           int // Number of failed attempts to run the test
-	Failures         []TestFailure
-	Passes           []string
-	Output           string  // Stdout / stderr from the test.
-	Cached           bool    // True if the test results were retrieved from cache
-	TimedOut         bool    // True if the test failed because we timed it out.
-	Duration         float64 // Length of time this test took, in seconds.
-}
-
-type TestFailure struct {
-	Name      string // Name of failed test
-	Type      string // Type of failure, eg. type of exception raised
-	Traceback string // Traceback
-	Stdout    string // Standard output during test
-	Stderr    string // Standard error during test
-}
-
-// Aggregates the given results into this one.
-func (this *TestResults) Aggregate(that TestResults) {
-	this.NumTests += that.NumTests
-	this.Passed += that.Passed
-	this.Failed += that.Failed
-	this.ExpectedFailures += that.ExpectedFailures
-	this.Skipped += that.Skipped
-	this.Flakes += that.Flakes
-	this.Failures = append(this.Failures, that.Failures...)
-	this.Passes = append(this.Passes, that.Passes...)
-	this.Duration += that.Duration
-	// Output can't really be aggregated sensibly.
-}
-
 // Inputs to a build can be either a file in the local package or another build rule.
 // All users care about is where they find them.
 type BuildInput interface {
