@@ -507,6 +507,12 @@ func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, 
 			}
 		}
 	}
+	// Make sure it's not the actual build file.
+	for _, filename := range core.State.Config.Please.BuildFileName {
+		if filename == src {
+			return nil, fmt.Errorf("You can't specify the BUILD file as an input to a rule")
+		}
+	}
 	return core.FileLabel{File: src, Package: packageName}, nil
 }
 
@@ -787,6 +793,8 @@ func Glob(cPackage *C.char, cIncludes **C.char, numIncludes int, cExcludes **C.c
 	includes := cStringArrayToStringSlice(cIncludes, numIncludes, "")
 	prefixedExcludes := cStringArrayToStringSlice(cExcludes, numExcludes, packageName)
 	excludes := cStringArrayToStringSlice(cExcludes, numExcludes, "")
+	// To make sure we can't glob the BUILD file, it is always added to excludes.
+	excludes = append(excludes, core.State.Config.Please.BuildFileName...)
 	filenames := core.Glob(packageName, includes, prefixedExcludes, excludes, includeHidden)
 	return stringSliceToCStringArray(filenames)
 }

@@ -417,3 +417,7 @@ python_test(
     flaky = 5,
     labels = ['manual'],
 )
+
+# Test that it's not possible to glob the BUILD file at parse time.
+if 'BUILD' in glob(['*']):
+    raise ParseError('should not be able to glob the BUILD file')
