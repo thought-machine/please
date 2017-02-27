@@ -32,9 +32,10 @@ var BuildLabelStdin = BuildLabel{PackageName: "", Name: "_STDIN"}
 // Used to indicate one of the originally requested targets on the command line.
 var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
-const packagePart = `[\pL\pN\pM\._\+-]+`
+const validChars = `\pL\pN\pM!@`
+const packagePart = "[" + validChars + `\._\+-]+`
 const packageName = "(" + packagePart + "(?:/" + packagePart + ")*)"
-const targetName = `([\pL\pN\pM\._\+-]+(?:#[\pL\pN\pM_\+-]+)*)`
+const targetName = `([` + validChars + `\._\+-]+(?:#[` + validChars + `_\+-]+)*)`
 
 // Regexes for matching the various ways of writing a build label.
 // Fully specified labels, e.g. //src/core:core
