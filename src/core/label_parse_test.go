@@ -112,3 +112,7 @@ func TestReservedTempDirs(t *testing.T) {
 	assertNotLabel(t, "//src/core:core._build", "._build is a reserved suffix")
 	assertNotLabel(t, "//src/core:core._test", "._test is a reserved suffix")
 }
+
+func TestNonAsciiParse(t *testing.T) {
+	assertLabel(t, "//src/core:aerolínea", "src/core", "aerolínea")
+}
