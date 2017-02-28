@@ -1,3 +1,14 @@
+Version 7.6.0
+-------------
+
+    * Allow Unicode characters in target names.
+    * Fixed some issues with plz cover when using Go 1.8
+    * Fixed plz clean so it does not parse the repo unnecessarily.
+    * Add current package directory to GOPATH, fixes #184.
+    * Correctly exclude BUILD files from glob()
+    * Fixed glob() for paths containing some atoms like ++
+
+
 Version 7.5.0
 -------------
 
