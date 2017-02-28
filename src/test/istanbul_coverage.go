@@ -5,6 +5,7 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 
 	"core"
@@ -76,14 +77,31 @@ func (file *istanbulFile) maxLineNumber() int {
 
 // sanitiseFileName strips out any build/test paths found in the given file.
 func sanitiseFileName(target *core.BuildTarget, filename string) string {
-	if index := strings.Index(filename, target.OutDir()); index != -1 {
-		return filename[index+len(target.OutDir())+1:]
-	}
-	if index := strings.Index(filename, target.TmpDir()); index != -1 {
-		return filename[index+len(target.TmpDir())+1:]
-	}
-	if index := strings.Index(filename, target.TestDir()); index != -1 {
-		return filename[index+len(target.TestDir())+1:]
+	if s := sanitiseFileNameDir(filename, target.OutDir(), false); s != "" {
+		return s
+	} else if s := sanitiseFileNameDir(filename, target.TmpDir(), true); s != "" {
+		return s
+	} else if s := sanitiseFileNameDir(filename, target.TestDir(), true); s != "" {
+		return s
 	}
 	return filename
+}
+
+// sanitiseFileNameDir attempts to strip off a directory from the middle of a given path.
+// It returns a non-empty string if successful.
+// If matchAnyLastDir is true it will match any directory for the last component.
+func sanitiseFileNameDir(filename string, dir string, matchAnyLastDir bool) string {
+	if matchAnyLastDir {
+		dir = filepath.Dir(dir)
+	}
+	if index := strings.Index(filename, dir); index != -1 {
+		ret := filename[index+len(dir)+1:]
+		if matchAnyLastDir {
+			if index := strings.IndexRune(ret, filepath.Separator); index != -1 {
+				return ret[index+1:]
+			}
+		}
+		return ret
+	}
+	return ""
 }

@@ -1,3 +1,10 @@
+Version 7.6.1
+-------------
+
+    * Fix to Istanbul coverage parsing to support instrumenting the source in a different
+      target to the test target.
+
+
 Version 7.6.0
 -------------
 

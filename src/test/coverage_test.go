@@ -183,7 +183,7 @@ func TestGcovParsing(t *testing.T) {
 }
 
 func TestIstanbulCoverage(t *testing.T) {
-	target := &core.BuildTarget{Label: core.BuildLabel{PackageName: "common/js/components/ActionButton", Name: "test_test_bin"}}
+	target := &core.BuildTarget{Label: core.BuildLabel{PackageName: "common/js/components/ActionButton", Name: "test"}}
 	coverage, err := parseTestCoverage(target, istanbulCoverageFile)
 	assert.NoError(t, err)
 	assert.Contains(t, coverage.Files, "common/js/components/ActionButton/ActionButton.js")
