@@ -31,7 +31,7 @@ var opts struct {
 func main() {
 	cli.ParseFlagsOrDie("plz_go_test", "7.2.0", &opts)
 	cli.InitLogging(opts.Verbosity)
-	coverVars, err := buildgo.FindCoverVars(opts.Dir, opts.Exclude)
+	coverVars, err := buildgo.FindCoverVars(opts.Dir, opts.Exclude, opts.Args.Sources)
 	if err != nil {
 		log.Fatalf("Error scanning for coverage: %s", err)
 	}

@@ -21,7 +21,7 @@ type CoverVar struct {
 }
 
 // FindCoverVars searches the given directory recursively to find all Go files with coverage variables.
-func FindCoverVars(dir string, exclude []string) ([]CoverVar, error) {
+func FindCoverVars(dir string, exclude, srcs []string) ([]CoverVar, error) {
 	if dir == "" {
 		return nil, nil
 	}
@@ -36,8 +36,8 @@ func FindCoverVars(dir string, exclude []string) ([]CoverVar, error) {
 			return err
 		} else if _, present := excludeMap[name]; present {
 			return filepath.SkipDir
-		} else if strings.HasSuffix(name, ".a") {
-			vars, err := findCoverVars(name)
+		} else if strings.HasSuffix(name, ".a") && !strings.ContainsRune(path.Base(name), '#') {
+			vars, err := findCoverVars(name, srcs)
 			if err != nil {
 				return err
 			}
@@ -51,8 +51,9 @@ func FindCoverVars(dir string, exclude []string) ([]CoverVar, error) {
 }
 
 // findCoverVars scans a directory containing a .a file for any go files.
-func findCoverVars(filepath string) ([]CoverVar, error) {
-	dir := path.Dir(filepath)
+func findCoverVars(filepath string, srcs []string) ([]CoverVar, error) {
+	dir, file := path.Split(filepath)
+	dir = strings.TrimRight(dir, "/")
 	fi, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -60,13 +61,26 @@ func findCoverVars(filepath string) ([]CoverVar, error) {
 	importPath := collapseFinalDir(strings.TrimPrefix(strings.TrimSuffix(filepath, ".a"), "src/"))
 	ret := make([]CoverVar, 0, len(fi))
 	for _, info := range fi {
-		if strings.HasSuffix(info.Name(), ".go") && !info.IsDir() {
+		if info.Name() != file && strings.HasSuffix(info.Name(), ".a") {
+			log.Warning("multiple .a files in %s, can't determine coverage variables accurately", dir)
+			return nil, nil
+		}
+		if strings.HasSuffix(info.Name(), ".go") && !info.IsDir() && !contains(path.Join(dir, info.Name()), srcs) {
 			// N.B. The scheme here must match what we do in go_rules.build_defs
 			v := "GoCover_" + strings.Replace(info.Name(), ".", "_", -1)
 			ret = append(ret, coverVar(dir, importPath, v))
 		}
 	}
 	return ret, nil
+}
+
+func contains(needle string, haystack []string) bool {
+	for _, straw := range haystack {
+		if straw == needle {
+			return true
+		}
+	}
+	return false
 }
 
 func coverVar(dir, importPath, v string) CoverVar {

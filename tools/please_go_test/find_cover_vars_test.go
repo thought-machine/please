@@ -15,18 +15,18 @@ var coverageVars = []CoverVar{{
 }}
 
 func TestFindCoverVars(t *testing.T) {
-	vars, err := FindCoverVars("tools/please_go_test/test_data", []string{"tools/please_go_test/test_data/x", "tools/please_go_test/test_data/binary"})
+	vars, err := FindCoverVars("tools/please_go_test/test_data", []string{"tools/please_go_test/test_data/x", "tools/please_go_test/test_data/binary"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, coverageVars, vars)
 }
 
 func TestFindCoverVarsFailsGracefully(t *testing.T) {
-	_, err := FindCoverVars("wibble", []string{})
+	_, err := FindCoverVars("wibble", nil, nil)
 	assert.Error(t, err)
 }
 
 func TestFindCoverVarsReturnsNothingForEmptyPath(t *testing.T) {
-	vars, err := FindCoverVars("", []string{})
+	vars, err := FindCoverVars("", nil, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(vars))
 }
@@ -39,7 +39,13 @@ func TestFindBinaryCoverVars(t *testing.T) {
 		Var:        "GoCover_lock_go",
 		File:       "tools/please_go_test/test_data/binary/lock.go",
 	}}
-	vars, err := FindCoverVars("tools/please_go_test/test_data/binary", nil)
+	vars, err := FindCoverVars("tools/please_go_test/test_data/binary", nil, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, vars)
+}
+
+func TestFindCoverVarsExcludesSrcs(t *testing.T) {
+	vars, err := FindCoverVars("tools/please_go_test/test_data/binary", nil, []string{"tools/please_go_test/test_data/binary/lock.go"})
+	assert.NoError(t, err)
+	assert.Equal(t, []CoverVar{}, vars)
 }
