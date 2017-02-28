@@ -12,12 +12,13 @@ import (
 var target = &core.BuildTarget{Label: core.BuildLabel{PackageName: "src/test", Name: "coverage_test"}}
 
 const (
-	pythonCoverageFile   = "src/test/test_data/python-coverage.xml"
-	goCoverageFile       = "src/test/test_data/go_coverage.txt"
-	goCoverageFile2      = "src/test/test_data/go_coverage_2.txt"
-	goCoverageFile3      = "src/test/test_data/go_coverage_3.txt"
-	gcovCoverageFile     = "src/test/test_data/gcov_coverage.gcov"
-	istanbulCoverageFile = "src/test/test_data/istanbul_coverage.json"
+	pythonCoverageFile    = "src/test/test_data/python-coverage.xml"
+	goCoverageFile        = "src/test/test_data/go_coverage.txt"
+	goCoverageFile2       = "src/test/test_data/go_coverage_2.txt"
+	goCoverageFile3       = "src/test/test_data/go_coverage_3.txt"
+	gcovCoverageFile      = "src/test/test_data/gcov_coverage.gcov"
+	istanbulCoverageFile  = "src/test/test_data/istanbul_coverage.json"
+	istanbulCoverageFile2 = "src/test/test_data/istanbul_coverage_2.json"
 )
 
 // Test that tests aren't required to produce coverage, ie. it's not an error if the file doesn't exist.
@@ -198,4 +199,22 @@ func TestIstanbulCoverage(t *testing.T) {
 	assertLine(t, lines, 22, core.NotExecutable)
 	assertLine(t, lines, 23, core.Uncovered)
 	assertLine(t, lines, 24, core.NotExecutable)
+}
+
+func TestIstanbulCoverage2(t *testing.T) {
+	target := &core.BuildTarget{Label: core.BuildLabel{PackageName: "common/js/components/Table", Name: "test"}}
+	coverage, err := parseTestCoverage(target, istanbulCoverageFile2)
+	assert.NoError(t, err)
+	assert.Contains(t, coverage.Files, "common/js/components/Table/Table.js")
+	lines := coverage.Files["common/js/components/Table/Table.js"]
+	// This exercises a slightly more complex example with multiple overlapping statements.
+	assertLine(t, lines, 15, core.Covered)
+	assertLine(t, lines, 16, core.Covered)
+	assertLine(t, lines, 17, core.Covered)
+	assertLine(t, lines, 18, core.Covered)
+	assertLine(t, lines, 19, core.Covered)
+	assertLine(t, lines, 20, core.Covered)
+	assertLine(t, lines, 21, core.Covered)
+	assertLine(t, lines, 22, core.Covered)
+	assertLine(t, lines, 23, core.Covered)
 }

@@ -53,6 +53,7 @@ go_test(
         'test_data/go_coverage_2.txt',
         'test_data/go_coverage_3.txt',
         'test_data/istanbul_coverage.json',
+        'test_data/istanbul_coverage_2.json',
         'test_data/python-coverage.xml',
     ],
     deps = [

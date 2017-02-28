@@ -58,7 +58,9 @@ func (file *istanbulFile) toLineCoverage() []core.LineCoverage {
 		}
 		s := file.StatementMap[statement]
 		for i := s.Start.Line; i <= s.End.Line; i++ {
-			ret[i-1] = val // -1 because 1-indexed
+			if val > ret[i-1] {
+				ret[i-1] = val // -1 because 1-indexed
+			}
 		}
 	}
 	return ret
