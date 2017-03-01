@@ -26,7 +26,8 @@ _DEFAULT_GRPC_LABELS = ['grpc']
 
 def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None,
                   python_deps=None, cc_deps=None, java_deps=None, go_deps=None,
-                  languages=None, _is_grpc=False, test_only=False, root_dir=''):
+                  languages=None, _is_grpc=False, test_only=False, root_dir='',
+                  protoc_flags=None):
     """Compile a .proto file to generated code for various languages.
 
     Args:
@@ -44,6 +45,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
       test_only (bool): If True, can only be used in test rules.
       root_dir (str): The directory that the protos are compiled relative to. Useful if your
                       proto files have import statements that are not relative to the repo root.
+      protoc_flags (list): List of additional flags to pass to protoc.
     """
     if languages:
         for language in languages:
@@ -97,8 +99,6 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         languages = ['cc_hdrs'] + languages  # Order is important
         plugins['cc_hdrs'] = plugins.get('cc', [])
     for language in languages:
-        gen_name = '_%s#protoc_%s' % (name, language)
-        gen_dep = ':' + gen_name
         lang_name = '_%s#%s' % (name, language)
 
         plugin_cmds = ''
@@ -114,6 +114,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             _plugin(CONFIG.PROTOC_TOOL, lang_tools),
             '--%s_out=%s$TMP_DIR' % (_PROTO_LANGUAGES[language], language_out_arguments),
             ' '.join(lang_plugins),
+            ' '.join(protoc_flags or []),
         ])
         if root_dir:
             cmd = 'export RD="%s"; cd $RD; %s ${SRCS//$RD\\//} && cd $TMP_DIR' % (root_dir, cmd.replace('$TMP_DIR', '.'))
@@ -137,8 +138,9 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         grpc_language = ('grpc_' + language) if _is_grpc else language
         cmd = ' && '.join(cmds)
 
-        build_rule(
-            name = gen_name,
+        protoc_rule = build_rule(
+            name = name,
+            tag = 'protoc_' + language,
             srcs = srcs,
             outs = outs.get(grpc_language, outs.get(language)),
             cmd = cmd,
@@ -157,7 +159,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         if language == 'cc':
             cc_library(
                 name = lang_name,
-                srcs = [gen_dep],
+                srcs = [protoc_rule],
                 hdrs = [':_%s#protoc_cc_hdrs' % name],
                 deps = deps + cc_deps,
                 visibility = visibility,
@@ -170,7 +172,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         elif language == 'py':
             python_library(
                 name = lang_name,
-                srcs = [gen_dep],
+                srcs = [protoc_rule],
                 deps = [CONFIG.PROTO_PYTHON_DEP] + deps + python_deps,
                 visibility = visibility,
                 test_only = test_only,
@@ -179,7 +181,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         elif language == 'java':
             java_library(
                 name = lang_name,
-                srcs = [gen_dep],
+                srcs = [protoc_rule],
                 exported_deps = [CONFIG.PROTO_JAVA_DEP] + deps + java_deps,
                 visibility = visibility,
                 test_only = test_only,
@@ -188,7 +190,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         elif language == 'go':
             go_library(
                 name = lang_name,
-                srcs = [gen_dep],
+                srcs = [protoc_rule],
                 out = name + '.a',
                 deps = [CONFIG.PROTO_GO_DEP] + deps + go_deps,
                 visibility = visibility,
@@ -197,7 +199,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             # Needed for things like cgo_test / cgo_library that need the source in expected places
             build_rule(
                 name = '_%s#go_src' % name,
-                srcs = [gen_dep],
+                srcs = [protoc_rule],
                 outs = [name],
                 deps = deps,
                 cmd = 'mkdir -p $OUT && cp ${PKG}/*.go $OUT',
@@ -210,7 +212,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         elif language == 'js':
             filegroup(
                 name = lang_name,
-                srcs = [gen_dep],
+                srcs = [protoc_rule],
                 deps = [CONFIG.PROTO_JS_DEP] + deps,
                 visibility = visibility,
                 test_only = test_only,
@@ -242,7 +244,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
 
 def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_deps=None,
                  java_deps=None, go_deps=None, cc_deps=None, labels=None, test_only=False,
-                 root_dir=''):
+                 root_dir='', protoc_flags=None):
     """Defines a rule for a grpc library.
 
     Args:
@@ -259,6 +261,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_
       test_only (bool): If True, this rule can only be used by test rules.
       root_dir (str): The directory that the protos are compiled relative to. Useful if your
                       proto files have import statements that are not relative to the repo root.
+      protoc_flags (list): List of additional flags to pass to protoc.
     """
     # No plugin for Go, that's handled above since it's merged into the go_out argument.
     deps = deps or []
@@ -299,6 +302,7 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_
         _is_grpc=True,
         test_only=test_only,
         root_dir=root_dir,
+        protoc_flags=protoc_flags,
     )
 
 
