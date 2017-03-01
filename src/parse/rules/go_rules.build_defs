@@ -51,7 +51,7 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         )
         srcs += [':_%s#gen' % name]
 
-    build_rule(
+    return build_rule(
         name=name,
         srcs=srcs,
         deps=deps + [':_%s#srcs' % name],

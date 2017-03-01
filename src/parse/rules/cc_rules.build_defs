@@ -76,7 +76,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
 
     if not srcs:
         # Header-only library, no compilation needed.
-        filegroup(
+        return filegroup(
             name=name,
             srcs=hdrs,
             requires=['cc_hdrs'],
@@ -86,7 +86,6 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             visibility=visibility,
             output_is_complete=False,
         )
-        return
 
     # Collect the headers for other rules
     hdrs_rule = filegroup(
@@ -184,7 +183,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             output_is_complete=False,
         )
 
-    filegroup(
+    return filegroup(
         name=name,
         srcs=[lib_rule],
         deps=[hdrs_rule],

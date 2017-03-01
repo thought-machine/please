@@ -86,7 +86,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             'cd _tmp',
             jarcat_tool + ' -d -o $OUT -i .',
         ])
-        build_rule(
+        return build_rule(
             name=name,
             srcs=srcs or [src_dir],
             deps=deps,
@@ -105,7 +105,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             cmd = 'cd ${PKG}/%s && %s -d -o ${OUT} -i .' % (resources_root, jarcat_tool)
         else:
             cmd = '%s -d -o ${OUTS} -i .' % jarcat_tool
-        build_rule(
+        return build_rule(
             name=name,
             srcs=resources,
             deps=deps,
@@ -121,7 +121,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
     else:
         # If input is only jar files (as maven_jar produces in some cases) we simply collect them
         # all up for other rules to use.
-        filegroup(
+        return filegroup(
             name=name,
             deps=deps,
             exported_deps=exported_deps,
