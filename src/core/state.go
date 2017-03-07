@@ -214,7 +214,11 @@ func (state *BuildState) SetIncludeAndExclude(include, exclude []string) {
 	state.Include = include
 	for _, e := range exclude {
 		if LooksLikeABuildLabel(e) {
-			state.ExcludeTargets = append(state.ExcludeTargets, parseMaybeRelativeBuildLabel(e, ""))
+			if label, err := parseMaybeRelativeBuildLabel(e, ""); err != nil {
+				log.Fatalf("%s", err)
+			} else {
+				state.ExcludeTargets = append(state.ExcludeTargets, label)
+			}
 		} else {
 			state.Exclude = append(state.Exclude, e)
 		}

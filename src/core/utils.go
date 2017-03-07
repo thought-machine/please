@@ -66,7 +66,8 @@ func InitialPackage() []BuildLabel {
 	// In that case move up until we find somewhere we can run from.
 	dir := initialPackage
 	for dir != "." {
-		if label, err := TryNewBuildLabel(dir, "..."); err == nil {
+		if label, err := TryNewBuildLabel(dir, "test"); err == nil {
+			label.Name = "..."
 			return []BuildLabel{label}
 		}
 		dir = filepath.Dir(dir)

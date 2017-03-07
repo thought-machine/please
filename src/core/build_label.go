@@ -35,7 +35,7 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 const validChars = `\pL\pN\pM!@`
 const packagePart = "[" + validChars + `\._\+-]+`
 const packageName = "(" + packagePart + "(?:/" + packagePart + ")*)"
-const targetName = `([` + validChars + `\._\+-]+(?:#[` + validChars + `_\+-]+)*)`
+const targetName = `([` + validChars + `_\+-][` + validChars + `\._\+-]*(?:#[` + validChars + `_\+-]+)*)`
 
 // Regexes for matching the various ways of writing a build label.
 // Fully specified labels, e.g. //src/core:core
@@ -75,7 +75,7 @@ func (label BuildLabel) String() string {
 }
 
 // NewBuildLabel constructs a new build label from the given components. Panics on failure.
-func NewBuildLabel(pkgName string, name string) BuildLabel {
+func NewBuildLabel(pkgName, name string) BuildLabel {
 	label, err := TryNewBuildLabel(pkgName, name)
 	if err != nil {
 		panic(err)
@@ -84,23 +84,39 @@ func NewBuildLabel(pkgName string, name string) BuildLabel {
 }
 
 // TryNewBuildLabel constructs a new build label from the given components.
-func TryNewBuildLabel(pkgName string, name string) (BuildLabel, error) {
-	if !packageNameOnly.MatchString(pkgName) {
-		return BuildLabel{}, fmt.Errorf("Invalid package name: %s", pkgName)
-	} else if !targetNameOnly.MatchString(name) {
-		return BuildLabel{}, fmt.Errorf("Invalid target name: %s", name)
-	} else if strings.HasSuffix(name, buildDirSuffix) ||
-		strings.HasSuffix(name, testDirSuffix) ||
-		strings.HasSuffix(pkgName, buildDirSuffix) ||
-		strings.HasSuffix(pkgName, testDirSuffix) {
-
-		return BuildLabel{}, fmt.Errorf("._build and ._test are reserved suffixes")
+func TryNewBuildLabel(pkgName, name string) (BuildLabel, error) {
+	if err := validateNames(pkgName, name); err != nil {
+		return BuildLabel{}, err
 	}
 	return BuildLabel{PackageName: pkgName, Name: name}, nil
 }
 
+// validateNames returns an error if the package name of target name isn't accepted.
+func validateNames(pkgName, name string) error {
+	if !packageNameOnly.MatchString(pkgName) {
+		return fmt.Errorf("Invalid package name: %s", pkgName)
+	} else if !targetNameOnly.MatchString(name) {
+		return fmt.Errorf("Invalid target name: %s", name)
+	} else if err := validateSuffixes(pkgName, name); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateSuffixes checks that there are no invalid suffixes on the target name.
+func validateSuffixes(pkgName, name string) error {
+	if strings.HasSuffix(name, buildDirSuffix) ||
+		strings.HasSuffix(name, testDirSuffix) ||
+		strings.HasSuffix(pkgName, buildDirSuffix) ||
+		strings.HasSuffix(pkgName, testDirSuffix) {
+
+		return fmt.Errorf("._build and ._test are reserved suffixes")
+	}
+	return nil
+}
+
 // ParseBuildLabel parses a single build label from a string. Panics on failure.
-func ParseBuildLabel(target string, currentPath string) BuildLabel {
+func ParseBuildLabel(target, currentPath string) BuildLabel {
 	label, err := TryParseBuildLabel(target, currentPath)
 	if err != nil {
 		panic(err)
@@ -108,41 +124,48 @@ func ParseBuildLabel(target string, currentPath string) BuildLabel {
 	return label
 }
 
+// newBuildLabel creates a new build label after parsing.
+// It is only used internally because it skips some checks; we know those are valid because
+// they already run implicitly as part of us parsing the label.
+func newBuildLabel(pkgName, name string) (BuildLabel, error) {
+	return BuildLabel{pkgName, name}, validateSuffixes(pkgName, name)
+}
+
 // TryParseBuildLabel attempts to parse a single build label from a string. Returns an error if unsuccessful.
 func TryParseBuildLabel(target string, currentPath string) (BuildLabel, error) {
 	matches := absoluteTarget.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(matches[1], matches[2]), nil
+		return newBuildLabel(matches[1], matches[2])
 	}
 	matches = localTarget.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(currentPath, matches[1]), nil
+		return newBuildLabel(currentPath, matches[1])
 	}
 	matches = subTargets.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(matches[1], matches[2]), nil
+		return newBuildLabel(matches[1], matches[2])
 	}
 	matches = rootSubTargets.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel("", matches[2]), nil
+		return newBuildLabel("", matches[2])
 	}
 	matches = implicitTarget.FindStringSubmatch(target)
 	if matches != nil {
 		if matches[1] != "" {
-			return NewBuildLabel(matches[1]+"/"+matches[2], matches[2]), nil
+			return newBuildLabel(matches[1]+"/"+matches[2], matches[2])
 		}
-		return NewBuildLabel(matches[2], matches[2]), nil
+		return newBuildLabel(matches[2], matches[2])
 	}
 	return BuildLabel{}, fmt.Errorf("Invalid build label: %s", target)
 }
 
 // As above, but allows parsing of relative labels (eg. src/parse/rules:python_rules)
 // which is convenient at the shell prompt
-func parseMaybeRelativeBuildLabel(target, subdir string) BuildLabel {
+func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 	// Try the ones that don't need locating the repo root first.
 	if !strings.HasPrefix(target, ":") {
 		if label, err := TryParseBuildLabel(target, ""); err == nil {
-			return label
+			return label, nil
 		}
 	}
 	// Now we need to locate the repo root and initial package.
@@ -153,39 +176,36 @@ func parseMaybeRelativeBuildLabel(target, subdir string) BuildLabel {
 	}
 	matches := relativeTarget.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(path.Join(subdir, matches[1]), matches[2])
+		return newBuildLabel(path.Join(subdir, matches[1]), matches[2])
 	}
 	matches = relativeSubTargets.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(path.Join(subdir, matches[1]), matches[2])
+		return newBuildLabel(path.Join(subdir, matches[1]), matches[2])
 	}
 	matches = relativeImplicitTarget.FindStringSubmatch(target)
 	if matches != nil {
 		if matches[1] != "" {
-			return NewBuildLabel(path.Join(subdir, matches[1], matches[2]), matches[2])
+			return newBuildLabel(path.Join(subdir, matches[1], matches[2]), matches[2])
 		}
-		return NewBuildLabel(path.Join(subdir, matches[2]), matches[2])
+		return newBuildLabel(path.Join(subdir, matches[2]), matches[2])
 	}
 	matches = localTarget.FindStringSubmatch(target)
 	if matches != nil {
-		return NewBuildLabel(subdir, matches[1])
+		return newBuildLabel(subdir, matches[1])
 	}
-	log.Fatalf("Invalid build target label: %s", target)
-	return BuildLabel{}
+	return BuildLabel{}, fmt.Errorf("Invalid build target label: %s", target)
 }
 
 // Parse a bunch of build labels.
 // Relative labels are allowed since this is generally used at initialisation.
 func ParseBuildLabels(targets []string) []BuildLabel {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Fatalf("%s", r)
+	ret := make([]BuildLabel, len(targets))
+	for i, target := range targets {
+		if label, err := parseMaybeRelativeBuildLabel(target, ""); err != nil {
+			log.Fatalf("%s", err)
+		} else {
+			ret[i] = label
 		}
-	}()
-
-	var ret []BuildLabel
-	for _, target := range targets {
-		ret = append(ret, parseMaybeRelativeBuildLabel(target, ""))
 	}
 	return ret
 }
@@ -260,16 +280,13 @@ func (label *BuildLabel) UnmarshalFlag(value string) error {
 	if value == "-" {
 		*label = BuildLabelStdin
 		return nil
+	} else if l, err := parseMaybeRelativeBuildLabel(value, ""); err != nil {
+		// This has to be fatal because of the way we're using the flags package;
+		// we lose incoming flags if we return errors.
+		log.Fatalf("%s", err)
+	} else {
+		*label = l
 	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			// This has to be fatal because of the way we're using the flags package;
-			// we lose incoming flags if we return errors.
-			log.Fatalf("%s", r)
-		}
-	}()
-	*label = parseMaybeRelativeBuildLabel(value, "")
 	return nil
 }
 

@@ -5,24 +5,26 @@ package core
 import "testing"
 
 func assertLabel(t *testing.T, in, pkg, name string) {
-	assertLabelFunc(t, in, pkg, name, ParseBuildLabel)
-}
-
-func assertRelativeLabel(t *testing.T, in, pkg, name string) {
-	assertLabelFunc(t, in, pkg, name, parseMaybeRelativeBuildLabel)
-}
-
-func assertLabelFunc(t *testing.T, in, pkg, name string, f func(string, string) BuildLabel) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Failed to parse %s: %s", in, r)
 		}
 	}()
-	label := f(in, "current_package")
+	label := ParseBuildLabel(in, "current_package")
 	if label.PackageName != pkg {
 		t.Errorf("Incorrect parse of %s: package name should be %s, was %s", in, pkg, label.PackageName)
 	}
 	if label.Name != name {
+		t.Errorf("Incorrect parse of %s: target name should be %s, was %s", in, name, label.Name)
+	}
+}
+
+func assertRelativeLabel(t *testing.T, in, pkg, name string) {
+	if label, err := parseMaybeRelativeBuildLabel(in, "current_package"); err != nil {
+		t.Errorf("Failed to parse %s: %s", in, err)
+	} else if label.PackageName != pkg {
+		t.Errorf("Incorrect parse of %s: package name should be %s, was %s", in, pkg, label.PackageName)
+	} else if label.Name != name {
 		t.Errorf("Incorrect parse of %s: target name should be %s, was %s", in, name, label.Name)
 	}
 }
@@ -115,4 +117,12 @@ func TestReservedTempDirs(t *testing.T) {
 
 func TestNonAsciiParse(t *testing.T) {
 	assertLabel(t, "//src/core:aerolínea", "src/core", "aerolínea")
+}
+
+func TestDotsArentAccepted(t *testing.T) {
+	assertNotLabel(t, "//src/core:.", ". is not a valid label name")
+	assertNotLabel(t, "//src/core:..", ".. is not a valid label name")
+	assertNotLabel(t, "//src/core:...", "... is not a valid label name")
+	assertNotLabel(t, "//src/core:....", ".... is not a valid label name")
+	assertLabel(t, "//src/core/...", "src/core", "...")
 }
