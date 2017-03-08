@@ -246,7 +246,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command string, inputHash []byte) ([]byte, error) {
 	env := core.StampedBuildEnvironment(state, target, false, inputHash)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), command)
-	out, combined, err := core.ExecWithTimeoutShell(target.TmpDir(), env, target.BuildTimeout, state.Config.Build.Timeout, state.ShowAllOutput, command)
+	out, combined, err := core.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.Config.Build.Timeout, state.ShowAllOutput, command)
 	if err != nil {
 		if state.Verbosity >= 4 {
 			return nil, fmt.Errorf("Error building target %s: %s\nENVIRONMENT:\n%s\n%s\n%s",

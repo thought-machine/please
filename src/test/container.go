@@ -46,7 +46,7 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 	replacedCmd = "mkdir -p /tmp/test && cp -r /tmp/test_in/* /tmp/test && cd /tmp/test && " + replacedCmd
 	command = append(command, "-v", testDir+":/tmp/test_in", "-w", "/tmp/test_in", containerName, "bash", "-o", "pipefail", "-c", replacedCmd)
 	log.Debug("Running containerised test %s: %s", target.Label, strings.Join(command, " "))
-	_, out, err := core.ExecWithTimeout(target.TestDir(), nil, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, command)
+	_, out, err := core.ExecWithTimeout(target, target.TestDir(), nil, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, command)
 	retrieveResultsAndRemoveContainer(target, cidfile, err == context.DeadlineExceeded)
 	return out, err
 }

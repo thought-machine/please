@@ -234,11 +234,30 @@ func (sb *safeBuffer) Bytes() []byte {
 	return sb.buf.Bytes()
 }
 
+// logProgress logs a message once a minute until the given context has expired.
+// Used to provide some notion of progress while waiting for external commands.
+func logProgress(label BuildLabel, ctx context.Context) {
+	t := time.NewTicker(1 * time.Minute)
+	defer t.Stop()
+	for i := 1; i < 1000000; i++ {
+		select {
+		case <-ctx.Done():
+			break
+		case <-t.C:
+			if i == 1 {
+				log.Notice("%s still running after 1 minute", label)
+			} else {
+				log.Notice("%s still running after %d minutes", label, i)
+			}
+		}
+	}
+}
+
 // ExecWithTimeout runs an external command with a timeout.
 // If the command times out the returned error will be a context.DeadlineExceeded error.
 // If showOutput is true then output will be printed to stderr as well as returned.
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
-func ExecWithTimeout(dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, argv []string) ([]byte, []byte, error) {
+func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, argv []string) ([]byte, []byte, error) {
 	if timeout == 0 {
 		timeout = time.Duration(defaultTimeout)
 	}
@@ -257,6 +276,9 @@ func ExecWithTimeout(dir string, env []string, timeout time.Duration, defaultTim
 		cmd.Stdout = io.MultiWriter(&out, &outerr)
 		cmd.Stderr = &outerr
 	}
+	if target != nil {
+		go logProgress(target.Label, ctx)
+	}
 	err := cmd.Run()
 	return out.Bytes(), outerr.Bytes(), err
 }
@@ -264,15 +286,15 @@ func ExecWithTimeout(dir string, env []string, timeout time.Duration, defaultTim
 // ExecWithTimeoutShell runs an external command within a Bash shell.
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
-func ExecWithTimeoutShell(dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string) ([]byte, []byte, error) {
+func ExecWithTimeoutShell(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string) ([]byte, []byte, error) {
 	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
-	return ExecWithTimeout(dir, env, timeout, defaultTimeout, showOutput, c)
+	return ExecWithTimeout(target, dir, env, timeout, defaultTimeout, showOutput, c)
 }
 
 // ExecWithTimeoutSimple runs an external command with a timeout.
 // It's a simpler version of ExecWithTimeout that gives less control.
 func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, error) {
-	_, out, err := ExecWithTimeout("", nil, time.Duration(timeout), timeout, false, cmd)
+	_, out, err := ExecWithTimeout(nil, "", nil, time.Duration(timeout), timeout, false, cmd)
 	return out, err
 }
 

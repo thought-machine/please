@@ -1,3 +1,17 @@
+Version 7.6.3
+-------------
+
+    * Logging a periodic message during long-running tasks so it's possible to see
+      what's still going (often the slowest test started a while back and you don't see
+      any further messages logged while waiting).
+
+
+Version 7.6.2
+-------------
+
+    * Minor bugfixes
+
+
 Version 7.6.1
 -------------
 

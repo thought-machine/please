@@ -281,7 +281,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 		env = append(env, "TESTS="+args)
 	}
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	_, out, err := core.ExecWithTimeoutShell(target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd)
+	_, out, err := core.ExecWithTimeoutShell(target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd)
 	return out, err
 }
 
