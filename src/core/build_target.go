@@ -150,6 +150,35 @@ const (
 	Failed                             // Target failed for some reason
 )
 
+// String implements the fmt.Stringer interface.
+// TODO(pebers): Convert this to use go generate / stringer.
+func (s BuildTargetState) String() string {
+	if s == Inactive {
+		return "Inactive"
+	} else if s == Semiactive {
+		return "Semiactive"
+	} else if s == Active {
+		return "Active"
+	} else if s == Pending {
+		return "Pending"
+	} else if s == Building {
+		return "Building"
+	} else if s == Stopped {
+		return "Stopped"
+	} else if s == Built {
+		return "Built"
+	} else if s == Cached {
+		return "Cached"
+	} else if s == Unchanged {
+		return "Unchanged"
+	} else if s == Reused {
+		return "Reused"
+	} else if s == Failed {
+		return "Failed"
+	}
+	return "Unknown"
+}
+
 // Inputs to a build can be either a file in the local package or another build rule.
 // All users care about is where they find them.
 type BuildInput interface {

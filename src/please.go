@@ -75,8 +75,9 @@ var opts struct {
 	NoCacheCleaner   bool   `description:"Don't start a cleaning process for the directory cache" no-flag:"true"`
 
 	Build struct {
-		Prepare bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
-		Args    struct { // Inner nesting is necessary to make positional-args work :(
+		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		ShowStatus bool     `long:"show_status" hidden:"true" description:"Show status of each target in output after build"`
+		Args       struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
@@ -537,7 +538,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	}()
 	// Draw stuff to the screen while there are still results coming through.
 	shouldRun := !opts.Run.Args.Target.IsEmpty()
-	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.OutputFlags.TraceFile)
+	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.Build.ShowStatus, opts.OutputFlags.TraceFile)
 	metrics.Stop()
 	build.StopWorkers()
 	if c != nil {
