@@ -108,10 +108,10 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			fmt.Printf("      flaky = %d,\n", target.Flakiness)
 		}
 		if target.BuildTimeout > 0 {
-			fmt.Printf("      timeout = %d,\n", target.BuildTimeout)
+			fmt.Printf("      timeout = %0.0f,\n", target.BuildTimeout.Seconds())
 		}
 		if target.TestTimeout > 0 {
-			fmt.Printf("      test_timeout = %d,\n", target.TestTimeout)
+			fmt.Printf("      test_timeout = %0.0f,\n", target.TestTimeout.Seconds())
 		}
 		if len(target.Visibility) > 0 {
 			fmt.Printf("      visibility = [\n")
