@@ -242,7 +242,7 @@ func logProgress(label BuildLabel, ctx context.Context) {
 	for i := 1; i < 1000000; i++ {
 		select {
 		case <-ctx.Done():
-			break
+			return
 		case <-t.C:
 			if i == 1 {
 				log.Notice("%s still running after 1 minute", label)
