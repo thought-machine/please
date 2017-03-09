@@ -1,3 +1,10 @@
+Version 7.6.4
+-------------
+
+    * Excluding errors from Python coverage reports; fixes failures when dynamically
+      loading modules inside tests which coverage can't find the source for.
+
+
 Version 7.6.3
 -------------
 

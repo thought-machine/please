@@ -119,7 +119,7 @@ def main(args):
         omissions = ['*/third_party/*', '*/.bootstrap/*', '*/test_main.py']
         # Exclude test code from coverage itself.
         omissions.extend('*/%s.py' % module.replace('.', '/') for module in args.test_names)
-        cov.xml_report(outfile=os.getenv('COVERAGE_FILE'), omit=omissions)
+        cov.xml_report(outfile=os.getenv('COVERAGE_FILE'), omit=omissions, ignore_errors=True)
         return result
     else:
         return run_tests(args.test_names)
