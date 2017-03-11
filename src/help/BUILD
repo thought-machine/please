@@ -22,7 +22,6 @@ go_bindata(
         ':rule_defs',
     ],
     compress = True,
-    prefix = '$PKG',
 )
 
 go_library(

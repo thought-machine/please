@@ -308,6 +308,18 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	return ret == pyDeferParse
 }
 
+// RunCode will run some arbitrary Python code using our embedded interpreter.
+func RunCode(state *core.BuildState, code string) error {
+	initializeOnce.Do(func() { initializeInterpreter(state) })
+	cCode := C.CString(code)
+	defer C.free(unsafe.Pointer(cCode))
+	ret := C.GoString(C.RunCode(cCode))
+	if ret != "" {
+		return fmt.Errorf("%s", ret)
+	}
+	return nil
+}
+
 // IsValidTargetName returns true if the given name is valid in a package.
 // This is provided to help error handling on the Python side.
 //export IsValidTargetName

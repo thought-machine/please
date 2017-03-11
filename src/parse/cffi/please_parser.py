@@ -90,6 +90,20 @@ def parse_code(c_code, c_filename, c_package):
         return ffi_from_string(str(err))
 
 
+@ffi.def_extern('RunCode')
+def run_code(c_code):
+    """Executes some arbitrary code in a normal Python context.
+
+    This isn't made available during parse time, it's for some internal functionality.
+    """
+    try:
+        code = _compile(ffi_to_string(c_code), '<data>', 'exec')
+        exec(code, globals())
+        return ffi.NULL
+    except Exception as err:
+        return ffi_from_string(str(err))
+
+
 def _parse_build_code(filename, globals_dict, cache=False):
     """Parses given file and interprets it. Optionally caches code for future reuse."""
     code = _build_code_cache.get(filename)

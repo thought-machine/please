@@ -9,6 +9,7 @@ char* (*parse_code)(char*, char*, size_t);
 void (*set_config_value)(char*, char*);
 char* (*pre_build_callback_runner)(void*, size_t, char*);
 char* (*post_build_callback_runner)(void*, size_t, char*, char*);
+char* (*run_code)(char*);
 
 char* ParseFile(char* filename, char* package_name, size_t package) {
   return (*parse_file)(filename, package_name, package);
@@ -30,6 +31,10 @@ char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* ou
   return (*post_build_callback_runner)((void*)callback, package, name, output);
 }
 
+char* RunCode(char* code) {
+  return (*run_code)(code);
+}
+
 int InitialiseInterpreter(char* parser_location) {
   void* parser = dlopen(parser_location, RTLD_NOW | RTLD_GLOBAL);
   if (parser == NULL) {
@@ -41,6 +46,7 @@ int InitialiseInterpreter(char* parser_location) {
   set_config_value = dlsym(parser, "SetConfigValue");
   pre_build_callback_runner = dlsym(parser, "PreBuildFunctionRunner");
   post_build_callback_runner = dlsym(parser, "PostBuildFunctionRunner");
+  run_code = dlsym(parser, "RunCode");
   if (!reg || !parse_file || !parse_code || !set_config_value ||
       !pre_build_callback_runner || !post_build_callback_runner) {
     return 2;

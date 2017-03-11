@@ -13,6 +13,7 @@ char* ParseCode(char* filename, char* package_name, size_t package);
 void SetConfigValue(char* name, char* value);
 char* RunPreBuildFunction(size_t callback, size_t package, char* name);
 char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* output);
+char* RunCode(char* code);
 
 // Initialises interpreter. Returns 0 on success.
 int InitialiseInterpreter(char* parser_location);

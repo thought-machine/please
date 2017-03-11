@@ -7,3 +7,4 @@ extern char* ParseCode(char*, char*, size_t);
 extern void SetConfigValue(char*, char*);
 extern char* PreBuildFunctionRunner(void*, size_t, char*);
 extern char* PostBuildFunctionRunner(void*, size_t, char*, char*);
+extern char* RunCode(char*);

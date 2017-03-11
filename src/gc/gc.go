@@ -1,20 +1,23 @@
+// +build ignore
+
 // Package gc implements "garbage collection" logic for Please, which is an attempt to identify
 // targets in the repo that are no longer needed.
 // The definition of "needed" is a bit unclear; we define it as non-test binaries, but the
 // command accepts an argument to add extra ones just in case (for example, if you have a repo which
 // is primarily a library, you might have to tell it that).
-// Note that right now it doesn't do anything to actually "collect" the garbage, i.e. it tells
-// you what to do but doesn't rewrite BUILD files itself.
 package gc
 
 import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
+	"github.com/Songmu/prompter"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"parse"
 )
 
 var log = logging.MustGetLogger("gc")
@@ -22,10 +25,10 @@ var log = logging.MustGetLogger("gc")
 type targetMap map[*core.BuildTarget]bool
 
 // GarbageCollect initiates the garbage collection logic.
-func GarbageCollect(graph *core.BuildGraph, targets []core.BuildLabel, keepLabels []string, conservative, targetsOnly, srcsOnly bool) {
-	if targets, srcs := targetsToRemove(graph, targets, keepLabels, conservative); len(targets) > 0 {
+func GarbageCollect(state *core.BuildState, targets []core.BuildLabel, keepLabels []string, conservative, targetsOnly, srcsOnly, noPrompt, dryRun bool) {
+	if targets, srcs := targetsToRemove(state.Graph, targets, keepLabels, conservative); len(targets) > 0 {
 		if !srcsOnly {
-			fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), graph.Len())
+			fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), state.Graph.Len())
 			for _, target := range targets {
 				fmt.Printf("  %s\n", target)
 			}
@@ -36,6 +39,25 @@ func GarbageCollect(graph *core.BuildGraph, targets []core.BuildLabel, keepLabel
 				fmt.Printf("  %s\n", src)
 			}
 		}
+		if dryRun {
+			return
+		} else if !noPrompt && !prompter.YN("Remove these targets / files?", false) {
+			os.Exit(1)
+		}
+		if !srcsOnly {
+			if err := removeTargets(state, targets); err != nil {
+				log.Fatalf("%s", err)
+			}
+		}
+		if !targetsOnly {
+			for _, src := range srcs {
+				fmt.Printf("Deleting %s...\n", src)
+				if err := os.Remove(src); err != nil {
+					log.Fatalf("Failed to remove %s: %s", src, err)
+				}
+			}
+		}
+
 	} else {
 		fmt.Fprintf(os.Stderr, "Nothing to remove\n")
 	}
@@ -152,4 +174,29 @@ func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*cor
 		}
 	}
 	return ret
+}
+
+// rewriteFile rewrites a BUILD file to exclude a set of targets.
+func rewriteFile(state *core.BuildState, filename string, targets []string) error {
+	data := string(MustAsset("rewrite.py"))
+	// Template in the variables we want.
+	data = strings.Replace(data, "__FILENAME__", filename, 1)
+	data = strings.Replace(data, "__TARGETS__", strings.Replace(fmt.Sprintf("%s", targets), " ", ", ", -1), 1)
+	return parse.RunCode(state, data)
+}
+
+// removeTargets rewrites the given set of targets out of their BUILD files.
+func removeTargets(state *core.BuildState, labels core.BuildLabels) error {
+	byPackage := map[string][]string{}
+	for _, l := range labels {
+		byPackage[l.PackageName] = append(byPackage[l.PackageName], `"`+l.Name+`"`)
+	}
+	for pkgName, victims := range byPackage {
+		filename := state.Graph.PackageOrDie(pkgName).Filename
+		fmt.Printf("Rewriting %s to remove %s...\n", filename, strings.Replace(strings.Join(victims, ", "), `"`, "", -1))
+		if err := rewriteFile(state, filename, victims); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -1,4 +1,4 @@
-def go_bindata(name, srcs, package=None, input_dir=None, prefix=None, out=None,
+def go_bindata(name, srcs, package=None, input_dir=None, prefix='$PKG', out=None,
                memcopy=False, metadata=False, compress=False, visibility=None,
                test_only=False):
     """Defines a rule that invokes go-bindata to embed data into Go code."""
