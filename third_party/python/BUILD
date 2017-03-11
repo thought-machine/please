@@ -32,12 +32,6 @@ pip_library(
     hashes = ['sha1: 05f20a29a5dff7dd5b908afcf37c2b1bea8d3db6'],
 )
 
-filegroup(
-    name = 'coverage_pex_patch',
-    srcs = ['coverage_pex.patch'],
-    visibility = ['PUBLIC'],
-)
-
 pip_library(
     name = 'requests',
     version = '2.5.0',
