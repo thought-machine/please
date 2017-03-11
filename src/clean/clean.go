@@ -41,7 +41,9 @@ func CleanTargets(state *core.BuildState, labels []core.BuildLabel, cleanCache b
 		// we have several targets to clean in a package. It's unlikely to be a big concern though
 		// unless we have lots of targets to clean and their packages are very large.
 		for _, target := range state.Graph.PackageOrDie(label.PackageName).AllChildren(state.Graph.TargetOrDie(label)) {
-			cleanTarget(state, target, cleanCache)
+			if target.ShouldInclude(state.Include, state.Exclude) {
+				cleanTarget(state, target, cleanCache)
+			}
 		}
 	}
 }

@@ -296,9 +296,12 @@ var buildFunctions = map[string]func() bool{
 	"clean": func() bool {
 		opts.NoCacheCleaner = true
 		if len(opts.Clean.Args.Targets) == 0 {
-			// Clean everything, doesn't require parsing at all.
-			clean.Clean(config, !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
-			return true
+			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
+				// Clean everything, doesn't require parsing at all.
+				clean.Clean(config, !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
+				return true
+			}
+			opts.Clean.Args.Targets = core.WholeGraph
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false); success {
 			clean.CleanTargets(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache)
