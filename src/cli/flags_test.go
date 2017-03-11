@@ -62,6 +62,34 @@ func TestURLDefault(t *testing.T) {
 	assert.EqualValues(t, "https://localhost:8080", opts.U)
 }
 
+func TestVersion(t *testing.T) {
+	v := Version{}
+	assert.NoError(t, v.UnmarshalFlag("3.2.1"))
+	assert.EqualValues(t, 3, v.Major)
+	assert.EqualValues(t, 2, v.Minor)
+	assert.EqualValues(t, 1, v.Patch)
+	assert.False(t, v.IsGTE)
+	assert.NoError(t, v.UnmarshalFlag(">=3.2.1"))
+	assert.EqualValues(t, 3, v.Major)
+	assert.EqualValues(t, 2, v.Minor)
+	assert.EqualValues(t, 1, v.Patch)
+	assert.True(t, v.IsGTE)
+	assert.NoError(t, v.UnmarshalFlag(">= 3.2.1"))
+	assert.EqualValues(t, 3, v.Major)
+	assert.EqualValues(t, 2, v.Minor)
+	assert.EqualValues(t, 1, v.Patch)
+	assert.True(t, v.IsGTE)
+	assert.Error(t, v.UnmarshalFlag("thirty-five ham and cheese sandwiches"))
+}
+
+func TestVersionString(t *testing.T) {
+	v := Version{}
+	v.UnmarshalFlag("3.2.1")
+	assert.Equal(t, "3.2.1", v.String())
+	v.UnmarshalFlag(">=3.2.1")
+	assert.Equal(t, ">=3.2.1", v.String())
+}
+
 func TestGetUsageTag(t *testing.T) {
 	opts := struct {
 		Usage string `usage:"Test usage"`

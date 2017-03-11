@@ -10,10 +10,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/op/go-logging.v1"
 
+	"cli"
 	"core"
 )
 
@@ -65,10 +65,10 @@ func TestDownloadNewPlease(t *testing.T) {
 	// Should not have written this yet though
 	assert.False(t, core.PathExists(path.Join(c.Please.Location, "please")))
 	// Panics because it's not a valid .tar.gz
-	c.Please.Version = *semver.New("1.0.0")
+	c.Please.Version.UnmarshalFlag("1.0.0")
 	assert.Panics(t, func() { downloadPlease(c) })
 	// Panics because it doesn't exist
-	c.Please.Version = *semver.New("2.0.0")
+	c.Please.Version.UnmarshalFlag("2.0.0")
 	assert.Panics(t, func() { downloadPlease(c) })
 	// Panics because invalid URL
 	c.Please.DownloadLocation = "notaurl"
@@ -77,7 +77,7 @@ func TestDownloadNewPlease(t *testing.T) {
 
 func TestShouldUpdateVersionsMatch(t *testing.T) {
 	c := makeConfig("shouldupdate")
-	c.Please.Version = core.PleaseVersion
+	c.Please.Version.Set(core.PleaseVersion.String())
 	// Versions match, update is never needed
 	assert.False(t, shouldUpdate(c, false, false))
 	assert.False(t, shouldUpdate(c, true, true))
@@ -85,13 +85,19 @@ func TestShouldUpdateVersionsMatch(t *testing.T) {
 
 func TestShouldUpdateVersionsDontMatch(t *testing.T) {
 	c := makeConfig("shouldupdate")
-	c.Please.Version = *semver.New("2.0.0")
+	c.Please.Version.UnmarshalFlag("2.0.0")
 	// Versions don't match but update is skipped
 	assert.False(t, shouldUpdate(c, false, false))
 	// Versions don't match, update is not skipped.
 	assert.True(t, shouldUpdate(c, true, false))
 	// Updates are off in config.
 	c.Please.SelfUpdate = false
+	assert.False(t, shouldUpdate(c, true, false))
+}
+
+func TestShouldUpdateGTEVersion(t *testing.T) {
+	c := makeConfig("shouldupdate")
+	c.Please.Version.UnmarshalFlag(">=2.0.0")
 	assert.False(t, shouldUpdate(c, true, false))
 }
 
@@ -112,16 +118,16 @@ func TestShouldUpdateNoPleaseLocation(t *testing.T) {
 func TestShouldUpdateNoVersion(t *testing.T) {
 	c := makeConfig("shouldupdate")
 	// No version is set, shouldn't update unless we force
-	c.Please.Version = semver.Version{}
+	c.Please.Version = cli.Version{}
 	assert.False(t, shouldUpdate(c, true, false))
-	assert.Equal(t, core.PleaseVersion, c.Please.Version)
-	c.Please.Version = semver.Version{}
+	assert.Equal(t, core.PleaseVersion, c.Please.Version.Semver())
+	c.Please.Version = cli.Version{}
 	assert.True(t, shouldUpdate(c, true, true))
 }
 
 func TestDownloadAndLinkPlease(t *testing.T) {
 	c := makeConfig("downloadandlink")
-	c.Please.Version = core.PleaseVersion
+	c.Please.Version.UnmarshalFlag(core.PleaseVersion.String())
 	newPlease := downloadAndLinkPlease(c)
 	assert.True(t, core.PathExists(newPlease))
 }
@@ -156,7 +162,7 @@ func makeConfig(dir string) *core.Configuration {
 	wd, _ := os.Getwd()
 	c.Please.Location = path.Join(wd, dir)
 	c.Please.DownloadLocation.UnmarshalFlag(server.URL)
-	c.Please.Version = *semver.New("42.0.0")
+	c.Please.Version.UnmarshalFlag("42.0.0")
 	return c
 }
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/dustin/go-humanize"
 	"github.com/jessevdk/go-flags"
 )
@@ -145,4 +146,38 @@ func (u *URL) UnmarshalText(text []byte) error {
 // String implements the fmt.Stringer interface
 func (u *URL) String() string {
 	return string(*u)
+}
+
+// A Version is an extension to semver.Version extending it with the ability to
+// recognise >= prefixes.
+type Version struct {
+	semver.Version
+	IsGTE bool
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface
+func (v *Version) UnmarshalText(text []byte) error {
+	return v.UnmarshalFlag(string(text))
+}
+
+// UnmarshalFlag implements the flags.Unmarshaler interface.
+func (v *Version) UnmarshalFlag(in string) error {
+	if strings.HasPrefix(in, ">=") {
+		v.IsGTE = true
+		in = strings.TrimSpace(strings.TrimPrefix(in, ">="))
+	}
+	return v.Set(in)
+}
+
+// String implements the fmt.Stringer interface
+func (v Version) String() string {
+	if v.IsGTE {
+		return ">=" + v.Version.String()
+	}
+	return v.Version.String()
+}
+
+// Semver converts a Version to a semver.Version
+func (v *Version) Semver() semver.Version {
+	return v.Version
 }

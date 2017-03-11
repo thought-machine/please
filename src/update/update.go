@@ -27,6 +27,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"gopkg.in/op/go-logging.v1"
 
+	"cli"
 	"core"
 )
 
@@ -43,7 +44,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	if !forceUpdate && !shouldUpdate(config, updatesEnabled, updateCommand) {
 		return
 	}
-	word := describe(config.Please.Version, core.PleaseVersion, true)
+	word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
 	log.Warning("%s to Please version %s (currently %s)", word, config.Please.Version, core.PleaseVersion)
 
 	// Must lock here so that the update process doesn't race when running two instances
@@ -75,11 +76,13 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 
 // shouldUpdate determines whether we should run an update or not. It returns true iff one is required.
 func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool) bool {
-	if config.Please.Version == core.PleaseVersion {
+	if config.Please.Version.Semver() == core.PleaseVersion {
 		return false // Version matches, nothing to do here.
+	} else if config.Please.Version.IsGTE && config.Please.Version.LessThan(core.PleaseVersion) {
+		return false // Version specified is >= and we are above it, nothing to do here.
 	} else if (!updatesEnabled || !config.Please.SelfUpdate) && !updateCommand {
 		// Update is required but has been skipped (--noupdate or whatever)
-		word := describe(config.Please.Version, core.PleaseVersion, true)
+		word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
 		log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, core.PleaseVersion)
 		return false
 	} else if config.Please.Location == "" {
@@ -92,10 +95,10 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 	if config.Please.Version.Major == 0 {
 		// Specific version isn't set, only update on `plz update`.
 		if !updateCommand {
-			config.Please.Version = core.PleaseVersion
+			config.Please.Version.Set(core.PleaseVersion.String())
 			return false
 		}
-		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String())
+		config.Please.Version = *findLatestVersion(config.Please.DownloadLocation.String())
 		return shouldUpdate(config, updatesEnabled, updateCommand)
 	}
 	return true
@@ -218,7 +221,7 @@ func handleSignals(newDir string) {
 }
 
 // findLatestVersion attempts to find the latest available version of plz.
-func findLatestVersion(downloadLocation string) semver.Version {
+func findLatestVersion(downloadLocation string) *cli.Version {
 	url := strings.TrimRight(downloadLocation, "/") + "/latest_version"
 	log.Info("Downloading %s", url)
 	response, err := http.Get(url)
@@ -232,7 +235,11 @@ func findLatestVersion(downloadLocation string) semver.Version {
 	if err != nil {
 		log.Fatalf("Failed to find latest plz version: %s", err)
 	}
-	return *semver.New(strings.TrimSpace(string(data)))
+	v := &cli.Version{}
+	if err := v.UnmarshalFlag(strings.TrimSpace(string(data))); err != nil {
+		log.Fatalf("Failed to parse version: %s", string(data))
+	}
+	return v
 }
 
 // describe returns a word describing the process we're about to do ("update", "downgrading", etc)
