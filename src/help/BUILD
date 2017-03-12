@@ -31,6 +31,7 @@ go_library(
         ':data',
     ],
     deps = [
+        '//src/cli',
         '//src/utils',
         '//third_party/go:logging',
     ],

@@ -11,6 +11,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
+	"cli"
 	"utils"
 )
 
@@ -37,16 +38,40 @@ var allHelpFiles = []string{"rule_defs.json", "config.json", "misc.json"}
 // maxSuggestionDistance is the maximum Levenshtein edit distance we'll suggest help topics at.
 const maxSuggestionDistance = 5
 
+var replacements = map[string]string{
+	"BOLD":         "\x1b[1m",
+	"BOLD_GREY":    "\x1b[30;1m",
+	"BOLD_RED":     "\x1b[31;1m",
+	"BOLD_GREEN":   "\x1b[32;1m",
+	"BOLD_YELLOW":  "\x1b[33;1m",
+	"BOLD_BLUE":    "\x1b[34;1m",
+	"BOLD_MAGENTA": "\x1b[35;1m",
+	"BOLD_CYAN":    "\x1b[36;1m",
+	"BOLD_WHITE":   "\x1b[37;1m",
+	"GREY":         "\x1b[30m",
+	"RED":          "\x1b[31m",
+	"GREEN":        "\x1b[32m",
+	"YELLOW":       "\x1b[33m",
+	"BLUE":         "\x1b[34m",
+	"MAGENTA":      "\x1b[35m",
+	"CYAN":         "\x1b[36m",
+	"WHITE":        "\x1b[37m",
+	"WHITE_ON_RED": "\x1b[37;41;1m",
+	"RED_NO_BG":    "\x1b[31;49;1m",
+	"RESET":        "\x1b[0m",
+	"ERASE_AFTER":  "\x1b[K",
+}
+
 // Help prints help on a particular topic.
 // It returns true if the topic is known or false if it isn't.
 func Help(topic string) bool {
 	if message := help(topic); message != "" {
-		fmt.Println(message)
+		printMessage(message)
 		return true
 	}
 	fmt.Printf("Sorry OP, can't halp you with %s\n", topic)
 	if message := suggest(topic); message != "" {
-		fmt.Println(message)
+		printMessage(message)
 		fmt.Printf("Or have a look on the website: https://please.build\n")
 	} else {
 		fmt.Printf("\nMaybe have a look on the website? https://please.build\n")
@@ -119,4 +144,15 @@ func allTopics() []string {
 type helpFile struct {
 	Preamble string            `json:"preamble"`
 	Topics   map[string]string `json:"topics"`
+}
+
+// printMessage prints a message, with some string replacements for ANSI codes.
+func printMessage(msg string) {
+	for k, v := range replacements {
+		if !cli.StdErrIsATerminal || !cli.StdOutIsATerminal {
+			v = ""
+		}
+		msg = strings.Replace(msg, fmt.Sprintf("${%s}", k), v, -1)
+	}
+	fmt.Println(msg)
 }

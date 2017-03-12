@@ -19,6 +19,7 @@ import (
 
 var log = logging.MustGetLogger("cli")
 var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
+var StdOutIsATerminal = terminal.IsTerminal(int(os.Stdout.Fd()))
 var StripAnsi = regexp.MustCompile("\x1b[^m]+m")
 
 var logLevel = logging.WARNING

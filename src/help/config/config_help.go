@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"core"
@@ -15,6 +16,8 @@ type output struct {
 	Preamble string            `json:"preamble"`
 	Topics   map[string]string `json:"topics"`
 }
+
+var urlRegex = regexp.MustCompile("https?://[^ ]+[^.]")
 
 // ExampleValue returns an example value for a config field based on its type.
 func ExampleValue(f reflect.Value, name string, t reflect.Type, example string) string {
@@ -53,7 +56,7 @@ func ExampleValue(f reflect.Value, name string, t reflect.Type, example string) 
 
 func main() {
 	o := output{
-		Preamble: "%s is a config setting defined in the .plzconfig file. See `plz help plzconfig` for more information.",
+		Preamble: "${BOLD_BLUE}%s${RESET} is a config setting defined in the .plzconfig file. See `plz help plzconfig` for more information.",
 		Topics:   map[string]string{},
 	}
 	config := core.DefaultConfiguration()
@@ -70,7 +73,7 @@ func main() {
 				if help := subt.Tag.Get("help"); help != "" {
 					name := strings.ToLower(subt.Name)
 					example := subt.Tag.Get("example")
-					preamble := fmt.Sprintf("[%s]\n%s = %s\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example))
+					preamble := fmt.Sprintf("${BOLD_YELLOW}[%s]${RESET}\n${YELLOW}%s${RESET} = ${BLUE}%s${RESET}\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example))
 					help = strings.Replace(help, "\\n", "\n", -1)
 					o.Topics[name] = preamble + help
 					subfields = append(subfields, "  "+name)
@@ -81,9 +84,9 @@ func main() {
 		}
 		if help := t.Field(i).Tag.Get("help"); help != "" {
 			if len(subfields) > 0 {
-				help += "\n\nThis option has the following sub-fields:\n" + strings.Join(subfields, "\n")
+				help += "\n\n${YELLOW}This option has the following sub-fields:${RESET}\n${BLUE}" + strings.Join(subfields, "\n") + "${RESET}"
 			}
-			o.Topics[sectname] = help
+			o.Topics[sectname] = urlRegex.ReplaceAllStringFunc(help, func(s string) string { return "${GREEN}" + s + "${RESET}" })
 		}
 	}
 	b, _ := json.Marshal(o)
