@@ -73,7 +73,7 @@ func main() {
 				if help := subt.Tag.Get("help"); help != "" {
 					name := strings.ToLower(subt.Name)
 					example := subt.Tag.Get("example")
-					preamble := fmt.Sprintf("${BOLD_YELLOW}[%s]${RESET}\n${YELLOW}%s${RESET} = ${BLUE}%s${RESET}\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example))
+					preamble := fmt.Sprintf("${BOLD_YELLOW}[%s]${RESET}\n${YELLOW}%s${RESET} = ${GREEN}%s${RESET}\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example))
 					help = strings.Replace(help, "\\n", "\n", -1)
 					o.Topics[name] = preamble + help
 					subfields = append(subfields, "  "+name)
@@ -84,9 +84,9 @@ func main() {
 		}
 		if help := t.Field(i).Tag.Get("help"); help != "" {
 			if len(subfields) > 0 {
-				help += "\n\n${YELLOW}This option has the following sub-fields:${RESET}\n${BLUE}" + strings.Join(subfields, "\n") + "${RESET}"
+				help += "\n\n${YELLOW}This option has the following sub-fields:${RESET}\n${GREEN}" + strings.Join(subfields, "\n") + "${RESET}"
 			}
-			o.Topics[sectname] = urlRegex.ReplaceAllStringFunc(help, func(s string) string { return "${GREEN}" + s + "${RESET}" })
+			o.Topics[sectname] = urlRegex.ReplaceAllStringFunc(help, func(s string) string { return "${BLUE}" + s + "${RESET}" })
 		}
 	}
 	b, _ := json.Marshal(o)

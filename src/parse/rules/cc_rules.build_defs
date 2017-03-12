@@ -18,7 +18,7 @@ _NO_WHOLE_ARCHIVE = '-noall_load' if CONFIG.OS == 'darwin' else '--no-whole-arch
 def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False,
                compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None, defines=None,
                alwayslink=False, _c=False):
-    """Generate a C++ library target.
+    """Generate a C or C++ library target.
 
     Args:
       name (str): Name of the rule

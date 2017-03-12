@@ -98,8 +98,8 @@ def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=N
     Args:
       name (str): Name of the rule
       src (str): Test script file.
-      args (list): Arguments that will be passed to this test when run.
-                   Deprecated, prefer `flags` instead.
+      args (list): Deprecated, prefer 'flags' instead.
+                   Arguments that will be passed to this test when run.
       labels (list): Labels to apply to this test.
       data (list): Runtime data for the test.
       deps (list): Dependencies of this rule

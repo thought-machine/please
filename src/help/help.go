@@ -6,6 +6,7 @@ package help
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -61,6 +62,8 @@ var replacements = map[string]string{
 	"RESET":        "\x1b[0m",
 	"ERASE_AFTER":  "\x1b[K",
 }
+
+var backtickRegex = regexp.MustCompile("\\`[^\\`\n]+\\`")
 
 // Help prints help on a particular topic.
 // It returns true if the topic is known or false if it isn't.
@@ -148,6 +151,11 @@ type helpFile struct {
 
 // printMessage prints a message, with some string replacements for ANSI codes.
 func printMessage(msg string) {
+	if cli.StdErrIsATerminal && cli.StdOutIsATerminal {
+		msg = backtickRegex.ReplaceAllStringFunc(msg, func(s string) string {
+			return "${BOLD_CYAN}" + strings.Replace(s, "`", "", -1) + "${RESET}"
+		})
+	}
 	for k, v := range replacements {
 		if !cli.StdErrIsATerminal || !cli.StdOutIsATerminal {
 			v = ""

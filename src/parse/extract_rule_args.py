@@ -11,7 +11,7 @@ import sys
 from itertools import chain
 
 
-DOCSTRING_RE = re.compile(r' *([^ ]+) \(([^\)]+)\):')
+DOCSTRING_RE = re.compile(r' *([^ ]+) \(([^\)]+)\):( Deprecated)?')
 
 
 def read_functions(filenames):
@@ -31,7 +31,7 @@ def read_functions(filenames):
 
 def arg_checks(node):
     """Yields a sequence of checks on the given ast function node."""
-    docs = {m.group(1): m.group(2) for m in DOCSTRING_RE.finditer(ast.get_docstring(node))}
+    docs = {m.group(1): (m.group(2), m.group(3)) for m in DOCSTRING_RE.finditer(ast.get_docstring(node))}
     min_default = len(node.args.args) - len(node.args.defaults)
     # ast in python 3 looks a bit different.
     arg_name = lambda arg: arg.id if hasattr(arg, 'id') else arg.arg
@@ -39,8 +39,8 @@ def arg_checks(node):
         if arg.startswith('_'):  # Private, undocumented arguments.
             continue
         assert arg in docs, 'Missing docstring for argument %s to %s()' % (arg, node.name)
-        doc = docs[arg]
-        yield arg, i < min_default, doc.split(' | ')
+        types, deprecated = docs[arg]
+        yield arg, i < min_default, types.split(' | '), bool(deprecated)
 
 
 if __name__ == '__main__':
@@ -51,6 +51,7 @@ if __name__ == '__main__':
                 'name': arg_name,
                 'required': required,
                 'types': types,
-            } for arg_name, required, types in func_info],
+                'deprecated': deprecated,
+            } for arg_name, required, types, deprecated in func_info],
         } for func_name, docstring, func_info in read_functions(sys.argv[1:])
     }}, sys.stdout, sort_keys=True, indent=4)

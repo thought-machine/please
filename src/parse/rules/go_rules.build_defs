@@ -25,7 +25,7 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
       test_only (bool): If True, is only visible to test rules.
       go_tools (list): A list of targets to pre-process your src files with go generate.
       complete (bool): Indicates whether the library is complete or not (ie. buildable with
-                       'go tool build -complete'). In nearly all cases this is True (the main
+                       `go tool build -complete`). In nearly all cases this is True (the main
                        exception being for cgo).
     """
     deps = deps or []
@@ -264,7 +264,7 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
       static (bool): If True, passes flags to the linker to try to force fully static linking.
-                     (specifically -linkmode external -extldflags static).
+                     (specifically `-linkmode external -extldflags static`).
                      Typically this increases size & link time a little but in return the binary
                      has absolutely no external dependencies.
                      Not yet tested against cgo.
