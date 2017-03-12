@@ -10,6 +10,7 @@ package gc
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"sort"
 	"strings"
 
@@ -25,7 +26,7 @@ var log = logging.MustGetLogger("gc")
 type targetMap map[*core.BuildTarget]bool
 
 // GarbageCollect initiates the garbage collection logic.
-func GarbageCollect(state *core.BuildState, targets []core.BuildLabel, keepLabels []string, conservative, targetsOnly, srcsOnly, noPrompt, dryRun bool) {
+func GarbageCollect(state *core.BuildState, targets []core.BuildLabel, keepLabels []string, conservative, targetsOnly, srcsOnly, noPrompt, dryRun, git bool) {
 	if targets, srcs := targetsToRemove(state.Graph, targets, keepLabels, conservative); len(targets) > 0 {
 		if !srcsOnly {
 			fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), state.Graph.Len())
@@ -46,18 +47,29 @@ func GarbageCollect(state *core.BuildState, targets []core.BuildLabel, keepLabel
 		}
 		if !srcsOnly {
 			if err := removeTargets(state, targets); err != nil {
-				log.Fatalf("%s", err)
+				log.Fatalf("%s\n", err)
 			}
 		}
 		if !targetsOnly {
-			for _, src := range srcs {
-				fmt.Printf("Deleting %s...\n", src)
-				if err := os.Remove(src); err != nil {
-					log.Fatalf("Failed to remove %s: %s", src, err)
+			if git {
+				log.Notice("Running git rm %s\n", strings.Join(srcs, " "))
+				srcs = append([]string{"rm", "-q"}, srcs...)
+				cmd := exec.Command("git", srcs...)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					log.Fatalf("git rm failed: %s\n", err)
+				}
+			} else {
+				for _, src := range srcs {
+					log.Notice("Deleting %s...\n", src)
+					if err := os.Remove(src); err != nil {
+						log.Fatalf("Failed to remove %s: %s\n", src, err)
+					}
 				}
 			}
 		}
-
+		fmt.Fprintf(os.Stderr, "Garbage collected!\n")
 	} else {
 		fmt.Fprintf(os.Stderr, "Nothing to remove\n")
 	}
@@ -193,7 +205,7 @@ func removeTargets(state *core.BuildState, labels core.BuildLabels) error {
 	}
 	for pkgName, victims := range byPackage {
 		filename := state.Graph.PackageOrDie(pkgName).Filename
-		fmt.Printf("Rewriting %s to remove %s...\n", filename, strings.Replace(strings.Join(victims, ", "), `"`, "", -1))
+		log.Notice("Rewriting %s to remove %s...\n", filename, strings.Replace(strings.Join(victims, ", "), `"`, "", -1))
 		if err := rewriteFile(state, filename, victims); err != nil {
 			return err
 		}

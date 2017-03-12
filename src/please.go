@@ -161,6 +161,7 @@ var opts struct {
 		SrcsOnly     bool `short:"s" long:"srcs_only" description:"Only print the source files to delete"`
 		NoPrompt     bool `short:"y" long:"no_prompt" description:"Remove targets without prompting"`
 		DryRun       bool `short:"n" long:"dry_run" description:"Don't remove any targets or files, just print what would be done"`
+		Git          bool `short:"g" long:"git" description:"Use 'git rm' to remove unused files instead of just 'rm'."`
 	} `command:"gc" description:"Analyzes the repo to determine unneeded targets."`
 
 	Help struct {
@@ -338,7 +339,7 @@ var buildFunctions = map[string]func() bool{
 		if success {
 			state.OriginalTargets = state.Config.Gc.Keep
 			gc.GarbageCollect(state, state.ExpandOriginalTargets(), state.Config.Gc.KeepLabel,
-				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly, opts.Gc.NoPrompt, opts.Gc.DryRun)
+				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly, opts.Gc.NoPrompt, opts.Gc.DryRun, opts.Gc.Git)
 		}
 		return success
 	},
