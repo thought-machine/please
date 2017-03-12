@@ -82,6 +82,13 @@ func TestConfigOverrideSlice(t *testing.T) {
 	assert.Equal(t, []string{"/mnt/bin", "/mnt/sbin"}, config.Build.Path)
 }
 
+func TestConfigOverrideLabelSlice(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"gc.keep": "//src/core:core"})
+	assert.NoError(t, err)
+	assert.Equal(t, []BuildLabel{ParseBuildLabel("//src/core:core", "")}, config.Gc.Keep)
+}
+
 func TestConfigOverrideMap(t *testing.T) {
 	config := DefaultConfiguration()
 	err := config.ApplyOverrides(map[string]string{"aliases.blah": "run //blah:blah"})

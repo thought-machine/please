@@ -378,8 +378,17 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 			}
 			field.Set(reflect.ValueOf(d))
 		case reflect.Slice:
-			// We only have to worry about slices of strings. Comma-separated values are accepted.
-			field.Set(reflect.ValueOf(strings.Split(v, ",")))
+			// Comma-separated values are accepted.
+			if field.Type().Elem().Kind() == reflect.Struct {
+				// Assume it must be a slice of BuildLabel.
+				l := []BuildLabel{}
+				for _, s := range strings.Split(v, ",") {
+					l = append(l, ParseBuildLabel(s, ""))
+				}
+				field.Set(reflect.ValueOf(l))
+			} else {
+				field.Set(reflect.ValueOf(strings.Split(v, ",")))
+			}
 		default:
 			return fmt.Errorf("Can't override config field %s (is %s)", k, field.Kind())
 		}
