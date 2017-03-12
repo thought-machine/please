@@ -26,8 +26,8 @@ var log = logging.MustGetLogger("gc")
 type targetMap map[*core.BuildTarget]bool
 
 // GarbageCollect initiates the garbage collection logic.
-func GarbageCollect(state *core.BuildState, targets []core.BuildLabel, keepLabels []string, conservative, targetsOnly, srcsOnly, noPrompt, dryRun, git bool) {
-	if targets, srcs := targetsToRemove(state.Graph, targets, keepLabels, conservative); len(targets) > 0 {
+func GarbageCollect(state *core.BuildState, filter, targets []core.BuildLabel, keepLabels []string, conservative, targetsOnly, srcsOnly, noPrompt, dryRun, git bool) {
+	if targets, srcs := targetsToRemove(state.Graph, filter, targets, keepLabels, conservative); len(targets) > 0 {
 		if !srcsOnly {
 			fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), state.Graph.Len())
 			for _, target := range targets {
@@ -76,7 +76,7 @@ func GarbageCollect(state *core.BuildState, targets []core.BuildLabel, keepLabel
 }
 
 // targetsToRemove finds the set of targets that are no longer needed and any extraneous sources.
-func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, keepLabels []string, includeTests bool) (core.BuildLabels, []string) {
+func targetsToRemove(graph *core.BuildGraph, filter, targets []core.BuildLabel, keepLabels []string, includeTests bool) (core.BuildLabels, []string) {
 	keepTargets := targetMap{}
 	for _, target := range graph.AllTargets() {
 		if (target.IsBinary && (!target.IsTest || includeTests)) || target.HasAnyLabel(keepLabels) {
@@ -137,7 +137,7 @@ func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, keepLabe
 	ret := make(core.BuildLabels, 0, len(keepTargets))
 	retSrcs := []string{}
 	for _, target := range graph.AllTargets() {
-		if !target.HasParent() && !keepTargets[target] {
+		if !target.HasParent() && !keepTargets[target] && isIncluded(target, filter) {
 			ret = append(ret, target.Label)
 			for _, src := range target.AllLocalSources() {
 				if !keepSrcs[src] {
@@ -151,6 +151,19 @@ func targetsToRemove(graph *core.BuildGraph, targets []core.BuildLabel, keepLabe
 	log.Notice("%d targets to remove", len(ret))
 	log.Notice("%d sources to remove", len(retSrcs))
 	return ret, retSrcs
+}
+
+// isIncluded returns true if the given target is included in a set of filtering labels.
+func isIncluded(target *core.BuildTarget, filter []core.BuildLabel) bool {
+	if len(filter) == 0 {
+		return true // if you don't specify anything, the filter has no effect.
+	}
+	for _, f := range filter {
+		if f.Includes(target.Label) {
+			return true
+		}
+	}
+	return false
 }
 
 // addTarget adds a target and all its transitive dependencies to the given map.

@@ -220,8 +220,8 @@ func (label BuildLabel) IsAllTargets() bool {
 	return label.Name == "all"
 }
 
-// includes returns true if label includes the other label (//pkg:target1 is covered by //pkg:all etc).
-func (label BuildLabel) includes(that BuildLabel) bool {
+// Includes returns true if label includes the other label (//pkg:target1 is covered by //pkg:all etc).
+func (label BuildLabel) Includes(that BuildLabel) bool {
 	if (label.PackageName == "" && label.IsAllSubpackages()) ||
 		that.PackageName == label.PackageName ||
 		strings.HasPrefix(that.PackageName, label.PackageName+"/") {

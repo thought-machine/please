@@ -391,7 +391,7 @@ func (target *BuildTarget) allDependenciesResolved() bool {
 
 // isExperimental returns true if the given target is in the "experimental" tree
 func isExperimental(target *BuildTarget) bool {
-	return State.experimentalLabel.PackageName != "" && State.experimentalLabel.includes(target.Label)
+	return State.experimentalLabel.PackageName != "" && State.experimentalLabel.Includes(target.Label)
 }
 
 // CanSee returns true if target can see the given dependency, or false if not.
@@ -405,7 +405,7 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 		return false
 	}
 	for _, vis := range dep.Visibility {
-		if vis.includes(target.Label.Parent()) {
+		if vis.Includes(target.Label.Parent()) {
 			return true
 		}
 	}

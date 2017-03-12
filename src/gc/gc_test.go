@@ -10,7 +10,7 @@ import (
 
 func TestTargetsToRemoveWithTests(t *testing.T) {
 	graph := createGraph()
-	labels, _ := targetsToRemove(graph, nil, nil, true)
+	labels, _ := targetsToRemove(graph, nil, nil, nil, true)
 	assert.EqualValues(t, []core.BuildLabel{
 		bl("//src/cli:cli"),
 		bl("//src/parse:parse"),
@@ -19,7 +19,7 @@ func TestTargetsToRemoveWithTests(t *testing.T) {
 
 func TestTargetsToRemoveWithoutTests(t *testing.T) {
 	graph := createGraph()
-	labels, _ := targetsToRemove(graph, nil, nil, false)
+	labels, _ := targetsToRemove(graph, nil, nil, nil, false)
 	assert.EqualValues(t, []core.BuildLabel{
 		bl("//src/cli:cli"),
 		bl("//src/parse:parse"),
@@ -28,9 +28,17 @@ func TestTargetsToRemoveWithoutTests(t *testing.T) {
 
 func TestTargetsToRemoveWithArgs(t *testing.T) {
 	graph := createGraph()
-	labels, _ := targetsToRemove(graph, []core.BuildLabel{bl("//src/cli:cli")}, nil, false)
+	labels, _ := targetsToRemove(graph, nil, []core.BuildLabel{bl("//src/cli:cli")}, nil, false)
 	assert.EqualValues(t, []core.BuildLabel{
 		bl("//src/parse:parse"),
+	}, labels)
+}
+
+func TestTargetsToRemoveFiltered(t *testing.T) {
+	graph := createGraph()
+	labels, _ := targetsToRemove(graph, []core.BuildLabel{bl("//src/cli:all")}, nil, nil, false)
+	assert.EqualValues(t, []core.BuildLabel{
+		bl("//src/cli:cli"),
 	}, labels)
 }
 
