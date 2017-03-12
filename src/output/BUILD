@@ -41,7 +41,7 @@ for file_name, rule_name in sorted(TEMPLATED_FILES.items()):
 
 go_library(
     name = 'output',
-    srcs = glob(['*.go'], excludes = TEMPLATED_FILES.keys() + ['*_test.go']) + TEMPLATED_FILES_DEPS,
+    srcs = glob(['*.go'], excludes = sorted(TEMPLATED_FILES.keys()) + ['*_test.go']) + TEMPLATED_FILES_DEPS,
     deps = TEMPLATED_FILES_DEPS + [
         '//src/build',
         '//src/cli',

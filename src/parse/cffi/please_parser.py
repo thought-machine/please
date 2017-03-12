@@ -465,7 +465,16 @@ def _get_globals(c_package, c_package_name):
 @ffi.def_extern('RegisterCallback')
 def register_callback(name, c_type, callback):
     """Called at initialisation time to register a single callback."""
-    globals()[ffi_to_string(name)] = ffi.cast(ffi_to_string(c_type), callback)
+    if is_py3:
+        # Wrap the function up to auto-encode to bytes (ffi requires this in py3)
+        # TODO(pebers): this is not exactly beautiful, can we find a better way of handling it?
+        t = ffi_to_string(c_type)
+        argdefs = [arg == 'char*' for arg in t[t.find('(*)')+4:].rstrip(')').split(', ')]
+        f = ffi.cast(t, callback)
+        globals()[ffi_to_string(name)] = lambda *args: f(*[ffi_from_string(arg) if argdef and isinstance(arg, str) else arg
+                                                           for arg, argdef in zip(args, argdefs)])
+    else:
+        globals()[ffi_to_string(name)] = ffi.cast(ffi_to_string(c_type), callback)
     return 1  # used to detect success (must be nonzero)
 
 

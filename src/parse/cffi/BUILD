@@ -14,9 +14,6 @@ for interpreter in ENGINES:
         visibility = ['PUBLIC'],
     )
 
-# Temporarily removed so it doesn't wind up in the deployment; it's not ready yet.
-ENGINES.remove('python3')
-
 filegroup(
     name = 'all_engines',
     srcs = [':please_parser_' + interpreter for interpreter in ENGINES],

@@ -232,7 +232,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
     # This is the final rule that directs dependencies to the appropriate language.
     filegroup(
         name = name,
-        deps = provides.values(),
+        deps = sorted(provides.values()),
         provides = provides,
         visibility = visibility,
         labels = labels,
