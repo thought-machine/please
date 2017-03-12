@@ -18,17 +18,6 @@ import (
 
 var log = logging.MustGetLogger("help")
 
-const defaultHelpMessage = `
-Please is a high-performance language-agnostic build system.
-
-Try plz help <topic> for help on a specific topic;
-plz --help if you want information on flags / options / commands that it accepts;
-plz help topics if you want to see the list of possible topics to get help on
-or try a few commands like plz build or plz test if your repo is already set up
-and you'd like to see it in action.
-
-Or see the website (https://please.build) for more information.
-`
 const topicsHelpMessage = `
 The following help topics are available:
 
@@ -57,10 +46,7 @@ var replacements = map[string]string{
 	"MAGENTA":      "\x1b[35m",
 	"CYAN":         "\x1b[36m",
 	"WHITE":        "\x1b[37m",
-	"WHITE_ON_RED": "\x1b[37;41;1m",
-	"RED_NO_BG":    "\x1b[31;49;1m",
 	"RESET":        "\x1b[0m",
-	"ERASE_AFTER":  "\x1b[K",
 }
 
 var backtickRegex = regexp.MustCompile("\\`[^\\`\n]+\\`")
@@ -93,9 +79,7 @@ func HelpTopics(prefix string) {
 
 func help(topic string) string {
 	topic = strings.ToLower(topic)
-	if topic == "" {
-		return defaultHelpMessage
-	} else if topic == "topics" {
+	if topic == "topics" {
 		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(), "\n"))
 	}
 	for _, filename := range allHelpFiles {
@@ -111,6 +95,9 @@ func findHelpFromFile(topic, filename string) (string, bool) {
 	message, found := topics[topic]
 	if !found {
 		return "", false
+	}
+	if preamble == "" {
+		return message, true
 	}
 	return fmt.Sprintf(preamble+"\n\n", topic) + message, true
 }
