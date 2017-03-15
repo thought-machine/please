@@ -58,6 +58,19 @@ func TestExpandVisibleOriginalTargets(t *testing.T) {
 	assert.Equal(t, state.ExpandVisibleOriginalTargets(), BuildLabels{{"src/core", "target1"}})
 }
 
+func TestExpandOriginalSubTargets(t *testing.T) {
+	state := NewBuildState(1, nil, 4, DefaultConfiguration())
+	state.OriginalTargets = []BuildLabel{{"src/core", "..."}}
+	state.Include = []string{"go"}
+	state.Exclude = []string{"py"}
+	addTarget(state, "//src/core:target1", "go")
+	addTarget(state, "//src/core:target2", "py")
+	addTarget(state, "//src/core/tests:target3", "go")
+	// Only the one target comes out here; it must be a test and otherwise follows
+	// the same include / exclude logic as the previous test.
+	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{"src/core", "target1"}, {"src/core/tests", "target3"}})
+}
+
 func TestComparePendingTasks(t *testing.T) {
 	p := func(taskType TaskType) pendingTask { return pendingTask{Type: taskType} }
 	// NB. "Higher priority" means the task comes first, does not refer to numeric values.

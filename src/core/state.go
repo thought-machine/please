@@ -286,11 +286,20 @@ func (state *BuildState) NumDone() int {
 // from the set of original targets.
 func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 	ret := BuildLabels{}
+	addPackage := func(pkg *Package) {
+		for _, target := range pkg.Targets {
+			if target.ShouldInclude(state.Include, state.Exclude) && (!state.NeedTests || target.IsTest) {
+				ret = append(ret, target.Label)
+			}
+		}
+	}
 	for _, label := range state.OriginalTargets {
 		if label.IsAllTargets() {
-			for _, target := range state.Graph.PackageOrDie(label.PackageName).Targets {
-				if target.ShouldInclude(state.Include, state.Exclude) && (!state.NeedTests || target.IsTest) {
-					ret = append(ret, target.Label)
+			addPackage(state.Graph.PackageOrDie(label.PackageName))
+		} else if label.IsAllSubpackages() {
+			for name, pkg := range state.Graph.PackageMap() {
+				if label.Includes(BuildLabel{PackageName: name}) {
+					addPackage(pkg)
 				}
 			}
 		} else {
