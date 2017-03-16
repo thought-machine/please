@@ -258,7 +258,8 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
 
     Args:
       name (str): Name of the rule.
-      main (str): Go source file containing the main function.
+      main (str): Deprecated, prefer srcs instead.
+                  Go source file containing the main function.
       srcs (list): Go source files, one of which contains the main function.
       deps (list): Dependencies
       visibility (list): Visibility specification
@@ -269,6 +270,8 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
                      has absolutely no external dependencies.
                      Not yet tested against cgo.
     """
+    if not srcs:
+        log.warning('"main" on go_binary is deprecated, prefer "srcs" instead.')
     go_library(
         name='_%s#lib' % name,
         srcs=srcs or [main or name + '.go'],

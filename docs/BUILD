@@ -36,5 +36,5 @@ filegroup(
 
 go_binary(
     name = 'templater',
-    main = 'template.go',
+    srcs = ['template.go'],
 )

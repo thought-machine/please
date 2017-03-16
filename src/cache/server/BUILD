@@ -22,7 +22,7 @@ go_library(
 
 go_binary(
     name = 'http_cache_server_bin',
-    main = 'http_server_main.go',
+    srcs = ['http_server_main.go'],
     deps = [
         ':server',
         '//src/cli',
@@ -33,7 +33,7 @@ go_binary(
 
 go_binary(
     name = 'rpc_cache_server_bin',
-    main = 'rpc_server_main.go',
+    srcs = ['rpc_server_main.go'],
     deps = [
         ':server',
         '//src/cache/cluster',

@@ -10,6 +10,7 @@ go_library(
 
 go_binary(
     name = 'jarcat',
+    srcs = ['jarcat.go'],
     deps = [
         ':zip_writer',
         '//src/cli',

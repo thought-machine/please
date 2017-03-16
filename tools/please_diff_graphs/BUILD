@@ -11,7 +11,7 @@ go_library(
 
 go_binary(
     name = 'please_diff_graphs',
-    main = 'plz_diff_graphs_main.go',
+    srcs = ['plz_diff_graphs_main.go'],
     deps = [
         ':diff_graphs',
         '//src/cli',

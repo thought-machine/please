@@ -15,7 +15,7 @@ go_library(
 
 go_binary(
     name = 'go_rules_test_bin',
-    main = 'go_rules_test_bin.go',
+    srcs = ['go_rules_test_bin.go'],
     test_only = True,
     deps = [
         ':go_rules_test_lib',
@@ -25,7 +25,7 @@ go_binary(
 
 go_binary(
     name = 'go_rules_test_generate_bin',
-    main = 'go_rules_test_generate_bin.go',
+    srcs = ['go_rules_test_generate_bin.go'],
     test_only = True,
     deps = ['//test/go_rules/test:generate_test'],
 )
