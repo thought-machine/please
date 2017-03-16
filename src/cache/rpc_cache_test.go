@@ -1,10 +1,10 @@
 package cache
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,21 +32,23 @@ func init() {
 		log.Fatalf("Failed to prepare test directory: %s\n", err)
 	}
 
-	startServer(7677, "", "", "")
-	rpccache = buildClient(7677, "")
+	_, addr := startServer("", "", "")
+	rpccache = buildClient(addr, "")
 }
 
-func startServer(port int, keyFile, certFile, caCertFile string) *grpc.Server {
+func startServer(keyFile, certFile, caCertFile string) (*grpc.Server, string) {
 	// Arbitrary large numbers so the cleaner never needs to run.
 	cache := server.NewCache("src/cache/test_data", 20*time.Hour, 100000, 100000000, 1000000000)
-	s, lis := server.BuildGrpcServer(port, cache, nil, keyFile, certFile, caCertFile, "", "")
+	s, lis := server.BuildGrpcServer(0, cache, nil, keyFile, certFile, caCertFile, "", "")
 	go s.Serve(lis)
-	return s
+	return s, lis.Addr().String()
 }
 
-func buildClient(port int, ca string) *rpcCache {
+func buildClient(addr, ca string) *rpcCache {
 	config := core.DefaultConfiguration()
-	config.Cache.RpcUrl.UnmarshalFlag(fmt.Sprintf("localhost:%d", port))
+	if err := config.Cache.RpcUrl.UnmarshalFlag(strings.Replace(addr, "[::]", "localhost", 1)); err != nil {
+		log.Fatalf("%s", err)
+	}
 	config.Cache.RpcWriteable = true
 	config.Cache.RpcCACert = ca
 
@@ -107,8 +109,8 @@ func TestClean(t *testing.T) {
 
 func TestDisconnectAfterEnoughErrors(t *testing.T) {
 	// Need a separate cache for this so we don't interfere with the other tests.
-	s := startServer(7676, "", "", "")
-	c := buildClient(7676, "")
+	s, addr := startServer("", "", "")
+	c := buildClient(addr, "")
 
 	target := core.NewBuildTarget(label)
 	target.AddOutput("testfile4")
@@ -133,10 +135,10 @@ func TestLoadCertificates(t *testing.T) {
 
 func TestRetrieveSSL(t *testing.T) {
 	// Need a separate cache for this so we don't interfere with the other tests.
-	s := startServer(7675, "src/cache/test_data/key.pem", "src/cache/test_data/cert_signed.pem", "src/cache/test_data/ca.pem")
+	s, addr := startServer("src/cache/test_data/key.pem", "src/cache/test_data/cert_signed.pem", "src/cache/test_data/ca.pem")
 	defer s.Stop()
-	c := buildClient(7675, "")
+	c := buildClient(addr, "")
 	assert.False(t, c.Connected, "Should fail to connect without giving the client a CA cert")
-	c = buildClient(7675, "src/cache/test_data/ca.pem")
+	c = buildClient(addr, "src/cache/test_data/ca.pem")
 	assert.True(t, c.Connected, "Connects OK this time")
 }
