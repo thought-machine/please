@@ -6,6 +6,7 @@ package help
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -27,27 +28,6 @@ var allHelpFiles = []string{"rule_defs.json", "config.json", "misc.json"}
 
 // maxSuggestionDistance is the maximum Levenshtein edit distance we'll suggest help topics at.
 const maxSuggestionDistance = 5
-
-var replacements = map[string]string{
-	"BOLD":         "\x1b[1m",
-	"BOLD_GREY":    "\x1b[30;1m",
-	"BOLD_RED":     "\x1b[31;1m",
-	"BOLD_GREEN":   "\x1b[32;1m",
-	"BOLD_YELLOW":  "\x1b[33;1m",
-	"BOLD_BLUE":    "\x1b[34;1m",
-	"BOLD_MAGENTA": "\x1b[35;1m",
-	"BOLD_CYAN":    "\x1b[36;1m",
-	"BOLD_WHITE":   "\x1b[37;1m",
-	"GREY":         "\x1b[30m",
-	"RED":          "\x1b[31m",
-	"GREEN":        "\x1b[32m",
-	"YELLOW":       "\x1b[33m",
-	"BLUE":         "\x1b[34m",
-	"MAGENTA":      "\x1b[35m",
-	"CYAN":         "\x1b[36m",
-	"WHITE":        "\x1b[37m",
-	"RESET":        "\x1b[0m",
-}
 
 var backtickRegex = regexp.MustCompile("\\`[^\\`\n]+\\`")
 
@@ -143,11 +123,5 @@ func printMessage(msg string) {
 			return "${BOLD_CYAN}" + strings.Replace(s, "`", "", -1) + "${RESET}"
 		})
 	}
-	for k, v := range replacements {
-		if !cli.StdErrIsATerminal || !cli.StdOutIsATerminal {
-			v = ""
-		}
-		msg = strings.Replace(msg, fmt.Sprintf("${%s}", k), v, -1)
-	}
-	fmt.Println(msg)
+	cli.Fprintf(os.Stdout, msg)
 }
