@@ -154,7 +154,9 @@ func downloadPlease(config *core.Configuration) {
 	}
 	defer mustClose(response.Body)
 
-	gzreader, err := gzip.NewReader(response.Body)
+	pr := cli.NewProgressReader(response.Body, response.Header.Get("Content-Length"))
+	defer pr.Close()
+	gzreader, err := gzip.NewReader(pr)
 	if err != nil {
 		panic(fmt.Sprintf("%s isn't a valid gzip file: %s", url, err))
 	}
