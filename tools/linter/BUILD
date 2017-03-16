@@ -1,3 +1,5 @@
+package(python_module_dir = '')
+
 python_binary(
     name = 'linter',
     out = 'linter',

@@ -1,3 +1,5 @@
+package(python_module_dir = '')
+
 # Bootstrapping please_pex is difficult, because the code essentially needs to run from a zip
 # file. We assemble enough by hand to make it go.
 build_rule(
