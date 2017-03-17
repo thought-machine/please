@@ -84,7 +84,7 @@ func main() {
 		}
 		if help := t.Field(i).Tag.Get("help"); help != "" {
 			if len(subfields) > 0 {
-				help += "\n\n${YELLOW}This option has the following sub-fields:${RESET}\n${GREEN}" + strings.Join(subfields, "\n") + "${RESET}"
+				help += "\n\n${YELLOW}This option has the following sub-fields:${RESET}\n${GREEN}" + strings.Join(subfields, "\n") + "${RESET}\n"
 			}
 			o.Topics[sectname] = urlRegex.ReplaceAllStringFunc(help, func(s string) string { return "${BLUE}" + s + "${RESET}" })
 		}
