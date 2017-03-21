@@ -31,7 +31,7 @@ func TestRewriteFile(t *testing.T) {
 	wd, _ := os.Getwd()
 	err := core.CopyFile("src/gc/test_data/before.build", path.Join(wd, "test.build"), 0644)
 	assert.NoError(t, err)
-	assert.NoError(t, rewriteFile(state, "test.build", []string{`"prometheus"`, `"cover"`}))
+	assert.NoError(t, RewriteFile(state, "test.build", []string{"prometheus", "cover"}))
 	rewritten, err := ioutil.ReadFile("test.build")
 	assert.NoError(t, err)
 	after, err := ioutil.ReadFile("src/gc/test_data/after.build")

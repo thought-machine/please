@@ -173,6 +173,10 @@ func RecursiveCopyFile(from string, to string, mode os.FileMode, link, fallback 
 				if fi.IsDir() {
 					return RecursiveCopyFile(name+"/", dest+"/", mode, link, fallback)
 				} else {
+					// 0 indicates inheriting the existing mode bits.
+					if mode == 0 {
+						mode = info.Mode()
+					}
 					return copyOrLinkFile(name, dest, mode, link, fallback)
 				}
 			} else {

@@ -201,8 +201,11 @@ func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*cor
 	return ret
 }
 
-// rewriteFile rewrites a BUILD file to exclude a set of targets.
-func rewriteFile(state *core.BuildState, filename string, targets []string) error {
+// RewriteFile rewrites a BUILD file to exclude a set of targets.
+func RewriteFile(state *core.BuildState, filename string, targets []string) error {
+	for i, t := range targets {
+		targets[i] = fmt.Sprintf(`"%s"`, t)
+	}
 	data := string(MustAsset("rewrite.py"))
 	// Template in the variables we want.
 	data = strings.Replace(data, "__FILENAME__", filename, 1)
@@ -214,12 +217,12 @@ func rewriteFile(state *core.BuildState, filename string, targets []string) erro
 func removeTargets(state *core.BuildState, labels core.BuildLabels) error {
 	byPackage := map[string][]string{}
 	for _, l := range labels {
-		byPackage[l.PackageName] = append(byPackage[l.PackageName], `"`+l.Name+`"`)
+		byPackage[l.PackageName] = append(byPackage[l.PackageName], l.Name)
 	}
 	for pkgName, victims := range byPackage {
 		filename := state.Graph.PackageOrDie(pkgName).Filename
-		log.Notice("Rewriting %s to remove %s...\n", filename, strings.Replace(strings.Join(victims, ", "), `"`, "", -1))
-		if err := rewriteFile(state, filename, victims); err != nil {
+		log.Notice("Rewriting %s to remove %s...\n", filename, strings.Join(victims, ", "))
+		if err := RewriteFile(state, filename, victims); err != nil {
 			return err
 		}
 	}

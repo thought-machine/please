@@ -18,6 +18,7 @@ import (
 	"clean"
 	"cli"
 	"core"
+	"export"
 	"gc"
 	"help"
 	"metrics"
@@ -166,6 +167,13 @@ var opts struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to limit gc to."`
 		} `positional-args:"true"`
 	} `command:"gc" description:"Analyzes the repo to determine unneeded targets."`
+
+	Export struct {
+		Output string `short:"o" long:"output" required:"true" description:"Directory to export into"`
+		Args   struct {
+			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to export."`
+		} `positional-args:"true"`
+	} `command:"export" description:"Exports a set of targets and files from the repo."`
 
 	Help struct {
 		Args struct {
@@ -343,6 +351,13 @@ var buildFunctions = map[string]func() bool{
 			state.OriginalTargets = state.Config.Gc.Keep
 			gc.GarbageCollect(state, opts.Gc.Args.Targets, state.ExpandOriginalTargets(), state.Config.Gc.KeepLabel,
 				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly, opts.Gc.NoPrompt, opts.Gc.DryRun, opts.Gc.Git)
+		}
+		return success
+	},
+	"export": func() bool {
+		success, state := runBuild(opts.Export.Args.Targets, false, false)
+		if success {
+			export.ToDir(state, opts.Export.Output, state.ExpandOriginalTargets())
 		}
 		return success
 	},
