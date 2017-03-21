@@ -103,7 +103,9 @@ def run_tests(test_names):
     return len(results.errors) + len(results.failures)
 
 
-def main(args):
+def main(args, extra_args):
+    args.test_names = args.test_names.split(',') if args.test_names else []
+    sys.argv[1:] = extra_args
     if args.list_classes:
         suite = unittest.defaultTestLoader.loadTestsFromNames(TEST_NAMES)
         for _, cls in set(list_classes(suite)):
@@ -132,5 +134,5 @@ if __name__ == '__main__':
     parser.add_argument('--list_classes', type=bool, default=False, help='List all test classes')
     parser.add_argument('--coverage', dest='coverage', action='store_true',
                         help='Write output coverage file')
-    parser.add_argument('test_names', nargs='*', default=[], help='Tests to run')
-    sys.exit(main(parser.parse_args()))
+    parser.add_argument('--test_names', default=os.environ.get('TEST_ARGS'), help='Tests to run')
+    sys.exit(main(*parser.parse_known_args()))
