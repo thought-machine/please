@@ -55,6 +55,13 @@ python_test(
     ],
 )
 
+# Test flags on python_test
+python_test(
+    name = 'flags_test',
+    srcs = ['flags_test.py'],
+    flags = '--test_flag',
+)
+
 # Tests for a subtle case where python_test rules should get a pex when
 # specified as data, but not when depending directly.
 python_binary(
