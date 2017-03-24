@@ -393,7 +393,7 @@ def python_wheel(name, version=None, src=None, hashes=None, package_name=None, o
       package_name (str): If given, overrides `name` for the name of the package to look for.
       outs (list): List of output files. Defaults to a directory named the same as `name`.
       post_install_commands (list): Commands to run after 'install'.
-      patch (src | list): Patch file to apply after install to fix any upstream code that has
+      patch (str | list): Patch file to apply after install to fix any upstream code that has
                           done bad things.
       licences (list): Licences that this rule is subject to.
       test_only (bool): If True, this library can only be used by tests.
@@ -404,7 +404,7 @@ def python_wheel(name, version=None, src=None, hashes=None, package_name=None, o
     """
     outs = outs or [name]
     deps = deps or []
-    package_name = package_name or name
+    package_name = package_name or name.replace('-', '_')
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:
         raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly '
