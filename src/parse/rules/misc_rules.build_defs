@@ -511,6 +511,9 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
             compression='gzip', visibility=None, labels=None):
     """Defines a rule to create a tarball containing outputs of other rules.
 
+    File mode and ownership are preserved. However, the atime and mtime of all
+    files will be set to 1 Jan 1970 00:00:00.
+
     Args:
       name (str): Rule name
       srcs (list): Source files to include in the tarball
@@ -537,15 +540,27 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
                              'explicit flag for "compression"')
     else:
         compression, extension = _COMPRESSION.get(compression, ('-a', ''))
+
+    out = out or name + '.tar' + extension
+    # Unlike the rest of the compressions, gzip preserves the file's (the tar)
+    # timestamp by default, making the output unreproducible.
+    # Hence the compression is done with the -n flag in a separate step
+    if extension == '.gz' or out.endswith('.gz'):
+        archive_cmd = 'tar -c * | gzip -n > $OUT'
+    else:
+        archive_cmd = 'tar %s -cf $OUT *' % compression
+
     build_rule(
         name=name,
         cmd=' && '.join([
             'mkdir -p _tmp/' + subdir,
-            'cp -r $(locations :_%s#files) _tmp/%s' % (name, subdir),
+            'cp -pr $(locations :_%s#files) _tmp/%s' % (name, subdir),
             'cd _tmp',
-            'tar %s -cf $OUT *' % compression,
+            # not using tar's --mtime because it's only available in GNU tar
+            'find . -exec touch -t 197001010000.00 {} +',
+            archive_cmd
         ]),
-        outs=[out or name + '.tar' + extension],
+        outs=[out],
         deps=deps,
         visibility=visibility,
         labels=(labels or []) + ['tar'],

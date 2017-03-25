@@ -2838,6 +2838,8 @@ This is just a convenience wrapper around remote_file but is somewhat clearer to
     <p><pre class="rule"><code>tarball(name, srcs, out=None, deps=None, subdir=None, compression=gzip, visibility=None, labels=None)</code></pre></p>
 
     <p>Defines a rule to create a tarball containing outputs of other rules.</p>
+    <p>
+    File mode and ownership are preserved. However, the atime and mtime of all files will be set to 1 Jan 1970 00:00:00.</p>
 
     <table>
       <thead>
