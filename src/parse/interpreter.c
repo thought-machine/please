@@ -87,7 +87,7 @@ int InitialiseInterpreter(char* parser_location) {
   reg("_add_dependency", "char* (*)(size_t, char*, char*, uint8)", AddDependency);
   reg("_add_output", "char* (*)(size_t, char*, char*)", AddOutputPost);
   reg("_add_licence_post", "char* (*)(size_t, char*, char*)", AddLicencePost);
-  reg("_set_command", "char* (*)(size_t, char*, char*)", GetCommand);
+  reg("_get_command", "char* (*)(size_t, char*, char*)", GetCommand);
   reg("_set_command", "char* (*)(size_t, char*, char*, char*)", SetCommand);
   reg("_is_valid_target_name", "uint8 (*)(char*)", IsValidTargetName);
   return 0;
