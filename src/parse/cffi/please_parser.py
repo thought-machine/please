@@ -436,6 +436,7 @@ def _get_globals(c_package, c_package_name):
     local_globals['add_exported_dep'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, True))
     local_globals['add_out'] = lambda target, out: _check_c_error(_add_output(c_package, target, out))
     local_globals['add_licence'] = lambda name, licence: _check_c_error(_add_licence_post(c_package, name, licence))
+    local_globals['get_command'] = lambda name, config='': _get_command(c_package, name, config)
     local_globals['set_command'] = lambda name, config, command='': _check_c_error(_set_command(c_package, name, config, command))
     local_globals['package'] = lambda **kwargs: package(local_globals, **kwargs)
     # Make these available to other scripts so they can get it without import.

@@ -221,6 +221,17 @@ func TestLabels(t *testing.T) {
 	assert.True(t, target.HasLabel("test"))
 }
 
+func TestGetCommandConfig(t *testing.T) {
+	target := makeTarget("//src/core:target1", "PUBLIC")
+	target.Command = "test1"
+	assert.Equal(t, "test1", target.GetCommandConfig(""))
+	target.Command = ""
+	target.AddCommand("opt", "test3")
+	target.AddCommand("dbg", "test4")
+	assert.Equal(t, "test3", target.GetCommandConfig("opt"))
+	assert.Equal(t, "test4", target.GetCommandConfig("dbg"))
+}
+
 func TestGetCommand(t *testing.T) {
 	state := NewBuildState(10, nil, 2, DefaultConfiguration())
 	state.Config.Build.Config = "dbg"
