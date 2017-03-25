@@ -74,7 +74,11 @@ func main() {
 					name := strings.ToLower(subt.Name)
 					example := subt.Tag.Get("example")
 					preamble := fmt.Sprintf("${BOLD_YELLOW}[%s]${RESET}\n${YELLOW}%s${RESET} = ${GREEN}%s${RESET}\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example))
-					help = strings.Replace(help, "\\n", "\n", -1)
+					help = strings.Replace(help, "\\n", "\n", -1) + "\n"
+					if v := subt.Tag.Get("var"); v != "" {
+						help += fmt.Sprintf("\nThis variable is exposed to BUILD rules via the variable ${BOLD_CYAN}CONFIG.%s${RESET},\n"+
+							"and can be overriden package-locally via ${GREEN}package${RESET}(${YELLOW}%s${RESET}='${GREY}<value>${RESET}').\n", v, strings.ToLower(v))
+					}
 					o.Topics[name] = preamble + help
 					subfields = append(subfields, "  "+name)
 				} else {
