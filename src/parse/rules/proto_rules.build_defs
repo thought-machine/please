@@ -302,12 +302,7 @@ def proto_languages():
         'py': proto_language(
             language = 'python',
             extensions = ['_pb2.py'],
-            func = lambda name, srcs, deps, test_only: python_library(
-                name = name,
-                srcs = srcs,
-                deps = deps,
-                test_only = test_only,
-            ),
+            func = python_library,
             deps = [CONFIG.PROTO_PYTHON_DEP],
         ),
     }
@@ -341,12 +336,7 @@ def grpc_languages():
         'py': proto_language(
             language = 'python',
             extensions = ['_pb2.py'],
-            func = lambda name, srcs, deps, test_only: python_library(
-                name = name,
-                srcs = srcs,
-                deps = deps,
-                test_only = test_only,
-            ),
+            func = python_library,
             protoc_flags = ['--plugin=protoc-gen-grpc-python=$TOOL2', '--grpc-python_out=$TMP_DIR'],
             tools = [CONFIG.GRPC_PYTHON_PLUGIN],
             deps = [CONFIG.PROTO_PYTHON_DEP, CONFIG.GRPC_PYTHON_DEP],
