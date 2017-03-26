@@ -35,11 +35,11 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
       test_only (bool): If True, can only be used in test rules.
       root_dir (str): The directory that the protos are compiled relative to. Useful if your
                       proto files have import statements that are not relative to the repo root.
+      protoc_flags (list): Additional flags to pass to protoc.
       python_deps (list): Deprecated, replaced by languages.
       java_deps (list): Deprecated, replaced by languages.
       go_deps (list): Deprecated, replaced by languages.
       cc_deps (list): Deprecated, replaced by languages.
-      protoc_flags (list): Deprecated, replaced by languages.
     """
     languages = _merge_dicts(languages or CONFIG.PROTO_LANGUAGES, proto_languages())
     labels = labels or []
@@ -54,7 +54,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
 
     for language, plugin in sorted(languages.items()):
         outs = [src.replace('.proto', ext) for src in file_srcs for ext in plugin['extensions']] if plugin['use_file_names'] else []
-        cmd = '$TOOL1 --%s_out=$TMP_DIR %s' % (plugin['language'], ' '.join(plugin['protoc_flags']))
+        cmd = '$TOOL1 --%s_out=$TMP_DIR %s %s' % (plugin['language'], ' '.join(plugin['protoc_flags']), ' '.join(protoc_flags or []))
         if root_dir:
             cmd = 'export RD="%s"; cd $RD; %s ${SRCS//$RD\\//} && cd $TMP_DIR' % (root_dir, cmd.replace('$TMP_DIR', '.'))
         else:
@@ -63,7 +63,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
 
         # TODO(pebers): genericise these bits?
         if language == 'py' and CONFIG.PROTO_PYTHON_PACKAGE:
-            cmds.append('sed -i -e "s/from google.protobuf/from %s/g" *_pb2.py' %
+            cmds.append('find . -name "*_pb2.py" | xargs sed -i -e "s/from google.protobuf/from %s/g"' %
                         CONFIG.PROTO_PYTHON_PACKAGE)
         elif language == 'go':
             base_path = get_base_path()
@@ -134,21 +134,22 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_
       test_only (bool): If True, this rule can only be used by test rules.
       root_dir (str): The directory that the protos are compiled relative to. Useful if your
                       proto files have import statements that are not relative to the repo root.
+      protoc_flags (list): Additional flags to pass to protoc.
       python_deps (list): Deprecated, replaced by languages.
       java_deps (list): Deprecated, replaced by languages.
       go_deps (list): Deprecated, replaced by languages.
       cc_deps (list): Deprecated, replaced by languages.
-      protoc_flags (list): Deprecated, replaced by languages.
     """
     proto_library(
         name = name,
         srcs = srcs,
-        deps=deps,
-        languages=_merge_dicts(languages or CONFIG.PROTO_LANGUAGES, grpc_languages()),
-        visibility=visibility,
-        labels=(labels or []) + _DEFAULT_GRPC_LABELS,
-        test_only=test_only,
-        root_dir=root_dir,
+        deps = deps,
+        languages = _merge_dicts(languages or CONFIG.PROTO_LANGUAGES, grpc_languages()),
+        visibility = visibility,
+        labels = (labels or []) + _DEFAULT_GRPC_LABELS,
+        test_only = test_only,
+        root_dir = root_dir,
+        protoc_flags = protoc_flags,
     )
 
 
@@ -158,7 +159,7 @@ def _go_path_mapping(grpc):
     def _map_go_paths(rule_name):
         mapping = ',M'.join(get_labels(rule_name, 'proto:go-map:'))
         cmd = get_command(rule_name)
-        new_cmd = cmd.replace('go_out=$TMP_DIR', 'go_out=%sM%s:$TMP_DIR' % (grpc_plugin, mapping))
+        new_cmd = cmd.replace('--go_out=', '--go_out=%sM%s:' % (grpc_plugin, mapping))
         set_command(rule_name, new_cmd)
     return _map_go_paths
 
@@ -250,6 +251,7 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
                 pkg_config_libs = ['protobuf'],
+                compiler_flags = ['-I$PKG'],
             ),
         ),
         'cc_hdrs': proto_language(
@@ -325,7 +327,7 @@ def grpc_languages():
                 deps = deps,
                 test_only = test_only,
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'],
-                compiler_flags = ['-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
+                compiler_flags = ['-I$PKG', '-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
             ),
             protoc_flags = ['--plugin=protoc-gen-grpc-cc=$TOOL2', '--grpc-cc_out=$TMP_DIR'],
             tools = [CONFIG.GRPC_CC_PLUGIN],
