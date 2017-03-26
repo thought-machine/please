@@ -11,7 +11,7 @@ DOCSTRING_RE = re.compile(r'^( *[^ ]+) (\([^\)]+\)):', flags=re.MULTILINE)
 def main(filename):
     with open(filename) as f:
         data = json.load(f)
-    online_help = lambda f: 'Online help is available at ${BLUE}https://please.build/lexicon.html#%s${RESET}.\n' % f
+    online_help = lambda f: '${RESET}Online help is available at ${BLUE}https://please.build/lexicon.html#%s${RESET}.\n' % f
     m = lambda k, v: '${BOLD_YELLOW}%s${RESET}(%s)\n\n%s\n\n%s' % (k, ', '.join(
         '${GREEN}%s${RESET}' % a['name'] for a in v['args']), colourise(v['docstring'], v['args'], data['functions']), online_help(k))
 
