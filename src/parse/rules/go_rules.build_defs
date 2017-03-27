@@ -270,7 +270,7 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
                      has absolutely no external dependencies.
                      Not yet tested against cgo.
     """
-    if not srcs:
+    if main:
         log.warning('"main" on go_binary is deprecated, prefer "srcs" instead.')
     go_library(
         name='_%s#lib' % name,
