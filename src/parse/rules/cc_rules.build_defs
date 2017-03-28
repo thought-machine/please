@@ -348,6 +348,7 @@ def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None
             hdrs=hdrs,
             private_hdrs=private_hdrs,
             deps=deps,
+            pkg_config_libs=pkg_config_libs,
             compiler_flags=compiler_flags,
             test_only=test_only,
             _c=_c,
