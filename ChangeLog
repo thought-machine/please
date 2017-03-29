@@ -1,5 +1,14 @@
+Version 7.8.2
+-------------
+
+    * Correctly pass `pkg_config_libs` through `cc_binary` to `cc_library` (#190).
+
+
 Version 7.8.1
+-------------
+
     * Fixate tarball timestamps #188
+
 
 Version 7.8.0
 -------------
