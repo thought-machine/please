@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path"
 	"regexp"
@@ -63,6 +64,12 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		// Similarly, TOOL is only available on rules with a single tool.
 		if len(target.Tools) == 1 {
 			env = append(env, "TOOL="+toolPath(state, target.Tools[0]))
+		}
+		if len(target.Tools) >= 1 {
+			// If there are multiple tools, you can use TOOL1, TOOL2 etc.
+			for i, tool := range target.Tools {
+				env = append(env, fmt.Sprintf("TOOL%d=%s", i+1, toolPath(state, tool)))
+			}
 		}
 		// Named source groups if the target declared any.
 		for name, srcs := range target.NamedSources {

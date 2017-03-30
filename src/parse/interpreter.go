@@ -451,6 +451,15 @@ func AddLicencePost(cPackage uintptr, cTarget *C.char, cLicence *C.char) *C.char
 	return nil
 }
 
+//export GetCommand
+func GetCommand(cPackage uintptr, cTarget *C.char, cConfig *C.char) *C.char {
+	target, err := getTargetPost(cPackage, cTarget)
+	if err != nil {
+		log.Fatalf("%s", err) // Too hard to signal this one back to Python.
+	}
+	return C.CString(target.GetCommandConfig(C.GoString(cConfig)))
+}
+
 //export SetCommand
 func SetCommand(cPackage uintptr, cTarget *C.char, cConfigOrCommand *C.char, cCommand *C.char) *C.char {
 	target, err := getTargetPost(cPackage, cTarget)

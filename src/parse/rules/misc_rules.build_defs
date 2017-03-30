@@ -305,7 +305,7 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
       test_only (bool): If true the rule is only visible to test targets.
       deps (list): List of extra dependencies for this rule.
     """
-    build_rule(
+    return build_rule(
         name=name,
         cmd='echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (url, url),
         outs=[out or url[url.rfind('/') + 1:]],
@@ -319,7 +319,7 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
     )
 
 
-def github_file(name, repo, file, revision='master', hash=None, visibility=None, test_only=False):
+def github_file(name, repo, file, revision='master', out=None, hash=None, visibility=None, test_only=False):
     """Defines a rule to fetch a file from Github.
 
     This is just a convenience wrapper around remote_file but is somewhat clearer to write.
@@ -329,6 +329,7 @@ def github_file(name, repo, file, revision='master', hash=None, visibility=None,
       repo (str): Repository to fetch from (e.g. thought-machine/please).
       file (str): File in the repo to fetch (e.g. src/parse/rules/misc_rules.py).
       revision (str): Git revision to fetch from. Defaults to most recent on master.
+      out (str): Name of the output file
       hash (str): Hash of downloaded file. You should set 'revision' if you set this.
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If true the rule is only visible to test targets.
@@ -336,9 +337,10 @@ def github_file(name, repo, file, revision='master', hash=None, visibility=None,
     if revision == 'master' and hash:
         log.warning('Your github_file rule fetches from master but is hash verified; this '
                     'is prone to breaking if upstream changes at any point.')
-    remote_file(
+    return remote_file(
         name = name,
         url = join_path('https://raw.githubusercontent.com', repo, revision, file),
+        out = out,
         hashes = [hash] if hash else None,
         visibility = visibility,
         test_only = test_only,

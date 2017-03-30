@@ -618,6 +618,14 @@ func (target *BuildTarget) GetCommand() string {
 	return target.getCommand(target.Commands, target.Command)
 }
 
+// GetCommandConfig returns the command we should use to build this target for the given config.
+func (target *BuildTarget) GetCommandConfig(config string) string {
+	if config == "" {
+		return target.Command
+	}
+	return target.Commands[config]
+}
+
 // GetTestCommand returns the command we should use to test this target for the current config.
 func (target *BuildTarget) GetTestCommand() string {
 	return target.getCommand(target.TestCommands, target.TestCommand)

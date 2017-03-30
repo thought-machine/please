@@ -53,8 +53,12 @@ def arg_checks(node):
                 yield 'assert not %s or isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
                     arg, arg, rtype, arg, node.name, doc)
         else:
-            yield 'assert isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
-                arg, rtype, arg, node.name, doc)
+            if doc == 'function':
+                yield 'assert callable(%s), "Argument %s to %s must be callable"' % (
+                    arg, arg, node.name)
+            else:
+                yield 'assert isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
+                    arg, rtype, arg, node.name, doc)
 
 
 def process(filename):

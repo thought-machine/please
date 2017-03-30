@@ -67,7 +67,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
         )
         deps.append(':_%s#zip' % name)
 
-    filegroup(
+    return filegroup(
         name=name,
         srcs=(srcs or []) + (resources or []),
         deps=deps,
