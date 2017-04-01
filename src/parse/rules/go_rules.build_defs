@@ -456,8 +456,16 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         if not binary:
             post_build = _extra_outs(get)
     cmd = [
-        'export GOPATH=$TMP_DIR:$TMP_DIR/$PKG',
+        # When PKG_DIR == ".", the install location likely coincides with the
+        # dependencies of this go_get (i.e they are all in the root's BUILD
+        # file). Thus we need to note which compiled .a files are already
+        # provided by the deps and filter these out from the
+        # output
+        'if [ -d $PKG_DIR ]; then '
+        'export EXISTING="$(find $PKG_DIR -name *.a)"; else export EXISTING=""; fi',
+
         'rm -rf pkg src',
+        'export GOPATH=$TMP_DIR:$TMP_DIR/$PKG',
         'go get -d ' + get,
     ]
     subdir = 'src/' + (get[:-4] if get.endswith('/...') else get)
@@ -468,7 +476,9 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$(location %s)' % (subdir, patch))
     cmd.append('go install -gcflags "-trimpath $TMP_DIR" ' + ' '.join([get] + (install or [])))
     # Remove anything that was there already.
-    cmd.append('if [ -d $PKG_DIR ]; then find $PKG_DIR -name "*.a" | sed -e "s|$PKG_DIR/||g" | xargs rm -f; fi')
+    cmd.append('if [ -d $PKG_DIR ]; then '
+               'if [ $PKG_DIR = "." ]; then echo $EXISTING | xargs rm -f; '
+               'else echo $EXISTING | sed -e "s|$PKG_DIR/||g" | xargs rm -f; fi; fi')
     if not binary:
         cmd.extend([
             'find . -name .git | xargs rm -rf',
