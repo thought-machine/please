@@ -97,6 +97,8 @@ type BuildState struct {
 	NeedHashesOnly bool
 	// True if we only want to prepare build directories (ie. 'plz build --prepare')
 	PrepareOnly bool
+	// True if we're going to run a shell after builds are prepared.
+	PrepareShell bool
 	// Number of times to run each test target. 0 == once each, plus flakes if necessary.
 	NumTestRuns int
 	// True to clean working directories after successful builds.
