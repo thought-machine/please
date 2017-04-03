@@ -20,6 +20,7 @@ import (
 	"core"
 	"export"
 	"gc"
+	"hashes"
 	"help"
 	"metrics"
 	"output"
@@ -92,6 +93,7 @@ var opts struct {
 
 	Hash struct {
 		Detailed bool `long:"detailed" description:"Produces a detailed breakdown of the hash"`
+		Update   bool `short:"u" long:"update" description:"Rewrites the hashes in the BUILD file to the new values"`
 		Args     struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
@@ -271,6 +273,9 @@ var buildFunctions = map[string]func() bool{
 			for _, target := range state.ExpandOriginalTargets() {
 				build.PrintHashes(state, state.Graph.TargetOrDie(target))
 			}
+		}
+		if opts.Hash.Update {
+			hashes.RewriteHashes(state, state.ExpandOriginalTargets())
 		}
 		return success
 	},
