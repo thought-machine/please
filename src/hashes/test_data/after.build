@@ -1,0 +1,21 @@
+remote_file(
+    name = 'test1',
+    hashes = ['b9643f8154a9e9912d730a931d329afc82a44a52'],
+    url = 'http://localhost/test_file',
+)
+
+maven_jar(
+    name = 'test2',
+    id = 'net.thoughtmachine.please:test2:1.0',
+    hash = 'bd79dd61c1494072271f3d13350ccbc26c25a09e',
+)
+
+maven_jar(
+    name = 'test3',
+    id = 'net.thoughtmachine.please:test3:1.0',
+    binary = True,
+    hashes = [
+        'test_x86: 94ead0b0422cad925910e5f8b6f9bd93b309f8f0',
+        'test_armhf: 1ff337975be0ae566b7e961932d82f5fe78b1cdc',
+    ],
+)

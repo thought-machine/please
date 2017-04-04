@@ -9,6 +9,7 @@ go_binary(
         '//src/core',
         '//src/export',
         '//src/gc',
+        '//src/hashes',
         '//src/help',
         '//src/metrics',
         '//src/output',
