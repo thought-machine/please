@@ -92,7 +92,12 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
         )
 
         lang_name = '_%s#%s' % (name, language)
-        provides[language] = plugin['func'](lang_name, [protoc_rule], deps + plugin['deps'], test_only) or (':' + lang_name)
+        provides[language] = plugin['func'](
+            name = lang_name,
+            srcs = [protoc_rule],
+            deps = deps + plugin['deps'],
+            test_only = test_only
+        ) or (':' + lang_name)
 
     # This simply collects the sources, it's used for other proto_library rules to depend on.
     filegroup(
