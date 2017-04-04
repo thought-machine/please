@@ -77,6 +77,7 @@ var opts struct {
 
 	Build struct {
 		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		Shell      bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
 		ShowStatus bool     `long:"show_status" hidden:"true" description:"Show status of each target in output after build"`
 		Args       struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
@@ -529,7 +530,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
-	state.PrepareOnly = opts.Build.Prepare
+	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell
+	state.PrepareShell = opts.Build.Shell
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
