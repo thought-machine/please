@@ -414,9 +414,9 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         srcs.append(':_%s#main' % name)
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
     test_cmd = None if not CONFIG.CPP_COVERAGE else {
-        'opt': '$TEST',
-        'dbg': '$TEST',
-        'cover': '$TEST; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R',
+        'opt': '$TEST %s' % flags,
+        'dbg': '$TEST %s' % flags,
+        'cover': '$TEST %s; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R' % flags,
     }
     if srcs:
         cc_library(
@@ -424,6 +424,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
             srcs=srcs,
             hdrs=hdrs,
             deps=deps,
+            pkg_config_libs=pkg_config_libs,
             compiler_flags=compiler_flags,
             test_only=True,
             alwayslink=True,
