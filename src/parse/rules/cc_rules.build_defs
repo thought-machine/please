@@ -723,7 +723,8 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
     """Applies commands from transitive labels to a cc_binary, cc_test or cc_shared_object rule."""
     def apply_transitive_labels(name):
         labels = get_labels(name, 'cc:')
-        flags = [l[3:] for l in labels if l.startswith('ld:')]
+        linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
+        flags = [linker_prefix + l[3:] for l in labels if l.startswith('ld:')]
         flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
         # ./ here because some weak linkers don't realise ./lib.a is the same file as lib.a
         # and report duplicate symbol errors as a result.
