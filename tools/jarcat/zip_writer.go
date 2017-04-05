@@ -11,12 +11,14 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 	"zip"
 
 	"gopkg.in/op/go-logging.v1"
 )
 
 var log = logging.MustGetLogger("zip_writer")
+var modTime = time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
 
 // AddZipFile copies the contents of a zip file into an existing zip writer.
 func AddZipFile(w *zip.Writer, filepath string, include, exclude []string, stripPrefix string, strict bool, renameDirs map[string]string) error {
@@ -96,9 +98,6 @@ outer:
 		if _, err := r2.Seek(start, 0); err != nil {
 			return err
 		}
-		// Make these deterministic.
-		f.FileHeader.ModifiedDate = 0
-		f.FileHeader.ModifiedTime = 0
 		if err := addFile(w, &f.FileHeader, r2, f.CRC32); err != nil {
 			return err
 		}
@@ -242,6 +241,7 @@ func HandleConcatenatedFiles(w *zip.Writer) error {
 func addFile(w *zip.Writer, fh *zip.FileHeader, r io.Reader, crc uint32) error {
 	fh.Flags = 0 // we're not writing a data descriptor after the file
 	comp := func(w io.Writer) (io.WriteCloser, error) { return nopCloser{w}, nil }
+	fh.SetModTime(modTime)
 	fw, err := w.CreateHeaderWithCompressor(fh, comp, fixedCrc32{value: crc})
 	if err == nil {
 		_, err = io.CopyN(fw, r, int64(fh.CompressedSize64))
@@ -251,7 +251,13 @@ func addFile(w *zip.Writer, fh *zip.FileHeader, r io.Reader, crc uint32) error {
 
 // WriteFile writes a complete file to the writer.
 func WriteFile(w *zip.Writer, filename string, data []byte) error {
-	if fw, err := w.Create(filename); err != nil {
+	fh := zip.FileHeader{
+		Name:   filename,
+		Method: zip.Deflate,
+	}
+	fh.SetModTime(modTime)
+
+	if fw, err := w.CreateHeader(&fh); err != nil {
 		return err
 	} else if _, err := fw.Write(data); err != nil {
 		return err
@@ -267,6 +273,7 @@ func WriteDir(w *zip.Writer, filename string) error {
 		Name:   filename,
 		Method: zip.Store,
 	}
+	fh.SetModTime(modTime)
 	if _, err := w.CreateHeader(&fh); err != nil {
 		return err
 	}
