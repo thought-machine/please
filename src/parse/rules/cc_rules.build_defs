@@ -679,7 +679,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags=''):
     opt_flags = _build_flags(compiler_flags, pkg_config_libs, c=c)
     cc_tool, tools = _tool_path(CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL)
     ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
-    cmd_template = '%s -c -I . ${SRCS_SRCS} %s%s && %s rcs $OUT *.o'
+    cmd_template = '%s -c -I . ${SRCS_SRCS} %s %s && %s rcs $OUT *.o'
     cmds = {
         'dbg': cmd_template % (cc_tool, dbg_flags, extra_flags, ar_tool),
         'opt': cmd_template % (cc_tool, opt_flags, extra_flags, ar_tool),
