@@ -1,4 +1,13 @@
+Version 7.9.0
+-------------
+
+    * Rewrite of proto_library and grpc_library rules. It's now possible to configure new
+      languages externally for plugins such as grpc-gateway.
     * Add <root>/third_party/ to the default GOPATH
+    * Added --shell flag to plz build, which is like --prepare but opens a shell in the
+      work directory with an appropriate environment set.
+    * Added --update flag to plz hash to rewrite hashes in a BUILD file.
+
 
 Version 7.8.2
 -------------

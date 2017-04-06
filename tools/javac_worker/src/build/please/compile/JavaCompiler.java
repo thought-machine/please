@@ -81,6 +81,14 @@ public class JavaCompiler {
         }
     }
 
+    /**
+     * newCompiler creates a new compiler instance.
+     * This is added to allow subclasses to define their own compiler supplier (e.g. ErrorProne).
+     */
+    public javax.tools.JavaCompiler newCompiler() {
+        return ToolProvider.getSystemJavaCompiler();
+    }
+
     private BuildResponse reallyBuild(BuildRequest request) throws IOException {
         BuildResponse.Builder builder = BuildResponse.newBuilder();
         // Try to create the output directory
@@ -95,7 +103,7 @@ public class JavaCompiler {
         String tmpDir = request.getTempDir() + "/_tmp";
         DiagnosticReporter reporter = new DiagnosticReporter(builder);
         StringWriter writer = new StringWriter();
-        javax.tools.JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        javax.tools.JavaCompiler compiler = newCompiler();
         StandardJavaFileManager fileManager = compiler.getStandardFileManager(reporter, null, null);
         ArrayList<String> srcs = new ArrayList<String>();
         for (String src : request.getSrcsList()) {
