@@ -304,8 +304,10 @@ def cc_shared_object(name, srcs=None, hdrs=None, out='', compiler_flags=None, li
         visibility=visibility,
         cmd=cmds,
         building_description='Linking...',
+        binary=True,
         needs_transitive_deps=True,
         output_is_complete=True,
+        provides=provides,
         tools=tools,
         test_only=test_only,
         requires=['cc', 'cc_hdrs'],
@@ -414,9 +416,9 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         srcs.append(':_%s#main' % name)
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
     test_cmd = None if not CONFIG.CPP_COVERAGE else {
-        'opt': '$TEST',
-        'dbg': '$TEST',
-        'cover': '$TEST; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R',
+        'opt': '$TEST %s' % flags,
+        'dbg': '$TEST %s' % flags,
+        'cover': '$TEST %s; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R' % flags,
     }
     if srcs:
         cc_library(
@@ -424,6 +426,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
             srcs=srcs,
             hdrs=hdrs,
             deps=deps,
+            pkg_config_libs=pkg_config_libs,
             compiler_flags=compiler_flags,
             test_only=True,
             alwayslink=True,
@@ -679,7 +682,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags=''):
     opt_flags = _build_flags(compiler_flags, pkg_config_libs, c=c)
     cc_tool, tools = _tool_path(CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL)
     ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
-    cmd_template = '%s -c -I . ${SRCS_SRCS} %s%s && %s rcs $OUT *.o'
+    cmd_template = '%s -c -I . ${SRCS_SRCS} %s %s && %s rcs $OUT *.o'
     cmds = {
         'dbg': cmd_template % (cc_tool, dbg_flags, extra_flags, ar_tool),
         'opt': cmd_template % (cc_tool, opt_flags, extra_flags, ar_tool),
@@ -720,7 +723,8 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
     """Applies commands from transitive labels to a cc_binary, cc_test or cc_shared_object rule."""
     def apply_transitive_labels(name):
         labels = get_labels(name, 'cc:')
-        flags = [l[3:] for l in labels if l.startswith('ld:')]
+        linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
+        flags = [linker_prefix + l[3:] for l in labels if l.startswith('ld:')]
         flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
         # ./ here because some weak linkers don't realise ./lib.a is the same file as lib.a
         # and report duplicate symbol errors as a result.
