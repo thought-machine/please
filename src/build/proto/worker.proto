@@ -18,6 +18,8 @@ service Worker {
 message BuildRequest {
     // The rule label
     string rule = 1;
+    // Labels applied to this build rule.
+    repeated string labels = 5;
     // The temporary directory to build the target in.
     string temp_dir = 2;
     // List of source files to compile

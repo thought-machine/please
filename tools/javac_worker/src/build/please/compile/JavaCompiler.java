@@ -85,7 +85,7 @@ public class JavaCompiler {
      * newCompiler creates a new compiler instance.
      * This is added to allow subclasses to define their own compiler supplier (e.g. ErrorProne).
      */
-    public javax.tools.JavaCompiler newCompiler() {
+    public javax.tools.JavaCompiler newCompiler(BuildRequest request) {
         return ToolProvider.getSystemJavaCompiler();
     }
 
@@ -103,7 +103,7 @@ public class JavaCompiler {
         String tmpDir = request.getTempDir() + "/_tmp";
         DiagnosticReporter reporter = new DiagnosticReporter(builder);
         StringWriter writer = new StringWriter();
-        javax.tools.JavaCompiler compiler = newCompiler();
+        javax.tools.JavaCompiler compiler = newCompiler(request);
         StandardJavaFileManager fileManager = compiler.getStandardFileManager(reporter, null, null);
         ArrayList<String> srcs = new ArrayList<String>();
         for (String src : request.getSrcsList()) {
