@@ -7,8 +7,11 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 	"zip"
 )
+
+var expectedModTime = time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
 
 func TestZipWriter(t *testing.T) {
 	// Have to write an actual file for zip.OpenReader to use later.
@@ -42,6 +45,12 @@ func TestZipWriter(t *testing.T) {
 		if f.Name != files[i].Name {
 			t.Errorf("File %d has wrong name: expected %s, was %s", i, files[i].Name, f.Name)
 		}
+
+		if !f.ModTime().Equal(expectedModTime) {
+			t.Errorf("File %d has an unexpected modification date: expected %s, was %s",
+				i, expectedModTime, f.ModTime)
+		}
+
 		fr, err := f.Open()
 		if err != nil {
 			t.Errorf("Failed to reopen file %d [%s]: %s", i, f.Name, err)
