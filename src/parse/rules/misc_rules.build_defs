@@ -559,7 +559,7 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
             'cp -pr $(locations :_%s#files) _tmp/%s' % (name, subdir),
             'cd _tmp',
             # not using tar's --mtime because it's only available in GNU tar
-            'find . -exec touch -t 197001010000.00 {} +',
+            'find . -exec touch -t 200001010000.00 {} +',
             archive_cmd
         ]),
         outs=[out],
