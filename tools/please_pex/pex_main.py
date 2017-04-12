@@ -39,7 +39,7 @@ def override_import(package=MODULE_DIR):
 
     def _override_import(name, globals=None, locals=None, fromlist=None, level=DEFAULT_IMPORT_LEVEL):
         module_name, _, _ = name.partition('.')
-        if module_name not in sys.modules and module_name in modules and level < 1:
+        if module_name in modules and level < 1:
             prefix = modules[module_name] + '.'
             fq_name = prefix + name
             mod = original_import(fq_name, globals, locals, fromlist, level=ABSOLUTE_IMPORT_ONLY)
