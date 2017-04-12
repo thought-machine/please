@@ -274,6 +274,9 @@ def cc_shared_object(name, srcs=None, hdrs=None, out='', compiler_flags=None, li
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
       includes (list): Include directories to be added to the compiler's lookup path.
     """
+    linker_flags = linker_flags or []
+    if CONFIG.DEFAULT_LDFLAGS:
+        linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     deps = deps or []
     provides = None
     if srcs:
