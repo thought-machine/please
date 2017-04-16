@@ -660,9 +660,9 @@ def _binary_build_flags(linker_flags, pkg_config_libs, shared=False, alwayslink=
     """Builds flags that we'll pass to the linker invocation."""
     pkg_config_cmd = ' '.join('`pkg-config --libs %s`' % x for x in pkg_config_libs or [])
     objs = '`find . -name "*.o" -or -name "*.a" | sort`'
-    if not shared:
-        objs = alwayslink + ' ' + objs
     linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
+    if not shared and alwayslink:
+        objs = '%s--whole-archive %s %s--no-whole-archive %s' % (linker_prefix, alwayslink, linker_prefix, objs)
     build_id_flag = ''
     if CONFIG.OS != 'darwin':
         # We don't order libraries in a way that is especially useful for the linker, which is
