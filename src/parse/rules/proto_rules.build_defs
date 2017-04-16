@@ -58,7 +58,7 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             cmd = 'export RD="%s"; cd $RD; %s ${SRCS//$RD\\//} && cd $TMP_DIR' % (root_dir, cmd.replace('$TMP_DIR', '.'))
         else:
             cmd += ' ${SRCS}'
-        cmds = [cmd, 'mv -f ${PKG}/* .']
+        cmds = [cmd, '(mv -f ${PKG}/* .; true)']
 
         # TODO(pebers): genericise these bits?
         if language == 'py' and CONFIG.PROTO_PYTHON_PACKAGE:
