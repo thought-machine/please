@@ -9,7 +9,7 @@ import (
 
 func TestExpandOriginalTargets(t *testing.T) {
 	state := NewBuildState(1, nil, 4, DefaultConfiguration())
-	state.OriginalTargets = []BuildLabel{{"src/core", "all"}, {"src/parse", "parse"}}
+	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}, {PackageName: "src/parse", Name: "parse"}}
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
 
@@ -27,14 +27,14 @@ func TestExpandOriginalTargets(t *testing.T) {
 	// //src/parse:parse doesn't have 'go' but was explicitly requested so will be
 	// added anyway.
 	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{
-		{"src/core", "target1"},
-		{"src/parse", "parse"},
+		{PackageName: "src/core", Name: "target1"},
+		{PackageName: "src/parse", Name: "parse"},
 	})
 }
 
 func TestExpandOriginalTestTargets(t *testing.T) {
 	state := NewBuildState(1, nil, 4, DefaultConfiguration())
-	state.OriginalTargets = []BuildLabel{{"src/core", "all"}}
+	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}}
 	state.NeedTests = true
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
@@ -46,16 +46,16 @@ func TestExpandOriginalTestTargets(t *testing.T) {
 	addTarget(state, "//src/core:target4_test", "go", "manual")
 	// Only the one target comes out here; it must be a test and otherwise follows
 	// the same include / exclude logic as the previous test.
-	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{"src/core", "target1_test"}})
+	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{PackageName: "src/core", Name: "target1_test"}})
 }
 
 func TestExpandVisibleOriginalTargets(t *testing.T) {
 	state := NewBuildState(1, nil, 4, DefaultConfiguration())
-	state.OriginalTargets = []BuildLabel{{"src/core", "all"}}
+	state.OriginalTargets = []BuildLabel{NewBuildLabel("src/core", "all")}
 
 	addTarget(state, "//src/core:target1", "py")
 	addTarget(state, "//src/core:_target1#zip", "py")
-	assert.Equal(t, state.ExpandVisibleOriginalTargets(), BuildLabels{{"src/core", "target1"}})
+	assert.Equal(t, state.ExpandVisibleOriginalTargets(), BuildLabels{NewBuildLabel("src/core", "target1")})
 }
 
 func TestExpandOriginalSubTargets(t *testing.T) {

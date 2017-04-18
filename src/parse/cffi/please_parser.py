@@ -199,7 +199,7 @@ def _get_subinclude_target(url, hash):
     return '//%s:%s' % (_subinclude_package_name, name)
 
 
-def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=None, outs=None,
+def build_rule(globals_dict, package, name, cmd, test_cmd=None, arch=None, srcs=None, data=None, outs=None,
                deps=None, exported_deps=None, tools=None, labels=None, visibility=None, hashes=None,
                binary=False, test=False, test_only=None, building_description='Building...',
                needs_transitive_deps=False, output_is_complete=False, container=False,
@@ -239,6 +239,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                          ffi_string(name),
                          ffi_string('' if isinstance(cmd, Mapping) else cmd.strip()),
                          ffi_string('' if isinstance(test_cmd, Mapping) else test_cmd.strip() if test_cmd else None),
+                         ffi_string(arch),
                          binary,
                          test,
                          needs_transitive_deps,

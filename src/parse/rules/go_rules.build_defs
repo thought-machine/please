@@ -4,7 +4,7 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 
-_GOPATH = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
+_GOPATH = ' '.join('-I %s -I %s/pkg/$ARCH' % (p, p) for p in CONFIG.GOPATH.split(':'))
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
 _LINK_PKGS_CMD = 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done'
 
@@ -100,7 +100,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
         _LINK_PKGS_CMD,
         # It's also essential that the compiled .a files are under this prefix, otherwise gcimporter won't find them.
         'mkdir pkg',
-        'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
+        'ln -s $TMP_DIR pkg/$ARCH',
         'PATH="$PATH:%s" GOPATH="$TMP_DIR$(echo ":$(%s)" | sed "s/:$//g")" go generate $SRCS' % (path, gopath),
         'mv $PKG_DIR/*.go .',
         'ls *.go'

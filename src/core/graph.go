@@ -4,8 +4,11 @@
 
 package core
 
-import "sort"
-import "sync"
+import (
+	"fmt"
+	"sort"
+	"sync"
+)
 
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
@@ -25,14 +28,24 @@ type BuildGraph struct {
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
-	_, present := graph.targets[target.Label]
-	if present {
+	if _, present := graph.targets[target.Label]; present {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
 	graph.targets[target.Label] = target
 	// Check these reverse deps which may have already been added against this target.
-	revdeps, present := graph.pendingRevDeps[target.Label]
-	if present {
+	graph.linkPendingRevdeps(target.Label, target)
+
+	if target.Label.Arch != "" {
+		// Helps some stuff out to keep this guy in the graph twice.
+		// TODO(pebers): are other bits of code (e.g. query) liable to be confused by this?
+		graph.targets[target.Label.noArch()] = target
+		graph.linkPendingRevdeps(target.Label.noArch(), target)
+	}
+	return target
+}
+
+func (graph *BuildGraph) linkPendingRevdeps(label BuildLabel, target *BuildTarget) {
+	if revdeps, present := graph.pendingRevDeps[label]; present {
 		for revdep, originalTarget := range revdeps {
 			if originalTarget != nil {
 				graph.linkDependencies(graph.targets[revdep], originalTarget)
@@ -40,9 +53,8 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 				graph.linkDependencies(graph.targets[revdep], target)
 			}
 		}
-		delete(graph.pendingRevDeps, target.Label) // Don't need any more
+		delete(graph.pendingRevDeps, label) // Don't need any more
 	}
-	return target
 }
 
 // Adds a new package to the graph with given name.
@@ -58,8 +70,15 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 // Target retrieves a target from the graph by label
 func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
 	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return graph.targets[label]
+	target := graph.targets[label]
+	graph.mutex.RUnlock()
+	if target == nil && label.Arch != "" {
+		// Specified an architecture, we might need to clone a target at this point.
+		graph.mutex.Lock()
+		defer graph.mutex.Unlock()
+		return graph.maybeCloneTargetForArch(label)
+	}
+	return target
 }
 
 // TargetOrDie retrieves a target from the graph by label. Dies if the target doesn't exist.
@@ -124,10 +143,18 @@ func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 	if fromTarget.hasResolvedDependency(to) {
 		return
 	}
-	toTarget, present := graph.targets[to]
+	toTarget := graph.targets[to]
+	if toTarget == nil {
+		if to.Arch != "" {
+			if target := graph.targets[to.noArch()]; target != nil {
+				checkArchitectureCompatibility(fromTarget, target)
+			}
+		}
+		toTarget = graph.maybeCloneTargetForArch(to)
+	}
 	// The dependency may not exist yet if we haven't parsed its package.
 	// In that case we stash it away for later.
-	if !present {
+	if toTarget == nil {
 		graph.addPendingRevDep(from, to, nil)
 	} else {
 		graph.linkDependencies(fromTarget, toTarget)
@@ -150,7 +177,7 @@ func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget
 	if revdeps, present := graph.revDeps[target.Label]; present {
 		return revdeps[:]
 	}
-	return []*BuildTarget{}
+	return nil
 }
 
 // AllDepsBuilt returns true if all the dependencies of a target are built.
@@ -172,16 +199,83 @@ func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
 // reverse dependency in the other direction.
 // This is complicated somewhat by the require/provide mechanism which is resolved at this
 // point, but some of the dependencies may not yet exist.
+// Also at this point we resolve any architecture differences if cross-compiling is needed.
 func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
+	checkArchitectureCompatibility(fromTarget, toTarget)
+	if fromTarget.Label.Arch != "" && !fromTarget.IsTool(toTarget.Label) {
+		// Source dependency from a target that's not being built for the host.
+		toTarget = graph.cloneTargetForArch(toTarget, fromTarget.Label.Arch)
+	}
 	for _, label := range toTarget.ProvideFor(fromTarget) {
-		target, present := graph.targets[label]
-		if present {
+		if target, present := graph.targets[label]; present {
 			fromTarget.resolveDependency(toTarget.Label, target)
 			graph.revDeps[label] = append(graph.revDeps[label], fromTarget)
 		} else {
 			graph.addPendingRevDep(fromTarget.Label, label, toTarget)
 		}
 	}
+}
+
+// checkArchitectureCompatibility checks that two targets have compatible architectures. It panics if they don't.
+func checkArchitectureCompatibility(from, to *BuildTarget) {
+	if from.Label.Arch != "" && to.Label.Arch != "" && from.Label.Arch != to.Label.Arch {
+		panic(fmt.Sprintf("%s requires a dependency on %s, but it's not available for that architecture", from.Label, to.Label.toArch("")))
+	}
+}
+
+// cloneTargetForArch returns a build target for the given architecture. It's otherwise
+// identical to the original one.
+// The caller must have already acquired graph.mutex before calling this function.
+func (graph *BuildGraph) cloneTargetForArch(target *BuildTarget, arch string) *BuildTarget {
+	archLabel := target.Label.toArch(arch)
+	t, present := graph.targets[archLabel]
+	if present {
+		return t
+	}
+	graph.targets[archLabel] = target // Sentinel, so we don't recurse into here incorrectly.
+	t = target.toArch(graph, arch)
+	graph.targets[t.Label] = t
+
+	// Clone the revdeps too.
+	existingRevdeps := graph.revDeps[target.Label]
+	newRevdeps := make([]*BuildTarget, len(existingRevdeps))
+	for i, r := range existingRevdeps {
+		newRevdeps[i] = graph.cloneTargetForArch(r, arch)
+	}
+	graph.revDeps[t.Label] = newRevdeps
+
+	// Now if the target has any tools, they don't get cloned, but we need to add the new
+	// arch to their revdeps so this target builds after they do.
+	for _, dep := range t.dependencies {
+		if dep.tool { // Tools remain dependent on the host configuration.
+			if dep.resolved {
+				for _, d := range dep.deps {
+					graph.revDeps[d.Label] = append(graph.revDeps[d.Label], t)
+				}
+			} else {
+				graph.addPendingRevDep(t.Label, dep.declared, nil)
+			}
+		} else {
+			for j, d := range dep.deps {
+				dep.deps[j] = graph.cloneTargetForArch(d, arch)
+			}
+		}
+	}
+	return t
+}
+
+// maybeCloneTargetForArch returns a build target for the given architecture, if a no-arch version
+// exists in the graph already.
+// The caller must have already acquired graph.mutex before calling this function.
+func (graph *BuildGraph) maybeCloneTargetForArch(label BuildLabel) *BuildTarget {
+	if label.Arch == "" {
+		return nil
+	}
+	target := graph.targets[label.noArch()]
+	if target == nil || target.Label.Arch != "" {
+		return nil
+	}
+	return graph.cloneTargetForArch(target, label.Arch)
 }
 
 func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {

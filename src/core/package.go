@@ -27,6 +27,12 @@ type Package struct {
 	// It would be sort of conceptually nice if they ran simultaneously but it'd
 	// be far too hard to ensure consistency in any case where they can interact with one another.
 	BuildCallbackMutex sync.Mutex
+	// Used during post-build callbacks to track the architecture of the currently running callback.
+	// It'd be more elegant to pass the arch out to the parser and back but it's quite tricky to
+	// modify the globals of the callback functions to make that work.
+	// N.B. This assumes that BuildCallbackMutex has been set, i.e. we are not handling multiple
+	//      callbacks simultaneously (otherwise it wouldn't be threadsafe, obviously).
+	CurrentArch string
 }
 
 // NewPackage constructs a new package with the given name.

@@ -53,16 +53,18 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 		state.LogBuildResult(tid, label, core.PackageParsed, "Deferred")
 		return
 	}
+	activateTarget(state, pkg, label, dependor, noDeps, include, exclude)
 
 	// Now add any lurking pending targets for this package.
 	pendingTargetMutex.Lock()
-	pending := pendingTargets[label.PackageName]                       // Must be present.
-	pendingTargets[label.PackageName] = map[string][]core.BuildLabel{} // Empty this to free memory, but leave a sentinel
-	pendingTargetMutex.Unlock()                                        // Nothing will look up this package in the map again.
-	for targetName, dependors := range pending {
+	pending := pendingTargets[label.PackageName]                                // Must be present.
+	pendingTargets[label.PackageName] = map[core.BuildLabel][]core.BuildLabel{} // Empty this to free memory, but leave a sentinel
+	pendingTargetMutex.Unlock()                                                 // Nothing will look up this package in the map again.
+	for target, dependors := range pending {
 		for _, dependor := range dependors {
-			lbl := core.BuildLabel{PackageName: label.PackageName, Name: targetName}
-			activateTarget(state, pkg, lbl, dependor, noDeps, include, exclude)
+			if target.Name != label.Name {
+				activateTarget(state, pkg, target, dependor, noDeps, include, exclude)
+			}
 		}
 	}
 	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed")
@@ -101,10 +103,10 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 var pendingTargetMutex sync.Mutex
 
 // Map of package name -> target name -> label that requested parse
-var pendingTargets = map[string]map[string][]core.BuildLabel{}
+var pendingTargets = map[string]map[core.BuildLabel][]core.BuildLabel{}
 
-// Map of package name -> target name -> package names that're waiting for it
-var deferredParses = map[string]map[string][]string{}
+// Map of package name -> target label -> package names that're waiting for it
+var deferredParses = map[string]map[core.BuildLabel][]string{}
 
 // firstToParse returns true if the caller is the first to parse a given package and hence should
 // continue parsing that file. It only returns true once for each package but stores subsequent
@@ -113,10 +115,10 @@ func firstToParse(label, dependor core.BuildLabel) bool {
 	pendingTargetMutex.Lock()
 	defer pendingTargetMutex.Unlock()
 	if pkg, present := pendingTargets[label.PackageName]; present {
-		pkg[label.Name] = append(pkg[label.Name], dependor)
+		pkg[label] = append(pkg[label], dependor)
 		return false
 	}
-	pendingTargets[label.PackageName] = map[string][]core.BuildLabel{label.Name: {dependor}}
+	pendingTargets[label.PackageName] = map[core.BuildLabel][]core.BuildLabel{label: {dependor}}
 	return true
 }
 
@@ -130,9 +132,9 @@ func deferParse(label core.BuildLabel, pkg *core.Package) bool {
 	}
 	log.Debug("Deferring parse of %s pending %s", pkg.Name, label)
 	if m, present := deferredParses[label.PackageName]; present {
-		m[label.Name] = append(m[label.Name], pkg.Name)
+		m[label] = append(m[label], pkg.Name)
 	} else {
-		deferredParses[label.PackageName] = map[string][]string{label.Name: {pkg.Name}}
+		deferredParses[label.PackageName] = map[core.BuildLabel][]string{label: {pkg.Name}}
 	}
 	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkg.Name, Name: "all"}, true)
 	return true
@@ -143,22 +145,22 @@ func UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
 	pendingTargetMutex.Lock()
 	defer pendingTargetMutex.Unlock()
 	if m, present := deferredParses[target.Label.PackageName]; present {
-		if s, present := m[target.Label.Name]; present {
+		if s, present := m[target.Label]; present {
 			for _, deferredPackageName := range s {
 				log.Debug("Undeferring parse of %s", deferredPackageName)
 				state.AddPendingParse(
-					core.BuildLabel{PackageName: deferredPackageName, Name: getDependingTarget(deferredPackageName)},
+					getDependingTarget(deferredPackageName),
 					core.BuildLabel{PackageName: deferredPackageName, Name: "_UNDEFER_"},
 					false,
 				)
 			}
-			delete(m, target.Label.Name) // Don't need this any more
+			delete(m, target.Label) // Don't need this any more
 		}
 	}
 }
 
 // getDependingTarget returns the name of any one target in packageName that required parsing.
-func getDependingTarget(packageName string) string {
+func getDependingTarget(packageName string) core.BuildLabel {
 	// We need to supply a label in this package that actually needs to be built.
 	// Fortunately there must be at least one of these in the pending target map...
 	if m, present := pendingTargets[packageName]; present {
@@ -168,7 +170,7 @@ func getDependingTarget(packageName string) string {
 	}
 	// We shouldn't really get here, of course.
 	log.Errorf("No pending target entry for %s at deferral. Must assume :all.", packageName)
-	return "all"
+	return core.NewBuildLabel(packageName, "all")
 }
 
 // parsePackage performs the initial parse of a package.
@@ -206,7 +208,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 	}
 	// Do this in a separate loop so we get intra-package dependencies right now.
 	for _, target := range pkg.Targets {
-		for _, dep := range target.DeclaredDependencies() {
+		for _, dep := range target.DeclaredArchDependencies() {
 			state.Graph.AddDependency(target.Label, dep)
 		}
 	}
@@ -264,7 +266,7 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 			return
 		}
 	}
-	for _, dep := range target.DeclaredDependencies() {
+	for _, dep := range target.DeclaredArchDependencies() {
 		// Check the require/provide stuff; we may need to add a different target.
 		if len(target.Requires) > 0 {
 			if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
@@ -290,6 +292,7 @@ func RunPreBuildFunction(tid int, state *core.BuildState, target *core.BuildTarg
 	pkg := state.Graph.Package(target.Label.PackageName)
 	pkg.BuildCallbackMutex.Lock()
 	defer pkg.BuildCallbackMutex.Unlock()
+	pkg.CurrentArch = target.Label.Arch
 	if err := runPreBuildFunction(pkg, target); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed pre-build function for %s", target.Label)
 		return err
@@ -311,6 +314,7 @@ func RunPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTar
 	pkg := state.Graph.Package(target.Label.PackageName)
 	pkg.BuildCallbackMutex.Lock()
 	defer pkg.BuildCallbackMutex.Unlock()
+	pkg.CurrentArch = target.Label.Arch
 	log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, out)
 	if err := runPostBuildFunction(pkg, target, out); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed post-build function for %s", target.Label)
@@ -330,7 +334,7 @@ func rescanDeps(state *core.BuildState, pkg *core.Package) {
 		//               targets that need it but it's not easy to tell we're in a post build
 		//               function at the point we'd need to do that.
 		if !state.Graph.AllDependenciesResolved(target) {
-			for _, dep := range target.DeclaredDependencies() {
+			for _, dep := range target.DeclaredArchDependencies() {
 				state.Graph.AddDependency(target.Label, dep)
 			}
 		}

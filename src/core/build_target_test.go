@@ -279,6 +279,20 @@ func TestHasSource(t *testing.T) {
 	assert.False(t, target.HasSource("file3.go"))
 }
 
+func TestAddTool(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	gcc := SystemFileLabel{Path: "/usr/bin/gcc"}
+	target1.AddTool(target2.Label)
+	target1.AddTool(gcc)
+	assert.Equal(t, 2, len(target1.Tools))
+	assert.Equal(t, target2.Label, target1.Tools[0])
+	assert.Equal(t, gcc, target1.Tools[1])
+	deps := target1.DeclaredDependencies()
+	assert.Equal(t, 1, len(deps))
+	assert.Equal(t, target2.Label, deps[0])
+}
+
 func TestToolPath(t *testing.T) {
 	target := makeTarget("//src/core:target1", "")
 	target.AddOutput("file1.go")
@@ -308,7 +322,7 @@ func TestAddDependency(t *testing.T) {
 	target2.AddDependency(target1.Label)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
-	target2.AddMaybeExportedDependency(target1.Label, true)
+	target2.AddMaybeExportedDependency(target1.Label, true, false)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ExportedDependencies())
 	assert.Equal(t, []*BuildTarget{}, target2.Dependencies())
@@ -322,6 +336,26 @@ func TestDependencyFor(t *testing.T) {
 	assert.Equal(t, []*BuildTarget{target1}, target2.DependenciesFor(target1.Label))
 	assert.Equal(t, []*BuildTarget(nil), target2.DependenciesFor(target2.Label))
 	assert.Equal(t, 1, len(target2.dependencies))
+}
+
+func TestDeclaredArchDependencies(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	target3 := makeTarget("//src/core:target3", "")
+	target1.Label.Arch = "test_x86"
+	target1.AddDependency(target2.Label)
+	target1.AddTool(target3.Label)
+	deps := target1.DeclaredArchDependencies()
+	assert.Equal(t, 2, len(deps))
+	assert.Equal(t, BuildLabel{
+		PackageName: "src/core",
+		Name:        "target2",
+		Arch:        "test_x86",
+	}, deps[0])
+	assert.Equal(t, BuildLabel{
+		PackageName: "src/core",
+		Name:        "target3",
+	}, deps[1])
 }
 
 func TestParent(t *testing.T) {
@@ -381,6 +415,36 @@ func TestAllLocalSources(t *testing.T) {
 	target.AddSource(BuildLabel{Name: "target2", PackageName: "src/core"})
 	target.AddSource(SystemFileLabel{Path: "/usr/bin/bash"})
 	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSources())
+}
+
+func TestToArch(t *testing.T) {
+	graph := NewGraph()
+	target := makeTarget("//src/core:target1", "")
+	target.AddSource(FileLabel{File: "target1.go", Package: "src/core"})
+	target2 := target.toArch(graph, "test_x86")
+	assert.NotEqual(t, target, target2)
+	assert.Equal(t, "", target.Label.Arch)
+	assert.Equal(t, "test_x86", target2.Label.Arch)
+	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSources())
+	assert.Equal(t, []string{"src/core/target1.go"}, target2.AllLocalSources())
+}
+
+func TestTmpDir(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	assert.Equal(t, "plz-out/tmp/"+HostArch+"/src/core/target1._build", target.TmpDir())
+	target.Label.Arch = "test_x86"
+	assert.Equal(t, "plz-out/tmp/test_x86/src/core/target1._build", target.TmpDir())
+}
+
+func TestOutDir(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	assert.Equal(t, "plz-out/gen/src/core", target.OutDir())
+	target.IsBinary = true
+	assert.Equal(t, "plz-out/bin/src/core", target.OutDir())
+	target.Label.Arch = "test_x86"
+	assert.Equal(t, "plz-out/test_x86/bin/src/core", target.OutDir())
+	target.IsBinary = false
+	assert.Equal(t, "plz-out/test_x86/gen/src/core", target.OutDir())
 }
 
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
