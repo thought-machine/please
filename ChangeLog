@@ -1,3 +1,11 @@
+Version 7.9.1
+-------------
+
+    * `proto_library` is a little more robust about some cases involving sources in
+      subdirectories.
+    * Fixed alwayslink for `cc_library` which was sometimes not honoured.
+
+
 Version 7.9.0
 -------------
 
