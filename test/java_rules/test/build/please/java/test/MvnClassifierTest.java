@@ -1,4 +1,4 @@
-package test.java_rules;
+package build.please.java.test;
 
 import static org.junit.Assert.assertTrue;
 
