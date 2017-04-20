@@ -379,7 +379,7 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
 def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
               exclude_paths=None, native=False, artifact_type=None, test_only=False,
-              binary=False, classifier=""):
+              binary=False, classifier="", classifier_sources_override=""):
     """Fetches a single Java dependency from Maven.
 
     Args:
@@ -400,7 +400,10 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
       binary (bool): If True, we attempt to fetch and download an executable binary. The output
                      is marked as such. Implies native=True and sources=False.
       classifier (str): Maven classifier, allows to distinguish artifacts that were built from 
-                     the same POM but differ in their content. 
+                     the same POM but differ in their content.
+      classifier_sources_override (str): Allows to override the classifier used to fetch the 
+                     source artifact. 
+                     e.g. logback-core-1.1.3-tests.jar and logback-core-1.1.3-test-sources.jar  
     """
     if hash and hashes:
         raise ParseError('You can pass only one of hash or hashes to maven_jar')
@@ -453,6 +456,8 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
     srcs = [bin_rule]
 
     if sources:
+        if classifier_sources_override:
+            classifier = '-' + classifier_sources_override
         src_url = '%s/%s-%s%s-sources.jar' % (url_base, artifact, version, classifier)
         cmd = 'echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (src_url, src_url)
         src_rule = build_rule(
