@@ -49,7 +49,7 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 		return nil, err
 	}
 	log.Debug("Sending remote build request to %s; opts %s", worker, workerArgs)
-	resp, err := buildRemotely(worker, &pb.BuildRequest{
+	resp, err := buildRemotely(state.Config, worker, &pb.BuildRequest{
 		Rule:    target.Label.String(),
 		Labels:  target.Labels,
 		TempDir: path.Join(core.RepoRoot, target.TmpDir()),
@@ -72,8 +72,8 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 }
 
 // buildRemotely runs a single build request and returns its response.
-func buildRemotely(worker string, req *pb.BuildRequest) (*pb.BuildResponse, error) {
-	w, err := getOrStartWorker(worker)
+func buildRemotely(config *core.Configuration, worker string, req *pb.BuildRequest) (*pb.BuildResponse, error) {
+	w, err := getOrStartWorker(config, worker)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func buildRemotely(worker string, req *pb.BuildRequest) (*pb.BuildResponse, erro
 }
 
 // getOrStartWorker either retrieves an existing worker process or starts a new one.
-func getOrStartWorker(worker string) (*workerServer, error) {
+func getOrStartWorker(config *core.Configuration, worker string) (*workerServer, error) {
 	workerMutex.Lock()
 	defer workerMutex.Unlock()
 	if w, present := workerMap[worker]; present {
@@ -95,6 +95,7 @@ func getOrStartWorker(worker string) (*workerServer, error) {
 	}
 	// Need to create a new process
 	cmd := exec.Command(worker)
+	cmd.Env = core.GeneralBuildEnvironment(config)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

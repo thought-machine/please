@@ -20,27 +20,33 @@ func ExpandHomePath(path string) string {
 	})
 }
 
-// BuildEnvironment creates the shell env vars to be passed
-// into the exec.Command calls made by plz. Use test=true for plz test targets.
-func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []string {
-	sources := target.AllSourcePaths(state.Graph)
+// GeneralBuildEnvironment creates the shell env vars used for a command, not based
+// on any specific target etc.
+func GeneralBuildEnvironment(config *Configuration) []string {
 	env := []string{
-		"PKG=" + target.Label.PackageName,
-		"PKG_DIR=" + target.Label.PackageDir(),
 		// Need to know these for certain rules, particularly Go rules.
 		"ARCH=" + runtime.GOARCH,
 		"OS=" + runtime.GOOS,
 		// Need this for certain tools, for example sass
-		"LANG=" + state.Config.Please.Lang,
+		"LANG=" + config.Please.Lang,
 		// Use a restricted PATH; it'd be easier for the user if we pass it through
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		"PATH=" + ExpandHomePath(strings.Join(state.Config.Build.Path, ":")),
+		"PATH=" + ExpandHomePath(strings.Join(config.Build.Path, ":")),
 	}
-	if state.Config.Go.GoRoot != "" {
-		env = append(env, "GOROOT="+state.Config.Go.GoRoot)
+	if config.Go.GoRoot != "" {
+		env = append(env, "GOROOT="+config.Go.GoRoot)
 	}
+	return env
+}
+
+// BuildEnvironment creates the shell env vars to be passed
+// into the exec.Command calls made by plz. Use test=true for plz test targets.
+func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []string {
+	sources := target.AllSourcePaths(state.Graph)
+	env := GeneralBuildEnvironment(state.Config)
+	env = append(env, "PKG="+target.Label.PackageName, "PKG_DIR="+target.Label.PackageDir())
 	if !test {
 		env = append(env,
 			"TMP_DIR="+path.Join(RepoRoot, target.TmpDir()),
