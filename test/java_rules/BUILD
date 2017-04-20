@@ -12,3 +12,23 @@ java_test(
         '//third_party/java:junit',
     ],
 )
+
+
+
+# Test for maven classifier
+maven_jar(
+    name = 'logback-core-tests',
+    id = 'ch.qos.logback:logback-core:1.1.3',
+    classifier = 'tests',
+    hash = '',
+    test_only = True,
+)
+
+java_test(
+    name = 'mvn_classifier_test',
+    srcs = ['MvnClassifierTest.java'],
+    deps = [
+         ':logback-core-tests',
+         '//third_party/java:junit',
+    ],
+)
