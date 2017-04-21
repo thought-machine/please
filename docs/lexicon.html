@@ -1895,6 +1895,39 @@ have a top-level target as a facade which doesn't have actual code.</td>
 	<td>Attempt to download a native jar (i.e. add "-linux-x86_64" or "-osx-x86_64" etc to the URL).</td>
       </tr>
 
+      <tr>
+	<td>artifact_type</td>
+	<td>jar</td>
+	<td>str</td>
+	<td>The type of artifact to download. Defaults to <code>.jar</code> but could also be
+      <code>.aar</code>, for example.</td>
+      </tr>
+
+      <tr>
+	<td>binary</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>If True, we attempt to fetch and download an executable binary. The output
+      is marked as such. Implies <code>native = True</code> and <code>sources = False</code>.</td>
+      </tr>
+
+      <tr>
+	<td>classifier</td>
+	<td></td>
+	<td>str</td>
+	<td>Maven classifier, allows to distinguish artifacts that were built from
+      the same POM but differ in their content.</td>
+      </tr>
+
+      <tr>
+	<td>classifier_sources_override</td>
+	<td></td>
+	<td>str</td>
+	<td>Allows to override the classifier used to fetch the
+      source artifact.
+      e.g. logback-core-1.1.3-tests.jar and logback-core-1.1.3-test-sources.jar</td>
+      </tr>
+
       </tbody>
     </table>
 
