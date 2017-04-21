@@ -379,7 +379,7 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
 def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
               exclude_paths=None, native=False, artifact_type=None, test_only=False,
-              binary=False, classifier="", classifier_sources_override=""):
+              binary=False, classifier='', classifier_sources_override=''):
     """Fetches a single Java dependency from Maven.
 
     Args:

@@ -21,7 +21,7 @@ maven_jar(
     id = 'ch.qos.logback:logback-core:1.1.3',
     classifier = 'tests',
     classifier_sources_override = 'test',
-    hash = '',
+    hash = '223eff0a4419ea839742a123199cfd609bf7249e',
     test_only = True,
 )
 
