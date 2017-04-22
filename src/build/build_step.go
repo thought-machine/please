@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -30,6 +31,9 @@ var stopTarget = fmt.Errorf("stopping build")
 // outputting the same file, for this and other reasons).
 var buildingFilegroupOutputs = map[string]*sync.Mutex{}
 var buildingFilegroupMutex sync.Mutex
+
+// goDirOnce guards the creation of plz-out/go, which we only attempt once per process.
+var goDirOnce sync.Once
 
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	start := time.Now()
@@ -127,6 +131,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	oldOutputHash, outputHashErr := OutputHash(target)
 	if err := prepareDirectories(target); err != nil {
 		return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
+	}
+
+	// Similarly to the createInitPy special-casing, this is not very nice, but makes it
+	// rather easier to have a consistent GOPATH setup.
+	if target.HasLabel("go") {
+		goDirOnce.Do(createPlzOutGo)
 	}
 
 	retrieveArtifacts := func() bool {
@@ -581,5 +591,30 @@ func createInitPy(dir string) {
 	dir = path.Dir(dir)
 	if dir != core.GenDir && dir != "." && !core.PathExists(path.Join(dir, "__init__.py")) {
 		createInitPy(dir)
+	}
+}
+
+// createPlzOutGo creates a directory plz-out/go that contains src / pkg links which
+// make it easier to set up one's GOPATH appropriately.
+func createPlzOutGo() {
+	dir := path.Join(core.RepoRoot, core.OutDir, "go")
+	genDir := path.Join(core.RepoRoot, core.GenDir)
+	srcDir := path.Join(dir, "src")
+	pkgDir := path.Join(dir, "pkg")
+	archDir := path.Join(pkgDir, runtime.GOOS+"_"+runtime.GOARCH)
+	if err := os.MkdirAll(pkgDir, core.DirPermissions); err != nil {
+		log.Warning("Failed to create %s: %s", pkgDir, err)
+		return
+	}
+	symlinkIfNotExists(genDir, srcDir)
+	symlinkIfNotExists(genDir, archDir)
+}
+
+// symlinkIfNotExists creates newDir as a link to oldDir if it doesn't already exist.
+func symlinkIfNotExists(oldDir, newDir string) {
+	if !core.PathExists(newDir) {
+		if err := os.Symlink(oldDir, newDir); err != nil {
+			log.Warning("Failed to create %s: %s", newDir, err)
+		}
 	}
 }
