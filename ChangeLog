@@ -2,6 +2,9 @@ Version 7.10.0
 --------------
 
     * Add support for classifiers on `maven_jar`.
+    * Automatic creation of `plz-out/go`, which contains some symlinks making it
+      suitable for setting your GOPATH to to find some things in plz-out/gen (e.g.
+      generated code).
 
 
 Version 7.9.2
