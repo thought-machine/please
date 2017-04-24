@@ -80,7 +80,7 @@ tarball(
 
 filegroup(
     name = 'tarballs',
-    deps = [
+    srcs = [
         ':please_tarball',
         ':servers_tarball',
     ],
