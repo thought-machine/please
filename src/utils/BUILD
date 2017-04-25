@@ -19,10 +19,10 @@ go_library(
 go_bindata(
     name = 'bindata',
     srcs = [
-        '//src/misc:completion_scripts',
-        '//src/misc:wrapper_script',
+        '//tools/misc:completion_scripts',
+        '//tools/misc:wrapper_script',
     ],
-    prefix = 'src/misc',
+    prefix = 'tools/misc',
 )
 
 go_test(
