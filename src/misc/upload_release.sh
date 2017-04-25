@@ -3,21 +3,21 @@
 # Will not overwrite existing versions, only adds new ones.
 # Should be run from the root of the repo, and only by a CI system.
 
-set -eu
+set -euo pipefail
 RED="$(tput setaf 1)"
 GREEN="$(tput setaf 2)"
 YELLOW="$(tput setaf 3)"
 RESET="$(tput sgr0)"
 BUCKET="s3://get.please.build"
 
-VERSION="`cat VERSION`"
-eval `go env`
+VERSION="$(cat VERSION)"
+eval $(go env)
 echo "${GREEN}Identifying outputs...${RESET}"
-FILES="`plz query outputs -p //package:tarballs`"
+FILES="$(plz query outputs -p //package:tarballs)"
 
 if [ "$GOOS" == "linux" ]; then
     # For Linux we upload debs as well.
-    DEBS="`plz query alltargets -p //package:all --include deb | plz query outputs -p -`"
+    DEBS="$(plz query alltargets -p //package:all --include deb | plz query outputs -p -)"
     FILES="$FILES $DEBS"
 fi
 
