@@ -456,8 +456,23 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         if not binary:
             post_build = _extra_outs(get)
     cmd = [
-        'export GOPATH=$TMP_DIR:$TMP_DIR/$PKG',
-        'rm -rf pkg src',
+        # the TMP_DIR contains all the compiled dependencies already. Later when
+        # we go install, it is difficult to seperate its outputs from the
+        # deps outputs, hence why we capture them here in advance
+        'export existing="$(find $TMP_DIR -name \"*.a\")"',
+
+        # go_get dependencies could be in different paths, make sure they are
+        # all available in the GOPATH by detecting their pkg/ folder and using its parent
+        'export GOPATH="$TMP_DIR"',
+        # loop done like this because the GOPATH export should not be in a SubShell
+        'while IFS= read -r dep_dir; do '
+        'if [ -n "$dep_dir" ]; then export GOPATH="${dep_dir}:${GOPATH}" ; fi ; done '
+        '< <(echo "$existing" | sed -e \'s|pkg/.*||g\' | sort -u)',
+
+        'export INSTALL_DIR=$(mktemp -d --tmpdir=$TMP_DIR)',
+        'export GOPATH="$INSTALL_DIR:$GOPATH"',
+
+        'cd $INSTALL_DIR',
         'go get -d ' + get,
     ]
     subdir = 'src/' + (get[:-4] if get.endswith('/...') else get)
@@ -466,9 +481,19 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
     if patch:
         cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$(location %s)' % (subdir, patch))
-    cmd.append('go install -gcflags "-trimpath $TMP_DIR" ' + ' '.join([get] + (install or [])))
+    cmd.append('go install -gcflags "-trimpath $INSTALL_DIR" ' + ' '.join([get] + (install or [])))
     # Remove anything that was there already.
-    cmd.append('if [ -d $PKG_DIR ]; then find $PKG_DIR -name "*.a" | sed -e "s|$PKG_DIR/||g" | xargs rm -f; fi')
+    cmd.extend([
+        # go_get built dependencies could be in different dirs so we strip the prefix
+        # leading up to `/pkg/`. These have been cached in the "$INSTALL_DIR/pkg/.."
+        # during the `go install`. So clean them up from this target's outputs
+        'echo "$existing" | while IFS= read -r pathname; do '
+        'if [ -n "$pathname" ]; then rm -f "$INSTALL_DIR/pkg/${pathname#*/pkg/}" ; fi ; done',
+        'cd $TMP_DIR',
+        # delete all other dirs with deps. Only src,pkg and maybe bin will remain
+        'ls | grep -v $(basename $INSTALL_DIR) | xargs rm -rf',
+        'mv $INSTALL_DIR/* $TMP_DIR/'
+    ])
     if not binary:
         cmd.extend([
             'find . -name .git | xargs rm -rf',
