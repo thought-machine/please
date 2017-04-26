@@ -469,7 +469,7 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         'if [ -n "$dep_dir" ]; then export GOPATH="${dep_dir}:${GOPATH}" ; fi ; done '
         '< <(echo "$existing" | sed -e \'s|pkg/.*||g\' | sort -u)',
 
-        'export INSTALL_DIR=$(mktemp -d --tmpdir=$TMP_DIR)',
+        'export INSTALL_DIR=$(mktemp -d ${TMP_DIR}/tmp.XXXXX)',
         'export GOPATH="$INSTALL_DIR:$GOPATH"',
 
         'cd $INSTALL_DIR',
