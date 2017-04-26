@@ -294,9 +294,7 @@ func (cache *Cache) cleanOldFiles(maxArtifactAge time.Duration) bool {
 			cleaned++
 		}
 	}
-	if cleaned > 0 {
-		log.Notice("Removed %d old files", cleaned)
-	}
+	log.Notice("Removed %d old files, new size: %d, %d files", cleaned, cache.totalSize, cache.cachedFiles.Count())
 	return cleaned > 0
 }
 
