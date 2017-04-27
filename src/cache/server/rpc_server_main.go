@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"strings"
 	"time"
 
@@ -16,6 +19,7 @@ var log = logging.MustGetLogger("rpc_cache_server")
 var opts struct {
 	Usage     string `usage:"rpc_cache_server is a server for Please's remote RPC cache.\n\nSee https://please.build/cache.html for more information."`
 	Port      int    `short:"p" long:"port" description:"Port to serve on" default:"7677"`
+	HttpPort  int    `long:"http_port" description:"Port to serve HTTP on (for profiling etc)"`
 	Dir       string `short:"d" long:"dir" description:"Directory to write into" default:"plz-rpc-cache"`
 	Verbosity int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
 	LogFile   string `long:"log_file" description:"File to log to (in addition to stdout)"`
@@ -71,6 +75,22 @@ func main() {
 	} else if opts.ClusterFlags.ClusterAddresses != "" {
 		clusta = cluster.NewCluster(opts.ClusterFlags.ClusterPort, opts.Port, opts.ClusterFlags.NodeName)
 		clusta.Join(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
+	}
+
+	if opts.HttpPort != 0 {
+		http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte(fmt.Sprintf("Total size: %d bytes\nNum files: %d\n", cache.TotalSize(), cache.NumFiles())))
+		})
+		go func() {
+			port := fmt.Sprintf(":%d", opts.HttpPort)
+			if opts.TLSFlags.KeyFile != "" {
+				log.Fatalf("%s\n", http.ListenAndServeTLS(port, opts.TLSFlags.CertFile, opts.TLSFlags.KeyFile, nil))
+			} else {
+				log.Fatalf("%s\n", http.ListenAndServe(port, nil))
+			}
+		}()
+		log.Notice("Serving HTTP stats on port %d", opts.HttpPort)
 	}
 
 	log.Notice("Starting up RPC cache server on port %d...", opts.Port)

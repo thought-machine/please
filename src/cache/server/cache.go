@@ -57,6 +57,16 @@ func newCache(path string) *Cache {
 	return cache
 }
 
+// TotalSize returns the current total size monitored by the cache, in bytes.
+func (cache *Cache) TotalSize() int64 {
+	return cache.totalSize
+}
+
+// NumFiles returns the number of files currently monitored by the cache.
+func (cache *Cache) NumFiles() int {
+	return cache.cachedFiles.Count()
+}
+
 // scan scans the directory tree for files.
 func (cache *Cache) scan() {
 	cache.cachedFiles = cmap.New()
