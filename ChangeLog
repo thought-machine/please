@@ -1,3 +1,9 @@
+Version 7.10.1
+--------------
+
+    * Fix to go_get change in 7.10 to make it BSD-compatible.
+
+
 Version 7.10.0
 --------------
 
@@ -5,6 +11,7 @@ Version 7.10.0
     * Automatic creation of `plz-out/go`, which contains some symlinks making it
       suitable for setting your GOPATH to to find some things in plz-out/gen (e.g.
       generated code).
+    * Fix go_get with dependencies when in declared in repo root
 
 
 Version 7.9.2
