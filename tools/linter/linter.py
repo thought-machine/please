@@ -5,8 +5,7 @@ Most features of the language we attempt to control at parse time, for example
 banning import and print statements, but some cannot be readily or reliably
 identified then (e.g. use of dict.iteritems in a python 2 based interpreter).
 
-This script attempts to identify such stylistic things as a linter. The
-current things searched for are:
+The linter attempts to identify such stylistic things. The current things searched for are:
  - Syntax errors - obviously these are caught at build time too, but we have
    to handle them here, and it's useful in some workflows to have lint prompt
    for this as well.
@@ -47,6 +46,9 @@ Lint warnings can be suppressed on a per-line basis by adding a trailing comment
 saying either `# nolint` or `# lint:disable=iterkeys-used`, or on a per-file basis
 by adding lines containing only the disabling messages. Currently you can't use
 `nolint` on a per-file basis; consider not running the linter on that file... :)
+
+Usage:
+
 """
 
 import argparse
@@ -254,7 +256,7 @@ def print_lint(filenames, suppress=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Linter for Please BUILD files')
     parser.add_argument('files', nargs='+')
     parser.add_argument('--suppress', nargs='+')
     parser.add_argument('--exit_zero', dest='exit_zero', action='store_true')

@@ -17,3 +17,14 @@ python_test(
         ':linter',
     ],
 )
+
+genrule(
+    name = 'help_topics',
+    srcs = {
+        'linter': ['linter.py'],
+        'script': ['linter_help.py'],
+    },
+    outs = ['help.json'],
+    cmd = 'cat $SRCS_LINTER | python $SRCS_SCRIPT > $OUT',
+    visibility = ['//src/help/...'],
+)

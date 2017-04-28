@@ -24,8 +24,6 @@ The following help topics are available:
 
 %s`
 
-var allHelpFiles = []string{"rule_defs.json", "config.json", "misc.json"}
-
 // maxSuggestionDistance is the maximum Levenshtein edit distance we'll suggest help topics at.
 const maxSuggestionDistance = 5
 
@@ -62,7 +60,7 @@ func help(topic string) string {
 	if topic == "topics" {
 		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(), "\n"))
 	}
-	for _, filename := range allHelpFiles {
+	for _, filename := range AssetNames() {
 		if message, found := findHelpFromFile(topic, filename); found {
 			return message
 		}
@@ -100,7 +98,7 @@ func suggest(topic string) string {
 // allTopics returns all the possible topics to get help on.
 func allTopics() []string {
 	topics := []string{}
-	for _, filename := range allHelpFiles {
+	for _, filename := range AssetNames() {
 		_, data := loadData(filename)
 		for t := range data {
 			topics = append(topics, t)
@@ -123,5 +121,6 @@ func printMessage(msg string) {
 			return "${BOLD_CYAN}" + strings.Replace(s, "`", "", -1) + "${RESET}"
 		})
 	}
-	cli.Fprintf(os.Stdout, msg)
+	// Replace % to %% when not followed by anything so it doesn't become a replacement.
+	cli.Fprintf(os.Stdout, strings.Replace(msg, "% ", "%% ", -1))
 }

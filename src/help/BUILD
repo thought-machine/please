@@ -19,6 +19,7 @@ go_bindata(
     srcs = [
         'misc.json',
         ':config_json',
+        ':help_json',
         ':rule_defs',
     ],
     compress = True,
@@ -52,4 +53,9 @@ genrule(
     outs = ['config.json'],
     cmd = '$TOOL > $OUTS',
     tools = ['//src/help/config:config_help'],
+)
+
+filegroup(
+    name = 'help_json',
+    srcs = ['//tools/linter:help_topics'],
 )
