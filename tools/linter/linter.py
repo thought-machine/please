@@ -34,6 +34,12 @@ current things searched for are:
  - Detection of duplicates in argument lists - most usually this is useful for deps,
    but it applies to anything since there's no reason to have a duplicate in any
    argument list to any builtin Please function.
+ - Some specific checks on third-party library rules (maven_jar, pip_library and
+   go_get) that warn on duplicated artifacts.
+   This is deliberately version-agnostic, since in most cases having two different
+   versions of the same library turns out to be a Bad Thing, although there are
+   potentially legitimate uses for that as well. In such cases we suggest splitting
+   into different packages if the linter is becoming vexing.
 
 Lint warnings can be suppressed on a per-line basis by adding a trailing comment
 saying either `# nolint` or `# lint:disable=iterkeys-used`.
@@ -59,6 +65,7 @@ DEPRECATED_FUNCTION = 'deprecated-function'
 DEPRECATED_ARGUMENT = 'deprecated-argument'
 INCORRECT_ARGUMENT = 'incorrect-argument'
 UNNECESSARY_DUPLICATE = 'unnecessary-duplicate'
+DUPLICATE_ARTIFACT = 'duplicate-artifact'
 
 
 ERROR_DESCRIPTIONS = {
@@ -73,6 +80,7 @@ ERROR_DESCRIPTIONS = {
     DEPRECATED_ARGUMENT: 'Deprecated argument',
     INCORRECT_ARGUMENT: 'Unknown argument to built-in function',
     UNNECESSARY_DUPLICATE: 'Unnecessary duplicate in argument',
+    DUPLICATE_ARTIFACT: 'Duplicated third-party artifact',
 }
 
 BANNED_ATTRS = {
@@ -93,10 +101,25 @@ def _args(func):
     return func
 
 
+def _extract_keyword(node, arg, default=''):
+    """Extracts a single keyword argument from an AST node."""
+    for kwd in node.keywords:
+        if kwd.arg == arg and hasattr(kwd.value, 's'):
+            return kwd.value.s
+    return default
+
+
 JSON = json.loads(pkg_resources.resource_string('src.parse', 'rule_args.json').decode('utf-8'))
 WHITELISTED_FUNCTIONS = {'subinclude', 'glob', 'include_defs', 'licenses'}
 BUILTIN_FUNCTIONS = {k: _args(v) for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
 DEPRECATED_FUNCTIONS = {'include_defs'}
+THIRD_PARTY_FUNCTIONS = {
+    'maven_jar': lambda n: _extract_keyword(n, 'id').rpartition(':')[0],
+    'go_get': lambda n: _extract_keyword(n, 'get'),
+    'pip_library': lambda n: _extract_keyword(n, 'package_name', _extract_keyword(n, 'name')),
+    'python_wheel': lambda n: _extract_keyword(n, 'package_name', _extract_keyword(n, 'name')),
+}
+third_party_artifacts = set()
 
 
 def is_suppressed(code, line, file_suppressions):
@@ -166,6 +189,17 @@ def _lint_duplicates(n):
                         seen.add(s.s)
 
 
+def _lint_third_party_artifacts(n):
+    """Lints for duplicate third-party artifacts (in pip_library, maven_jar etc)."""
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in THIRD_PARTY_FUNCTIONS:
+        artifact = THIRD_PARTY_FUNCTIONS[n.func.id](n)
+        print(artifact)
+        if artifact in third_party_artifacts:
+            yield n.lineno, DUPLICATE_ARTIFACT
+        else:
+            third_party_artifacts.add(artifact)
+
+
 def _lint(contents):
     try:
         tree = ast.parse(contents)
@@ -181,11 +215,13 @@ def _lint(contents):
 LINT_FUNCTIONS = [
     _lint_iteritems, _lint_unsorted_iteration, _lint_builtin_functions,
     _lint_deprecated_functions, _lint_deprecated_args, _lint_duplicates,
+    _lint_third_party_artifacts,
 ]
 
 
 def lint(filename, suppress=None):
     """Lint the given file. Yields the error codes found."""
+    third_party_artifacts.clear()  # Only check this within a single file.
     with open(filename) as f:
         contents = f.read()
     # ast discards comments, but we use those to suppress messages.

@@ -66,3 +66,9 @@ class TestLinter(unittest.TestCase):
         """Test suppressing lint warnings for a whole file."""
         self.assertEqual([(5, linter.ITERKEYS_USED)],
                          lint('tools/linter/test_data/test_file_suppressions'))
+
+    def test_duplicate_artifacts(self):
+        """Test linting for duplicate third party artifacts."""
+        self.assertEqual([(11, linter.DUPLICATE_ARTIFACT),
+                          (30, linter.DUPLICATE_ARTIFACT)],
+                         lint('tools/linter/test_data/test_duplicate_artifacts'))
