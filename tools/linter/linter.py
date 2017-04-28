@@ -166,10 +166,12 @@ def _lint_builtin_functions(n):
         for kwd in n.keywords or []:
             if kwd.arg not in args and not kwd.arg.startswith('_'):
                 yield kwd.value.lineno, INCORRECT_ARGUMENT
-        kwds = {kwd.arg for kwd in n.keywords or []}
-        for name, arg in args.items():
-            if arg['required'] and name not in kwds:
-                yield n.lineno, MISSING_ARGUMENT
+        # Don't check kwargs if the caller is doing a **kwargs into it, assume that'll take care of it.
+        if not n.kwargs:
+            kwds = {kwd.arg for kwd in n.keywords or []}
+            for name, arg in args.items():
+                if arg['required'] and name not in kwds:
+                    yield n.lineno, MISSING_ARGUMENT
 
 
 def _lint_deprecated_functions(n):
@@ -204,11 +206,11 @@ def _lint_third_party_artifacts(n):
     """Lints for duplicate third-party artifacts (in pip_library, maven_jar etc)."""
     if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in THIRD_PARTY_FUNCTIONS:
         artifact = THIRD_PARTY_FUNCTIONS[n.func.id](n)
-        print(artifact)
-        if artifact in third_party_artifacts:
-            yield n.lineno, DUPLICATE_ARTIFACT
-        else:
-            third_party_artifacts.add(artifact)
+        if artifact:
+            if artifact in third_party_artifacts:
+                yield n.lineno, DUPLICATE_ARTIFACT
+            else:
+                third_party_artifacts.add(artifact)
 
 
 def _lint(contents):
