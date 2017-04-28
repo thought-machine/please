@@ -31,6 +31,8 @@ current things searched for are:
    doing typechecking on them - that's done at runtime anyway more accurately than
    we can here. This is somewhat unnecessary but again may help some workflows
    where the linter might hint you not to commit with obvious problems.
+ - Missing required arguments to builtin functions. This will of course fail at
+   parse time but it still seems useful to collect here.
  - Detection of duplicates in argument lists - most usually this is useful for deps,
    but it applies to anything since there's no reason to have a duplicate in any
    argument list to any builtin Please function.
@@ -42,8 +44,9 @@ current things searched for are:
    into different packages if the linter is becoming vexing.
 
 Lint warnings can be suppressed on a per-line basis by adding a trailing comment
-saying either `# nolint` or `# lint:disable=iterkeys-used`.
-At present there is no way to disable it by scope or completely for a file.
+saying either `# nolint` or `# lint:disable=iterkeys-used`, or on a per-file basis
+by adding lines containing only the disabling messages. Currently you can't use
+`nolint` on a per-file basis; consider not running the linter on that file... :)
 """
 
 import argparse
@@ -63,6 +66,7 @@ UNSORTED_DICT_ITERATION = 'unsorted-dict-iteration'
 NON_KEYWORD_CALL = 'non-keyword-call'
 DEPRECATED_FUNCTION = 'deprecated-function'
 DEPRECATED_ARGUMENT = 'deprecated-argument'
+MISSING_ARGUMENT = 'missing-argument'
 INCORRECT_ARGUMENT = 'incorrect-argument'
 UNNECESSARY_DUPLICATE = 'unnecessary-duplicate'
 DUPLICATE_ARTIFACT = 'duplicate-artifact'
@@ -78,6 +82,7 @@ ERROR_DESCRIPTIONS = {
     NON_KEYWORD_CALL: 'Call to builtin rule without using keyword arguments',
     DEPRECATED_FUNCTION: 'The function include_defs is deprecated, use subinclude() instead',
     DEPRECATED_ARGUMENT: 'Deprecated argument',
+    MISSING_ARGUMENT: 'Missing required argument',
     INCORRECT_ARGUMENT: 'Unknown argument to built-in function',
     UNNECESSARY_DUPLICATE: 'Unnecessary duplicate in argument',
     DUPLICATE_ARTIFACT: 'Duplicated third-party artifact',
@@ -159,6 +164,10 @@ def _lint_builtin_functions(n):
         for kwd in n.keywords or []:
             if kwd.arg not in args and not kwd.arg.startswith('_'):
                 yield kwd.value.lineno, INCORRECT_ARGUMENT
+        kwds = {kwd.arg for kwd in n.keywords or []}
+        for name, arg in args.items():
+            if arg['required'] and name not in kwds:
+                yield n.lineno, MISSING_ARGUMENT
 
 
 def _lint_deprecated_functions(n):
@@ -228,7 +237,7 @@ def lint(filename, suppress=None):
     lines = contents.split('\n')
     # Find any lines that fully suppress messages.
     matches = [re.match('^ *# lint: *disable=(.*)$', line) for line in lines]
-    suppressions = {match.group(1) for match in matches if match}
+    suppressions = {match.group(1) for match in matches if match}.union(suppress or [])
     for lineno, code in _lint(contents):
         if not is_suppressed(code, lines[lineno - 1], suppressions):
             yield lineno, code

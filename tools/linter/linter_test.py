@@ -3,7 +3,7 @@ import unittest
 from tools.linter import linter
 
 
-lint = lambda fn, suppress=None: list(linter.lint(fn, suppress))
+lint = lambda fn, suppress=[linter.MISSING_ARGUMENT]: list(linter.lint(fn, suppress))
 
 
 class TestLinter(unittest.TestCase):
@@ -56,6 +56,11 @@ class TestLinter(unittest.TestCase):
         """Test detection of incorrect arguments."""
         self.assertEqual([(7, linter.INCORRECT_ARGUMENT)],
                          lint('tools/linter/test_data/test_incorrect_args'))
+
+    def test_missing_args(self):
+        """Test detection of missing required arguments."""
+        self.assertEqual([(1, linter.MISSING_ARGUMENT)],
+                         lint('tools/linter/test_data/test_missing_args', suppress=None))
 
     def test_incorrect_args(self):
         """Test detection of duplicates in arguments."""
