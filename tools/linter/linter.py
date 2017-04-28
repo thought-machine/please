@@ -26,6 +26,7 @@ current things searched for are:
    The most obvious case here is include_defs which we haven't removed because it's
    used internally for some Bazel compatibility, and it might be useful for Buck
    compatibility.
+   Similarly we check for arguments that are deprecated.
  - Detection of incorrect arguments to builtin functions. Note that we don't bother
    doing typechecking on them - that's done at runtime anyway more accurately than
    we can here. This is somewhat unnecessary but again may help some workflows
@@ -55,6 +56,7 @@ UNSORTED_SET_ITERATION = 'unsorted-set-iteration'
 UNSORTED_DICT_ITERATION = 'unsorted-dict-iteration'
 NON_KEYWORD_CALL = 'non-keyword-call'
 DEPRECATED_FUNCTION = 'deprecated-function'
+DEPRECATED_ARGUMENT = 'deprecated-argument'
 INCORRECT_ARGUMENT = 'incorrect-argument'
 UNNECESSARY_DUPLICATE = 'unnecessary-duplicate'
 
@@ -68,6 +70,7 @@ ERROR_DESCRIPTIONS = {
     UNSORTED_DICT_ITERATION: 'Iteration of dicts is not ordered, use sorted()',
     NON_KEYWORD_CALL: 'Call to builtin rule without using keyword arguments',
     DEPRECATED_FUNCTION: 'The function include_defs is deprecated, use subinclude() instead',
+    DEPRECATED_ARGUMENT: 'Deprecated argument',
     INCORRECT_ARGUMENT: 'Unknown argument to built-in function',
     UNNECESSARY_DUPLICATE: 'Unnecessary duplicate in argument',
 }
@@ -83,9 +86,16 @@ UNSORTED_CALLS = {
     'dict': UNSORTED_DICT_ITERATION,
 }
 
+
+def _args(func):
+    """Alters argument structure on function object to be a map of name -> arg instead of a list."""
+    func['args'] = {arg['name']: arg for arg in func['args']}
+    return func
+
+
 JSON = json.loads(pkg_resources.resource_string('src.parse', 'rule_args.json').decode('utf-8'))
 WHITELISTED_FUNCTIONS = {'subinclude', 'glob', 'include_defs', 'licenses'}
-BUILTIN_FUNCTIONS = {k: v for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
+BUILTIN_FUNCTIONS = {k: _args(v) for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
 DEPRECATED_FUNCTIONS = {'include_defs'}
 
 
@@ -122,7 +132,7 @@ def _lint_builtin_functions(n):
     if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
         if n.args or n.starargs:
             yield n.lineno, NON_KEYWORD_CALL
-        args = {arg['name'] for arg in BUILTIN_FUNCTIONS[n.func.id]['args']}
+        args = BUILTIN_FUNCTIONS[n.func.id]['args']
         for kwd in n.keywords or []:
             if kwd.arg not in args and not kwd.arg.startswith('_'):
                 yield kwd.value.lineno, INCORRECT_ARGUMENT
@@ -132,6 +142,15 @@ def _lint_deprecated_functions(n):
     """Lints for calls to deprecated functions."""
     if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in DEPRECATED_FUNCTIONS:
         yield n.lineno, DEPRECATED_FUNCTION
+
+
+def _lint_deprecated_args(n):
+    """Lints for calls to builtin functions that use deprecated arguments."""
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
+        args = BUILTIN_FUNCTIONS[n.func.id]['args']
+        for kwd in n.keywords or []:
+            if args.get(kwd.arg, {}).get('deprecated'):
+                yield kwd.value.lineno, DEPRECATED_ARGUMENT
 
 
 def _lint_duplicates(n):
@@ -161,7 +180,7 @@ def _lint(contents):
 
 LINT_FUNCTIONS = [
     _lint_iteritems, _lint_unsorted_iteration, _lint_builtin_functions,
-    _lint_deprecated_functions, _lint_duplicates,
+    _lint_deprecated_functions, _lint_deprecated_args, _lint_duplicates,
 ]
 
 
