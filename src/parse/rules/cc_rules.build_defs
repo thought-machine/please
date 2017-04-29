@@ -96,7 +96,6 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         exported_deps=deps,
         test_only=test_only,
         labels=labels,
-        output_is_complete=False,
     )
 
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs)
