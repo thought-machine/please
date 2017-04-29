@@ -35,7 +35,6 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         srcs=srcs,
         exported_deps=deps,
         visibility=visibility,
-        output_is_complete=False,
         requires=['go'],
         test_only=test_only,
     )
