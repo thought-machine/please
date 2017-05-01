@@ -1,3 +1,11 @@
+Version 7.10.3
+--------------
+
+    * Disabling tracing on RPC cache server, possible fix for aforementioned
+      memory leak.
+    * Fix for #208, whereby some C++ settings were not being honoured properly.
+
+
 Version 7.10.2
 --------------
 

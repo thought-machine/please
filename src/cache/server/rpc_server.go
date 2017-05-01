@@ -25,8 +25,14 @@ import (
 
 // maxMsgSize is the maximum message size our gRPC server accepts.
 // We deliberately set this to something high since we don't want to limit artifact size here.
-// TODO(pebers): we should limit it on the client side though.
 const maxMsgSize = 200 * 1024 * 1024
+
+func init() {
+	// When tracing is enabled, it appears to keep references to messages alive, possibly indefinitely (?).
+	// This is very bad for us since our messages are large, it can result in leaking memory very quickly
+	// and ultimately OOM errors. Disabling tracing appears to alleviate the problem.
+	grpc.EnableTracing = false
+}
 
 type RpcCacheServer struct {
 	cache        *Cache
