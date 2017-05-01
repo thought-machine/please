@@ -283,7 +283,9 @@ func (target *BuildTarget) Dependencies() []*BuildTarget {
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
 		for _, dep := range deps.deps {
+			// N.B. Include any exported dependencies of this guy too.
 			ret = append(ret, dep)
+			ret = append(ret, dep.transitiveExportedDependencies()...)
 		}
 	}
 	sort.Sort(ret)
@@ -296,6 +298,20 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	for _, info := range target.dependencies {
 		if info.exported {
 			ret = append(ret, info.declared)
+		}
+	}
+	return ret
+}
+
+// transitiveExportedDependencies returns the transitive set of exported dependencies of this target.
+func (target *BuildTarget) transitiveExportedDependencies() []*BuildTarget {
+	var ret []*BuildTarget
+	for _, info := range target.dependencies {
+		if info.exported {
+			for _, dep := range info.deps {
+				ret = append(ret, dep)
+				ret = append(ret, dep.transitiveExportedDependencies()...)
+			}
 		}
 	}
 	return ret

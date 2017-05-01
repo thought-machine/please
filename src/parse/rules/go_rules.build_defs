@@ -13,7 +13,7 @@ _GO_TOOL = ['go']
 
 
 def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False,
-               go_tools=None, complete=True, _needs_transitive_deps=False, _all_srcs=False):
+               go_tools=None, complete=True, _needs_transitive_deps=False,_all_srcs=False):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -35,7 +35,6 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         srcs=srcs,
         exported_deps=deps,
         visibility=visibility,
-        output_is_complete=False,
         requires=['go'],
         test_only=test_only,
     )
@@ -201,14 +200,9 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
         requires = ['cc'],
         tools = tools,
     )
-    srcs_rule = filegroup(
-        name = name,
-        tag = 'go_src',
-        srcs = [gen_go] + go_srcs,
-    )
-    go_library(
+    go_rule = go_library(
         name = '_%s#go' % name,
-        srcs = [srcs_rule],
+        srcs = [gen_go] + go_srcs,
         test_only = test_only,
         complete = False,
         deps = deps,
@@ -224,7 +218,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
         out=out,
         provides = {
             'go': ':' + name,
-            'go_src': srcs_rule,
+            'go_src': go_rule,
             'cgo_obj': cgo_o_rule,
         },
     )
@@ -326,7 +320,6 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         deps = deps,
         test_only = True,
         _all_srcs = True,
-        _needs_transitive_deps = True,  # Need deps of our deps as well. Not ideal though.
         complete = False,
     )
     lib_rule = ':_%s#lib' % name
