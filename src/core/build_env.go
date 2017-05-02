@@ -38,8 +38,8 @@ func GeneralBuildEnvironment(config *Configuration) []string {
 	if config.Go.GoRoot != "" {
 		env = append(env, "GOROOT="+config.Go.GoRoot)
 	}
-	if state.Config.Cpp.PkgConfigPath != "" {
-		env = append(env, "PKG_CONFIG_PATH="+state.Config.Cpp.PkgConfigPath)
+	if config.Cpp.PkgConfigPath != "" {
+		env = append(env, "PKG_CONFIG_PATH="+config.Cpp.PkgConfigPath)
 	}
 	return env
 }
