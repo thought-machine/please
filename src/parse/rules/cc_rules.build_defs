@@ -715,6 +715,7 @@ def _library_transitive_labels(c, compiler_flags, pkg_config_libs):
         labels = get_labels(name, 'cc:')
         flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
         flags.extend('-D' + l[4:] for l in labels if l.startswith('def:'))
+        pkg_config_libs.extend(l[3:] for l in labels if l.startswith('pc:'))
         if flags:  # Don't update if there aren't any relevant labels
             cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, ' '.join(flags))
             for k, v in cmds.items():
