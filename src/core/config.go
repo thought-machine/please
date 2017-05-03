@@ -147,7 +147,6 @@ func DefaultConfiguration() *Configuration {
 	config.Cpp.DefaultDbgCflags = "--std=c99 -g3 -pipe -DDEBUG -Wall -Werror"
 	config.Cpp.DefaultOptCppflags = "--std=c++11 -O3 -pipe -DNDEBUG -Wall -Werror"
 	config.Cpp.DefaultDbgCppflags = "--std=c++11 -g3 -pipe -DDEBUG -Wall -Werror"
-	config.Cpp.PkgConfigPath = ""
 	config.Cpp.Coverage = true
 	config.Proto.ProtocTool = "protoc"
 	// We're using the most common names for these; typically gRPC installs the builtin plugins
