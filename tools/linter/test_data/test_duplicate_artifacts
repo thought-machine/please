@@ -1,0 +1,34 @@
+pip_library(
+    name = 'six',
+    version = '1.10.0',
+)
+
+pip_library(
+    name = 'pex',
+    version = '1.17.1',
+)
+
+pip_library(
+    name = 'six_14',
+    package_name = 'six',
+    version = '1.4.0',
+)
+
+maven_jar(
+    name = 'guava',
+    id = 'com.google.guava:guava:20.0',
+    hash = 'sha1: 8f67b54ab392fba69159a524ac40d112e427c3a1',
+    visibility = ['PUBLIC'],
+)
+
+maven_jar(
+    name = 'lz4',
+    id = 'net.jpountz.lz4:lz4:1.3',
+    hash = 'sha1: 137bf1299ce70869b379d7d8a5197b7dd0689b74',
+)
+
+maven_jar(
+    name = 'guava_19',
+    id = 'com.google.guava:guava:19.0',
+    visibility = ['PUBLIC'],
+)

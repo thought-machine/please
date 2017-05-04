@@ -5,8 +5,7 @@ Most features of the language we attempt to control at parse time, for example
 banning import and print statements, but some cannot be readily or reliably
 identified then (e.g. use of dict.iteritems in a python 2 based interpreter).
 
-This script attempts to identify such stylistic things as a linter. The
-current things searched for are:
+The linter attempts to identify such stylistic things. The current things searched for are:
  - Syntax errors - obviously these are caught at build time too, but we have
    to handle them here, and it's useful in some workflows to have lint prompt
    for this as well.
@@ -26,17 +25,30 @@ current things searched for are:
    The most obvious case here is include_defs which we haven't removed because it's
    used internally for some Bazel compatibility, and it might be useful for Buck
    compatibility.
+   Similarly we check for arguments that are deprecated.
  - Detection of incorrect arguments to builtin functions. Note that we don't bother
    doing typechecking on them - that's done at runtime anyway more accurately than
    we can here. This is somewhat unnecessary but again may help some workflows
    where the linter might hint you not to commit with obvious problems.
+ - Missing required arguments to builtin functions. This will of course fail at
+   parse time but it still seems useful to collect here.
  - Detection of duplicates in argument lists - most usually this is useful for deps,
    but it applies to anything since there's no reason to have a duplicate in any
    argument list to any builtin Please function.
+ - Some specific checks on third-party library rules (maven_jar, pip_library and
+   go_get) that warn on duplicated artifacts.
+   This is deliberately version-agnostic, since in most cases having two different
+   versions of the same library turns out to be a Bad Thing, although there are
+   potentially legitimate uses for that as well. In such cases we suggest splitting
+   into different packages if the linter is becoming vexing.
 
 Lint warnings can be suppressed on a per-line basis by adding a trailing comment
-saying either `# nolint` or `# lint:disable=iterkeys-used`.
-At present there is no way to disable it by scope or completely for a file.
+saying either `# nolint` or `# lint:disable=iterkeys-used`, or on a per-file basis
+by adding lines containing only the disabling messages. Currently you can't use
+`nolint` on a per-file basis; consider not running the linter on that file... :)
+
+Usage:
+
 """
 
 import argparse
@@ -55,8 +67,11 @@ UNSORTED_SET_ITERATION = 'unsorted-set-iteration'
 UNSORTED_DICT_ITERATION = 'unsorted-dict-iteration'
 NON_KEYWORD_CALL = 'non-keyword-call'
 DEPRECATED_FUNCTION = 'deprecated-function'
+DEPRECATED_ARGUMENT = 'deprecated-argument'
+MISSING_ARGUMENT = 'missing-argument'
 INCORRECT_ARGUMENT = 'incorrect-argument'
 UNNECESSARY_DUPLICATE = 'unnecessary-duplicate'
+DUPLICATE_ARTIFACT = 'duplicate-artifact'
 
 
 ERROR_DESCRIPTIONS = {
@@ -68,8 +83,11 @@ ERROR_DESCRIPTIONS = {
     UNSORTED_DICT_ITERATION: 'Iteration of dicts is not ordered, use sorted()',
     NON_KEYWORD_CALL: 'Call to builtin rule without using keyword arguments',
     DEPRECATED_FUNCTION: 'The function include_defs is deprecated, use subinclude() instead',
+    DEPRECATED_ARGUMENT: 'Deprecated argument',
+    MISSING_ARGUMENT: 'Missing required argument',
     INCORRECT_ARGUMENT: 'Unknown argument to built-in function',
     UNNECESSARY_DUPLICATE: 'Unnecessary duplicate in argument',
+    DUPLICATE_ARTIFACT: 'Duplicated third-party artifact',
 }
 
 BANNED_ATTRS = {
@@ -83,10 +101,32 @@ UNSORTED_CALLS = {
     'dict': UNSORTED_DICT_ITERATION,
 }
 
+
+def _args(func):
+    """Alters argument structure on function object to be a map of name -> arg instead of a list."""
+    func['args'] = {arg['name']: arg for arg in func['args']}
+    return func
+
+
+def _extract_keyword(node, arg, default=''):
+    """Extracts a single keyword argument from an AST node."""
+    for kwd in node.keywords:
+        if kwd.arg == arg and hasattr(kwd.value, 's'):
+            return kwd.value.s
+    return default
+
+
 JSON = json.loads(pkg_resources.resource_string('src.parse', 'rule_args.json').decode('utf-8'))
 WHITELISTED_FUNCTIONS = {'subinclude', 'glob', 'include_defs', 'licenses'}
-BUILTIN_FUNCTIONS = {k: v for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
+BUILTIN_FUNCTIONS = {k: _args(v) for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
 DEPRECATED_FUNCTIONS = {'include_defs'}
+THIRD_PARTY_FUNCTIONS = {
+    'maven_jar': lambda n: _extract_keyword(n, 'id').rpartition(':')[0],
+    'go_get': lambda n: _extract_keyword(n, 'get'),
+    'pip_library': lambda n: _extract_keyword(n, 'package_name', _extract_keyword(n, 'name')),
+    'python_wheel': lambda n: _extract_keyword(n, 'package_name', _extract_keyword(n, 'name')),
+}
+third_party_artifacts = set()
 
 
 def is_suppressed(code, line, file_suppressions):
@@ -122,16 +162,31 @@ def _lint_builtin_functions(n):
     if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
         if n.args or n.starargs:
             yield n.lineno, NON_KEYWORD_CALL
-        args = {arg['name'] for arg in BUILTIN_FUNCTIONS[n.func.id]['args']}
+        args = BUILTIN_FUNCTIONS[n.func.id]['args']
         for kwd in n.keywords or []:
             if kwd.arg not in args and not kwd.arg.startswith('_'):
                 yield kwd.value.lineno, INCORRECT_ARGUMENT
+        # Don't check kwargs if the caller is doing a **kwargs into it, assume that'll take care of it.
+        if not n.kwargs:
+            kwds = {kwd.arg for kwd in n.keywords or []}
+            for name, arg in args.items():
+                if arg['required'] and name not in kwds:
+                    yield n.lineno, MISSING_ARGUMENT
 
 
 def _lint_deprecated_functions(n):
     """Lints for calls to deprecated functions."""
     if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in DEPRECATED_FUNCTIONS:
         yield n.lineno, DEPRECATED_FUNCTION
+
+
+def _lint_deprecated_args(n):
+    """Lints for calls to builtin functions that use deprecated arguments."""
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
+        args = BUILTIN_FUNCTIONS[n.func.id]['args']
+        for kwd in n.keywords or []:
+            if args.get(kwd.arg, {}).get('deprecated'):
+                yield kwd.value.lineno, DEPRECATED_ARGUMENT
 
 
 def _lint_duplicates(n):
@@ -145,6 +200,17 @@ def _lint_duplicates(n):
                         if s.s in seen:
                             yield s.lineno, UNNECESSARY_DUPLICATE
                         seen.add(s.s)
+
+
+def _lint_third_party_artifacts(n):
+    """Lints for duplicate third-party artifacts (in pip_library, maven_jar etc)."""
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in THIRD_PARTY_FUNCTIONS:
+        artifact = THIRD_PARTY_FUNCTIONS[n.func.id](n)
+        if artifact:
+            if artifact in third_party_artifacts:
+                yield n.lineno, DUPLICATE_ARTIFACT
+            else:
+                third_party_artifacts.add(artifact)
 
 
 def _lint(contents):
@@ -161,19 +227,21 @@ def _lint(contents):
 
 LINT_FUNCTIONS = [
     _lint_iteritems, _lint_unsorted_iteration, _lint_builtin_functions,
-    _lint_deprecated_functions, _lint_duplicates,
+    _lint_deprecated_functions, _lint_deprecated_args, _lint_duplicates,
+    _lint_third_party_artifacts,
 ]
 
 
 def lint(filename, suppress=None):
     """Lint the given file. Yields the error codes found."""
+    third_party_artifacts.clear()  # Only check this within a single file.
     with open(filename) as f:
         contents = f.read()
     # ast discards comments, but we use those to suppress messages.
     lines = contents.split('\n')
     # Find any lines that fully suppress messages.
     matches = [re.match('^ *# lint: *disable=(.*)$', line) for line in lines]
-    suppressions = {match.group(1) for match in matches if match}
+    suppressions = {match.group(1) for match in matches if match}.union(suppress or [])
     for lineno, code in _lint(contents):
         if not is_suppressed(code, lines[lineno - 1], suppressions):
             yield lineno, code
@@ -190,7 +258,7 @@ def print_lint(filenames, suppress=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Linter for Please BUILD files')
     parser.add_argument('files', nargs='+')
     parser.add_argument('--suppress', nargs='+')
     parser.add_argument('--exit_zero', dest='exit_zero', action='store_true')

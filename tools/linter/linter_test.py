@@ -3,7 +3,7 @@ import unittest
 from tools.linter import linter
 
 
-lint = lambda fn, suppress=None: list(linter.lint(fn, suppress))
+lint = lambda fn, suppress=[linter.MISSING_ARGUMENT]: list(linter.lint(fn, suppress))
 
 
 class TestLinter(unittest.TestCase):
@@ -47,10 +47,20 @@ class TestLinter(unittest.TestCase):
         self.assertEqual([(1, linter.DEPRECATED_FUNCTION)],
                          lint('tools/linter/test_data/test_deprecated_functions'))
 
+    def test_deprecated_arguments(self):
+        """Test detection of deprecated arguments."""
+        self.assertEqual([(3, linter.DEPRECATED_ARGUMENT)],
+                         lint('tools/linter/test_data/test_deprecated_arguments'))
+
     def test_incorrect_args(self):
         """Test detection of incorrect arguments."""
         self.assertEqual([(7, linter.INCORRECT_ARGUMENT)],
                          lint('tools/linter/test_data/test_incorrect_args'))
+
+    def test_missing_args(self):
+        """Test detection of missing required arguments."""
+        self.assertEqual([(1, linter.MISSING_ARGUMENT)],
+                         lint('tools/linter/test_data/test_missing_args', suppress=None))
 
     def test_incorrect_args(self):
         """Test detection of duplicates in arguments."""
@@ -61,3 +71,9 @@ class TestLinter(unittest.TestCase):
         """Test suppressing lint warnings for a whole file."""
         self.assertEqual([(5, linter.ITERKEYS_USED)],
                          lint('tools/linter/test_data/test_file_suppressions'))
+
+    def test_duplicate_artifacts(self):
+        """Test linting for duplicate third party artifacts."""
+        self.assertEqual([(11, linter.DUPLICATE_ARTIFACT),
+                          (30, linter.DUPLICATE_ARTIFACT)],
+                         lint('tools/linter/test_data/test_duplicate_artifacts'))
