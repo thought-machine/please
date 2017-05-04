@@ -3,10 +3,11 @@ package(default_visibility = ['PUBLIC'])
 pip_library(
     name = 'pex',
     version = '1.1.20',
-    hashes = ['sha1: e410ca1d350e852e705299b31c6c9ea7658257a4'],
+    hashes = ['sha1: 336f91b0ecc026ae8dce72bad0d29b5fca3ec5dd'],
     patch = [
         'never_cache_pex.patch',
         'bytecode_timestamps.patch',
+        'deterministic_pex_info.patch',
     ],
 )
 
