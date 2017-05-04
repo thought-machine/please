@@ -1,3 +1,11 @@
+Version 7.11.0
+--------------
+
+    * `pkg_config_libs` is now applied transitively for `cc_library` and `c_library` rules.
+    * Fixed a bug in pex writing where the output was not always deterministic.
+    * Linter now detects deprecated & missing arguments and for duplicate third-party artifacts.
+
+
 Version 7.10.3
 --------------
 
