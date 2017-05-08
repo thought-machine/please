@@ -55,7 +55,9 @@ func (pr *progressReader) Close() error {
 func (pr *progressReader) update() {
 	if !StdErrIsATerminal {
 		// Can't do interactive things, just print dots.
-		Printf(strings.Repeat(".", (pr.current-pr.last)/1000))
+		if pr.current > pr.last {
+			Printf(strings.Repeat(".", (pr.current-pr.last)/1000))
+		}
 		return
 	}
 	currentBytes := humanize.Bytes(uint64(pr.current))
