@@ -70,5 +70,6 @@ go_test(
     deps = [
         ':output',
         '//src/core',
+        '//third_party/go:testify',
     ],
 )

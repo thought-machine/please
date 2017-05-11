@@ -1,8 +1,13 @@
 package output
 
-import "testing"
+import (
+	"fmt"
+	"testing"
 
-import "core"
+	"github.com/stretchr/testify/assert"
+
+	"core"
+)
 
 func TestFindGraphCycle(t *testing.T) {
 	graph := core.NewGraph()
@@ -26,6 +31,12 @@ func TestFindGraphCycle(t *testing.T) {
 	assertTarget(t, cycle[0], "//src/output:target2")
 	assertTarget(t, cycle[1], "//src/core:target1")
 	assertTarget(t, cycle[2], "//src/core:target3")
+}
+
+func TestColouriseError(t *testing.T) {
+	err := fmt.Errorf("/opt/tm/toolchains/1.8.2/usr/include/fst/label-reachable.h:176:39: error: non-const lvalue reference to type 'unordered_map<int, int>' cannot bind to a value of unrelated type 'unordered_map<unsigned char, unsigned char>'")
+	expected := fmt.Errorf("\x1b[37;1m/opt/tm/toolchains/1.8.2/usr/include/fst/label-reachable.h, line 176, column 39:\x1b[0m \x1b[31;1merror: \x1b[0m\x1b[37;1mnon-const lvalue reference to type 'unordered_map<int, int>' cannot bind to a value of unrelated type 'unordered_map<unsigned char, unsigned char>'\x1b[0m")
+	assert.EqualValues(t, expected, colouriseError(err))
 }
 
 // Factory function for build targets
