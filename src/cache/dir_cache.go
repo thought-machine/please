@@ -4,7 +4,6 @@ package cache
 
 import (
 	"encoding/base64"
-	"fmt"
 	"os"
 	"path"
 	"syscall"
@@ -130,7 +129,7 @@ func newDirCache(config *core.Configuration) *dirCache {
 	}
 	// Make directory if it doesn't exist.
 	if err := os.MkdirAll(cache.Dir, core.DirPermissions); err != nil {
-		panic(fmt.Sprintf("Failed to create root cache directory %s: %s", cache.Dir, err))
+		log.Fatalf("Failed to create root cache directory %s: %s", cache.Dir, err)
 	}
 	// Fire off the cache cleaner process.
 	if config.Cache.DirCacheCleaner != "" && config.Cache.DirCacheCleaner != "none" {
