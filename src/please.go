@@ -441,11 +441,11 @@ var buildFunctions = map[string]func() bool{
 		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
 		}
-		labels := query.QueryCompletionLabels(config, fragments, core.RepoRoot)
+		labels, hidden := query.QueryCompletionLabels(config, fragments, core.RepoRoot)
 		if success, state := Please(labels, config, false, false, false); success {
 			binary := opts.Query.Completions.Cmd == "run"
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
-			query.QueryCompletions(state.Graph, labels, binary, test)
+			query.QueryCompletions(state.Graph, labels, binary, test, hidden)
 			return true
 		}
 		return false
