@@ -1,3 +1,10 @@
+Version 7.11.1
+--------------
+
+    * Fix for performance regression of some setups (mostly large Java trees) introduced
+      in previous version.
+
+
 Version 7.11.0
 --------------
 
