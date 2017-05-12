@@ -116,6 +116,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			// If a post-build function ran it may modify the rule definition. In that case we
 			// need to check again whether the rule needs building.
 			if target.PostBuildFunction == 0 || !needsBuilding(state, target, true) {
+				if target.IsFilegroup {
+					// Small optimisation to ensure we don't need to rehash things unnecessarily.
+					copyFilegroupHashes(state, target)
+				}
 				target.SetState(core.Reused)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
 				return nil // Nothing needs to be done.
@@ -579,6 +583,18 @@ func buildFilegroupFile(target *core.BuildTarget, fromPath, toPath string) (bool
 	delete(buildingFilegroupOutputs, toPath)
 	buildingFilegroupMutex.Unlock()
 	return changed, err
+}
+
+// copyFilegroupHashes copies the hashes of the inputs of this filegroup to their outputs.
+// This is a small optimisation to ensure we don't need to recalculate them unnecessarily.
+func copyFilegroupHashes(state *core.BuildState, target *core.BuildTarget) {
+	outDir := target.OutDir()
+	localSources := target.AllLocalSourcePaths(state.Graph)
+	for i, source := range target.AllFullSourcePaths(state.Graph) {
+		if out := path.Join(outDir, localSources[i]); out != source {
+			movePathHash(source, out, true)
+		}
+	}
 }
 
 func createInitPy(dir string) {

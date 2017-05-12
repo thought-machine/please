@@ -93,9 +93,10 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         tag = 'hdrs',
         srcs=hdrs,
         requires=['cc_hdrs'],
-        exported_deps=deps,
+        deps=deps,
         test_only=test_only,
         labels=labels,
+        output_is_complete=False,
     )
 
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs)
@@ -119,6 +120,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
                 tools=tools,
                 # TODO(pebers): handle includes and defines in _library_cmds as well.
                 pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs) if (deps or includes or defines) else None,
+                needs_transitive_deps=True,
             )
             a_rules.append(':' + a_name)
 
@@ -169,6 +171,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             labels=labels,
             tools=tools,
             pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs) if deps else None,
+            needs_transitive_deps=True,
         )
         if alwayslink:
             labels.append('cc:al:%s/%s.a' % (get_base_path(), name))

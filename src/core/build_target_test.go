@@ -300,20 +300,6 @@ func TestDependencies(t *testing.T) {
 	assert.Equal(t, []*BuildTarget{target1, target2}, target3.Dependencies())
 }
 
-func TestDependenciesExported(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "")
-	target2.AddMaybeExportedDependency(target1.Label, true)
-	target2.resolveDependency(target1.Label, target1)
-	target3 := makeTarget("//src/core:target3", "", target2)
-	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependencies())
-	assert.Equal(t, []*BuildTarget{}, target1.Dependencies())
-	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
-	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
-	assert.Equal(t, []BuildLabel{target2.Label}, target3.DeclaredDependencies())
-	assert.Equal(t, []*BuildTarget{target1, target2}, target3.Dependencies())
-}
-
 func TestAddDependency(t *testing.T) {
 	target1 := makeTarget("//src/core:target1", "")
 	target2 := makeTarget("//src/core:target2", "")
