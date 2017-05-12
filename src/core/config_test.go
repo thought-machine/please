@@ -101,6 +101,13 @@ func TestConfigOverrideUnknownName(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestConfigOverrideURL(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"metrics.pushgatewayurl": "http://gateway:9091"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, "http://gateway:9091", config.Metrics.PushGatewayURL)
+}
+
 func TestDynamicSection(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/aliases.plzconfig"})
 	assert.NoError(t, err)

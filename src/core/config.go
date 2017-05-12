@@ -361,7 +361,11 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		}
 		switch field.Kind() {
 		case reflect.String:
-			field.Set(reflect.ValueOf(v))
+			if field.Type().Name() == "URL" {
+				field.Set(reflect.ValueOf(cli.URL(v)))
+			} else {
+				field.Set(reflect.ValueOf(v))
+			}
 		case reflect.Bool:
 			v = strings.ToLower(v)
 			// Mimics the set of truthy things gcfg accepts in our config file.
