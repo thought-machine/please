@@ -153,33 +153,34 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     linker_flags = linker_flags or []
     generated_go_srcs = [src.replace('.go', '.cgo1.go') for src in srcs] + ['_cgo_gotypes.go']
     generated_c_srcs = [src.replace('.go', '.cgo2.c') for src in srcs] + ['_cgo_export.c']
-    generated_hdrs = ['_cgo_export.h']
+    generated_c_hdrs = ['_cgo_export.h']
+
     cgo_rule = build_rule(
         name = name,
         tag = 'cgo',
         srcs = srcs + hdrs,
-        outs = [name + '_cgo'],
+        outs = generated_go_srcs + generated_c_srcs + generated_c_hdrs,
         cmd = ' && '.join([
-            'mkdir $OUT',
             'cd $PKG_DIR',
-            '$TOOL tool cgo -objdir $OUT -importpath ${PKG#*src/} *.go',
+            '$TOOL tool cgo -objdir $TMP_DIR -importpath ${PKG#*src/} *.go',
             # cgo leaves absolute paths in these files which we must get rid of :(
-            'find $OUT -type f | xargs sed -i -e "s|$TMP_DIR/||g"',
+            'find $TMP_DIR -type f -maxdepth 1 | xargs sed -i -e "s|$TMP_DIR/||g"',
         ]),
         tools = _GO_TOOL,
         requires = ['go', 'cc_hdrs'],
     )
-    # Break up the outputs of the cgo rule into relevant bits.
-    # TODO(pebers): This would be easier if we could indicate a dependency on a single
-    #               output of a rule somehow...
-    gen_go = _collect_files(name, 'gen_go', cgo_rule, generated_go_srcs, '.go')
-    gen_c = _collect_files(name, 'gen_c', cgo_rule, generated_c_srcs, '.c')
-    gen_h = _collect_files(name, 'gen_hdr', cgo_rule, generated_hdrs, '.h')
+
+    # Take specific outputs from this rule for various languages.
+    outputs = lambda files: ['%s|%s' % (cgo_rule, file) for file in files]
+    gen_go = outputs(generated_go_srcs)
+    gen_c = outputs(generated_c_srcs)
+    gen_h = outputs(generated_c_hdrs)
+
     # Compile the various bits
     c_library(
         name = '_%s#c' % name,
-        srcs = [gen_c] + c_srcs,
-        hdrs = [gen_h] + hdrs,
+        srcs = gen_c + c_srcs,
+        hdrs = gen_h + hdrs,
         compiler_flags = compiler_flags + [
             '-Wno-error',
             '-Wno-unused-parameter',  # Generated code doesn't compile clean
@@ -202,7 +203,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     )
     go_rule = go_library(
         name = '_%s#go' % name,
-        srcs = [gen_go] + go_srcs,
+        srcs = gen_go + go_srcs,
         test_only = test_only,
         complete = False,
         deps = deps,
@@ -584,31 +585,6 @@ def _go_tool(tools):
     Currently the tool invoked for 'go' is not configurable.
     """
     return (tools or []) + ['go']
-
-
-def _collect_files(name, tag, dep, outs, extension):
-    """Defines a rule to collect a subset of outputs from another rule.
-
-    Used mostly for cgo which spits out many different kinds of thing.
-    """
-    # Handle sources that are actually build rules.
-    # TODO(pebers): This is overly awkward to need to use a post-build rule for, can we do
-    #               something more lightweight?
-    file_outs = [out for out in outs if not out.startswith('/') and not out.startswith(':')]
-    return build_rule(
-        name = name,
-        tag = tag,
-        srcs = [dep],
-        outs = file_outs,
-        cmd = 'mv $PKG_DIR/%s_cgo/* . && ls *%s' % (name, extension),
-        post_build = _collect_rule_outs if file_outs != outs else None,
-    )
-
-
-def _collect_rule_outs(name, output):
-    for line in output:
-        if line != '_cgo_main.c':
-            add_out(name, line)
 
 
 def _go_library_cmds(complete=True, all_srcs=False):
