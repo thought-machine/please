@@ -182,14 +182,18 @@ func (s BuildTargetState) String() string {
 // Inputs to a build can be either a file in the local package or another build rule.
 // All users care about is where they find them.
 type BuildInput interface {
-	// Returns a slice of paths to the files of this input.
+	// Paths returns a slice of paths to the files of this input.
 	Paths(graph *BuildGraph) []string
-	// As above, but includes the leading plz-out/gen directory.
+	// FullPaths is like Paths but includes the leading plz-out/gen directory.
 	FullPaths(graph *BuildGraph) []string
-	// Paths within the local package
+	// LocalPaths returns paths within the local package
 	LocalPaths(graph *BuildGraph) []string
-	// Returns the build label associated with this input, or nil if it doesn't have one (eg. it's just a file).
+	// Label returns the build label associated with this input, or nil if it doesn't have one (eg. it's just a file).
 	Label() *BuildLabel
+	// nonOutputLabel returns the build label associated with this input, or nil if it doesn't have
+	// one or is a specific output of a rule.
+	// This is fiddly enough that we don't want to expose it outside the package right now.
+	nonOutputLabel() *BuildLabel
 	// Returns a string representation of this input
 	String() string
 }
@@ -323,7 +327,7 @@ func (target *BuildTarget) Outputs() []string {
 		ret = make([]string, 0, len(target.Sources))
 		// Filegroups just re-output their inputs.
 		for _, src := range target.Sources {
-			if label := src.Label(); label == nil {
+			if label := src.nonOutputLabel(); label == nil {
 				ret = append(ret, src.LocalPaths(nil)[0])
 			} else {
 				for _, dep := range target.DependenciesFor(*label) {
@@ -351,7 +355,7 @@ func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) 
 
 // sourcePaths returns the source paths for a single source.
 func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc) []string {
-	if label := source.Label(); label != nil {
+	if label := source.nonOutputLabel(); label != nil {
 		ret := []string{}
 		for _, providedLabel := range graph.TargetOrDie(*label).ProvideFor(target) {
 			for _, file := range f(providedLabel, graph) {

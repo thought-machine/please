@@ -397,7 +397,7 @@ func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, d
 
 // maybeRecursivelyProvideFor is similar to recursivelyProvideFor but operates on a BuildInput.
 func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildInput) []BuildInput {
-	if label := src.Label(); label != nil {
+	if label := src.nonOutputLabel(); label != nil {
 		dep := graph.TargetOrDie(*label)
 		provided := recursivelyProvideFor(graph, target, dep, dep.Label)
 		ret := make([]BuildInput, len(provided))
@@ -467,13 +467,12 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 	ch := make(chan string)
 	var inner func(*BuildTarget)
 	inner = func(target *BuildTarget) {
-
 		if !doneTargets[target] {
 			// First yield all the sources of the target only ever pushing declared paths to
 			// the channel to prevent us outputting any intermediate files.
 			for _, source := range target.AllSources() {
 				// If the label is nil add any input paths contained here.
-				if label := source.Label(); label == nil {
+				if label := source.nonOutputLabel(); label == nil {
 					for _, sourcePath := range source.FullPaths(graph) {
 						if !donePaths[sourcePath] {
 							ch <- sourcePath

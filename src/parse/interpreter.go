@@ -510,7 +510,7 @@ func AddSource(cTarget uintptr, cSource *C.char) *C.char {
 // Identifies if the file is owned by this package and returns an error if not.
 func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, error) {
 	if core.LooksLikeABuildLabel(src) {
-		return core.TryParseBuildLabel(src, packageName)
+		return core.TryParseBuildOutputLabel(src, packageName)
 	} else if src == "" {
 		return nil, fmt.Errorf("Empty source path (in package %s)", packageName)
 	} else if strings.Contains(src, "../") {
