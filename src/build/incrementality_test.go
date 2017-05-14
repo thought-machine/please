@@ -37,6 +37,7 @@ var KnownFields = map[string]bool{
 	"PreBuildHash":                true,
 	"PostBuildHash":               true,
 	"outputs":                     true,
+	"namedOutputs":                true,
 	"Licences":                    true,
 	"Tools":                       true,
 	"TestOutputs":                 true,

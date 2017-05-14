@@ -89,6 +89,10 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 			paths := target.SourcePaths(state.Graph, srcs)
 			env = append(env, "SRCS_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
 		}
+		// Named output groups similarly.
+		for name, outs := range target.DeclaredNamedOutputs() {
+			env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
+		}
 		if state.Config.Bazel.Compatibility {
 			// Obviously this is only a subset of the variables Bazel would expose, but there's
 			// no point populating ones that we literally have no clue what they should be.

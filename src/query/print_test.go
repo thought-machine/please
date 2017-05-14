@@ -26,6 +26,7 @@ var KnownFields = map[string]bool{
 	"Label":                       true, // this includes the target's name
 	"Labels":                      true,
 	"Licences":                    true,
+	"namedOutputs":                true,
 	"NamedSources":                true,
 	"NeedsTransitiveDependencies": true,
 	"NoTestOutput":                true,

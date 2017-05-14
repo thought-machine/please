@@ -39,6 +39,17 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 				fmt.Printf("          '%s',\n", out)
 			}
 			fmt.Printf("      ],\n")
+		} else if names := target.DeclaredOutputNames(); len(names) > 0 {
+			fmt.Printf("      outs = {\n")
+			outs := target.DeclaredNamedOutputs()
+			for _, name := range names {
+				fmt.Printf("          '%s': [\n", name)
+				for _, out := range outs[name] {
+					fmt.Printf("              '%s'\n", out)
+				}
+				fmt.Printf("          ],\n")
+			}
+			fmt.Printf("      },\n")
 		}
 		stringList("optional_outs", target.OptionalOutputs)
 		if !target.IsFilegroup {

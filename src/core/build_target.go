@@ -329,6 +329,17 @@ func (target *BuildTarget) DeclaredNamedOutputs() map[string][]string {
 	return target.namedOutputs
 }
 
+// DeclaredOutputNames is a convenience function to return the names of the declared
+// outputs in a consistent order.
+func (target *BuildTarget) DeclaredOutputNames() []string {
+	ret := make([]string, 0, len(target.namedOutputs))
+	for name := range target.namedOutputs {
+		ret = append(ret, name)
+	}
+	sort.Strings(ret)
+	return ret
+}
+
 // Outputs returns a slice of all the outputs of this rule.
 func (target *BuildTarget) Outputs() []string {
 	var ret []string
