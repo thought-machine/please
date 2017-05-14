@@ -427,7 +427,7 @@ func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported boo
 }
 
 //export AddOutputPost
-func AddOutputPost(cPackage uintptr, cTarget *C.char, cOut *C.char) *C.char {
+func AddOutputPost(cPackage uintptr, cTarget, cOut *C.char) *C.char {
 	target, err := getTargetPost(cPackage, cTarget)
 	if err != nil {
 		return C.CString(err.Error())
@@ -438,6 +438,21 @@ func AddOutputPost(cPackage uintptr, cTarget *C.char, cOut *C.char) *C.char {
 		return C.CString(err.Error())
 	}
 	target.AddOutput(out)
+	return nil
+}
+
+//export AddNamedOutputPost
+func AddNamedOutputPost(cPackage uintptr, cTarget, cName, cOut *C.char) *C.char {
+	target, err := getTargetPost(cPackage, cTarget)
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	out := C.GoString(cOut)
+	pkg := unsizep(cPackage)
+	if err := pkg.RegisterOutput(out, target); err != nil {
+		return C.CString(err.Error())
+	}
+	target.AddNamedOutput(C.GoString(cName), out)
 	return nil
 }
 
@@ -510,7 +525,7 @@ func AddSource(cTarget uintptr, cSource *C.char) *C.char {
 // Identifies if the file is owned by this package and returns an error if not.
 func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, error) {
 	if core.LooksLikeABuildLabel(src) {
-		return core.TryParseBuildOutputLabel(src, packageName)
+		return core.TryParseNamedOutputLabel(src, packageName)
 	} else if src == "" {
 		return nil, fmt.Errorf("Empty source path (in package %s)", packageName)
 	} else if strings.Contains(src, "../") {
@@ -578,6 +593,13 @@ func AddData(cTarget uintptr, cData *C.char) *C.char {
 func AddOutput(cTarget uintptr, cOutput *C.char) *C.char {
 	target := unsizet(cTarget)
 	target.AddOutput(C.GoString(cOutput))
+	return nil
+}
+
+//export AddNamedOutput
+func AddNamedOutput(cTarget uintptr, cName *C.char, cOutput *C.char) *C.char {
+	target := unsizet(cTarget)
+	target.AddNamedOutput(C.GoString(cName), C.GoString(cOutput))
 	return nil
 }
 
