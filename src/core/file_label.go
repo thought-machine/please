@@ -66,42 +66,45 @@ func (label SystemFileLabel) String() string {
 	return label.Path
 }
 
-// BuildOutputLabel represents a single output file from a particular build rule.
-type BuildOutputLabel struct {
+// NamedOutputLabel represents a reference to a subset of named outputs from a rule.
+// The rule must have declared those as a named group.
+type NamedOutputLabel struct {
 	BuildLabel
 	Output string
 }
 
-func (label BuildOutputLabel) Paths(graph *BuildGraph) []string {
-	return []string{path.Join(label.PackageName, label.Output)}
+func (label NamedOutputLabel) Paths(graph *BuildGraph) []string {
+	return addPathPrefix(graph.TargetOrDie(label.BuildLabel).NamedOutputs(label.Output), label.PackageName)
 }
 
-func (label BuildOutputLabel) FullPaths(graph *BuildGraph) []string {
-	return []string{path.Join(graph.TargetOrDie(label.BuildLabel).OutDir(), label.Output)}
+func (label NamedOutputLabel) FullPaths(graph *BuildGraph) []string {
+	target := graph.TargetOrDie(label.BuildLabel)
+	return addPathPrefix(target.NamedOutputs(label.Output), target.OutDir())
 }
 
-func (label BuildOutputLabel) LocalPaths(graph *BuildGraph) []string {
-	return []string{label.Output}
+func (label NamedOutputLabel) LocalPaths(graph *BuildGraph) []string {
+	return graph.TargetOrDie(label.BuildLabel).NamedOutputs(label.Output)
 }
 
-func (label BuildOutputLabel) Label() *BuildLabel {
+func (label NamedOutputLabel) Label() *BuildLabel {
 	return &label.BuildLabel
 }
 
-func (label BuildOutputLabel) nonOutputLabel() *BuildLabel {
+func (label NamedOutputLabel) nonOutputLabel() *BuildLabel {
 	return nil
 }
 
-func (label BuildOutputLabel) String() string {
+func (label NamedOutputLabel) String() string {
 	return label.BuildLabel.String() + "|" + label.Output
 }
 
-// TryParseBuildOutputLabel attempts to parse a build output label. It's allowed to just be
+// TryParseNamedOutputLabel attempts to parse a build output label. It's allowed to just be
 // a normal build label as well.
-func TryParseBuildOutputLabel(target, currentPath string) (BuildInput, error) {
+// The syntax is an extension of normal build labels: //package:target|output
+func TryParseNamedOutputLabel(target, currentPath string) (BuildInput, error) {
 	if index := strings.IndexRune(target, '|'); index != -1 && index != len(target)-1 {
 		label, err := TryParseBuildLabel(target[:index], currentPath)
-		return BuildOutputLabel{BuildLabel: label, Output: target[index+1:]}, err
+		return NamedOutputLabel{BuildLabel: label, Output: target[index+1:]}, err
 	}
 	return TryParseBuildLabel(target, currentPath)
 }

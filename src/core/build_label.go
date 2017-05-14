@@ -247,23 +247,21 @@ func (this BuildLabel) Less(that BuildLabel) bool {
 
 // Implementation of BuildInput interface
 func (label BuildLabel) Paths(graph *BuildGraph) []string {
-	target := graph.TargetOrDie(label)
-	outputs := target.Outputs()
-	ret := make([]string, len(outputs), len(outputs))
-	for i, output := range outputs {
-		ret[i] = path.Join(label.PackageName, output)
-	}
-	return ret
+	return addPathPrefix(graph.TargetOrDie(label).Outputs(), label.PackageName)
 }
 
 func (label BuildLabel) FullPaths(graph *BuildGraph) []string {
 	target := graph.TargetOrDie(label)
-	outputs := target.Outputs()
-	ret := make([]string, len(outputs), len(outputs))
-	for i, output := range outputs {
-		ret[i] = path.Join(target.OutDir(), output)
+	return addPathPrefix(target.Outputs(), target.OutDir())
+}
+
+// addPathPrefix adds a prefix to all the entries in a slice.
+// Note that this is done in-place and the slice is altered.
+func addPathPrefix(paths []string, prefix string) []string {
+	for i, output := range paths {
+		paths[i] = path.Join(prefix, output)
 	}
-	return ret
+	return paths
 }
 
 func (label BuildLabel) LocalPaths(graph *BuildGraph) []string {

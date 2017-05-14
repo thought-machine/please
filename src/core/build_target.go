@@ -45,6 +45,10 @@ type BuildTarget struct {
 	Data []BuildInput
 	// Output files of this rule. All are paths relative to this package.
 	outputs []string
+	// Named output subsets of this rule. All are paths relative to this package but can be
+	// captured separately; for example something producing C code might separate its outputs
+	// into sources and headers.
+	namedOutputs map[string][]string
 	// Optional output files of this rule. Same as outs but aren't required to be produced always.
 	// Can be glob patterns.
 	OptionalOutputs []string
@@ -320,6 +324,11 @@ func (target *BuildTarget) DeclaredOutputs() []string {
 	return target.outputs
 }
 
+// DeclaredNamedOutputs returns the named outputs from this target's original declaration.
+func (target *BuildTarget) DeclaredNamedOutputs() map[string][]string {
+	return target.namedOutputs
+}
+
 // Outputs returns a slice of all the outputs of this rule.
 func (target *BuildTarget) Outputs() []string {
 	var ret []string
@@ -340,8 +349,25 @@ func (target *BuildTarget) Outputs() []string {
 		ret = make([]string, len(target.outputs))
 		copy(ret, target.outputs)
 	}
+	if target.namedOutputs != nil {
+		for _, outputs := range target.namedOutputs {
+			ret = append(ret, outputs...)
+		}
+	}
 	sort.Strings(ret)
 	return ret
+}
+
+// NamedOutputs returns a slice of all the outputs of this rule with a given name.
+// If the name is not declared by this rule it panics.
+func (target *BuildTarget) NamedOutputs(name string) []string {
+	if target.namedOutputs == nil {
+		panic(fmt.Sprintf("Target %s does not declare any named outputs (tried to look up %s)", target.Label, name))
+	}
+	if outs, present := target.namedOutputs[name]; present {
+		return outs
+	}
+	panic(fmt.Sprintf("Target %s does not declare any outputs named %s", target.Label, name))
 }
 
 // SourcePaths returns the source paths for a given set of sources.
@@ -741,18 +767,34 @@ func (target *BuildTarget) toolPath() string {
 
 // AddOutput adds a new output to the target if it's not already there.
 func (target *BuildTarget) AddOutput(output string) {
-	for i, out := range target.outputs {
-		if out == output {
-			return
-		} else if out > output {
-			// Insert in sorted order, with an attempt to be efficient.
-			target.outputs = append(target.outputs, "")
-			copy(target.outputs[i+1:], target.outputs[i:])
-			target.outputs[i] = output
-			return
+	target.outputs = target.insert(target.outputs, output)
+}
+
+// AddNamedOutput adds a new output to the target under a named group.
+// No attempt to deduplicate against unnamed outputs is currently made.
+func (target *BuildTarget) AddNamedOutput(name, output string) {
+	if target.namedOutputs == nil {
+		target.namedOutputs = map[string][]string{name: []string{output}}
+		return
+	}
+	target.namedOutputs[name] = target.insert(target.namedOutputs[name], output)
+}
+
+// insert adds a string into a slice if it's not already there. Sorted order is maintained.
+func (target *BuildTarget) insert(sl []string, s string) []string {
+	for i, x := range sl {
+		if s == x {
+			// Already present.
+			return sl
+		} else if x > s {
+			// Insert in this location. Make an attempt to be efficient.
+			sl = append(sl, "")
+			copy(sl[i+1:], sl[i:])
+			sl[i] = s
+			return sl
 		}
 	}
-	target.outputs = append(target.outputs, output)
+	return append(sl, s)
 }
 
 // AddLicence adds a licence to the target if it's not already there.
