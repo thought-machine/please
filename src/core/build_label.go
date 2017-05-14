@@ -256,12 +256,12 @@ func (label BuildLabel) FullPaths(graph *BuildGraph) []string {
 }
 
 // addPathPrefix adds a prefix to all the entries in a slice.
-// Note that this is done in-place and the slice is altered.
 func addPathPrefix(paths []string, prefix string) []string {
+	ret := make([]string, len(paths))
 	for i, output := range paths {
-		paths[i] = path.Join(prefix, output)
+		ret[i] = path.Join(prefix, output)
 	}
-	return paths
+	return ret
 }
 
 func (label BuildLabel) LocalPaths(graph *BuildGraph) []string {

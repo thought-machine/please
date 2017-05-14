@@ -151,15 +151,16 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     hdrs = hdrs or []
     compiler_flags = compiler_flags or []
     linker_flags = linker_flags or []
-    generated_go_srcs = [src.replace('.go', '.cgo1.go') for src in srcs] + ['_cgo_gotypes.go']
-    generated_c_srcs = [src.replace('.go', '.cgo2.c') for src in srcs] + ['_cgo_export.c']
-    generated_c_hdrs = ['_cgo_export.h']
 
     cgo_rule = build_rule(
         name = name,
         tag = 'cgo',
         srcs = srcs + hdrs,
-        outs = generated_go_srcs + generated_c_srcs + generated_c_hdrs,
+        outs = {
+            'go': [src.replace('.go', '.cgo1.go') for src in srcs] + ['_cgo_gotypes.go'],
+            'c': [src.replace('.go', '.cgo2.c') for src in srcs] + ['_cgo_export.c'],
+            'h': ['_cgo_export.h'],
+        },
         cmd = ' && '.join([
             'cd $PKG_DIR',
             '$TOOL tool cgo -objdir $TMP_DIR -importpath ${PKG#*src/} *.go',
@@ -170,17 +171,11 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
         requires = ['go', 'cc_hdrs'],
     )
 
-    # Take specific outputs from this rule for various languages.
-    outputs = lambda files: ['%s|%s' % (cgo_rule, file) for file in files]
-    gen_go = outputs(generated_go_srcs)
-    gen_c = outputs(generated_c_srcs)
-    gen_h = outputs(generated_c_hdrs)
-
     # Compile the various bits
     c_library(
         name = '_%s#c' % name,
-        srcs = gen_c + c_srcs,
-        hdrs = gen_h + hdrs,
+        srcs = [cgo_rule + '|c'] + c_srcs,
+        hdrs = [cgo_rule + '|h'] + hdrs,
         compiler_flags = compiler_flags + [
             '-Wno-error',
             '-Wno-unused-parameter',  # Generated code doesn't compile clean
@@ -203,7 +198,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     )
     go_rule = go_library(
         name = '_%s#go' % name,
-        srcs = gen_go + go_srcs,
+        srcs = [cgo_rule + '|go'] + go_srcs,
         test_only = test_only,
         complete = False,
         deps = deps,

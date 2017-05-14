@@ -336,7 +336,12 @@ func (target *BuildTarget) Outputs() []string {
 		ret = make([]string, 0, len(target.Sources))
 		// Filegroups just re-output their inputs.
 		for _, src := range target.Sources {
-			if label := src.nonOutputLabel(); label == nil {
+			if namedLabel, ok := src.(NamedOutputLabel); ok {
+				// Bit of a hack, but this needs different treatment from either of the others.
+				for _, dep := range target.DependenciesFor(namedLabel.BuildLabel) {
+					ret = append(ret, dep.NamedOutputs(namedLabel.Output)...)
+				}
+			} else if label := src.nonOutputLabel(); label == nil {
 				ret = append(ret, src.LocalPaths(nil)[0])
 			} else {
 				for _, dep := range target.DependenciesFor(*label) {

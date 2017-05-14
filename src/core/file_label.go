@@ -91,7 +91,7 @@ func (label NamedOutputLabel) Label() *BuildLabel {
 }
 
 func (label NamedOutputLabel) nonOutputLabel() *BuildLabel {
-	return &label.BuildLabel
+	return nil
 }
 
 func (label NamedOutputLabel) String() string {
