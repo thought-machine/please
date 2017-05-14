@@ -342,7 +342,8 @@ def _add_maybe_named(target, named_func, unnamed_func, arg, name, arg_name):
                                  'meant to use a list of strings instead' % (arg_name, name))
             elif v:
                 for x in v:
-                    _check_c_error(named_func(target, k, x))
+                    if x:
+                        _check_c_error(named_func(target, k, x))
     elif arg:
         for v in arg:
             if v and v.startswith('/') and not v.startswith('//'):
