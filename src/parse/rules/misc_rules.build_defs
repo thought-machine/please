@@ -566,6 +566,7 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
         deps=deps,
         visibility=visibility,
         labels=(labels or []) + ['tar'],
+        output_is_complete = True,
     )
 
 

@@ -1,3 +1,11 @@
+Version 7.11.2
+--------------
+
+    * Tarballs are now correctly marked as `output_is_complete` so downstream rules don't
+      fetch their transitive dependencies as well. Fixes some subtle interactions between
+      `tarball` and `sh_binary`.
+
+
 Version 7.11.1
 --------------
 
