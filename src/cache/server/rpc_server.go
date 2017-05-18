@@ -159,17 +159,17 @@ func loadKeys(filename string) map[string]*x509.Certificate {
 		if err != nil {
 			return err
 		} else if !info.IsDir() {
-			data, err := ioutil.ReadFile(filename)
+			data, err := ioutil.ReadFile(name)
 			if err != nil {
-				log.Fatalf("Failed to read cert from %s: %s", filename, err)
+				log.Fatalf("Failed to read cert from %s: %s", name, err)
 			}
 			p, _ := pem.Decode(data)
 			if p == nil {
-				log.Fatalf("Couldn't decode PEM data from %s: %s", filename, err)
+				log.Fatalf("Couldn't decode PEM data from %s: %s", name, err)
 			}
 			cert, err := x509.ParseCertificate(p.Bytes)
 			if err != nil {
-				log.Fatalf("Couldn't parse certificate from %s: %s", filename, err)
+				log.Fatalf("Couldn't parse certificate from %s: %s", name, err)
 			}
 			ret[string(cert.RawSubject)] = cert
 		}
