@@ -1104,7 +1104,7 @@ rules to Go packages.</p>
 
     <h3><a name="go_test">go_test</a></h3>
 
-    <p><pre class="rule"><code>go_test(name, srcs, data=None, deps=None, visibility=None, container=False, timeout=0, flaky=False, test_outputs=None, labels=None)</code></pre></p>
+    <p><pre class="rule"><code>go_test(name, srcs, data=None, deps=None, visibility=None, container=False, external=False, timeout=0, flaky=False, test_outputs=None, labels=None)</code></pre></p>
 
     <p>Defines a Go test rule.</p>
 
@@ -1166,6 +1166,14 @@ rules to Go packages.</p>
 	<td>False</td>
 	<td>bool | dict</td>
 	<td>True to run this test in a container.</td>
+      </tr>
+
+      <tr>
+	<td>external</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>True if this test is external to the library it's testing, i.e. it uses the
+        feature of Go that allows it to be in the same directory with a _test suffix.</td>
       </tr>
 
       <tr>

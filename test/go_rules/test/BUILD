@@ -15,3 +15,15 @@ go_library(
     ],
     visibility = ['//test/...'],
 )
+
+# Tests a go 'external test', where you can have files in the same directory
+# with a _test suffix.
+go_test(
+    name = 'external_test',
+    srcs = ['external_test.go'],
+    external = True,
+    deps = [
+        ':test',
+        '//third_party/go:testify',
+    ],
+)

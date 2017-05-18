@@ -292,7 +292,7 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
 
 
 def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False, cgo=False,
-            timeout=0, flaky=0, test_outputs=None, labels=None, size=None):
+            external=False, timeout=0, flaky=0, test_outputs=None, labels=None, size=None):
     """Defines a Go test rule.
 
     Args:
@@ -304,6 +304,8 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
       flags (str): Flags to apply to the test invocation.
       container (bool | dict): True to run this test in a container.
       cgo (bool): True if this test depends on a cgo_library.
+      external (bool): True if this test is external to the library it's testing, i.e. it uses the
+                       feature of Go that allows it to be in the same directory with a _test suffix.
       timeout (int): Timeout in seconds to allow the test to run for.
       flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
       test_outputs (list): Extra test output files to generate from this test.
@@ -319,7 +321,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         out = name + ('_lib.a' if cgo else '.a'),
         deps = deps,
         test_only = True,
-        _all_srcs = True,
+        _all_srcs = not external,
         complete = False,
     )
     lib_rule = ':_%s#lib' % name
