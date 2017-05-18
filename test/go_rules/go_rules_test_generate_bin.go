@@ -2,7 +2,7 @@
 package main
 
 import "fmt"
-import "test/go_rules/generate_test"
+import "test/go_rules/test/generate_test"
 
 func main() {
 	fmt.Println(generate_test.Placebo.String())

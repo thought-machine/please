@@ -6,7 +6,11 @@ rules to Go packages.
 
 _GOPATH = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
-_LINK_PKGS_CMD = 'for i in `find . -name "*.a"`; do j=${i%/*}; ln -s $TMP_DIR/$i ${j%/*}; done'
+_LINK_PKGS_CMD = ' '.join([
+    'for FN in `find . -name "*.a" | sort`; do ',
+    'DN=${FN%/*}; BN=${FN##*/}; if [ "${DN##*/}" == "${BN%.a}" ]; then ',
+    'ln -s $TMP_DIR/$FN ${DN%/*}; fi; done'
+])
 
 # Applied to various rules to treat 'go' as a tool.
 _GO_TOOL = ['go']

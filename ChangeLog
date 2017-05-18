@@ -1,3 +1,9 @@
+Version 7.11.4
+--------------
+
+    * Fixed some indeterminacy in Go rules to do with the infamous symlinking malarkey.
+
+
 Version 7.11.3
 --------------
 
