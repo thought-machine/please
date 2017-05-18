@@ -21,6 +21,7 @@ go_library(
 go_test(
     name = 'external_test',
     srcs = ['external_test.go'],
+    external = True,
     deps = [
         ':test',
         '//third_party/go:testify',
