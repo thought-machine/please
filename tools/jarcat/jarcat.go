@@ -111,7 +111,7 @@ func matchesSuffix(path string, suffixes []string) bool {
 
 var opts = struct {
 	Usage                   string
-	Out                     string            `short:"o" long:"output" description:"Output filename" required:"true"`
+	Out                     string            `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
 	In                      string            `short:"i" long:"input" description:"Input directory" required:"true"`
 	Suffix                  []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
 	ExcludeSuffix           []string          `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
@@ -128,6 +128,7 @@ var opts = struct {
 	NoDirEntries            bool              `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
 	RenameDirs              map[string]string `short:"r" long:"rename_dir" description:"Rename directories within zip file"`
 	StripBytecodeTimestamps bool              `short:"b" long:"strip_bytecode_timestamps" description:"Strips timestamps from any .pyc / .pyo files encountered."`
+	Tar                     bool              `long:"tar" description:"Write a tarball instead of a zipfile. Note that most other flags are not honoured if this is given."`
 }{
 	Usage: `
 Jarcat is a binary shipped with Please that helps it operate on .jar and .zip files.
