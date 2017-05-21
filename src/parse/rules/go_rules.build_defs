@@ -221,6 +221,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
             'go_src': go_rule,
             'cgo_obj': cgo_o_rule,
         },
+        deps = deps,
     )
 
 

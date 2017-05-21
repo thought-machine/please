@@ -314,9 +314,10 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 	tmpDir := target.TmpDir()
 	var inner func(dependency *BuildTarget)
 	inner = func(dependency *BuildTarget) {
+		sources := dependency.AllSources()
 		if target == dependency {
 			// This is the current build rule, so link its sources.
-			for _, source := range dependency.AllSources() {
+			for _, source := range sources {
 				for _, providedSource := range recursivelyProvideSource(graph, target, source) {
 					fullPaths := providedSource.FullPaths(graph)
 					for i, sourcePath := range providedSource.Paths(graph) {
@@ -324,6 +325,9 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 						ch <- sourcePair{fullPaths[i], tmpPath}
 						donePaths[tmpPath] = true
 					}
+				}
+				if label := source.Label(); label != nil {
+					done[*label] = true
 				}
 			}
 		} else {
@@ -345,6 +349,13 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 				}
 			}
 		}
+		// All the sources of this rule now count as done.
+		for _, source := range sources {
+			if label := source.Label(); label != nil {
+				done[*label] = true
+			}
+		}
+
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
 			for _, dep := range dependency.Dependencies() {

@@ -378,12 +378,12 @@ func (target *BuildTarget) Outputs() []string {
 // If the name is not declared by this rule it panics.
 func (target *BuildTarget) NamedOutputs(name string) []string {
 	if target.namedOutputs == nil {
-		panic(fmt.Sprintf("Target %s does not declare any named outputs (tried to look up %s)", target.Label, name))
+		return nil
 	}
 	if outs, present := target.namedOutputs[name]; present {
 		return outs
 	}
-	panic(fmt.Sprintf("Target %s does not declare any outputs named %s", target.Label, name))
+	return nil
 }
 
 // SourcePaths returns the source paths for a given set of sources.

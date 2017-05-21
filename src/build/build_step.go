@@ -417,7 +417,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 }
 
 // RemoveOutputs removes all generated outputs for a rule.
-func RemoveOutputs(target *core.BuildTarget) error {
+func RemoveOutputs(target *core.BuildTarget) (err error) {
 	if err := os.Remove(ruleHashFileName(target)); err != nil && !os.IsNotExist(err) {
 		return err
 	}

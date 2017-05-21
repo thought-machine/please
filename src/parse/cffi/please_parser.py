@@ -412,6 +412,16 @@ def _null_terminated_array(arr):
         yield arr[i]
 
 
+def _checked_log(level, c_package, message, args):
+    """Checked version of log that handles logging args directly."""
+    if args:
+        _log(level, c_package, message % args)  # Main 'correct' way: log('%s', thing)
+    elif isinstance(message, str):
+        _log(level, c_package, message)         # Also 'correct': log('some message')
+    else:
+        _log(level, c_package, str(message))    # 'Lazy' way: log(thing)
+
+
 def _get_globals(c_package, c_package_name):
     """Creates a copy of the builtin set of globals to use on interpreting new files.
 
@@ -452,12 +462,12 @@ def _get_globals(c_package, c_package_name):
     local_globals['dirname'] = os.path.dirname
     # The levels here are internally interpreted to match go-logging's levels.
     local_globals['log'] = DotDict({
-        'fatal': lambda message, *args: _log(0, c_package, message % args),
-        'error': lambda message, *args: _log(1, c_package, message % args),
-        'warning': lambda message, *args: _log(2, c_package, message % args),
-        'notice': lambda message, *args: _log(3, c_package, message % args),
-        'info': lambda message, *args: _log(4, c_package, message % args),
-        'debug': lambda message, *args: _log(5, c_package, message % args),
+        'fatal': lambda message, *args: _checked_log(0, c_package, message, args),
+        'error': lambda message, *args: _checked_log(1, c_package, message, args),
+        'warning': lambda message, *args: _checked_log(2, c_package, message, args),
+        'notice': lambda message, *args: _checked_log(3, c_package, message, args),
+        'info': lambda message, *args: _checked_log(4, c_package, message, args),
+        'debug': lambda message, *args: _checked_log(5, c_package, message, args),
     })
     if bazel_compat:
         # include_defs is used indirectly. It's also nice to switch this on for limited Buck compatibility too.

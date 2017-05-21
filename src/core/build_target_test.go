@@ -389,7 +389,7 @@ func TestNamedOutputs(t *testing.T) {
 	assert.Equal(t, map[string][]string{"srcs": {"src1.c", "src2.c"}, "hdrs": {"hdr1.h", "hdr2.h"}}, target.DeclaredNamedOutputs())
 	assert.Equal(t, []string{"hdr1.h", "hdr2.h"}, target.NamedOutputs("hdrs"))
 	assert.Equal(t, []string{"src1.c", "src2.c"}, target.NamedOutputs("srcs"))
-	assert.Panics(t, func() { target.NamedOutputs("go_srcs") })
+	assert.Equal(t, 0, len(target.NamedOutputs("go_srcs")))
 	assert.Equal(t, []string{"hdrs", "srcs"}, target.DeclaredOutputNames())
 }
 
