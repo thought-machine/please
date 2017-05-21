@@ -34,6 +34,10 @@ func GeneralBuildEnvironment(config *Configuration) []string {
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
 		"PATH=" + ExpandHomePath(strings.Join(config.Build.Path, ":")),
+		// Expose the requested build config. We might also want to expose
+		// the command that's actually running (although typically this is more useful,
+		// because targets using this want to avoid defining different commands).
+		"BUILD_CONFIG=" + config.Build.Config,
 	}
 	if config.Go.GoRoot != "" {
 		env = append(env, "GOROOT="+config.Go.GoRoot)
@@ -84,6 +88,10 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		for name, srcs := range target.NamedSources {
 			paths := target.SourcePaths(state.Graph, srcs)
 			env = append(env, "SRCS_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
+		}
+		// Named output groups similarly.
+		for name, outs := range target.DeclaredNamedOutputs() {
+			env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
 		}
 		if state.Config.Bazel.Compatibility {
 			// Obviously this is only a subset of the variables Bazel would expose, but there's

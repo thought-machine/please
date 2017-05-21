@@ -126,3 +126,7 @@ func TestDotsArentAccepted(t *testing.T) {
 	assertNotLabel(t, "//src/core:....", ".... is not a valid label name")
 	assertLabel(t, "//src/core/...", "src/core", "...")
 }
+
+func TestPipesArentAccepted(t *testing.T) {
+	assertNotLabel(t, "//src/core:core|build_label.go", "| is not allowed in build labels")
+}

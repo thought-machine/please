@@ -105,7 +105,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         # than giving them all to gcc in one invocation.
         a_rules = []
         for src in srcs:
-            a_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_'))
+            a_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_').replace('|', '_'))
             build_rule(
                 name=a_name,
                 srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},

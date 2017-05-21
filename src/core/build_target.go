@@ -45,6 +45,10 @@ type BuildTarget struct {
 	Data []BuildInput
 	// Output files of this rule. All are paths relative to this package.
 	outputs []string
+	// Named output subsets of this rule. All are paths relative to this package but can be
+	// captured separately; for example something producing C code might separate its outputs
+	// into sources and headers.
+	namedOutputs map[string][]string
 	// Optional output files of this rule. Same as outs but aren't required to be produced always.
 	// Can be glob patterns.
 	OptionalOutputs []string
@@ -182,14 +186,18 @@ func (s BuildTargetState) String() string {
 // Inputs to a build can be either a file in the local package or another build rule.
 // All users care about is where they find them.
 type BuildInput interface {
-	// Returns a slice of paths to the files of this input.
+	// Paths returns a slice of paths to the files of this input.
 	Paths(graph *BuildGraph) []string
-	// As above, but includes the leading plz-out/gen directory.
+	// FullPaths is like Paths but includes the leading plz-out/gen directory.
 	FullPaths(graph *BuildGraph) []string
-	// Paths within the local package
+	// LocalPaths returns paths within the local package
 	LocalPaths(graph *BuildGraph) []string
-	// Returns the build label associated with this input, or nil if it doesn't have one (eg. it's just a file).
+	// Label returns the build label associated with this input, or nil if it doesn't have one (eg. it's just a file).
 	Label() *BuildLabel
+	// nonOutputLabel returns the build label associated with this input, or nil if it doesn't have
+	// one or is a specific output of a rule.
+	// This is fiddly enough that we don't want to expose it outside the package right now.
+	nonOutputLabel() *BuildLabel
 	// Returns a string representation of this input
 	String() string
 }
@@ -316,6 +324,22 @@ func (target *BuildTarget) DeclaredOutputs() []string {
 	return target.outputs
 }
 
+// DeclaredNamedOutputs returns the named outputs from this target's original declaration.
+func (target *BuildTarget) DeclaredNamedOutputs() map[string][]string {
+	return target.namedOutputs
+}
+
+// DeclaredOutputNames is a convenience function to return the names of the declared
+// outputs in a consistent order.
+func (target *BuildTarget) DeclaredOutputNames() []string {
+	ret := make([]string, 0, len(target.namedOutputs))
+	for name := range target.namedOutputs {
+		ret = append(ret, name)
+	}
+	sort.Strings(ret)
+	return ret
+}
+
 // Outputs returns a slice of all the outputs of this rule.
 func (target *BuildTarget) Outputs() []string {
 	var ret []string
@@ -323,7 +347,12 @@ func (target *BuildTarget) Outputs() []string {
 		ret = make([]string, 0, len(target.Sources))
 		// Filegroups just re-output their inputs.
 		for _, src := range target.Sources {
-			if label := src.Label(); label == nil {
+			if namedLabel, ok := src.(NamedOutputLabel); ok {
+				// Bit of a hack, but this needs different treatment from either of the others.
+				for _, dep := range target.DependenciesFor(namedLabel.BuildLabel) {
+					ret = append(ret, dep.NamedOutputs(namedLabel.Output)...)
+				}
+			} else if label := src.nonOutputLabel(); label == nil {
 				ret = append(ret, src.LocalPaths(nil)[0])
 			} else {
 				for _, dep := range target.DependenciesFor(*label) {
@@ -336,8 +365,25 @@ func (target *BuildTarget) Outputs() []string {
 		ret = make([]string, len(target.outputs))
 		copy(ret, target.outputs)
 	}
+	if target.namedOutputs != nil {
+		for _, outputs := range target.namedOutputs {
+			ret = append(ret, outputs...)
+		}
+	}
 	sort.Strings(ret)
 	return ret
+}
+
+// NamedOutputs returns a slice of all the outputs of this rule with a given name.
+// If the name is not declared by this rule it panics.
+func (target *BuildTarget) NamedOutputs(name string) []string {
+	if target.namedOutputs == nil {
+		panic(fmt.Sprintf("Target %s does not declare any named outputs (tried to look up %s)", target.Label, name))
+	}
+	if outs, present := target.namedOutputs[name]; present {
+		return outs
+	}
+	panic(fmt.Sprintf("Target %s does not declare any outputs named %s", target.Label, name))
 }
 
 // SourcePaths returns the source paths for a given set of sources.
@@ -351,7 +397,7 @@ func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) 
 
 // sourcePaths returns the source paths for a single source.
 func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc) []string {
-	if label := source.Label(); label != nil {
+	if label := source.nonOutputLabel(); label != nil {
 		ret := []string{}
 		for _, providedLabel := range graph.TargetOrDie(*label).ProvideFor(target) {
 			for _, file := range f(providedLabel, graph) {
@@ -737,18 +783,34 @@ func (target *BuildTarget) toolPath() string {
 
 // AddOutput adds a new output to the target if it's not already there.
 func (target *BuildTarget) AddOutput(output string) {
-	for i, out := range target.outputs {
-		if out == output {
-			return
-		} else if out > output {
-			// Insert in sorted order, with an attempt to be efficient.
-			target.outputs = append(target.outputs, "")
-			copy(target.outputs[i+1:], target.outputs[i:])
-			target.outputs[i] = output
-			return
+	target.outputs = target.insert(target.outputs, output)
+}
+
+// AddNamedOutput adds a new output to the target under a named group.
+// No attempt to deduplicate against unnamed outputs is currently made.
+func (target *BuildTarget) AddNamedOutput(name, output string) {
+	if target.namedOutputs == nil {
+		target.namedOutputs = map[string][]string{name: []string{output}}
+		return
+	}
+	target.namedOutputs[name] = target.insert(target.namedOutputs[name], output)
+}
+
+// insert adds a string into a slice if it's not already there. Sorted order is maintained.
+func (target *BuildTarget) insert(sl []string, s string) []string {
+	for i, x := range sl {
+		if s == x {
+			// Already present.
+			return sl
+		} else if x > s {
+			// Insert in this location. Make an attempt to be efficient.
+			sl = append(sl, "")
+			copy(sl[i+1:], sl[i:])
+			sl[i] = s
+			return sl
 		}
 	}
-	target.outputs = append(target.outputs, output)
+	return append(sl, s)
 }
 
 // AddLicence adds a licence to the target if it's not already there.

@@ -66,6 +66,7 @@ int InitialiseInterpreter(char* parser_location) {
   reg("_add_exported_dep", "char* (*)(size_t, char*)", AddExportedDep);
   reg("_add_tool", "char* (*)(size_t, char*)", AddTool);
   reg("_add_out", "char* (*)(size_t, char*)", AddOutput);
+  reg("_add_named_out", "char* (*)(size_t, char*, char*)", AddNamedOutput);
   reg("_add_optional_out", "char* (*)(size_t, char*)", AddOptionalOutput);
   reg("_add_vis", "char* (*)(size_t, char*)", AddVis);
   reg("_add_label", "char* (*)(size_t, char*)", AddLabel);
@@ -86,6 +87,7 @@ int InitialiseInterpreter(char* parser_location) {
   reg("_set_post_build_callback", "char** (*)(void*, char*, size_t)", SetPostBuildFunction);
   reg("_add_dependency", "char* (*)(size_t, char*, char*, uint8)", AddDependency);
   reg("_add_output", "char* (*)(size_t, char*, char*)", AddOutputPost);
+  reg("_add_named_output", "char* (*)(size_t, char*, char*, char*)", AddNamedOutputPost);
   reg("_add_licence_post", "char* (*)(size_t, char*, char*)", AddLicencePost);
   reg("_get_command", "char* (*)(size_t, char*, char*)", GetCommand);
   reg("_set_command", "char* (*)(size_t, char*, char*, char*)", SetCommand);

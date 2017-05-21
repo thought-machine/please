@@ -256,20 +256,8 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         # Currently this is the only reason _add_target can fail, given that we validated
         # the target name earlier. Bit hacky but will have to do for now.
         raise DuplicateTargetError('Duplicate target %s' % name)
-    if isinstance(srcs, Mapping):
-        for src_name, src_list in srcs.items():
-            if isinstance(src_list, str):
-                raise ValueError('Value in named_srcs for target %s is a string, you probably '
-                                 'meant to use a list of strings instead' % name)
-            elif src_list:
-                for src in src_list:
-                    _check_c_error(_add_named_src(target, src_name, src))
-    elif srcs:
-        for src in srcs:
-            if src and src.startswith('/') and not src.startswith('//'):
-                raise ValueError('Entry "%s" in srcs of %s has an absolute path; that\'s not allowed. '
-                                 'You might want to try system_srcs instead' % (src, name))
-        _add_strings(target, _add_src, srcs, 'srcs')
+    _add_maybe_named(target, _add_named_src, _add_src, srcs, name, 'srcs')
+    _add_maybe_named(target, _add_named_out, _add_out, outs, name, 'outs')
     if isinstance(cmd, Mapping):
         for config, command in cmd.items():
             _check_c_error(_add_command(target, config, command.strip()))
@@ -286,7 +274,6 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     _add_strings(target, _add_dep, deps, 'deps')
     _add_strings(target, _add_exported_dep, exported_deps, 'exported_deps')
     _add_strings(target, _add_tool, tools, 'tools')
-    _add_strings(target, _add_out, outs, 'outs')
     _add_strings(target, _add_optional_out, optional_outs, 'optional_outs')
     _add_strings(target, _add_vis, visibility, 'visibility')
     _add_strings(target, _add_label, labels, 'labels')
@@ -345,6 +332,23 @@ def _add_strings(target, func, lst, name):
         for x in lst:
             if x:
                 _check_c_error(func(target, ffi_from_string(x)))
+
+
+def _add_maybe_named(target, named_func, unnamed_func, arg, name, arg_name):
+    if isinstance(arg, Mapping):
+        for k, v in arg.items():
+            if isinstance(v, str):
+                raise ValueError('Value in %s for target %s is a string, you probably '
+                                 'meant to use a list of strings instead' % (arg_name, name))
+            elif v:
+                for x in v:
+                    if x:
+                        _check_c_error(named_func(target, k, x))
+    elif arg:
+        for v in arg:
+            if v and v.startswith('/') and not v.startswith('//'):
+                raise ValueError('Entry "%s" in %s of %s has an absolute path; that\'s not allowed.' % (v, arg_name, name))
+        _add_strings(target, unnamed_func, arg, arg_name)
 
 
 def _check_c_error(error):
@@ -434,7 +438,8 @@ def _get_globals(c_package, c_package_name):
     local_globals['get_base_path'] = lambda: package_name
     local_globals['add_dep'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, False))
     local_globals['add_exported_dep'] = lambda target, dep: _check_c_error(_add_dependency(c_package, target, dep, True))
-    local_globals['add_out'] = lambda target, out: _check_c_error(_add_output(c_package, target, out))
+    local_globals['add_out'] = lambda target, name, out='': _check_c_error(_add_named_output(c_package, target, name, out) if out else
+                                                                           _add_output(c_package, target, name))
     local_globals['add_licence'] = lambda name, licence: _check_c_error(_add_licence_post(c_package, name, licence))
     local_globals['get_command'] = lambda name, config='': ffi_to_string(_get_command(c_package, name, config))
     local_globals['set_command'] = lambda name, config, command='': _check_c_error(_set_command(c_package, name, config, command))

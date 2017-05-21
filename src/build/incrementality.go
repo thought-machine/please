@@ -307,6 +307,13 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	for _, out := range target.DeclaredOutputs() {
 		h.Write([]byte(out))
 	}
+	outs := target.DeclaredNamedOutputs()
+	for _, name := range target.DeclaredOutputNames() {
+		h.Write([]byte(name))
+		for _, out := range outs[name] {
+			h.Write([]byte(out))
+		}
+	}
 	for _, licence := range target.Licences {
 		h.Write([]byte(licence))
 	}

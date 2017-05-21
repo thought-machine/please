@@ -363,7 +363,7 @@ func TestOutMode(t *testing.T) {
 
 func TestOutputOrdering(t *testing.T) {
 	// Check that outputs come out ordered, this is important for hash stability; previously
-	// we preseved the original order, but tools like buildifier may reorder them assuming
+	// we preserved the original order, but tools like buildifier may reorder them assuming
 	// that the order of arguments is not important.
 	target1 := makeTarget("//src/core:target1", "")
 	target1.AddOutput("file1.txt")
@@ -373,6 +373,24 @@ func TestOutputOrdering(t *testing.T) {
 	target2.AddOutput("file1.txt")
 	assert.Equal(t, target1.DeclaredOutputs(), target2.DeclaredOutputs())
 	assert.Equal(t, target1.Outputs(), target2.Outputs())
+}
+
+func TestNamedOutputs(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	target.AddOutput("a.txt")
+	target.AddOutput("z.txt")
+	target.AddNamedOutput("srcs", "src1.c")
+	target.AddNamedOutput("srcs", "src2.c")
+	target.AddNamedOutput("hdrs", "hdr1.h")
+	target.AddNamedOutput("hdrs", "hdr2.h")
+	target.AddNamedOutput("hdrs", "hdr2.h") // deliberate duplicate
+	assert.Equal(t, []string{"a.txt", "hdr1.h", "hdr2.h", "src1.c", "src2.c", "z.txt"}, target.Outputs())
+	assert.Equal(t, []string{"a.txt", "z.txt"}, target.DeclaredOutputs())
+	assert.Equal(t, map[string][]string{"srcs": {"src1.c", "src2.c"}, "hdrs": {"hdr1.h", "hdr2.h"}}, target.DeclaredNamedOutputs())
+	assert.Equal(t, []string{"hdr1.h", "hdr2.h"}, target.NamedOutputs("hdrs"))
+	assert.Equal(t, []string{"src1.c", "src2.c"}, target.NamedOutputs("srcs"))
+	assert.Panics(t, func() { target.NamedOutputs("go_srcs") })
+	assert.Equal(t, []string{"hdrs", "srcs"}, target.DeclaredOutputNames())
 }
 
 func TestAllLocalSources(t *testing.T) {
