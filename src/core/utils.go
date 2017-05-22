@@ -385,7 +385,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 // recursivelyProvideFor recursively applies ProvideFor to a target.
 func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, dep BuildLabel) []BuildLabel {
 	depTarget := graph.TargetOrDie(dep)
-	ret := depTarget.ProvideFor(dependency)
+	ret := depTarget.ProvideFor(target)
 	if len(ret) == 1 && ret[0] == dep {
 		// Dependency doesn't have a require/provide directly on this guy, up to the top-level
 		// target. We have to check the dep first to keep things consistent with what targets
@@ -406,7 +406,7 @@ func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, d
 	return ret2
 }
 
-// maybeRecursivelyProvideFor is similar to recursivelyProvideFor but operates on a BuildInput.
+// recursivelyProvideSource is similar to recursivelyProvideFor but operates on a BuildInput.
 func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildInput) []BuildInput {
 	if label := src.nonOutputLabel(); label != nil {
 		dep := graph.TargetOrDie(*label)
