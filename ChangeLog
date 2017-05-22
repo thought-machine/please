@@ -1,3 +1,11 @@
+Version 7.12.0
+--------------
+
+    * Support for named output groups on rules. Outs can now optionally be specified as
+      a dict of name -> outputs, and other rules can collect just the group they want.
+      Resolves a few long-standing TODOs around the place.
+
+
 Version 7.11.4
 --------------
 
