@@ -17,6 +17,7 @@ import (
 
 	"cli"
 	"tools/jarcat"
+	"tools/jarcat/tar"
 )
 
 var log = logging.MustGetLogger("jarcat")
@@ -128,7 +129,10 @@ var opts = struct {
 	NoDirEntries            bool              `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
 	RenameDirs              map[string]string `short:"r" long:"rename_dir" description:"Rename directories within zip file"`
 	StripBytecodeTimestamps bool              `short:"b" long:"strip_bytecode_timestamps" description:"Strips timestamps from any .pyc / .pyo files encountered."`
-	Tar                     bool              `long:"tar" description:"Write a tarball instead of a zipfile. Note that most other flags are not honoured if this is given."`
+
+	Tar    bool   `long:"tar" description:"Write a tarball instead of a zipfile. Note that most other flags are not honoured if this is given."`
+	Gzip   bool   `short:"z" long:"gzip" description:"Apply gzip compression to the tar file. Only has an effect if --tar is passed."`
+	Prefix string `long:"prefix" description:"Flatten all files into a directory with this name within the tarball."`
 }{
 	Usage: `
 Jarcat is a binary shipped with Please that helps it operate on .jar and .zip files.
@@ -157,6 +161,14 @@ func main() {
 		opts.IncludeOther = true
 	}
 	cli.InitLogging(opts.Verbosity)
+
+	if opts.Tar {
+		if err := tar.Write(opts.Out, opts.In, opts.Prefix, opts.Gzip); err != nil {
+			log.Fatalf("Error writing tarball: %s\n", err)
+		}
+		os.Exit(0)
+	}
+
 	if err := combine(opts.Out, opts.In, opts.Preamble, opts.StripPrefix, opts.MainClass,
 		opts.ExcludeInternalPrefix, opts.ExcludeSuffix, opts.Suffix, opts.IncludeInternalPrefix,
 		opts.Strict, opts.IncludeOther, opts.AddInitPy, !opts.NoDirEntries, opts.RenameDirs); err != nil {

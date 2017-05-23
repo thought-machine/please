@@ -16,6 +16,7 @@ go_binary(
         '//src/cli',
         '//third_party/go:logging',
         '//third_party/go/zip',
+        '//tools/jarcat/tar',
     ],
     visibility = ['PUBLIC'],
 )

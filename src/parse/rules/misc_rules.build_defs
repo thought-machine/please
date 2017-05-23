@@ -520,7 +520,7 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
       name (str): Rule name
       srcs (list): Source files to include in the tarball
       out (str): Name of output tarball (defaults to `name`.tar.gz, but see below re compression)
-      subdir (str): Subdirectory to create in (defaults to 'name')
+      subdir (str): Subdirectory to create in.
       gzip (bool): If True, the output will be gzipped. If False, it will just be a tarball.
       deps (list): Dependencies
       visibility (list): Visibility specification.
@@ -534,10 +534,15 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
     )
     subdir = subdir or name
     out = out or name + ('.tar.gz' if compress else '.tar')
+    cmd = '$TOOL --tar -i .'
+    if gzip:
+        cmd += ' -z'
+    if subdir:
+        cmd += ' --prefix ' + subdir
 
     build_rule(
         name = name,
-        cmd = '$TOOL --tar',
+        cmd = cmd,
         srcs = [src_filegroup],
         tools = [CONFIG.JARCAT_TOOL],
         outs = [out],

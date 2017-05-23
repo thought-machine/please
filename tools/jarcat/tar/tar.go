@@ -30,14 +30,14 @@ func Write(output, inputDir, prefix string, compress bool) error {
 	if compress {
 		w := gzip.NewWriter(f)
 		defer w.Close()
-		return write(w, inputDir, prefix)
+		return write(w, output, inputDir, prefix)
 	}
-	return write(f, inputDir, prefix)
+	return write(f, output, inputDir, prefix)
 }
 
 // write writes a tarball to the given writer with all the files found in inputDir.
 // If prefix is given the files are all placed into a single directory with that name.
-func write(w io.Writer, inputDir, prefix string) error {
+func write(w io.Writer, output, inputDir, prefix string) error {
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
@@ -46,6 +46,8 @@ func write(w io.Writer, inputDir, prefix string) error {
 			return err
 		} else if info.IsDir() {
 			return nil // ignore directories
+		} else if abs, _ := filepath.Abs(path); abs == output {
+			return nil // don't write the output tarball into itself :)
 		}
 		hdr, err := tar.FileInfoHeader(info, "") // We don't write symlinks into plz-out/tmp, so the argument doesn't matter.
 		if err != nil {
