@@ -160,7 +160,7 @@ public class TestCoverage {
   /**
    * Read the sourcemap file that we use to map Java class names back to their path in the repo.
    */
-  static Map<String, String> readSourceMap() {
+  public static Map<String, String> readSourceMap() {
     Map<String, String> sourceMap = new LinkedHashMap<>();
     try {
       InputStream is = TestCoverage.class.getClassLoader().getResourceAsStream("META-INF/please_sourcemap");
@@ -187,7 +187,7 @@ public class TestCoverage {
    * the class would be build/please/test/TestCoverage; we want to
    * produce src/build/java/build/please/test/TestCoverage.
    */
-  static String deriveOriginalFilename(String packageName, String className) {
+  public static String deriveOriginalFilename(String packageName, String className) {
     String packagePath[] = packageName.split("/");
     String classPath[] = className.split("/");
     for (int size = classPath.length - 1; size > 0; --size) {
