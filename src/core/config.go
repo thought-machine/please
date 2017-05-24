@@ -257,7 +257,7 @@ type Configuration struct {
 		JarCatTool         string  `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to jarcat in the Please install directory." var:"JARCAT_TOOL"`
 		PleaseMavenTool    string  `help:"Defines the tool used to fetch information from Maven in maven_jars rules.\nDefaults to please_maven in the Please install directory." var:"PLEASE_MAVEN_TOOL"`
 		JUnitRunner        string  `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the Please install directory." var:"JUNIT_RUNNER"`
-		DefaultTestPackage string  `help:"The Java classpath to search for functions annotated with @Test." var:"DEFAULT_TEST_PACKAGE"`
+		DefaultTestPackage string  `help:"The Java classpath to search for functions annotated with @Test." If not specified the compiled sources will be searched for files named *Test.java." var:"DEFAULT_TEST_PACKAGE"`
 		SourceLevel        string  `help:"The default Java source level when compiling. Defaults to 8." var:"JAVA_SOURCE_LEVEL"`
 		TargetLevel        string  `help:"The default Java bytecode level to target. Defaults to 8." var:"JAVA_TARGET_LEVEL"`
 		JavacFlags         string  `help:"Additional flags to pass to javac when compiling libraries." example:"-Xmx1200M" var:"JAVAC_FLAGS"`

@@ -9,6 +9,7 @@ import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarEntry;
@@ -23,10 +24,17 @@ import java.util.jar.JarFile;
 class ClassFinder {
 
     private final String prefix;
-    private final Set<Class> classes = new HashSet<Class>();
+    private final ClassLoader loader;
+    private final Set<Class> classes = new LinkedHashSet<Class>();
+
+    public ClassFinder(ClassLoader loader) throws IOException {
+        this.prefix = "";
+        this.loader = loader;
+    }
 
     public ClassFinder(ClassLoader loader, String prefix) throws IOException {
         this.prefix = prefix;
+        this.loader = loader;
         scan(getClassPathEntries(loader));
     }
 
@@ -123,5 +131,12 @@ class ClassFinder {
                 throw new IllegalStateException(ex);
             }
         }
+    }
+
+    /**
+     * Loads a single class by filename into our internal set.
+     */
+    public void loadClass(String filename) {
+        loadClass(loader, filename);
     }
 }
