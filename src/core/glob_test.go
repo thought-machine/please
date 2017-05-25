@@ -8,6 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func init() {
+	NewBuildState(1, nil, 2, DefaultConfiguration())
+}
+
 func TestCanGlobFirstFile(t *testing.T) {
 	// If this fails then we probably failed to interpret /**/ properly,
 	// which can resolve to just / - ie. we glob test_data/**/*.txt,
@@ -52,4 +56,10 @@ func TestGlobPlusPlus(t *testing.T) {
 	files, err := glob("src/core/test_data/test_subfolder++", "**/*.txt", false, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"src/core/test_data/test_subfolder++/test.txt"}, files)
+}
+
+func TestGlobExcludes(t *testing.T) {
+	files := Glob("src/core", []string{"test_data/**/*.txt"}, nil, []string{"test.txt"}, false)
+	expected := []string{"test_data/test_subfolder1/a.txt"}
+	assert.Equal(t, expected, files)
 }

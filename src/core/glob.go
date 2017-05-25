@@ -47,8 +47,10 @@ func Glob(rootPath string, includes, prefixedExcludes, excludes []string, includ
 
 func shouldExcludeMatch(match string, excludes []string) bool {
 	for _, excl := range excludes {
-		matches, err := filepath.Match(excl, match)
-		if matches || err != nil {
+		if strings.ContainsRune(match, '/') && !strings.ContainsRune(excl, '/') {
+			match = path.Base(match)
+		}
+		if matches, err := filepath.Match(excl, match); matches || err != nil {
 			return true
 		}
 	}
