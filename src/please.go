@@ -128,15 +128,15 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
-		Args struct {
-			Target core.BuildLabel `positional-arg-name:"target" description:"Target to run"`
-			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
-		} `positional-args:"true" required:"true"`
 		Parallel struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
+		Args struct {
+			Target core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
+			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
+		} `positional-args:"true"`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Clean struct {

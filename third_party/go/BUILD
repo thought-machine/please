@@ -35,7 +35,8 @@ go_get(
 go_get(
     name = 'go-flags',
     get = 'github.com/jessevdk/go-flags',
-    revision = '0a28dbe50f23d8fce6b016975b964cfe7b97a20a',
+    patch = 'flags_subcommand.patch',
+    revision = '5695738f733662da3e9afc2283bba6f3c879002d',
 )
 
 go_get(
