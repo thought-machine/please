@@ -132,7 +132,12 @@ var opts struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to run"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
 		} `positional-args:"true" required:"true"`
-	} `command:"run" description:"Builds and runs a single target"`
+		Parallel struct {
+			Args struct {
+				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
+			} `positional-args:"true" required:"true"`
+		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
+	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
@@ -312,6 +317,12 @@ var buildFunctions = map[string]func() bool{
 			run.Run(state.Graph, opts.Run.Args.Target, opts.Run.Args.Args)
 		}
 		return false // We should never return from run.Run so if we make it here something's wrong.
+	},
+	"parallel": func() bool {
+		if success, state := runBuild(opts.Run.Parallel.Args.Targets, true, false); success {
+			run.Parallel(state.Graph, opts.Run.Parallel.Args.Targets)
+		}
+		return true // We do return from run.Parallel once it's all over.
 	},
 	"clean": func() bool {
 		opts.NoCacheCleaner = true
