@@ -38,6 +38,14 @@ func Parallel(graph *core.BuildGraph, labels []core.BuildLabel) {
 	wg.Wait()
 }
 
+// Sequential runs a series of targets sequentially.
+func Sequential(graph *core.BuildGraph, labels []core.BuildLabel) {
+	for _, label := range labels {
+		log.Notice("Running %s", label)
+		run(graph, label, nil, true).Wait()
+	}
+}
+
 // run implements the internal logic about running a target.
 // If fork is true then we fork to run the target and return the started subprocess.
 // If it's false this function never returns (because we either win or die; it's like

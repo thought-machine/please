@@ -133,6 +133,11 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
+		Sequential struct {
+			Args struct {
+				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
+			} `positional-args:"true" required:"true"`
+		} `command:"sequential" description:"Runs a sequence of targets sequentially."`
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
@@ -321,6 +326,12 @@ var buildFunctions = map[string]func() bool{
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.Args.Targets, true, false); success {
 			run.Parallel(state.Graph, opts.Run.Parallel.Args.Targets)
+		}
+		return true // We do return from run.Parallel once it's all over.
+	},
+	"sequential": func() bool {
+		if success, state := runBuild(opts.Run.Sequential.Args.Targets, true, false); success {
+			run.Sequential(state.Graph, opts.Run.Sequential.Args.Targets)
 		}
 		return true // We do return from run.Parallel once it's all over.
 	},
