@@ -7,9 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"syscall"
 
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/op/go-logging.v1"
 
 	"build"
@@ -25,24 +25,25 @@ func Run(graph *core.BuildGraph, label core.BuildLabel, args []string) {
 }
 
 // Parallel runs a series of targets in parallel.
-// Currently it's not possible to provide arguments to them.
-func Parallel(graph *core.BuildGraph, labels []core.BuildLabel) {
-	var wg sync.WaitGroup
-	wg.Add(len(labels))
+func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string) {
+	var g errgroup.Group
 	for _, label := range labels {
-		go func(label core.BuildLabel) {
-			run(graph, label, nil, true).Wait()
-			wg.Done()
-		}(label)
+		label := label // capture locally
+		g.Go(func() error {
+			return run(graph, label, args, true).Wait()
+		})
 	}
-	wg.Wait()
+	if err := g.Wait(); err != nil {
+		log.Fatalf("Command failed: %s", err)
+	}
 }
 
 // Sequential runs a series of targets sequentially.
-func Sequential(graph *core.BuildGraph, labels []core.BuildLabel) {
+func Sequential(graph *core.BuildGraph, labels []core.BuildLabel, args []string) {
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		run(graph, label, nil, true).Wait()
+		cmd := run(graph, label, args, true)
+		must(cmd.Wait(), cmd.Args)
 	}
 }
 
@@ -76,13 +77,16 @@ func run(graph *core.BuildGraph, label core.BuildLabel, args []string, fork bool
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		// Note that we don't connect stdin. It doesn't make sense for multiple processes.
-		if err := cmd.Start(); err != nil {
-			log.Fatalf("Error running command %s: %s", strings.Join(args, " "), err)
-		}
+		must(cmd.Start(), args)
 		return cmd
 	}
-	if err := syscall.Exec(splitCmd[0], args, os.Environ()); err != nil {
-		log.Fatalf("Error running command %s: %s", strings.Join(args, " "), err)
-	}
+	must(syscall.Exec(splitCmd[0], args, os.Environ()), args)
 	return nil // never happens
+}
+
+// must dies if the given error is non-nil.
+func must(err error, cmd []string) {
+	if err != nil {
+		log.Fatalf("Error running command %s: %s", strings.Join(cmd, " "), err)
+	}
 }

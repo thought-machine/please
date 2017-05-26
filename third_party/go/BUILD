@@ -185,3 +185,10 @@ go_get(
     get = 'github.com/djherbis/atime',
     revision = '89517e96e10b93292169a79fd4523807bdc5d5fa',
 )
+
+go_get(
+    name = 'errgroup',
+    get = 'golang.org/x/sync/errgroup',
+    revision = '457c5828408160d6a47e17645169cf8fa20218c4',
+    deps = [':context'],
+)

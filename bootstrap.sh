@@ -31,6 +31,7 @@ function interpreter_target {
 notice "Installing Go dependencies..."
 export GOPATH="${PWD}"
 go get golang.org/x/crypto/ssh/terminal
+go get golang.org/x/sync/errgroup
 go get golang.org/x/tools/cover
 go get gopkg.in/op/go-logging.v1
 go get gopkg.in/gcfg.v1

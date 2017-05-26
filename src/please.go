@@ -129,14 +129,16 @@ var opts struct {
 
 	Run struct {
 		Parallel struct {
-			Args struct {
+			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
+			Args []string `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
-			Args struct {
+			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
+			Args []string `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 		} `command:"sequential" description:"Runs a sequence of targets sequentially."`
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
@@ -324,14 +326,14 @@ var buildFunctions = map[string]func() bool{
 		return false // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"parallel": func() bool {
-		if success, state := runBuild(opts.Run.Parallel.Args.Targets, true, false); success {
-			run.Parallel(state.Graph, opts.Run.Parallel.Args.Targets)
+		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
+			run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args)
 		}
 		return true // We do return from run.Parallel once it's all over.
 	},
 	"sequential": func() bool {
-		if success, state := runBuild(opts.Run.Sequential.Args.Targets, true, false); success {
-			run.Sequential(state.Graph, opts.Run.Sequential.Args.Targets)
+		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
+			run.Sequential(state.Graph, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args)
 		}
 		return true // We do return from run.Parallel once it's all over.
 	},
