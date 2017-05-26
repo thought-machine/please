@@ -326,9 +326,6 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 						donePaths[tmpPath] = true
 					}
 				}
-				if label := source.Label(); label != nil {
-					done[*label] = true
-				}
 			}
 		} else {
 			// This is a dependency of the rule, so link its outputs.

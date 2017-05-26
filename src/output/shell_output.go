@@ -285,7 +285,7 @@ func printTempDirs(state *core.BuildState, duration float64) {
 			fmt.Printf("   Expanded: %s\n", os.Expand(cmd, core.ReplaceEnvironment(env)))
 		} else {
 			fmt.Printf("\n")
-			cmd := exec.Command("bash", "--noprofile", "--norc") // plz requires bash, some commands contain bashisms.
+			cmd := exec.Command("bash", "--noprofile", "--norc", "-o", "pipefail") // plz requires bash, some commands contain bashisms.
 			cmd.Dir = target.TmpDir()
 			cmd.Env = env
 			cmd.Stdin = os.Stdin
