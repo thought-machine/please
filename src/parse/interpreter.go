@@ -575,6 +575,13 @@ func AddTestCommand(cTarget uintptr, cConfig *C.char, cCommand *C.char) *C.char 
 	return nil
 }
 
+//export AddSecret
+func AddSecret(cTarget uintptr, cSecret *C.char) *C.char {
+	target := unsizet(cTarget)
+	target.Secrets = append(target.Secrets, C.GoString(cSecret))
+	return nil
+}
+
 //export AddData
 func AddData(cTarget uintptr, cData *C.char) *C.char {
 	target := unsizet(cTarget)

@@ -37,6 +37,7 @@ var KnownFields = map[string]bool{
 	"PostBuildFunction":           true,
 	"Provides":                    true,
 	"Requires":                    true,
+	"Secrets":                     true,
 	"Sources":                     true,
 	"Stamp":                       true,
 	"TestCommand":                 true,

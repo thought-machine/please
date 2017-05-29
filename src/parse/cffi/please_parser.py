@@ -200,8 +200,8 @@ def _get_subinclude_target(url, hash):
 
 
 def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=None, outs=None,
-               deps=None, exported_deps=None, tools=None, labels=None, visibility=None, hashes=None,
-               binary=False, test=False, test_only=None, building_description='Building...',
+               deps=None, exported_deps=None, secrets=None, tools=None, labels=None, visibility=None,
+               hashes=None, binary=False, test=False, test_only=None, building_description='Building...',
                needs_transitive_deps=False, output_is_complete=False, container=False,
                no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
@@ -286,6 +286,11 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
             raise ValueError('"provides" argument for rule %s is not a mapping' % name)
         for lang, rule in provides.items():
             _check_c_error(_add_provide(target, ffi_from_string(lang), ffi_from_string(rule)))
+    if secrets:
+        for secret in secrets:
+            if (not secret.startswith('/') or secret.startswith('//')) and not secret.startswith('~'):
+                raise ValueError('Secret "%s" of %s is not an absolute path' % (secret, name))
+        _add_strings(target, _add_secret, secrets, 'secrets')
     if pre_build:
         # Must manually ensure we keep these objects from being gc'd.
         handle = ffi.new_handle(pre_build)

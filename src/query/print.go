@@ -99,6 +99,7 @@ func QueryPrint(graph *core.BuildGraph, labels []core.BuildLabel) {
 			}
 			fmt.Printf("      ],\n")
 		}
+		stringList("secrets", target.Secrets)
 		stringList("labels", excludeStrings(target.Labels, target.Requires))
 		stringList("hashes", target.Hashes)
 		stringList("licences", target.Licences)

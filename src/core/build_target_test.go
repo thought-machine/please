@@ -401,6 +401,19 @@ func TestAllLocalSources(t *testing.T) {
 	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSources())
 }
 
+func TestCheckSecrets(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	assert.NoError(t, target.CheckSecrets())
+	target.Secrets = append(target.Secrets, "/bin/sh")
+	assert.NoError(t, target.CheckSecrets())
+	// Checking for files in the home directory is awkward because nothing is really
+	// guaranteed to exist. We just check the directory itself for now.
+	target.Secrets = append(target.Secrets, "~/")
+	assert.NoError(t, target.CheckSecrets())
+	target.Secrets = append(target.Secrets, "/doesnt_exist")
+	assert.Error(t, target.CheckSecrets())
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
