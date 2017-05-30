@@ -327,13 +327,13 @@ var buildFunctions = map[string]func() bool{
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			return run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args)
+			os.Exit(run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args))
 		}
 		return false
 	},
 	"sequential": func() bool {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
-			return run.Sequential(state.Graph, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args)
+			os.Exit(run.Sequential(state.Graph, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args))
 		}
 		return false
 	},

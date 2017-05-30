@@ -26,7 +26,7 @@ func Run(graph *core.BuildGraph, label core.BuildLabel, args []string) {
 
 // Parallel runs a series of targets in parallel.
 // Returns true if all were successful.
-func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string) bool {
+func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string) int {
 	var g errgroup.Group
 	for _, label := range labels {
 		label := label // capture locally
@@ -36,9 +36,9 @@ func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string) b
 	}
 	if err := g.Wait(); err != nil {
 		log.Error("Command failed: %s", err)
-		return false
+		return toExitCode(err)
 	}
-	return true
+	return 0
 }
 
 // Sequential runs a series of targets sequentially.
@@ -48,11 +48,11 @@ func Sequential(graph *core.BuildGraph, labels []core.BuildLabel, args []string)
 		log.Notice("Running %s", label)
 		cmd := run(graph, label, args, true)
 		if err := cmd.Wait(); err != nil {
-			log.Error("Error running command %s: %s", strings.Join(cmd, " "), err)
-			return false
+			log.Error("Error running command %s: %s", strings.Join(cmd.Args, " "), err)
+			return toExitCode(err)
 		}
 	}
-	return true
+	return 0
 }
 
 // run implements the internal logic about running a target.
@@ -97,4 +97,16 @@ func must(err error, cmd []string) {
 	if err != nil {
 		log.Fatalf("Error running command %s: %s", strings.Join(cmd, " "), err)
 	}
+}
+
+// toExitCode attempts to extract the exit code from an error.
+func toExitCode(err error) int {
+	if exitError, ok := err.(*exec.ExitError); ok {
+		// This is a little hairy; there isn't a good way of getting the exit code,
+		// but this should be reasonably portable (at least to the platforms we care about).
+		if status, ok := exitError.Sys().(syscall.WaitStatus); ok {
+			return status.ExitStatus()
+		}
+	}
+	return 1
 }
