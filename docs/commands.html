@@ -205,6 +205,14 @@
       them last on the command line, after a <code>--</code>. This tells Please not
       to attempt to parse them as its own flags.</p>
 
+    <p>There are two optional subcommands <code>sequential</code> and <code>parallel</code>
+      which allow running multiple targets in one go. As the names suggest, they run targets
+      either one after the other or all in parallel.<br/>
+      In either case, the semantics are a little different to running a single target; arguments
+      must be passed one by one via the <code>-a</code> flag, and while stdout / stderr are
+      connected to the current terminal, stdin is not connected (because it'd not be clear
+      which process would consume it).</p>
+
     <h2>plz query</h2>
 
     <p>This allows you to introspect various aspects of the build graph. There are
