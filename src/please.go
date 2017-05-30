@@ -327,15 +327,15 @@ var buildFunctions = map[string]func() bool{
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args)
+			return run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args)
 		}
-		return true // We do return from run.Parallel once it's all over.
+		return false
 	},
 	"sequential": func() bool {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
-			run.Sequential(state.Graph, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args)
+			return run.Sequential(state.Graph, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args)
 		}
-		return true // We do return from run.Parallel once it's all over.
+		return false
 	},
 	"clean": func() bool {
 		opts.NoCacheCleaner = true

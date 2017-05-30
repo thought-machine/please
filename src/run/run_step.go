@@ -25,7 +25,8 @@ func Run(graph *core.BuildGraph, label core.BuildLabel, args []string) {
 }
 
 // Parallel runs a series of targets in parallel.
-func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string) {
+// Returns true if all were successful.
+func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string) bool {
 	var g errgroup.Group
 	for _, label := range labels {
 		label := label // capture locally
@@ -34,17 +35,24 @@ func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string) {
 		})
 	}
 	if err := g.Wait(); err != nil {
-		log.Fatalf("Command failed: %s", err)
+		log.Error("Command failed: %s", err)
+		return false
 	}
+	return true
 }
 
 // Sequential runs a series of targets sequentially.
-func Sequential(graph *core.BuildGraph, labels []core.BuildLabel, args []string) {
+// Returns true if all were successful.
+func Sequential(graph *core.BuildGraph, labels []core.BuildLabel, args []string) int {
 	for _, label := range labels {
 		log.Notice("Running %s", label)
 		cmd := run(graph, label, args, true)
-		must(cmd.Wait(), cmd.Args)
+		if err := cmd.Wait(); err != nil {
+			log.Error("Error running command %s: %s", strings.Join(cmd, " "), err)
+			return false
+		}
 	}
+	return true
 }
 
 // run implements the internal logic about running a target.
