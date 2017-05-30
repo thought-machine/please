@@ -1,3 +1,20 @@
+Version 8.0.0
+-------------
+
+    * The `tarball` rule has been rewritten to be more deterministic. As a consequence it now
+      only supports gzip compression; the previous `compression` argument has been removed.
+      This is obviously a breaking change for anything that was setting that argument.
+    * Build rules with `needs_transitive_deps = True` no longer receive transitive deps of
+      their `srcs`, only their `deps`.
+      This is again a breaking change although a relatively subtle case that doesn't affect
+      many rules; most cases that were using `srcs` and `deps` semantically correctly won't notice.
+    * `plz query print` now accepts a `--fields` argument to print only the given fields.
+    * `plz run` now has two new subcommands, `sequential` and `parallel` that allow passing
+      multiple targets to be run either consecutively or concurrently.
+    * Go 1.8 is now required to build the Please repo. Support for targeted Go versions is
+      unchanged.
+
+
 Version 7.12.0
 --------------
 
