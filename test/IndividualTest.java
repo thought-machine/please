@@ -5,7 +5,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 
-public class IndividualTestRun {
+public class IndividualTest {
   // Test for running individual Java tests.
 
   @Test

@@ -35,7 +35,8 @@ go_get(
 go_get(
     name = 'go-flags',
     get = 'github.com/jessevdk/go-flags',
-    revision = '0a28dbe50f23d8fce6b016975b964cfe7b97a20a',
+    patch = 'flags_subcommand.patch',
+    revision = '5695738f733662da3e9afc2283bba6f3c879002d',
 )
 
 go_get(
@@ -183,4 +184,11 @@ go_get(
     name = 'atime',
     get = 'github.com/djherbis/atime',
     revision = '89517e96e10b93292169a79fd4523807bdc5d5fa',
+)
+
+go_get(
+    name = 'errgroup',
+    get = 'golang.org/x/sync/errgroup',
+    revision = '457c5828408160d6a47e17645169cf8fa20218c4',
+    deps = [':context'],
 )

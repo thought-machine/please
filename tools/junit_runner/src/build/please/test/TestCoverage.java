@@ -5,8 +5,8 @@ import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.io.IOException;
 import java.lang.Thread;
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +15,6 @@ import org.jacoco.core.analysis.Analyzer;
 import org.jacoco.core.analysis.CoverageBuilder;
 import org.jacoco.core.analysis.IClassCoverage;
 import org.jacoco.core.analysis.ICounter;
-import org.jacoco.core.analysis.ILine;
 import org.jacoco.core.data.ExecutionDataStore;
 import org.jacoco.core.data.SessionInfoStore;
 import org.jacoco.core.instr.Instrumenter;
@@ -25,11 +24,6 @@ import org.jacoco.core.runtime.RuntimeData;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -166,8 +160,8 @@ public class TestCoverage {
   /**
    * Read the sourcemap file that we use to map Java class names back to their path in the repo.
    */
-  static Map<String, String> readSourceMap() {
-    Map<String, String> sourceMap = new HashMap<>();
+  public static Map<String, String> readSourceMap() {
+    Map<String, String> sourceMap = new LinkedHashMap<>();
     try {
       InputStream is = TestCoverage.class.getClassLoader().getResourceAsStream("META-INF/please_sourcemap");
       BufferedReader br = new BufferedReader(new InputStreamReader(is, UTF_8));
@@ -175,6 +169,9 @@ public class TestCoverage {
         String[] parts = line.trim().split(" ");
         if (parts.length == 2) {
           sourceMap.put(parts[1], deriveOriginalFilename(parts[0], parts[1]));
+        } else if (parts.length == 1 && line.startsWith(" ")) {
+          // Special case for repo root, where there is no first part.
+          sourceMap.put(parts[0], parts[0]);
         }
       }
     } catch (IOException ex) {
@@ -190,7 +187,7 @@ public class TestCoverage {
    * the class would be build/please/test/TestCoverage; we want to
    * produce src/build/java/build/please/test/TestCoverage.
    */
-  static String deriveOriginalFilename(String packageName, String className) {
+  public static String deriveOriginalFilename(String packageName, String className) {
     String packagePath[] = packageName.split("/");
     String classPath[] = className.split("/");
     for (int size = classPath.length - 1; size > 0; --size) {

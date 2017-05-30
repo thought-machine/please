@@ -128,11 +128,23 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
+		Parallel struct {
+			PositionalArgs struct {
+				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
+			} `positional-args:"true" required:"true"`
+			Args []string `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
+		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
+		Sequential struct {
+			PositionalArgs struct {
+				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
+			} `positional-args:"true" required:"true"`
+			Args []string `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
+		} `command:"sequential" description:"Runs a sequence of targets sequentially."`
 		Args struct {
-			Target core.BuildLabel `positional-arg-name:"target" description:"Target to run"`
+			Target core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
-		} `positional-args:"true" required:"true"`
-	} `command:"run" description:"Builds and runs a single target"`
+		} `positional-args:"true"`
+	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
@@ -209,7 +221,8 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"alltargets" description:"Lists all targets in the graph"`
 		Print struct {
-			Args struct {
+			Fields []string `short:"f" long:"field" description:"Individual fields to print of the target"`
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to print" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"print" description:"Prints a representation of a single target"`
@@ -313,6 +326,18 @@ var buildFunctions = map[string]func() bool{
 		}
 		return false // We should never return from run.Run so if we make it here something's wrong.
 	},
+	"parallel": func() bool {
+		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
+			os.Exit(run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args))
+		}
+		return false
+	},
+	"sequential": func() bool {
+		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
+			os.Exit(run.Sequential(state.Graph, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args))
+		}
+		return false
+	},
 	"clean": func() bool {
 		opts.NoCacheCleaner = true
 		if len(opts.Clean.Args.Targets) == 0 {
@@ -396,7 +421,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"print": func() bool {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.QueryPrint(state.Graph, state.ExpandOriginalTargets())
+			query.Print(state.Graph, state.ExpandOriginalTargets(), opts.Query.Print.Fields)
 		})
 	},
 	"affectedtargets": func() bool {

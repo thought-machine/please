@@ -43,16 +43,14 @@ public class TestMain {
 
   public static void main(String[] args) throws Exception {
     String testPackage = System.getProperty("build.please.testpackage");
-    if (testPackage == null || testPackage.equals("")) {
-      throw new RuntimeException("Test package not provided (define with -Dbuild.please.testpackage)");
-    }
     program_args = args;
 
     Set<Class> classes = new HashSet<>();
-    Set<Class> allClasses = new HashSet<>();
-    ClassFinder finder = new ClassFinder(Thread.currentThread().getContextClassLoader(), testPackage);
-    for (Class testClass : finder.getClasses()) {
-      allClasses.add(testClass);
+    Set<Class> allClasses = findClasses(testPackage);
+    if (allClasses.isEmpty()) {
+      throw new RuntimeException("No test classes found");
+    }
+    for (Class testClass : allClasses) {
       if (testClass.getAnnotation(Ignore.class) == null) {
         for (Method method : testClass.getMethods()) {
           if (method.getAnnotation(Test.class) != null) {
@@ -75,6 +73,26 @@ public class TestMain {
       throw new RuntimeException("No tests were run.");
     }
     System.exit(exitCode);
+  }
+
+  /**
+   * Loads all the available test classes.
+   * This is a little complex because we want to try to avoid scanning every single class on our classpath.
+   * @param testPackage the test package to load from. If empty we'll look for them by filename.
+   */
+  private static Set<Class> findClasses(String testPackage) throws Exception {
+    ClassLoader loader = Thread.currentThread().getContextClassLoader();
+    if (testPackage != null && !testPackage.isEmpty()) {
+      return new ClassFinder(loader, testPackage).getClasses();
+    }
+    // Need to load by filename. Fortunately we have a list of the files we compiled in please_sourcemap.
+    ClassFinder finder = new ClassFinder(loader);
+    for (String key : TestCoverage.readSourceMap().keySet()) {
+      if (key.endsWith("Test.java")) {
+        finder.loadClass(key.replace(".java", ".class"));
+      }
+    }
+    return finder.getClasses();
   }
 
   public static void runClass(Class testClass) throws Exception {

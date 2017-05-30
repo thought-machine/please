@@ -300,6 +300,16 @@ func TestDependencies(t *testing.T) {
 	assert.Equal(t, []*BuildTarget{target1, target2}, target3.Dependencies())
 }
 
+func TestDeclaredDependenciesStrict(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "", target1)
+	target3 := makeTarget("//src/core:target3", "", target2)
+	target3.AddMaybeExportedDependency(target1.Label, true)
+	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependenciesStrict())
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependenciesStrict())
+	assert.Equal(t, []BuildLabel{target2.Label}, target3.DeclaredDependenciesStrict())
+}
+
 func TestAddDependency(t *testing.T) {
 	target1 := makeTarget("//src/core:target1", "")
 	target2 := makeTarget("//src/core:target2", "")
@@ -412,6 +422,18 @@ func TestCheckSecrets(t *testing.T) {
 	assert.NoError(t, target.CheckSecrets())
 	target.Secrets = append(target.Secrets, "/doesnt_exist")
 	assert.Error(t, target.CheckSecrets())
+}
+
+func TestContainerSettingsToMap(t *testing.T) {
+	s := TargetContainerSettings{
+		DockerImage: "alpine:3.5",
+		DockerUser:  "test",
+	}
+	expected := map[string]string{
+		"docker_image": "alpine:3.5",
+		"docker_user":  "test",
+	}
+	assert.Equal(t, expected, s.ToMap())
 }
 
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
