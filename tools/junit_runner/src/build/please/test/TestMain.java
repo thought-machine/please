@@ -82,7 +82,7 @@ public class TestMain {
    */
   private static Set<Class> findClasses(String testPackage) throws Exception {
     ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    if (testPackage != null && !testPackage.equals("")) {
+    if (testPackage != null && !testPackage.isEmpty()) {
       return new ClassFinder(loader, testPackage).getClasses();
     }
     // Need to load by filename. Fortunately we have a list of the files we compiled in please_sourcemap.
