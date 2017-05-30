@@ -209,7 +209,8 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"alltargets" description:"Lists all targets in the graph"`
 		Print struct {
-			Args struct {
+			Fields []string `short:"f" long:"field" description:"Individual fields to print of the target"`
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to print" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"print" description:"Prints a representation of a single target"`
@@ -396,7 +397,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"print": func() bool {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.QueryPrint(state.Graph, state.ExpandOriginalTargets())
+			query.Print(state.Graph, state.ExpandOriginalTargets(), opts.Query.Print.Fields)
 		})
 	},
 	"affectedtargets": func() bool {

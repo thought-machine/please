@@ -16,6 +16,7 @@ go_test(
     deps = [
         ':query',
         '//src/core',
+        '//third_party/go:testify',
     ],
 )
 

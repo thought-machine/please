@@ -29,74 +29,76 @@ const testDirSuffix = "._test"
 // its name, dependencies, build commands, etc.
 
 type BuildTarget struct {
+	// N.B. The tags on these fields are used by query print to help it print them.
+
 	// Identifier of this build target
-	Label BuildLabel
+	Label BuildLabel `name:"name"`
 	// Dependencies of this target.
 	// Maps the original declaration to whatever dependencies actually got attached,
 	// which may be more than one in some cases. Also contains info about exporting etc.
-	dependencies []depInfo
+	dependencies []depInfo `name:"deps"`
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
 	// Source files of this rule. Can refer to build rules themselves.
-	Sources []BuildInput
+	Sources []BuildInput `name:"srcs"`
 	// Named source files of this rule; as above but identified by name.
-	NamedSources map[string][]BuildInput
+	NamedSources map[string][]BuildInput `name:"srcs"`
 	// Data files of this rule. Similar to sources but used at runtime, typically by tests.
 	Data []BuildInput
 	// Output files of this rule. All are paths relative to this package.
-	outputs []string
+	outputs []string `name:"outs"`
 	// Named output subsets of this rule. All are paths relative to this package but can be
 	// captured separately; for example something producing C code might separate its outputs
 	// into sources and headers.
-	namedOutputs map[string][]string
+	namedOutputs map[string][]string `name:"outs"`
 	// Optional output files of this rule. Same as outs but aren't required to be produced always.
 	// Can be glob patterns.
-	OptionalOutputs []string
+	OptionalOutputs []string `name:"optional_outs"`
 	// Optional labels applied to this rule. Used for including/excluding rules.
 	Labels []string
 	// Shell command to run.
-	Command string
+	Command string `name:"cmd"`
 	// Per-configuration shell commands to run.
-	Commands map[string]string
+	Commands map[string]string `name:"cmd"`
 	// Shell command to run for test targets.
 	TestCommand string
 	// Per-configuration test commands to run.
 	TestCommands map[string]string
 	// Represents the state of this build target (see below)
-	state int32
+	state int32 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
-	IsBinary bool
+	IsBinary bool `name:"binary"`
 	// True if this target is a test
-	IsTest bool
+	IsTest bool `name:"test"`
 	// Indicates that the target can only be depended on by tests or other rules with this set.
 	// Used to restrict non-deployable code and also affects coverage detection.
-	TestOnly bool
+	TestOnly bool `name:"test_only"`
 	// True if we're going to containerise the test.
-	Containerise bool
+	Containerise bool `name:"container"`
 	// True if the target is a test and has no output file.
 	// Default is false, meaning all tests must produce test.results as output.
 	NoTestOutput bool
 	// True if this target needs access to its transitive dependencies to build.
 	// This would be false for most 'normal' genrules but true for eg. compiler steps
 	// that need to build in everything.
-	NeedsTransitiveDependencies bool
+	NeedsTransitiveDependencies bool `name:"needs_transitive_deps"`
 	// True if this target blocks recursive exploring for transitive dependencies.
 	// This is typically false for _library rules which aren't complete, and true
 	// for _binary rules which normally are, and genrules where you don't care about
 	// the inputs, only whatever they were turned into.
-	OutputIsComplete bool
+	OutputIsComplete bool `name:"output_is_complete"`
 	// If true, the rule is given an env var at build time that contains the hash of its
 	// transitive dependencies, which can be used to identify the output in a predictable way.
 	Stamp bool
 	// Marks the target as a filegroup.
-	IsFilegroup bool
+	IsFilegroup bool `print:"false"`
 	// Containerisation settings that override the defaults.
-	ContainerSettings *TargetContainerSettings
+	ContainerSettings *TargetContainerSettings `name:"container"`
 	// Results of test, if it is one
-	Results TestResults
+	Results TestResults `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
-	BuildingDescription string
+	BuildingDescription string `name:"building_description"`
 	// Acceptable hashes of the outputs of this rule. If the output doesn't match any of these
 	// it's an error at build time. Can be used to validate third-party deps.
 	Hashes []string
@@ -104,10 +106,11 @@ type BuildTarget struct {
 	Licences []string
 	// Python functions to call before / after target is built. Allows deferred manipulation of the
 	// build graph.
-	PreBuildFunction, PostBuildFunction uintptr
+	PreBuildFunction  uintptr `name:"pre_build"`
+	PostBuildFunction uintptr `name:"post_build"`
 	// Hash of the function's bytecode. Used for incrementality.
 	// TODO(pebers): unify with RuleHash maybe? seems wasteful to store these separately.
-	PreBuildHash, PostBuildHash []byte
+	PreBuildHash, PostBuildHash []byte `print:"false"`
 	// Languages this rule requires. These are an arbitrary set and the only meaning is that they
 	// correspond to entries in Provides; if rules match up then it allows choosing a specific
 	// dependency (consider eg. code generated from protobufs; this mechanism allows us to expose
@@ -116,16 +119,16 @@ type BuildTarget struct {
 	// Dependent rules this rule provides for each language. Matches up to Requires as described above.
 	Provides map[string]BuildLabel
 	// Stores the hash of this build rule before any post-build function is run.
-	RuleHash []byte
+	RuleHash []byte `print:"false"`
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
 	// copied into its source directory.
 	Tools []BuildInput
 	// Flakiness of test, ie. number of times we will rerun it before giving up. 0 is the default and
 	// is interpreted the same way as 1 would be (ie. one run only).
-	Flakiness int
+	Flakiness int `name:"flaky"`
 	// Timeouts for build/test actions
-	BuildTimeout time.Duration
-	TestTimeout  time.Duration
+	BuildTimeout time.Duration `name:"timeout"`
+	TestTimeout  time.Duration `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string
@@ -205,11 +208,23 @@ type BuildInput interface {
 // Settings controlling containerisation for a particular target.
 type TargetContainerSettings struct {
 	// Image to use for this test
-	DockerImage string
+	DockerImage string `name:"docker_image"`
 	// Username / Uid to run as
-	DockerUser string
+	DockerUser string `name:"docker_user"`
 	// Extra arguments to pass to 'docker run'
-	DockerRunArgs string
+	DockerRunArgs string `name:"docker_run_args"`
+}
+
+// ToMap returns this struct as a map.
+func (settings *TargetContainerSettings) ToMap() map[string]string {
+	m := map[string]string{}
+	v := reflect.ValueOf(settings).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		if s := v.Field(i).String(); s != "" {
+			m[v.Type().Field(i).Tag.Get("name")] = s
+		}
+	}
+	return m
 }
 
 func NewBuildTarget(label BuildLabel) *BuildTarget {
@@ -276,11 +291,34 @@ func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc
 	return ret
 }
 
-// DeclaredDependencies returns the original declaration of this target's dependencies.
+// DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
 func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
+	ret := make(BuildLabels, len(target.dependencies))
+	for i, dep := range target.dependencies {
+		ret[i] = dep.declared
+	}
+	sort.Sort(ret)
+	return ret
+}
+
+// DeclaredDependenciesStrict returns the original declaration of this target's dependencies.
+func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
+	m := map[BuildLabel]bool{}
+	for _, src := range target.AllSources() {
+		if l := src.Label(); l != nil {
+			m[*l] = true
+		}
+	}
+	for _, tool := range target.Tools {
+		if l := tool.Label(); l != nil {
+			m[*l] = true
+		}
+	}
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, dep := range target.dependencies {
-		ret = append(ret, dep.declared)
+		if !dep.exported && !m[dep.declared] {
+			ret = append(ret, dep.declared)
+		}
 	}
 	sort.Sort(ret)
 	return ret
