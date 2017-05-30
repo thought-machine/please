@@ -41,8 +41,7 @@ if [[ "$VERSION" =~ .*(alpha|beta|pre|rc).* ]]; then
     echo -e "${YELLOW}Pre-release version found, will not update latest_version.${RESET}"
 elif [ "$UPLOADED" = true ]; then
     echo -e "${GREEN}Uploaded at least one file, updating latest_version...${RESET}"
-    aws s3 cp "VERSION" "${BUCKET}/new_version"
-    aws s3 mv "${BUCKET}/new_version" "${BUCKET}/latest_version"
+    aws s3 cp "VERSION" "${BUCKET}/latest_version"
 else
     echo -e "${YELLOW}Didn't upload anything, will not update latest_version${RESET}"
 fi
