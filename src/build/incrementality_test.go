@@ -40,6 +40,7 @@ var KnownFields = map[string]bool{
 	"namedOutputs":                true,
 	"Licences":                    true,
 	"Tools":                       true,
+	"Secrets":                     true,
 	"TestOutputs":                 true,
 	"Stamp":                       true,
 

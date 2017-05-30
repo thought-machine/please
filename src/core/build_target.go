@@ -104,6 +104,12 @@ type BuildTarget struct {
 	Hashes []string
 	// Licences that this target is subject to.
 	Licences []string
+	// Any secrets that this rule requires.
+	// Secrets are similar to sources but are always absolute system paths and affect the hash
+	// differently; they are not used to determine the hash for retrieving a file from cache, but
+	// if changed locally will still force a rebuild. They're not copied into the source directory
+	// (or indeed anywhere by plz).
+	Secrets []string
 	// Python functions to call before / after target is built. Allows deferred manipulation of the
 	// build graph.
 	PreBuildFunction  uintptr `name:"pre_build"`
@@ -523,6 +529,19 @@ func (target *BuildTarget) CheckDuplicateOutputs() error {
 			return fmt.Errorf("Target %s declares output file %s multiple times", target.Label, output)
 		}
 		outputs[output] = struct{}{}
+	}
+	return nil
+}
+
+// CheckSecrets checks that this target's secrets are available.
+// We run this check before building because we don't attempt to copy them, but any rule
+// requiring them will presumably fail if they aren't available.
+// Returns an error if any aren't.
+func (target *BuildTarget) CheckSecrets() error {
+	for _, secret := range target.Secrets {
+		if path := ExpandHomePath(secret); !PathExists(path) {
+			return fmt.Errorf("Path %s doesn't exist; it's required to build %s", secret, target.Label)
+		}
 	}
 	return nil
 }

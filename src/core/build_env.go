@@ -93,6 +93,10 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		for name, outs := range target.DeclaredNamedOutputs() {
 			env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
 		}
+		// Secrets, again only if they declared any.
+		if len(target.Secrets) > 0 {
+			env = append(env, "SECRETS="+strings.Join(target.Secrets, " "))
+		}
 		if state.Config.Bazel.Compatibility {
 			// Obviously this is only a subset of the variables Bazel would expose, but there's
 			// no point populating ones that we literally have no clue what they should be.

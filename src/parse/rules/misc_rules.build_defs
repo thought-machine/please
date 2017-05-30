@@ -3,7 +3,7 @@
 
 def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None,
             building_description='Building...', hashes=None, timeout=0, binary=False,
-            needs_transitive_deps=False, output_is_complete=True, test_only=False,
+            needs_transitive_deps=False, output_is_complete=True, test_only=False, secrets=None,
             requires=None, provides=None, pre_build=None, post_build=None, tools=None):
     """A general build rule which allows the user to specify a command.
 
@@ -42,6 +42,14 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
                     Entries that are not build labels are assumed to be system-level commands and
                     resolved within the path given in the config file (note that the value of $PATH
                     in the outside environment is not propagated to the build rule).
+      secrets (list): Files containing secrets (credentials etc) used to build this rule. These are
+                      all absolute paths (beginning with / or ~) and are not copied to the build
+                      directory. They can be accessed through the environment variable $SECRETS.
+                      They don't contribute to the key used to retrieve outputs from the cache; this
+                      means it's possible for one machine to build a target with the secret and then
+                      share the output with others. That also implies that secrets are things like
+                      credentials or signing keys and shouldn't be copied directly to outputs, otherwise
+                      they might become more widely known.
       visibility (list): Visibility declaration of this rule
       building_description (str): Description to display to the user while the rule is building.
       hashes (list): List of hashes; if given the outputs must match one of these. They can be
@@ -88,6 +96,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
         cmd=cmd,
         deps=deps,
         tools=tools,
+        secrets=secrets,
         visibility = visibility,
         output_is_complete=output_is_complete,
         building_description=building_description,
@@ -103,7 +112,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
 
 
 def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None, tools=None,
-            data=None, visibility=None, timeout=0, needs_transitive_deps=False, flaky=0,
+            data=None, visibility=None, timeout=0, needs_transitive_deps=False, flaky=0, secrets=None,
             no_test_output=False, output_is_complete=True, requires=None, container=False):
     """A rule which creates a test with an arbitrary command.
 
@@ -122,6 +131,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
       deps (list): Dependencies of this rule.
       tools (list): Tools used to build this rule; similar to srcs but are not copied to the temporary
                     build directory. Should be accessed via $(exe //path/to:tool) or similar.
+      secrets (list): Secrets available to this rule while building.
       data (list): Runtime data files for the test.
       visibility (list): Visibility declaration of this rule.
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
@@ -142,6 +152,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
         deps=deps,
         data=data,
         tools=tools,
+        secrets=secrets,
         test_cmd = test_cmd,
         cmd=cmd or 'true',  # By default, do nothing
         visibility=visibility,
