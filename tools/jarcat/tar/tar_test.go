@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const testDataDir = "tools/jarcat/tar/test_data"
@@ -18,7 +19,7 @@ const testDataDir = "tools/jarcat/tar/test_data"
 func TestNoCompression(t *testing.T) {
 	filename := "test_no_compression.tar"
 	err := Write(filename, testDataDir, "", false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	m := ReadTar(t, filename, false)
 	assert.EqualValues(t, map[string]string{
@@ -42,7 +43,7 @@ func TestNoCompression(t *testing.T) {
 func TestCompression(t *testing.T) {
 	filename := "test_compression.tar.gz"
 	err := Write(filename, testDataDir, "", true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	m := ReadTar(t, filename, true)
 	assert.EqualValues(t, map[string]string{
@@ -54,7 +55,7 @@ func TestCompression(t *testing.T) {
 func TestWithPrefix(t *testing.T) {
 	filename := "test_prefix.tar"
 	err := Write(filename, testDataDir, "wibble", false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	m := ReadTar(t, filename, false)
 	assert.EqualValues(t, map[string]string{
@@ -67,10 +68,10 @@ func TestWithPrefix(t *testing.T) {
 // their headers -> their contents.
 func ReadTar(t *testing.T, filename string, compress bool) map[*tar.Header]string {
 	f, err := os.Open(filename)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	if compress {
 		r, err := gzip.NewReader(f)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		return readTar(t, r)
 	}
 	return readTar(t, f)
@@ -86,10 +87,10 @@ func readTar(t *testing.T, r io.Reader) map[*tar.Header]string {
 		if err == io.EOF {
 			break
 		}
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		var buf bytes.Buffer
 		_, err = io.Copy(&buf, tr)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		m[hdr] = strings.TrimSpace(buf.String()) // Don't worry about newline, they're just test files...
 	}
 	return m

@@ -510,7 +510,7 @@ def _deb_deps(cmd, current_label):
 
 
 def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
-            visibility=None, labels=None, compression=None):
+            visibility=None, labels=None):
     """Defines a rule to create a tarball containing outputs of other rules.
 
     File mode and ownership are preserved. However, the atime and mtime of all
@@ -520,12 +520,11 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
       name (str): Rule name
       srcs (list): Source files to include in the tarball
       out (str): Name of output tarball (defaults to `name`.tar.gz, but see below re compression)
-      subdir (str): Subdirectory to create in.
+      subdir (str): Subdirectory to create in. All files will be flattened into this directory.
       gzip (bool): If True, the output will be gzipped. If False, it will just be a tarball.
       deps (list): Dependencies
       visibility (list): Visibility specification.
       labels (list): Labels associated with this rule.
-      compression (str): Deprecated. No longer has any effect.
     """
     # A filegroup is a nice easy way to move all these files locally.
     src_filegroup = filegroup(
@@ -533,7 +532,7 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
         srcs = srcs,
     )
     subdir = subdir or name
-    out = out or name + ('.tar.gz' if compress else '.tar')
+    out = out or (name + ('.tar.gz' if gzip else '.tar'))
     cmd = '$TOOL --tar -i .'
     if gzip:
         cmd += ' -z'
