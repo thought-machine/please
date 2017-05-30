@@ -94,6 +94,7 @@ go_get(
 go_get(
     name = 'testify',
     get = 'github.com/stretchr/testify',
+    install = ['github.com/stretchr/testify/require'],
     revision = 'f390dcf405f7b83c997eac1b06768bb9f44dec18',
 )
 

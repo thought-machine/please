@@ -520,8 +520,8 @@ def _deb_deps(cmd, current_label):
     return _find_deb_deps
 
 
-def tarball(name, srcs, out=None, deps=None, subdir=None,
-            compression='gzip', visibility=None, labels=None):
+def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
+            visibility=None, labels=None):
     """Defines a rule to create a tarball containing outputs of other rules.
 
     File mode and ownership are preserved. However, the atime and mtime of all
@@ -531,63 +531,36 @@ def tarball(name, srcs, out=None, deps=None, subdir=None,
       name (str): Rule name
       srcs (list): Source files to include in the tarball
       out (str): Name of output tarball (defaults to `name`.tar.gz, but see below re compression)
-      subdir (str): Subdirectory to create in (defaults to 'name')
-      compression (str): Kind of compression to use. Either one of {gzip, bzip2, xz, lzma}
-                         to filter through known tar methods, an explicit flag, or None for
-                         no compression.
+      subdir (str): Subdirectory to create in. All files will be flattened into this directory.
+      gzip (bool): If True, the output will be gzipped. If False, it will just be a tarball.
       deps (list): Dependencies
       visibility (list): Visibility specification.
       labels (list): Labels associated with this rule.
     """
     # A filegroup is a nice easy way to move all these files locally.
-    filegroup(
+    src_filegroup = filegroup(
         name = '_%s#files' % name,
         srcs = srcs,
     )
-    deps = deps or []
-    deps.append(':_%s#files' % name)
     subdir = subdir or name
-    if compression is not None and compression.startswith('-'):
-        if not out:
-            raise ValueError('Must pass "out" argument to tarball() if you pass an '
-                             'explicit flag for "compression"')
-    else:
-        compression, extension = _COMPRESSION.get(compression, ('-a', ''))
-
-    out = out or name + '.tar' + extension
-    # Unlike the rest of the compressions, gzip preserves the file's (the tar)
-    # timestamp by default, making the output unreproducible.
-    # Hence the compression is done with the -n flag in a separate step
-    if extension == '.gz' or out.endswith('.gz'):
-        archive_cmd = 'tar -c * | gzip -n > $OUT'
-    else:
-        archive_cmd = 'tar %s -cf $OUT *' % compression
+    out = out or (name + ('.tar.gz' if gzip else '.tar'))
+    cmd = '$TOOL --tar -i .'
+    if gzip:
+        cmd += ' -z'
+    if subdir:
+        cmd += ' --prefix ' + subdir
 
     build_rule(
-        name=name,
-        cmd=' && '.join([
-            'mkdir -p _tmp/' + subdir,
-            'cp -pr $(locations :_%s#files) _tmp/%s' % (name, subdir),
-            'cd _tmp',
-            # not using tar's --mtime because it's only available in GNU tar
-            'find . -exec touch -t 200001010000.00 {} +',
-            archive_cmd
-        ]),
-        outs=[out],
-        deps=deps,
-        visibility=visibility,
-        labels=(labels or []) + ['tar'],
+        name = name,
+        cmd = cmd,
+        srcs = [src_filegroup],
+        tools = [CONFIG.JARCAT_TOOL],
+        outs = [out],
+        deps = deps,
+        visibility = visibility,
+        labels = (labels or []) + ['tar'],
         output_is_complete = True,
     )
-
-
-_COMPRESSION = {
-    'gzip': ('-z', '.gz'),
-    'bzip2': ('-j', '.bz2'),
-    'xz': ('-J', '.xz'),
-    'lzma': ('--lzma', '.lzma'),
-    'compress': ('-Z', '.Z'),
-}
 
 
 def _tool_path(tool, tools=None, binary=True, worker=False):

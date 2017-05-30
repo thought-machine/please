@@ -2925,16 +2925,15 @@ This is just a convenience wrapper around remote_file but is somewhat clearer to
 	<td>subdir</td>
 	<td>None</td>
 	<td>str</td>
-	<td>Subdirectory to create in (defaults to 'name')</td>
+	<td>Subdirectory to create in (defaults to 'name').
+        All files will be flattened into this directory.</td>
       </tr>
 
       <tr>
-	<td>compression</td>
 	<td>gzip</td>
-	<td>str</td>
-	<td>Kind of compression to use. Either one of {gzip, bzip2, xz, lzma}
-to filter through known tar methods, an explicit flag, or None for
-no compression.</td>
+	<td>True</td>
+	<td>bool</td>
+	<td>If True, the output will be gzipped. If False, it will just be a tarball.</td>
       </tr>
 
       <tr>
