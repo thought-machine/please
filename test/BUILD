@@ -178,7 +178,7 @@ plz_e2e_test(
 
 java_test(
     name = 'individual_test_run_java',
-    srcs = ['IndividualTestRun.java'],
+    srcs = ['IndividualTest.java'],
     labels = ['manual'],
     deps = [
         '//third_party/java:junit',
