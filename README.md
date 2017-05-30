@@ -39,7 +39,7 @@ Building Please
 To build Please yourself, run `./bootstrap.sh` in the repo root.
 This will set up the minimal environment needed to build Please,
 build it once manually and then rebuild it again using itself.
-You'll need to have Go 1.7+ installed to build Please (we use some
+You'll need to have Go 1.8+ installed to build Please (we use some
 new standard library features like context) although once built it
 can target Go 1.4+.
 
