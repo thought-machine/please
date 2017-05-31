@@ -1,3 +1,10 @@
+Version 8.0.1
+-------------
+
+    * Small fix to secrets in previous version which were causing some targets to rebuild
+      more often than they should.
+
+
 Version 8.0.0
 -------------
 

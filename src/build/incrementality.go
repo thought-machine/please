@@ -424,7 +424,7 @@ func readRuleHashFile(filename string, postBuild bool) ([]byte, []byte, []byte, 
 		return nil, nil, nil, nil
 	} else if n == oldHashFileLength {
 		// Handle older hash files that don't have secrets in them.
-		contents = append(contents, noSecrets...)
+		copy(contents[4*hashLength:hashFileLength], noSecrets)
 	} else if n != hashFileLength {
 		log.Warning("Unexpected rule hash file length: expected %d bytes, was %d", hashFileLength, n)
 		return nil, nil, nil, nil
