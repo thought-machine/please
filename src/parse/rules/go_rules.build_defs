@@ -155,14 +155,16 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     hdrs = hdrs or []
     compiler_flags = compiler_flags or []
     linker_flags = linker_flags or []
+    file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
+    post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
 
     cgo_rule = build_rule(
         name = name,
         tag = 'cgo',
-        srcs = srcs + hdrs,
+        srcs = srcs + [h for h in hdrs if not h.startswith('/') and not h.startswith(':')],
         outs = {
-            'go': [src.replace('.go', '.cgo1.go') for src in srcs] + ['_cgo_gotypes.go'],
-            'c': [src.replace('.go', '.cgo2.c') for src in srcs] + ['_cgo_export.c'],
+            'go': [src.replace('.go', '.cgo1.go') for src in file_srcs] + ['_cgo_gotypes.go'],
+            'c': [src.replace('.go', '.cgo2.c') for src in file_srcs] + ['_cgo_export.c'],
             'h': ['_cgo_export.h'],
         },
         cmd = ' && '.join([
@@ -170,8 +172,13 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
             '$TOOL tool cgo -objdir $TMP_DIR -importpath ${PKG#*src/} *.go',
             # cgo leaves absolute paths in these files which we must get rid of :(
             'find $TMP_DIR -type f -maxdepth 1 | xargs sed -i -e "s|$TMP_DIR/||g"',
+            'cd $TMP_DIR',
+            'rm _cgo_main.c',
+            'ls *.c *.go',
         ]),
+        deps = [h for h in hdrs if h.startswith('/') or h.startswith(':')],
         tools = _GO_TOOL,
+        post_build = post_build if file_srcs != srcs else None,
         requires = ['go', 'cc_hdrs'],
     )
 

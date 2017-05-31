@@ -1,3 +1,9 @@
+Version 8.0.3
+-------------
+
+    * Fix to cgo_library for cases where some of the sources are produced by a genrule.
+
+
 Version 8.0.2
 -------------
 
