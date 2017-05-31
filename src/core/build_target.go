@@ -77,7 +77,7 @@ type BuildTarget struct {
 	Containerise bool `name:"container"`
 	// True if the target is a test and has no output file.
 	// Default is false, meaning all tests must produce test.results as output.
-	NoTestOutput bool
+	NoTestOutput bool `name:"no_test_output"`
 	// True if this target needs access to its transitive dependencies to build.
 	// This would be false for most 'normal' genrules but true for eg. compiler steps
 	// that need to build in everything.
@@ -125,7 +125,7 @@ type BuildTarget struct {
 	// Dependent rules this rule provides for each language. Matches up to Requires as described above.
 	Provides map[string]BuildLabel
 	// Stores the hash of this build rule before any post-build function is run.
-	RuleHash []byte `print:"false"`
+	RuleHash []byte `name:"exported_deps"` // bit of a hack to call this exported_deps...
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
 	// copied into its source directory.
 	Tools []BuildInput

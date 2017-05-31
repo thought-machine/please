@@ -1,3 +1,10 @@
+Version 8.0.2
+-------------
+
+    * Small fix to jarcat to add __init__.py files in a couple more cases.
+    * Subtle require/provide fix.
+
+
 Version 8.0.1
 -------------
 

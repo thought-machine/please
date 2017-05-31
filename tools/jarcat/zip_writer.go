@@ -136,25 +136,24 @@ func AddInitPyFiles(w *zip.Writer) error {
 	}
 	sort.Strings(s)
 	for _, p := range s {
-		d := filepath.Dir(p)
-		if filepath.Base(d) == "__pycache__" {
-			continue // Don't need to add an __init__.py here.
-		}
-		initPyPath := path.Join(d, "__init__.py")
-		if _, present := m[initPyPath]; !present {
-			// If we already have a pyc / pyo we don't need the __init__.py as well.
-			if _, present := m[initPyPath+"c"]; present {
-				continue
-			} else if _, present := m[initPyPath+"o"]; present {
-				continue
+		for d := filepath.Dir(p); d != "."; d = filepath.Dir(d) {
+			if filepath.Base(d) == "__pycache__" {
+				break // Don't need to add an __init__.py here.
 			}
+			initPyPath := path.Join(d, "__init__.py")
 			// Don't write one at the root, it's not necessary.
-			if initPyPath != "__init__.py" {
-				log.Debug("Adding %s", initPyPath)
-				m[initPyPath] = fileRecord{}
-				if err := WriteFile(w, initPyPath, []byte{}); err != nil {
-					return err
-				}
+			if _, present := m[initPyPath]; present || initPyPath == "__init__.py" {
+				break
+			} else if _, present := m[initPyPath+"c"]; present {
+				// If we already have a pyc / pyo we don't need the __init__.py as well.
+				break
+			} else if _, present := m[initPyPath+"o"]; present {
+				break
+			}
+			log.Debug("Adding %s", initPyPath)
+			m[initPyPath] = fileRecord{}
+			if err := WriteFile(w, initPyPath, []byte{}); err != nil {
+				return err
 			}
 		}
 	}

@@ -40,6 +40,9 @@ var specialFields = map[string]func(*printer) (string, bool){
 	"deps": func(p *printer) (string, bool) {
 		return p.genericPrint(reflect.ValueOf(p.target.DeclaredDependenciesStrict()))
 	},
+	"exported_deps": func(p *printer) (string, bool) {
+		return p.genericPrint(reflect.ValueOf(p.target.ExportedDependencies()))
+	},
 	"visibility": func(p *printer) (string, bool) {
 		if len(p.target.Visibility) == 1 && p.target.Visibility[0] == core.WholeGraph[0] {
 			return "['PUBLIC']", true
