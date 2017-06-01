@@ -56,7 +56,7 @@ func write(w io.Writer, output string, srcs []string, prefix string) error {
 				return err
 			}
 			// Set name appropriately (recall that FileInfoHeader does not set the full path).
-			hdr.Name = strings.TrimLeft(strings.TrimPrefix(src, strip), "/")
+			hdr.Name = strings.TrimLeft(strings.TrimPrefix(path, strip), "/")
 			if prefix != "" {
 				hdr.Name = filepath.Join(prefix, hdr.Name)
 			}
