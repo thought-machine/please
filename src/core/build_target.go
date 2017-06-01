@@ -130,7 +130,7 @@ type BuildTarget struct {
 	// copied into its source directory.
 	Tools []BuildInput
 	// Named tools, similar to named sources.
-	namedTools map[string][]BuildInput
+	namedTools map[string][]BuildInput `name:"tools"`
 	// Flakiness of test, ie. number of times we will rerun it before giving up. 0 is the default and
 	// is interpreted the same way as 1 would be (ie. one run only).
 	Flakiness int `name:"flaky"`

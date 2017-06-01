@@ -55,6 +55,9 @@ var specialFields = map[string]func(*printer) (string, bool){
 		}
 		return p.genericPrint(reflect.ValueOf(p.target.ContainerSettings.ToMap()))
 	},
+	"tools": func(p *printer) (string, bool) {
+		return p.genericPrint(reflect.ValueOf(p.target.AllTools()))
+	},
 }
 
 // fieldPrecedence defines a specific ordering for fields.
