@@ -537,12 +537,6 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
       visibility (list): Visibility specification.
       labels (list): Labels associated with this rule.
     """
-    # A filegroup is a nice easy way to move all these files locally.
-    src_filegroup = filegroup(
-        name = '_%s#files' % name,
-        srcs = srcs,
-    )
-    subdir = subdir or name
     out = out or (name + ('.tar.gz' if gzip else '.tar'))
     cmd = '$TOOL --tar -i .'
     if gzip:
@@ -553,7 +547,7 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
     build_rule(
         name = name,
         cmd = cmd,
-        srcs = [src_filegroup],
+        srcs = srcs,
         tools = [CONFIG.JARCAT_TOOL],
         outs = [out],
         deps = deps,

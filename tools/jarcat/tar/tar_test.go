@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testDataDir = "tools/jarcat/tar/test_data"
+var testInputs = []string{"tools/jarcat/tar/test_data/dir1", "tools/jarcat/tar/test_data/dir2"}
 
 func TestNoCompression(t *testing.T) {
 	filename := "test_no_compression.tar"
-	err := Write(filename, testDataDir, "", false)
+	err := Write(filename, testInputs, "", false)
 	require.NoError(t, err)
 
 	m := ReadTar(t, filename, false)
@@ -42,7 +42,7 @@ func TestNoCompression(t *testing.T) {
 
 func TestCompression(t *testing.T) {
 	filename := "test_compression.tar.gz"
-	err := Write(filename, testDataDir, "", true)
+	err := Write(filename, testInputs, "", true)
 	require.NoError(t, err)
 
 	m := ReadTar(t, filename, true)
@@ -54,13 +54,13 @@ func TestCompression(t *testing.T) {
 
 func TestWithPrefix(t *testing.T) {
 	filename := "test_prefix.tar"
-	err := Write(filename, testDataDir, "wibble", false)
+	err := Write(filename, testInputs, "/", false)
 	require.NoError(t, err)
 
 	m := ReadTar(t, filename, false)
 	assert.EqualValues(t, map[string]string{
-		"wibble/file1.txt": "test file 1",
-		"wibble/file2.txt": "test file 2",
+		"/dir1/file1.txt": "test file 1",
+		"/dir2/file2.txt": "test file 2",
 	}, toFilenameMap(m))
 }
 
