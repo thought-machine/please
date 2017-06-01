@@ -6,6 +6,7 @@ system_library(
 proto_library(
     name = 'source_context',
     srcs = [':source_context_proto'],
+    languages = ['py'],
     visibility = ['//test/system_deps/...'],
 )
 
