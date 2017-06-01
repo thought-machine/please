@@ -2,7 +2,6 @@ package core
 
 import (
 	"encoding/base64"
-	"fmt"
 	"os"
 	"path"
 	"regexp"
@@ -61,11 +60,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 			"OUTS="+strings.Join(target.Outputs(), " "),
 			"NAME="+target.Label.Name,
 		)
-		tools := make([]string, len(target.Tools))
-		for i, tool := range target.Tools {
-			tools[i] = toolPath(state, tool)
-		}
-		env = append(env, "TOOLS="+strings.Join(tools, " "))
+		env = append(env, "TOOLS="+strings.Join(toolPaths(state, target.Tools), " "))
 		// The OUT variable is only available on rules that have a single output.
 		if len(target.Outputs()) == 1 {
 			env = append(env, "OUT="+path.Join(RepoRoot, target.TmpDir(), target.Outputs()[0]))
@@ -78,12 +73,6 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		if len(target.Tools) == 1 {
 			env = append(env, "TOOL="+toolPath(state, target.Tools[0]))
 		}
-		if len(target.Tools) >= 1 {
-			// If there are multiple tools, you can use TOOL1, TOOL2 etc.
-			for i, tool := range target.Tools {
-				env = append(env, fmt.Sprintf("TOOL%d=%s", i+1, toolPath(state, tool)))
-			}
-		}
 		// Named source groups if the target declared any.
 		for name, srcs := range target.NamedSources {
 			paths := target.SourcePaths(state.Graph, srcs)
@@ -92,6 +81,10 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		// Named output groups similarly.
 		for name, outs := range target.DeclaredNamedOutputs() {
 			env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
+		}
+		// Named tools as well.
+		for name, tools := range target.namedTools {
+			env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools), " "))
 		}
 		// Secrets, again only if they declared any.
 		if len(target.Secrets) > 0 {
@@ -138,6 +131,14 @@ func toolPath(state *BuildState, tool BuildInput) string {
 		return state.Graph.TargetOrDie(*label).toolPath()
 	}
 	return tool.Paths(state.Graph)[0]
+}
+
+func toolPaths(state *BuildState, tools []BuildInput) []string {
+	ret := make([]string, len(tools))
+	for i, tool := range tools {
+		ret[i] = toolPath(state, tool)
+	}
+	return ret
 }
 
 // ReplaceEnvironment returns a function suitable for passing to os.Expand to replace environment

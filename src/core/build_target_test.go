@@ -424,6 +424,34 @@ func TestCheckSecrets(t *testing.T) {
 	assert.Error(t, target.CheckSecrets())
 }
 
+func TestAddTool(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	target1.AddTool(target2.Label)
+	assert.Equal(t, []BuildInput{target2.Label}, target1.Tools)
+	assert.True(t, target1.HasDependency(target2.Label))
+}
+
+func TestAddNamedTool(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	target1.AddNamedTool("test", target2.Label)
+	assert.Equal(t, 0, len(target1.Tools))
+	assert.Equal(t, []BuildInput{target2.Label}, target1.NamedTools("test"))
+	assert.True(t, target1.HasDependency(target2.Label))
+}
+
+func TestAllTools(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	target3 := makeTarget("//src/core:target3", "")
+	target4 := makeTarget("//src/core:target4", "")
+	target1.AddTool(target2.Label)
+	target1.AddNamedTool("test1", target4.Label)
+	target1.AddNamedTool("test2", target3.Label)
+	assert.Equal(t, []BuildInput{target2.Label, target4.Label, target3.Label}, target1.AllTools())
+}
+
 func TestContainerSettingsToMap(t *testing.T) {
 	s := TargetContainerSettings{
 		DockerImage: "alpine:3.5",

@@ -59,8 +59,9 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
             for language, plugin in lang_plugins for ext_lang, exts in plugin['extensions'].items()}
     flags = ['--%s_out=$TMP_DIR %s' % (plugin['proto_language'], ' '.join(plugin['protoc_flags']))
              for plugin in plugins] + (protoc_flags or [])
-    tools = [CONFIG.PROTOC_TOOL] + [tool for plugin in plugins for tool in plugin.get('tools', [])]
-    cmd = '$TOOL1 ' + ' '.join(flags)
+    tools = {lang: plugin.get('tools') for lang, plugin in lang_plugins}
+    tools['protoc'] = [CONFIG.PROTOC_TOOL]
+    cmd = '$TOOLS_PROTOC ' + ' '.join(flags)
     if root_dir:
         cmd = 'export RD="%s"; cd $RD; %s ${SRCS//$RD\\//} && cd $TMP_DIR' % (root_dir, cmd.replace('$TMP_DIR', '.'))
     else:
@@ -297,7 +298,7 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--plugin=protoc-gen-go=$(location %s)' % CONFIG.PROTOC_GO_PLUGIN],
+            protoc_flags = ['--plugin=protoc-gen-go=$TOOLS_GO'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
             pre_build = _go_path_mapping(False),
@@ -342,7 +343,7 @@ def grpc_languages():
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'],
                 compiler_flags = ['-I$PKG', '-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
             ),
-            protoc_flags = ['--plugin=protoc-gen-grpc-cc=$(location %s)' % CONFIG.GRPC_CC_PLUGIN, '--grpc-cc_out=$TMP_DIR'],
+            protoc_flags = ['--plugin=protoc-gen-grpc-cc=$TOOLS_CC', '--grpc-cc_out=$TMP_DIR'],
             tools = [CONFIG.GRPC_CC_PLUGIN],
         ),
         'py': proto_language(
@@ -350,7 +351,7 @@ def grpc_languages():
             proto_language = 'python',
             extensions = ['_pb2.py'],
             func = python_library,
-            protoc_flags = ['--plugin=protoc-gen-grpc-python=$(location %s)' % CONFIG.GRPC_PYTHON_PLUGIN, '--grpc-python_out=$TMP_DIR'],
+            protoc_flags = ['--plugin=protoc-gen-grpc-python=$TOOLS_PY', '--grpc-python_out=$TMP_DIR'],
             tools = [CONFIG.GRPC_PYTHON_PLUGIN],
             deps = [CONFIG.PROTO_PYTHON_DEP, CONFIG.GRPC_PYTHON_DEP],
         ),
@@ -364,7 +365,7 @@ def grpc_languages():
                 exported_deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--plugin=protoc-gen-grpc-java=$(location %s)' % CONFIG.GRPC_JAVA_PLUGIN, '--grpc-java_out=$TMP_DIR'],
+            protoc_flags = ['--plugin=protoc-gen-grpc-java=$TOOLS_JAVA', '--grpc-java_out=$TMP_DIR'],
             tools = [CONFIG.GRPC_JAVA_PLUGIN],
             deps = [CONFIG.GRPC_JAVA_DEP, CONFIG.PROTO_JAVA_DEP],
         ),
@@ -378,7 +379,7 @@ def grpc_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--plugin=protoc-gen-go=$(location %s)' % CONFIG.PROTOC_GO_PLUGIN],
+            protoc_flags = ['--plugin=protoc-gen-go=$TOOLS_GO'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
             pre_build = _go_path_mapping(True),

@@ -152,7 +152,7 @@ func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error
 		}
 		h.Write(result)
 	}
-	for _, tool := range target.Tools {
+	for _, tool := range target.AllTools() {
 		if label := tool.Label(); label != nil {
 			// Note that really it would be more correct to hash the outputs of these rules
 			// in the same way we calculate a hash of sources for the rule, but that is
@@ -552,7 +552,7 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 	for source := range core.IterSources(state.Graph, target) {
 		fmt.Printf("  Source: %s: %s\n", source.Src, b64(mustPathHash(source.Src)))
 	}
-	for _, tool := range target.Tools {
+	for _, tool := range target.AllTools() {
 		if label := tool.Label(); label != nil {
 			fmt.Printf("    Tool: %s: %s\n", *label, b64(mustShortTargetHash(state, state.Graph.TargetOrDie(*label))))
 		} else {

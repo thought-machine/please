@@ -258,6 +258,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         raise DuplicateTargetError('Duplicate target %s' % name)
     _add_maybe_named(target, _add_named_src, _add_src, srcs, name, 'srcs')
     _add_maybe_named(target, _add_named_out, _add_out, outs, name, 'outs')
+    _add_maybe_named(target, _add_named_tool, _add_tool, tools, name, 'tools', absolute=True)
     if isinstance(cmd, Mapping):
         for config, command in cmd.items():
             _check_c_error(_add_command(target, config, command.strip()))
@@ -273,7 +274,6 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     _add_strings(target, _add_data, data, 'data')
     _add_strings(target, _add_dep, deps, 'deps')
     _add_strings(target, _add_exported_dep, exported_deps, 'exported_deps')
-    _add_strings(target, _add_tool, tools, 'tools')
     _add_strings(target, _add_optional_out, optional_outs, 'optional_outs')
     _add_strings(target, _add_vis, visibility, 'visibility')
     _add_strings(target, _add_label, labels, 'labels')
@@ -339,7 +339,7 @@ def _add_strings(target, func, lst, name):
                 _check_c_error(func(target, ffi_from_string(x)))
 
 
-def _add_maybe_named(target, named_func, unnamed_func, arg, name, arg_name):
+def _add_maybe_named(target, named_func, unnamed_func, arg, name, arg_name, absolute=False):
     if isinstance(arg, Mapping):
         for k, v in arg.items():
             if isinstance(v, str):
@@ -350,9 +350,10 @@ def _add_maybe_named(target, named_func, unnamed_func, arg, name, arg_name):
                     if x:
                         _check_c_error(named_func(target, k, x))
     elif arg:
-        for v in arg:
-            if v and v.startswith('/') and not v.startswith('//'):
-                raise ValueError('Entry "%s" in %s of %s has an absolute path; that\'s not allowed.' % (v, arg_name, name))
+        if not absolute:
+            for v in arg:
+                if v and v.startswith('/') and not v.startswith('//'):
+                    raise ValueError('Entry "%s" in %s of %s has an absolute path; that\'s not allowed.' % (v, arg_name, name))
         _add_strings(target, unnamed_func, arg, arg_name)
 
 

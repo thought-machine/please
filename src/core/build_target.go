@@ -129,6 +129,8 @@ type BuildTarget struct {
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
 	// copied into its source directory.
 	Tools []BuildInput
+	// Named tools, similar to named sources.
+	namedTools map[string][]BuildInput
 	// Flakiness of test, ie. number of times we will rerun it before giving up. 0 is the default and
 	// is interpreted the same way as 1 would be (ie. one run only).
 	Flakiness int `name:"flaky"`
@@ -692,6 +694,26 @@ func (target *BuildTarget) AddNamedSource(name string, source BuildInput) {
 	}
 }
 
+// AddTool adds a new tool to the target.
+func (target *BuildTarget) AddTool(tool BuildInput) {
+	target.Tools = append(target.Tools, tool)
+	if label := tool.Label(); label != nil {
+		target.AddDependency(*label)
+	}
+}
+
+// AddNamedTool adds a new tool to the target.
+func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
+	if target.namedTools == nil {
+		target.namedTools = map[string][]BuildInput{name: []BuildInput{tool}}
+	} else {
+		target.namedTools[name] = append(target.namedTools[name], tool)
+	}
+	if label := tool.Label(); label != nil {
+		target.AddDependency(*label)
+	}
+}
+
 // AddCommand adds a new config-specific command to this build target.
 // Adding a general command is still done by simply setting the Command member.
 func (target *BuildTarget) AddCommand(config, command string) {
@@ -798,6 +820,36 @@ func (target *BuildTarget) HasSource(source string) bool {
 		}
 	}
 	return false
+}
+
+// AllTools returns all the tools for this rule in some canonical order.
+func (target *BuildTarget) AllTools() []BuildInput {
+	if target.namedTools == nil {
+		return target.Tools // Leave them in input order, that's sufficiently consistent.
+	}
+	tools := make([]BuildInput, len(target.Tools), len(target.Tools)+len(target.namedTools)*2)
+	copy(tools, target.Tools)
+	for _, name := range target.ToolNames() {
+		for _, tool := range target.namedTools[name] {
+			tools = append(tools, tool)
+		}
+	}
+	return tools
+}
+
+// ToolNames returns an ordered list of tool names.
+func (target *BuildTarget) ToolNames() []string {
+	ret := make([]string, 0, len(target.namedTools))
+	for name := range target.namedTools {
+		ret = append(ret, name)
+	}
+	sort.Strings(ret)
+	return ret
+}
+
+// NamedTools returns the tools with the given name.
+func (target *BuildTarget) NamedTools(name string) []BuildInput {
+	return target.namedTools[name]
 }
 
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
