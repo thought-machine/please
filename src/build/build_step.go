@@ -460,11 +460,19 @@ func OutputHash(target *core.BuildTarget) ([]byte, error) {
 		// NB. Always force a recalculation of the output hashes here. Memoisation is not
 		//     useful because by definition we are rebuilding a target, and can actively hurt
 		//     in cases where we compare the retrieved cache artifacts with what was there before.
-		h2, err := pathHash(path.Join(target.OutDir(), output), true)
+		filename := path.Join(target.OutDir(), output)
+		h2, err := pathHash(filename, true)
 		if err != nil {
 			return nil, err
 		}
 		h.Write(h2)
+		// Record the name of the file too, but not if the rule has hash verification
+		// (because this will change the hashes, and the cases it fixes are relatively rare
+		// and generally involve things like hash_filegroup that doesn't have hashes set).
+		// TODO(pebers): Find some more elegant way of unifying this behaviour.
+		if len(target.Hashes) == 0 {
+			h.Write([]byte(filename))
+		}
 	}
 	return h.Sum(nil), nil
 }
