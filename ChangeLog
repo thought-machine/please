@@ -1,3 +1,10 @@
+Version 8.0.5
+-------------
+
+    * Potential fix for a rare issue with rules like `hash_filegroup` that sometimes
+      weren't marked as rebuilt correctly.
+
+
 Version 8.0.4
 -------------
 
