@@ -379,6 +379,9 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	if target.IsFilegroup {
 		hashBool(h, target.IsFilegroup)
 	}
+	if target.IsHashFilegroup {
+		hashBool(h, target.IsHashFilegroup)
+	}
 	for _, require := range target.Requires {
 		h.Write([]byte(require))
 	}

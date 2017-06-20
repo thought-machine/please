@@ -257,15 +257,11 @@ def hash_filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=No
       test_only (bool): If true the exported file can only be used by test targets.
       requires (list): Kinds of output from other rules that this one requires.
     """
-    build_rule(
+    return build_rule(
         name=name,
         srcs=srcs,
+        cmd='',
         deps=deps,
-        cmd = '; '.join('for FILE in $(locations %s); do BN=$(basename $FILE); '
-                        'BASE="${BN%%.*}"; EXT="${BN:${#BASE} + 1}"; '
-                        'OUT="${BASE}-$(hash %s)"; '
-                        '[ -n "$EXT" ] && OUT="${OUT}.${EXT}"; '
-                        'mv $FILE $OUT; echo $OUT; done' % (src, src) for src in srcs),
         exported_deps=exported_deps,
         visibility=visibility,
         building_description='Copying...',
@@ -273,8 +269,7 @@ def hash_filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=No
         test_only=test_only,
         labels=labels,
         requires=requires,
-        post_build=lambda name, output: [add_out(name, out) for out in output],
-        stamp=True,
+        _hash_filegroup=True,
     )
 
 

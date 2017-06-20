@@ -96,7 +96,9 @@ func (p *printer) printf(msg string, args ...interface{}) {
 
 // PrintTarget prints an entire build target.
 func (p *printer) PrintTarget() {
-	if p.target.IsFilegroup {
+	if p.target.IsHashFilegroup {
+		p.printf("hash_filegroup(\n")
+	} else if p.target.IsFilegroup {
 		p.printf("filegroup(\n")
 	} else {
 		p.printf("build_rule(\n")

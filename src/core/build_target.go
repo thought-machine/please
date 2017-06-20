@@ -92,6 +92,8 @@ type BuildTarget struct {
 	Stamp bool
 	// Marks the target as a filegroup.
 	IsFilegroup bool `print:"false"`
+	// Marks the target as a hash_filegroup.
+	IsHashFilegroup bool `print:"false"`
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings `name:"container"`
 	// Results of test, if it is one
@@ -389,7 +391,7 @@ func (target *BuildTarget) DeclaredOutputNames() []string {
 // Outputs returns a slice of all the outputs of this rule.
 func (target *BuildTarget) Outputs() []string {
 	var ret []string
-	if target.IsFilegroup {
+	if target.IsFilegroup && !target.IsHashFilegroup {
 		ret = make([]string, 0, len(target.Sources))
 		// Filegroups just re-output their inputs.
 		for _, src := range target.Sources {

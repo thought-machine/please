@@ -4,6 +4,7 @@ package build
 import (
 	"bytes"
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -107,6 +108,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			return err
 		}
 		return stopTarget
+	}
+	if target.IsHashFilegroup {
+		updateHashFilegroupPaths(state, target)
 	}
 	if !needsBuilding(state, target, false) {
 		log.Debug("Not rebuilding %s, nothing's changed", target.Label)
@@ -555,7 +559,8 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 	outDir := target.OutDir()
 	localSources := target.AllLocalSourcePaths(state.Graph)
 	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		c, err := buildFilegroupFile(target, source, path.Join(outDir, localSources[i]))
+		out, _ := filegroupOutputPath(target, outDir, localSources[i], source)
+		c, err := buildFilegroupFile(target, source, out)
 		if err != nil {
 			return err
 		}
@@ -605,10 +610,37 @@ func copyFilegroupHashes(state *core.BuildState, target *core.BuildTarget) {
 	outDir := target.OutDir()
 	localSources := target.AllLocalSourcePaths(state.Graph)
 	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		if out := path.Join(outDir, localSources[i]); out != source {
+		if out, _ := filegroupOutputPath(target, outDir, localSources[i], source); out != source {
 			movePathHash(source, out, true)
 		}
 	}
+}
+
+// updateHashFilegroupPaths sets the output paths on a hash_filegroup rule.
+// Unlike normal filegroups, hash filegroups can't calculate these themselves very readily.
+func updateHashFilegroupPaths(state *core.BuildState, target *core.BuildTarget) {
+	outDir := target.OutDir()
+	localSources := target.AllLocalSourcePaths(state.Graph)
+	for i, source := range target.AllFullSourcePaths(state.Graph) {
+		_, relOut := filegroupOutputPath(target, outDir, localSources[i], source)
+		target.AddOutput(relOut)
+	}
+}
+
+// filegroupOutputPath returns the output path for a single filegroup source.
+func filegroupOutputPath(target *core.BuildTarget, outDir, source, full string) (string, string) {
+	if !target.IsHashFilegroup {
+		return path.Join(outDir, source), source
+	}
+	// Hash filegroups have a hash embedded into the output name.
+	ext := path.Ext(source)
+	before := source[:len(source)-len(ext)]
+	hash, err := pathHash(full, false)
+	if err != nil {
+		panic(err)
+	}
+	out := before + "-" + base64.RawURLEncoding.EncodeToString(hash) + ext
+	return path.Join(outDir, out), out
 }
 
 func createInitPy(dir string) {

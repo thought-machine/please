@@ -1,3 +1,11 @@
+Version 8.2.4
+-------------
+
+    * Internal improvements to hash_filegroup; it is now a known internal rule
+      and operates more like normal filegroups (e.g. outputs are links and are
+      never cached etc).
+
+
 Version 8.2.3
 -------------
 
