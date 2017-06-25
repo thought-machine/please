@@ -1,11 +1,14 @@
 package core
 
 import (
+	"fmt"
+	"os"
 	"path"
 	"regexp"
 	"strings"
+	"syscall"
 
-	"fmt"
+	"github.com/jessevdk/go-flags"
 	"gopkg.in/op/go-logging.v1"
 )
 
@@ -285,7 +288,10 @@ func (label *BuildLabel) UnmarshalFlag(value string) error {
 	} else if l, err := parseMaybeRelativeBuildLabel(value, ""); err != nil {
 		// This has to be fatal because of the way we're using the flags package;
 		// we lose incoming flags if we return errors.
-		log.Fatalf("%s", err)
+		// But don't die in completion mode.
+		if os.Getenv("PLZ_COMPLETE") == "" {
+			log.Fatalf("%s", err)
+		}
 	} else {
 		*label = l
 	}
@@ -330,6 +336,22 @@ func (label BuildLabel) PackageDir() string {
 		return "."
 	}
 	return label.PackageName
+}
+
+// Complete implements the flags.Completer interface, which is used for shell completion.
+// Unfortunately it's rather awkward to handle here; we need to do a proper parse in order
+// to find out what the possible build labels are, and we're not ready for that yet.
+// Returning to main is also awkward since the flags haven't parsed properly; all in all
+// it seems an easier (albeit inelegant) solution to start things over by re-execing ourselves.
+func (label BuildLabel) Complete(match string) []flags.Completion {
+	if match == "" {
+		os.Exit(0)
+	}
+	os.Setenv("PLZ_COMPLETE", match)
+	os.Unsetenv("GO_FLAGS_COMPLETION")
+	exec, _ := os.Executable()
+	log.Fatalf("%s", syscall.Exec(exec, os.Args, os.Environ()))
+	return nil
 }
 
 // LooksLikeABuildLabel returns true if the string appears to be a build label, false if not.

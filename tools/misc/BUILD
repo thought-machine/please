@@ -5,7 +5,7 @@ filegroup(
 )
 
 filegroup(
-    name = 'completion_scripts',
-    srcs = glob(['plz_complete.*']),
+    name = 'completion_script',
+    srcs = ['plz_complete.sh'],
     visibility = ['PUBLIC'],
 )

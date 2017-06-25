@@ -16,11 +16,14 @@
       <code>pip install cffi>=1.5.0</code> should take care of it.</p>
 
     <h2>Shell completion</h2>
-    <p>Please comes with completion scripts for Bash and zsh built-in.<p>
+    <p>Please comes with a completion script for Bash and zsh built-in.</p>
 
-    <p>You can produce them by running <code>plz query completions --bash_script</code> or
-      <code>plz query completions --zsh_script</code>. This is handy to add to your .bashrc, for example:<br/>
-      <pre><code>source <(plz query completions --bash_script)</code></pre></p>
+    <p>You can produce it by running <code>plz --completion_script</code>.
+      This is handy to add to your <code>.bashrc</code> or <code>.zshrc</code>, for example:<br/>
+      <pre><code>source <(plz --completion_script)</code></pre></p>
+
+    <p>The script will complete subcommands and flags but most relevantly can also complete
+      build labels by reading BUILD files for you.</p>
 
     <h2>Getting started</h2>
     <p>Run <code>plz init</code> at the root of your repo to create the .plzconfig file.

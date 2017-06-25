@@ -11,9 +11,10 @@ import (
 )
 
 // QueryCompletionLabels produces a set of labels that complete a given input.
-// The second return value is true if one or more of the inputs are a "hidden" target
+// The second return value is a set of labels to parse for (since the original set generally won't turn out to exist).
+// The last return value is true if one or more of the inputs are a "hidden" target
 // (i.e. name begins with an underscore).
-func QueryCompletionLabels(config *core.Configuration, args []string, repoRoot string) ([]core.BuildLabel, bool) {
+func QueryCompletionLabels(config *core.Configuration, args []string, repoRoot string) ([]core.BuildLabel, []core.BuildLabel, bool) {
 	if len(args) == 0 {
 		queryCompletionPackages(config, ".", repoRoot)
 	} else if !strings.Contains(args[0], ":") {
@@ -24,9 +25,6 @@ func QueryCompletionLabels(config *core.Configuration, args []string, repoRoot s
 			queryCompletionPackages(config, args[0], repoRoot)
 		}
 	}
-	if strings.HasSuffix(args[0], ":") {
-		args[0] += "all"
-	}
 	hidden := false
 	for _, arg := range args {
 		hidden = hidden || strings.Contains(arg, ":_")
@@ -34,9 +32,14 @@ func QueryCompletionLabels(config *core.Configuration, args []string, repoRoot s
 	// Bash completion sometimes produces \: instead of just : (see issue #18).
 	// We silently fix that here since we've not yet worked out how to fix Bash itself :(
 	args[0] = strings.Replace(args[0], "\\:", ":", -1)
+
+	if strings.HasSuffix(args[0], ":") {
+		// Have to special-case this because it won't be a valid label.
+		labels := core.ParseBuildLabels([]string{args[0] + "all"})
+		return []core.BuildLabel{{PackageName: labels[0].PackageName, Name: ""}}, labels, hidden
+	}
 	labels := core.ParseBuildLabels([]string{args[0]})
-	// Return this label without the trailing bit.
-	return []core.BuildLabel{{PackageName: labels[0].PackageName, Name: "all"}}, hidden
+	return labels, []core.BuildLabel{{PackageName: labels[0].PackageName, Name: "all"}}, hidden
 }
 
 func queryCompletionPackages(config *core.Configuration, query, repoRoot string) {
@@ -73,6 +76,9 @@ func QueryCompletions(graph *core.BuildGraph, labels []core.BuildLabel, binary, 
 	for _, label := range labels {
 		count := 0
 		for _, target := range graph.PackageOrDie(label.PackageName).Targets {
+			if !strings.HasPrefix(target.Label.Name, label.Name) {
+				continue
+			}
 			if (binary && (!target.IsBinary || target.IsTest)) || (test && !target.IsTest) {
 				continue
 			}
@@ -81,7 +87,7 @@ func QueryCompletions(graph *core.BuildGraph, labels []core.BuildLabel, binary, 
 				count++
 			}
 		}
-		if !binary && count > 1 {
+		if !binary && ((label.Name != "" && strings.HasPrefix("all", label.Name)) || count > 1) {
 			fmt.Printf("//%s:all\n", label.PackageName)
 		}
 	}

@@ -6,6 +6,6 @@ func InitConfig(dir string, bazelCompatibility bool) {
 }
 
 // PrintCompletionScript is a stub used during initial bootstrap.
-func PrintCompletionScript(zsh bool) {
+func PrintCompletionScript() {
 	log.Fatalf("Not supported during initial bootstrap.\n")
 }
