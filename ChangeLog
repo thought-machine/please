@@ -1,3 +1,9 @@
+Version 8.1.1
+-------------
+
+    * Minor completion fixes to suppress warnings when version differs.
+
+
 Version 8.1.0
 -------------
 

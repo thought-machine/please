@@ -87,7 +87,7 @@ func QueryCompletions(graph *core.BuildGraph, labels []core.BuildLabel, binary, 
 				count++
 			}
 		}
-		if !binary && ((label.Name != "" && strings.HasPrefix("all", label.Name)) || count > 1) {
+		if !binary && ((label.Name != "" && strings.HasPrefix("all", label.Name)) || (label.Name == "" && count > 1)) {
 			fmt.Printf("//%s:all\n", label.PackageName)
 		}
 	}
