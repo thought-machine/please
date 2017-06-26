@@ -1,3 +1,11 @@
+Version 8.1.0
+-------------
+
+    * Rewritten completion script; is now activated using
+      `source <(plz --completion_script)` which works for both bash and zsh.
+      It should also be more robust for more subtle flag combinations.
+
+
 Version 8.0.5
 -------------
 
