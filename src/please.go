@@ -194,7 +194,7 @@ var opts struct {
 
 	Help struct {
 		Args struct {
-			Topic string `positional-arg-name:"topic" description:"Topic to display help on"`
+			Topic help.Topic `positional-arg-name:"topic" description:"Topic to display help on"`
 		} `positional-args:"true"`
 	} `command:"help" alias:"halp" description:"Displays help about various parts of plz or its build rules"`
 
@@ -395,7 +395,7 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"help": func() bool {
-		return help.Help(opts.Help.Args.Topic)
+		return help.Help(string(opts.Help.Args.Topic))
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {

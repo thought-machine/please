@@ -28,12 +28,14 @@ go_bindata(
 go_library(
     name = 'help',
     srcs = [
+        'completion.go',
         'help.go',
         ':data',
     ],
     deps = [
         '//src/cli',
         '//src/utils',
+        '//third_party/go:go-flags',
         '//third_party/go:logging',
     ],
     visibility = ['PUBLIC'],

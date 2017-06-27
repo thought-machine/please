@@ -81,7 +81,6 @@ func findHelpFromFile(topic, filename string) (string, bool) {
 }
 
 func loadData(filename string) (string, map[string]string) {
-	log.Debug("Opening help file %s", filename)
 	data := MustAsset(filename)
 	f := helpFile{}
 	if err := json.Unmarshal(data, &f); err != nil {
