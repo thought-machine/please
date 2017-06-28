@@ -301,11 +301,14 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	defer C.free(unsafe.Pointer(cFilename))
 	defer C.free(unsafe.Pointer(cPackageName))
 	ret := C.GoString(C.ParseFile(cFilename, cPackageName, sizep(pkg)))
-	if ret != "" && ret != pyDeferParse {
+	if ret == pyDeferParse {
+		log.Debug("Deferred parse of package file %s in %0.3f seconds", filename, time.Since(start).Seconds())
+		return true
+	} else if ret != "" {
 		panic(fmt.Sprintf("Failed to parse file %s: %s", filename, ret))
 	}
 	log.Debug("Parsed package file %s in %0.3f seconds", filename, time.Since(start).Seconds())
-	return ret == pyDeferParse
+	return false
 }
 
 // RunCode will run some arbitrary Python code using our embedded interpreter.

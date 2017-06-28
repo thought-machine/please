@@ -1,6 +1,8 @@
+subinclude('//build_defs:version')
+
 fpm_deb(
     name = 'please',
-    version = CONFIG.PLZ_VERSION,
+    version = VERSION,
     files = {
         '/opt/please/please': '//src:please',
         '/opt/please/please_pex': '//tools/please_pex',
@@ -25,7 +27,7 @@ fpm_deb(
 fpm_deb(
     name = 'plz_rpc_cache_server',
     package_name = 'plz-rpc-cache-server',
-    version = CONFIG.PLZ_VERSION,
+    version = VERSION,
     files = {
         '/usr/bin/plz_rpc_cache_server': '//src/cache/server:rpc_cache_server_bin',
     },
@@ -34,7 +36,7 @@ fpm_deb(
 fpm_deb(
     name = 'plz_http_cache_server',
     package_name = 'plz-http-cache-server',
-    version = CONFIG.PLZ_VERSION,
+    version = VERSION,
     files = {
         '/usr/bin/plz_http_cache_server': '//src/cache/server:http_cache_server_bin',
     },
@@ -43,7 +45,7 @@ fpm_deb(
 fpm_deb(
     name = 'plz_build_linter',
     package_name = 'please-build-lint',
-    version = CONFIG.PLZ_VERSION,
+    version = VERSION,
     files = {
         '/opt/please/please_build_linter': '//tools/linter',
     },
@@ -64,7 +66,7 @@ tarball(
         '//tools/please_maven',
         '//tools/please_pex',
     ],
-    out = 'please_%s.tar.gz' % CONFIG.PLZ_VERSION,
+    out = 'please_%s.tar.gz' % VERSION,
     subdir = 'please',
 )
 
@@ -74,7 +76,7 @@ tarball(
         '//src/cache/server:http_cache_server_bin',
         '//src/cache/server:rpc_cache_server_bin',
     ],
-    out = 'please_servers_%s.tar.gz' % CONFIG.PLZ_VERSION,
+    out = 'please_servers_%s.tar.gz' % VERSION,
     subdir = 'please',
 )
 

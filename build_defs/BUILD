@@ -1,11 +1,19 @@
-export_file(
+filegroup(
     name = 'go_bindata',
-    src = 'go_bindata.build_defs',
+    srcs = ['go_bindata.build_defs'],
     visibility = ['PUBLIC'],
 )
 
-export_file(
+filegroup(
     name = 'plz_e2e_test',
-    src = 'plz_e2e_test.build_defs',
+    srcs = ['plz_e2e_test.build_defs'],
     visibility = ['//test/...'],
+)
+
+genrule(
+    name = 'version',
+    srcs = ['//:version'],
+    outs = ['version.build_defs'],
+    cmd = 'echo "VERSION = \'`cat $SRCS`\'" > $OUT',
+    visibility = ['PUBLIC'],
 )

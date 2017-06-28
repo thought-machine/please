@@ -520,7 +520,7 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 		case core.Stop, core.Kill:
 			return
 		case core.Parse, core.SubincludeParse:
-			parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude)
+			parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude, t == core.SubincludeParse)
 		case core.Build, core.SubincludeBuild:
 			build.Build(tid, state, label)
 		case core.Test:
