@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -103,21 +104,10 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 		}
 		targets[target] = struct{}{}
 		for _, source := range target.AllSources() {
-			if source.Label() == nil {
-				for _, src := range source.Paths(state.Graph) {
-					files.Set(src, struct{}{})
-					if info, err := os.Stat(src); err == nil && !info.IsDir() {
-						src = path.Dir(src)
-					}
-					if _, present := dirs[src]; !present {
-						log.Notice("Adding watch on %s", src)
-						dirs[src] = struct{}{}
-						if err := watcher.Add(src); err != nil {
-							log.Error("Failed to add watch on %s: %s", src, err)
-						}
-					}
-				}
-			}
+			addSource(watcher, state, source, dirs, files)
+		}
+		for _, datum := range target.Data {
+			addSource(watcher, state, datum, dirs, files)
 		}
 		for _, dep := range target.Dependencies() {
 			startWatch(dep)
@@ -137,4 +127,28 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 	}
 	// Drop a message here so they know when it's actually ready to go.
 	fmt.Println("And now my watch begins...")
+}
+
+func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.BuildInput, dirs map[string]struct{}, files cmap.ConcurrentMap) {
+	if source.Label() == nil {
+		for _, src := range source.Paths(state.Graph) {
+			if err := filepath.Walk(src, func(src string, info os.FileInfo, err error) error {
+				files.Set(src, struct{}{})
+				dir := src
+				if info, err := os.Stat(src); err == nil && !info.IsDir() {
+					dir = path.Dir(src)
+				}
+				if _, present := dirs[dir]; !present {
+					log.Notice("Adding watch on %s", dir)
+					dirs[dir] = struct{}{}
+					if err := watcher.Add(dir); err != nil {
+						log.Error("Failed to add watch on %s: %s", src, err)
+					}
+				}
+				return err
+			}); err != nil {
+				log.Error("Failed to add watch on %s: %s", src, err)
+			}
+		}
+	}
 }
