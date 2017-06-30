@@ -35,6 +35,7 @@ func TestRewriteHashes(t *testing.T) {
 		"test1": "b9643f8154a9e9912d730a931d329afc82a44a52",
 		"test2": "bd79dd61c1494072271f3d13350ccbc26c25a09e",
 		"test3": "94ead0b0422cad925910e5f8b6f9bd93b309f8f0",
+		"test4": "94ead0b0422cad925910e5f8b6f9bd93b309f8f0",
 	}))
 	rewritten, err := ioutil.ReadFile("test.build")
 	assert.NoError(t, err)
