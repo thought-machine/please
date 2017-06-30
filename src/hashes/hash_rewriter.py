@@ -19,6 +19,12 @@ def is_a_target(node):
                     return keyword.value.s
 
 
+def replace_hash(line, before, after):
+    """Rewrites a hash within one particular line. Returns updated line."""
+    quote = lambda s, q: q + s + q
+    return line.replace(quote(before, '"'), quote(after, '"')).replace(quote(before, "'"), quote(after, "'"))
+
+
 with _open(FILENAME) as f:
     lines = f.readlines()
     tree = ast.parse(''.join(lines), filename=FILENAME)
@@ -40,12 +46,12 @@ for node in ast.iter_child_nodes(tree):
                 # Should really do something here about multiple hashes and working out which
                 # is which...
                 current, lineno = candidates.popitem()
-                lines[lineno] = lines[lineno].replace(current, prefix + TARGETS[name])
+                lines[lineno] = replace_hash(lines[lineno], current, prefix + TARGETS[name])
             elif keyword.arg == 'hash' and isinstance(keyword.value, ast.Str):
                 lineno = keyword.value.lineno - 1
                 current = keyword.value.s
                 prefix = current[:current.find(':') + 2] if ': ' in current else ''
-                lines[lineno] = lines[lineno].replace(current, prefix + TARGETS[name])
+                lines[lineno] = replace_hash(lines[lineno], current, prefix + TARGETS[name])
 
 with _open(FILENAME, 'w') as f:
     for line in lines:
