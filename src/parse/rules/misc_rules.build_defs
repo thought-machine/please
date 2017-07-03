@@ -37,11 +37,15 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
       outs (list): Outputs of this rule.
       out (str): A single output of this rule, as a string. Discouraged in favour of 'outs'.
       deps (list): Dependencies of this rule.
-      tools (list): Tools used to build this rule; similar to srcs but are not copied to the temporary
-                    build directory. Should be accessed via $(exe //path/to:tool) or similar.
-                    Entries that are not build labels are assumed to be system-level commands and
-                    resolved within the path given in the config file (note that the value of $PATH
-                    in the outside environment is not propagated to the build rule).
+      tools (list | dict): Tools used to build this rule; similar to srcs but are not copied to the
+                           temporary build directory. Should be accessed via $(exe //path/to:tool)
+                           or similar.
+                           Entries that are not build labels are assumed to be system-level commands
+                           and resolved within the path given in the config file (note that the
+                           value of $PATH in the outside environment is not propagated to the build
+                           rule).
+                           If tools is given as a dict then the keys of the dict name the various
+                           tools and they can be accessed with $TOOLS_KEY.
       secrets (list): Files containing secrets (credentials etc) used to build this rule. These are
                       all absolute paths (beginning with / or ~) and are not copied to the build
                       directory. They can be accessed through the environment variable $SECRETS.
