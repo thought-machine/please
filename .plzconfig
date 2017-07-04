@@ -50,6 +50,7 @@ grpcjavaplugin = //third_party/java:protoc-gen-grpc-java
 protocgoplugin = //third_party/go:protoc-gen-go
 
 [docker]
+defaultimage = thoughtmachine/please_test:v1
 allowlocalfallback = false
 
 [cache]
