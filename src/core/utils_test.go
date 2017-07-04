@@ -188,6 +188,20 @@ func TestExecWithTimeoutStderr(t *testing.T) {
 	assert.Equal(t, "hello\n", string(stderr))
 }
 
+func TestAsyncDeleteDir(t *testing.T) {
+	err := os.MkdirAll("test_dir/a/b/c", DirPermissions)
+	assert.NoError(t, err)
+	err = AsyncDeleteDir("test_dir")
+	assert.NoError(t, err)
+	for i := 0; i < 100; i++ {
+		if !PathExists("test_dir") {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	assert.False(t, PathExists("test_dir"))
+}
+
 // buildGraph builds a test graph which we use to test IterSources etc.
 func buildGraph() *BuildGraph {
 	graph := NewGraph()
