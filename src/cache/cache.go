@@ -21,12 +21,6 @@ func NewCache(config *core.Configuration) core.Cache {
 	return c
 }
 
-// NewRemoteCache is a factory function for creating a cache setup for remote caches only.
-// It is never asynchronous.
-func NewRemoteCache(config *core.Configuration) core.Cache {
-	return newSyncCache(config, true)
-}
-
 // newSyncCache creates a new cache, possibly multiplexing many underneath.
 func newSyncCache(config *core.Configuration, remoteOnly bool) core.Cache {
 	mplex := &cacheMultiplexer{}

@@ -346,10 +346,12 @@ var buildFunctions = map[string]func() bool{
 		if len(opts.Clean.Args.Targets) == 0 {
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
 				// Clean everything, doesn't require parsing at all.
-				if !opts.FeatureFlags.NoCache && opts.Clean.Remote {
-					cache.NewRemoteCache(config).CleanAll()
+				if !opts.Clean.Remote {
+					// Don't construct the remote caches if they didn't pass --remote.
+					config.Cache.RpcUrl = ""
+					config.Cache.HttpUrl = ""
 				}
-				clean.Clean(config, !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
+				clean.Clean(config, newCache(config), !opts.Clean.NoBackground)
 				return true
 			}
 			opts.Clean.Args.Targets = core.WholeGraph
@@ -542,6 +544,14 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool 
 	return interactiveOutput || (!plainOutput && cli.StdErrIsATerminal && verbosity < 4)
 }
 
+// newCache constructs a new cache based on the current config / flags.
+func newCache(config *core.Configuration) core.Cache {
+	if opts.FeatureFlags.NoCache {
+		return nil
+	}
+	return cache.NewCache(config)
+}
+
 func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
@@ -554,10 +564,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config
 	}
-	var c core.Cache
-	if !opts.FeatureFlags.NoCache {
-		c = cache.NewCache(config)
-	}
+	c := newCache(config)
 	state := core.NewBuildState(config.Please.NumThreads, c, opts.OutputFlags.Verbosity, config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.NumTestRuns = opts.Test.NumRuns + opts.Cover.NumRuns            // Only one of these can be passed.

@@ -113,8 +113,8 @@ func (cache *dirCache) Clean(target *core.BuildTarget) {
 }
 
 func (cache *dirCache) CleanAll() {
-	if err := os.RemoveAll(cache.Dir); err != nil {
-		log.Warning("Failed to clean cache: %s", err)
+	if err := core.AsyncDeleteDir(cache.Dir); err != nil {
+		log.Error("Failed to clean cache: %s", err)
 	}
 }
 

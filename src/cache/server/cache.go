@@ -274,12 +274,7 @@ func (cache *Cache) DeleteAllArtifacts() error {
 	// Empty entire cache now.
 	cache.cachedFiles = cmap.New()
 	cache.totalSize = 0
-	// Move directory somewhere else
-	tempPath := cache.rootPath + "_deleting"
-	if err := os.Rename(cache.rootPath, tempPath); err != nil {
-		return err
-	}
-	return os.RemoveAll(tempPath)
+	return core.AsyncDeleteDir(cache.rootPath)
 }
 
 // clean implements a periodic clean of the cache to remove old artifacts.
