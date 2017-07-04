@@ -112,6 +112,12 @@ func (cache *dirCache) Clean(target *core.BuildTarget) {
 	}
 }
 
+func (cache *dirCache) CleanAll() {
+	if err := os.RemoveAll(cache.Dir); err != nil {
+		log.Warning("Failed to clean cache: %s", err)
+	}
+}
+
 func (cache *dirCache) Shutdown() {}
 
 func (cache *dirCache) getPath(target *core.BuildTarget, key []byte) string {

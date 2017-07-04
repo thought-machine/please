@@ -150,6 +150,7 @@ var opts struct {
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
+		Remote       bool     `long:"remote" description:"Clean entire remote cache when no targets are given (default is local only)"`
 		Args         struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
@@ -345,6 +346,9 @@ var buildFunctions = map[string]func() bool{
 		if len(opts.Clean.Args.Targets) == 0 {
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
 				// Clean everything, doesn't require parsing at all.
+				if !opts.FeatureFlags.NoCache && opts.Clean.Remote {
+					cache.NewRemoteCache(config).CleanAll()
+				}
 				clean.Clean(config, !opts.FeatureFlags.NoCache, !opts.Clean.NoBackground)
 				return true
 			}

@@ -164,6 +164,13 @@ func (cache *httpCache) Clean(target *core.BuildTarget) {
 	response.Body.Close()
 }
 
+func (cache *httpCache) CleanAll() {
+	req, _ := http.NewRequest("DELETE", cache.Url, nil)
+	if _, err := http.DefaultClient.Do(req); err != nil {
+		log.Warning("Failed to remove artifacts from http cache: %s", err)
+	}
+}
+
 func (cache *httpCache) Shutdown() {}
 
 func newHttpCache(config *core.Configuration) *httpCache {

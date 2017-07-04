@@ -279,6 +279,7 @@ func (*mockCache) RetrieveExtra(target *core.BuildTarget, key []byte, file strin
 }
 
 func (*mockCache) Clean(target *core.BuildTarget) {}
+func (*mockCache) CleanAll()                      {}
 func (*mockCache) Shutdown()                      {}
 
 type buildFunctionMap map[*core.BuildTarget]func(*core.BuildTarget, string) error
