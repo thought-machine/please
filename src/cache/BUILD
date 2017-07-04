@@ -52,6 +52,7 @@ go_test(
     srcs = ['http_cache_test.go'],
     container = True,  # Brings up an internal server
     data = [':test_data'],
+    static = True,
     deps = [
         ':cache',
         '//src/cache/server',

@@ -15,6 +15,7 @@ go_test(
     name = 'cluster_test',
     srcs = ['cluster_test.go'],
     container = True,
+    static = True,
     deps = [
         ':cluster',
         '//src/cache/proto:rpc_cache',

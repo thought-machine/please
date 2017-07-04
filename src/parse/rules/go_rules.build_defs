@@ -270,7 +270,8 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
                      (specifically `-linkmode external -extldflags static`).
                      Typically this increases size & link time a little but in return the binary
                      has absolutely no external dependencies.
-                     Not yet tested against cgo.
+                     Note that it may have negative consequences if the binary contains any cgo
+                     (including net/http DNS lookup code potentially).
     """
     if main:
         log.warning('"main" on go_binary is deprecated, prefer "srcs" instead.')
@@ -300,7 +301,7 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
 
 
 def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False, cgo=False,
-            external=False, timeout=0, flaky=0, test_outputs=None, labels=None, size=None):
+            external=False, timeout=0, flaky=0, test_outputs=None, labels=None, size=None, static=False):
     """Defines a Go test rule.
 
     Args:
@@ -319,6 +320,12 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
       test_outputs (list): Extra test output files to generate from this test.
       labels (list): Labels for this rule.
       size (str): Test size (enormous, large, medium or small).
+      static (bool): If True, passes flags to the linker to try to force fully static linking.
+                     (specifically `-linkmode external -extldflags static`).
+                     Typically this increases size & link time a little but in return the binary
+                     has absolutely no external dependencies.
+                     Note that it may have negative consequences if the binary contains any cgo
+                     (including net/http DNS lookup code potentially).
     """
     deps = deps or []
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
@@ -357,7 +364,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         requires=['go'],
         test_only=True,
         tools=tools,
-        post_build=_replace_test_package,
+        post_build=lambda name, output: _replace_test_package(name, output, static),
     )
     deps.append(lib_rule)
     go_library(
@@ -367,7 +374,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
     )
-    cmds, tools = _go_binary_cmds()
+    cmds, tools = _go_binary_cmds(static=static)
     build_rule(
         name=name,
         srcs=[':_%s#main_lib' % name],
@@ -393,7 +400,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
 
 
 def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False,
-            timeout=0, flaky=0, test_outputs=None, labels=None, size=None):
+             timeout=0, flaky=0, test_outputs=None, labels=None, size=None, static=False):
     """Defines a Go test rule over a cgo_library.
 
     If the library you are testing is a cgo_library, you must use this instead of go_test.
@@ -413,6 +420,12 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
       test_outputs (list): Extra test output files to generate from this test.
       labels (list): Labels for this rule.
       size (str): Test size (enormous, large, medium or small).
+      static (bool): If True, passes flags to the linker to try to force fully static linking.
+                     (specifically `-linkmode external -extldflags static`).
+                     Typically this increases size & link time a little but in return the binary
+                     has absolutely no external dependencies.
+                     It may not be easy to make cgo tests work when linked statically; depending
+                     on your toolchain it may not be possible or may fail.
     """
     go_test(
         name = name,
@@ -420,6 +433,7 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
         data = data,
         deps = deps,
         cgo = True,
+        static = static,
         visibility = visibility,
         flags = flags,
         container = container,
@@ -566,7 +580,7 @@ def _extra_outs(get):
     return _inner
 
 
-def _replace_test_package(name, output):
+def _replace_test_package(name, output, static):
     """Post-build function, called after we template the main function.
 
     The purpose is to replace the real library with the specific one we've
@@ -579,7 +593,7 @@ def _replace_test_package(name, output):
     for line in output:
         if line.startswith('Package: '):
             ldflags = ' '.join(get_labels(name, 'cc:ld:'))
-            binary_cmds, _ = _go_binary_cmds(ldflags=ldflags)
+            binary_cmds, _ = _go_binary_cmds(ldflags=ldflags, static=static)
             pkg_name = line[9:]
             if pkg_name != new_name or ldflags:  # Might not be necessary if names match already.
                 for k, v in binary_cmds.items():
