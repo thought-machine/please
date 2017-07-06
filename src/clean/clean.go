@@ -3,6 +3,7 @@
 package clean
 
 import (
+	"fmt"
 	"os"
 
 	"gopkg.in/op/go-logging.v1"
@@ -22,6 +23,9 @@ func Clean(config *core.Configuration, cache core.Cache, background bool) {
 	if background {
 		if err := core.AsyncDeleteDir(core.OutDir); err != nil {
 			log.Warning("Couldn't run clean in background; will do it synchronously: %s", err)
+		} else {
+			fmt.Println("Cleaning in background; you may continue to do pleasing things in this repo in the meantime.")
+			return
 		}
 	}
 	clean(core.OutDir)

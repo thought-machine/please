@@ -233,7 +233,11 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 }
 
 func (cache *rpcCache) CleanAll() {
-	if cache.isConnected() && cache.Writeable {
+	if !cache.isConnected() {
+		log.Error("RPC cache is not connected, cannot clean")
+	} else if !cache.Writeable {
+		log.Error("RPC cache is not writable, will not clean")
+	} else {
 		req := pb.DeleteRequest{Everything: true}
 		cache.runRpc(zeroKey, func(cache *rpcCache) (bool, []*pb.Artifact) {
 			if response, err := cache.client.Delete(context.Background(), &req); err != nil || !response.Success {
