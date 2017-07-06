@@ -231,6 +231,25 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 		})
 	}
 }
+
+func (cache *rpcCache) CleanAll() {
+	if !cache.isConnected() {
+		log.Error("RPC cache is not connected, cannot clean")
+	} else if !cache.Writeable {
+		log.Error("RPC cache is not writable, will not clean")
+	} else {
+		log.Debug("Cleaning entire RPC cache")
+		req := pb.DeleteRequest{Everything: true}
+		cache.runRpc(zeroKey, func(cache *rpcCache) (bool, []*pb.Artifact) {
+			if response, err := cache.client.Delete(context.Background(), &req); err != nil || !response.Success {
+				log.Errorf("Failed to clean RPC cache: %s", err)
+				return false, nil
+			}
+			return true, nil
+		})
+	}
+}
+
 func (cache *rpcCache) Shutdown() {}
 
 func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode bool) {

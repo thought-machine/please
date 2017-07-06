@@ -128,6 +128,8 @@ func (c *mockCache) Clean(target *core.BuildTarget) {
 	c.Retrieve(target, nil)
 }
 
+func (c *mockCache) CleanAll() {}
+
 func (*mockCache) Shutdown() {}
 
 func makeTarget(label string) *core.BuildTarget {

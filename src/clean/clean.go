@@ -3,13 +3,8 @@
 package clean
 
 import (
-	"encoding/hex"
 	"fmt"
-	"math/rand"
 	"os"
-	"os/exec"
-	"path"
-	"syscall"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -21,14 +16,17 @@ import (
 var log = logging.MustGetLogger("clean")
 
 // Clean cleans the entire output directory and optionally the cache as well.
-func Clean(config *core.Configuration, cleanCache, background bool) {
-	if background {
-		if err := maybeFork(core.OutDir, config.Cache.Dir, cleanCache); err != nil {
-			log.Warning("Couldn't run clean in background; will do it synchronously: %s", err)
-		}
+func Clean(config *core.Configuration, cache core.Cache, background bool) {
+	if cache != nil {
+		cache.CleanAll()
 	}
-	if cleanCache {
-		clean(config.Cache.Dir)
+	if background {
+		if err := core.AsyncDeleteDir(core.OutDir); err != nil {
+			log.Warning("Couldn't run clean in background; will do it synchronously: %s", err)
+		} else {
+			fmt.Println("Cleaning in background; you may continue to do pleasing things in this repo in the meantime.")
+			return
+		}
 	}
 	clean(core.OutDir)
 }
@@ -69,48 +67,4 @@ func clean(path string) {
 			log.Fatalf("Failed to clean path %s: %s", path, err)
 		}
 	}
-}
-
-// maybeFork will fork & detach if background is true. First it will rename the out and
-// cache dirs so it's safe to run another plz in this repo, then fork & detach child
-// processes to do the actual cleaning.
-// The parent will then die quietly and the children will continue to actually remove the
-// directories.
-func maybeFork(outDir, cacheDir string, cleanCache bool) error {
-	rm, err := exec.LookPath("rm")
-	if err != nil {
-		return err
-	}
-	if !core.PathExists(outDir) || !core.PathExists(cacheDir) {
-		return nil
-	}
-	newOutDir, err := moveDir(outDir)
-	if err != nil {
-		return err
-	}
-	args := []string{rm, "-rf", newOutDir}
-	if cleanCache {
-		newCacheDir, err := moveDir(cacheDir)
-		if err != nil {
-			return err
-		}
-		args = append(args, newCacheDir)
-	}
-	// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay.
-	_, err = syscall.ForkExec(rm, args, nil)
-	if err == nil {
-		// Success if we get here.
-		fmt.Println("Cleaning in background; you may continue to do pleasing things in this repo in the meantime.")
-		os.Exit(0)
-	}
-	return err
-}
-
-// moveDir moves a directory to a new location and returns that new location.
-func moveDir(dir string) (string, error) {
-	b := make([]byte, 16)
-	rand.Read(b)
-	name := path.Join(path.Dir(dir), ".plz_clean_"+hex.EncodeToString(b))
-	log.Notice("Moving %s to %s", dir, name)
-	return name, os.Rename(dir, name)
 }

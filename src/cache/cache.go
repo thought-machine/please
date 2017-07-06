@@ -14,16 +14,17 @@ var log = logging.MustGetLogger("cache")
 
 // NewCache is the factory function for creating a cache setup from the given config.
 func NewCache(config *core.Configuration) core.Cache {
-	c := newSyncCache(config)
+	c := newSyncCache(config, false)
 	if config.Cache.Workers > 0 {
 		return newAsyncCache(c, config)
 	}
 	return c
 }
 
-func newSyncCache(config *core.Configuration) core.Cache {
+// newSyncCache creates a new cache, possibly multiplexing many underneath.
+func newSyncCache(config *core.Configuration, remoteOnly bool) core.Cache {
 	mplex := &cacheMultiplexer{}
-	if config.Cache.Dir != "" {
+	if config.Cache.Dir != "" && !remoteOnly {
 		mplex.caches = append(mplex.caches, newDirCache(config))
 	}
 	if config.Cache.RpcUrl != "" {
@@ -131,6 +132,12 @@ func (mplex cacheMultiplexer) RetrieveExtra(target *core.BuildTarget, key []byte
 func (mplex cacheMultiplexer) Clean(target *core.BuildTarget) {
 	for _, cache := range mplex.caches {
 		cache.Clean(target)
+	}
+}
+
+func (mplex cacheMultiplexer) CleanAll() {
+	for _, cache := range mplex.caches {
+		cache.CleanAll()
 	}
 }
 

@@ -18,6 +18,8 @@ type Cache interface {
 	RetrieveExtra(target *BuildTarget, key []byte, file string) bool
 	// Cleans any artifacts associated with this target from the cache, for any possible key.
 	Clean(target *BuildTarget)
+	// Cleans the entire cache.
+	CleanAll()
 	// Shuts down the cache, blocking until any potentially pending requests are done.
 	Shutdown()
 }

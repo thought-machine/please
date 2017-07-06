@@ -65,6 +65,10 @@ func (c *asyncCache) Clean(target *core.BuildTarget) {
 	c.realCache.Clean(target)
 }
 
+func (c *asyncCache) CleanAll() {
+	c.realCache.CleanAll()
+}
+
 func (c *asyncCache) Shutdown() {
 	log.Info("Shutting down cache workers...")
 	close(c.requests)
