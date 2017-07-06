@@ -272,6 +272,7 @@ func (cache *Cache) DeleteArtifact(artPath string) error {
 // The function will return the first error found in the process, or nil if the process is successful.
 func (cache *Cache) DeleteAllArtifacts() error {
 	// Empty entire cache now.
+	log.Warning("Deleting entire cache")
 	cache.cachedFiles = cmap.New()
 	cache.totalSize = 0
 	return core.AsyncDeleteDir(cache.rootPath)

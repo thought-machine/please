@@ -750,7 +750,10 @@ func main() {
 	}
 	// Reset this now we're at the repo root.
 	if opts.OutputFlags.LogFile != "" {
-		cli.InitFileLogging(path.Join(core.RepoRoot, opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel)
+		if !path.IsAbs(opts.OutputFlags.LogFile) {
+			opts.OutputFlags.LogFile = path.Join(core.RepoRoot, opts.OutputFlags.LogFile)
+		}
+		cli.InitFileLogging(opts.OutputFlags.LogFile, opts.OutputFlags.LogFileLevel)
 	}
 
 	config = readConfig(command == "update")
