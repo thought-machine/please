@@ -6,4 +6,4 @@ jobs:
        - image: thoughtmachine/please:latest
      steps:
        - checkout
-       - run: ./bootstrap.sh
+       - run: ./bootstrap.sh --test_results_file $CIRCLE_TEST_REPORTS/please/results.xml
