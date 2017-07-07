@@ -1,0 +1,9 @@
+version: 2
+jobs:
+   build:
+     working_directory: ~/please
+     docker:
+       - image: thoughtmachine/please:v1
+     steps:
+       - checkout
+       - run: ./bootstrap.sh
