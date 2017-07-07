@@ -3,7 +3,7 @@ jobs:
    build:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please:latest
+       - image: thoughtmachine/please_ubuntu:latest
      steps:
        - checkout
        - run: ./bootstrap.sh -p --test_results_file $CIRCLE_TEST_REPORTS/please/results.xml

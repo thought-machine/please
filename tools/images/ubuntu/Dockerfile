@@ -31,6 +31,10 @@ RUN unzip /tmp/protoc.zip -x readme.txt -d /usr
 # Locale
 RUN locale-gen en_GB.UTF-8
 
+# Ruby (for fpm)
+RUN apt-get install ruby ruby-dev rubygems
+RUN gem install --no-ri --no-rdoc fpm
+
 # Welcome message
 COPY /motd.txt /etc/motd
 RUN echo 'cat /etc/motd' >> /etc/bash.bashrc
