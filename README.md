@@ -1,4 +1,4 @@
-# Please [![Build Status](https://travis-ci.org/thought-machine/please.svg?branch=master)](https://travis-ci.org/thought-machine/please) [![Go Report Card](https://goreportcard.com/badge/github.com/thought-machine/please)](https://goreportcard.com/report/github.com/thought-machine/please)
+# Please [![Build Status](https://circleci.com/gh/thought-machine/please.svg?style=shield)](https://circleci.com/gh/thought-machine/please) [![Go Report Card](https://goreportcard.com/badge/github.com/thought-machine/please)](https://goreportcard.com/report/github.com/thought-machine/please)
 
 Please is a cross-language build system with an emphasis on
 high performance, extensibility and reproduceability.
@@ -56,6 +56,11 @@ Optional dependencies for various tests include unittest++
 (`sudo apt-get install libunittest++-dev`), clang, gold and docker - none
 of those are required to build components so their tests will be excluded
 if they aren't available.
+
+If you'd rather not worry about installing the dependencies, we provide
+a prebuilt Docker image based on Ubuntu which is capable of building
+the whole thing for you:
+[`docker run -it thoughtmachine/please`](https://hub.docker.com/r/thoughtmachine/please)
 
 
 Contributors

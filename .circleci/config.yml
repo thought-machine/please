@@ -3,7 +3,7 @@ jobs:
    build:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please:v1
+       - image: thoughtmachine/please:latest
      steps:
        - checkout
        - run: ./bootstrap.sh
