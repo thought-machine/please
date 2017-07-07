@@ -32,7 +32,7 @@ RUN unzip /tmp/protoc.zip -x readme.txt -d /usr
 RUN locale-gen en_GB.UTF-8
 
 # Ruby (for fpm)
-RUN apt-get install ruby ruby-dev rubygems
+RUN apt-get install -y ruby ruby-dev rubygems
 RUN gem install --no-ri --no-rdoc fpm
 
 # Welcome message
