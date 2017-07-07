@@ -47,7 +47,7 @@ go get github.com/coreos/go-semver/semver
 PYPY="$(interpreter_target pypy)"
 PYTHON2="$(interpreter_target python2)"
 PYTHON3="$(interpreter_target python3)"
-INTERPRETERS="$PYPY $PYTHON2"
+INTERPRETERS="$PYPY $PYTHON2 $PYTHON3"
 if [ -z "${INTERPRETERS// }" ]; then
     error "No known Python interpreters found, can't build parser engine"
     exit 1
