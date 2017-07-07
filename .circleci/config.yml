@@ -6,6 +6,16 @@ jobs:
        - image: thoughtmachine/please_ubuntu:latest
      steps:
        - checkout
-       - run: ./bootstrap.sh -p --test_results_file $CIRCLE_TEST_REPORTS/please/results.xml
-       - run: ./plz-out/bin/src/please build -p //package:all
-       - run: mv plz-out/gen/package/*.deb plz-out/gen/package/*.tar.gz $CIRCLE_ARTIFACTS
+       - run:
+           name: Bootstrap & Build
+           command: ./bootstrap.sh -p --test_results_file plz-out/results/test_results.xml
+       - store_test_results:
+           path: plz-out/results/test_results.xml
+       - run:
+           name: Package
+           command: |
+             ./plz-out/bin/src/please build -p //package:all &&
+             mkdir /tmp/artifacts &&
+             mv plz-out/gen/package/*.deb plz-out/gen/package/*.tar.gz /tmp/artifacts
+       - store_artifacts:
+           path: /tmp/artifacts
