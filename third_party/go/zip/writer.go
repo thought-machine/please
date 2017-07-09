@@ -169,8 +169,8 @@ func (w *Writer) Close() error {
 // WritePreamble writes some leading data to the file. Since zip files have their index at the end
 // and file locations are specified there it's possible to lead off with something, for
 // example a shebang to make them self-executing as with pexes.
-func (w *Writer) WritePreamble(preamble string) error {
-	_, err := io.WriteString(w.cw, preamble)
+func (w *Writer) WritePreamble(preamble []byte) error {
+	_, err := w.cw.Write(preamble)
 	return err
 }
 

@@ -15,7 +15,7 @@ a target which has only had small changes.
 
 
 def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
-                   test_only=False, zip_safe=True, labels=None, interpreter=None):
+                   test_only=False, zip_safe=True, labels=None, interpreter=None, strip=False):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
     Note that each python_library performs some pre-zipping of its inputs before they're combined
@@ -39,20 +39,29 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
+      strip (bool): If True, the original sources are stripped and only bytecode is output.
     """
     deps = deps or []
     labels = labels or []
     if not zip_safe:
         labels.append('py:zip-unsafe')
     if srcs or resources:
-        interpreter_tool, tools = _tool_path(interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER)
-        jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
-        cmd = jarcat_tool + ' -d -o ${OUTS} -i . -b'
+        cmd = '$TOOLS_JARCAT -d -o ${OUTS} -i . -b'
+        interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
         if srcs:
-            cmd = '%s -m compileall -f $SRCS_SRCS && %s' % (interpreter_tool, cmd)
+            # This is a bit of a hack, but rather annoying. We want to put bytecode in its 'legacy' location
+            # in python3 because zipimport doesn't look in __pycache__. Unfortunately the flag doesn't exist
+            # in python2 so we have to guess whether we should apply it or not.
+            bytecode_flag = '-b' if 'python3' in interpreter or 'pypy3' in interpreter else ''
+            compile_cmd = '$TOOLS_INT -m compileall %s -f $SRCS_SRCS' % bytecode_flag
+            if strip:
+                cmd = ' && '.join([compile_cmd, 'rm -f $SRCS_SRCS', cmd])
+            else:
+                cmd = ' && '.join([compile_cmd, cmd])
         # Pre-zip the files for later collection by python_binary.
-        build_rule(
-            name='_%s#zip' % name,
+        zip_rule = build_rule(
+            name=name,
+            tag='zip',
             srcs={
                 'SRCS': srcs,
                 'RES': resources,
@@ -63,13 +72,18 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
             requires=['py'],
             test_only=test_only,
             output_is_complete=True,
-            tools=tools,
+            tools={
+                'int': [interpreter],
+                'jarcat': [CONFIG.JARCAT_TOOL],
+            },
         )
-        deps.append(':_%s#zip' % name)
+        deps.append(zip_rule)
+    elif strip:
+        raise ParseError("Can't pass strip=True to a python_library with no srcs")
 
     return filegroup(
         name=name,
-        srcs=(srcs or []) + (resources or []),
+        srcs=resources if strip else ((srcs or []) + (resources or [])),
         deps=deps,
         visibility=visibility,
         output_is_complete=False,
@@ -80,7 +94,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
 
 
 def python_binary(name, main, resources=None, out=None, deps=None, visibility=None, zip_safe=None,
-                  interpreter=None, shebang=None, labels=None):
+                  interpreter=None, shebang='', labels=None):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -106,28 +120,10 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
                      determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
     """
-    interpreter_tool, tools = _tool_path(interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER)
-    pex_tool, tools = _tool_path(CONFIG.PEX_TOOL, tools)
-    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
-    deps = deps or []
-    cmd = ' '.join([
-        'rm -f $SRCS &&',
-        interpreter_tool,
-        pex_tool,
-        '--src_dir=${TMP_DIR}',
-        '--out=temp.pex',
-        '--entry_point=$SRCS',
-        '--noscan',
-        '--shebang="%s"' % shebang if shebang else '',
-        '--interpreter=' + interpreter_tool,
-        '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
-        '--zip_safe',
-        # Run it through jarcat to normalise the timestamps.
-        '&& %s -i temp.pex -o $OUT --suffix=.pex --preamble="`head -n 1 temp.pex`"' % jarcat_tool,
-    ])
+    cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe' % (shebang, CONFIG.PYTHON_MODULE_DIR)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
-    python_library(
+    lib_rule = python_library(
         name='_%s#lib' % name,
         srcs=[main],
         resources=resources,
@@ -137,8 +133,9 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
     )
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
-    build_rule(
-        name='_%s#pex' % name,
+    pex_rule = build_rule(
+        name = name,
+        tag = 'pex',
         srcs=[main],
         outs=['.%s_main.pex.zip' % name],  # just call it .zip so everything has the same extension
         cmd=cmd,
@@ -146,28 +143,34 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
         pre_build=pre_build,
         deps=deps,
         needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
-        tools=tools,
+        output_is_complete=True,
+        stamp=True,  # Used for pex to identify each pex uniquely.
+        tools={
+            'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+            'pex': [CONFIG.PEX_TOOL],
+        },
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     build_rule(
         name=name,
-        deps=[':_%s#pex' % name, ':_%s#lib' % name],
+        srcs=[pex_rule],
+        deps=[lib_rule],
         outs=[out or (name + '.pex')],
-        cmd=_python_binary_cmds(name, jarcat_tool),
+        cmd=_PYTHON_BINARY_CMDS,
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
         building_description="Creating pex...",
         visibility=visibility,
         requires=['py', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
-        tools=tools,
+        tools=[CONFIG.JARCAT_TOOL],
         # This makes the python_library rule the dependency for other python_library or
         # python_test rules that try to import it. Does mean that they cannot collect a .pex
         # by depending directly on the rule, they'll just get the Python files instead.
         # This is not a common case anyway; more usually you'd treat that as a runtime data
         # file rather than trying to pack into a pex. Can be worked around with an
         # intermediary filegroup rule if really needed.
-        provides={'py': ':_%s#lib' % name},
+        provides={'py': lib_rule},
         labels=labels,
     )
 
@@ -205,59 +208,48 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
                         'pypy' or whatever.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
-    deps = deps or []
-    interpreter_tool, tools = _tool_path(interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER)
-    pex_tool, tools = _tool_path(CONFIG.PEX_TOOL, tools)
-    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
-    cmd=' '.join([
-        interpreter_tool,
-        pex_tool,
-        '--src_dir=${TMP_DIR}',
-        '--out=temp.pex',
-        '--entry_point=test_main',
-        '--test_package=${PKG//\//.}',
-        '--test_srcs=${SRCS_SRCS// /,}',
-        '--interpreter=' + interpreter_tool,
-        '--module_dir=' + CONFIG.PYTHON_MODULE_DIR,
-        '--zip_safe',
-        # Run it through jarcat to normalise the timestamps.
-        '&& %s -i temp.pex -o $OUT --suffix=.pex --preamble="`head -n 1 temp.pex`"' % jarcat_tool,
-    ])
+    cmd = '$TOOLS_PEX -t -m "%s" --zip_safe' % CONFIG.PYTHON_MODULE_DIR
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
-    # Used to separate dependencies from the pex rule so they aren't recompressed again.
-    build_rule(
-        name='_%s#deps' % name,
+    # Test library itself.
+    lib_rule = python_library(
+        name='_%s#lib' % name,
+        srcs=srcs,
+        resources=resources,
+        interpreter=interpreter,
         deps=deps,
-        cmd='true',
-        requires=['py'],
         test_only=True,
     )
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
-    build_rule(
-        name='_%s#pex' % name,
-        srcs={
-            'srcs': srcs,
-            'resources': resources,
-        },
+    pex_rule = build_rule(
+        name = name,
+        tag = 'pex',
+        srcs=srcs,
         outs=['.%s_main.pex.zip' % name],  # just call it .zip so everything has the same extension
         cmd=cmd,
         requires=['py'],
         test_only=True,
+        needs_transitive_deps=True,  # needed for zip-safe detection
+        output_is_complete=True,
         building_description="Creating pex info...",
         pre_build=pre_build,
-        deps=[':_%s#deps' % name],
-        tools=tools,
+        deps=deps,
+        stamp=True,  # Used for pex to identify each test uniquely.
+        tools={
+            'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+            'pex': [CONFIG.PEX_TOOL],
+        },
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     build_rule(
         name=name,
-        deps=[':_%s#pex' % name],
+        srcs=[pex_rule],
+        deps=[lib_rule],
         data=data,
         outs=['%s.pex' % name],
-        labels=labels or [],
-        cmd=_python_binary_cmds(name, jarcat_tool),
+        labels=labels,
+        cmd=_PYTHON_BINARY_CMDS,
         test_cmd = '$TEST ' + flags,
         needs_transitive_deps=True,
         output_is_complete=True,
@@ -270,7 +262,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         flaky=flaky,
         test_outputs=test_outputs,
         requires=['py', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
-        tools=tools,
+        tools=[CONFIG.JARCAT_TOOL],
     )
 
 
@@ -481,16 +473,11 @@ def _add_licences(name, output):
                 name.lstrip('_').split('#')[0])
 
 
-def _python_binary_cmds(name, jarcat_tool):
-    """Returns the commands to use for python_binary and python_test rules."""
-    cmd = ' && '.join([
-        'PREAMBLE=`head -n 1 $(location :_%s#pex)`' % name,
-        '%s -i . -o $OUTS --suffix=.pex.zip --preamble="$PREAMBLE" --include_other --add_init_py --strict' % jarcat_tool,
-    ])
-    return {
-        'opt': cmd,
-        'stripped': cmd + ' -e .py -x "*.py"',
-    }
+# The commands that we use for python_binary and python_test rules.
+_PYTHON_BINARY_CMDS = {
+    'opt': '$TOOL -i . -o $OUTS --suffix=.pex.zip --preamble_from="$SRC" --include_other --add_init_py --strict',
+    'stripped': '$TOOL -i . -o $OUTS --suffix=.pex.zip --preamble_from="$SRC" --include_other --add_init_py --strict -e .py -x "*.py"',
+}
 
 
 if CONFIG.BAZEL_COMPATIBILITY:

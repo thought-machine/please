@@ -16,10 +16,19 @@ python_test(
     deps = [':proto_lib'],
 )
 
+python_library(
+    name = 'strip_source',
+    srcs = ['strip_source.py'],
+    interpreter = 'python3.5',
+    strip = True,
+)
+
 python_test(
     name = 'strip_source_test',
     srcs = ['strip_source_test.py'],
-    labels = ['manual'],  # only works in stripped configuration
+    interpreter = 'python3.5',
+    labels = ['py3'],
+    deps = [':strip_source'],
 )
 
 # Test that has no actual tests in it. Should still count as a pass.

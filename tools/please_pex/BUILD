@@ -1,13 +1,62 @@
-package(python_module_dir = '')
+subinclude('//build_defs:go_bindata')
 
-# Bootstrapping please_pex is difficult, because the code essentially needs to run from a zip
-# file. We assemble enough by hand to make it go.
-build_rule(
-    name = 'please_pex',
+# Extract the contents of __main__.py from pex.
+# We could duplicate here easily enough but then might fall out of sync
+# with the version of pex we're using.
+genrule(
+    name = 'main_py',
     srcs = [
-        'pex.py',
+        '//third_party/python:pex',
+        'gen_main.sh',
+    ],
+    outs = ['__main__.py'],
+    cmd = '$PKG/gen_main.sh > $OUT',
+)
+
+go_bindata(
+    name = 'main_files',
+    srcs = [
         'pex_main.py',
         'test_main.py',
+        ':main_py',
+    ],
+    package = 'pex',
+)
+
+go_library(
+    name = 'pex',
+    srcs = [
+        'pex.go',
+        ':main_files',
+    ],
+    deps = [
+        '//third_party/go/zip',
+        '//tools/jarcat:zip_writer',
+    ],
+)
+
+go_binary(
+    name = 'pex_main',
+    srcs = ['pex_main.go'],
+    deps = [
+        ':pex',
+        '//src/cli',
+        '//third_party/go:logging',
+    ],
+)
+
+# Combine all the Python dependencies into one zipfile and concatenate them
+# onto the binary.
+genrule(
+    name = 'please_pex',
+    srcs = [
+        ':pex_main',
+        '//third_party/python:pex',
+        '//third_party/python:pkg_resources',
+        '//third_party/python:six',
+        '//third_party/python:xmlrunner',
+        '//third_party/python/py2:coverage',
+        '//third_party/python/py3:coverage',
     ],
     outs = ['please_pex'],
     binary = True,
@@ -20,20 +69,10 @@ build_rule(
         'mv .bootstrap/py3/coverage .bootstrap/coverage',
         'mv .bootstrap/py2/coverage/tracer.so .bootstrap/coverage',
         # A little cleanup.
-        'rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles .bootstrap/py3 .bootstrap/py2 .bootstrap/.*.pex.zip',
-        'cat tools/please_pex/pex_main.py | sed -e "s/__MODULE_DIR__//" -e "s|__ENTRY_POINT__|tools.please_pex.pex|" -e "s/__ZIP_SAFE__/True/" > pex_main.py',
-        'PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=".:./.bootstrap" python -O tools/please_pex/pex.py --src_dir=${TMP_DIR} --out=${OUT} --entry_point=${PKG//\//.}.pex --bootstrap --interpreter ' + CONFIG.DEFAULT_PYTHON_INTERPRETER,
+        'rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles .bootstrap/py3 .bootstrap/py2 .bootstrap/_pex/bin .bootstrap/.*.pex.zip',
+        '$TOOL -d -i .bootstrap -b -o $OUTS --preamble_file $(location :pex_main)',
     ]),
-    needs_transitive_deps = True,
-    output_is_complete = True,
-    deps = [
-        '//third_party/python:pex',
-        '//third_party/python:pkg_resources',
-        '//third_party/python:six',
-        '//third_party/python:xmlrunner',
-        '//third_party/python/py2:coverage',
-        '//third_party/python/py3:coverage',
-    ],
+    tools = ['//tools/jarcat'],
     visibility = ['PUBLIC'],
 )
 

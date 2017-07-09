@@ -2,13 +2,8 @@ package(default_visibility = ['PUBLIC'])
 
 pip_library(
     name = 'pex',
-    version = '1.1.20',
-    hashes = ['sha1: 336f91b0ecc026ae8dce72bad0d29b5fca3ec5dd'],
-    patch = [
-        'never_cache_pex.patch',
-        'bytecode_timestamps.patch',
-        'deterministic_pex_info.patch',
-    ],
+    version = '1.2.8',
+    hashes = ['sha1: 15be967c06ab9686fb77397c0480345e75d6f0cc'],
 )
 
 pip_library(

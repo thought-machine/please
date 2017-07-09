@@ -289,11 +289,15 @@ func StripBytecodeTimestamp(filename string, contents []byte) error {
 		} else {
 			// The .pyc format starts with a two-byte magic number, a \r\n, then a four-byte
 			// timestamp. It is that timestamp we are interested in; we overwrite it with
-			// 2000-01-01 so it's deterministic.
-			contents[4] = 92
-			contents[5] = 120
-			contents[6] = 56
-			contents[7] = 48
+			// the same mtime we use in the zipfile directory (it's important that it is
+			// deterministic, but also that it matches, otherwise zipimport complains).
+			var buf bytes.Buffer
+			binary.Write(&buf, binary.LittleEndian, modTime.Unix())
+			b := buf.Bytes()
+			contents[4] = b[0]
+			contents[5] = b[1]
+			contents[6] = b[2]
+			contents[7] = b[3]
 		}
 	}
 	return nil
