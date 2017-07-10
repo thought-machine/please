@@ -11,4 +11,5 @@ else
     echo "Can't find a usable Python interpreter"
     exit 1
 fi
-exec $INTERPRETER -c "from third_party.python.pex import pex_builder; print(pex_builder.BOOTSTRAP_ENVIRONMENT.decode())"
+export PYTHONPATH="third_party/python"
+exec $INTERPRETER -c "from pex import pex_builder; print(pex_builder.BOOTSTRAP_ENVIRONMENT.decode())"

@@ -7,6 +7,8 @@ genrule(
     name = 'main_py',
     srcs = [
         '//third_party/python:pex',
+        '//third_party/python:pkg_resources',
+        '//third_party/python:six',
         'gen_main.sh',
     ],
     outs = ['__main__.py'],
