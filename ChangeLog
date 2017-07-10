@@ -1,3 +1,10 @@
+Version 8.2.0
+-------------
+
+    * Rewrite of parts of Python rules for better performance
+    * Added `static` argument to `go_test` rule, analogous to `go_binary`.
+
+
 Version 8.1.1
 -------------
 
