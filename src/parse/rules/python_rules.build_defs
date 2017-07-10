@@ -116,10 +116,11 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
-      shebang (str): Exact shebang to apply to the generated file. By default pex will
+      shebang (str): Exact shebang to apply to the generated file. By default we will
                      determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
     """
+    shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe' % (shebang, CONFIG.PYTHON_MODULE_DIR)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
@@ -208,7 +209,8 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
                         'pypy' or whatever.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
-    cmd = '$TOOLS_PEX -t -m "%s" --zip_safe' % CONFIG.PYTHON_MODULE_DIR
+    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
+    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" --zip_safe' % (interpreter, CONFIG.PYTHON_MODULE_DIR)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
     # Test library itself.

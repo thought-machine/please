@@ -1,3 +1,10 @@
+Version 8.2.1
+-------------
+
+    * Leave the Python interpreter as given in the shebang of the pex, don't
+      turn it into an absolute path.
+
+
 Version 8.2.0
 -------------
 
