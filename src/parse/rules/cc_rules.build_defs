@@ -254,6 +254,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         test_only = test_only,
         building_description = 'Archiving...',
         provides = provides,
+        requires = ['cc'],
         tools = tools,
     )
 

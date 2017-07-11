@@ -1,3 +1,9 @@
+Version 8.2.2
+-------------
+
+    * Fairly subtle fix; add a missing `require` on `cc_static_library`.
+
+
 Version 8.2.1
 -------------
 
