@@ -609,10 +609,11 @@ func copyFilegroupHashes(state *core.BuildState, target *core.BuildTarget) {
 }
 
 func createInitPy(dir string) {
-	if core.PathExists(path.Join(dir, "__init__.py")) {
+	initPy := path.Join(dir, "__init__.py")
+	if core.PathExists(initPy) {
 		return
 	}
-	if f, err := os.OpenFile(path.Join(dir, "__init__.py"), os.O_RDONLY|os.O_CREATE, 0444); err == nil {
+	if f, err := os.OpenFile(initPy, os.O_RDONLY|os.O_CREATE, 0444); err == nil {
 		f.Close()
 	}
 	dir = path.Dir(dir)
