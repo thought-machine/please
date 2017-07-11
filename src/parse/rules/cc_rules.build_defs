@@ -79,7 +79,6 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
         return filegroup(
             name=name,
             srcs=hdrs,
-            requires=['cc_hdrs'],
             exported_deps=deps,
             labels=labels,
             test_only=test_only,
