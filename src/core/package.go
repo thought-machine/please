@@ -22,7 +22,7 @@ type Package struct {
 	// Set of output files from rules.
 	Outputs map[string]*BuildTarget
 	// Protects access to above
-	mutex sync.Mutex
+	mutex sync.RWMutex
 	// Used to arbitrate a single post-build function running at a time.
 	// It would be sort of conceptually nice if they ran simultaneously but it'd
 	// be far too hard to ensure consistency in any case where they can interact with one another.
@@ -53,6 +53,14 @@ func (pkg *Package) HasSubinclude(label BuildLabel) bool {
 		}
 	}
 	return false
+}
+
+// HasOutput returns true if the package has the given file as an output.
+func (pkg *Package) HasOutput(output string) bool {
+	pkg.mutex.RLock()
+	defer pkg.mutex.RUnlock()
+	_, present := pkg.Outputs[output]
+	return present
 }
 
 // RegisterOutput registers a new output file in the map.
