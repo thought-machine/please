@@ -19,14 +19,14 @@ python_test(
 python_library(
     name = 'strip_source',
     srcs = ['strip_source.py'],
-    interpreter = 'python3.5',
+    interpreter = 'python3',
     strip = True,
 )
 
 python_test(
     name = 'strip_source_test',
     srcs = ['strip_source_test.py'],
-    interpreter = 'python3.5',
+    interpreter = 'python3',
     labels = ['py3'],
     deps = [':strip_source'],
 )
@@ -95,6 +95,6 @@ python_test(
 python_test(
     name = 'python3_coverage_test',
     srcs = ['python3_coverage_test.py'],
-    interpreter = 'python3.5',
+    interpreter = 'python3',
     labels = ['py3'],
 )
