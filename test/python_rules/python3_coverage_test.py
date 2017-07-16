@@ -1,3 +1,4 @@
+import sys
 import unittest
 
 
@@ -20,6 +21,8 @@ class Python3CoverageTest(unittest.TestCase):
         import coverage
         self.assertIsNotNone(coverage)
 
+    @unittest.skipIf(sys.version_info.major != 3 or sys.version_info.minor != 5,
+                     'currently we only ship tracer.so for 2.7 and 3.5')
     def test_can_import_tracer(self):
         """Test we can import the binary tracer module."""
         from coverage import tracer
