@@ -2037,7 +2037,10 @@ have separate kinds of things in a rule.</td>
 	<td>outs</td>
 	<td>None</td>
 	<td>list</td>
-	<td>Outputs of this rule.</td>
+	<td>Outputs of this rule. All are files relative to this package.<br/>
+        If given as a dict, it declares a series of named outputs which work
+        similarly to named srcs; they have separate environment variables and
+        can be accessed directly by other rules.</td>
       </tr>
 
       <tr>
