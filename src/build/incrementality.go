@@ -151,6 +151,7 @@ func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error
 			return nil, err
 		}
 		h.Write(result)
+		h.Write([]byte(source.Src))
 	}
 	for _, tool := range target.AllTools() {
 		if label := tool.Label(); label != nil {

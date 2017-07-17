@@ -1,3 +1,10 @@
+Version 8.2.5
+-------------
+
+    * Some changes to how source hashes of other rules are calculated; fixes
+      some subtle cases related to file names changing when contents don't.
+
+
 Version 8.2.4
 -------------
 
