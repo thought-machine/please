@@ -17,6 +17,7 @@ go_binary(
         '//src/query',
         '//src/run',
         '//src/test',
+        '//src/tool',
         '//src/update',
         '//src/utils',
         '//src/watch',

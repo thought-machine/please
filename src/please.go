@@ -29,6 +29,7 @@ import (
 	"run"
 	"sync"
 	"test"
+	"tool"
 	"update"
 	"utils"
 	"watch"
@@ -198,6 +199,13 @@ var opts struct {
 			Topic help.Topic `positional-arg-name:"topic" description:"Topic to display help on"`
 		} `positional-args:"true"`
 	} `command:"help" alias:"halp" description:"Displays help about various parts of plz or its build rules"`
+
+	Tool struct {
+		Args struct {
+			Tool tool.Tool `positional-arg-name:"tool" description:"Tool to invoke (jarcat, lint, etc)"`
+			Args []string  `positional-arg-name:"arguments" description:"Arguments to pass to the tool"`
+		} `positional-args:"true"`
+	} `command:"tool" hidden:"true" description:"Invoke one of Please's sub-tools"`
 
 	Query struct {
 		Deps struct {
@@ -402,6 +410,10 @@ var buildFunctions = map[string]func() bool{
 	},
 	"help": func() bool {
 		return help.Help(string(opts.Help.Args.Topic))
+	},
+	"tool": func() bool {
+		tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args)
+		return false // If the function returns (which it shouldn't), something went wrong.
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {

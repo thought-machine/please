@@ -73,6 +73,7 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	defaultPath(&config.Java.JarCatTool, config.Please.Location, "jarcat")
 	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
+	defaultPath(&config.Please.LintTool, config.Please.Location, "please_build_linter")
 
 	if (config.Cache.RpcPrivateKey == "") != (config.Cache.RpcPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
@@ -179,6 +180,7 @@ type Configuration struct {
 		Nonce            string      `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 		NumThreads       int         `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed." example:"6"`
 		ExperimentalDir  string      `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
+		LintTool         string      `help:"Location of the lint tool for BUILD files."`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Display struct {
 		UpdateTitle bool `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
