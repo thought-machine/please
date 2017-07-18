@@ -241,19 +241,15 @@ def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, vis
     )
 
 
-def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=False,
+def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None, combine=False,
                hash=None, deps=None, visibility=None, filename=None, deps_only=False,
                optional=None):
     """Fetches a transitive set of dependencies from Maven.
 
-    Requires post build commands to be allowed for this repo.
-
-    Note that this is still fairly experimental; the interface is unlikely to change much
-    but it still has issues with some Maven packages.
-
     Args:
       name (str): Name of the output rule.
-      id (str): Maven id of the artifact (eg. org.junit:junit:4.1.0)
+      id (str): Maven id of the artifact (e.g. org.junit:junit:4.1.0)
+      ids (list): Maven ids of artifacts to fetch (e.g. org.junit:junit:4.1.0, io.grpc:grpc-all:1.4.0)
       repository (str): Maven repo to fetch deps from.
       exclude (list): Dependencies to ignore when fetching this one.
       hashes (dict): Map of Maven id -> rule hash for each rule produced.
@@ -266,8 +262,12 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
                         have a top-level target as a facade which doesn't have actual code.
       optional (list): List of optional dependencies to fetch. By default we fetch none of them.
     """
-    if id.count(':') != 2:
-        raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
+    ids = ids or []
+    if id:
+        ids.append(id)
+    for id in ids:
+        if id.count(':') != 2:
+            raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
     existing_packages = _maven_packages[get_base_path()]
     exclude = exclude or []
     combine = combine or hash
@@ -314,7 +314,7 @@ def maven_jars(name, id, repository=None, exclude=None, hashes=None, combine=Fal
     please_maven_tool, tools = _tool_path(CONFIG.PLEASE_MAVEN_TOOL)
     build_rule(
         name='_%s#deps' % name,
-        cmd='%s -r %s %s %s %s' % (please_maven_tool, repository, id, exclusions, options),
+        cmd='%s -r %s %s %s %s' % (please_maven_tool, repository, ' '.join(ids), exclusions, options),
         post_build=create_maven_deps,
         building_description='Finding dependencies...',
         tools=tools,
@@ -399,11 +399,11 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
       test_only (bool): If True, this target can only be used by tests or other test_only rules.
       binary (bool): If True, we attempt to fetch and download an executable binary. The output
                      is marked as such. Implies native=True and sources=False.
-      classifier (str): Maven classifier, allows to distinguish artifacts that were built from 
+      classifier (str): Maven classifier, allows to distinguish artifacts that were built from
                      the same POM but differ in their content.
-      classifier_sources_override (str): Allows to override the classifier used to fetch the 
-                     source artifact. 
-                     e.g. logback-core-1.1.3-tests.jar and logback-core-1.1.3-test-sources.jar  
+      classifier_sources_override (str): Allows to override the classifier used to fetch the
+                     source artifact.
+                     e.g. logback-core-1.1.3-tests.jar and logback-core-1.1.3-test-sources.jar
     """
     if hash and hashes:
         raise ParseError('You can pass only one of hash or hashes to maven_jar')

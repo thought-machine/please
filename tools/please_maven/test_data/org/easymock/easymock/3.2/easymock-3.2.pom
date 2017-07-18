@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.easymock</groupId>
+    <artifactId>easymock-parent</artifactId>
+    <version>3.2</version>
+  </parent>
+  
+  <artifactId>easymock</artifactId>
+  <packaging>jar</packaging>
+  <name>EasyMock</name>
+  <description>EasyMock provides an easy way to create Mock Objects for interfaces and classes generating them on the fly</description>
+  <inceptionYear>2001</inceptionYear>
+  <organization>
+    <name>OFFIS, Tammo Freese, Henri Tremblay</name>
+  </organization>
+  <developers>
+    <developer>
+      <id>tammo</id>
+      <name>Tammo Freese</name>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
+      <id>henri</id>
+      <name>Henri Tremblay</name>
+      <url>http://henritremblay.blogspot.fr/</url>
+      <timezone>+1</timezone>
+    </developer>
+  </developers>
+  <dependencies>
+    <!-- Used for class mocking -->
+    <dependency>
+      <groupId>cglib</groupId>
+      <artifactId>cglib-nodep</artifactId>
+      <version>2.2.2</version>
+    </dependency>
+    <!-- Used for class mocking -->
+    <dependency>
+      <groupId>org.objenesis</groupId>
+      <artifactId>objenesis</artifactId>
+      <version>1.3</version>
+    </dependency>
+    <!-- Used for class mocking on Android (cglib replacement) -->
+    <dependency>
+        <groupId>com.google.dexmaker</groupId>
+        <artifactId>dexmaker</artifactId>
+        <version>1.0</version>
+        <optional>true</optional>
+    </dependency>     
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <optional>true</optional>
+    </dependency>    
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>add-test-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${basedir}/src/samples/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <configuration>
+          <instructions>
+            <Export-Package>org.easymock.internal.*;poweruser=true;mandatory:=poweruser,org.easymock</Export-Package>
+            <Import-Package>net.sf.cglib.core;resolution:=optional,net.sf.cglib.proxy;resolution:=optional,net.sf.cglib.reflect;resolution:=optional,org.easymock,org.easymock.internal;poweruser=true,org.objenesis;resolution:=optional</Import-Package>
+          </instructions>
+        </configuration>
+        <executions>
+          <execution>
+            <id>bundle-manifest</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+  <profiles>
+    <profile>
+      <id>fullBuild</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.atlassian.maven.plugins</groupId>
+            <artifactId>maven-clover2-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/org/easymock/tests/IMethods.java</exclude>
+                <exclude>**/org/easymock/tests/IVarArgs.java</exclude>
+                <exclude>**/org/easymock/tests/Util.java</exclude>
+                <exclude>**/org/easymock/samples/*.java</exclude>
+              </excludes>
+            </configuration>
+            <executions>
+              <execution>
+                <phase>verify</phase>
+                <goals>
+                  <goal>instrument</goal>
+                  <goal>clover</goal>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>com.mycila.maven-license-plugin</groupId>
+            <artifactId>maven-license-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>deployBuild</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>easymock-bundle</id>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
+
+  <name>error-prone javac</name>
+  <groupId>com.google.errorprone</groupId>
+  <artifactId>javac</artifactId>
+  <version>1.9.0-dev-r2973-2</version>
+  <packaging>jar</packaging>
+
+  <description>A repackaged copy of javac for error-prone to depend on</description>
+  <url>https://github.com/google/error-prone-javac</url>
+
+  <licenses>
+    <license>
+      <name>GNU General Public License, version 2, with the Classpath Exception</name>
+      <url>http://openjdk.java.net/legal/gplv2+ce.html</url>
+    </license>
+  </licenses>
+
+  <scm>
+    <url>https://github.com/google/error-prone-javac</url>
+    <connection>scm:git:git://github.com/google/error-prone-javac.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/google/error-prone-javac.git</developerConnection>
+  </scm>
+
+</project>
