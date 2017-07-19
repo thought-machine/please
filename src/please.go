@@ -78,6 +78,7 @@ var opts struct {
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	NoCacheCleaner   bool   `description:"Don't start a cleaning process for the directory cache" no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
+	VisibilityParse  bool   `description:"Parse all targets that the original targets are visible to. Used for some query steps." no-flag:"true"`
 
 	Build struct {
 		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
@@ -421,8 +422,8 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"reverseDeps": func() bool {
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			state.OriginalTargets = opts.Query.ReverseDeps.Args.Targets
+		opts.VisibilityParse = true
+		return runQuery(false, opts.Query.ReverseDeps.Args.Targets, func(state *core.BuildState) {
 			query.ReverseDeps(state.Graph, state.ExpandOriginalTargets())
 		})
 	},
@@ -539,6 +540,9 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 			return
 		case core.Parse, core.SubincludeParse:
 			parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude, t == core.SubincludeParse)
+			if opts.VisibilityParse && state.IsOriginalTarget(label) {
+				parseForVisibleTargets(state, label)
+			}
 		case core.Build, core.SubincludeBuild:
 			build.Build(tid, state, label)
 		case core.Test:
@@ -548,7 +552,16 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 	}
 }
 
-// Determines from input flags whether we should show 'pretty' output (ie. interactive).
+// parseForVisibleTargets adds parse tasks for any targets that the given label is visible to.
+func parseForVisibleTargets(state *core.BuildState, label core.BuildLabel) {
+	if target := state.Graph.Target(label); target != nil {
+		for _, vis := range target.Visibility {
+			findOriginalTask(state, vis, false)
+		}
+	}
+}
+
+// prettyOutputs determines from input flags whether we should show 'pretty' output (ie. interactive).
 func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool {
 	if interactiveOutput && plainOutput {
 		log.Fatal("Can't pass both --interactive_output and --plain_output")
@@ -633,22 +646,22 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 	for _, target := range targets {
 		if target == core.BuildLabelStdin {
 			for label := range utils.ReadStdin() {
-				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0])
+				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0], true)
 			}
 		} else {
-			findOriginalTask(state, target)
+			findOriginalTask(state, target, true)
 		}
 	}
 	state.TaskDone() // initial target adding counts as one.
 }
 
-func findOriginalTask(state *core.BuildState, target core.BuildLabel) {
+func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool) {
 	if target.IsAllSubpackages() {
 		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
-			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"))
+			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"), addToList)
 		}
 	} else {
-		state.AddOriginalTarget(target)
+		state.AddOriginalTarget(target, addToList)
 	}
 }
 

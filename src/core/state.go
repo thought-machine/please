@@ -228,14 +228,16 @@ func (state *BuildState) SetIncludeAndExclude(include, exclude []string) {
 }
 
 // AddOriginalTarget adds one of the original targets and enqueues it for parsing / building.
-func (state *BuildState) AddOriginalTarget(label BuildLabel) {
+func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 	// Check it's not excluded first.
 	for _, e := range state.ExcludeTargets {
 		if e.Includes(label) {
 			return
 		}
 	}
-	state.OriginalTargets = append(state.OriginalTargets, label)
+	if addToList {
+		state.OriginalTargets = append(state.OriginalTargets, label)
+	}
 	state.AddPendingParse(label, OriginalTarget, false)
 }
 
