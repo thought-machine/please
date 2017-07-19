@@ -19,3 +19,9 @@ maven_jar(
         'test_armhf: 1ff337975be0ae566b7e961932d82f5fe78b1cdc',
     ],
 )
+
+maven_jar(
+    name = 'test4',
+    id = 'net.thoughtmachine.please:test4:1.0',
+    hash = 'ab2649b7e58f7e32b0c75be95d11e2979399d392',
+)
