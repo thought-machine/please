@@ -133,7 +133,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
 
 
 def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None, visibility=None,
-                jvm_args=None, self_executable=False):
+                jvm_args=None, self_executable=False, manifest=None):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
@@ -146,27 +146,31 @@ def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None
       visibility (list): Visibility declaration of this rule.
       jvm_args (str): Arguments to pass to the JVM in the run script.
       self_executable (bool): True to make the jar self executable.
+      manifest (str): Manifest file to put into the jar. Can't be passed at the same time as
+                      main_class.
     """
+    if main_class and manifest:
+        raise ParseError("Can't pass both main_class and manifest to java_binary")
+    deps = deps or []
     if srcs:
-        lib_name = '_%s#lib' % name
-        java_library(
-            name = lib_name,
+        lib_rule = java_library(
+            name = '_%s#lib' % name,
             srcs = srcs,
             deps = deps,
         )
-        deps = deps or []
-        deps.append(':' + lib_name)
+        deps.append(lib_rule)
     if self_executable:
-        cmd, tools = _java_binary_cmd(main_class, jvm_args)
+        cmd, tools = _java_binary_cmd(main_class, jvm_args, manifest=manifest)
     else:
         # This is essentially a hack to get past some Java things (notably Jersey) failing
         # in subtle ways when the jar has a preamble (srsly...).
-        cmd, tools = _jarcat_cmd(main_class)
+        cmd, tools = _jarcat_cmd(main_class, manifest=manifest)
     build_rule(
         name=name,
         deps=deps,
         data=data,
         outs=[out or name + '.jar'],
+        srcs=[manifest],
         cmd=cmd,
         needs_transitive_deps=True,
         output_is_complete=True,
@@ -525,25 +529,27 @@ def _parse_maven_artifact(id, sources=True, licences=None):
     return group, artifact, version, sources, licences
 
 
-def _java_binary_cmd(main_class, jvm_args, test_package=None):
+def _java_binary_cmd(main_class, jvm_args, test_package=None, manifest=None):
     """Returns the command we use to build a .jar for a java_binary or a java_test."""
     prop = '-Dnet.thoughtmachine.please.testpackage=' + test_package if test_package else ''
     preamble = '#!/bin/sh\nexec java %s %s -jar $0 $@' % (prop, jvm_args or '')
-    jarcat_cmd, tools = _jarcat_cmd(main_class, preamble)
+    jarcat_cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
     if not test_package:
         return jarcat_cmd, tools
     junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools, binary=False)
     return 'ln -s %s . && %s' % (junit_runner, jarcat_cmd), tools
 
 
-def _jarcat_cmd(main_class=None, preamble=None):
+def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
     """Returns the command we'd use to invoke jarcat, and the tool paths required."""
     jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
     cmd = '%s -i . -o ${OUTS} --exclude_internal_prefix "%s"' % (jarcat_tool, _JAVA_EXCLUDE_FILES)
     if main_class:
         cmd += ' -m "%s"' % main_class
     if preamble:
-        return cmd + " -p '%s'" % preamble, tools
+        cmd += " -p '%s'" % preamble
+    if manifest:
+        cmd += ' --manifest "$SRCS"'
     return cmd, tools
 
 

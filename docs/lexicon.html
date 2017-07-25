@@ -1528,7 +1528,7 @@ config, which itself defaults to 8.</td>
 
     <h3><a name="java_binary">java_binary</a></h3>
 
-    <p><pre class="rule"><code>java_binary(name, main_class, deps=None, data=None, visibility=None, jvm_args=None, self_executable=False)</code></pre></p>
+    <p><pre class="rule"><code>java_binary(name, main_class, manifest=None, deps=None, data=None, visibility=None, jvm_args=None, self_executable=False)</code></pre></p>
 
     <p>Compiles a .jar from a set of Java libraries.</p>
 
@@ -1555,6 +1555,13 @@ config, which itself defaults to 8.</td>
 	<td></td>
 	<td>str</td>
 	<td>Main class to set in the manifest.</td>
+      </tr>
+
+      <tr>
+	<td>manifest</td>
+	<td></td>
+	<td>str</td>
+	<td>File to use as MANIFEST.MF. Optional, cannot be specified with <code>main_class</code></td>
       </tr>
 
       <tr>

@@ -23,7 +23,7 @@ import (
 
 var log = logging.MustGetLogger("jarcat")
 
-func combine(out, in, preamble, preambleFile, stripPrefix, mainClass, excludeInternalPrefix string,
+func combine(out, in, preamble, preambleFile, stripPrefix, mainClass, manifest, excludeInternalPrefix string,
 	excludeSuffixes, suffix, includeInternalPrefixes []string,
 	strict, includeOther, addInitPy, dirEntries bool, renameDirs map[string]string) error {
 	f, err := os.Create(out)
@@ -105,6 +105,14 @@ func combine(out, in, preamble, preambleFile, stripPrefix, mainClass, excludeInt
 			return err
 		}
 	}
+	if manifest != "" {
+		b, err := ioutil.ReadFile(manifest)
+		if err != nil {
+			return err
+		} else if err := jarcat.WriteFile(w, "META-INF/MANIFEST.MF", b); err != nil {
+			return err
+		}
+	}
 	if addInitPy {
 		return jarcat.AddInitPyFiles(w)
 	}
@@ -148,6 +156,7 @@ var opts = struct {
 	PreambleFrom            string            `long:"preamble_from" description:"Read the first line of this file and use as --preamble."`
 	PreambleFile            string            `long:"preamble_file" description:"Concatenate zip file onto the end of this file"`
 	MainClass               string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
+	Manifest                string            `long:"manifest" description:"Use the given file as a Java manifest"`
 	Verbosity               int               `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
 	Strict                  bool              `long:"strict" description:"Disallow duplicate files"`
 	IncludeOther            bool              `long:"include_other" description:"Add files that are not jar files as well"`
@@ -201,7 +210,7 @@ func main() {
 		opts.Preamble = mustReadPreamble(opts.PreambleFrom)
 	}
 
-	if err := combine(opts.Out, opts.In, opts.Preamble, opts.PreambleFile, opts.StripPrefix, opts.MainClass,
+	if err := combine(opts.Out, opts.In, opts.Preamble, opts.PreambleFile, opts.StripPrefix, opts.MainClass, opts.Manifest,
 		opts.ExcludeInternalPrefix, opts.ExcludeSuffix, opts.Suffix, opts.IncludeInternalPrefix,
 		opts.Strict, opts.IncludeOther, opts.AddInitPy, !opts.NoDirEntries, opts.RenameDirs); err != nil {
 		log.Fatalf("Error combining zip files: %s\n", err)

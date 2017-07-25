@@ -1,3 +1,9 @@
+Version 8.3.0
+-------------
+
+    * Added `manifest` argument to `java_binary` so you can specify an explicit MANIFEST.MF
+
+
 Version 8.2.6
 -------------
 
