@@ -47,6 +47,10 @@ message ReplicateRequest {
     bytes hash = 4;
     // True to delete the artifact
     bool delete = 5;
+    // Hostname of the original sender who stored this
+    string hostname = 6;
+    // Hostname of the peer sending this request
+    string peer = 7;
 }
 
 message ReplicateResponse {

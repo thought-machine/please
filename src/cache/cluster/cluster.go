@@ -18,6 +18,7 @@ import (
 	"fmt"
 	stdlog "log"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -51,6 +52,9 @@ type Cluster struct {
 
 	// node is the node corresponding to this instance.
 	node *pb.Node
+
+	// hostname is our hostname.
+	hostname string
 }
 
 // NewCluster creates a new Cluster object and starts listening on the given port.
@@ -69,10 +73,14 @@ func NewCluster(port, rpcPort int, name string) *Cluster {
 	}
 	n := list.LocalNode()
 	log.Notice("Memberlist initialised, this node is %s / %s:%d", n.Name, n.Addr, port)
-	return &Cluster{
+	clu := &Cluster{
 		list:    list,
 		clients: map[string]pb.RpcServerClient{},
 	}
+	if hostname, err := os.Hostname(); err == nil {
+		clu.hostname = hostname
+	}
+	return clu
 }
 
 // JoinCluster joins an existing plz cache cluster.
@@ -210,7 +218,7 @@ func (cluster *Cluster) ReplicateArtifacts(req *pb.StoreRequest) {
 		return
 	}
 	log.Info("Replicating artifact to node %s", address)
-	cluster.replicate(name, address, req.Os, req.Arch, req.Hash, false, req.Artifacts)
+	cluster.replicate(name, address, req.Os, req.Arch, req.Hash, false, req.Artifacts, req.Hostname)
 }
 
 // DeleteArtifacts deletes artifacts from all other nodes.
@@ -219,12 +227,12 @@ func (cluster *Cluster) DeleteArtifacts(req *pb.DeleteRequest) {
 		// Don't forward request to ourselves...
 		if cluster.node.Name != node.Name {
 			log.Info("Forwarding delete request to node %s", node.Address)
-			cluster.replicate(node.Name, node.Address, req.Os, req.Arch, nil, true, req.Artifacts)
+			cluster.replicate(node.Name, node.Address, req.Os, req.Arch, nil, true, req.Artifacts, "")
 		}
 	}
 }
 
-func (cluster *Cluster) replicate(name, address, os, arch string, hash []byte, delete bool, artifacts []*pb.Artifact) {
+func (cluster *Cluster) replicate(name, address, os, arch string, hash []byte, delete bool, artifacts []*pb.Artifact, hostname string) {
 	client, err := cluster.getRPCClient(name, address)
 	if err != nil {
 		log.Error("Failed to get RPC client for %s %s: %s", name, address, err)
@@ -238,6 +246,8 @@ func (cluster *Cluster) replicate(name, address, os, arch string, hash []byte, d
 		Arch:      arch,
 		Hash:      hash,
 		Delete:    delete,
+		Hostname:  hostname,
+		Peer:      cluster.hostname,
 	}); err != nil {
 		log.Error("Error replicating artifact: %s", err)
 	} else if !resp.Success {

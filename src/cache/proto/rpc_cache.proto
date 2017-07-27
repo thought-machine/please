@@ -37,6 +37,8 @@ message StoreRequest {
     string arch = 3;
     // Hash of rule that generated these artifacts
     bytes hash = 4;
+    // Hostname of submitter (optional, used to identify the artifact later)
+    string hostname = 5;
 }
 
 message StoreResponse {

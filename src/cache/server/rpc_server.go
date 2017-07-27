@@ -45,7 +45,7 @@ func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.S
 	if err := r.authenticateClient(r.writableKeys, ctx); err != nil {
 		return nil, err
 	}
-	success := storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts)
+	success := storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts, req.Hostname, extractAddress(ctx), "")
 	if success && r.cluster != nil {
 		// Replicate this artifact to another node. Doesn't have to be done synchronously.
 		go r.cluster.ReplicateArtifacts(req)
@@ -55,14 +55,16 @@ func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.S
 
 // storeArtifact stores a series of artifacts in the cache.
 // Broken out of above to share with Replicate below.
-func storeArtifact(cache *Cache, os, arch string, hash []byte, artifacts []*pb.Artifact) bool {
+func storeArtifact(cache *Cache, os, arch string, hash []byte, artifacts []*pb.Artifact, hostname, address, peer string) bool {
 	arch = os + "_" + arch
 	hashStr := base64.RawURLEncoding.EncodeToString(hash)
 	for _, artifact := range artifacts {
-		path := path.Join(arch, artifact.Package, artifact.Target, hashStr, artifact.File)
-		if err := cache.StoreArtifact(path, artifact.Body); err != nil {
+		dir := path.Join(arch, artifact.Package, artifact.Target, hashStr)
+		file := path.Join(dir, artifact.File)
+		if err := cache.StoreArtifact(file, artifact.Body); err != nil {
 			return false
 		}
+		go cache.StoreMetadata(dir, hostname, address, peer)
 	}
 	return true
 }
@@ -153,6 +155,14 @@ func (r *RpcCacheServer) authenticateClient(certs map[string]*x509.Certificate, 
 	return fmt.Errorf("Invalid or unknown certificate")
 }
 
+func extractAddress(ctx context.Context) string {
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return ""
+	}
+	return p.Addr.String()
+}
+
 func loadKeys(filename string) map[string]*x509.Certificate {
 	ret := map[string]*x509.Certificate{}
 	if err := filepath.Walk(filename, func(name string, info os.FileInfo, err error) error {
@@ -199,7 +209,7 @@ func (r *RPCServer) Replicate(ctx context.Context, req *pb.ReplicateRequest) (*p
 		}, nil
 	}
 	return &pb.ReplicateResponse{
-		Success: storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts),
+		Success: storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts, req.Hostname, extractAddress(ctx), req.Peer),
 	}, nil
 }
 

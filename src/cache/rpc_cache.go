@@ -45,6 +45,7 @@ type rpcCache struct {
 	startTime  time.Time
 	maxMsgSize int
 	nodes      []cacheNode
+	hostname   string
 }
 
 type cacheNode struct {
@@ -120,7 +121,13 @@ func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*
 }
 
 func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artifacts []*pb.Artifact) {
-	req := pb.StoreRequest{Artifacts: artifacts, Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
+	req := pb.StoreRequest{
+		Artifacts: artifacts,
+		Hash:      key,
+		Os:        runtime.GOOS,
+		Arch:      runtime.GOARCH,
+		Hostname:  cache.hostname,
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
 	cache.runRpc(key, func(cache *rpcCache) (bool, []*pb.Artifact) {
@@ -272,6 +279,10 @@ func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode
 		cache.Connecting = false
 		log.Warning("Failed to connect to RPC cache: %s", err)
 		return
+	}
+	// Stash hostname for later
+	if hostname, err := os.Hostname(); err == nil {
+		cache.hostname = hostname
 	}
 	// Message the server to get its cluster topology.
 	client := pb.NewRpcCacheClient(connection)

@@ -1,3 +1,9 @@
+Version 8.3.1
+-------------
+
+    * RPC cache now writes metadata files indicating who submitted artifacts.
+
+
 Version 8.3.0
 -------------
 

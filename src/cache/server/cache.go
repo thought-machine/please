@@ -3,6 +3,7 @@ package server
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -19,6 +20,16 @@ import (
 
 	"core"
 )
+
+// metadataFileName is the filename we store metadata in.
+const metadataFileName = ".plz_metadata"
+
+// metadataTemplate is the template for writing the metadata files
+const metadataTemplate = `Address:    %s
+Hostname:   %s
+Replicated: %v
+Peer:       %s
+`
 
 // A cachedFile stores metadata about a file stored in our cache.
 type cachedFile struct {
@@ -241,6 +252,21 @@ func (cache *Cache) StoreArtifact(artPath string, key []byte) error {
 	if err := core.WriteFile(bytes.NewReader(key), fullPath, 0); err != nil {
 		log.Errorf("Could not create %s artifact: %s", fullPath, err)
 		cache.removeAndDeleteFile(artPath, lock)
+		return err
+	}
+	return nil
+}
+
+// StoreMetadata stores some metadata about the given artifact in a simple format.
+// This mostly just identifies where it came from.
+func (cache *Cache) StoreMetadata(artPath, hostname, address, peer string) error {
+	log.Info("Storing metadata for %s", artPath)
+	lock := cache.lockFile(artPath, true, 0)
+	defer lock.Unlock()
+	fullPath := path.Join(cache.rootPath, artPath, metadataFileName)
+	contents := fmt.Sprintf(metadataTemplate, address, hostname, peer != "", peer)
+	if err := ioutil.WriteFile(fullPath, []byte(contents), 0644); err != nil {
+		log.Error("Could not write metadata file: %s", err)
 		return err
 	}
 	return nil
