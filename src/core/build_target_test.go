@@ -464,6 +464,80 @@ func TestContainerSettingsToMap(t *testing.T) {
 	assert.Equal(t, expected, s.ToMap())
 }
 
+func TestShouldIncludeSimple(t *testing.T) {
+	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	excludes := []string{}
+	includes := []string{"a"}
+	assert.True(t, target.ShouldInclude(includes, excludes))
+
+	includes = []string{"b"}
+	assert.True(t, target.ShouldInclude(includes, excludes))
+
+	includes = []string{"c"}
+	assert.True(t, target.ShouldInclude(includes, excludes))
+}
+
+func TestShouldIncludeNonMatchingInclude(t *testing.T) {
+	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	excludes := []string{}
+	includes := []string{"d"}
+	assert.False(t, target.ShouldInclude(includes, excludes))
+}
+
+func TestShouldIncludeWithExclude(t *testing.T) {
+	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	includes := []string{}
+	excludes := []string{"a"}
+	assert.False(t, target.ShouldInclude(includes, excludes))
+
+	excludes = []string{"b"}
+	assert.False(t, target.ShouldInclude(includes, excludes))
+
+	excludes = []string{"c"}
+	assert.False(t, target.ShouldInclude(includes, excludes))
+}
+
+func TestShouldIncludeWithIncludeAndExclude(t *testing.T) {
+	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	includes := []string{"a"}
+	excludes := []string{"b"}
+	assert.False(t, target.ShouldInclude(includes, excludes))
+}
+
+func TestShouldIncludeWithCompoundInclude(t *testing.T) {
+	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	includes := []string{"a,b"}
+	excludes := []string{}
+	assert.True(t, target.ShouldInclude(includes, excludes))
+
+	includes = []string{"a,d", "a"}
+	assert.True(t, target.ShouldInclude(includes, excludes))
+
+	includes = []string{"a,d"}
+	assert.False(t, target.ShouldInclude(includes, excludes))
+}
+
+func TestShouldIncludeWithCompoundExclude(t *testing.T) {
+	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	includes := []string{}
+	excludes := []string{"a,d"}
+	assert.True(t, target.ShouldInclude(includes, excludes))
+
+	excludes = []string{"a,b", "d"}
+	assert.False(t, target.ShouldInclude(includes, excludes))
+}
+
+func TestShouldIncludeWithCompoundIncludeAndExclude(t *testing.T) {
+	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	includes := []string{"a,b"}
+	excludes := []string{"a,d"}
+	assert.True(t, target.ShouldInclude(includes, excludes))
+
+	includes = []string{"a,b"}
+	excludes = []string{"a,c"}
+	assert.False(t, target.ShouldInclude(includes, excludes))
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
@@ -474,6 +548,14 @@ func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	for _, dep := range deps {
 		target.AddDependency(dep.Label)
 		target.resolveDependency(dep.Label, dep)
+	}
+	return target
+}
+
+func makeTargetWithLabels(name string, labels ...string) *BuildTarget {
+	target := makeTarget(name, "")
+	for _, label := range labels {
+		target.AddLabel(label)
 	}
 	return target
 }
