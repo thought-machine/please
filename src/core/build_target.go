@@ -630,10 +630,44 @@ func (target *BuildTarget) HasAnyLabel(labels []string) bool {
 	return false
 }
 
+// HasAllLabels returns true if target has all of these labels.
+func (target *BuildTarget) HasAllLabels(labels []string) bool {
+	for _, label := range labels {
+		if !target.HasLabel(label) {
+			return false
+		}
+	}
+	return true
+}
+
 // ShouldInclude handles the typical include/exclude logic for a target's labels; returns true if
 // target has any include label and not an exclude one.
-func (target *BuildTarget) ShouldInclude(include, exclude []string) bool {
-	return (len(include) == 0 || target.HasAnyLabel(include)) && !target.HasAnyLabel(exclude) && !target.HasLabel("manual")
+// Each include/exclude can have multiple comma-separated labels; in this case, all of the labels
+// in a given group must match.
+func (target *BuildTarget) ShouldInclude(includes, excludes []string) bool {
+	if target.HasLabel("manual") {
+		return false
+	}
+
+	if len(includes) == 0 && len(excludes) == 0 {
+		return true
+	}
+
+	// Include by default if no includes are specified.
+	shouldInclude := len(includes) == 0
+	for _, include := range includes {
+		if target.HasAllLabels(strings.Split(include, ",")) {
+			shouldInclude = true
+			break
+		}
+	}
+	for _, exclude := range excludes {
+		if target.HasAllLabels(strings.Split(exclude, ",")) {
+			shouldInclude = false
+			break
+		}
+	}
+	return shouldInclude
 }
 
 // AddProvide adds a new provide entry to this target.
