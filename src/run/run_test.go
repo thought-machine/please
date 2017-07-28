@@ -25,9 +25,9 @@ func TestSequential(t *testing.T) {
 
 func TestParallel(t *testing.T) {
 	graph, labels1, labels2 := makeGraph()
-	code := Parallel(graph, labels1, nil)
+	code := Parallel(graph, labels1, nil, 5)
 	assert.Equal(t, 0, code)
-	code = Parallel(graph, labels2, nil)
+	code = Parallel(graph, labels2, nil, 5)
 	assert.Equal(t, 1, code)
 }
 

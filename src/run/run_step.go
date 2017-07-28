@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"syscall"
 
 	"golang.org/x/sync/errgroup"
@@ -26,12 +27,20 @@ func Run(graph *core.BuildGraph, label core.BuildLabel, args []string) {
 
 // Parallel runs a series of targets in parallel.
 // Returns true if all were successful.
-func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string) int {
+func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string, numTasks int) int {
+	pool := NewGoroutinePool(numTasks)
 	var g errgroup.Group
 	for _, label := range labels {
 		label := label // capture locally
-		g.Go(func() error {
-			return run(graph, label, args, true).Wait()
+		g.Go(func() (err error) {
+			var wg sync.WaitGroup
+			wg.Add(1)
+			pool.Submit(func() {
+				err = run(graph, label, args, true).Wait()
+				wg.Done()
+			})
+			wg.Wait()
+			return
 		})
 	}
 	if err := g.Wait(); err != nil {

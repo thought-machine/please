@@ -133,6 +133,7 @@ var opts struct {
 
 	Run struct {
 		Parallel struct {
+			NumTasks       int `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -340,7 +341,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args))
+			os.Exit(run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks))
 		}
 		return false
 	},
