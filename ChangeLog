@@ -1,3 +1,11 @@
+Version 8.4.0
+-------------
+
+   * `--include` and `--exclude` can now take a comma-separated list. These are essentially
+     ANDed together (unlike passing the flag multiple times which ORs them).
+   * `plz run parallel` limits the number of subprocesses run simultaneously.
+
+
 Version 8.3.1
 -------------
 
