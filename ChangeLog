@@ -1,3 +1,10 @@
+Version 8.4.1
+-------------
+
+   * Pass -S when invoking the Python interpreter to byte-compile code.
+     Fixes some cases where it failed importing site due to $HOME not being defined.
+
+
 Version 8.4.0
 -------------
 

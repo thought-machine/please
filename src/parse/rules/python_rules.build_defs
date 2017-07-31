@@ -53,7 +53,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
             # in python3 because zipimport doesn't look in __pycache__. Unfortunately the flag doesn't exist
             # in python2 so we have to guess whether we should apply it or not.
             bytecode_flag = '-b' if 'python3' in interpreter or 'pypy3' in interpreter else ''
-            compile_cmd = '$TOOLS_INT -m compileall %s -f $SRCS_SRCS' % bytecode_flag
+            compile_cmd = '$TOOLS_INT -S -m compileall %s -f $SRCS_SRCS' % bytecode_flag
             if strip:
                 cmd = ' && '.join([compile_cmd, 'rm -f $SRCS_SRCS', cmd])
             else:
