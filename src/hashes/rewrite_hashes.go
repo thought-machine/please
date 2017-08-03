@@ -26,6 +26,8 @@ func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
 		if err != nil {
 			log.Fatalf("%s\n", err)
 		}
+		// Interior targets won't appear in the BUILD file directly, look for their parent instead.
+		l = l.Parent()
 		hashStr := hex.EncodeToString(h)
 		if m2, present := m[l.PackageName]; present {
 			m2[l.Name] = hashStr
