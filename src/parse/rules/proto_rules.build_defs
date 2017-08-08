@@ -349,7 +349,7 @@ def grpc_languages():
         'py': proto_language(
             language = 'py',
             proto_language = 'python',
-            extensions = ['_pb2.py'],
+            extensions = ['_pb2.py', '_pb2_grpc.py'],
             func = python_library,
             protoc_flags = ['--plugin=protoc-gen-grpc-python=$TOOLS_PY', '--grpc-python_out=$TMP_DIR'],
             tools = [CONFIG.GRPC_PYTHON_PLUGIN],
