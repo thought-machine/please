@@ -1,3 +1,10 @@
+Version 8.4.2
+-------------
+
+   * Collect _pb2_grpc.py files for Python grpc_library rules.
+   * Minor jarcat fix to improve determinism of outputs for tarballs.
+
+
 Version 8.4.1
 -------------
 
