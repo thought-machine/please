@@ -163,3 +163,11 @@ func TestReadContainers(t *testing.T) {
 	config, err = ReadConfigFiles([]string{"src/core/test_data/container_bad.plzconfig"})
 	assert.Error(t, err)
 }
+
+func TestCompletions(t *testing.T) {
+	config := DefaultConfiguration()
+	completions := config.Completions("python.pip")
+	assert.Equal(t, 2, len(completions))
+	assert.Equal(t, "python.piptool", completions[0].Item)
+	assert.Equal(t, "python.pipflags", completions[1].Item)
+}

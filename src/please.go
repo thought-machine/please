@@ -42,14 +42,14 @@ var config *core.Configuration
 var opts struct {
 	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
-		Config     string            `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
-		RepoRoot   string            `short:"r" long:"repo_root" description:"Root of repository to build."`
-		KeepGoing  bool              `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
-		NumThreads int               `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
-		Include    []string          `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
-		Exclude    []string          `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
-		Engine     string            `long:"engine" hidden:"true" description:"Parser engine .so / .dylib to load"`
-		Option     map[string]string `short:"o" long:"override" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
+		Config     string          `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
+		RepoRoot   string          `short:"r" long:"repo_root" description:"Root of repository to build."`
+		KeepGoing  bool            `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
+		NumThreads int             `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
+		Include    []string        `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
+		Exclude    []string        `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
+		Engine     string          `long:"engine" hidden:"true" description:"Parser engine .so / .dylib to load"`
+		Option     ConfigOverrides `short:"o" long:"override" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
@@ -514,6 +514,14 @@ var buildFunctions = map[string]func() bool{
 			query.WhatOutputs(state.Graph, files, opts.Query.WhatOutputs.EchoFiles)
 		})
 	},
+}
+
+// ConfigOverrides are used to implement completion on the -o flag.
+type ConfigOverrides map[string]string
+
+// Complete implements the flags.Completer interface.
+func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
+	return core.DefaultConfiguration().Completions(match)
 }
 
 // Used above as a convenience wrapper for query functions.

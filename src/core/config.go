@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jessevdk/go-flags"
 	"gopkg.in/gcfg.v1"
 
 	"cli"
@@ -401,6 +402,23 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		}
 	}
 	return nil
+}
+
+// Completions returns a list of possible completions for the given option prefix.
+func (config *Configuration) Completions(prefix string) []flags.Completion {
+	ret := []flags.Completion{}
+	t := reflect.TypeOf(*config)
+	for i := 0; i < t.NumField(); i++ {
+		if field := t.Field(i); field.Type.Kind() == reflect.Struct {
+			for j := 0; j < field.Type.NumField(); j++ {
+				subfield := field.Type.Field(j)
+				if name := strings.ToLower(field.Name + "." + subfield.Name); strings.HasPrefix(name, prefix) {
+					ret = append(ret, flags.Completion{Item: name, Description: subfield.Tag.Get("help")})
+				}
+			}
+		}
+	}
+	return ret
 }
 
 // ContainerImplementation is an enumerated type for the container engine we'd use.
