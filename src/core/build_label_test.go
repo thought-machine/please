@@ -1,6 +1,7 @@
 package core
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -56,4 +57,36 @@ func TestPackageDir(t *testing.T) {
 	assert.Equal(t, "src/core", label.PackageDir())
 	label = NewBuildLabel("", "core")
 	assert.Equal(t, ".", label.PackageDir())
+}
+
+func TestComplete(t *testing.T) {
+	label := BuildLabel{}
+	completions := label.Complete("//src/c")
+	assert.Equal(t, 4, len(completions))
+	assert.Equal(t, "//src/cache", completions[0].Item)
+	assert.Equal(t, "//src/clean", completions[1].Item)
+	assert.Equal(t, "//src/cli", completions[2].Item)
+	assert.Equal(t, "//src/core", completions[3].Item)
+}
+
+func TestCompleteError(t *testing.T) {
+	label := BuildLabel{}
+	completions := label.Complete("nope")
+	assert.Equal(t, 0, len(completions))
+}
+
+func TestMain(m *testing.M) {
+	// Used to support TestComplete, the function it's testing re-execs
+	// itself thinking that it's actually plz.
+	if complete := os.Getenv("PLZ_COMPLETE"); complete == "//src/c" {
+		os.Stdout.Write([]byte("//src/cache\n"))
+		os.Stdout.Write([]byte("//src/clean\n"))
+		os.Stdout.Write([]byte("//src/cli\n"))
+		os.Stdout.Write([]byte("//src/core\n"))
+		os.Exit(0)
+	} else if complete != "" {
+		os.Stderr.Write([]byte("Invalid completion\n"))
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
 }

@@ -168,7 +168,7 @@ func TestExecWithTimeoutFailure(t *testing.T) {
 }
 
 func TestExecWithTimeoutDeadline(t *testing.T) {
-	out, err := ExecWithTimeoutSimple(cli.Duration(0*time.Second), "sleep", "10")
+	out, err := ExecWithTimeoutSimple(cli.Duration(1*time.Nanosecond), "sleep", "10")
 	assert.Error(t, err)
 	assert.True(t, err == context.DeadlineExceeded)
 	assert.Equal(t, 0, len(out))

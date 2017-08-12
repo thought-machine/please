@@ -6,7 +6,6 @@ import (
 	"path"
 	"regexp"
 	"strings"
-	"syscall"
 
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/op/go-logging.v1"
@@ -350,8 +349,17 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	os.Setenv("PLZ_COMPLETE", match)
 	os.Unsetenv("GO_FLAGS_COMPLETION")
 	exec, _ := os.Executable()
-	log.Fatalf("%s", syscall.Exec(exec, os.Args, os.Environ()))
-	return nil
+	out, _, err := ExecWithTimeout(nil, "", os.Environ(), 0, 0, false, append([]string{exec}, os.Args[1:]...))
+	if err != nil {
+		return nil
+	}
+	ret := []flags.Completion{}
+	for _, line := range strings.Split(string(out), "\n") {
+		if line != "" {
+			ret = append(ret, flags.Completion{Item: line})
+		}
+	}
+	return ret
 }
 
 // LooksLikeABuildLabel returns true if the string appears to be a build label, false if not.

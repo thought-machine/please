@@ -265,7 +265,11 @@ func logProgress(label BuildLabel, ctx context.Context) {
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
 func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, argv []string) ([]byte, []byte, error) {
 	if timeout == 0 {
-		timeout = time.Duration(defaultTimeout)
+		if defaultTimeout == 0 {
+			timeout = 10 * time.Minute
+		} else {
+			timeout = time.Duration(defaultTimeout)
+		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
