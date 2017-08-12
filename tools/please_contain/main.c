@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #ifdef __linux__
-#include <errno.h>
 #include <stdlib.h>
 #include <sched.h>
 #include <string.h>
@@ -21,7 +20,8 @@
 #include <sys/wait.h>
 
 // drop_root is ported more or less directly from Chrome's chrome-sandbox helper.
-//
+// It simply drops us back to whatever user invoked us originally (i.e. before suid
+// got involved).
 static int drop_root() {
     if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0)) {
         perror("prctl(PR_SET_DUMPABLE)");
@@ -59,22 +59,23 @@ int exec_child(char* argv[]) {
 
 // clone_and_contain calls clone(2) to isolate and contain the network.
 int clone_and_contain(char* argv[]) {
-    const int STACK_SIZE = 10 * 1024;
+    // Unsure exactly how big this needs to be, but 2k is probably more than enough
+    // given that we do nearly nothing in exec_child.
+    const int STACK_SIZE = 2 * 1024;
     char* child_stack = malloc(STACK_SIZE);
     if (child_stack == NULL) {
+        perror("malloc");
         exit(3);
     }
     char* stack_top = child_stack + STACK_SIZE;  // assume stack grows downwards
     pid_t child_pid = clone((int (*)(void *))exec_child, stack_top, CLONE_NEWPID | CLONE_NEWNET | SIGCHLD, argv);
     if (child_pid == -1) {
-        const int error = errno;
-        fputs("failed to clone: ", stderr);
-        fputs(strerror(error), stderr);
-        fputs("\n", stderr);
-        return error;
+        perror("clone");
+        return -1;
     }
     int exit_code = 0;
     if (waitpid(child_pid, &exit_code, 0) == -1) {
+        perror("waitpid");
         return -1;
     }
     return WEXITSTATUS(exit_code);
