@@ -63,7 +63,7 @@ func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarg
 			log.Warning("Target %s specifies that it should be tested in a container, but test "+
 				"containers are disabled in your .plzconfig.", target.Label)
 			return runTest(state, target)
-		} else if state.Config.Test.DefaultContainer == core.ContainerImplementationPlz {
+		} else if state.Config.Test.DefaultContainer == core.ContainerImplementationPlz && target.ContainerSettings == nil {
 			return runPlzContainedTest(state, target)
 		}
 		out, err = runContainerisedTest(state, target)
