@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <string.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -22,7 +24,7 @@
 // drop_root is ported more or less directly from Chrome's chrome-sandbox helper.
 // It simply drops us back to whatever user invoked us originally (i.e. before suid
 // got involved).
-static int drop_root() {
+int drop_root() {
     if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0)) {
         perror("prctl(PR_SET_DUMPABLE)");
         return 1;
@@ -52,16 +54,50 @@ static int drop_root() {
     return 0;
 }
 
+// lo_up brings up the loopback interface in the new network namespace.
+// By default the namespace is created with lo but it is down.
+// Note that this can't be done with system() because it loses the
+// required capabilities.
+int lo_up() {
+    const int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        perror("socket");
+        return 1;
+    }
+
+    struct ifreq req;
+    memset(&req, 0, sizeof(req));
+    strcpy(req.ifr_name, "lo");
+    if (ioctl(sock, SIOCGIFFLAGS, &req) < 0) {
+        perror("SIOCGIFFLAGS");
+        return 1;
+    }
+
+    req.ifr_flags |= IFF_UP;
+    if (ioctl(sock, SIOCSIFFLAGS, &req) < 0) {
+        perror("SIOCSIFFLAGS");
+        return 1;
+    }
+    close(sock);
+    return 0;
+}
+
 // exec_child calls execvp(3) to run the eventual child process.
 int exec_child(char* argv[]) {
-    return drop_root() ? 1 : execvp(argv[0], argv);
+    if (lo_up() != 0) {
+        return 1;
+    }
+    if (drop_root() != 0) {
+        return 1;
+    }
+    return execvp(argv[0], argv);
 }
 
 // clone_and_contain calls clone(2) to isolate and contain the network.
 int clone_and_contain(char* argv[]) {
-    // Unsure exactly how big this needs to be, but 2k is probably more than enough
-    // given that we do nearly nothing in exec_child.
-    const int STACK_SIZE = 2 * 1024;
+    // Unsure exactly how big this needs to be, but 20k is probably enough
+    // given that we don't do an awful lot in the child process.
+    const int STACK_SIZE = 20 * 1024;
     char* child_stack = malloc(STACK_SIZE);
     if (child_stack == NULL) {
         perror("malloc");
