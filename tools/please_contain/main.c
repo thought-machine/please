@@ -67,7 +67,7 @@ int lo_up() {
 
     struct ifreq req;
     memset(&req, 0, sizeof(req));
-    strcpy(req.ifr_name, "lo");
+    strncpy(req.ifr_name, "lo", IFNAMSIZ);
     if (ioctl(sock, SIOCGIFFLAGS, &req) < 0) {
         perror("SIOCGIFFLAGS");
         return 1;
