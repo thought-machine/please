@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/op/go-logging.v1"
 
 	"cache/cluster"
@@ -17,12 +19,13 @@ import (
 var log = logging.MustGetLogger("rpc_cache_server")
 
 var opts struct {
-	Usage     string `usage:"rpc_cache_server is a server for Please's remote RPC cache.\n\nSee https://please.build/cache.html for more information."`
-	Port      int    `short:"p" long:"port" description:"Port to serve on" default:"7677"`
-	HttpPort  int    `long:"http_port" description:"Port to serve HTTP on (for profiling etc)"`
-	Dir       string `short:"d" long:"dir" description:"Directory to write into" default:"plz-rpc-cache"`
-	Verbosity int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
-	LogFile   string `long:"log_file" description:"File to log to (in addition to stdout)"`
+	Usage       string `usage:"rpc_cache_server is a server for Please's remote RPC cache.\n\nSee https://please.build/cache.html for more information."`
+	Port        int    `short:"p" long:"port" description:"Port to serve on" default:"7677"`
+	HttpPort    int    `long:"http_port" description:"Port to serve HTTP on (for profiling, metrics etc)"`
+	MetricsPort int    `long:"metrics_port" description:"Port to serve Prometheus metrics on"`
+	Dir         string `short:"d" long:"dir" description:"Directory to write into" default:"plz-rpc-cache"`
+	Verbosity   int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
+	LogFile     string `long:"log_file" description:"File to log to (in addition to stdout)"`
 
 	CleanFlags struct {
 		LowWaterMark   cli.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"18G"`
@@ -96,6 +99,15 @@ func main() {
 	log.Notice("Starting up RPC cache server on port %d...", opts.Port)
 	s, lis := server.BuildGrpcServer(opts.Port, cache, clusta, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
 		opts.TLSFlags.CACertFile, opts.TLSFlags.ReadonlyCerts, opts.TLSFlags.WritableCerts)
+
+	if opts.MetricsPort != 0 {
+		grpc_prometheus.Register(s)
+		grpc_prometheus.EnableHandlingTimeHistogram()
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", prometheus.Handler())
+		log.Notice("Serving Prometheus metrics on port %d /metrics", opts.MetricsPort)
+		go http.ListenAndServe(fmt.Sprintf(":%d", opts.MetricsPort), mux)
+	}
 
 	server.ServeGrpcForever(s, lis)
 }

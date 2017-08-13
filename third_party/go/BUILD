@@ -164,6 +164,29 @@ go_get(
 )
 
 go_get(
+    name = 'grpc-prometheus',
+    get = 'github.com/grpc-ecosystem/go-grpc-prometheus',
+    revision = '34abd90a014618f61222a1b0a7b7eb834a2d0dc3',
+    deps = [
+        ':grpc',
+        ':procfs',
+        ':prometheus',
+        ':protobuf',
+    ],
+)
+
+go_get(
+    name = 'grpc-middleware',
+    get = 'github.com/grpc-ecosystem/go-grpc-middleware',
+    revision = 'f63a7dfb64c138bd93d5c5b896d8b33c4b08e000',
+    deps = [
+        ':context',
+        ':grpc',
+        ':protobuf',
+    ],
+)
+
+go_get(
     name = 'shlex',
     get = 'github.com/google/shlex',
     revision = '6f45313302b9c56850fc17f99e40caebce98c716',

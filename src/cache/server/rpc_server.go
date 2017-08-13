@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -276,5 +277,10 @@ func serverWithAuth(keyFile, certFile, caCertFile string) *grpc.Server {
 			log.Fatalf("Failed to find any PEM certificates in CA cert")
 		}
 	}
-	return grpc.NewServer(grpc.Creds(credentials.NewTLS(&config)), grpc.MaxMsgSize(maxMsgSize))
+	return grpc.NewServer(
+		grpc.Creds(credentials.NewTLS(&config)),
+		grpc.MaxMsgSize(maxMsgSize),
+		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+	)
 }

@@ -12,6 +12,8 @@ go_library(
         '//third_party/go:atime',
         '//third_party/go:concurrent-map',
         '//third_party/go:grpc',
+        '//third_party/go:grpc-middleware',
+        '//third_party/go:grpc-prometheus',
         '//third_party/go:humanize',
         '//third_party/go:logging',
         '//third_party/go:mux',
@@ -38,7 +40,9 @@ go_binary(
         ':server',
         '//src/cache/cluster',
         '//src/cli',
+        '//third_party/go:grpc-prometheus',
         '//third_party/go:logging',
+        '//third_party/go:prometheus',
     ],
     visibility = ['PUBLIC'],
 )
