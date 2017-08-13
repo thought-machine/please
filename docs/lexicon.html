@@ -1995,7 +1995,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
       <tr>
 	<td>cmd</td>
 	<td></td>
-	<td>str</td>
+	<td>str or list or dict</td>
 	<td>Command to run. It's subject to various sequence replacements:
       <ul>
         <li><code>$(location //path/to:target)</code> expands to the location of the given build rule, which
@@ -2021,6 +2021,13 @@ the preceding plz-out/gen etc.</li>
         <li><code>SRCS_&lt;suffix&gt;</code>: Present when you've defined named sources on a rule. Each group
 creates one of these these variables with paths to those sources.</li>
       </ul>
+
+      If given as a string, it's a single command that's used always (the most common case).<br/>
+      If given as a list, it's a sequence of commands run one after another if the
+      preceding command is successful (i.e. it's equivalent to ' && '.join(cmd)).<br/>
+      If given as a dict, the keys correspond to the build config to run and the values
+      are the command to run in that config. The typical use case here is 'opt' vs. 'dbg'
+      but arbitrary names can be given and specified with `plz build -c name`.
     </td>
       </tr>
 

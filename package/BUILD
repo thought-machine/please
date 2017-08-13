@@ -65,13 +65,13 @@ genrule(
     name = 'please_contain',
     srcs = [':please_contain_fpm'],
     outs = ['please_contain.deb'],
-    cmd = ' && '.join([
+    cmd = [
         'ar x $SRCS',
         'tar -xzf data.tar.gz',
         'rm data.tar.gz',
         'tar -czf data.tar.gz --mode="u+s" --owner root --group root usr/bin/please_contain',
         'ar -rc $OUT debian-binary control.tar.gz data.tar.gz',
-    ]),
+    ],
 )
 
 tarball(

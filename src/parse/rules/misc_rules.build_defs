@@ -9,7 +9,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
 
     Args:
       name (str): Name of the rule
-      cmd (str | dict): Command to run. It's subject to various sequence replacements:
+      cmd (str | dict | list): Command to run. It's subject to various sequence replacements:
              $(location //path/to:target) expands to the location of the given build rule, which
                                           must have a single output only.
              $(locations //path/to:target) expands to the locations of the outputs of the given
@@ -31,6 +31,12 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
              SRC: the source of this rule. Only present when there is only one source.
              SRCS_<suffix>: Present when you've defined named sources on a rule. Each group
                             creates one of these these variables with paths to those sources.
+           If given as a string, it's a single command that's used always (the most common case).
+           If given as a list, it's a sequence of commands run one after another if the
+           preceding command is successful (i.e. it's equivalent to ' && '.join(cmd)).
+           If given as a dict, the keys correspond to the build config to run and the values
+           are the command to run in that config. The typical use case here is 'opt' vs. 'dbg'
+           but arbitrary names can be given and specified with `plz build -c name`.
       srcs (list | dict): Sources of this rule. Can be a list of files or rules, or a dict of names
                           to lists. In the latter case they can be accessed separately which is useful
                           to be able to refer to them distinctly in the command.
@@ -100,7 +106,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
         name=name,
         srcs=srcs,
         outs=[out] if out else outs,
-        cmd=cmd,
+        cmd=' && '.join(cmd) if isinstance(cmd, list) else cmd,
         deps=deps,
         tools=tools,
         secrets=secrets,
