@@ -1,4 +1,4 @@
-// please_contain is a very small binary to implement sandboxing
+// please_sandbox is a very small binary to implement sandboxing
 // of tests (and possibly other build actions) via cgroups.
 // Essentially this is a very lightweight replacement for Docker
 // where we would use it for tests to avoid port clashes etc.
@@ -130,7 +130,7 @@ int clone_and_contain(char* argv[]) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        fputs("please_contain implements sandboxing for Please.\n", stderr);
+        fputs("please_sandbox implements sandboxing for Please.\n", stderr);
         fputs("It takes no flags, it simply executes the command given as arguments.\n", stderr);
         fputs("Usage: plz_contain command args...\n", stderr);
         exit(1);

@@ -52,24 +52,24 @@ fpm_deb(
 )
 
 fpm_deb(
-    name = 'please_contain_fpm',
-    package_name = 'please_contain',
+    name = 'please_sandbox_fpm',
+    package_name = 'please_sandbox',
     version = VERSION,
     files = {
-        '/usr/bin/please_contain': '//tools/please_contain',
+        '/usr/bin/please_sandbox': '//tools/sandbox:please_sandbox',
     },
 )
 
 # fpm builds us the deb, but we need to apply the suid bit separately.
 genrule(
-    name = 'please_contain',
-    srcs = [':please_contain_fpm'],
-    outs = ['please_contain.deb'],
+    name = 'please_sandbox',
+    srcs = [':please_sandbox_fpm'],
+    outs = ['please_sandbox.deb'],
     cmd = [
         'ar x $SRCS',
         'tar -xzf data.tar.gz',
         'rm data.tar.gz',
-        'tar -czf data.tar.gz --mode="u+s" --owner root --group root usr/bin/please_contain',
+        'tar -czf data.tar.gz --mode="u+s" --owner root --group root usr/bin/please_sandbox',
         'ar -rc $OUT debian-binary control.tar.gz data.tar.gz',
     ],
 )

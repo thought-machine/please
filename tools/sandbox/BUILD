@@ -1,5 +1,5 @@
 c_binary(
-    name = 'please_contain',
+    name = 'please_sandbox',
     srcs = ['main.c'],
     visibility = ['PUBLIC'],
 )

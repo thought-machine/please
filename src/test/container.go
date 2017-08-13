@@ -64,7 +64,7 @@ func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarg
 				"containers are disabled in your .plzconfig.", target.Label)
 			return runTest(state, target)
 		} else if state.Config.Test.DefaultContainer == core.ContainerImplementationPlz && target.ContainerSettings == nil {
-			return runPlzContainedTest(state, target)
+			return runPlzSandboxedTest(state, target)
 		}
 		out, err = runContainerisedTest(state, target)
 		if err != nil && state.Config.Docker.AllowLocalFallback {
@@ -120,13 +120,13 @@ func retrieveFile(target *core.BuildTarget, cid []byte, filename string, warn bo
 	}
 }
 
-// runPlzContainedTest runs a test using please_contain, which simply restricts network & process
+// runPlzSandboxedTest runs a test using please_sandbox, which simply restricts network & process
 // namespaces. It's only available on Linux and must be installed separately, since it has to be
 // suid root in order to use CLONE_NEWNET.
-func runPlzContainedTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
+func runPlzSandboxedTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	replacedCmd, env := testCommandAndEnv(state, target)
 	// Add please_contain on the command.
-	tool, err := core.LookPath(state.Config.Test.PleaseContainTool, state.Config.Build.Path)
+	tool, err := core.LookPath(state.Config.Test.PleaseSandboxTool, state.Config.Build.Path)
 	if err != nil {
 		return nil, err
 	}

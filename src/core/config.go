@@ -123,7 +123,7 @@ func DefaultConfiguration() *Configuration {
 	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Test.DefaultContainer = ContainerImplementationDocker // TODO(pebers): Change this to plz when less experimental.
-	config.Test.PleaseContainTool = "please_contain"
+	config.Test.PleaseSandboxTool = "please_sandbox"
 	config.Docker.DefaultImage = "ubuntu:trusty"
 	config.Docker.AllowLocalFallback = false
 	config.Docker.Timeout = cli.Duration(20 * time.Minute)
@@ -227,7 +227,7 @@ type Configuration struct {
 	Test               struct {
 		Timeout           cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
 		DefaultContainer  string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the available options are 'docker' and 'plz', the latter is an experimental custom sandbox that currently only restricts the process and network namespaces whereas the former is a full-blown container engine. We expect to add support for more engines in future."`
-		PleaseContainTool string       `help:"The location of the please_contain tool to use." example:"please_contain"`
+		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use." example:"please_sandbox"`
 	}
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
