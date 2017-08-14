@@ -45,6 +45,12 @@ public class TestMain {
     String testPackage = System.getProperty("build.please.testpackage");
     program_args = args;
 
+    // Ensure this guy matches
+    String tmpDir = System.getenv("TMP_DIR");
+    if (tmpDir != null) {
+      System.setProperty("java.io.tmpdir", tmpDir);
+    }
+
     Set<Class> classes = new HashSet<>();
     Set<Class> allClasses = findClasses(testPackage);
     if (allClasses.isEmpty()) {
