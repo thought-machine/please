@@ -104,7 +104,10 @@ int clone_and_contain(char* argv[]) {
         exit(3);
     }
     char* stack_top = child_stack + STACK_SIZE;  // assume stack grows downwards
-    pid_t child_pid = clone((int (*)(void *))exec_child, stack_top, CLONE_NEWPID | CLONE_NEWNET | SIGCHLD, argv);
+    pid_t child_pid = clone((int (*)(void *))exec_child,
+                            stack_top,
+                            CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD,
+                            argv);
     if (child_pid == -1) {
         perror("clone");
         return -1;
