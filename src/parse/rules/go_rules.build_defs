@@ -195,17 +195,18 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
         deps = deps,
     )
     # Recompile the output of the C rule into an object suitable for Go's linker.
-    ld_tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL)
-    ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
     ld_flag = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
     cgo_o_rule = build_rule(
         name = name,
         tag = 'cgo_o',
         srcs = [':_%s#c' % name],
         outs = [name + '_cgo.o'],
-        cmd = '%s x $SRCS && %s -o $OUT %s-r -nostdlib *.o' % (ar_tool, ld_tool, ld_flag),
+        cmd = '$TOOLS_AR x $SRCS && $TOOLS_LD -o $OUT %s-r -nostdlib *.o' % ld_flag,
         requires = ['cc'],
-        tools = tools,
+        tools = {
+            'ld': [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL],
+            'ar': [CONFIG.AR_TOOL],
+        },
     )
     go_rule = go_library(
         name = '_%s#go' % name,
@@ -349,21 +350,23 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
             test_only = True,
             deps = deps,
         )
-    go_test_tool, tools = _tool_path(CONFIG.GO_TEST_TOOL, _GO_TOOL)
     build_rule(
         name='_%s#main' % name,
         srcs=srcs,
         outs=[name + '_main.go'],
         deps=deps,
         cmd={
-            'dbg': '$TOOLS -o $OUT $SRCS',
-            'opt': '$TOOLS -o $OUT $SRCS',
-            'cover': '$TOOLS -d . -o $OUT $SRCS ',
+            'dbg': '$TOOLS_TEST $TOOLS_GO -o $OUT $SRCS',
+            'opt': '$TOOLS_TEST $TOOLS_GO -o $OUT $SRCS',
+            'cover': '$TOOLS_TEST $TOOLS_GO -d . -o $OUT $SRCS ',
         },
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
         requires=['go'],
         test_only=True,
-        tools=tools,
+        tools={
+            'go': ['go'],
+            'test': [CONFIG.GO_TEST_TOOL],
+        },
         post_build=lambda name, output: _replace_test_package(name, output, static),
     )
     deps.append(lib_rule)
@@ -629,8 +632,7 @@ def _go_library_cmds(complete=True, all_srcs=False):
 def _go_binary_cmds(static=False, ldflags=''):
     """Returns the commands to run for linking a Go binary."""
     _go_link_tool = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
-    extld_tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL, _GO_TOOL)
-    _link_cmd = 'go tool %s -tmpdir $TMP_DIR -extld %s %s -L . -o ${OUT} ' % (_go_link_tool, extld_tool, _GOPATH.replace('-I ', '-L '))
+    _link_cmd = '$TOOLS_GO tool %s -tmpdir $TMP_DIR -extld $TOOLS_LD %s -L . -o ${OUT} ' % (_go_link_tool, _GOPATH.replace('-I ', '-L '))
 
     if static:
         flags = '-linkmode external -extldflags "-static %s"' % ldflags
@@ -642,7 +644,10 @@ def _go_binary_cmds(static=False, ldflags=''):
     return {
         'dbg': '%s; %s %s $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
         'opt': '%s; %s %s -s -w $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
-    }, tools
+    }, {
+        'go': ['go'],
+        'ld': [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL],
+    }
 
 
 def _collect_linker_flags(static):
