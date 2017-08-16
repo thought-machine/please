@@ -1,30 +1,36 @@
+Version 8.4.4
+-------------
+
+    * Fixed issue with java_library rule introduced in previous version.
+
+
 Version 8.4.3
 -------------
 
-   * Set $HOME during builds for some tools (notably Python) that want to know
-     where it is and on some machine setups can fail without.
+    * Set $HOME during builds for some tools (notably Python) that want to know
+      where it is and on some machine setups can fail without.
 
 
 Version 8.4.2
 -------------
 
-   * Collect _pb2_grpc.py files for Python grpc_library rules.
-   * Minor jarcat fix to improve determinism of outputs for tarballs.
+    * Collect _pb2_grpc.py files for Python grpc_library rules.
+    * Minor jarcat fix to improve determinism of outputs for tarballs.
 
 
 Version 8.4.1
 -------------
 
-   * Pass -S when invoking the Python interpreter to byte-compile code.
-     Fixes some cases where it failed importing site due to $HOME not being defined.
+    * Pass -S when invoking the Python interpreter to byte-compile code.
+      Fixes some cases where it failed importing site due to $HOME not being defined.
 
 
 Version 8.4.0
 -------------
 
-   * `--include` and `--exclude` can now take a comma-separated list. These are essentially
-     ANDed together (unlike passing the flag multiple times which ORs them).
-   * `plz run parallel` limits the number of subprocesses run simultaneously.
+    * `--include` and `--exclude` can now take a comma-separated list. These are essentially
+      ANDed together (unlike passing the flag multiple times which ORs them).
+    * `plz run parallel` limits the number of subprocesses run simultaneously.
 
 
 Version 8.3.1

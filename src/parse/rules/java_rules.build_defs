@@ -103,7 +103,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         if resources_root:
             cmd = 'cd ${PKG}/%s && $TOOL -d -o ${OUT} -i .' % resources_root
         else:
-            cmd = '%s -d -o ${OUTS} -i .' % jarcat_tool
+            cmd = '$TOOL -d -o ${OUTS} -i .'
         return build_rule(
             name=name,
             srcs=resources,
