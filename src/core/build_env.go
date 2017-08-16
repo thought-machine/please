@@ -107,8 +107,12 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		env = append(env,
 			"TEST_DIR="+testDir,
 			"TEST_ARGS="+strings.Join(state.TestArgs, ","),
-			"HOME="+testDir,
 		)
+		// Ideally we would set this to something useful even within a container, but it ends
+		// up being /tmp/test or something which just confuses matters.
+		if !target.Containerise {
+			env = append(env, "HOME="+testDir)
+		}
 		if state.NeedCoverage {
 			env = append(env, "COVERAGE=true", "COVERAGE_FILE="+path.Join(RepoRoot, target.TestDir(), "test.coverage"))
 		}
