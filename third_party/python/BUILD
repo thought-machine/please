@@ -54,3 +54,8 @@ pip_library(
     outs = ['google'],
     deps = [':six'],
 )
+
+pip_library(
+    name = 'pycparser',
+    version = '2.18',
+)

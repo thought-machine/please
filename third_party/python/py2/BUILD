@@ -1,8 +1,20 @@
-package(default_python_interpreter = 'python2')
+package(
+    default_python_interpreter = 'python2',
+    python_wheel_repo = 'https://get.please.build/third_party/python/py2',
+)
 
 python_wheel(
     name = 'coverage',
     version = '4.3.4',
-    repo = 'https://get.please.build/third_party/python/py2',
+    visibility = ['PUBLIC'],
+)
+
+python_wheel(
+    name = 'cffi',
+    version = '1.10.0',
+    outs = [
+        '_cffi_backend.so',
+        'cffi',
+    ],
     visibility = ['PUBLIC'],
 )
