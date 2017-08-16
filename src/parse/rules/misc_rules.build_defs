@@ -126,7 +126,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
 
 def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None, tools=None,
             data=None, visibility=None, timeout=0, needs_transitive_deps=False, flaky=0, secrets=None,
-            no_test_output=False, output_is_complete=True, requires=None, container=False):
+            no_test_output=False, output_is_complete=True, requires=None, container=False, sandbox=None):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -157,6 +157,9 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
                           dependencies by other rules.
       requires (list): Kinds of output from other rules that this one requires.
       container (bool | dict): If true the test is run in a container (eg. Docker).
+      sandbox (bool): If True, the test is run within a sandbox that restricts some cgroups
+                      including networking, process, IPC, etc. Only has an effect on Linux.
+                      If this is on by default then tests can opt out by setting this to False.
     """
     build_rule(
         name=name,
@@ -177,6 +180,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
         needs_transitive_deps=needs_transitive_deps,
         requires=requires,
         container=container,
+        sandbox=sandbox,
         no_test_output=no_test_output,
         flaky=flaky,
     )

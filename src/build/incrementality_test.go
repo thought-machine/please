@@ -49,6 +49,7 @@ var KnownFields = map[string]bool{
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
 	"Containerise":      true,
+	"Sandbox":           true,
 	"ContainerSettings": true,
 
 	// These would ideally not contribute to the hash, but we need that at present

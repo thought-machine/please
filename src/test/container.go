@@ -71,8 +71,6 @@ func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarg
 			return runTest(state, target)
 		}
 		return out, err
-	} else if state.Config.Test.Sandbox {
-		return runPlzSandboxedTest(state, target)
 	}
 	return runTest(state, target)
 }
@@ -118,20 +116,4 @@ func retrieveFile(target *core.BuildTarget, cid []byte, filename string, warn bo
 			log.Debug("Failed to retrieve results for %s: %s [%s]", target.Label, err, out)
 		}
 	}
-}
-
-// runPlzSandboxedTest runs a test using please_sandbox, which restricts various namespaces
-// including process, network, IPC and UTS. It's only available on Linux and must be installed
-// separately, since it has to be suid root in order to use CLONE_NEWNET.
-func runPlzSandboxedTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	replacedCmd, env := testCommandAndEnv(state, target)
-	// Add please_contain on the command.
-	tool, err := core.LookPath(state.Config.Test.PleaseSandboxTool, state.Config.Build.Path)
-	if err != nil {
-		return nil, err
-	}
-	replacedCmd = tool + " " + replacedCmd
-	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	_, out, err := core.ExecWithTimeoutShell(target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd)
-	return out, err
 }

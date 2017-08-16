@@ -61,9 +61,9 @@ type BuildTarget struct {
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd"`
 	// Shell command to run for test targets.
-	TestCommand string
+	TestCommand string `name:"test_cmd"`
 	// Per-configuration test commands to run.
-	TestCommands map[string]string
+	TestCommands map[string]string `name:"test_cmd"`
 	// Represents the state of this build target (see below)
 	state int32 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
@@ -75,6 +75,8 @@ type BuildTarget struct {
 	TestOnly bool `name:"test_only"`
 	// True if we're going to containerise the test.
 	Containerise bool `name:"container"`
+	// True if we're going to sandbox the test.
+	Sandbox bool
 	// True if the target is a test and has no output file.
 	// Default is false, meaning all tests must produce test.results as output.
 	NoTestOutput bool `name:"no_test_output"`

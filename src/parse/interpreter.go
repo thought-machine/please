@@ -101,6 +101,7 @@ func initializeInterpreter(state *core.BuildState) {
 		}
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version.String())
+	setConfigValue("TEST_SANDBOX", pythonBool(config.Test.Sandbox))
 	setConfigValue("GO_VERSION", config.Go.GoVersion)
 	setConfigValue("GO_TEST_TOOL", config.Go.TestTool)
 	setConfigValue("GOPATH", config.Go.GoPath)
@@ -333,21 +334,21 @@ func IsValidTargetName(name *C.char) bool {
 
 //export AddTarget
 func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary, test, needsTransitiveDeps,
-	outputIsComplete, containerise, noTestOutput, testOnly, stamp, filegroup, hashFilegroup bool,
+	outputIsComplete, containerise, sandbox, noTestOutput, testOnly, stamp, filegroup, hashFilegroup bool,
 	flakiness, buildTimeout, testTimeout int, cBuildingDescription *C.char) (ret C.size_t) {
 	buildingDescription := ""
 	if cBuildingDescription != nil {
 		buildingDescription = C.GoString(cBuildingDescription)
 	}
 	return sizet(addTarget(pkgPtr, C.GoString(cName), C.GoString(cCmd), C.GoString(cTestCmd),
-		binary, test, needsTransitiveDeps, outputIsComplete, containerise, noTestOutput,
+		binary, test, needsTransitiveDeps, outputIsComplete, containerise, sandbox, noTestOutput,
 		testOnly, stamp, filegroup, hashFilegroup, flakiness, buildTimeout, testTimeout, buildingDescription))
 }
 
 // addTarget adds a new build target to the graph.
 // Separated from AddTarget to make it possible to test (since you can't mix cgo and go test).
 func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTransitiveDeps,
-	outputIsComplete, containerise, noTestOutput, testOnly, stamp, filegroup, hashFilegroup bool,
+	outputIsComplete, containerise, sandbox, noTestOutput, testOnly, stamp, filegroup, hashFilegroup bool,
 	flakiness, buildTimeout, testTimeout int, buildingDescription string) *core.BuildTarget {
 	pkg := unsizep(pkgPtr)
 	target := core.NewBuildTarget(core.NewBuildLabel(pkg.Name, name))
@@ -356,6 +357,7 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTra
 	target.NeedsTransitiveDependencies = needsTransitiveDeps
 	target.OutputIsComplete = outputIsComplete
 	target.Containerise = containerise
+	target.Sandbox = sandbox
 	target.NoTestOutput = noTestOutput
 	target.TestOnly = testOnly
 	target.Flakiness = flakiness

@@ -379,7 +379,8 @@ def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None
 
 def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None,
             deps=None, data=None, visibility=None, flags='', labels=None, flaky=0, test_outputs=None,
-            size=None, timeout=0, container=False, write_main=not CONFIG.BAZEL_COMPATIBILITY, _c=False):
+            size=None, timeout=0, container=False, sandbox=None,
+            write_main=not CONFIG.BAZEL_COMPATIBILITY, _c=False):
     """Defines a C++ test using UnitTest++.
 
     We template in a main file so you don't have to supply your own.
@@ -402,6 +403,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
       size (str): Test size (enormous, large, medium or small).
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
       container (bool | dict): If true the test is run in a container (eg. Docker).
+      sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       write_main (bool): Whether or not to write a main() for these tests.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)

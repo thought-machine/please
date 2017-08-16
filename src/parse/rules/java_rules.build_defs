@@ -184,7 +184,7 @@ def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None
 
 
 def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, visibility=None,
-              flags='', container=False, timeout=0, flaky=0, test_outputs=None, size=None,
+              flags='', container=False, sandbox=None, timeout=0, flaky=0, test_outputs=None, size=None,
               test_package=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args=''):
     """Defines a Java test.
 
@@ -198,6 +198,7 @@ def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, vis
       visibility (list): Visibility declaration of this rule.
       flags (str): Flags to pass to the test invocation.
       container (bool | dict): True to run this test within a container (eg. Docker).
+      sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       timeout (int): Maximum length of time, in seconds, to allow this test to run for.
       flaky (int | bool): True to mark this as flaky and automatically rerun.
       test_outputs (list): Extra test output files to generate from this test.
@@ -231,6 +232,7 @@ def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, vis
         deps=[':_%s#lib' % name],
         visibility=visibility,
         container=container,
+        sandbox=sandbox,
         labels=labels,
         test_timeout=timeout,
         flaky=flaky,

@@ -296,8 +296,15 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 // ExecWithTimeoutShell runs an external command within a Bash shell.
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
-func ExecWithTimeoutShell(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string) ([]byte, []byte, error) {
+func ExecWithTimeoutShell(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
 	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
+	if sandbox {
+		tool, err := LookPath(State.Config.Test.PleaseSandboxTool, State.Config.Build.Path)
+		if err != nil {
+			return nil, nil, err
+		}
+		c = append([]string{tool}, c...)
+	}
 	return ExecWithTimeout(target, dir, env, timeout, defaultTimeout, showOutput, c)
 }
 

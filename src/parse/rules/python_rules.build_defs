@@ -177,8 +177,8 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
 
 
 def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, size=None,
-                flags='', visibility=None, container=False, timeout=0, flaky=0, test_outputs=None,
-                zip_safe=None, interpreter=None):
+                flags='', visibility=None, container=False, sandbox=None, timeout=0, flaky=0,
+                test_outputs=None, zip_safe=None, interpreter=None):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
@@ -197,6 +197,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
       flags (str): Flags to apply to the test command.
       visibility (list): Visibility specification.
       container (bool | dict): If True, the test will be run in a container (eg. Docker).
+      sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       timeout (int): Maximum time this test is allowed to run for, in seconds.
       flaky (int | bool): True to mark this test as flaky, or an integer for a number of reruns.
       test_outputs (list): Extra test output files to generate from this test.
@@ -258,6 +259,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         binary=True,
         test=True,
         container=container,
+        sandbox=sandbox,
         building_description="Building pex...",
         visibility=visibility,
         test_timeout=timeout,

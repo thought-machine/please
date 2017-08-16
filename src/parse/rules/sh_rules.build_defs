@@ -92,7 +92,8 @@ def sh_binary(name, main, deps=None, visibility=None, labels=None):
 
 
 def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=None,
-            visibility=None, flags='', flaky=0, test_outputs=None, timeout=0, container=False):
+            visibility=None, flags='', flaky=0, test_outputs=None, timeout=0, container=False,
+            sandbox=None):
     """Generates a shell test. Note that these aren't packaged in a useful way.
 
     Args:
@@ -110,6 +111,7 @@ def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=N
       flaky (int | bool): True to mark this as flaky and automatically rerun.
       test_outputs (list): Extra test output files to generate from this test.
       container (bool | dict): True to run this test within a container (eg. Docker).
+      sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
     """
     if args and not flags:
         flags = ' '.join(args)
@@ -131,6 +133,7 @@ def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=N
         test_outputs=test_outputs,
         test_timeout=timeout,
         container=container,
+        sandbox=sandbox,
     )
 
 
