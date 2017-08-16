@@ -37,7 +37,6 @@ const MachineConfigFileName = "/etc/plzconfig"
 const (
 	ContainerImplementationNone   = "none"
 	ContainerImplementationDocker = "docker"
-	ContainerImplementationPlz    = "plz"
 )
 
 func readConfigFile(config *Configuration, filename string) error {
@@ -82,8 +81,8 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	if (config.Cache.RpcPrivateKey == "") != (config.Cache.RpcPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
 	}
-	if c := config.Test.DefaultContainer; c != ContainerImplementationNone && c != ContainerImplementationDocker && c != ContainerImplementationPlz {
-		return config, fmt.Errorf("%s invalid for test.defaultcontainer; must be one of {none,plz,docker}", c)
+	if c := config.Test.DefaultContainer; c != ContainerImplementationNone && c != ContainerImplementationDocker {
+		return config, fmt.Errorf("%s invalid for test.defaultcontainer; must be one of {none,docker}", c)
 	}
 	return config, nil
 }
@@ -122,7 +121,7 @@ func DefaultConfiguration() *Configuration {
 	config.Metrics.PushFrequency = cli.Duration(400 * time.Millisecond)
 	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
-	config.Test.DefaultContainer = ContainerImplementationDocker // TODO(pebers): Change this to plz when less experimental.
+	config.Test.DefaultContainer = ContainerImplementationDocker
 	config.Test.PleaseSandboxTool = "please_sandbox"
 	config.Docker.DefaultImage = "ubuntu:trusty"
 	config.Docker.AllowLocalFallback = false
@@ -226,8 +225,9 @@ type Configuration struct {
 	CustomMetricLabels map[string]string `help:"Allows defining custom labels to be applied to metrics. The key is the name of the label, and the value is a command to be run, the output of which becomes the label's value. For example, to attach the current Git branch to all metrics:\n\n[custommetriclabels]\nbranch = git rev-parse --abbrev-ref HEAD\n\nBe careful when defining new labels, it is quite possible to overwhelm the metric collector by creating metric sets with too high cardinality."`
 	Test               struct {
 		Timeout           cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		DefaultContainer  string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the available options are 'docker' and 'plz', the latter is an experimental custom sandbox that currently only restricts the process and network namespaces whereas the former is a full-blown container engine. We expect to add support for more engines in future."`
-		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use." example:"please_sandbox"`
+		DefaultContainer  string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only available option is 'docker', we expect to add support for more engines in future."`
+		Sandbox           bool         `help:"True to sandbox individual tests, which isolates them using cgroups. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
+		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use."`
 	}
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
