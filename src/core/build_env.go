@@ -49,16 +49,20 @@ func GeneralBuildEnvironment(config *Configuration) []string {
 
 // BuildEnvironment creates the shell env vars to be passed
 // into the exec.Command calls made by plz. Use test=true for plz test targets.
+// Note that we lie about the location of HOME in order to keep some tools happy.
+// We read this as being slightly more POSIX-compliant than not having it set at all...
 func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []string {
 	sources := target.AllSourcePaths(state.Graph)
 	env := GeneralBuildEnvironment(state.Config)
 	env = append(env, "PKG="+target.Label.PackageName, "PKG_DIR="+target.Label.PackageDir())
 	if !test {
+		tmpDir := path.Join(RepoRoot, target.TmpDir())
 		env = append(env,
-			"TMP_DIR="+path.Join(RepoRoot, target.TmpDir()),
+			"TMP_DIR="+tmpDir,
 			"SRCS="+strings.Join(sources, " "),
 			"OUTS="+strings.Join(target.Outputs(), " "),
 			"NAME="+target.Label.Name,
+			"HOME="+tmpDir,
 		)
 		env = append(env, "TOOLS="+strings.Join(toolPaths(state, target.Tools), " "))
 		// The OUT variable is only available on rules that have a single output.
@@ -99,8 +103,16 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 			env = append(env, "BINDIR="+path.Join(RepoRoot, BinDir))
 		}
 	} else {
-		env = append(env, "TEST_DIR="+path.Join(RepoRoot, target.TestDir()))
-		env = append(env, "TEST_ARGS="+strings.Join(state.TestArgs, ","))
+		testDir := path.Join(RepoRoot, target.TestDir())
+		env = append(env,
+			"TEST_DIR="+testDir,
+			"TEST_ARGS="+strings.Join(state.TestArgs, ","),
+		)
+		// Ideally we would set this to something useful even within a container, but it ends
+		// up being /tmp/test or something which just confuses matters.
+		if !target.Containerise {
+			env = append(env, "HOME="+testDir)
+		}
 		if state.NeedCoverage {
 			env = append(env, "COVERAGE=true", "COVERAGE_FILE="+path.Join(RepoRoot, target.TestDir(), "test.coverage"))
 		}

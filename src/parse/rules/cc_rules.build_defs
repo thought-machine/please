@@ -124,19 +124,18 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             a_rules.append(':' + a_name)
 
         # Combine the archives into one.
-        ar_tool, tools = _tool_path(CONFIG.AR_TOOL)
         a_rule = build_rule(
             name = name,
             tag = 'a',
             srcs = a_rules,
             outs = [name + '.a'],
-            cmd = 'echo $SRCS | xargs -n 1 %s xo && %s rcs $OUT *.o' % (ar_tool, ar_tool),
+            cmd = 'echo $SRCS | xargs -n 1 $TOOL xo && $TOOL rcs $OUT *.o',
             building_description = 'Archiving...',
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
             deps = (deps or []) + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
-            tools = tools,
+            tools = [CONFIG.AR_TOOL],
         )
         if alwayslink:
             labels.append('cc:al:%s/%s.a' % (get_base_path(), name))
@@ -238,14 +237,13 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
             'cc_hdrs': ':_%s#lib_hdrs' % name,
             'cc': ':' + name,
         }
-    ar_tool, tools = _tool_path(CONFIG.AR_TOOL)
     build_rule(
         name = name,
         deps = deps,
         outs = ['lib%s.a' % name],
         cmd = (
-            'for a in `find . -name "*.a"`; do (cd $(dirname $a) && %s x $(basename $a)); done;'
-            '%s rcs $OUT `find . -name "*.o" | sort`' % (ar_tool, ar_tool)
+            'for a in `find . -name "*.a"`; do (cd $(dirname $a) && $TOOL x $(basename $a)); done;'
+            '$TOOL rcs $OUT `find . -name "*.o" | sort`'
         ),
         needs_transitive_deps = True,
         output_is_complete = True,
@@ -254,7 +252,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         building_description = 'Archiving...',
         provides = provides,
         requires = ['cc'],
-        tools = tools,
+        tools = [CONFIG.AR_TOOL],
     )
 
 
@@ -514,7 +512,7 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         test_only=test_only,
     )
 
-    ar_tool, tools = _tool_path(CONFIG.AR_TOOL)
+    tools = {'ar': [CONFIG.AR_TOOL]}
     if darwin:
         # OSX's ld doesn't support '--format binary', and this is the least fiddly
         # alternative. Requiring an additional tool is a bit suboptimal but probably
@@ -522,13 +520,13 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         cmd = ' && '.join([
             'export ENCODED_FILENAME=${SRCS//[\/\.]/_}',
             'echo "%s" > embedded.asm' % _CC_DARWIN_ASM_CONTENTS,
-            '%s -fmacho64 embedded.asm -o ${OUTS/.a/.o}' % CONFIG.ASM_TOOL,
-            '%s rcs $OUT ${OUTS/.a/.o}' % ar_tool,
+            '$TOOLS_ASM -fmacho64 embedded.asm -o ${OUTS/.a/.o}',
+            '$TOOLS_AR rcs $OUT ${OUTS/.a/.o}',
         ])
+        tools['asm'] = [CONFIG.ASM_TOOL]
     else:
-        ld_tool, tools = _tool_path(CONFIG.LD_TOOL, tools)
-        cmd = '%s -r --format binary -o ${OUTS/.a/.o} $SRC && %s rcs $OUT ${OUTS/.a/.o}' % (
-            ld_tool, ar_tool)
+        cmd = '$TOOLS_LD -r --format binary -o ${OUTS/.a/.o} $SRC && $TOOLS_AR rcs $OUT ${OUTS/.a/.o}'
+        tools['ld'] = [CONFIG.LD_TOOL]
 
     lib_rule = build_rule(
         name = name,
@@ -686,30 +684,30 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags=''):
     """Returns the commands needed for a cc_library rule."""
     dbg_flags = _build_flags(compiler_flags, pkg_config_libs, c=c, dbg=True)
     opt_flags = _build_flags(compiler_flags, pkg_config_libs, c=c)
-    cc_tool, tools = _tool_path(CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL)
-    ar_tool, tools = _tool_path(CONFIG.AR_TOOL, tools)
-    cmd_template = '%s -c -I . ${SRCS_SRCS} %s %s && %s rcs $OUT *.o'
+    cmd_template = '$TOOLS_CC -c -I . ${SRCS_SRCS} %s %s && $TOOLS_AR rcs $OUT *.o'
     cmds = {
-        'dbg': cmd_template % (cc_tool, dbg_flags, extra_flags, ar_tool),
-        'opt': cmd_template % (cc_tool, opt_flags, extra_flags, ar_tool),
+        'dbg': cmd_template % (dbg_flags, extra_flags),
+        'opt': cmd_template % (opt_flags, extra_flags),
     }
     if CONFIG.CPP_COVERAGE:
-        cmds['cover'] = cmd_template % (cc_tool, dbg_flags + _COVERAGE_FLAGS, extra_flags, ar_tool)
-    return cmds, tools
+        cmds['cover'] = cmd_template % (dbg_flags + _COVERAGE_FLAGS, extra_flags)
+    return cmds, {
+        'cc': [CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL],
+        'ar': [CONFIG.AR_TOOL],
+    }
 
 
 def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False, alwayslink=''):
     """Returns the commands needed for a cc_binary, cc_test or cc_shared_object rule."""
-    tool, tools = _tool_path(CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
-                             CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL)
     flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink)
     cmds = {
-        'dbg': '%s -o ${OUT} %s %s' % (tool, flags, extra_flags),
-        'opt': '%s -o ${OUT} %s %s' % (tool, flags, extra_flags),
+        'dbg': '$TOOL -o ${OUT} %s %s' % (flags, extra_flags),
+        'opt': '$TOOL -o ${OUT} %s %s' % (flags, extra_flags),
     }
     if CONFIG.CPP_COVERAGE:
-        cmds['cover'] = '%s -o ${OUT} %s %s %s' % (tool, flags, extra_flags, _COVERAGE_FLAGS)
-    return cmds, tools
+        cmds['cover'] = '$TOOL -o ${OUT} %s %s %s' % (flags, extra_flags, _COVERAGE_FLAGS)
+    return cmds, [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
+                  CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL]
 
 
 def _library_transitive_labels(c, compiler_flags, pkg_config_libs):

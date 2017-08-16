@@ -44,9 +44,6 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         log.warning('`target` argument to java_library is deprecated and will be removed soon')
     if srcs and src_dir:
         raise ParseError('You cannot pass both srcs and src_dir to java_library')
-    use_worker = not CONFIG.JAVAC_TOOL
-    javac_tool, tools = _tool_path(CONFIG.JAVAC_TOOL or CONFIG.JAVAC_WORKER, worker=use_worker)
-    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL, tools)
     if srcs or src_dir:
         if resources:
             # Split up resources into a separate rule so we don't have to try to build them here.
@@ -70,11 +67,10 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             javac_flags,
         )
 
-        if use_worker:
-            javac_cmd = '%s %s %s' % (javac_tool, javac_flags, '--src_dir' if src_dir else '')
+        if not CONFIG.JAVAC_TOOL:
+            javac_cmd = '$(worker %s) %s %s' % (CONFIG.JAVAC_WORKER, javac_flags, '--src_dir' if src_dir else '')
         else:
-            javac_cmd = 'mkdir -p _tmp/META-INF && %s %s -classpath .:%s -d _tmp %s' % (
-                javac_tool,
+            javac_cmd = 'mkdir -p _tmp/META-INF && $TOOLS_JAVAC %s -classpath .:%s -d _tmp %s' % (
                 javac_flags,
                 r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
                 '$SRCS' if srcs else '`find $SRCS -name "*.java"`',
@@ -84,7 +80,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             javac_cmd,
             'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g" | sort > _tmp/META-INF/please_sourcemap',
             'cd _tmp',
-            jarcat_tool + ' -d -o $OUT -i .',
+            '$TOOLS_JARCAT -d -o $OUT -i .',
         ])
         return build_rule(
             name=name,
@@ -97,12 +93,15 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             building_description="Compiling...",
             requires=['java'],
             test_only=test_only,
-            tools=tools,
+            tools={
+                'javac': [CONFIG.JAVAC_TOOL or CONFIG.JAVAC_WORKER],
+                'jarcat': [CONFIG.JARCAT_TOOL],
+            },
         )
     elif resources:
         # Can't run javac since there are no java files.
         if resources_root:
-            cmd = 'cd ${PKG}/%s && %s -d -o ${OUT} -i .' % (resources_root, jarcat_tool)
+            cmd = 'cd ${PKG}/%s && $TOOL -d -o ${OUT} -i .' % resources_root
         else:
             cmd = '%s -d -o ${OUTS} -i .' % jarcat_tool
         return build_rule(
@@ -116,7 +115,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             building_description="Linking...",
             requires=['java'],
             test_only=test_only,
-            tools=tools,
+            tools=[CONFIG.JARCAT_TOOL],
         )
     else:
         # If input is only jar files (as maven_jar produces in some cases) we simply collect them
@@ -160,7 +159,8 @@ def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None
         )
         deps.append(lib_rule)
     if self_executable:
-        cmd, tools = _java_binary_cmd(main_class, jvm_args, manifest=manifest)
+        preamble = '#!/bin/sh\nexec java %s -jar $0 $@' % (jvm_args or '')
+        cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
     else:
         # This is essentially a hack to get past some Java things (notably Jersey) failing
         # in subtle ways when the jar has a preamble (srsly...).
@@ -218,8 +218,8 @@ def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, vis
     )
     # As above, would be nicer if we could make the jars self-executing again.
     cmd, tools = _jarcat_cmd('build.please.test.TestMain')
-    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools, binary=False)
-    cmd = 'ln -s %s . && %s' % (junit_runner, cmd)
+    tools['junit'] = [CONFIG.JUNIT_RUNNER]
+    cmd = 'ln -s $TOOLS_JUNIT . && ' + cmd
     test_cmd = 'java -Dbuild.please.testpackage=%s %s -jar $(location :%s) %s' % (
         test_package, jvm_args, name, flags)
     build_rule(
@@ -315,13 +315,12 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
     deps = deps or []
     exclusions = ' '.join('-e ' + excl for excl in exclude)
     options = ' '.join('-o ' + option for option in optional) if optional else ''
-    please_maven_tool, tools = _tool_path(CONFIG.PLEASE_MAVEN_TOOL)
     build_rule(
         name='_%s#deps' % name,
-        cmd='%s -r %s %s %s %s' % (please_maven_tool, repository, ' '.join(ids), exclusions, options),
+        cmd='$TOOL -r %s %s %s %s' % (repository, ' '.join(ids), exclusions, options),
         post_build=create_maven_deps,
         building_description='Finding dependencies...',
-        tools=tools,
+        tools=[CONFIG.PLEASE_MAVEN_TOOL],
     )
     if combine:
         download_name = '_%s#download' % name
@@ -529,28 +528,16 @@ def _parse_maven_artifact(id, sources=True, licences=None):
     return group, artifact, version, sources, licences
 
 
-def _java_binary_cmd(main_class, jvm_args, test_package=None, manifest=None):
-    """Returns the command we use to build a .jar for a java_binary or a java_test."""
-    prop = '-Dnet.thoughtmachine.please.testpackage=' + test_package if test_package else ''
-    preamble = '#!/bin/sh\nexec java %s %s -jar $0 $@' % (prop, jvm_args or '')
-    jarcat_cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
-    if not test_package:
-        return jarcat_cmd, tools
-    junit_runner, tools = _tool_path(CONFIG.JUNIT_RUNNER, tools, binary=False)
-    return 'ln -s %s . && %s' % (junit_runner, jarcat_cmd), tools
-
-
 def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
     """Returns the command we'd use to invoke jarcat, and the tool paths required."""
-    jarcat_tool, tools = _tool_path(CONFIG.JARCAT_TOOL)
-    cmd = '%s -i . -o ${OUTS} --exclude_internal_prefix "%s"' % (jarcat_tool, _JAVA_EXCLUDE_FILES)
+    cmd = '$TOOLS_JARCAT -i . -o ${OUTS} --exclude_internal_prefix "%s"' % _JAVA_EXCLUDE_FILES
     if main_class:
         cmd += ' -m "%s"' % main_class
     if preamble:
         cmd += " -p '%s'" % preamble
     if manifest:
         cmd += ' --manifest "$SRCS"'
-    return cmd, tools
+    return cmd, {'jarcat': [CONFIG.JARCAT_TOOL]}
 
 
 if CONFIG.BAZEL_COMPATIBILITY:
