@@ -1,3 +1,10 @@
+Version 8.4.3
+-------------
+
+   * Set $HOME during builds for some tools (notably Python) that want to know
+     where it is and on some machine setups can fail without.
+
+
 Version 8.4.2
 -------------
 
