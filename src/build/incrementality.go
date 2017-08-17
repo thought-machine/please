@@ -357,6 +357,7 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 			h.Write([]byte(datum.String()))
 		}
 		hashBool(h, target.Containerise)
+		hashBool(h, target.Sandbox)
 		if target.ContainerSettings != nil {
 			e := gob.NewEncoder(h)
 			if err := e.Encode(target.ContainerSettings); err != nil {

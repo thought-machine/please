@@ -34,8 +34,10 @@ const LocalConfigFileName string = ".plzconfig.local"
 // for a particular machine (eg. build machine with different caching behaviour).
 const MachineConfigFileName = "/etc/plzconfig"
 
-const TestContainerDocker = "docker"
-const TestContainerNone = "none"
+const (
+	ContainerImplementationNone   = "none"
+	ContainerImplementationDocker = "docker"
+)
 
 func readConfigFile(config *Configuration, filename string) error {
 	log.Debug("Reading config from %s...", filename)
@@ -79,6 +81,9 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	if (config.Cache.RpcPrivateKey == "") != (config.Cache.RpcPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
 	}
+	if c := config.Test.DefaultContainer; c != ContainerImplementationNone && c != ContainerImplementationDocker {
+		return config, fmt.Errorf("%s invalid for test.defaultcontainer; must be one of {none,docker}", c)
+	}
 	return config, nil
 }
 
@@ -106,6 +111,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.Timeout = cli.Duration(10 * time.Minute)
 	config.Build.Config = "opt"         // Optimised builds by default
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
+	config.Build.PleaseSandboxTool = "please_sandbox"
 	config.Cache.HttpTimeout = cli.Duration(5 * time.Second)
 	config.Cache.RpcTimeout = cli.Duration(5 * time.Second)
 	config.Cache.Dir = ".plz-cache"
@@ -116,7 +122,7 @@ func DefaultConfiguration() *Configuration {
 	config.Metrics.PushFrequency = cli.Duration(400 * time.Millisecond)
 	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
-	config.Test.DefaultContainer = TestContainerDocker
+	config.Test.DefaultContainer = ContainerImplementationDocker
 	config.Docker.DefaultImage = "ubuntu:trusty"
 	config.Docker.AllowLocalFallback = false
 	config.Docker.Timeout = cli.Duration(20 * time.Minute)
@@ -187,10 +193,12 @@ type Configuration struct {
 		UpdateTitle bool `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
 	Build struct {
-		Timeout        cli.Duration `help:"Default timeout for Dockerised tests, in seconds. Default is twenty minutes."`
-		Path           []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
-		Config         string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
-		FallbackConfig string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
+		Timeout           cli.Duration `help:"Default timeout for Dockerised tests, in seconds. Default is twenty minutes."`
+		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
+		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
+		FallbackConfig    string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
+		Sandbox           bool         `help:"True to sandbox individual build actions, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
+		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use."`
 	}
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	Cache       struct {
@@ -218,8 +226,9 @@ type Configuration struct {
 	} `help:"A section of options relating to reporting metrics. Currently only pushing metrics to a Prometheus pushgateway is supported, which is enabled by the pushgatewayurl setting."`
 	CustomMetricLabels map[string]string `help:"Allows defining custom labels to be applied to metrics. The key is the name of the label, and the value is a command to be run, the output of which becomes the label's value. For example, to attach the current Git branch to all metrics:\n\n[custommetriclabels]\nbranch = git rev-parse --abbrev-ref HEAD\n\nBe careful when defining new labels, it is quite possible to overwhelm the metric collector by creating metric sets with too high cardinality."`
 	Test               struct {
-		Timeout          cli.Duration            `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		DefaultContainer ContainerImplementation `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only option is 'docker' but we intend to add rkt support at some point."`
+		Timeout          cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
+		DefaultContainer string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only available option is 'docker', we expect to add support for more engines in future."`
+		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
 	}
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
@@ -420,19 +429,3 @@ func (config *Configuration) Completions(prefix string) []flags.Completion {
 	}
 	return ret
 }
-
-// ContainerImplementation is an enumerated type for the container engine we'd use.
-type ContainerImplementation string
-
-func (ci *ContainerImplementation) UnmarshalText(text []byte) error {
-	if ContainerImplementation(text) == ContainerImplementationNone || ContainerImplementation(text) == ContainerImplementationDocker {
-		*ci = ContainerImplementation(text)
-		return nil
-	}
-	return fmt.Errorf("Unknown container implementation: %s", string(text))
-}
-
-const (
-	ContainerImplementationNone   ContainerImplementation = "none"
-	ContainerImplementationDocker ContainerImplementation = "docker"
-)

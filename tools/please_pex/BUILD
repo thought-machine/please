@@ -62,7 +62,7 @@ genrule(
     ],
     outs = ['please_pex'],
     binary = True,
-    cmd = ' && '.join([
+    cmd = [
         # Have to make sure these exist.
         'touch third_party/__init__.py third_party/python/__init__.py',
         'touch tools/__init__.py tools/please_pex/__init__.py',
@@ -73,7 +73,7 @@ genrule(
         # A little cleanup.
         'rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles .bootstrap/py3 .bootstrap/py2 .bootstrap/_pex/bin .bootstrap/.*.pex.zip',
         '$TOOL -d -i .bootstrap -b -o $OUTS --preamble_file $(location :pex_main)',
-    ]),
+    ],
     tools = ['//tools/jarcat'],
     visibility = ['PUBLIC'],
 )

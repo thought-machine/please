@@ -59,6 +59,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		tmpDir := path.Join(RepoRoot, target.TmpDir())
 		env = append(env,
 			"TMP_DIR="+tmpDir,
+			"TMPDIR="+tmpDir,
 			"SRCS="+strings.Join(sources, " "),
 			"OUTS="+strings.Join(target.Outputs(), " "),
 			"NAME="+target.Label.Name,
@@ -106,6 +107,8 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		testDir := path.Join(RepoRoot, target.TestDir())
 		env = append(env,
 			"TEST_DIR="+testDir,
+			"TMP_DIR="+testDir,
+			"TMPDIR="+testDir,
 			"TEST_ARGS="+strings.Join(state.TestArgs, ","),
 		)
 		// Ideally we would set this to something useful even within a container, but it ends

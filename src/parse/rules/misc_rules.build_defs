@@ -1,7 +1,7 @@
 """Miscellaneous rules that aren't language-specific."""
 
 
-def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None,
+def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, labels=None, visibility=None,
             building_description='Building...', hashes=None, timeout=0, binary=False,
             needs_transitive_deps=False, output_is_complete=True, test_only=False, secrets=None,
             requires=None, provides=None, pre_build=None, post_build=None, tools=None):
@@ -9,7 +9,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
 
     Args:
       name (str): Name of the rule
-      cmd (str | dict): Command to run. It's subject to various sequence replacements:
+      cmd (str | dict | list): Command to run. It's subject to various sequence replacements:
              $(location //path/to:target) expands to the location of the given build rule, which
                                           must have a single output only.
              $(locations //path/to:target) expands to the locations of the outputs of the given
@@ -31,6 +31,12 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
              SRC: the source of this rule. Only present when there is only one source.
              SRCS_<suffix>: Present when you've defined named sources on a rule. Each group
                             creates one of these these variables with paths to those sources.
+           If given as a string, it's a single command that's used always (the most common case).
+           If given as a list, it's a sequence of commands run one after another if the
+           preceding command is successful (i.e. it's equivalent to ' && '.join(cmd)).
+           If given as a dict, the keys correspond to the build config to run and the values
+           are the command to run in that config. The typical use case here is 'opt' vs. 'dbg'
+           but arbitrary names can be given and specified with `plz build -c name`.
       srcs (list | dict): Sources of this rule. Can be a list of files or rules, or a dict of names
                           to lists. In the latter case they can be accessed separately which is useful
                           to be able to refer to them distinctly in the command.
@@ -57,6 +63,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
                       share the output with others. That also implies that secrets are things like
                       credentials or signing keys and shouldn't be copied directly to outputs, otherwise
                       they might become more widely known.
+      labels (list): Labels to apply to this rule.
       visibility (list): Visibility declaration of this rule
       building_description (str): Description to display to the user while the rule is building.
       hashes (list): List of hashes; if given the outputs must match one of these. They can be
@@ -100,10 +107,11 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
         name=name,
         srcs=srcs,
         outs=[out] if out else outs,
-        cmd=cmd,
+        cmd=' && '.join(cmd) if isinstance(cmd, list) else cmd,
         deps=deps,
         tools=tools,
         secrets=secrets,
+        labels=labels,
         visibility = visibility,
         output_is_complete=output_is_complete,
         building_description=building_description,
@@ -120,7 +128,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
 
 def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None, tools=None,
             data=None, visibility=None, timeout=0, needs_transitive_deps=False, flaky=0, secrets=None,
-            no_test_output=False, output_is_complete=True, requires=None, container=False):
+            no_test_output=False, output_is_complete=True, requires=None, container=False, sandbox=None):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -151,6 +159,9 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
                           dependencies by other rules.
       requires (list): Kinds of output from other rules that this one requires.
       container (bool | dict): If true the test is run in a container (eg. Docker).
+      sandbox (bool): If True, the test is run within a sandbox that restricts some cgroups
+                      including networking, process, IPC, etc. Only has an effect on Linux.
+                      If this is on by default then tests can opt out by setting this to False.
     """
     build_rule(
         name=name,
@@ -171,6 +182,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
         needs_transitive_deps=needs_transitive_deps,
         requires=requires,
         container=container,
+        sandbox=sandbox,
         no_test_output=no_test_output,
         flaky=flaky,
     )
@@ -300,6 +312,7 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
         hashes = hashes,
         visibility = visibility,
         test_only = test_only,
+        sandbox = False,
     )
 
 
@@ -329,6 +342,7 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
         building_description='Fetching...',
         deps=deps,
         test_only=test_only,
+        sandbox = False,
     )
 
 
@@ -391,6 +405,7 @@ def git_repo(name, repo, revision='master', files=None, hash=None, visibility=No
         hashes = [hash] if hash else None,
         visibility = visibility,
         test_only = test_only,
+        sandbox = False,
     )
 
 
@@ -400,7 +415,8 @@ def _find_git_repo_files(name, output):
 
 
 def fpm_package(name, version, package_type, files=None, dirs=None, links=None, package_name=None,
-                options='', srcs=None, deps=None, visibility=None, labels=None, _apply_deb_deps=False):
+                options='', post_cmds=None, srcs=None, deps=None, visibility=None,
+                labels=None, _apply_deb_deps=False):
     """Defines a rule to build a package using fpm.
 
     Args:
@@ -424,6 +440,7 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
       package_type (str): Type of package to build (deb, rpm, etc)
       package_name (str): Name of package. Defaults to rule name.
       options (str): Extra options to pass to fpm.
+      post_cmds (list): Additional commands to run after the .deb is built.
       srcs (list): Extra sources (it's not necessary to mention entries in 'files' here)
       deps (list): Dependencies
       visibility (list): Visibility specification.
@@ -447,6 +464,8 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
                     (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(links.items()))
     cmds.append('fpm -s dir -t %s -n "%s" -v "%s" %s -p $OUT .' % (package_type, package_name,
                                                                    version, options))
+    if post_cmds:
+        cmds.extend(post_cmds)
     cmd = ' && '.join(cmds)
     build_rule(
         name=name,
@@ -464,7 +483,7 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
 
 
 def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None, options='',
-            srcs=None, deps=None, visibility=None, labels=None):
+            post_cmds=None, srcs=None, deps=None, visibility=None, labels=None):
     """Convenience wrapper around fpm_package that always builds a .deb package.
 
     Args:
@@ -487,6 +506,7 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
       version (str): Version of the package.
       package_name (str): Name of package. Defaults to rule name.
       options (str): Extra options to pass to fpm.
+      post_cmds (list): Additional commands to run after the .deb is built.
       srcs (list): Extra sources (it's not necessary to mention entries in 'files' here)
       deps (list): Dependencies
       visibility (list): Visibility specification.
@@ -501,6 +521,7 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
         links=links,
         package_name=package_name,
         options=options,
+        post_cmds=post_cmds,
         srcs=srcs,
         deps=deps,
         visibility=visibility,

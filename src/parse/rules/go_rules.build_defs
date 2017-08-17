@@ -301,8 +301,9 @@ def go_binary(name, main=None, srcs=None, deps=None, visibility=None, test_only=
     )
 
 
-def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False, cgo=False,
-            external=False, timeout=0, flaky=0, test_outputs=None, labels=None, size=None, static=False):
+def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False,
+            sandbox=None, cgo=False, external=False, timeout=0, flaky=0, test_outputs=None,
+            labels=None, size=None, static=False):
     """Defines a Go test rule.
 
     Args:
@@ -313,6 +314,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
       visibility (list): Visibility specification
       flags (str): Flags to apply to the test invocation.
       container (bool | dict): True to run this test in a container.
+      sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       cgo (bool): True if this test depends on a cgo_library.
       external (bool): True if this test is external to the library it's testing, i.e. it uses the
                        feature of Go that allows it to be in the same directory with a _test suffix.
@@ -389,6 +391,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         test_cmd='$TEST %s | tee test.results' % flags,
         visibility=visibility,
         container=container,
+        sandbox=sandbox,
         test_timeout=timeout,
         flaky=flaky,
         test_outputs=test_outputs,
@@ -402,7 +405,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
     )
 
 
-def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False,
+def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False, sandbox=None,
              timeout=0, flaky=0, test_outputs=None, labels=None, size=None, static=False):
     """Defines a Go test rule over a cgo_library.
 
@@ -418,6 +421,7 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
       visibility (list): Visibility specification
       flags (str): Flags to apply to the test invocation.
       container (bool | dict): True to run this test in a container.
+      sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       timeout (int): Timeout in seconds to allow the test to run for.
       flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
       test_outputs (list): Extra test output files to generate from this test.
@@ -440,6 +444,7 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
         visibility = visibility,
         flags = flags,
         container = container,
+        sandbox = sandbox,
         timeout = timeout,
         flaky = flaky,
         test_outputs = test_outputs,
@@ -536,6 +541,7 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         test_only=test_only,
         post_build=post_build,
         labels=['go_get:%s@%s' % (get, revision) if revision else 'go_get:%s' % get],
+        sandbox = False,
     )
 
 

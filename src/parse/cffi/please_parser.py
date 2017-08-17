@@ -202,7 +202,7 @@ def _get_subinclude_target(url, hash):
 def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=None, outs=None,
                deps=None, exported_deps=None, secrets=None, tools=None, labels=None, visibility=None,
                hashes=None, binary=False, test=False, test_only=None, building_description='Building...',
-               needs_transitive_deps=False, output_is_complete=False, container=False,
+               needs_transitive_deps=False, output_is_complete=False, container=False, sandbox=None,
                no_test_output=False, flaky=0, build_timeout=0, test_timeout=0,
                pre_build=None, post_build=None, requires=None, provides=None, licences=None,
                test_outputs=None, system_srcs=None, stamp=False, tag='', optional_outs=None,
@@ -228,6 +228,8 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
         licences = globals_dict['CONFIG'].get('DEFAULT_LICENCES')
     if test_only is None:
         test_only = globals_dict['CONFIG'].get('DEFAULT_TESTONLY')
+    if sandbox is None:
+        sandbox = bool(globals_dict['CONFIG'].get('TEST_SANDBOX'))
 
     # Further calls to package() are now banned; it's too difficult to ensure pre/post build
     # functions work as expected if the user changes things after adding the target but before
@@ -244,6 +246,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
                          needs_transitive_deps,
                          output_is_complete,
                          bool(container),
+                         sandbox,
                          no_test_output,
                          test_only or test,  # Tests are implicitly test_only
                          stamp,
