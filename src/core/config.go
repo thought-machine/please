@@ -197,7 +197,7 @@ type Configuration struct {
 		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
 		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
 		FallbackConfig    string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
-		Sandbox           bool         `help:"True to sandbox individual build actions, which isolates them using cgroups. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
+		Sandbox           bool         `help:"True to sandbox individual build actions, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
 		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use."`
 	}
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
@@ -228,7 +228,7 @@ type Configuration struct {
 	Test               struct {
 		Timeout          cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
 		DefaultContainer string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only available option is 'docker', we expect to add support for more engines in future."`
-		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them using cgroups. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
+		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
 	}
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
