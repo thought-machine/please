@@ -13,7 +13,7 @@ python_wheel(
     name = 'cffi',
     version = '1.10.0',
     outs = [
-        '.libs_cffi_backend/libffi-72499c49.so.6.0.4',
+        '.libs_cffi_backend/libffi-72499c49.so.6.0.4' if (CONFIG.OS == 'linux') else None,
         '_cffi_backend.so',
         'cffi',
     ],
