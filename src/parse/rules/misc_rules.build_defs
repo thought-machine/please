@@ -310,6 +310,7 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
         hashes = hashes,
         visibility = visibility,
         test_only = test_only,
+        sandbox = False,
     )
 
 
@@ -339,6 +340,7 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
         building_description='Fetching...',
         deps=deps,
         test_only=test_only,
+        sandbox = False,
     )
 
 
@@ -401,6 +403,7 @@ def git_repo(name, repo, revision='master', files=None, hash=None, visibility=No
         hashes = [hash] if hash else None,
         visibility = visibility,
         test_only = test_only,
+        sandbox = False,
     )
 
 

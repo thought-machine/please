@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -298,8 +299,9 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 // Note that the command is deliberately a single string.
 func ExecWithTimeoutShell(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
 	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
-	if sandbox {
-		tool, err := LookPath(State.Config.Test.PleaseSandboxTool, State.Config.Build.Path)
+	// Runtime check is a little ugly, but we know this only works on Linux right now.
+	if sandbox && runtime.GOOS == "linux" {
+		tool, err := LookPath(State.Config.Build.PleaseSandboxTool, State.Config.Build.Path)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -323,6 +323,7 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
         post_build=create_maven_deps,
         building_description='Finding dependencies...',
         tools=[CONFIG.PLEASE_MAVEN_TOOL],
+        sandbox=False,
     )
     if combine:
         download_name = '_%s#download' % name
@@ -456,6 +457,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         requires=['java'],
         test_only=test_only,
         binary = binary,
+        sandbox = False,
     )
     provides = {'java': bin_rule}
     srcs = [bin_rule]
@@ -475,6 +477,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
             building_description='Fetching...',
             requires=['java'],
             test_only=test_only,
+            sandbox = False,
         )
         srcs.append(src_rule)
 

@@ -8,7 +8,6 @@ import (
 	"math"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 	"time"
 
@@ -288,7 +287,7 @@ func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget) (string
 func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	replacedCmd, env := testCommandAndEnv(state, target)
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	_, out, err := core.ExecWithTimeoutShell(target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd, target.Sandbox && runtime.GOOS == "linux")
+	_, out, err := core.ExecWithTimeoutShell(target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd, target.Sandbox)
 	return out, err
 }
 

@@ -353,6 +353,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
         licences=licences,
         tools=[CONFIG.PIP_TOOL],
         post_build=None if licences else _add_licences,
+        sandbox = False,
     )
     # Get this to do the pex pre-zipping stuff.
     python_library(
@@ -437,6 +438,7 @@ def python_wheel(name, version=None, src=None, hashes=None, package_name=None, o
         test_only = test_only,
         licences = licences,
         post_build = None if licences else _add_licences,
+        sandbox = False,
     )
     # Get this to do the pex pre-zipping stuff.
     python_library(
