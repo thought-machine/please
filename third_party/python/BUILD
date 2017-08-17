@@ -55,7 +55,8 @@ pip_library(
     deps = [':six'],
 )
 
-pip_library(
+python_wheel(
     name = 'pycparser',
     version = '2.18',
+    repo = 'https://get.please.build/third_party/python/py3',
 )
