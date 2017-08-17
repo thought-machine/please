@@ -13,7 +13,9 @@ for interpreter, deps in ENGINES.items():
         deps = ['//third_party/python:pycparser'] + deps,
         cmd = 'export PYTHONPATH="third_party/python:third_party/python/py2:third_party/python/py3"; $TOOL $SRCS --verbose',
         visibility = ['PUBLIC'],
-        tools = [interpreter],
+        # Have to make sure we get the right interpreter so we can use our cffi.
+        # TODO(pebers): Should really have a more robust way of handling all of this.
+        tools = ['python3.5' if interpreter == 'python3' else interpreter],
     )
 
 filegroup(
