@@ -21,6 +21,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+pid_t child_pid = -1;
+
 // drop_root is ported more or less directly from Chrome's chrome-sandbox helper.
 // It simply drops us back to whatever user invoked us originally (i.e. before suid
 // got involved).
@@ -93,6 +95,13 @@ int exec_child(char* argv[]) {
     return execvp(argv[0], argv);
 }
 
+// relay_signal passes received signals onto the spawned child process.
+void relay_signal(int sig) {
+    if (child_pid != -1) {
+        kill(child_pid, sig);
+    }
+}
+
 // clone_and_contain calls clone(2) to isolate and contain the network.
 int clone_and_contain(char* argv[]) {
     // Unsure exactly how big this needs to be, but 20k is probably enough
@@ -104,14 +113,16 @@ int clone_and_contain(char* argv[]) {
         exit(3);
     }
     char* stack_top = child_stack + STACK_SIZE;  // assume stack grows downwards
-    pid_t child_pid = clone((int (*)(void *))exec_child,
-                            stack_top,
-                            CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD,
-                            argv);
+    child_pid = clone((int (*)(void *))exec_child,
+                      stack_top,
+                      CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD,
+                      argv);
     if (child_pid == -1) {
         perror("clone");
         return -1;
     }
+    // Handle SIGTERM and pass it on to the child process.
+    signal(SIGTERM, relay_signal);
     int exit_code = 0;
     if (waitpid(child_pid, &exit_code, 0) == -1) {
         perror("waitpid");

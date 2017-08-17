@@ -241,6 +241,10 @@ func (sb *safeBuffer) Bytes() []byte {
 	return sb.buf.Bytes()
 }
 
+func (sb *safeBuffer) String() string {
+	return sb.buf.String()
+}
+
 // logProgress logs a message once a minute until the given context has expired.
 // Used to provide some notion of progress while waiting for external commands.
 func logProgress(label BuildLabel, ctx context.Context) {
@@ -290,8 +294,34 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 	if target != nil {
 		go logProgress(target.Label, ctx)
 	}
-	err := cmd.Run()
+	// Start the command, wait for the timeout & then kill it.
+	// We deliberately don't use CommandContext because it will only send SIGKILL which
+	// child processes can't handle themselves.
+	err := cmd.Start()
+	if err != nil {
+		return nil, nil, err
+	}
+	ch := make(chan error)
+	go runCommand(cmd, ch)
+	select {
+	case err = <-ch:
+		// Do nothing.
+	case <-time.After(timeout):
+		// Send a relatively gentle signal that it can catch.
+		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			log.Notice("Failed to kill subprocess: %s", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+		// Send a more forceful signal.
+		cmd.Process.Kill()
+		err = fmt.Errorf("Timeout exceeded: %s", outerr.String())
+	}
 	return out.Bytes(), outerr.Bytes(), err
+}
+
+// runCommand runs a command and signals on the given channel when it's done.
+func runCommand(cmd *exec.Cmd, ch chan error) {
+	ch <- cmd.Wait()
 }
 
 // ExecWithTimeoutShell runs an external command within a Bash shell.
