@@ -1,3 +1,11 @@
+Version 8.5.0
+-------------
+
+    * Adds an option for lightweight sandboxing of test / build actions.
+      This only works on Linux right now, using a helper binary named please_sandbox
+      which must be installed separately (the .deb is still built in this repo).
+
+
 Version 8.4.4
 -------------
 

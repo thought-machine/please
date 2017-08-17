@@ -1,7 +1,7 @@
 """Miscellaneous rules that aren't language-specific."""
 
 
-def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None,
+def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, labels=None, visibility=None,
             building_description='Building...', hashes=None, timeout=0, binary=False,
             needs_transitive_deps=False, output_is_complete=True, test_only=False, secrets=None,
             requires=None, provides=None, pre_build=None, post_build=None, tools=None):
@@ -63,6 +63,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
                       share the output with others. That also implies that secrets are things like
                       credentials or signing keys and shouldn't be copied directly to outputs, otherwise
                       they might become more widely known.
+      labels (list): Labels to apply to this rule.
       visibility (list): Visibility declaration of this rule
       building_description (str): Description to display to the user while the rule is building.
       hashes (list): List of hashes; if given the outputs must match one of these. They can be
@@ -110,6 +111,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=Non
         deps=deps,
         tools=tools,
         secrets=secrets,
+        labels=labels,
         visibility = visibility,
         output_is_complete=output_is_complete,
         building_description=building_description,
@@ -413,7 +415,8 @@ def _find_git_repo_files(name, output):
 
 
 def fpm_package(name, version, package_type, files=None, dirs=None, links=None, package_name=None,
-                options='', srcs=None, deps=None, visibility=None, labels=None, _apply_deb_deps=False):
+                options='', post_cmds=None, srcs=None, deps=None, visibility=None,
+                labels=None, _apply_deb_deps=False):
     """Defines a rule to build a package using fpm.
 
     Args:
@@ -437,6 +440,7 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
       package_type (str): Type of package to build (deb, rpm, etc)
       package_name (str): Name of package. Defaults to rule name.
       options (str): Extra options to pass to fpm.
+      post_cmds (list): Additional commands to run after the .deb is built.
       srcs (list): Extra sources (it's not necessary to mention entries in 'files' here)
       deps (list): Dependencies
       visibility (list): Visibility specification.
@@ -460,6 +464,8 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
                     (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(links.items()))
     cmds.append('fpm -s dir -t %s -n "%s" -v "%s" %s -p $OUT .' % (package_type, package_name,
                                                                    version, options))
+    if post_cmds:
+        cmds.extend(post_cmds)
     cmd = ' && '.join(cmds)
     build_rule(
         name=name,
@@ -477,7 +483,7 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
 
 
 def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None, options='',
-            srcs=None, deps=None, visibility=None, labels=None):
+            post_cmds=None, srcs=None, deps=None, visibility=None, labels=None):
     """Convenience wrapper around fpm_package that always builds a .deb package.
 
     Args:
@@ -500,6 +506,7 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
       version (str): Version of the package.
       package_name (str): Name of package. Defaults to rule name.
       options (str): Extra options to pass to fpm.
+      post_cmds (list): Additional commands to run after the .deb is built.
       srcs (list): Extra sources (it's not necessary to mention entries in 'files' here)
       deps (list): Dependencies
       visibility (list): Visibility specification.
@@ -514,6 +521,7 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
         links=links,
         package_name=package_name,
         options=options,
+        post_cmds=post_cmds,
         srcs=srcs,
         deps=deps,
         visibility=visibility,

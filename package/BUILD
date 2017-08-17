@@ -52,21 +52,15 @@ fpm_deb(
 )
 
 fpm_deb(
-    name = 'please_sandbox_fpm',
-    package_name = 'please_sandbox',
+    name = 'please_sandbox',
     version = VERSION,
     files = {
         '/usr/bin/please_sandbox': '//tools/sandbox:please_sandbox',
     },
-)
-
-# fpm builds us the deb, but we need to apply the suid bit separately.
-genrule(
-    name = 'please_sandbox',
-    srcs = [':please_sandbox_fpm'],
-    outs = ['please_sandbox.deb'],
-    cmd = [
-        'ar x $SRCS',
+    # fpm builds us the deb, but we need to apply the suid bit separately.
+    post_cmds = [
+        'ar x $OUT',
+        'rm $OUT',
         'tar -xzf data.tar.gz',
         'rm data.tar.gz',
         'tar -czf data.tar.gz --mode="u+s" --owner root --group root usr/bin/please_sandbox',
