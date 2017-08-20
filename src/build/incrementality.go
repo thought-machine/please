@@ -345,6 +345,7 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	}
 	hashBool(h, target.IsBinary)
 	hashBool(h, target.IsTest)
+	hashOptionalBool(h, target.Sandbox)
 
 	// Note that we only hash the current command here; whatever's set in commands that we're not going
 	// to run is uninteresting to us.
@@ -357,7 +358,6 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 			h.Write([]byte(datum.String()))
 		}
 		hashBool(h, target.Containerise)
-		hashBool(h, target.Sandbox)
 		if target.ContainerSettings != nil {
 			e := gob.NewEncoder(h)
 			if err := e.Encode(target.ContainerSettings); err != nil {
@@ -374,16 +374,9 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 	// Should really not be conditional here, but we don't want adding the new flag to
 	// change the hash of every single other target everywhere.
 	// Might consider removing this the next time we peturb the hashing strategy.
-	if target.Stamp {
-		hashBool(h, target.Stamp)
-	}
-	// Similarly here.
-	if target.IsFilegroup {
-		hashBool(h, target.IsFilegroup)
-	}
-	if target.IsHashFilegroup {
-		hashBool(h, target.IsHashFilegroup)
-	}
+	hashOptionalBool(h, target.Stamp)
+	hashOptionalBool(h, target.IsFilegroup)
+	hashOptionalBool(h, target.IsHashFilegroup)
 	for _, require := range target.Requires {
 		h.Write([]byte(require))
 	}
@@ -408,6 +401,12 @@ func hashBool(writer hash.Hash, b bool) {
 		writer.Write(boolTrueHashValue)
 	} else {
 		writer.Write(boolFalseHashValue)
+	}
+}
+
+func hashOptionalBool(writer hash.Hash, b bool) {
+	if b {
+		hashBool(writer, b)
 	}
 }
 

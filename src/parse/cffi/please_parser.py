@@ -229,7 +229,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     if test_only is None:
         test_only = globals_dict['CONFIG'].get('DEFAULT_TESTONLY')
     if sandbox is None:
-        sandbox = bool(globals_dict['CONFIG'].get('TEST_SANDBOX'))
+        sandbox = bool(globals_dict['CONFIG'].get('BUILD_SANDBOX'))
 
     # Further calls to package() are now banned; it's too difficult to ensure pre/post build
     # functions work as expected if the user changes things after adding the target but before

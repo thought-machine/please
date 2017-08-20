@@ -1,3 +1,10 @@
+Version 8.5.2
+-------------
+
+    * Corrections to incrementality calculations when toggling targets between
+      sandboxed and unsandboxed.
+
+
 Version 8.5.1
 -------------
 
