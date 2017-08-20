@@ -12,21 +12,6 @@ function error {
     >&2 echo -e "\033[31m$1\033[0m"
 }
 
-function interpreter_target {
-    if hash $1 2>/dev/null ; then
-        $1 -c 'import cffi' 2> /dev/null
-        if [ $? -eq 0 ]; then
-            echo "//src:please_parser_$1"
-        else
-            warn "$1 doesn't have cffi installed, won't build parser engine for it."
-            warn "You won't be able to build Please packages unless all parsers are present."
-        fi
-    else
-        warn "$1 not found; won't build parser engine for it."
-        warn "You won't be able to build Please packages unless all parsers are present."
-    fi
-}
-
 # Fetch the Go dependencies manually
 notice "Installing Go dependencies..."
 export GOPATH="${PWD}"
@@ -44,37 +29,52 @@ go get github.com/Workiva/go-datastructures/queue
 go get github.com/coreos/go-semver/semver
 
 # Determine which interpreter engines we'll build.
-PYPY="$(interpreter_target pypy)"
-PYTHON2="$(interpreter_target python2)"
-PYTHON3="$(interpreter_target python3)"
-INTERPRETERS="$PYPY $PYTHON2 $PYTHON3"
-if [ -z "${INTERPRETERS// }" ]; then
+INTERPRETERS=""
+BOOTSTRAP_INTERPRETER=""
+
+function detect_interpreter {
+    set +e
+    if hash $1 2>/dev/null ; then
+	INTERPRETERS="$INTERPRETERS //src:please_parser_$1"
+        $1 -c 'import cffi' 2> /dev/null
+        if [ $? -eq 0 ]; then
+	    notice "$1 is a usable interpreter engine"
+	    if [ -z "$BOOTSTRAP_INTERPRETER" ]; then
+		BOOTSTRAP_INTERPRETER="$1"
+	    fi
+        else
+            warn "$1 doesn't have cffi installed, can't be used for bootstrap. Engine will still be built."
+        fi
+    else
+        warn "$1 not found; won't build parser engine for it."
+        warn "You won't be able to build Please packages unless all parsers are present."
+    fi
+    set -e
+}
+
+detect_interpreter "pypy"
+detect_interpreter "python2"
+detect_interpreter "python3"
+if [ -z "$BOOTSTRAP_INTERPRETER" ]; then
     error "No known Python interpreters found, can't build parser engine"
     exit 1
 fi
-# Choose one to build with during bootstrap
-PYPY="${PYPY##*_}"
-PYTHON2="${PYTHON2##*_}"
-PYTHON3="${PYTHON3##*_}"
-INTERPRETER="${PYPY:-${PYTHON2}}"
 
 # Clean out old artifacts.
 rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parser.py
 # Generate the cffi compiled source
-(cd src/parse/cffi && $INTERPRETER cffi_compiler.py defs.h please_parser.py)
+(cd src/parse/cffi && $BOOTSTRAP_INTERPRETER cffi_compiler.py defs.h please_parser.py)
 # Invoke this tool to embed the Python scripts.
 bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
 SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
-ENGINE="${SCRIPT_DIR}/src/parse/cffi/libplease_parser_${INTERPRETER}.*"
-go run src/please.go --engine $ENGINE --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/bootstrap_build.log --log_file_level 4
+ENGINE="${SCRIPT_DIR}/src/parse/cffi/libplease_parser_${BOOTSTRAP_INTERPRETER}.*"
+go run src/please.go --engine $ENGINE --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/bootstrap_build.log
 # Use it to build the rest of the tools that come with it.
-# NB. We can't do the tarballs here because they depend on all the interpreters, which some
-#     users might not have installed.
 notice "Building the tools..."
-plz-out/bin/src/please --plain_output build //src:please //tools --log_file plz-out/log/tools_build.log --log_file_level 4
+plz-out/bin/src/please --plain_output build //src:please //tools --log_file plz-out/log/tools_build.log
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
