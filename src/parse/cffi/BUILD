@@ -1,10 +1,6 @@
-ENGINES = {
-    'pypy': [],
-    'python2': ['//third_party/python/py2:cffi'],
-    'python3': ['//third_party/python/py3:cffi'],
-}
+subinclude('//build_defs:engines')
 
-for interpreter, deps in ENGINES.items():
+for interpreter, deps in ENGINE_DEPENDENCIES.items():
     extension = 'dylib' if CONFIG.OS == 'darwin' else 'so'
     genrule(
         name = 'please_parser_' + interpreter,

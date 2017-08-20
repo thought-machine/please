@@ -1,0 +1,9 @@
+# Contains a list of viable parser engines & their dependencies.
+
+ENGINE_DEPENDENCIES = {
+    'pypy': [],
+    'python2': ['//third_party/python/py2:cffi'],
+    'python3': ['//third_party/python/py3:cffi'],
+}
+
+ENGINES = sorted(ENGINE_DEPENDENCIES)

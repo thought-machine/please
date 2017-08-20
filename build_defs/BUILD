@@ -10,6 +10,12 @@ filegroup(
     visibility = ['//test/...'],
 )
 
+filegroup(
+    name = 'engines',
+    srcs = ['engines.build_defs'],
+    visibility = ['PUBLIC'],
+)
+
 genrule(
     name = 'version',
     srcs = ['//:version'],
