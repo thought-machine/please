@@ -797,11 +797,11 @@ func main() {
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
 	if flagsErr != nil || len(extraArgs) > 0 {
-		argv := strings.Join(os.Args, " ")
+		argv := strings.Join(os.Args[1:], " ")
 		for k, v := range config.Aliases {
 			argv = strings.Replace(argv, k, v, 1)
 		}
-		parser = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, strings.Fields(argv))
+		parser = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, strings.Fields(os.Args[0]+" "+argv))
 		command = activeCommand(parser.Command)
 	}
 
