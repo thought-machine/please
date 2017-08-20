@@ -133,13 +133,15 @@ var opts struct {
 
 	Run struct {
 		Parallel struct {
-			NumTasks       int `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
 			Args []string `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
+			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -341,13 +343,13 @@ var buildFunctions = map[string]func() bool{
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks))
+			os.Exit(run.Parallel(state.Graph, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet))
 		}
 		return false
 	},
 	"sequential": func() bool {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Sequential(state.Graph, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args))
+			os.Exit(run.Sequential(state.Graph, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args, opts.Run.Sequential.Quiet))
 		}
 		return false
 	},
