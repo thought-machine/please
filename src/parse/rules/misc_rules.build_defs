@@ -2,7 +2,7 @@
 
 
 def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, labels=None, visibility=None,
-            building_description='Building...', hashes=None, timeout=0, binary=False,
+            building_description='Building...', hashes=None, timeout=0, binary=False, sandbox=None,
             needs_transitive_deps=False, output_is_complete=True, test_only=False, secrets=None,
             requires=None, provides=None, pre_build=None, post_build=None, tools=None):
     """A general build rule which allows the user to specify a command.
@@ -72,6 +72,10 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, labels=None, v
       binary (bool): True to mark a rule that produces a runnable output. Its output will be placed into
               plz-out/bin instead of plz-out/gen and can be run with 'plz run'. Binary rules
               can only have a single output.
+      sandbox (bool): If True, the build action is sandboxed within a separate network and process
+                      namespace. Only works on Linux and requires plz_sandbox to be installed
+                      separately.
+                      If False, it opts the target out of sandboxing when that is turned on.
       needs_transitive_deps (bool): If True, all transitive dependencies of the rule will be made
                              available to it when it builds (although see below...). By default
                              rules only get their immediate dependencies.
@@ -118,6 +122,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, labels=None, v
         hashes=hashes,
         post_build=post_build,
         binary=binary,
+        sandbox=sandbox,
         build_timeout=timeout,
         needs_transitive_deps=needs_transitive_deps,
         requires=requires,
