@@ -93,7 +93,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 		}
 		// Secrets, again only if they declared any.
 		if len(target.Secrets) > 0 {
-			env = append(env, "SECRETS="+strings.Join(target.Secrets, " "))
+			env = append(env, "SECRETS="+ExpandHomePath(strings.Join(target.Secrets, " ")))
 		}
 		if state.Config.Bazel.Compatibility {
 			// Obviously this is only a subset of the variables Bazel would expose, but there's
