@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path"
 	"runtime"
@@ -75,6 +77,7 @@ var opts struct {
 	} `group:"Options that enable / disable certain features"`
 
 	Profile          string `long:"profile" hidden:"true" description:"Write profiling output to this file"`
+	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	NoCacheCleaner   bool   `description:"Don't start a cleaning process for the directory cache" no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
@@ -807,6 +810,11 @@ func main() {
 		command = activeCommand(parser.Command)
 	}
 
+	if opts.ProfilePort != 0 {
+		go func() {
+			log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
+		}()
+	}
 	if opts.Profile != "" {
 		f, err := os.Create(opts.Profile)
 		if err != nil {
