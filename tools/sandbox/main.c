@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
     if (argc < 2) {
         fputs("please_sandbox implements sandboxing for Please.\n", stderr);
         fputs("It takes no flags, it simply executes the command given as arguments.\n", stderr);
-        fputs("Usage: plz_contain command args...\n", stderr);
+        fputs("Usage: plz_sandbox command args...\n", stderr);
         exit(1);
     }
     return clone_and_contain(&argv[1]);
