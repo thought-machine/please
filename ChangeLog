@@ -1,3 +1,9 @@
+Version 8.5.4
+-------------
+
+    * Separate build & test sandboxing more correctly.
+
+
 Version 8.5.3
 -------------
 
