@@ -19,9 +19,6 @@
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
-#include <sys/wait.h>
-
-pid_t child_pid = -1;
 
 // drop_root is ported more or less directly from Chrome's chrome-sandbox helper.
 // It simply drops us back to whatever user invoked us originally (i.e. before suid
@@ -84,8 +81,11 @@ int lo_up() {
     return 0;
 }
 
-// exec_child calls execvp(3) to run the eventual child process.
-int exec_child(char* argv[]) {
+// contain separates the process into new namespaces to sandbox it.
+int contain(char* argv[]) {
+    if (unshare(CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC) != 0) {
+        return 1;
+    }
     if (lo_up() != 0) {
         return 1;
     }
@@ -95,47 +95,11 @@ int exec_child(char* argv[]) {
     return execvp(argv[0], argv);
 }
 
-// relay_signal passes received signals onto the spawned child process.
-void relay_signal(int sig) {
-    if (child_pid != -1) {
-        kill(child_pid, sig);
-    }
-}
-
-// clone_and_contain calls clone(2) to isolate and contain the network.
-int clone_and_contain(char* argv[]) {
-    // Unsure exactly how big this needs to be, but 20k is probably enough
-    // given that we don't do an awful lot in the child process.
-    const int STACK_SIZE = 20 * 1024;
-    char* child_stack = malloc(STACK_SIZE);
-    if (child_stack == NULL) {
-        perror("malloc");
-        exit(3);
-    }
-    char* stack_top = child_stack + STACK_SIZE;  // assume stack grows downwards
-    child_pid = clone((int (*)(void *))exec_child,
-                      stack_top,
-                      CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD,
-                      argv);
-    if (child_pid == -1) {
-        perror("clone");
-        return -1;
-    }
-    // Handle SIGTERM and pass it on to the child process.
-    signal(SIGTERM, relay_signal);
-    int exit_code = 0;
-    if (waitpid(child_pid, &exit_code, 0) == -1) {
-        perror("waitpid");
-        return -1;
-    }
-    return WEXITSTATUS(exit_code);
-}
-
 #else
 
-// On non-Linux systems clone_and_contain simply execs a subprocess.
+// On non-Linux systems contain simply execs a subprocess.
 // It's not really expected to be used there, this is simply to make it compile.
-int clone_and_contain(char* argv[]) {
+int contain(char* argv[]) {
     return execvp(argv[0], argv);
 }
 
@@ -149,5 +113,5 @@ int main(int argc, char* argv[]) {
         fputs("Usage: plz_sandbox command args...\n", stderr);
         exit(1);
     }
-    return clone_and_contain(&argv[1]);
+    return contain(&argv[1]);
 }
