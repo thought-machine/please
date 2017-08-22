@@ -232,7 +232,7 @@ def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, vis
         deps=[':_%s#lib' % name],
         visibility=visibility,
         container=container,
-        sandbox=sandbox,
+        test_sandbox=sandbox,
         labels=labels,
         test_timeout=timeout,
         flaky=flaky,

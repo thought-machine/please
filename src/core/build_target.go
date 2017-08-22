@@ -75,8 +75,10 @@ type BuildTarget struct {
 	TestOnly bool `name:"test_only"`
 	// True if we're going to containerise the test.
 	Containerise bool `name:"container"`
-	// True if we're going to sandbox the test.
+	// True if the build action is sandboxed.
 	Sandbox bool
+	// True if the test action is sandboxed.
+	TestSandbox bool `name:"test_sandbox"`
 	// True if the target is a test and has no output file.
 	// Default is false, meaning all tests must produce test.results as output.
 	NoTestOutput bool `name:"no_test_output"`

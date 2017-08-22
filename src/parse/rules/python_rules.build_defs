@@ -259,7 +259,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         binary=True,
         test=True,
         container=container,
-        sandbox=sandbox,
+        test_sandbox=sandbox,
         building_description="Building pex...",
         visibility=visibility,
         test_timeout=timeout,

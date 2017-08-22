@@ -187,7 +187,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
         needs_transitive_deps=needs_transitive_deps,
         requires=requires,
         container=container,
-        sandbox=sandbox,
+        test_sandbox=sandbox,
         no_test_output=no_test_output,
         flaky=flaky,
     )

@@ -391,7 +391,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         test_cmd='$TEST %s | tee test.results' % flags,
         visibility=visibility,
         container=container,
-        sandbox=sandbox,
+        test_sandbox=sandbox,
         test_timeout=timeout,
         flaky=flaky,
         test_outputs=test_outputs,

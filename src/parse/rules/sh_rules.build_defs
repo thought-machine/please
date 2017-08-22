@@ -133,7 +133,7 @@ def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=N
         test_outputs=test_outputs,
         test_timeout=timeout,
         container=container,
-        sandbox=sandbox,
+        test_sandbox=sandbox,
     )
 
 

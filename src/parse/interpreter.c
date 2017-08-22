@@ -59,7 +59,7 @@ int InitialiseInterpreter(char* parser_location) {
     return 3;  // This happens if Python is available but cffi isn't.
   }
   reg("_add_target", "size_t (*)(size_t, char*, char*, char*, uint8, uint8, uint8, uint8, uint8, "
-      "uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*)", AddTarget);
+      "uint8, uint8, uint8, uint8, uint8, uint8, uint8, int64, int64, int64, char*)", AddTarget);
   reg("_add_src", "char* (*)(size_t, char*)", AddSource);
   reg("_add_data", "char* (*)(size_t, char*)", AddData);
   reg("_add_dep", "char* (*)(size_t, char*)", AddDep);

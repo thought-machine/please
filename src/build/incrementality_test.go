@@ -40,6 +40,7 @@ var KnownFields = map[string]bool{
 	"outputs":                     true,
 	"namedOutputs":                true,
 	"Licences":                    true,
+	"Sandbox":                     true,
 	"Tools":                       true,
 	"namedTools":                  true,
 	"Secrets":                     true,
@@ -49,7 +50,7 @@ var KnownFields = map[string]bool{
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
 	"Containerise":      true,
-	"Sandbox":           true,
+	"TestSandbox":       true,
 	"ContainerSettings": true,
 
 	// These would ideally not contribute to the hash, but we need that at present

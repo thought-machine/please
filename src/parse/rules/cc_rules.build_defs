@@ -461,6 +461,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         test_outputs=test_outputs,
         test_timeout=timeout,
         container=container,
+        test_sandbox=sandbox,
     )
 
 
