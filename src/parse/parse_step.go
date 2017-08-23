@@ -206,12 +206,22 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 
 	for _, target := range pkg.Targets {
 		state.Graph.AddTarget(target)
-		for _, out := range target.DeclaredOutputs() {
-			pkg.MustRegisterOutput(out, target)
-		}
-		for _, out := range target.TestOutputs {
-			if !core.IsGlob(out) {
+		if target.IsFilegroup {
+			// At least register these guys as outputs.
+			// It's difficult to handle non-file sources because we don't know if they're
+			// parsed yet - recall filegroups are a special case for this since they don't
+			// explicitly declare their outputs but can re-output other rules' outputs.
+			for _, src := range target.AllLocalSources() {
+				pkg.MustRegisterOutput(src, target)
+			}
+		} else {
+			for _, out := range target.DeclaredOutputs() {
 				pkg.MustRegisterOutput(out, target)
+			}
+			for _, out := range target.TestOutputs {
+				if !core.IsGlob(out) {
+					pkg.MustRegisterOutput(out, target)
+				}
 			}
 		}
 	}
