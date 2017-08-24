@@ -3,7 +3,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -47,7 +46,7 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 	command = append(command, "-v", testDir+":/tmp/test_in", "-w", "/tmp/test_in", containerName, "bash", "-o", "pipefail", "-c", replacedCmd)
 	log.Debug("Running containerised test %s: %s", target.Label, strings.Join(command, " "))
 	_, out, err := core.ExecWithTimeout(target, target.TestDir(), nil, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, command)
-	retrieveResultsAndRemoveContainer(target, cidfile, err == context.DeadlineExceeded)
+	retrieveResultsAndRemoveContainer(target, cidfile, err == nil)
 	return out, err
 }
 
