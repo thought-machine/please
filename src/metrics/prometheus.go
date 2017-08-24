@@ -31,6 +31,7 @@ type metrics struct {
 	newMetrics                                    bool
 	ticker                                        *time.Ticker
 	cancelled                                     bool
+	perTest                                       bool
 	errors                                        int
 	pushes                                        int
 	timeout                                       time.Duration
@@ -50,7 +51,7 @@ func InitFromConfig(config *core.Configuration) {
 			}
 		}()
 		m = initMetrics(config.Metrics.PushGatewayURL.String(), time.Duration(config.Metrics.PushFrequency),
-			time.Duration(config.Metrics.PushTimeout), config.CustomMetricLabels)
+			time.Duration(config.Metrics.PushTimeout), config.CustomMetricLabels, config.Metrics.PerTest)
 		prometheus.MustRegister(m.buildCounter)
 		prometheus.MustRegister(m.cacheCounter)
 		prometheus.MustRegister(m.testCounter)
@@ -62,7 +63,7 @@ func InitFromConfig(config *core.Configuration) {
 
 // initMetrics initialises a new metrics instance.
 // This is deliberately not exposed but is useful for testing.
-func initMetrics(url string, frequency, timeout time.Duration, customLabels map[string]string) *metrics {
+func initMetrics(url string, frequency, timeout time.Duration, customLabels map[string]string, perTest bool) *metrics {
 	u, err := user.Current()
 	if err != nil {
 		log.Warning("Can't determine current user name for metrics")
@@ -80,6 +81,7 @@ func initMetrics(url string, frequency, timeout time.Duration, customLabels map[
 		url:     url,
 		timeout: timeout,
 		ticker:  time.NewTicker(frequency),
+		perTest: perTest,
 	}
 
 	// Count of builds for each target.
@@ -101,7 +103,7 @@ func initMetrics(url string, frequency, timeout time.Duration, customLabels map[
 		Name:        "test_runs",
 		Help:        "Count of number of times we run each test",
 		ConstLabels: constLabels,
-	}, []string{"pass"})
+	}, addTest([]string{"pass"}, perTest))
 
 	// Build durations for each target
 	m.buildHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -125,11 +127,19 @@ func initMetrics(url string, frequency, timeout time.Duration, customLabels map[
 		Help:        "Durations to run tests",
 		Buckets:     prometheus.LinearBuckets(0, 1, 100),
 		ConstLabels: constLabels,
-	}, []string{})
+	}, addTest([]string{}, perTest))
 
 	go m.keepPushing()
 
 	return m
+}
+
+// addTest adds a per-test label to the given slice.
+func addTest(s []string, perTest bool) []string {
+	if perTest {
+		return append(s, "test")
+	}
+	return s
 }
 
 // Stop shuts down the metrics and ensures the final ones are sent before returning.
@@ -157,11 +167,19 @@ func (m *metrics) record(target *core.BuildTarget, duration time.Duration) {
 	if target.Results.NumTests > 0 {
 		// Tests have run
 		m.cacheCounter.WithLabelValues(b(target.Results.Cached)).Inc()
-		m.testCounter.WithLabelValues(b(target.Results.Failed == 0)).Inc()
+		if m.perTest {
+			m.testCounter.WithLabelValues(b(target.Results.Failed == 0), target.Label.String()).Inc()
+		} else {
+			m.testCounter.WithLabelValues(b(target.Results.Failed == 0)).Inc()
+		}
 		if target.Results.Cached {
 			m.cacheHistogram.WithLabelValues().Observe(duration.Seconds())
 		} else if target.Results.Failed == 0 {
-			m.testHistogram.WithLabelValues().Observe(duration.Seconds())
+			if m.perTest {
+				m.testHistogram.WithLabelValues(target.Label.String()).Observe(duration.Seconds())
+			} else {
+				m.testHistogram.WithLabelValues().Observe(duration.Seconds())
+			}
 		}
 	} else {
 		// Build has run

@@ -16,7 +16,7 @@ const timeout = 10000000  // Long timeout so it doesn't affect things
 var label = core.BuildLabel{PackageName: "src/metrics", Name: "prometheus"}
 
 func TestNoMetrics(t *testing.T) {
-	m := initMetrics(url, verySlow, timeout, nil)
+	m := initMetrics(url, verySlow, timeout, nil, true)
 	assert.Equal(t, 0, m.errors)
 	assert.Equal(t, 0, m.pushes)
 	m.stop()
@@ -24,7 +24,7 @@ func TestNoMetrics(t *testing.T) {
 }
 
 func TestSomeMetrics(t *testing.T) {
-	m := initMetrics(url, verySlow, timeout, nil)
+	m := initMetrics(url, verySlow, timeout, nil, true)
 	assert.Equal(t, 0, m.errors)
 	assert.Equal(t, 0, m.pushes)
 	m.record(core.NewBuildTarget(label), time.Millisecond)
@@ -33,7 +33,7 @@ func TestSomeMetrics(t *testing.T) {
 }
 
 func TestTargetStates(t *testing.T) {
-	m := initMetrics(url, verySlow, timeout, nil)
+	m := initMetrics(url, verySlow, timeout, nil, true)
 	assert.Equal(t, 0, m.errors)
 	assert.Equal(t, 0, m.pushes)
 	target := core.NewBuildTarget(label)
@@ -53,7 +53,7 @@ func TestTargetStates(t *testing.T) {
 }
 
 func TestPushAttempts(t *testing.T) {
-	m := initMetrics(url, 1, 1000, nil) // Fast push attempts
+	m := initMetrics(url, 1, 1000, nil, true) // Fast push attempts
 	assert.Equal(t, 0, m.errors)
 	assert.Equal(t, 0, m.pushes)
 	m.record(core.NewBuildTarget(label), time.Millisecond)
@@ -67,7 +67,7 @@ func TestPushAttempts(t *testing.T) {
 func TestCustomLabels(t *testing.T) {
 	m := initMetrics(url, verySlow, timeout, map[string]string{
 		"mylabel": "echo hello",
-	})
+	}, true)
 	// It's a little bit fiddly to observe that the const label has been set as expected.
 	c := m.cacheCounter.WithLabelValues("false")
 	assert.Contains(t, c.Desc().String(), `mylabel="hello"`)
@@ -77,7 +77,7 @@ func TestCustomLabelsShlex(t *testing.T) {
 	// Naive splitting will not produce good results here.
 	m := initMetrics(url, verySlow, timeout, map[string]string{
 		"mylabel": "bash -c 'echo hello'",
-	})
+	}, false)
 	c := m.cacheCounter.WithLabelValues("false")
 	assert.Contains(t, c.Desc().String(), `mylabel="hello"`)
 }
@@ -86,7 +86,7 @@ func TestCustomLabelsShlexInvalid(t *testing.T) {
 	assert.Panics(t, func() {
 		initMetrics(url, verySlow, timeout, map[string]string{
 			"mylabel": "bash -c 'echo hello", // missing trailing quote
-		})
+		}, false)
 	})
 }
 
@@ -94,7 +94,7 @@ func TestCustomLabelsCommandFails(t *testing.T) {
 	assert.Panics(t, func() {
 		initMetrics(url, verySlow, timeout, map[string]string{
 			"mylabel": "wibble",
-		})
+		}, false)
 	})
 }
 
@@ -102,7 +102,7 @@ func TestCustomLabelsCommandNewlines(t *testing.T) {
 	assert.Panics(t, func() {
 		initMetrics(url, verySlow, timeout, map[string]string{
 			"mylabel": "echo 'hello\nworld\n'",
-		})
+		}, true)
 	})
 }
 
