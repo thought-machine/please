@@ -263,7 +263,10 @@ func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode
 	// Change grpc to log using our implementation
 	grpclog.SetLogger(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", url)
-	opts := []grpc.DialOption{grpc.WithTimeout(cache.timeout)}
+	opts := []grpc.DialOption{
+		grpc.WithTimeout(cache.timeout),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(cache.maxMsgSize), grpc.MaxCallSendMsgSize(cache.maxMsgSize)),
+	}
 	if config.Cache.RpcPublicKey != "" || config.Cache.RpcCACert != "" || config.Cache.RpcSecure {
 		auth, err := loadAuth(config.Cache.RpcCACert, config.Cache.RpcPublicKey, config.Cache.RpcPrivateKey)
 		if err != nil {

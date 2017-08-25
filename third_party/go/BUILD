@@ -63,7 +63,7 @@ go_get(
 go_get(
     name = 'context',
     get = 'golang.org/x/net/context',
-    revision = '7394c112eae4dba7e96bfcfe738e6373d61772b4',
+    revision = '57efc9c3d9f91fb3277f8da1cff370539c4d3dc5',
 )
 
 go_get(
@@ -71,14 +71,14 @@ go_get(
     exported_deps = [':context'],
     get = 'google.golang.org/grpc',
     install = ['google.golang.org/grpc/health'],
-    revision = 'v1.2.1',
+    revision = 'v1.5.2',
     deps = [':protobuf'],
 )
 
 go_get(
     name = 'protobuf',
     get = 'github.com/golang/protobuf/proto',
-    revision = '2bba0603135d7d7f5cb73b2125beeda19c09f4ef',
+    revision = 'ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e',
 )
 
 go_get(

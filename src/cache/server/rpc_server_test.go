@@ -40,9 +40,11 @@ func startServer(port int, auth bool, readonlyCerts, writableCerts string) *grpc
 }
 
 func buildClient(t *testing.T, port int, auth bool) pb.RpcCacheClient {
+	const maxSize = 10 * 1024 * 1024
+	sizeOpts := grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxSize), grpc.MaxCallSendMsgSize(maxSize))
 	url := fmt.Sprintf("localhost:%d", port)
 	if !auth {
-		conn, err := grpc.Dial(url, grpc.WithInsecure(), grpc.WithTimeout(5*time.Second))
+		conn, err := grpc.Dial(url, grpc.WithInsecure(), grpc.WithTimeout(5*time.Second), sizeOpts)
 		assert.NoError(t, err)
 		return pb.NewRpcCacheClient(conn)
 	}
@@ -55,7 +57,7 @@ func buildClient(t *testing.T, port int, auth bool) pb.RpcCacheClient {
 		RootCAs:      x509.NewCertPool(),
 	}
 	assert.True(t, config.RootCAs.AppendCertsFromPEM(ca))
-	conn, err := grpc.Dial(url, grpc.WithTransportCredentials(credentials.NewTLS(&config)), grpc.WithTimeout(5*time.Second))
+	conn, err := grpc.Dial(url, grpc.WithTransportCredentials(credentials.NewTLS(&config)), grpc.WithTimeout(5*time.Second), sizeOpts)
 	assert.NoError(t, err)
 	return pb.NewRpcCacheClient(conn)
 }
