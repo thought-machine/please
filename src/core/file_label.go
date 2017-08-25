@@ -66,6 +66,44 @@ func (label SystemFileLabel) String() string {
 	return label.Path
 }
 
+// SystemPathLabel represents system dependency somewhere on PATH, which is not managed by the build system.
+type SystemPathLabel struct {
+	Name string
+	Path []string
+}
+
+func (label SystemPathLabel) Paths(graph *BuildGraph) []string {
+	return label.FullPaths(graph)
+}
+
+func (label SystemPathLabel) FullPaths(graph *BuildGraph) []string {
+	// non-specified paths like "bash" are turned into absolute ones based on plz's PATH.
+	// awkwardly this means we can't use the builtin exec.LookPath because the current
+	// environment variable isn't necessarily the same as what's in our config.
+	tool, err := LookPath(label.Name, label.Path)
+	if err != nil {
+		// This is a bit awkward, we can't signal an error here sensibly.
+		panic(err)
+	}
+	return []string{tool}
+}
+
+func (label SystemPathLabel) LocalPaths(graph *BuildGraph) []string {
+	return label.FullPaths(graph)
+}
+
+func (label SystemPathLabel) Label() *BuildLabel {
+	return nil
+}
+
+func (label SystemPathLabel) nonOutputLabel() *BuildLabel {
+	return nil
+}
+
+func (label SystemPathLabel) String() string {
+	return label.Name
+}
+
 // NamedOutputLabel represents a reference to a subset of named outputs from a rule.
 // The rule must have declared those as a named group.
 type NamedOutputLabel struct {

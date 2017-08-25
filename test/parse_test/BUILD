@@ -81,3 +81,11 @@ go_test(
     srcs = ['additional_output_test.go'],
     data = [':_gen_output'],
 )
+
+# Test for a target with a missing tool; we should still be able to parse the package.
+genrule(
+    name = 'missing_tool',
+    cmd = '$TOOL --version',
+    labels = ['manual'],
+    tools = ['python4.7'],
+)

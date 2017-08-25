@@ -672,14 +672,7 @@ func AddNamedTool(cTarget uintptr, cName *C.char, cTool *C.char) *C.char {
 // parseTool parses a string into a tool; it's similar to sources but has slightly different semantics.
 func parseTool(target *core.BuildTarget, tool string) (core.BuildInput, error) {
 	if !core.LooksLikeABuildLabel(tool) && !strings.Contains(tool, "/") {
-		// non-specified paths like "bash" are turned into absolute ones based on plz's PATH.
-		// awkwardly this means we can't use the builtin exec.LookPath because the current
-		// environment variable isn't necessarily the same as what's in our config.
-		tool, err := core.LookPath(tool, core.State.Config.Build.Path)
-		if err != nil {
-			return nil, err
-		}
-		return parseSource(tool, target.Label.PackageName, true)
+		return core.SystemPathLabel{Name: tool, Path: core.State.Config.Build.Path}, nil
 	}
 	return parseSource(tool, target.Label.PackageName, true)
 }
