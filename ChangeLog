@@ -1,3 +1,9 @@
+Version 8.6.1
+-------------
+
+    * No code change, but is now compiled with Go 1.9.
+
+
 Version 8.6.0
 -------------
 
