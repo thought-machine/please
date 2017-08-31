@@ -585,6 +585,23 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
     )
 
 
+def decompose(label):
+    """Decomposes a build label into the package and name parts.
+
+    Args:
+      label (str): A build label in either relative or absolute form.
+    Raises:
+      ValueError: if the given label is not a correctly formatted build label.
+    """
+    if label.startswith(':'):
+        return get_base_path(), label.lstrip(':')
+    elif label.startswith('//'):
+        package, _, name = label.partition(':')
+        return package.lstrip('/'), name
+    else:
+        raise ValueError("%s doesn't look like a build label" % label)
+
+
 def _test_size_and_timeout(size, timeout, labels):
     """Resolves size and timeout arguments for a test. For Buck compatibility."""
     if size:
