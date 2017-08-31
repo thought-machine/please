@@ -1,3 +1,14 @@
+Version 8.7.0
+-------------
+
+    * The protoc_flags argument to proto_library now applies transitively to any
+      further protoc_library rules that depend on it, in a similar fashion to C++ rules.
+      Since protos always need all transitive dependencies to compile they typically
+      require transitive compiler flags as well.
+    * Added a decompose function to the build builtins which breaks a build label into
+      its package and name parts.
+
+
 Version 8.6.1
 -------------
 

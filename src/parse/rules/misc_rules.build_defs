@@ -588,6 +588,9 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
 def decompose(label):
     """Decomposes a build label into the package and name parts.
 
+    Consider carefully when you should use this - command replacements may be more appropriate.
+    Most rules should be able to accept labels without having to know anything about their structure.
+
     Args:
       label (str): A build label in either relative or absolute form.
     Raises:
