@@ -22,13 +22,16 @@ if [ -f "$TARGET" ]; then
     exec "$TARGET" $@
 fi
 
-URL_BASE=`grep -i "^downloadlocation" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
+URL_BASE="`grep -i "^downloadlocation" .plzconfig | cut -d '=' -f 2 | tr -d ' '`"
 if [ -z "$URL_BASE" ]; then
     URL_BASE=$DEFAULT_URL_BASE
 fi
 URL_BASE="${URL_BASE%/}"
 
-VERSION=`grep -i "^version" .plzconfig | cut -d '=' -f 2 | tr -d ' '`
+VERSION="`grep -i "^version" .plzconfig`"
+VERSION="${VERSION#*=}"    # Strip until after first =
+VERSION="${VERSION/ /}"    # Remove all spaces
+VERSION="${VERSION#>=}"    # Strip any initial >=
 if [ -z "$VERSION" ]; then
     echo -e "${YELLOW}Can't determine version, will use latest.${RESET}"
     VERSION=`curl -fsSL ${URL_BASE}/latest_version`

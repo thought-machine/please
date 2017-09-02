@@ -1,3 +1,9 @@
+Version 8.7.2
+-------------
+
+    * Fixed some bugs around handling >= in version specifier.
+
+
 Version 8.7.1
 -------------
 

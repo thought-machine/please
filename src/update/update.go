@@ -45,7 +45,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 		return
 	}
 	word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
-	log.Warning("%s to Please version %s (currently %s)", word, config.Please.Version, core.PleaseVersion)
+	log.Warning("%s to Please version %s (currently %s)", word, config.Please.Version.VersionString(), core.PleaseVersion)
 
 	// Must lock here so that the update process doesn't race when running two instances
 	// simultaneously.
@@ -53,7 +53,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	defer core.ReleaseRepoLock()
 
 	// If the destination exists and the user passed --force, remove it to force a redownload.
-	newDir := core.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.String()))
+	newDir := core.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.VersionString()))
 	log.Notice("%s", newDir)
 	if forceUpdate && core.PathExists(newDir) {
 		if err := os.RemoveAll(newDir); err != nil {
@@ -108,13 +108,13 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 // It returns the new location and dies on failure.
 func downloadAndLinkPlease(config *core.Configuration) string {
 	config.Please.Location = core.ExpandHomePath(config.Please.Location)
-	newPlease := path.Join(config.Please.Location, config.Please.Version.String(), "please")
+	newPlease := path.Join(config.Please.Location, config.Please.Version.VersionString(), "please")
 
 	if !core.PathExists(newPlease) {
 		downloadPlease(config)
 	}
-	if !verifyNewPlease(newPlease, config.Please.Version.String()) {
-		cleanDir(path.Join(config.Please.Location, config.Please.Version.String()))
+	if !verifyNewPlease(newPlease, config.Please.Version.VersionString()) {
+		cleanDir(path.Join(config.Please.Location, config.Please.Version.VersionString()))
 		log.Fatalf("Not continuing.")
 	}
 	linkNewPlease(config)
@@ -122,7 +122,7 @@ func downloadAndLinkPlease(config *core.Configuration) string {
 }
 
 func downloadPlease(config *core.Configuration) {
-	newDir := path.Join(config.Please.Location, config.Please.Version.String())
+	newDir := path.Join(config.Please.Location, config.Please.Version.VersionString())
 	if err := os.MkdirAll(newDir, core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory %s: %s", newDir, err)
 	}
@@ -144,7 +144,7 @@ func downloadPlease(config *core.Configuration) {
 	}
 
 	url := strings.TrimSuffix(config.Please.DownloadLocation.String(), "/")
-	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.gz", url, runtime.GOOS, runtime.GOARCH, config.Please.Version, config.Please.Version)
+	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.gz", url, runtime.GOOS, runtime.GOARCH, config.Please.Version.VersionString(), config.Please.Version.VersionString())
 	log.Info("Downloading %s", url)
 	response, err := http.Get(url)
 	if err != nil {
@@ -176,7 +176,7 @@ func downloadPlease(config *core.Configuration) {
 }
 
 func linkNewPlease(config *core.Configuration) {
-	if files, err := ioutil.ReadDir(path.Join(config.Please.Location, config.Please.Version.String())); err != nil {
+	if files, err := ioutil.ReadDir(path.Join(config.Please.Location, config.Please.Version.VersionString())); err != nil {
 		log.Fatalf("Failed to read directory: %s", err)
 	} else {
 		for _, file := range files {
@@ -186,7 +186,7 @@ func linkNewPlease(config *core.Configuration) {
 }
 
 func linkNewFile(config *core.Configuration, file string) {
-	newDir := path.Join(config.Please.Location, config.Please.Version.String())
+	newDir := path.Join(config.Please.Location, config.Please.Version.VersionString())
 	globalFile := path.Join(config.Please.Location, file)
 	downloadedFile := path.Join(newDir, file)
 	if err := os.RemoveAll(globalFile); err != nil {

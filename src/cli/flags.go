@@ -177,6 +177,11 @@ func (v Version) String() string {
 	return v.Version.String()
 }
 
+// VersionString returns just the version, without any preceding >=.
+func (v *Version) VersionString() string {
+	return v.Version.String()
+}
+
 // Semver converts a Version to a semver.Version
 func (v *Version) Semver() semver.Version {
 	return v.Version
