@@ -1,3 +1,10 @@
+Version 8.7.3
+-------------
+
+    * Fix for Debian's pip mess; we now attempt to pass --system to fix it
+      if we can identify that we're running on Debian and using pip3.
+
+
 Version 8.7.2
 -------------
 
