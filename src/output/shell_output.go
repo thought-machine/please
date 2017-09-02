@@ -87,7 +87,9 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 			log.Fatalf("Target %s doesn't exist in build graph", label)
 		} else if (state.NeedHashesOnly || state.PrepareOnly) && target.State() == core.Stopped {
 			// Do nothing, we will output about this shortly.
-		} else if shouldBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 {
+		} else if shouldBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
+			// N.B. Currently targets that are added post-build are excluded here, because in some legit cases this
+			//      check can fail incorrectly. It'd be better to verify this more precisely though.
 			cycle := graphCycleMessage(state.Graph, target)
 			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, cycle)
 		}

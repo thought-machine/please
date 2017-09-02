@@ -61,9 +61,9 @@ var KnownFields = map[string]bool{
 
 	// These fields we have thought about and decided that they shouldn't contribute to the
 	// hash because they don't affect the actual output of the target.
+	"AddedPostBuild":      true,
 	"Flakiness":           true,
 	"NoTestOutput":        true,
-	"SkipCache":           true,
 	"BuildTimeout":        true,
 	"TestTimeout":         true,
 	"state":               true,

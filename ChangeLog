@@ -1,3 +1,10 @@
+Version 8.7.1
+-------------
+
+    * Fixed a bug where building the :all or /... pseudo-targets would fail when
+      post-build functions ran and require/provide meant not all the targets were needed.
+
+
 Version 8.7.0
 -------------
 

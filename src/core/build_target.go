@@ -98,6 +98,8 @@ type BuildTarget struct {
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a hash_filegroup.
 	IsHashFilegroup bool `print:"false"`
+	// Marks that the target was added in a post-build function.
+	AddedPostBuild bool `print:"false"`
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings `name:"container"`
 	// Results of test, if it is one

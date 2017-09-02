@@ -396,6 +396,7 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTra
 	if core.State.Graph.Package(pkg.Name) != nil {
 		// Package already added, so we're probably in a post-build function. Add target directly to graph now.
 		log.Debug("Adding new target %s directly to graph", target.Label)
+		target.AddedPostBuild = true
 		core.State.Graph.AddTarget(target)
 	}
 	return target
