@@ -1,3 +1,9 @@
+Version 8.7.4
+-------------
+
+    * Small fix for `maven_jar`; output filegroup is correctly tagged as binary.
+
+
 Version 8.7.3
 -------------
 

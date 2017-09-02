@@ -676,7 +676,7 @@ func createPlzOutGo() {
 // symlinkIfNotExists creates newDir as a link to oldDir if it doesn't already exist.
 func symlinkIfNotExists(oldDir, newDir string) {
 	if !core.PathExists(newDir) {
-		if err := os.Symlink(oldDir, newDir); err != nil {
+		if err := os.Symlink(oldDir, newDir); err != nil && !os.IsExist(err) {
 			log.Warning("Failed to create %s: %s", newDir, err)
 		}
 	}

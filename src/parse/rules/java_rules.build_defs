@@ -513,6 +513,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         visibility = visibility,
         test_only=test_only,
         output_is_complete = False,
+        binary = binary,
     )
 
 
