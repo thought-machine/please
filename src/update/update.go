@@ -54,7 +54,6 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 
 	// If the destination exists and the user passed --force, remove it to force a redownload.
 	newDir := core.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.VersionString()))
-	log.Notice("%s", newDir)
 	if forceUpdate && core.PathExists(newDir) {
 		if err := os.RemoveAll(newDir); err != nil {
 			log.Fatalf("Failed to remove existing directory: %s", err)
@@ -79,7 +78,12 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 	if config.Please.Version.Semver() == core.PleaseVersion {
 		return false // Version matches, nothing to do here.
 	} else if config.Please.Version.IsGTE && config.Please.Version.LessThan(core.PleaseVersion) {
-		return false // Version specified is >= and we are above it, nothing to do here.
+		if !updateCommand {
+			return false // Version specified is >= and we are above it, nothing to do unless it's `plz update`
+		}
+		// Find the latest available version. Update if it's newer than the current one.
+		config.Please.Version = *findLatestVersion(config.Please.DownloadLocation.String())
+		return config.Please.Version.Semver() != core.PleaseVersion
 	} else if (!updatesEnabled || !config.Please.SelfUpdate) && !updateCommand {
 		// Update is required but has been skipped (--noupdate or whatever)
 		word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)

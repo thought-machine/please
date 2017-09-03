@@ -99,6 +99,7 @@ func TestShouldUpdateGTEVersion(t *testing.T) {
 	c := makeConfig("shouldupdate")
 	c.Please.Version.UnmarshalFlag(">=2.0.0")
 	assert.False(t, shouldUpdate(c, true, false))
+	assert.True(t, shouldUpdate(c, true, true))
 }
 
 func TestShouldUpdateNoDownloadLocation(t *testing.T) {
