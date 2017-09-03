@@ -139,6 +139,12 @@ func TestDownloadAndLinkPleaseBadVersion(t *testing.T) {
 	assert.False(t, core.PathExists(path.Join(c.Please.Location, c.Please.Version.String())))
 }
 
+func TestFilterArgs(t *testing.T) {
+	assert.Equal(t, []string{"plz", "update"}, filterArgs(false, []string{"plz", "update"}))
+	assert.Equal(t, []string{"plz", "update", "--force"}, filterArgs(false, []string{"plz", "update", "--force"}))
+	assert.Equal(t, []string{"plz", "update"}, filterArgs(true, []string{"plz", "update", "--force"}))
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	vCurrent := fmt.Sprintf("/%s_%s/%s/please_%s.tar.gz", runtime.GOOS, runtime.GOARCH, core.PleaseVersion, core.PleaseVersion)
 	v42 := fmt.Sprintf("/%s_%s/42.0.0/please_42.0.0.tar.gz", runtime.GOOS, runtime.GOARCH)

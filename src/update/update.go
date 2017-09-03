@@ -65,7 +65,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	newPlease := downloadAndLinkPlease(config)
 
 	// Now run the new one.
-	args := append([]string{newPlease}, os.Args[1:]...)
+	args := filterArgs(forceUpdate, append([]string{newPlease}, os.Args[1:]...))
 	log.Info("Executing %s", strings.Join(args, " "))
 	if err := syscall.Exec(newPlease, args, os.Environ()); err != nil {
 		log.Fatalf("Failed to exec new Please version %s: %s", newPlease, err)
@@ -295,4 +295,19 @@ func writeTarFile(hdr *tar.Header, r io.Reader, destination string) error {
 	defer f.Close()
 	_, err = io.Copy(f, r)
 	return err
+}
+
+// filterArgs filters out the --force update if forced updates were specified.
+// This is important so that we don't end up in a loop of repeatedly forcing re-downloads.
+func filterArgs(forceUpdate bool, args []string) []string {
+	if !forceUpdate {
+		return args
+	}
+	ret := args[:0]
+	for _, arg := range args {
+		if arg != "--force" {
+			ret = append(ret, arg)
+		}
+	}
+	return ret
 }
