@@ -481,6 +481,15 @@ func OutputHash(target *core.BuildTarget) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
+// mustOutputHash calculates the hash of a target's outputs. It panics on any errors.
+func mustOutputHash(target *core.BuildTarget) []byte {
+	hash, err := OutputHash(target)
+	if err != nil {
+		panic(err)
+	}
+	return hash
+}
+
 // Verify the hash of output files for a rule match the ones set on it.
 func checkRuleHashes(target *core.BuildTarget, hash []byte) error {
 	if len(target.Hashes) == 0 {
