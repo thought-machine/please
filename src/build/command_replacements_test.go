@@ -3,6 +3,7 @@
 package build
 
 import (
+	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -181,13 +182,19 @@ func TestBazelCompatReplacements(t *testing.T) {
 }
 
 func TestHashReplacement(t *testing.T) {
+	// Need to write the file that will be used to calculate the hash.
+	err := os.MkdirAll("plz-out/gen/path/to", 0755)
+	assert.NoError(t, err)
+	err = ioutil.WriteFile("plz-out/gen/path/to/target2.py", []byte(`"""Test file for command_replacements_test"""`), 0644)
+	assert.NoError(t, err)
+
 	target2 := makeTarget("//path/to:target2", "cp $< $@", nil)
 	target := makeTarget("//path/to:target", "echo $(hash //path/to:target2)", target2)
 	assert.Panics(t, func() { replaceSequences(target) }, "Can't use $(hash ) on a non-stamped target")
 	target.Stamp = true
 	// Note that this hash is determined arbitrarily, it doesn't matter for this test
 	// precisely what its value is.
-	assert.Equal(t, "echo atEv6JE4Af62tnNvDkjWmnWRY5I", replaceSequences(target))
+	assert.Equal(t, "echo gB4sUwsLkB1ODYKUxYrKGlpdYUI", replaceSequences(target))
 }
 
 func TestWorkerReplacement(t *testing.T) {
