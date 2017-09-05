@@ -11,8 +11,7 @@ _maven_packages = defaultdict(dict)
 
 
 def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=None, deps=None,
-                 exported_deps=None, visibility=None, source=None,
-                 target=None, test_only=False, javac_flags=None):
+                 exported_deps=None, visibility=None, test_only=False, javac_flags=None):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -29,19 +28,9 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
                             Java; any dependency that forms part of the public API for your classes
                             should be an exported dependency.
       visibility (list): Visibility declaration of this rule.
-      source (int): Deprecated, will be removed in a future version in favour of control via package().
-                    Java source level to compile sources as. Defaults to whatever's set in the config,
-                    which itself defaults to 8.
-      target (int): Deprecated, will be removed in a future version in favour of control via package().
-                    Java bytecode level to target after compile. Defaults to whatever's set in the
-                    config, which itself defaults to 8.
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
     """
-    if source:
-        log.warning('`source` argument to java_library is deprecated and will be removed soon')
-    if target:
-        log.warning('`target` argument to java_library is deprecated and will be removed soon')
     if srcs and src_dir:
         raise ParseError('You cannot pass both srcs and src_dir to java_library')
     if srcs or src_dir:
@@ -62,8 +51,8 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         else:
             javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
         javac_flags = '-encoding utf8 -source %s -target %s -g %s' % (
-            source or CONFIG.JAVA_SOURCE_LEVEL,
-            target or CONFIG.JAVA_TARGET_LEVEL,
+            CONFIG.JAVA_SOURCE_LEVEL,
+            CONFIG.JAVA_TARGET_LEVEL,
             javac_flags,
         )
 

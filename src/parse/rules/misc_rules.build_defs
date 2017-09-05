@@ -214,7 +214,7 @@ def export_file(name, src, visibility=None, binary=False, test_only=False):
 
 def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility=None,
               labels=None, binary=False, output_is_complete=True, requires=None, provides=None,
-              hashes=None, link=False, test_only=False):
+              hashes=None, test_only=False):
     """Defines a collection of files which other rules can depend on.
 
     Sources can be omitted entirely in which case it acts simply as a rule to collect other rules,
@@ -237,10 +237,7 @@ def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility
                        in-depth discussion of this).
       hashes (list): List of acceptable output hashes for this rule.
       test_only (bool): If true the exported file can only be used by test targets.
-      link (bool): Deprecated, no longer has any effect.
     """
-    if link:
-        log.warning('link attribute on filegroup is deprecated and will go away soon.')
     return build_rule(
         name=name,
         tag=tag,
@@ -349,207 +346,6 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
         test_only=test_only,
         sandbox = False,
     )
-
-
-def github_file(name, repo, file, revision='master', out=None, hash=None, visibility=None, test_only=False):
-    """Defines a rule to fetch a file from Github.
-
-    This is just a convenience wrapper around remote_file but is somewhat clearer to write.
-
-    Args:
-      name (str): Name of the rule.
-      repo (str): Repository to fetch from (e.g. thought-machine/please).
-      file (str): File in the repo to fetch (e.g. src/parse/rules/misc_rules.py).
-      revision (str): Git revision to fetch from. Defaults to most recent on master.
-      out (str): Name of the output file
-      hash (str): Hash of downloaded file. You should set 'revision' if you set this.
-      visibility (list): Visibility declaration of the rule.
-      test_only (bool): If true the rule is only visible to test targets.
-    """
-    log.warning('The github_file builtin is deprecated, see https://github.com/thought-machine/pleasings/tree/master/remote for the replacement')
-    if revision == 'master' and hash:
-        log.warning('Your github_file rule fetches from master but is hash verified; this '
-                    'is prone to breaking if upstream changes at any point.')
-    return remote_file(
-        name = name,
-        url = join_path('https://raw.githubusercontent.com', repo, revision, file),
-        out = out,
-        hashes = [hash] if hash else None,
-        visibility = visibility,
-        test_only = test_only,
-    )
-
-
-def git_repo(name, repo, revision='master', files=None, hash=None, visibility=None, test_only=False):
-    """Defines a rule to fetch a remote Git repository.
-
-    Optionally the contents returned can be filtered to a specific set of files. This won't
-    of course improve the efficiency of the fetch.
-
-    Args:
-      name (str): Name of the rule.
-      repo (str): Repository to fetch from (e.g. https://github.com/thought-machine/please.git).
-      files (list): File in the repo to fetch (e.g. ['src']).
-      revision (str): Git revision to fetch from. Defaults to most recent on master.
-      hash (str): Hash of downloaded file. You should set 'revision' if you set this.
-      visibility (list): Visibility declaration of the rule.
-      test_only (bool): If true the rule is only visible to test targets.
-    """
-    log.warning('The git_repo builtin is deprecated, see https://github.com/thought-machine/pleasings/tree/master/remote for the replacement')
-    if revision == 'master' and hash:
-        log.warning('Your git_repo rule fetches from master but is hash verified; this '
-                    'is prone to breaking if upstream changes at any point.')
-    files = files or [name]
-    build_rule(
-        name = name,
-        cmd = ' && '.join([
-            'git clone -q %s %s' % (repo, name),
-            '(cd %s && git checkout -q %s)' % (name, revision),
-            'rm -rf %s/.git' % name,
-            'find ' + ' '.join(files),
-        ]),
-        post_build=_find_git_repo_files,
-        hashes = [hash] if hash else None,
-        visibility = visibility,
-        test_only = test_only,
-        sandbox = False,
-    )
-
-
-def _find_git_repo_files(name, output):
-    for line in output:
-        add_out(name, line)
-
-
-def fpm_package(name, version, package_type, files=None, dirs=None, links=None, package_name=None,
-                options='', post_cmds=None, srcs=None, deps=None, visibility=None,
-                labels=None, _apply_deb_deps=False):
-    """Defines a rule to build a package using fpm.
-
-    Args:
-      name (str): Rule name
-      files (dict): Dict of locations -> files to include, for example:
-             {
-                 '/usr/bin/plz': '//src:please',
-                 '/usr/share/plz/junit_runner': '//src/build/java:junit_runner',
-                 '/usr/share/plz/some_file': 'some_file',  # file in this package
-             }
-      dirs (dict): Dict of directories -> rules to move into that directory, for example:
-             {
-                 '/usr/bin': ['//src:please'],
-                 '/usr/share/plz': ['//src/build/java:junit_runner', 'some_file'],
-             }
-      links (dict): Dict of locations -> file to link to, for example:
-             {
-                 '/usr/bin/plz': '/opt/please',
-             }
-      version (str): Version of the package.
-      package_type (str): Type of package to build (deb, rpm, etc)
-      package_name (str): Name of package. Defaults to rule name.
-      options (str): Extra options to pass to fpm.
-      post_cmds (list): Additional commands to run after the .deb is built.
-      srcs (list): Extra sources (it's not necessary to mention entries in 'files' here)
-      deps (list): Dependencies
-      visibility (list): Visibility specification.
-      labels (list): Labels associated with this rule.
-    """
-    log.warning('The fpm_package builtin is deprecated, see https://github.com/thought-machine/pleasings/tree/master/package for the replacement')
-    package_name = package_name or name
-    cmds = ['mkdir _tmp']
-    srcs = srcs or []
-    if files:
-        cmds.extend('mkdir -p _tmp/$(dirname %s) && cp -r $(location %s) _tmp/%s' %
-                    (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(files.items()))
-        srcs.extend(sorted(files.values()))
-    if dirs:
-        cmds.extend('mkdir -p _tmp/%s && cp -r %s _tmp/%s' %
-                    (k, ' '.join('$(locations %s)' % x for x in v), k)
-                    for k, v in sorted(dirs.items()))
-        srcs.extend(x for v in sorted(dirs.values()) for x in v)
-    cmds.append('cd _tmp')
-    if links:
-        cmds.extend('mkdir -p $(dirname %s) && ln -s %s %s' %
-                    (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(links.items()))
-    cmds.append('fpm -s dir -t %s -n "%s" -v "%s" %s -p $OUT .' % (package_type, package_name,
-                                                                   version, options))
-    if post_cmds:
-        cmds.extend(post_cmds)
-    cmd = ' && '.join(cmds)
-    build_rule(
-        name=name,
-        srcs=srcs,
-        outs=['%s_%s_%s.deb' % (package_name, version, CONFIG.ARCH)],
-        cmd=cmd,
-        deps=deps,
-        visibility=visibility,
-        building_description='Packaging...',
-        requires=['fpm'],
-        labels=labels,
-        pre_build=_deb_deps(cmd, package_name) if _apply_deb_deps else None,
-        output_is_complete=True,
-    )
-
-
-def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None, options='',
-            post_cmds=None, srcs=None, deps=None, visibility=None, labels=None):
-    """Convenience wrapper around fpm_package that always builds a .deb package.
-
-    Args:
-      name (str): Rule name
-      files (dict): Dict of locations -> files to include, for example:
-             {
-                 '/usr/bin/plz': '//src:please',
-                 '/usr/share/plz/junit_runner': '//src/build/java:junit_runner',
-                 '/usr/share/plz/some_file': 'some_file',  # file in this package
-             }
-      dirs (dict): Dict of directories -> rules to move into that directory, for example:
-             {
-                 '/usr/bin': ['//src:please'],
-                 '/usr/share/plz': ['//src/build/java:junit_runner', 'some_file'],
-             }
-      links (dict): Dict of locations -> file to link to, for example:
-             {
-                 '/usr/bin/plz': '/opt/please',
-             }
-      version (str): Version of the package.
-      package_name (str): Name of package. Defaults to rule name.
-      options (str): Extra options to pass to fpm.
-      post_cmds (list): Additional commands to run after the .deb is built.
-      srcs (list): Extra sources (it's not necessary to mention entries in 'files' here)
-      deps (list): Dependencies
-      visibility (list): Visibility specification.
-      labels (list): Labels associated with this rule.
-    """
-    log.warning('The fpm_deb builtin is deprecated, see https://github.com/thought-machine/pleasings/tree/master/package for the replacement')
-    fpm_package(
-        name=name,
-        files=files,
-        dirs=dirs,
-        version=version,
-        package_type='deb',
-        links=links,
-        package_name=package_name,
-        options=options,
-        post_cmds=post_cmds,
-        srcs=srcs,
-        deps=deps,
-        visibility=visibility,
-        labels=(labels or []) + [
-            'deb',
-            'deb_pkg:%s' % (package_name or name),
-        ],
-        _apply_deb_deps=True,
-    )
-
-
-def _deb_deps(cmd, current_label):
-    """Returns a pre-build function that updates the fpm command to add .deb dependencies."""
-    def _find_deb_deps(name):
-        deps = ' '.join('-d ' + label for label in get_labels(name, 'deb_pkg:')
-                        if label != current_label)
-        # Insert immediately after fpm, because it doesn't honour flags after positional arguments.
-        set_command(name, cmd.replace(' && fpm ', ' && fpm %s ' % deps))
-    return _find_deb_deps
 
 
 def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,

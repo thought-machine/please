@@ -47,6 +47,7 @@ class TestLinter(unittest.TestCase):
         self.assertEqual([(1, linter.DEPRECATED_FUNCTION)],
                          lint('tools/linter/test_data/test_deprecated_functions'))
 
+    @unittest.skip("Currently we don't have any builtin functions with deprecated arguments")
     def test_deprecated_arguments(self):
         """Test detection of deprecated arguments."""
         self.assertEqual([(3, linter.DEPRECATED_ARGUMENT)],
