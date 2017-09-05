@@ -199,7 +199,13 @@ var opts struct {
 		Args   struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to export."`
 		} `positional-args:"true"`
-	} `command:"export" description:"Exports a set of targets and files from the repo."`
+
+		Outputs struct {
+			Args struct {
+				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to export."`
+			} `positional-args:"true"`
+		} `command:"outputs" description:"Exports outputs of a set of targets"`
+	} `command:"export" subcommands-optional:"true" description:"Exports a set of targets and files from the repo."`
 
 	Help struct {
 		Args struct {
@@ -412,6 +418,13 @@ var buildFunctions = map[string]func() bool{
 		success, state := runBuild(opts.Export.Args.Targets, false, false)
 		if success {
 			export.ToDir(state, opts.Export.Output, state.ExpandOriginalTargets())
+		}
+		return success
+	},
+	"outputs": func() bool {
+		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false)
+		if success {
+			export.Outputs(state, opts.Export.Output, state.ExpandOriginalTargets())
 		}
 		return success
 	},

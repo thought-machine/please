@@ -4,6 +4,7 @@
 package export
 
 import (
+	"os"
 	"path"
 	"strings"
 
@@ -71,5 +72,22 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 	}
 	for _, subinclude := range graph.PackageOrDie(target.Label.PackageName).Subincludes {
 		export(graph, dir, graph.TargetOrDie(subinclude), done)
+	}
+}
+
+// Outputs exports the outputs of a target.
+func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
+	for _, label := range targets {
+		target := state.Graph.TargetOrDie(label)
+		for _, out := range target.Outputs() {
+			fullPath := path.Join(dir, out)
+			outDir := path.Dir(fullPath)
+			if err := os.MkdirAll(outDir, core.DirPermissions); err != nil {
+				log.Fatalf("Failed to create export dir %s: %s", outDir, err)
+			}
+			if err := core.CopyFile(path.Join(target.OutDir(), out), fullPath, target.OutMode()); err != nil {
+				log.Fatalf("Failed to copy export file: %s", err)
+			}
+		}
 	}
 }
