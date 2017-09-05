@@ -371,7 +371,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
     )
 
 
-def python_wheel(name, version=None, src=None, hashes=None, package_name=None, outs=None,
+def python_wheel(name, version=None, hashes=None, package_name=None, outs=None,
                  post_install_commands=None, patch=None, licences=None, test_only=False,
                  repo=None, zip_safe=True, visibility=None, deps=None):
     """Downloads a Python wheel and extracts it.
@@ -386,10 +386,6 @@ def python_wheel(name, version=None, src=None, hashes=None, package_name=None, o
       name (str): Name of the rule. Also doubles as the name of the package if package_name
             is not set.
       version (str): Version of the package to install.
-      src (str): Source .whl file to load from the local repo. This can be useful for local
-                 development, but it's not really recommended for vendorising dependencies
-                 (because it'd be cleaner to simply commit the code at that point rather than
-                 binary artifacts).
       hashes (list): List of hashes to verify the package against.
       package_name (str): If given, overrides `name` for the name of the package to look for.
       outs (list): List of output files. Defaults to a directory named the same as `name`.

@@ -1,4 +1,5 @@
 subinclude('//build_defs:version')
+subinclude('//build_defs:fpm')
 
 fpm_deb(
     name = 'please',

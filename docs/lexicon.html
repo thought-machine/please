@@ -209,6 +209,19 @@
     <p>The message and arguments together are interpolated like Python's normal string
       interpolation, similar to the builtin <code>logging</code> package.</p>
 
+    <h3><a name="decompose">decompose</a></h3>
+
+    <p><pre class="rule"><code>decompose(label)</code></pre></p>
+
+    <p>Decomposes a build label into the package and name parts.</p>
+
+    <p>Consider carefully when you should use this - command replacements may be more appropriate.<br/>
+      Most rules should be able to accept labels without having to know anything about their structure.</p>
+
+    <p>The input label can be given in either relative or absolute form. A ValueError will be
+      raised if it's not a structurally valid label.</p>
+
+
     <h2><a name="cc">C and C++ rules</a></h2>
 
     <p>Rules to build C and C++ targets.</p>
@@ -220,7 +233,7 @@
 
     <h3><a name="cc_library">c_library / cc_library</a></h3>
 
-    <p><pre class="rule"><code>cc_library(name, srcs=None, hdrs=None, deps=None, visibility=None, test_only=False, compiler_flags=None, linker_flags=None, pkg_config_libs=None, archive=False)</code></pre></p>
+    <p><pre class="rule"><code>cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False, compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None, defines=None, alwayslink=False)</code></pre></p>
 
     <p>Generate a C++ library target.</p>
 
@@ -255,6 +268,14 @@
 	<td>list</td>
 	<td>Header files. These will be made available to dependent rules, so the distinction
 between srcs and hdrs is important.</td>
+      </tr>
+
+      <tr>
+	<td>private_hdrs</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Header files that are available only to this rule and not exported to
+      dependent rules.</td>
       </tr>
 
       <tr>
@@ -299,6 +320,23 @@ picked up by a cc_binary or cc_test rule.</td>
 	<td>list</td>
 	<td>Libraries to declare a dependency on using pkg-config. Again, the ldflags
 will be picked up by cc_binary or cc_test rules.</td>
+      </tr>
+
+      <tr>
+	<td>includes</td>
+	<td>None</td>
+	<td>list</td>
+	<td>List of include directories to be added to the compiler's path.<br/>
+      Note that these are also picked up by dependent rules.</td>
+      </tr>
+
+      <tr>
+	<td>defines</td>
+	<td>None</td>
+	<td>list or dict</td>
+	<td>List of tokens to define in the preprocessor.
+      Alternatively can be a dict of name -> value to define, in which case
+      values are surrounded by quotes.</td>
       </tr>
 
       <tr>
@@ -402,7 +440,7 @@ it as a collection of other rules.</p>
 
     <h3><a name="cc_shared_object">c_shared_object / cc_shared_object</a></h3>
 
-    <p><pre class="rule"><code>cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None)</code></pre></p>
+    <p><pre class="rule"><code>cc_shared_object(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, deps=None, visibility=None, test_only=False, pkg_config_libs=None, includes=None)</code></pre></p>
 
     <p>Generates a C++ shared object with its dependencies linked in.</p>
 
@@ -488,6 +526,14 @@ between srcs and hdrs is important.</td>
 	<td>Libraries to declare a dependency on using pkg-config.</td>
       </tr>
 
+      <tr>
+	<td>includes</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Include directories to be added to the compiler's lookup path.<br/>
+      These are inherited by dependent rules.</td>
+      </tr>
+
       </tbody>
     </table>
 
@@ -526,7 +572,15 @@ between srcs and hdrs is important.</td>
 	<td>hdrs</td>
 	<td>None</td>
 	<td>list</td>
-	<td>Header files.</td>
+	<td>Header files. Dependent rules will have access to these.</td>
+      </tr>
+
+      <tr>
+	<td>private_hdrs</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Header files which are private to this rule, i.e. dependent rules will not be
+        able to make use of them.</td>
       </tr>
 
       <tr>
@@ -584,7 +638,7 @@ between srcs and hdrs is important.</td>
 
     <h3><a name="cc_test">c_test / cc_test</a></h3>
 
-    <p><pre class="rule"><code>cc_test(name, srcs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None, deps=None, data=None, visibility=None, labels=None, flaky=False, test_outputs=None, timeout=0, container=False, write_main=True)</code></pre></p>
+    <p><pre class="rule"><code>cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None, deps=None, data=None, visibility=None, labels=None, flaky=False, test_outputs=None, timeout=0, container=False, sandbox=False, write_main=True)</code></pre></p>
 
     <p>Defines a C++ test using UnitTest++.</p>
     <p>If <code>write_main</code> is true (the default for C++) then we template in a main file so you don't have to supply your own.</p>
@@ -614,6 +668,13 @@ between srcs and hdrs is important.</td>
 	<td>None</td>
 	<td>list</td>
 	<td>C or C++ source files to compile.</td>
+      </tr>
+
+      <tr>
+	<td>hdrs</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Header files used by the test.</td>
       </tr>
 
       <tr>
@@ -675,7 +736,7 @@ between srcs and hdrs is important.</td>
       <tr>
 	<td>flaky</td>
 	<td></td>
-	<td>bool | int</td>
+	<td>bool or int</td>
 	<td>If true the test will be marked as flaky and automatically retried.</td>
       </tr>
 
@@ -696,8 +757,15 @@ between srcs and hdrs is important.</td>
       <tr>
 	<td>container</td>
 	<td>False</td>
-	<td>bool | dict</td>
+	<td>bool or dict</td>
 	<td>If true the test is run in a container (eg. Docker).</td>
+      </tr>
+
+      <tr>
+	<td>sandbox</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>Sandbox the test on Linux to restrict access to namespaces such as network.</td>
       </tr>
 
       <tr>
@@ -865,12 +933,21 @@ rules to Go packages.</p>
 	<td>A list of targets to pre-process your src files with go generate.</td>
       </tr>
 
+      <tr>
+	<td>complete</td>
+	<td>True</td>
+	<td>bool</td>
+	<td>Indicates whether the library is complete or not (ie. buildable with
+      <code>go tool build -complete</code>). In nearly all cases this is True (the main
+      exception being for cgo).</td>
+      </tr>
+
       </tbody>
     </table>
 
     <h3><a name="go_generate">go_generate</a></h3>
 
-    <p><pre class="rule"><code>go_generate(name, srcs, tools, deps=None, visibility=None)</code></pre></p>
+    <p><pre class="rule"><code>go_generate(name, srcs, tools, test_only=False, deps=None, visibility=None)</code></pre></p>
 
     <p>Generates a `go generate` rule.</p>
 
@@ -904,6 +981,13 @@ rules to Go packages.</p>
 	<td></td>
 	<td>list</td>
 	<td>A list of targets which represent binaries to be used via `go generate`.</td>
+      </tr>
+
+      <tr>
+	<td>test_only</td>
+	<td></td>
+	<td>bool</td>
+	<td>If True, is only usable by test rules.</td>
       </tr>
 
       <tr>
@@ -1060,11 +1144,10 @@ rules to Go packages.</p>
       </tr>
 
       <tr>
-	<td>main</td>
+	<td>srcs</td>
 	<td>None</td>
-	<td>str</td>
-	<td>Deprecated, prefer <code>srcs</code> instead.<br/>
-      Go source file containing the main function.</td>
+	<td>list</td>
+	<td>Go source files, one of which contains the main function.</td>
       </tr>
 
       <tr>
@@ -1105,7 +1188,7 @@ rules to Go packages.</p>
 
     <h3><a name="go_test">go_test</a></h3>
 
-    <p><pre class="rule"><code>go_test(name, srcs, data=None, deps=None, visibility=None, container=False, external=False, timeout=0, flaky=False, test_outputs=None, labels=None)</code></pre></p>
+    <p><pre class="rule"><code>go_test(name, srcs, data=None, deps=None, visibility=None, container=False, sandbox=False, cgo=False, external=False, timeout=0, flaky=False, test_outputs=None, labels=None)</code></pre></p>
 
     <p>Defines a Go test rule.</p>
 
@@ -1165,8 +1248,24 @@ rules to Go packages.</p>
       <tr>
 	<td>container</td>
 	<td>False</td>
-	<td>bool | dict</td>
+	<td>bool or dict</td>
 	<td>True to run this test in a container.</td>
+      </tr>
+
+      <tr>
+	<td>sandbox</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>Sandbox the test on Linux to restrict access to namespaces such as network.</td>
+      </tr>
+
+      <tr>
+	<td>cgo</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>True if this test depends on a <a href="#cgo_library"><code>cgo_library</code></a>.<br/>
+      It's slightly more concise and idiomatic to use a <a href="#cgo_test"><code>cgo_test</code></a>
+      in such cases though.</td>
       </tr>
 
       <tr>
@@ -1187,7 +1286,7 @@ rules to Go packages.</p>
       <tr>
 	<td>flaky</td>
 	<td></td>
-	<td>int | bool</td>
+	<td>int or bool</td>
 	<td>True to mark the test as flaky, or an integer to specify how many reruns.</td>
       </tr>
 
@@ -1222,7 +1321,7 @@ rules to Go packages.</p>
 
     <h3><a name="cgo_test">cgo_test</a></h3>
 
-    <p><pre class="rule"><code>cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False, timeout=0, flaky=False, test_outputs=None, labels=None, tags=None)</code></pre></p>
+    <p><pre class="rule"><code>cgo_test(name, srcs, data=None, deps=None, visibility=None, container=False, sandbox=False, timeout=0, flaky=False, test_outputs=None, labels=None, tags=None)</code></pre></p>
 
     <p>Defines a Go test rule for a library that uses cgo.</p>
     <p>
@@ -1286,8 +1385,15 @@ as your test.</p>
       <tr>
 	<td>container</td>
 	<td>False</td>
-	<td>bool | dict</td>
+	<td>bool or dict</td>
 	<td>True to run this test in a container.</td>
+      </tr>
+
+      <tr>
+	<td>sandbox</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>Sandbox the test on Linux to restrict access to namespaces such as network.</td>
       </tr>
 
       <tr>
@@ -1300,7 +1406,7 @@ as your test.</p>
       <tr>
 	<td>flaky</td>
 	<td></td>
-	<td>int | bool</td>
+	<td>int or bool</td>
 	<td>True to mark the test as flaky, or an integer to specify how many reruns.</td>
       </tr>
 
@@ -1335,7 +1441,7 @@ as your test.</p>
 
     <h3><a name="go_get">go_get</a></h3>
 
-    <p><pre class="rule"><code>go_get(name, get=None, outs=None, deps=None, visibility=None, patch=None, binary=False, test_only=False, install=None, revision=None)</code></pre></p>
+    <p><pre class="rule"><code>go_get(name, get=None, outs=None, deps=None, exported_deps=None visibility=None, patch=None, binary=False, test_only=False, install=None, revision=None, strip=None)</code></pre></p>
 
     <p>Defines a dependency on a third-party Go library.</p>
 
@@ -1379,6 +1485,13 @@ as your test.</p>
       </tr>
 
       <tr>
+	<td>exported_deps</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Dependencies to make available to anything else using this rule.</td>
+      </tr>
+
+      <tr>
 	<td>visibility</td>
 	<td>None</td>
 	<td>list</td>
@@ -1418,8 +1531,15 @@ want to go get something with an extra subpackage.</td>
 	<td>revision</td>
 	<td>None</td>
 	<td>str</td>
-	<td>Git hash to check out before building. Only works for git at present,
+	<td>Git hash or tag to check out before building. Only works for git at present,
 not for other version control systems.</td>
+      </tr>
+
+      <tr>
+	<td>strip</td>
+	<td>None</td>
+	<td>list</td>
+	<td>List of paths to strip from the installed target.</td>
       </tr>
 
       </tbody>
@@ -1431,7 +1551,7 @@ not for other version control systems.</td>
 
     <h3><a name="java_library">java_library</a></h3>
 
-    <p><pre class="rule"><code>java_library(name, srcs=None, resources=None, resources_root=None, deps=None, exported_deps=None, visibility=None, source=None, target=None, test_only=False)</code></pre></p>
+    <p><pre class="rule"><code>java_library(name, srcs=None, src_dir=None, resources=None, resources_root=None, deps=None, exported_deps=None, visibility=None, test_only=False, javac_flags=None)</code></pre></p>
 
     <p>Compiles Java source to a .jar which can be collected by other rules.</p>
 
@@ -1458,6 +1578,13 @@ not for other version control systems.</td>
 	<td>None</td>
 	<td>list</td>
 	<td>Java source files to compile for this library</td>
+      </tr>
+
+      <tr>
+	<td>src_dir</td>
+	<td>None</td>
+	<td>str</td>
+	<td>Directory containing Java source files to compile.</td>
       </tr>
 
       <tr>
@@ -1501,26 +1628,17 @@ should be an exported dependency.</td>
       </tr>
 
       <tr>
-	<td>source</td>
-	<td>None</td>
-	<td>int</td>
-	<td>Java source level to compile sources as. Defaults to whatever's set in the config,
-which itself defaults to 8.</td>
-      </tr>
-
-      <tr>
-	<td>target</td>
-	<td>None</td>
-	<td>int</td>
-	<td>Java bytecode level to target after compile. Defaults to whatever's set in the
-config, which itself defaults to 8.</td>
-      </tr>
-
-      <tr>
 	<td>test_only</td>
 	<td>False</td>
 	<td>bool</td>
 	<td>If True, this rule can only be depended on by tests.</td>
+      </tr>
+
+      <tr>
+	<td>javac_flags</td>
+	<td></td>
+	<td>list</td>
+	<td>List of flags passed to javac.</td>
       </tr>
 
       </tbody>
@@ -1528,7 +1646,7 @@ config, which itself defaults to 8.</td>
 
     <h3><a name="java_binary">java_binary</a></h3>
 
-    <p><pre class="rule"><code>java_binary(name, main_class, manifest=None, deps=None, data=None, visibility=None, jvm_args=None, self_executable=False)</code></pre></p>
+    <p><pre class="rule"><code>java_binary(name, main_class, out='', srcs=None, manifest=None, deps=None, data=None, visibility=None, jvm_args=None, self_executable=False)</code></pre></p>
 
     <p>Compiles a .jar from a set of Java libraries.</p>
 
@@ -1555,6 +1673,20 @@ config, which itself defaults to 8.</td>
 	<td></td>
 	<td>str</td>
 	<td>Main class to set in the manifest.</td>
+      </tr>
+
+      <tr>
+	<td>out</td>
+	<td>name + .jar</td>
+	<td>str</td>
+	<td>Name of output .jar file. Defaults to name + .jar.</td>
+      </tr>
+
+      <tr>
+	<td>srcs</td>
+	<td></td>
+	<td>list</td>
+	<td>Source files to compile.</td>
       </tr>
 
       <tr>
@@ -1604,7 +1736,7 @@ config, which itself defaults to 8.</td>
 
     <h3><a name="java_test">java_test</a></h3>
 
-    <p><pre class="rule"><code>java_test(name, srcs, data=None, deps=None, labels=None, visibility=None, container=False, timeout=0, flaky=False, test_outputs=None, test_package=Set in config, jvm_args)</code></pre></p>
+    <p><pre class="rule"><code>java_test(name, srcs, resources=None, data=None, deps=None, labels=None, visibility=None, container=False, sandbox=False, timeout=0, flaky=False, test_outputs=None, test_package=Set in config, jvm_args)</code></pre></p>
 
     <p>Defines a Java test.</p>
 
@@ -1631,6 +1763,13 @@ config, which itself defaults to 8.</td>
 	<td></td>
 	<td>list</td>
 	<td>Java files containing the tests.</td>
+      </tr>
+
+      <tr>
+	<td>resources</td>
+	<td></td>
+	<td>list</td>
+	<td>Resources to include in the .jar file</td>
       </tr>
 
       <tr>
@@ -1671,8 +1810,15 @@ config, which itself defaults to 8.</td>
       <tr>
 	<td>container</td>
 	<td>False</td>
-	<td>bool | dict</td>
+	<td>bool or dict</td>
 	<td>True to run this test within a container (eg. Docker).</td>
+      </tr>
+
+      <tr>
+	<td>sandbox</td>
+	<td>Set in config</td>
+	<td>bool</td>
+	<td>Sandbox the test on Linux to restrict access to namespaces such as network.</td>
       </tr>
 
       <tr>
@@ -1685,7 +1831,7 @@ config, which itself defaults to 8.</td>
       <tr>
 	<td>flaky</td>
 	<td></td>
-	<td>int | bool</td>
+	<td>int or bool</td>
 	<td>True to mark this as flaky and automatically rerun.</td>
       </tr>
 
@@ -1715,7 +1861,7 @@ config, which itself defaults to 8.</td>
 
     <h3><a name="maven_jars">maven_jars</a></h3>
 
-    <p><pre class="rule"><code>maven_jars(name, id, repository='https://repo1.maven.org/maven2', exclude=None, hashes=None, combine=False, hash=None, deps=None, visibility=None, filename=None, deps_only=False, optional=None)</code></pre></p>
+    <p><pre class="rule"><code>maven_jars(name, id, ids, repository='https://repo1.maven.org/maven2', exclude=None, hashes=None, combine=False, hash=None, deps=None, visibility=None, filename=None, deps_only=False, optional=None)</code></pre></p>
 
     <p>Fetches a transitive set of dependencies from Maven.</p>
     <p>
@@ -1750,6 +1896,14 @@ but it still has issues with some Maven packages.</p>
       </tr>
 
       <tr>
+	<td>ids</td>
+	<td></td>
+	<td>list</td>
+	<td>Maven ids of the artifacts to fetch (e.g. org.junit:junit:4.1.0, io.grpc:grpc-all:1.4.0)
+</td>
+      </tr>
+
+      <tr>
 	<td>repository</td>
 	<td>https://repo1.maven.org/maven2</td>
 	<td>str</td>
@@ -1780,7 +1934,7 @@ but it still has issues with some Maven packages.</p>
       <tr>
 	<td>hash</td>
 	<td>None</td>
-	<td>string</td>
+	<td>str or list</td>
 	<td>Hash of final produced .jar. For brevity, implies combine=True.<br/>
 	  Can optionally be a list for cases where there are jars with multiple
 	  possible outputs, e.g. architecture-specific.</td>
@@ -1945,6 +2099,13 @@ have a top-level target as a facade which doesn't have actual code.</td>
       </tr>
 
       <tr>
+	<td>test_only</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>If True, this target can only be used by tests or other test_only rules.</td>
+      </tr>
+
+      <tr>
 	<td>classifier</td>
 	<td></td>
 	<td>str</td>
@@ -1970,7 +2131,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
 
     <h3><a name="genrule">genrule</a></h3>
 
-    <p><pre class="rule"><code>genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, visibility=None, building_description=Building..., hashes=None, timeout=0, binary=False, needs_transitive_deps=False, output_is_complete=True, test_only=False, requires=None, provides=None, pre_build=None, post_build=None, tools=None)</code></pre></p>
+    <p><pre class="rule"><code>genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, secrets=None, labels=None, visibility=None, building_description=Building..., hashes=None, timeout=0, binary=False, sandbox=None, needs_transitive_deps=False, output_is_complete=True, test_only=False, requires=None, provides=None, pre_build=None, post_build=None, tools=None)</code></pre></p>
 
     <p>A general build rule which allows the user to specify a command.</p>
 
@@ -1995,7 +2156,7 @@ have a top-level target as a facade which doesn't have actual code.</td>
       <tr>
 	<td>cmd</td>
 	<td></td>
-	<td>str or list or dict</td>
+	<td>str or dict or list</td>
 	<td>Command to run. It's subject to various sequence replacements:
       <ul>
         <li><code>$(location //path/to:target)</code> expands to the location of the given build rule, which
@@ -2050,7 +2211,7 @@ have separate kinds of things in a rule.</td>
       <tr>
 	<td>outs</td>
 	<td>None</td>
-	<td>list</td>
+	<td>list or dict</td>
 	<td>Outputs of this rule. All are files relative to this package.<br/>
         If given as a dict, it declares a series of named outputs which work
         similarly to named srcs; they have separate environment variables and
@@ -2062,6 +2223,29 @@ have separate kinds of things in a rule.</td>
 	<td>None</td>
 	<td>list</td>
 	<td>Dependencies of this rule.</td>
+      </tr>
+
+      <tr>
+	<td>labels</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Labels to apply to this rule.<br/>
+      Labels are arbitrary strings which can form selectors for the <code>--include</code>
+      and <code>--exclude</code> flags, as well as identifying information about rules.</td>
+      </tr>
+
+      <tr>
+	<td>secrets</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Files containing secrets (credentials etc) used to build this rule. These are
+      all absolute paths (beginning with / or ~) and are not copied to the build
+      directory. They can be accessed through the environment variable $SECRETS.
+      They don't contribute to the key used to retrieve outputs from the cache; this
+      means it's possible for one machine to build a target with the secret and then
+      share the output with others. That also implies that secrets are things like
+      credentials or signing keys and shouldn't be copied directly to outputs, otherwise
+      they might become more widely known.</td>
       </tr>
 
       <tr>
@@ -2100,6 +2284,16 @@ optionally preceded by their method. Currently the only supported method is sha1
 	<td>True to mark a rule that produces a runnable output. Its output will be placed into
 plz-out/bin instead of plz-out/gen and can be run with 'plz run'. Binary rules
 can only have a single output.</td>
+      </tr>
+
+      <tr>
+	<td>sandbox</td>
+	<td>Not set</td>
+	<td>bool</td>
+	<td>If True, the build action is sandboxed within a separate network and process
+      namespace. Only works on Linux and requires plz_sandbox to be installed
+      separately.<br/>
+      If False, it opts the target out of sandboxing when that is turned on.</td>
       </tr>
 
       <tr>
@@ -2179,12 +2373,15 @@ to dynamically create new rules based on the output of another.</td>
       <tr>
 	<td>tools</td>
 	<td>None</td>
-	<td>list</td>
+	<td>list or dict</td>
 	<td>Tools used to build this rule; similar to srcs but are not copied to the temporary
-          build directory. Should be accessed via $(exe //path/to:tool) or similar.<br/>
-          Entries that are not build labels are assumed to be system-level commands and
-          resolved within the path given in the config file (note that the value of $PATH
-          in the outside environment is not propagated to the build rule).</td>
+      build directory. Should be accessed via $TOOL or $TOOLS env vars, or command replacements
+      like <code>$(exe //path/to:tool)</code> etc.<br/>
+      Entries that are not build labels are assumed to be system-level commands and
+      resolved within the path given in the config file (note that the value of $PATH
+      in the outside environment is not propagated to the build rule).<br/>
+      If tools is given as a dict then the keys of the dict name the various
+      tools and they can be accessed with $TOOLS_KEY.</td>
       </tr>
 
       </tbody>
@@ -2221,7 +2418,7 @@ to test.results (or not if no_test_output is True).</p>
       <tr>
 	<td>test_cmd</td>
 	<td></td>
-	<td>str</td>
+	<td>str or dict</td>
 	<td>Command to run for the test.</td>
       </tr>
 
@@ -2235,7 +2432,7 @@ to test.results (or not if no_test_output is True).</p>
       <tr>
 	<td>cmd</td>
 	<td>None</td>
-	<td>str</td>
+	<td>str or dict</td>
 	<td>Command to run to build the test.</td>
       </tr>
 
@@ -2266,6 +2463,13 @@ to test.results (or not if no_test_output is True).</p>
 	<td>list</td>
 	<td>Tools used to build this rule; similar to srcs but are not copied to the temporary
 build directory. Should be accessed via <code>$(exe //path/to:tool)</code> or similar.</td>
+      </tr>
+
+      <tr>
+	<td>secrets</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Secrets available to this rule while building.</td>
       </tr>
 
       <tr>
@@ -2300,7 +2504,7 @@ be made available.</td>
       <tr>
 	<td>flaky</td>
 	<td></td>
-	<td>bool | int</td>
+	<td>bool or int</td>
 	<td>If true the test will be marked as flaky and automatically retried.</td>
       </tr>
 
@@ -2330,8 +2534,17 @@ dependencies by other rules.</td>
       <tr>
 	<td>container</td>
 	<td>False</td>
-	<td>bool | dict</td>
+	<td>bool or dict</td>
 	<td>If true the test is run in a container (eg. Docker).</td>
+      </tr>
+
+      <tr>
+	<td>sandbox</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>If True, the test is run within a sandbox that restricts some cgroups
+        including networking, process, IPC, etc. Only has an effect on Linux.<br/>
+        If this is on by default then tests can opt out by setting this to False.</td>
       </tr>
 
       </tbody>
@@ -2394,7 +2607,7 @@ dependencies by other rules.</td>
 
     <h3><a name="filegroup">filegroup</a></h3>
 
-    <p><pre class="rule"><code>filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, labels=None, binary=False, output_is_complete=True, requires=None, provides=None, link=True, test_only=False)</code></pre></p>
+    <p><pre class="rule"><code>filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None, labels=None, binary=False, output_is_complete=True, requires=None, provides=None, hashes=None, test_only=False)</code></pre></p>
 
     <p>Defines a collection of files which other rules can depend on.</p>
     <p>
@@ -2417,6 +2630,14 @@ which is often more handy than you might think.</p>
 	<td></td>
 	<td>str</td>
 	<td>Name of the rule</td>
+      </tr>
+
+      <tr>
+	<td>tag</td>
+	<td></td>
+	<td>str</td>
+	<td>Tag applied to name; generates a private rule, for example name='a',tag='b' gives
+      _a#b. Typically used for "private" rules.</td>
       </tr>
 
       <tr>
@@ -2485,10 +2706,10 @@ in-depth discussion of this).</td>
       </tr>
 
       <tr>
-	<td>link</td>
-	<td>True</td>
+	<td>hashes</td>
 	<td></td>
-	<td></td>
+	<td>list</td>
+	<td>List of acceptable output hashes for this rule.</td>
       </tr>
 
       <tr>
@@ -2496,6 +2717,84 @@ in-depth discussion of this).</td>
 	<td>False</td>
 	<td>bool</td>
 	<td>If true the exported file can only be used by test targets.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
+    <h3><a name="hash_filegroup">hash_filegroup</a></h3>
+
+    <p><pre class="rule"><code>hash_filegroup(name, srcs, deps=None, exported_deps=None, visibility=None, labels=None, test_only=False, requires=None)</code></pre></p>
+
+    <p>Copies a set of files to output names which are uniquely hashed based on their contents.</p>
+
+    <p>For example, <code>srcs = ["test.txt"]</code> might output <code>"test-b250cnf30f3h.txt".</code></p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>name</td>
+	<td></td>
+	<td>str</td>
+	<td>Name of the rule</td>
+      </tr>
+
+      <tr>
+	<td>srcs</td>
+	<td></td>
+	<td>list</td>
+	<td>Source files for the rule</td>
+      </tr>
+
+      <tr>
+	<td>deps</td>
+	<td></td>
+	<td>list</td>
+	<td>Dependencies of the rule.</td>
+      </tr>
+
+      <tr>
+	<td>exported_deps</td>
+	<td></td>
+	<td>list</td>
+	<td>Dependencies that will become visible to any rules that depend on this rule.</td>
+      </tr>
+
+      <tr>
+	<td>visibility</td>
+	<td></td>
+	<td>list</td>
+	<td>Visibility declaration</td>
+      </tr>
+
+      <tr>
+	<td>labels</td>
+	<td></td>
+	<td>list</td>
+	<td>Labels to apply to this rule</td>
+      </tr>
+
+      <tr>
+	<td>test_only</td>
+	<td></td>
+	<td>bool</td>
+	<td>If true the rule can only be used by test targets.</td>
+      </tr>
+
+      <tr>
+	<td>requires</td>
+	<td></td>
+	<td>list</td>
+	<td>Kinds of output from other rules that this one requires.</td>
       </tr>
 
       </tbody>
@@ -2524,29 +2823,30 @@ into the build tree, you must add additional rules if compilation is necessary.<
       <tr>
 	<td>name</td>
 	<td></td>
-	<td></td>
-	<td></td>
+	<td>str</td>
+	<td>Name of the rule</td>
       </tr>
 
       <tr>
 	<td>srcs</td>
 	<td></td>
-	<td></td>
-	<td></td>
+	<td>list</td>
+	<td>System-level sources. Should all be absolute paths.</td>
       </tr>
 
       <tr>
 	<td>deps</td>
 	<td>None</td>
-	<td></td>
-	<td></td>
+	<td>list</td>
+	<td>Extra dependencies of the rule.</td>
       </tr>
 
       <tr>
 	<td>hashes</td>
 	<td>None</td>
-	<td></td>
-	<td></td>
+	<td>list</td>
+	<td>List of hashes; the output must match at least one of these. This is not required
+        but could be used to assert that the system lib is of some known version.</td>
       </tr>
 
       <tr>
@@ -2632,278 +2932,18 @@ into the build tree, you must add additional rules if compilation is necessary.<
 	<td>If true the rule is only visible to test targets.</td>
       </tr>
 
-      </tbody>
-    </table>
-
-    <h3><a name="github_file">github_file</a></h3>
-
-    <p><pre class="rule"><code>github_file(name, repo, file, revision=master, hash=None, visibility=None, test_only=False)</code></pre></p>
-
-    <p>Defines a rule to fetch a file from Github.</p>
-    <p>
-This is just a convenience wrapper around remote_file but is somewhat clearer to write.</p>
-
-    <table>
-      <thead>
       <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
-
-      <tr>
-	<td>name</td>
-	<td></td>
-	<td></td>
-	<td></td>
-      </tr>
-
-      <tr>
-	<td>repo</td>
-	<td></td>
-	<td></td>
-	<td></td>
-      </tr>
-
-      <tr>
-	<td>file</td>
-	<td></td>
-	<td></td>
-	<td></td>
-      </tr>
-
-      <tr>
-	<td>revision</td>
-	<td>master</td>
-	<td></td>
-	<td></td>
-      </tr>
-
-      <tr>
-	<td>hash</td>
-	<td>None</td>
-	<td></td>
-	<td></td>
-      </tr>
-
-      <tr>
-	<td>visibility</td>
+	<td>licences</td>
 	<td>None</td>
 	<td>list</td>
-	<td>Visibility declaration of the rule.</td>
-      </tr>
-
-      <tr>
-	<td>test_only</td>
-	<td>False</td>
-	<td>bool</td>
-	<td>If true the rule is only visible to test targets.</td>
-      </tr>
-
-      </tbody>
-    </table>
-
-    <h3><a name="fpm_package">fpm_package</a></h3>
-
-    <p><pre class="rule"><code>fpm_package(name, files, version, package_type, links=None, package_name=None, options, srcs=None, deps=None, visibility=None, labels=None)</code></pre></p>
-
-    <p>Defines a rule to build a package using fpm.</p>
-
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
-
-      <tr>
-	<td>name</td>
-	<td></td>
-	<td>str</td>
-	<td>Rule name</td>
-      </tr>
-
-      <tr>
-	<td>files</td>
-	<td></td>
-	<td>dict</td>
-	<td>Dict of locations -> files to include, for example:
-{
-'/usr/bin/plz': '//src:please',
-'/usr/share/plz/junit_runner': '//src/build/java:junit_runner',
-'/usr/share/plz/some_file': 'some_file',  # file in this package
-}</td>
-      </tr>
-
-      <tr>
-	<td>version</td>
-	<td></td>
-	<td>str</td>
-	<td>Version of the package.</td>
-      </tr>
-
-      <tr>
-	<td>package_type</td>
-	<td></td>
-	<td>str</td>
-	<td>Type of package to build (deb, rpm, etc)</td>
-      </tr>
-
-      <tr>
-	<td>links</td>
-	<td>None</td>
-	<td>dict</td>
-	<td>Dict of locations -> file to link to, for example:
-{
-'/usr/bin/plz': '/opt/please',
-}</td>
-      </tr>
-
-      <tr>
-	<td>package_name</td>
-	<td>None</td>
-	<td>str</td>
-	<td>Name of package. Defaults to rule name.</td>
-      </tr>
-
-      <tr>
-	<td>options</td>
-	<td></td>
-	<td>str</td>
-	<td>Extra options to pass to fpm.</td>
-      </tr>
-
-      <tr>
-	<td>srcs</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Extra sources (it's not necessary to mention entries in 'files' here)</td>
+	<td>List of licences that apply to this rule.</td>
       </tr>
 
       <tr>
 	<td>deps</td>
 	<td>None</td>
 	<td>list</td>
-	<td>Dependencies</td>
-      </tr>
-
-      <tr>
-	<td>visibility</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Visibility specification.</td>
-      </tr>
-
-      <tr>
-	<td>labels</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Labels associated with this rule.</td>
-      </tr>
-
-      </tbody>
-    </table>
-
-    <h3><a name="fpm_deb">fpm_deb</a></h3>
-
-    <p><pre class="rule"><code>fpm_deb(name, files, version, links=None, package_name=None, options, srcs=None, deps=None, visibility=None, labels=None)</code></pre></p>
-
-    <p>Convenience wrapper around fpm_package that always builds a .deb package.</p>
-
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
-
-      <tr>
-	<td>name</td>
-	<td></td>
-	<td>str</td>
-	<td>Rule name</td>
-      </tr>
-
-      <tr>
-	<td>files</td>
-	<td></td>
-	<td>dict</td>
-	<td>Dict of locations -> files to include, for example:
-{
-'/usr/bin/plz': '//src:please',
-'/usr/share/plz/junit_runner': '//src/build/java:junit_runner',
-'/usr/share/plz/some_file': 'some_file',  # file in this package
-}</td>
-      </tr>
-
-      <tr>
-	<td>version</td>
-	<td></td>
-	<td>str</td>
-	<td>Version of the package.</td>
-      </tr>
-
-      <tr>
-	<td>links</td>
-	<td>None</td>
-	<td>dict</td>
-	<td>Dict of locations -> file to link to, for example:
-{
-'/usr/bin/plz': '/opt/please',
-}</td>
-      </tr>
-
-      <tr>
-	<td>package_name</td>
-	<td>None</td>
-	<td>str</td>
-	<td>Name of package. Defaults to rule name.</td>
-      </tr>
-
-      <tr>
-	<td>options</td>
-	<td></td>
-	<td>str</td>
-	<td>Extra options to pass to fpm.</td>
-      </tr>
-
-      <tr>
-	<td>srcs</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Extra sources (it's not necessary to mention entries in 'files' here)</td>
-      </tr>
-
-      <tr>
-	<td>deps</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Dependencies</td>
-      </tr>
-
-      <tr>
-	<td>visibility</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Visibility specification.</td>
-      </tr>
-
-      <tr>
-	<td>labels</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Labels associated with this rule.</td>
+	<td>List of extra dependencies for this rule.</td>
       </tr>
 
       </tbody>
@@ -3000,7 +3040,7 @@ the proto_library rule to get its appropriate outputs.</p>
 
     <h3><a name="proto_library">proto_library</a></h3>
 
-    <p><pre class="rule"><code>proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None, python_deps=None, cc_deps=None, java_deps=None, go_deps=None, protoc_version=Set in config, languages=None)</code></pre></p>
+    <p><pre class="rule"><code>proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None, languages=None, test_only=False, root_dir=None, protoc_flags=None)</code></pre></p>
 
     <p>Compile a .proto file to generated code for various languages.</p>
 
@@ -3055,50 +3095,39 @@ labels(list): List of labels to apply to this rule.</td>
       <tr>
 	<td>labels</td>
 	<td>None</td>
-	<td></td>
-	<td></td>
-      </tr>
-
-      <tr>
-	<td>python_deps</td>
-	<td>None</td>
 	<td>list</td>
-	<td>Additional deps to add to the python_library rules</td>
-      </tr>
-
-      <tr>
-	<td>cc_deps</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Additional deps to add to the cc_library rules</td>
-      </tr>
-
-      <tr>
-	<td>java_deps</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Additional deps to add to the java_library rules</td>
-      </tr>
-
-      <tr>
-	<td>go_deps</td>
-	<td>None</td>
-	<td>list</td>
-	<td>Additional deps to add to the go_library rules</td>
-      </tr>
-
-      <tr>
-	<td>protoc_version</td>
-	<td>Set in config</td>
-	<td>str</td>
-	<td>Version of protoc compiler, used to invalidate build rules when it changes.</td>
+	<td>List of labels to apply to this rule.</td>
       </tr>
 
       <tr>
 	<td>languages</td>
 	<td>None</td>
-	<td>list</td>
+	<td>list or dict</td>
 	<td>List of languages to generate rules for, chosen from the set {cc, py, go, java}.</td>
+      </tr>
+
+      <tr>
+	<td>test_only</td>
+	<td>None</td>
+	<td>bool</td>
+	<td>If True, can only be used in test rules.</td>
+      </tr>
+
+      <tr>
+	<td>root_dir</td>
+	<td>None</td>
+	<td>str</td>
+	<td>The directory that the protos are compiled relative to. Useful if your
+      proto files have import statements that are not relative to the repo root.</td>
+      </tr>
+
+      <tr>
+	<td>protoc_flags</td>
+	<td>None</td>
+	<td>list</td>
+	<td>Additional flags to pass to protoc. Note that these are inherited by
+      further rules that depend on this one (because in nearly all cases that
+      will be necessary for them to build too).</td>
       </tr>
 
       </tbody>
@@ -3106,7 +3135,7 @@ labels(list): List of labels to apply to this rule.</td>
 
     <h3><a name="grpc_library">grpc_library</a></h3>
 
-    <p><pre class="rule"><code>grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_deps=None, java_deps=None, go_deps=None)</code></pre></p>
+    <p><pre class="rule"><code>grpc_library(name, srcs, deps=None, visibility=None, languages=None, labels=None, test_only=False, root_dir=None, protoc_flags=None)</code></pre></p>
 
     <p>Defines a rule for a grpc library.</p>
 
@@ -3152,7 +3181,7 @@ labels(list): List of labels to apply to this rule.</td>
       <tr>
 	<td>languages</td>
 	<td>None</td>
-	<td>list</td>
+	<td>list or dict</td>
 	<td>List of languages to generate rules for, chosen from the set {cc, py, go, java}.<br/>
 
 At present this will not create any service definitions for C++, but 'cc' is
@@ -3160,31 +3189,35 @@ still accepted for forwards compatibility.</td>
       </tr>
 
       <tr>
-	<td>python_deps</td>
+	<td>labels</td>
 	<td>None</td>
 	<td>list</td>
-	<td>Additional deps to add to the python_library rules</td>
+	<td>List of labels to apply to this rule.</td>
       </tr>
 
       <tr>
-	<td>java_deps</td>
+	<td>test_only</td>
 	<td>None</td>
-	<td>list</td>
-	<td>Additional deps to add to the java_library rules</td>
+	<td>bool</td>
+	<td>If True, this rule can only be used by test rules.</td>
       </tr>
 
       <tr>
-	<td>go_deps</td>
+	<td>root_dir</td>
 	<td>None</td>
-	<td>list</td>
-	<td>Additional deps to add to the go_library rules</td>
+	<td>str</td>
+	<td>The directory that the protos are compiled relative to. Useful if your
+      proto files have import statements that are not relative to the repo root.</td>
       </tr>
 
       <tr>
-	<td>cc_deps</td>
+	<td>protoc_flags</td>
 	<td>None</td>
 	<td>list</td>
-	<td>Additional deps to add to the cc_library rules</td>
+	<td>Additional flags to pass to protoc.<br/>
+      These are inherited by dependent rules as well, since that's nearly always needed in
+      order to compile them as well (since dependent rules must also understand all
+      the .proto files they're compiling).</td>
       </tr>
 
       </tbody>
@@ -3208,7 +3241,7 @@ a target which has only had small changes.</p>
 
     <h3><a name="python_library">python_library</a></h3>
 
-    <p><pre class="rule"><code>python_library(name, srcs=None, resources=None, deps=None, visibility=None, test_only=False, zip_safe=True, labels=None, interpreter=None)</code></pre></p>
+    <p><pre class="rule"><code>python_library(name, srcs=None, resources=None, deps=None, visibility=None, test_only=False, zip_safe=True, labels=None, interpreter=None, strip=False)</code></pre></p>
 
     <p>Generates a Python library target, which collects Python files for use by dependent rules.</p>
     <p>
@@ -3297,6 +3330,13 @@ See python_binary for more information.</td>
 	<td>The Python interpreter to use. Defaults to the config setting
 which is normally just 'python', but could be 'python3' or
 'pypy' or whatever.</td>
+      </tr>
+
+      <tr>
+	<td>strip</td>
+	<td></td>
+	<td>bool</td>
+	<td>If True, the original sources are stripped and only bytecode is output.</td>
       </tr>
 
       </tbody>
@@ -3395,12 +3435,19 @@ which is normally just 'python', but could be 'python3' or
 	  but this allows overriding it if you need something different.</td>
       </tr>
 
+      <tr>
+	<td>labels</td>
+	<td></td>
+	<td>list</td>
+	<td>Labels to apply to this rule.</td>
+      </tr>
+
       </tbody>
     </table>
 
     <h3><a name="python_test">python_test</a></h3>
 
-    <p><pre class="rule"><code>python_test(name, srcs, data=None, resources=None, deps=None, labels=None, visibility=None, container=False, timeout=0, flaky=False, test_outputs=None, zip_safe=None, interpreter=Set in config)</code></pre></p>
+    <p><pre class="rule"><code>python_test(name, srcs, data=None, resources=None, deps=None, labels=None, visibility=None, container=False, sandbox=False, timeout=0, flaky=False, test_outputs=None, zip_safe=None, interpreter=Set in config)</code></pre></p>
 
     <p>Generates a Python test target.</p>
     <p>
@@ -3479,8 +3526,15 @@ and it may or may not be happy if given non-Python files.</td>
       <tr>
 	<td>container</td>
 	<td>False</td>
-	<td>bool | dict</td>
+	<td>bool or dict</td>
 	<td>If True, the test will be run in a container (eg. Docker).</td>
+      </tr>
+
+      <tr>
+	<td>sandbox</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>Sandbox the test on Linux to restrict access to namespaces such as network.</td>
       </tr>
 
       <tr>
@@ -3493,7 +3547,7 @@ and it may or may not be happy if given non-Python files.</td>
       <tr>
 	<td>flaky</td>
 	<td></td>
-	<td>int | bool</td>
+	<td>int or bool</td>
 	<td>True to mark this test as flaky, or an integer for a number of reruns.</td>
       </tr>
 
@@ -3529,7 +3583,7 @@ which is normally just 'python', but could be 'python3' or
 
     <h3><a name="pip_library">pip_library</a></h3>
 
-    <p><pre class="rule"><code>pip_library(name, version, hashes=None, package_name=None, outs=None, test_only=False, env=None, deps=None, post_install_commands=None, install_subdirectory=False, repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True, licences=None)</code></pre></p>
+    <p><pre class="rule"><code>pip_library(name, version, hashes=None, package_name=None, outs=None, test_only=False, env=None, deps=None, post_install_commands=None, install_subdirectory=False, repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True, licences=None, pip_flags='')</code></pre></p>
 
     <p>Provides a build rule for third-party dependencies to be installed by pip.</p>
 
@@ -3582,7 +3636,7 @@ which is normally just 'python', but could be 'python3' or
       <tr>
 	<td>test_only</td>
 	<td>False</td>
-	<td></td>
+	<td>bool</td>
 	<td></td>
       </tr>
 
@@ -3631,8 +3685,8 @@ which is normally just 'python', but could be 'python3' or
       <tr>
 	<td>patch</td>
 	<td>None</td>
-	<td>str</td>
-	<td>A patch file to be applied after install.</td>
+	<td>str or list</td>
+	<td>A patch file or files to be applied after install.</td>
       </tr>
 
       <tr>
@@ -3654,6 +3708,132 @@ which is normally just 'python', but could be 'python3' or
 	<td>None</td>
 	<td>list</td>
 	<td>Licences this rule is subject to. Default attempts to detect from package metadata.</td>
+      </tr>
+
+      <tr>
+	<td>pip_flags</td>
+	<td>None</td>
+	<td>str</td>
+	<td>Additional flags to pass to pip.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
+    <h3><a name="python_wheel">python_wheel</a></h3>
+
+    <p><pre class="rule"><code>python_wheel(name, version, hashes=None, package_name='', outs=None, post_install_commands=None, patch=None, licences=None, test_only=False, repo='', zip_safe=True, visibility=None, deps=None)</code></pre></p>
+
+    <p>Downloads a Python wheel and extracts it.</p>
+
+    <p>This is a lightweight pip-free alternative to pip_library.<br/>
+      Rather than leaning on pip which is difficult to achieve reproducible builds with and
+      support on different platforms, this rule is a simple wrapper around curl and unzip.<br/>
+      The wheels are expected to follow a simple naming scheme which is essentially:
+      <code><package_name>-<version>[-<os>_<arch>].whl</code>.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>name</td>
+	<td></td>
+	<td>str</td>
+	<td>Name of the rule. Also doubles as the name of the package if package_name is not set.</td>
+      </tr>
+
+      <tr>
+	<td>version</td>
+	<td></td>
+	<td>str</td>
+	<td>Version of the package to install.</td>
+      </tr>
+
+      <tr>
+	<td>hashes</td>
+	<td></td>
+	<td>list</td>
+	<td>List of hashes to verify the package against.</td>
+      </tr>
+
+      <tr>
+	<td>package_name</td>
+	<td>Same as <code>name</code></td>
+	<td>str</td>
+	<td>If given, overrides name for the name of the package to look for.</td>
+      </tr>
+
+      <tr>
+	<td>outs</td>
+	<td>[package_name]</td>
+	<td>list</td>
+	<td>List of output files. Defaults to a directory named the same as package_name (or name if that's not given).</td>
+      </tr>
+
+      <tr>
+	<td>post_install_commands</td>
+	<td></td>
+	<td>list</td>
+	<td>Commands to run after 'install'.<br/>
+      These could be considered a bit of a hack, generally <code>patch</code> is a cleaner way
+      to handle local library changes.</td>
+      </tr>
+
+      <tr>
+	<td>patch</td>
+	<td></td>
+	<td>str or list</td>
+	<td>Patch file to apply after install to fix any upstream code that has done bad things.</td>
+      </tr>
+
+      <tr>
+	<td>licences</td>
+	<td></td>
+	<td>list</td>
+	<td>Licences that this rule is subject to.</td>
+      </tr>
+
+      <tr>
+	<td>test_only</td>
+	<td></td>
+	<td>bool</td>
+	<td>If True, this library can only be used by tests.</td>
+      </tr>
+
+      <tr>
+	<td>repo</td>
+	<td>Set in config</td>
+	<td>str</td>
+	<td>Repository to download wheels from.</td>
+      </tr>
+
+      <tr>
+	<td>zip_safe</td>
+	<td>True</td>
+	<td>bool</td>
+	<td>Flag to indicate whether a pex including this rule will be zip-safe.</td>
+      </tr>
+
+      <tr>
+	<td>visibility</td>
+	<td></td>
+	<td>list</td>
+	<td>Visibility declaration.</td>
+      </tr>
+
+      <tr>
+	<td>deps</td>
+	<td></td>
+	<td>list</td>
+	<td>Dependencies of this rule.</td>
       </tr>
 
       </tbody>
@@ -3793,6 +3973,82 @@ Note that these are individually executable so can only have one source file eac
       </tbody>
     </table>
 
+    <h3><a name="sh_cmd">sh_cmd</a></h3>
+
+    <p><pre class="rule"><code>sh_cmd(name, cmd, out, shell, labels, deps, visibility)</code></pre></p>
+
+    <p>Generates a runnable shell script from a command.</p>
+
+    <p>This is doable with a genrule with a little effort but it's awkward enough to be nice
+      to have a builtin.<br/>
+      The command is subject to Please's usual variable expansion at build time. Note that if
+      you want plz run to transparently work and refer to other files, you may need to use
+      <code>$(out_location ...)</code> instead of <code>$(location ...)</code>.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>name</td>
+	<td></td>
+	<td>str</td>
+	<td>Name of the rule</td>
+      </tr>
+
+      <tr>
+	<td>cmd</td>
+	<td></td>
+	<td>str</td>
+	<td>Command to write into the output script file.</td>
+      </tr>
+
+      <tr>
+	<td>out</td>
+	<td>name + .sh</td>
+	<td>str</td>
+	<td>Name of the output file to create. Defaults to name + .sh.</td>
+      </tr>
+
+      <tr>
+	<td>shell</td>
+	<td>/bin/sh</td>
+	<td>str</td>
+	<td>Shell to write into the shebang, by default /bin/sh.</td>
+      </tr>
+
+      <tr>
+	<td>labels</td>
+	<td></td>
+	<td>list</td>
+	<td>Labels to apply to this rule.</td>
+      </tr>
+
+      <tr>
+	<td>deps</td>
+	<td></td>
+	<td>list</td>
+	<td>Any dependencies for this rule.</td>
+      </tr>
+
+      <tr>
+	<td>visibility</td>
+	<td></td>
+	<td>list</td>
+	<td>Visibility declaration of the rule.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
+
     <h3><a name="sh_test">sh_test</a></h3>
 
     <p><pre class="rule"><code>sh_test(name, src=None, args=None, labels=None, data=None, deps=None, visibility=None, flaky=False, test_outputs=None, timeout=0, container=False)</code></pre></p>
@@ -3870,7 +4126,7 @@ Note that these are individually executable so can only have one source file eac
       <tr>
 	<td>flaky</td>
 	<td></td>
-	<td>int | bool</td>
+	<td>int or bool</td>
 	<td>True to mark this as flaky and automatically rerun.</td>
       </tr>
 
@@ -3891,8 +4147,15 @@ Note that these are individually executable so can only have one source file eac
       <tr>
 	<td>container</td>
 	<td>False</td>
-	<td>bool | dict</td>
+	<td>bool or dict</td>
 	<td>True to run this test within a container (eg. Docker).</td>
+      </tr>
+
+      <tr>
+	<td>sandbox</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>Sandbox the test on Linux to restrict access to namespaces such as network.</td>
       </tr>
 
       </tbody>

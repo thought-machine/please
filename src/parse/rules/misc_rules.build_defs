@@ -366,6 +366,7 @@ def github_file(name, repo, file, revision='master', out=None, hash=None, visibi
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If true the rule is only visible to test targets.
     """
+    log.warning('The github_file builtin is deprecated, see https://github.com/thought-machine/pleasings/tree/master/remote for the replacement')
     if revision == 'master' and hash:
         log.warning('Your github_file rule fetches from master but is hash verified; this '
                     'is prone to breaking if upstream changes at any point.')
@@ -394,6 +395,7 @@ def git_repo(name, repo, revision='master', files=None, hash=None, visibility=No
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If true the rule is only visible to test targets.
     """
+    log.warning('The git_repo builtin is deprecated, see https://github.com/thought-machine/pleasings/tree/master/remote for the replacement')
     if revision == 'master' and hash:
         log.warning('Your git_repo rule fetches from master but is hash verified; this '
                     'is prone to breaking if upstream changes at any point.')
@@ -451,6 +453,7 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
       visibility (list): Visibility specification.
       labels (list): Labels associated with this rule.
     """
+    log.warning('The fpm_package builtin is deprecated, see https://github.com/thought-machine/pleasings/tree/master/package for the replacement')
     package_name = package_name or name
     cmds = ['mkdir _tmp']
     srcs = srcs or []
@@ -517,6 +520,7 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
       visibility (list): Visibility specification.
       labels (list): Labels associated with this rule.
     """
+    log.warning('The fpm_deb builtin is deprecated, see https://github.com/thought-machine/pleasings/tree/master/package for the replacement')
     fpm_package(
         name=name,
         files=files,

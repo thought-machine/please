@@ -216,3 +216,9 @@ go_get(
     revision = '457c5828408160d6a47e17645169cf8fa20218c4',
     deps = [':context'],
 )
+
+go_get(
+    name = 'html',
+    get = 'golang.org/x/net/html',
+    revision = '66aacef3dd8a676686c7ae3716979581e8b03c47',
+)

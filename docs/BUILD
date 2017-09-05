@@ -38,3 +38,16 @@ go_binary(
     name = 'templater',
     srcs = ['template.go'],
 )
+
+go_test(
+    name = 'lexicon_test',
+    srcs = ['lexicon_test.go'],
+    data = [
+        'lexicon.html',
+        '//src/parse:rule_args',
+    ],
+    deps = [
+        '//third_party/go:html',
+        '//third_party/go:testify',
+    ],
+)

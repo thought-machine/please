@@ -16,6 +16,12 @@ filegroup(
     visibility = ['PUBLIC'],
 )
 
+filegroup(
+    name = 'fpm',
+    srcs = ['fpm.build_defs'],
+    visibility = ['//package:all'],
+)
+
 genrule(
     name = 'version',
     srcs = ['//:version'],
