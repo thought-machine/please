@@ -1,0 +1,121 @@
+<h1>Writing build rules</h1>
+
+<p>Please is designed to support interleaving custom build commands as first-class
+  citizens in the system. This describes some of the concepts to bear in mind when
+  writing rules of your own.</p>
+
+<p>The documentation for <a href="lexicon.html#genrule">genrule</a> may be of use as well,
+  as that explains the available arguments and what they do.</p>
+
+<h2>Build location</h2>
+
+<p>A core concept of Please is to try to isolate compilation so we have a good concept of
+  correctness for each action. To this end each rule builds in its own temporary directory
+  (under <code>plz-out/tmp</code>) with a limited set of files in it.<br/>
+  If you want to have a look at what it looks like in there, <code>plz build --shell</code>
+  will prepare a target for building and open up a shell into the directory, where you can
+  look around and try running commands by hand.</p>
+
+<p>Some aspects of this environment are different to normal - for example rules are given a
+  small, deterministic set of environment variables. They shouldn't need to read anything
+  outside this directory or not described by those variables.</p>
+
+
+<h2>Sources</h2>
+
+<p>Sources are the inputs to your rule - typically source code. This is defined in the
+  <code>srcs</code> argument.</p>
+
+<p>All sources are linked into the build directory - for performance reasons they aren't copied
+  so you shouldn't modify them in-place.</p>
+
+<p>Sources can be referred to through the <code>$SRCS</code> environment variable. If there's only
+  one, a <code>$SRC</code> variable will be defined too.<br/>
+  Sources can also be named, e.g.
+  <pre><code>
+      srcs = {
+          'srcs': ['my_source.py'],
+          'resources': ['something.txt'],
+      },
+  </code></pre>
+  In that case they can be accessed separately through <code>$SRCS_SRCS</code> and
+  <code>$SRCS_RESOURCES</code>.
+  </p>
+
+
+<h2>Dependencies</h2>
+
+<p>Dependencies are other things you need to build - e.g. other code that your rule depends on.<br/>
+  These are also linked into the build directory, so the difference between sources and dependencies
+  can seem arbitrary, but for some internal functions it's an important distinction to know how
+  rules see the things they'll consume.</p>
+
+<p>Dependencies don't have any corresponding environment variables associated with them.</p>
+
+
+<h2>Commands</h2>
+
+<p>The command that you run is of course the core part of the rule. It can be passed to
+  <code>genrule</code> in three formats:
+  <ul>
+    <li>As a string; the simplest format, since there's only one command that's run.</li>
+    <li>As a list, it's a sequence of commands run one after another if the preceding ones are
+      successful (i.e. it's effectively shorthand for <code>' && '.join(cmd)</code></li>
+    <li>As a dict, the keys correspond to the build config to run and the values
+      are the command to run in that config. The typical use case here is <code>opt</code> vs.
+      <code>dbg</code> but arbitrary names can be given and specified with <code>plz build -c name</code>.</li>
+  </ul>
+</p>
+
+<p>There are various special sequence replacements that the rule is subject to:
+  <ul>
+    <li><code>$(location //path/to:target)</code> expands to the location of the given build rule,
+      which must have a single output only.</li>
+    <li><code>$(locations //path/to:target)</code> expands to the locations of the outputs of the
+      given build rule, which can have any number of outputs.</li>
+    <li><code>$(exe //path/to:target)</code> expands to a command to run the output of the given
+      target. The rule must be marked as binary.</li>
+    <li><code>$(out_location //path_to:target)</code> expands to the output of the given build rule,
+      with the preceding plz-out/gen etc.<br/>
+      Consider carefully when to use this though; it is not normally useful.</li>
+    <li><code>$(hash //path/to:target)</code> expands to a hash of the outputs of that target.<br/>
+      This can be useful to uniquely fingerprint the given rule.</li>
+  </ul>
+</p>
+
+<p>The following environment variables are also set:
+  <ul>
+    <li><code>ARCH</code>: architecture of the system, eg. amd64</li>
+    <li><code>OS</code>: current operating system (linux, darwin, etc).</li>
+    <li><code>PATH</code>: usual PATH environment variable as defined in your .plzconfig</li>
+    <li><code>TMP_DIR</code>: the temporary directory you're compiling within.</li>
+    <li><code>HOME</code>: also set to the temporary directory you're compiling within.</li>
+    <li><code>NAME</code>: the name of the rule.
+    <li><code>SRCS</code>: the sources of your rule</li>
+    <li><code>OUTS</code>: the outputs of your rule</li>
+    <li><code>PKG</code>: the path to the package containing this rule</li>
+    <li><code>PKG_DIR</code>: Similar to <code>PKG</code> but always contains a path (specifically <code>.</code>
+        if the rule is in the root of the repo).</li>
+    <li><code>NAME</code>: the name of this build rule</li>
+    <li><code>OUT</code>: the output of this rule. Only present when there is only one output.</li>
+    <li><code>SRC</code>: the source of this rule. Only present when there is only one source.</li>
+    <li><code>SRCS_&lt;suffix&gt;</code>: Present when you've defined named sources on a rule. Each group
+        creates one of these these variables with paths to those sources.</li>
+    <li><code>TOOLS</code>: Any tools defined on the rule.</li>
+    <li><code>TOOL</code>: Available on any rule that defines a single tool only.</li>
+    <li><code>SECRETS</code>: If any secrets are defined on the rule, these are the paths to them.</li>
+  </ul>
+</p>
+
+
+<h2>Secrets</h2>
+
+<p>Rules can define a list of secrets that they want access to. These are all absolute paths
+  (beginning with <code>/</code> or <code>~</code> and aren't copied to the build directory;
+  instead they can be located using the environment variable <code>$SECRETS</code>.<br/>
+  They're useful for things like signing or access keys that you don't want to check into
+  version control but still might be necessary for building some rules.</p>
+
+<p>These don't contribute to the key used to retrieve outputs from the cache; this
+  means it's possible for one machine to build a target with the secret and then
+  share the output with others.</p>

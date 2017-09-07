@@ -9,34 +9,15 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, labels=None, v
 
     Args:
       name (str): Name of the rule
-      cmd (str | dict | list): Command to run. It's subject to various sequence replacements:
-             $(location //path/to:target) expands to the location of the given build rule, which
-                                          must have a single output only.
-             $(locations //path/to:target) expands to the locations of the outputs of the given
-                                           build rule, which can have any number of outputs.
-             $(exe //path/to:target) expands to a command to run the output of the given target.
-                                     The rule must be marked as binary.
-             $(out_location //path_to:target) expands to the output of the given build rule, with
-                                              the preceding plz-out/gen etc.
-           Also a number of environment variables will be defined:
-             ARCH: architecture of the system, eg. amd64
-             OS: current operating system (linux, darwin, etc).
-             PATH: usual PATH environment variable as defined in your .plzconfig
-             TMP_DIR: the temporary directory you're compiling within.
-             SRCS: the sources of your rule
-             OUTS: the outputs of your rule
-             PKG: the path to the package containing this rule
-             NAME: the name of this build rule
-             OUT: the output of this rule. Only present when there is only one output.
-             SRC: the source of this rule. Only present when there is only one source.
-             SRCS_<suffix>: Present when you've defined named sources on a rule. Each group
-                            creates one of these these variables with paths to those sources.
+      cmd (str | dict | list): Command to run.
            If given as a string, it's a single command that's used always (the most common case).
            If given as a list, it's a sequence of commands run one after another if the
            preceding command is successful (i.e. it's equivalent to ' && '.join(cmd)).
            If given as a dict, the keys correspond to the build config to run and the values
            are the command to run in that config. The typical use case here is 'opt' vs. 'dbg'
            but arbitrary names can be given and specified with `plz build -c name`.
+           See https://please.build/build_rules.html for more information about the sequence
+           replacements and environment variables that are made available to this rule.
       srcs (list | dict): Sources of this rule. Can be a list of files or rules, or a dict of names
                           to lists. In the latter case they can be accessed separately which is useful
                           to be able to refer to them distinctly in the command.
