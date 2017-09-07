@@ -8,10 +8,12 @@ import json
 import os
 import re
 import sys
+import textwrap
 from itertools import chain
 
 
-DOCSTRING_RE = re.compile(r' *([^ ]+) \(([^\)]+)\):( Deprecated)?')
+DOCSTRING_RE = re.compile(' *([^ ]+) \\(([^\)]+)\\):( Deprecated)? *([^\n]+(?:\n {8}[^\n]+)*)',
+                          flags=re.MULTILINE)
 
 
 def read_functions(filenames):
@@ -31,7 +33,8 @@ def read_functions(filenames):
 
 def arg_checks(node):
     """Yields a sequence of checks on the given ast function node."""
-    docs = {m.group(1): (m.group(2), m.group(3)) for m in DOCSTRING_RE.finditer(ast.get_docstring(node))}
+    docs = {m.group(1): (m.group(2), m.group(3), m.group(4))
+            for m in DOCSTRING_RE.finditer(ast.get_docstring(node))}
     min_default = len(node.args.args) - len(node.args.defaults)
     # ast in python 3 looks a bit different.
     arg_name = lambda arg: arg.id if hasattr(arg, 'id') else arg.arg
@@ -39,8 +42,11 @@ def arg_checks(node):
         if arg.startswith('_'):  # Private, undocumented arguments.
             continue
         assert arg in docs, 'Missing docstring for argument %s to %s()' % (arg, node.name)
-        types, deprecated = docs[arg]
-        yield arg, i < min_default, types.split(' | '), bool(deprecated)
+        types, deprecated, comment = docs[arg]
+        first, _, rest = comment.partition('\n')
+        c = (first + '\n' + textwrap.dedent(rest)) if rest else first
+        lines = [x.replace('\n', ' ') for x in c.split('.\n')]
+        yield arg, i < min_default, types.split(' | '), bool(deprecated), lines
 
 
 if __name__ == '__main__':
@@ -52,6 +58,7 @@ if __name__ == '__main__':
                 'required': required,
                 'types': types,
                 'deprecated': deprecated,
-            } for arg_name, required, types, deprecated in func_info],
+                'comment': comment,
+            } for arg_name, required, types, deprecated, comment in func_info],
         } for func_name, docstring, func_info in read_functions(sys.argv[1:])
     }}, sys.stdout, sort_keys=True, indent=4)
