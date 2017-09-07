@@ -13,8 +13,7 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
         '//src:please_parser_python3',
         '//src:please_parser_pypy',
         '//third_party/python:pycparser',
-        '//third_party/python/py2:cffi',
-        '//third_party/python/py3:cffi',
+        '//third_party/python:cffi',
     ]
     if expected_failure:
         test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd

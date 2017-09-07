@@ -1,8 +1,16 @@
+subinclude('//build_defs:multiversion_wheel')
 package(
     default_python_interpreter = 'python3',
     default_visibility = ['PUBLIC'],
     python_wheel_repo = 'https://get.please.build/third_party/python/py3',
 )
+
+REPOS = [
+    'https://get.please.build/third_party/python/py27',
+    'https://get.please.build/third_party/python/py34',
+    'https://get.please.build/third_party/python/py35',
+    'https://get.please.build/third_party/python/py36',
+]
 
 python_wheel(
     name = 'pex',
@@ -62,4 +70,17 @@ python_wheel(
 python_wheel(
     name = 'pycparser',
     version = '2.18',
+)
+
+python_multiversion_wheel(
+    name = 'coverage',
+    version = '4.3.4',
+    repos = REPOS,
+)
+
+python_multiversion_wheel(
+    name = 'cffi',
+    version = '1.10.0',
+    repos = REPOS,
+    subdir = 'cffi',
 )

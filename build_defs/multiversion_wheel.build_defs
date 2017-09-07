@@ -1,0 +1,69 @@
+def python_multiversion_wheel(name, version, repos, hashes=None, package_name=None, outs=None,
+                              subdir='.', licences=None, test_only=False, zip_safe=True,
+                              visibility=None, deps=None):
+    """Downloads and combines multiple Python wheels.
+
+    This is an extended version of python_wheel that allows fetching multiple wheels for
+    different Python versions and combining them. For most packages this is unnecessary
+    since they are pure Python, but for packages with binary components those objects are
+    linked to one Python version each. By adding all the .so files for all versions we care
+    about, we can support them all simultaneously.
+
+    Note that python 2 does not support versioned object file names, so this can only work
+    for one python 2 wheel at a time. For us that's not an issue since we only support 2.7
+    (and these days that's nearly always what people are using, so often not a big deal).
+
+    The wheels are downloaded one each from the given list of repo URLs, which work in the
+    same way as python_wheel. Within those directories, the wheels are expected to follow a
+    simple naming scheme which is essentially:
+      <package_name>-<version>-<os>_<arch>.whl
+    Note that non-arch-specific wheels aren't supported since you'd not then need multiple
+    versions of them and python_wheel would suffice.
+
+    Args:
+      name (str): Name of the rule. Also doubles as the name of the package if package_name
+            is not set.
+      version (str): Version of the package to install.
+      repos (list): List of repos to download wheels from.
+      hashes (list): List of hashes to verify the package against.
+      package_name (str): If given, overrides `name` for the name of the package to look for.
+      outs (list): List of output files. Defaults to a directory named the same as `name`.
+      subdir (str): Subdirectory to extract into. If not given, defaults to the current directory.
+      licences (list): Licences that this rule is subject to.
+      test_only (bool): If True, this library can only be used by tests.
+      repo (str): Repository to download wheels from.
+      zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
+      visibility (list): Visibility declaration.
+      deps (list): Dependencies of this rule.
+    """
+    package_name = package_name or name
+
+    file_rules = [remote_file(
+        name = '_%s#%d' % (name, i + 1),
+        url = '%s/%s-%s-${OS}_${ARCH}.whl' % (repo, package_name, version),
+        out = '%s-%s-%d.whl' % (package_name, version, i + 1),
+    ) for i, repo in enumerate(repos)]
+
+    extract_rule = build_rule(
+        name = name,
+        tag = 'extract',
+        srcs = file_rules,
+        outs = outs or [package_name],
+        cmd = 'mkdir -p %s && for SRC in $SRCS; do unzip -o -qq -d %s $SRC; done && rm -rf %s/*.egg-info %s/*.dist-info' %
+            (subdir, subdir, subdir, subdir),
+        hashes = hashes,
+        building_description = 'Extracting...',
+        requires = ['py'],
+        test_only = test_only,
+    )
+
+    # Get this to do the pex pre-zipping stuff.
+    return python_library(
+        name = name,
+        srcs = [extract_rule],
+        deps = deps,
+        visibility = visibility,
+        test_only = test_only,
+        zip_safe = zip_safe,
+        labels = ['whl:%s==%s' % (package_name, version)],
+    )

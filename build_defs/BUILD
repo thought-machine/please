@@ -22,6 +22,12 @@ filegroup(
     visibility = ['//package:all'],
 )
 
+filegroup(
+    name = 'multiversion_wheel',
+    srcs = ['multiversion_wheel.build_defs'],
+    visibility = ['//third_party/python:all'],
+)
+
 genrule(
     name = 'version',
     srcs = ['//:version'],
