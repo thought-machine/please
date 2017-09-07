@@ -40,7 +40,7 @@
   </code></pre>
   In that case they can be accessed separately through <code>$SRCS_SRCS</code> and
   <code>$SRCS_RESOURCES</code>.
-  </p>
+</p>
 
 
 <h2>Dependencies</h2>
@@ -51,6 +51,28 @@
   rules see the things they'll consume.</p>
 
 <p>Dependencies don't have any corresponding environment variables associated with them.</p>
+
+
+<h2>Tools</h2>
+
+<p>Tools are the things that a rule uses to build with. They can refer either to other rules
+  within the repo, or system-level binaries, for example:
+  <pre><code>
+      tools = [
+          'curl',
+          '//path/to:tool',
+      ],
+  </code></pre>
+  In this example, <code>curl</code> is resolved on the system using the <code>PATH</code>
+  variable defined in your <a href="config.html">.plzconfig file</a>. <code>//path/to:tool</code>
+  will be built first and used from its output location.</p>
+
+<p>Tools are not copied into the build directory, you can access them using the <code>$TOOL</code>
+  or <code>$TOOLS</code> environment variables. They can also be named in a similar manner to sources.</p>
+
+<p>Note that since tools aren't copied, they can be a source of nondeterminism if you make use of
+  other outputs that happen to be located near them. In order to ensure correctness you should
+  make sure that you only run the tool itself and don't access neighbouring outputs.</p>
 
 
 <h2>Commands</h2>
