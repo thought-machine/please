@@ -1,0 +1,39 @@
+    <h3><a name="{{ .Name }}">{{ .Name }}{{ if .Aliases }} / {{ join .Aliases " / " }}{{ end }}</a></h3>
+
+    <p><pre class="rule"><code>{{ .Name }}(
+      {{- range $i, $arg := .Args -}}
+          {{- if gt $i 0 }}, {{ end -}}
+          {{- if not $arg.Required -}}
+            <span class="optional">{{- $arg.Name -}}</span>
+          {{- else -}}
+            {{- $arg.Name -}}
+          {{- end -}}
+      {{- end }})</code></pre></p>
+
+    <p>{{ .Comment }}</p>
+
+    <table>
+      <thead>
+      <tr>
+	    <th>Argument</th>
+        <th>Required</th>
+        <th>Type</th>
+        <th></th>
+      </tr>
+      </thead>
+      <tbody>
+      {{ range .Args }}
+        <tr>
+          <td>{{ .Name }}</td>
+          <td>{{ if .Required }}yes{{ end }}</td>
+          <td>{{ join .Types " or " }}</td>
+          <td>
+            {{- range $i, $comment := .Comment -}}
+            {{- if gt $i 0 }}<br/>{{ end -}}
+            {{- $comment -}}
+            {{- end -}}
+          </td>
+        </tr>
+      {{ end }}
+      </tbody>
+    </table>

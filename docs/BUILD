@@ -1,6 +1,6 @@
 deps = []
 
-for src in glob(['*.html'], excludes=['template.html']):
+for src in glob(['*.html'], excludes=['template.html', 'lexicon*.html']):
     name = src.replace('.', '_')
     genrule(
         name = name,
@@ -10,6 +10,22 @@ for src in glob(['*.html'], excludes=['template.html']):
         cmd = '$TOOL $SRCS > $OUT',
     )
     deps.append(':' + name)
+
+genrule(
+    name = 'lexicon_html',
+    srcs = [
+        'lexicon.html',
+        'lexicon_entry.html',
+        'template.html',
+        '//src/parse:rule_args',
+    ],
+    outs = ['lexicon.html'],
+    cmd = '$TOOLS_LEX > temp.html && $TOOLS_TMPL docs/template.html temp.html > $OUT',
+    tools = {
+        'lex': [':lexicon_templater'],
+        'tmpl': [':templater'],
+    },
+)
 
 # Downscale images from original resolution
 for colour, scale in [('teal', '50%'), ('white', '20%')]:
@@ -26,6 +42,7 @@ for colour, scale in [('teal', '50%'), ('white', '20%')]:
 filegroup(
     name = 'docs',
     srcs = deps + [
+        ':lexicon_html',
         'styles.css',
         'action.js',
         'images/thoughtmachine.png',
@@ -39,15 +56,7 @@ go_binary(
     srcs = ['template.go'],
 )
 
-go_test(
-    name = 'lexicon_test',
-    srcs = ['lexicon_test.go'],
-    data = [
-        'lexicon.html',
-        '//src/parse:rule_args',
-    ],
-    deps = [
-        '//third_party/go:html',
-        '//third_party/go:testify',
-    ],
+go_binary(
+    name = 'lexicon_templater',
+    srcs = ['template_lexicon.go'],
 )

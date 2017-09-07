@@ -19,6 +19,9 @@ DOCSTRING_RE = re.compile(' *([^ ]+) \\(([^\)]+)\\):( Deprecated)? *([^\n]+(?:\n
 def read_functions(filenames):
     """Reads the given python files and yields the function arguments from them."""
     for filename in filenames:
+        # Infer a language from the filename. Theoretically one should derive this from
+        # `requires` stanzas but that'd be stupidly hard to do...
+        lang, _, _ = filename.partition('_')
         with open(filename) as f:
             tree = ast.parse(f.read(), f.name)
             for i, node in enumerate(ast.iter_child_nodes(tree)):
@@ -26,9 +29,15 @@ def read_functions(filenames):
                     # The c_*** family of functions call through to the cc_family.
                     # They don't have formal argument lists because most things are delegated.
                     if not node.name.startswith('c_'):
-                        yield node.name, ast.get_docstring(node), arg_checks(node)
+                        ds = ast.get_docstring(node)
+                        comment, _, _ = ds.partition('\nArgs:\n')
+                        comment = textwrap.dedent('    ' + comment.strip())
                         if node.name.startswith('cc_'):
-                            yield node.name.replace('cc_', 'c_'), ast.get_docstring(node), arg_checks(node)
+                            alias = node.name.replace('cc_', 'c_')
+                            yield node.name, [alias], lang, ds, comment, arg_checks(node)
+                            yield alias, [node.name], lang, ds, comment, arg_checks(node)
+                        else:
+                            yield node.name, None, lang, ds, comment, arg_checks(node)
 
 
 def arg_checks(node):
@@ -52,7 +61,10 @@ def arg_checks(node):
 if __name__ == '__main__':
     json.dump({'functions': {
         func_name: {
+            'aliases': aliases,
+            'comment': comment,
             'docstring': docstring,
+            'language': None if language == 'misc' else language,
             'args': [{
                 'name': arg_name,
                 'required': required,
@@ -60,5 +72,5 @@ if __name__ == '__main__':
                 'deprecated': deprecated,
                 'comment': comment,
             } for arg_name, required, types, deprecated, comment in func_info],
-        } for func_name, docstring, func_info in read_functions(sys.argv[1:])
+        } for func_name, aliases, language, docstring, comment, func_info in read_functions(sys.argv[1:])
     }}, sys.stdout, sort_keys=True, indent=4)

@@ -68,6 +68,9 @@ pre.rule {
     word-wrap: break-word;
     word-break: normal;
 }
+.optional {
+    font-style: italic;
+}
 p, li, td {
     line-height: 130%;
 }
