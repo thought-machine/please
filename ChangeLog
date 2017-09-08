@@ -1,3 +1,16 @@
+Version 9.0.0
+-------------
+
+    * Better support for multiple Python versions; should now support python 2.7, 3.4, 3.5
+      and 3.6 for bootstrap, and binary artifacts for all of those are written for coverage
+      in generated test pexes.
+    * Removed a number of esoteric builtin rules: github_file, git_repo, fpm_package and
+      fpm_deb. Removed long-deprecated go_yacc rule and `link` argument to filegroup.
+      Removed rules are available at github.com/thought-machine/pleasings as build_defs
+      files; they will still work equivalently but it's unnecessary to have those built
+      into the core.
+
+
 Version 8.7.5
 -------------
 
