@@ -47,7 +47,7 @@ func main() {
 		// point. It doesn't really matter in the sense that when run within plz pex will never
 		// reuse its code hashes anyway (because $HOME is overridden).
 		sum := sha1.Sum([]byte(opts.Out))
-		opts.CodeHash = base64.RawStdEncoding.EncodeToString(sum[:])
+		opts.CodeHash = base64.RawURLEncoding.EncodeToString(sum[:])
 	}
 	w := pex.NewPexWriter(opts.EntryPoint, opts.Interpreter, opts.CodeHash, !opts.NoZipSafe)
 	if opts.Shebang != "" {

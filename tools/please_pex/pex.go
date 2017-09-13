@@ -22,6 +22,7 @@ type PexInfo struct {
 	CodeHash        string          `json:"code_hash"`
 	EntryPoint      string          `json:"entry_point"`
 	ZipSafe         bool            `json:"zip_safe"`
+	PexRoot         string          `json:"pex_root"`
 }
 
 // A BuildProperties represents the BuildProperties entry in a PexInfo.
@@ -53,6 +54,7 @@ func NewPexWriter(entryPoint, interpreter, codeHash string, zipSafe bool) *PexWr
 			CodeHash:   codeHash,
 			EntryPoint: "pex_main",
 			ZipSafe:    zipSafe,
+			PexRoot:    "~/.pex",
 		},
 		realEntryPoint: toPythonPath(entryPoint),
 	}
