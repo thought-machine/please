@@ -1,3 +1,9 @@
+Version 9.0.1
+-------------
+
+    * Better incrementality for python_test / python_binary rules.
+
+
 Version 9.0.0
 -------------
 
