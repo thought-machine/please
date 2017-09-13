@@ -371,7 +371,7 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
         )
 
 
-def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
+def maven_jar(name, id, repository=None, hash=None, hashes=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
               exclude_paths=None, native=False, artifact_type=None, test_only=False,
               binary=False, classifier='', classifier_sources_override=''):
@@ -499,6 +499,7 @@ def maven_jar(name, id=None, repository=None, hash=None, hashes=None, deps=None,
         exported_deps=deps,  # easiest to assume these are always exported.
         deps = local_deps,  # ensure the classes_rule gets built correctly if there is one.
         hashes = hashes if hashes else [hash] if hash else None,
+        labels = ['mvn:' + id],
         visibility = visibility,
         test_only=test_only,
         output_is_complete = False,
