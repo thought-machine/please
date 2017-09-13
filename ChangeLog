@@ -1,3 +1,9 @@
+Version 9.0.2
+-------------
+
+    * Fixed some pexes from previous commit where pex_root wasn't set properly.
+
+
 Version 9.0.1
 -------------
 
