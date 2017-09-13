@@ -145,7 +145,6 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
         deps=deps,
         needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
         output_is_complete=True,
-        stamp=True,  # Used for pex to identify each pex uniquely.
         tools={
             'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
             'pex': [CONFIG.PEX_TOOL],
@@ -238,7 +237,6 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         building_description="Creating pex info...",
         pre_build=pre_build,
         deps=deps,
-        stamp=True,  # Used for pex to identify each test uniquely.
         tools={
             'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
             'pex': [CONFIG.PEX_TOOL],
