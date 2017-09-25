@@ -22,17 +22,23 @@ func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
 	// Collect the targets per-package so we only rewrite each file once.
 	m := map[string]map[string]string{}
 	for _, l := range labels {
-		h, err := build.OutputHash(state.Graph.TargetOrDie(l))
-		if err != nil {
-			log.Fatalf("%s\n", err)
-		}
-		// Interior targets won't appear in the BUILD file directly, look for their parent instead.
-		l = l.Parent()
-		hashStr := hex.EncodeToString(h)
-		if m2, present := m[l.PackageName]; present {
-			m2[l.Name] = hashStr
-		} else {
-			m[l.PackageName] = map[string]string{l.Name: hashStr}
+		for _, target := range state.Graph.PackageOrDie(l.PackageName).AllChildren(state.Graph.TargetOrDie(l)) {
+			// Ignore targets with no hash specified.
+			if len(target.Hashes) == 0 {
+				continue
+			}
+			h, err := build.OutputHash(target)
+			if err != nil {
+				log.Fatalf("%s\n", err)
+			}
+			// Interior targets won't appear in the BUILD file directly, look for their parent instead.
+			l := target.Label.Parent()
+			hashStr := hex.EncodeToString(h)
+			if m2, present := m[l.PackageName]; present {
+				m2[l.Name] = hashStr
+			} else {
+				m[l.PackageName] = map[string]string{l.Name: hashStr}
+			}
 		}
 	}
 	for pkgName, hashes := range m {
