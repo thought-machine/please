@@ -12,8 +12,8 @@ import (
 // A Fetch fetches files for us from Maven.
 // It memoises requests internally so we don't re-request the same file.
 type Fetch struct {
-	// URL of the Maven repo we're fetching from
-	url string
+	// Maven repos we're fetching from.
+	repos []string
 	// HTTP client to fetch with
 	client *http.Client
 	// Request cache
@@ -27,15 +27,17 @@ type Fetch struct {
 }
 
 // NewFetch constructs & returns a new Fetch instance.
-func NewFetch(url string, exclude, optional []string) *Fetch {
-	if !strings.HasSuffix(url, "/") {
-		url = url + "/"
-	}
-	if strings.HasPrefix(url, "http:") {
-		log.Warning("Repo URL is not secure, you should really be using https")
+func NewFetch(repos, exclude, optional []string) *Fetch {
+	for i, url := range repos {
+		if !strings.HasSuffix(url, "/") {
+			repos[i] = url + "/"
+		}
+		if strings.HasPrefix(url, "http:") {
+			log.Warning("Repo URL %s is not secure, you should really be using https", url)
+		}
 	}
 	f := &Fetch{
-		url:      url,
+		repos:    repos,
 		client:   &http.Client{Timeout: 30 * time.Second},
 		cache:    map[string][]byte{},
 		exclude:  toMap(exclude),
@@ -57,6 +59,10 @@ func toMap(sl []string) map[string]bool {
 // Pom fetches the POM XML for a package.
 // Note that this may invoke itself recursively to fetch parent artifacts and dependencies.
 func (f *Fetch) Pom(a *Artifact) *pomXml {
+	if a.Version == "+" {
+		// + indicates the latest version, presumably.
+		a.SetVersion(f.Metadata(a).LatestVersion())
+	}
 	pom, created := f.Resolver.CreatePom(a)
 	pom.Lock()
 	defer pom.Unlock()
@@ -97,7 +103,7 @@ func (f *Fetch) ShouldInclude(artifact string) bool {
 func (f *Fetch) mustFetch(url string) []byte {
 	b, err := f.fetch(url, true)
 	if err != nil {
-		log.Fatalf("Error downloading %s: %s\n", f.url+url, err)
+		log.Fatalf("Error downloading %s: %s\n", f.repos[len(f.repos)-1]+url, err)
 	}
 	return b
 }
@@ -111,9 +117,21 @@ func (f *Fetch) fetch(url string, readBody bool) ([]byte, error) {
 		log.Debug("Retrieved %s from cache", url)
 		return contents, nil
 	}
-	fullUrl := f.url + url
-	log.Notice("%s %s...", f.description(readBody), fullUrl)
-	req, err := http.NewRequest(http.MethodGet, fullUrl, nil)
+	var err error
+	for _, repo := range f.repos {
+		if contents, err = f.fetchURL(repo+url, readBody); err == nil {
+			f.mutex.Lock()
+			defer f.mutex.Unlock()
+			f.cache[url] = contents
+			return contents, nil
+		}
+	}
+	return nil, err
+}
+
+func (f *Fetch) fetchURL(url string, readBody bool) ([]byte, error) {
+	log.Notice("%s %s...", f.description(readBody), url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -124,16 +142,10 @@ func (f *Fetch) fetch(url string, readBody bool) ([]byte, error) {
 		return nil, fmt.Errorf("Bad response code: %s", response.Status)
 	}
 	defer response.Body.Close()
-	if readBody {
-		contents, err = ioutil.ReadAll(response.Body)
-		if err != nil {
-			return nil, err
-		}
+	if !readBody {
+		return nil, nil
 	}
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
-	f.cache[url] = contents
-	return contents, nil
+	return ioutil.ReadAll(response.Body)
 }
 
 // description returns the log description we'll use for a download.

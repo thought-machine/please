@@ -1,3 +1,9 @@
+Version 9.0.3
+-------------
+
+    * Minor fix to plz_maven to allow it to compare multiple repositories correctly.
+
+
 Version 9.0.2
 -------------
 

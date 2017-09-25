@@ -18,15 +18,15 @@ import (
 )
 
 var opts = struct {
-	Usage      string
-	Repository string   `short:"r" long:"repository" description:"Location of Maven repo" default:"https://repo1.maven.org/maven2"`
-	Verbosity  int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
-	Exclude    []string `short:"e" long:"exclude" description:"Artifacts to exclude from download"`
-	Indent     bool     `short:"i" long:"indent" description:"Indent stdout lines appropriately"`
-	Optional   []string `short:"o" long:"optional" description:"Optional dependencies to fetch"`
-	BuildRules bool     `short:"b" long:"build_rules" description:"Print individual maven_jar build rules for each artifact"`
-	NumThreads int      `short:"n" long:"num_threads" default:"10" description:"Number of concurrent fetches to perform"`
-	Args       struct {
+	Usage        string
+	Repositories []string `short:"r" long:"repository" description:"Location of Maven repo" default:"https://repo1.maven.org/maven2"`
+	Verbosity    int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
+	Exclude      []string `short:"e" long:"exclude" description:"Artifacts to exclude from download"`
+	Indent       bool     `short:"i" long:"indent" description:"Indent stdout lines appropriately"`
+	Optional     []string `short:"o" long:"optional" description:"Optional dependencies to fetch"`
+	BuildRules   bool     `short:"b" long:"build_rules" description:"Print individual maven_jar build rules for each artifact"`
+	NumThreads   int      `short:"n" long:"num_threads" default:"10" description:"Number of concurrent fetches to perform"`
+	Args         struct {
 		Artifacts []maven.Artifact `positional-arg-name:"ids" required:"yes" description:"Maven IDs to fetch (e.g. io.grpc:grpc-all:1.4.0)"`
 	} `positional-args:"yes" required:"yes"`
 }{
@@ -51,8 +51,8 @@ rule to make adding dependencies easier.
 }
 
 func main() {
-	cli.ParseFlagsOrDie("please_maven", "8.2.5", &opts)
+	cli.ParseFlagsOrDie("please_maven", "9.0.3", &opts)
 	cli.InitLogging(opts.Verbosity)
-	f := maven.NewFetch(opts.Repository, opts.Exclude, opts.Optional)
+	f := maven.NewFetch(opts.Repositories, opts.Exclude, opts.Optional)
 	fmt.Println(strings.Join(maven.AllDependencies(f, opts.Args.Artifacts, opts.NumThreads, opts.Indent, opts.BuildRules), "\n"))
 }

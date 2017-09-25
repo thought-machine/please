@@ -29,7 +29,7 @@ var server *httptest.Server
 var errorProne, grpc []Artifact
 
 func TestAllDependenciesGRPC(t *testing.T) {
-	f := NewFetch(server.URL, excludes, nil)
+	f := NewFetch([]string{server.URL}, excludes, nil)
 	expected := []string{
 		"io.grpc:grpc-auth:1.1.2:src:BSD 3-Clause",
 		"io.grpc:grpc-core:1.1.2:src:BSD 3-Clause",
@@ -68,7 +68,7 @@ func TestAllDependenciesGRPC(t *testing.T) {
 }
 
 func TestAllDependenciesGRPCWithIndent(t *testing.T) {
-	f := NewFetch(server.URL, excludes, nil)
+	f := NewFetch([]string{server.URL}, excludes, nil)
 	expected := []string{
 		"io.grpc:grpc-auth:1.1.2:src:BSD 3-Clause",
 		"  io.grpc:grpc-core:1.1.2:src:BSD 3-Clause",
@@ -107,7 +107,7 @@ func TestAllDependenciesGRPCWithIndent(t *testing.T) {
 }
 
 func TestAllDependenciesErrorProne(t *testing.T) {
-	f := NewFetch(server.URL, nil, nil)
+	f := NewFetch([]string{server.URL}, nil, nil)
 	expected := []string{
 		"com.google.errorprone:error_prone_annotation:2.0.14:src",
 		"com.google.guava:guava:19.0:no_src",
@@ -129,7 +129,7 @@ func TestAllDependenciesErrorProne(t *testing.T) {
 }
 
 func TestAllDependenciesErrorProneWithIndent(t *testing.T) {
-	f := NewFetch(server.URL, nil, nil)
+	f := NewFetch([]string{server.URL}, nil, nil)
 	expected := []string{
 		"com.google.errorprone:error_prone_annotation:2.0.14:src",
 		"  com.google.guava:guava:19.0:no_src",
@@ -151,7 +151,7 @@ func TestAllDependenciesErrorProneWithIndent(t *testing.T) {
 }
 
 func TestAllDependenciesTogether(t *testing.T) {
-	f := NewFetch(server.URL, excludes, nil)
+	f := NewFetch([]string{server.URL}, excludes, nil)
 	expected := []string{
 		"com.google.errorprone:error_prone_annotation:2.0.14:src",
 		"com.google.guava:guava:20.0:src",
@@ -378,7 +378,7 @@ maven_jar(
         ':support-v4',
     ],
 )`
-	f := NewFetch(server.URL, nil, nil)
+	f := NewFetch([]string{server.URL}, nil, nil)
 	actual := AllDependencies(f, errorProne, concurrency, false, true)
 	// The rules come out in a different order to the original tool; this doesn't
 	// really matter since order of rules in a BUILD file is unimportant.
@@ -775,7 +775,7 @@ maven_jar(
         ':mockito-core',
     ],
 )`
-	f := NewFetch(server.URL, excludes, nil)
+	f := NewFetch([]string{server.URL}, excludes, nil)
 	actual := AllDependencies(f, grpc, concurrency, false, true)
 	// The rules come out in a different order to the original tool; this doesn't
 	// really matter since order of rules in a BUILD file is unimportant.
