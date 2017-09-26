@@ -20,18 +20,22 @@ import (
 	"cli"
 )
 
-// File name for the typical repo config - this is normally checked in
+// OsArch is the os/arch pair, like linux_amd64 etc.
+const OsArch = runtime.GOOS + "_" + runtime.GOARCH
+
+// ConfigFileName is the file name for the typical repo config - this is normally checked in
 const ConfigFileName string = ".plzconfig"
 
-// Architecture-specific config file which overrides the repo one. Also normally checked in if needed.
-const ArchConfigFileName string = ".plzconfig_" + runtime.GOOS + "_" + runtime.GOARCH
+// ArchConfigFileName is the architecture-specific config file which overrides the repo one.
+// Also normally checked in if needed.
+const ArchConfigFileName string = ".plzconfig_" + OsArch
 
-// File name for the local repo config - this is not normally checked in and used to
-// override settings on the local machine.
+// LocalConfigFileName is the file name for the local repo config - this is not normally checked
+// in and used to override settings on the local machine.
 const LocalConfigFileName string = ".plzconfig.local"
 
-// File name for the machine-level config - can use this to override things
-// for a particular machine (eg. build machine with different caching behaviour).
+// MachineConfigFileName is the file name for the machine-level config - can use this to override
+// things for a particular machine (eg. build machine with different caching behaviour).
 const MachineConfigFileName = "/etc/plzconfig"
 
 const (

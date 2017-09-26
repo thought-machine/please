@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"path"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -18,11 +17,9 @@ var (
 	target    *core.BuildTarget
 	httpcache *httpCache
 	key       []byte
-	osName    string
 )
 
 func init() {
-	osName = runtime.GOOS + "_" + runtime.GOARCH
 	label = core.NewBuildLabel("pkg/name", "label_name")
 	target = core.NewBuildTarget(label)
 
@@ -40,7 +37,7 @@ func init() {
 func TestStore(t *testing.T) {
 	target.AddOutput("testfile")
 	httpcache.Store(target, []byte("test_key"))
-	abs, _ := filepath.Abs(path.Join("src/cache/test_data", osName, "pkg/name", "label_name"))
+	abs, _ := filepath.Abs(path.Join("src/cache/test_data", core.OsArch, "pkg/name", "label_name"))
 	if !core.PathExists(abs) {
 		t.Errorf("Test file %s was not stored in cache.", abs)
 	}
@@ -54,7 +51,7 @@ func TestRetrieve(t *testing.T) {
 
 func TestClean(t *testing.T) {
 	httpcache.Clean(target)
-	filename := path.Join("src/cache/test_data", osName, "pkg/name/label_name")
+	filename := path.Join("src/cache/test_data", core.OsArch, "pkg/name/label_name")
 	if core.PathExists(filename) {
 		t.Errorf("File %s was not removed from cache.", filename)
 	}

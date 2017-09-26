@@ -651,7 +651,7 @@ func (target *BuildTarget) HasAllLabels(labels []string) bool {
 // Each include/exclude can have multiple comma-separated labels; in this case, all of the labels
 // in a given group must match.
 func (target *BuildTarget) ShouldInclude(includes, excludes []string) bool {
-	if target.HasLabel("manual") {
+	if target.HasLabel("manual") || target.HasLabel("manual:"+OsArch) {
 		return false
 	}
 

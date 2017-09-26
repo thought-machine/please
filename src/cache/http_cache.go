@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"core"
@@ -21,7 +20,6 @@ type httpCache struct {
 	Url       string
 	Writeable bool
 	Timeout   time.Duration
-	OSName    string
 }
 
 func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files ...string) {
@@ -48,7 +46,7 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files ...str
 func (cache *httpCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
 	if cache.Writeable {
 		artifact := path.Join(
-			cache.OSName,
+			core.OsArch,
 			target.Label.PackageName,
 			target.Label.Name,
 			base64.RawURLEncoding.EncodeToString(key),
@@ -90,7 +88,7 @@ func (cache *httpCache) RetrieveExtra(target *core.BuildTarget, key []byte, file
 	log.Debug("Retrieving %s:%s from http cache...", target.Label, file)
 
 	artifact := path.Join(
-		cache.OSName,
+		core.OsArch,
 		target.Label.PackageName,
 		target.Label.Name,
 		base64.RawURLEncoding.EncodeToString(key),
@@ -152,7 +150,7 @@ func (cache *httpCache) writeFile(target *core.BuildTarget, file string, r io.Re
 func (cache *httpCache) Clean(target *core.BuildTarget) {
 	var reader io.Reader
 	artifact := path.Join(
-		cache.OSName,
+		core.OsArch,
 		target.Label.PackageName,
 		target.Label.Name,
 	)
@@ -174,10 +172,9 @@ func (cache *httpCache) CleanAll() {
 func (cache *httpCache) Shutdown() {}
 
 func newHttpCache(config *core.Configuration) *httpCache {
-	cache := new(httpCache)
-	cache.OSName = runtime.GOOS + "_" + runtime.GOARCH
-	cache.Url = config.Cache.HttpUrl.String()
-	cache.Writeable = config.Cache.HttpWriteable
-	cache.Timeout = time.Duration(config.Cache.HttpTimeout)
-	return cache
+	return &httpCache{
+		Url:       config.Cache.HttpUrl.String(),
+		Writeable: config.Cache.HttpWriteable,
+		Timeout:   time.Duration(config.Cache.HttpTimeout),
+	}
 }

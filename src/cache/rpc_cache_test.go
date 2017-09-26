@@ -18,12 +18,10 @@ import (
 var (
 	label    core.BuildLabel
 	rpccache *rpcCache
-	osName   string
 )
 
 func init() {
 	runtime.GOMAXPROCS(1) // Don't allow tests to run in parallel, they should work but makes debugging tricky
-	osName = runtime.GOOS + "_" + runtime.GOARCH
 	label = core.NewBuildLabel("pkg/name", "label_name")
 
 	// Move this directory from test_data to somewhere local.
@@ -68,7 +66,7 @@ func TestStore(t *testing.T) {
 	target := core.NewBuildTarget(label)
 	target.AddOutput("testfile2")
 	rpccache.Store(target, []byte("test_key"))
-	expectedPath := path.Join("src/cache/test_data", osName, "pkg/name", "label_name", "dGVzdF9rZXk", target.Outputs()[0])
+	expectedPath := path.Join("src/cache/test_data", core.OsArch, "pkg/name", "label_name", "dGVzdF9rZXk", target.Outputs()[0])
 	if !core.PathExists(expectedPath) {
 		t.Errorf("Test file %s was not stored in cache.", expectedPath)
 	}
@@ -101,7 +99,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 func TestClean(t *testing.T) {
 	target := core.NewBuildTarget(label)
 	rpccache.Clean(target)
-	filename := path.Join("src/cache/test_data", osName, "pkg/name/label_name")
+	filename := path.Join("src/cache/test_data", core.OsArch, "pkg/name/label_name")
 	if core.PathExists(filename) {
 		t.Errorf("File %s was not removed from cache.", filename)
 	}

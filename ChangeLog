@@ -1,3 +1,9 @@
+Version 9.1.0
+-------------
+
+    * The 'manual' label can now be applied per-architecture, e.g. manual:linux_amd64.
+
+
 Version 9.0.4
 -------------
 
