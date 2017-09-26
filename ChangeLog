@@ -1,3 +1,10 @@
+Version 9.1.1
+-------------
+
+    * Quick fix for plz_diff_graphs to honour manual:linux_amd64.
+      Doesn't work correctly on OSX yet though.
+
+
 Version 9.1.0
 -------------
 

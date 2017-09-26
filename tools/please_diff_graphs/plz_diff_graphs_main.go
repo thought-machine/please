@@ -24,7 +24,7 @@ var opts = struct {
 	Before       string   `short:"b" long:"before" required:"true" description:"File containing build graph before changes."`
 	After        string   `short:"a" long:"after" required:"true" description:"File containing build graph after changes."`
 	Include      []string `short:"i" long:"include" description:"Label of targets to include."`
-	Exclude      []string `short:"e" long:"exclude" description:"Label of targets to exclude." default:"manual"`
+	Exclude      []string `short:"e" long:"exclude" description:"Label of targets to exclude." default:"manual,manual:linux_amd64"`
 	NoRecurse    bool     `long:"norecurse" description:"Don't recurse into dependencies of rules to see if they've changed"`
 	ChangedFiles struct {
 		Files []string `positional-arg-name:"files" description:"Files that have changed. - to read from stdin."`
