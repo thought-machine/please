@@ -24,7 +24,7 @@ var opts = struct {
 	Before       string   `short:"b" long:"before" required:"true" description:"File containing build graph before changes."`
 	After        string   `short:"a" long:"after" required:"true" description:"File containing build graph after changes."`
 	Include      []string `short:"i" long:"include" description:"Label of targets to include."`
-	Exclude      []string `short:"e" long:"exclude" description:"Label of targets to exclude." default:"manual,manual:linux_amd64"`
+	Exclude      []string `short:"e" long:"exclude" description:"Label of targets to exclude." default:"manual" default:"manual:linux_amd64"`
 	NoRecurse    bool     `long:"norecurse" description:"Don't recurse into dependencies of rules to see if they've changed"`
 	ChangedFiles struct {
 		Files []string `positional-arg-name:"files" description:"Files that have changed. - to read from stdin."`
@@ -67,7 +67,7 @@ func readStdin() []string {
 }
 
 func main() {
-	cli.ParseFlagsOrDie("Please graph differ", "5.5.0", &opts)
+	cli.ParseFlagsOrDie("Please graph differ", "9.1.2", &opts)
 	cli.InitLogging(opts.Verbosity)
 	before := misc.ParseGraphOrDie(opts.Before)
 	after := misc.ParseGraphOrDie(opts.After)
