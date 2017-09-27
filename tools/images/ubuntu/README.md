@@ -16,6 +16,5 @@ Notes
    thing from scratch. A sufficiently recent packaged version would be
    preferable.
  - libunittest++-dev is available in Ubuntu but the version is fairly old
-   and core dumps on several tests. Installing v2.0.0 ourselves fixes this,
-   although the naming is a bit inconsistent (tracked in #200). Regardless,
-   we fix that up with a couple of judicious symlinks.
+   and core dumps on several tests, and has idiosyncratic naming of the
+   header directory. Installing v2.0.0 ourselves fixes this.

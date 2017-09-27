@@ -20,8 +20,6 @@ RUN ln -s /usr/local/pypy/bin/libpypy-c.so /usr/lib
 RUN apt-get install -y pkg-config clang
 RUN curl -fsSL https://github.com/unittest-cpp/unittest-cpp/releases/download/v2.0.0/unittest-cpp-2.0.0.tar.gz | tar -xzC /tmp
 RUN cd /tmp/unittest-cpp-2.0.0 && ./configure --prefix=/usr && make -j4 && make install
-RUN ln -s /usr/include/UnitTest++ /usr/include/unittest++
-RUN ln -s /usr/lib/libUnitTest++.a /usr/lib/libunittest++.a
 RUN rm -r /tmp/unittest-cpp-2.0.0
 
 # Protocol buffers

@@ -412,7 +412,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     if write_main:
-        linker_flags.append('-lunittest++')
+        linker_flags.append('-lUnitTest++')
         genrule(
             name='_%s#main' % name,
             outs=['_%s_main.cc' % name],
@@ -618,8 +618,8 @@ _CC_TEST_MAIN_CONTENTS = """
 #include <fstream>
 #include <stdlib.h>
 #include <string.h>
-#include "unittest++/UnitTest++.h"
-#include "unittest++/XmlTestReporter.h"
+#include "UnitTest++/UnitTest++.h"
+#include "UnitTest++/XmlTestReporter.h"
 int main(int argc, char const *argv[]) {
     auto run_named = [argc, argv](UnitTest::Test* test) {
         return argc <= 1 || std::any_of(argv + 1, argv + argc, [test](const char* name) {
