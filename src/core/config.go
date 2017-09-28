@@ -80,7 +80,7 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	defaultPath(&config.Java.JarCatTool, config.Please.Location, "jarcat")
 	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
-	defaultPath(&config.Please.LintTool, config.Please.Location, "please_build_linter")
+	defaultPath(&config.Please.LintTool, config.Please.Location, "linter")
 
 	if (config.Cache.RpcPrivateKey == "") != (config.Cache.RpcPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")

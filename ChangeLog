@@ -1,3 +1,9 @@
+Version 9.1.3
+-------------
+
+    * Fixed `plz tool lint` which was looking in the wrong place.
+
+
 Version 9.1.2
 -------------
 
