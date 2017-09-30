@@ -1,3 +1,10 @@
+Version 9.1.6
+-------------
+
+    * Fixed a subtle interaction of srcs and deps whereby transitive deps couldn't
+      be accessed when specified as both srcs and deps.
+
+
 Version 9.1.5
 -------------
 

@@ -304,7 +304,7 @@ func TestDeclaredDependenciesStrict(t *testing.T) {
 	target1 := makeTarget("//src/core:target1", "")
 	target2 := makeTarget("//src/core:target2", "", target1)
 	target3 := makeTarget("//src/core:target3", "", target2)
-	target3.AddMaybeExportedDependency(target1.Label, true)
+	target3.AddMaybeExportedDependency(target1.Label, true, false)
 	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependenciesStrict())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependenciesStrict())
 	assert.Equal(t, []BuildLabel{target2.Label}, target3.DeclaredDependenciesStrict())
@@ -318,12 +318,22 @@ func TestAddDependency(t *testing.T) {
 	target2.AddDependency(target1.Label)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
-	target2.AddMaybeExportedDependency(target1.Label, true)
+	target2.AddMaybeExportedDependency(target1.Label, true, false)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ExportedDependencies())
 	assert.Equal(t, []*BuildTarget{}, target2.Dependencies())
 	target2.resolveDependency(target1.Label, target1)
 	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
+}
+
+func TestAddDependencySource(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "")
+	target2.AddMaybeExportedDependency(target1.Label, true, true)
+	assert.True(t, target2.IsSourceOnlyDep(target1.Label))
+	// N.B. It's important that calling this again cancels the source flag.
+	target2.AddMaybeExportedDependency(target1.Label, true, false)
+	assert.False(t, target2.IsSourceOnlyDep(target1.Label))
 }
 
 func TestDependencyFor(t *testing.T) {

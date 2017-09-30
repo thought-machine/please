@@ -155,6 +155,7 @@ type depInfo struct {
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
+	source   bool           // is it implicit because it's a source (not true if it's a dependency too)
 }
 
 type BuildTargetState int32
@@ -319,20 +320,9 @@ func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 
 // DeclaredDependenciesStrict returns the original declaration of this target's dependencies.
 func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
-	m := map[BuildLabel]bool{}
-	for _, src := range target.AllSources() {
-		if l := src.Label(); l != nil {
-			m[*l] = true
-		}
-	}
-	for _, tool := range target.Tools {
-		if l := tool.Label(); l != nil {
-			m[*l] = true
-		}
-	}
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, dep := range target.dependencies {
-		if !dep.exported && !m[dep.declared] {
+		if !dep.exported && !dep.source && !target.IsTool(dep.declared) {
 			ret = append(ret, dep.declared)
 		}
 	}
@@ -590,6 +580,12 @@ func (target *BuildTarget) dependencyInfo(label BuildLabel) *depInfo {
 	return nil
 }
 
+// IsSourceOnlyDep returns true if the given dependency was only declared on the srcs of the target.
+func (target *BuildTarget) IsSourceOnlyDep(label BuildLabel) bool {
+	info := target.dependencyInfo(label)
+	return info != nil && info.source
+}
+
 // State returns the target's current state.
 func (target *BuildTarget) State() BuildTargetState {
 	return BuildTargetState(atomic.LoadInt32(&target.state))
@@ -720,7 +716,7 @@ func (target *BuildTarget) addSource(sources []BuildInput, source BuildInput) []
 	}
 	// Add a dependency if this is not just a file.
 	if label := source.Label(); label != nil {
-		target.AddDependency(*label)
+		target.AddMaybeExportedDependency(*label, false, true)
 	}
 	return append(sources, source)
 }
@@ -896,19 +892,20 @@ func (target *BuildTarget) NamedTools(name string) []BuildInput {
 
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
-	target.AddMaybeExportedDependency(dep, false)
+	target.AddMaybeExportedDependency(dep, false, false)
 }
 
 // AddMaybeExportedDependency adds a dependency to this target which may be exported. It deduplicates against any existing deps.
-func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported bool) {
+func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, source bool) {
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
 	}
 	info := target.dependencyInfo(dep)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported})
-	} else if exported {
-		info.exported = exported
+		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported, source: source})
+	} else {
+		info.exported = info.exported || exported
+		info.source = info.source && source
 	}
 }
 

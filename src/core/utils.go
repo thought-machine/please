@@ -393,7 +393,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan sourcePair {
 		}
 		// All the sources of this rule now count as done.
 		for _, source := range sources {
-			if label := source.Label(); label != nil {
+			if label := source.Label(); label != nil && dependency.IsSourceOnlyDep(*label) {
 				done[*label] = true
 			}
 		}
