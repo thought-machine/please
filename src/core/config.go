@@ -116,6 +116,8 @@ func DefaultConfiguration() *Configuration {
 	config.Build.Config = "opt"         // Optimised builds by default
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Build.PleaseSandboxTool = "please_sandbox"
+	config.BuildConfig = map[string]string{}
+	config.Aliases = map[string]string{}
 	config.Cache.HttpTimeout = cli.Duration(5 * time.Second)
 	config.Cache.RpcTimeout = cli.Duration(5 * time.Second)
 	config.Cache.Dir = ".plz-cache"
@@ -369,6 +371,9 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		field := elem.FieldByNameFunc(match(split[0]))
 		if !field.IsValid() {
 			return fmt.Errorf("Unknown config field: %s", split[0])
+		} else if field.Kind() == reflect.Map {
+			field.SetMapIndex(reflect.ValueOf(split[1]), reflect.ValueOf(v))
+			continue
 		} else if field.Kind() != reflect.Struct {
 			return fmt.Errorf("Unsettable config field: %s", split[0])
 		}

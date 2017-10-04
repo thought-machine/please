@@ -91,8 +91,15 @@ func TestConfigOverrideLabelSlice(t *testing.T) {
 
 func TestConfigOverrideMap(t *testing.T) {
 	config := DefaultConfiguration()
-	err := config.ApplyOverrides(map[string]string{"aliases.blah": "run //blah:blah"})
-	assert.Error(t, err, "Can't override map fields, but should handle it nicely.")
+	err := config.ApplyOverrides(map[string]string{
+		"buildconfig.android-keystore":          "/tmp/debug.key",
+		"buildconfig.android-keystore-password": "android",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{
+		"android-keystore":          "/tmp/debug.key",
+		"android-keystore-password": "android",
+	}, config.BuildConfig)
 }
 
 func TestConfigOverrideUnknownName(t *testing.T) {

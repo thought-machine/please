@@ -1,3 +1,11 @@
+Version 9.1.7
+-------------
+
+    * Fixed -o flag to be able to override map fields in config, such as buildconfig
+      and aliases.
+    * Fixed gc.keep field in config which wasn't being honoured properly.
+
+
 Version 9.1.6
 -------------
 

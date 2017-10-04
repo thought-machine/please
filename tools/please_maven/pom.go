@@ -265,11 +265,11 @@ func (pom *pomXml) handleDependency(f *Fetch, dep *pomDependency) {
 	// TODO(pebers): Consider allowing specifying these to this tool to produce test-only deps.
 	// Similarly system deps don't actually get fetched from Maven.
 	if dep.Scope == "test" || dep.Scope == "system" {
-		log.Info("Not fetching %s:%s because of scope", dep.GroupId, dep.ArtifactId)
+		log.Info("Not fetching %s:%s (dep of %s) because of scope", dep.GroupId, dep.ArtifactId, pom.Artifact)
 		return
 	}
 	if dep.Optional && !f.ShouldInclude(dep.ArtifactId) {
-		log.Info("Not fetching optional dependency %s:%s", dep.GroupId, dep.ArtifactId)
+		log.Info("Not fetching optional dependency %s:%s (of %s)", dep.GroupId, dep.ArtifactId, pom.Artifact)
 		return
 	}
 	dep.GroupId = pom.replaceVariables(dep.GroupId)

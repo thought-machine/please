@@ -409,7 +409,7 @@ var buildFunctions = map[string]func() bool{
 		success, state := runBuild(core.WholeGraph, false, false)
 		if success {
 			state.OriginalTargets = state.Config.Gc.Keep
-			gc.GarbageCollect(state, opts.Gc.Args.Targets, state.ExpandOriginalTargets(), state.Config.Gc.KeepLabel,
+			gc.GarbageCollect(state, opts.Gc.Args.Targets, state.ExpandOriginalTargets(), state.Config.Gc.Keep, state.Config.Gc.KeepLabel,
 				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly, opts.Gc.NoPrompt, opts.Gc.DryRun, opts.Gc.Git)
 		}
 		return success
