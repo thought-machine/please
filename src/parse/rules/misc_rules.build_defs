@@ -386,6 +386,24 @@ def decompose(label):
         raise ValueError("%s doesn't look like a build label" % label)
 
 
+def check_config(key, section='buildconfig', rule='', example='...'):
+    """Checks the configuration for the given item and raises an exception if it's not set.
+
+    Args:
+      key (str): Config key that must be set, e.g. ANDROID_HOME
+      section (str): Section of the configuration that it must be set in.
+                     Defaults to buildconfig since most external rules will have to use that.
+      rule (str): Kind of rule that will be using this, e.g. "Android". Affects the output message.
+      example (str): Example that they might consider setting.
+    """
+    if not CONFIG.get(key):
+        key = key.lower().replace('_', '-')
+        rule_msg = (' to use %s rules' % rule) if rule else ''
+        msg = 'You must set %s.%s in your .plzconfig%s' % (section, key, rule_msg)
+        msg = '%s, e.g.\n[%s]\n%s = %s\n' % (msg, section, key, example)
+        raise ConfigError(msg)
+
+
 def _test_size_and_timeout(size, timeout, labels):
     """Resolves size and timeout arguments for a test. For Buck compatibility."""
     if size:

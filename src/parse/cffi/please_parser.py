@@ -509,6 +509,10 @@ class ParseError(Exception):
     """Raised on general file parsing errors."""
 
 
+class ConfigError(ParseError):
+    """Raised on errors that require alterations to the .plzconfig file."""
+
+
 class DuplicateTargetError(ParseError):
     """Raised when a duplicate target is added."""
 
@@ -531,6 +535,7 @@ _please_globals['CONFIG']['DEFAULT_LICENCES'] = None
 _please_globals['CONFIG']['DEFAULT_TESTONLY'] = False
 _please_globals['defaultdict'] = defaultdict
 _please_globals['ParseError'] = ParseError
+_please_globals['ConfigError'] = ConfigError
 _please_globals['DuplicateTargetError'] = DuplicateTargetError
 
 # We'll need these guys locally. Unfortunately exec is a statement so we
