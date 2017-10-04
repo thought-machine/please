@@ -20,6 +20,7 @@ import (
 var opts = struct {
 	Usage        string
 	Repositories []string `short:"r" long:"repository" description:"Location of Maven repo" default:"https://repo1.maven.org/maven2"`
+	Android      bool     `short:"a" long:"android" description:"Adds https://maven.google.org to repositories for Android deps."`
 	Verbosity    int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
 	Exclude      []string `short:"e" long:"exclude" description:"Artifacts to exclude from download"`
 	Indent       bool     `short:"i" long:"indent" description:"Indent stdout lines appropriately"`
@@ -53,6 +54,9 @@ rule to make adding dependencies easier.
 func main() {
 	cli.ParseFlagsOrDie("please_maven", "9.0.3", &opts)
 	cli.InitLogging(opts.Verbosity)
+	if opts.Android {
+		opts.Repositories = append(opts.Repositories, "https://maven.google.com")
+	}
 	f := maven.NewFetch(opts.Repositories, opts.Exclude, opts.Optional)
 	fmt.Println(strings.Join(maven.AllDependencies(f, opts.Args.Artifacts, opts.NumThreads, opts.Indent, opts.BuildRules), "\n"))
 }
