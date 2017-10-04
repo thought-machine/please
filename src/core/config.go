@@ -150,7 +150,7 @@ func DefaultConfiguration() *Configuration {
 	config.Java.DefaultTestPackage = ""
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"
-	config.Java.DefaultMavenRepo = "https://repo1.maven.org/maven2"
+	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2"}
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
 	config.Cpp.CCTool = "gcc"
 	config.Cpp.CppTool = "g++"
@@ -271,17 +271,17 @@ type Configuration struct {
 		UsePyPI            bool    `help:"Whether or not to use PyPI for pip_library rules or not. Defaults to true, if you disable this you will presumably want to set DefaultPipRepo to use one of your own.\nIs overridden by the use_pypi argument to pip_library." var:"USE_PYPI"`
 	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty."`
 	Java struct {
-		JavacTool          string  `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
-		JavacWorker        string  `help:"Defines the tool used for the Java persistent compiler. This is significantly (approx 4x) faster for large Java trees than invoking javac separately each time. Default to javac_worker in the install directory, but can be switched off to fall back to javactool and separate invocation." var:"JAVAC_WORKER"`
-		JarCatTool         string  `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to jarcat in the Please install directory." var:"JARCAT_TOOL"`
-		PleaseMavenTool    string  `help:"Defines the tool used to fetch information from Maven in maven_jars rules.\nDefaults to please_maven in the Please install directory." var:"PLEASE_MAVEN_TOOL"`
-		JUnitRunner        string  `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the Please install directory." var:"JUNIT_RUNNER"`
-		DefaultTestPackage string  `help:"The Java classpath to search for functions annotated with @Test." If not specified the compiled sources will be searched for files named *Test.java." var:"DEFAULT_TEST_PACKAGE"`
-		SourceLevel        string  `help:"The default Java source level when compiling. Defaults to 8." var:"JAVA_SOURCE_LEVEL"`
-		TargetLevel        string  `help:"The default Java bytecode level to target. Defaults to 8." var:"JAVA_TARGET_LEVEL"`
-		JavacFlags         string  `help:"Additional flags to pass to javac when compiling libraries." example:"-Xmx1200M" var:"JAVAC_FLAGS"`
-		JavacTestFlags     string  `help:"Additional flags to pass to javac when compiling tests." example:"-Xmx1200M" var:"JAVAC_TEST_FLAGS"`
-		DefaultMavenRepo   cli.URL `help:"Default location to load artifacts from in maven_jar rules. Can be overridden on a per-rule basis." var:"DEFAULT_MAVEN_REPO"`
+		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
+		JavacWorker        string    `help:"Defines the tool used for the Java persistent compiler. This is significantly (approx 4x) faster for large Java trees than invoking javac separately each time. Default to javac_worker in the install directory, but can be switched off to fall back to javactool and separate invocation." var:"JAVAC_WORKER"`
+		JarCatTool         string    `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to jarcat in the Please install directory." var:"JARCAT_TOOL"`
+		PleaseMavenTool    string    `help:"Defines the tool used to fetch information from Maven in maven_jars rules.\nDefaults to please_maven in the Please install directory." var:"PLEASE_MAVEN_TOOL"`
+		JUnitRunner        string    `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the Please install directory." var:"JUNIT_RUNNER"`
+		DefaultTestPackage string    `help:"The Java classpath to search for functions annotated with @Test." If not specified the compiled sources will be searched for files named *Test.java." var:"DEFAULT_TEST_PACKAGE"`
+		SourceLevel        string    `help:"The default Java source level when compiling. Defaults to 8." var:"JAVA_SOURCE_LEVEL"`
+		TargetLevel        string    `help:"The default Java bytecode level to target. Defaults to 8." var:"JAVA_TARGET_LEVEL"`
+		JavacFlags         string    `help:"Additional flags to pass to javac when compiling libraries." example:"-Xmx1200M" var:"JAVAC_FLAGS"`
+		JavacTestFlags     string    `help:"Additional flags to pass to javac when compiling tests." example:"-Xmx1200M" var:"JAVAC_TEST_FLAGS"`
+		DefaultMavenRepo   []cli.URL `help:"Default location to load artifacts from in maven_jar rules. Can be overridden on a per-rule basis." var:"DEFAULT_MAVEN_REPO"`
 	} `help:"Please has built-in support for compiling Java.\nIt builds uber-jars for binary and test rules which contain all dependencies and can be easily deployed, and with the help of some of Please's additional tools they are deterministic as well.\n\nWe've only tested support for Java 7 and 8, although it's likely newer versions will work with little or no change."`
 	Cpp struct {
 		CCTool             string `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example." var:"CC_TOOL"`
@@ -413,6 +413,12 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 					l = append(l, ParseBuildLabel(s, ""))
 				}
 				field.Set(reflect.ValueOf(l))
+			} else if field.Type().Elem().Name() == "URL" {
+				urls := []cli.URL{}
+				for _, s := range strings.Split(v, ",") {
+					urls = append(urls, cli.URL(s))
+				}
+				field.Set(reflect.ValueOf(urls))
 			} else {
 				field.Set(reflect.ValueOf(strings.Split(v, ",")))
 			}

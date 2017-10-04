@@ -31,6 +31,7 @@ go_test(
     data = glob(['test_data/*.plzconfig']),
     deps = [
         ':core',
+        '//src/cli',
         '//third_party/go:testify',
     ],
 )

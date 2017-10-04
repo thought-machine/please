@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"cli"
 )
 
 func TestPlzConfigWorking(t *testing.T) {
@@ -87,6 +89,13 @@ func TestConfigOverrideLabelSlice(t *testing.T) {
 	err := config.ApplyOverrides(map[string]string{"gc.keep": "//src/core:core"})
 	assert.NoError(t, err)
 	assert.Equal(t, []BuildLabel{ParseBuildLabel("//src/core:core", "")}, config.Gc.Keep)
+}
+
+func TestConfigOverrideURLSlice(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"java.defaultmavenrepo": "https://repo1.maven.org,https://maven.google.com"})
+	assert.NoError(t, err)
+	assert.Equal(t, []cli.URL{"https://repo1.maven.org", "https://maven.google.com"}, config.Java.DefaultMavenRepo)
 }
 
 func TestConfigOverrideMap(t *testing.T) {

@@ -125,7 +125,9 @@ func initializeInterpreter(state *core.BuildState) {
 	setConfigValue("JAVA_TARGET_LEVEL", config.Java.TargetLevel)
 	setConfigValue("JAVAC_FLAGS", config.Java.JavacFlags)
 	setConfigValue("JAVAC_TEST_FLAGS", config.Java.JavacTestFlags)
-	setConfigValue("DEFAULT_MAVEN_REPO", config.Java.DefaultMavenRepo.String())
+	for _, repo := range config.Java.DefaultMavenRepo {
+		setConfigValue("DEFAULT_MAVEN_REPO", repo.String())
+	}
 	setConfigValue("CC_TOOL", config.Cpp.CCTool)
 	setConfigValue("CPP_TOOL", config.Cpp.CppTool)
 	setConfigValue("LD_TOOL", config.Cpp.LdTool)

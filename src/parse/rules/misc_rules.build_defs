@@ -300,12 +300,13 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
 
 
 def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
-                licences=None, test_only=False, deps=None):
+                licences=None, test_only=False, deps=None, exported_deps=None, _tag=None):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
       name (str): Name of the rule
-      url (str): URL to fetch
+      url (str | list): URL or URLs to fetch. If multiple are passed then they will be tried
+                        in sequence until one succeeds.
       hashes (list): List of hashes; the output must match at least one of these.
       out (str): Output name of the file. Chosen automatically if not given.
       binary (bool): True to mark the output as binary and runnable.
@@ -313,18 +314,23 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
       licences (list): List of licences that apply to this rule.
       test_only (bool): If true the rule is only visible to test targets.
       deps (list): List of extra dependencies for this rule.
+      exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
     """
+    urls = [url] if isinstance(url, str) else url
+    cmd = ') || ('.join('echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (url, url) for url in urls)
     return build_rule(
-        name=name,
-        cmd='echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (url, url),
-        outs=[out or url[url.rfind('/') + 1:]],
-        binary=binary,
-        visibility=visibility,
-        hashes=hashes,
-        licences=licences,
-        building_description='Fetching...',
-        deps=deps,
-        test_only=test_only,
+        name = name,
+        tag = _tag,
+        cmd = '(%s)' % cmd,
+        outs = [out or url[url.rfind('/') + 1:]],
+        binary = binary,
+        visibility = visibility,
+        hashes = hashes,
+        licences = licences,
+        building_description = 'Fetching...',
+        deps = deps,
+        exported_deps = exported_deps,
+        test_only = test_only,
         sandbox = False,
     )
 
