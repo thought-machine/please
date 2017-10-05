@@ -20,6 +20,7 @@ var log = logging.MustGetLogger("maven")
 type unversioned struct {
 	GroupId    string `xml:"groupId"`
 	ArtifactId string `xml:"artifactId"`
+	Type       string `xml:"type"`
 }
 
 type Artifact struct {
@@ -29,7 +30,9 @@ type Artifact struct {
 	// A full-blown Maven version spec. If the version is not parseable (which is allowed
 	// to happen :( ) then we just use Version to interpret it as a string.
 	ParsedVersion Version
-	isParent      bool
+	// Trailing specifier e.g. "@aar"
+	Specifier string
+	isParent  bool
 	// A "soft version", for dependencies that don't have one specified and we want to
 	// provide a hint about what to do in that case.
 	SoftVersion string
@@ -64,7 +67,11 @@ func (a *Artifact) SourcePath() string {
 
 // String prints this artifact as a Maven identifier (i.e. GroupId:ArtifactId:Version)
 func (a Artifact) String() string {
-	return a.GroupId + ":" + a.ArtifactId + ":" + a.ParsedVersion.Path
+	s := a.GroupId + ":" + a.ArtifactId + ":" + a.ParsedVersion.Path
+	if a.Type != "" && a.Type != "jar" {
+		s += "@" + a.Type
+	}
+	return s
 }
 
 // FromId loads this artifact from a Maven id.
@@ -76,6 +83,12 @@ func (a *Artifact) FromId(id string) error {
 	a.GroupId = split[0]
 	a.ArtifactId = split[1]
 	a.Version = split[2]
+	if index := strings.IndexRune(a.Version, '@'); index != -1 {
+		if t := a.Version[index+1:]; t != "jar" {
+			a.Type = t
+			a.Version = a.Version[:index]
+		}
+	}
 	a.ParsedVersion.Unmarshal(a.Version)
 	return nil
 }
