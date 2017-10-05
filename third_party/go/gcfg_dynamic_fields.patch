@@ -10,7 +10,7 @@ index 6ca1051..43de5dc 100644
 +			if vSect.IsNil() {
 +				vSect.Set(reflect.MakeMap(vst))
 +			}
-+			if value != "" {
++			if name != "" {
 +				if sub != "" {
 +					vSect.SetMapIndex(reflect.ValueOf(sub + " " + name), reflect.ValueOf(value))
 +				} else {
