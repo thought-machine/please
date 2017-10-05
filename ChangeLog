@@ -1,3 +1,15 @@
+Version 9.2.0
+-------------
+
+    * Added check_config builtin which helps with asserting that things are
+      set in .plzconfig, and ConfigError which is a little more specific than
+      ParseError.
+    * Support for passing multiple values for Maven repos (in config and to
+      rules directly). They're searched in sequence and the rule succeeds as
+      long as any one contains the requested artifact.
+    * The name / location of the command invoked for `go` is now configurable.
+
+
 Version 9.1.7
 -------------
 
