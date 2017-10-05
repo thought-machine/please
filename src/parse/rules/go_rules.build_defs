@@ -12,9 +12,6 @@ _LINK_PKGS_CMD = ' '.join([
     'ln -s $TMP_DIR/$FN ${DN%/*}; fi; done'
 ])
 
-# Applied to various rules to treat 'go' as a tool.
-_GO_TOOL = ['go']
-
 
 def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False,
                go_tools=None, complete=True, _needs_transitive_deps=False,_all_srcs=False):
@@ -65,7 +62,7 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
         requires=['go', 'go_src'] if _all_srcs else ['go'],
         provides={'go': ':' + name, 'go_src': ':_%s#srcs' % name},
         test_only=test_only,
-        tools=_GO_TOOL,
+        tools=[CONFIG.GO_TOOL],
         needs_transitive_deps=_needs_transitive_deps,
     )
 
@@ -88,7 +85,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
                 add_out(rule_name, out)
 
     # All the tools must be in the $PATH.
-    path = ':'.join('$(dirname $(location %s))' % tool for tool in tools)
+
     gopath = ' | '.join([
         'find . -type d -name src',
         'grep -v "^\.$"',
@@ -104,7 +101,8 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
         # It's also essential that the compiled .a files are under this prefix, otherwise gcimporter won't find them.
         'mkdir pkg',
         'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
-        'PATH="$PATH:%s" GOPATH="$TMP_DIR$(echo ":$(%s)" | sed "s/:$//g")" go generate $SRCS' % (path, gopath),
+        'export PATH="$(echo "$TOOLS_GEN " | sed -re \'s|/[^/]+[ ]|:|g\')$PATH"',
+        'GOPATH="$TMP_DIR$(echo ":$(%s)" | sed "s/:$//g")" $TOOLS_GO generate $SRCS' % gopath,
         'mv $PKG_DIR/*.go .',
         'ls *.go'
     ])
@@ -112,7 +110,10 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
         name=name,
         srcs=srcs,
         deps=deps,
-        tools=_go_tool(tools),
+        tools={
+            'go': [CONFIG.GO_TOOL],
+            'gen': tools,
+        },
         cmd=cmd,
         visibility=visibility,
         test_only=test_only,
@@ -177,7 +178,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
             'ls *.c *.go',
         ]),
         deps = [h for h in hdrs if h.startswith('/') or h.startswith(':')],
-        tools = _GO_TOOL,
+        tools = [CONFIG.GO_TOOL],
         post_build = post_build if file_srcs != srcs else None,
         requires = ['go', 'cc_hdrs'],
     )
@@ -245,7 +246,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
         },
         outs = [out or name + '.a'],
         cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOL tool pack r $OUT $PKG_DIR/*_cgo.o',
-        tools = _GO_TOOL,
+        tools = [CONFIG.GO_TOOL],
         visibility = visibility,
         test_only = test_only,
         labels = ['cc:ld:' + flag for flag in (linker_flags or [])],
@@ -328,7 +329,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
     deps = deps or []
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # Unfortunately we have to recompile this to build the test together with its library.
-    go_library(
+    lib_rule = go_library(
         name = '_%s#lib' % name,
         srcs = srcs,
         out = name + ('_lib.a' if cgo else '.a'),
@@ -337,7 +338,6 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         _all_srcs = not external,
         complete = False,
     )
-    lib_rule = ':_%s#lib' % name
     if cgo:
         lib_rule = _merge_cgo_obj(
             name = name,
@@ -361,7 +361,7 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
         requires=['go'],
         test_only=True,
         tools={
-            'go': ['go'],
+            'go': [CONFIG.GO_TOOL],
             'test': [CONFIG.GO_TEST_TOOL],
         },
         post_build=lambda name, output: _replace_test_package(name, output, static),
@@ -493,7 +493,7 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         'export GOPATH="$INSTALL_DIR:$GOPATH"',
 
         'cd $INSTALL_DIR',
-        'go get -d ' + get,
+        '$TOOL get -d ' + get,
     ]
     subdir = 'src/' + (get[:-4] if get.endswith('/...') else get)
     if revision:
@@ -501,7 +501,7 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
     if patch:
         cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$(location %s)' % (subdir, patch))
-    cmd.append('go install -gcflags "-trimpath $INSTALL_DIR" ' + ' '.join([get] + (install or [])))
+    cmd.append('$TOOL install -gcflags "-trimpath $INSTALL_DIR" ' + ' '.join([get] + (install or [])))
     # Remove anything that was there already.
     cmd.extend([
         # go_get built dependencies could be in different dirs so we strip the prefix
@@ -527,7 +527,7 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         outs=outs,
         deps=deps,
         exported_deps=exported_deps,
-        tools=_GO_TOOL,
+        tools=[CONFIG.GO_TOOL],
         visibility=visibility,
         building_description='Fetching...',
         cmd=' && '.join(cmd),
@@ -582,20 +582,12 @@ def _replace_test_package(name, output, static):
                     set_command(lib, k, 'mv -f ${PKG_DIR}/%s.a ${PKG_DIR}/%s.a && %s' % (new_name, pkg_name, v))
 
 
-def _go_tool(tools):
-    """Returns the given list annotated with the 'go' tool.
-
-    Currently the tool invoked for 'go' is not configurable.
-    """
-    return (tools or []) + ['go']
-
-
 def _go_library_cmds(complete=True, all_srcs=False):
     """Returns the commands to run for building a Go library."""
     go_compile_tool = 'compile' if CONFIG.GO_VERSION >= "1.5" else '6g'
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
-    compile_cmd = 'go tool %s -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (go_compile_tool, complete_flag, _GOPATH)
+    compile_cmd = '$TOOL tool %s -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (go_compile_tool, complete_flag, _GOPATH)
     # Annotates files for coverage
     cover_cmd = 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
     srcs = 'export SRCS="$PKG_DIR/*.go"; ' if all_srcs else ''

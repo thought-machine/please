@@ -103,6 +103,7 @@ func initializeInterpreter(state *core.BuildState) {
 	setConfigValue("PLZ_VERSION", config.Please.Version.String())
 	setConfigValue("BUILD_SANDBOX", pythonBool(config.Build.Sandbox))
 	setConfigValue("TEST_SANDBOX", pythonBool(config.Test.Sandbox))
+	setConfigValue("GO_TOOL", config.Go.GoTool)
 	setConfigValue("GO_VERSION", config.Go.GoVersion)
 	setConfigValue("GO_TEST_TOOL", config.Go.TestTool)
 	setConfigValue("GOPATH", config.Go.GoPath)
