@@ -1,3 +1,9 @@
+Version 9.2.2
+-------------
+
+    * Bugfix in go_get which sometimes failed due to not finding any directories to remove.
+
+
 Version 9.2.1
 -------------
 
