@@ -511,7 +511,7 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         'if [ -n "$pathname" ]; then rm -f "$INSTALL_DIR/pkg/${pathname#*/pkg/}" ; fi ; done',
         'cd $TMP_DIR',
         # delete all other dirs with deps. Only src,pkg and maybe bin will remain
-        'ls | grep -v $(basename $INSTALL_DIR) | xargs rm -rf',
+        'ls | (grep -v $(basename $INSTALL_DIR) || true) | xargs rm -rf',
         'mv $INSTALL_DIR/* $TMP_DIR/'
     ])
     if not binary:
