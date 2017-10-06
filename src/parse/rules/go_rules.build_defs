@@ -614,7 +614,7 @@ def _go_binary_cmds(static=False, ldflags=''):
         'dbg': '%s; %s %s $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
         'opt': '%s; %s %s -s -w $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
     }, {
-        'go': ['go'],
+        'go': [CONFIG.GO_TOOL],
         'ld': [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL],
     }
 

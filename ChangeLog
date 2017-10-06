@@ -1,3 +1,10 @@
+Version 9.2.1
+-------------
+
+    * Fixed one case that didn't correctly honour the `go` command location.
+    * maven_jars / please_maven now correctly support the @aar syntax.
+
+
 Version 9.2.0
 -------------
 
