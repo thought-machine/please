@@ -237,7 +237,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
             'cc_hdrs': ':_%s#lib_hdrs' % name,
             'cc': ':' + name,
         }
-    build_rule(
+    return build_rule(
         name = name,
         deps = deps,
         outs = ['lib%s.a' % name],
@@ -300,7 +300,7 @@ def cc_shared_object(name, srcs=None, hdrs=None, out='', compiler_flags=None, li
             'cc': ':' + name,
         }
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, shared=True)
-    build_rule(
+    return build_rule(
         name=name,
         srcs={'srcs': srcs, 'hdrs': hdrs},
         outs=[out or name + '.so'],
@@ -360,7 +360,7 @@ def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None
         )
         deps = deps or []
         deps.append(':_%s#lib' % name)
-    build_rule(
+    return build_rule(
         name=name,
         outs=[name],
         deps=deps,
@@ -440,7 +440,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
         )
         deps = deps or []
         deps.append(':_%s#lib' % name)
-    build_rule(
+    return build_rule(
         name=name,
         outs=[name],
         deps=deps,
@@ -544,7 +544,7 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         tools=tools,
         test_only=test_only,
     )
-    filegroup(
+    return filegroup(
         name=name,
         srcs=[lib_rule, hdr_rule],
         visibility=visibility,
