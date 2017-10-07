@@ -168,7 +168,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             test_only=test_only,
             labels=labels,
             tools=tools,
-            pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs) if deps else None,
+            pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs) if (deps or includes or defines) else None,
             needs_transitive_deps=True,
         )
         if alwayslink:
