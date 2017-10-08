@@ -93,7 +93,7 @@ type ByteSize uint64
 func (b *ByteSize) UnmarshalFlag(in string) error {
 	b2, err := humanize.ParseBytes(in)
 	*b = ByteSize(b2)
-	return err
+	return flagsError(err)
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface
@@ -117,7 +117,7 @@ func (d *Duration) UnmarshalFlag(in string) error {
 		}
 	}
 	*d = Duration(d2)
-	return err
+	return flagsError(err)
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface
@@ -132,7 +132,7 @@ type URL string
 // UnmarshalFlag implements the flags.Unmarshaler interface.
 func (u *URL) UnmarshalFlag(in string) error {
 	if _, err := url.Parse(in); err != nil {
-		return err
+		return flagsError(err)
 	}
 	*u = URL(in)
 	return nil
@@ -185,4 +185,12 @@ func (v *Version) VersionString() string {
 // Semver converts a Version to a semver.Version
 func (v *Version) Semver() semver.Version {
 	return v.Version
+}
+
+// flagsError converts an error to a flags.Error, which is required for flag parsing.
+func flagsError(err error) error {
+	if err == nil {
+		return err
+	}
+	return &flags.Error{Type: flags.ErrMarshal, Message: err.Error()}
 }
