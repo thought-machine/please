@@ -37,10 +37,10 @@ func connectClient(state *core.BuildState, url string, retries int, delay time.D
 	for i := 0; i <= retries; i++ {
 		if err = connectSingleTry(state, url); err == nil {
 			return
-		} else if retries > 0 {
+		} else if retries > 0 && i < retries {
 			log.Warning("Failed to connect to remote server, will retry in %s: %s", delay, err)
+			time.Sleep(delay)
 		}
-		time.Sleep(delay)
 	}
 	log.Fatalf("%s", err)
 }
