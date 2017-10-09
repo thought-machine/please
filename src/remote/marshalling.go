@@ -167,5 +167,6 @@ func resourceFromProto(r *pb.ResourceUsageResponse) *core.SystemStats {
 	s.CPU.IOWait = r.IoWait
 	s.Memory.Total = r.MemTotal
 	s.Memory.Used = r.MemUsed
+	s.Memory.UsedPercent = 100.0 * float64(r.MemUsed) / float64(r.MemTotal)
 	return s
 }

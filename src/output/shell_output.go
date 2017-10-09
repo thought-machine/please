@@ -109,12 +109,17 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 // PrintConnectionMessage prints the message when we're initially connected to a remote server.
 func PrintConnectionMessage(url string, targets []core.BuildLabel, tests, coverage bool) {
 	printf("${WHITE}Connection established to remote plz server at ${BOLD_WHITE}%s${RESET}.\n", url)
-	printf("${WHITE}It's building the following targets: ")
+	printf("${WHITE}It's building the following %s: ", pluralise(len(targets), "target", "targets"))
 	for i, t := range targets {
-		if i > 0 {
-			printf(", ")
+		if i > 5 {
+			printf("${BOLD_WHITE}...${RESET}")
+			break
+		} else {
+			if i > 0 {
+				printf(", ")
+			}
+			printf("${BOLD_WHITE}%s${RESET}", t)
 		}
-		printf("${BOLD_WHITE}%s${RESET}", t)
 	}
 	printf("\n${WHITE}Running tests: ${BOLD_WHITE}%s${RESET}\n", yesNo(tests))
 	printf("${WHITE}Coverage: ${BOLD_WHITE}%s${RESET}\n", yesNo(coverage))
