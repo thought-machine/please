@@ -17,6 +17,7 @@ go_binary(
         '//src/output',
         '//src/parse',
         '//src/query',
+        '//src/remote',
         '//src/run',
         '//src/test',
         '//src/tool',

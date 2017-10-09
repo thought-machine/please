@@ -136,6 +136,7 @@ go_get(
     name = 'fsnotify',
     get = 'github.com/fsnotify/fsnotify',
     revision = 'a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb',
+    deps = [':unix'],
 )
 
 go_get(
@@ -221,4 +222,21 @@ go_get(
     name = 'html',
     get = 'golang.org/x/net/html',
     revision = '66aacef3dd8a676686c7ae3716979581e8b03c47',
+)
+
+go_get(
+    name = 'psutil',
+    get = 'github.com/shirou/gopsutil',
+    install = [
+        'github.com/shirou/gopsutil/cpu',
+        'github.com/shirou/gopsutil/mem',
+    ],
+    revision = 'v2.17.09',
+    deps = [':unix'],
+)
+
+go_get(
+    name = 'unix',
+    get = 'golang.org/x/sys/unix',
+    revision = 'ebfc5b4631820b793c9010c87fd8fef0f39eb082',
 )

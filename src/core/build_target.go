@@ -245,13 +245,11 @@ func (settings *TargetContainerSettings) ToMap() map[string]string {
 }
 
 func NewBuildTarget(label BuildLabel) *BuildTarget {
-	target := new(BuildTarget)
-	target.Label = label
-	target.state = int32(Inactive)
-	target.IsBinary = false
-	target.IsTest = false
-	target.BuildingDescription = DefaultBuildingDescription
-	return target
+	return &BuildTarget{
+		Label:               label,
+		state:               int32(Inactive),
+		BuildingDescription: DefaultBuildingDescription,
+	}
 }
 
 // TmpDir returns the temporary working directory for this target, eg.

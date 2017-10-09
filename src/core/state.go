@@ -10,6 +10,9 @@ import (
 	"github.com/Workiva/go-datastructures/queue"
 )
 
+// startTime is as close as we can conveniently get to process start time.
+var startTime = time.Now()
+
 // A TaskType identifies the kind of task returned from NextTask()
 type TaskType int
 
@@ -59,6 +62,15 @@ type BuildState struct {
 	pendingTasks *queue.PriorityQueue
 	// Stream of results from the build
 	Results chan *BuildResult
+	// Stream of results pushed to remote clients.
+	// Will be nil until server is initialised.
+	RemoteResults chan *BuildResult
+	// Last results for each thread. These are used to catch up remote clients quickly.
+	LastResults []*BuildResult
+	// Timestamp that the build is considered to start at.
+	StartTime time.Time
+	// Various system statistics. Mostly used during remote communication.
+	Stats *SystemStats
 	// Configuration options
 	Config *Configuration
 	// Parser implementation. Other things can call this to perform various external parse tasks.
@@ -118,6 +130,22 @@ type BuildState struct {
 	numPending int64
 	numDone    int64
 	mutex      sync.Mutex
+}
+
+// SystemStats stores information about the system.
+type SystemStats struct {
+	Memory struct {
+		Total, Used uint64
+		UsedPercent float64
+	}
+	// This is somewhat abbreviated to the "interesting" values and is aggregated
+	// across all CPUs for convenience of display.
+	// We're a bit casual about the exact definition of Used (it's the sum of some
+	// fields that seem relevant) and IOWait is not fully reliable.
+	CPU struct {
+		Used, IOWait float64
+		Count        int
+	}
 }
 
 // Singleton instance of one of these. Tried to avoid introducing it but it ended up being
@@ -242,18 +270,18 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 }
 
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
-	state.Results <- &BuildResult{
+	state.logResult(&BuildResult{
 		ThreadId:    tid,
 		Time:        time.Now(),
 		Label:       label,
 		Status:      status,
 		Err:         nil,
 		Description: description,
-	}
+	})
 }
 
 func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildResultStatus, results *TestResults, coverage *TestCoverage, err error, format string, args ...interface{}) {
-	state.Results <- &BuildResult{
+	state.logResult(&BuildResult{
 		ThreadId:    tid,
 		Time:        time.Now(),
 		Label:       label,
@@ -261,20 +289,28 @@ func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildRe
 		Err:         err,
 		Description: fmt.Sprintf(format, args...),
 		Tests:       *results,
-	}
+	})
 	state.mutex.Lock()
 	defer state.mutex.Unlock()
 	state.Coverage.Aggregate(coverage)
 }
 
 func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
-	state.Results <- &BuildResult{
+	state.logResult(&BuildResult{
 		ThreadId:    tid,
 		Time:        time.Now(),
 		Label:       label,
 		Status:      status,
 		Err:         err,
 		Description: fmt.Sprintf(format, args...),
+	})
+}
+
+func (state *BuildState) logResult(result *BuildResult) {
+	state.Results <- result
+	if state.RemoteResults != nil {
+		state.RemoteResults <- result
+		state.LastResults[result.ThreadId] = result
 	}
 }
 
@@ -284,6 +320,13 @@ func (state *BuildState) NumActive() int {
 
 func (state *BuildState) NumDone() int {
 	return int(atomic.LoadInt64(&state.numDone))
+}
+
+// SetTaskNumbers allows a caller to set the number of active and done tasks.
+// This may drastically confuse matters if used incorrectly.
+func (state *BuildState) SetTaskNumbers(active, done int64) {
+	atomic.StoreInt64(&state.numActive, active)
+	atomic.StoreInt64(&state.numDone, done)
 }
 
 // ExpandOriginalTargets expands any pseudo-targets (ie. :all, ... has already been resolved to a bunch :all targets)
@@ -331,6 +374,8 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		Graph:             NewGraph(),
 		pendingTasks:      queue.NewPriorityQueue(10000, true), // big hint, why not
 		Results:           make(chan *BuildResult, numThreads*100),
+		LastResults:       make([]*BuildResult, numThreads),
+		StartTime:         startTime,
 		Config:            config,
 		Verbosity:         verbosity,
 		Cache:             cache,
@@ -341,9 +386,11 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		Coverage:          TestCoverage{Files: map[string][]LineCoverage{}},
 		numWorkers:        numThreads,
 		experimentalLabel: BuildLabel{PackageName: config.Please.ExperimentalDir, Name: "..."},
+		Stats:             &SystemStats{},
 	}
 	State.Hashes.Config = config.Hash()
 	State.Hashes.Containerisation = config.ContainerisationHash()
+	config.Please.NumThreads = numThreads
 	return State
 }
 

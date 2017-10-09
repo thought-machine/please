@@ -10,6 +10,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/kardianos/osext"
@@ -28,6 +29,7 @@ import (
 	"output"
 	"parse"
 	"query"
+	"remote"
 	"run"
 	"sync"
 	"test"
@@ -206,6 +208,14 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"outputs" description:"Exports outputs of a set of targets"`
 	} `command:"export" subcommands-optional:"true" description:"Exports a set of targets and files from the repo."`
+
+	Remote struct {
+		Retries int          `long:"retries" description:"Number of times to retry the connection"`
+		Delay   cli.Duration `long:"delay" default:"1s" description:"Delay between timeouts"`
+		Args    struct {
+			URL cli.URL `positional-arg-name:"URL" required:"true" description:"URL of remote server to connect to, e.g. 10.23.0.5:7777"`
+		} `positional-args:"true"`
+	} `command:"remote" description:"Connects to a remote Please instance to stream build events from."`
 
 	Help struct {
 		Args struct {
@@ -421,6 +431,11 @@ var buildFunctions = map[string]func() bool{
 		}
 		return success
 	},
+	"remote": func() bool {
+		// This is only temporary, ConnectClient will alter it to match the server.
+		state := core.NewBuildState(1, nil, opts.OutputFlags.Verbosity, config)
+		return remote.ConnectClient(state, opts.Remote.Args.URL.String(), opts.Remote.Retries, time.Duration(opts.Remote.Delay))
+	},
 	"outputs": func() bool {
 		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false)
 		if success {
@@ -632,6 +647,13 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+	if config.Events.Port != 0 && shouldBuild {
+		shutdown := remote.InitialiseServer(state, config.Events.Port)
+		defer shutdown()
+	}
+	if config.Events.Port != 0 || config.Display.SystemStats {
+		go remote.UpdateResources(state)
+	}
 	metrics.InitFromConfig(config)
 	// Acquire the lock before we start building
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
@@ -777,7 +799,8 @@ func main() {
 		// If we're running plz init then we obviously don't expect to read a config file.
 		utils.InitConfig(opts.Init.Dir, opts.Init.BazelCompatibility)
 		os.Exit(0)
-	} else if command == "help" {
+	} else if command == "help" || command == "remote" {
+		config = core.DefaultConfiguration()
 		if !buildFunctions[command]() {
 			os.Exit(1)
 		}

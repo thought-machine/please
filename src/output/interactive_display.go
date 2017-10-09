@@ -39,7 +39,7 @@ loop:
 		case <-stop:
 			break loop
 		case <-ticker.C:
-			moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows)
+			moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows, state.Config.Display.SystemStats)
 			printLines(state, *buildingTargets, backend.MaxInteractiveRows, backend.Cols)
 			for _, line := range backend.Output {
 				printf("\x1b[2K%s\n", line) // erase each line as we go
@@ -51,23 +51,32 @@ loop:
 	ticker.Stop()
 	setWindowTitle(state, false)
 	// Clear it all out.
-	moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows)
+	moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows, state.Config.Display.SystemStats)
 	printf("\x1b[0J") // Clear out to end of screen.
 	backend.Deactivate()
 	done <- struct{}{}
 }
 
 // moveToFirstLine resets back to the first line. Not as easy as you might think.
-func moveToFirstLine(buildingTargets []buildingTarget, outputLines, maxInteractiveRows int) {
+func moveToFirstLine(buildingTargets []buildingTarget, outputLines, maxInteractiveRows int, showingStats bool) {
 	if maxInteractiveRows > len(buildingTargets) {
 		maxInteractiveRows = len(buildingTargets)
+	}
+	if showingStats {
+		maxInteractiveRows++
 	}
 	printf("\x1b[%dA", maxInteractiveRows+1+outputLines)
 }
 
 func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLines, cols int) {
 	now := time.Now()
-	printf("Building [%d/%d, %3.1fs]:\n", state.NumDone(), state.NumActive(), time.Since(startTime).Seconds())
+	printf("Building [%d/%d, %3.1fs]:\n", state.NumDone(), state.NumActive(), time.Since(state.StartTime).Seconds())
+	if state.Config.Display.SystemStats {
+		printStat("CPU use", state.Stats.CPU.Used, state.Stats.CPU.Count)
+		printStat("I/O", state.Stats.CPU.IOWait, state.Stats.CPU.Count)
+		printStat("Mem use", state.Stats.Memory.UsedPercent, 1)
+		printf("\n")
+	}
 	for i := 0; i < len(buildingTargets) && i < maxLines; i++ {
 		buildingTargets[i].Lock()
 		// Take a local copy of the structure, which isn't *that* big, so we don't need to retain the lock
@@ -96,6 +105,17 @@ func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLin
 		}
 	}
 	printf("${RESET}")
+}
+
+// printStat prints a single statistic with appropriate colours.
+func printStat(caption string, stat float64, multiplier int) {
+	colour := "${BOLD_GREEN}"
+	if stat > 80.0*float64(multiplier) {
+		colour = "${BOLD_RED}"
+	} else if stat > 60.0*float64(multiplier) {
+		colour = "${BOLD_YELLOW}"
+	}
+	printf("  ${BOLD_WHITE}%s:${RESET} %s%5.1f%%${RESET}", caption, colour, stat)
 }
 
 func recalcWindowSize(backend *cli.LogBackend) {
@@ -153,7 +173,7 @@ func setWindowTitle(state *core.BuildState, running bool) {
 	if running {
 		SetWindowTitle("plz: finishing up")
 	} else {
-		SetWindowTitle(fmt.Sprintf("plz: %d / %d tasks, %3.1fs", state.NumDone(), state.NumActive(), time.Since(startTime).Seconds()))
+		SetWindowTitle(fmt.Sprintf("plz: %d / %d tasks, %3.1fs", state.NumDone(), state.NumActive(), time.Since(state.StartTime).Seconds()))
 	}
 }
 
