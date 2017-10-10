@@ -58,5 +58,5 @@ func getCpuTimes() (float64, float64) {
 		return 0.0, 0.0
 	}
 	t := ts[0]
-	return t.Total() - t.Idle, t.Iowait
+	return t.Total() - t.Idle - t.Iowait, t.Iowait
 }
