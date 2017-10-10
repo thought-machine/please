@@ -8,7 +8,7 @@
 // That doesn't work so well for a test where everything happens on the scale of
 // microseconds and we want to assert precise events, but we do the best we can.
 
-package remote
+package follow
 
 import (
 	"fmt"

@@ -3,7 +3,7 @@
 // Package remote implements remote connections to other plz processes.
 // Specifically it implements a gRPC server and client that can stream
 // build events.
-package remote
+package follow
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
-	pb "remote/proto/build_event"
+	pb "follow/proto/build_event"
 )
 
 var log = logging.MustGetLogger("remote")

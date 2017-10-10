@@ -1,6 +1,6 @@
 // +build nobootstrap
 
-package remote
+package follow
 
 import (
 	"fmt"
@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	"core"
+	pb "follow/proto/build_event"
 	"output"
-	pb "remote/proto/build_event"
 )
 
 // Used to track the state of the remote connection.

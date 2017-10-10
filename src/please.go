@@ -22,6 +22,7 @@ import (
 	"cli"
 	"core"
 	"export"
+	"follow"
 	"gc"
 	"hashes"
 	"help"
@@ -29,7 +30,6 @@ import (
 	"output"
 	"parse"
 	"query"
-	"remote"
 	"run"
 	"sync"
 	"test"
@@ -209,7 +209,7 @@ var opts struct {
 		} `command:"outputs" description:"Exports outputs of a set of targets"`
 	} `command:"export" subcommands-optional:"true" description:"Exports a set of targets and files from the repo."`
 
-	Remote struct {
+	Follow struct {
 		Retries int          `long:"retries" description:"Number of times to retry the connection"`
 		Delay   cli.Duration `long:"delay" default:"1s" description:"Delay between timeouts"`
 		Args    struct {
@@ -431,10 +431,10 @@ var buildFunctions = map[string]func() bool{
 		}
 		return success
 	},
-	"remote": func() bool {
+	"follow": func() bool {
 		// This is only temporary, ConnectClient will alter it to match the server.
 		state := core.NewBuildState(1, nil, opts.OutputFlags.Verbosity, config)
-		return remote.ConnectClient(state, opts.Remote.Args.URL.String(), opts.Remote.Retries, time.Duration(opts.Remote.Delay))
+		return follow.ConnectClient(state, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay))
 	},
 	"outputs": func() bool {
 		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false)
@@ -648,11 +648,11 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if config.Events.Port != 0 && shouldBuild {
-		shutdown := remote.InitialiseServer(state, config.Events.Port)
+		shutdown := follow.InitialiseServer(state, config.Events.Port)
 		defer shutdown()
 	}
 	if config.Events.Port != 0 || config.Display.SystemStats {
-		go remote.UpdateResources(state)
+		go follow.UpdateResources(state)
 	}
 	metrics.InitFromConfig(config)
 	// Acquire the lock before we start building

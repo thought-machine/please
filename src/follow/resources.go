@@ -1,6 +1,6 @@
 // +build nobootstrap
 
-package remote
+package follow
 
 import (
 	"time"

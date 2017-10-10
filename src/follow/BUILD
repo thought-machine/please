@@ -1,5 +1,5 @@
 go_library(
-    name = 'remote',
+    name = 'follow',
     srcs = [
         'grpc_client.go',
         'grpc_server.go',
@@ -8,8 +8,8 @@ go_library(
     ],
     deps = [
         '//src/core',
+        '//src/follow/proto:build_event',
         '//src/output',
-        '//src/remote/proto:build_event',
         '//third_party/go:context',
         '//third_party/go:grpc',
         '//third_party/go:logging',
@@ -22,7 +22,7 @@ go_test(
     name = 'grpc_test',
     srcs = ['grpc_test.go'],
     deps = [
-        ':remote',
+        ':follow',
         '//src/cli',
         '//src/core',
         '//third_party/go:testify',

@@ -5,14 +5,14 @@
 // The duplication is unfortunate but it's preferable to needing
 // to run proto / gRPC compilers at bootstrap time.
 
-package remote
+package follow
 
 import (
 	"errors"
 	"time"
 
 	"core"
-	pb "remote/proto/build_event"
+	pb "follow/proto/build_event"
 )
 
 // toProto converts an internal test result into a proto type.
