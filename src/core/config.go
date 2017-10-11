@@ -351,6 +351,9 @@ func (config *Configuration) Hash() []byte {
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
+	for _, env := range config.GetBuildEnv() {
+		h.Write([]byte(env))
+	}
 	return h.Sum(nil)
 }
 
