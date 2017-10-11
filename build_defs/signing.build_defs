@@ -62,7 +62,7 @@ def detached_signature(name, src, out, labels=None, deps=None, visibility=None):
         secrets = ['~/.gnupg'],
         cmd = [
             'ln -s $SECRETS .gnupg',
-            'echo "$GPG_PASSWORD" | $TOOL --armor --output $OUTS -u "%s" --passphrase-fd 0 --detach-sign $SRC' % CONFIG.GPG_USERID,
+            'echo "$GPG_PASSWORD" | $TOOL --armor --output $OUTS -u "%s" --passphrase-fd 0 --no-tty --detach-sign $SRC' % CONFIG.GPG_USERID,
         ],
         deps = deps,
         visibility = visibility,
