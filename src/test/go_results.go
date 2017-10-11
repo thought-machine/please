@@ -49,7 +49,6 @@ func parseGoTestResults(data []byte) (core.TestResults, error) {
 				output := ""
 				for j := i + 1; j < len(lines) && !bytes.HasPrefix(lines[j], []byte("===")); j++ {
 					output += string(lines[j]) + "\n"
-					i = j
 				}
 				results.Failed++
 				results.Failures = append(results.Failures, core.TestFailure{

@@ -33,7 +33,7 @@ type JSONGraph struct {
 
 // JSONPackage is an alternate representation of a build package
 type JSONPackage struct {
-	name    string                `json:"-"` // Only used internally.
+	name    string
 	Targets map[string]JSONTarget `json:"targets"`
 }
 

@@ -25,13 +25,13 @@ func TestBringUpCluster(t *testing.T) {
 	log.Notice("c2 joined cluster")
 
 	expected := []*pb.Node{
-		&pb.Node{
+		{
 			Name:      "c1",
 			Address:   "127.0.0.1:6995",
 			HashBegin: tools.HashPoint(0, 3),
 			HashEnd:   tools.HashPoint(1, 3),
 		},
-		&pb.Node{
+		{
 			Name:      "c2",
 			Address:   "127.0.0.1:6996",
 			HashBegin: tools.HashPoint(1, 3),
@@ -47,19 +47,19 @@ func TestBringUpCluster(t *testing.T) {
 	c3.Join([]string{"127.0.0.1:5995", "127.0.0.1:5996"})
 
 	expected = []*pb.Node{
-		&pb.Node{
+		{
 			Name:      "c1",
 			Address:   "127.0.0.1:6995",
 			HashBegin: tools.HashPoint(0, 3),
 			HashEnd:   tools.HashPoint(1, 3),
 		},
-		&pb.Node{
+		{
 			Name:      "c2",
 			Address:   "127.0.0.1:6996",
 			HashBegin: tools.HashPoint(1, 3),
 			HashEnd:   tools.HashPoint(2, 3),
 		},
-		&pb.Node{
+		{
 			Name:      "c3",
 			Address:   "127.0.0.1:6997",
 			HashBegin: tools.HashPoint(2, 3),

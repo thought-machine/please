@@ -136,13 +136,13 @@ func makeTarget(label string) *core.BuildTarget {
 	return core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 }
 
-func makeCaches() (mockCache, core.Cache) {
-	mCache := mockCache{
+func makeCaches() (*mockCache, core.Cache) {
+	mCache := &mockCache{
 		inFlight:  make(map[*core.BuildTarget]bool),
 		completed: make(map[*core.BuildTarget]bool),
 		stored:    make(map[*core.BuildTarget][]string),
 	}
 	config := core.DefaultConfiguration()
 	config.Cache.Workers = 10
-	return mCache, newAsyncCache(&mCache, config)
+	return mCache, newAsyncCache(mCache, config)
 }

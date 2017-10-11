@@ -743,7 +743,7 @@ func (target *BuildTarget) AddTool(tool BuildInput) {
 // AddNamedTool adds a new tool to the target.
 func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 	if target.namedTools == nil {
-		target.namedTools = map[string][]BuildInput{name: []BuildInput{tool}}
+		target.namedTools = map[string][]BuildInput{name: {tool}}
 	} else {
 		target.namedTools[name] = append(target.namedTools[name], tool)
 	}
@@ -945,7 +945,7 @@ func (target *BuildTarget) AddOutput(output string) {
 // No attempt to deduplicate against unnamed outputs is currently made.
 func (target *BuildTarget) AddNamedOutput(name, output string) {
 	if target.namedOutputs == nil {
-		target.namedOutputs = map[string][]string{name: []string{output}}
+		target.namedOutputs = map[string][]string{name: {output}}
 		return
 	}
 	target.namedOutputs[name] = target.insert(target.namedOutputs[name], output)
