@@ -14,7 +14,7 @@ jobs:
        - run:
            name: Package
            command: |
-             ./plz-out/bin/src/please build -p //package:all &&
+             ./plz-out/bin/src/please build -p //package:all --exclude asc &&
              mkdir /tmp/artifacts &&
              mv plz-out/gen/package/*.deb plz-out/gen/package/*.tar.gz /tmp/artifacts
        - store_artifacts:

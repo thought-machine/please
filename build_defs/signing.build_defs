@@ -66,7 +66,7 @@ def detached_signature(name, src, out, labels=None, deps=None, visibility=None):
         ],
         deps = deps,
         visibility = visibility,
-        labels = labels,
+        labels = ['asc'] + (labels or []),
     )
 
 
