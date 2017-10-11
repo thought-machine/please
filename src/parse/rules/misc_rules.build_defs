@@ -359,7 +359,7 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
     if subdir:
         cmd += ' --prefix ' + subdir
 
-    build_rule(
+    return build_rule(
         name = name,
         cmd = cmd,
         srcs = srcs,

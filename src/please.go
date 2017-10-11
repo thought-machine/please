@@ -51,7 +51,7 @@ var opts struct {
 		Include    []string        `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
 		Exclude    []string        `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
 		Engine     string          `long:"engine" hidden:"true" description:"Parser engine .so / .dylib to load"`
-		Option     ConfigOverrides `short:"o" long:"override" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
+		Option     ConfigOverrides `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
@@ -171,7 +171,8 @@ var opts struct {
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
 	Update struct {
-		Force bool `long:"force" description:"Forces a re-download of the new version."`
+		Force    bool `long:"force" description:"Forces a re-download of the new version."`
+		NoVerify bool `long:"noverify" description:"Skips signature verification of downloaded version"`
 	} `command:"update" description:"Checks for an update and updates if needed."`
 
 	Op struct {
@@ -724,7 +725,7 @@ func readConfig(forceUpdate bool) *core.Configuration {
 	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
 		log.Fatalf("Can't override requested config setting: %s", err)
 	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force)
+	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify)
 	return config
 }
 

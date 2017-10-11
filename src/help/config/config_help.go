@@ -81,7 +81,7 @@ func main() {
 					}
 					o.Topics[name] = preamble + help
 					subfields = append(subfields, "  "+name)
-				} else {
+				} else if f.CanSet() {
 					panic(fmt.Sprintf("Missing help struct tag on %s.%s", t.Field(i).Name, subt.Name))
 				}
 			}

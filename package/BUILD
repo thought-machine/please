@@ -1,7 +1,8 @@
 subinclude('//build_defs:version')
 subinclude('//build_defs:fpm')
+subinclude('//build_defs:signing')
 
-fpm_deb(
+signed_fpm_deb(
     name = 'please',
     version = VERSION,
     files = {
@@ -25,7 +26,7 @@ fpm_deb(
     },
 )
 
-fpm_deb(
+signed_fpm_deb(
     name = 'plz_rpc_cache_server',
     package_name = 'plz-rpc-cache-server',
     version = VERSION,
@@ -34,7 +35,7 @@ fpm_deb(
     },
 )
 
-fpm_deb(
+signed_fpm_deb(
     name = 'plz_http_cache_server',
     package_name = 'plz-http-cache-server',
     version = VERSION,
@@ -43,7 +44,7 @@ fpm_deb(
     },
 )
 
-fpm_deb(
+signed_fpm_deb(
     name = 'plz_build_linter',
     package_name = 'please-build-lint',
     version = VERSION,
@@ -52,7 +53,7 @@ fpm_deb(
     },
 )
 
-fpm_deb(
+signed_fpm_deb(
     name = 'please_sandbox',
     version = VERSION,
     files = {
@@ -69,7 +70,7 @@ fpm_deb(
     ],
 )
 
-tarball(
+signed_tarball(
     name = 'please_tarball',
     srcs = [
         '//src:please',
@@ -88,7 +89,7 @@ tarball(
     subdir = 'please',
 )
 
-tarball(
+signed_tarball(
     name = 'servers_tarball',
     srcs = [
         '//src/cache/server:http_cache_server_bin',

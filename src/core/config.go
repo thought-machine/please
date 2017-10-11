@@ -10,8 +10,10 @@ import (
 	"path"
 	"reflect"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -117,6 +119,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Build.PleaseSandboxTool = "please_sandbox"
 	config.BuildConfig = map[string]string{}
+	config.BuildEnv = map[string]string{}
 	config.Aliases = map[string]string{}
 	config.Cache.HttpTimeout = cli.Duration(5 * time.Second)
 	config.Cache.RpcTimeout = cli.Duration(5 * time.Second)
@@ -208,6 +211,7 @@ type Configuration struct {
 		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use."`
 	}
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
+	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSWORD for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
 	Cache       struct {
 		Workers               int          `help:"Number of workers for uploading artifacts to remote caches, which is done asynchronously."`
 		Dir                   string       `help:"Sets the directory to use for the dir cache.\nThe default is .plz-cache, if set to the empty string the dir cache will be disabled."`
@@ -325,6 +329,10 @@ type Configuration struct {
 	Bazel   struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
+
+	// buildEnvStored is a cached form of BuildEnv.
+	buildEnvStored []string
+	buildEnvOnce   sync.Once
 }
 
 func (config *Configuration) Hash() []byte {
@@ -354,6 +362,17 @@ func (config *Configuration) ContainerisationHash() []byte {
 		panic(err)
 	}
 	return h.Sum(nil)
+}
+
+func (config *Configuration) GetBuildEnv() []string {
+	config.buildEnvOnce.Do(func() {
+		config.buildEnvStored = []string{}
+		for k, v := range config.BuildEnv {
+			config.buildEnvStored = append(config.buildEnvStored, strings.ToUpper(k)+"="+v)
+		}
+		sort.Strings(config.buildEnvStored)
+	})
+	return config.buildEnvStored
 }
 
 // ApplyOverrides applies a set of overrides to the config.

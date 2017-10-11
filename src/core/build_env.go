@@ -19,10 +19,13 @@ func ExpandHomePath(path string) string {
 	})
 }
 
+// A BuildEnv is a representation of the build environment that also knows how to log itself.
+type BuildEnv []string
+
 // GeneralBuildEnvironment creates the shell env vars used for a command, not based
 // on any specific target etc.
-func GeneralBuildEnvironment(config *Configuration) []string {
-	env := []string{
+func GeneralBuildEnvironment(config *Configuration) BuildEnv {
+	env := BuildEnv{
 		// Need to know these for certain rules, particularly Go rules.
 		"ARCH=" + runtime.GOARCH,
 		"OS=" + runtime.GOOS,
@@ -44,14 +47,14 @@ func GeneralBuildEnvironment(config *Configuration) []string {
 	if config.Cpp.PkgConfigPath != "" {
 		env = append(env, "PKG_CONFIG_PATH="+config.Cpp.PkgConfigPath)
 	}
-	return env
+	return append(env, config.GetBuildEnv()...)
 }
 
 // BuildEnvironment creates the shell env vars to be passed
 // into the exec.Command calls made by plz. Use test=true for plz test targets.
 // Note that we lie about the location of HOME in order to keep some tools happy.
 // We read this as being slightly more POSIX-compliant than not having it set at all...
-func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []string {
+func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) BuildEnv {
 	sources := target.AllSourcePaths(state.Graph)
 	env := GeneralBuildEnvironment(state.Config)
 	env = append(env, "PKG="+target.Label.PackageName, "PKG_DIR="+target.Label.PackageDir())
@@ -132,7 +135,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) []strin
 
 // StampedBuildEnvironment returns the shell env vars to be passed into exec.Command.
 // Optionally includes a stamp if the target is marked as such.
-func StampedBuildEnvironment(state *BuildState, target *BuildTarget, test bool, stamp []byte) []string {
+func StampedBuildEnvironment(state *BuildState, target *BuildTarget, test bool, stamp []byte) BuildEnv {
 	env := BuildEnvironment(state, target, test)
 	if target.Stamp {
 		return append(env, "STAMP="+base64.RawURLEncoding.EncodeToString(stamp))
@@ -156,15 +159,31 @@ func toolPaths(state *BuildState, tools []BuildInput) []string {
 	return ret
 }
 
-// ReplaceEnvironment returns a function suitable for passing to os.Expand to replace environment
-// variables from an earlier call to BuildEnvironment.
-func ReplaceEnvironment(env []string) func(string) string {
-	return func(s string) string {
-		for _, e := range env {
-			if strings.HasPrefix(e, s+"=") {
-				return e[len(s)+1:]
-			}
+// ReplaceEnvironment is a function suitable for passing to os.Expand to replace environment
+// variables from this BuildEnv.
+func (env BuildEnv) ReplaceEnvironment(s string) string {
+	for _, e := range env {
+		if strings.HasPrefix(e, s+"=") {
+			return e[len(s)+1:]
 		}
-		return ""
 	}
+	return ""
+}
+
+// Redactor implements the interface for our logging implementation.
+func (env BuildEnv) Redacted() interface{} {
+	r := make(BuildEnv, len(env))
+	for i, e := range env {
+		r[i] = e
+		split := strings.SplitN(e, "=", 2)
+		if len(split) == 2 && (strings.Contains(split[0], "SECRET") || strings.Contains(split[0], "PASSWORD")) {
+			r[i] = split[0] + "=" + "************"
+		}
+	}
+	return r
+}
+
+// String implements the fmt.Stringer interface
+func (env BuildEnv) String() string {
+	return strings.Join(env, "\n")
 }

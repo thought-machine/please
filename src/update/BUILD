@@ -1,13 +1,26 @@
+subinclude('//build_defs:go_bindata')
+
 go_library(
     name = 'update',
-    srcs = glob(['*.go'], excludes = ['*_test.go']),
+    srcs = [
+        'pypy.go',
+        'update.go',
+        'verify.go',
+        ':pubkey',
+    ],
     deps = [
         '//src/cli',
         '//src/core',
         '//third_party/go:logging',
+        '//third_party/go:openpgp',
         '//third_party/go:semver',
     ],
     visibility = ['PUBLIC'],
+)
+
+go_bindata(
+    name = 'pubkey',
+    srcs = ['pubkey.gpg.asc'],
 )
 
 go_test(
@@ -21,6 +34,16 @@ go_test(
         ':update',
         '//src/cli',
         '//third_party/go:logging',
+        '//third_party/go:testify',
+    ],
+)
+
+go_test(
+    name = 'verify_test',
+    srcs = ['verify_test.go'],
+    data = ['test_data'],
+    deps = [
+        ':update',
         '//third_party/go:testify',
     ],
 )

@@ -284,7 +284,7 @@ func printTempDirs(state *core.BuildState, duration float64) {
 		fmt.Printf("    Command: %s\n", cmd)
 		if !state.PrepareShell {
 			// This isn't very useful if we're opening a shell (since then the vars will be set anyway)
-			fmt.Printf("   Expanded: %s\n", os.Expand(cmd, core.ReplaceEnvironment(env)))
+			fmt.Printf("   Expanded: %s\n", os.Expand(cmd, env.ReplaceEnvironment))
 		} else {
 			fmt.Printf("\n")
 			cmd := exec.Command("bash", "--noprofile", "--norc", "-o", "pipefail") // plz requires bash, some commands contain bashisms.

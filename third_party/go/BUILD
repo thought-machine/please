@@ -222,3 +222,9 @@ go_get(
     get = 'golang.org/x/net/html',
     revision = '66aacef3dd8a676686c7ae3716979581e8b03c47',
 )
+
+go_get(
+    name = 'openpgp',
+    get = 'golang.org/x/crypto/openpgp',
+    revision = '077efaa604f994162e3307fafe5954640763fc08',
+)

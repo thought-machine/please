@@ -1,4 +1,6 @@
-// Code for Please auto-updating itself.
+// +build nobootstrap
+
+// Package update contains code for Please auto-updating itself.
 // At startup, Please can check a version set in the config file. If that doesn't
 // match the version of the current binary, it will download the appropriate
 // version from the website and swap to using that instead.
@@ -6,7 +8,6 @@
 // This feature is fairly directly cribbed from Buck since we found it very useful,
 // albeit implemented differently so it plays nicer with multiple simultaneous
 // builds on the same machine.
-
 package update
 
 import (
@@ -33,6 +34,9 @@ import (
 
 var log = logging.MustGetLogger("update")
 
+// minSignedVersion is the earliest version of Please that has a signature.
+var minSignedVersion = semver.Version{Major: 9, Minor: 2}
+
 // CheckAndUpdate checks whether we should update Please and does so if needed.
 // If it requires an update it will never return, it will either die on failure or on success will exec the new Please.
 // Conversely, if an update isn't required it will return. It may adjust the version in the configuration.
@@ -40,7 +44,7 @@ var log = logging.MustGetLogger("update")
 // updateCommand indicates whether an update is specifically requested (due to e.g. `plz update`)
 // forceUpdate indicates whether the user passed --force on the command line, in which case we
 // will always update even if the version exists.
-func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate bool) {
+func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify bool) {
 	if !forceUpdate && !shouldUpdate(config, updatesEnabled, updateCommand) {
 		return
 	}
@@ -61,7 +65,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	}
 
 	// Download it.
-	newPlease := downloadAndLinkPlease(config)
+	newPlease := downloadAndLinkPlease(config, verify)
 
 	// Now run the new one.
 	args := filterArgs(forceUpdate, append([]string{newPlease}, os.Args[1:]...))
@@ -110,12 +114,12 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 
 // downloadAndLinkPlease downloads a new Please version and links it into place, if needed.
 // It returns the new location and dies on failure.
-func downloadAndLinkPlease(config *core.Configuration) string {
+func downloadAndLinkPlease(config *core.Configuration, verify bool) string {
 	config.Please.Location = core.ExpandHomePath(config.Please.Location)
 	newPlease := path.Join(config.Please.Location, config.Please.Version.VersionString(), "please")
 
 	if !core.PathExists(newPlease) {
-		downloadPlease(config)
+		downloadPlease(config, verify)
 	}
 	if !verifyNewPlease(newPlease, config.Please.Version.VersionString()) {
 		cleanDir(path.Join(config.Please.Location, config.Please.Version.VersionString()))
@@ -125,7 +129,7 @@ func downloadAndLinkPlease(config *core.Configuration) string {
 	return newPlease
 }
 
-func downloadPlease(config *core.Configuration) {
+func downloadPlease(config *core.Configuration, verify bool) {
 	newDir := path.Join(config.Please.Location, config.Please.Version.VersionString())
 	if err := os.MkdirAll(newDir, core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory %s: %s", newDir, err)
@@ -149,18 +153,19 @@ func downloadPlease(config *core.Configuration) {
 
 	url := strings.TrimSuffix(config.Please.DownloadLocation.String(), "/")
 	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.gz", url, runtime.GOOS, runtime.GOARCH, config.Please.Version.VersionString(), config.Please.Version.VersionString())
-	log.Info("Downloading %s", url)
-	response, err := http.Get(url)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to download %s: %s", url, err))
-	} else if response.StatusCode < 200 || response.StatusCode > 299 {
-		panic(fmt.Sprintf("Failed to download %s: got response %s", url, response.Status))
-	}
-	defer mustClose(response.Body)
+	rc := mustDownload(url, true)
+	defer mustClose(rc)
+	var r io.Reader = rc
 
-	pr := cli.NewProgressReader(response.Body, response.Header.Get("Content-Length"))
-	defer pr.Close()
-	gzreader, err := gzip.NewReader(pr)
+	if verify && config.Please.Version.LessThan(minSignedVersion) {
+		log.Warning("Won't verify signature of download, version is too old to be signed.")
+	} else if verify {
+		r = verifyDownload(r, url)
+	} else {
+		log.Warning("Signature verification disabled for %s", url)
+	}
+
+	gzreader, err := gzip.NewReader(r)
 	if err != nil {
 		panic(fmt.Sprintf("%s isn't a valid gzip file: %s", url, err))
 	}
@@ -177,6 +182,22 @@ func downloadPlease(config *core.Configuration) {
 			panic(err)
 		}
 	}
+}
+
+// mustDownload downloads the contents of the given URL and returns its body
+// The caller must close the reader when done.
+// It panics if the download fails.
+func mustDownload(url string, progress bool) io.ReadCloser {
+	log.Info("Downloading %s", url)
+	response, err := http.Get(url)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to download %s: %s", url, err))
+	} else if response.StatusCode < 200 || response.StatusCode > 299 {
+		panic(fmt.Sprintf("Failed to download %s: got response %s", url, response.Status))
+	} else if progress {
+		return cli.NewProgressReader(response.Body, response.Header.Get("Content-Length"))
+	}
+	return response.Body
 }
 
 func linkNewPlease(config *core.Configuration) {
