@@ -138,7 +138,7 @@ func PrintDisconnectionMessage(success, closed, disconnected bool) {
 	} else if success {
 		printf("${BOLD_GREEN}Success${RESET}\n")
 	} else {
-		printf("${BOLD_RED}Success${RESET}\n")
+		printf("${BOLD_RED}Failure${RESET}\n")
 	}
 }
 

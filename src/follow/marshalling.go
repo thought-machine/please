@@ -19,7 +19,7 @@ import (
 func toProto(r *core.BuildResult) *pb.BuildEventResponse {
 	t := &r.Tests
 	return &pb.BuildEventResponse{
-		ThreadId:    int32(r.ThreadId),
+		ThreadId:    int32(r.ThreadID),
 		Timestamp:   r.Time.UnixNano(),
 		BuildLabel:  toProtoBuildLabel(r.Label),
 		Status:      pb.BuildResultStatus(r.Status),
@@ -88,7 +88,7 @@ func toProtoError(err error) string {
 func fromProto(r *pb.BuildEventResponse) *core.BuildResult {
 	t := r.TestResults
 	return &core.BuildResult{
-		ThreadId:    int(r.ThreadId),
+		ThreadID:    int(r.ThreadId),
 		Time:        time.Unix(0, r.Timestamp),
 		Label:       fromProtoBuildLabel(r.BuildLabel),
 		Status:      core.BuildResultStatus(r.Status),

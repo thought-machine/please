@@ -88,7 +88,7 @@ func TestClientToServerCommunication(t *testing.T) {
 	}()
 	go func() {
 		for r := range clientState.Results {
-			log.Info("Received result from thread %d", r.ThreadId)
+			log.Info("Received result from thread %d", r.ThreadID)
 		}
 	}()
 	log.Info("Shutting down server")
