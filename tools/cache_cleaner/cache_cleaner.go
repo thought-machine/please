@@ -1,9 +1,8 @@
-// Small program to clean directory cache.
+// Package main implements a small program to clean directory cache.
 // This is actually fairly tricky since Please doesn't have a daemon managing it;
 // we don't particularly want that so instead we fire off one of these processes
 // at each invocation of 'build' or 'test' to check the cache size and clean out stuff
 // if it looks too big.
-
 package main
 
 import (
@@ -24,11 +23,14 @@ var log = logging.MustGetLogger("cache_cleaner")
 // Period of time in seconds between which two artifacts are considered to have the same atime.
 const accessTimeGracePeriod = 600 // Ten minutes
 
+// A CacheEntry represents a single file entry in the cache.
 type CacheEntry struct {
 	Path  string
 	Size  int64
 	Atime int64
 }
+
+// CacheEntries are a collection of CacheEntry instances.
 type CacheEntries []CacheEntry
 
 func (entries CacheEntries) Len() int      { return len(entries) }
@@ -42,24 +44,22 @@ func (entries CacheEntries) Less(i, j int) bool {
 }
 
 func findSize(path string) (int64, error) {
-	var totalSize int64 = 0
+	var totalSize int64
 	if err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
-		} else {
-			totalSize += info.Size()
-			return nil
 		}
+		totalSize += info.Size()
+		return nil
 	}); err != nil {
 		return 0, err
-	} else {
-		return totalSize, nil
 	}
+	return totalSize, nil
 }
 
 func start(directory string, highWaterMark, lowWaterMark int64) {
 	entries := CacheEntries{}
-	var totalSize int64 = 0
+	var totalSize int64
 	if err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -69,13 +69,13 @@ func start(directory string, highWaterMark, lowWaterMark int64) {
 			// 28 == length of 20-byte sha1 hash, encoded to base64, which always gets a trailing =
 			// as padding so we can check that to be "sure".
 			// Also 29 in case we appended an extra = (see below)
-			if size, err := findSize(path); err != nil {
+			size, err := findSize(path)
+			if err != nil {
 				return err
-			} else {
-				entries = append(entries, CacheEntry{path, size, atime.Get(info).Unix()})
-				totalSize += size
-				return filepath.SkipDir
 			}
+			entries = append(entries, CacheEntry{path, size, atime.Get(info).Unix()})
+			totalSize += size
+			return filepath.SkipDir
 		} else {
 			return nil // nothing particularly to do for other entries
 		}

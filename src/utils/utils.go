@@ -15,7 +15,7 @@ import (
 
 var log = logging.MustGetLogger("utils")
 
-// Finds all packages under a particular path.
+// FindAllSubpackages finds all packages under a particular path.
 // Used to implement rules with ... where we need to know all possible packages
 // under that location.
 func FindAllSubpackages(config *core.Configuration, rootPath string, prefix string) <-chan string {

@@ -25,9 +25,8 @@ func WindowSize() (int, int) {
 	); int(ret) == -1 {
 		log.Errorf("error %d getting window size", int(errno))
 		return 25, 80
-	} else {
-		return int(ws.Row), int(ws.Col)
 	}
+	return int(ws.Row), int(ws.Col)
 }
 
 // tiocgwinsz returns the ioctl number corresponding to TIOCGWINSZ.
@@ -36,7 +35,6 @@ func WindowSize() (int, int) {
 func tiocgwinsz() int {
 	if runtime.GOOS == "linux" {
 		return 0x5413
-	} else {
-		return 1074295912 // OSX and FreeBSD.
 	}
+	return 1074295912 // OSX and FreeBSD.
 }

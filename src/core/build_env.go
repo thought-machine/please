@@ -170,7 +170,7 @@ func (env BuildEnv) ReplaceEnvironment(s string) string {
 	return ""
 }
 
-// Redactor implements the interface for our logging implementation.
+// Redacted implements the interface for our logging implementation.
 func (env BuildEnv) Redacted() interface{} {
 	r := make(BuildEnv, len(env))
 	for i, e := range env {

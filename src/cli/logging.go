@@ -18,13 +18,19 @@ import (
 )
 
 var log = logging.MustGetLogger("cli")
+
+// StdErrIsATerminal is true if the process' stderr is an interactive TTY.
 var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
+
+// StdOutIsATerminal is true if the process' stdout is an interactive TTY.
 var StdOutIsATerminal = terminal.IsTerminal(int(os.Stdout.Fd()))
+
+// StripAnsi is a regex to find & replace ANSI console escape sequences.
 var StripAnsi = regexp.MustCompile("\x1b[^m]+m")
 
 var logLevel = logging.WARNING
 var fileLogLevel = logging.WARNING
-var fileBackend *logging.LogBackend = nil
+var fileBackend *logging.LogBackend
 
 type logFileWriter struct {
 	file io.Writer
@@ -117,6 +123,7 @@ type LogBackend struct {
 	Formatter                                                             logging.Formatter // TODO(pebers): seems a bit weird that we have to have this here, but it doesn't
 } //               seem to be possible to retrieve the formatter from outside the package?
 
+// RecalcLines recalculates how many lines we have available, typically in response to the window size changing
 func (backend *LogBackend) RecalcLines() {
 	for backend.LogMessages.Len() >= backend.MaxRecords {
 		backend.LogMessages.Remove(backend.LogMessages.Front())
@@ -178,9 +185,8 @@ func (backend *LogBackend) lineWrap(msg string) []string {
 	}
 	if len(wrappedLines) > backend.maxLines {
 		return reverse(wrappedLines[:backend.maxLines])
-	} else {
-		return reverse(wrappedLines)
 	}
+	return reverse(wrappedLines)
 }
 
 func reverse(s []string) []string {
@@ -190,9 +196,8 @@ func reverse(s []string) []string {
 			r = append(r, s[i])
 		}
 		return r
-	} else {
-		return s
 	}
+	return s
 }
 
 // Tries to find an appropriate point to word wrap line, taking shell escape codes into account.

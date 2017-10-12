@@ -10,11 +10,11 @@ import (
 	"utils"
 )
 
-// QueryCompletionLabels produces a set of labels that complete a given input.
+// CompletionLabels produces a set of labels that complete a given input.
 // The second return value is a set of labels to parse for (since the original set generally won't turn out to exist).
 // The last return value is true if one or more of the inputs are a "hidden" target
 // (i.e. name begins with an underscore).
-func QueryCompletionLabels(config *core.Configuration, args []string, repoRoot string) ([]core.BuildLabel, []core.BuildLabel, bool) {
+func CompletionLabels(config *core.Configuration, args []string, repoRoot string) ([]core.BuildLabel, []core.BuildLabel, bool) {
 	if len(args) == 0 {
 		queryCompletionPackages(config, ".", repoRoot)
 	} else if !strings.Contains(args[0], ":") {
@@ -67,12 +67,12 @@ func queryCompletionPackages(config *core.Configuration, query, repoRoot string)
 	os.Exit(0) // Don't need to run a full-blown parse, get out now.
 }
 
-// Queries a set of possible completions for some build labels.
+// Completions queries a set of possible completions for some build labels.
 // If 'binary' is true it will complete only targets that are runnable binaries (but not tests).
 // If 'test' is true it will similarly complete only targets that are tests.
 // If 'hidden' is true then hidden targets (i.e. those with names beginning with an underscore)
 // will be included as well.
-func QueryCompletions(graph *core.BuildGraph, labels []core.BuildLabel, binary, test, hidden bool) {
+func Completions(graph *core.BuildGraph, labels []core.BuildLabel, binary, test, hidden bool) {
 	for _, label := range labels {
 		count := 0
 		for _, target := range graph.PackageOrDie(label.PackageName).Targets {

@@ -14,7 +14,7 @@ import (
 
 func parseJUnitXMLTestResults(bytes []byte) (core.TestResults, error) {
 	results := core.TestResults{}
-	junitCase := JUnitXMLTestResults{}
+	junitCase := jUnitXMLTestResults{}
 	if err := xml.Unmarshal(bytes, &junitCase); err != nil {
 		return results, err
 	}
@@ -32,21 +32,21 @@ func parseJUnitXMLTestResults(bytes []byte) (core.TestResults, error) {
 	return results, nil
 }
 
-func appendResult(test JUnitXMLTest, results *core.TestResults) {
+func appendResult(test jUnitXMLTest, results *core.TestResults) {
 	results.NumTests++
 	if test.Failure != nil {
 		appendResult2(test, results, *test.Failure)
 	} else if test.Error != nil {
 		appendResult2(test, results, *test.Error)
 	} else if test.Type == "FAILURE" || test.Success == "false" || test.Stacktrace != "" {
-		appendResult2(test, results, JUnitXMLFailure{"", "FAILURE", test.Stacktrace})
+		appendResult2(test, results, jUnitXMLFailure{"", "FAILURE", test.Stacktrace})
 	} else {
 		results.Passed++
 		results.Passes = append(results.Passes, test.Name)
 	}
 }
 
-func appendResult2(test JUnitXMLTest, results *core.TestResults, failure JUnitXMLFailure) {
+func appendResult2(test jUnitXMLTest, results *core.TestResults, failure jUnitXMLFailure) {
 	results.Failed++
 	results.Failures = append(results.Failures, core.TestFailure{
 		Name:      combineNames(test.ClassName, test.Name),
@@ -57,42 +57,40 @@ func appendResult2(test JUnitXMLTest, results *core.TestResults, failure JUnitXM
 	})
 }
 
-func messageOrTraceback(failure JUnitXMLFailure) string {
+func messageOrTraceback(failure jUnitXMLFailure) string {
 	if failure.Traceback != "" {
 		return failure.Traceback
-	} else {
-		return failure.Message
 	}
+	return failure.Message
 }
 
 func combineNames(className string, name string) string {
 	index := strings.LastIndex(className, ".")
 	if index != -1 {
 		return className[index+1:] + "." + name
-	} else {
-		return className + "." + name
 	}
+	return className + "." + name
 }
 
-type JUnitXMLTestResults struct {
-	TestSuites []JUnitXMLTestSuite `xml:"testsuite"`
-	TestCases  []JUnitXMLTest      `xml:"testcase"`
-	Tests      []JUnitXMLTest      `xml:"test"`
+type jUnitXMLTestResults struct {
+	TestSuites []jUnitXMLTestSuite `xml:"testsuite"`
+	TestCases  []jUnitXMLTest      `xml:"testcase"`
+	Tests      []jUnitXMLTest      `xml:"test"`
 	XMLName    xml.Name
 }
 
-type JUnitXMLTestSuite struct {
+type jUnitXMLTestSuite struct {
 	Name      string         `xml:"name,attr"`
 	Failures  int            `xml:"failures,attr,omitempty"`
 	Tests     int            `xml:"tests,attr"`
-	TestCases []JUnitXMLTest `xml:"testcase"`
+	TestCases []jUnitXMLTest `xml:"testcase"`
 }
 
-type JUnitXMLTest struct {
+type jUnitXMLTest struct {
 	ClassName  string           `xml:"classname,attr,omitempty"`
 	Name       string           `xml:"name,attr"`
-	Failure    *JUnitXMLFailure `xml:"failure,omitempty"`
-	Error      *JUnitXMLFailure `xml:"error,omitempty"`
+	Failure    *jUnitXMLFailure `xml:"failure,omitempty"`
+	Error      *jUnitXMLFailure `xml:"error,omitempty"`
 	Time       float64          `xml:"time,attr,omitempty"`
 	Type       string           `xml:"type,attr,omitempty"`
 	Success    string           `xml:"success,attr,omitempty"`
@@ -101,36 +99,36 @@ type JUnitXMLTest struct {
 	Stderr     string           `xml:"stderr,omitempty"`
 }
 
-type JUnitXMLFailure struct {
+type jUnitXMLFailure struct {
 	Message   string `xml:"message,attr,omitempty"`
 	Type      string `xml:"type,attr,omitempty"`
 	Traceback string `xml:",chardata"`
 }
 
-// Write test results out to a file in xUnit format. Dies on any errors.
+// WriteResultsToFileOrDie writes test results out to a file in xUnit format. Dies on any errors.
 func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	if err := os.MkdirAll(path.Dir(filename), core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory for test output")
 	}
-	results := JUnitXMLTestResults{}
+	results := jUnitXMLTestResults{}
 	results.XMLName.Local = "testsuites"
 	for _, target := range graph.AllTargets() {
 		if target.Results.NumTests > 0 {
-			suite := JUnitXMLTestSuite{
+			suite := jUnitXMLTestSuite{
 				Name:     target.Label.String(),
 				Failures: target.Results.Failed,
 				Tests:    target.Results.NumTests,
 			}
 			for _, pass := range target.Results.Passes {
-				suite.TestCases = append(suite.TestCases, JUnitXMLTest{Name: pass})
+				suite.TestCases = append(suite.TestCases, jUnitXMLTest{Name: pass})
 			}
 			for _, fail := range target.Results.Failures {
-				suite.TestCases = append(suite.TestCases, JUnitXMLTest{
+				suite.TestCases = append(suite.TestCases, jUnitXMLTest{
 					Name:   fail.Name,
 					Type:   fail.Type,
 					Stdout: fail.Stdout,
 					Stderr: fail.Stderr,
-					Error: &JUnitXMLFailure{
+					Error: &jUnitXMLFailure{
 						Type:      fail.Type,
 						Traceback: fail.Traceback,
 					},

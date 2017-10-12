@@ -1,4 +1,4 @@
-// The build package houses the core functionality for actually building targets.
+// Package build houses the core functionality for actually building targets.
 package build
 
 import (
@@ -24,7 +24,7 @@ import (
 var log = logging.MustGetLogger("build")
 
 // Type that indicates that we're stopping the build of a target in a nonfatal way.
-var stopTarget = fmt.Errorf("stopping build")
+var errStop = fmt.Errorf("stopping build")
 
 // buildingFilegroupOutputs is used to track any file that's being built by a filegroup right now.
 // This avoids race conditions with them where two filegroups can race to build the same file
@@ -36,12 +36,13 @@ var buildingFilegroupMutex sync.Mutex
 // goDirOnce guards the creation of plz-out/go, which we only attempt once per process.
 var goDirOnce sync.Once
 
+// Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	start := time.Now()
 	target := state.Graph.TargetOrDie(label)
 	target.SetState(core.Building)
 	if err := buildTarget(tid, state, target); err != nil {
-		if err == stopTarget {
+		if err == errStop {
 			target.SetState(core.Stopped)
 			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
 			return
@@ -107,7 +108,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		if err := prepareSources(state.Graph, target); err != nil {
 			return err
 		}
-		return stopTarget
+		return errStop
 	}
 	if target.IsHashFilegroup {
 		updateHashFilegroupPaths(state, target)
@@ -127,9 +128,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 				target.SetState(core.Reused)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
 				return nil // Nothing needs to be done.
-			} else {
-				log.Debug("Rebuilding %s after post-build function", target.Label)
 			}
+			log.Debug("Rebuilding %s after post-build function", target.Label)
 		}
 	}
 	if target.IsFilegroup {
@@ -444,7 +444,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	}
 	if err = checkRuleHashes(target, hash); err != nil {
 		if state.NeedHashesOnly && (state.IsOriginalTarget(target.Label) || state.IsOriginalTarget(target.Label.Parent())) {
-			return nil, stopTarget
+			return nil, errStop
 		} else if state.VerifyHashes {
 			return nil, err
 		} else {

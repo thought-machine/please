@@ -13,7 +13,7 @@ import (
 
 var log = logging.MustGetLogger("core")
 
-// Representation of an identifier of a build target, eg. //spam/eggs:ham
+// A BuildLabel is a representation of an identifier of a build target, e.g. //spam/eggs:ham
 // corresponds to BuildLabel{PackageName: spam/eggs name: ham}
 // BuildLabels are always absolute, so relative identifiers
 // like :ham are always parsed into an absolute form.
@@ -24,14 +24,14 @@ type BuildLabel struct {
 	Name        string
 }
 
-// Build label that represents parsing the entire graph.
+// WholeGraph represents parsing the entire graph (i.e. //...).
 // We use this specially in one or two places.
 var WholeGraph = []BuildLabel{{PackageName: "", Name: "..."}}
 
-// Used to indicate that we're going to consume build labels from stdin.
+// BuildLabelStdin is used to indicate that we're going to consume build labels from stdin.
 var BuildLabelStdin = BuildLabel{PackageName: "", Name: "_STDIN"}
 
-// Used to indicate one of the originally requested targets on the command line.
+// OriginalTarget is used to indicate one of the originally requested targets on the command line.
 var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 const validChars = `\pL\pN\pM!@`
@@ -69,6 +69,7 @@ var relativeSubTargets = regexp.MustCompile(fmt.Sprintf("^(?:%s/)?(\\.\\.\\.)$",
 var packageNameOnly = regexp.MustCompile(fmt.Sprintf("^%s?$", packageName))
 var targetNameOnly = regexp.MustCompile(fmt.Sprintf("^%s$", targetName))
 
+// String returns a string representation of this build label.
 func (label BuildLabel) String() string {
 	if label.Name != "" {
 		return "//" + label.PackageName + ":" + label.Name
@@ -198,7 +199,7 @@ func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 	return BuildLabel{}, fmt.Errorf("Invalid build target label: %s", target)
 }
 
-// Parse a bunch of build labels.
+// ParseBuildLabels parses a bunch of build labels from strings. It dies on failure.
 // Relative labels are allowed since this is generally used at initialisation.
 func ParseBuildLabels(targets []string) []BuildLabel {
 	ret := make([]BuildLabel, len(targets))
@@ -212,12 +213,12 @@ func ParseBuildLabels(targets []string) []BuildLabel {
 	return ret
 }
 
-// Returns true if the label ends in ..., ie. it includes all subpackages.
+// IsAllSubpackages returns true if the label ends in ..., ie. it includes all subpackages.
 func (label BuildLabel) IsAllSubpackages() bool {
 	return label.Name == "..."
 }
 
-// Returns true if the label is the pseudo-label referring to all targets in this package.
+// IsAllTargets returns true if the label is the pseudo-label referring to all targets in this package.
 func (label BuildLabel) IsAllTargets() bool {
 	return label.Name == "all"
 }
@@ -239,19 +240,20 @@ func (label BuildLabel) Includes(that BuildLabel) bool {
 	return false
 }
 
-func (this BuildLabel) Less(that BuildLabel) bool {
-	if this.PackageName == that.PackageName {
-		return this.Name < that.Name
-	} else {
-		return this.PackageName < that.PackageName
+// Less returns true if this build label would sort less than another one.
+func (label BuildLabel) Less(other BuildLabel) bool {
+	if label.PackageName == other.PackageName {
+		return label.Name < other.Name
 	}
+	return label.PackageName < other.PackageName
 }
 
-// Implementation of BuildInput interface
+// Paths is an implementation of BuildInput interface; we use build labels directly as inputs.
 func (label BuildLabel) Paths(graph *BuildGraph) []string {
 	return addPathPrefix(graph.TargetOrDie(label).Outputs(), label.PackageName)
 }
 
+// FullPaths is an implementation of BuildInput interface.
 func (label BuildLabel) FullPaths(graph *BuildGraph) []string {
 	target := graph.TargetOrDie(label)
 	return addPathPrefix(target.Outputs(), target.OutDir())
@@ -266,10 +268,12 @@ func addPathPrefix(paths []string, prefix string) []string {
 	return ret
 }
 
+// LocalPaths is an implementation of BuildInput interface.
 func (label BuildLabel) LocalPaths(graph *BuildGraph) []string {
 	return graph.TargetOrDie(label).Outputs()
 }
 
+// Label is an implementation of BuildInput interface. It always returns this label.
 func (label BuildLabel) Label() *BuildLabel {
 	return &label
 }
@@ -368,7 +372,7 @@ func LooksLikeABuildLabel(str string) bool {
 	return strings.HasPrefix(str, "//") || strings.HasPrefix(str, ":")
 }
 
-// Make slices of these guys sortable.
+// BuildLabels makes slices of build labels sortable.
 type BuildLabels []BuildLabel
 
 func (slice BuildLabels) Len() int {

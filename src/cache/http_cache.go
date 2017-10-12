@@ -17,7 +17,7 @@ import (
 )
 
 type httpCache struct {
-	Url       string
+	URL       string
 	Writeable bool
 	Timeout   time.Duration
 }
@@ -60,11 +60,11 @@ func (cache *httpCache) StoreExtra(target *core.BuildTarget, key []byte, file st
 			log.Warning("Failed to read artifact: %s", err)
 			return
 		}
-		response, err := http.Post(cache.Url+"/artifact/"+artifact, "application/octet-stream", file)
+		response, err := http.Post(cache.URL+"/artifact/"+artifact, "application/octet-stream", file)
 		if err != nil {
-			log.Warning("Failed to send artifact to %s: %s", cache.Url+"/artifact/"+artifact, err)
+			log.Warning("Failed to send artifact to %s: %s", cache.URL+"/artifact/"+artifact, err)
 		} else if response.StatusCode < 200 || response.StatusCode > 299 {
-			log.Warning("Failed to send artifact to %s: got response %s", cache.Url+"/artifact/"+artifact, response.Status)
+			log.Warning("Failed to send artifact to %s: got response %s", cache.URL+"/artifact/"+artifact, response.Status)
 		}
 		response.Body.Close()
 	}
@@ -95,7 +95,7 @@ func (cache *httpCache) RetrieveExtra(target *core.BuildTarget, key []byte, file
 		file,
 	)
 
-	response, err := http.Get(cache.Url + "/artifact/" + artifact)
+	response, err := http.Get(cache.URL + "/artifact/" + artifact)
 	if err != nil {
 		return false
 	}
@@ -154,7 +154,7 @@ func (cache *httpCache) Clean(target *core.BuildTarget) {
 		target.Label.PackageName,
 		target.Label.Name,
 	)
-	req, _ := http.NewRequest("DELETE", cache.Url+"/artifact/"+artifact, reader)
+	req, _ := http.NewRequest("DELETE", cache.URL+"/artifact/"+artifact, reader)
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Warning("Failed to remove artifacts for %s from http cache: %s", target.Label, err)
@@ -163,7 +163,7 @@ func (cache *httpCache) Clean(target *core.BuildTarget) {
 }
 
 func (cache *httpCache) CleanAll() {
-	req, _ := http.NewRequest("DELETE", cache.Url, nil)
+	req, _ := http.NewRequest("DELETE", cache.URL, nil)
 	if _, err := http.DefaultClient.Do(req); err != nil {
 		log.Warning("Failed to remove artifacts from http cache: %s", err)
 	}
@@ -171,10 +171,10 @@ func (cache *httpCache) CleanAll() {
 
 func (cache *httpCache) Shutdown() {}
 
-func newHttpCache(config *core.Configuration) *httpCache {
+func newHTTPCache(config *core.Configuration) *httpCache {
 	return &httpCache{
-		Url:       config.Cache.HttpUrl.String(),
-		Writeable: config.Cache.HttpWriteable,
-		Timeout:   time.Duration(config.Cache.HttpTimeout),
+		URL:       config.Cache.HTTPURL.String(),
+		Writeable: config.Cache.HTTPWriteable,
+		Timeout:   time.Duration(config.Cache.HTTPTimeout),
 	}
 }

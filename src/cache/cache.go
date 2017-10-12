@@ -27,18 +27,18 @@ func newSyncCache(config *core.Configuration, remoteOnly bool) core.Cache {
 	if config.Cache.Dir != "" && !remoteOnly {
 		mplex.caches = append(mplex.caches, newDirCache(config))
 	}
-	if config.Cache.RpcUrl != "" {
-		cache, err := newRpcCache(config)
+	if config.Cache.RPCURL != "" {
+		cache, err := newRPCCache(config)
 		if err == nil {
 			mplex.caches = append(mplex.caches, cache)
 		} else {
 			log.Warning("RPC cache server could not be reached: %s", err)
 		}
 	}
-	if config.Cache.HttpUrl != "" {
-		res, err := http.Get(config.Cache.HttpUrl.String() + "/ping")
+	if config.Cache.HTTPURL != "" {
+		res, err := http.Get(config.Cache.HTTPURL.String() + "/ping")
 		if err == nil && res.StatusCode == 200 {
-			mplex.caches = append(mplex.caches, newHttpCache(config))
+			mplex.caches = append(mplex.caches, newHTTPCache(config))
 		} else {
 			log.Warning("Http cache server could not be reached: %s.\nSkipping http caching...", err)
 		}

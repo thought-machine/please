@@ -23,6 +23,7 @@ var log = logging.MustGetLogger("test")
 const dummyOutput = "=== RUN DummyTest\n--- PASS: DummyTest (0.00s)\nPASS\n"
 const dummyCoverage = "<?xml version=\"1.0\" ?><coverage></coverage>"
 
+// Test runs the tests for a single target.
 func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
 	startTime := time.Now()
@@ -158,8 +159,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		target.Results.Duration += duration
 		if !core.PathExists(outputFile) {
 			if err == nil && target.NoTestOutput {
-				target.Results.NumTests += 1
-				target.Results.Passed += 1
+				target.Results.NumTests++
+				target.Results.Passed++
 				numSucceeded++
 			} else if err == nil {
 				target.Results.NumTests++

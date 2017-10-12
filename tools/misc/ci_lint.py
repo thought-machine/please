@@ -14,7 +14,7 @@ from itertools import groupby
 
 
 # Packages that don't load. Will be cleaned up over time.
-BLACKLISTED_PACKAGES = {
+BLACKLISTED_VET_PACKAGES = {
     'src/cache/server',
     'tools/please_diff_graphs',
     'tools/please_pex',
@@ -24,6 +24,11 @@ BLACKLISTED_PACKAGES = {
     'tools/please_go_test/test_data',
     'test/go_rules',
     'test/go_rules/test',
+    'third_party/go/zip',
+    # There are two warnings in here about unsafe.Pointer; we *think* they
+    # are safe but not 100% sure and it'd be nice to clean it up.
+    # Unfortunately may be hard due to cgo checks :(
+    'src/parse',
 }
 
 
@@ -36,14 +41,15 @@ def find_go_files(root):
 
 def run_linters(files):
     try:
-        subprocess.check_call(['go', 'tool', 'vet', '-unsafeptr=false'] + files)
+        subprocess.check_call(['go', 'tool', 'vet'] + files)
+        subprocess.check_call(['golint', '-set_exit_status'] + files)
         return True
     except subprocess.CalledProcessError:
         return False
 
 
 def main():
-    all_go_files = [(d, f) for d, f in find_go_files('.') if d not in BLACKLISTED_PACKAGES]
+    all_go_files = [(d, f) for d, f in find_go_files('.') if d not in BLACKLISTED_VET_PACKAGES]
     by_dir = [[os.path.join(d, f[1]) for f in files]
               for d, files in groupby(all_go_files, key=lambda x: x[0])]
     if not all([run_linters(files) for files in by_dir]):

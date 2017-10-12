@@ -52,7 +52,7 @@ func translateEvent(result *core.BuildResult, phase string) traceEntry {
 		Pid:  0, // This isn't really important, there's only one process.
 		Ts:   result.Time.UnixNano() / 1000,
 	}
-	entry.Tid = fmt.Sprintf("Builder %d", result.ThreadId)
+	entry.Tid = fmt.Sprintf("Builder %d", result.ThreadID)
 	entry.Args.Description = result.Description
 	if result.Err != nil {
 		entry.Args.Err = fmt.Sprintf("%s", result.Err)

@@ -11,8 +11,8 @@ import (
 	"core"
 )
 
-// QueryGraph prints a representation of the build graph as JSON.
-func QueryGraph(graph *core.BuildGraph, targets []core.BuildLabel) {
+// Graph prints a representation of the build graph as JSON.
+func Graph(graph *core.BuildGraph, targets []core.BuildLabel) {
 	log.Notice("Generating graph...")
 	g := makeJSONGraph(graph, targets)
 	log.Notice("Marshalling...")

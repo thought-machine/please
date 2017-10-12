@@ -70,12 +70,12 @@ func replaceSequences(target *core.BuildTarget) string {
 	return ReplaceSequences(target, target.GetCommand())
 }
 
-// Replace escape sequences in the given string.
+// ReplaceSequences replaces escape sequences in the given string.
 func ReplaceSequences(target *core.BuildTarget, command string) string {
 	return replaceSequencesInternal(target, command, false)
 }
 
-// Replace escape sequences in the given string when running a test.
+// ReplaceTestSequences replaces escape sequences in the given string when running a test.
 func ReplaceTestSequences(target *core.BuildTarget, command string) string {
 	if command == "" {
 		// An empty test command implies running the test binary.

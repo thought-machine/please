@@ -40,6 +40,7 @@ const LocalConfigFileName string = ".plzconfig.local"
 // things for a particular machine (eg. build machine with different caching behaviour).
 const MachineConfigFileName = "/etc/plzconfig"
 
+// The available container implementations that we support.
 const (
 	ContainerImplementationNone   = "none"
 	ContainerImplementationDocker = "docker"
@@ -57,7 +58,7 @@ func readConfigFile(config *Configuration, filename string) error {
 	return nil
 }
 
-// Reads a config file from the given locations, in order.
+// ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
 func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	config := DefaultConfiguration()
@@ -84,7 +85,7 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
 	defaultPath(&config.Please.LintTool, config.Please.Location, "linter")
 
-	if (config.Cache.RpcPrivateKey == "") != (config.Cache.RpcPublicKey == "") {
+	if (config.Cache.RPCPrivateKey == "") != (config.Cache.RPCPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
 	}
 	if c := config.Test.DefaultContainer; c != ContainerImplementationNone && c != ContainerImplementationDocker {
@@ -107,6 +108,7 @@ func defaultPath(conf *string, dir, file string) {
 	}
 }
 
+// DefaultConfiguration returns the default configuration object with no overrides.
 func DefaultConfiguration() *Configuration {
 	config := Configuration{}
 	config.Please.Location = "~/.please"
@@ -121,13 +123,13 @@ func DefaultConfiguration() *Configuration {
 	config.BuildConfig = map[string]string{}
 	config.BuildEnv = map[string]string{}
 	config.Aliases = map[string]string{}
-	config.Cache.HttpTimeout = cli.Duration(5 * time.Second)
-	config.Cache.RpcTimeout = cli.Duration(5 * time.Second)
+	config.Cache.HTTPTimeout = cli.Duration(5 * time.Second)
+	config.Cache.RPCTimeout = cli.Duration(5 * time.Second)
 	config.Cache.Dir = ".plz-cache"
 	config.Cache.DirCacheHighWaterMark = "10G"
 	config.Cache.DirCacheLowWaterMark = "8G"
 	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
-	config.Cache.RpcMaxMsgSize.UnmarshalFlag("200MiB")
+	config.Cache.RPCMaxMsgSize.UnmarshalFlag("200MiB")
 	config.Metrics.PushFrequency = cli.Duration(400 * time.Millisecond)
 	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
@@ -184,6 +186,8 @@ func DefaultConfiguration() *Configuration {
 	return &config
 }
 
+// A Configuration contains all the settings that can be configured about Please.
+// This is parsed from .plzconfig etc; we also auto-generate help messages from its tags.
 type Configuration struct {
 	Please struct {
 		Version          cli.Version `help:"Defines the version of plz that this repo is supposed to use currently. If it's not present or the version matches the currently running version no special action is taken; otherwise if SelfUpdate is set Please will attempt to download an appropriate version, otherwise it will issue a warning and continue.\n\nNote that if this is not set, you can run plz update to update to the latest version available on the server." var:"PLZ_VERSION"`
@@ -218,17 +222,17 @@ type Configuration struct {
 		DirCacheCleaner       string       `help:"The binary to use for cleaning the directory cache.\nDefaults to cache_cleaner in the plz install directory.\nCan also be set to the empty string to disable attempting to run it - note that this will of course lead to the dir cache growing without limit which may ruin your day if it fills your disk :)"`
 		DirCacheHighWaterMark string       `help:"Starts cleaning the directory cache when it is over this number of bytes.\nCan also be given with human-readable suffixes like 10G, 200MB etc."`
 		DirCacheLowWaterMark  string       `help:"When cleaning the directory cache, it's reduced to at most this size."`
-		HttpUrl               cli.URL      `help:"Base URL of the HTTP cache.\nNot set to anything by default which means the cache will be disabled."`
-		HttpWriteable         bool         `help:"If True this plz instance will write content back to the HTTP cache.\nBy default it runs in read-only mode."`
-		HttpTimeout           cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
-		RpcUrl                cli.URL      `help:"Base URL of the RPC cache.\nNot set to anything by default which means the cache will be disabled."`
-		RpcWriteable          bool         `help:"If True this plz instance will write content back to the RPC cache.\nBy default it runs in read-only mode."`
-		RpcTimeout            cli.Duration `help:"Timeout for operations contacting the RPC cache, in seconds."`
-		RpcPublicKey          string       `help:"File containing a PEM-encoded private key which is used to authenticate to the RPC cache." example:"my_key.pem"`
-		RpcPrivateKey         string       `help:"File containing a PEM-encoded certificate which is used to authenticate to the RPC cache." example:"my_cert.pem"`
-		RpcCACert             string       `help:"File containing a PEM-encoded certificate which is used to validate the RPC cache's certificate." example:"ca.pem"`
-		RpcSecure             bool         `help:"Forces SSL on for the RPC cache. It will be activated if any of rpcpublickey, rpcprivatekey or rpccacert are set, but this can be used if none of those are needed and SSL is still in use."`
-		RpcMaxMsgSize         cli.ByteSize `help:"Maximum size of a single message that we'll send to the RPC server.\nThis should agree with the server's limit, if it's higher the artifacts will be rejected.\nThe value is given as a byte size so can be suffixed with M, GB, KiB, etc."`
+		HTTPURL               cli.URL      `help:"Base URL of the HTTP cache.\nNot set to anything by default which means the cache will be disabled."`
+		HTTPWriteable         bool         `help:"If True this plz instance will write content back to the HTTP cache.\nBy default it runs in read-only mode."`
+		HTTPTimeout           cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
+		RPCURL                cli.URL      `help:"Base URL of the RPC cache.\nNot set to anything by default which means the cache will be disabled."`
+		RPCWriteable          bool         `help:"If True this plz instance will write content back to the RPC cache.\nBy default it runs in read-only mode."`
+		RPCTimeout            cli.Duration `help:"Timeout for operations contacting the RPC cache, in seconds."`
+		RPCPublicKey          string       `help:"File containing a PEM-encoded private key which is used to authenticate to the RPC cache." example:"my_key.pem"`
+		RPCPrivateKey         string       `help:"File containing a PEM-encoded certificate which is used to authenticate to the RPC cache." example:"my_cert.pem"`
+		RPCCACert             string       `help:"File containing a PEM-encoded certificate which is used to validate the RPC cache's certificate." example:"ca.pem"`
+		RPCSecure             bool         `help:"Forces SSL on for the RPC cache. It will be activated if any of rpcpublickey, rpcprivatekey or rpccacert are set, but this can be used if none of those are needed and SSL is still in use."`
+		RPCMaxMsgSize         cli.ByteSize `help:"Maximum size of a single message that we'll send to the RPC server.\nThis should agree with the server's limit, if it's higher the artifacts will be rejected.\nThe value is given as a byte size so can be suffixed with M, GB, KiB, etc."`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Metrics struct {
 		PushGatewayURL cli.URL      `help:"The URL of the pushgateway to send metrics to."`
@@ -335,6 +339,9 @@ type Configuration struct {
 	buildEnvOnce   sync.Once
 }
 
+// Hash returns a hash of the parts of this configuration that affect building targets in general.
+// Most parts are considered not to (e.g. cache settings) or affect specific targets (e.g. changing
+// tool paths which get accounted for on the targets that use them).
 func (config *Configuration) Hash() []byte {
 	h := sha1.New()
 	// These fields are the ones that need to be in the general hash; other things will be
@@ -345,6 +352,9 @@ func (config *Configuration) Hash() []byte {
 	}
 	h.Write([]byte(config.Please.Lang))
 	h.Write([]byte(config.Please.Nonce))
+	// TODO(peterebden): Can we get rid of this? Doing it correctly would mean annotating every
+	//                   rule with things like cp and mv as tools - but maybe we just assume
+	//                   coreutils always behave as expected?
 	for _, p := range config.Build.Path {
 		h.Write([]byte(p))
 	}
@@ -367,6 +377,7 @@ func (config *Configuration) ContainerisationHash() []byte {
 	return h.Sum(nil)
 }
 
+// GetBuildEnv returns the build environment configured for this config object.
 func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvOnce.Do(func() {
 		config.buildEnvStored = []string{}

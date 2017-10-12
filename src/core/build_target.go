@@ -12,22 +12,27 @@ import (
 	"time"
 )
 
-// OutDir is the output directory for everything.
+// OutDir is the root output directory for everything.
 const OutDir string = "plz-out"
+
+// TmpDir is the root of the temporary directory for building targets & running tests.
 const TmpDir string = "plz-out/tmp"
+
+// GenDir is the output directory for non-binary targets.
 const GenDir string = "plz-out/gen"
+
+// BinDir is the output directory for binary targets.
 const BinDir string = "plz-out/bin"
 
-// Default when this isn't otherwise specified.
+// DefaultBuildingDescription is the default description for targets when they're building.
 const DefaultBuildingDescription = "Building..."
 
 // Suffixes for temporary directories
 const buildDirSuffix = "._build"
 const testDirSuffix = "._test"
 
-// Representation of a build target and all information about it;
+// A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
-
 type BuildTarget struct {
 	// N.B. The tags on these fields are used by query print to help it print them.
 
@@ -158,8 +163,11 @@ type depInfo struct {
 	source   bool           // is it implicit because it's a source (not true if it's a dependency too)
 }
 
+// A BuildTargetState tracks the current state of this target in regard to whether it's built
+// or not. Targets only move forwards through this (i.e. the state of a target only ever increases).
 type BuildTargetState int32
 
+// The available states for a target.
 const (
 	Inactive   BuildTargetState = iota // Target isn't used in current build
 	Semiactive                         // Target would be active if we needed a build
@@ -175,7 +183,6 @@ const (
 )
 
 // String implements the fmt.Stringer interface.
-// TODO(pebers): Convert this to use go generate / stringer.
 func (s BuildTargetState) String() string {
 	if s == Inactive {
 		return "Inactive"
@@ -203,26 +210,7 @@ func (s BuildTargetState) String() string {
 	return "Unknown"
 }
 
-// Inputs to a build can be either a file in the local package or another build rule.
-// All users care about is where they find them.
-type BuildInput interface {
-	// Paths returns a slice of paths to the files of this input.
-	Paths(graph *BuildGraph) []string
-	// FullPaths is like Paths but includes the leading plz-out/gen directory.
-	FullPaths(graph *BuildGraph) []string
-	// LocalPaths returns paths within the local package
-	LocalPaths(graph *BuildGraph) []string
-	// Label returns the build label associated with this input, or nil if it doesn't have one (eg. it's just a file).
-	Label() *BuildLabel
-	// nonOutputLabel returns the build label associated with this input, or nil if it doesn't have
-	// one or is a specific output of a rule.
-	// This is fiddly enough that we don't want to expose it outside the package right now.
-	nonOutputLabel() *BuildLabel
-	// Returns a string representation of this input
-	String() string
-}
-
-// Settings controlling containerisation for a particular target.
+// TargetContainerSettings are known settings controlling containerisation for a particular target.
 type TargetContainerSettings struct {
 	// Image to use for this test
 	DockerImage string `name:"docker_image"`
@@ -244,14 +232,13 @@ func (settings *TargetContainerSettings) ToMap() map[string]string {
 	return m
 }
 
+// NewBuildTarget constructs & returns a new BuildTarget.
 func NewBuildTarget(label BuildLabel) *BuildTarget {
-	target := new(BuildTarget)
-	target.Label = label
-	target.state = int32(Inactive)
-	target.IsBinary = false
-	target.IsTest = false
-	target.BuildingDescription = DefaultBuildingDescription
-	return target
+	return &BuildTarget{
+		Label:               label,
+		state:               int32(Inactive),
+		BuildingDescription: DefaultBuildingDescription,
+	}
 }
 
 // TmpDir returns the temporary working directory for this target, eg.
@@ -263,17 +250,16 @@ func (target *BuildTarget) TmpDir() string {
 	return path.Join(TmpDir, target.Label.PackageName, target.Label.Name+buildDirSuffix)
 }
 
-// Returns the output directory for this target, eg.
+// OutDir returns the output directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
 	if target.IsBinary {
 		return path.Join(BinDir, target.Label.PackageName)
-	} else {
-		return path.Join(GenDir, target.Label.PackageName)
 	}
+	return path.Join(GenDir, target.Label.PackageName)
 }
 
-// Returns the test directory for this target, eg.
+// TestDir returns the test directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy._test
 // This is different to TmpDir so we run tests in a clean environment
 // and to facilitate containerising tests.
@@ -1025,7 +1011,7 @@ func (target *BuildTarget) HasParent() bool {
 	return target.Label.HasParent()
 }
 
-// Make slices of these guys sortable.
+// BuildTargets makes a slice of build targets sortable by their labels.
 type BuildTargets []*BuildTarget
 
 func (slice BuildTargets) Len() int {

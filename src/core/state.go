@@ -45,14 +45,18 @@ func (t pendingTask) Compare(that queue.Item) int {
 // to minimise any dependencies on it).
 type Parser interface {
 	// RunPreBuildFunction runs a pre-build function for a target.
-	RunPreBuildFunction(threadId int, state *BuildState, target *BuildTarget) error
+	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
-	RunPostBuildFunction(threadId int, state *BuildState, target *BuildTarget, output string) error
+	RunPostBuildFunction(threadID int, state *BuildState, target *BuildTarget, output string) error
 	// UndeferAnyParses undefers any pending parses that are waiting for this target to build.
 	UndeferAnyParses(state *BuildState, target *BuildTarget)
 }
 
-// Passed about to track the current state of the build.
+// A BuildState tracks the current state of the build & related data.
+// As well as tracking the build graph and config, it also tracks the set of current
+// tasks and maintains a queue of them, along with various related counters which are
+// used to determine when we're finished.
+// Tasks are internally tracked by priority, which is determined by their type.
 type BuildState struct {
 	Graph *BuildGraph
 	// Stream of pending tasks
@@ -120,14 +124,17 @@ type BuildState struct {
 	mutex      sync.Mutex
 }
 
-// Singleton instance of one of these. Tried to avoid introducing it but it ended up being
-// inevitable to make some of the parsing code work.
+// State is a singleton instance of the most recently constructed BuildState.
+// We would prefer not to have this but it ended up being inevitable for some of the
+// parsing code that doesn't have ready access to other Go variables.
 var State *BuildState
 
+// AddActiveTarget increments the counter for a newly active build target.
 func (state *BuildState) AddActiveTarget() {
 	atomic.AddInt64(&state.numActive, 1)
 }
 
+// AddPendingParse adds a task for a pending parse of a build label.
 func (state *BuildState) AddPendingParse(label, dependor BuildLabel, forSubinclude bool) {
 	atomic.AddInt64(&state.numActive, 1)
 	atomic.AddInt64(&state.numPending, 1)
@@ -138,6 +145,7 @@ func (state *BuildState) AddPendingParse(label, dependor BuildLabel, forSubinclu
 	}
 }
 
+// AddPendingBuild adds a task for a pending build of a target.
 func (state *BuildState) AddPendingBuild(label BuildLabel, forSubinclude bool) {
 	if forSubinclude {
 		state.addPending(label, SubincludeBuild)
@@ -146,6 +154,7 @@ func (state *BuildState) AddPendingBuild(label BuildLabel, forSubinclude bool) {
 	}
 }
 
+// AddPendingTest adds a task for a pending test of a target.
 func (state *BuildState) AddPendingTest(label BuildLabel) {
 	if state.NeedTests {
 		state.addPending(label, Test)
@@ -241,9 +250,10 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 	state.AddPendingParse(label, OriginalTarget, false)
 }
 
+// LogBuildResult logs the result of a target either building or parsing.
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	state.Results <- &BuildResult{
-		ThreadId:    tid,
+		ThreadID:    tid,
 		Time:        time.Now(),
 		Label:       label,
 		Status:      status,
@@ -252,9 +262,10 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 	}
 }
 
+// LogTestResult logs the result of a target once its tests have completed.
 func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildResultStatus, results *TestResults, coverage *TestCoverage, err error, format string, args ...interface{}) {
 	state.Results <- &BuildResult{
-		ThreadId:    tid,
+		ThreadID:    tid,
 		Time:        time.Now(),
 		Label:       label,
 		Status:      status,
@@ -267,9 +278,10 @@ func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildRe
 	state.Coverage.Aggregate(coverage)
 }
 
+// LogBuildError logs a failure for a target to parse, build or test.
 func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
 	state.Results <- &BuildResult{
-		ThreadId:    tid,
+		ThreadID:    tid,
 		Time:        time.Now(),
 		Label:       label,
 		Status:      status,
@@ -278,10 +290,13 @@ func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildRe
 	}
 }
 
+// NumActive returns the number of currently active tasks (i.e. those that are
+// scheduled to be built at some point, or have been built already).
 func (state *BuildState) NumActive() int {
 	return int(atomic.LoadInt64(&state.numActive))
 }
 
+// NumDone returns the number of tasks that have been completed so far.
 func (state *BuildState) NumDone() int {
 	return int(atomic.LoadInt64(&state.numDone))
 }
@@ -326,6 +341,9 @@ func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 	return ret
 }
 
+// NewBuildState constructs and returns a new BuildState.
+// Everyone should use this rather than attempting to construct it themselves;
+// callers can't initialise all the required private fields.
 func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configuration) *BuildState {
 	State = &BuildState{
 		Graph:             NewGraph(),
@@ -347,9 +365,11 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 	return State
 }
 
+// A BuildResult represents a single event in the build process, i.e. a target starting or finishing
+// building, or reaching some milestone within those steps.
 type BuildResult struct {
 	// Thread id (or goroutine id, really) that generated this result.
-	ThreadId int
+	ThreadID int
 	// Timestamp of this event
 	Time time.Time
 	// Target which has just changed
@@ -364,19 +384,10 @@ type BuildResult struct {
 	Tests TestResults
 }
 
-func NewBuildError(tid int, label BuildLabel, status BuildResultStatus, err error, description string) BuildResult {
-	return BuildResult{
-		ThreadId:    tid,
-		Time:        time.Now(),
-		Label:       label,
-		Status:      status,
-		Err:         err,
-		Description: description,
-	}
-}
-
+// A BuildResultStatus represents the status of a target when we log a build result.
 type BuildResultStatus int
 
+// The collection of expected build result statuses.
 const (
 	PackageParsing BuildResultStatus = iota
 	PackageParsed
@@ -391,6 +402,7 @@ const (
 	TargetTestFailed
 )
 
+// Category returns the broad area that this event represents in the tasks we perform for a target.
 func (s BuildResultStatus) Category() string {
 	switch s {
 	case PackageParsing, PackageParsed, ParseFailed:

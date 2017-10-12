@@ -83,7 +83,7 @@ func NewCluster(port, rpcPort int, name string) *Cluster {
 	return clu
 }
 
-// JoinCluster joins an existing plz cache cluster.
+// Join joins an existing plz cache cluster.
 func (cluster *Cluster) Join(members []string) {
 	// Talk to the other nodes to request to join.
 	if _, err := cluster.list.Join(members); err != nil {
@@ -113,7 +113,7 @@ func (cluster *Cluster) Join(members []string) {
 	log.Fatalf("Unable to contact any other cluster members")
 }
 
-// InitCluster seeds a new plz cache cluster.
+// Init seeds a new plz cache cluster.
 func (cluster *Cluster) Init(size int) {
 	cluster.size = size
 	// We're node 0. The following will add us to the node list.

@@ -159,7 +159,6 @@ func newDirCache(config *core.Configuration) *dirCache {
 func fileMode(target *core.BuildTarget) os.FileMode {
 	if target.IsBinary {
 		return 0555
-	} else {
-		return 0444
 	}
+	return 0444
 }
