@@ -28,9 +28,9 @@ func UpdateResources(state *core.BuildState) {
 	maxCPU := float64(100 * count)
 	// CPU is a bit of a fiddle since the kernel only gives us totals,
 	// so we have to sample how busy we think it's been.
-	lastTotal, lastIO := getCpuTimes()
+	lastTotal, lastIO := getCPUTimes()
 	for timeNow := range time.NewTicker(resourceUpdateFrequency).C {
-		if thisTotal, thisIO := getCpuTimes(); thisTotal > 0.0 {
+		if thisTotal, thisIO := getCPUTimes(); thisTotal > 0.0 {
 			elapsed := timeNow.Sub(lastTime).Seconds()
 			state.Stats.CPU.Used = 100.0 * (thisTotal - lastTotal) / elapsed
 			state.Stats.CPU.IOWait = 100.0 * (thisIO - lastIO) / elapsed
@@ -51,7 +51,7 @@ func UpdateResources(state *core.BuildState) {
 	}
 }
 
-func getCpuTimes() (float64, float64) {
+func getCPUTimes() (float64, float64) {
 	ts, err := cpu.Times(false) // not per CPU
 	if err != nil || len(ts) == 0 {
 		log.Error("Error getting CPU info: %s", err)

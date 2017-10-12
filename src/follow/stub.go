@@ -1,4 +1,4 @@
-// package follow implements remote communication between plz instances.
+// Package follow implements remote communication between plz instances.
 // This file is a stub used only for initial bootstrap.
 package follow
 

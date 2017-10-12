@@ -58,7 +58,7 @@ func connectSingleTry(state *core.BuildState, url string) error {
 	if err != nil {
 		if s, ok := status.FromError(err); ok && s.Code() == codes.Unavailable {
 			// Slightly nicer version for an obvious failure which gets a bit technical by default
-			return fmt.Errorf("Failed to set up communication with remote server; check the address is correct and it's running.")
+			return fmt.Errorf("Failed to set up communication with remote server; check the address is correct and it's running")
 		}
 		return fmt.Errorf("Failed to set up communication with remote server: %s", err)
 	}

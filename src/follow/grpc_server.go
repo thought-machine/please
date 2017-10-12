@@ -1,6 +1,6 @@
 // +build nobootstrap
 
-// Package remote implements remote connections to other plz processes.
+// Package follow implements remote connections to other plz processes.
 // Specifically it implements a gRPC server and client that can stream
 // build events.
 package follow
