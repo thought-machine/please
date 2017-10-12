@@ -4,9 +4,9 @@ import "fmt"
 
 import "core"
 
-// QuerySomePath finds and returns a path between two targets.
+// SomePath finds and returns a path between two targets.
 // Useful for a "why on earth do I depend on this thing" type query.
-func QuerySomePath(graph *core.BuildGraph, label1 core.BuildLabel, label2 core.BuildLabel) {
+func SomePath(graph *core.BuildGraph, label1 core.BuildLabel, label2 core.BuildLabel) {
 	// Awkwardly either target can be :all. This is an extremely useful idiom though so despite
 	// trickiness is worth supporting.
 	// Of course this calculation is also quadratic but it's not very obvious how to avoid that.

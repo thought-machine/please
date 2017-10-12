@@ -15,11 +15,11 @@ PLZ="plz-out/bin/src/please"
 VERSION="$(cat VERSION)"
 eval $(go env)
 echo -e "${GREEN}Identifying outputs...${RESET}"
-FILES="$($PLZ query outputs -p //package:tarballs)"
+FILES="$($PLZ query alltargets -p //package:all --include tar --include tar_asc | $PLZ query outputs -p -)"
 
 if [ "$GOOS" == "linux" ]; then
     # For Linux we upload debs as well.
-    DEBS="$($PLZ query alltargets -p //package:all --include deb | $PLZ query outputs -p -)"
+    DEBS="$($PLZ query alltargets -p //package:all --include deb --include deb_asc | $PLZ query outputs -p -)"
     FILES="$FILES $DEBS"
 fi
 

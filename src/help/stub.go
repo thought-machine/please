@@ -7,8 +7,8 @@ func Help(topic string) bool {
 	return false
 }
 
-// HelpTopics is also a stub implementation used only during bootstrap.
-func HelpTopics(prefix string) {}
+// Topics is also a stub implementation used only during bootstrap.
+func Topics(prefix string) {}
 
 // A Topic is an alias for a string, which does not provide completion during bootstrap.
 type Topic string

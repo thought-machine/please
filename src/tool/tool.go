@@ -21,6 +21,7 @@ var log = logging.MustGetLogger("tool")
 // A Tool is one of Please's tools; this only exists for facilitating tab-completion for flags.
 type Tool string
 
+// Complete suggests completions for a partial tool name.
 func (tool Tool) Complete(match string) []flags.Completion {
 	ret := []flags.Completion{}
 	for k := range matchingTools(core.DefaultConfiguration(), match) {

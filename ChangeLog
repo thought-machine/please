@@ -1,3 +1,11 @@
+Version 9.2.3
+-------------
+
+    * Fix a bug where C++ rules with a single source didn't always honour includes.
+    * Fixed a panic in flags unmarshalling (only when flags were already incorrect,
+      but we now handle it more nicely).
+
+
 Version 9.2.2
 -------------
 

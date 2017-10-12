@@ -3,11 +3,11 @@ package query
 import "core"
 import "fmt"
 
-// QueryAffectedTargets walks over the build graph and identifies all targets that have a transitive
+// AffectedTargets walks over the build graph and identifies all targets that have a transitive
 // dependency on the given set of files.
 // Targets are filtered by given include / exclude labels and if 'tests' is true only
 // test targets will be returned.
-func QueryAffectedTargets(graph *core.BuildGraph, files, include, exclude []string, tests, transitive bool) {
+func AffectedTargets(graph *core.BuildGraph, files, include, exclude []string, tests, transitive bool) {
 	affectedTargets := make(chan *core.BuildTarget, 100)
 	done := make(chan bool)
 

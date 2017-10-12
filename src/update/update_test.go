@@ -59,20 +59,20 @@ func TestLinkNewFile(t *testing.T) {
 
 func TestDownloadNewPlease(t *testing.T) {
 	c := makeConfig("downloadnewplease")
-	downloadPlease(c)
+	downloadPlease(c, false)
 	// Should have written new file
 	assert.True(t, core.PathExists(path.Join(c.Please.Location, c.Please.Version.String(), "please")))
 	// Should not have written this yet though
 	assert.False(t, core.PathExists(path.Join(c.Please.Location, "please")))
 	// Panics because it's not a valid .tar.gz
 	c.Please.Version.UnmarshalFlag("1.0.0")
-	assert.Panics(t, func() { downloadPlease(c) })
+	assert.Panics(t, func() { downloadPlease(c, false) })
 	// Panics because it doesn't exist
 	c.Please.Version.UnmarshalFlag("2.0.0")
-	assert.Panics(t, func() { downloadPlease(c) })
+	assert.Panics(t, func() { downloadPlease(c, false) })
 	// Panics because invalid URL
 	c.Please.DownloadLocation = "notaurl"
-	assert.Panics(t, func() { downloadPlease(c) })
+	assert.Panics(t, func() { downloadPlease(c, false) })
 }
 
 func TestShouldUpdateVersionsMatch(t *testing.T) {
@@ -129,13 +129,13 @@ func TestShouldUpdateNoVersion(t *testing.T) {
 func TestDownloadAndLinkPlease(t *testing.T) {
 	c := makeConfig("downloadandlink")
 	c.Please.Version.UnmarshalFlag(core.PleaseVersion.String())
-	newPlease := downloadAndLinkPlease(c)
+	newPlease := downloadAndLinkPlease(c, false)
 	assert.True(t, core.PathExists(newPlease))
 }
 
 func TestDownloadAndLinkPleaseBadVersion(t *testing.T) {
 	c := makeConfig("downloadandlink")
-	assert.Panics(t, func() { downloadAndLinkPlease(c) })
+	assert.Panics(t, func() { downloadAndLinkPlease(c, false) })
 	// Should have deleted the thing it downloaded.
 	assert.False(t, core.PathExists(path.Join(c.Please.Location, c.Please.Version.String())))
 }

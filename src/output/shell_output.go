@@ -48,6 +48,8 @@ type buildingTargetData struct {
 	Colour      string
 }
 
+// MonitorState monitors the build while it's running (essentially until state.Results is closed)
+// and prints output while it's happening.
 func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest, shouldRun, showStatus bool, traceFile string) bool {
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads, numThreads)
@@ -155,18 +157,18 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	cached := result.Status == core.TargetCached || result.Tests.Cached
 	stopped := result.Status == core.TargetBuildStopped
 	if shouldTrace {
-		addTrace(result, buildingTargets[result.ThreadId].Label, active)
+		addTrace(result, buildingTargets[result.ThreadID].Label, active)
 	}
 	if failed && result.Tests.NumTests == 0 && result.Tests.Failed == 0 {
 		result.Tests.NumTests = 1
 		result.Tests.Failed = 1 // Ensure there's one test failure when there're no results to parse.
 	}
 	// Only aggregate test results the first time it finishes.
-	if buildingTargets[result.ThreadId].Active && !active {
+	if buildingTargets[result.ThreadID].Active && !active {
 		aggregatedResults.Aggregate(&result.Tests)
 	}
 	target := state.Graph.Target(label)
-	updateTarget(state, plainOutput, &buildingTargets[result.ThreadId], label, active, failed, cached, result.Description, result.Err, targetColour(target))
+	updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target))
 	if failed {
 		failedTargetMap[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
@@ -246,29 +248,27 @@ func testResultMessage(results core.TestResults, failedTargets []core.BuildLabel
 	if results.NumTests == 0 {
 		if len(failedTargets) > 0 {
 			return "Tests failed"
-		} else {
-			return "No tests found"
 		}
-	} else {
-		msg := fmt.Sprintf("%s run", pluralise(results.NumTests, "test", "tests"))
-		if results.Duration >= 0.0 {
-			msg += fmt.Sprintf(" in %4.2fs", results.Duration)
-		}
-		msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passed)
-		if results.Failed > 0 {
-			msg += fmt.Sprintf(", ${BOLD_RED}%d failed${RESET}", results.Failed)
-		}
-		if results.Skipped > 0 {
-			msg += fmt.Sprintf(", ${BOLD_YELLOW}%d skipped${RESET}", results.Skipped)
-		}
-		if results.Flakes > 0 {
-			msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.Flakes, "flake", "flakes"))
-		}
-		if results.Cached {
-			msg += " ${GREEN}[cached]${RESET}"
-		}
-		return msg
+		return "No tests found"
 	}
+	msg := fmt.Sprintf("%s run", pluralise(results.NumTests, "test", "tests"))
+	if results.Duration >= 0.0 {
+		msg += fmt.Sprintf(" in %4.2fs", results.Duration)
+	}
+	msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passed)
+	if results.Failed > 0 {
+		msg += fmt.Sprintf(", ${BOLD_RED}%d failed${RESET}", results.Failed)
+	}
+	if results.Skipped > 0 {
+		msg += fmt.Sprintf(", ${BOLD_YELLOW}%d skipped${RESET}", results.Skipped)
+	}
+	if results.Flakes > 0 {
+		msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.Flakes, "flake", "flakes"))
+	}
+	if results.Cached {
+		msg += " ${GREEN}[cached]${RESET}"
+	}
+	return msg
 }
 
 func printBuildResults(state *core.BuildState, duration float64, showStatus bool) {
@@ -323,7 +323,7 @@ func printTempDirs(state *core.BuildState, duration float64) {
 		fmt.Printf("    Command: %s\n", cmd)
 		if !state.PrepareShell {
 			// This isn't very useful if we're opening a shell (since then the vars will be set anyway)
-			fmt.Printf("   Expanded: %s\n", os.Expand(cmd, core.ReplaceEnvironment(env)))
+			fmt.Printf("   Expanded: %s\n", os.Expand(cmd, env.ReplaceEnvironment))
 		} else {
 			fmt.Printf("\n")
 			cmd := exec.Command("bash", "--noprofile", "--norc", "-o", "pipefail") // plz requires bash, some commands contain bashisms.
@@ -448,9 +448,8 @@ func printf(format string, args ...interface{}) {
 func pluralise(num int, singular, plural string) string {
 	if num == 1 {
 		return fmt.Sprintf("1 %s", singular)
-	} else {
-		return fmt.Sprintf("%d %s", num, plural)
 	}
+	return fmt.Sprintf("%d %s", num, plural)
 }
 
 // PrintCoverage writes out coverage metrics after a test run in a file tree setup.
@@ -477,7 +476,7 @@ func PrintCoverage(state *core.BuildState, includeFiles []string) {
 	printf("${BOLD_WHITE}Total coverage: %s${RESET}\n", coveragePercentage(totalCovered, totalTotal, ""))
 }
 
-// PrintCoverageReport writes out line-by-line coverage metrics after a test run.
+// PrintLineCoverageReport writes out line-by-line coverage metrics after a test run.
 func PrintLineCoverageReport(state *core.BuildState, includeFiles []string) {
 	coverageColours := map[core.LineCoverage]string{
 		core.NotExecutable: "${GREY}",
@@ -537,18 +536,16 @@ func coverageColour(percentage float32) string {
 		return "${BOLD_RED}"
 	} else if percentage < 80.0 {
 		return "${BOLD_YELLOW}"
-	} else {
-		return "${BOLD_GREEN}"
 	}
+	return "${BOLD_GREEN}"
 }
 
 func coveragePercentage(covered, total int, label string) string {
 	if total == 0 {
 		return fmt.Sprintf("${BOLD_MAGENTA}%s No data${RESET}", label)
-	} else {
-		percentage := 100.0 * float32(covered) / float32(total)
-		return fmt.Sprintf("%s%s %d/%s, %2.1f%%${RESET}", coverageColour(percentage), label, covered, pluralise(total, "line", "lines"), percentage)
 	}
+	percentage := 100.0 * float32(covered) / float32(total)
+	return fmt.Sprintf("%s%s %d/%s, %2.1f%%${RESET}", coverageColour(percentage), label, covered, pluralise(total, "line", "lines"), percentage)
 }
 
 // colouriseError adds a splash of colour to a compiler error message.

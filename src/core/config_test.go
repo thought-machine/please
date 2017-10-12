@@ -74,7 +74,7 @@ func TestConfigOverrideBool(t *testing.T) {
 	config := DefaultConfiguration()
 	err := config.ApplyOverrides(map[string]string{"cache.rpcwriteable": "yes"})
 	assert.NoError(t, err)
-	assert.True(t, config.Cache.RpcWriteable)
+	assert.True(t, config.Cache.RPCWriteable)
 }
 
 func TestConfigOverrideSlice(t *testing.T) {
@@ -167,7 +167,7 @@ func TestReadDurations(t *testing.T) {
 func TestReadByteSizes(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/bytesize_good.plzconfig"})
 	assert.NoError(t, err)
-	assert.EqualValues(t, 500*1000*1000, config.Cache.RpcMaxMsgSize)
+	assert.EqualValues(t, 500*1000*1000, config.Cache.RPCMaxMsgSize)
 	config, err = ReadConfigFiles([]string{"src/core/test_data/bytesize_bad.plzconfig"})
 	assert.Error(t, err)
 }

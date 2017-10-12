@@ -228,7 +228,7 @@ func TestLocalCommandWorker(t *testing.T) {
 	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
 }
 
-func TestworkerCommandAndArgsMustComeFirst(t *testing.T) {
+func TestWorkerCommandAndArgsMustComeFirst(t *testing.T) {
 	tool := makeTarget("//path/to:target2", "", nil)
 	tool.IsBinary = true
 	target := makeTarget("//path/to:target", "something something $(worker javac)", tool)

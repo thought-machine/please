@@ -1,4 +1,4 @@
-package system_deps_go
+package systemdeps
 
 import (
 	"testing"

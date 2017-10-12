@@ -3,8 +3,8 @@ package query
 import "core"
 import "fmt"
 
-// QueryDeps prints all transitive dependencies of a set of targets.
-func QueryDeps(state *core.BuildState, labels []core.BuildLabel, unique bool) {
+// Deps prints all transitive dependencies of a set of targets.
+func Deps(state *core.BuildState, labels []core.BuildLabel, unique bool) {
 	targets := map[*core.BuildTarget]bool{}
 	for _, label := range labels {
 		printTarget(state, state.Graph.TargetOrDie(label), "", targets, unique)

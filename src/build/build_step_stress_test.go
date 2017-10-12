@@ -114,11 +114,11 @@ type fakeParser struct {
 	PostBuildFunctions buildFunctionMap
 }
 
-func (fake *fakeParser) RunPreBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget) error {
+func (fake *fakeParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
 	return nil
 }
 
-func (fake *fakeParser) RunPostBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget, output string) error {
+func (fake *fakeParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
 	if f, present := fake.PostBuildFunctions[target]; present {
 		return f(target, output)
 	}

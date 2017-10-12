@@ -43,47 +43,47 @@ func TestCollapseHash2(t *testing.T) {
 
 func TestIterSources(t *testing.T) {
 	graph := buildGraph()
-	iterSources := func(label string) []sourcePair {
+	iterSources := func(label string) []SourcePair {
 		return toSlice(IterSources(graph, graph.TargetOrDie(ParseBuildLabel(label, ""))))
 	}
 
-	assert.Equal(t, []sourcePair{
+	assert.Equal(t, []SourcePair{
 		{"src/core/target1.go", "plz-out/tmp/src/core/target1._build/src/core/target1.go"},
 	}, iterSources("//src/core:target1"))
 
-	assert.Equal(t, []sourcePair{
+	assert.Equal(t, []SourcePair{
 		{"src/core/target2.go", "plz-out/tmp/src/core/target2._build/src/core/target2.go"},
 		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/core/target2._build/src/core/target1.a"},
 	}, iterSources("//src/core:target2"))
 
-	assert.Equal(t, []sourcePair{
+	assert.Equal(t, []SourcePair{
 		{"src/build/target1.go", "plz-out/tmp/src/build/target1._build/src/build/target1.go"},
 		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/build/target1._build/src/core/target1.a"},
 	}, iterSources("//src/build:target1"))
 
-	assert.Equal(t, []sourcePair{
+	assert.Equal(t, []SourcePair{
 		{"src/output/output1.go", "plz-out/tmp/src/output/output1._build/src/output/output1.go"},
 		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1._build/src/build/target1.a"},
 	}, iterSources("//src/output:output1"))
 
-	assert.Equal(t, []sourcePair{
+	assert.Equal(t, []SourcePair{
 		{"src/output/output1.go", "plz-out/tmp/src/output/output1._build/src/output/output1.go"},
 		{"plz-out/gen/src/build/target1.a", "plz-out/tmp/src/output/output1._build/src/build/target1.a"},
 	}, iterSources("//src/output:output1"))
 
-	assert.Equal(t, []sourcePair{
+	assert.Equal(t, []SourcePair{
 		{"src/output/output2.go", "plz-out/tmp/src/output/output2._build/src/output/output2.go"},
 		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/output/output2._build/src/core/target2.a"},
 		{"plz-out/gen/src/output/output1.a", "plz-out/tmp/src/output/output2._build/src/output/output1.a"},
 	}, iterSources("//src/output:output2"))
 
-	assert.Equal(t, []sourcePair{
+	assert.Equal(t, []SourcePair{
 		{"src/parse/target1.go", "plz-out/tmp/src/parse/target1._build/src/parse/target1.go"},
 		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/parse/target1._build/src/core/target2.a"},
 		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/parse/target1._build/src/core/target1.a"},
 	}, iterSources("//src/parse:target1"))
 
-	assert.Equal(t, []sourcePair{
+	assert.Equal(t, []SourcePair{
 		{"src/parse/target2.go", "plz-out/tmp/src/parse/target2._build/src/parse/target2.go"},
 		{"plz-out/gen/src/parse/target1.a", "plz-out/tmp/src/parse/target2._build/src/parse/target1.a"},
 	}, iterSources("//src/parse:target2"))
@@ -240,8 +240,8 @@ func makeTarget(graph *BuildGraph, label string, deps ...string) *BuildTarget {
 	return target
 }
 
-func toSlice(ch <-chan sourcePair) []sourcePair {
-	ret := []sourcePair{}
+func toSlice(ch <-chan SourcePair) []SourcePair {
+	ret := []SourcePair{}
 	for x := range ch {
 		ret = append(ret, x)
 	}

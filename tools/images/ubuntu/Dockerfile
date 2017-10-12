@@ -8,7 +8,7 @@ RUN pip3 install cffi
 
 # Go
 RUN curl -fsSL https://storage.googleapis.com/golang/go1.8.1.linux-amd64.tar.gz | tar -xzC /usr/local
-RUN ln -s /usr/local/go/bin/go /usr/local/bin/go
+RUN ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 
 # PyPy
 RUN curl -fsSL https://bitbucket.org/pypy/pypy/downloads/pypy2-v5.7.1-linux64.tar.bz2 | tar -xjC /usr/local
@@ -36,4 +36,7 @@ RUN gem install --no-ri --no-rdoc fpm
 # Welcome message
 COPY /motd.txt /etc/motd
 RUN echo 'cat /etc/motd' >> /etc/bash.bashrc
+
+# Linters etc
 WORKDIR /tmp
+RUN go get github.com/golang/lint/golint && mv ~/go/bin/golint /usr/local/bin && rm -rf ~/go

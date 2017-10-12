@@ -242,7 +242,7 @@ func (m *metrics) pushMetrics() int {
 		m.newMetrics = true
 		return m.errors + 1
 	}
-	m.pushes += 1
+	m.pushes++
 	log.Debug("Push #%d of metrics in %0.3fs", m.pushes, time.Since(start).Seconds())
 	return 0
 }

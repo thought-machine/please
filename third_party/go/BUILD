@@ -240,3 +240,9 @@ go_get(
     get = 'golang.org/x/sys/unix',
     revision = 'ebfc5b4631820b793c9010c87fd8fef0f39eb082',
 )
+
+go_get(
+    name = 'openpgp',
+    get = 'golang.org/x/crypto/openpgp',
+    revision = '077efaa604f994162e3307fafe5954640763fc08',
+)

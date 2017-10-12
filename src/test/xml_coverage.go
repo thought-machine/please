@@ -7,7 +7,7 @@ import "strings"
 
 import "core"
 
-func parseXmlCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte) error {
+func parseXMLCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte) error {
 	xcoverage := xmlCoverage{}
 	if err := xml.Unmarshal(data, &xcoverage); err != nil {
 		return err
@@ -18,14 +18,14 @@ func parseXmlCoverageResults(target *core.BuildTarget, coverage *core.TestCovera
 				cls.Filename = cls.Filename[len(core.RepoRoot):]
 			}
 			// There can be multiple classes per file so we must merge here, not overwrite.
-			coverage.Files[cls.Filename] = core.MergeCoverageLines(coverage.Files[cls.Filename], parseXmlLines(cls.Lines.Line))
+			coverage.Files[cls.Filename] = core.MergeCoverageLines(coverage.Files[cls.Filename], parseXMLLines(cls.Lines.Line))
 		}
 	}
 	coverage.Tests[target.Label] = coverage.Files
 	return nil
 }
 
-func parseXmlLines(lines []xmlCoverageLine) []core.LineCoverage {
+func parseXMLLines(lines []xmlCoverageLine) []core.LineCoverage {
 	ret := []core.LineCoverage{}
 	for _, line := range lines {
 		for i := len(ret) + 1; i < line.Number; i++ {

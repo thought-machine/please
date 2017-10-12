@@ -15,11 +15,11 @@ import (
 // it probably doesn't generalise perfectly to things of arbitrary sizes.
 type progressReader struct {
 	current, last, max, width int
-	reader                    io.Reader
+	reader                    io.ReadCloser
 }
 
 // NewProgressReader returns a new progress bar reader.
-func NewProgressReader(reader io.Reader, total string) io.ReadCloser {
+func NewProgressReader(reader io.ReadCloser, total string) io.ReadCloser {
 	i, _ := strconv.Atoi(total)
 	_, cols := WindowSize()
 	return &progressReader{
@@ -39,7 +39,7 @@ func (pr *progressReader) Read(b []byte) (int, error) {
 }
 
 // Close implements the io.Closer interface
-// This implementation never returns an error.
+// It closes the internal reader as well as cleaning up itself.
 func (pr *progressReader) Close() error {
 	if StdErrIsATerminal {
 		// Clear out the line.
@@ -48,7 +48,7 @@ func (pr *progressReader) Close() error {
 		// Can't clear out the line, just move down to the next one.
 		Printf("\n")
 	}
-	return nil
+	return pr.reader.Close()
 }
 
 // update refreshes the display.

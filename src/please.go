@@ -53,7 +53,7 @@ var opts struct {
 		Include    []string        `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
 		Exclude    []string        `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
 		Engine     string          `long:"engine" hidden:"true" description:"Parser engine .so / .dylib to load"`
-		Option     ConfigOverrides `short:"o" long:"override" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
+		Option     ConfigOverrides `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
@@ -173,7 +173,8 @@ var opts struct {
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
 	Update struct {
-		Force bool `long:"force" description:"Forces a re-download of the new version."`
+		Force    bool `long:"force" description:"Forces a re-download of the new version."`
+		NoVerify bool `long:"noverify" description:"Skips signature verification of downloaded version"`
 	} `command:"update" description:"Checks for an update and updates if needed."`
 
 	Op struct {
@@ -379,8 +380,8 @@ var buildFunctions = map[string]func() bool{
 				// Clean everything, doesn't require parsing at all.
 				if !opts.Clean.Remote {
 					// Don't construct the remote caches if they didn't pass --remote.
-					config.Cache.RpcUrl = ""
-					config.Cache.HttpUrl = ""
+					config.Cache.RPCURL = ""
+					config.Cache.HTTPURL = ""
 				}
 				clean.Clean(config, newCache(config), !opts.Clean.NoBackground)
 				return true
@@ -388,7 +389,7 @@ var buildFunctions = map[string]func() bool{
 			opts.Clean.Args.Targets = core.WholeGraph
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false); success {
-			clean.CleanTargets(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache)
+			clean.Targets(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache)
 			return true
 		}
 		return false
@@ -452,7 +453,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.QueryDeps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Unique)
+			query.Deps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Unique)
 		})
 	},
 	"reverseDeps": func() bool {
@@ -465,13 +466,13 @@ var buildFunctions = map[string]func() bool{
 		return runQuery(true,
 			[]core.BuildLabel{opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2},
 			func(state *core.BuildState) {
-				query.QuerySomePath(state.Graph, opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2)
+				query.SomePath(state.Graph, opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2)
 			},
 		)
 	},
 	"alltargets": func() bool {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
-			query.QueryAllTargets(state.Graph, state.ExpandOriginalTargets(), opts.Query.AllTargets.Hidden)
+			query.AllTargets(state.Graph, state.ExpandOriginalTargets(), opts.Query.AllTargets.Hidden)
 		})
 	},
 	"print": func() bool {
@@ -489,17 +490,17 @@ var buildFunctions = map[string]func() bool{
 			if len(files) == 1 && files[0] == "-" {
 				files = utils.ReadAllStdin()
 			}
-			query.QueryAffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
+			query.AffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
 		})
 	},
 	"input": func() bool {
 		return runQuery(true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
-			query.QueryTargetInputs(state.Graph, state.ExpandOriginalTargets())
+			query.TargetInputs(state.Graph, state.ExpandOriginalTargets())
 		})
 	},
 	"output": func() bool {
 		return runQuery(true, opts.Query.Output.Args.Targets, func(state *core.BuildState) {
-			query.QueryTargetOutputs(state.Graph, state.ExpandOriginalTargets())
+			query.TargetOutputs(state.Graph, state.ExpandOriginalTargets())
 		})
 	},
 	"completions": func() bool {
@@ -512,20 +513,20 @@ var buildFunctions = map[string]func() bool{
 		if opts.Query.Completions.Cmd == "help" {
 			// Special-case completing help topics rather than build targets.
 			if len(fragments) == 0 {
-				help.HelpTopics("")
+				help.Topics("")
 			} else {
-				help.HelpTopics(fragments[0])
+				help.Topics(fragments[0])
 			}
 			return true
 		}
 		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
 		}
-		labels, parseLabels, hidden := query.QueryCompletionLabels(config, fragments, core.RepoRoot)
+		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
 		if success, state := Please(parseLabels, config, false, false, false); success {
 			binary := opts.Query.Completions.Cmd == "run"
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
-			query.QueryCompletions(state.Graph, labels, binary, test, hidden)
+			query.Completions(state.Graph, labels, binary, test, hidden)
 			return true
 		}
 		return false
@@ -535,7 +536,7 @@ var buildFunctions = map[string]func() bool{
 			if len(opts.Query.Graph.Args.Targets) == 0 {
 				state.OriginalTargets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
 			}
-			query.QueryGraph(state.Graph, state.ExpandOriginalTargets())
+			query.Graph(state.Graph, state.ExpandOriginalTargets())
 		})
 	},
 	"whatoutputs": func() bool {
@@ -619,6 +620,7 @@ func newCache(config *core.Configuration) core.Cache {
 	return cache.NewCache(config)
 }
 
+// Please starts & runs the main build process through to its completion.
 func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
@@ -746,7 +748,7 @@ func readConfig(forceUpdate bool) *core.Configuration {
 	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
 		log.Fatalf("Can't override requested config setting: %s", err)
 	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force)
+	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify)
 	return config
 }
 

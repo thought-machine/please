@@ -31,8 +31,8 @@ func Clean(config *core.Configuration, cache core.Cache, background bool) {
 	clean(core.OutDir)
 }
 
-// CleanTargets cleans a given set of build targets.
-func CleanTargets(state *core.BuildState, labels []core.BuildLabel, cleanCache bool) {
+// Targets cleans a given set of build targets.
+func Targets(state *core.BuildState, labels []core.BuildLabel, cleanCache bool) {
 	for _, label := range labels {
 		// Clean any and all sub-targets of this target.
 		// This is not super efficient; we potentially repeat this walk multiple times if

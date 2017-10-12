@@ -37,7 +37,7 @@ func ParseFlags(appname string, data interface{}, args []string) (*flags.Parser,
 	return parser, extraArgs, err
 }
 
-// ParseFlagsOrDie, as the name suggests, parses the app's flags and dies if unsuccessful.
+// ParseFlagsOrDie parses the app's flags and dies if unsuccessful.
 // Also dies if any unexpected arguments are passed.
 func ParseFlagsOrDie(appname, version string, data interface{}) *flags.Parser {
 	return ParseFlagsFromArgsOrDie(appname, version, data, os.Args)
@@ -121,8 +121,8 @@ func (d *Duration) UnmarshalFlag(in string) error {
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface
-func (duration *Duration) UnmarshalText(text []byte) error {
-	return duration.UnmarshalFlag(string(text))
+func (d *Duration) UnmarshalText(text []byte) error {
+	return d.UnmarshalFlag(string(text))
 }
 
 // A URL is used for flags or config fields that represent a URL.

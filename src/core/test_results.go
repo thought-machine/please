@@ -31,7 +31,7 @@ type TestFailure struct {
 	Stderr    string // Standard error during test
 }
 
-// Aggregates the given results into this one.
+// Aggregate aggregates the given results into this one.
 func (results *TestResults) Aggregate(r *TestResults) {
 	results.NumTests += r.NumTests
 	results.Passed += r.Passed
@@ -49,6 +49,7 @@ func (results *TestResults) Aggregate(r *TestResults) {
 // Note that Please doesn't support sub-line coverage at present.
 type LineCoverage uint8
 
+// Constants representing the states that a single line can be in for coverage.
 const (
 	NotExecutable LineCoverage = iota // Line isn't executable (eg. comment, blank)
 	Unreachable   LineCoverage = iota // Line is executable but we've determined it can't be reached. So far not used.
@@ -58,14 +59,14 @@ const (
 
 var lineCoverageOutput = [...]rune{'N', 'X', 'U', 'C'} // Corresponds to ordering of enum.
 
-// This is a pretty simple coverage format; we record one int for each line
+// TestCoverage implements a pretty simple coverage format; we record one int for each line
 // stating what its coverage is.
 type TestCoverage struct {
 	Tests map[BuildLabel]map[string][]LineCoverage
 	Files map[string][]LineCoverage
 }
 
-// Aggregates results from that coverage object into this one.
+// Aggregate aggregates results from that coverage object into this one.
 func (coverage *TestCoverage) Aggregate(cov *TestCoverage) {
 	if coverage.Tests == nil {
 		coverage.Tests = map[BuildLabel]map[string][]LineCoverage{}
@@ -85,6 +86,8 @@ func (coverage *TestCoverage) Aggregate(cov *TestCoverage) {
 	}
 }
 
+// MergeCoverageLines merges two sets of coverage results together, taking
+// the superset of the two results.
 func MergeCoverageLines(existing, coverage []LineCoverage) []LineCoverage {
 	ret := make([]LineCoverage, len(existing))
 	copy(ret, existing)
@@ -98,7 +101,7 @@ func MergeCoverageLines(existing, coverage []LineCoverage) []LineCoverage {
 	return ret
 }
 
-// Returns an ordered slice of all the files we have coverage information for.
+// OrderedFiles returns an ordered slice of all the files we have coverage information for.
 func (coverage *TestCoverage) OrderedFiles() []string {
 	files := []string{}
 	for file := range coverage.Files {
@@ -111,6 +114,7 @@ func (coverage *TestCoverage) OrderedFiles() []string {
 	return files
 }
 
+// NewTestCoverage constructs and returns a new TestCoverage instance.
 func NewTestCoverage() TestCoverage {
 	return TestCoverage{
 		Tests: map[BuildLabel]map[string][]LineCoverage{},
@@ -118,9 +122,9 @@ func NewTestCoverage() TestCoverage {
 	}
 }
 
-// Produce a string representation of coverage for serialising to file so we don't
+// TestCoverageString produces a string representation of coverage for serialising to file so we don't
 // expose the internal enum values (ordering is important so we may want to insert
-// new ones later. This format happens to be the same as the one Phabricator uses,
+// new ones later). This format happens to be the same as the one Phabricator uses,
 // which is mildly useful to us since we want to integrate with it anyway. See
 // https://secure.phabricator.com/book/phabricator/article/arcanist_coverage/
 // for more detail of how it works.

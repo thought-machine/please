@@ -33,12 +33,12 @@ func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCo
 	} else if looksLikeIstanbulCoverageResults(data) {
 		return coverage, parseIstanbulCoverageResults(target, &coverage, data)
 	} else {
-		return coverage, parseXmlCoverageResults(target, &coverage, data)
+		return coverage, parseXMLCoverageResults(target, &coverage, data)
 	}
 }
 
-// Adds empty coverage entries for any files covered by the original query that we
-// haven't discovered through tests to the overall report.
+// AddOriginalTargetsToCoverage adds empty coverage entries for any files covered by the original
+// query that we haven't discovered through tests to the overall report.
 // The coverage reports only contain information about files that were covered during
 // tests, so it's important that we identify anything with zero coverage here.
 // This is made trickier by attempting to reconcile coverage targets from languages like

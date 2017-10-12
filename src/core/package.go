@@ -77,7 +77,7 @@ func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) error {
 			// Update the existing one with this, the registered outputs should prefer non-filegroup targets.
 			pkg.Outputs[fileName] = target
 		} else if !target.IsFilegroup && !existing.IsFilegroup {
-			return fmt.Errorf("Rules %s and %s in %s both attempt to output the same file: %s\n",
+			return fmt.Errorf("rules %s and %s in %s both attempt to output the same file: %s",
 				existing.Label, target.Label, pkg.Filename, originalFileName)
 		}
 	}

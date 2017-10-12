@@ -7,6 +7,10 @@ package core
 import "sort"
 import "sync"
 
+// A BuildGraph contains all the loaded targets and packages and maintains their
+// relationships, especially reverse dependencies which are calculated here.
+// It also arbitrates access to a lot of things via its builtin mutex which
+// is probably our most overused lock :(
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets map[BuildLabel]*BuildTarget
@@ -21,7 +25,7 @@ type BuildGraph struct {
 	mutex sync.RWMutex
 }
 
-// Adds a new target to the graph.
+// AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
@@ -45,7 +49,7 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	return target
 }
 
-// Adds a new package to the graph with given name.
+// AddPackage adds a new package to the graph with given name.
 func (graph *BuildGraph) AddPackage(pkg *Package) {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
@@ -87,13 +91,14 @@ func (graph *BuildGraph) PackageOrDie(name string) *Package {
 	return pkg
 }
 
+// Len returns the number of targets currently in the graph.
 func (graph *BuildGraph) Len() int {
 	graph.mutex.RLock()
 	defer graph.mutex.RUnlock()
 	return len(graph.targets)
 }
 
-// Returns a sorted slice of all the targets in the graph.
+// AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
 	graph.mutex.RLock()
 	defer graph.mutex.RUnlock()
@@ -105,17 +110,19 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 	return targets
 }
 
-// Used for getting a local copy of the package map without having to expose it publicly.
+// PackageMap returns a copy of the graph's internal map of name to package.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
 	graph.mutex.RLock()
 	defer graph.mutex.RUnlock()
-	packages := make(map[string]*Package)
+	packages := make(map[string]*Package, len(graph.packages))
 	for name, pkg := range graph.packages {
 		packages[name] = pkg
 	}
 	return packages
 }
 
+// AddDependency adds a dependency between two build targets.
+// The 'to' target doesn't necessarily have to exist in the graph yet (but 'from' must).
 func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
@@ -134,6 +141,8 @@ func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 	}
 }
 
+// NewGraph constructs and returns a new BuildGraph.
+// Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {
 	return &BuildGraph{
 		targets:        make(map[BuildLabel]*BuildTarget),

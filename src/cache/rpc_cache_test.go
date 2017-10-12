@@ -44,13 +44,13 @@ func startServer(keyFile, certFile, caCertFile string) (*grpc.Server, string) {
 
 func buildClient(addr, ca string) *rpcCache {
 	config := core.DefaultConfiguration()
-	if err := config.Cache.RpcUrl.UnmarshalFlag(strings.Replace(addr, "[::]", "localhost", 1)); err != nil {
+	if err := config.Cache.RPCURL.UnmarshalFlag(strings.Replace(addr, "[::]", "localhost", 1)); err != nil {
 		log.Fatalf("%s", err)
 	}
-	config.Cache.RpcWriteable = true
-	config.Cache.RpcCACert = ca
+	config.Cache.RPCWriteable = true
+	config.Cache.RPCCACert = ca
 
-	cache, err := newRpcCache(config)
+	cache, err := newRPCCache(config)
 	if err != nil {
 		log.Fatalf("Failed to create RPC cache: %s", err)
 	}
