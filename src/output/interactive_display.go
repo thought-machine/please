@@ -17,7 +17,7 @@ import (
 // (note that most terminals do for compatibility; some report as xterm-color, hence HasPrefix)
 var terminalClaimsToBeXterm = strings.HasPrefix(os.Getenv("TERM"), "xterm")
 
-func display(state *core.BuildState, buildingTargets *[]buildingTarget, stop <-chan interface{}, done chan<- interface{}) {
+func display(state *core.BuildState, buildingTargets *[]buildingTarget, stop <-chan struct{}, done chan<- struct{}) {
 	backend := cli.NewLogBackend(len(*buildingTargets))
 	go func() {
 		sig := make(chan os.Signal, 10)

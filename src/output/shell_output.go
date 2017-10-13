@@ -56,9 +56,11 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads, numThreads)
 
-	displayDone := make(chan interface{})
-	stop := make(chan interface{})
-	if !plainOutput {
+	displayDone := make(chan struct{})
+	stop := make(chan struct{})
+	if plainOutput {
+		go logProgress(state, &buildingTargets, stop, displayDone)
+	} else {
 		go display(state, &buildingTargets, stop, displayDone)
 	}
 	aggregatedResults := core.TestResults{}
@@ -67,10 +69,8 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	for result := range state.Results {
 		processResult(state, result, buildingTargets, &aggregatedResults, plainOutput, keepGoing, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
 	}
-	if !plainOutput {
-		stop <- struct{}{}
-		<-displayDone
-	}
+	stop <- struct{}{}
+	<-displayDone
 	if traceFile != "" {
 		writeTrace(traceFile)
 	}
@@ -204,6 +204,27 @@ func printTestResults(state *core.BuildState, aggregatedResults core.TestResults
 		pluralise(i, "test target", "test targets"), testResultMessage(aggregatedResults, failedTargets), duration))
 }
 
+// logProgress continually logs progress messages every 10s explaining where we're up to.
+func logProgress(state *core.BuildState, buildingTargets *[]buildingTarget, stop <-chan struct{}, done chan<- struct{}) {
+	t := time.NewTicker(10 * time.Second)
+	defer t.Stop()
+	for {
+		select {
+		case <-t.C:
+			busy := 0
+			for _, target := range *buildingTargets {
+				if target.Active {
+					busy++
+				}
+			}
+			log.Notice("Build running for %s, %d / %d tasks done, %d workers busy", time.Since(startTime).Round(time.Second), state.NumDone(), state.NumActive(), busy)
+		case <-stop:
+			done <- struct{}{}
+			return
+		}
+	}
+}
+
 // Produces a string describing the results of one test (or a single aggregation).
 func testResultMessage(results core.TestResults, failedTargets []core.BuildLabel) string {
 	if results.NumTests == 0 {
@@ -333,7 +354,7 @@ func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buil
 		} else {
 			if !active {
 				active := pluralise(state.NumActive(), "task", "tasks")
-				log.Notice("[%d/%s] %s: %s [%3.1fs]", state.NumDone(), active, label.String(), description, time.Now().Sub(buildingTarget.Started).Seconds())
+				log.Info("[%d/%s] %s: %s [%3.1fs]", state.NumDone(), active, label.String(), description, time.Now().Sub(buildingTarget.Started).Seconds())
 			} else {
 				log.Info("%s: %s", label.String(), description)
 			}
