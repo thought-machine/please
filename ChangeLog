@@ -1,3 +1,15 @@
+Version 9.3.0
+-------------
+
+    * Downloaded versions are now verified against a detached GPG signature.
+    * Support for following the progress of a remote build using `plz follow`.
+      Requires it to open a port, which is configured in the [events] section
+      of .plzconfig.
+    * Support for arbitrary env vars in .plzconfig which are available to all build rules.
+      Note that these cause rebuilds of all targets on change, because we can't know what
+      effects they'll have.
+
+
 Version 9.2.3
 -------------
 

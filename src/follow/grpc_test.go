@@ -12,7 +12,6 @@ package follow
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
