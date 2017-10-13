@@ -256,7 +256,7 @@ func logProgress(state *core.BuildState, buildingTargets *[]buildingTarget, stop
 					busy++
 				}
 			}
-			log.Notice("Build running for %s, %d / %d tasks done, %d workers busy", time.Since(state.StartTime).Round(time.Second), state.NumDone(), state.NumActive(), busy)
+			log.Notice("Build running for %s, %d / %d tasks done, %s busy", time.Since(state.StartTime).Round(time.Second), state.NumDone(), state.NumActive(), pluralise(busy, "worker", "workers"))
 		case <-stop:
 			done <- struct{}{}
 			return
