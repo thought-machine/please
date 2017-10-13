@@ -8,7 +8,7 @@ jobs:
        - checkout
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh -p --test_results_file plz-out/results/test_results.xml
+           command: ./bootstrap.sh -p --exclude no_circleci --test_results_file plz-out/results/test_results.xml
        - store_test_results:
            path: plz-out/results/test_results.xml
        - run:

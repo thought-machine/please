@@ -25,8 +25,6 @@ import (
 
 var log = logging.MustGetLogger("output")
 
-var startTime = time.Now()
-
 // SetColouredOutput forces on or off coloured output in logging and other console output.
 func SetColouredOutput(on bool) {
 	cli.StdErrIsATerminal = on
@@ -74,7 +72,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	if traceFile != "" {
 		writeTrace(traceFile)
 	}
-	duration := time.Since(startTime).Seconds()
+	duration := time.Since(state.StartTime).Seconds()
 	if len(failedNonTests) > 0 { // Something failed in the build step.
 		if state.Verbosity > 0 {
 			printFailedBuildResults(failedNonTests, failedTargetMap, duration)
@@ -108,6 +106,47 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 		}
 	}
 	return len(failedTargetMap) == 0
+}
+
+// PrintConnectionMessage prints the message when we're initially connected to a remote server.
+func PrintConnectionMessage(url string, targets []core.BuildLabel, tests, coverage bool) {
+	printf("${WHITE}Connection established to remote plz server at ${BOLD_WHITE}%s${RESET}.\n", url)
+	printf("${WHITE}It's building the following %s: ", pluralise(len(targets), "target", "targets"))
+	for i, t := range targets {
+		if i > 5 {
+			printf("${BOLD_WHITE}...${RESET}")
+			break
+		} else {
+			if i > 0 {
+				printf(", ")
+			}
+			printf("${BOLD_WHITE}%s${RESET}", t)
+		}
+	}
+	printf("\n${WHITE}Running tests: ${BOLD_WHITE}%s${RESET}\n", yesNo(tests))
+	printf("${WHITE}Coverage: ${BOLD_WHITE}%s${RESET}\n", yesNo(coverage))
+	printf("${BOLD_WHITE}Ctrl+C${RESET}${WHITE} to disconnect from it; that will ${BOLD_WHITE}not${RESET}${WHITE} stop the remote build.${RESET}\n")
+}
+
+// PrintDisconnectionMessage prints the message when we're disconnected from the remote server.
+func PrintDisconnectionMessage(success, closed, disconnected bool) {
+	printf("${BOLD_WHITE}Disconnected from remote plz server.\nStatus: ")
+	if disconnected {
+		printf("${BOLD_YELLOW}Disconnected${RESET}\n")
+	} else if !closed {
+		printf("${BOLD_MAGENTA}Unknown${RESET}\n")
+	} else if success {
+		printf("${BOLD_GREEN}Success${RESET}\n")
+	} else {
+		printf("${BOLD_RED}Failure${RESET}\n")
+	}
+}
+
+func yesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
 }
 
 func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, aggregatedResults *core.TestResults, plainOutput bool,

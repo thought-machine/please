@@ -205,7 +205,11 @@ type Configuration struct {
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Display struct {
 		UpdateTitle bool `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
+		SystemStats bool `help:"Whether or not to show basic system resource usage in the interactive display. Has no effect without that configured."`
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
+	Events struct {
+		Port int `help:"Port to start the streaming build event server on."`
+	} `help:"The [events] section in the config contains settings relating to the internal build event system & streaming them externally."`
 	Build struct {
 		Timeout           cli.Duration `help:"Default timeout for Dockerised tests, in seconds. Default is twenty minutes."`
 		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
