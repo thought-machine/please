@@ -8,6 +8,7 @@ Version 9.3.0
     * Support for arbitrary env vars in .plzconfig which are available to all build rules.
       Note that these cause rebuilds of all targets on change, because we can't know what
       effects they'll have.
+    * Go 1.9 is now required to compile Please.
 
 
 Version 9.2.3
