@@ -12,6 +12,7 @@ package follow
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,9 @@ func TestClientToServerCommunication(t *testing.T) {
 	// server and shut it down again.
 	serverState := core.NewBuildState(5, nil, 4, core.DefaultConfiguration())
 	addr, shutdown := initialiseServer(serverState, 0)
+	// Guessing a bit here; this test seems to be failing on CircleCI; maybe it doesn't
+	// support the ipv6 address format?
+	addr = strings.Replace(addr, ":[::]", "127.0.0.1", 1)
 
 	// This is a bit awkward. We want to assert that we receive a matching set of
 	// build events, but it's difficult to build strong synchronisation into this
