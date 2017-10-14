@@ -140,3 +140,8 @@ if [ ! -d "/usr/include/google/protobuf" ]; then
 fi
 
 plz-out/bin/src/please test ... $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 $@
+
+# Don't run this in CI or any unusual workflows.
+if [ $# -eq 0 ] ; then
+    tools/misc/ci_lint.py
+fi

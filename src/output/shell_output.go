@@ -251,8 +251,8 @@ func logProgress(state *core.BuildState, buildingTargets *[]buildingTarget, stop
 		select {
 		case <-t.C:
 			busy := 0
-			for _, target := range *buildingTargets {
-				if target.Active {
+			for i := 0; i < len(*buildingTargets); i++ {
+				if (*buildingTargets)[i].Active {
 					busy++
 				}
 			}
