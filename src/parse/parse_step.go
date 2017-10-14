@@ -318,16 +318,17 @@ func RunPreBuildFunction(tid int, state *core.BuildState, target *core.BuildTarg
 	state.LogBuildResult(tid, target.Label, core.PackageParsing,
 		fmt.Sprintf("Running pre-build function for %s", target.Label))
 	pkg := state.Graph.Package(target.Label.PackageName)
-	pkg.BuildCallbackMutex.Lock()
-	defer pkg.BuildCallbackMutex.Unlock()
-	if err := runPreBuildFunction(pkg, target); err != nil {
+	changed, err := pkg.EnterBuildCallback(func() error {
+		return runPreBuildFunction(pkg, target)
+	})
+	if err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed pre-build function for %s", target.Label)
-		return err
+	} else {
+		rescanDeps(state, changed)
+		state.LogBuildResult(tid, target.Label, core.TargetBuilding,
+			fmt.Sprintf("Finished pre-build function for %s", target.Label))
 	}
-	rescanDeps(state, pkg)
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding,
-		fmt.Sprintf("Finished pre-build function for %s", target.Label))
-	return nil
+	return err
 }
 
 // RunPostBuildFunction runs a post-build callback function registered on a build target via post_build = <...>.
@@ -339,33 +340,29 @@ func RunPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTar
 	state.LogBuildResult(tid, target.Label, core.PackageParsing,
 		fmt.Sprintf("Running post-build function for %s", target.Label))
 	pkg := state.Graph.Package(target.Label.PackageName)
-	pkg.BuildCallbackMutex.Lock()
-	defer pkg.BuildCallbackMutex.Unlock()
-	log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, out)
-	if err := runPostBuildFunction(pkg, target, out); err != nil {
+	changed, err := pkg.EnterBuildCallback(func() error {
+		log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, out)
+		return runPostBuildFunction(pkg, target, out)
+	})
+	if err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed post-build function for %s", target.Label)
-		return err
+	} else {
+		rescanDeps(state, changed)
+		state.LogBuildResult(tid, target.Label, core.TargetBuilding,
+			fmt.Sprintf("Finished post-build function for %s", target.Label))
 	}
-	rescanDeps(state, pkg)
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding,
-		fmt.Sprintf("Finished post-build function for %s", target.Label))
-	return nil
+	return err
 }
 
-func rescanDeps(state *core.BuildState, pkg *core.Package) {
-	// Run over all the targets in this package and ensure that any newly added dependencies enter the build queue.
-	for _, target := range pkg.Targets {
-		// TODO(pebers): this is pretty brutal; we're forcing a recheck of all dependencies
-		//               in case we have any new targets. It'd be better to do it only for
-		//               targets that need it but it's not easy to tell we're in a post build
-		//               function at the point we'd need to do that.
+func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) {
+	// Run over all the changed targets in this package and ensure that any newly added dependencies enter the build queue.
+	for target := range changed {
 		if !state.Graph.AllDependenciesResolved(target) {
 			for _, dep := range target.DeclaredDependencies() {
 				state.Graph.AddDependency(target.Label, dep)
 			}
 		}
-		s := target.State()
-		if s < core.Built && s > core.Inactive {
+		if s := target.State(); s < core.Built && s > core.Inactive {
 			addDep(state, target.Label, core.OriginalTarget, true, false)
 		}
 	}
