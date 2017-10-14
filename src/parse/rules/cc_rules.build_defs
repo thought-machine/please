@@ -198,6 +198,75 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     )
 
 
+def cc_object(name, src, hdrs=None, private_hdrs=None, out=None, test_only=False,
+              compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None,
+              defines=None, alwayslink=False, _c=False, visibility=None, deps=None):
+    """Generate a C or C++ object file from a single source.
+
+    N.B. This is fairly low-level; for most use cases cc_library should be preferred.
+
+    Args:
+      name (str): Name of the rule
+      src (str): C or C++ source file to compile. This can be another rule, but if so it must
+                 have exactly one output.
+      hdrs (list): Header files. These will be made available to dependent rules, so the distinction
+                   between srcs and hdrs is important.
+      private_hdrs (list): Header files that are available only to this rule and not exported to
+                           dependent rules.
+      out (str): Name of the output file. Defaults to name + .o.
+      deps (list): Dependent rules.
+      visibility (list): Visibility declaration for this rule.
+      test_only (bool): If True, is only available to other test rules.
+      compiler_flags (list): Flags to pass to the compiler.
+      linker_flags (list): Flags to pass to the linker; these will not be used here but will be
+                           picked up by a cc_binary or cc_test rule.
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
+                              will be picked up by cc_binary or cc_test rules.
+      includes (list): List of include directories to be added to the compiler's path.
+      defines (list | dict): List of tokens to define in the preprocessor.
+                             Alternatively can be a dict of name -> value to define, in which case
+                             values are surrounded by quotes.
+      alwayslink (bool): If True, any binaries / tests using this library will link in all symbols,
+                         even if they don't directly reference them. This is useful for e.g. having
+                         static members that register themselves at construction time.
+    """
+    deps = deps or []
+    compiler_flags = compiler_flags or []
+    linker_flags = linker_flags or []
+    pkg_config_libs = pkg_config_libs or []
+    includes = includes or []
+    defines = defines or []
+
+    # Handle defines being passed as a dict, as a nicety for the user.
+    if isinstance(defines, dict):
+        defines = [k if v is None else r'%s=\"%s\"' % (k, v) for k, v in sorted(defines.items())]
+
+    labels = (['cc:ld:' + flag for flag in linker_flags] +
+              ['cc:pc:' + lib for lib in pkg_config_libs] +
+              ['cc:inc:%s/%s' % (get_base_path(), include) for include in includes] +
+              ['cc:def:' + define for define in defines])
+    if alwayslink:
+        labels.append('cc:al:%s/%s.a' % (get_base_path(), name))
+    cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, archive=False)
+
+    return build_rule(
+        name=name,
+        srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
+        outs=[out or name + '.o'],
+        optional_outs=['*.gcno'],  # For coverage
+        deps=deps,
+        cmd=cmds,
+        building_description='Compiling...',
+        requires=['cc_hdrs'],
+        test_only=test_only,
+        labels=labels,
+        tools=tools,
+        pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs, archive=False)
+                  if (deps or includes or defines) else None,
+        needs_transitive_deps=True,
+    )
+
+
 def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None,
                       deps=None, visibility=None, test_only=False, pkg_config_libs=None, _c=False):
     """Generates a C++ static library (.a).
@@ -683,11 +752,13 @@ def _binary_build_flags(linker_flags, pkg_config_libs, shared=False, alwayslink=
     return ' '.join([objs, build_id_flag, linker_flags, pkg_config_cmd])
 
 
-def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags=''):
+def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags='', archive=True):
     """Returns the commands needed for a cc_library rule."""
     dbg_flags = _build_flags(compiler_flags, pkg_config_libs, c=c, dbg=True)
     opt_flags = _build_flags(compiler_flags, pkg_config_libs, c=c)
-    cmd_template = '$TOOLS_CC -c -I . ${SRCS_SRCS} %s %s && $TOOLS_AR rcs $OUT *.o'
+    cmd_template = '$TOOLS_CC -c -I . ${SRCS_SRCS} %s %s'
+    if archive:
+        cmd_template += ' && $TOOLS_AR rcs $OUT *.o'
     cmds = {
         'dbg': cmd_template % (dbg_flags, extra_flags),
         'opt': cmd_template % (opt_flags, extra_flags),
@@ -696,7 +767,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags=''):
         cmds['cover'] = cmd_template % (dbg_flags + _COVERAGE_FLAGS, extra_flags)
     return cmds, {
         'cc': [CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL],
-        'ar': [CONFIG.AR_TOOL],
+        'ar': [CONFIG.AR_TOOL if archive else None],
     }
 
 
@@ -713,7 +784,7 @@ def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False,
                   CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL]
 
 
-def _library_transitive_labels(c, compiler_flags, pkg_config_libs):
+def _library_transitive_labels(c, compiler_flags, pkg_config_libs, archive=True):
     """Applies commands from transitive labels to a cc_library rule."""
     def apply_transitive_labels(name):
         labels = get_labels(name, 'cc:')
@@ -721,7 +792,7 @@ def _library_transitive_labels(c, compiler_flags, pkg_config_libs):
         flags.extend('-D' + l[4:] for l in labels if l.startswith('def:'))
         pkg_config_libs.extend(l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs)
         if flags:  # Don't update if there aren't any relevant labels
-            cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, ' '.join(flags))
+            cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, ' '.join(flags), archive=archive)
             for k, v in cmds.items():
                 set_command(name, k, v)
     return apply_transitive_labels
@@ -749,6 +820,9 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
 # C rules. These call straight through to the c++ versions and just set a flag.
 def c_library(**kwargs):
     cc_library(_c=True, **kwargs)
+
+def c_object(**kwargs):
+    cc_object(_c=True, **kwargs)
 
 def c_static_library(**kwargs):
     cc_static_library(_c=True, **kwargs)
