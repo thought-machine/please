@@ -166,12 +166,18 @@ func (w *Writer) Close() error {
 	return w.cw.w.(*bufio.Writer).Flush()
 }
 
-// WritePreamble writes some leading data to the file. Since zip files have their index at the end
-// and file locations are specified there it's possible to lead off with something, for
+// WriteRaw writes some data to the file, not part of any of the internal structure.
+// This is useful for preambles; since zip files have their index at the end and
+// file locations are specified as offsets it's possible to lead off with something, for
 // example a shebang to make them self-executing as with pexes.
-func (w *Writer) WritePreamble(preamble []byte) error {
-	_, err := w.cw.Write(preamble)
+func (w *Writer) WriteRaw(b []byte) error {
+	_, err := w.cw.Write(b)
 	return err
+}
+
+// Offset returns the offset that the next file would begin at.
+func (w *Writer) Offset() int {
+	return int(w.cw.count)
 }
 
 // Create adds a file to the zip file using the provided name.

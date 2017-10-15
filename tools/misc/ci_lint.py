@@ -18,7 +18,6 @@ BLACKLISTED_VET_PACKAGES = {
     'src/cache/server',
     'tools/please_diff_graphs',
     'tools/please_pex',
-    'tools/jarcat',
     'tools/please_maven',
     'tools/please_go_test',
     'tools/please_go_test/test_data',

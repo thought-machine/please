@@ -46,7 +46,7 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
     if not zip_safe:
         labels.append('py:zip-unsafe')
     if srcs or resources:
-        cmd = '$TOOLS_JARCAT -d -o ${OUTS} -i . -b'
+        cmd = '$TOOLS_JARCAT -d -o ${OUTS} -i .'
         interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
         if srcs:
             # This is a bit of a hack, but rather annoying. We want to put bytecode in its 'legacy' location

@@ -1,12 +1,5 @@
 """Built-in rules to compile Java code."""
 
-# Prefixes of files to exclude when building jars. May need to be configurable.
-_JAVA_EXCLUDE_FILES = ','.join([
-    'META-INF/LICENSE', 'META-INF/NOTICE', 'META-INF/maven/*', 'META-INF/MANIFEST.MF',
-    # Unsign all jars by default, after concatenation the signatures will no longer be valid.
-    'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.LIST',
-])
-
 _maven_packages = defaultdict(dict)
 
 
@@ -515,7 +508,7 @@ def _parse_maven_artifact(id, sources=True, licences=None):
 
 def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
     """Returns the command we'd use to invoke jarcat, and the tool paths required."""
-    cmd = '$TOOLS_JARCAT -i . -o ${OUTS} --exclude_internal_prefix "%s"' % _JAVA_EXCLUDE_FILES
+    cmd = '$TOOLS_JARCAT -i . -o ${OUTS} -j'
     if main_class:
         cmd += ' -m "%s"' % main_class
     if preamble:

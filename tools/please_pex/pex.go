@@ -11,9 +11,8 @@ import (
 	"path"
 	"runtime"
 	"strings"
-	"zip"
 
-	"tools/jarcat"
+	"tools/jarcat/zip"
 )
 
 // A PexInfo describes the PEX-INFO file written into the root of the .zip file.
@@ -85,23 +84,18 @@ func (pw *PexWriter) SetTest(srcs []string) {
 
 // Write writes the pex to the given output file.
 func (pw *PexWriter) Write(out, moduleDir string) error {
-	// TODO(pebers): move this to jarcat package.
-	f, err := os.Create(out)
-	if err != nil {
-		return err
-	}
+	f := zip.NewFile(out, true)
 	defer f.Close()
-	w := zip.NewWriter(f)
-	defer w.Close()
+	f.Include = pw.zipIncludes()
 
 	// Write preamble (i.e. the shebang that makes it executable)
-	if err := w.WritePreamble([]byte(pw.shebang)); err != nil {
+	if err := f.WritePreamble([]byte(pw.shebang)); err != nil {
 		return err
 	}
 
 	// Write required pex stuff. Note that this executable is also a zipfile and we can
 	// jarcat it directly in (nifty, huh?).
-	if err := jarcat.AddZipFile(w, os.Args[0], pw.zipIncludes(), nil, "", false, nil); err != nil {
+	if err := f.AddZipFile(os.Args[0]); err != nil {
 		return err
 	}
 	// Always write pex_main.py, with some templating.
@@ -109,27 +103,27 @@ func (pw *PexWriter) Write(out, moduleDir string) error {
 	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(moduleDir), 1)
 	b = bytes.Replace(b, []byte("__ENTRY_POINT__"), []byte(pw.realEntryPoint), 1)
 	b = bytes.Replace(b, []byte("__ZIP_SAFE__"), []byte(pythonBool(pw.info.ZipSafe)), 1)
-	if err := jarcat.WriteFile(w, "pex_main.py", b); err != nil {
+	if err := f.WriteFile("pex_main.py", b); err != nil {
 		return err
 	}
 	// If we're writing a test, we'll need test_main.py too.
 	if len(pw.testSrcs) != 0 {
 		b = MustAsset("test_main.py")
 		b = bytes.Replace(b, []byte("__TEST_NAMES__"), []byte(strings.Join(pw.testSrcs, ",")), 1)
-		if err := jarcat.WriteFile(w, "test_main.py", b); err != nil {
+		if err := f.WriteFile("test_main.py", b); err != nil {
 			return err
 		}
 	}
 	// All pexes need the __main__.py entry point.
-	if err := jarcat.WriteFile(w, "__main__.py", MustAsset("__main__.py")); err != nil {
+	if err := f.WriteFile("__main__.py", MustAsset("__main__.py")); err != nil {
 		return err
 	}
 	// Write the PEX-INFO file.
-	b, err = json.Marshal(pw.info)
+	b, err := json.Marshal(pw.info)
 	if err != nil {
 		return err
 	}
-	return jarcat.WriteFile(w, "PEX-INFO", b)
+	return f.WriteFile("PEX-INFO", b)
 }
 
 // zipIncludes returns the list of paths we'll include from our own zip file.
