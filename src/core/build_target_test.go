@@ -189,6 +189,17 @@ func TestAddProvide(t *testing.T) {
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3))
 }
 
+func TestAddDatum(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "PUBLIC")
+	target2 := makeTarget("//src/core:target2", "PUBLIC")
+	target1.AddDatum(target2.Label)
+	assert.Equal(t, target1.Data, []BuildInput{target2.Label})
+	assert.True(t, target1.dependencies[0].data)
+	// Now we add it as a dependency too, which unsets the data label
+	target1.AddMaybeExportedDependency(target2.Label, false, false)
+	assert.False(t, target1.dependencies[0].data)
+}
+
 func TestCheckDuplicateOutputs(t *testing.T) {
 	target1 := makeFilegroup("//src/core:target1", "PUBLIC")
 	target3 := makeFilegroup("//src/core:target3", "PUBLIC")
@@ -298,6 +309,16 @@ func TestDependencies(t *testing.T) {
 	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
 	assert.Equal(t, []BuildLabel{target1.Label, target2.Label}, target3.DeclaredDependencies())
 	assert.Equal(t, []*BuildTarget{target1, target2}, target3.Dependencies())
+}
+
+func TestBuildDependencies(t *testing.T) {
+	target1 := makeTarget("//src/core:target1", "")
+	target2 := makeTarget("//src/core:target2", "", target1)
+	target3 := makeTarget("//src/core:target3", "", target2)
+	target3.AddDatum(target1.Label)
+	assert.Equal(t, []*BuildTarget{}, target1.BuildDependencies())
+	assert.Equal(t, []*BuildTarget{target1}, target2.BuildDependencies())
+	assert.Equal(t, []*BuildTarget{target2}, target3.BuildDependencies())
 }
 
 func TestDeclaredDependenciesStrict(t *testing.T) {

@@ -1,3 +1,9 @@
+Version 9.3.2
+-------------
+
+    * Fixed a bug where data entries of targets would turn up at build time as well.
+
+
 Version 9.3.1
 -------------
 

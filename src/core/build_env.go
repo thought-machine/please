@@ -57,7 +57,12 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) BuildEnv {
 	sources := target.AllSourcePaths(state.Graph)
 	env := GeneralBuildEnvironment(state.Config)
-	env = append(env, "PKG="+target.Label.PackageName, "PKG_DIR="+target.Label.PackageDir())
+	env = append(
+		env,
+		"PKG="+target.Label.PackageName,
+		"PKG_DIR="+target.Label.PackageDir(),
+		"NAME="+target.Label.Name,
+	)
 	if !test {
 		tmpDir := path.Join(RepoRoot, target.TmpDir())
 		env = append(env,
@@ -65,7 +70,6 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) BuildEn
 			"TMPDIR="+tmpDir,
 			"SRCS="+strings.Join(sources, " "),
 			"OUTS="+strings.Join(target.Outputs(), " "),
-			"NAME="+target.Label.Name,
 			"HOME="+tmpDir,
 		)
 		env = append(env, "TOOLS="+strings.Join(toolPaths(state, target.Tools), " "))

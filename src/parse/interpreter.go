@@ -602,10 +602,7 @@ func AddData(cTarget uintptr, cData *C.char) *C.char {
 	if err != nil {
 		return C.CString(err.Error())
 	}
-	target.Data = append(target.Data, data)
-	if label := data.Label(); label != nil {
-		target.AddDependency(*label)
-	}
+	target.AddDatum(data)
 	return nil
 }
 

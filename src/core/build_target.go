@@ -161,6 +161,7 @@ type depInfo struct {
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
 	source   bool           // is it implicit because it's a source (not true if it's a dependency too)
+	data     bool           // is it a data item for a test
 }
 
 // A BuildTargetState tracks the current state of this target in regard to whether it's built
@@ -322,6 +323,20 @@ func (target *BuildTarget) Dependencies() []*BuildTarget {
 	for _, deps := range target.dependencies {
 		for _, dep := range deps.deps {
 			ret = append(ret, dep)
+		}
+	}
+	sort.Sort(ret)
+	return ret
+}
+
+// BuildDependencies returns the build-time dependencies of this target (i.e. not data).
+func (target *BuildTarget) BuildDependencies() []*BuildTarget {
+	ret := make(BuildTargets, 0, len(target.dependencies))
+	for _, deps := range target.dependencies {
+		if !deps.data {
+			for _, dep := range deps.deps {
+				ret = append(ret, dep)
+			}
 		}
 	}
 	sort.Sort(ret)
@@ -726,6 +741,15 @@ func (target *BuildTarget) AddTool(tool BuildInput) {
 	}
 }
 
+// AddDatum adds a new item of data to the target.
+func (target *BuildTarget) AddDatum(datum BuildInput) {
+	target.Data = append(target.Data, datum)
+	if label := datum.Label(); label != nil {
+		target.AddDependency(*label)
+		target.dependencyInfo(*label).data = true
+	}
+}
+
 // AddNamedTool adds a new tool to the target.
 func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 	if target.namedTools == nil {
@@ -892,6 +916,7 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 	} else {
 		info.exported = info.exported || exported
 		info.source = info.source && source
+		info.data = false // It's not *only* data any more.
 	}
 }
 
