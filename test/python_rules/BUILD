@@ -86,6 +86,12 @@ python_test(
 )
 
 python_test(
+    name = 'data_dep_only_test',
+    srcs = ['data_dep_only_test.py'],
+    data = [':data_dep'],
+)
+
+python_test(
     name = 'python2_coverage_test',
     srcs = ['python2_coverage_test.py'],
     interpreter = 'python2',
