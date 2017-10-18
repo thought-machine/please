@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """Implements a bunch of linters on the repo's source.
 
 Some specific things are run as plz tests (e.g. lint_builtin_rules_test)
