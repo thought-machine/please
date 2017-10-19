@@ -129,7 +129,9 @@ func (pkg *Package) EnterBuildCallback(f func() error) (map[*BuildTarget]struct{
 // MarkTargetModified marks a single target as being modified during a pre- or post- build function.
 // Correct usage of EnterBuildCallback must have been observed.
 func (pkg *Package) MarkTargetModified(target *BuildTarget) {
-	pkg.modifiedTargets[target] = struct{}{}
+	if pkg.modifiedTargets != nil {
+		pkg.modifiedTargets[target] = struct{}{}
+	}
 }
 
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.

@@ -401,6 +401,7 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTra
 		log.Debug("Adding new target %s directly to graph", target.Label)
 		target.AddedPostBuild = true
 		core.State.Graph.AddTarget(target)
+		pkg.MarkTargetModified(target)
 	}
 	return target
 }
