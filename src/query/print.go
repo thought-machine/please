@@ -18,12 +18,12 @@ import (
 func Print(graph *core.BuildGraph, labels []core.BuildLabel, fields []string) {
 	for _, label := range labels {
 		if len(fields) == 0 {
-			fmt.Fprintf(os.Stderr, "%s:\n", label)
+			fmt.Fprintf(os.Stdout, "# %s:\n", label)
 		}
 		if len(fields) > 0 {
 			newPrinter(os.Stdout, graph.TargetOrDie(label), 0).PrintFields(fields)
 		} else {
-			newPrinter(os.Stdout, graph.TargetOrDie(label), 2).PrintTarget()
+			newPrinter(os.Stdout, graph.TargetOrDie(label), 0).PrintTarget()
 		}
 	}
 }
