@@ -13,7 +13,11 @@ go_library(
     srcs = glob(['*.go'], excludes = [
         '*_test.go',
         'version.go',
-    ]) + [':version'],
+        'exec_*.go',
+    ]) + [
+        ':version',
+        'exec_linux.go' if (CONFIG.OS == 'linux') else 'exec_other.go',
+    ],
     deps = [
         '//src/cli',
         '//third_party/go:gcfg',

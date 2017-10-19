@@ -277,7 +277,7 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd := ExecCommand(argv[0], argv[1:]...)
 	cmd.Dir = dir
 	cmd.Env = env
 

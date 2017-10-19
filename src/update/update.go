@@ -18,7 +18,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path"
 	"runtime"
@@ -285,7 +284,7 @@ func describe(a, b semver.Version, verb bool) string {
 // It returns true iff the version is as expected.
 func verifyNewPlease(newPlease, version string) bool {
 	version = "Please version " + version // Output is prefixed with this.
-	cmd := exec.Command(newPlease, "--version")
+	cmd := core.ExecCommand(newPlease, "--version")
 	output, err := cmd.Output()
 	if err != nil {
 		log.Errorf("Failed to run new Please: %s", err)

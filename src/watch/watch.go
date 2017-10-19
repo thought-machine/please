@@ -75,7 +75,7 @@ func runBuild(state *core.BuildState, command string, labels []core.BuildLabel) 
 		log.Warning("Can't determine current executable, will assume 'plz'")
 		binary = "plz"
 	}
-	cmd := exec.Command(binary, command)
+	cmd := core.ExecCommand(binary, command)
 	cmd.Args = append(cmd.Args, "-c", state.Config.Build.Config)
 	for _, label := range labels {
 		cmd.Args = append(cmd.Args, label.String())

@@ -94,7 +94,7 @@ func getOrStartWorker(config *core.Configuration, worker string) (*workerServer,
 		return w, nil
 	}
 	// Need to create a new process
-	cmd := exec.Command(worker)
+	cmd := core.ExecCommand(worker)
 	cmd.Env = core.GeneralBuildEnvironment(config)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

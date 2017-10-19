@@ -10,7 +10,6 @@ package gc
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 
@@ -54,7 +53,7 @@ func GarbageCollect(state *core.BuildState, filter, targets, keepTargets []core.
 			if git {
 				log.Notice("Running git rm %s\n", strings.Join(srcs, " "))
 				srcs = append([]string{"rm", "-q"}, srcs...)
-				cmd := exec.Command("git", srcs...)
+				cmd := core.ExecCommand("git", srcs...)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {

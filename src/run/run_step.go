@@ -96,7 +96,7 @@ func run(graph *core.BuildGraph, label core.BuildLabel, args []string, fork, qui
 	}
 	// Run as a normal subcommand.
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.
-	cmd := exec.Command(splitCmd[0], args[1:]...) // args here don't include argv[0]
+	cmd := core.ExecCommand(splitCmd[0], args[1:]...) // args here don't include argv[0]
 	if !quiet {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
