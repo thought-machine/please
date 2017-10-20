@@ -28,6 +28,9 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 	env := BuildEnv{
 		// Need to know these for certain rules, particularly Go rules.
 		"ARCH=" + runtime.GOARCH,
+		// This is a more convenient form for many things.
+		// Right now it's not configurable since we only support amd64.
+		"XARCH=x86_64",
 		"OS=" + runtime.GOOS,
 		// Need this for certain tools, for example sass
 		"LANG=" + config.Please.Lang,

@@ -414,3 +414,34 @@ def grpc_languages():
             deps = [CONFIG.PROTO_JS_DEP],
         ),
     }
+
+
+def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
+    """Downloads a precompiled protoc binary.
+
+    You will obviously need to choose a version that is available on Github - there aren't
+    necessarily protoc downloads for every protobuf release.
+
+    Args:
+      name (str): Name of the rule
+      version (str): Version of protoc to download (e.g. '3.4.0').
+      hashes (list): Hashes to verify the download against.
+      deps (list): Any other dependencies
+      visibility (list): Visibility of the rule.
+    """
+    download_rule = remote_file(
+        name = name,
+        _tag = 'download',
+        url = 'https://github.com/google/protobuf/releases/download/v%s/protoc-%s-${OS}-${XARCH}.zip' % (version, version),
+        out = 'protoc-%s.zip' % version,
+        hashes = hashes,
+        deps = deps,
+    )
+    return genrule(
+        name = name,
+        srcs = [download_rule],
+        outs = ['protoc'],
+        binary = True,
+        cmd = 'unzip $SRCS bin/protoc && mv bin/protoc $OUT',
+        visibility = visibility,
+    )

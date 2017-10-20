@@ -45,6 +45,7 @@ sourcelevel = 7
 targetlevel = 7
 
 [proto]
+protoctool = //third_party/proto:protoc
 pythonpackage = third_party.python.google.protobuf
 grpcjavaplugin = //third_party/java:protoc-gen-grpc-java
 protocgoplugin = //third_party/go:protoc-gen-go
@@ -64,6 +65,7 @@ accept = BSD
 accept = BSD License
 accept = Simplified BSD
 accept = BSD 3-Clause
+accept = 3-Clause BSD License
 accept = New BSD License
 accept = Apache 2.0
 accept = Apache License, Version 2.0

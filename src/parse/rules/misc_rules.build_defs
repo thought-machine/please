@@ -88,7 +88,7 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, labels=None, v
     """
     if out and outs:
         raise TypeError('Can\'t specify both "out" and "outs".')
-    build_rule(
+    return build_rule(
         name=name,
         srcs=srcs,
         outs=[out] if out else outs,
@@ -149,7 +149,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
                       including networking, process, IPC, etc. Only has an effect on Linux.
                       If this is on by default then tests can opt out by setting this to False.
     """
-    build_rule(
+    return build_rule(
         name=name,
         srcs=srcs,
         outs=outs,
