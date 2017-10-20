@@ -22,6 +22,7 @@ else:
             '//src/cache/tools',
             '//third_party/go:logging',
             '//third_party/go:grpc',
+            '//src/cli',
         ],
         visibility = ['PUBLIC'],
     )

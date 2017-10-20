@@ -28,7 +28,10 @@ var StdOutIsATerminal = terminal.IsTerminal(int(os.Stdout.Fd()))
 // StripAnsi is a regex to find & replace ANSI console escape sequences.
 var StripAnsi = regexp.MustCompile("\x1b[^m]+m")
 
-var logLevel = logging.WARNING
+// LogLevel is the current verbosity level that is set.
+// N.B. Setting this does *not* alter it. Use InitLogging for that.
+var LogLevel = logging.WARNING
+
 var fileLogLevel = logging.WARNING
 var fileBackend *logging.LogBackend
 
@@ -57,7 +60,7 @@ func translateLogLevel(verbosity int) logging.Level {
 
 // InitLogging initialises logging backends.
 func InitLogging(verbosity int) {
-	logLevel = translateLogLevel(verbosity)
+	LogLevel = translateLogLevel(verbosity)
 	logging.SetFormatter(logFormatter())
 	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
 }
@@ -86,7 +89,7 @@ func logFormatter() logging.Formatter {
 
 func setLogBackend(backend logging.Backend) {
 	backendLeveled := logging.AddModuleLevel(backend)
-	backendLeveled.SetLevel(logLevel, "")
+	backendLeveled.SetLevel(LogLevel, "")
 	if fileBackend == nil {
 		logging.SetBackend(backendLeveled)
 	} else {

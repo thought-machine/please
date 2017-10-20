@@ -27,6 +27,7 @@ import (
 
 	pb "cache/proto/rpc_cache"
 	"cache/tools"
+	"cli"
 )
 
 const maxErrors = 5
@@ -262,7 +263,7 @@ func (cache *rpcCache) Shutdown() {}
 
 func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode bool) {
 	// Change grpc to log using our implementation
-	grpclog.SetLogger(&grpcLogMabob{})
+	grpclog.SetLoggerV2(&grpcLogMabob{})
 	log.Info("Connecting to RPC cache at %s", url)
 	opts := []grpc.DialOption{
 		grpc.WithTimeout(cache.timeout),
@@ -398,12 +399,19 @@ func newRPCCacheInternal(url string, config *core.Configuration, isSubnode bool)
 // grpcLogMabob is an implementation of grpc's logging interface using our backend.
 type grpcLogMabob struct{}
 
-func (g *grpcLogMabob) Fatal(args ...interface{})                 { log.Fatal(args...) }
-func (g *grpcLogMabob) Fatalf(format string, args ...interface{}) { log.Fatalf(format, args...) }
-func (g *grpcLogMabob) Fatalln(args ...interface{})               { log.Fatal(args...) }
-func (g *grpcLogMabob) Print(args ...interface{})                 { log.Warning("%s", args) }
-func (g *grpcLogMabob) Printf(format string, args ...interface{}) { log.Warning(format, args...) }
-func (g *grpcLogMabob) Println(args ...interface{})               { log.Warning("%s", args) }
+func (g *grpcLogMabob) Info(args ...interface{})                    { log.Info("%s", args) }
+func (g *grpcLogMabob) Infof(format string, args ...interface{})    { log.Info(format, args...) }
+func (g *grpcLogMabob) Infoln(args ...interface{})                  { log.Info("%s", args) }
+func (g *grpcLogMabob) Warning(args ...interface{})                 { log.Warning("%s", args) }
+func (g *grpcLogMabob) Warningf(format string, args ...interface{}) { log.Warning(format, args...) }
+func (g *grpcLogMabob) Warningln(args ...interface{})               { log.Warning("%s", args) }
+func (g *grpcLogMabob) Error(args ...interface{})                   { log.Error("", args...) }
+func (g *grpcLogMabob) Errorf(format string, args ...interface{})   { log.Errorf(format, args...) }
+func (g *grpcLogMabob) Errorln(args ...interface{})                 { log.Error("", args...) }
+func (g *grpcLogMabob) Fatal(args ...interface{})                   { log.Fatal(args...) }
+func (g *grpcLogMabob) Fatalf(format string, args ...interface{})   { log.Fatalf(format, args...) }
+func (g *grpcLogMabob) Fatalln(args ...interface{})                 { log.Fatal(args...) }
+func (g *grpcLogMabob) V(l int) bool                                { return l >= int(cli.LogLevel) }
 
 // loadAuth loads authentication credentials from a given pair of public / private key files.
 func loadAuth(caCert, publicKey, privateKey string) (grpc.DialOption, error) {
