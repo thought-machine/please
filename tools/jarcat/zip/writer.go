@@ -119,6 +119,9 @@ func (f *File) AddZipFile(filepath string) error {
 
 	for _, rf := range r.File {
 		log.Debug("Found file %s (from %s)", rf.Name, filepath)
+		if !f.shouldInclude(rf.Name) {
+			continue
+		}
 		// This directory is very awkward. We need to merge the contents by concatenating them,
 		// we can't replace them or leave them out.
 		if strings.HasPrefix(rf.Name, "META-INF/services/") ||
@@ -127,9 +130,6 @@ func (f *File) AddZipFile(filepath string) error {
 			if err := f.concatenateFile(rf); err != nil {
 				return err
 			}
-			continue
-		}
-		if !f.shouldInclude(rf.Name) {
 			continue
 		}
 		hasTrailingSlash := strings.HasSuffix(rf.Name, "/")
