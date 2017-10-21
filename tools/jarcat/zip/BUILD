@@ -8,7 +8,7 @@ go_library(
     ],
     visibility = [
         '//tools/jarcat:all',
-        '//tools/please_pex:all',
+        '//tools/please_pex/pex',
     ],
 )
 

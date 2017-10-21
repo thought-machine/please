@@ -96,10 +96,9 @@ func (s *httpServer) deleteAllHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Failed to clean http cache: %s", err)
 		return
-	} else {
-		log.Notice("The http cache has been cleaned.")
-		fmt.Fprintf(w, "The http cache has been cleaned.")
 	}
+	log.Notice("The http cache has been cleaned.")
+	fmt.Fprintf(w, "The http cache has been cleaned.")
 }
 
 // The deleteHandler function handles the DELETE endpoint for the artifact path.
@@ -111,13 +110,12 @@ func (s *httpServer) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Failed to remove %s from http cache: %s", artifactPath, err)
 		return
-	} else {
-		log.Notice("%s was removed from the http cache.", artifactPath)
-		fmt.Fprintf(w, "%s artifact was removed from cache.", artifactPath)
 	}
+	log.Notice("%s was removed from the http cache.", artifactPath)
+	fmt.Fprintf(w, "%s artifact was removed from cache.", artifactPath)
 }
 
-// The BuildRouter function creates a router, sets the base FileServer directory and the Handler Functions
+// BuildRouter creates a router, sets the base FileServer directory and the Handler Functions
 // for each endpoint, and then returns the router.
 func BuildRouter(cache *Cache) *mux.Router {
 	s := &httpServer{cache: cache}

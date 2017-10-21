@@ -7,6 +7,6 @@ grpc_library(
     languages = ['go'],
     visibility = [
         '//src/cache/...',
-        '//src/cache_server/...',
+        '//tools/cache/...',
     ],
 )

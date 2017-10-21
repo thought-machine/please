@@ -1,5 +1,3 @@
-subinclude('//build_defs:go_bindata')
-
 # Extract the contents of __main__.py from pex.
 # We could duplicate here easily enough but then might fall out of sync
 # with the version of pex we're using.
@@ -15,34 +13,23 @@ genrule(
     cmd = '$PKG/gen_main.sh > $OUT',
 )
 
-go_bindata(
-    name = 'main_files',
+filegroup(
+    name = 'pex_data',
     srcs = [
         'pex_main.py',
         'test_main.py',
         ':main_py',
     ],
-    package = 'pex',
-)
-
-go_library(
-    name = 'pex',
-    srcs = [
-        'pex.go',
-        ':main_files',
-    ],
-    deps = [
-        '//tools/jarcat/zip',
-    ],
+    visibility = ['//tools/please_pex/pex:all'],
 )
 
 go_binary(
     name = 'pex_main',
     srcs = ['pex_main.go'],
     deps = [
-        ':pex',
         '//src/cli',
         '//third_party/go:logging',
+        '//tools/please_pex/pex',
     ],
 )
 

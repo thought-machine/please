@@ -1,4 +1,4 @@
-// Package cache_server contains core functionality for our cache servers; storing & retrieving files etc.
+// Package server contains core functionality for our cache servers; storing & retrieving files etc.
 package server
 
 import (

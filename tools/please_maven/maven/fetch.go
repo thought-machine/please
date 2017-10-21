@@ -58,7 +58,7 @@ func toMap(sl []string) map[string]bool {
 
 // Pom fetches the POM XML for a package.
 // Note that this may invoke itself recursively to fetch parent artifacts and dependencies.
-func (f *Fetch) Pom(a *Artifact) *pomXml {
+func (f *Fetch) Pom(a *Artifact) *PomXML {
 	if a.Version == "+" {
 		// + indicates the latest version, presumably.
 		a.SetVersion(f.Metadata(a).LatestVersion())
@@ -75,8 +75,8 @@ func (f *Fetch) Pom(a *Artifact) *pomXml {
 
 // Metadata returns the metadata XML for a package.
 // This contains some information, typically the main useful thing is the latest available version of the package.
-func (f *Fetch) Metadata(a *Artifact) *mavenMetadataXml {
-	metadata := &mavenMetadataXml{Group: a.GroupId, Artifact: a.ArtifactId}
+func (f *Fetch) Metadata(a *Artifact) *MetadataXML {
+	metadata := &MetadataXML{Group: a.GroupID, Artifact: a.ArtifactID}
 	metadata.Unmarshal(f.mustFetch(a.MetadataPath()))
 	return metadata
 }

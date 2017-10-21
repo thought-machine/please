@@ -8,11 +8,11 @@ import (
 )
 
 const mavenJarTemplate = `maven_jar(
-    name = '{{ .ArtifactId }}',
-    id = '{{ .GroupId }}:{{ .ArtifactId }}:{{ .Version }}',
+    name = '{{ .ArtifactID }}',
+    id = '{{ .GroupID }}:{{ .ArtifactID }}:{{ .Version }}',
     hash = '',{{ if .Dependencies.Dependency }}
     deps = [
-{{ range .Dependencies.Dependency }}        ':{{ .ArtifactId }}',
+{{ range .Dependencies.Dependency }}        ':{{ .ArtifactID }}',
 {{ end }}    ],{{ end }}
 )`
 
@@ -36,7 +36,7 @@ func AllDependencies(f *Fetch, artifacts []Artifact, concurrency int, indent, bu
 	return ret
 }
 
-func allDeps(pom *pomXml, indent, buildRules bool, done map[unversioned]bool) []string {
+func allDeps(pom *PomXML, indent, buildRules bool, done map[unversioned]bool) []string {
 	if buildRules {
 		tmpl := template.Must(template.New("maven_jar").Parse(mavenJarTemplate))
 		return allDependencies(pom, "", "", tmpl, done)
@@ -58,7 +58,7 @@ func allDeps(pom *pomXml, indent, buildRules bool, done map[unversioned]bool) []
 }
 
 // allDependencies implements the logic of AllDependencies with indenting.
-func allDependencies(pom *pomXml, currentIndent, indentIncrement string, tmpl *template.Template, done map[unversioned]bool) []string {
+func allDependencies(pom *PomXML, currentIndent, indentIncrement string, tmpl *template.Template, done map[unversioned]bool) []string {
 	ret := []string{
 		fmt.Sprintf("%s%s:%s", currentIndent, pom.Artifact, source(pom)),
 	}
@@ -81,7 +81,7 @@ func allDependencies(pom *pomXml, currentIndent, indentIncrement string, tmpl *t
 }
 
 // source returns the src / no_src indicator for a single pom.
-func source(pom *pomXml) string {
+func source(pom *PomXML) string {
 	if pom.HasSources {
 		return "src"
 	}

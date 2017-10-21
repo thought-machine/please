@@ -6,7 +6,6 @@ go_library(
         'rpc_server.go',
     ],
     deps = [
-        '//src/cache/cluster',
         '//src/cache/proto:rpc_cache',
         '//src/core',
         '//third_party/go:atime',
@@ -17,34 +16,13 @@ go_library(
         '//third_party/go:humanize',
         '//third_party/go:logging',
         '//third_party/go:mux',
+        '//tools/cache/cluster',
     ],
     # Exposed for a test only.
-    visibility = ['//src/cache/...'],
-)
-
-go_binary(
-    name = 'http_cache_server_bin',
-    srcs = ['http_server_main.go'],
-    deps = [
-        ':server',
-        '//src/cli',
-        '//third_party/go:logging',
+    visibility = [
+        '//src/cache/...',
+        '//tools/cache:all',
     ],
-    visibility = ['PUBLIC'],
-)
-
-go_binary(
-    name = 'rpc_cache_server_bin',
-    srcs = ['rpc_server_main.go'],
-    deps = [
-        ':server',
-        '//src/cache/cluster',
-        '//src/cli',
-        '//third_party/go:grpc-prometheus',
-        '//third_party/go:logging',
-        '//third_party/go:prometheus',
-    ],
-    visibility = ['PUBLIC'],
 )
 
 go_test(

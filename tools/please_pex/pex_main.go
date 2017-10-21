@@ -49,7 +49,7 @@ func main() {
 		sum := sha1.Sum([]byte(opts.Out))
 		opts.CodeHash = base64.RawURLEncoding.EncodeToString(sum[:])
 	}
-	w := pex.NewPexWriter(opts.EntryPoint, opts.Interpreter, opts.CodeHash, !opts.NoZipSafe)
+	w := pex.NewWriter(opts.EntryPoint, opts.Interpreter, opts.CodeHash, !opts.NoZipSafe)
 	if opts.Shebang != "" {
 		w.SetShebang(opts.Shebang)
 	}

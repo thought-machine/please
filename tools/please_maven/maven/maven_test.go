@@ -789,9 +789,9 @@ func TestMain(m *testing.M) {
 	cli.InitLogging(1) // Suppress informational messages which there can be an awful lot of
 	errorProne = []Artifact{{}}
 	grpc = []Artifact{{}}
-	errorProne[0].FromId("com.google.errorprone:error_prone_core:2.0.14")
-	grpc[0].FromId("io.grpc:grpc-all:1.1.2")
-	server = httptest.NewServer(http.FileServer(http.Dir("tools/please_maven/test_data")))
+	errorProne[0].FromID("com.google.errorprone:error_prone_core:2.0.14")
+	grpc[0].FromID("io.grpc:grpc-all:1.1.2")
+	server = httptest.NewServer(http.FileServer(http.Dir("tools/please_maven/maven/test_data")))
 	ret := m.Run()
 	server.Close()
 	os.Exit(ret)

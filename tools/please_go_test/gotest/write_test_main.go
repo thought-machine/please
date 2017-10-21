@@ -1,4 +1,4 @@
-package buildgo
+package gotest
 
 import (
 	"fmt"

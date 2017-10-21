@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
-	"cache/server"
 	"core"
+	"tools/cache/server"
 )
 
 var (

@@ -1,6 +1,6 @@
-// plz_diff_graphs is a small utility to take the JSON representation of two build graphs
-// (as output from 'plz query graph') and produce a list of targets that have changed
-// between the two.
+// package main implements plz_diff_graphs, a small utility to take the JSON representation
+// of two build graphs (as output from 'plz query graph') and produce a list of targets
+// that have changed between the two.
 //
 // Note that the 'ordering' of the two graphs matters, hence their labels 'before' and 'after';
 // the operation is non-commutative because targets that are added appear and those deleted do not.
@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"cli"
-	"tools/please_diff_graphs"
+	"tools/please_diff_graphs/diff"
 )
 
 var opts = struct {
@@ -69,12 +69,12 @@ func readStdin() []string {
 func main() {
 	cli.ParseFlagsOrDie("Please graph differ", "9.1.2", &opts)
 	cli.InitLogging(opts.Verbosity)
-	before := misc.ParseGraphOrDie(opts.Before)
-	after := misc.ParseGraphOrDie(opts.After)
+	before := diff.ParseGraphOrDie(opts.Before)
+	after := diff.ParseGraphOrDie(opts.After)
 	if len(opts.ChangedFiles.Files) == 1 && opts.ChangedFiles.Files[0] == "-" {
 		opts.ChangedFiles.Files = readStdin()
 	}
-	for _, label := range misc.DiffGraphs(before, after, opts.ChangedFiles.Files, opts.Include, opts.Exclude, !opts.NoRecurse) {
+	for _, label := range diff.Graphs(before, after, opts.ChangedFiles.Files, opts.Include, opts.Exclude, !opts.NoRecurse) {
 		fmt.Printf("%s\n", label)
 	}
 }

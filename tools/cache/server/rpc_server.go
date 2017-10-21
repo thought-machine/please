@@ -15,13 +15,15 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 
-	"cache/cluster"
 	pb "cache/proto/rpc_cache"
+	"tools/cache/cluster"
 )
 
 // maxMsgSize is the maximum message size our gRPC server accepts.
@@ -35,15 +37,17 @@ func init() {
 	grpc.EnableTracing = false
 }
 
-type RpcCacheServer struct {
+// A RPCCacheServer implements our RPC cache, including communication in a cluster.
+type RPCCacheServer struct {
 	cache        *Cache
 	readonlyKeys map[string]*x509.Certificate
 	writableKeys map[string]*x509.Certificate
 	cluster      *cluster.Cluster
 }
 
-func (r *RpcCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
-	if err := r.authenticateClient(r.writableKeys, ctx); err != nil {
+// Store implements the Store RPC to store an artifact in the cache.
+func (r *RPCCacheServer) Store(ctx context.Context, req *pb.StoreRequest) (*pb.StoreResponse, error) {
+	if err := r.authenticateClient(ctx, r.writableKeys); err != nil {
 		return nil, err
 	}
 	success := storeArtifact(r.cache, req.Os, req.Arch, req.Hash, req.Artifacts, req.Hostname, extractAddress(ctx), "")
@@ -70,8 +74,9 @@ func storeArtifact(cache *Cache, os, arch string, hash []byte, artifacts []*pb.A
 	return true
 }
 
-func (r *RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) (*pb.RetrieveResponse, error) {
-	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
+// Retrieve implements the Retrieve RPC to retrieve artifacts from the cache.
+func (r *RPCCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) (*pb.RetrieveResponse, error) {
+	if err := r.authenticateClient(ctx, r.readonlyKeys); err != nil {
 		return nil, err
 	}
 	response := pb.RetrieveResponse{Success: true}
@@ -97,8 +102,9 @@ func (r *RpcCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) 
 	return &response, nil
 }
 
-func (r *RpcCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
-	if err := r.authenticateClient(r.writableKeys, ctx); err != nil {
+// Delete implements the Delete RPC to delete an artifact from the cache.
+func (r *RPCCacheServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+	if err := r.authenticateClient(ctx, r.writableKeys); err != nil {
 		return nil, err
 	}
 	if req.Everything {
@@ -124,8 +130,9 @@ func deleteArtifact(cache *Cache, os, arch string, artifacts []*pb.Artifact) boo
 	return success
 }
 
-func (r *RpcCacheServer) ListNodes(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
-	if err := r.authenticateClient(r.readonlyKeys, ctx); err != nil {
+// ListNodes implements the RPC for clustered servers.
+func (r *RPCCacheServer) ListNodes(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
+	if err := r.authenticateClient(ctx, r.readonlyKeys); err != nil {
 		return nil, err
 	}
 	if r.cluster == nil {
@@ -134,26 +141,27 @@ func (r *RpcCacheServer) ListNodes(ctx context.Context, req *pb.ListRequest) (*p
 	return &pb.ListResponse{Nodes: r.cluster.GetMembers()}, nil
 }
 
-func (r *RpcCacheServer) authenticateClient(certs map[string]*x509.Certificate, ctx context.Context) error {
+func (r *RPCCacheServer) authenticateClient(ctx context.Context, certs map[string]*x509.Certificate) error {
 	if len(certs) == 0 {
 		return nil // Open to anyone.
 	}
 	p, ok := peer.FromContext(ctx)
 	if !ok {
-		return fmt.Errorf("Missing client certificate")
+		return status.Error(codes.Unauthenticated, "Missing client certificate")
 	}
 	info, ok := p.AuthInfo.(credentials.TLSInfo)
 	if !ok {
-		return fmt.Errorf("Could not extract auth info")
+		return status.Error(codes.Unauthenticated, "Could not extract auth info")
 	}
 	if len(info.State.PeerCertificates) == 0 {
-		return fmt.Errorf("No peer certificate available")
+		return status.Error(codes.Unauthenticated, "No peer certificate available")
 	}
 	cert := info.State.PeerCertificates[0]
-	if okCert := certs[string(cert.RawSubject)]; okCert != nil && okCert.Equal(cert) {
-		return nil
+	okCert := certs[string(cert.RawSubject)]
+	if okCert == nil || !okCert.Equal(cert) {
+		return status.Error(codes.Unauthenticated, "Invalid or unknown certificate")
 	}
-	return fmt.Errorf("Invalid or unknown certificate")
+	return nil
 }
 
 func extractAddress(ctx context.Context) string {
@@ -197,11 +205,13 @@ type RPCServer struct {
 	cluster *cluster.Cluster
 }
 
+// Join implements the Join RPC for a new server joining the cluster.
 func (r *RPCServer) Join(ctx context.Context, req *pb.JoinRequest) (*pb.JoinResponse, error) {
 	// TODO(pebers): Authentication.
 	return r.cluster.AddNode(req), nil
 }
 
+// Replicate implements the Replicate RPC for replicating an artifact from another node.
 func (r *RPCServer) Replicate(ctx context.Context, req *pb.ReplicateRequest) (*pb.ReplicateResponse, error) {
 	// TODO(pebers): Authentication.
 	if req.Delete {
@@ -222,7 +232,7 @@ func BuildGrpcServer(port int, cache *Cache, cluster *cluster.Cluster, keyFile, 
 		log.Fatalf("Failed to listen on port %d: %v", port, err)
 	}
 	s := serverWithAuth(keyFile, certFile, caCertFile)
-	r := &RpcCacheServer{cache: cache, cluster: cluster}
+	r := &RPCCacheServer{cache: cache, cluster: cluster}
 	if writableKeys != "" {
 		r.writableKeys = loadKeys(writableKeys)
 	}

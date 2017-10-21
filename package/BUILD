@@ -11,7 +11,7 @@ signed_fpm_deb(
         '/opt/please/please_maven': '//tools/please_maven',
         '/opt/please/javac_worker': '//tools/javac_worker',
         '/opt/please/junit_runner.jar': '//tools/junit_runner',
-        '/opt/please/cache_cleaner': '//tools/cache_cleaner',
+        '/opt/please/cache_cleaner': '//tools/cache:cleaner',
         '/opt/please/jarcat': '//tools/jarcat',
         '/opt/please/please_diff_graphs': '//tools/please_diff_graphs',
         '/opt/please/please_go_test': '//tools/please_go_test',
@@ -31,7 +31,7 @@ signed_fpm_deb(
     package_name = 'plz-rpc-cache-server',
     version = VERSION,
     files = {
-        '/usr/bin/plz_rpc_cache_server': '//src/cache/server:rpc_cache_server_bin',
+        '/usr/bin/plz_rpc_cache_server': '//tools/cache:rpc_cache_server',
     },
 )
 
@@ -40,7 +40,7 @@ signed_fpm_deb(
     package_name = 'plz-http-cache-server',
     version = VERSION,
     files = {
-        '/usr/bin/plz_http_cache_server': '//src/cache/server:http_cache_server_bin',
+        '/usr/bin/plz_http_cache_server': '//tools/cache:http_cache_server',
     },
 )
 
@@ -75,7 +75,7 @@ signed_tarball(
     srcs = [
         '//src:please',
         '//src/parse/cffi:all_engines',
-        '//tools/cache_cleaner',
+        '//tools/cache:cleaner',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',
@@ -92,8 +92,8 @@ signed_tarball(
 signed_tarball(
     name = 'servers_tarball',
     srcs = [
-        '//src/cache/server:http_cache_server_bin',
-        '//src/cache/server:rpc_cache_server_bin',
+        '//tools/cache:http_cache_server',
+        '//tools/cache:rpc_cache_server',
     ],
     out = 'please_servers_%s.tar.gz' % VERSION,
     subdir = 'please',
@@ -114,7 +114,7 @@ hash_filegroup(
     srcs = [
         '//src:please',
         '//src/parse/cffi:all_engines',
-        '//tools/cache_cleaner',
+        '//tools/cache:cleaner',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',

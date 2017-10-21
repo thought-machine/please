@@ -1,6 +1,5 @@
-// Package buildgo contains utilities used by plz_go_test.
-// It's split up mostly for ease of testing.
-package buildgo
+// Package gotest contains utilities used by plz_go_test.
+package gotest
 
 import (
 	"io/ioutil"

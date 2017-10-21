@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"cache/server"
 	"core"
+	"tools/cache/server"
 )
 
 var (

@@ -3,6 +3,7 @@ go_library(
     srcs = ['hash.go'],
     visibility = [
         '//src/cache/...',
+        '//tools/cache/...',
         '//tools/cache_cleaner:all',
     ],
 )

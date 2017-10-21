@@ -1,5 +1,5 @@
-// Package misc contains utility functions, mostly to help the graph differ.
-package misc
+// Package diff contains the implementation of the graph differ.
+package diff
 
 import (
 	"encoding/json"
@@ -13,7 +13,7 @@ import (
 	"query"
 )
 
-var log = logging.MustGetLogger("misc")
+var log = logging.MustGetLogger("diff")
 
 // ParseGraphOrDie reads a graph file, or dies if anything goes wrong.
 func ParseGraphOrDie(filename string) *query.JSONGraph {
@@ -28,8 +28,8 @@ func ParseGraphOrDie(filename string) *query.JSONGraph {
 	return &graph
 }
 
-// DiffGraphs calculates the differences between two graphs.
-func DiffGraphs(before, after *query.JSONGraph, changedFiles, include, exclude []string, recurse bool) []core.BuildLabel {
+// Graphs calculates the differences between two graphs.
+func Graphs(before, after *query.JSONGraph, changedFiles, include, exclude []string, recurse bool) []core.BuildLabel {
 	changedFileMap := toMap(changedFiles)
 	allChanges := map[string]bool{}
 	for pkgName, afterPkg := range after.Packages {

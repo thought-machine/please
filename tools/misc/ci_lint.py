@@ -13,24 +13,14 @@ import sys
 from itertools import groupby
 
 
-# Packages that don't load. Will be cleaned up over time.
-BLACKLISTED_VET_PACKAGES = {
-    'src/cache/server',
-    'tools/please_diff_graphs',
-    'tools/please_pex',
-    'tools/please_maven',
-    'tools/please_go_test',
-    'tools/please_go_test/test_data',
-    'test/go_rules',
-    'test/go_rules/test',
-    'third_party/go/zip',
-}
+# Dir names that are always blacklisted.
+BLACKLISTED_DIRS = {'plz-out', 'test', 'test_data', 'third_party'}
 
 
 def find_go_files(root):
     for dirname, dirs, files in os.walk(root):
         # Excludes github.com, gopkg.in, etc.
-        dirs[:] = [d for d in dirs if '.' not in d and d != 'plz-out']
+        dirs[:] = [d for d in dirs if '.' not in d and d not in BLACKLISTED_DIRS]
         yield from [(dirname[2:], file) for file in files
                     if file.endswith('.go') and not file.endswith('.bindata.go')]
 
@@ -49,7 +39,7 @@ def run_linters(files):
 
 
 def main():
-    all_go_files = [(d, f) for d, f in find_go_files('.') if d not in BLACKLISTED_VET_PACKAGES]
+    all_go_files = [(d, f) for d, f in find_go_files('.')]
     by_dir = [[os.path.join(d, f[1]) for f in files]
               for d, files in groupby(all_go_files, key=lambda x: x[0])]
     if not all([run_linters(files) for files in by_dir]):

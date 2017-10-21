@@ -18,11 +18,12 @@ import (
 var log = logging.MustGetLogger("maven")
 
 type unversioned struct {
-	GroupId    string `xml:"groupId"`
-	ArtifactId string `xml:"artifactId"`
+	GroupID    string `xml:"groupId"`
+	ArtifactID string `xml:"artifactId"`
 	Type       string `xml:"type"`
 }
 
+// An Artifact is a model of a Maven artifact.
 type Artifact struct {
 	unversioned
 	// Raw version as found in XML
@@ -42,17 +43,17 @@ type Artifact struct {
 
 // GroupPath returns the group ID as a path.
 func (a *Artifact) GroupPath() string {
-	return strings.Replace(a.GroupId, ".", "/", -1)
+	return strings.Replace(a.GroupID, ".", "/", -1)
 }
 
 // MetadataPath returns the path to the metadata XML file for this artifact.
 func (a *Artifact) MetadataPath() string {
-	return a.GroupPath() + "/" + a.ArtifactId + "/maven-metadata.xml"
+	return a.GroupPath() + "/" + a.ArtifactID + "/maven-metadata.xml"
 }
 
 // Path returns the path to an artifact that we'd download.
 func (a *Artifact) Path(suffix string) string {
-	return a.GroupPath() + "/" + a.ArtifactId + "/" + a.ParsedVersion.Path + "/" + a.ArtifactId + "-" + a.ParsedVersion.Path + suffix
+	return a.GroupPath() + "/" + a.ArtifactID + "/" + a.ParsedVersion.Path + "/" + a.ArtifactID + "-" + a.ParsedVersion.Path + suffix
 }
 
 // PomPath returns the path to the pom.xml for this artifact.
@@ -65,23 +66,23 @@ func (a *Artifact) SourcePath() string {
 	return a.Path("-sources.jar")
 }
 
-// String prints this artifact as a Maven identifier (i.e. GroupId:ArtifactId:Version)
+// String prints this artifact as a Maven identifier (i.e. GroupID:ArtifactID:Version)
 func (a Artifact) String() string {
-	s := a.GroupId + ":" + a.ArtifactId + ":" + a.ParsedVersion.Path
+	s := a.GroupID + ":" + a.ArtifactID + ":" + a.ParsedVersion.Path
 	if a.Type != "" && a.Type != "jar" {
 		s += "@" + a.Type
 	}
 	return s
 }
 
-// FromId loads this artifact from a Maven id.
-func (a *Artifact) FromId(id string) error {
+// FromID loads this artifact from a Maven id.
+func (a *Artifact) FromID(id string) error {
 	split := strings.Split(id, ":")
 	if len(split) != 3 {
 		return fmt.Errorf("Invalid Maven artifact id %s; must be in the form group:artifact:version", id)
 	}
-	a.GroupId = split[0]
-	a.ArtifactId = split[1]
+	a.GroupID = split[0]
+	a.ArtifactID = split[1]
 	a.Version = split[2]
 	if index := strings.IndexRune(a.Version, '@'); index != -1 {
 		if t := a.Version[index+1:]; t != "jar" {
@@ -102,7 +103,7 @@ func (a *Artifact) SetVersion(ver string) {
 // UnmarshalFlag implements the flags.Unmarshaler interface.
 // This lets us use Artifact instances directly as flags.
 func (a *Artifact) UnmarshalFlag(value string) error {
-	if err := a.FromId(value); err != nil {
+	if err := a.FromID(value); err != nil {
 		return &flags.Error{Type: flags.ErrMarshal, Message: err.Error()}
 	}
 	return nil
@@ -111,7 +112,7 @@ func (a *Artifact) UnmarshalFlag(value string) error {
 // IsExcluded returns true if the given artifact is in this one's list of exclusions.
 func (a *Artifact) IsExcluded(a2 *Artifact) bool {
 	for _, excl := range a.Exclusions {
-		if excl.GroupId == a2.GroupId && excl.ArtifactId == a2.ArtifactId {
+		if excl.GroupID == a2.GroupID && excl.ArtifactID == a2.ArtifactID {
 			return true
 		}
 	}
@@ -123,7 +124,8 @@ type pomProperty struct {
 	Value   string `xml:",chardata"`
 }
 
-type pomXml struct {
+// A PomXML models a Maven pom.xml and its contents.
+type PomXML struct {
 	Artifact
 	sync.Mutex
 	OriginalArtifact     Artifact
@@ -141,14 +143,14 @@ type pomXml struct {
 	} `xml:"licenses"`
 	Parent        Artifact `xml:"parent"`
 	PropertiesMap map[string]string
-	Dependors     []*pomXml
+	Dependors     []*PomXML
 	HasSources    bool
 }
 
 type pomDependency struct {
 	Artifact
-	Pom      *pomXml
-	Dependor *pomXml
+	Pom      *PomXML
+	Dependor *PomXML
 	Scope    string `xml:"scope"`
 	Optional bool   `xml:"optional"`
 }
@@ -157,7 +159,8 @@ type pomDependencies struct {
 	Dependency []*pomDependency `xml:"dependency"`
 }
 
-type mavenMetadataXml struct {
+// A MetadataXML models a Maven metadata.xml file and its contents.
+type MetadataXML struct {
 	Version    string `xml:"version"`
 	Versioning struct {
 		Latest   string `xml:"latest"`
@@ -170,7 +173,7 @@ type mavenMetadataXml struct {
 }
 
 // LatestVersion returns the latest available version of a package
-func (metadata *mavenMetadataXml) LatestVersion() string {
+func (metadata *MetadataXML) LatestVersion() string {
 	if metadata.Versioning.Release != "" {
 		return metadata.Versioning.Release
 	} else if metadata.Versioning.Latest != "" {
@@ -185,7 +188,7 @@ func (metadata *mavenMetadataXml) LatestVersion() string {
 }
 
 // HasVersion returns true if the given package has the specified version.
-func (metadata *mavenMetadataXml) HasVersion(version string) bool {
+func (metadata *MetadataXML) HasVersion(version string) bool {
 	for _, v := range metadata.Versioning.Versions.Version {
 		if v == version {
 			return true
@@ -195,14 +198,14 @@ func (metadata *mavenMetadataXml) HasVersion(version string) bool {
 }
 
 // Unmarshal reads a metadata object from raw XML. It dies on any error.
-func (metadata *mavenMetadataXml) Unmarshal(content []byte) {
+func (metadata *MetadataXML) Unmarshal(content []byte) {
 	if err := xml.Unmarshal(content, metadata); err != nil {
 		log.Fatalf("Error parsing metadata XML: %s\n", err)
 	}
 }
 
 // AddProperty adds a property (typically from a parent or wherever), without overwriting.
-func (pom *pomXml) AddProperty(property pomProperty) {
+func (pom *PomXML) AddProperty(property pomProperty) {
 	if _, present := pom.PropertiesMap[property.XMLName.Local]; !present {
 		pom.PropertiesMap[property.XMLName.Local] = property.Value
 		pom.Properties.Property = append(pom.Properties.Property, property)
@@ -210,7 +213,7 @@ func (pom *pomXml) AddProperty(property pomProperty) {
 }
 
 // replaceVariables a Maven variable in the given string.
-func (pom *pomXml) replaceVariables(s string) string {
+func (pom *PomXML) replaceVariables(s string) string {
 	if strings.HasPrefix(s, "${") {
 		if prop, present := pom.PropertiesMap[s[2:len(s)-1]]; !present {
 			log.Fatalf("Failed property lookup %s: %s\n", s, pom.PropertiesMap)
@@ -222,7 +225,7 @@ func (pom *pomXml) replaceVariables(s string) string {
 }
 
 // Unmarshal parses a downloaded pom.xml. This is of course less trivial than you would hope.
-func (pom *pomXml) Unmarshal(f *Fetch, response []byte) {
+func (pom *PomXML) Unmarshal(f *Fetch, response []byte) {
 	pom.OriginalArtifact = pom.Artifact // Keep a copy of this for later
 	decoder := xml.NewDecoder(bytes.NewReader(response))
 	// This is not beautiful; it assumes all inputs are utf-8 compatible, essentially, in order to handle
@@ -233,8 +236,8 @@ func (pom *pomXml) Unmarshal(f *Fetch, response []byte) {
 		log.Fatalf("Error parsing XML response: %s\n", err)
 	}
 	// Clean up strings in case they have spaces
-	pom.GroupId = strings.TrimSpace(pom.GroupId)
-	pom.ArtifactId = strings.TrimSpace(pom.ArtifactId)
+	pom.GroupID = strings.TrimSpace(pom.GroupID)
+	pom.ArtifactID = strings.TrimSpace(pom.ArtifactID)
 	pom.SetVersion(strings.TrimSpace(pom.Version))
 	for i, licence := range pom.Licences.Licence {
 		pom.Licences.Licence[i].Name = strings.TrimSpace(licence.Name)
@@ -245,14 +248,14 @@ func (pom *pomXml) Unmarshal(f *Fetch, response []byte) {
 		pom.PropertiesMap[prop.XMLName.Local] = prop.Value
 	}
 	// There are also some properties that aren't described by the above - "project" is a bit magic.
-	pom.PropertiesMap["groupId"] = pom.GroupId
-	pom.PropertiesMap["artifactId"] = pom.ArtifactId
+	pom.PropertiesMap["groupId"] = pom.GroupID
+	pom.PropertiesMap["artifactId"] = pom.ArtifactID
 	pom.PropertiesMap["version"] = pom.Version
-	pom.PropertiesMap["project.groupId"] = pom.GroupId
+	pom.PropertiesMap["project.groupId"] = pom.GroupID
 	pom.PropertiesMap["project.version"] = pom.Version
-	if pom.Parent.ArtifactId != "" {
-		if pom.Parent.GroupId == pom.GroupId && pom.Parent.ArtifactId == pom.ArtifactId {
-			log.Fatalf("Circular dependency: %s:%s:%s specifies itself as its own parent", pom.GroupId, pom.ArtifactId, pom.Version)
+	if pom.Parent.ArtifactID != "" {
+		if pom.Parent.GroupID == pom.GroupID && pom.Parent.ArtifactID == pom.ArtifactID {
+			log.Fatalf("Circular dependency: %s:%s:%s specifies itself as its own parent", pom.GroupID, pom.ArtifactID, pom.Version)
 		}
 		// Must inherit variables from the parent.
 		pom.Parent.isParent = true
@@ -273,23 +276,23 @@ func (pom *pomXml) Unmarshal(f *Fetch, response []byte) {
 	}
 }
 
-func (pom *pomXml) handleDependency(f *Fetch, dep *pomDependency) {
+func (pom *PomXML) handleDependency(f *Fetch, dep *pomDependency) {
 	// This is a bit of a hack; our build model doesn't distinguish these in the way Maven does.
 	// TODO(pebers): Consider allowing specifying these to this tool to produce test-only deps.
 	// Similarly system deps don't actually get fetched from Maven.
 	if dep.Scope == "test" || dep.Scope == "system" {
-		log.Info("Not fetching %s:%s (dep of %s) because of scope", dep.GroupId, dep.ArtifactId, pom.Artifact)
+		log.Info("Not fetching %s:%s (dep of %s) because of scope", dep.GroupID, dep.ArtifactID, pom.Artifact)
 		return
 	}
-	if dep.Optional && !f.ShouldInclude(dep.ArtifactId) {
-		log.Info("Not fetching optional dependency %s:%s (of %s)", dep.GroupId, dep.ArtifactId, pom.Artifact)
+	if dep.Optional && !f.ShouldInclude(dep.ArtifactID) {
+		log.Info("Not fetching optional dependency %s:%s (of %s)", dep.GroupID, dep.ArtifactID, pom.Artifact)
 		return
 	}
-	dep.GroupId = pom.replaceVariables(dep.GroupId)
-	dep.ArtifactId = pom.replaceVariables(dep.ArtifactId)
+	dep.GroupID = pom.replaceVariables(dep.GroupID)
+	dep.ArtifactID = pom.replaceVariables(dep.ArtifactID)
 	dep.SetVersion(pom.replaceVariables(dep.Version))
 	dep.Dependor = pom
-	if f.IsExcluded(dep.ArtifactId) {
+	if f.IsExcluded(dep.ArtifactID) {
 		log.Info("Not fetching %s, is excluded by command-line parameter", dep.Artifact)
 		return
 	} else if pom.OriginalArtifact.IsExcluded(&dep.Artifact) {
@@ -313,7 +316,7 @@ func (dep *pomDependency) Resolve(f *Fetch) {
 		// things seem to expect the latest. Most likely it is some complex resolution
 		// logic, but we'll take a stab at the same if the group matches and the same
 		// version exists, otherwise we'll take the latest.
-		if metadata := f.Metadata(&dep.Artifact); dep.GroupId == dep.Dependor.GroupId && metadata.HasVersion(dep.Dependor.Version) {
+		if metadata := f.Metadata(&dep.Artifact); dep.GroupID == dep.Dependor.GroupID && metadata.HasVersion(dep.Dependor.Version) {
 			dep.SoftVersion = dep.Dependor.Version
 		} else {
 			dep.SoftVersion = metadata.LatestVersion()
@@ -328,8 +331,8 @@ func (dep *pomDependency) Resolve(f *Fetch) {
 }
 
 // AllDependencies returns all the dependencies for this package.
-func (pom *pomXml) AllDependencies() []*pomXml {
-	deps := make([]*pomXml, 0, len(pom.Dependencies.Dependency))
+func (pom *PomXML) AllDependencies() []*PomXML {
+	deps := make([]*PomXML, 0, len(pom.Dependencies.Dependency))
 	for _, dep := range pom.Dependencies.Dependency {
 		if dep.Pom != nil {
 			deps = append(deps, dep.Pom)
@@ -339,7 +342,7 @@ func (pom *pomXml) AllDependencies() []*pomXml {
 }
 
 // AllLicences returns all the licences for this package.
-func (pom *pomXml) AllLicences() []string {
+func (pom *PomXML) AllLicences() []string {
 	licences := make([]string, len(pom.Licences.Licence))
 	for i, licence := range pom.Licences.Licence {
 		licences[i] = licence.Name

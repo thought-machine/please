@@ -11,9 +11,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/op/go-logging.v1"
 
-	"cache/cluster"
-	"cache/server"
 	"cli"
+	"tools/cache/cluster"
+	"tools/cache/server"
 )
 
 var log = logging.MustGetLogger("rpc_cache_server")
@@ -21,7 +21,7 @@ var log = logging.MustGetLogger("rpc_cache_server")
 var opts struct {
 	Usage       string `usage:"rpc_cache_server is a server for Please's remote RPC cache.\n\nSee https://please.build/cache.html for more information."`
 	Port        int    `short:"p" long:"port" description:"Port to serve on" default:"7677"`
-	HttpPort    int    `long:"http_port" description:"Port to serve HTTP on (for profiling, metrics etc)"`
+	HTTPPort    int    `long:"http_port" description:"Port to serve HTTP on (for profiling, metrics etc)"`
 	MetricsPort int    `long:"metrics_port" description:"Port to serve Prometheus metrics on"`
 	Dir         string `short:"d" long:"dir" description:"Directory to write into" default:"plz-rpc-cache"`
 	Verbosity   int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
@@ -80,20 +80,20 @@ func main() {
 		clusta.Join(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
 	}
 
-	if opts.HttpPort != 0 {
+	if opts.HTTPPort != 0 {
 		http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Set("Content-Type", "text/plain")
 			w.Write([]byte(fmt.Sprintf("Total size: %d bytes\nNum files: %d\n", cache.TotalSize(), cache.NumFiles())))
 		})
 		go func() {
-			port := fmt.Sprintf(":%d", opts.HttpPort)
+			port := fmt.Sprintf(":%d", opts.HTTPPort)
 			if opts.TLSFlags.KeyFile != "" {
 				log.Fatalf("%s\n", http.ListenAndServeTLS(port, opts.TLSFlags.CertFile, opts.TLSFlags.KeyFile, nil))
 			} else {
 				log.Fatalf("%s\n", http.ListenAndServe(port, nil))
 			}
 		}()
-		log.Notice("Serving HTTP stats on port %d", opts.HttpPort)
+		log.Notice("Serving HTTP stats on port %d", opts.HTTPPort)
 	}
 
 	log.Notice("Starting up RPC cache server on port %d...", opts.Port)

@@ -1,6 +1,6 @@
 go_library(
     name = 'cluster',
-    srcs = glob(['*.go'], excludes = ['*_test.go']),
+    srcs = ['cluster.go'],
     deps = [
         '//src/cache/proto:rpc_cache',
         '//src/cache/tools',
@@ -8,7 +8,7 @@ go_library(
         '//third_party/go:logging',
         '//third_party/go:memberlist',
     ],
-    visibility = ['//src/cache/server:all'],
+    visibility = ['//tools/cache/...'],
 )
 
 go_test(

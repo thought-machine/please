@@ -20,7 +20,7 @@ var (
 	reader       io.Reader
 )
 
-const cachePath = "src/cache/server/test_data"
+const cachePath = "tools/cache/server/test_data"
 
 func init() {
 	c := newCache(cachePath)

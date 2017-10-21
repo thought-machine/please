@@ -1,4 +1,4 @@
-// plz_go_test implements a code templater for go tests.
+// Package main implements plz_go_test, a code templater for go tests.
 // This is essentially equivalent to what 'go test' does but it lifts some restrictions
 // on file organisation and allows the code to be instrumented for coverage as separate
 // build targets rather than having to repeat it for every test.
@@ -10,7 +10,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"cli"
-	"tools/please_go_test/buildgo"
+	"tools/please_go_test/gotest"
 )
 
 var log = logging.MustGetLogger("plz_go_test")
@@ -31,11 +31,11 @@ var opts struct {
 func main() {
 	cli.ParseFlagsOrDie("plz_go_test", "7.2.0", &opts)
 	cli.InitLogging(opts.Verbosity)
-	coverVars, err := buildgo.FindCoverVars(opts.Dir, opts.Exclude, opts.Args.Sources)
+	coverVars, err := gotest.FindCoverVars(opts.Dir, opts.Exclude, opts.Args.Sources)
 	if err != nil {
 		log.Fatalf("Error scanning for coverage: %s", err)
 	}
-	if err = buildgo.WriteTestMain(opts.Package, buildgo.IsVersion18(opts.Args.Go), opts.Args.Sources, opts.Output, coverVars); err != nil {
+	if err = gotest.WriteTestMain(opts.Package, gotest.IsVersion18(opts.Args.Go), opts.Args.Sources, opts.Output, coverVars); err != nil {
 		log.Fatalf("Error writing test main: %s", err)
 	}
 	os.Exit(0)

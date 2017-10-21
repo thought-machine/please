@@ -15,8 +15,8 @@ import (
 	"tools/jarcat/zip"
 )
 
-// A PexInfo describes the PEX-INFO file written into the root of the .zip file.
-type PexInfo struct {
+// A Info describes the PEX-INFO file written into the root of the .zip file.
+type Info struct {
 	BuildProperties BuildProperties `json:"build_properties"`
 	CodeHash        string          `json:"code_hash"`
 	EntryPoint      string          `json:"entry_point"`
@@ -24,25 +24,25 @@ type PexInfo struct {
 	PexRoot         string          `json:"pex_root"`
 }
 
-// A BuildProperties represents the BuildProperties entry in a PexInfo.
+// A BuildProperties represents the BuildProperties entry in a Info.
 type BuildProperties struct {
 	Class    string `json:"class"`
 	Platform string `json:"platform"`
 	Version  []int  `json:"version"`
 }
 
-// A PexWriter implements writing a .pex file in various steps.
-type PexWriter struct {
-	info           *PexInfo
+// A Writer implements writing a .pex file in various steps.
+type Writer struct {
+	info           *Info
 	shebang        string
 	realEntryPoint string
 	testSrcs       []string
 }
 
-// NewPexWriter constructs a new PexWriter.
-func NewPexWriter(entryPoint, interpreter, codeHash string, zipSafe bool) *PexWriter {
-	pw := &PexWriter{
-		info: &PexInfo{
+// NewWriter constructs a new Writer.
+func NewWriter(entryPoint, interpreter, codeHash string, zipSafe bool) *Writer {
+	pw := &Writer{
+		info: &Info{
 			// As far as we know, this doesn't affect what happens at runtime,
 			// it's just for reference and so we don't need to pretend to be Python.
 			BuildProperties: BuildProperties{
@@ -62,7 +62,7 @@ func NewPexWriter(entryPoint, interpreter, codeHash string, zipSafe bool) *PexWr
 }
 
 // SetShebang sets the leading shebang that will be written to the file.
-func (pw *PexWriter) SetShebang(shebang string) {
+func (pw *Writer) SetShebang(shebang string) {
 	if !path.IsAbs(shebang) {
 		shebang = "/usr/bin/env " + shebang
 	}
@@ -72,9 +72,9 @@ func (pw *PexWriter) SetShebang(shebang string) {
 	pw.shebang = shebang + "\n"
 }
 
-// SetTest sets this PexWriter to write tests using the given sources.
+// SetTest sets this Writer to write tests using the given sources.
 // This overrides the entry point given earlier.
-func (pw *PexWriter) SetTest(srcs []string) {
+func (pw *Writer) SetTest(srcs []string) {
 	pw.info.EntryPoint = "test_main"
 	pw.testSrcs = make([]string, len(srcs))
 	for i, src := range srcs {
@@ -83,7 +83,7 @@ func (pw *PexWriter) SetTest(srcs []string) {
 }
 
 // Write writes the pex to the given output file.
-func (pw *PexWriter) Write(out, moduleDir string) error {
+func (pw *Writer) Write(out, moduleDir string) error {
 	f := zip.NewFile(out, true)
 	defer f.Close()
 	f.Include = pw.zipIncludes()
@@ -127,7 +127,7 @@ func (pw *PexWriter) Write(out, moduleDir string) error {
 }
 
 // zipIncludes returns the list of paths we'll include from our own zip file.
-func (pw *PexWriter) zipIncludes() []string {
+func (pw *Writer) zipIncludes() []string {
 	// If we're writing a test, we can write the whole bootstrap dir and move on with our lives.
 	if len(pw.testSrcs) != 0 {
 		return []string{".bootstrap"}

@@ -18,7 +18,7 @@ type Resolver struct {
 	// Contains all the poms we've fetched.
 	// Note that these are keyed by a subset of the artifact struct, so we
 	// can do version-independent lookups.
-	poms map[unversioned][]*pomXml
+	poms map[unversioned][]*PomXML
 	// Reference to a thing that fetches for us.
 	fetch *Fetch
 	// Task queue that prioritises upcoming tasks.
@@ -30,7 +30,7 @@ type Resolver struct {
 // NewResolver constructs and returns a new Resolver instance.
 func NewResolver(f *Fetch) *Resolver {
 	return &Resolver{
-		poms:  map[unversioned][]*pomXml{},
+		poms:  map[unversioned][]*PomXML{},
 		fetch: f,
 		tasks: queue.NewPriorityQueue(100, false),
 	}
@@ -58,7 +58,7 @@ func (r *Resolver) Run(artifacts []Artifact, concurrency int) {
 
 // Pom returns a pom for an artifact. The version doesn't have to be specified exactly.
 // If one doesn't currently exist it will return nil.
-func (r *Resolver) Pom(a *Artifact) *pomXml {
+func (r *Resolver) Pom(a *Artifact) *PomXML {
 	r.Lock()
 	defer r.Unlock()
 	return r.pom(a)
@@ -66,7 +66,7 @@ func (r *Resolver) Pom(a *Artifact) *pomXml {
 
 // CreatePom returns a pom for an artifact. If a suitable match doesn't exist, a new one
 // will be created. The second return value is true if a new one was created.
-func (r *Resolver) CreatePom(a *Artifact) (*pomXml, bool) {
+func (r *Resolver) CreatePom(a *Artifact) (*PomXML, bool) {
 	r.Lock()
 	defer r.Unlock()
 	if pom := r.pom(a); pom != nil {
@@ -76,14 +76,14 @@ func (r *Resolver) CreatePom(a *Artifact) (*pomXml, bool) {
 	if a.Version == "" {
 		a.SetVersion(a.SoftVersion)
 	}
-	pom := &pomXml{Artifact: *a}
+	pom := &PomXML{Artifact: *a}
 	r.poms[pom.unversioned] = append(r.poms[pom.unversioned], pom)
 	return pom, true
 }
 
-func (r *Resolver) pom(a *Artifact) *pomXml {
+func (r *Resolver) pom(a *Artifact) *PomXML {
 	poms := r.poms[a.unversioned]
-	log.Debug("Resolving %s:%s: found %d candidates", a.GroupId, a.ArtifactId, len(poms))
+	log.Debug("Resolving %s:%s: found %d candidates", a.GroupID, a.ArtifactID, len(poms))
 	for _, pom := range poms {
 		if pom.SoftVersion != "" && a.SoftVersion == "" {
 			// Unfortunately we can't reuse these if we downloaded as a 'soft' version and
@@ -135,7 +135,7 @@ func (r *Resolver) Mediate() {
 	for _, poms := range r.poms {
 		if len(poms) > 1 { // clearly unnecessary otherwise
 			wg.Add(1)
-			go func(poms []*pomXml) {
+			go func(poms []*PomXML) {
 				r.mediate(poms)
 				wg.Done()
 			}(poms)
@@ -144,9 +144,9 @@ func (r *Resolver) Mediate() {
 	wg.Wait()
 }
 
-func (r *Resolver) mediate(poms []*pomXml) {
+func (r *Resolver) mediate(poms []*PomXML) {
 	// strip out parents which we don't need to worry about
-	nonParents := make([]*pomXml, 0, len(poms))
+	nonParents := make([]*PomXML, 0, len(poms))
 	for _, pom := range poms {
 		if !pom.isParent {
 			nonParents = append(nonParents, pom)
@@ -164,7 +164,7 @@ func (r *Resolver) mediate(poms []*pomXml) {
 	})
 
 	// Reduce these to just hard deps (any soft versions we assumed, so we don't care about)
-	hard := make([]*pomXml, 0, len(poms))
+	hard := make([]*PomXML, 0, len(poms))
 	for _, pom := range poms {
 		if pom.SoftVersion == "" {
 			hard = append(hard, pom)
@@ -184,7 +184,7 @@ func (r *Resolver) mediate(poms []*pomXml) {
 	for _, pom := range hard[1:] {
 		if !ver.Intersect(&pom.OriginalArtifact.ParsedVersion) {
 			// TODO(peterebden): Should really give some more detail here about what we can't satisfy
-			log.Fatalf("Unsatisfiable version constraints for %s:%s: %s", pom.GroupId, pom.ArtifactId, strings.Join(r.allVersions(hard), " "))
+			log.Fatalf("Unsatisfiable version constraints for %s:%s: %s", pom.GroupID, pom.ArtifactID, strings.Join(r.allVersions(hard), " "))
 		}
 	}
 	// Find the first one that satisfies this version & use that.
@@ -194,15 +194,15 @@ func (r *Resolver) mediate(poms []*pomXml) {
 			return
 		}
 	}
-	log.Fatalf("Failed to find a suitable version for %s:%s", poms[0].GroupId, poms[0].ArtifactId)
+	log.Fatalf("Failed to find a suitable version for %s:%s", poms[0].GroupID, poms[0].ArtifactID)
 }
 
 // updateDeps updates all the dependencies to point to one particular artifact.
-func (r *Resolver) updateDeps(poms []*pomXml, winner *pomXml) {
+func (r *Resolver) updateDeps(poms []*PomXML, winner *PomXML) {
 	for _, pom := range poms {
 		for _, dependor := range pom.Dependors {
 			for _, dep := range dependor.Dependencies.Dependency {
-				if dep.GroupId == winner.GroupId && dep.ArtifactId == winner.ArtifactId {
+				if dep.GroupID == winner.GroupID && dep.ArtifactID == winner.ArtifactID {
 					dep.Pom = winner
 				}
 			}
@@ -211,7 +211,7 @@ func (r *Resolver) updateDeps(poms []*pomXml, winner *pomXml) {
 }
 
 // allVersions returns all the version descriptors in the given set of poms.
-func (r *Resolver) allVersions(poms []*pomXml) []string {
+func (r *Resolver) allVersions(poms []*PomXML) []string {
 	ret := make([]string, len(poms))
 	for i, pom := range poms {
 		ret[i] = pom.OriginalArtifact.ParsedVersion.Raw
