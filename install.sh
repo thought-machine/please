@@ -27,7 +27,7 @@ cp -f plz-out/bin/tools/jarcat/jarcat ${DEST}/jarcat
 chmod 0775 ${DEST}/jarcat
 cp -f plz-out/bin/tools/please_maven/please_maven ${DEST}/please_maven
 chmod 0775 ${DEST}/please_maven
-cp -f plz-out/bin/tools/cache_cleaner/cache_cleaner ${DEST}/cache_cleaner
+cp -f plz-out/bin/tools/cache/cleaner ${DEST}/cache_cleaner
 chmod 0775 ${DEST}/cache_cleaner
 cp -f plz-out/bin/tools/please_diff_graphs/please_diff_graphs ${DEST}/please_diff_graphs
 chmod 0775 ${DEST}/please_diff_graphs
