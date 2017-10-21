@@ -61,11 +61,11 @@ if [ -z "$BOOTSTRAP_INTERPRETER" ]; then
 fi
 
 # Clean out old artifacts.
-rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/rules/embedded_parser.py
+rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/builtin_rules.go
 # Generate the cffi compiled source
 (cd src/parse/cffi && $BOOTSTRAP_INTERPRETER cffi_compiler.py defs.h please_parser.py)
 # Invoke this tool to embed the Python scripts.
-bin/go-bindata -o src/parse/builtin_rules.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
+bin/go-bindata -o src/parse/builtin_rules.bindata.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."

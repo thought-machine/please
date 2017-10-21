@@ -24,10 +24,6 @@ BLACKLISTED_VET_PACKAGES = {
     'test/go_rules',
     'test/go_rules/test',
     'third_party/go/zip',
-    # There are two warnings in here about unsafe.Pointer; we *think* they
-    # are safe but not 100% sure and it'd be nice to clean it up.
-    # Unfortunately may be hard due to cgo checks :(
-    'src/parse',
 }
 
 
@@ -35,12 +31,17 @@ def find_go_files(root):
     for dirname, dirs, files in os.walk(root):
         # Excludes github.com, gopkg.in, etc.
         dirs[:] = [d for d in dirs if '.' not in d and d != 'plz-out']
-        yield from [(dirname[2:], file) for file in files if file.endswith('.go')]
+        yield from [(dirname[2:], file) for file in files
+                    if file.endswith('.go') and not file.endswith('.bindata.go')]
 
 
 def run_linters(files):
     try:
-        subprocess.check_call(['go', 'tool', 'vet'] + files)
+        # There are two cases of "possible misuse of unsafe.Pointer" in the parser.
+        # We *think* our usage is legit although of course it would be nice to fix
+        # the warnings regardless. For now we disable it to get linting of the rest
+        # of the package.
+        subprocess.check_call(['go', 'tool', 'vet', '-unsafeptr=false'] + files)
         subprocess.check_call(['golint', '-set_exit_status'] + files)
         return True
     except subprocess.CalledProcessError:

@@ -58,13 +58,13 @@ var initializeOnce sync.Once
 type pythonParser struct{}
 
 // RunPreBuildFunction runs a pre-build function for a target.
-func (p *pythonParser) RunPreBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget) error {
-	return RunPreBuildFunction(threadId, state, target)
+func (p *pythonParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
+	return RunPreBuildFunction(threadID, state, target)
 }
 
 // RunPostBuildFunction runs a post-build function for a target.
-func (p *pythonParser) RunPostBuildFunction(threadId int, state *core.BuildState, target *core.BuildTarget, output string) error {
-	return RunPostBuildFunction(threadId, state, target, output)
+func (p *pythonParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
+	return RunPostBuildFunction(threadID, state, target, output)
 }
 
 // UndeferAnyParses undefers any pending parses that are waiting for this target to build.
@@ -336,6 +336,7 @@ func IsValidTargetName(name *C.char) bool {
 	return err == nil
 }
 
+// AddTarget is a cgo callback to add a new build target to the graph.
 //export AddTarget
 func AddTarget(pkgPtr uintptr, cName, cCmd, cTestCmd *C.char, binary, test, needsTransitiveDeps,
 	outputIsComplete, containerise, sandbox, testSandbox, noTestOutput, testOnly, stamp, filegroup, hashFilegroup bool,
@@ -406,6 +407,7 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTra
 	return target
 }
 
+// SetPreBuildFunction sets a pre-build function on a target.
 //export SetPreBuildFunction
 func SetPreBuildFunction(callback uintptr, cBytecode *C.char, cTarget uintptr) {
 	target := unsizet(cTarget)
@@ -414,6 +416,7 @@ func SetPreBuildFunction(callback uintptr, cBytecode *C.char, cTarget uintptr) {
 	target.PreBuildHash = hash[:]
 }
 
+// SetPostBuildFunction sets a post-build function on a target.
 //export SetPostBuildFunction
 func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget uintptr) {
 	target := unsizet(cTarget)
@@ -422,6 +425,8 @@ func SetPostBuildFunction(callback uintptr, cBytecode *C.char, cTarget uintptr) 
 	target.PostBuildHash = hash[:]
 }
 
+// AddDependency is called by the add_dep builtin to add a dependency to an existing target.
+// It's only invoked by post-build functions.
 //export AddDependency
 func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported bool) *C.char {
 	target, err := getTargetPost(cPackage, cTarget)
@@ -440,6 +445,7 @@ func AddDependency(cPackage uintptr, cTarget *C.char, cDep *C.char, exported boo
 	return nil
 }
 
+// AddOutputPost is called by the add_out builtin to add an output to an existing target.
 //export AddOutputPost
 func AddOutputPost(cPackage uintptr, cTarget, cOut *C.char) *C.char {
 	target, err := getTargetPost(cPackage, cTarget)
@@ -455,6 +461,7 @@ func AddOutputPost(cPackage uintptr, cTarget, cOut *C.char) *C.char {
 	return nil
 }
 
+// AddNamedOutputPost is called by the add_out builtin to add an output to an existing target.
 //export AddNamedOutputPost
 func AddNamedOutputPost(cPackage uintptr, cTarget, cName, cOut *C.char) *C.char {
 	target, err := getTargetPost(cPackage, cTarget)
@@ -470,6 +477,8 @@ func AddNamedOutputPost(cPackage uintptr, cTarget, cName, cOut *C.char) *C.char 
 	return nil
 }
 
+// AddLicencePost is called by the add_licence builtin to add a licence to a target
+// during a post-build function.
 //export AddLicencePost
 func AddLicencePost(cPackage uintptr, cTarget *C.char, cLicence *C.char) *C.char {
 	target, err := getTargetPost(cPackage, cTarget)
@@ -480,6 +489,7 @@ func AddLicencePost(cPackage uintptr, cTarget *C.char, cLicence *C.char) *C.char
 	return nil
 }
 
+// GetCommand is a cgo callback that returns the command for a target.
 //export GetCommand
 func GetCommand(cPackage uintptr, cTarget *C.char, cConfig *C.char) *C.char {
 	target, err := getTargetPost(cPackage, cTarget)
@@ -489,6 +499,7 @@ func GetCommand(cPackage uintptr, cTarget *C.char, cConfig *C.char) *C.char {
 	return C.CString(target.GetCommandConfig(C.GoString(cConfig)))
 }
 
+// SetCommand is a cgo callback that sets a (possibly config-specific) command on a target.
 //export SetCommand
 func SetCommand(cPackage uintptr, cTarget *C.char, cConfigOrCommand *C.char, cCommand *C.char) *C.char {
 	target, err := getTargetPost(cPackage, cTarget)
@@ -507,7 +518,7 @@ func SetCommand(cPackage uintptr, cTarget *C.char, cConfigOrCommand *C.char, cCo
 	return nil
 }
 
-// Called by above to get a target from the current package.
+// getTargetPost is called by above to get a target from the current package.
 // Returns an error if the target is not in the current package or has already been built.
 func getTargetPost(cPackage uintptr, cTarget *C.char) (*core.BuildTarget, error) {
 	pkg := unsizep(cPackage)
@@ -524,6 +535,7 @@ func getTargetPost(cPackage uintptr, cTarget *C.char) (*core.BuildTarget, error)
 	return target, nil
 }
 
+// AddSource is a cgo callback that adds a source to a target.
 //export AddSource
 func AddSource(cTarget uintptr, cSource *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -535,7 +547,7 @@ func AddSource(cTarget uintptr, cSource *C.char) *C.char {
 	return nil
 }
 
-// Parses an incoming source label as either a file or a build label.
+// parseSource parses an incoming source label as either a file or a build label.
 // Identifies if the file is owned by this package and returns an error if not.
 func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, error) {
 	if core.LooksLikeABuildLabel(src) {
@@ -546,14 +558,14 @@ func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, 
 		return nil, fmt.Errorf("'%s' (in package %s) is an invalid path; build target paths can't contain ../", src, packageName)
 	} else if src[0] == '/' || src[0] == '~' {
 		if !systemAllowed {
-			return nil, fmt.Errorf("'%s' (in package %s) is an absolute path; that's not allowed.", src, packageName)
+			return nil, fmt.Errorf("'%s' (in package %s) is an absolute path; that's not allowed", src, packageName)
 		}
 		return core.SystemFileLabel{Path: src}, nil
 	} else if strings.Contains(src, "/") {
 		// Target is in a subdirectory, check nobody else owns that.
 		for dir := path.Dir(path.Join(packageName, src)); dir != packageName && dir != "."; dir = path.Dir(dir) {
 			if core.IsPackage(dir) {
-				return nil, fmt.Errorf("Package %s tries to use file %s, but that belongs to another package (%s).", packageName, src, dir)
+				return nil, fmt.Errorf("Package %s tries to use file %s, but that belongs to another package (%s)", packageName, src, dir)
 			}
 		}
 	}
@@ -566,6 +578,7 @@ func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, 
 	return core.FileLabel{File: src, Package: packageName}, nil
 }
 
+// AddNamedSource adds a named source to a target.
 //export AddNamedSource
 func AddNamedSource(cTarget uintptr, cName *C.char, cSource *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -577,18 +590,21 @@ func AddNamedSource(cTarget uintptr, cName *C.char, cSource *C.char) *C.char {
 	return nil
 }
 
+// AddCommand adds a (possibly config-specific) command to a target.
 //export AddCommand
 func AddCommand(cTarget uintptr, cConfig *C.char, cCommand *C.char) *C.char {
 	unsizet(cTarget).AddCommand(C.GoString(cConfig), C.GoString(cCommand))
 	return nil
 }
 
+// AddTestCommand adds a (possibly config-specific) test command to a target.
 //export AddTestCommand
 func AddTestCommand(cTarget uintptr, cConfig *C.char, cCommand *C.char) *C.char {
 	unsizet(cTarget).AddTestCommand(C.GoString(cConfig), C.GoString(cCommand))
 	return nil
 }
 
+// AddSecret adds a secret to a target.
 //export AddSecret
 func AddSecret(cTarget uintptr, cSecret *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -596,6 +612,7 @@ func AddSecret(cTarget uintptr, cSecret *C.char) *C.char {
 	return nil
 }
 
+// AddData adds a runtime data file to a test.
 //export AddData
 func AddData(cTarget uintptr, cData *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -607,6 +624,7 @@ func AddData(cTarget uintptr, cData *C.char) *C.char {
 	return nil
 }
 
+// AddOutput adds an output to a build target.
 //export AddOutput
 func AddOutput(cTarget uintptr, cOutput *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -614,6 +632,7 @@ func AddOutput(cTarget uintptr, cOutput *C.char) *C.char {
 	return nil
 }
 
+// AddNamedOutput adds a named output to a build target.
 //export AddNamedOutput
 func AddNamedOutput(cTarget uintptr, cName *C.char, cOutput *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -621,6 +640,7 @@ func AddNamedOutput(cTarget uintptr, cName *C.char, cOutput *C.char) *C.char {
 	return nil
 }
 
+// AddOptionalOutput adds an optional output to a build target.
 //export AddOptionalOutput
 func AddOptionalOutput(cTarget uintptr, cOutput *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -628,6 +648,7 @@ func AddOptionalOutput(cTarget uintptr, cOutput *C.char) *C.char {
 	return nil
 }
 
+// AddDep adds a dependency to a target.
 //export AddDep
 func AddDep(cTarget uintptr, cDep *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -639,6 +660,7 @@ func AddDep(cTarget uintptr, cDep *C.char) *C.char {
 	return nil
 }
 
+// AddExportedDep adds an exported dependency to a target.
 //export AddExportedDep
 func AddExportedDep(cTarget uintptr, cDep *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -650,6 +672,7 @@ func AddExportedDep(cTarget uintptr, cDep *C.char) *C.char {
 	return nil
 }
 
+// AddTool adds a tool to a build target.
 //export AddTool
 func AddTool(cTarget uintptr, cTool *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -661,6 +684,7 @@ func AddTool(cTarget uintptr, cTool *C.char) *C.char {
 	return nil
 }
 
+// AddNamedTool adds a named tool to a build target.
 //export AddNamedTool
 func AddNamedTool(cTarget uintptr, cName *C.char, cTool *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -680,6 +704,7 @@ func parseTool(target *core.BuildTarget, tool string) (core.BuildInput, error) {
 	return parseSource(tool, target.Label.PackageName, true)
 }
 
+// AddVis adds a visibility directive to a build target.
 //export AddVis
 func AddVis(cTarget uintptr, cVis *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -696,6 +721,7 @@ func AddVis(cTarget uintptr, cVis *C.char) *C.char {
 	return nil
 }
 
+// AddLabel adds a label to a build target.
 //export AddLabel
 func AddLabel(cTarget uintptr, cLabel *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -703,6 +729,7 @@ func AddLabel(cTarget uintptr, cLabel *C.char) *C.char {
 	return nil
 }
 
+// AddHash adds a hash to a build target.
 //export AddHash
 func AddHash(cTarget uintptr, cHash *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -710,6 +737,7 @@ func AddHash(cTarget uintptr, cHash *C.char) *C.char {
 	return nil
 }
 
+// AddLicence adds a licence to a build target.
 //export AddLicence
 func AddLicence(cTarget uintptr, cLicence *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -717,6 +745,7 @@ func AddLicence(cTarget uintptr, cLicence *C.char) *C.char {
 	return nil
 }
 
+// AddTestOutput adds a test output file to a build target.
 //export AddTestOutput
 func AddTestOutput(cTarget uintptr, cTestOutput *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -724,6 +753,7 @@ func AddTestOutput(cTarget uintptr, cTestOutput *C.char) *C.char {
 	return nil
 }
 
+// AddRequire adds a require statement to a build target.
 //export AddRequire
 func AddRequire(cTarget uintptr, cRequire *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -733,6 +763,7 @@ func AddRequire(cTarget uintptr, cRequire *C.char) *C.char {
 	return nil
 }
 
+// AddProvide adds a provide mapping to a build target.
 //export AddProvide
 func AddProvide(cTarget uintptr, cLanguage *C.char, cDep *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -744,6 +775,7 @@ func AddProvide(cTarget uintptr, cLanguage *C.char, cDep *C.char) *C.char {
 	return nil
 }
 
+// SetContainerSetting sets a particular container setting on a target.
 //export SetContainerSetting
 func SetContainerSetting(cTarget uintptr, cName, cValue *C.char) *C.char {
 	target := unsizet(cTarget)
@@ -843,6 +875,7 @@ var logLevelFuncs = map[logging.Level]func(format string, args ...interface{}){
 	logging.DEBUG:    log.Debug,
 }
 
+// Log is a cgo callback that is called by the log() builtin to log into our normal logging framework.
 //export Log
 func Log(level int, cPackage uintptr, cMessage *C.char) {
 	pkg := unsizep(cPackage)
@@ -853,6 +886,7 @@ func Log(level int, cPackage uintptr, cMessage *C.char) {
 	f("//%s/BUILD: %s", pkg.Name, C.GoString(cMessage))
 }
 
+// Glob implements the glob() builtin build function.
 //export Glob
 func Glob(cPackage *C.char, cIncludes **C.char, numIncludes int, cExcludes **C.char, numExcludes int, includeHidden bool) **C.char {
 	packageName := C.GoString(cPackage)
@@ -893,6 +927,8 @@ func cStringArrayToStringSlice(a **C.char, n int, prefix string) []string {
 	return ret
 }
 
+// GetLabels returns the set of labels for a build target and its transitive dependencies.
+// The labels are filtered by the given prefix, which is stripped from the returned labels.
 //export GetLabels
 func GetLabels(cPackage uintptr, cTarget *C.char, cPrefix *C.char) **C.char {
 	// Two formats are supported here: either passing just the name of a target in the current

@@ -1,4 +1,4 @@
-// Package responsible for parsing build files and constructing build targets & the graph.
+// Package parse implements parsing of the BUILD files via an embedded Python interpreter.
 //
 // The actual work here is done by an embedded PyPy instance. Various rules are built in to
 // the binary itself using go-bindata to embed the .py files; these are always available to
@@ -14,7 +14,7 @@ import (
 	"core"
 )
 
-// Parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
+// Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
 // It is not an error if the package has already been parsed.
 //
 // By default, after the package is parsed, any targets that are now needed for the build and ready

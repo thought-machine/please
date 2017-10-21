@@ -8,7 +8,7 @@ cgo_library(
     compiler_flags = ['--std=c99 -Werror'],
     go_srcs = glob(['*.go'], excludes = [
         '*_test.go',
-        'builtin_rules.go',
+        'builtin_rules.bindata.go',
         'interpreter.go',
     ]) + [':builtin_rules'],
     linker_flags = ([] if (CONFIG.OS == 'freebsd') else ['-ldl']),
