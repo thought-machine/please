@@ -900,6 +900,15 @@ func (target *BuildTarget) NamedTools(name string) []BuildInput {
 	return target.namedTools[name]
 }
 
+// AllData returns all the data paths for this target.
+func (target *BuildTarget) AllData(graph *BuildGraph) []string {
+	ret := make([]string, 0, len(target.Data))
+	for _, datum := range target.Data {
+		ret = append(ret, datum.Paths(graph)...)
+	}
+	return ret
+}
+
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
 	target.AddMaybeExportedDependency(dep, false, false)
