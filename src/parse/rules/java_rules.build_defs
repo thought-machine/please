@@ -332,7 +332,7 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
             cmd=cmd + ' -s src.jar -e ""',
             tools=tools,
         )
-        build_rule(
+        return build_rule(
             name=name,
             hashes=hash if isinstance(hash, list) else [hash] if hash else None,
             output_is_complete=True,
@@ -346,7 +346,7 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
             tools=tools,
         )
     elif not deps_only:
-        maven_jar(
+        return maven_jar(
             name=name,
             id=id,
             repository=repos,
@@ -356,7 +356,7 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
             filename=filename,
         )
     else:
-        build_rule(
+        return build_rule(
             name=name,
             deps=[':_%s#deps' % name],
             exported_deps=deps,
@@ -470,7 +470,7 @@ def maven_jar(name, id, repository=None, hash=None, hashes=None, deps=None,
     else:
         local_deps = None
 
-    filegroup(
+    return filegroup(
         name = name,
         srcs = srcs,
         provides = provides,
