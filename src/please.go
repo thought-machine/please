@@ -81,7 +81,6 @@ var opts struct {
 	Profile          string `long:"profile" hidden:"true" description:"Write profiling output to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
-	NoCacheCleaner   bool   `description:"Don't start a cleaning process for the directory cache" no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
 	VisibilityParse  bool   `description:"Parse all targets that the original targets are visible to. Used for some query steps." no-flag:"true"`
 
@@ -374,7 +373,7 @@ var buildFunctions = map[string]func() bool{
 		return false
 	},
 	"clean": func() bool {
-		opts.NoCacheCleaner = true
+		config.Cache.DirClean = false
 		if len(opts.Clean.Args.Targets) == 0 {
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
 				// Clean everything, doesn't require parsing at all.
@@ -560,7 +559,7 @@ func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 
 // Used above as a convenience wrapper for query functions.
 func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state *core.BuildState)) bool {
-	opts.NoCacheCleaner = true
+	config.Cache.DirClean = false
 	if !needFullParse {
 		opts.ParsePackageOnly = true
 		opts.OutputFlags.PlainOutput = true // No point displaying this for one of these queries.
@@ -626,9 +625,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 	} else if config.Please.NumThreads <= 0 {
 		config.Please.NumThreads = runtime.NumCPU() + 2
-	}
-	if opts.NoCacheCleaner {
-		config.Cache.DirCacheCleaner = ""
 	}
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config

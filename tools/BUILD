@@ -1,7 +1,6 @@
 filegroup(
     name = 'tools',
     deps = [
-        '//tools/cache:cleaner',
         '//tools/cache:http_cache_server',
         '//tools/cache:rpc_cache_server',
         '//tools/jarcat',

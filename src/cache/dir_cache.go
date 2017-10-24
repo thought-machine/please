@@ -6,18 +6,27 @@ import (
 	"encoding/base64"
 	"os"
 	"path"
-	"syscall"
+	"path/filepath"
+	"sort"
+	"sync"
+	"time"
+
+	"github.com/djherbis/atime"
+	"github.com/dustin/go-humanize"
 
 	"core"
 )
 
 type dirCache struct {
-	Dir string
+	Dir   string
+	added map[string]uint64
+	mutex sync.Mutex
 }
 
 func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files ...string) {
 	cacheDir := cache.getPath(target, key)
 	tmpDir := cacheDir + "=" // Temp dir which we'll move when it's ready.
+	cache.markDir(cacheDir, 0)
 	// Clear out anything that might already be there.
 	if err := os.RemoveAll(cacheDir); err != nil {
 		log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
@@ -26,24 +35,29 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files ...stri
 		log.Warning("Failed to create cache directory %s: %s", tmpDir, err)
 		return
 	}
+	var totalSize uint64
 	for out := range cacheArtifacts(target, files...) {
-		cache.storeFile(target, out, tmpDir)
+		totalSize += cache.storeFile(target, out, tmpDir)
 	}
+	cache.markDir(cacheDir, totalSize)
 	if err := os.Rename(tmpDir, cacheDir); err != nil {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 	}
 }
 
 func (cache *dirCache) StoreExtra(target *core.BuildTarget, key []byte, out string) {
-	cache.storeFile(target, out, cache.getPath(target, key))
+	path := cache.getPath(target, key)
+	cache.markDir(path, 0)
+	size := cache.storeFile(target, out, path)
+	cache.markDir(path, size)
 }
 
-func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string) {
+func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string) uint64 {
 	log.Debug("Storing %s: %s in dir cache...", target.Label, out)
 	if dir := path.Dir(out); dir != "." {
 		if err := os.MkdirAll(path.Join(cacheDir, dir), core.DirPermissions); err != nil {
 			log.Warning("Failed to create cache directory %s: %s", path.Join(cacheDir, dir), err)
-			return
+			return 0
 		}
 	}
 	outFile := path.Join(core.RepoRoot, target.OutDir(), out)
@@ -53,11 +67,15 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 		log.Warning("Failed to remove existing cached file %s: %s", cachedFile, err)
 	} else if err := os.MkdirAll(cacheDir, core.DirPermissions); err != nil {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
-		return
+		return 0
 	} else if err := core.RecursiveCopyFile(outFile, cachedFile, fileMode(target), true, true); err != nil {
 		// Cannot hardlink files into the cache, must copy them for reals.
 		log.Warning("Failed to store cache file %s: %s", cachedFile, err)
 	}
+	// TODO(peterebden): This is a little inefficient, it would be better to track the size in
+	//                   RecursiveCopyFile rather than walking again.
+	size, _ := findSize(cachedFile)
+	return size
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte) bool {
@@ -125,8 +143,26 @@ func (cache *dirCache) getPath(target *core.BuildTarget, key []byte) string {
 	return path.Join(cache.Dir, target.Label.PackageName, target.Label.Name, base64.URLEncoding.EncodeToString(key))
 }
 
+// markDir marks a directory as added to the cache, which saves it from later deletion.
+func (cache *dirCache) markDir(path string, size uint64) {
+	cache.mutex.Lock()
+	defer cache.mutex.Unlock()
+	cache.added[path] = size
+	cache.added[path+"="] = size
+}
+
+// isMarked returns true if a directory has previously been passed to markDir.
+func (cache *dirCache) isMarked(path string) (uint64, bool) {
+	cache.mutex.Lock()
+	defer cache.mutex.Unlock()
+	size, present := cache.added[path]
+	return size, present
+}
+
 func newDirCache(config *core.Configuration) *dirCache {
-	cache := new(dirCache)
+	cache := &dirCache{
+		added: map[string]uint64{},
+	}
 	// Absolute paths are allowed. Relative paths are interpreted relative to the repo root.
 	if config.Cache.Dir[0] == '/' {
 		cache.Dir = config.Cache.Dir
@@ -137,21 +173,9 @@ func newDirCache(config *core.Configuration) *dirCache {
 	if err := os.MkdirAll(cache.Dir, core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create root cache directory %s: %s", cache.Dir, err)
 	}
-	// Fire off the cache cleaner process.
-	if config.Cache.DirCacheCleaner != "" && config.Cache.DirCacheCleaner != "none" {
-		go func() {
-			cleaner := core.ExpandHomePath(config.Cache.DirCacheCleaner)
-			log.Info("Running cache cleaner: %s --dir %s --high_water_mark %s --low_water_mark %s",
-				cleaner, cache.Dir, config.Cache.DirCacheHighWaterMark, config.Cache.DirCacheLowWaterMark)
-			if _, err := syscall.ForkExec(cleaner, []string{
-				cleaner,
-				"--dir", cache.Dir,
-				"--high_water_mark", config.Cache.DirCacheHighWaterMark,
-				"--low_water_mark", config.Cache.DirCacheLowWaterMark,
-			}, nil); err != nil {
-				log.Errorf("Failed to start cache cleaner: %s", err)
-			}
-		}()
+	// Start the cache-cleaning goroutine.
+	if config.Cache.DirClean {
+		go cache.clean(uint64(config.Cache.DirCacheHighWaterMark), uint64(config.Cache.DirCacheLowWaterMark))
 	}
 	return cache
 }
@@ -161,4 +185,100 @@ func fileMode(target *core.BuildTarget) os.FileMode {
 		return 0555
 	}
 	return 0444
+}
+
+// Period of time in seconds between which two artifacts are considered to have the same atime.
+const accessTimeGracePeriod = 600 // Ten minutes
+
+// A cacheEntry represents a single file entry in the cache.
+type cacheEntry struct {
+	Path  string
+	Size  uint64
+	Atime int64
+}
+
+func findSize(path string) (uint64, error) {
+	var totalSize uint64
+	if err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		totalSize += uint64(info.Size())
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+	return totalSize, nil
+}
+
+// clean runs background cleaning of this cache until the process exits.
+// Returns the total size of the cache after it's finished.
+func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
+	entries := []cacheEntry{}
+	var totalSize uint64
+	if err := filepath.Walk(cache.Dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		} else if (len(info.Name()) == 28 || len(info.Name()) == 29) && info.Name()[27] == '=' {
+			// Directory has the right length. We do this in an attempt to clean only entire
+			// entries in the cache, not just individual files from them.
+			// 28 == length of 20-byte sha1 hash, encoded to base64, which always gets a trailing =
+			// as padding so we can check that to be "sure".
+			// Also 29 in case we appended an extra = (see below)
+			if size, marked := cache.isMarked(path); marked {
+				totalSize += size
+				return filepath.SkipDir // Already handled
+			}
+			size, err := findSize(path)
+			if err != nil {
+				return err
+			}
+			entries = append(entries, cacheEntry{
+				Path:  path,
+				Size:  size,
+				Atime: atime.Get(info).Unix(),
+			})
+			totalSize += size
+			return filepath.SkipDir
+		} else {
+			return nil // nothing particularly to do for other entries
+		}
+	}); err != nil {
+		log.Error("error walking cache directory: %s\n", err)
+		return totalSize
+	}
+	log.Info("Total cache size: %s", humanize.Bytes(uint64(totalSize)))
+	if totalSize < highWaterMark {
+		return totalSize // Nothing to do, cache is small enough.
+	}
+	// OK, we need to slim it down a bit. We implement a simple LRU algorithm.
+	sort.Slice(entries, func(i, j int) bool {
+		diff := entries[i].Atime - entries[j].Atime
+		if diff > -accessTimeGracePeriod && diff < accessTimeGracePeriod {
+			return entries[i].Size > entries[j].Size
+		}
+		return entries[i].Atime < entries[j].Atime
+	})
+	for _, entry := range entries {
+		if _, marked := cache.isMarked(entry.Path); marked {
+			continue
+		}
+
+		log.Debug("Cleaning %s, accessed %s, saves %s", entry.Path, humanize.Time(time.Unix(entry.Atime, 0)), humanize.Bytes(uint64(entry.Size)))
+		// Try to rename the directory first so we don't delete bits while someone might access them.
+		newPath := entry.Path + "="
+		if err := os.Rename(entry.Path, newPath); err != nil {
+			log.Errorf("Couldn't rename %s: %s", entry.Path, err)
+			continue
+		}
+		if err := os.RemoveAll(newPath); err != nil {
+			log.Errorf("Couldn't remove %s: %s", newPath, err)
+			continue
+		}
+		totalSize -= entry.Size
+		if totalSize < lowWaterMark {
+			break
+		}
+	}
+	return totalSize
 }

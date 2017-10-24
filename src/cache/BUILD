@@ -9,7 +9,9 @@ go_library(
         '//src/cache/tools',
         '//src/cli',
         '//src/core',
+        '//third_party/go:atime',
         '//third_party/go:grpc',
+        '//third_party/go:humanize',
         '//third_party/go:logging',
     ],
     visibility = ['PUBLIC'],
@@ -52,6 +54,15 @@ go_test(
 go_test(
     name = 'async_cache_test',
     srcs = ['async_cache_test.go'],
+    deps = [
+        ':cache',
+        '//third_party/go:testify',
+    ],
+)
+
+go_test(
+    name = 'dir_cache_test',
+    srcs = ['dir_cache_test.go'],
     deps = [
         ':cache',
         '//third_party/go:testify',

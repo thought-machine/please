@@ -76,7 +76,6 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go", "js"})
 
 	// Default values for these guys depend on config.Please.Location.
-	defaultPath(&config.Cache.DirCacheCleaner, config.Please.Location, "cache_cleaner")
 	defaultPath(&config.Go.TestTool, config.Please.Location, "please_go_test")
 	defaultPath(&config.Python.PexTool, config.Please.Location, "please_pex")
 	defaultPath(&config.Java.JavacWorker, config.Please.Location, "javac_worker")
@@ -126,8 +125,9 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.HTTPTimeout = cli.Duration(5 * time.Second)
 	config.Cache.RPCTimeout = cli.Duration(5 * time.Second)
 	config.Cache.Dir = ".plz-cache"
-	config.Cache.DirCacheHighWaterMark = "10G"
-	config.Cache.DirCacheLowWaterMark = "8G"
+	config.Cache.DirCacheHighWaterMark = 10 * cli.GiByte
+	config.Cache.DirCacheLowWaterMark = 8 * cli.GiByte
+	config.Cache.DirClean = true
 	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
 	config.Cache.RPCMaxMsgSize.UnmarshalFlag("200MiB")
 	config.Metrics.PushFrequency = cli.Duration(400 * time.Millisecond)
@@ -224,8 +224,9 @@ type Configuration struct {
 		Workers               int          `help:"Number of workers for uploading artifacts to remote caches, which is done asynchronously."`
 		Dir                   string       `help:"Sets the directory to use for the dir cache.\nThe default is .plz-cache, if set to the empty string the dir cache will be disabled."`
 		DirCacheCleaner       string       `help:"The binary to use for cleaning the directory cache.\nDefaults to cache_cleaner in the plz install directory.\nCan also be set to the empty string to disable attempting to run it - note that this will of course lead to the dir cache growing without limit which may ruin your day if it fills your disk :)"`
-		DirCacheHighWaterMark string       `help:"Starts cleaning the directory cache when it is over this number of bytes.\nCan also be given with human-readable suffixes like 10G, 200MB etc."`
-		DirCacheLowWaterMark  string       `help:"When cleaning the directory cache, it's reduced to at most this size."`
+		DirCacheHighWaterMark cli.ByteSize `help:"Starts cleaning the directory cache when it is over this number of bytes.\nCan also be given with human-readable suffixes like 10G, 200MB etc."`
+		DirCacheLowWaterMark  cli.ByteSize `help:"When cleaning the directory cache, it's reduced to at most this size."`
+		DirClean              bool         `help:"Controls whether entries in the dir cache are cleaned or not. If disabled the cache will only grow."`
 		HTTPURL               cli.URL      `help:"Base URL of the HTTP cache.\nNot set to anything by default which means the cache will be disabled."`
 		HTTPWriteable         bool         `help:"If True this plz instance will write content back to the HTTP cache.\nBy default it runs in read-only mode."`
 		HTTPTimeout           cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`

@@ -27,6 +27,7 @@ go get github.com/kardianos/osext
 go get github.com/texttheater/golang-levenshtein/levenshtein
 go get github.com/Workiva/go-datastructures/queue
 go get github.com/coreos/go-semver/semver
+go get github.com/djherbis/atime
 
 # Determine which interpreter engines we'll build.
 INTERPRETERS=""

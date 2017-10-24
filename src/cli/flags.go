@@ -16,6 +16,9 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
+// GiByte is a re-export for convenience of other things using it.
+const GiByte = humanize.GiByte
+
 // ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
 // It may exit if certain options are encountered (eg. --help).
 func ParseFlags(appname string, data interface{}, args []string) (*flags.Parser, []string, error) {

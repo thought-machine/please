@@ -11,7 +11,6 @@ signed_fpm_deb(
         '/opt/please/please_maven': '//tools/please_maven',
         '/opt/please/javac_worker': '//tools/javac_worker',
         '/opt/please/junit_runner.jar': '//tools/junit_runner',
-        '/opt/please/cache_cleaner': '//tools/cache:cleaner',
         '/opt/please/jarcat': '//tools/jarcat',
         '/opt/please/please_diff_graphs': '//tools/please_diff_graphs',
         '/opt/please/please_go_test': '//tools/please_go_test',
@@ -75,7 +74,6 @@ signed_tarball(
     srcs = [
         '//src:please',
         '//src/parse/cffi:all_engines',
-        '//tools/cache:cleaner',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',
@@ -114,7 +112,6 @@ hash_filegroup(
     srcs = [
         '//src:please',
         '//src/parse/cffi:all_engines',
-        '//tools/cache:cleaner',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',
