@@ -432,7 +432,7 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
     download_rule = remote_file(
         name = name,
         _tag = 'download',
-        url = 'https://github.com/google/protobuf/releases/download/v%s/protoc-%s-${OS}-${XARCH}.zip' % (version, version),
+        url = 'https://github.com/google/protobuf/releases/download/v%s/protoc-%s-${XOS}-${XARCH}.zip' % (version, version),
         out = 'protoc-%s.zip' % version,
         hashes = hashes,
         deps = deps,
