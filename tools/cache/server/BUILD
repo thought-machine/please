@@ -37,11 +37,11 @@ go_test(
 go_test(
     name = 'rpc_server_test',
     srcs = ['rpc_server_test.go'],
-    container = True,
     data = [
         ':test_data',
         '//src/cache:test_data',
     ],
+    flaky = True,
     deps = [
         ':server',
         '//third_party/go:testify',

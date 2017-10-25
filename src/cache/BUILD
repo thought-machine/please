@@ -20,7 +20,6 @@ go_library(
 go_test(
     name = 'rpc_cache_test',
     srcs = ['rpc_cache_test.go'],
-    container = True,  # Brings up an internal server
     data = [':test_data'],
     deps = [
         ':cache',
@@ -41,9 +40,7 @@ filegroup(
 go_test(
     name = 'http_cache_test',
     srcs = ['http_cache_test.go'],
-    container = True,  # Brings up an internal server
     data = [':test_data'],
-    static = True,
     deps = [
         ':cache',
         '//third_party/go:logging',
