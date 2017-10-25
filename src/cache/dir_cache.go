@@ -84,6 +84,7 @@ func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte) bool {
 		log.Debug("%s: %s doesn't exist in dir cache", target.Label, cacheDir)
 		return false
 	}
+	cache.markDir(cacheDir, 0)
 	for out := range cacheArtifacts(target) {
 		if !cache.RetrieveExtra(target, key, out) {
 			return false
@@ -101,6 +102,7 @@ func (cache *dirCache) RetrieveExtra(target *core.BuildTarget, key []byte, out s
 		log.Debug("%s: %s doesn't exist in dir cache", target.Label, cachedOut)
 		return false
 	}
+	cache.markDir(cacheDir, 0)
 	log.Debug("Retrieving %s: %s from dir cache...", target.Label, cachedOut)
 	if dir := path.Dir(realOut); dir != "." {
 		if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
