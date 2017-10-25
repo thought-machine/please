@@ -54,7 +54,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)
 		results, err := parseTestResults(target, cachedOutputFile, true)
-		target.Results.Duration = time.Since(startTime).Seconds()
+		target.Results.Duration = time.Since(startTime)
 		target.Results.Cached = true
 		if err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to parse cached test file %s", cachedOutputFile)
@@ -140,7 +140,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i+1, numRuns))
 		}
 		out, err := prepareAndRunTest(tid, state, target)
-		duration := time.Since(startTime).Seconds()
+		duration := time.Since(startTime)
 		startTime = time.Now() // reset this for next time
 
 		// This is all pretty involved; there are lots of different possibilities of what could happen.

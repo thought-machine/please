@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"sort"
 	"strings"
+	"time"
 )
 
 // TestResults describes a set of test results for a test target.
@@ -16,10 +17,10 @@ type TestResults struct {
 	Flakes           int // Number of failed attempts to run the test
 	Failures         []TestFailure
 	Passes           []string
-	Output           string  // Stdout / stderr from the test.
-	Cached           bool    // True if the test results were retrieved from cache
-	TimedOut         bool    // True if the test failed because we timed it out.
-	Duration         float64 // Length of time this test took, in seconds.
+	Output           string        // Stdout / stderr from the test.
+	Cached           bool          // True if the test results were retrieved from cache
+	TimedOut         bool          // True if the test failed because we timed it out.
+	Duration         time.Duration // Length of time this test took
 }
 
 // TestFailure represents information about a test failure.

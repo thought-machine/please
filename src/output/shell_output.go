@@ -25,6 +25,10 @@ import (
 
 var log = logging.MustGetLogger("output")
 
+// durationGranularity is the granularity that we build durations at.
+const durationGranularity = 10 * time.Millisecond
+const testDurationGranularity = time.Millisecond
+
 // SetColouredOutput forces on or off coloured output in logging and other console output.
 func SetColouredOutput(on bool) {
 	cli.StdErrIsATerminal = on
@@ -72,7 +76,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	if traceFile != "" {
 		writeTrace(traceFile)
 	}
-	duration := time.Since(state.StartTime).Seconds()
+	duration := time.Since(state.StartTime).Round(durationGranularity)
 	if len(failedNonTests) > 0 { // Something failed in the build step.
 		if state.Verbosity > 0 {
 			printFailedBuildResults(failedNonTests, failedTargetMap, duration)
@@ -191,7 +195,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	}
 }
 
-func printTestResults(state *core.BuildState, aggregatedResults core.TestResults, failedTargets []core.BuildLabel, duration float64) {
+func printTestResults(state *core.BuildState, aggregatedResults core.TestResults, failedTargets []core.BuildLabel, duration time.Duration) {
 	if len(failedTargets) > 0 {
 		for _, failed := range failedTargets {
 			target := state.Graph.TargetOrDie(failed)
@@ -202,7 +206,7 @@ func printTestResults(state *core.BuildState, aggregatedResults core.TestResults
 					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
 				}
 			} else {
-				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_WHITE}Took %3.1fs${RESET}\n",
+				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_WHITE}Took %s${RESET}\n",
 					target.Label, target.Results.Passed, target.Results.Skipped, target.Results.Failed, target.Results.Duration)
 				for _, failure := range target.Results.Failures {
 					printf("${BOLD_RED}Failure: %s in %s${RESET}\n", failure.Type, failure.Name)
@@ -238,8 +242,8 @@ func printTestResults(state *core.BuildState, aggregatedResults core.TestResults
 			i++
 		}
 	}
-	aggregatedResults.Duration = -0.1 // Exclude this from being displayed later.
-	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}. Total time %0.2fs.${RESET}\n",
+	aggregatedResults.Duration = -100 * time.Millisecond // Exclude this from being displayed later.
+	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}. Total time %s.${RESET}\n",
 		pluralise(i, "test target", "test targets"), testResultMessage(aggregatedResults, failedTargets), duration))
 }
 
@@ -274,7 +278,7 @@ func testResultMessage(results core.TestResults, failedTargets []core.BuildLabel
 	}
 	msg := fmt.Sprintf("%s run", pluralise(results.NumTests, "test", "tests"))
 	if results.Duration >= 0.0 {
-		msg += fmt.Sprintf(" in %4.2fs", results.Duration)
+		msg += fmt.Sprintf(" in %s", results.Duration.Round(testDurationGranularity))
 	}
 	msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passed)
 	if results.Failed > 0 {
@@ -292,7 +296,7 @@ func testResultMessage(results core.TestResults, failedTargets []core.BuildLabel
 	return msg
 }
 
-func printBuildResults(state *core.BuildState, duration float64, showStatus bool) {
+func printBuildResults(state *core.BuildState, duration time.Duration, showStatus bool) {
 	// Count incrementality.
 	totalBuilt := 0
 	totalReused := 0
@@ -308,7 +312,7 @@ func printBuildResults(state *core.BuildState, duration float64, showStatus bool
 		incrementality = 100 // avoid NaN
 	}
 	// Print this stuff so we always see it.
-	printf("Build finished; total time %0.2fs, incrementality %.1f%%. Outputs:\n", duration, incrementality)
+	printf("Build finished; total time %s, incrementality %.1f%%. Outputs:\n", duration, incrementality)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		if showStatus {
@@ -322,8 +326,8 @@ func printBuildResults(state *core.BuildState, duration float64, showStatus bool
 	}
 }
 
-func printHashes(state *core.BuildState, duration float64) {
-	fmt.Printf("Hashes calculated, total time %0.2fs:\n", duration)
+func printHashes(state *core.BuildState, duration time.Duration) {
+	fmt.Printf("Hashes calculated, total time %s:\n", duration)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		hash, err := build.OutputHash(state.Graph.TargetOrDie(label))
 		if err != nil {
@@ -334,8 +338,8 @@ func printHashes(state *core.BuildState, duration float64) {
 	}
 }
 
-func printTempDirs(state *core.BuildState, duration float64) {
-	fmt.Printf("Temp directories prepared, total time %0.2fs:\n", duration)
+func printTempDirs(state *core.BuildState, duration time.Duration) {
+	fmt.Printf("Temp directories prepared, total time %s:\n", duration)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		cmd := build.ReplaceSequences(target, target.GetCommand())
@@ -372,8 +376,8 @@ func buildResult(target *core.BuildTarget) []string {
 	return results
 }
 
-func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap map[core.BuildLabel]error, duration float64) {
-	printf("${WHITE_ON_RED}Build stopped after %0.2fs. %s failed:${RESET}\n", duration, pluralise(len(failedTargetMap), "target", "targets"))
+func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap map[core.BuildLabel]error, duration time.Duration) {
+	printf("${WHITE_ON_RED}Build stopped after %s. %s failed:${RESET}\n", duration, pluralise(len(failedTargetMap), "target", "targets"))
 	for _, label := range failedTargets {
 		err := failedTargetMap[label]
 		if err != nil {
