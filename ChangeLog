@@ -1,3 +1,23 @@
+Version 9.4.0
+-------------
+
+    * Added a c_object rule which lets you compile a C or C++ object file from a single
+      input. It's lower-level than c_library so rarely needed, but allows a bit more control.
+    * Added protoc_binary which can download a protoc release to use as the protoc_tool.
+      Unfortunately there is no equivalent available for gRPC C++ / Python plugins.
+    * Pre- and post- build functions are now better optimised about recalculating
+      changes after they run. Can significantly speed up building packages with
+      many c_library rules in them.
+    * Jarcat can now align files to specific size boundaries in a similar way to
+      Android's zipalign command.
+    * Setting PDEATHSIG on child commands which may help ensure that subprocesses
+      (especially workers) terminate correctly.
+    * Runtime data of tests is exposed in a $DATA env var.
+    * Cleaning of the directory cache is now done in-process rather than in a
+      forked subprocess. This allows it to be better synchronised with the main build
+      about what it's deleting.
+
+
 Version 9.3.2
 -------------
 
