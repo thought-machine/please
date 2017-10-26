@@ -357,12 +357,6 @@ func (config *Configuration) Hash() []byte {
 	}
 	h.Write([]byte(config.Please.Lang))
 	h.Write([]byte(config.Please.Nonce))
-	// TODO(peterebden): Can we get rid of this? Doing it correctly would mean annotating every
-	//                   rule with things like cp and mv as tools - but maybe we just assume
-	//                   coreutils always behave as expected?
-	for _, p := range config.Build.Path {
-		h.Write([]byte(p))
-	}
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
