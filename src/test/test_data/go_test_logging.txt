@@ -1,0 +1,50 @@
+14:23:54,190 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [file:///home/app/git/core3/plz-out/tmp/skyscraper/e2e_tests/skyscraper_e2e_test._test/services/cassandra/logback_test.xml] at [file:/home/app/git/core3/plz-out/tmp/skyscraper/e2e_tests/skyscraper_e2e_test._test/services/cassandra/logback_test.xml]
+14:23:54,300 |-INFO in ch.qos.logback.classic.joran.action.ConfigurationAction - debug attribute not set
+14:23:54,303 |-INFO in ReconfigureOnChangeFilter{invocationCounter=0} - Will scan for changes in [[/home/app/git/core3/plz-out/tmp/skyscraper/e2e_tests/skyscraper_e2e_test._test/services/cassandra/logback_test.xml]] every 60 seconds. 
+14:23:54,303 |-INFO in ch.qos.logback.classic.joran.action.ConfigurationAction - Adding ReconfigureOnChangeFilter as a turbo filter
+14:23:54,309 |-ERROR in ch.qos.logback.core.util.ContextUtil@4563e9ab - Failed to get local hostname java.net.UnknownHostException
+	at java.net.UnknownHostException
+	at 	at ch.qos.logback.core.util.ContextUtil.getLocalAddressAsString(ContextUtil.java:59)
+	at 	at ch.qos.logback.core.util.ContextUtil.getLocalHostName(ContextUtil.java:41)
+	at 	at ch.qos.logback.core.util.ContextUtil.addHostNameAsProperty(ContextUtil.java:74)
+	at 	at ch.qos.logback.classic.joran.action.ConfigurationAction.begin(ConfigurationAction.java:57)
+	at 	at ch.qos.logback.core.joran.spi.Interpreter.callBeginAction(Interpreter.java:275)
+	at 	at ch.qos.logback.core.joran.spi.Interpreter.startElement(Interpreter.java:147)
+	at 	at ch.qos.logback.core.joran.spi.Interpreter.startElement(Interpreter.java:129)
+	at 	at ch.qos.logback.core.joran.spi.EventPlayer.play(EventPlayer.java:50)
+	at 	at ch.qos.logback.core.joran.GenericConfigurator.doConfigure(GenericConfigurator.java:149)
+	at 	at ch.qos.logback.core.joran.GenericConfigurator.doConfigure(GenericConfigurator.java:135)
+	at 	at ch.qos.logback.core.joran.GenericConfigurator.doConfigure(GenericConfigurator.java:99)
+	at 	at ch.qos.logback.core.joran.GenericConfigurator.doConfigure(GenericConfigurator.java:49)
+	at 	at ch.qos.logback.classic.util.ContextInitializer.configureByResource(ContextInitializer.java:77)
+	at 	at ch.qos.logback.classic.util.ContextInitializer.autoConfig(ContextInitializer.java:152)
+	at 	at org.slf4j.impl.StaticLoggerBinder.init(StaticLoggerBinder.java:85)
+	at 	at org.slf4j.impl.StaticLoggerBinder.<clinit>(StaticLoggerBinder.java:55)
+	at 	at org.slf4j.LoggerFactory.bind(LoggerFactory.java:129)
+	at 	at org.slf4j.LoggerFactory.performInitialization(LoggerFactory.java:108)
+	at 	at org.slf4j.LoggerFactory.getILoggerFactory(LoggerFactory.java:302)
+	at 	at org.slf4j.LoggerFactory.getLogger(LoggerFactory.java:276)
+	at 	at org.slf4j.LoggerFactory.getLogger(LoggerFactory.java:288)
+	at 	at org.apache.cassandra.service.CassandraDaemon.<clinit>(CassandraDaemon.java:103)
+14:23:54,310 |-INFO in ch.qos.logback.classic.joran.action.JMXConfiguratorAction - begin
+14:23:54,397 |-INFO in ch.qos.logback.core.joran.action.ShutdownHookAction - About to instantiate shutdown hook of type [ch.qos.logback.core.hook.DelayingShutdownHook]
+14:23:54,400 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+14:23:54,403 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [STDERR]
+14:23:54,429 |-INFO in ch.qos.logback.core.joran.action.NestedComplexPropertyIA - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+14:23:54,489 |-INFO in ch.qos.logback.classic.joran.action.RootLoggerAction - Setting level of ROOT logger to INFO
+14:23:54,489 |-INFO in ch.qos.logback.core.joran.action.AppenderRefAction - Attaching appender named [STDERR] to Logger[ROOT]
+14:23:54,490 |-INFO in ch.qos.logback.classic.joran.action.LoggerAction - Setting level of logger [org.apache.cassandra] to WARN
+14:23:54,490 |-INFO in ch.qos.logback.classic.joran.action.LoggerAction - Setting level of logger [com.thinkaurelius.thrift] to ERROR
+14:23:54,490 |-INFO in ch.qos.logback.classic.joran.action.ConfigurationAction - End of configuration.
+14:23:54,490 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@1fbc7afb - Registering current configuration as safe fallback point
+
+=== RUN   TestOneOffScrape
+--- PASS: TestOneOffScrape (2.36s)
+=== RUN   TestOneOffScrapeWithDummyWebsite
+Starting ChromeDriver 2.32 on port 33678
+Only local connections are allowed.
+--- PASS: TestOneOffScrapeWithDummyWebsite (15.49s)
+=== RUN   TestCredentialStorage
+--- PASS: TestCredentialStorage (4.71s)
+PASS
+coverage: 32.6% of statements

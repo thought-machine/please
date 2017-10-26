@@ -15,11 +15,6 @@ import (
 	"core"
 )
 
-func looksLikeGoTestResults(results []byte) bool {
-	// The latter case happens when there are no test functions to run.
-	return bytes.HasPrefix(results, []byte("===")) || bytes.HasPrefix(results, []byte("PASS"))
-}
-
 // Not sure what the -6 suffixes are about.
 var testStart = regexp.MustCompile("^=== RUN (.*)(?:-6)?$")
 var testResult = regexp.MustCompile("^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \\((.*)s\\)$")

@@ -1,8 +1,12 @@
 package test
 
-import "testing"
+import (
+	"testing"
 
-import "core"
+	"github.com/stretchr/testify/assert"
+
+	"core"
+)
 
 func TestGoFailure(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_test_failure.txt", false)
@@ -10,11 +14,11 @@ func TestGoFailure(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 4, "tests")
-	assert(t, results.Passed, 2, "passes")
-	assert(t, results.Failed, 2, "failures")
-	assert(t, results.Skipped, 0, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 4, results.NumTests)
+	assert.Equal(t, 2, results.Passed)
+	assert.Equal(t, 2, results.Failed)
+	assert.Equal(t, 0, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestGoPassed(t *testing.T) {
@@ -23,11 +27,11 @@ func TestGoPassed(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 4, "tests")
-	assert(t, results.Passed, 4, "passes")
-	assert(t, results.Failed, 0, "failures")
-	assert(t, results.Skipped, 0, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 4, results.NumTests)
+	assert.Equal(t, 4, results.Passed)
+	assert.Equal(t, 0, results.Failed)
+	assert.Equal(t, 0, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestGoMultipleFailure(t *testing.T) {
@@ -36,11 +40,11 @@ func TestGoMultipleFailure(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 2, "tests")
-	assert(t, results.Passed, 0, "passes")
-	assert(t, results.Failed, 2, "failures")
-	assert(t, results.Skipped, 0, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 2, results.NumTests)
+	assert.Equal(t, 0, results.Passed)
+	assert.Equal(t, 2, results.Failed)
+	assert.Equal(t, 0, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestGoSkipped(t *testing.T) {
@@ -49,11 +53,11 @@ func TestGoSkipped(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 4, "tests")
-	assert(t, results.Passed, 3, "passes")
-	assert(t, results.Failed, 0, "failures")
-	assert(t, results.Skipped, 1, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 4, results.NumTests)
+	assert.Equal(t, 3, results.Passed)
+	assert.Equal(t, 0, results.Failed)
+	assert.Equal(t, 1, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestGoSubtests(t *testing.T) {
@@ -62,8 +66,8 @@ func TestGoSubtests(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 7, "tests")
-	assert(t, results.Passed, 7, "passes")
+	assert.Equal(t, 7, results.NumTests)
+	assert.Equal(t, 7, results.Passed)
 }
 
 func TestBuckXML(t *testing.T) {
@@ -72,11 +76,11 @@ func TestBuckXML(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 4, "tests")
-	assert(t, results.Passed, 4, "passes")
-	assert(t, results.Failed, 0, "failures")
-	assert(t, results.Skipped, 0, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 4, results.NumTests)
+	assert.Equal(t, 4, results.Passed)
+	assert.Equal(t, 0, results.Failed)
+	assert.Equal(t, 0, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestJUnitXML(t *testing.T) {
@@ -85,11 +89,11 @@ func TestJUnitXML(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 2, "tests")
-	assert(t, results.Passed, 1, "passes")
-	assert(t, results.Failed, 1, "failures")
-	assert(t, results.Skipped, 0, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 2, results.NumTests)
+	assert.Equal(t, 1, results.Passed)
+	assert.Equal(t, 1, results.Failed)
+	assert.Equal(t, 0, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestKarmaXML(t *testing.T) {
@@ -98,11 +102,11 @@ func TestKarmaXML(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 10, "tests")
-	assert(t, results.Passed, 10, "passes")
-	assert(t, results.Failed, 0, "failures")
-	assert(t, results.Skipped, 0, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 10, results.NumTests)
+	assert.Equal(t, 10, results.Passed)
+	assert.Equal(t, 0, results.Failed)
+	assert.Equal(t, 0, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestUnitTestXML(t *testing.T) {
@@ -111,11 +115,11 @@ func TestUnitTestXML(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 2, "tests")
-	assert(t, results.Passed, 0, "passes")
-	assert(t, results.Failed, 2, "failures")
-	assert(t, results.Skipped, 0, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 2, results.NumTests)
+	assert.Equal(t, 0, results.Passed)
+	assert.Equal(t, 2, results.Failed)
+	assert.Equal(t, 0, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestGoSuite(t *testing.T) {
@@ -124,11 +128,11 @@ func TestGoSuite(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 7, "tests")
-	assert(t, results.Passed, 5, "passes")
-	assert(t, results.Failed, 1, "failures")
-	assert(t, results.Skipped, 1, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 7, results.NumTests)
+	assert.Equal(t, 5, results.Passed)
+	assert.Equal(t, 1, results.Failed)
+	assert.Equal(t, 1, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestGoIgnoreUnknownOutput(t *testing.T) {
@@ -137,30 +141,27 @@ func TestGoIgnoreUnknownOutput(t *testing.T) {
 		t.Errorf("Unable to parse file: %s", err)
 		return
 	}
-	assert(t, results.NumTests, 4, "tests")
-	assert(t, results.Passed, 4, "passes")
-	assert(t, results.Failed, 0, "failures")
-	assert(t, results.Skipped, 0, "skipped tests")
-	assert(t, results.ExpectedFailures, 0, "expected failures")
+	assert.Equal(t, 4, results.NumTests)
+	assert.Equal(t, 4, results.Passed)
+	assert.Equal(t, 0, results.Failed)
+	assert.Equal(t, 0, results.Skipped)
+	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
 func TestGoFailIfUnknownTestPasses(t *testing.T) {
 	_, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_test_unknown_test.txt", false)
-	if err == nil {
-		t.Errorf("Results should not be parsable.")
-	}
+	assert.Error(t, err)
 }
 
 func TestParseGoFileWithNoTests(t *testing.T) {
 	_, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_empty_test.txt", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-	}
+	assert.NoError(t, err)
 }
 
-// because I'm already pining for self.assertEqual...
-func assert(t *testing.T, actual int, expected int, description string) {
-	if actual != expected {
-		t.Errorf("Unexpected number of %s: should be %d, was %d", description, expected, actual)
-	}
+func TestParseGoFileWithLogging(t *testing.T) {
+	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_test_logging.txt", false)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, results.NumTests)
+	assert.Equal(t, 3, results.Passed)
+	assert.Equal(t, 0, results.Failed)
 }

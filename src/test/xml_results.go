@@ -3,6 +3,7 @@
 package test
 
 import (
+	"bytes"
 	"encoding/xml"
 	"io/ioutil"
 	"os"
@@ -11,6 +12,10 @@ import (
 
 	"core"
 )
+
+func looksLikeJUnitXMLTestResults(b []byte) bool {
+	return bytes.HasPrefix(b, []byte{'<', '?', 'x', 'm', 'l'})
+}
 
 func parseJUnitXMLTestResults(bytes []byte) (core.TestResults, error) {
 	results := core.TestResults{}

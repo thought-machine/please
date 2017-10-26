@@ -17,6 +17,7 @@ go_test(
     data = glob(['test_data/*']),
     deps = [
         ':test',
+        '//third_party/go:testify',
     ],
 )
 

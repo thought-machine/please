@@ -35,10 +35,10 @@ func parseTestResultsImpl(target *core.BuildTarget, outputFile string) (core.Tes
 	}
 	if len(bytes) == 0 {
 		return core.TestResults{}, fmt.Errorf("No results")
-	} else if looksLikeGoTestResults(bytes) {
-		return parseGoTestResults(bytes)
-	} else {
+	} else if looksLikeJUnitXMLTestResults(bytes) {
 		return parseJUnitXMLTestResults(bytes)
+	} else {
+		return parseGoTestResults(bytes)
 	}
 }
 
