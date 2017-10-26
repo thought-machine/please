@@ -414,7 +414,7 @@ def maven_jar(name, id, repository=None, hash=None, hashes=None, deps=None,
         artifact_type = '.exe'  # Maven always describes them this way, even for Linux :(
         out_artifact_type = ''  # But we're not peasants so we won't do the same.
     if native:
-        filename = filename or '%s-%s-%s${OS}-${XARCH}%s' % (artifact, version, classifier, artifact_type)
+        filename = filename or '%s-%s-%s${XOS}-${XARCH}%s' % (artifact, version, classifier, artifact_type)
     else:
         filename = filename or '%s-%s%s%s' % (artifact, version, classifier, artifact_type)
 

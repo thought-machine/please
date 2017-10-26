@@ -1,3 +1,10 @@
+Version 9.4.1
+-------------
+
+    * Small fix to maven_jar rules on OSX which would sometimes take the wrong path for
+      binary artifacts.
+
+
 Version 9.4.0
 -------------
 
