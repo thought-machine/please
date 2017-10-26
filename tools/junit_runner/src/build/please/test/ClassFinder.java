@@ -120,9 +120,12 @@ class ClassFinder {
      * Loads a single class if it matches our prefix.
      */
     private void loadClass(ClassLoader loader, String filename) {
+        if (!filename.endsWith(".class")) {
+            return;
+        }
         int classNameEnd = filename.length() - ".class".length();
         String className = filename.substring(0, classNameEnd).replace('/', '.');
-        if (className.startsWith(prefix) && filename.endsWith(".class")) {
+        if (className.startsWith(prefix)) {
             try {
                 classes.add(loader.loadClass(className));
             } catch (ClassNotFoundException ex) {

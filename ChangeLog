@@ -1,3 +1,10 @@
+Version 9.4.3
+-------------
+
+    * Fix a subtle bug in junit_runner where it could throw an index exception on
+      certain filenames.
+
+
 Version 9.4.2
 -------------
 
