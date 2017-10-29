@@ -16,6 +16,7 @@ package parse
 import (
 	"crypto/sha1"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -170,9 +171,12 @@ func initializeInterpreter(state *core.BuildState) {
 	dir, _ := AssetDir("")
 	sort.Strings(dir)
 	for _, filename := range dir {
-		loadBuiltinRules(filename)
+		loadBuiltinRules(filename, MustAsset(filename))
 	}
 	loadSubincludePackage()
+	for _, preload := range config.Parse.PreloadBuildDefs {
+		mustPreloadFile(preload)
+	}
 	state.Parser = &pythonParser{}
 	log.Debug("Interpreter ready")
 }
@@ -246,23 +250,15 @@ func setConfigValue(name string, value string) {
 	C.SetConfigValue(cName, cValue)
 }
 
-func loadBuiltinRules(path string) {
-	data := loadAsset(path)
+func loadBuiltinRules(path string, contents []byte) {
+	// This is a little inefficient in terms of the number of copies of this data we make.
+	data := C.CString(string(contents))
 	defer C.free(unsafe.Pointer(data))
 	cPackageName := C.CString(path)
 	defer C.free(unsafe.Pointer(cPackageName))
 	if result := C.GoString(C.ParseCode(data, cPackageName, 0)); result != "" {
-		// This obviously shouldn't happen, because we control all the builtin rules.
-		// It's here for developing rules in Please in case one makes a mistake :)
-		log.Fatalf("Failed to interpret builtin build rules from %s: %s", path, result)
+		log.Fatalf("Failed to interpret initial build rules from %s: %s", path, result)
 	}
-}
-
-func loadAsset(path string) *C.char {
-	data := MustAsset(path)
-	// well this is pretty inefficient... we end up with three copies of the data for no
-	// really good reason.
-	return C.CString(string(data))
 }
 
 func loadSubincludePackage() {
@@ -272,6 +268,14 @@ func loadSubincludePackage() {
 	C.ParseCode(nil, cPackageName, sizep(pkg))
 	C.free(unsafe.Pointer(cPackageName))
 	core.State.Graph.AddPackage(pkg)
+}
+
+func mustPreloadFile(preload string) {
+	data, err := ioutil.ReadFile(preload)
+	if err != nil {
+		log.Fatalf("Failed to preload requested build_defs file: %s", err)
+	}
+	loadBuiltinRules(preload, data)
 }
 
 // sizet converts a build target to a C.size_t.
