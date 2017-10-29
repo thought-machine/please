@@ -1,5 +1,3 @@
-subinclude('//build_defs:go_bindata')
-
 go_bindata(
     name = 'hash_rewriter',
     srcs = ['hash_rewriter.py'],

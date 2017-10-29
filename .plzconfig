@@ -8,10 +8,10 @@ pextool = //tools/please_pex
 defaultpiprepo = https://get.please.build/third_party/python/index.html
 moduledir = third_party.python
 
+[parse]
 ; This is a hack to handle peasant operating systems with case-insensitive file systems.
 ; I don't want to rename my package so we have one slightly differently named build file
 ; in this project.
-[parse]
 buildfilename = BUILD
 buildfilename = BUILD_
 ; Blacklist the third-party dirs, we never need to descend into those.
@@ -19,6 +19,8 @@ blacklistdirs = github.com
 blacklistdirs = golang.org
 blacklistdirs = google.golang.org
 blacklistdirs = gopkg.in
+; Make this generally available
+preloadbuilddefs = build_defs/go_bindata.build_defs
 
 [gc]
 keep = //test/...

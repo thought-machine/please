@@ -1,5 +1,3 @@
-subinclude('//build_defs:go_bindata')
-
 go_library(
     name = 'utils',
     srcs = glob(['*.go'], excludes = [

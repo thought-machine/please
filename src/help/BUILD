@@ -1,5 +1,3 @@
-subinclude('//build_defs:go_bindata')
-
 genrule(
     name = 'rule_defs',
     srcs = [

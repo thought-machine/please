@@ -1,5 +1,3 @@
-subinclude('//build_defs:go_bindata')
-
 go_bindata(
     name = 'main_files',
     srcs = ['//tools/please_pex:pex_data'],

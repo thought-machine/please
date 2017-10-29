@@ -1,5 +1,3 @@
-subinclude('//build_defs:go_bindata')
-
 cgo_library(
     name = 'parse',
     srcs = ['interpreter.go'],

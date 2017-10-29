@@ -1,5 +1,3 @@
-subinclude('//build_defs:go_bindata')
-
 go_bindata(
     name = 'rewrite',
     srcs = ['rewrite.py'],
