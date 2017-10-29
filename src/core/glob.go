@@ -133,7 +133,7 @@ func IsPackage(name string) bool {
 }
 
 func isPackageInternal(name string) bool {
-	for _, buildFileName := range State.Config.Please.BuildFileName {
+	for _, buildFileName := range State.Config.Parse.BuildFileName {
 		if FileExists(path.Join(name, buildFileName)) {
 			return true
 		}

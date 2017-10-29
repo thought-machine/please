@@ -38,7 +38,7 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 		"XARCH=x86_64",
 		"XOS=" + xos,
 		// Need this for certain tools, for example sass
-		"LANG=" + config.Please.Lang,
+		"LANG=" + config.Build.Lang,
 		// Use a restricted PATH; it'd be easier for the user if we pass it through
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory

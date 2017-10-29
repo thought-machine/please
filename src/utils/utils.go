@@ -34,11 +34,11 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 			} else if isABuildFile(info.Name(), config) && !info.IsDir() {
 				dir, _ := path.Split(name)
 				ch <- strings.TrimRight(dir, "/")
-			} else if name == config.Please.ExperimentalDir {
+			} else if name == config.Parse.ExperimentalDir {
 				return filepath.SkipDir // Skip the experimental directory if it's set
 			}
 			// Check against blacklist
-			for _, dir := range config.Please.BlacklistDirs {
+			for _, dir := range config.Parse.BlacklistDirs {
 				if dir == info.Name() {
 					return filepath.SkipDir
 				}
@@ -56,7 +56,7 @@ var seenStdin = false // Used to track that we don't try to read stdin twice
 
 // isABuildFile returns true if given filename is a build file name.
 func isABuildFile(name string, config *core.Configuration) bool {
-	for _, buildFileName := range config.Please.BuildFileName {
+	for _, buildFileName := range config.Parse.BuildFileName {
 		if name == buildFileName {
 			return true
 		}

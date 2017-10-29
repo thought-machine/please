@@ -88,9 +88,9 @@ func initializeInterpreter(state *core.BuildState) {
 	os.Setenv("PYTHONHASHSEED", "42")
 
 	// If an engine has been explicitly set, by flag or config, we honour it here.
-	if config.Please.ParserEngine != "" {
-		if !initialiseInterpreter(config.Please.ParserEngine, false) {
-			log.Fatalf("Failed to initialise requested parser engine [%s]", config.Please.ParserEngine)
+	if config.Parse.Engine != "" {
+		if !initialiseInterpreter(config.Parse.Engine, false) {
+			log.Fatalf("Failed to initialise requested parser engine [%s]", config.Parse.Engine)
 		}
 	} else {
 		// Okay, now try the standard fallbacks.
@@ -570,7 +570,7 @@ func parseSource(src, packageName string, systemAllowed bool) (core.BuildInput, 
 		}
 	}
 	// Make sure it's not the actual build file.
-	for _, filename := range core.State.Config.Please.BuildFileName {
+	for _, filename := range core.State.Config.Parse.BuildFileName {
 		if filename == src {
 			return nil, fmt.Errorf("You can't specify the BUILD file as an input to a rule")
 		}
@@ -894,7 +894,7 @@ func Glob(cPackage *C.char, cIncludes **C.char, numIncludes int, cExcludes **C.c
 	prefixedExcludes := cStringArrayToStringSlice(cExcludes, numExcludes, packageName)
 	excludes := cStringArrayToStringSlice(cExcludes, numExcludes, "")
 	// To make sure we can't glob the BUILD file, it is always added to excludes.
-	excludes = append(excludes, core.State.Config.Please.BuildFileName...)
+	excludes = append(excludes, core.State.Config.Parse.BuildFileName...)
 	filenames := core.Glob(packageName, includes, prefixedExcludes, excludes, includeHidden)
 	return stringSliceToCStringArray(filenames)
 }

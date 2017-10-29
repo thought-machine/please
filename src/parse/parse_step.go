@@ -241,7 +241,7 @@ func buildFileName(state *core.BuildState, pkgName string) string {
 	if state.Config.Bazel.Compatibility && pkgName == "external" {
 		return "WORKSPACE"
 	}
-	for _, buildFileName := range state.Config.Please.BuildFileName {
+	for _, buildFileName := range state.Config.Parse.BuildFileName {
 		if filename := path.Join(pkgName, buildFileName); core.FileExists(filename) {
 			return filename
 		}

@@ -11,7 +11,7 @@ moduledir = third_party.python
 ; This is a hack to handle peasant operating systems with case-insensitive file systems.
 ; I don't want to rename my package so we have one slightly differently named build file
 ; in this project.
-[please]
+[parse]
 buildfilename = BUILD
 buildfilename = BUILD_
 ; Blacklist the third-party dirs, we never need to descend into those.

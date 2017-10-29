@@ -69,7 +69,7 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	}
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
-	setDefault(&config.Please.BuildFileName, []string{"BUILD"})
+	setDefault(&config.Parse.BuildFileName, []string{"BUILD"})
 	setDefault(&config.Build.Path, []string{"/usr/local/bin", "/usr/bin", "/bin"})
 	setDefault(&config.Cover.FileExtension, []string{".go", ".py", ".java", ".js", ".cc", ".h", ".c"})
 	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc"})
@@ -82,7 +82,7 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	defaultPath(&config.Java.JarCatTool, config.Please.Location, "jarcat")
 	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
-	defaultPath(&config.Please.LintTool, config.Please.Location, "linter")
+	defaultPath(&config.Parse.LintTool, config.Please.Location, "linter")
 
 	if (config.Cache.RPCPrivateKey == "") != (config.Cache.RPCPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
@@ -90,6 +90,27 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	if c := config.Test.DefaultContainer; c != ContainerImplementationNone && c != ContainerImplementationDocker {
 		return config, fmt.Errorf("%s invalid for test.defaultcontainer; must be one of {none,docker}", c)
 	}
+
+	// Deprecations
+	if config.Parse.ExperimentalDir == "" && config.Please.ExperimentalDir != "" {
+		config.Parse.ExperimentalDir = config.Please.ExperimentalDir
+	}
+	if config.Build.Nonce == "" && config.Please.Nonce != "" {
+		config.Build.Nonce = config.Please.Nonce
+	}
+	if config.Parse.Engine == "" && config.Please.ParserEngine != "" {
+		config.Parse.Engine = config.Please.ParserEngine
+	}
+	if config.Build.Lang == "" && config.Please.Lang != "" {
+		config.Build.Lang = config.Please.Lang
+	}
+	if len(config.Parse.BuildFileName) == 0 && len(config.Please.BuildFileName) > 0 {
+		config.Parse.BuildFileName = config.Please.BuildFileName
+	}
+	if len(config.Parse.BlacklistDirs) == 0 && len(config.Please.BlacklistDirs) > 0 {
+		config.Parse.BlacklistDirs = config.Please.BlacklistDirs
+	}
+
 	return config, nil
 }
 
@@ -113,8 +134,8 @@ func DefaultConfiguration() *Configuration {
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.DownloadLocation = "https://get.please.build"
-	config.Please.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
-	config.Please.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
+	config.Build.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
+	config.Build.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
 	config.Build.Timeout = cli.Duration(10 * time.Minute)
 	config.Build.Config = "opt"         // Optimised builds by default
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
@@ -194,15 +215,22 @@ type Configuration struct {
 		Location         string      `help:"Defines the directory Please is installed into.\nDefaults to ~/.please but you might want it to be somewhere else if you're installing via another method (e.g. the debs and install script still use /opt/please)."`
 		SelfUpdate       bool        `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
 		DownloadLocation cli.URL     `help:"Defines the location to download Please from when self-updating. Defaults to the Please web server, but you can point it to some location of your own if you prefer to keep traffic within your network or use home-grown versions."`
-		BuildFileName    []string    `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+."`
-		BlacklistDirs    []string    `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
-		Lang             string      `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
-		ParserEngine     string      `help:"Allows forcing a particular parser engine. Can be either a path to a file or the name of an engine (e.g. 'pypy').\nIt is rare that you need to force this, typically Please will try available engines at startup." example:"pypy | python2 | python3 | /usr/lib/libplease_parser_custom.so"`
-		Nonce            string      `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 		NumThreads       int         `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed." example:"6"`
-		ExperimentalDir  string      `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
-		LintTool         string      `help:"Location of the lint tool for BUILD files."`
+		BuildFileName    []string    `help:"Deprecated, use parse.buildfilename instead"`
+		BlacklistDirs    []string    `help:"Deprecated, use parse.blacklistdirs instead"`
+		Lang             string      `help:"Deprecated, use build.lang instead"`
+		ParserEngine     string      `help:"Deprecated, use parse.engine instead"`
+		Nonce            string      `help:"Deprecated, use build.nonce instead"`
+		ExperimentalDir  string      `help:"Deprecated, use parse.experimentaldir instead"`
+		LintTool         string      `help:"Deprecated, use parse.linttool instead."`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
+	Parse struct {
+		LintTool        string   `help:"Location of the lint tool for BUILD files."`
+		Engine          string   `help:"Allows forcing a particular parser engine. Can be either a path to a file or the name of an engine (e.g. 'pypy').\nIt is rare that you need to force this, typically Please will try available engines at startup." example:"pypy | python2 | python3 | /usr/lib/libplease_parser_custom.so"`
+		ExperimentalDir string   `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
+		BuildFileName   []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+."`
+		BlacklistDirs   []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
+	} `help:"The [parse] section in the config contains settings specific to parsing files."`
 	Display struct {
 		UpdateTitle bool `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
 		SystemStats bool `help:"Whether or not to show basic system resource usage in the interactive display. Has no effect without that configured."`
@@ -215,8 +243,10 @@ type Configuration struct {
 		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
 		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
 		FallbackConfig    string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
+		Lang              string       `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
 		Sandbox           bool         `help:"True to sandbox individual build actions, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
 		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use."`
+		Nonce             string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 	}
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSWORD for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
@@ -352,11 +382,11 @@ func (config *Configuration) Hash() []byte {
 	// These fields are the ones that need to be in the general hash; other things will be
 	// picked up by relevant rules (particularly tool paths etc).
 	// Note that container settings are handled separately.
-	for _, f := range config.Please.BuildFileName {
+	for _, f := range config.Parse.BuildFileName {
 		h.Write([]byte(f))
 	}
-	h.Write([]byte(config.Please.Lang))
-	h.Write([]byte(config.Please.Nonce))
+	h.Write([]byte(config.Build.Lang))
+	h.Write([]byte(config.Build.Nonce))
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}

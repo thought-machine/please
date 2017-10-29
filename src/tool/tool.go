@@ -57,7 +57,7 @@ func matchingTools(config *core.Configuration, prefix string) map[string]string 
 		"jarcat":      config.Java.JarCatTool,
 		"javacworker": config.Java.JavacWorker,
 		"junitrunner": config.Java.JUnitRunner,
-		"lint":        config.Please.LintTool,
+		"lint":        config.Parse.LintTool,
 		"maven":       config.Java.PleaseMavenTool,
 		"pex":         config.Python.PexTool,
 	}

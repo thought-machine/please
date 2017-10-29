@@ -403,7 +403,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		numPending:        1,
 		Coverage:          TestCoverage{Files: map[string][]LineCoverage{}},
 		numWorkers:        numThreads,
-		experimentalLabel: BuildLabel{PackageName: config.Please.ExperimentalDir, Name: "..."},
+		experimentalLabel: BuildLabel{PackageName: config.Parse.ExperimentalDir, Name: "..."},
 		Stats:             &SystemStats{},
 	}
 	State.Hashes.Config = config.Hash()

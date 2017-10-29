@@ -140,6 +140,6 @@ func TestGetLabels(t *testing.T) {
 func TestMain(m *testing.M) {
 	core.NewBuildState(10, nil, 2, core.DefaultConfiguration())
 	// Need to set this before calling parseSource.
-	core.State.Config.Please.BuildFileName = []string{"TEST_BUILD"}
+	core.State.Config.Parse.BuildFileName = []string{"TEST_BUILD"}
 	os.Exit(m.Run())
 }

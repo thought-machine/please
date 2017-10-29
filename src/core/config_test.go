@@ -39,7 +39,7 @@ func TestConfigSlicesOverwrite(t *testing.T) {
 	// This should be completely overwritten by the config file
 	assert.Equal(t, []string{"/sbin"}, config.Build.Path)
 	// This should still get the defaults.
-	assert.Equal(t, []string{"BUILD"}, config.Please.BuildFileName)
+	assert.Equal(t, []string{"BUILD"}, config.Parse.BuildFileName)
 }
 
 func TestConfigOverrideString(t *testing.T) {
