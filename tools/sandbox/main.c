@@ -17,6 +17,7 @@
 #include <string.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <sys/mount.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 
@@ -81,10 +82,28 @@ int lo_up() {
     return 0;
 }
 
+// mount_tmp mounts a tmpfs on /tmp for the tests to muck about in.
+int mount_tmp() {
+    // Remounting / as private is necessary so that the tmpfs mount isn't visible to anyone else.
+    if (mount("none", "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0) {
+        perror("remount");
+        return 1;
+    }
+    const int flags = MS_LAZYTIME | MS_NOATIME | MS_NODEV | MS_NOSUID;
+    if (mount("tmpfs", "/tmp", "tmpfs", flags, NULL) != 0) {
+        perror("mount");
+        return 1;
+    }
+    return setenv("TMPDIR", "/tmp", 1);
+}
+
 // contain separates the process into new namespaces to sandbox it.
 int contain(char* argv[]) {
-    if (unshare(CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC) != 0) {
+    if (unshare(CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) != 0) {
         return 1;
+    }
+    if (mount_tmp() != 0) {
+      return 1;
     }
     if (lo_up() != 0) {
         return 1;
