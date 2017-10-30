@@ -14,13 +14,15 @@ import (
 )
 
 func TestBringUpCluster(t *testing.T) {
+	lis := openRPCPort(6995)
 	c1 := NewCluster(5995, 6995, "c1")
-	m1 := newRPCServer(c1, 6995)
+	m1 := newRPCServer(c1, lis)
 	c1.Init(3)
 	log.Notice("Cluster seeded")
 
-	m2 := newRPCServer(c2, 6996)
+	lis = openRPCPort(6996)
 	c2 := NewCluster(5996, 6996, "c2")
+	m2 := newRPCServer(c2, lis)
 	c2.Join([]string{"127.0.0.1:5995"})
 	log.Notice("c2 joined cluster")
 
@@ -42,8 +44,9 @@ func TestBringUpCluster(t *testing.T) {
 	assert.Equal(t, expected, c1.GetMembers())
 	assert.Equal(t, expected, c2.GetMembers())
 
+	lis = openRPCPort(6997)
 	c3 := NewCluster(5997, 6997, "c3")
-	m3 := newRPCServer(c2, 6997)
+	m3 := newRPCServer(c2, lis)
 	c3.Join([]string{"127.0.0.1:5995", "127.0.0.1:5996"})
 
 	expected = []*pb.Node{
@@ -124,16 +127,24 @@ func (r *mockRPCServer) Replicate(ctx context.Context, req *pb.ReplicateRequest)
 	return &pb.ReplicateResponse{Success: true}, nil
 }
 
-// newRPCServer creates a new mockRPCServer, starts a gRPC server running it, and returns it.
-// It's not possible to stop it again...
-func newRPCServer(cluster *Cluster, port int) *mockRPCServer {
-	m := &mockRPCServer{cluster: cluster}
-	s := grpc.NewServer()
-	pb.RegisterRpcServerServer(s, m)
+// openRPCPort opens a port for the gRPC server.
+// This is rather awkwardly split up from below to try to avoid races around the port opening.
+// There's something of a circular dependency between starting the gossip service (which triggers
+// RPC calls) and starting the gRPC server (which refers to said gossip service).
+func openRPCPort(port int) net.Listener {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("Failed to listen on port %d: %v", port, err)
 	}
+	return lis
+}
+
+// newRPCServer creates a new mockRPCServer, starts a gRPC server running it, and returns it.
+// It's not possible to stop it again...
+func newRPCServer(cluster *Cluster, lis net.Listener) *mockRPCServer {
+	m := &mockRPCServer{cluster: cluster}
+	s := grpc.NewServer()
+	pb.RegisterRpcServerServer(s, m)
 	go s.Serve(lis)
 	return m
 }
