@@ -101,7 +101,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
         # It's also essential that the compiled .a files are under this prefix, otherwise gcimporter won't find them.
         'mkdir pkg',
         'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
-        'export PATH="$(echo "$TOOLS_GEN " | sed -re \'s|/[^/]+[ ]|:|g\')$PATH"',
+        'export PATH="$(echo "$TOOLS_GEN " | sed -E -e \'s|/[^/]+[ ]|:|g\')$PATH"',
         'GOPATH="$TMP_DIR$(echo ":$(%s)" | sed "s/:$//g")" $TOOLS_GO generate $SRCS' % gopath,
         'mv $PKG_DIR/*.go .',
         'ls *.go'
@@ -171,6 +171,8 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
         cmd = ' && '.join([
             'cd $PKG_DIR',
             '$TOOL tool cgo -objdir $TMP_DIR -importpath ${PKG#*src/} *.go',
+            # Remote the .o file which BSD sed gets upset about in the next command
+            'rm -f $TMP_DIR/_cgo_.o',
             # cgo leaves absolute paths in these files which we must get rid of :(
             'find $TMP_DIR -type f -maxdepth 1 | xargs sed -i -e "s|$TMP_DIR/||g"',
             'cd $TMP_DIR',

@@ -9,10 +9,10 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #ifdef __linux__
-#include <stdlib.h>
 #include <sched.h>
 #include <string.h>
 #include <net/if.h>
