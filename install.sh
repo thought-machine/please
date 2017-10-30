@@ -17,8 +17,8 @@ rm -f ${DEST}/please ${DEST}/please_pex ${DEST}/junit_runner.jar ${DEST}/jarcat 
 cp -f plz-out/bin/src/please ${DEST}/please
 chmod 0775 ${DEST}/please
 ln -sf ${DEST}/please ${DEST}/plz
-cp -f plz-out/bin/src/libplease_parser_*.so ${DEST}
-chmod 0664 ${DEST}/libplease_parser_*.so
+cp -f plz-out/bin/src/libplease_parser_* ${DEST}
+chmod 0664 ${DEST}/libplease_parser_*
 cp -f plz-out/bin/tools/please_pex/please_pex ${DEST}/please_pex
 chmod 0775 ${DEST}/please_pex
 cp -f plz-out/bin/tools/junit_runner/junit_runner.jar ${DEST}/junit_runner.jar
