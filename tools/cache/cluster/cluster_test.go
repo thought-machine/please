@@ -19,8 +19,8 @@ func TestBringUpCluster(t *testing.T) {
 	c1.Init(3)
 	log.Notice("Cluster seeded")
 
-	c2 := NewCluster(5996, 6996, "c2")
 	m2 := newRPCServer(c2, 6996)
+	c2 := NewCluster(5996, 6996, "c2")
 	c2.Join([]string{"127.0.0.1:5995"})
 	log.Notice("c2 joined cluster")
 
