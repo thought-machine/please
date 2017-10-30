@@ -264,6 +264,9 @@ func (pom *PomXML) Unmarshal(f *Fetch, response []byte) {
 		for _, prop := range parent.Properties.Property {
 			pom.AddProperty(prop)
 		}
+		if len(pom.Licences.Licence) == 0 {
+			pom.Licences.Licence = parent.Licences.Licence
+		}
 	}
 	pom.Version = pom.replaceVariables(pom.Version)
 	// Arbitrarily, some pom files have this different structure with the extra "dependencyManagement" level.
