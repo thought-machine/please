@@ -101,7 +101,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
         # It's also essential that the compiled .a files are under this prefix, otherwise gcimporter won't find them.
         'mkdir pkg',
         'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
-        'export PATH="$(echo "$TOOLS_GEN " | sed -re \'s|/[^/]+[ ]|:|g\')$PATH"',
+        'export PATH="$(echo "$TOOLS_GEN " | sed -E -e \'s|/[^/]+[ ]|:|g\')$PATH"',
         'GOPATH="$TMP_DIR$(echo ":$(%s)" | sed "s/:$//g")" $TOOLS_GO generate $SRCS' % gopath,
         'mv $PKG_DIR/*.go .',
         'ls *.go'
