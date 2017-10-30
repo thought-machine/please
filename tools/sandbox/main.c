@@ -21,6 +21,11 @@
 #include <sys/prctl.h>
 #include <sys/types.h>
 
+// TODO(peterebden): Remove the following once our build machine gets updated...
+#ifndef MS_LAZYTIME
+#define MS_LAZYTIME	(1<<25)
+#endif
+
 // drop_root is ported more or less directly from Chrome's chrome-sandbox helper.
 // It simply drops us back to whatever user invoked us originally (i.e. before suid
 // got involved).
