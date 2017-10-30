@@ -1,3 +1,17 @@
+Version 9.5.0
+-------------
+
+    * New config property, parse.preloadbuilddefs which specifies files to be loaded
+      into the global rule context.
+    * Moved a bunch of config properties (buildfilename, blacklistdirs, lang, parserengine,
+      nonce, experimentaldir and linttool) out of the [please] section since that had
+      turned into a bit of a grab-bag of unstructured properties.
+      Old ones are still honoured for now but will be removed in v10.0.
+    * please_sandbox now mounts a tmpfs on /tmp
+    * `plz query print` prints a comment & build label on stdout rather then the bare label
+      on stderr.
+
+
 Version 9.4.3
 -------------
 
