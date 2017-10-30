@@ -30,7 +30,7 @@ jobs:
        - checkout
        - run:
            name: Install deps
-           command: brew install python3 pypy unittest-cpp
+           command: brew install go python3 pypy unittest-cpp
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh -p --exclude no_circleci --test_results_file plz-out/results/test_results.xml
