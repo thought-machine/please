@@ -15,7 +15,7 @@ def main(defs_file, parser_file, verbose):
         ldflags = ['-Wl,-rpath=./plz-out/gen/_remote/_pypy/bin']
     if platform.python_implementation() == 'CPython' and platform.system() == 'Darwin':
         version = platform.python_version_tuple()
-        ldflags = ['-L' + sys.prefix]
+        ldflags = ['-L' + os.path.join(sys.prefix, 'lib')]
     ffi.set_source('parser_interface', '#include "%s"' % defs_file,
                    extra_link_args=ldflags)
     with open(parser_file) as f:
