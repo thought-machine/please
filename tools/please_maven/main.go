@@ -27,7 +27,6 @@ var opts = struct {
 	Optional     []string `short:"o" long:"optional" description:"Optional dependencies to fetch"`
 	BuildRules   bool     `short:"b" long:"build_rules" description:"Print individual maven_jar build rules for each artifact"`
 	NumThreads   int      `short:"n" long:"num_threads" default:"10" description:"Number of concurrent fetches to perform"`
-	LicenceOnly  bool     `short:"l" long:"licence_only" description:"Fetch only the licence of the given package from Maven"`
 	Args         struct {
 		Artifacts []maven.Artifact `positional-arg-name:"ids" required:"yes" description:"Maven IDs to fetch (e.g. io.grpc:grpc-all:1.4.0)"`
 	} `positional-args:"yes" required:"yes"`
@@ -59,13 +58,5 @@ func main() {
 		opts.Repositories = append(opts.Repositories, "https://maven.google.com")
 	}
 	f := maven.NewFetch(opts.Repositories, opts.Exclude, opts.Optional)
-	if opts.LicenceOnly {
-		for _, artifact := range opts.Args.Artifacts {
-			for _, licence := range f.Pom(&artifact).Licences.Licence {
-				fmt.Println(licence.Name)
-			}
-		}
-	} else {
-		fmt.Println(strings.Join(maven.AllDependencies(f, opts.Args.Artifacts, opts.NumThreads, opts.Indent, opts.BuildRules), "\n"))
-	}
+	fmt.Println(strings.Join(maven.AllDependencies(f, opts.Args.Artifacts, opts.NumThreads, opts.Indent, opts.BuildRules), "\n"))
 }
