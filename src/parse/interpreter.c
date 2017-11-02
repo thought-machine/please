@@ -4,15 +4,15 @@
 
 // Since we dlsym() the callbacks out of the parser .so, we have variables for them as
 // well as extern definitions which cffi uses. The two must match, of course.
-char* (*parse_file)(char*, char*, size_t);
+char* (*parse_file)(char*, char*, char*, size_t);
 char* (*parse_code)(char*, char*, size_t);
 void (*set_config_value)(char*, char*);
 char* (*pre_build_callback_runner)(void*, size_t, char*);
 char* (*post_build_callback_runner)(void*, size_t, char*, char*);
 char* (*run_code)(char*);
 
-char* ParseFile(char* filename, char* package_name, size_t package) {
-  return (*parse_file)(filename, package_name, package);
+char* ParseFile(char* filename, char* contents, char* package_name, size_t package) {
+  return (*parse_file)(filename, contents, package_name, package);
 }
 
 char* ParseCode(char* filename, char* package_name, size_t package) {

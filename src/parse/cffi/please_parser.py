@@ -56,12 +56,13 @@ _FFI_DEFER_PARSE = ffi_from_string(_DEFER_PARSE)
 
 
 @ffi.def_extern('ParseFile')
-def parse_file(c_filename, c_package_name, c_package):
+def parse_file(c_filename, c_data, c_package_name, c_package):
     try:
         filename = ffi_to_string(c_filename)
         package_name = ffi_to_string(c_package_name)
         builtins = _get_globals(c_package, c_package_name)
-        _parse_build_code(filename, builtins)
+        code = _compile_build_code(ffi_to_string(c_data), filename)
+        exec(code, builtins)
         return ffi.NULL
     except DeferParse as err:
         return _FFI_DEFER_PARSE
@@ -104,23 +105,27 @@ def run_code(c_code):
         return ffi_from_string(str(err))
 
 
-def _parse_build_code(filename, globals_dict, cache=False):
-    """Parses given file and interprets it. Optionally caches code for future reuse."""
+def _parse_build_code(filename, globals_dict):
+    """Parses given file and interprets it. Caches code for future reuse."""
     code = _build_code_cache.get(filename)
     if not code:
         with _open(filename) as f:
-            tree = ast.parse(f.read(), filename)
-        for node in ast.iter_child_nodes(tree):
-            if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
-                raise SyntaxError('import not allowed')
-            if not is_py3 and isinstance(node, ast.Exec):
-                raise SyntaxError('exec not allowed')
-            if not is_py3 and isinstance(node, ast.Print):
-                raise SyntaxError('print not allowed, use log functions instead')
-        code = _compile(tree, filename, 'exec')
-        if cache:
-            _build_code_cache[filename] = code
+            code = _compile_build_code(f.read(), filename)
+        _build_code_cache[filename] = code
     exec(code, globals_dict)
+
+
+def _compile_build_code(code, filename):
+    """Compiles and validates some build code."""
+    tree = ast.parse(code, filename)
+    for node in ast.iter_child_nodes(tree):
+        if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
+            raise SyntaxError('import not allowed')
+        if not is_py3 and isinstance(node, ast.Exec):
+            raise SyntaxError('exec not allowed')
+        if not is_py3 and isinstance(node, ast.Print):
+            raise SyntaxError('print not allowed, use log functions instead')
+    return _compile(tree, filename, 'exec')
 
 
 def bazel_wrapper(func):
@@ -169,7 +174,7 @@ def include_defs(package, dct, target):
     # Dodgy in-band signalling of errors follows.
     if filename.startswith('__'):
         raise ParseError(filename.lstrip('_'))
-    _parse_build_code(filename, dct, cache=True)
+    _parse_build_code(filename, dct)
 
 
 def subinclude(package, dct, target, hash=None):
@@ -181,7 +186,7 @@ def subinclude(package, dct, target, hash=None):
         raise DeferParse(filename)
     elif filename.startswith('__'):
         raise ParseError(filename.lstrip('_'))
-    _parse_build_code(filename, dct, cache=True)
+    _parse_build_code(filename, dct)
 
 
 def _get_subinclude_target(url, hash):

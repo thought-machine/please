@@ -297,6 +297,10 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	log.Debug("Parsing package file %s", filename)
 	start := time.Now()
 	initializeOnce.Do(func() { initializeInterpreter(state) })
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	// TODO(pebers): It seems like we should be calling C.pypy_attach_thread here once per OS thread.
@@ -307,9 +311,11 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	//               multithreaded parsing without it.
 	cFilename := C.CString(filename)
 	cPackageName := C.CString(pkg.Name)
+	cData := C.CString(string(data))
 	defer C.free(unsafe.Pointer(cFilename))
 	defer C.free(unsafe.Pointer(cPackageName))
-	ret := C.GoString(C.ParseFile(cFilename, cPackageName, sizep(pkg)))
+	defer C.free(unsafe.Pointer(cData))
+	ret := C.GoString(C.ParseFile(cFilename, cData, cPackageName, sizep(pkg)))
 	if ret == pyDeferParse {
 		log.Debug("Deferred parse of package file %s in %0.3f seconds", filename, time.Since(start).Seconds())
 		return true

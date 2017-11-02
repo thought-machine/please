@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 // AFAICT there isn't a way to call the function pointers directly.
-char* ParseFile(char* filename, char* package_name, size_t package);
+char* ParseFile(char* filename, char* contents, char* package_name, size_t package);
 char* ParseCode(char* filename, char* package_name, size_t package);
 void SetConfigValue(char* name, char* value);
 char* RunPreBuildFunction(size_t callback, size_t package, char* name);

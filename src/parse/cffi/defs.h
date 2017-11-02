@@ -2,7 +2,7 @@
 typedef unsigned char uint8;
 typedef long long int64;
 extern int RegisterCallback(char*, char*, void*);
-extern char* ParseFile(char*, char*, size_t);
+extern char* ParseFile(char*, char*, char*, size_t);
 extern char* ParseCode(char*, char*, size_t);
 extern void SetConfigValue(char*, char*);
 extern char* PreBuildFunctionRunner(void*, size_t, char*);
