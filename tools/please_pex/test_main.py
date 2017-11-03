@@ -11,11 +11,6 @@ except ImportError:
 # This will get templated in by the build rules.
 TEST_NAMES = '__TEST_NAMES__'.split(',')
 
-sys.path.append(os.path.join(sys.argv[0], '.bootstrap'))
-
-import xmlrunner
-from pex_main import clean_sys_path, override_import
-
 
 def list_classes(suite):
     for test in suite:
@@ -86,6 +81,7 @@ class TracerImport(object):
 
 def run_tests(test_names):
     """Runs tests, returns the number of failures."""
+    import xmlrunner
     # unittest's discovery produces very misleading errors in some cases; if it tries to import
     # a module which imports other things that then fail, it reports 'module object has no
     # attribute <test name>' and swallows the original exception. Try to import them all first
@@ -102,8 +98,11 @@ def run_tests(test_names):
     return len(results.errors) + len(results.failures)
 
 
-def main(args):
-    args = [arg for arg in args if not arg.startswith('-')]
+def main():
+    """Runs the tests. Returns an appropriate exit code."""
+    args = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
+    # Add .bootstrap dir to path, after the initial pex entry
+    sys.path = sys.path[:1] + [os.path.join(sys.path[0], '.bootstrap')] + sys.path[1:]
     if os.getenv('COVERAGE'):
         # It's important that we run coverage while we load the tests otherwise
         # we get no coverage for import statements etc.
@@ -118,9 +117,3 @@ def main(args):
         return result
     else:
         return run_tests(args)
-
-
-if __name__ == '__main__':
-    override_import()
-    clean_sys_path()
-    sys.exit(main(sys.argv[1:]))

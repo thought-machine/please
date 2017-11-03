@@ -1,24 +1,9 @@
-# Extract the contents of __main__.py from pex.
-# We could duplicate here easily enough but then might fall out of sync
-# with the version of pex we're using.
-genrule(
-    name = 'main_py',
-    srcs = [
-        '//third_party/python:pex',
-        '//third_party/python:pkg_resources',
-        '//third_party/python:six',
-        'gen_main.sh',
-    ],
-    outs = ['__main__.py'],
-    cmd = '$PKG/gen_main.sh > $OUT',
-)
-
 filegroup(
     name = 'pex_data',
     srcs = [
         'pex_main.py',
+        'pex_run.py',
         'test_main.py',
-        ':main_py',
     ],
     visibility = ['//tools/please_pex/pex:all'],
 )
@@ -39,8 +24,6 @@ genrule(
     name = 'please_pex',
     srcs = [
         ':pex_main',
-        '//third_party/python:pex',
-        '//third_party/python:pkg_resources',
         '//third_party/python:six',
         '//third_party/python:xmlrunner',
         '//third_party/python:coverage',
@@ -52,9 +35,8 @@ genrule(
         'touch third_party/__init__.py third_party/python/__init__.py',
         'touch tools/__init__.py tools/please_pex/__init__.py',
         'mv third_party/python .bootstrap',
-        'mv .bootstrap/pex .bootstrap/_pex',
         # A little cleanup.
-        'rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles .bootstrap/_pex/bin .bootstrap/.*.pex.zip',
+        'rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles .bootstrap/.*.pex.zip',
         '$TOOL -d -i .bootstrap -o $OUTS --preamble_file $(location :pex_main)',
     ],
     tools = ['//tools/jarcat'],

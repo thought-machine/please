@@ -1,10 +1,15 @@
 package(python_module_dir = '')
 
+filegroup(
+    name = 'rule_args',
+    srcs = ['//src/parse:rule_args'],
+)
+
 python_binary(
     name = 'linter',
     out = 'linter',
     main = 'linter.py',
-    resources = ['//src/parse:rule_args'],
+    resources = [':rule_args'],
     shebang = '/usr/bin/env python',
     visibility = ['PUBLIC'],
 )

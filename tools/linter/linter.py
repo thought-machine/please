@@ -54,9 +54,10 @@ Usage:
 import argparse
 import ast
 import json
-import pkg_resources
 import re
 import sys
+import zipfile
+import __main__ as pex_main
 
 
 SYNTAX_ERROR = 'syntax-error'
@@ -116,7 +117,8 @@ def _extract_keyword(node, arg, default=''):
     return default
 
 
-JSON = json.loads(pkg_resources.resource_string('src.parse', 'rule_args.json').decode('utf-8'))
+with zipfile.ZipFile(pex_main.PEX, 'r') as zf:
+    JSON = json.load(zf.open('tools/linter/rule_args.json'))
 WHITELISTED_FUNCTIONS = {'subinclude', 'glob', 'include_defs', 'licenses'}
 BUILTIN_FUNCTIONS = {k: _args(v) for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
 DEPRECATED_FUNCTIONS = {'include_defs'}

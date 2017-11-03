@@ -1,7 +1,7 @@
 """Tests on source stripping."""
 
-import pkg_resources
 import unittest
+import zipfile
 
 
 class StripSourceTest(unittest.TestCase):
@@ -13,4 +13,7 @@ class StripSourceTest(unittest.TestCase):
 
     def test_this_file_doesnt_exist(self):
         """Test this file doesn't exist in the pex."""
-        self.assertFalse(pkg_resources.resource_exists('test.python_rules', 'strip_source.py'))
+        import __main__ as pex_main
+        with zipfile.ZipFile(pex_main.PEX, 'r') as zf:
+            with self.assertRaises(KeyError):
+                zf.getinfo('test/python_rules/strip_source.py')

@@ -1,18 +1,22 @@
 #!/usr/bin/python
 
-import pkg_resources
 import unittest
+import zipfile
+import __main__ as pex_main
 
 
 class RequireProvideTest(unittest.TestCase):
 
     def test_other_language_not_present(self):
         """Test that we don't get the Go file from the dependent rule."""
-        self.assertFalse(pkg_resources.resource_exists('test.parse_test', 'test_require.go'))
+        with zipfile.ZipFile(pex_main.PEX) as zf:
+            with self.assertRaises(KeyError):
+                zf.getinfo('test/parse_test/test_require.go')
 
     def test_our_language_is_present(self):
         """Test that we do get the Python file from the dependent rule."""
-        self.assertTrue(pkg_resources.resource_exists('test.parse_test', 'test_require.py'))
+        with zipfile.ZipFile(pex_main.PEX) as zf:
+            zf.getinfo('test/parse_test/test_require.py')
 
 
 if __name__ == '__main__':

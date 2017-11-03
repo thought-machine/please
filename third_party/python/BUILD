@@ -13,12 +13,6 @@ REPOS = [
 ]
 
 python_wheel(
-    name = 'pex',
-    version = '1.2.8',
-    hashes = ['sha1: 15be967c06ab9686fb77397c0480345e75d6f0cc'],
-)
-
-python_wheel(
     name = 'xmlrunner',
     package_name = 'unittest_xml_reporting',
     version = '1.11.0',
@@ -31,13 +25,6 @@ python_wheel(
     version = '1.10.0',
     outs = ['six.py'],
     hashes = ['sha1: 460beba667fbd2b7a050df6a456e0269260b385a'],
-)
-
-python_wheel(
-    name = 'pkg_resources',
-    package_name = 'setuptools',
-    version = '33.1.1',
-    hashes = ['sha1: 05f20a29a5dff7dd5b908afcf37c2b1bea8d3db6'],
 )
 
 python_wheel(
