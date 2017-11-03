@@ -24,26 +24,31 @@ class TestListener extends RunListener {
   private Result result;
   private RunListener resultListener;
   private Failure assumptionFailure;
+  private boolean captureOutput;
   private static final String ENCODING = "UTF-8";
 
   private long startTime = System.currentTimeMillis();
 
   public TestListener(List<TestResult> results) {
     this.results = results;
+    this.captureOutput = System.getProperty("PLZ_NO_OUTPUT_CAPTURE") == null;
   }
 
   @Override
   public void testStarted(Description description) throws Exception {
-    // Create an intermediate stdout/stderr to capture any debugging statements (usually in the
-    // form of System.out.println) the developer is using to debug the test.
-    originalOut = System.out;
-    originalErr = System.err;
     rawStdOutBytes = new ByteArrayOutputStream();
     rawStdErrBytes = new ByteArrayOutputStream();
     stdOutStream = new PrintStream(rawStdOutBytes, true, ENCODING);
     stdErrStream = new PrintStream(rawStdErrBytes, true, ENCODING);
-    System.setOut(stdOutStream);
-    System.setErr(stdErrStream);
+
+    if (captureOutput) {
+      // Create an intermediate stdout/stderr to capture any debugging statements (usually in the
+      // form of System.out.println) the developer is using to debug the test.
+      originalOut = System.out;
+      originalErr = System.err;
+      System.setOut(stdOutStream);
+      System.setErr(stdErrStream);
+    }
 
     result = new Result();
     resultListener = result.createListener();
@@ -59,8 +64,10 @@ class TestListener extends RunListener {
     resultListener = null;
 
     // Restore the original stdout/stderr.
-    System.setOut(originalOut);
-    System.setErr(originalErr);
+    if (captureOutput) {
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+    }
 
     // Get the stdout/stderr written during the test as strings.
     stdOutStream.flush();
