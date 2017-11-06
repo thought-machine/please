@@ -1,3 +1,11 @@
+Version 9.5.1
+-------------
+
+    * Is now possible to prevent Java tests from consuming stdout / stderr by passing
+      -DPLZ_NO_OUTPUT_CAPTURE to Java when running the jars. This isn't exposed through
+      plz anywhere though.
+
+
 Version 9.5.0
 -------------
 
