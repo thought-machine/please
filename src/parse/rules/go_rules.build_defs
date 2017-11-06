@@ -13,13 +13,14 @@ _LINK_PKGS_CMD = ' '.join([
 ])
 
 
-def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False,
+def go_library(name, srcs, asm_srcs=None, out=None, deps=None, visibility=None, test_only=False,
                go_tools=None, complete=True, _needs_transitive_deps=False,_all_srcs=False):
     """Generates a Go library which can be reused by other rules.
 
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to compile.
+      asm_srcs (list): Source files to assemble with `go tool assemble`.
       out (str): Name of the output library to compile (defaults to name suffixed with .a)
       deps (list): Dependencies
       visibility (list): Visibility specification
@@ -29,6 +30,43 @@ def go_library(name, srcs, out=None, deps=None, visibility=None, test_only=False
                        `go tool build -complete`). In nearly all cases this is True (the main
                        exception being for cgo).
     """
+    if asm_srcs:
+        lib_rule = go_library(
+            name = '_%s#lib' % name,
+            srcs = srcs,
+            deps = deps,
+            test_only = test_only,
+            go_tools = go_tools,
+            complete = False,
+            _needs_transitive_deps = _needs_transitive_deps,
+            _all_srcs = _all_srcs,
+        )
+        asm_rule = build_rule(
+            name = name,
+            tag = 'asm',
+            srcs = asm_srcs,
+            outs = [name + '.o'],
+            building_description = 'Assembling...',
+            cmd = 'eval `$TOOL env` && $TOOL tool asm -trimpath $TMP_DIR -I ${GOROOT}/pkg/include -D GOOS_${OS} -D GOARCH_${ARCH} -o $OUT $SRCS',
+            tools=[CONFIG.GO_TOOL],
+            test_only = test_only,
+        )
+        return build_rule(
+            name = name,
+            srcs = {
+                'lib': [lib_rule],
+                'asm': [asm_rule],
+            },
+            outs=[out or name + '.a'],
+            tools=[CONFIG.GO_TOOL],
+            cmd = 'cp $SRCS_LIB $OUT && $TOOL tool pack r $OUT $SRCS_ASM',
+            visibility = visibility,
+            building_description = 'Packing...',
+            requires = ['go'],
+            provides = {'go': ':' + name, 'go_src': ':__%s#lib#srcs' % name},
+            test_only = test_only,
+        )
+
     deps = deps or []
     # go_test and cgo_library need access to the sources as well.
     filegroup(
@@ -258,12 +296,13 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
     )
 
 
-def go_binary(name, srcs=None, deps=None, visibility=None, test_only=False, static=False):
+def go_binary(name, srcs=None, out=None, deps=None, visibility=None, test_only=False, static=False):
     """Compiles a Go binary.
 
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files, one of which contains the main function.
+      out (str): Name of the output file to create. Defaults to the same as `name`.
       deps (list): Dependencies
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
@@ -285,7 +324,7 @@ def go_binary(name, srcs=None, deps=None, visibility=None, test_only=False, stat
         name=name,
         srcs=[':_%s#lib' % name],
         deps=deps,
-        outs=[name],
+        outs=[out or name],
         cmd=cmds,
         building_description="Linking...",
         needs_transitive_deps=True,
