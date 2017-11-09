@@ -10,6 +10,7 @@ Should be run from the repo root.
 import os
 import subprocess
 import sys
+from concurrent import futures
 from itertools import groupby
 
 
@@ -42,8 +43,9 @@ def main():
     all_go_files = [(d, f) for d, f in find_go_files('.')]
     by_dir = [[os.path.join(d, f[1]) for f in files]
               for d, files in groupby(all_go_files, key=lambda x: x[0])]
-    if not all([run_linters(files) for files in by_dir]):
-        sys.exit('Some linters failed')
+    with futures.ThreadPoolExecutor() as executor:
+        if not all(executor.map(run_linters, by_dir)):
+            sys.exit('Some linters failed')
 
 
 if __name__ == '__main__':
