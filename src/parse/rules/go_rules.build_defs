@@ -296,12 +296,14 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
     )
 
 
-def go_binary(name, srcs=None, out=None, deps=None, visibility=None, test_only=False, static=False):
+def go_binary(name, srcs=None, asm_srcs=None, out=None, deps=None, visibility=None,
+              test_only=False, static=False):
     """Compiles a Go binary.
 
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files, one of which contains the main function.
+      asm_srcs (list): Assembly source files.
       out (str): Name of the output file to create. Defaults to the same as `name`.
       deps (list): Dependencies
       visibility (list): Visibility specification
@@ -316,11 +318,12 @@ def go_binary(name, srcs=None, out=None, deps=None, visibility=None, test_only=F
     go_library(
         name='_%s#lib' % name,
         srcs=srcs or [name + '.go'],
+        asm_srcs=asm_srcs,
         deps=deps,
         test_only=test_only,
     )
     cmds, tools = _go_binary_cmds(static=static)
-    build_rule(
+    return build_rule(
         name=name,
         srcs=[':_%s#lib' % name],
         deps=deps,
