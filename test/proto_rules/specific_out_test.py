@@ -1,5 +1,5 @@
-import pkg_resources
 import unittest
+import zipfile
 
 
 class SpecificOutTest(unittest.TestCase):
@@ -15,4 +15,7 @@ class SpecificOutTest(unittest.TestCase):
         If this fails the way the proto rules depend on specific files from the protoc rule
         probably isn't being selective enough.
         """
-        self.assertFalse(pkg_resources.resource_exists('test.proto_rules', 'test.pb.go'))
+        import __main__ as pex_main
+        with zipfile.ZipFile(pex_main.PEX) as zf:
+            with self.assertRaises(KeyError):
+                zf.getinfo('test/proto_rules/test.pb.go')

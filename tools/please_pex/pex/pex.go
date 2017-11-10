@@ -6,55 +6,25 @@ package pex
 
 import (
 	"bytes"
-	"encoding/json"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 
 	"tools/jarcat/zip"
 )
 
-// A Info describes the PEX-INFO file written into the root of the .zip file.
-type Info struct {
-	BuildProperties BuildProperties `json:"build_properties"`
-	CodeHash        string          `json:"code_hash"`
-	EntryPoint      string          `json:"entry_point"`
-	ZipSafe         bool            `json:"zip_safe"`
-	PexRoot         string          `json:"pex_root"`
-}
-
-// A BuildProperties represents the BuildProperties entry in a Info.
-type BuildProperties struct {
-	Class    string `json:"class"`
-	Platform string `json:"platform"`
-	Version  []int  `json:"version"`
-}
-
 // A Writer implements writing a .pex file in various steps.
 type Writer struct {
-	info           *Info
+	zipSafe        bool
 	shebang        string
 	realEntryPoint string
 	testSrcs       []string
 }
 
 // NewWriter constructs a new Writer.
-func NewWriter(entryPoint, interpreter, codeHash string, zipSafe bool) *Writer {
+func NewWriter(entryPoint, interpreter string, zipSafe bool) *Writer {
 	pw := &Writer{
-		info: &Info{
-			// As far as we know, this doesn't affect what happens at runtime,
-			// it's just for reference and so we don't need to pretend to be Python.
-			BuildProperties: BuildProperties{
-				Class:    "please_pex",
-				Platform: runtime.GOOS + "_" + runtime.GOARCH,
-				Version:  []int{8, 1, 2},
-			},
-			CodeHash:   codeHash,
-			EntryPoint: "pex_main",
-			ZipSafe:    zipSafe,
-			PexRoot:    "~/.pex",
-		},
+		zipSafe:        zipSafe,
 		realEntryPoint: toPythonPath(entryPoint),
 	}
 	pw.SetShebang(interpreter)
@@ -75,7 +45,7 @@ func (pw *Writer) SetShebang(shebang string) {
 // SetTest sets this Writer to write tests using the given sources.
 // This overrides the entry point given earlier.
 func (pw *Writer) SetTest(srcs []string) {
-	pw.info.EntryPoint = "test_main"
+	pw.realEntryPoint = "test_main"
 	pw.testSrcs = make([]string, len(srcs))
 	for i, src := range srcs {
 		pw.testSrcs[i] = toPythonPath(src)
@@ -86,61 +56,35 @@ func (pw *Writer) SetTest(srcs []string) {
 func (pw *Writer) Write(out, moduleDir string) error {
 	f := zip.NewFile(out, true)
 	defer f.Close()
-	f.Include = pw.zipIncludes()
 
 	// Write preamble (i.e. the shebang that makes it executable)
 	if err := f.WritePreamble([]byte(pw.shebang)); err != nil {
 		return err
 	}
 
-	// Write required pex stuff. Note that this executable is also a zipfile and we can
+	// Write required pex stuff for tests. Note that this executable is also a zipfile and we can
 	// jarcat it directly in (nifty, huh?).
-	if err := f.AddZipFile(os.Args[0]); err != nil {
-		return err
+	if len(pw.testSrcs) != 0 {
+		if err := f.AddZipFile(os.Args[0]); err != nil {
+			return err
+		}
 	}
+
 	// Always write pex_main.py, with some templating.
 	b := MustAsset("pex_main.py")
 	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(moduleDir), 1)
 	b = bytes.Replace(b, []byte("__ENTRY_POINT__"), []byte(pw.realEntryPoint), 1)
-	b = bytes.Replace(b, []byte("__ZIP_SAFE__"), []byte(pythonBool(pw.info.ZipSafe)), 1)
-	if err := f.WriteFile("pex_main.py", b); err != nil {
-		return err
-	}
-	// If we're writing a test, we'll need test_main.py too.
-	if len(pw.testSrcs) != 0 {
-		b = MustAsset("test_main.py")
-		b = bytes.Replace(b, []byte("__TEST_NAMES__"), []byte(strings.Join(pw.testSrcs, ",")), 1)
-		if err := f.WriteFile("test_main.py", b); err != nil {
-			return err
-		}
-	}
-	// All pexes need the __main__.py entry point.
-	if err := f.WriteFile("__main__.py", MustAsset("__main__.py")); err != nil {
-		return err
-	}
-	// Write the PEX-INFO file.
-	b, err := json.Marshal(pw.info)
-	if err != nil {
-		return err
-	}
-	return f.WriteFile("PEX-INFO", b)
-}
+	b = bytes.Replace(b, []byte("__ZIP_SAFE__"), []byte(pythonBool(pw.zipSafe)), 1)
 
-// zipIncludes returns the list of paths we'll include from our own zip file.
-func (pw *Writer) zipIncludes() []string {
-	// If we're writing a test, we can write the whole bootstrap dir and move on with our lives.
 	if len(pw.testSrcs) != 0 {
-		return []string{".bootstrap"}
+		// If we're writing a test, we append test_main.py to it.
+		b2 := MustAsset("test_main.py")
+		b2 = bytes.Replace(b2, []byte("__TEST_NAMES__"), []byte(strings.Join(pw.testSrcs, ",")), 1)
+		b = append(b, b2...)
 	}
-	// Always extract the following.
-	// Note that we have a be a bit careful that these are a complete set of required paths.
-	return []string{
-		".bootstrap/_pex",
-		".bootstrap/pkg_resources",
-		".bootstrap/__init__.py",
-		".bootstrap/six.py",
-		".bootstrap/six.pyc",
-	}
+	// We always append the final if __name__ == '__main__' bit.
+	b = append(b, MustAsset("pex_run.py")...)
+	return f.WriteFile("__main__.py", b)
 }
 
 // pythonBool returns a Python bool representation of a Go bool.

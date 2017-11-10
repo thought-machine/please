@@ -1,10 +1,7 @@
-// Package main implements please_pex, which builds Python pex files for us.
+// Package main implements please_pex, which builds runnable Python zip files for us.
 package main
 
 import (
-	"crypto/sha1"
-	"encoding/base64"
-
 	"gopkg.in/op/go-logging.v1"
 
 	"cli"
@@ -25,31 +22,20 @@ var opts = struct {
 	Shebang     string   `short:"s" long:"shebang" description:"Explicitly set shebang to this"`
 	ZipSafe     bool     `long:"zip_safe" description:"Marks this pex as zip-safe"`
 	NoZipSafe   bool     `long:"nozip_safe" description:"Marks this pex as zip-unsafe"`
-	CodeHash    string   `long:"code_hash" description:"Hash to embed into the pex file"`
 }{
 	Usage: `
 please_pex is a tool to create .pex files for Python.
 
-Pex files are the binaries that Please outputs for its python_binary
-and python_test rules. They are essentially self-contained executable
-Python environments.
-
-See https://github.com/pantsbuild/pex for more info about pex.
+These are not really pex files any more, they are just zip files (which Python supports
+out of the box). They still have essentially the same approach of containing all the
+dependent code as a self-contained self-executable environment.
 `,
 }
 
 func main() {
-	cli.ParseFlagsOrDie("please_pex", "9.0.1", &opts)
+	cli.ParseFlagsOrDie("please_pex", "9.6.0", &opts)
 	cli.InitLogging(opts.Verbosity)
-	if opts.CodeHash == "" {
-		// It is difficult to know what the code hash should be. We want to have one to keep
-		// pex happy, but it is not "correct" since we don't have the entire pex to write at this
-		// point. It doesn't really matter in the sense that when run within plz pex will never
-		// reuse its code hashes anyway (because $HOME is overridden).
-		sum := sha1.Sum([]byte(opts.Out))
-		opts.CodeHash = base64.RawURLEncoding.EncodeToString(sum[:])
-	}
-	w := pex.NewWriter(opts.EntryPoint, opts.Interpreter, opts.CodeHash, !opts.NoZipSafe)
+	w := pex.NewWriter(opts.EntryPoint, opts.Interpreter, !opts.NoZipSafe)
 	if opts.Shebang != "" {
 		w.SetShebang(opts.Shebang)
 	}

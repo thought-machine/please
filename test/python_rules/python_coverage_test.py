@@ -2,7 +2,7 @@ import sys
 import unittest
 
 
-class Python2CoverageTest(unittest.TestCase):
+class PythonCoverageTest(unittest.TestCase):
     """Tests that we can import parts of the coverage module.
 
     By default it's not trivial to import binary modules from inside a pex. Also we need to package
@@ -13,7 +13,7 @@ class Python2CoverageTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Must ensure coverage is set up before we can import tracer."""
-        import test_main
+        import __main__ as test_main
         test_main.initialise_coverage()
 
     def test_can_import_coverage(self):
@@ -21,7 +21,8 @@ class Python2CoverageTest(unittest.TestCase):
         import coverage
         self.assertIsNotNone(coverage)
 
-    @unittest.skipIf(sys.platform == 'darwin', 'Not working on OSX at present due to symbol errors')
+    @unittest.skipIf(sys.platform == 'darwin' and sys.version_info.major < 3,
+                     'Not working on OSX python2 at present due to symbol errors')
     def test_can_import_tracer(self):
         """Test we can import the binary tracer module."""
         from coverage import tracer
