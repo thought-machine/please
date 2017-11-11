@@ -66,7 +66,7 @@ class Linter:
 
 def main():
     linter = Linter('.')
-    with futures.ThreadPoolExecutor() as executor:
+    with futures.ThreadPoolExecutor(max_workers=6) as executor:
         if not all(executor.map(linter.run_linters, linter.by_dir)):
             linter.reset_line()
             sys.exit('Some linters failed')
