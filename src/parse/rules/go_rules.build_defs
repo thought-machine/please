@@ -200,7 +200,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     cgo_rule = build_rule(
         name = name,
         tag = 'cgo',
-        srcs = srcs + [h for h in hdrs if not h.startswith('/') and not h.startswith(':')],
+        srcs = srcs + hdrs,
         outs = {
             'go': [src.replace('.go', '.cgo1.go') for src in file_srcs] + ['_cgo_gotypes.go'],
             'c': [src.replace('.go', '.cgo2.c') for src in file_srcs] + ['_cgo_export.c'],
@@ -217,7 +217,6 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
             'rm _cgo_main.c',
             'ls *.c *.go',
         ]),
-        deps = [h for h in hdrs if h.startswith('/') or h.startswith(':')],
         tools = [CONFIG.GO_TOOL],
         post_build = post_build if file_srcs != srcs else None,
         requires = ['go', 'cc_hdrs'],
@@ -257,7 +256,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
         deps = deps,
     )
     # And finally combine the compiled C code into the Go archive object so go tool link can find it later.
-    _merge_cgo_obj(
+    return _merge_cgo_obj(
         name = name,
         a_rule = ':_%s#go' % name,
         o_rule = cgo_o_rule,
