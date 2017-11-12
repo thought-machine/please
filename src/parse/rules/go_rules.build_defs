@@ -160,7 +160,7 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
 
 
 def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, compiler_flags=None,
-                linker_flags=None, deps=None, visibility=None, test_only=False):
+                linker_flags=None, subdir='', deps=None, visibility=None, test_only=False):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -182,6 +182,8 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
       out (str): Name of output file. Defaults to name + '.a'.
       compiler_flags (list): List of compiler flags to be passed when compiling the C code.
       linker_flags (list): List of linker flags to be passed when linking a Go binary.
+      subdir (str): Subdirectory that source files are in. Required if they're not in the
+                    current directory.
       deps (list): Dependencies. Note that if you intend to depend on cc_library rules,
                    you will likely be better off wrapping them into a cc_static_library
                    and depending on that.
@@ -196,26 +198,28 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     linker_flags = linker_flags or []
     file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
     post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
+    subdir2 = (subdir + '/') if subdir and not subdir.endswith('/') else subdir
 
     cgo_rule = build_rule(
         name = name,
         tag = 'cgo',
         srcs = srcs + hdrs,
         outs = {
-            'go': [src.replace('.go', '.cgo1.go') for src in file_srcs] + ['_cgo_gotypes.go'],
-            'c': [src.replace('.go', '.cgo2.c') for src in file_srcs] + ['_cgo_export.c'],
-            'h': ['_cgo_export.h'],
+            'go': [subdir2 + src.replace('.go', '.cgo1.go') for src in file_srcs] + [subdir2 + '_cgo_gotypes.go'],
+            'c': [subdir2 + src.replace('.go', '.cgo2.c') for src in file_srcs] + [subdir2 + '_cgo_export.c'],
+            'h': [subdir2 + '_cgo_export.h'],
         },
         cmd = ' && '.join([
-            'cd $PKG_DIR',
-            '$TOOL tool cgo -objdir $TMP_DIR -importpath ${PKG#*src/} *.go',
-            # Remote the .o file which BSD sed gets upset about in the next command
-            'rm -f $TMP_DIR/_cgo_.o',
+            ('OUT_DIR="$TMP_DIR/%s"' % subdir) if subdir else 'OUT_DIR="$TMP_DIR"',
+            'mkdir -p $OUT_DIR',
+            'cd $PKG_DIR/' + subdir,
+            '$TOOL tool cgo -objdir $OUT_DIR -importpath ${PKG#*src/} *.go',
+            # Remove the .o file which BSD sed gets upset about in the next command
+            'rm -f $OUT_DIR/_cgo_.o $OUT_DIR/_cgo_main.c',
             # cgo leaves absolute paths in these files which we must get rid of :(
-            'find $TMP_DIR -type f -maxdepth 1 | xargs sed -i -e "s|$TMP_DIR/||g"',
+            'find $OUT_DIR -type f -maxdepth 1 | xargs sed -i -e "s|$TMP_DIR/||g"',
             'cd $TMP_DIR',
-            'rm _cgo_main.c',
-            'ls *.c *.go',
+            'ls %s*.c %s*.go' % (subdir2, subdir2),
         ]),
         tools = [CONFIG.GO_TOOL],
         post_build = post_build if file_srcs != srcs else None,
