@@ -1,3 +1,18 @@
+Version 10.0.0
+--------------
+
+    * please_pex rewritten to be more efficient. This is a breaking change for anyone
+      who assumed they could import pkg_resources or pex as a global which will no longer
+      be available (although these are easy to add using pip_library or python_wheel rules
+      if still needed).
+    * cgo_library takes a subdir argument that is needed if sources are in a subdirectory
+      from the BUILD file (this isn't breaking since it never worked without).
+    * Support for assembly (using go tool asm) in go_library and go_binary rules.
+    * Removed a number of deprecated config properties.
+    * Removed a number of deprecated arguments to builtin build rules (most have been
+      deprecated and often nonfunctional for a long time now).
+
+
 Version 9.5.1
 -------------
 

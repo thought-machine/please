@@ -368,7 +368,7 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
 
 def maven_jar(name, id, repository=None, hash=None, hashes=None, deps=None,
               visibility=None, filename=None, sources=True, licences=None,
-              exclude_paths=None, native=False, artifact_type=None, test_only=False,
+              native=False, artifact_type=None, test_only=False,
               binary=False, classifier='', classifier_sources_override=''):
     """Fetches a single Java dependency from Maven.
 
@@ -383,7 +383,6 @@ def maven_jar(name, id, repository=None, hash=None, hashes=None, deps=None,
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
       sources (bool): True to download source jars as well.
       licences (list): Licences this package is subject to.
-      exclude_paths (list): Deprecated. Paths to remove from the downloaded .jar.
       native (bool): Attempt to download a native jar (i.e. add "-linux-x86_64" etc to the URL).
       artifact_type (str): Type of artifact to download (defaults to jar but could be e.g. aar).
       test_only (bool): If True, this target can only be used by tests or other test_only rules.

@@ -91,26 +91,6 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 		return config, fmt.Errorf("%s invalid for test.defaultcontainer; must be one of {none,docker}", c)
 	}
 
-	// Deprecations
-	if config.Parse.ExperimentalDir == "" && config.Please.ExperimentalDir != "" {
-		config.Parse.ExperimentalDir = config.Please.ExperimentalDir
-	}
-	if config.Build.Nonce == "" && config.Please.Nonce != "" {
-		config.Build.Nonce = config.Please.Nonce
-	}
-	if config.Parse.Engine == "" && config.Please.ParserEngine != "" {
-		config.Parse.Engine = config.Please.ParserEngine
-	}
-	if config.Build.Lang == "" && config.Please.Lang != "" {
-		config.Build.Lang = config.Please.Lang
-	}
-	if len(config.Parse.BuildFileName) == 0 && len(config.Please.BuildFileName) > 0 {
-		config.Parse.BuildFileName = config.Please.BuildFileName
-	}
-	if len(config.Parse.BlacklistDirs) == 0 && len(config.Please.BlacklistDirs) > 0 {
-		config.Parse.BlacklistDirs = config.Please.BlacklistDirs
-	}
-
 	return config, nil
 }
 
@@ -216,13 +196,6 @@ type Configuration struct {
 		SelfUpdate       bool        `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
 		DownloadLocation cli.URL     `help:"Defines the location to download Please from when self-updating. Defaults to the Please web server, but you can point it to some location of your own if you prefer to keep traffic within your network or use home-grown versions."`
 		NumThreads       int         `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed." example:"6"`
-		BuildFileName    []string    `help:"Deprecated, use parse.buildfilename instead"`
-		BlacklistDirs    []string    `help:"Deprecated, use parse.blacklistdirs instead"`
-		Lang             string      `help:"Deprecated, use build.lang instead"`
-		ParserEngine     string      `help:"Deprecated, use parse.engine instead"`
-		Nonce            string      `help:"Deprecated, use build.nonce instead"`
-		ExperimentalDir  string      `help:"Deprecated, use parse.experimentaldir instead"`
-		LintTool         string      `help:"Deprecated, use parse.linttool instead."`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
 		LintTool         string   `help:"Location of the lint tool for BUILD files."`

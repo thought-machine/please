@@ -15,10 +15,8 @@ should be the return value of proto_language.
 _DEFAULT_GRPC_LABELS = ['grpc']
 
 
-def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=None,
-                  python_deps=None, cc_deps=None, java_deps=None, go_deps=None,
-                  languages=None, test_only=False, root_dir='',
-                  protoc_flags=None):
+def proto_library(name, srcs, deps=None, visibility=None, labels=None,
+                  languages=None, test_only=False, root_dir='', protoc_flags=None):
     """Compile a .proto file to generated code for various languages.
 
     Args:
@@ -36,11 +34,6 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
       protoc_flags (list): Additional flags to pass to protoc. Note that these are inherited by
                            further rules that depend on this one (because in nearly all cases that
                            will be necessary for them to build too).
-      python_deps (list): Deprecated, replaced by languages.
-      java_deps (list): Deprecated, replaced by languages.
-      go_deps (list): Deprecated, replaced by languages.
-      cc_deps (list): Deprecated, replaced by languages.
-      plugins (dict): Deprecated, replaced by languages.
     """
     languages = _merge_dicts(languages or CONFIG.PROTO_LANGUAGES, proto_languages())
     labels = labels or []
@@ -149,9 +142,8 @@ def proto_library(name, srcs, plugins=None, deps=None, visibility=None, labels=N
     )
 
 
-def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_deps=None,
-                 java_deps=None, go_deps=None, cc_deps=None, labels=None, test_only=False,
-                 root_dir='', protoc_flags=None):
+def grpc_library(name, srcs, deps=None, visibility=None, languages=None, labels=None,
+                 test_only=False, root_dir='', protoc_flags=None):
     """Defines a rule for a grpc library.
 
     Args:
@@ -167,10 +159,6 @@ def grpc_library(name, srcs, deps=None, visibility=None, languages=None, python_
       root_dir (str): The directory that the protos are compiled relative to. Useful if your
                       proto files have import statements that are not relative to the repo root.
       protoc_flags (list): Additional flags to pass to protoc.
-      python_deps (list): Deprecated, replaced by languages.
-      java_deps (list): Deprecated, replaced by languages.
-      go_deps (list): Deprecated, replaced by languages.
-      cc_deps (list): Deprecated, replaced by languages.
     """
     proto_library(
         name = name,

@@ -19,7 +19,7 @@ exit 0\n\
 %(tarball_boundary)s"""
 
 
-def sh_library(name, src, deps=None, visibility=None, link=True, labels=None):
+def sh_library(name, src, deps=None, visibility=None, labels=None):
     """Generates a shell script binary, essentially just the given source.
 
     Note that these are individually executable so can only have one source file each.
@@ -30,7 +30,6 @@ def sh_library(name, src, deps=None, visibility=None, link=True, labels=None):
       src (str): Source file for the rule.
       deps (list): Dependencies of this rule.
       visibility (list): Visibility declaration of the rule.
-      link (bool): Deprecated, has no effect.
       labels (list): List of labels.
     """
     filegroup(
@@ -91,7 +90,7 @@ def sh_binary(name, main, deps=None, visibility=None, labels=None):
     )
 
 
-def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=None,
+def sh_test(name, src=None, labels=None, data=None, deps=None, size=None,
             visibility=None, flags='', flaky=0, test_outputs=None, timeout=0, container=False,
             sandbox=None):
     """Generates a shell test. Note that these aren't packaged in a useful way.
@@ -99,8 +98,6 @@ def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=N
     Args:
       name (str): Name of the rule
       src (str): Test script file.
-      args (list): Deprecated, prefer 'flags' instead.
-                   Arguments that will be passed to this test when run.
       labels (list): Labels to apply to this test.
       data (list): Runtime data for the test.
       deps (list): Dependencies of this rule
@@ -113,8 +110,6 @@ def sh_test(name, src=None, args=None, labels=None, data=None, deps=None, size=N
       container (bool | dict): True to run this test within a container (eg. Docker).
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
     """
-    if args and not flags:
-        flags = ' '.join(args)
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     build_rule(
         name=name,
