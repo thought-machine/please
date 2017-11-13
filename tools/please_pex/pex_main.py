@@ -33,6 +33,7 @@ class ModuleDirImport(object):
 
     def load_module(self, fullname):
         mod = importlib.import_module(self.prefix + fullname)
+        mod.__name__ = fullname  # Make sure it has the expected name.
         sys.modules[fullname] = mod
         return mod
 
