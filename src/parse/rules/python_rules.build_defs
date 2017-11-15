@@ -371,14 +371,17 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
 
 def python_wheel(name, version, hashes=None, package_name=None, outs=None,
                  post_install_commands=None, patch=None, licences=None, test_only=False,
-                 repo=None, zip_safe=True, visibility=None, deps=None):
+                 repo=None, zip_safe=True, visibility=None, deps=None, name_scheme=None):
     """Downloads a Python wheel and extracts it.
 
     This is a lightweight pip-free alternative to pip_library which supports cross-compiling.
     Rather than leaning on pip which is difficult to achieve reproducible builds with and
     support on different platforms, this rule is a simple wrapper around curl and unzip.
-    The wheels are expected to follow a simple naming scheme which is essentially:
+    Unless otherwise specified, the wheels are expected to adhere to common naming schemes,
+    such as:
+      <package_name>-<version>[-<os>-<arch>].whl
       <package_name>-<version>[-<os>_<arch>].whl
+      <package_name>-<version>.whl
 
     Args:
       name (str): Name of the rule. Also doubles as the name of the package if package_name
@@ -396,6 +399,8 @@ def python_wheel(name, version, hashes=None, package_name=None, outs=None,
       zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
       visibility (list): Visibility declaration.
       deps (list): Dependencies of this rule.
+      name_scheme (str): The templatized wheel naming scheme (available template variables
+                         are `url_base`, `package_name`, and `version`).
     """
     outs = outs or [name]
     deps = deps or []
@@ -404,12 +409,32 @@ def python_wheel(name, version, hashes=None, package_name=None, outs=None,
     if not url_base:
         raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly '
                          'to python_wheel')
-    # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
-    # has optional arch-specific bits) and we prefer the one with the cool stuff.
-    url1 = '%s/%s-%s-${OS}_${ARCH}.whl' % (url_base, package_name, version)
-    url2 = '%s/%s-%s.whl' % (url_base, package_name, version)
+    urls = []
+    if name_scheme:
+        urls.append(name_scheme.format(url_base=url_base,
+                                       package_name=package_name,
+                                       version=version))
+    elif CONFIG.PYTHON_WHEEL_NAME_SCHEME:
+        urls.append(CONFIG.PYTHON_WHEEL_NAME_SCHEME.format(url_base=url_base,
+                                                           package_name=package_name,
+                                                           version=version))
+    else:
+        # Populate urls using a reasonable set of possible wheel naming schemes.
+        # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
+        # has optional arch-specific bits) and we prefer the one with the cool stuff.
+        urls.append('{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
+                                                                                       package_name=package_name,
+                                                                                       version=version))
+        urls.append('{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
+                                                                                       package_name=package_name,
+                                                                                       version=version))
+        urls.append('{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
+                                                                     package_name=package_name,
+                                                                     version=version))
+
+    curl_commands = ' || '.join(['curl -fsSO {url}'.format(url=url) for url in urls])
     cmd = [
-        '(curl -fsSO %s || curl -fsSO %s)' % (url1, url2),
+        curl_commands,
         'unzip -q *.whl',
         # Strip any bytecode, it might lead to nondeterminism. Similarly some wheels annoyingly
         # contain test code that we don't want.
