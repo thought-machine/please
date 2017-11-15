@@ -15,13 +15,13 @@ import (
 
 func TestBringUpCluster(t *testing.T) {
 	lis := openRPCPort(6995)
-	c1 := NewCluster(5995, 6995, "c1")
+	c1 := NewCluster(5995, 6995, "c1", "")
 	m1 := newRPCServer(c1, lis)
 	c1.Init(3)
 	log.Notice("Cluster seeded")
 
 	lis = openRPCPort(6996)
-	c2 := NewCluster(5996, 6996, "c2")
+	c2 := NewCluster(5996, 6996, "c2", "")
 	m2 := newRPCServer(c2, lis)
 	c2.Join([]string{"127.0.0.1:5995"})
 	log.Notice("c2 joined cluster")
@@ -45,7 +45,7 @@ func TestBringUpCluster(t *testing.T) {
 	assert.Equal(t, expected, c2.GetMembers())
 
 	lis = openRPCPort(6997)
-	c3 := NewCluster(5997, 6997, "c3")
+	c3 := NewCluster(5997, 6997, "c3", "")
 	m3 := newRPCServer(c2, lis)
 	c3.Join([]string{"127.0.0.1:5995", "127.0.0.1:5996"})
 

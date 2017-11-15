@@ -62,12 +62,13 @@ type Cluster struct {
 }
 
 // NewCluster creates a new Cluster object and starts listening on the given port.
-func NewCluster(port, rpcPort int, name string) *Cluster {
+func NewCluster(port, rpcPort int, name, advertiseAddr string) *Cluster {
 	c := memberlist.DefaultLANConfig()
 	c.BindPort = port
 	c.AdvertisePort = port
 	c.Delegate = &delegate{name: name, port: rpcPort}
 	c.Logger = stdlog.New(&logWriter{}, "", 0)
+	c.AdvertiseAddr = advertiseAddr
 	if name != "" {
 		c.Name = name
 	}
@@ -75,16 +76,16 @@ func NewCluster(port, rpcPort int, name string) *Cluster {
 	if err != nil {
 		log.Fatalf("Failed to create new memberlist: %s", err)
 	}
-	n := list.LocalNode()
-	log.Notice("Memberlist initialised, this node is %s / %s:%d", n.Name, n.Addr, port)
 	clu := &Cluster{
-		list:    list,
 		clients: map[string]pb.RpcServerClient{},
 		name:    name,
+		list:    list,
 	}
 	if hostname, err := os.Hostname(); err == nil {
 		clu.hostname = hostname
 	}
+	n := list.LocalNode()
+	log.Notice("Memberlist initialised, this node is %s / %s:%d", n.Name, n.Addr, port)
 	return clu
 }
 
@@ -101,7 +102,7 @@ func (cluster *Cluster) Join(members []string) {
 		if name == cluster.name {
 			continue // Don't attempt to join ourselves, we're in the memberlist but can't welcome a new member.
 		}
-		log.Notice("Attempting to join with %s / %s", name, port)
+		log.Notice("Attempting to join with %s: %s / %s", name, node.Addr, port)
 		if client, err := cluster.getRPCClient(name, node.Addr.String()+port); err != nil {
 			log.Error("Error getting RPC client for %s: %s", node.Addr, err)
 		} else if resp, err := client.Join(ctx, &pb.JoinRequest{
@@ -167,7 +168,7 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 		if n.Name == "" || n.Name == node.Name {
 			// Available slot. Or, if they identified as an existing node, they can take that space over.
 			if n.Name == node.Name {
-				log.Warning("Node %s / %s is taking over slot %d", node.Name, node.Addr, i)
+				log.Notice("Node %s / %s matched to slot %d", node.Name, node.Addr, i)
 			} else {
 				log.Notice("Populating node %d: %s / %s", i, node.Name, node.Addr)
 			}
