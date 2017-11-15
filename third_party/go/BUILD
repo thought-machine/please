@@ -180,7 +180,8 @@ go_get(
 go_get(
     name = 'grpc-middleware',
     get = 'github.com/grpc-ecosystem/go-grpc-middleware',
-    revision = 'f63a7dfb64c138bd93d5c5b896d8b33c4b08e000',
+    install = ['github.com/grpc-ecosystem/go-grpc-middleware/retry'],
+    revision = 'fa8fef87dcecac0bda02d36abb3c790ab9e0030b',
     deps = [
         ':context',
         ':grpc',

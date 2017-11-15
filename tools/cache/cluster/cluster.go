@@ -20,9 +20,11 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/hashicorp/memberlist"
 	"google.golang.org/grpc"
 	"gopkg.in/op/go-logging.v1"
@@ -55,6 +57,8 @@ type Cluster struct {
 
 	// hostname is our hostname.
 	hostname string
+	// name is the name of this cluster node.
+	name string
 }
 
 // NewCluster creates a new Cluster object and starts listening on the given port.
@@ -62,7 +66,7 @@ func NewCluster(port, rpcPort int, name string) *Cluster {
 	c := memberlist.DefaultLANConfig()
 	c.BindPort = port
 	c.AdvertisePort = port
-	c.Delegate = &delegate{port: rpcPort}
+	c.Delegate = &delegate{name: name, port: rpcPort}
 	c.Logger = stdlog.New(&logWriter{}, "", 0)
 	if name != "" {
 		c.Name = name
@@ -76,6 +80,7 @@ func NewCluster(port, rpcPort int, name string) *Cluster {
 	clu := &Cluster{
 		list:    list,
 		clients: map[string]pb.RpcServerClient{},
+		name:    name,
 	}
 	if hostname, err := os.Hostname(); err == nil {
 		clu.hostname = hostname
@@ -92,9 +97,12 @@ func (cluster *Cluster) Join(members []string) {
 	for _, node := range cluster.list.Members() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		// We don't have the node name here yet.
-		// TODO(pebers): we could maybe gossip that with the metadata?
-		if client, err := cluster.getRPCClient("", node.Addr.String()+":"+string(node.Meta)); err != nil {
+		name, port := cluster.metadata(node)
+		if name == cluster.name {
+			continue // Don't attempt to join ourselves, we're in the memberlist but can't welcome a new member.
+		}
+		log.Notice("Attempting to join with %s / %s", name, port)
+		if client, err := cluster.getRPCClient(name, node.Addr.String()+port); err != nil {
 			log.Error("Error getting RPC client for %s: %s", node.Addr, err)
 		} else if resp, err := client.Join(ctx, &pb.JoinRequest{
 			Name:    cluster.list.LocalNode().Name,
@@ -111,6 +119,16 @@ func (cluster *Cluster) Join(members []string) {
 		}
 	}
 	log.Fatalf("Unable to contact any other cluster members")
+}
+
+// metadata breaks metadata from a node into its name and port (with a leading colon).
+func (cluster *Cluster) metadata(node *memberlist.Node) (string, string) {
+	meta := string(node.Meta)
+	idx := strings.IndexRune(meta, ':')
+	if idx == -1 {
+		return "", ""
+	}
+	return meta[:idx], meta[idx:]
 }
 
 // Init seeds a new plz cache cluster.
@@ -135,9 +153,10 @@ func (cluster *Cluster) GetMembers() []*pb.Node {
 // This includes allocating it hash space.
 func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 	newNode := func(i int) *pb.Node {
+		_, port := cluster.metadata(node)
 		return &pb.Node{
 			Name:      node.Name,
-			Address:   node.Addr.String() + ":" + string(node.Meta),
+			Address:   node.Addr.String() + port,
 			HashBegin: tools.HashPoint(i, cluster.size),
 			HashEnd:   tools.HashPoint(i+1, cluster.size),
 		}
@@ -165,7 +184,7 @@ func (cluster *Cluster) newNode(node *memberlist.Node) *pb.Node {
 		cluster.nodes = append(cluster.nodes, node)
 		return node
 	}
-	log.Warning("Node %s / %s attempted to join, but there is no space available.", node.Name, node.Addr)
+	log.Warning("Node %s / %s attempted to join, but there is no space available [%d / %d].", node.Name, node.Addr, len(cluster.nodes), cluster.size)
 	return nil
 }
 
@@ -178,7 +197,8 @@ func (cluster *Cluster) getRPCClient(name, address string) (pb.RpcServerClient, 
 		return client, nil
 	}
 	// TODO(pebers): add credentials.
-	connection, err := grpc.Dial(address, grpc.WithTimeout(5*time.Second), grpc.WithInsecure())
+	connection, err := grpc.Dial(address, grpc.WithTimeout(5*time.Second), grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(grpc_retry.WithMax(3))))
 	if err != nil {
 		return nil, err
 	}
@@ -275,13 +295,14 @@ func (cluster *Cluster) AddNode(req *pb.JoinRequest) *pb.JoinResponse {
 
 // A delegate is our implementation of memberlist's Delegate interface.
 // Somewhat awkwardly we have to implement the whole thing to provide metadata for our node,
-// which we only really need to do to communicate our RPC port.
+// which we only really need to do to communicate our name and RPC port.
 type delegate struct {
+	name string
 	port int
 }
 
 func (d *delegate) NodeMeta(limit int) []byte {
-	return []byte(strconv.Itoa(d.port))
+	return []byte(d.name + ":" + strconv.Itoa(d.port))
 }
 
 func (d *delegate) NotifyMsg([]byte)                           {}
