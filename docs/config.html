@@ -331,6 +331,10 @@
         Whether or not to use PyPI for <code>pip_library</code> rules or not. Defaults to true, if you
         disable this you will presumably want to set DefaultPipRepo to use one of your own.<br/>
         Is overridden by the <code>use_pypi</code> argument to <code>pip_library</code>.</li>
+
+      <li><b>WheelNameScheme</b> (string)<br/>
+        Defines a custom templatized wheel naming scheme.<br/>
+        Templatized variables should be surrounded in curly braces within the scheme, and the available options are: <code>url_base</code>, <code>package_name</code>, and <code>version</code>. The default search pattern is <code>{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl</code> along with a few common variants.</li>
     </ul>
 
     <h3>[Java]</h3>

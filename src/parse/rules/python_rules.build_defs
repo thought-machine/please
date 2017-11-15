@@ -412,21 +412,25 @@ def python_wheel(name, version, hashes=None, package_name=None, outs=None,
     urls = []
     if name_scheme:
         urls.append(name_scheme.format(url_base=url_base,
-                                        package_name=package_name,
-                                        version=version))
+                                       package_name=package_name,
+                                       version=version))
+    elif CONFIG.PYTHON_WHEEL_NAME_SCHEME:
+        urls.append(CONFIG.PYTHON_WHEEL_NAME_SCHEME.format(url_base=url_base,
+                                                           package_name=package_name,
+                                                           version=version))
     else:
         # Populate urls using a reasonable set of possible wheel naming schemes.
         # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
         # has optional arch-specific bits) and we prefer the one with the cool stuff.
         urls.append('{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                   package_name=package_name,
-                                                                                   version=version))
+                                                                                       package_name=package_name,
+                                                                                       version=version))
         urls.append('{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                   package_name=package_name,
-                                                                                   version=version))
+                                                                                       package_name=package_name,
+                                                                                       version=version))
         urls.append('{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
-                                                                                   package_name=package_name,
-                                                                                   version=version))
+                                                                     package_name=package_name,
+                                                                     version=version))
 
     curl_commands = ' || '.join(['curl -fsSO {url}'.format(url=url) for url in urls])
     cmd = [

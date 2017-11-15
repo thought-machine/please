@@ -116,6 +116,7 @@ func initializeInterpreter(state *core.BuildState) {
 	setConfigValue("PYTHON_MODULE_DIR", config.Python.ModuleDir)
 	setConfigValue("PYTHON_DEFAULT_PIP_REPO", config.Python.DefaultPipRepo.String())
 	setConfigValue("PYTHON_WHEEL_REPO", config.Python.WheelRepo.String())
+	setConfigValue("PYTHON_WHEEL_NAME_SCHEME", config.Python.WheelNameScheme)
 	setConfigValue("USE_PYPI", pythonBool(config.Python.UsePyPI))
 	setConfigValue("JAVAC_TOOL", config.Java.JavacTool)
 	setConfigValue("JAVAC_WORKER", config.Java.JavacWorker)
