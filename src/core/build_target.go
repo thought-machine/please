@@ -515,7 +515,11 @@ func (target *BuildTarget) CheckDependencyVisibility(graph *BuildGraph) error {
 		if !target.CanSee(dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
 		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
-			return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
+			if isExperimental(target) {
+				log.Warning("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
+			} else {
+				return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
+			}
 		}
 	}
 	return nil

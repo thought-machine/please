@@ -6,6 +6,7 @@ package tool
 
 import (
 	"os"
+	"path"
 	"strings"
 	"syscall"
 
@@ -60,6 +61,7 @@ func matchingTools(config *core.Configuration, prefix string) map[string]string 
 		"lint":        config.Parse.LintTool,
 		"maven":       config.Java.PleaseMavenTool,
 		"pex":         config.Python.PexTool,
+		"diff_graphs": path.Join(config.Please.Location, "please_diff_graphs"),
 	}
 	ret := map[string]string{}
 	for k, v := range knownTools {
