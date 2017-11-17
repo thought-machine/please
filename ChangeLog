@@ -1,3 +1,11 @@
+Version 10.1.0
+--------------
+
+    * Dynamic support for Python wheel naming schemes, either via name_scheme on the
+      rule or by setting it in the config.
+    * diff_graphs added to plz tool.
+
+
 Version 10.0.1
 --------------
 
