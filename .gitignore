@@ -15,6 +15,8 @@
 /src/parse/cffi/parser_interface.c
 /src/parse/cffi/libplease_parser_python2.so
 /src/parse/cffi/libplease_parser_python2.dylib
+/src/parse/cffi/libplease_parser_python3.so
+/src/parse/cffi/libplease_parser_python3.dylib
 /src/parse/cffi/libplease_parser_pypy.so
 /src/parse/cffi/libplease_parser_pypy.dylib
 /src/parse/rules/embedded_parser.py
