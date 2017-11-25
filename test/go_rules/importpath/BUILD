@@ -1,3 +1,5 @@
+package(go_import_path = 'github.com/thought-machine/please')
+
 go_library(
     name = 'importpath',
     srcs = ['importpath.go'],
