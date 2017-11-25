@@ -33,7 +33,6 @@ python_wheel(
     hashes = [
         'sha1: e43b552c4a6063d32b8c9bf742fb3e9ce579c4d8',
     ],
-    test_only = True,  # Not used by plz itself.
 )
 
 python_wheel(
