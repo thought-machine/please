@@ -152,19 +152,21 @@ _BAZEL_KEYWORD_REWRITES = {
     'exports': 'exported_deps',
 }
 
+_CONFIG_MULTI_VALUES = {
+    'DEFAULT_MAVEN_REPO',
+    'PROTO_LANGUAGES',
+}
+
 
 @ffi.def_extern('SetConfigValue')
 def set_config_value(c_name, c_value):
     name = ffi_to_string(c_name)
     value = ffi_to_string(c_value)
     config = _please_globals['CONFIG']
-    existing = config.get(name)
-    # A little gentle hack to make it convenient to set repeated config values; we could
-    # do it via another callback but we already have so many of them...
-    if isinstance(existing, list):
+    existing = config.get(name, [])
+    if name in _CONFIG_MULTI_VALUES:
         existing.append(value)
-    elif existing:
-        config[name] = [existing, value]
+        config[name] = existing
     else:
         config[name] = value
 

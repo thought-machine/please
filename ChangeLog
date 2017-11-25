@@ -1,3 +1,9 @@
+Version 10.1.1
+--------------
+
+    * Fixes a long-lurking bug where some config values didn't override properly.
+
+
 Version 10.1.0
 --------------
 
