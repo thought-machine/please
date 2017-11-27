@@ -637,11 +637,12 @@ def _go_library_cmds(complete=True, all_srcs=False):
     compile_cmd = '$TOOL tool %s -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (go_compile_tool, complete_flag, _GOPATH)
     # Annotates files for coverage
     cover_cmd = 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
-    srcs = 'export SRCS="$PKG_DIR/*.go"; ' if all_srcs else ''
+    prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
+    prefix += _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
     return {
-        'dbg': '%s%s; %s -N -l $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),
-        'opt': '%s%s; %s $SRCS' % (srcs, _LINK_PKGS_CMD, compile_cmd),
-        'cover': '%s%s; %s && %s $SRCS' % (srcs, _LINK_PKGS_CMD, cover_cmd, compile_cmd),
+        'dbg': '%s; %s -N -l $SRCS' % (prefix, compile_cmd),
+        'opt': '%s; %s $SRCS' % (prefix, compile_cmd),
+        'cover': '%s; %s && %s $SRCS' % (prefix, cover_cmd, compile_cmd),
     }
 
 
@@ -649,6 +650,7 @@ def _go_binary_cmds(static=False, ldflags=''):
     """Returns the commands to run for linking a Go binary."""
     _go_link_tool = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
     _link_cmd = '$TOOLS_GO tool %s -tmpdir $TMP_DIR -extld $TOOLS_LD %s -L . -o ${OUT} ' % (_go_link_tool, _GOPATH.replace('-I ', '-L '))
+    prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     if static:
         flags = '-linkmode external -extldflags "-static %s"' % ldflags
@@ -658,12 +660,24 @@ def _go_binary_cmds(static=False, ldflags=''):
         flags = ''
 
     return {
-        'dbg': '%s; %s %s $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
-        'opt': '%s; %s %s -s -w $SRCS' % (_LINK_PKGS_CMD, _link_cmd, flags),
+        'dbg': '%s && %s %s $SRCS' % (prefix, _link_cmd, flags),
+        'opt': '%s && %s %s -s -w $SRCS' % (prefix, _link_cmd, flags),
     }, {
         'go': [CONFIG.GO_TOOL],
         'ld': [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL],
     }
+
+
+def _go_import_path_cmd(import_path):
+    """Returns a partial command which is used for setting up the Go import path."""
+    if not import_path:
+        return ''
+    elif import_path.startswith('/'):
+        raise ConfigError('GO_IMPORT_PATH cannot start with a /')
+    elif '/' in import_path:
+        return ' && mkdir -p %s && ln -s $TMP_DIR %s' % (dirname(import_path), import_path)
+    else:
+        return ' && ln -s $TMP_DIR ' + import_path
 
 
 def _collect_linker_flags(static):
