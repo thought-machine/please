@@ -793,7 +793,7 @@ func main() {
 		// If we're running plz init then we obviously don't expect to read a config file.
 		utils.InitConfig(opts.Init.Dir, opts.Init.BazelCompatibility)
 		os.Exit(0)
-	} else if command == "help" || command == "remote" {
+	} else if command == "help" || command == "follow" {
 		config = core.DefaultConfiguration()
 		if !buildFunctions[command]() {
 			os.Exit(1)
