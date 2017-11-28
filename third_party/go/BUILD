@@ -205,6 +205,13 @@ go_get(
     name = 'memberlist',
     get = 'github.com/hashicorp/memberlist',
     revision = '7ad712f5f34ec40aebe6ca47756d07898486a8d2',
+    deps = [':dns'],
+)
+
+go_get(
+    name = 'dns',
+    get = 'github.com/miekg/dns',
+    revision = 'be5ae6ca7ac994584d2e30167737687f1c1ded8e',
 )
 
 go_get(
