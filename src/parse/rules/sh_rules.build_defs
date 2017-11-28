@@ -86,7 +86,8 @@ def sh_binary(name, main, deps=None, visibility=None, labels=None):
         deps = deps,
         binary = True,
         needs_transitive_deps = True,
-        labels = labels
+        labels = labels,
+        visibility = visibility,
     )
 
 
