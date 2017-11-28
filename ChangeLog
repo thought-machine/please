@@ -1,3 +1,11 @@
+Version 10.2.0
+--------------
+
+    * Support for specifying Go import paths (#249)
+    * `plz follow` now works anywhere (you don't have to be in a plz repo)
+    * Fixed `sh_binary` which wasn't honouring visibility correctly.
+
+
 Version 10.1.1
 --------------
 
