@@ -16,9 +16,11 @@ import (
 // A Writer implements writing a .pex file in various steps.
 type Writer struct {
 	zipSafe        bool
+	usePyTest      bool
 	shebang        string
 	realEntryPoint string
 	testSrcs       []string
+	testExcludes   []string
 }
 
 // NewWriter constructs a new Writer.
@@ -52,6 +54,22 @@ func (pw *Writer) SetTest(srcs []string) {
 	}
 }
 
+// UsePyTest sets this Writer to use pytest as the runner instead of unittest.
+func (pw *Writer) UsePyTest(use bool) {
+	pw.usePyTest = use
+	// We only need xmlrunner for unittest, the equivalent is builtin to pytest.
+	if use {
+		pw.testExcludes = []string{".bootstrap/xmlrunner"}
+	} else {
+		pw.testExcludes = []string{
+			".bootstrap/pytest.py",
+			".bootstrap/py",
+			".bootstrap/pluggy",
+			".bootstrap/attr",
+		}
+	}
+}
+
 // Write writes the pex to the given output file.
 func (pw *Writer) Write(out, moduleDir string) error {
 	f := zip.NewFile(out, true)
@@ -65,6 +83,7 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	// Write required pex stuff for tests. Note that this executable is also a zipfile and we can
 	// jarcat it directly in (nifty, huh?).
 	if len(pw.testSrcs) != 0 {
+		f.Exclude = pw.testExcludes
 		if err := f.AddZipFile(os.Args[0]); err != nil {
 			return err
 		}

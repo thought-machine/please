@@ -76,19 +76,19 @@ python_wheel(
     name = 'attrs',
     version = '17.3.0',
     outs = ['attr'],
-    hashes = ['sha1: 62e71134eb068413e40fe4d973451c0e4931db5a'],
+    hashes = ['sha1: 8c10e615550922e4cd9a52fe7166339c8d4615fd'],
 )
 
 python_wheel(
     name = 'pluggy',
     version = '0.6.0',
-    hashes = ['sha1: 62e71134eb068413e40fe4d973451c0e4931db5a'],
+    hashes = ['sha1: 8413e603d74392f027e8a2e87a589a4f055f2e18'],
 )
 
 python_wheel(
     name = 'py',
     version = '1.5.2',
-    hashes = ['sha1: 62e71134eb068413e40fe4d973451c0e4931db5a'],
+    hashes = ['sha1: f63c59196e88ce403e528630a76fb3f755157625'],
 )
 
 python_wheel(
@@ -98,5 +98,11 @@ python_wheel(
         '_pytest',
         'pytest.py',
     ],
-    hashes = ['sha1: 62e71134eb068413e40fe4d973451c0e4931db5a'],
+    hashes = ['sha1: 27dbe6214cab8205259396111ed9465267de26da'],
+    deps = [
+        ':attrs',
+        ':pluggy',
+        ':py',
+        ':six',
+    ],
 )
