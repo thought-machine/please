@@ -224,7 +224,6 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         requires=['py'],
         test_only=True,
         needs_transitive_deps=True,  # needed for zip-safe detection
-        output_is_complete=True,
         building_description="Creating pex info...",
         pre_build=pre_build,
         deps=deps,
@@ -233,29 +232,14 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
             'pex': [CONFIG.PEX_TOOL],
         },
     )
-    if CONFIG.PYTHON_TEST_RUNNER == 'pytest':
-        # pytest needs to be able to find the tests as files.
-        # On the bright side it is kinda nice not to have to package the test sources into the pex,
-        # so it doesn't have to be rebuilt when they change.
-        data = (data or []) + srcs
-    else:
-        # unittest requires the sources to be packaged (because they are imported directly as modules).
-        # TODO(peterebden): Can we avoid it here too? We could probably import them ourselves, as
-        #                   long as we can provide the modules themselves to unittest.
-        deps = [python_library(
-            name='_%s#lib' % name,
-            srcs=srcs,
-            resources=resources,
-            interpreter=interpreter,
-            deps=deps,
-            test_only=True,
-        )]
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     build_rule(
         name=name,
         srcs=[pex_rule],
-        deps=deps,
-        data=data,
+        deps=[pex_rule],
+        # N.B. the actual test sources are passed as data files as well. This is needed for pytest but
+        #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
+        data=(data or []) + srcs,
         outs=['%s.pex' % name],
         labels=labels,
         cmd=_PYTHON_BINARY_CMDS,

@@ -1,3 +1,5 @@
+import imp
+import os
 import unittest
 from importlib import import_module
 
@@ -19,17 +21,26 @@ def filter_suite(suite, test_names):
     return new_suite
 
 
+def import_tests(test_names):
+    """Yields the set of test modules, from file if necessary."""
+    # We have files available locally, but there may (likely) also be python files in the same
+    # Python package within the pex. We can't just import them because the parent package exists
+    # in only one of those places (this is similar to importing generated code from plz-out/gen).
+    for filename in TEST_NAMES:
+        pkg_name, _ = os.path.splitext(filename.replace('/', '.'))
+        try:
+            yield import_module(pkg_name)
+        except ImportError:
+            with open(filename, 'r') as f:
+                yield imp.load_module(pkg_name, f, filename, ('.py', 'r', imp.PY_SOURCE))
+
+
 def run_tests(test_names):
     """Runs tests using unittest, returns the number of failures."""
     # N.B. import must be deferred until we have set up import paths.
     import xmlrunner
-    # unittest's discovery produces very misleading errors in some cases; if it tries to import
-    # a module which imports other things that then fail, it reports 'module object has no
-    # attribute <test name>' and swallows the original exception. Try to import them all first
-    # so we get better error messages.
-    for test_name in TEST_NAMES:
-        import_module(test_name)
-    suite = unittest.defaultTestLoader.loadTestsFromNames(TEST_NAMES)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(module)
+                               for module in import_tests(test_names))
     if test_names:
         suite = filter_suite(suite, test_names)
         if suite.countTestCases() == 0:
