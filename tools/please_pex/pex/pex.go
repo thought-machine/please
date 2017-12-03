@@ -16,11 +16,11 @@ import (
 // A Writer implements writing a .pex file in various steps.
 type Writer struct {
 	zipSafe        bool
-	usePyTest      bool
 	shebang        string
 	realEntryPoint string
 	testSrcs       []string
 	testExcludes   []string
+	testRunner     string
 }
 
 // NewWriter constructs a new Writer.
@@ -56,17 +56,19 @@ func (pw *Writer) SetTest(srcs []string) {
 
 // UsePyTest sets this Writer to use pytest as the runner instead of unittest.
 func (pw *Writer) UsePyTest(use bool) {
-	pw.usePyTest = use
 	// We only need xmlrunner for unittest, the equivalent is builtin to pytest.
 	if use {
 		pw.testExcludes = []string{".bootstrap/xmlrunner"}
+		pw.testRunner = "pytest.py"
 	} else {
 		pw.testExcludes = []string{
 			".bootstrap/pytest.py",
 			".bootstrap/py",
 			".bootstrap/pluggy",
 			".bootstrap/attr",
+			".bootstrap/funcsigs",
 		}
+		pw.testRunner = "unittest.py"
 	}
 }
 
@@ -100,6 +102,8 @@ func (pw *Writer) Write(out, moduleDir string) error {
 		b2 := MustAsset("test_main.py")
 		b2 = bytes.Replace(b2, []byte("__TEST_NAMES__"), []byte(strings.Join(pw.testSrcs, ",")), 1)
 		b = append(b, b2...)
+		// It also needs an appropriate test runner.
+		b = append(b, MustAsset(pw.testRunner)...)
 	}
 	// We always append the final if __name__ == '__main__' bit.
 	b = append(b, MustAsset("pex_run.py")...)
