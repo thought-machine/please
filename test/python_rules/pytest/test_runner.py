@@ -6,7 +6,10 @@ import pytest
 
 
 def test_answer():
-    """Extremely simple test, from their examples."""
+    """Deceptively simple test, from their examples.
+
+    In this case, it's really testing that the import works correctly, which is fairly important...
+    """
     from test.python_rules.pytest.inc import inc
     assert inc(3) == 4
 

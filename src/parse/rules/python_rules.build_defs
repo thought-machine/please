@@ -243,6 +243,8 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
             'pex': [CONFIG.PEX_TOOL],
         },
     )
+    if CONFIG.PYTHON_TEST_RUNNER == 'pytest':
+        data = (data or []) + srcs
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     build_rule(
         name=name,
