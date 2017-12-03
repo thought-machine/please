@@ -5,12 +5,9 @@
 import pytest
 
 
-def inc(x):
-    return x + 1
-
-
 def test_answer():
     """Extremely simple test, from their examples."""
+    from test.python_rules.pytest.inc import inc
     assert inc(3) == 4
 
 
