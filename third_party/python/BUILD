@@ -98,6 +98,13 @@ python_wheel(
 )
 
 python_wheel(
+    name = 'pkg_resources',
+    package_name = 'setuptools',
+    version = '33.1.1',
+    hashes = ['sha1: 05f20a29a5dff7dd5b908afcf37c2b1bea8d3db6'],
+)
+
+python_wheel(
     name = 'pytest',
     version = '3.3.0',
     outs = [
@@ -108,6 +115,7 @@ python_wheel(
     deps = [
         ':attrs',
         ':funcsigs',
+        ':pkg_resources',
         ':pluggy',
         ':py',
         ':six',
