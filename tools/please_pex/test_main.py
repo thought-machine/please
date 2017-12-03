@@ -3,10 +3,6 @@
 import os
 import unittest
 import sys
-try:
-    from builtins import __import__  # python3
-except ImportError:
-    from __builtin__ import __import__  # python2
 
 # This will get templated in by the build rules.
 TEST_NAMES = '__TEST_NAMES__'.split(',')
@@ -82,12 +78,13 @@ class TracerImport(object):
 def run_tests(test_names):
     """Runs tests, returns the number of failures."""
     import xmlrunner
+    from importlib import import_module
     # unittest's discovery produces very misleading errors in some cases; if it tries to import
     # a module which imports other things that then fail, it reports 'module object has no
     # attribute <test name>' and swallows the original exception. Try to import them all first
     # so we get better error messages.
     for test_name in TEST_NAMES:
-        __import__(test_name)
+        import_module(test_name)
     suite = unittest.defaultTestLoader.loadTestsFromNames(TEST_NAMES)
     if test_names:
         suite = filter_suite(suite, test_names)
