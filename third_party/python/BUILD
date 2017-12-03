@@ -13,10 +13,10 @@ REPOS = [
 ]
 
 python_wheel(
-    name = 'xmlrunner',
-    package_name = 'unittest_xml_reporting',
-    version = '1.11.0',
-    hashes = ['sha1: 62e71134eb068413e40fe4d973451c0e4931db5a'],
+    name = 'pytest',
+    package_name = 'pytest',
+    version = '3.3.0',
+    hashes = ['md5: 334ee86af89c9811462b1b39bc2bfbca'],
     deps = [':six'],
 )
 
