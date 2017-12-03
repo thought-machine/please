@@ -182,7 +182,8 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
 
     This works very similarly to python_binary; it is also a single .pex file
     which is run to execute the tests. The tests are run via either unittest or pytest, depending
-    on which is set for the python.testrunner property in .plzconfig.
+    on which is set for the test runner, which can be configured either via the python_test_runner
+    package property or python.testrunner in the config.
 
     Args:
       name (str): Name of the rule.
