@@ -24,8 +24,8 @@ genrule(
     name = 'please_pex',
     srcs = [
         ':pex_main',
+        '//third_party/python:pytest',
         '//third_party/python:six',
-        '//third_party/python:xmlrunner',
         '//third_party/python:coverage',
     ],
     outs = ['please_pex'],
