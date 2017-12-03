@@ -214,16 +214,6 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
     cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe' % (interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
-    # Test library itself.
-    lib_rule = python_library(
-        name='_%s#lib' % name,
-        srcs=srcs,
-        resources=resources,
-        interpreter=interpreter,
-        deps=deps,
-        test_only=True,
-    )
-
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
     pex_rule = build_rule(
         name = name,
@@ -244,12 +234,27 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         },
     )
     if CONFIG.PYTHON_TEST_RUNNER == 'pytest':
+        # pytest needs to be able to find the tests as files.
+        # On the bright side it is kinda nice not to have to package the test sources into the pex,
+        # so it doesn't have to be rebuilt when they change.
         data = (data or []) + srcs
+    else:
+        # unittest requires the sources to be packaged (because they are imported directly as modules).
+        # TODO(peterebden): Can we avoid it here too? We could probably import them ourselves, as
+        #                   long as we can provide the modules themselves to unittest.
+        deps = [python_library(
+            name='_%s#lib' % name,
+            srcs=srcs,
+            resources=resources,
+            interpreter=interpreter,
+            deps=deps,
+            test_only=True,
+        )]
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     build_rule(
         name=name,
         srcs=[pex_rule],
-        deps=[lib_rule],
+        deps=deps,
         data=data,
         outs=['%s.pex' % name],
         labels=labels,

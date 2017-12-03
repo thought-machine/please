@@ -46,20 +46,13 @@ func (pw *Writer) SetShebang(shebang string) {
 
 // SetTest sets this Writer to write tests using the given sources.
 // This overrides the entry point given earlier.
-func (pw *Writer) SetTest(srcs []string) {
+func (pw *Writer) SetTest(srcs []string, usePyTest bool) {
 	pw.realEntryPoint = "test_main"
-	pw.testSrcs = make([]string, len(srcs))
-	for i, src := range srcs {
-		pw.testSrcs[i] = toPythonPath(src)
-	}
-}
-
-// UsePyTest sets this Writer to use pytest as the runner instead of unittest.
-func (pw *Writer) UsePyTest(use bool) {
-	// We only need xmlrunner for unittest, the equivalent is builtin to pytest.
-	if use {
+	if usePyTest {
+		// We only need xmlrunner for unittest, the equivalent is builtin to pytest.
 		pw.testExcludes = []string{".bootstrap/xmlrunner/*"}
 		pw.testRunner = "pytest.py"
+		pw.testSrcs = srcs
 	} else {
 		pw.testIncludes = []string{
 			".bootstrap/xmlrunner",
@@ -68,6 +61,11 @@ func (pw *Writer) UsePyTest(use bool) {
 			".bootstrap/six.py",
 		}
 		pw.testRunner = "unittest.py"
+		// unittest needs them to be given as actual module names
+		pw.testSrcs = make([]string, len(srcs))
+		for i, src := range srcs {
+			pw.testSrcs[i] = toPythonPath(src)
+		}
 	}
 }
 

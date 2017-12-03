@@ -41,8 +41,7 @@ func main() {
 		w.SetShebang(opts.Shebang)
 	}
 	if opts.Test {
-		w.SetTest(opts.TestSrcs)
-		w.UsePyTest(opts.TestRunner == "pytest")
+		w.SetTest(opts.TestSrcs, opts.TestRunner == "pytest")
 	}
 	if err := w.Write(opts.Out, opts.ModuleDir); err != nil {
 		log.Fatalf("%s", err)
