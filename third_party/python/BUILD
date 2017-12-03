@@ -92,6 +92,12 @@ python_wheel(
 )
 
 python_wheel(
+    name = 'funcsigs',
+    version = '1.0.2',
+    hashes = ['sha1: de18f4fe57b15873bae7b98ee464a4b7bd6b273a'],
+)
+
+python_wheel(
     name = 'pytest',
     version = '3.3.0',
     outs = [
@@ -101,6 +107,7 @@ python_wheel(
     hashes = ['sha1: 27dbe6214cab8205259396111ed9465267de26da'],
     deps = [
         ':attrs',
+        ':funcsigs',
         ':pluggy',
         ':py',
         ':six',

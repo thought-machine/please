@@ -31,6 +31,7 @@ genrule(
         '//third_party/python:py',
         '//third_party/python:pluggy',
         '//third_party/python:attrs',
+        '//third_party/python:funcsigs',
     ],
     outs = ['please_pex'],
     binary = True,
