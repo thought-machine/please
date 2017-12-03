@@ -114,6 +114,7 @@ func initializeInterpreter(state *core.BuildState) {
 	setConfigValue("PIP_FLAGS", config.Python.PipFlags)
 	setConfigValue("PEX_TOOL", config.Python.PexTool)
 	setConfigValue("DEFAULT_PYTHON_INTERPRETER", config.Python.DefaultInterpreter)
+	setConfigValue("PYTHON_TEST_RUNNER", config.Python.TestRunner)
 	setConfigValue("PYTHON_MODULE_DIR", config.Python.ModuleDir)
 	setConfigValue("PYTHON_DEFAULT_PIP_REPO", config.Python.DefaultPipRepo.String())
 	setConfigValue("PYTHON_WHEEL_REPO", config.Python.WheelRepo.String())
