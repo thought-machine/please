@@ -3,7 +3,9 @@ filegroup(
     srcs = [
         'pex_main.py',
         'pex_run.py',
+        'pytest.py',
         'test_main.py',
+        'unittest.py',
     ],
     visibility = ['//tools/please_pex/pex:all'],
 )
@@ -27,6 +29,12 @@ genrule(
         '//third_party/python:six',
         '//third_party/python:xmlrunner',
         '//third_party/python:coverage',
+        '//third_party/python:pytest',
+        '//third_party/python:py',
+        '//third_party/python:pluggy',
+        '//third_party/python:attrs',
+        '//third_party/python:funcsigs',
+        '//third_party/python:pkg_resources',
     ],
     outs = ['please_pex'],
     binary = True,

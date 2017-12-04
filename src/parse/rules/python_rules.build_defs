@@ -181,7 +181,9 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
-    which is run to execute the tests. The tests are run via unittest.
+    which is run to execute the tests. The tests are run via either unittest or pytest, depending
+    on which is set for the test runner, which can be configured either via the python_test_runner
+    package property or python.testrunner in the config.
 
     Args:
       name (str): Name of the rule.
@@ -210,18 +212,8 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" --zip_safe' % (interpreter, CONFIG.PYTHON_MODULE_DIR)
+    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe' % (interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
-
-    # Test library itself.
-    lib_rule = python_library(
-        name='_%s#lib' % name,
-        srcs=srcs,
-        resources=resources,
-        interpreter=interpreter,
-        deps=deps,
-        test_only=True,
-    )
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
     pex_rule = build_rule(
@@ -233,7 +225,6 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
         requires=['py'],
         test_only=True,
         needs_transitive_deps=True,  # needed for zip-safe detection
-        output_is_complete=True,
         building_description="Creating pex info...",
         pre_build=pre_build,
         deps=deps,
@@ -242,12 +233,27 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
             'pex': [CONFIG.PEX_TOOL],
         },
     )
+
+    # If there are resources specified, they have to get built into the pex.
+    if resources:
+        # Test library itself.
+        lib_rule = python_library(
+            name='_%s#lib' % name,
+            resources=resources,
+            interpreter=interpreter,
+            deps=deps,
+            test_only=True,
+        )
+        deps = (deps or []) + [lib_rule]
+
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     build_rule(
         name=name,
         srcs=[pex_rule],
-        deps=[lib_rule],
-        data=data,
+        deps=[pex_rule],
+        # N.B. the actual test sources are passed as data files as well. This is needed for pytest but
+        #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
+        data=(data or []) + srcs,
         outs=['%s.pex' % name],
         labels=labels,
         cmd=_PYTHON_BINARY_CMDS,

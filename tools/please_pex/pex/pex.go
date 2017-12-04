@@ -15,10 +15,12 @@ import (
 
 // A Writer implements writing a .pex file in various steps.
 type Writer struct {
-	zipSafe        bool
-	shebang        string
-	realEntryPoint string
-	testSrcs       []string
+	zipSafe                    bool
+	shebang                    string
+	realEntryPoint             string
+	testSrcs                   []string
+	testIncludes, testExcludes []string
+	testRunner                 string
 }
 
 // NewWriter constructs a new Writer.
@@ -44,11 +46,21 @@ func (pw *Writer) SetShebang(shebang string) {
 
 // SetTest sets this Writer to write tests using the given sources.
 // This overrides the entry point given earlier.
-func (pw *Writer) SetTest(srcs []string) {
+func (pw *Writer) SetTest(srcs []string, usePyTest bool) {
 	pw.realEntryPoint = "test_main"
-	pw.testSrcs = make([]string, len(srcs))
-	for i, src := range srcs {
-		pw.testSrcs[i] = toPythonPath(src)
+	pw.testSrcs = srcs
+	if usePyTest {
+		// We only need xmlrunner for unittest, the equivalent is builtin to pytest.
+		pw.testExcludes = []string{".bootstrap/xmlrunner/*"}
+		pw.testRunner = "pytest.py"
+	} else {
+		pw.testIncludes = []string{
+			".bootstrap/xmlrunner",
+			".bootstrap/coverage",
+			".bootstrap/__init__.py",
+			".bootstrap/six.py",
+		}
+		pw.testRunner = "unittest.py"
 	}
 }
 
@@ -65,6 +77,8 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	// Write required pex stuff for tests. Note that this executable is also a zipfile and we can
 	// jarcat it directly in (nifty, huh?).
 	if len(pw.testSrcs) != 0 {
+		f.Include = pw.testIncludes
+		f.Exclude = pw.testExcludes
 		if err := f.AddZipFile(os.Args[0]); err != nil {
 			return err
 		}
@@ -81,6 +95,8 @@ func (pw *Writer) Write(out, moduleDir string) error {
 		b2 := MustAsset("test_main.py")
 		b2 = bytes.Replace(b2, []byte("__TEST_NAMES__"), []byte(strings.Join(pw.testSrcs, ",")), 1)
 		b = append(b, b2...)
+		// It also needs an appropriate test runner.
+		b = append(b, MustAsset(pw.testRunner)...)
 	}
 	// We always append the final if __name__ == '__main__' bit.
 	b = append(b, MustAsset("pex_run.py")...)

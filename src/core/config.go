@@ -146,6 +146,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
 	config.Python.PipTool = "pip"
 	config.Python.DefaultInterpreter = "python"
+	config.Python.TestRunner = "unittest"
 	config.Python.UsePyPI = true
 	// Annoyingly pip on OSX doesn't seem to work with this flag (you get the dreaded
 	// "must supply either home or prefix/exec-prefix" error). Goodness knows why *adding* this
@@ -285,6 +286,7 @@ type Configuration struct {
 		PipFlags           string  `help:"Additional flags to pass to pip invocations in pip_library rules." var:"PIP_FLAGS"`
 		PexTool            string  `help:"The tool that's invoked to build pexes. Defaults to please_pex in the install directory." var:"PEX_TOOL"`
 		DefaultInterpreter string  `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to, say, pypy." var:"DEFAULT_PYTHON_INTERPRETER"`
+		TestRunner         string  `help:"The test runner used to discover & run Python tests; one of unittest or pytest." var:"PYTHON_TEST_RUNNER"`
 		ModuleDir          string  `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex." var:"PYTHON_MODULE_DIR"`
 		DefaultPipRepo     cli.URL `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library." var:"PYTHON_DEFAULT_PIP_REPO"`
 		WheelRepo          cli.URL `help:"Defines a location for a remote repo that python_wheel rules will download from. See python_wheel for more information." var:"PYTHON_WHEEL_REPO"`
