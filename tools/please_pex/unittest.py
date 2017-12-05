@@ -37,7 +37,7 @@ def import_tests(test_names):
                 # Have to set the attribute on the parent module too otherwise some things
                 # can't find it.
                 parent, _, mod_name = pkg_name.rpartition('.')
-                if parent:
+                if parent and parent in sys.modules:
                     setattr(sys.modules[parent], mod_name, mod)
                 yield mod
 
