@@ -13,7 +13,7 @@ fi
 
 DEST="${HOME}/.please"
 mkdir -p ${DEST}
-rm -f ${DEST}/please ${DEST}/please_pex ${DEST}/junit_runner.jar ${DEST}/jarcat ${DEST}/please_maven ${DEST}/*.so
+rm -f ${DEST}/please ${DEST}/please_pex ${DEST}/junit_runner.jar ${DEST}/jarcat ${DEST}/please_maven ${DEST}/*.so ${DEST}/linter
 cp -f plz-out/bin/src/please ${DEST}/please
 chmod 0775 ${DEST}/please
 ln -sf ${DEST}/please ${DEST}/plz
@@ -32,7 +32,9 @@ chmod 0775 ${DEST}/please_diff_graphs
 cp -f plz-out/bin/tools/please_go_test/please_go_test ${DEST}/please_go_test
 chmod 0775 ${DEST}/please_go_test
 cp -f plz-out/bin/tools/linter/linter ${DEST}/please_build_linter
+cp -f plz-out/bin/tools/linter/linter ${DEST}/linter
 chmod 0775 ${DEST}/please_build_linter
+chmod 0775 ${DEST}/linter
 cp -f plz-out/bin/tools/javac_worker/javac_worker ${DEST}/javac_worker
 chmod 0775 ${DEST}/javac_worker
 echo "Please installed"
