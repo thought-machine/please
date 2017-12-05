@@ -235,6 +235,7 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
     )
 
     # If there are resources specified, they have to get built into the pex.
+    deps = [pex_rule]
     if resources:
         # Test library itself.
         lib_rule = python_library(
@@ -244,13 +245,13 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
             deps=deps,
             test_only=True,
         )
-        deps = (deps or []) + [lib_rule]
+        deps = [pex_rule, lib_rule]
 
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     build_rule(
         name=name,
         srcs=[pex_rule],
-        deps=[pex_rule],
+        deps=deps,
         # N.B. the actual test sources are passed as data files as well. This is needed for pytest but
         #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
         data=(data or []) + srcs,
