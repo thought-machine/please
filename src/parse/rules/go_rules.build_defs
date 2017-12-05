@@ -14,7 +14,8 @@ _LINK_PKGS_CMD = ' '.join([
 
 
 def go_library(name, srcs, asm_srcs=None, out=None, deps=None, visibility=None, test_only=False,
-               go_tools=None, complete=True, _needs_transitive_deps=False,_all_srcs=False):
+               go_tools=None, complete=True, _needs_transitive_deps=False,_all_srcs=False,
+               cover=True):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -29,6 +30,10 @@ def go_library(name, srcs, asm_srcs=None, out=None, deps=None, visibility=None, 
       complete (bool): Indicates whether the library is complete or not (ie. buildable with
                        `go tool build -complete`). In nearly all cases this is True (the main
                        exception being for cgo).
+      cover (bool): Indicates whether this library should be considered for coverage annotations.
+                    Libraries are only annotated when using `plz cover` (or `plz build -c cover`),
+                    but if this is false they never will be. Can be useful for e.g. third-party
+                    code that you never want to be instrumented.
     """
     if asm_srcs:
         lib_rule = go_library(
@@ -38,6 +43,7 @@ def go_library(name, srcs, asm_srcs=None, out=None, deps=None, visibility=None, 
             test_only = test_only,
             go_tools = go_tools,
             complete = False,
+            cover = cover,
             _needs_transitive_deps = _needs_transitive_deps,
             _all_srcs = _all_srcs,
         )
@@ -94,7 +100,7 @@ def go_library(name, srcs, asm_srcs=None, out=None, deps=None, visibility=None, 
         srcs=srcs,
         deps=deps + [':_%s#srcs' % name],
         outs=[out or name + '.a'],
-        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs),
+        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover),
         visibility=visibility,
         building_description="Compiling...",
         requires=['go', 'go_src'] if _all_srcs else ['go'],
@@ -629,21 +635,23 @@ def _replace_test_package(name, output, static):
                     set_command(lib, k, 'mv -f ${PKG_DIR}/%s.a ${PKG_DIR}/%s.a && %s' % (new_name, pkg_name, v))
 
 
-def _go_library_cmds(complete=True, all_srcs=False):
+def _go_library_cmds(complete=True, all_srcs=False, cover=True):
     """Returns the commands to run for building a Go library."""
     go_compile_tool = 'compile' if CONFIG.GO_VERSION >= "1.5" else '6g'
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
     compile_cmd = '$TOOL tool %s -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (go_compile_tool, complete_flag, _GOPATH)
     # Annotates files for coverage
-    cover_cmd = 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//./_} _tmp.go > $SRC; done'
+    cover_cmd = 'for SRC in $SRCS; do mv -f $SRC _tmp.go; BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} _tmp.go > $SRC; done'
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
     prefix += _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
-    return {
+    cmds = {
         'dbg': '%s; %s -N -l $SRCS' % (prefix, compile_cmd),
         'opt': '%s; %s $SRCS' % (prefix, compile_cmd),
-        'cover': '%s; %s && %s $SRCS' % (prefix, cover_cmd, compile_cmd),
     }
+    if cover:
+        cmds['cover'] = '%s; %s && %s $SRCS' % (prefix, cover_cmd, compile_cmd)
+    return cmds
 
 
 def _go_binary_cmds(static=False, ldflags=''):
