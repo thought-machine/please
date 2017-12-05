@@ -166,7 +166,8 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
 
 
 def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, compiler_flags=None,
-                linker_flags=None, subdir='', deps=None, visibility=None, test_only=False):
+                linker_flags=None, pkg_config=None, subdir='', deps=None, visibility=None,
+                test_only=False):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -188,6 +189,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
       out (str): Name of output file. Defaults to name + '.a'.
       compiler_flags (list): List of compiler flags to be passed when compiling the C code.
       linker_flags (list): List of linker flags to be passed when linking a Go binary.
+      pkg_config (list): List of packages to pass to pkg-config.
       subdir (str): Subdirectory that source files are in. Required if they're not in the
                     current directory.
       deps (list): Dependencies. Note that if you intend to depend on cc_library rules,
@@ -241,6 +243,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
             '-Wno-error',
             '-Wno-unused-parameter',  # Generated code doesn't compile clean
         ],
+        pkg_config_libs = pkg_config,
         test_only = test_only,
         deps = deps,
     )
@@ -625,12 +628,18 @@ def _replace_test_package(name, output, static):
     new_name = name[1:-5]
     for line in output:
         if line.startswith('Package: '):
-            ldflags = ' '.join(get_labels(name, 'cc:ld:'))
-            binary_cmds, _ = _go_binary_cmds(ldflags=ldflags, static=static)
+            ldflags, pkg_config = _get_ldflags_and_pkgconfig(name)
             pkg_name = line[9:]
-            if pkg_name != new_name or ldflags:  # Might not be necessary if names match already.
-                for k, v in binary_cmds.items():
-                    set_command(new_name, k, 'mv -f ${PKG_DIR}/%s.a ${PKG_DIR}/%s.a && %s' % (new_name, pkg_name, v))
+            name_changed = pkg_name != new_name
+            if name_changed or ldflags or pkg_config:  # Might not be necessary if names match already.
+                binary_cmds, _ = _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config)
+                if name_changed:
+                    for k, v in binary_cmds.items():
+                        set_command(new_name, k, 'mv -f ${PKG_DIR}/%s.a ${PKG_DIR}/%s.a && %s' % (new_name, pkg_name, v))
+                else:
+                    for k, v in binary_cmds.items():
+                        set_command(new_name, k, v)
+            if name_changed:
                 for k, v in _go_library_cmds().items():
                     set_command(lib, k, 'mv -f ${PKG_DIR}/%s.a ${PKG_DIR}/%s.a && %s' % (new_name, pkg_name, v))
 
@@ -654,16 +663,16 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True):
     return cmds
 
 
-def _go_binary_cmds(static=False, ldflags=''):
+def _go_binary_cmds(static=False, ldflags='', pkg_config=''):
     """Returns the commands to run for linking a Go binary."""
     _go_link_tool = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
     _link_cmd = '$TOOLS_GO tool %s -tmpdir $TMP_DIR -extld $TOOLS_LD %s -L . -o ${OUT} ' % (_go_link_tool, _GOPATH.replace('-I ', '-L '))
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     if static:
-        flags = '-linkmode external -extldflags "-static %s"' % ldflags
-    elif ldflags:
-        flags = '-extldflags "%s"' % ldflags
+        flags = '-linkmode external -extldflags "-static %s %s"' % (ldflags, pkg_config)
+    elif ldflags or pkg_config:
+        flags = '-extldflags "%s %s"' % (ldflags, pkg_config)
     else:
         flags = ''
 
@@ -691,8 +700,17 @@ def _go_import_path_cmd(import_path):
 def _collect_linker_flags(static):
     """Returns a pre-build function to apply transitive linker flags to a go_binary rule."""
     def collect_linker_flags(name):
-        ldflags = ' '.join(get_labels(name, 'cc:ld:'))
-        cmds, _ =  _go_binary_cmds(static=static, ldflags=ldflags)
-        for k, v in cmds.items():
-            set_command(name, k, v)
+        ldflags, pkg_config = _get_ldflags_and_pkgconfig(name)
+        if ldflags or pkg_config:
+            cmds, _ =  _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config)
+            for k, v in cmds.items():
+                set_command(name, k, v)
     return collect_linker_flags
+
+
+def _get_ldflags_and_pkgconfig(name):
+    """Returns the ldflags and pkg-config invocations for a target."""
+    labels = get_labels(name, 'cc:')
+    ldflags = ' '.join(l[3:] for l in labels if l.startswith('ld:'))
+    pkg_config = ' '.join(l[3:] for l in labels if l.startswith('pc:'))
+    return (ldflags, '`pkg-config --libs %s`' % pkg_config) if pkg_config else (ldflags, '')
