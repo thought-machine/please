@@ -1,5 +1,6 @@
 import imp
 import os
+import sys
 import unittest
 from importlib import import_module
 
@@ -32,7 +33,13 @@ def import_tests(test_names):
             yield import_module(pkg_name)
         except ImportError:
             with open(filename, 'r') as f:
-                yield imp.load_module(pkg_name, f, filename, ('.py', 'r', imp.PY_SOURCE))
+                mod = imp.load_module(pkg_name, f, filename, ('.py', 'r', imp.PY_SOURCE))
+                # Have to set the attribute on the parent module too otherwise some things
+                # can't find it.
+                parent, _, mod_name = pkg_name.rpartition('.')
+                if parent:
+                    setattr(sys.modules[parent], mod_name, mod)
+                yield mod
 
 
 def run_tests(test_names):
