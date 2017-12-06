@@ -25,6 +25,7 @@ go_test(
     srcs = ['logging_test.go'],
     deps = [
         ':cli',
+        '//third_party/go:go-flags',
         '//third_party/go:testify',
     ],
 )

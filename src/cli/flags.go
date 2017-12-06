@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -19,10 +20,16 @@ import (
 // GiByte is a re-export for convenience of other things using it.
 const GiByte = humanize.GiByte
 
+// A CompletionHandler is the type of function that our flags library uses to handle completions.
+type CompletionHandler func(parser *flags.Parser, items []flags.Completion)
+
 // ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
 // It may exit if certain options are encountered (eg. --help).
-func ParseFlags(appname string, data interface{}, args []string) (*flags.Parser, []string, error) {
+func ParseFlags(appname string, data interface{}, args []string, completionHandler CompletionHandler) (*flags.Parser, []string, error) {
 	parser := flags.NewNamedParser(path.Base(args[0]), flags.HelpFlag|flags.PassDoubleDash)
+	if completionHandler != nil {
+		parser.CompletionHandler = func(items []flags.Completion) { completionHandler(parser, items) }
+	}
 	parser.AddGroup(appname+" options", "", data)
 	extraArgs, err := parser.ParseArgs(args[1:])
 	if err != nil {
@@ -49,7 +56,7 @@ func ParseFlagsOrDie(appname, version string, data interface{}) *flags.Parser {
 // ParseFlagsFromArgsOrDie is similar to ParseFlagsOrDie but allows control over the
 // flags passed.
 func ParseFlagsFromArgsOrDie(appname, version string, data interface{}, args []string) *flags.Parser {
-	parser, extraArgs, err := ParseFlags(appname, data, args)
+	parser, extraArgs, err := ParseFlags(appname, data, args, nil)
 	if err != nil && err.(*flags.Error).Type == flags.ErrUnknownFlag && strings.Contains(err.(*flags.Error).Message, "`version'") {
 		fmt.Printf("%s version %s\n", appname, version)
 		os.Exit(0) // Ignore other errors if --version was passed.
@@ -196,4 +203,24 @@ func flagsError(err error) error {
 		return err
 	}
 	return &flags.Error{Type: flags.ErrMarshal, Message: err.Error()}
+}
+
+// A Filepath implements completion for file paths.
+// This is distinct from upstream's in that it knows about completing into directories.
+type Filepath string
+
+// Complete implements the flags.Completer interface.
+func (f *Filepath) Complete(match string) []flags.Completion {
+	matches, _ := filepath.Glob(match + "*")
+	// If there's exactly one match and it's a directory, take its contents instead.
+	if len(matches) == 1 {
+		if info, err := os.Stat(matches[0]); err == nil && info.IsDir() {
+			matches, _ = filepath.Glob(matches[0] + "/*")
+		}
+	}
+	ret := make([]flags.Completion, len(matches))
+	for i, match := range matches {
+		ret[i].Item = match
+	}
+	return ret
 }

@@ -47,7 +47,7 @@ var opts struct {
 	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
 		Config     string          `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
-		RepoRoot   string          `short:"r" long:"repo_root" description:"Root of repository to build."`
+		RepoRoot   cli.Filepath    `short:"r" long:"repo_root" description:"Root of repository to build."`
 		KeepGoing  bool            `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
 		NumThreads int             `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
 		Include    []string        `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
@@ -56,17 +56,17 @@ var opts struct {
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
-		Verbosity         int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)" default:"1"`
-		LogFile           string `long:"log_file" description:"File to echo full logging output to" default:"plz-out/log/build.log"`
-		LogFileLevel      int    `long:"log_file_level" description:"Log level for file output" default:"4"`
-		InteractiveOutput bool   `long:"interactive_output" description:"Show interactive output in a terminal"`
-		PlainOutput       bool   `short:"p" long:"plain_output" description:"Don't show interactive output."`
-		Colour            bool   `long:"colour" description:"Forces coloured output from logging & other shell output."`
-		NoColour          bool   `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
-		TraceFile         string `long:"trace_file" description:"File to write Chrome tracing output into"`
-		ShowAllOutput     bool   `long:"show_all_output" description:"Show all output live from all commands. Implies --plain_output."`
-		CompletionScript  bool   `long:"completion_script" description:"Prints the bash / zsh completion script to stdout"`
-		Version           bool   `long:"version" description:"Print the version of the tool"`
+		Verbosity         int          `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)" default:"1"`
+		LogFile           cli.Filepath `long:"log_file" description:"File to echo full logging output to" default:"plz-out/log/build.log"`
+		LogFileLevel      int          `long:"log_file_level" description:"Log level for file output" default:"4"`
+		InteractiveOutput bool         `long:"interactive_output" description:"Show interactive output ina  terminal"`
+		PlainOutput       bool         `short:"p" long:"plain_output" description:"Don't show interactive output."`
+		Colour            bool         `long:"colour" description:"Forces coloured output from logging & other shell output."`
+		NoColour          bool         `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
+		TraceFile         cli.Filepath `long:"trace_file" description:"File to write Chrome tracing output into"`
+		ShowAllOutput     bool         `long:"show_all_output" description:"Show all output live from all commands. Implies --plain_output."`
+		CompletionScript  bool         `long:"completion_script" description:"Prints the bash / zsh completion script to stdout"`
+		Version           bool         `long:"version" description:"Print the version of the tool"`
 	} `group:"Options controlling output & logging"`
 
 	FeatureFlags struct {
@@ -107,10 +107,10 @@ var opts struct {
 	} `command:"hash" description:"Calculates hash for one or more targets"`
 
 	Test struct {
-		FailingTestsOk  bool   `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
-		NumRuns         int    `long:"num_runs" short:"n" description:"Number of times to run each test target."`
-		TestResultsFile string `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
-		ShowOutput      bool   `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
+		FailingTestsOk  bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NumRuns         int          `long:"num_runs" short:"n" description:"Number of times to run each test target."`
+		TestResultsFile cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		ShowOutput      bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -119,15 +119,15 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
-		FailingTestsOk      bool     `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
-		NoCoverageReport    bool     `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
-		LineCoverageReport  bool     `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
-		NumRuns             int      `short:"n" long:"num_runs" description:"Number of times to run each test target."`
-		IncludeAllFiles     bool     `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
-		IncludeFile         []string `long:"include_file" description:"Filenames to filter coverage display to"`
-		TestResultsFile     string   `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
-		CoverageResultsFile string   `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
-		ShowOutput          bool     `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
+		FailingTestsOk      bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NoCoverageReport    bool         `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
+		LineCoverageReport  bool         `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
+		NumRuns             int          `short:"n" long:"num_runs" description:"Number of times to run each test target."`
+		IncludeAllFiles     bool         `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
+		IncludeFile         []string     `long:"include_file" description:"Filenames to filter coverage display to"`
+		TestResultsFile     cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		CoverageResultsFile cli.Filepath `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
+		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -179,8 +179,8 @@ var opts struct {
 	} `command:"op" description:"Re-runs previous command."`
 
 	Init struct {
-		Dir                string `long:"dir" description:"Directory to create config in" default:"."`
-		BazelCompatibility bool   `long:"bazel_compat" description:"Initialises config for Bazel compatibility mode."`
+		Dir                cli.Filepath `long:"dir" description:"Directory to create config in" default:"."`
+		BazelCompatibility bool         `long:"bazel_compat" description:"Initialises config for Bazel compatibility mode."`
 	} `command:"init" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
@@ -326,10 +326,10 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"test": func() bool {
-		os.RemoveAll(opts.Test.TestResultsFile)
+		os.RemoveAll(string(opts.Test.TestResultsFile))
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args)
 		success, state := runBuild(targets, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, opts.Test.TestResultsFile)
+		test.WriteResultsToFileOrDie(state.Graph, string(opts.Test.TestResultsFile))
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
@@ -338,14 +338,14 @@ var buildFunctions = map[string]func() bool{
 		} else {
 			opts.BuildFlags.Config = "cover"
 		}
-		os.RemoveAll(opts.Cover.TestResultsFile)
-		os.RemoveAll(opts.Cover.CoverageResultsFile)
+		os.RemoveAll(string(opts.Cover.TestResultsFile))
+		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
 		success, state := runBuild(targets, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, opts.Cover.TestResultsFile)
+		test.WriteResultsToFileOrDie(state.Graph, string(opts.Cover.TestResultsFile))
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
-		test.WriteCoverageToFileOrDie(state.Coverage, opts.Cover.CoverageResultsFile)
+		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile))
 		if opts.Cover.LineCoverageReport {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile)
 		} else if !opts.Cover.NoCoverageReport {
@@ -675,7 +675,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	}()
 	// Draw stuff to the screen while there are still results coming through.
 	shouldRun := !opts.Run.Args.Target.IsEmpty()
-	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.Build.ShowStatus, opts.OutputFlags.TraceFile)
+	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.Build.ShowStatus, string(opts.OutputFlags.TraceFile))
 	metrics.Stop()
 	build.StopWorkers()
 	if c != nil {
@@ -762,8 +762,59 @@ func activeCommand(command *flags.Command) string {
 	return command.Name
 }
 
+// readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
+func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
+	if opts.BuildFlags.RepoRoot == "" {
+		log.Debug("Found repo root at %s", core.MustFindRepoRoot())
+	} else {
+		core.RepoRoot = string(opts.BuildFlags.RepoRoot)
+	}
+
+	// Please always runs from the repo root, so move there now.
+	if err := os.Chdir(core.RepoRoot); err != nil {
+		log.Fatalf("%s", err)
+	}
+	// Reset this now we're at the repo root.
+	if opts.OutputFlags.LogFile != "" {
+		if !path.IsAbs(string(opts.OutputFlags.LogFile)) {
+			opts.OutputFlags.LogFile = cli.Filepath(path.Join(core.RepoRoot, string(opts.OutputFlags.LogFile)))
+		}
+		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel)
+	}
+
+	return readConfig(forceUpdate)
+}
+
+// handleCompletions handles shell completion. Typically it just prints to stdout but
+// may do a little more if we think we need to handle aliases.
+func handleCompletions(parser *flags.Parser, items []flags.Completion) {
+	if len(items) > 0 {
+		printCompletions(items)
+	} else {
+		cli.InitLogging(0) // Ensure this is quiet
+		config := readConfigAndSetRoot(false)
+		if len(config.Aliases) > 0 {
+			for k, v := range config.Aliases {
+				parser.AddCommand(k, v, v, &struct{}{})
+			}
+			// Run again without this registered as a completion handler
+			parser.CompletionHandler = nil
+			parser.ParseArgs(os.Args[1:])
+		}
+	}
+	// Regardless of what happened, always exit with 0 at this point.
+	os.Exit(0)
+}
+
+// printCompletions prints a set of completions to stdout.
+func printCompletions(items []flags.Completion) {
+	for _, item := range items {
+		fmt.Println(item.Item)
+	}
+}
+
 func main() {
-	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args)
+	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args, handleCompletions)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.OutputFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
@@ -791,7 +842,7 @@ func main() {
 			cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, os.Args)
 		}
 		// If we're running plz init then we obviously don't expect to read a config file.
-		utils.InitConfig(opts.Init.Dir, opts.Init.BazelCompatibility)
+		utils.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
 		os.Exit(0)
 	} else if command == "help" || command == "follow" {
 		config = core.DefaultConfiguration()
@@ -807,25 +858,8 @@ func main() {
 		utils.PrintCompletionScript()
 		os.Exit(0)
 	}
-	if opts.BuildFlags.RepoRoot == "" {
-		log.Debug("Found repo root at %s", core.MustFindRepoRoot())
-	} else {
-		core.RepoRoot = opts.BuildFlags.RepoRoot
-	}
-
-	// Please always runs from the repo root, so move there now.
-	if err := os.Chdir(core.RepoRoot); err != nil {
-		log.Fatalf("%s", err)
-	}
-	// Reset this now we're at the repo root.
-	if opts.OutputFlags.LogFile != "" {
-		if !path.IsAbs(opts.OutputFlags.LogFile) {
-			opts.OutputFlags.LogFile = path.Join(core.RepoRoot, opts.OutputFlags.LogFile)
-		}
-		cli.InitFileLogging(opts.OutputFlags.LogFile, opts.OutputFlags.LogFileLevel)
-	}
-
-	config = readConfig(command == "update")
+	// Read the config now
+	config = readConfigAndSetRoot(command == "update")
 	// Set this in case anything wants to use it soon
 	core.NewBuildState(config.Please.NumThreads, nil, opts.OutputFlags.Verbosity, config)
 
