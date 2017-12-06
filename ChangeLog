@@ -2,7 +2,11 @@ Version 10.3.0
 --------------
 
     * Support for using pytest as the test runner instead of unittest
+    * Python tests now supply test files as runtime files instead of packaging into
+      the pex itself, leading to somewhat faster rebuild times.
     * `go_library` rules can now be individually opted out of coverage instrumentation.
+    * `cgo_library` rules now accept a `pkg_config` argument to determine appropriate
+      compiler flags for dependencies.
 
 
 Version 10.2.0
