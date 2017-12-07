@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Downloads a precompiled copy of Please from our s3 bucket and installs it.
-set -eu
+set -e
 
 VERSION=`curl -fsSL https://get.please.build/latest_version`
 # Find the os / arch to download. You can do this quite nicely with go env
@@ -30,9 +30,18 @@ for x in `ls "$DIR"`; do
 done
 ln -sf "${LOCATION}/please" "${LOCATION}/plz"
 
-if [ ! -f /usr/local/bin/plz ]; then
-    echo "Creating a symlink in /usr/local/bin..."
-    sudo ln -sf "${LOCATION}/please" /usr/local/bin/plz
+if [ ! hash plz 2>/dev/null ]; then
+    echo "Adding ~/.please to PATH..."
+    export PATH="${PATH}:~/.please"
+    if [ -n "$ZSH_VERSION" ]; then
+        echo 'export PATH="${PATH}:~/.please"' >> ~/.zshrc
+    elif [ -n "$BASH_VERSION" ]; then
+        echo 'export PATH="${PATH}:~/.please"' >> ~/.bashrc
+    else
+        echo "Unknown shell, won't attempt to modify rc files."
+    fi
 fi
+
 echo "Please installed."
-plz --help
+echo "Run plz --help for more information about how to invoke it,"
+echo "or plz help for information on specific help topics."
