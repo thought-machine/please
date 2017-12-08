@@ -30,13 +30,15 @@ for x in `ls "$DIR"`; do
 done
 ln -sf "${LOCATION}/please" "${LOCATION}/plz"
 
-if [ ! hash plz 2>/dev/null ]; then
+if ! hash plz 2>/dev/null; then
     echo "Adding ~/.please to PATH..."
     export PATH="${PATH}:~/.please"
     if [ -n "$ZSH_VERSION" ]; then
         echo 'export PATH="${PATH}:~/.please"' >> ~/.zshrc
+        echo "You may need to run source ~/.zshrc to pick up the new PATH."
     elif [ -n "$BASH_VERSION" ]; then
         echo 'export PATH="${PATH}:~/.please"' >> ~/.bashrc
+        echo "You may need to run source ~/.bashrc to pick up the new PATH."
     else
         echo "Unknown shell, won't attempt to modify rc files."
     fi
