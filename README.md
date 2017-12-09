@@ -25,7 +25,9 @@ available, on OSX installation is fairly straightforward with Homebrew,
 simply run `brew install pypy`.
 
 Alternatively, you've likely got CPython installed already, and installing
-cffi is as simple as `sudo pip install "cffi>=1.5.0"`.
+cffi is as simple as `sudo pip install "cffi>=1.5.0"`. If you are a
+[pyenv]](https://github.com/pyenv/pyenv) user, note that due to the way dynamic linking works, you will
+still need a system-level cffi installation as described here.
 
 Then you simply run `plz init` at the root of your project to set up
 a default config and you're good to start adding BUILD files.
