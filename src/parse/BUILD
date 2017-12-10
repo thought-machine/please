@@ -1,4 +1,4 @@
-linker_flags = ['-Lsrc/parse/cffi -lplease_parser_static']
+linker_flags = ['-Lsrc/parse/cffi -lplease_parser_static -lm -lz -lutil']
 
 cgo_library(
     name = 'parse',

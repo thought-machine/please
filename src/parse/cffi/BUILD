@@ -31,7 +31,20 @@ c_static_library(
     srcs = [':parser_src'],
     hdrs = ['defs.h'],
     pkg_config_libs = ['python2'],
+    deps = [':libpython'],
     visibility = ['//src/parse/...'],
+)
+
+# This rule locates libpython which we need the symbols from.
+# This is pretty ugly but right now I can't persuade it to link statically for some reason
+# (always end up getting a dynamic link instead).
+# It's also pretty yuck that it arbitrarily fetches this off the system, although
+# arguably it is not really different to using pkg-config in that regard.
+genrule(
+    name = 'libpython',
+    srcs = ['find_python.sh'],
+    outs = ['libpython2.7.a'],
+    cmd = 'bash $SRCS',
 )
 
 filegroup(
