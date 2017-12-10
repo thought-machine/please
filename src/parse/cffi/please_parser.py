@@ -12,8 +12,6 @@ try:
     from path import join_path, split_path, splitext, dirname, basename
 except ImportError:
     from os.path import join as join_path, split as split_path, splitext, dirname, basename
-from collections import defaultdict, Mapping
-from contextlib import contextmanager
 from types import FunctionType
 from parser_interface import ffi
 
@@ -251,8 +249,8 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     ffi_string = lambda x: ffi.NULL if x is None else ffi_from_string(x)
     target = _add_target(package,
                          ffi_string(name),
-                         ffi_string('' if isinstance(cmd, Mapping) else cmd.strip()),
-                         ffi_string('' if isinstance(test_cmd, Mapping) else test_cmd.strip() if test_cmd else None),
+                         ffi_string('' if isinstance(cmd, dict) else cmd.strip()),
+                         ffi_string('' if isinstance(test_cmd, dict) else test_cmd.strip() if test_cmd else None),
                          binary,
                          test,
                          needs_transitive_deps,
@@ -276,10 +274,10 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     _add_maybe_named(target, _add_named_src, _add_src, srcs, name, 'srcs')
     _add_maybe_named(target, _add_named_out, _add_out, outs, name, 'outs')
     _add_maybe_named(target, _add_named_tool, _add_tool, tools, name, 'tools', absolute=True)
-    if isinstance(cmd, Mapping):
+    if isinstance(cmd, dict):
         for config, command in cmd.items():
             _check_c_error(_add_command(target, config, command.strip()))
-    if isinstance(test_cmd, Mapping):
+    if isinstance(test_cmd, dict):
         for config, command in test_cmd.items():
             _check_c_error(_add_test_command(target, config, command.strip()))
     if system_srcs:
@@ -299,7 +297,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     _add_strings(target, _add_test_output, test_outputs, 'test_outputs')
     _add_strings(target, _add_require, requires, 'requires')
     if provides:
-        if not isinstance(provides, Mapping):
+        if not isinstance(provides, dict):
             raise ValueError('"provides" argument for rule %s is not a mapping' % name)
         for lang, rule in provides.items():
             _check_c_error(_add_provide(target, ffi_from_string(lang), ffi_from_string(rule)))
@@ -357,7 +355,7 @@ def _add_strings(target, func, lst, name):
 
 
 def _add_maybe_named(target, named_func, unnamed_func, arg, name, arg_name, absolute=False):
-    if isinstance(arg, Mapping):
+    if isinstance(arg, dict):
         for k, v in arg.items():
             if isinstance(v, str):
                 raise ValueError('Value in %s for target %s is a string, you probably '
@@ -543,7 +541,6 @@ _please_globals['CONFIG'] = DotDict()
 _please_globals['CONFIG']['DEFAULT_VISIBILITY'] = None
 _please_globals['CONFIG']['DEFAULT_LICENCES'] = None
 _please_globals['CONFIG']['DEFAULT_TESTONLY'] = False
-_please_globals['defaultdict'] = defaultdict
 _please_globals['ParseError'] = ParseError
 _please_globals['ConfigError'] = ConfigError
 _please_globals['DuplicateTargetError'] = DuplicateTargetError

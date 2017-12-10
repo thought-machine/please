@@ -51,4 +51,5 @@ PARSER_TOOL = _PARSER_BINARIES[CONFIG.PARSER_ENGINE]
 # TODO(peterebden): C
 PARSER_MODULES = [
     'ast',
+    'types',
 ]
