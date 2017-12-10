@@ -5,6 +5,9 @@ subinclude('//build_defs:signing')
 signed_fpm_deb(
     name = 'please',
     version = VERSION,
+    dirs = {
+        '/opt/please/lib_py': ['//src/lib_py'],
+    },
     files = {
         '/opt/please/please': '//src:please',
         '/opt/please/please_pex': '//tools/please_pex',
@@ -15,9 +18,6 @@ signed_fpm_deb(
         '/opt/please/please_diff_graphs': '//tools/please_diff_graphs',
         '/opt/please/please_go_test': '//tools/please_go_test',
         '/opt/please/please_build_linter': '//tools/linter',
-        '/opt/please/libplease_parser_pypy.so': '//src/parse/cffi:please_parser_pypy',
-        '/opt/please/libplease_parser_python2.so': '//src/parse/cffi:please_parser_python2',
-        '/opt/please/libplease_parser_python3.so': '//src/parse/cffi:please_parser_python3',
     },
     links = {
         '/usr/bin/plz': '/opt/please/please',
@@ -73,7 +73,7 @@ signed_tarball(
     name = 'please_tarball',
     srcs = [
         '//src:please',
-        '//src/parse/cffi:all_engines',
+        '//src/lib_py',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',
