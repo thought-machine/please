@@ -30,7 +30,6 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
-	"update"
 )
 
 /*
@@ -90,12 +89,16 @@ func initializeInterpreter(state *core.BuildState) {
 
 	// If an engine has been explicitly set in the config, we honour it here.
 	if config.Parse.Engine != "" {
-		if !initialiseInterpreter(config.Parse.Engine, false) {
+		if !initialiseInterpreter(config.Parse.Engine) {
 			log.Fatalf("Failed to initialise requested parser engine [%s]", config.Parse.Engine)
 		}
 	} else {
 		// Use the static interpreter.
 		// This isn't available at bootstrap time, but that should send us through the branch above instead.
+		log.Debug("Using builtin interpreter")
+		// Setting python vars ensures it doesn't find anything outside our builtins.
+		os.Setenv("PYTHONHOME", "")
+		os.Setenv("PYTHONPATH", "")
 		if C.InitialiseStaticInterpreter() != 0 {
 			log.Fatalf("Failed to initialise parser engine")
 		}
@@ -193,9 +196,9 @@ func pythonBool(b bool) string {
 	return ""
 }
 
-func initialiseInterpreter(engine string, attemptDownload bool) bool {
+func initialiseInterpreter(engine string) bool {
 	if strings.HasPrefix(engine, "/") {
-		return initialiseInterpreterFrom(engine, attemptDownload)
+		return initialiseInterpreterFrom(engine)
 	}
 	executable, err := os.Executable()
 	if err != nil {
@@ -208,10 +211,10 @@ func initialiseInterpreter(engine string, attemptDownload bool) bool {
 		return false
 	}
 	executableDir := path.Dir(executable)
-	return initialiseInterpreterFrom(path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())), attemptDownload)
+	return initialiseInterpreterFrom(path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())))
 }
 
-func initialiseInterpreterFrom(enginePath string, attemptDownload bool) bool {
+func initialiseInterpreterFrom(enginePath string) bool {
 	if !core.PathExists(enginePath) {
 		return false
 	}
@@ -222,18 +225,6 @@ func initialiseInterpreterFrom(enginePath string, attemptDownload bool) bool {
 	if result == 0 {
 		log.Info("Using parser engine from %s", enginePath)
 		return true
-	} else if result == dlopenError {
-		dlerror := C.GoString(C.dlerror())
-		// This is a pretty brittle check, but there is no other interface available, and
-		// we don't want to download PyPy unless we think that'll solve the problem.
-		if attemptDownload && strings.Contains(dlerror, "libpypy-c.so: cannot open shared object file") && runtime.GOOS == "linux" {
-			if update.DownloadPyPy(core.State.Config) {
-				// Downloading PyPy succeeded, try to initialise again
-				return initialiseInterpreterFrom(enginePath, false)
-			}
-		}
-		// Low level of logging because it's allowable to fail on libplease_parser_pypy, which we try first.
-		log.Notice("Failed to initialise interpreter from %s: %s", enginePath, dlerror)
 	} else if result == cffiUnavailable {
 		log.Warning("cannot use %s, cffi unavailable", enginePath)
 	} else {

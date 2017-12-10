@@ -16,7 +16,6 @@ cgo_library(
         ':builtin_rules',
         '//src/core',
         '//src/parse/cffi:please_parser_static',
-        '//src/update',
         '//src/utils',
         '//third_party/go:gcfg',
         '//third_party/go:logging',
