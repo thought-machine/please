@@ -255,7 +255,7 @@ func setConfigValue(name string, value string) {
 	cValue := C.CString(value)
 	defer C.free(unsafe.Pointer(cName))
 	defer C.free(unsafe.Pointer(cValue))
-	C.SetConfigValue(cName, cValue)
+	C.PlzSetConfigValue(cName, cValue)
 }
 
 func loadBuiltinRules(path string, contents []byte) {
@@ -264,7 +264,7 @@ func loadBuiltinRules(path string, contents []byte) {
 	defer C.free(unsafe.Pointer(data))
 	cPackageName := C.CString(path)
 	defer C.free(unsafe.Pointer(cPackageName))
-	if result := C.GoString(C.ParseCode(data, cPackageName, 0)); result != "" {
+	if result := C.GoString(C.PlzParseCode(data, cPackageName, 0)); result != "" {
 		log.Fatalf("Failed to interpret initial build rules from %s: %s", path, result)
 	}
 }
@@ -273,7 +273,7 @@ func loadSubincludePackage() {
 	pkg := core.NewPackage(subincludePackage)
 	// Set up a builtin package for remote subincludes.
 	cPackageName := C.CString(pkg.Name)
-	C.ParseCode(nil, cPackageName, sizep(pkg))
+	C.PlzParseCode(nil, cPackageName, sizep(pkg))
 	C.free(unsafe.Pointer(cPackageName))
 	core.State.Graph.AddPackage(pkg)
 }
@@ -323,7 +323,7 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	defer C.free(unsafe.Pointer(cFilename))
 	defer C.free(unsafe.Pointer(cPackageName))
 	defer C.free(unsafe.Pointer(cData))
-	ret := C.GoString(C.ParseFile(cFilename, cData, cPackageName, sizep(pkg)))
+	ret := C.GoString(C.PlzParseFile(cFilename, cData, cPackageName, sizep(pkg)))
 	if ret == pyDeferParse {
 		log.Debug("Deferred parse of package file %s in %0.3f seconds", filename, time.Since(start).Seconds())
 		return true
@@ -339,7 +339,7 @@ func RunCode(state *core.BuildState, code string) error {
 	initializeOnce.Do(func() { initializeInterpreter(state) })
 	cCode := C.CString(code)
 	defer C.free(unsafe.Pointer(cCode))
-	ret := C.GoString(C.RunCode(cCode))
+	ret := C.GoString(C.PlzRunCode(cCode))
 	if ret != "" {
 		return fmt.Errorf("%s", ret)
 	}
@@ -862,7 +862,7 @@ func runPreBuildFunction(pkg *core.Package, target *core.BuildTarget) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	f := C.size_t(uintptr(unsafe.Pointer(target.PreBuildFunction)))
-	if result := C.GoString(C.RunPreBuildFunction(f, sizep(pkg), cName)); result != "" {
+	if result := C.GoString(C.PlzRunPreBuildFunction(f, sizep(pkg), cName)); result != "" {
 		return fmt.Errorf("Failed to run pre-build function for target %s: %s", target.Label.String(), result)
 	}
 	return nil
@@ -877,7 +877,7 @@ func runPostBuildFunction(pkg *core.Package, target *core.BuildTarget, out strin
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	f := C.size_t(uintptr(unsafe.Pointer(target.PostBuildFunction)))
-	if result := C.GoString(C.RunPostBuildFunction(f, sizep(pkg), cName, cOutput)); result != "" {
+	if result := C.GoString(C.PlzRunPostBuildFunction(f, sizep(pkg), cName, cOutput)); result != "" {
 		return fmt.Errorf("Failed to run post-build function for target %s: %s", target.Label.String(), result)
 	}
 	return nil

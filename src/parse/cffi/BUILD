@@ -30,7 +30,7 @@ c_static_library(
     name = 'please_parser_static',
     srcs = [':parser_src'],
     hdrs = ['defs.h'],
-    linker_flags = ['-lpython2'],
+    pkg_config_libs = ['python2'],
     visibility = ['//src/parse/...'],
 )
 

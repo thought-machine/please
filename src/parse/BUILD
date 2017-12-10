@@ -12,7 +12,6 @@ cgo_library(
         'interpreter.go',
     ]) + [':builtin_rules'],
     linker_flags = (linker_flags if (CONFIG.OS == 'freebsd') else (linker_flags + ['-ldl'])),
-    pkg_config = ['python2'],
     deps = [
         ':builtin_rules',
         '//src/core',

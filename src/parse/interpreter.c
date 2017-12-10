@@ -17,27 +17,27 @@ char* (*pre_build_callback_runner)(void*, size_t, char*);
 char* (*post_build_callback_runner)(void*, size_t, char*, char*);
 char* (*run_code)(char*);
 
-char* ParseFile(char* filename, char* contents, char* package_name, size_t package) {
+char* PlzParseFile(char* filename, char* contents, char* package_name, size_t package) {
   return (*parse_file)(filename, contents, package_name, package);
 }
 
-char* ParseCode(char* filename, char* package_name, size_t package) {
+char* PlzParseCode(char* filename, char* package_name, size_t package) {
   return (*parse_code)(filename, package_name, package);
 }
 
-void SetConfigValue(char* name, char* value) {
+void PlzSetConfigValue(char* name, char* value) {
   (*set_config_value)(name, value);
 }
 
-char* RunPreBuildFunction(size_t callback, size_t package, char* name) {
+char* PlzRunPreBuildFunction(size_t callback, size_t package, char* name) {
   return (*pre_build_callback_runner)((void*)callback, package, name);
 }
 
-char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* output) {
+char* PlzRunPostBuildFunction(size_t callback, size_t package, char* name, char* output) {
   return (*post_build_callback_runner)((void*)callback, package, name, output);
 }
 
-char* RunCode(char* code) {
+char* PlzRunCode(char* code) {
   return (*run_code)(code);
 }
 
