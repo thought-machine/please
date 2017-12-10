@@ -16,7 +16,7 @@ signed_fpm_deb(
         '/opt/please/please_go_test': '//tools/please_go_test',
         '/opt/please/please_build_linter': '//tools/linter',
         '/opt/please/_cffi_backend.so': '//src:cffi_backend',
-        '/opt/please/.libs_cffi_backend/libffi-72499c49.so.6.0.4': '//src:libffi',
+        '/opt/please/libffi-72499c49.so.6.0.4': '//src:libffi',
     },
     links = {
         '/usr/bin/plz': '/opt/please/please',

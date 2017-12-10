@@ -103,7 +103,10 @@ func initializeInterpreter(state *core.BuildState) {
 		// Setting python vars ensures it doesn't find anything outside the parts we ship.
 		os.Setenv("PYTHONHOME", dir)
 		os.Setenv("PYTHONPATH", dir)
-		if C.InitialiseStaticInterpreter() != 0 {
+		// Preloading the ffi lib means we don't have to have it in a subdirectory.
+		preloadSo := C.CString(path.Join(dir, "libffi-72499c49.so.6.0.4"))
+		defer C.free(unsafe.Pointer(preloadSo))
+		if C.InitialiseStaticInterpreter(preloadSo) != 0 {
 			log.Fatalf("Failed to initialise parser engine")
 		}
 	}

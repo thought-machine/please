@@ -108,7 +108,7 @@ int InitialiseInterpreter(char* parser_location) {
   return InitialiseCallbacks(reg);
 }
 
-int InitialiseStaticInterpreter() {
+int InitialiseStaticInterpreter(char* preload_so) {
 #ifdef BUILD_STATIC_INTERPRETER
   // Set this so the interpreter doesn't try to import site at startup.
   Py_NoSiteFlag = 1;
@@ -119,6 +119,10 @@ int InitialiseStaticInterpreter() {
   pre_build_callback_runner = PreBuildFunctionRunner;
   post_build_callback_runner = PostBuildFunctionRunner;
   run_code = RunCode;
+  // But it is useful if we load this guy upfront so we don't need him in a subdirectory.
+  if (!dlopen(preload_so, RTLD_NOW | RTLD_GLOBAL)) {
+    return 1;
+  }
   return InitialiseCallbacks(RegisterCallback);
 #else
   return 13;

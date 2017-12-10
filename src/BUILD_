@@ -43,9 +43,9 @@ genrule(
 genrule(
     name = 'libffi',
     srcs = ['//third_party/python:cffi'],
-    outs = ['.libs_cffi_backend/libffi-72499c49.so.6.0.4'],
+    outs = ['libffi-72499c49.so.6.0.4'],
     binary = True,
-    cmd = 'cp -r third_party/python/cffi/.libs_cffi_backend .',
+    cmd = 'cp -r third_party/python/cffi/.libs_cffi_backend/* .',
 )
 
 filegroup(
