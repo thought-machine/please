@@ -26,7 +26,6 @@ go_binary(
         '//src/watch',
         '//third_party/go:go-flags',
         '//third_party/go:logging',
-        '//third_party/go:osext',
     ],
     visibility = ['PUBLIC'],
 )

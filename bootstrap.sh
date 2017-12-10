@@ -23,7 +23,6 @@ go get gopkg.in/gcfg.v1
 go get github.com/jteeuwen/go-bindata/...
 go get github.com/jessevdk/go-flags
 go get github.com/dustin/go-humanize
-go get github.com/kardianos/osext
 go get github.com/texttheater/golang-levenshtein/levenshtein
 go get github.com/Workiva/go-datastructures/queue
 go get github.com/coreos/go-semver/semver

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/kardianos/osext"
 	"gopkg.in/op/go-logging.v1"
 
 	"build"
@@ -407,7 +406,7 @@ var buildFunctions = map[string]func() bool{
 		cmd := core.ReadLastOperationOrDie()
 		log.Notice("OP PLZ: %s", strings.Join(cmd, " "))
 		// Annoyingly we don't seem to have any access to execvp() which would be rather useful here...
-		executable, err := osext.Executable()
+		executable, err := os.Executable()
 		if err == nil {
 			err = syscall.Exec(executable, append([]string{executable}, cmd...), os.Environ())
 		}

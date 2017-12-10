@@ -6,7 +6,6 @@ go_library(
         '//third_party/go:concurrent-map',
         '//third_party/go:fsnotify',
         '//third_party/go:logging',
-        '//third_party/go:osext',
     ],
     visibility = ['PUBLIC'],
 )

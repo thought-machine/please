@@ -17,7 +17,6 @@ cgo_library(
         '//src/utils',
         '//third_party/go:gcfg',
         '//third_party/go:logging',
-        '//third_party/go:osext',
     ],
     visibility = ['PUBLIC'],
 )

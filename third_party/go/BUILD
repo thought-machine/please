@@ -100,12 +100,6 @@ go_get(
 )
 
 go_get(
-    name = 'osext',
-    get = 'github.com/kardianos/osext',
-    revision = '29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc',
-)
-
-go_get(
     name = 'prompter',
     get = 'github.com/Songmu/prompter',
     revision = 'f49666b0047d12850875d771340e1d862d9e7a0c',

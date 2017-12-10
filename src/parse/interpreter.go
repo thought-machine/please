@@ -26,7 +26,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/kardianos/osext"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
@@ -198,11 +197,12 @@ func initialiseInterpreter(engine string, attemptDownload bool) bool {
 	if strings.HasPrefix(engine, "/") {
 		return initialiseInterpreterFrom(engine, attemptDownload)
 	}
-	executableDir, err := osext.ExecutableFolder()
+	executable, err := os.Executable()
 	if err != nil {
 		log.Error("Can't determine current executable: %s", err)
 		return false
 	}
+	executableDir := path.Dir(executable)
 	return initialiseInterpreterFrom(path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())), attemptDownload)
 }
 

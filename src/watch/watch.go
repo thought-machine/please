@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/kardianos/osext"
 	"github.com/streamrail/concurrent-map"
 	"gopkg.in/op/go-logging.v1"
 
@@ -70,7 +69,7 @@ func Watch(state *core.BuildState, labels []core.BuildLabel) {
 }
 
 func runBuild(state *core.BuildState, command string, labels []core.BuildLabel) {
-	binary, err := osext.Executable()
+	binary, err := os.Executable()
 	if err != nil {
 		log.Warning("Can't determine current executable, will assume 'plz'")
 		binary = "plz"
