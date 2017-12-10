@@ -1,18 +1,22 @@
+linker_flags = ['-Lsrc/parse/cffi -lplease_parser_static']
+
 cgo_library(
     name = 'parse',
     srcs = ['interpreter.go'],
     hdrs = ['interpreter.h'],
     c_srcs = ['interpreter.c'],
-    compiler_flags = ['--std=c99 -Werror'],
+    compiler_flags = ['--std=c99 -Werror -DBUILD_STATIC_INTERPRETER'],
     go_srcs = glob(['*.go'], excludes = [
         '*_test.go',
         'builtin_rules.bindata.go',
         'interpreter.go',
     ]) + [':builtin_rules'],
-    linker_flags = ([] if (CONFIG.OS == 'freebsd') else ['-ldl']),
+    linker_flags = (linker_flags if (CONFIG.OS == 'freebsd') else (linker_flags + ['-ldl'])),
+    pkg_config = ['python2'],
     deps = [
         ':builtin_rules',
         '//src/core',
+        '//src/parse/cffi:please_parser_static',
         '//src/update',
         '//src/utils',
         '//third_party/go:gcfg',

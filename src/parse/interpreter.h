@@ -18,4 +18,7 @@ char* RunCode(char* code);
 // Initialises interpreter. Returns 0 on success.
 int InitialiseInterpreter(char* parser_location);
 
+// Initialises an interpreter that's statically linked into the binary. Returns 0 on success.
+int InitialiseStaticInterpreter();
+
 #endif  // _SRC_PARSE_INTERPRETER_H

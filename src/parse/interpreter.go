@@ -88,17 +88,16 @@ func initializeInterpreter(state *core.BuildState) {
 	// to accidentally write rules that are nondeterministic via {}.items() etc.
 	os.Setenv("PYTHONHASHSEED", "42")
 
-	// If an engine has been explicitly set, by flag or config, we honour it here.
+	// If an engine has been explicitly set in the config, we honour it here.
 	if config.Parse.Engine != "" {
 		if !initialiseInterpreter(config.Parse.Engine, false) {
 			log.Fatalf("Failed to initialise requested parser engine [%s]", config.Parse.Engine)
 		}
 	} else {
-		// Okay, now try the standard fallbacks.
-		// The python3 interpreter isn't ready yet, so don't try that.
-		// Try the python2 interpreter before attempting to download a portable PyPy.
-		if !initialiseInterpreter("pypy", false) && !initialiseInterpreter("python2", false) && !initialiseInterpreter("pypy", true) {
-			log.Fatalf("Can't initialise any Please parser engine. Please is putting itself out of its misery.\n")
+		// Use the static interpreter.
+		// This isn't available at bootstrap time, but that should send us through the branch above instead.
+		if C.InitialiseStaticInterpreter() != 0 {
+			log.Fatalf("Failed to initialise parser engine")
 		}
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version.String())
