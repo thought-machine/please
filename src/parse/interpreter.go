@@ -96,9 +96,10 @@ func initializeInterpreter(state *core.BuildState) {
 		// Use the static interpreter.
 		// This isn't available at bootstrap time, but that should send us through the branch above instead.
 		log.Debug("Using builtin interpreter")
-		// Setting python vars ensures it doesn't find anything outside our builtins.
-		os.Setenv("PYTHONHOME", executableDir())
-		os.Setenv("PYTHONPATH", "")
+		// Setting python vars ensures it doesn't find anything outside the parts we ship.
+		dir := path.Join(executableDir(), "lib_py")
+		os.Setenv("PYTHONHOME", dir)
+		os.Setenv("PYTHONPATH", dir)
 		if C.InitialiseStaticInterpreter() != 0 {
 			log.Fatalf("Failed to initialise parser engine")
 		}
