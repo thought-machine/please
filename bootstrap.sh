@@ -43,18 +43,20 @@ function detect_interpreter {
 		BOOTSTRAP_INTERPRETER="$1"
 	    fi
         else
-            warn "$1 doesn't have cffi installed, can't be used for bootstrap. Engine will still be built."
+            warn "$1 doesn't have cffi installed, can't be used for bootstrap."
         fi
-    else
-        warn "$1 not found; won't build parser engine for it."
-        warn "You won't be able to build Please packages unless all parsers are present."
     fi
     set -e
 }
 
-detect_interpreter "pypy"
-detect_interpreter "python2"
-detect_interpreter "python3"
+# Prefer pypy because we know it has cffi installed already.
+if hash pypy 2>/dev/null ; then
+    notice "pypy detected, will be used for bootstrap"
+    BOOTSTRAP_INTERPRETER="pypy"
+else
+    detect_interpreter "python2"
+    detect_interpreter "python3"
+fi
 if [ -z "$BOOTSTRAP_INTERPRETER" ]; then
     error "No known Python interpreters found, can't build parser engine"
     exit 1
