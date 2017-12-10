@@ -4,6 +4,8 @@
 
 #ifdef BUILD_STATIC_INTERPRETER
 #include "src/parse/cffi/defs.h"
+
+extern int Py_NoSiteFlag;
 #endif
 
 typedef int (*RegisterFunction)(char*, char*, void*);
@@ -108,6 +110,9 @@ int InitialiseInterpreter(char* parser_location) {
 
 int InitialiseStaticInterpreter() {
 #ifdef BUILD_STATIC_INTERPRETER
+  // Set this so the interpreter doesn't try to import site at startup.
+  Py_NoSiteFlag = 1;
+  // Callbacks don't need dlopen or dlsym because they're already in-process.
   parse_file = ParseFile;
   parse_code = ParseCode;
   set_config_value = SetConfigValue;
