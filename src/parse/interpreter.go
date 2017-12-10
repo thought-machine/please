@@ -97,7 +97,7 @@ func initializeInterpreter(state *core.BuildState) {
 		// This isn't available at bootstrap time, but that should send us through the branch above instead.
 		log.Debug("Using builtin interpreter")
 		// Setting python vars ensures it doesn't find anything outside our builtins.
-		os.Setenv("PYTHONHOME", "")
+		os.Setenv("PYTHONHOME", executableDir())
 		os.Setenv("PYTHONPATH", "")
 		if C.InitialiseStaticInterpreter() != 0 {
 			log.Fatalf("Failed to initialise parser engine")
@@ -200,18 +200,22 @@ func initialiseInterpreter(engine string) bool {
 	if strings.HasPrefix(engine, "/") {
 		return initialiseInterpreterFrom(engine)
 	}
+	return initialiseInterpreterFrom(path.Join(executableDir(), fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())))
+}
+
+// executableDir returns the directory of the current executable.
+// It dies on any errors (which should be pretty unlikely, it implies we can't read /proc/self/exe or similar)
+func executableDir() string {
 	executable, err := os.Executable()
 	if err != nil {
-		log.Error("Can't determine current executable: %s", err)
-		return false
+		log.Fatalf("Can't determine current executable: %s", err)
 	}
 	executable, err = filepath.EvalSymlinks(executable)
 	if err != nil {
 		log.Error("Can't determine current executable: %s", err)
 		return false
 	}
-	executableDir := path.Dir(executable)
-	return initialiseInterpreterFrom(path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())))
+	return path.Dir(executable)
 }
 
 func initialiseInterpreterFrom(enginePath string) bool {
