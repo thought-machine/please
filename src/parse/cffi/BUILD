@@ -30,7 +30,7 @@ c_static_library(
     name = 'please_parser_static',
     srcs = [':parser_src'],
     hdrs = ['defs.h'],
-    pkg_config_libs = ['python2'],
+    pkg_config_libs = [PARSER_PKG_CONFIG],
     deps = [':libpython'],
     visibility = ['//src/parse/...'],
 )
@@ -43,8 +43,8 @@ c_static_library(
 genrule(
     name = 'libpython',
     srcs = ['find_python.sh'],
-    outs = ['libpython2.7.a'],
-    cmd = 'bash $SRCS',
+    outs = [PARSER_LIB_FILENAME],
+    cmd = 'bash $SRCS %s %s' % (PARSER_PKG_CONFIG, PARSER_LIB_FILENAME),
 )
 
 filegroup(

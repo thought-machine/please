@@ -8,7 +8,7 @@ except ImportError:
     is_py3 = True
 import ast
 import imp
-import os
+import os.path
 from collections import defaultdict, Mapping
 from contextlib import contextmanager
 from types import FunctionType

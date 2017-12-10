@@ -1,6 +1,3 @@
-[display]
-updatetitle = true
-
 [python]
 ; We use the in-repo please_pex tool to build other pexes within this repo.
 ; Other projects using Please wouldn't normally need to do anything like this.

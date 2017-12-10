@@ -1,15 +1,7 @@
 # Contains a minimal set of Python things that we ship with Please.
 # These are required for the interpreter to work and aren't easy
 # to build into the binary itself.
-
-filegroup(
-    name = 'lib_py',
-    srcs = [
-        ':cffi_backend',
-        ':libffi',
-    ],
-    binary = True,
-)
+subinclude('//build_defs:engines')
 
 genrule(
     name = 'cffi_backend',
@@ -26,4 +18,21 @@ genrule(
     outs = ['.libs_cffi_backend/libffi-72499c49.so.6.0.4'],
     binary = True,
     cmd = 'cp ${SRCS}/$OUTS $OUTS',
+)
+
+modules = [genrule(
+    name = module,
+    outs = [module + '.pyc'],
+    cmd = 'cp `$TOOL -c "import %s; print(%s.__file__)"` $OUT' % (module, module),
+    tools = ['python2'],
+) for module in PARSER_MODULES]
+
+filegroup(
+    name = 'lib_py',
+    srcs = [
+        ':cffi_backend',
+        ':libffi',
+    ] + modules,
+    binary = True,
+    visibility = ['PUBLIC'],
 )
