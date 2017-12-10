@@ -8,7 +8,10 @@ except ImportError:
     is_py3 = True
 import ast
 import imp
-import os.path
+try:
+    from path import join_path, split_path, splitext, dirname, basename
+except ImportError:
+    from os.path import join as join_path, split as split_path, splitext, dirname, basename
 from collections import defaultdict, Mapping
 from contextlib import contextmanager
 from types import FunctionType
@@ -193,7 +196,7 @@ def subinclude(package, dct, target, hash=None):
 
 def _get_subinclude_target(url, hash):
     """Creates a remote_file target to subinclude() a remote url and returns its name."""
-    name = os.path.basename(url).replace('.', '_')
+    name = basename(url).replace('.', '_')
     try:
         _get_globals(_subinclude_package, _c_subinclude_package_name).get('remote_file')(
             name = name,
@@ -475,11 +478,11 @@ def _get_globals(c_package, c_package_name):
     local_globals['set_command'] = lambda name, config, command='': _check_c_error(_set_command(c_package, name, config, command))
     local_globals['package'] = lambda **kwargs: package(local_globals, **kwargs)
     # Make these available to other scripts so they can get it without import.
-    local_globals['join_path'] = os.path.join
-    local_globals['split_path'] = os.path.split
-    local_globals['splitext'] = os.path.splitext
-    local_globals['basename'] = os.path.basename
-    local_globals['dirname'] = os.path.dirname
+    local_globals['join_path'] = join_path
+    local_globals['split_path'] = split_path
+    local_globals['splitext'] = splitext
+    local_globals['basename'] = basename
+    local_globals['dirname'] = dirname
     # The levels here are internally interpreted to match go-logging's levels.
     local_globals['log'] = DotDict({
         'fatal': lambda message, *args: _checked_log(0, c_package, message, args),

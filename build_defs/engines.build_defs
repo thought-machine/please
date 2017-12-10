@@ -32,27 +32,23 @@ _PARSER_PKG_CONFIG = {
     'python36': 'python3',
 }
 
+_PARSER_BINARIES = {
+    'python27': 'python2.7',
+    'python34': 'python3.4',
+    'python35': 'python3.5',
+    'python36': 'python3.6',
+}
+
 if CONFIG.PARSER_ENGINE not in _PARSER_FILENAMES:
     raise ConfigError('Unknown parser engine %s' % CONFIG.PARSER_ENGINE)
 
 PARSER_PKG_CONFIG = _PARSER_PKG_CONFIG[CONFIG.PARSER_ENGINE]
 PARSER_LIB_FILENAME = _PARSER_FILENAMES[CONFIG.PARSER_ENGINE]
+PARSER_TOOL = _PARSER_BINARIES[CONFIG.PARSER_ENGINE]
 
 # The list of modules we need to provide for it to work.
 # These have been determined empirically by simply observing what's required for what we use.
 # TODO(peterebden): C
 PARSER_MODULES = [
     'ast',
-    'os',
-    'posixpath',
-    'stat',
-    'genericpath',
-    'warnings',
-    'linecache',
-    'types',
-    'UserDict',
-    '_abcoll',
-    'copy_reg',
-    'abc',
-    '_weakrefset',
 ]

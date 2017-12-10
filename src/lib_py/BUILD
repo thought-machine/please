@@ -24,7 +24,7 @@ modules = [genrule(
     name = module,
     outs = [module + '.pyc'],
     cmd = 'cp `$TOOL -c "import %s; print(%s.__file__)"` $OUT' % (module, module),
-    tools = ['python2'],
+    tools = [PARSER_TOOL],
 ) for module in PARSER_MODULES]
 
 filegroup(
@@ -32,6 +32,7 @@ filegroup(
     srcs = [
         ':cffi_backend',
         ':libffi',
+        'path.py',
     ] + modules,
     binary = True,
     visibility = ['PUBLIC'],
