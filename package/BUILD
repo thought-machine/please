@@ -111,7 +111,7 @@ hash_filegroup(
     name = 'hash_tools',
     srcs = [
         '//src:please',
-        '//src/parse/cffi:all_engines',
+        '//src/lib_py',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',

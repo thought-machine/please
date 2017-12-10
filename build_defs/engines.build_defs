@@ -20,9 +20,9 @@ CONFIG.setdefault('PARSER_ENGINE', 'python27')
 
 _PARSER_FILENAMES = {
     'python27': 'libpython2.7.a',
-    'python34': 'libpython3.4.a',
-    'python35': 'libpython3.5.a',
-    'python36': 'libpython3.6.a',
+    'python34': 'libpython3.4m.a',
+    'python35': 'libpython3.5m.a',
+    'python36': 'libpython3.6m.a',
 }
 
 _PARSER_PKG_CONFIG = {

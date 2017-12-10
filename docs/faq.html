@@ -102,7 +102,7 @@
     <p>There are no separate steps inside Please; parsing BUILD files, building targets and running
       tests can all happen simultaneously, so there's no down time waiting for the last thing to
       compile before the tests begin. The parsing process is also very fast due to having an
-      in-process PyPy interpreter.</p>
+      in-process Python interpreter.</p>
 
     <p>Finally, the rules themselves are optimised in various ways; for example, the construction of
       the final .jar from a <code>java_binary</code> is an efficient concatenation of other .jar
@@ -113,12 +113,8 @@
 
     <h3>How do you parse the BUILD files? What format are they?</h3>
 
-    <p>The BUILD files are a (slightly) restricted dialect of Python. Please prefers to use
-      <a href="http://pypy.org">PyPy</a> to parse them which is done in-process,
-      allowing a tight integration and a rich API with things like callbacks.<br/>
-      It can also use CPython + cffi via their embedding API. So far we
-      haven't done any detailed performance benchmarks between the two.<br/>
-      Python 3 isn't supported yet but we plan to make it work sometime in the future.</p>
+    <p>The BUILD files are a (slightly) restricted dialect of Python. Please has a built-in
+      Python interpreter, allowing a tight integration and a rich API with things like callbacks.</p>
 
     <p>The restrictions on the format are essentially that <code>import</code> and <code>print</code>
       are banned, and a number of the normal builtins are not available.<br/>
@@ -129,10 +125,35 @@
 
     <p>One down side to this is that the BUILD files are a little hard to automatically edit or
       update compared to a data format like XML, Yaml or JSON. We think this is worth the tradeoff
-      for giving the developer more power and (in our opinion) a significantly nicer format.</p>
+      for giving the developer more power and (in our opinion) a significantly nicer format.<br/>
+      A couple of updating features are built into Please (see <a href="commands.html#gc">plz gc</a>
+      and <a href="commands.html#hash">plz hash --update</a> for more info).</p>
 
     <p>We suggest investigating <a href="https://github.com/bazelbuild/buildifier">buildifier</a>
       if you'd like a pretty-printer / autoformatter for them.</p>
+
+
+    <h3>Okay, but what exactly are you using to parse the files?</h3>
+
+    <p>The built-in parser is currently a statically linked CPython 2.7.
+      This is a little unfortunate due to its approaching end-of-life,
+      but there are several reasons for it:
+      <ul>
+	<li>PyPy typically doesn't ship with static libraries.<br/>
+	  We're not sure how much work this would be to implement but we would
+	  at least require custom builds which would be very awkward for users
+	  (at least the users who wanted to compile Please themselves).</li>
+	<li>CPython 3 is significantly (approximately 30%) slower for this use case.<br/>
+	  We suspect the difference is due to <code>str</code> / <code>bytes</code> issues
+	  around interfacing with cffi; hopefully we can improve it later.</li>
+	<li>Rather less significantly, there are several relevant versions of Python 3
+	  (at least 3.4, 3.5 and 3.6 remain widespread) which means a little more work
+	  to detect appropriately.</li>
+      </ul>
+      The exact parser in use is really an implementation detail though; we try to use the
+      BUILD language as a common subset of the various options so we aren't tied to any one.<br/>
+      Hence the linter can warn on some python2isms which we can't readily prevent at
+      runtime (e.g. <code>iteritems</code> etc).</p>
 
 
     <h3>How does Please build itself? Do I need Please to build Please?</h3>
@@ -160,7 +181,7 @@
 
     <p>We're very happy with the results; the performance of native binaries is excellent,
       the language was easy to become productive with and has great support for all the things
-      we needed to do with it. Our early concerns (e.g. the classic "no generics!")
+      we needed to do with it. Our early concerns (e.g. the classic &quot;no generics!&quot;)
       turned out to be a lot less problematic than we expected.</p>
 
     <p>An alternative explanation is that the original high-level design meeting for Please was
@@ -207,6 +228,10 @@
       apparently unnecessary rebuilds after an update. We try to avoid that as much as possible
       since it's aggravating (for us too!) but since it doesn't affect eventual correctness
       it can change in minor releases.</p>
+
+    <p>The versions don't apply to the code interfaces themselves, since we don't expect
+      this to see wide use as a library. If some part of it becomes popular in that way we'll
+      likely split it out to a separate repository and version it separately.</p>
 
 
     <h3>What does it look like when I'm running it?</h3>
