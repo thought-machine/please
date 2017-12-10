@@ -23,7 +23,7 @@ go_test(
     srcs = ['hash_rewriter_test.go'],
     data = [
         'test_data',
-        '//src/lib_py',
+        '//src:cffi',
     ],
     deps = [
         ':hashes',

@@ -1,4 +1,4 @@
-"""Lightweight vendorised parts of posixpath that we use.
+"""Lightweight vendorised parts of posixpath / genericpath that we use.
 
 The intention here is to minimise the number of modules we have
 to ship, since we only require logical path operations and not

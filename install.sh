@@ -14,12 +14,12 @@ fi
 DEST="${HOME}/.please"
 mkdir -p ${DEST}
 rm -f ${DEST}/please ${DEST}/please_pex ${DEST}/junit_runner.jar ${DEST}/jarcat ${DEST}/please_maven ${DEST}/*.so ${DEST}/linter
-rm -rf ${DEST}/lib_py
+rm -rf ${DEST}/_cffi_backend.so ${DEST}/.libs_cffi_backend
 cp -f plz-out/bin/src/please ${DEST}/please
 chmod 0775 ${DEST}/please
 ln -sf ${DEST}/please ${DEST}/plz
-cp -rf plz-out/bin/src/lib_py ${DEST}/lib_py
-chmod -R 0775 ${DEST}/lib_py
+cp -rf plz-out/bin/src/_cffi_backend.so plz-out/bin/src/.libs_cffi_backend ${DEST}
+chmod -R 0775 ${DEST}/_cffi_backend.so ${DEST}/.libs_cffi_backend
 cp -f plz-out/bin/tools/please_pex/please_pex ${DEST}/please_pex
 chmod 0775 ${DEST}/please_pex
 cp -f plz-out/bin/tools/junit_runner/junit_runner.jar ${DEST}/junit_runner.jar

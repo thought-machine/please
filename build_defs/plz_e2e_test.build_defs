@@ -9,7 +9,7 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
     cmd = cmd.replace('plz', '$(location //src:please) --nolock -o cache.rpcurl:"" --log_file plz-out/log/%s.log' % name)
     data = (data or []) + [
         '//src:please',
-        '//src/lib_py',
+        '//src:cffi',
     ]
     if expected_failure:
         test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd

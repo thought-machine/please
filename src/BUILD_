@@ -1,4 +1,5 @@
 subinclude('//build_defs:engines')
+package(default_visibility = ['PUBLIC'])
 
 go_binary(
     name = 'please',
@@ -27,5 +28,31 @@ go_binary(
         '//third_party/go:go-flags',
         '//third_party/go:logging',
     ],
-    visibility = ['PUBLIC'],
+)
+
+# Needed at runtime for cffi to do it's thing.
+genrule(
+    name = 'cffi_backend',
+    srcs = ['//third_party/python:cffi'],
+    outs = ['_cffi_backend.so'],
+    binary = True,
+    cmd = 'cp third_party/python/cffi/_cffi_backend.so .',
+)
+
+# TODO(peterebden): how portable is the naming of this across platforms?
+genrule(
+    name = 'libffi',
+    srcs = ['//third_party/python:cffi'],
+    outs = ['.libs_cffi_backend/libffi-72499c49.so.6.0.4'],
+    binary = True,
+    cmd = 'cp -r third_party/python/cffi/.libs_cffi_backend .',
+)
+
+filegroup(
+    name = 'cffi',
+    srcs = [
+        ':cffi_backend',
+        ':libffi',
+    ],
+    binary = True,
 )

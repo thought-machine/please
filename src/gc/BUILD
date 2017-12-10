@@ -32,7 +32,7 @@ go_test(
     srcs = ['rewrite_test.go'],
     data = [
         'test_data',
-        '//src/lib_py',
+        '//src:cffi',
     ],
     deps = [
         ':gc',

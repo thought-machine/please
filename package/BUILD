@@ -5,9 +5,6 @@ subinclude('//build_defs:signing')
 signed_fpm_deb(
     name = 'please',
     version = VERSION,
-    dirs = {
-        '/opt/please/lib_py': ['//src/lib_py'],
-    },
     files = {
         '/opt/please/please': '//src:please',
         '/opt/please/please_pex': '//tools/please_pex',
@@ -18,6 +15,8 @@ signed_fpm_deb(
         '/opt/please/please_diff_graphs': '//tools/please_diff_graphs',
         '/opt/please/please_go_test': '//tools/please_go_test',
         '/opt/please/please_build_linter': '//tools/linter',
+        '/opt/please/_cffi_backend.so': '//src:cffi_backend',
+        '/opt/please/.libs_cffi_backend/libffi-72499c49.so.6.0.4': '//src:libffi',
     },
     links = {
         '/usr/bin/plz': '/opt/please/please',
@@ -72,8 +71,8 @@ signed_fpm_deb(
 signed_tarball(
     name = 'please_tarball',
     srcs = [
+        '//src:cffi',
         '//src:please',
-        '//src/lib_py',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',
@@ -110,8 +109,8 @@ filegroup(
 hash_filegroup(
     name = 'hash_tools',
     srcs = [
+        '//src:cffi',
         '//src:please',
-        '//src/lib_py',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',

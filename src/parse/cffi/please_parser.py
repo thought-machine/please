@@ -2,17 +2,13 @@
 
 try:
     import __builtin__ as builtins
+    from _ast import AST, Import, ImportFrom, Print, Exec, PyCF_ONLY_AST
     is_py3 = False
 except ImportError:
     import builtins
+    from _ast import AST, Import, ImportFrom, PyCF_ONLY_AST
     is_py3 = True
-import ast
 import imp
-try:
-    from path import join_path, split_path, splitext, dirname, basename
-except ImportError:
-    from os.path import join as join_path, split as split_path, splitext, dirname, basename
-from types import FunctionType
 from parser_interface import ffi
 
 
@@ -118,13 +114,13 @@ def _parse_build_code(filename, globals_dict):
 
 def _compile_build_code(code, filename):
     """Compiles and validates some build code."""
-    tree = ast.parse(code, filename)
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
+    tree = _compile(code, filename, 'exec', PyCF_ONLY_AST)
+    for node in iter_child_nodes(tree):
+        if isinstance(node, Import) or isinstance(node, ImportFrom):
             raise SyntaxError('import not allowed')
-        if not is_py3 and isinstance(node, ast.Exec):
+        if not is_py3 and isinstance(node, Exec):
             raise SyntaxError('exec not allowed')
-        if not is_py3 and isinstance(node, ast.Print):
+        if not is_py3 and isinstance(node, Print):
             raise SyntaxError('print not allowed, use log functions instead')
     return _compile(tree, filename, 'exec')
 
@@ -556,3 +552,97 @@ for k, v in list(builtins.__dict__.items()):  # YOLO
         pass
     if k not in _WHITELISTED_BUILTINS:
         del builtins.__dict__[k]
+
+
+# The following functions are vendorised from posixpath / genericpath
+# to save us from having to import all of os; these are the lightest weight
+# parts of it since we operate only on logical paths and not physical ones.
+
+def join_path(a, *p):
+    """Join two or more pathname components, inserting '/' as needed.
+    If any component is an absolute path, all previous path components
+    will be discarded.  An empty last part will result in a path that
+    ends with a separator."""
+    path = a
+    for b in p:
+        if b.startswith('/'):
+            path = b
+        elif path == '' or path.endswith('/'):
+            path +=  b
+        else:
+            path += '/' + b
+    return path
+
+
+def split_path(p):
+    """Split a pathname.  Returns tuple "(head, tail)" where "tail" is
+    everything after the final slash.  Either part may be empty."""
+    i = p.rfind('/') + 1
+    head, tail = p[:i], p[i:]
+    if head and head != '/'*len(head):
+        head = head.rstrip('/')
+    return head, tail
+
+
+def splitext(p, sep='/', extsep='.'):
+    """Split the extension from a pathname.
+
+    Extension is everything from the last dot to the end, ignoring
+    leading dots.  Returns "(root, ext)"; ext may be empty."""
+    sepIndex = p.rfind(sep)
+    dotIndex = p.rfind(extsep)
+    if dotIndex > sepIndex:
+        # skip all leading dots
+        filenameIndex = sepIndex + 1
+        while filenameIndex < dotIndex:
+            if p[filenameIndex] != extsep:
+                return p[:dotIndex], p[dotIndex:]
+            filenameIndex += 1
+
+    return p, ''
+
+
+def basename(p):
+    """Returns the final component of a pathname"""
+    i = p.rfind('/') + 1
+    return p[i:]
+
+
+def dirname(p):
+    """Returns the directory component of a pathname"""
+    i = p.rfind('/') + 1
+    head = p[:i]
+    if head and head != '/'*len(head):
+        head = head.rstrip('/')
+    return head
+
+
+# Replacement for the one thing we use from types.
+FunctionType = type(dirname)
+
+
+# Vendorised versions of the two functions we use from ast.
+def iter_fields(node):
+    """
+    Yield a tuple of ``(fieldname, value)`` for each field in ``node._fields``
+    that is present on *node*.
+    """
+    for field in node._fields:
+        try:
+            yield field, getattr(node, field)
+        except AttributeError:
+            pass
+
+
+def iter_child_nodes(node):
+    """
+    Yield all direct child nodes of *node*, that is, all fields that are nodes
+    and all items of fields that are lists of nodes.
+    """
+    for name, field in iter_fields(node):
+        if isinstance(field, AST):
+            yield field
+        elif isinstance(field, list):
+            for item in field:
+                if isinstance(item, AST):
+                    yield item
