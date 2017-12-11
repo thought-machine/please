@@ -30,7 +30,7 @@ jobs:
        - checkout
        - run:
            name: Install deps
-           command: brew install go python3 pypy unittest-cpp nasm pkg-config
+           command: brew install go python2 python3 unittest-cpp nasm pkg-config
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh -p --exclude no_circleci --test_results_file plz-out/results/test_results.xml
