@@ -9,9 +9,11 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"sync"
+	"syscall"
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
@@ -310,6 +312,7 @@ func BuildGrpcServer(port int, cache *Cache, cluster *cluster.Cluster, keyFile, 
 // It's very simple and provided as a convenience so callers don't have to import grpc themselves.
 func ServeGrpcForever(server *grpc.Server, lis net.Listener) {
 	log.Notice("Serving RPC cache on %s", lis.Addr())
+	go handleSignals(server)
 	server.Serve(lis)
 }
 
@@ -344,4 +347,19 @@ func serverWithAuth(keyFile, certFile, caCertFile string) *grpc.Server {
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 	)
+}
+
+// handleSignals received SIGTERM / SIGINT etc to gracefully shut down a gRPC server.
+// Repeated signals cause the server to terminate at increasing levels of urgency.
+func handleSignals(s *grpc.Server) {
+	c := make(chan os.Signal, 3) // Channel should be buffered a bit
+	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
+	sig := <-c
+	log.Warning("Received signal %s, gracefully shutting down gRPC server", sig)
+	go s.GracefulStop()
+	sig = <-c
+	log.Warning("Received signal %s, non-gracefully shutting down gRPC server", sig)
+	go s.Stop()
+	sig = <-c
+	log.Fatalf("Received signal %s, terminating\n", sig)
 }
