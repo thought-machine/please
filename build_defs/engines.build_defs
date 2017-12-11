@@ -26,10 +26,10 @@ _PARSER_FILENAMES = {
 }
 
 _PARSER_PKG_CONFIG = {
-    'python27': 'python2',
-    'python34': 'python3',
-    'python35': 'python3',
-    'python36': 'python3',
+    'python27': 'python-2.7',
+    'python34': 'python-3.4',
+    'python35': 'python-3.5',
+    'python36': 'python-3.6',
 }
 
 _PARSER_BINARIES = {
