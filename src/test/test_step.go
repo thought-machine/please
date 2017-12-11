@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"os"
 	"path"
 	"strings"
@@ -367,8 +366,8 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 // calcNumRuns works out how many total runs we should have for a test, and how many successes
 // are required for it to count as success.
 func calcNumRuns(numRuns, flakiness int) (int, int) {
-	if numRuns > 0 && flakiness > 0 { // If flag is passed we run exactly that many times with proportionate flakiness.
-		return numRuns, int(math.Ceil(float64(numRuns) / float64(flakiness)))
+	if numRuns > 0 && flakiness > 0 { // If flag is passed we run that many times * flakiness.
+		return numRuns * flakiness, numRuns
 	} else if numRuns > 0 {
 		return numRuns, numRuns
 	} else if flakiness > 0 { // Test is flaky, run that many times
