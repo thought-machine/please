@@ -1,4 +1,8 @@
-linker_flags = ['-Lsrc/parse/cffi -lplease_parser_static -lm -lz -lutil']
+subinclude('//build_defs:engines')
+
+# N.B. These are called linker_flags, but Go uses gcc as the linker, so hence we have to
+#      use -Wl in a few places otherwise they don't take effect.
+linker_flags = ['-Lsrc/parse/cffi -lplease_parser_static -Wl,-Bstatic -l%s -Wl,-Bdynamic -lm -lz -lutil' % PARSER_LIB_NAME]
 
 cgo_library(
     name = 'parse',
