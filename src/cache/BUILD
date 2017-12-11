@@ -60,7 +60,6 @@ go_test(
 go_test(
     name = 'dir_cache_test',
     srcs = ['dir_cache_test.go'],
-    flaky = True,
     deps = [
         ':cache',
         '//third_party/go:testify',
