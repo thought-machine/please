@@ -46,3 +46,16 @@ PARSER_PKG_CONFIG = _PARSER_PKG_CONFIG[CONFIG.PARSER_ENGINE]
 PARSER_LIB_FILENAME = _PARSER_FILENAMES[CONFIG.PARSER_ENGINE]
 PARSER_TOOL = _PARSER_BINARIES[CONFIG.PARSER_ENGINE]
 PARSER_LIB_NAME = PARSER_TOOL  # Happens to be the same for now.
+
+# These are really awkward; OSX's linker doesn't support the -Bstatic/-Bdynamic flags
+# and so it's unreasonably difficult to persuade it to link this statically.
+if CONFIG.OS == 'darwin':
+    PARSER_LINKER_FLAGS = ('`pkg-config --libs-only-L python-2.7 | sed "s/^-L//g"`/%s/config/%s -ldl' %
+                           (PARSER_LIB_NAME, PARSER_LIB_FILENAME))
+elif CONFIG.OS == 'freebsd':
+    # libdl doesn't exist on FreeBSD
+    PARSER_LINKER_FLAGS = '-Wl,-Bstatic -l%s -Wl,-Bdynamic' % PARSER_LIB_NAME
+else:
+    # N.B. These are called linker_flags, but Go uses gcc as the linker, so hence we have to
+    #      use -Wl otherwise they don't take effect.
+    PARSER_LINKER_FLAGS = '-Wl,-Bstatic -l%s -Wl,-Bdynamic -ldl' % PARSER_LIB_NAME

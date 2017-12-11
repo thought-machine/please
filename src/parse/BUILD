@@ -1,9 +1,5 @@
 subinclude('//build_defs:engines')
 
-# N.B. These are called linker_flags, but Go uses gcc as the linker, so hence we have to
-#      use -Wl in a few places otherwise they don't take effect.
-linker_flags = ['-Lsrc/parse/cffi -lplease_parser_static -Wl,-Bstatic -l%s -Wl,-Bdynamic -lm -lz -lutil' % PARSER_LIB_NAME]
-
 cgo_library(
     name = 'parse',
     srcs = ['interpreter.go'],
@@ -15,7 +11,11 @@ cgo_library(
         'builtin_rules.bindata.go',
         'interpreter.go',
     ]) + [':builtin_rules'],
-    linker_flags = (linker_flags if (CONFIG.OS == 'freebsd') else (linker_flags + ['-ldl'])),
+    linker_flags = [
+        '-Lsrc/parse/cffi -lplease_parser_static',
+        PARSER_LINKER_FLAGS,
+        '-lm -lz -lutil',
+    ],
     deps = [
         ':builtin_rules',
         '//src/core',
