@@ -16,6 +16,7 @@ go_library(
         '//third_party/go:humanize',
         '//third_party/go:logging',
         '//third_party/go:mux',
+        '//third_party/go:prometheus',
         '//tools/cache/cluster',
     ],
     # Exposed for a test only.
