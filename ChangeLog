@@ -1,3 +1,10 @@
+Version 10.3.3
+--------------
+
+    * Fixed RPC cache server to serve metrics on --http_port as the flag documentation said.
+      --metrics_port still works but will be removed in some future version.
+
+
 Version 10.3.2
 --------------
 

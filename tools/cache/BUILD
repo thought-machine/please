@@ -14,6 +14,7 @@ go_binary(
     srcs = ['rpc_server_main.go'],
     deps = [
         '//src/cli',
+        '//third_party/go:grpc',
         '//third_party/go:grpc-prometheus',
         '//third_party/go:logging',
         '//third_party/go:prometheus',

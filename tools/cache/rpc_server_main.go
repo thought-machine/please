@@ -22,8 +22,8 @@ var log = logging.MustGetLogger("rpc_cache_server")
 var opts struct {
 	Usage       string `usage:"rpc_cache_server is a server for Please's remote RPC cache.\n\nSee https://please.build/cache.html for more information."`
 	Port        int    `short:"p" long:"port" description:"Port to serve on" default:"7677"`
-	HTTPPort    int    `long:"http_port" description:"Port to serve HTTP on (for profiling, metrics etc)"`
-	MetricsPort int    `long:"metrics_port" description:"Port to serve Prometheus metrics on"`
+	HTTPPort    int    `short:"h" long:"http_port" description:"Port to serve HTTP on (for profiling, metrics etc)"`
+	MetricsPort int    `long:"metrics_port" hidden:"true" description:"Deprecated, use --http_port instead"`
 	Dir         string `short:"d" long:"dir" description:"Directory to write into" default:"plz-rpc-cache"`
 	Verbosity   int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
 	LogFile     string `long:"log_file" description:"File to log to (in addition to stdout)"`
@@ -52,6 +52,32 @@ var opts struct {
 		SeedIf           string `long:"seed_if" description:"Makes us the seed (overriding seed_cluster) if node_name matches this value and we can't resolve any cluster addresses. This makes it a lot easier to set up in automated deployments like Kubernetes."`
 		AdvertiseAddr    string `long:"advertise_addr" env:"NODE_IP" description:"IP address to advertise to other cluster nodes"`
 	} `group:"Options controlling clustering behaviour"`
+}
+
+// handleHTTP implements the http.Handler interface to return some simple stats.
+func handleHTTP(w http.ResponseWriter, cache *server.Cache) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("X-Clacks-Overhead", "GNU Terry Pratchett")
+	w.Write([]byte(fmt.Sprintf("Total size: %d bytes\nNum files: %d\n", cache.TotalSize(), cache.NumFiles())))
+}
+
+// serveHTTP serves HTTP responses (including metrics) on the given port.
+func serveHTTP(port int, cache *server.Cache) {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", prometheus.Handler())
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { handleHTTP(w, cache) })
+	s := &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: mux,
+	}
+	go func() {
+		if opts.TLSFlags.KeyFile != "" {
+			log.Fatalf("%s\n", s.ListenAndServeTLS(opts.TLSFlags.CertFile, opts.TLSFlags.KeyFile))
+		} else {
+			log.Fatalf("%s\n", s.ListenAndServe())
+		}
+	}()
+	log.Notice("Serving HTTP stats on port %d", port)
 }
 
 func main() {
@@ -87,33 +113,18 @@ func main() {
 		clusta.Join(strings.Split(opts.ClusterFlags.ClusterAddresses, ","))
 	}
 
-	if opts.HTTPPort != 0 {
-		http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-			w.Header().Set("Content-Type", "text/plain")
-			w.Write([]byte(fmt.Sprintf("Total size: %d bytes\nNum files: %d\n", cache.TotalSize(), cache.NumFiles())))
-		})
-		go func() {
-			port := fmt.Sprintf(":%d", opts.HTTPPort)
-			if opts.TLSFlags.KeyFile != "" {
-				log.Fatalf("%s\n", http.ListenAndServeTLS(port, opts.TLSFlags.CertFile, opts.TLSFlags.KeyFile, nil))
-			} else {
-				log.Fatalf("%s\n", http.ListenAndServe(port, nil))
-			}
-		}()
-		log.Notice("Serving HTTP stats on port %d", opts.HTTPPort)
-	}
-
 	log.Notice("Starting up RPC cache server on port %d...", opts.Port)
 	s, lis := server.BuildGrpcServer(opts.Port, cache, clusta, opts.TLSFlags.KeyFile, opts.TLSFlags.CertFile,
 		opts.TLSFlags.CACertFile, opts.TLSFlags.ReadonlyCerts, opts.TLSFlags.WritableCerts)
 
+	grpc_prometheus.Register(s)
+	grpc_prometheus.EnableHandlingTimeHistogram()
+	if opts.HTTPPort != 0 {
+		go serveHTTP(opts.HTTPPort, cache)
+	}
 	if opts.MetricsPort != 0 {
-		grpc_prometheus.Register(s)
-		grpc_prometheus.EnableHandlingTimeHistogram()
-		mux := http.NewServeMux()
-		mux.Handle("/metrics", prometheus.Handler())
-		log.Notice("Serving Prometheus metrics on port %d /metrics", opts.MetricsPort)
-		go http.ListenAndServe(fmt.Sprintf(":%d", opts.MetricsPort), mux)
+		log.Warning("--metrics_port is deprecated, prefer --http_port instead")
+		go serveHTTP(opts.MetricsPort, cache)
 	}
 
 	server.ServeGrpcForever(s, lis)
