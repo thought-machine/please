@@ -839,7 +839,7 @@ func main() {
 	} else if opts.OutputFlags.NoColour {
 		output.SetColouredOutput(false)
 	}
-	if opts.OutputFlags.ShowAllOutput || opts.Test.Debug || opts.Cover.Debug {
+	if opts.OutputFlags.ShowAllOutput {
 		opts.OutputFlags.PlainOutput = true
 	}
 	// Init logging, but don't do file output until we've chdir'd.

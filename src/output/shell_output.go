@@ -69,6 +69,16 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	failedTargets := []core.BuildLabel{}
 	failedNonTests := []core.BuildLabel{}
 	for result := range state.Results {
+		if state.DebugTests && result.Status == core.TargetTesting {
+			stop <- struct{}{}
+			<-displayDone
+			// Ensure that this works again later and we don't deadlock
+			// TODO(peterebden): this does not seem like a gloriously elegant synchronisation mechanism...
+			go func() {
+				<-stop
+				displayDone <- struct{}{}
+			}()
+		}
 		processResult(state, result, buildingTargets, &aggregatedResults, plainOutput, keepGoing, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
 	}
 	stop <- struct{}{}
