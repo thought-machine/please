@@ -40,6 +40,18 @@ func NewPackage(name string) *Package {
 	}
 }
 
+// AllTargets returns the current set of targets in this package.
+// This is threadsafe, unlike iterating .Targets directly which is not.
+func (pkg *Package) AllTargets() []*BuildTarget {
+	pkg.mutex.Lock()
+	defer pkg.mutex.Unlock()
+	ret := make([]*BuildTarget, 0, len(pkg.Targets))
+	for _, target := range pkg.Targets {
+		ret = append(ret, target)
+	}
+	return ret
+}
+
 // RegisterSubinclude adds a new subinclude to this package, guaranteeing uniqueness.
 func (pkg *Package) RegisterSubinclude(label BuildLabel) {
 	if !pkg.HasSubinclude(label) {
