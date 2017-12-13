@@ -292,6 +292,8 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 	}
 	if attachStdin {
 		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 	}
 	if target != nil {
 		go logProgress(ctx, target.Label)

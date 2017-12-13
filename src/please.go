@@ -645,8 +645,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
-	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.DebugTests = opts.Test.Debug || opts.Cover.Debug
+	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput || state.DebugTests
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if config.Events.Port != 0 && shouldBuild {
 		shutdown := follow.InitialiseServer(state, config.Events.Port)
@@ -839,7 +839,7 @@ func main() {
 	} else if opts.OutputFlags.NoColour {
 		output.SetColouredOutput(false)
 	}
-	if opts.OutputFlags.ShowAllOutput {
+	if opts.OutputFlags.ShowAllOutput || opts.Test.Debug || opts.Cover.Debug {
 		opts.OutputFlags.PlainOutput = true
 	}
 	// Init logging, but don't do file output until we've chdir'd.
