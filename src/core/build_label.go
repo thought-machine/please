@@ -353,7 +353,7 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	os.Setenv("PLZ_COMPLETE", match)
 	os.Unsetenv("GO_FLAGS_COMPLETION")
 	exec, _ := os.Executable()
-	out, _, err := ExecWithTimeout(nil, "", os.Environ(), 0, 0, false, append([]string{exec}, os.Args[1:]...))
+	out, _, err := ExecWithTimeout(nil, "", os.Environ(), 0, 0, false, false, append([]string{exec}, os.Args[1:]...))
 	if err != nil {
 		return nil
 	}
