@@ -8,4 +8,6 @@ def run_tests(test_names):
     args = ['--junitxml', 'test.results'] + TEST_NAMES
     if test_names:
         args += ['-k', ' '.join(test_names)]
+    if os.environ.get('DEBUG'):
+        args.append('--pdb')
     return main(args)

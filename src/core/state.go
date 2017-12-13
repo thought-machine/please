@@ -125,6 +125,8 @@ type BuildState struct {
 	ShowTestOutput bool
 	// True to print all output of all tasks to stderr.
 	ShowAllOutput bool
+	// True to attach a debugger on test failure.
+	DebugTests bool
 	// Number of running workers
 	numWorkers int
 	// Experimental directories

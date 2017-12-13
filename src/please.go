@@ -110,6 +110,7 @@ var opts struct {
 		NumRuns         int          `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		TestResultsFile cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		ShowOutput      bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
+		Debug           bool         `short:"d" long:"debug" description:"Start debugger on test failure. Does not work with all test types."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -127,6 +128,7 @@ var opts struct {
 		TestResultsFile     cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		CoverageResultsFile cli.Filepath `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
 		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
+		Debug               bool         `short:"d" long:"debug" description:"Start debugger on test failure. Does not work with all test types."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -644,6 +646,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
+	state.DebugTests = opts.Test.Debug || opts.Cover.Debug
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if config.Events.Port != 0 && shouldBuild {
 		shutdown := follow.InitialiseServer(state, config.Events.Port)
@@ -657,6 +660,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
+	}
+	if state.DebugTests && len(targets) != 1 {
+		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, targets)
