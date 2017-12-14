@@ -20,11 +20,13 @@ type output struct {
 var urlRegex = regexp.MustCompile("https?://[^ ]+[^.]")
 
 // ExampleValue returns an example value for a config field based on its type.
-func ExampleValue(f reflect.Value, name string, t reflect.Type, example string) string {
+func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options string) string {
 	if t.Kind() == reflect.Slice {
-		return ExampleValue(f, name, t.Elem(), example) + fmt.Sprintf("\n\n%s can be repeated", name)
+		return ExampleValue(f, name, t.Elem(), example, options) + fmt.Sprintf("\n\n%s can be repeated", name)
 	} else if example != "" {
 		return example
+	} else if options != "" {
+		return strings.Replace(options, ",", " | ", -1)
 	} else if name == "version" {
 		return core.PleaseVersion.String() // keep it up to date!
 	} else if t.Kind() == reflect.String {
@@ -73,7 +75,7 @@ func main() {
 				if help := subt.Tag.Get("help"); help != "" {
 					name := strings.ToLower(subt.Name)
 					example := subt.Tag.Get("example")
-					preamble := fmt.Sprintf("${BOLD_YELLOW}[%s]${RESET}\n${YELLOW}%s${RESET} = ${GREEN}%s${RESET}\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example))
+					preamble := fmt.Sprintf("${BOLD_YELLOW}[%s]${RESET}\n${YELLOW}%s${RESET} = ${GREEN}%s${RESET}\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example, subt.Tag.Get("options")))
 					help = strings.Replace(help, "\\n", "\n", -1) + "\n"
 					if v := subt.Tag.Get("var"); v != "" {
 						help += fmt.Sprintf("\nThis variable is exposed to BUILD rules via the variable ${BOLD_CYAN}CONFIG.%s${RESET},\n"+

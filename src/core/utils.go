@@ -657,3 +657,13 @@ func moveDir(dir string) (string, error) {
 	log.Notice("Moving %s to %s", dir, name)
 	return name, os.Rename(dir, name)
 }
+
+// contains returns true if the given slice contains an individual string.
+func contains(needle string, haystack []string) bool {
+	for _, straw := range haystack {
+		if needle == straw {
+			return true
+		}
+	}
+	return false
+}
