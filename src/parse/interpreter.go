@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -198,6 +199,11 @@ func initialiseInterpreter(engine string, attemptDownload bool) bool {
 		return initialiseInterpreterFrom(engine, attemptDownload)
 	}
 	executable, err := os.Executable()
+	if err != nil {
+		log.Error("Can't determine current executable: %s", err)
+		return false
+	}
+	executable, err = filepath.EvalSymlinks(executable)
 	if err != nil {
 		log.Error("Can't determine current executable: %s", err)
 		return false
