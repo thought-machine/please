@@ -16,16 +16,21 @@ import (
 type progressReader struct {
 	current, last, max, width int
 	reader                    io.ReadCloser
+	interactive               bool
 }
 
 // NewProgressReader returns a new progress bar reader.
 func NewProgressReader(reader io.ReadCloser, total string) io.ReadCloser {
 	i, _ := strconv.Atoi(total)
-	_, cols := WindowSize()
+	_, cols, err := WindowSize()
+	if err != nil {
+		log.Error("%s", err)
+	}
 	return &progressReader{
-		max:    i, // If we failed above this is zero, that's handled later.
-		reader: reader,
-		width:  cols,
+		max:         i, // If we failed above this is zero, that's handled later.
+		reader:      reader,
+		width:       cols,
+		interactive: err == nil && StdErrIsATerminal,
 	}
 }
 
@@ -41,7 +46,7 @@ func (pr *progressReader) Read(b []byte) (int, error) {
 // Close implements the io.Closer interface
 // It closes the internal reader as well as cleaning up itself.
 func (pr *progressReader) Close() error {
-	if StdErrIsATerminal {
+	if pr.interactive {
 		// Clear out the line.
 		Printf("${RESETLN}")
 	} else {
@@ -53,7 +58,7 @@ func (pr *progressReader) Close() error {
 
 // update refreshes the display.
 func (pr *progressReader) update() {
-	if !StdErrIsATerminal {
+	if !pr.interactive {
 		// Can't do interactive things, just print dots.
 		if pr.current > pr.last {
 			Printf(strings.Repeat(".", (pr.current-pr.last)/1000))

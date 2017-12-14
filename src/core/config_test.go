@@ -124,6 +124,15 @@ func TestConfigOverrideURL(t *testing.T) {
 	assert.EqualValues(t, "http://gateway:9091", config.Metrics.PushGatewayURL)
 }
 
+func TestConfigOverrideOptions(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{"python.testrunner": "pytest"})
+	assert.NoError(t, err)
+	assert.Equal(t, "pytest", config.Python.TestRunner)
+	err = config.ApplyOverrides(map[string]string{"python.testrunner": "junit"})
+	assert.Error(t, err)
+}
+
 func TestDynamicSection(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/aliases.plzconfig"})
 	assert.NoError(t, err)
@@ -184,6 +193,14 @@ func TestCompletions(t *testing.T) {
 	config := DefaultConfiguration()
 	completions := config.Completions("python.pip")
 	assert.Equal(t, 2, len(completions))
-	assert.Equal(t, "python.piptool", completions[0].Item)
-	assert.Equal(t, "python.pipflags", completions[1].Item)
+	assert.Equal(t, "python.piptool:", completions[0].Item)
+	assert.Equal(t, "python.pipflags:", completions[1].Item)
+}
+
+func TestConfigVerifiesOptions(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/testrunner_good.plzconfig"})
+	assert.NoError(t, err)
+	assert.Equal(t, "pytest", config.Python.TestRunner)
+	_, err = ReadConfigFiles([]string{"src/core/test_data/testrunner_bad.plzconfig"})
+	assert.Error(t, err)
 }

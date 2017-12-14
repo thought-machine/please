@@ -1,3 +1,18 @@
+Version 10.3.5
+--------------
+
+    * Fix an issue on OSX where the parser engine was sometimes not found when plz
+      was invoked through a symlink.
+
+
+Version 10.3.4
+--------------
+
+    * Fix bug where some java tests couldn't load package-private classes when run with
+      coverage and without a test package specified due to security boundaries created
+      by instrumentation process.
+
+
 Version 10.3.3
 --------------
 

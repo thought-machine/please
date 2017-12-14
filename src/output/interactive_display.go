@@ -119,7 +119,7 @@ func printStat(caption string, stat float64, multiplier int) {
 }
 
 func recalcWindowSize(backend *cli.LogBackend) {
-	rows, cols := cli.WindowSize()
+	rows, cols, _ := cli.WindowSize()
 	backend.Lock()
 	defer backend.Unlock()
 	backend.Rows = rows - 4 // Give a little space at the edge for any off-by-ones

@@ -90,11 +90,12 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	if (config.Cache.RPCPrivateKey == "") != (config.Cache.RPCPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
 	}
-	if c := config.Test.DefaultContainer; c != ContainerImplementationNone && c != ContainerImplementationDocker {
-		return config, fmt.Errorf("%s invalid for test.defaultcontainer; must be one of {none,docker}", c)
-	}
 
-	return config, nil
+	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
+	return config, config.ApplyOverrides(map[string]string{
+		"test.defaultcontainer": config.Test.DefaultContainer,
+		"python.testrunner":     config.Python.TestRunner,
+	})
 }
 
 // setDefault sets a slice of strings in the config if the set one is empty.
@@ -256,7 +257,7 @@ type Configuration struct {
 	CustomMetricLabels map[string]string `help:"Allows defining custom labels to be applied to metrics. The key is the name of the label, and the value is a command to be run, the output of which becomes the label's value. For example, to attach the current Git branch to all metrics:\n\n[custommetriclabels]\nbranch = git rev-parse --abbrev-ref HEAD\n\nBe careful when defining new labels, it is quite possible to overwhelm the metric collector by creating metric sets with too high cardinality."`
 	Test               struct {
 		Timeout          cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		DefaultContainer string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only available option is 'docker', we expect to add support for more engines in future."`
+		DefaultContainer string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only available option is 'docker', we expect to add support for more engines in future." options:"none,docker"`
 		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
 	}
 	Cover struct {
@@ -289,7 +290,7 @@ type Configuration struct {
 		PipFlags           string  `help:"Additional flags to pass to pip invocations in pip_library rules." var:"PIP_FLAGS"`
 		PexTool            string  `help:"The tool that's invoked to build pexes. Defaults to please_pex in the install directory." var:"PEX_TOOL"`
 		DefaultInterpreter string  `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to, say, pypy." var:"DEFAULT_PYTHON_INTERPRETER"`
-		TestRunner         string  `help:"The test runner used to discover & run Python tests; one of unittest or pytest." var:"PYTHON_TEST_RUNNER"`
+		TestRunner         string  `help:"The test runner used to discover & run Python tests; one of unittest or pytest." var:"PYTHON_TEST_RUNNER" options:"unittest,pytest"`
 		ModuleDir          string  `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex." var:"PYTHON_MODULE_DIR"`
 		DefaultPipRepo     cli.URL `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library." var:"PYTHON_DEFAULT_PIP_REPO"`
 		WheelRepo          cli.URL `help:"Defines a location for a remote repo that python_wheel rules will download from. See python_wheel for more information." var:"PYTHON_WHEEL_REPO"`
@@ -422,12 +423,19 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		} else if field.Kind() != reflect.Struct {
 			return fmt.Errorf("Unsettable config field: %s", split[0])
 		}
-		field = field.FieldByNameFunc(match(split[1]))
-		if !field.IsValid() {
+		subfield, ok := field.Type().FieldByNameFunc(match(split[1]))
+		if !ok {
 			return fmt.Errorf("Unknown config field: %s", split[1])
 		}
+		field = field.FieldByNameFunc(match(split[1]))
 		switch field.Kind() {
 		case reflect.String:
+			// verify this is a legit setting for this field
+			if options := subfield.Tag.Get("options"); options != "" {
+				if !contains(v, strings.Split(options, ",")) {
+					return fmt.Errorf("Invalid value %s for field %s; options are %s", v, k, options)
+				}
+			}
 			if field.Type().Name() == "URL" {
 				field.Set(reflect.ValueOf(cli.URL(v)))
 			} else {
@@ -483,7 +491,14 @@ func (config *Configuration) Completions(prefix string) []flags.Completion {
 			for j := 0; j < field.Type.NumField(); j++ {
 				subfield := field.Type.Field(j)
 				if name := strings.ToLower(field.Name + "." + subfield.Name); strings.HasPrefix(name, prefix) {
-					ret = append(ret, flags.Completion{Item: name, Description: subfield.Tag.Get("help")})
+					help := subfield.Tag.Get("help")
+					if options := subfield.Tag.Get("options"); options != "" {
+						for _, option := range strings.Split(options, ",") {
+							ret = append(ret, flags.Completion{Item: name + ":" + option, Description: help})
+						}
+					} else {
+						ret = append(ret, flags.Completion{Item: name + ":", Description: help})
+					}
 				}
 			}
 		}

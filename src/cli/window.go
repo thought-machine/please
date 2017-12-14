@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"runtime"
 	"syscall"
 	"unsafe"
@@ -16,17 +17,16 @@ type winsize struct {
 }
 
 // WindowSize finds and returns the size of the console window as (rows, columns)
-func WindowSize() (int, int) {
+func WindowSize() (int, int, error) {
 	ws := new(winsize)
 	if ret, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(syscall.Stderr),
 		uintptr(tiocgwinsz()),
 		uintptr(unsafe.Pointer(ws)),
 	); int(ret) == -1 {
-		log.Errorf("error %d getting window size", int(errno))
-		return 25, 80
+		return 25, 80, fmt.Errorf("error %d getting window size", int(errno))
 	}
-	return int(ws.Row), int(ws.Col)
+	return int(ws.Row), int(ws.Col), nil
 }
 
 // tiocgwinsz returns the ioctl number corresponding to TIOCGWINSZ.

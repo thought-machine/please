@@ -94,9 +94,7 @@ public class TestMain {
     // Need to load by filename. Fortunately we have a list of the files we compiled in please_sourcemap.
     ClassFinder finder = new ClassFinder(loader);
     for (String key : TestCoverage.readSourceMap().keySet()) {
-      if (key.endsWith("Test.java")) {
-        finder.loadClass(key.replace(".java", ".class"));
-      }
+      finder.loadClass(key.replace(".java", ".class"));
     }
     return finder.getClasses();
   }
