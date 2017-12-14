@@ -39,7 +39,7 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 			}
 			// Check against blacklist
 			for _, dir := range config.Parse.BlacklistDirs {
-				if dir == info.Name() {
+				if dir == info.Name() || strings.HasPrefix(name, dir) {
 					return filepath.SkipDir
 				}
 			}
