@@ -170,8 +170,10 @@ var opts struct {
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
 	Update struct {
-		Force    bool `long:"force" description:"Forces a re-download of the new version."`
-		NoVerify bool `long:"noverify" description:"Skips signature verification of downloaded version"`
+		Force    bool        `long:"force" description:"Forces a re-download of the new version."`
+		NoVerify bool        `long:"noverify" description:"Skips signature verification of downloaded version"`
+		Latest   bool        `long:"latest" description:"Update to latest available version (overrides config)."`
+		Version  cli.Version `long:"version" description:"Updates to a particular version (overrides config)."`
 	} `command:"update" description:"Checks for an update and updates if needed."`
 
 	Op struct {
@@ -738,6 +740,12 @@ func readConfig(forceUpdate bool) *core.Configuration {
 		log.Fatalf("Error reading config file: %s", err)
 	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
 		log.Fatalf("Can't override requested config setting: %s", err)
+	}
+	// Now apply any flags that override this
+	if opts.Update.Latest {
+		config.Please.Version.Unset()
+	} else if opts.Update.Version.IsSet {
+		config.Please.Version = opts.Update.Version
 	}
 	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify)
 	return config

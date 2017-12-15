@@ -163,6 +163,7 @@ func (u *URL) String() string {
 type Version struct {
 	semver.Version
 	IsGTE bool
+	IsSet bool
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface
@@ -176,6 +177,7 @@ func (v *Version) UnmarshalFlag(in string) error {
 		v.IsGTE = true
 		in = strings.TrimSpace(strings.TrimPrefix(in, ">="))
 	}
+	v.IsSet = true
 	return v.Set(in)
 }
 
@@ -195,6 +197,11 @@ func (v *Version) VersionString() string {
 // Semver converts a Version to a semver.Version
 func (v *Version) Semver() semver.Version {
 	return v.Version
+}
+
+// Unset resets this version to the default.
+func (v *Version) Unset() {
+	*v = Version{}
 }
 
 // flagsError converts an error to a flags.Error, which is required for flag parsing.

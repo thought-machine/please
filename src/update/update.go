@@ -44,7 +44,7 @@ var minSignedVersion = semver.Version{Major: 9, Minor: 2}
 // forceUpdate indicates whether the user passed --force on the command line, in which case we
 // will always update even if the version exists.
 func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify bool) {
-	if !forceUpdate && !shouldUpdate(config, updatesEnabled, updateCommand) {
+	if !shouldUpdate(config, updatesEnabled, updateCommand) && !forceUpdate {
 		return
 	}
 	word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
