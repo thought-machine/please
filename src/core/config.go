@@ -202,7 +202,7 @@ type Configuration struct {
 	Parse struct {
 		LintTool         string   `help:"Location of the lint tool for BUILD files."`
 		Engine           string   `help:"Allows forcing a particular parser engine. Can be either a path to a file or the name of an engine (e.g. 'pypy').\nIt is rare that you need to force this, typically Please will try available engines at startup." example:"pypy | python2 | python3 | /usr/lib/libplease_parser_custom.so"`
-		ExperimentalDir  string   `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
+		ExperimentalDir  []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
 		BuildFileName    []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+."`
 		BlacklistDirs    []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
 		PreloadBuildDefs []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths." example:"build_defs/go_bindata.build_defs"`
@@ -429,7 +429,7 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		case reflect.String:
 			// verify this is a legit setting for this field
 			if options := subfield.Tag.Get("options"); options != "" {
-				if !contains(v, strings.Split(options, ",")) {
+				if !ContainsString(v, strings.Split(options, ",")) {
 					return fmt.Errorf("Invalid value %s for field %s; options are %s", v, k, options)
 				}
 			}

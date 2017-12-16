@@ -34,7 +34,7 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 			} else if isABuildFile(info.Name(), config) && !info.IsDir() {
 				dir, _ := path.Split(name)
 				ch <- strings.TrimRight(dir, "/")
-			} else if name == config.Parse.ExperimentalDir {
+			} else if core.ContainsString(name, config.Parse.ExperimentalDir) {
 				return filepath.SkipDir // Skip the experimental directory if it's set
 			}
 			// Check against blacklist

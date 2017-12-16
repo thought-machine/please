@@ -482,7 +482,12 @@ func (target *BuildTarget) allDependenciesResolved() bool {
 
 // isExperimental returns true if the given target is in the "experimental" tree
 func isExperimental(target *BuildTarget) bool {
-	return State.experimentalLabel.PackageName != "" && State.experimentalLabel.Includes(target.Label)
+	for _, exp := range State.experimentalLabels {
+		if exp.Includes(target.Label) {
+			return true
+		}
+	}
+	return false
 }
 
 // CanSee returns true if target can see the given dependency, or false if not.

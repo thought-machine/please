@@ -127,8 +127,8 @@ type BuildState struct {
 	ShowAllOutput bool
 	// Number of running workers
 	numWorkers int
-	// Experimental directory
-	experimentalLabel BuildLabel
+	// Experimental directories
+	experimentalLabels []BuildLabel
 	// Used to count the number of currently active/pending targets
 	numActive  int64
 	numPending int64
@@ -389,26 +389,28 @@ func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 // callers can't initialise all the required private fields.
 func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configuration) *BuildState {
 	State = &BuildState{
-		Graph:             NewGraph(),
-		pendingTasks:      queue.NewPriorityQueue(10000, true), // big hint, why not
-		Results:           make(chan *BuildResult, numThreads*100),
-		LastResults:       make([]*BuildResult, numThreads),
-		StartTime:         startTime,
-		Config:            config,
-		Verbosity:         verbosity,
-		Cache:             cache,
-		VerifyHashes:      true,
-		NeedBuild:         true,
-		numActive:         1, // One for the initial target adding on the main thread.
-		numPending:        1,
-		Coverage:          TestCoverage{Files: map[string][]LineCoverage{}},
-		numWorkers:        numThreads,
-		experimentalLabel: BuildLabel{PackageName: config.Parse.ExperimentalDir, Name: "..."},
-		Stats:             &SystemStats{},
+		Graph:        NewGraph(),
+		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
+		Results:      make(chan *BuildResult, numThreads*100),
+		LastResults:  make([]*BuildResult, numThreads),
+		StartTime:    startTime,
+		Config:       config,
+		Verbosity:    verbosity,
+		Cache:        cache,
+		VerifyHashes: true,
+		NeedBuild:    true,
+		numActive:    1, // One for the initial target adding on the main thread.
+		numPending:   1,
+		Coverage:     TestCoverage{Files: map[string][]LineCoverage{}},
+		numWorkers:   numThreads,
+		Stats:        &SystemStats{},
 	}
 	State.Hashes.Config = config.Hash()
 	State.Hashes.Containerisation = config.ContainerisationHash()
 	config.Please.NumThreads = numThreads
+	for _, exp := range config.Parse.ExperimentalDir {
+		State.experimentalLabels = append(State.experimentalLabels, BuildLabel{PackageName: exp, Name: "..."})
+	}
 	return State
 }
 
