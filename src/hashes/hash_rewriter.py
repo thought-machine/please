@@ -10,7 +10,7 @@ TARGETS = {__TARGETS__}
 PLATFORM = '__PLATFORM__'
 
 
-def is_a_target(node):
+def get_node_name(node):
     """Returns the name of a node if it's a target that we're interested in."""
     if isinstance(node, Expr) and isinstance(node.value, Call):
         for keyword in node.value.keywords:
@@ -30,7 +30,7 @@ with _open(FILENAME) as f:
     tree = _compile(''.join(lines), FILENAME, 'exec', PyCF_ONLY_AST)
 
 for node in iter_child_nodes(tree):
-    name = is_a_target(node)
+    name = get_node_name(node)
     if name:
         for keyword in node.value.keywords:
             if keyword.arg == 'hashes' and isinstance(keyword.value, List):

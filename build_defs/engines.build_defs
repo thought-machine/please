@@ -50,8 +50,8 @@ PARSER_LIB_NAME = PARSER_TOOL  # Happens to be the same for now.
 # These are really awkward; OSX's linker doesn't support the -Bstatic/-Bdynamic flags
 # and so it's unreasonably difficult to persuade it to link this statically.
 if CONFIG.OS == 'darwin':
-    PARSER_LINKER_FLAGS = ('`pkg-config --libs-only-L python-2.7 | sed "s/^-L//g"`/%s/config/%s -ldl' %
-                           (PARSER_LIB_NAME, PARSER_LIB_FILENAME))
+    PARSER_LINKER_FLAGS = ('`pkg-config --libs-only-L %s | sed "s/^-L//g"`/%s/config/%s -ldl' %
+                           (PARSER_PKG_CONFIG, PARSER_LIB_NAME, PARSER_LIB_FILENAME))
 elif CONFIG.OS == 'freebsd':
     # libdl doesn't exist on FreeBSD
     PARSER_LINKER_FLAGS = '-Wl,-Bstatic -l%s -Wl,-Bdynamic' % PARSER_LIB_NAME

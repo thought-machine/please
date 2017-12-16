@@ -10,8 +10,9 @@ extern int Py_NoSiteFlag;
 
 typedef int (*RegisterFunction)(char*, char*, void*);
 
-// Since we dlsym() the callbacks out of the parser .so, we have variables for them as
-// well as extern definitions which cffi uses. The two must match, of course.
+// Since we can dlsym() the callbacks out of the parser .so instead of using the builtin forms,
+// we have variables for them as  well as extern definitions which cffi uses.
+// The two must match, of course.
 char* (*parse_file)(char*, char*, char*, size_t);
 char* (*parse_code)(char*, char*, size_t);
 void (*set_config_value)(char*, char*);
