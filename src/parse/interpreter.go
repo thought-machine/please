@@ -219,8 +219,7 @@ func executableDir() string {
 	}
 	executable, err = filepath.EvalSymlinks(executable)
 	if err != nil {
-		log.Error("Can't determine current executable: %s", err)
-		return false
+		log.Fatalf("Can't determine current executable: %s", err)
 	}
 	return path.Dir(executable)
 }
