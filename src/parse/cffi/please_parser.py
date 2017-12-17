@@ -2,16 +2,13 @@
 
 try:
     import __builtin__ as builtins
+    from _ast import AST, Import, ImportFrom, Print, Exec, PyCF_ONLY_AST
     is_py3 = False
 except ImportError:
     import builtins
+    from _ast import AST, Import, ImportFrom, PyCF_ONLY_AST
     is_py3 = True
-import ast
 import imp
-import os
-from collections import defaultdict, Mapping
-from contextlib import contextmanager
-from types import FunctionType
 from parser_interface import ffi
 
 
@@ -117,13 +114,13 @@ def _parse_build_code(filename, globals_dict):
 
 def _compile_build_code(code, filename):
     """Compiles and validates some build code."""
-    tree = ast.parse(code, filename)
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
+    tree = _compile(code, filename, 'exec', PyCF_ONLY_AST)
+    for node in iter_child_nodes(tree):
+        if isinstance(node, Import) or isinstance(node, ImportFrom):
             raise SyntaxError('import not allowed')
-        if not is_py3 and isinstance(node, ast.Exec):
+        if not is_py3 and isinstance(node, Exec):
             raise SyntaxError('exec not allowed')
-        if not is_py3 and isinstance(node, ast.Print):
+        if not is_py3 and isinstance(node, Print):
             raise SyntaxError('print not allowed, use log functions instead')
     return _compile(tree, filename, 'exec')
 
@@ -193,7 +190,7 @@ def subinclude(package, dct, target, hash=None):
 
 def _get_subinclude_target(url, hash):
     """Creates a remote_file target to subinclude() a remote url and returns its name."""
-    name = os.path.basename(url).replace('.', '_')
+    name = basename(url).replace('.', '_')
     try:
         _get_globals(_subinclude_package, _c_subinclude_package_name).get('remote_file')(
             name = name,
@@ -248,8 +245,8 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     ffi_string = lambda x: ffi.NULL if x is None else ffi_from_string(x)
     target = _add_target(package,
                          ffi_string(name),
-                         ffi_string('' if isinstance(cmd, Mapping) else cmd.strip()),
-                         ffi_string('' if isinstance(test_cmd, Mapping) else test_cmd.strip() if test_cmd else None),
+                         ffi_string('' if isinstance(cmd, dict) else cmd.strip()),
+                         ffi_string('' if isinstance(test_cmd, dict) else test_cmd.strip() if test_cmd else None),
                          binary,
                          test,
                          needs_transitive_deps,
@@ -273,10 +270,10 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     _add_maybe_named(target, _add_named_src, _add_src, srcs, name, 'srcs')
     _add_maybe_named(target, _add_named_out, _add_out, outs, name, 'outs')
     _add_maybe_named(target, _add_named_tool, _add_tool, tools, name, 'tools', absolute=True)
-    if isinstance(cmd, Mapping):
+    if isinstance(cmd, dict):
         for config, command in cmd.items():
             _check_c_error(_add_command(target, config, command.strip()))
-    if isinstance(test_cmd, Mapping):
+    if isinstance(test_cmd, dict):
         for config, command in test_cmd.items():
             _check_c_error(_add_test_command(target, config, command.strip()))
     if system_srcs:
@@ -296,7 +293,7 @@ def build_rule(globals_dict, package, name, cmd, test_cmd=None, srcs=None, data=
     _add_strings(target, _add_test_output, test_outputs, 'test_outputs')
     _add_strings(target, _add_require, requires, 'requires')
     if provides:
-        if not isinstance(provides, Mapping):
+        if not isinstance(provides, dict):
             raise ValueError('"provides" argument for rule %s is not a mapping' % name)
         for lang, rule in provides.items():
             _check_c_error(_add_provide(target, ffi_from_string(lang), ffi_from_string(rule)))
@@ -354,7 +351,7 @@ def _add_strings(target, func, lst, name):
 
 
 def _add_maybe_named(target, named_func, unnamed_func, arg, name, arg_name, absolute=False):
-    if isinstance(arg, Mapping):
+    if isinstance(arg, dict):
         for k, v in arg.items():
             if isinstance(v, str):
                 raise ValueError('Value in %s for target %s is a string, you probably '
@@ -475,11 +472,11 @@ def _get_globals(c_package, c_package_name):
     local_globals['set_command'] = lambda name, config, command='': _check_c_error(_set_command(c_package, name, config, command))
     local_globals['package'] = lambda **kwargs: package(local_globals, **kwargs)
     # Make these available to other scripts so they can get it without import.
-    local_globals['join_path'] = os.path.join
-    local_globals['split_path'] = os.path.split
-    local_globals['splitext'] = os.path.splitext
-    local_globals['basename'] = os.path.basename
-    local_globals['dirname'] = os.path.dirname
+    local_globals['join_path'] = join_path
+    local_globals['split_path'] = split_path
+    local_globals['splitext'] = splitext
+    local_globals['basename'] = basename
+    local_globals['dirname'] = dirname
     # The levels here are internally interpreted to match go-logging's levels.
     local_globals['log'] = DotDict({
         'fatal': lambda message, *args: _checked_log(0, c_package, message, args),
@@ -540,7 +537,6 @@ _please_globals['CONFIG'] = DotDict()
 _please_globals['CONFIG']['DEFAULT_VISIBILITY'] = None
 _please_globals['CONFIG']['DEFAULT_LICENCES'] = None
 _please_globals['CONFIG']['DEFAULT_TESTONLY'] = False
-_please_globals['defaultdict'] = defaultdict
 _please_globals['ParseError'] = ParseError
 _please_globals['ConfigError'] = ConfigError
 _please_globals['DuplicateTargetError'] = DuplicateTargetError
@@ -556,3 +552,97 @@ for k, v in list(builtins.__dict__.items()):  # YOLO
         pass
     if k not in _WHITELISTED_BUILTINS:
         del builtins.__dict__[k]
+
+
+# The following functions are vendorised from posixpath / genericpath
+# to save us from having to import all of os; these are the lightest weight
+# parts of it since we operate only on logical paths and not physical ones.
+
+def join_path(a, *p):
+    """Join two or more pathname components, inserting '/' as needed.
+    If any component is an absolute path, all previous path components
+    will be discarded.  An empty last part will result in a path that
+    ends with a separator."""
+    path = a
+    for b in p:
+        if b.startswith('/'):
+            path = b
+        elif path == '' or path.endswith('/'):
+            path +=  b
+        else:
+            path += '/' + b
+    return path
+
+
+def split_path(p):
+    """Split a pathname.  Returns tuple "(head, tail)" where "tail" is
+    everything after the final slash.  Either part may be empty."""
+    i = p.rfind('/') + 1
+    head, tail = p[:i], p[i:]
+    if head and head != '/'*len(head):
+        head = head.rstrip('/')
+    return head, tail
+
+
+def splitext(p, sep='/', extsep='.'):
+    """Split the extension from a pathname.
+
+    Extension is everything from the last dot to the end, ignoring
+    leading dots.  Returns "(root, ext)"; ext may be empty."""
+    sepIndex = p.rfind(sep)
+    dotIndex = p.rfind(extsep)
+    if dotIndex > sepIndex:
+        # skip all leading dots
+        filenameIndex = sepIndex + 1
+        while filenameIndex < dotIndex:
+            if p[filenameIndex] != extsep:
+                return p[:dotIndex], p[dotIndex:]
+            filenameIndex += 1
+
+    return p, ''
+
+
+def basename(p):
+    """Returns the final component of a pathname"""
+    i = p.rfind('/') + 1
+    return p[i:]
+
+
+def dirname(p):
+    """Returns the directory component of a pathname"""
+    i = p.rfind('/') + 1
+    head = p[:i]
+    if head and head != '/'*len(head):
+        head = head.rstrip('/')
+    return head
+
+
+# Replacement for the one thing we use from types.
+FunctionType = type(dirname)
+
+
+# Vendorised versions of the two functions we use from ast.
+def iter_fields(node):
+    """
+    Yield a tuple of ``(fieldname, value)`` for each field in ``node._fields``
+    that is present on *node*.
+    """
+    for field in node._fields:
+        try:
+            yield field, getattr(node, field)
+        except AttributeError:
+            pass
+
+
+def iter_child_nodes(node):
+    """
+    Yield all direct child nodes of *node*, that is, all fields that are nodes
+    and all items of fields that are lists of nodes.
+    """
+    for name, field in iter_fields(node):
+        if isinstance(field, AST):
+            yield field
+        elif isinstance(field, list):
+            for item in field:
+                if isinstance(item, AST):
+                    yield item

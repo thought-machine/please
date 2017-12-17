@@ -2,6 +2,7 @@
 # (Note that this only controls the tools we invoke directly, not what they
 # might use underneath - ie. we are not passing -fuse-ld or similar).
 
+subinclude('//build_defs:engines')
 package(
     cpp_tool = 'clang++',
     ld_tool = 'gold',
@@ -51,7 +52,7 @@ cc_library(
 cc_shared_object(
     name = 'so_test',
     srcs = ['so_test.cc'],
-    pkg_config_libs = ['python'],
+    pkg_config_libs = [PARSER_PKG_CONFIG],
     deps = [
         ':embedded_files',
     ],

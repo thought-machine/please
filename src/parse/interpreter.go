@@ -30,7 +30,6 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
-	"update"
 )
 
 /*
@@ -88,17 +87,27 @@ func initializeInterpreter(state *core.BuildState) {
 	// to accidentally write rules that are nondeterministic via {}.items() etc.
 	os.Setenv("PYTHONHASHSEED", "42")
 
-	// If an engine has been explicitly set, by flag or config, we honour it here.
+	// If an engine has been explicitly set in the config, we honour it here.
 	if config.Parse.Engine != "" {
-		if !initialiseInterpreter(config.Parse.Engine, false) {
+		if !initialiseInterpreter(config.Parse.Engine) {
 			log.Fatalf("Failed to initialise requested parser engine [%s]", config.Parse.Engine)
 		}
 	} else {
-		// Okay, now try the standard fallbacks.
-		// The python3 interpreter isn't ready yet, so don't try that.
-		// Try the python2 interpreter before attempting to download a portable PyPy.
-		if !initialiseInterpreter("pypy", false) && !initialiseInterpreter("python2", false) && !initialiseInterpreter("pypy", true) {
-			log.Fatalf("Can't initialise any Please parser engine. Please is putting itself out of its misery.\n")
+		// Use the static interpreter.
+		// This isn't available at bootstrap time, but that should send us through the branch above instead.
+		log.Debug("Using builtin interpreter")
+		dir := config.Parse.PyLib
+		if dir == "" {
+			dir = executableDir()
+		}
+		// Setting python vars ensures it doesn't find anything outside the parts we ship.
+		os.Setenv("PYTHONHOME", dir)
+		os.Setenv("PYTHONPATH", dir)
+		// Preloading the ffi lib means we don't have to have it in a subdirectory.
+		preloadSo := C.CString(path.Join(dir, "libffi-72499c49.so.6.0.4"))
+		defer C.free(unsafe.Pointer(preloadSo))
+		if C.InitialiseStaticInterpreter(preloadSo) != 0 {
+			log.Fatalf("Failed to initialise parser engine")
 		}
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version.String())
@@ -194,25 +203,28 @@ func pythonBool(b bool) string {
 	return ""
 }
 
-func initialiseInterpreter(engine string, attemptDownload bool) bool {
+func initialiseInterpreter(engine string) bool {
 	if strings.HasPrefix(engine, "/") {
-		return initialiseInterpreterFrom(engine, attemptDownload)
+		return initialiseInterpreterFrom(engine)
 	}
+	return initialiseInterpreterFrom(path.Join(executableDir(), fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())))
+}
+
+// executableDir returns the directory of the current executable.
+// It dies on any errors (which should be pretty unlikely, it implies we can't read /proc/self/exe or similar)
+func executableDir() string {
 	executable, err := os.Executable()
 	if err != nil {
-		log.Error("Can't determine current executable: %s", err)
-		return false
+		log.Fatalf("Can't determine current executable: %s", err)
 	}
 	executable, err = filepath.EvalSymlinks(executable)
 	if err != nil {
-		log.Error("Can't determine current executable: %s", err)
-		return false
+		log.Fatalf("Can't determine current executable: %s", err)
 	}
-	executableDir := path.Dir(executable)
-	return initialiseInterpreterFrom(path.Join(executableDir, fmt.Sprintf("libplease_parser_%s.%s", engine, libExtension())), attemptDownload)
+	return path.Dir(executable)
 }
 
-func initialiseInterpreterFrom(enginePath string, attemptDownload bool) bool {
+func initialiseInterpreterFrom(enginePath string) bool {
 	if !core.PathExists(enginePath) {
 		return false
 	}
@@ -223,18 +235,6 @@ func initialiseInterpreterFrom(enginePath string, attemptDownload bool) bool {
 	if result == 0 {
 		log.Info("Using parser engine from %s", enginePath)
 		return true
-	} else if result == dlopenError {
-		dlerror := C.GoString(C.dlerror())
-		// This is a pretty brittle check, but there is no other interface available, and
-		// we don't want to download PyPy unless we think that'll solve the problem.
-		if attemptDownload && strings.Contains(dlerror, "libpypy-c.so: cannot open shared object file") && runtime.GOOS == "linux" {
-			if update.DownloadPyPy(core.State.Config) {
-				// Downloading PyPy succeeded, try to initialise again
-				return initialiseInterpreterFrom(enginePath, false)
-			}
-		}
-		// Low level of logging because it's allowable to fail on libplease_parser_pypy, which we try first.
-		log.Notice("Failed to initialise interpreter from %s: %s", enginePath, dlerror)
 	} else if result == cffiUnavailable {
 		log.Warning("cannot use %s, cffi unavailable", enginePath)
 	} else {
@@ -256,7 +256,7 @@ func setConfigValue(name string, value string) {
 	cValue := C.CString(value)
 	defer C.free(unsafe.Pointer(cName))
 	defer C.free(unsafe.Pointer(cValue))
-	C.SetConfigValue(cName, cValue)
+	C.PlzSetConfigValue(cName, cValue)
 }
 
 func loadBuiltinRules(path string, contents []byte) {
@@ -265,7 +265,7 @@ func loadBuiltinRules(path string, contents []byte) {
 	defer C.free(unsafe.Pointer(data))
 	cPackageName := C.CString(path)
 	defer C.free(unsafe.Pointer(cPackageName))
-	if result := C.GoString(C.ParseCode(data, cPackageName, 0)); result != "" {
+	if result := C.GoString(C.PlzParseCode(data, cPackageName, 0)); result != "" {
 		log.Fatalf("Failed to interpret initial build rules from %s: %s", path, result)
 	}
 }
@@ -274,7 +274,7 @@ func loadSubincludePackage() {
 	pkg := core.NewPackage(subincludePackage)
 	// Set up a builtin package for remote subincludes.
 	cPackageName := C.CString(pkg.Name)
-	C.ParseCode(nil, cPackageName, sizep(pkg))
+	C.PlzParseCode(nil, cPackageName, sizep(pkg))
 	C.free(unsafe.Pointer(cPackageName))
 	core.State.Graph.AddPackage(pkg)
 }
@@ -324,7 +324,7 @@ func parsePackageFile(state *core.BuildState, filename string, pkg *core.Package
 	defer C.free(unsafe.Pointer(cFilename))
 	defer C.free(unsafe.Pointer(cPackageName))
 	defer C.free(unsafe.Pointer(cData))
-	ret := C.GoString(C.ParseFile(cFilename, cData, cPackageName, sizep(pkg)))
+	ret := C.GoString(C.PlzParseFile(cFilename, cData, cPackageName, sizep(pkg)))
 	if ret == pyDeferParse {
 		log.Debug("Deferred parse of package file %s in %0.3f seconds", filename, time.Since(start).Seconds())
 		return true
@@ -340,7 +340,7 @@ func RunCode(state *core.BuildState, code string) error {
 	initializeOnce.Do(func() { initializeInterpreter(state) })
 	cCode := C.CString(code)
 	defer C.free(unsafe.Pointer(cCode))
-	ret := C.GoString(C.RunCode(cCode))
+	ret := C.GoString(C.PlzRunCode(cCode))
 	if ret != "" {
 		return fmt.Errorf("%s", ret)
 	}
@@ -863,7 +863,7 @@ func runPreBuildFunction(pkg *core.Package, target *core.BuildTarget) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	f := C.size_t(uintptr(unsafe.Pointer(target.PreBuildFunction)))
-	if result := C.GoString(C.RunPreBuildFunction(f, sizep(pkg), cName)); result != "" {
+	if result := C.GoString(C.PlzRunPreBuildFunction(f, sizep(pkg), cName)); result != "" {
 		return fmt.Errorf("Failed to run pre-build function for target %s: %s", target.Label.String(), result)
 	}
 	return nil
@@ -878,7 +878,7 @@ func runPostBuildFunction(pkg *core.Package, target *core.BuildTarget, out strin
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	f := C.size_t(uintptr(unsafe.Pointer(target.PostBuildFunction)))
-	if result := C.GoString(C.RunPostBuildFunction(f, sizep(pkg), cName, cOutput)); result != "" {
+	if result := C.GoString(C.PlzRunPostBuildFunction(f, sizep(pkg), cName, cOutput)); result != "" {
 		return fmt.Errorf("Failed to run post-build function for target %s: %s", target.Label.String(), result)
 	}
 	return nil

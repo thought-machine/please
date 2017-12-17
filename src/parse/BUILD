@@ -1,19 +1,25 @@
+subinclude('//build_defs:engines')
+
 cgo_library(
     name = 'parse',
     srcs = ['interpreter.go'],
     hdrs = ['interpreter.h'],
     c_srcs = ['interpreter.c'],
-    compiler_flags = ['--std=c99 -Werror'],
+    compiler_flags = ['--std=c99 -Werror -DBUILD_STATIC_INTERPRETER'],
     go_srcs = glob(['*.go'], excludes = [
         '*_test.go',
         'builtin_rules.bindata.go',
         'interpreter.go',
     ]) + [':builtin_rules'],
-    linker_flags = ([] if (CONFIG.OS == 'freebsd') else ['-ldl']),
+    linker_flags = [
+        '-Lsrc/parse/cffi -lplease_parser_static',
+        PARSER_LINKER_FLAGS,
+        '-lm -lz -lutil',
+    ],
     deps = [
         ':builtin_rules',
         '//src/core',
-        '//src/update',
+        '//src/parse/cffi:please_parser_static',
         '//src/utils',
         '//third_party/go:gcfg',
         '//third_party/go:logging',

@@ -1,7 +1,6 @@
 go_library(
     name = 'update',
     srcs = [
-        'pypy.go',
         'update.go',
         'verify.go',
         ':pubkey',

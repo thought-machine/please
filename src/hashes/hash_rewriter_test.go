@@ -11,22 +11,9 @@ import (
 	"core"
 )
 
-func init() {
-	// Move the parser engine .so files into the current directory so we find them.
-	const dir = "src/parse/cffi"
-	info, err := ioutil.ReadDir(dir)
-	if err != nil {
-		log.Fatalf("%s", err)
-	}
-	for _, inf := range info {
-		if err := os.Rename(path.Join(dir, inf.Name()), inf.Name()); err != nil {
-			log.Fatalf("%s", err)
-		}
-	}
-}
-
 func TestRewriteHashes(t *testing.T) {
 	state := core.NewBuildState(0, nil, 4, core.DefaultConfiguration())
+	state.Config.Parse.PyLib = "src"
 	// Copy file to avoid any issues with links etc.
 	wd, _ := os.Getwd()
 	err := core.CopyFile("src/hashes/test_data/before.build", path.Join(wd, "test.build"), 0644)

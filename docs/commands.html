@@ -125,7 +125,7 @@
         They're always left in cases where targets fail.</li>
     </ul>
 
-    <h2>plz build</h2>
+    <h2><a name="build">plz build</a></h2>
 
     <p>This is the most common and obvious command; it builds one or more targets
       and all their dependencies. A plain <code>plz build</code> attempts to build
@@ -138,7 +138,7 @@
       <code>plz build //src/...</code> builds every target in <code>src</code>
       and all subdirectories.</p>
 
-    <h2>plz test</h2>
+    <h2><a name="test">plz test</a></h2>
 
     <p>This is also a very commonly used command, it builds one or more targets and
       then runs their tests. Which tests to run are specified by positional arguments
@@ -163,7 +163,7 @@
       </ul>
     </p>
 
-    <h2>plz cover</h2>
+    <h2><a name="cover">plz cover</a></h2>
 
     <p>Very similar to <code>plz test</code>, but also instruments tests for coverage
       and collects results. Tests normally run significantly slower in this mode
@@ -190,7 +190,7 @@
       </ul>
     </p>
 
-    <h2>plz run</h2>
+    <h2><a name="run">plz run</a></h2>
 
     <p>This is essentially shorthand for calling <code>plz build</code> and then
       running the result of whatever target was built. It's often handy for iterating
@@ -213,7 +213,7 @@
       connected to the current terminal, stdin is not connected (because it'd not be clear
       which process would consume it).</p>
 
-    <h2>plz query</h2>
+    <h2><a name="query">plz query</a></h2>
 
     <p>This allows you to introspect various aspects of the build graph. There are
       a number of subcommands identifying what you want to query for:
@@ -236,7 +236,7 @@
       and powerful. We haven't ruled out adding that in the future
       but have no concrete plans to do so at present.</p>
 
-  <h2>plz clean</h2>
+  <h2><a name="clean">plz clean</a></h2>
 
     <p>Cleans up output build artifacts and caches.</p>
 
@@ -258,7 +258,7 @@
       mentioning since it will prevent artifacts from being removed from the cache
       (by default they're cleaned from there too).</p>
 
-  <h2>plz hash</h2>
+  <h2><a name="hash">plz hash</a></h2>
 
     <p>This command calculates the hash of outputs for one or more targets. These can
       then be passed in the <code>hash</code> or <code>hashes</code> attributes of
@@ -272,7 +272,7 @@
     <p>One can of course achieve the same effect via running <code>plz build</code> and
       reading the actual hash when it fails, but this way is generally considered nicer.</p>
 
-  <h2>plz init</h2>
+  <h2><a name="init">plz init</a></h2>
 
     <p>Creates an initial (and pretty empty) <code>.plzconfig</code> file in the current
       directory (or, if the <code>--dir</code> flag is passed, somewhere else).</p>
@@ -288,7 +288,7 @@
       to begin building an existing Bazel project - although more complex projects will
       still likely find things that don't translate easily.</p>
 
-  <h2>plz update</h2>
+  <h2><a name="update">plz update</a></h2>
 
     <p>Updates plz to the appropriate version. This is quite tightly governed by the
       <code>.plzconfig</code> file:
@@ -305,7 +305,7 @@
       </ul>
     </p>
 
-  <h2>plz gc</h2>
+  <h2><a name="gc">plz gc</a></h2>
 
   <p>Runs a basic "garbage collection" step, which attempts to identify targets that
     aren't in use. This is still fairly experimental since the definition of "not used"
@@ -330,12 +330,12 @@
     </ul>
   </p>
 
-  <h2>plz help</h2>
+  <h2><a name="help">plz help</a></h2>
 
   <p>Displays help about a particular facet of Please. It knows about built-in build rules, config
     settings and a few other things. Mostly this is useful as an instant reference; you can run
     <code>plz help topics</code> to get a list of all the topics that it knows about.</p>
 
-  <h2>plz op</h2>
+  <h2><a name="op">plz op</a></h2>
 
     <p>Re-runs whatever the previous command was.</p>

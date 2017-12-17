@@ -43,18 +43,20 @@ function detect_interpreter {
 		BOOTSTRAP_INTERPRETER="$1"
 	    fi
         else
-            warn "$1 doesn't have cffi installed, can't be used for bootstrap. Engine will still be built."
+            warn "$1 doesn't have cffi installed, can't be used for bootstrap."
         fi
-    else
-        warn "$1 not found; won't build parser engine for it."
-        warn "You won't be able to build Please packages unless all parsers are present."
     fi
     set -e
 }
 
-detect_interpreter "pypy"
-detect_interpreter "python2"
-detect_interpreter "python3"
+# Prefer pypy because we know it has cffi installed already.
+if hash pypy 2>/dev/null ; then
+    notice "pypy detected, will be used for bootstrap"
+    BOOTSTRAP_INTERPRETER="pypy"
+else
+    detect_interpreter "python2"
+    detect_interpreter "python3"
+fi
 if [ -z "$BOOTSTRAP_INTERPRETER" ]; then
     error "No known Python interpreters found, can't build parser engine"
     exit 1
@@ -71,7 +73,7 @@ bin/go-bindata -o src/parse/builtin_rules.bindata.go -pkg parse -prefix src/pars
 notice "Building Please..."
 SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
 ENGINE="`ls ${SCRIPT_DIR}/src/parse/cffi/libplease_parser_${BOOTSTRAP_INTERPRETER}.*`"
-go run src/please.go -o parse.engine:$ENGINE --plain_output build //src:please $INTERPRETERS --log_file plz-out/log/bootstrap_build.log
+go run src/please.go -o parse.engine:$ENGINE --plain_output build //src:please //src:cffi --log_file plz-out/log/bootstrap_build.log
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
 plz-out/bin/src/please --plain_output build //src:please //tools --log_file plz-out/log/tools_build.log

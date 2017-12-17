@@ -8,14 +8,17 @@
 #include <stdlib.h>
 
 // AFAICT there isn't a way to call the function pointers directly.
-char* ParseFile(char* filename, char* contents, char* package_name, size_t package);
-char* ParseCode(char* filename, char* package_name, size_t package);
-void SetConfigValue(char* name, char* value);
-char* RunPreBuildFunction(size_t callback, size_t package, char* name);
-char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* output);
-char* RunCode(char* code);
+char* PlzParseFile(char* filename, char* contents, char* package_name, size_t package);
+char* PlzParseCode(char* filename, char* package_name, size_t package);
+void PlzSetConfigValue(char* name, char* value);
+char* PlzRunPreBuildFunction(size_t callback, size_t package, char* name);
+char* PlzRunPostBuildFunction(size_t callback, size_t package, char* name, char* output);
+char* PlzRunCode(char* code);
 
 // Initialises interpreter. Returns 0 on success.
 int InitialiseInterpreter(char* parser_location);
+
+// Initialises an interpreter that's statically linked into the binary. Returns 0 on success.
+int InitialiseStaticInterpreter(char* preload_so);
 
 #endif  // _SRC_PARSE_INTERPRETER_H

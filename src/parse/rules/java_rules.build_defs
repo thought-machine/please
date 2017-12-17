@@ -1,6 +1,6 @@
 """Built-in rules to compile Java code."""
 
-_maven_packages = defaultdict(dict)
+_maven_packages = {}
 
 
 def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=None, deps=None,
@@ -256,7 +256,7 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
     for id in ids:
         if id.count(':') != 2:
             raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
-    existing_packages = _maven_packages[get_base_path()]
+    existing_packages = _maven_packages.setdefault(get_base_path(), {})
     exclude = exclude or []
     combine = combine or hash
     source_name = '_%s#src' % name
@@ -396,7 +396,8 @@ def maven_jar(name, id, repository=None, hash=None, hashes=None, deps=None,
     """
     if hash and hashes:
         raise ParseError('You can pass only one of hash or hashes to maven_jar')
-    _maven_packages[get_base_path()][name] = id
+    d = _maven_packages.setdefault(get_base_path(), {})
+    d[name] = id
     if not artifact_type:
         id, _, artifact_type = id.partition('@')
         artifact_type = artifact_type or 'jar'

@@ -2,18 +2,14 @@
     <h1>Please quickstart</h1>
 
     <h2>System requirements</h2>
-    <p>Please supports Linux and OSX at the moment. We're internally using Ubuntu Trusty and Yosemite but it should
+    <p>Please supports Linux and OSX at the moment. We're internally using Ubuntu Xenial and Sierra but it should
       work on other reasonably recent distros.</p>
 
     <h2>Installing</h2>
     <p><code>curl https://get.please.build | bash</code></p>
-    <p>This will download and install the latest version of Please on your system.</p>
-
-    <p>It needs a Python parser to run; it ships with support for CPython (only version 2 for now)
-      and PyPy. On Linux it should automatically attempt to fetch a portable version of PyPy if not
-      available; on OSX you'll need to install it using <code>brew install pypy</code> or similar.<br/>
-      In either case, if you want to use CPython, you'll need cffi installed;
-      <code>pip install cffi>=1.5.0</code> should take care of it.</p>
+    <p>This will download and install the latest version of Please on your system.<br/>
+      It also adds itself to your <code>PATH</code>; you may need to <code>source ~/.bashrc</code>
+      or <code>source ~/.zshrc</code> after install to get that updated.</p>
 
     <h2>Shell completion</h2>
     <p>Please comes with a completion script for Bash and zsh built-in.</p>

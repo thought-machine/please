@@ -15,9 +15,8 @@ signed_fpm_deb(
         '/opt/please/please_diff_graphs': '//tools/please_diff_graphs',
         '/opt/please/please_go_test': '//tools/please_go_test',
         '/opt/please/please_build_linter': '//tools/linter',
-        '/opt/please/libplease_parser_pypy.so': '//src/parse/cffi:please_parser_pypy',
-        '/opt/please/libplease_parser_python2.so': '//src/parse/cffi:please_parser_python2',
-        '/opt/please/libplease_parser_python3.so': '//src/parse/cffi:please_parser_python3',
+        '/opt/please/_cffi_backend.so': '//src:cffi_backend',
+        '/opt/please/libffi-72499c49.so.6.0.4': '//src:libffi',
     },
     links = {
         '/usr/bin/plz': '/opt/please/please',
@@ -72,8 +71,8 @@ signed_fpm_deb(
 signed_tarball(
     name = 'please_tarball',
     srcs = [
+        '//src:cffi',
         '//src:please',
-        '//src/parse/cffi:all_engines',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',
@@ -110,8 +109,8 @@ filegroup(
 hash_filegroup(
     name = 'hash_tools',
     srcs = [
+        '//src:cffi',
         '//src:please',
-        '//src/parse/cffi:all_engines',
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',

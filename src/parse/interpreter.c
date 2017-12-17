@@ -2,8 +2,17 @@
 
 #include "_cgo_export.h"
 
-// Since we dlsym() the callbacks out of the parser .so, we have variables for them as
-// well as extern definitions which cffi uses. The two must match, of course.
+#ifdef BUILD_STATIC_INTERPRETER
+#include "src/parse/cffi/defs.h"
+
+extern int Py_NoSiteFlag;
+#endif
+
+typedef int (*RegisterFunction)(char*, char*, void*);
+
+// Since we can dlsym() the callbacks out of the parser .so instead of using the builtin forms,
+// we have variables for them as  well as extern definitions which cffi uses.
+// The two must match, of course.
 char* (*parse_file)(char*, char*, char*, size_t);
 char* (*parse_code)(char*, char*, size_t);
 void (*set_config_value)(char*, char*);
@@ -11,50 +20,34 @@ char* (*pre_build_callback_runner)(void*, size_t, char*);
 char* (*post_build_callback_runner)(void*, size_t, char*, char*);
 char* (*run_code)(char*);
 
-char* ParseFile(char* filename, char* contents, char* package_name, size_t package) {
+char* PlzParseFile(char* filename, char* contents, char* package_name, size_t package) {
   return (*parse_file)(filename, contents, package_name, package);
 }
 
-char* ParseCode(char* filename, char* package_name, size_t package) {
+char* PlzParseCode(char* filename, char* package_name, size_t package) {
   return (*parse_code)(filename, package_name, package);
 }
 
-void SetConfigValue(char* name, char* value) {
+void PlzSetConfigValue(char* name, char* value) {
   (*set_config_value)(name, value);
 }
 
-char* RunPreBuildFunction(size_t callback, size_t package, char* name) {
+char* PlzRunPreBuildFunction(size_t callback, size_t package, char* name) {
   return (*pre_build_callback_runner)((void*)callback, package, name);
 }
 
-char* RunPostBuildFunction(size_t callback, size_t package, char* name, char* output) {
+char* PlzRunPostBuildFunction(size_t callback, size_t package, char* name, char* output) {
   return (*post_build_callback_runner)((void*)callback, package, name, output);
 }
 
-char* RunCode(char* code) {
+char* PlzRunCode(char* code) {
   return (*run_code)(code);
 }
 
-int InitialiseInterpreter(char* parser_location) {
-  void* parser = dlopen(parser_location, RTLD_NOW | RTLD_GLOBAL);
-  if (parser == NULL) {
-    return 1;
-  }
-  int (*reg)(char*, char*, void*) = dlsym(parser, "RegisterCallback");
-  parse_file = dlsym(parser, "ParseFile");
-  parse_code = dlsym(parser, "ParseCode");
-  set_config_value = dlsym(parser, "SetConfigValue");
-  pre_build_callback_runner = dlsym(parser, "PreBuildFunctionRunner");
-  post_build_callback_runner = dlsym(parser, "PostBuildFunctionRunner");
-  run_code = dlsym(parser, "RunCode");
-  if (!reg || !parse_file || !parse_code || !set_config_value ||
-      !pre_build_callback_runner || !post_build_callback_runner) {
-    return 2;
-  }
+int InitialiseCallbacks(RegisterFunction reg) {
   // TODO(pebers): it would be nicer if we could get rid of the explicit types here; something
   //               like reg("_add_target", typeof(AddTarget), AddTarget) would be sweet.
   //               As far as I know this is only possible in C++ using typeid though :(
-
   if (reg("_log", "void (*)(int64, size_t, char*)", Log) != 1) {
     return 3;  // This happens if Python is available but cffi isn't.
   }
@@ -95,4 +88,46 @@ int InitialiseInterpreter(char* parser_location) {
   reg("_set_command", "char* (*)(size_t, char*, char*, char*)", SetCommand);
   reg("_is_valid_target_name", "uint8 (*)(char*)", IsValidTargetName);
   return 0;
+}
+
+int InitialiseInterpreter(char* parser_location) {
+  void* parser = dlopen(parser_location, RTLD_NOW | RTLD_GLOBAL);
+  if (parser == NULL) {
+    return 1;
+  }
+  RegisterFunction reg = dlsym(parser, "RegisterCallback");
+  parse_file = dlsym(parser, "ParseFile");
+  parse_code = dlsym(parser, "ParseCode");
+  set_config_value = dlsym(parser, "SetConfigValue");
+  pre_build_callback_runner = dlsym(parser, "PreBuildFunctionRunner");
+  post_build_callback_runner = dlsym(parser, "PostBuildFunctionRunner");
+  run_code = dlsym(parser, "RunCode");
+  if (!reg || !parse_file || !parse_code || !set_config_value ||
+      !pre_build_callback_runner || !post_build_callback_runner) {
+    return 2;
+  }
+  return InitialiseCallbacks(reg);
+}
+
+int InitialiseStaticInterpreter(char* preload_so) {
+#ifdef BUILD_STATIC_INTERPRETER
+  // Set this so the interpreter doesn't try to import site at startup.
+  Py_NoSiteFlag = 1;
+  // Callbacks don't need dlopen or dlsym because they're already in-process.
+  parse_file = ParseFile;
+  parse_code = ParseCode;
+  set_config_value = SetConfigValue;
+  pre_build_callback_runner = PreBuildFunctionRunner;
+  post_build_callback_runner = PostBuildFunctionRunner;
+  run_code = RunCode;
+#ifdef __linux__
+  // But it is useful if we load this guy upfront so we don't need him in a subdirectory.
+  if (!dlopen(preload_so, RTLD_NOW | RTLD_GLOBAL)) {
+    return 1;
+  }
+#endif
+  return InitialiseCallbacks(RegisterCallback);
+#else
+  return 13;
+#endif  // BUILD_STATIC_INTERPRETER
 }

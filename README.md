@@ -18,16 +18,6 @@ The easiest way to install it on your own machine is to run:
 ```bash
 curl -s https://get.please.build | bash
 ```
-In order for it to run you will need a Python interpreter available.
-You can use either PyPy or CPython with cffi; on Linux Please will
-attempt to download a portable version of PyPy if a system one isn't
-available, on OSX installation is fairly straightforward with Homebrew,
-simply run `brew install pypy`.
-
-Alternatively, you've likely got CPython installed already, and installing
-cffi is as simple as `sudo pip install "cffi>=1.5.0"`. If you are a
-[pyenv]](https://github.com/pyenv/pyenv) user, note that due to the way dynamic linking works, you will
-still need a system-level cffi installation as described here.
 
 Then you simply run `plz init` at the root of your project to set up
 a default config and you're good to start adding BUILD files.
@@ -44,19 +34,18 @@ build it once manually and then rebuild it again using itself.
 You'll need to have Go 1.9+ installed to build Please although once
 built it can target Go 1.4+.
 
-Similarly to the instructions above, you'll need a python interpreter.
-Having PyPy, python2 and python3 installed will allow you to build
-all the possible engines & therefore packages etc, but just python2
-is enough for the build to succeed, as long as you have cffi installed
-as mentioned above.
+In order to build Please, you will also need to have Python libraries
+available (you may need to install using `apt-get install libpython-dev`
+or similar) and a usable Python interpreter to build the first time.
+That can be any one of CPython 2, CPython 3 or PyPy; we attempt to
+autodetect which is available at build time. If using CPython you'll
+also need to install `cffi` (using `pip install cffi` or similar).
 
-You'll need to have dependencies for the various helper programs
-of Please installed in order to build it. At the moment the minimal
-set are Python (which you'll likely have anyway) and Java 7 or above.
-Optional dependencies for various tests include unittest++
-(`sudo apt-get install libunittest++-dev`), clang, gold and docker - none
-of those are required to build components so their tests will be excluded
-if they aren't available.
+You will also need to have Java 7 or above installed to build some
+of the Java helper programs. Optional dependencies for various tests
+include unittest++ (`sudo apt-get install libunittest++-dev`), clang,
+gold and docker - none of those are required to build components so
+their tests will be excluded if they aren't available.
 
 If you'd rather not worry about installing the dependencies, we provide
 a prebuilt Docker image based on Ubuntu which is capable of building

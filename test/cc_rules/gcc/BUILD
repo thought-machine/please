@@ -1,5 +1,7 @@
 # So far just contains tests for the C++ build rules.
 
+subinclude('//build_defs:engines')
+
 cc_embed_binary(
     name = 'embedded_file_1',
     src = 'embedded_file_1.txt',
@@ -40,7 +42,7 @@ cc_library(
 cc_shared_object(
     name = 'so_test',
     srcs = ['so_test.cc'],
-    pkg_config_libs = ['python'],
+    pkg_config_libs = [PARSER_PKG_CONFIG],
     deps = [
         ':embedded_files',
     ],
