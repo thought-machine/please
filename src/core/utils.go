@@ -267,7 +267,7 @@ func logProgress(ctx context.Context, label BuildLabel) {
 // If the command times out the returned error will be a context.DeadlineExceeded error.
 // If showOutput is true then output will be printed to stderr as well as returned.
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
-func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput, attachStdin bool, argv []string) ([]byte, []byte, error) {
+func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput, attachStdStreams bool, argv []string) ([]byte, []byte, error) {
 	if timeout == 0 {
 		if defaultTimeout == 0 {
 			timeout = 10 * time.Minute
@@ -290,7 +290,7 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 		cmd.Stdout = io.MultiWriter(&out, &outerr)
 		cmd.Stderr = &outerr
 	}
-	if attachStdin {
+	if attachStdStreams {
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -332,11 +332,11 @@ func runCommand(cmd *exec.Cmd, ch chan error) {
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
 func ExecWithTimeoutShell(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
-	return ExecWithTimeoutShellStdin(target, dir, env, timeout, defaultTimeout, showOutput, cmd, sandbox, false)
+	return ExecWithTimeoutShellStdStreams(target, dir, env, timeout, defaultTimeout, showOutput, cmd, sandbox, false)
 }
 
-// ExecWithTimeoutShellStdin is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
-func ExecWithTimeoutShellStdin(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox, attachStdin bool) ([]byte, []byte, error) {
+// ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
+func ExecWithTimeoutShellStdStreams(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
 	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
 	// Runtime check is a little ugly, but we know this only works on Linux right now.
 	if sandbox && runtime.GOOS == "linux" {
@@ -346,7 +346,7 @@ func ExecWithTimeoutShellStdin(target *BuildTarget, dir string, env []string, ti
 		}
 		c = append([]string{tool}, c...)
 	}
-	return ExecWithTimeout(target, dir, env, timeout, defaultTimeout, showOutput, attachStdin, c)
+	return ExecWithTimeout(target, dir, env, timeout, defaultTimeout, showOutput, attachStdStreams, c)
 }
 
 // ExecWithTimeoutSimple runs an external command with a timeout.
