@@ -12,9 +12,8 @@ a container.
 Notes
 -----
 
- - We download a precompiled protoc to avoid trying to compile the whole
-   thing from scratch. A sufficiently recent packaged version would be
-   preferable.
- - libunittest++-dev is available in Ubuntu but the version is fairly old
-   and core dumps on several tests, and has idiosyncratic naming of the
-   header directory. Installing v2.0.0 ourselves fixes this.
+ - The currently recommended version is Artful (17.10). A few things
+   work notably better and/or easier in this version, although it's certainly
+   possibly to get things working in Xenial as well with a bit more work.
+   Most notably you'll need to build a version of unittest++ yourself
+   if you want to run the C++ tests.

@@ -819,25 +819,25 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
 
 # C rules. These call straight through to the c++ versions and just set a flag.
 def c_library(**kwargs):
-    cc_library(_c=True, **kwargs)
+    return cc_library(_c=True, **kwargs)
 
 def c_object(**kwargs):
-    cc_object(_c=True, **kwargs)
+    return cc_object(_c=True, **kwargs)
 
 def c_static_library(**kwargs):
-    cc_static_library(_c=True, **kwargs)
+    return cc_static_library(_c=True, **kwargs)
 
 def c_shared_object(**kwargs):
-    cc_shared_object(_c=True, **kwargs)
+    return cc_shared_object(_c=True, **kwargs)
 
 def c_binary(**kwargs):
-    cc_binary(_c=True, **kwargs)
+    return cc_binary(_c=True, **kwargs)
 
 def c_test(write_main=False, **kwargs):
-    cc_test(_c=True, write_main=write_main, **kwargs)
+    return cc_test(_c=True, write_main=write_main, **kwargs)
 
 def c_embed_binary(**kwargs):
-    cc_embed_binary(**kwargs)
+    return cc_embed_binary(**kwargs)
 
 
 if CONFIG.BAZEL_COMPATIBILITY:

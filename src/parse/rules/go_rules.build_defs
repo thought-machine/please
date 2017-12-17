@@ -235,7 +235,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     )
 
     # Compile the various bits
-    c_library(
+    c_rule = c_library(
         name = '_%s#c' % name,
         srcs = [cgo_rule + '|c'] + c_srcs,
         hdrs = [cgo_rule + '|h'] + hdrs,
@@ -246,20 +246,6 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
         pkg_config_libs = pkg_config,
         test_only = test_only,
         deps = deps,
-    )
-    # Recompile the output of the C rule into an object suitable for Go's linker.
-    ld_flag = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
-    cgo_o_rule = build_rule(
-        name = name,
-        tag = 'cgo_o',
-        srcs = [':_%s#c' % name],
-        outs = [name + '_cgo.o'],
-        cmd = '$TOOLS_AR x $SRCS && $TOOLS_LD -o $OUT %s-r -nostdlib *.o' % ld_flag,
-        requires = ['cc'],
-        tools = {
-            'ld': [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL],
-            'ar': [CONFIG.AR_TOOL],
-        },
     )
     go_rule = go_library(
         name = '_%s#go' % name,
@@ -272,7 +258,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     return _merge_cgo_obj(
         name = name,
         a_rule = ':_%s#go' % name,
-        o_rule = cgo_o_rule,
+        o_rule = c_rule,
         visibility = visibility,
         test_only = test_only,
         linker_flags = linker_flags,
@@ -280,7 +266,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
         provides = {
             'go': ':' + name,
             'go_src': go_rule,
-            'cgo_obj': cgo_o_rule,
+            'cgo': c_rule,
         },
         deps = deps,
     )
@@ -289,6 +275,11 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
 def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag=None,
                    linker_flags=None, deps=None, provides=None, out=None):
     """Defines a rule to merge a cgo object into a Go library."""
+    if o_rule:
+        cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOLS_AR x $SRCS_O && $TOOLS_GO tool pack r $OUT *.o'
+    else:
+        cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOLS_AR x $PKG/*#c.a && $TOOLS_GO tool pack r $OUT *.o'
+
     return build_rule(
         name = name,
         tag = tag,
@@ -297,12 +288,15 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
             'o': [o_rule] if o_rule else [],
         },
         outs = [out or name + '.a'],
-        cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOL tool pack r $OUT $PKG_DIR/*_cgo.o',
-        tools = [CONFIG.GO_TOOL],
+        cmd = cmd,
+        tools = {
+            'go': [CONFIG.GO_TOOL],
+            'ar': [CONFIG.AR_TOOL],
+        },
         visibility = visibility,
         test_only = test_only,
         labels = ['cc:ld:' + flag for flag in (linker_flags or [])],
-        requires = ['go', 'cgo_obj'],
+        requires = ['go', 'cgo'],
         provides = provides,
         deps = deps,
     )

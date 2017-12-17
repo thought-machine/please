@@ -4,7 +4,20 @@
     <h3>Can I run it on my computer?</h3>
 
     <p>If you're running Linux or OSX, definitely; we actively support both those platforms.<br/>
-      We primarily test on Ubuntu but other distros should work fine too.</p>
+      Installing Please on either is as easy as <code>curl https://get.please.build | bash</code>.
+      Further dependencies shouldn't be necessary after that, assuming you have what you need for
+      the languages you want to work on (e.g. you'll need a JDK to use Please for Java).</p>
+
+    <p>To compile it, a few more things are needed. On Linux we primarily support Ubuntu,
+      <a href="https://www.ubuntu.com/desktop/1710">Artful</a> is the easiest to get it working on, but
+      <a href="http://releases.ubuntu.com/16.04/">Xenial</a> is supported for most features too.
+      See <a href="https://github.com/thought-machine/please/blob/master/tools/images/ubuntu">tools/images/ubuntu</a>
+      for information and a Dockerfile for setting up a recommended environment.</p>
+
+    <p>To build on OSX, you will need to add some extra packages; we recommend using
+      <a href="https://brew.sh">Homebrew</a> to add at least <code>go</code>, <code>pypy</code>
+      and <code>pkg-config</code>.<br/>
+      <code>unittest-cpp</code> and <code>nasm</code> will be needed for Please's C++ tests.</p>
 
     <p>It can self-host and passes all the core tests on FreeBSD. A little more work is required
       to set everything up; it'd be nice to streamline this at some point. Notable issues include:
