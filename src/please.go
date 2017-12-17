@@ -110,7 +110,7 @@ var opts struct {
 		NumRuns         int          `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		TestResultsFile cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		ShowOutput      bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
-		Debug           bool         `short:"d" long:"debug" description:"Start debugger on test failure. Does not work with all test types."`
+		Debug           bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -128,7 +128,7 @@ var opts struct {
 		TestResultsFile     cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		CoverageResultsFile cli.Filepath `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
 		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
-		Debug               bool         `short:"d" long:"debug" description:"Start debugger on test failure. Does not work with all test types."`
+		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -628,8 +628,11 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	} else if config.Please.NumThreads <= 0 {
 		config.Please.NumThreads = runtime.NumCPU() + 2
 	}
+	debugTests := opts.Test.Debug || opts.Cover.Debug
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config
+	} else if debugTests {
+		config.Build.Config = "dbg"
 	}
 	c := newCache(config)
 	state := core.NewBuildState(config.Please.NumThreads, c, opts.OutputFlags.Verbosity, config)
@@ -645,7 +648,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
-	state.DebugTests = opts.Test.Debug || opts.Cover.Debug
+	state.DebugTests = debugTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput || state.DebugTests
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if config.Events.Port != 0 && shouldBuild {
