@@ -52,7 +52,7 @@ var opts struct {
 		Include    []string        `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
 		Exclude    []string        `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
 		Option     ConfigOverrides `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
-		Profile    string          `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profie to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
+		Profile    string          `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
