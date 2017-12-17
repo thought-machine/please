@@ -40,6 +40,9 @@ const LocalConfigFileName string = ".plzconfig.local"
 // things for a particular machine (eg. build machine with different caching behaviour).
 const MachineConfigFileName = "/etc/plzconfig"
 
+// UserConfigFileName is the file name for user-specific config (for all their repos).
+const UserConfigFileName = "~/.please/plzconfig"
+
 // The available container implementations that we support.
 const (
 	ContainerImplementationNone   = "none"

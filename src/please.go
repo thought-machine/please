@@ -731,9 +731,10 @@ func readConfig(forceUpdate bool) *core.Configuration {
 	}
 
 	config, err := core.ReadConfigFiles([]string{
+		core.MachineConfigFileName,
+		core.ExpandHomePath(core.UserConfigFileName),
 		path.Join(core.RepoRoot, core.ConfigFileName),
 		path.Join(core.RepoRoot, core.ArchConfigFileName),
-		core.MachineConfigFileName,
 		path.Join(core.RepoRoot, core.LocalConfigFileName),
 	})
 	if err != nil {
