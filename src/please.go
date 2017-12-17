@@ -52,6 +52,7 @@ var opts struct {
 		Include    []string        `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
 		Exclude    []string        `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
 		Option     ConfigOverrides `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
+		Profile    string          `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profie to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
@@ -76,7 +77,7 @@ var opts struct {
 		KeepWorkdirs       bool `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 	} `group:"Options that enable / disable certain features"`
 
-	Profile          string `long:"profile" hidden:"true" description:"Write profiling output to this file"`
+	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
@@ -736,7 +737,7 @@ func readConfig(forceUpdate bool) *core.Configuration {
 		path.Join(core.RepoRoot, core.ConfigFileName),
 		path.Join(core.RepoRoot, core.ArchConfigFileName),
 		path.Join(core.RepoRoot, core.LocalConfigFileName),
-	})
+	}, opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {

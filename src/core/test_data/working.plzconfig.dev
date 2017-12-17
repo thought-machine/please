@@ -1,0 +1,3 @@
+[java]
+javactool = /opt/java/bin/javac
+targetlevel = 8
