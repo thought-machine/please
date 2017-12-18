@@ -144,6 +144,9 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) BuildEn
 		if target.HasLabel("cc") {
 			env = append(env, "GCNO_DIR="+path.Join(RepoRoot, GenDir, target.Label.PackageName))
 		}
+		if state.DebugTests {
+			env = append(env, "DEBUG=true")
+		}
 	}
 	return env
 }
