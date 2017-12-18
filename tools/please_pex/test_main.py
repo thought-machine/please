@@ -73,7 +73,13 @@ def main():
         omissions = ['*/third_party/*', '*/.bootstrap/*', '*/test_main.py']
         # Exclude test code from coverage itself.
         omissions.extend('*/%s.py' % module.replace('.', '/') for module in args)
-        cov.xml_report(outfile=os.getenv('COVERAGE_FILE'), omit=omissions, ignore_errors=True)
+        import coverage
+        try:
+            cov.xml_report(outfile=os.getenv('COVERAGE_FILE'), omit=omissions, ignore_errors=True)
+        except coverage.CoverageException as err:
+            # This isn't fatal; the main time we've seen it is raised for "No data to report" which
+            # isn't an exception as far as we're concerned.
+            sys.stderr.write('Failed to calculate coverage: %s' % err)
         return result
     else:
         return run_tests(args)
