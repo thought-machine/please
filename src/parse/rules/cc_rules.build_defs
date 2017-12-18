@@ -687,9 +687,17 @@ _CC_TEST_MAIN_CONTENTS = """
 #include <fstream>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <vector>
 #include "UnitTest++/UnitTest++.h"
 #include "UnitTest++/XmlTestReporter.h"
-int main(int argc, char const *argv[]) {
+int main(int argc, const char** argv) {
+    if (getenv("DEBUG")) {
+        unsetenv("DEBUG");
+        std::vector<char*> v({strdup("gdb"), strdup("-ex"), strdup("run"), strdup("--args")});
+        v.insert(v.end(), const_cast<char**>(argv), const_cast<char**>(argv) + argc);
+        execvp("gdb", const_cast<char**>(&v[0]));
+    }
     auto run_named = [argc, argv](UnitTest::Test* test) {
         return argc <= 1 || std::any_of(argv + 1, argv + argc, [test](const char* name) {
             return strcmp(test->m_details.testName, name) == 0;

@@ -160,6 +160,12 @@
 	  parse the results file to determine ultimate success / failure.</li>
 	<li><code>--test_results_file</code><br/>
 	  Specifies the location to write the combined test results to.</li>
+	<li><code>-d, --debug</code><br/>
+	  Turns on interactive debug mode for this test. You can only specify one test
+	  with this flag, because it attaches an interactive debugger to catch failures.<br/>
+	  It only works for some test types, currently python (with pytest as the test runner),
+	  C and C++.<br/>
+	  It implies <code>-c dbg</code> unless that flag is explicitly passed.</li>
       </ul>
     </p>
 
@@ -187,6 +193,12 @@
 	<li><code>--coverage_results_file</code><br/>
 	  Similar to <code>--test_results_file</code>, determines where to write
 	  the aggregated coverage results to.</li>
+	<li><code>-d, --debug</code><br/>
+	  Turns on interactive debug mode for this test. You can only specify one test
+	  with this flag, because it attaches an interactive debugger to catch failures.<br/>
+	  It only works for some test types, currently python (with pytest as the test runner),
+	  C and C++.<br/>
+	  It implies <code>-c dbg</code> unless that flag is explicitly passed.</li>
       </ul>
     </p>
 
