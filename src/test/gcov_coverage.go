@@ -11,7 +11,13 @@ import (
 	"core"
 )
 
+// gcovPlaceholder is used to mark empty coverage files for C++ tests when coverage is disabled for them.
+var gcovPlaceholder = []byte{'g', 'c', 'o', 'v'}
+
 func parseGcovCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte) error {
+	if bytes.Equal(data, gcovPlaceholder) {
+		return nil // Coverage is disabled, not an error.
+	}
 	// The data we have is a sequence of .gcov files smashed together.
 	lines := bytes.Split(data, []byte{'\n'})
 	if len(lines) == 0 {
@@ -56,5 +62,5 @@ func translateGcovCount(gcov []byte) core.LineCoverage {
 
 // looksLikeGcovCoverageResults returns true if the given data appears to be gcov results.
 func looksLikeGcovCoverageResults(data []byte) bool {
-	return bytes.HasPrefix(data, []byte("        -:    0:Source:"))
+	return bytes.HasPrefix(data, []byte("        -:    0:Source:")) || bytes.Equal(data, gcovPlaceholder)
 }
