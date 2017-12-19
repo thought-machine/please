@@ -101,14 +101,17 @@ func initializeInterpreter(state *core.BuildState) {
 			dir = executableDir()
 		}
 		// Setting python vars ensures it doesn't find anything outside the parts we ship.
-		os.Setenv("PYTHONHOME", dir)
-		os.Setenv("PYTHONPATH", dir)
+		f1 := temporarilySetEnv("PYTHONHOME", dir)
+		f2 := temporarilySetEnv("PYTHONPATH", dir)
+		defer f1()
+		defer f2()
 		// Preloading the ffi lib means we don't have to have it in a subdirectory.
 		preloadSo := C.CString(path.Join(dir, "libffi-72499c49.so.6.0.4"))
 		defer C.free(unsafe.Pointer(preloadSo))
 		if C.InitialiseStaticInterpreter(preloadSo) != 0 {
 			log.Fatalf("Failed to initialise parser engine")
 		}
+
 	}
 	setConfigValue("PLZ_VERSION", config.Please.Version.String())
 	setConfigValue("BUILD_SANDBOX", pythonBool(config.Build.Sandbox))
@@ -201,6 +204,18 @@ func pythonBool(b bool) string {
 		return "true"
 	}
 	return ""
+}
+
+// temporarilySetEnv sets an environment variable and returns a function that can be called
+// later to set it back to what it was before.
+func temporarilySetEnv(name, value string) func() {
+	prevValue, ok := os.LookupEnv(name)
+	if ok {
+		os.Setenv(name, value)
+		return func() { os.Setenv(name, prevValue) }
+	}
+	os.Setenv(name, value)
+	return func() { os.Unsetenv(name) }
 }
 
 func initialiseInterpreter(engine string) bool {
