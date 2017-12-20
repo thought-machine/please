@@ -9,7 +9,7 @@ import (
 )
 
 func TestMatchingTools(t *testing.T) {
-	c, err := core.ReadConfigFiles(nil)
+	c, err := core.ReadConfigFiles(nil, "")
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{"pex": "~/.please/please_pex"}, matchingTools(c, "p"))
 	assert.Equal(t, map[string]string{"pex": "~/.please/please_pex"}, matchingTools(c, "pex"))
@@ -20,7 +20,7 @@ func TestMatchingTools(t *testing.T) {
 }
 
 func TestAllToolNames(t *testing.T) {
-	c, err := core.ReadConfigFiles(nil)
+	c, err := core.ReadConfigFiles(nil, "")
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"jarcat", "javacworker"}, allToolNames(c, "ja"))
 }
