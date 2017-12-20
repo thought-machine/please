@@ -264,10 +264,8 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"print" description:"Prints a representation of a single target"`
 		Completions struct {
-			Cmd        string `long:"cmd" description:"Command to complete for" default:"build"`
-			BashScript bool   `long:"bash_script" description:"Prints the Bash completion script"`
-			ZshScript  bool   `long:"zsh_script" description:"Prints the zsh completion script"`
-			Args       struct {
+			Cmd  string `long:"cmd" description:"Command to complete for" default:"build"`
+			Args struct {
 				Fragments []string `positional-arg-name:"fragment" description:"Initial fragment to attempt to complete"`
 			} `positional-args:"true"`
 		} `command:"completions" subcommands-optional:"true" description:"Prints possible completions for a string."`
@@ -869,10 +867,6 @@ func main() {
 		}
 		os.Exit(0)
 	} else if opts.OutputFlags.CompletionScript {
-		utils.PrintCompletionScript()
-		os.Exit(0)
-	} else if opts.Query.Completions.BashScript || opts.Query.Completions.ZshScript {
-		log.Warning("--bash_script and --zsh_script are deprecated in favour of plz --completion_script")
 		utils.PrintCompletionScript()
 		os.Exit(0)
 	}
