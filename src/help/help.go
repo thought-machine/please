@@ -39,7 +39,7 @@ func Help(topic string) bool {
 	fmt.Printf("Sorry OP, can't halp you with %s\n", topic)
 	if message := suggest(topic); message != "" {
 		printMessage(message)
-		fmt.Printf("Or have a look on the website: https://please.build\n")
+		fmt.Printf(" Or have a look on the website: https://please.build\n")
 	} else {
 		fmt.Printf("\nMaybe have a look on the website? https://please.build\n")
 	}
