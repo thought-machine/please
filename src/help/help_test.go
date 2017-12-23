@@ -23,6 +23,7 @@ func TestHelpDescription(t *testing.T) {
 
 func TestSuggestion(t *testing.T) {
 	assert.Equal(t, "\nMaybe you meant cc_embed_binary or c_embed_binary ?", suggest("cc_emdbed_binary"))
+	assert.Equal(t, "\nMaybe you meant godep , go , gc , gopath , goroot or gotool ?", suggest("godop"))
 	assert.Equal(t, "", suggest("blahdiblahdiblah"))
 }
 

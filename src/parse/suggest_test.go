@@ -29,7 +29,7 @@ func TestSuggestTwoTargetsFromSamePackage(t *testing.T) {
 func TestSuggestSeveralTargetsFromSamePackage(t *testing.T) {
 	pkg := makePackage("src/core", "target1", "target21", "target_21", "wibble")
 	s := suggestTargets(pkg, bl("//src/core:target"), bl("//src/core:blibble"))
-	assert.Equal(t, s, "\nMaybe you meant :target1, :target21 or :target_21 ?")
+	assert.Equal(t, s, "\nMaybe you meant :target1 , :target21 or :target_21 ?")
 }
 
 func TestSuggestSingleTargetFromAnotherPackage(t *testing.T) {
@@ -47,7 +47,7 @@ func TestSuggestTwoTargetsFromAnotherPackage(t *testing.T) {
 func TestSuggestSeveralTargetsFromAnotherPackage(t *testing.T) {
 	pkg := makePackage("src/core", "target1", "target21", "target_21", "wibble")
 	s := suggestTargets(pkg, bl("//src/core:target"), bl("//src/parse:blibble"))
-	assert.Equal(t, s, "\nMaybe you meant //src/core:target1, //src/core:target21 or //src/core:target_21 ?")
+	assert.Equal(t, s, "\nMaybe you meant //src/core:target1 , //src/core:target21 or //src/core:target_21 ?")
 }
 
 func makePackage(name string, targets ...string) *core.Package {
