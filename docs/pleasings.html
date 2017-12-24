@@ -50,19 +50,14 @@
     <pre><code>
         package(default_visibility = ['PUBLIC'])
 
-        github_file(
+        remote_file(
             name = 'rust',
-            repo = 'thought-machine/pleasings',
-            file = 'rust/rust.build_defs',
-            revision = '4a8158a65ef39e7dd9a1569fbfa1e5eec398e066',
-            hash = 'bbfa10e522cfc870bfcbfbae6b899b770b54031a',
+            url = 'https://raw.githubusercontent.com/thought-machine/pleasings/4a8158a65ef39e7dd9a1569fbfa1e5eec398e066/rust/rust.build_defs',
+            hashes = [
+                'bbfa10e522cfc870bfcbfbae6b899b770b54031a',
+            ],
         )
     </code></pre>
-
-    <p>You could of course use <code>remote_file</code> for files hosted elsewhere,
-      <code>github_file</code> is a simple wrapper around it that knows about Github's raw file
-      structure.
-    </p>
 
     <p>Then from any other package in your repo you could write the following:</p>
 
@@ -79,4 +74,3 @@
       but more seriously states the expected revision & hash in a centralised location so
       your build always uses the same upstream version of the rules to compile it.
     </p>
-
