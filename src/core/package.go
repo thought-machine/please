@@ -146,6 +146,30 @@ func (pkg *Package) MarkTargetModified(target *BuildTarget) {
 	}
 }
 
+// VerifyOutputs checks all files output from this package and verifies that they're all OK;
+// notably it checks that if targets that output into a subdirectory, that subdirectory isn't
+// created by another target. That kind of thing can lead to subtle and annoying bugs.
+// It logs detected warnings to stdout.
+func (pkg *Package) VerifyOutputs() {
+	for _, warning := range pkg.verifyOutputs() {
+		log.Warning("%s: %s", pkg.Filename, warning)
+	}
+}
+
+func (pkg *Package) verifyOutputs() []string {
+	pkg.mutex.RLock()
+	defer pkg.mutex.RUnlock()
+	ret := []string{}
+	for filename, target := range pkg.Outputs {
+		for dir := path.Dir(filename); dir != "."; dir = path.Dir(dir) {
+			if target2, present := pkg.Outputs[dir]; present && target2 != target && !target.HasDependency(target2.Label.Parent()) {
+				ret = append(ret, fmt.Sprintf("Target %s outputs files into the directory %s, which is separately output by %s. This can cause errors based on build order - you should add a dependency.", target.Label, dir, target2.Label))
+			}
+		}
+	}
+	return ret
+}
+
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.
 func FindOwningPackages(files []string) []BuildLabel {
 	ret := make([]BuildLabel, len(files))

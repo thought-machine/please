@@ -60,3 +60,16 @@ func TestIsIncludedIn(t *testing.T) {
 	assert.True(t, NewPackage("src/core").IsIncludedIn(label))
 	assert.False(t, NewPackage("src2").IsIncludedIn(label))
 }
+
+func TestVerifyOutputs(t *testing.T) {
+	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
+	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
+	pkg := NewPackage("src/core")
+	pkg.Targets[target1.Label.Name] = target1
+	pkg.Targets[target2.Label.Name] = target2
+	pkg.MustRegisterOutput("dir/file1.go", target1)
+	pkg.MustRegisterOutput("dir", target2)
+	assert.Equal(t, 1, len(pkg.verifyOutputs()))
+	target1.AddDependency(target2.Label)
+	assert.Equal(t, 0, len(pkg.verifyOutputs()))
+}
