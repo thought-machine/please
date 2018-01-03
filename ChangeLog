@@ -1,3 +1,11 @@
+Version 11.0.1
+--------------
+
+    * Fixed a rare internal data race.
+    * Added a warning for potential cases where one target outputs into a directory written
+      by another target, which can cause subtle build failures.
+
+
 Version 11.0.0
 --------------
 
