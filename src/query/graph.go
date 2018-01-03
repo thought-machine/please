@@ -93,7 +93,7 @@ func addJSONTarget(graph *core.BuildGraph, ret *JSONGraph, label core.BuildLabel
 	done[label] = struct{}{}
 	if label.IsAllTargets() {
 		pkg := graph.PackageOrDie(label.PackageName)
-		for _, target := range pkg.Targets {
+		for _, target := range pkg.AllTargets() {
 			addJSONTarget(graph, ret, target.Label, done)
 		}
 		return
@@ -115,8 +115,8 @@ func addJSONTarget(graph *core.BuildGraph, ret *JSONGraph, label core.BuildLabel
 
 func makeJSONPackage(graph *core.BuildGraph, pkg *core.Package) JSONPackage {
 	targets := map[string]JSONTarget{}
-	for name, target := range pkg.Targets {
-		targets[name] = makeJSONTarget(graph, target)
+	for _, target := range pkg.AllTargets() {
+		targets[target.Label.Name] = makeJSONTarget(graph, target)
 	}
 	return JSONPackage{name: pkg.Name, Targets: targets}
 }

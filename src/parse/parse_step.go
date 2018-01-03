@@ -206,7 +206,8 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 		return nil // Indicates deferral
 	}
 
-	for _, target := range pkg.Targets {
+	allTargets := pkg.AllTargets()
+	for _, target := range allTargets {
 		state.Graph.AddTarget(target)
 		if target.IsFilegroup {
 			// At least register these guys as outputs.
@@ -228,7 +229,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 		}
 	}
 	// Do this in a separate loop so we get intra-package dependencies right now.
-	for _, target := range pkg.Targets {
+	for _, target := range allTargets {
 		for _, dep := range target.DeclaredDependencies() {
 			state.Graph.AddDependency(target.Label, dep)
 		}

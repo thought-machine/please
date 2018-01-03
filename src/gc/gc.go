@@ -99,7 +99,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 			// For slightly awkward reasons these can't be handled outside :(
 			for _, pkg := range graph.PackageMap() {
 				if pkg.IsIncludedIn(target) {
-					for _, target := range pkg.Targets {
+					for _, target := range pkg.AllTargets() {
 						log.Debug("GC root: %s", target.Label)
 						addTarget(graph, keepTargets, target)
 					}

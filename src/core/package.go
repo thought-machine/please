@@ -18,7 +18,7 @@ type Package struct {
 	// Subincluded build defs files that this package imported
 	Subincludes []BuildLabel
 	// Targets contained within the package
-	Targets map[string]*BuildTarget
+	targets map[string]*BuildTarget
 	// Set of output files from rules.
 	Outputs map[string]*BuildTarget
 	// Protects access to above
@@ -35,9 +35,24 @@ type Package struct {
 func NewPackage(name string) *Package {
 	return &Package{
 		Name:    name,
-		Targets: map[string]*BuildTarget{},
+		targets: map[string]*BuildTarget{},
 		Outputs: map[string]*BuildTarget{},
 	}
+}
+
+// Target returns the target with the given name, or nil if this package doesn't have one.
+func (pkg *Package) Target(name string) *BuildTarget {
+	pkg.mutex.RLock()
+	defer pkg.mutex.RUnlock()
+	return pkg.targets[name]
+}
+
+// AddTarget adds a new target to this package with the given name.
+// It doesn't check for duplicates.
+func (pkg *Package) AddTarget(target *BuildTarget) {
+	pkg.mutex.Lock()
+	defer pkg.mutex.Unlock()
+	pkg.targets[target.Label.Name] = target
 }
 
 // AllTargets returns the current set of targets in this package.
@@ -45,8 +60,8 @@ func NewPackage(name string) *Package {
 func (pkg *Package) AllTargets() []*BuildTarget {
 	pkg.mutex.Lock()
 	defer pkg.mutex.Unlock()
-	ret := make([]*BuildTarget, 0, len(pkg.Targets))
-	for _, target := range pkg.Targets {
+	ret := make([]*BuildTarget, 0, len(pkg.targets))
+	for _, target := range pkg.targets {
 		ret = append(ret, target)
 	}
 	return ret
@@ -111,7 +126,7 @@ func (pkg *Package) MustRegisterOutput(fileName string, target *BuildTarget) {
 func (pkg *Package) AllChildren(target *BuildTarget) []*BuildTarget {
 	ret := BuildTargets{}
 	parent := target.Label.Parent()
-	for _, t := range pkg.Targets {
+	for _, t := range pkg.targets {
 		if t.Label.Parent() == parent {
 			ret = append(ret, t)
 		}

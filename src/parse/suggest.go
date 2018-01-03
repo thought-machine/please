@@ -15,9 +15,9 @@ const maxSuggestionDistance = 3
 // the requested one.
 func suggestTargets(pkg *core.Package, label, dependor core.BuildLabel) string {
 	// The initial haystack only contains target names
-	haystack := make([]string, 0, len(pkg.Targets))
-	for t := range pkg.Targets {
-		haystack = append(haystack, fmt.Sprintf("//%s:%s", pkg.Name, t))
+	haystack := []string{}
+	for _, t := range pkg.AllTargets() {
+		haystack = append(haystack, fmt.Sprintf("//%s:%s", pkg.Name, t.Label.Name))
 	}
 	msg := utils.PrettyPrintSuggestion(label.String(), haystack, maxSuggestionDistance)
 	if pkg.Name != dependor.PackageName {

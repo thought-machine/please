@@ -75,7 +75,7 @@ func queryCompletionPackages(config *core.Configuration, query, repoRoot string)
 func Completions(graph *core.BuildGraph, labels []core.BuildLabel, binary, test, hidden bool) {
 	for _, label := range labels {
 		count := 0
-		for _, target := range graph.PackageOrDie(label.PackageName).Targets {
+		for _, target := range graph.PackageOrDie(label.PackageName).AllTargets() {
 			if !strings.HasPrefix(target.Label.Name, label.Name) {
 				continue
 			}

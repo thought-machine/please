@@ -53,7 +53,7 @@ func TestSuggestSeveralTargetsFromAnotherPackage(t *testing.T) {
 func makePackage(name string, targets ...string) *core.Package {
 	pkg := core.NewPackage(name)
 	for _, target := range targets {
-		pkg.Targets[target] = nil
+		pkg.AddTarget(core.NewBuildTarget(bl("//" + name + ":" + target)))
 	}
 	return pkg
 }

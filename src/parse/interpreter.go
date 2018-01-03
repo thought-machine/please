@@ -424,13 +424,13 @@ func addTarget(pkgPtr uintptr, name, cmd, testCmd string, binary, test, needsTra
 		target.Command = cmd
 		target.TestCommand = testCmd
 	}
-	if _, present := pkg.Targets[name]; present {
+	if existing := pkg.Target(name); existing != nil {
 		// NB. Not logged as an error because Python is now allowed to catch it.
 		//     It will turn into an error later if the exception is not caught.
 		log.Notice("Duplicate build target in %s: %s", pkg.Name, name)
 		return nil
 	}
-	pkg.Targets[name] = target
+	pkg.AddTarget(target)
 	if core.State.Graph.Package(pkg.Name) != nil {
 		// Package already added, so we're probably in a post-build function. Add target directly to graph now.
 		log.Debug("Adding new target %s directly to graph", target.Label)
@@ -557,8 +557,8 @@ func SetCommand(cPackage uintptr, cTarget *C.char, cConfigOrCommand *C.char, cCo
 func getTargetPost(cPackage uintptr, cTarget *C.char) (*core.BuildTarget, error) {
 	pkg := unsizep(cPackage)
 	name := C.GoString(cTarget)
-	target, present := pkg.Targets[name]
-	if !present {
+	target := pkg.Target(name)
+	if target == nil {
 		return nil, fmt.Errorf("Unknown build target %s in %s", name, pkg.Name)
 	}
 	// It'd be cheating to try to modify targets that're already built.
