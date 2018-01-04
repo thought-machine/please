@@ -443,7 +443,9 @@ func (v *Version) LessThan(ver *Version) bool {
 func (v *Version) Intersect(v2 *Version) bool {
 	if !v.Parsed || !v2.Parsed {
 		// Fallback logic; one or both versions aren't parsed, so we do string comparisons.
-		if strings.HasPrefix(v.Raw, "[") || strings.HasPrefix(v2.Raw, "[") {
+		if v.Raw == v2.Raw {
+			return true // If they're identical they always intersect.
+		} else if strings.HasPrefix(v.Raw, "[") || strings.HasPrefix(v2.Raw, "[") {
 			return false // No intersection if one specified an exact version
 		} else if v2.Raw > v.Raw {
 			*v = *v2
