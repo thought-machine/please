@@ -217,6 +217,9 @@ func (pom *PomXML) replaceVariables(s string) string {
 	if strings.HasPrefix(s, "${") {
 		if prop, present := pom.PropertiesMap[s[2:len(s)-1]]; !present {
 			log.Fatalf("Failed property lookup %s: %s\n", s, pom.PropertiesMap)
+		} else if strings.HasPrefix(prop, "${") && prop != s {
+			// Some property values can themselves be more properties...
+			return pom.replaceVariables(prop)
 		} else {
 			return prop
 		}
