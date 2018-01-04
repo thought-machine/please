@@ -217,6 +217,9 @@ func (pom *PomXML) replaceVariables(s string) string {
 	if strings.HasPrefix(s, "${") {
 		if prop, present := pom.PropertiesMap[s[2:len(s)-1]]; !present {
 			log.Fatalf("Failed property lookup %s: %s\n", s, pom.PropertiesMap)
+		} else if strings.HasPrefix(prop, "${") && prop != s {
+			// Some property values can themselves be more properties...
+			return pom.replaceVariables(prop)
 		} else {
 			return prop
 		}
@@ -427,7 +430,7 @@ func (v *Version) Matches(ver *Version) bool {
 		return (v.Min.LessThan(ver.Max) && v.Min.GreaterThan(ver.Min))
 	}
 	// If we fail to parse it, they are treated as strings.
-	return v.Raw >= ver.Raw
+	return strings.Trim(v.Raw, "[]") == strings.Trim(ver.Raw, "[]") || v.Raw >= ver.Raw
 }
 
 // LessThan returns true if this version is less than the given version.
@@ -443,7 +446,9 @@ func (v *Version) LessThan(ver *Version) bool {
 func (v *Version) Intersect(v2 *Version) bool {
 	if !v.Parsed || !v2.Parsed {
 		// Fallback logic; one or both versions aren't parsed, so we do string comparisons.
-		if strings.HasPrefix(v.Raw, "[") || strings.HasPrefix(v2.Raw, "[") {
+		if strings.Trim(v.Raw, "[]") == strings.Trim(v2.Raw, "[]") {
+			return true // If they're identical they always intersect.
+		} else if strings.HasPrefix(v.Raw, "[") || strings.HasPrefix(v2.Raw, "[") {
 			return false // No intersection if one specified an exact version
 		} else if v2.Raw > v.Raw {
 			*v = *v2

@@ -110,3 +110,17 @@ func TestIntersectUnparseable(t *testing.T) {
 	assert.Equal(t, 0, ver.Min.Incremental)
 	assert.Equal(t, "", ver.Min.Qualifier)
 }
+
+func TestIntersectTwoSquareBrackets(t *testing.T) {
+	v1 := v("[4.1.16.Final]")
+	v2 := v("[4.1.16.Final]")
+	assert.True(t, v1.Intersect(v2))
+	assert.True(t, v1.Matches(v2))
+}
+
+func TestMatchesOneSquareBracket(t *testing.T) {
+	v1 := v("[4.1.16.Final]")
+	v2 := v("4.1.16.Final")
+	assert.True(t, v1.Intersect(v2))
+	assert.True(t, v1.Matches(v2))
+}

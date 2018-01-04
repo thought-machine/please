@@ -194,7 +194,7 @@ func (r *Resolver) mediate(poms []*PomXML) {
 			return
 		}
 	}
-	log.Fatalf("Failed to find a suitable version for %s:%s", poms[0].GroupID, poms[0].ArtifactID)
+	log.Fatalf("Failed to find a suitable version for %s:%s from %s", poms[0].GroupID, poms[0].ArtifactID, hard)
 }
 
 // updateDeps updates all the dependencies to point to one particular artifact.
