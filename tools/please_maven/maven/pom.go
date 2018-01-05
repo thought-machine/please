@@ -274,6 +274,7 @@ func (pom *PomXML) Unmarshal(f *Fetch, response []byte) {
 	pom.Version = pom.replaceVariables(pom.Version)
 	// Arbitrarily, some pom files have this different structure with the extra "dependencyManagement" level.
 	pom.Dependencies.Dependency = append(pom.Dependencies.Dependency, pom.DependencyManagement.Dependencies.Dependency...)
+	pom.Dependencies.Dependency = pom.stripTestDependencies(f, pom.Dependencies.Dependency)
 	if !pom.isParent { // Don't fetch dependencies of parents, that just gets silly.
 		pom.HasSources = f.HasSources(&pom.Artifact)
 		for _, dep := range pom.Dependencies.Dependency {
@@ -282,18 +283,24 @@ func (pom *PomXML) Unmarshal(f *Fetch, response []byte) {
 	}
 }
 
+// stripTestDependencies removes all deps that have test scope or otherwise wouldn't be included.
+func (pom *PomXML) stripTestDependencies(f *Fetch, deps []*pomDependency) []*pomDependency {
+	ret := make([]*pomDependency, 0, len(deps))
+	for _, dep := range deps {
+		if dep.Scope == "test" || dep.Scope == "system" {
+			log.Info("Not fetching %s:%s (dep of %s) because of scope", dep.GroupID, dep.ArtifactID, pom.Artifact)
+			continue
+		}
+		if dep.Optional && !f.ShouldInclude(dep.ArtifactID) {
+			log.Info("Not fetching optional dependency %s:%s (of %s)", dep.GroupID, dep.ArtifactID, pom.Artifact)
+			continue
+		}
+		ret = append(ret, dep)
+	}
+	return ret
+}
+
 func (pom *PomXML) handleDependency(f *Fetch, dep *pomDependency) {
-	// This is a bit of a hack; our build model doesn't distinguish these in the way Maven does.
-	// TODO(pebers): Consider allowing specifying these to this tool to produce test-only deps.
-	// Similarly system deps don't actually get fetched from Maven.
-	if dep.Scope == "test" || dep.Scope == "system" {
-		log.Info("Not fetching %s:%s (dep of %s) because of scope", dep.GroupID, dep.ArtifactID, pom.Artifact)
-		return
-	}
-	if dep.Optional && !f.ShouldInclude(dep.ArtifactID) {
-		log.Info("Not fetching optional dependency %s:%s (of %s)", dep.GroupID, dep.ArtifactID, pom.Artifact)
-		return
-	}
 	dep.GroupID = pom.replaceVariables(dep.GroupID)
 	dep.ArtifactID = pom.replaceVariables(dep.ArtifactID)
 	dep.SetVersion(pom.replaceVariables(dep.Version))

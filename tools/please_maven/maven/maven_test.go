@@ -212,21 +212,12 @@ maven_jar(
     name = 'error_prone_annotations',
     id = 'com.google.errorprone:error_prone_annotations:2.0.14',
     hash = '',
-    deps = [
-        ':junit-dep',
-    ],
 )
 
 maven_jar(
     name = 'guava',
     id = 'com.google.guava:guava:19.0',
     hash = '',
-    deps = [
-        ':jsr305',
-        ':error_prone_annotations',
-        ':j2objc-annotations',
-        ':animal-sniffer-annotations',
-    ],
 )
 
 maven_jar(
@@ -235,7 +226,6 @@ maven_jar(
     hash = '',
     deps = [
         ':guava',
-        ':junit-dep',
     ],
 )
 
@@ -264,21 +254,12 @@ maven_jar(
     name = 'diffutils',
     id = 'com.googlecode.java-diff-utils:diffutils:1.3.0',
     hash = '',
-    deps = [
-        ':junit',
-    ],
 )
 
 maven_jar(
     name = 'auto-value',
     id = 'com.google.auto.value:auto-value:1.1',
     hash = '',
-    deps = [
-        ':guava-testlib',
-        ':compile-testing',
-        ':junit',
-        ':truth',
-    ],
 )
 
 maven_jar(
@@ -293,11 +274,6 @@ maven_jar(
         ':diffutils',
         ':auto-value',
         ':error_prone_annotations',
-        ':junit',
-        ':hamcrest-core',
-        ':truth',
-        ':mockito-core',
-        ':guava-testlib',
     ],
 )
 
@@ -305,18 +281,12 @@ maven_jar(
     name = 'jcip-annotations',
     id = 'com.github.stephenc.jcip:jcip-annotations:1.0-1',
     hash = '',
-    deps = [
-        ':junit',
-    ],
 )
 
 maven_jar(
     name = 'pcollections',
     id = 'org.pcollections:pcollections:2.1.2',
     hash = '',
-    deps = [
-        ':junit',
-    ],
 )
 
 maven_jar(
@@ -325,10 +295,6 @@ maven_jar(
     hash = '',
     deps = [
         ':guava',
-        ':guava-testlib',
-        ':compile-testing',
-        ':junit',
-        ':truth',
     ],
 )
 
@@ -345,7 +311,6 @@ maven_jar(
     deps = [
         ':error_prone_annotation',
         ':error_prone_check_api',
-        ':error_prone_test_helpers',
         ':jcip-annotations',
         ':pcollections',
         ':guava',
@@ -356,26 +321,6 @@ maven_jar(
         ':javac',
         ':auto-value',
         ':error_prone_annotations',
-        ':junit',
-        ':hamcrest-core',
-        ':hamcrest-library',
-        ':truth',
-        ':guice',
-        ':guice-assistedinject',
-        ':guice-servlet',
-        ':gin',
-        ':mockito-core',
-        ':jmock',
-        ':jmock-junit4',
-        ':protobuf-java',
-        ':dagger',
-        ':dagger-producers',
-        ':auto-factory',
-        ':guava-testlib',
-        ':compile-testing',
-        ':icu4j',
-        ':android',
-        ':support-v4',
     ],
 )`
 	f := NewFetch([]string{server.URL}, nil, nil)
@@ -393,21 +338,12 @@ func TestBuildRulesGRPC(t *testing.T) {
     name = 'guava',
     id = 'com.google.guava:guava:20.0',
     hash = '',
-    deps = [
-        ':jsr305',
-        ':error_prone_annotations',
-        ':j2objc-annotations',
-        ':animal-sniffer-annotations',
-    ],
 )
 
 maven_jar(
     name = 'error_prone_annotations',
     id = 'com.google.errorprone:error_prone_annotations:2.0.11',
     hash = '',
-    deps = [
-        ':junit-dep',
-    ],
 )
 
 maven_jar(
@@ -420,11 +356,6 @@ maven_jar(
     name = 'grpc-context',
     id = 'io.grpc:grpc-context:1.1.2',
     hash = '',
-    deps = [
-        ':junit',
-        ':mockito-core',
-        ':grpc-testing',
-    ],
 )
 
 maven_jar(
@@ -446,9 +377,6 @@ maven_jar(
         ':jsr305',
         ':grpc-context',
         ':instrumentation-api',
-        ':junit',
-        ':mockito-core',
-        ':grpc-testing',
     ],
 )
 
@@ -465,9 +393,6 @@ maven_jar(
     deps = [
         ':grpc-core',
         ':google-auth-library-credentials',
-        ':junit',
-        ':mockito-core',
-        ':google-auth-library-oauth2-http',
     ],
 )
 
@@ -475,22 +400,6 @@ maven_jar(
     name = 'netty-common',
     id = 'io.netty:netty-common:4.1.8.Final',
     hash = '',
-    deps = [
-        ':javassist',
-        ':slf4j-api',
-        ':commons-logging',
-        ':log4j',
-        ':log4j-api',
-        ':log4j-core',
-        ':junit',
-        ':netty-build',
-        ':hamcrest-library',
-        ':easymock',
-        ':easymockclassextension',
-        ':jmock-junit4',
-        ':mockito-core',
-        ':logback-classic',
-    ],
 )
 
 maven_jar(
@@ -527,16 +436,6 @@ maven_jar(
     hash = '',
     deps = [
         ':netty-transport',
-        ':protobuf-java',
-        ':protobuf-javanano',
-        ':jboss-marshalling',
-        ':jzlib',
-        ':compress-lzf',
-        ':lz4',
-        ':lzma-java',
-        ':jboss-marshalling-serial',
-        ':jboss-marshalling-river',
-        ':commons-compress',
     ],
 )
 
@@ -546,8 +445,6 @@ maven_jar(
     hash = '',
     deps = [
         ':netty-codec',
-        ':netty-handler',
-        ':jzlib',
     ],
 )
 
@@ -559,10 +456,6 @@ maven_jar(
         ':netty-buffer',
         ':netty-transport',
         ':netty-codec',
-        ':${tcnative.artifactId}',
-        ':bcpkix-jdk15on',
-        ':npn-api',
-        ':alpn-api',
     ],
 )
 
@@ -570,9 +463,6 @@ maven_jar(
     name = 'gson',
     id = 'com.google.code.gson:gson:2.7',
     hash = '',
-    deps = [
-        ':junit',
-    ],
 )
 
 maven_jar(
@@ -582,7 +472,6 @@ maven_jar(
     deps = [
         ':netty-codec-http',
         ':netty-handler',
-        ':jzlib',
         ':gson',
     ],
 )
@@ -604,7 +493,6 @@ maven_jar(
         ':netty-transport',
         ':netty-codec-socks',
         ':netty-codec-http',
-        ':netty-handler',
     ],
 )
 
@@ -616,9 +504,6 @@ maven_jar(
         ':grpc-core',
         ':netty-codec-http2',
         ':netty-handler-proxy',
-        ':junit',
-        ':mockito-core',
-        ':grpc-testing',
     ],
 )
 
@@ -626,10 +511,6 @@ maven_jar(
     name = 'okio',
     id = 'com.squareup.okio:okio:1.6.0',
     hash = '',
-    deps = [
-        ':animal-sniffer-annotations',
-        ':junit',
-    ],
 )
 
 maven_jar(
@@ -649,10 +530,6 @@ maven_jar(
         ':grpc-core',
         ':okhttp',
         ':okio',
-        ':junit',
-        ':mockito-core',
-        ':grpc-testing',
-        ':grpc-netty',
     ],
 )
 
@@ -700,8 +577,6 @@ maven_jar(
         ':grpc-core',
         ':protobuf-lite',
         ':guava',
-        ':junit',
-        ':mockito-core',
     ],
 )
 
@@ -715,8 +590,6 @@ maven_jar(
         ':guava',
         ':protobuf-java-util',
         ':grpc-protobuf-lite',
-        ':junit',
-        ':mockito-core',
     ],
 )
 
@@ -724,11 +597,6 @@ maven_jar(
     name = 'protobuf-javanano',
     id = 'com.google.protobuf.nano:protobuf-javanano:3.0.0-alpha-5',
     hash = '',
-    deps = [
-        ':junit',
-        ':easymock',
-        ':easymockclassextension',
-    ],
 )
 
 maven_jar(
@@ -739,8 +607,6 @@ maven_jar(
         ':grpc-core',
         ':protobuf-javanano',
         ':guava',
-        ':junit',
-        ':mockito-core',
     ],
 )
 
@@ -750,10 +616,6 @@ maven_jar(
     hash = '',
     deps = [
         ':grpc-core',
-        ':junit',
-        ':mockito-core',
-        ':truth',
-        ':grpc-testing',
     ],
 )
 
@@ -771,8 +633,6 @@ maven_jar(
         ':grpc-protobuf-lite',
         ':grpc-protobuf-nano',
         ':grpc-stub',
-        ':junit',
-        ':mockito-core',
     ],
 )`
 	f := NewFetch([]string{server.URL}, excludes, nil)
