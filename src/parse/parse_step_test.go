@@ -74,7 +74,7 @@ func TestAddDepRescan(t *testing.T) {
 
 	// Add new target & dep to target1
 	target4 := makeTarget("//package1:target4")
-	state.Graph.Package("package1").Targets["target4"] = target4
+	state.Graph.Package("package1").AddTarget(target4)
 	state.Graph.AddTarget(target4)
 	target1 := state.Graph.TargetOrDie(buildLabel("//package1:target1"))
 	target1.AddDependency(buildLabel("//package1:target4"))
@@ -124,28 +124,28 @@ func makeState(withPackage1, withPackage2 bool) *core.BuildState {
 	if withPackage1 {
 		pkg := core.NewPackage("package1")
 		state.Graph.AddPackage(pkg)
-		pkg.Targets["target1"] = makeTarget("//package1:target1", "//package1:target2", "//package2:target1")
-		pkg.Targets["target2"] = makeTarget("//package1:target2", "//package2:target1")
-		pkg.Targets["target3"] = makeTarget("//package1:target3", "//package2:target2")
-		state.Graph.AddTarget(pkg.Targets["target1"])
-		state.Graph.AddTarget(pkg.Targets["target2"])
-		state.Graph.AddTarget(pkg.Targets["target3"])
+		pkg.AddTarget(makeTarget("//package1:target1", "//package1:target2", "//package2:target1"))
+		pkg.AddTarget(makeTarget("//package1:target2", "//package2:target1"))
+		pkg.AddTarget(makeTarget("//package1:target3", "//package2:target2"))
+		state.Graph.AddTarget(pkg.Target("target1"))
+		state.Graph.AddTarget(pkg.Target("target2"))
+		state.Graph.AddTarget(pkg.Target("target3"))
 		addDeps(state.Graph, pkg)
 	}
 	if withPackage2 {
 		pkg := core.NewPackage("package2")
 		state.Graph.AddPackage(pkg)
-		pkg.Targets["target1"] = makeTarget("//package2:target1", "//package2:target2", "//package1:target3")
-		pkg.Targets["target2"] = makeTarget("//package2:target2")
-		state.Graph.AddTarget(pkg.Targets["target1"])
-		state.Graph.AddTarget(pkg.Targets["target2"])
+		pkg.AddTarget(makeTarget("//package2:target1", "//package2:target2", "//package1:target3"))
+		pkg.AddTarget(makeTarget("//package2:target2"))
+		state.Graph.AddTarget(pkg.Target("target1"))
+		state.Graph.AddTarget(pkg.Target("target2"))
 		addDeps(state.Graph, pkg)
 	}
 	return state
 }
 
 func addDeps(graph *core.BuildGraph, pkg *core.Package) {
-	for _, target := range pkg.Targets {
+	for _, target := range pkg.AllTargets() {
 		for _, dep := range target.DeclaredDependencies() {
 			graph.AddDependency(target.Label, dep)
 		}

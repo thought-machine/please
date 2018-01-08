@@ -217,7 +217,7 @@ func printTestResults(state *core.BuildState, aggregatedResults core.TestResults
 				}
 			} else {
 				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_WHITE}Took %s${RESET}\n",
-					target.Label, target.Results.Passed, target.Results.Skipped, target.Results.Failed, target.Results.Duration)
+					target.Label, target.Results.Passed, target.Results.Skipped, target.Results.Failed, target.Results.Duration.Round(durationGranularity))
 				for _, failure := range target.Results.Failures {
 					printf("${BOLD_RED}Failure: %s in %s${RESET}\n", failure.Type, failure.Name)
 					printf("%s\n", failure.Traceback)

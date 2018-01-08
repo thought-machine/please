@@ -35,7 +35,7 @@ func AffectedTargets(graph *core.BuildGraph, files, include, exclude []string, t
 	// for more explanation.
 	go func() {
 		invalidatePackage := func(pkg *core.Package) {
-			for _, target := range pkg.Targets {
+			for _, target := range pkg.AllTargets() {
 				affectedTargets <- target
 			}
 		}

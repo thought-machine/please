@@ -112,6 +112,6 @@ func addTarget(state *BuildState, name string, labels ...string) {
 		pkg = NewPackage(target.Label.PackageName)
 		state.Graph.AddPackage(pkg)
 	}
-	pkg.Targets[target.Label.Name] = target
+	pkg.AddTarget(target)
 	state.Graph.AddTarget(target)
 }

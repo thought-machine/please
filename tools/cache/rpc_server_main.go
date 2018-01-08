@@ -20,13 +20,12 @@ import (
 var log = logging.MustGetLogger("rpc_cache_server")
 
 var opts struct {
-	Usage       string `usage:"rpc_cache_server is a server for Please's remote RPC cache.\n\nSee https://please.build/cache.html for more information."`
-	Port        int    `short:"p" long:"port" description:"Port to serve on" default:"7677"`
-	HTTPPort    int    `short:"h" long:"http_port" description:"Port to serve HTTP on (for profiling, metrics etc)"`
-	MetricsPort int    `long:"metrics_port" hidden:"true" description:"Deprecated, use --http_port instead"`
-	Dir         string `short:"d" long:"dir" description:"Directory to write into" default:"plz-rpc-cache"`
-	Verbosity   int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
-	LogFile     string `long:"log_file" description:"File to log to (in addition to stdout)"`
+	Usage     string `usage:"rpc_cache_server is a server for Please's remote RPC cache.\n\nSee https://please.build/cache.html for more information."`
+	Port      int    `short:"p" long:"port" description:"Port to serve on" default:"7677"`
+	HTTPPort  int    `short:"h" long:"http_port" description:"Port to serve HTTP on (for profiling, metrics etc)"`
+	Dir       string `short:"d" long:"dir" description:"Directory to write into" default:"plz-rpc-cache"`
+	Verbosity int    `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 2 -> notice, warnings and errors only)" default:"2"`
+	LogFile   string `long:"log_file" description:"File to log to (in addition to stdout)"`
 
 	CleanFlags struct {
 		LowWaterMark   cli.ByteSize `short:"l" long:"low_water_mark" description:"Size of cache to clean down to" default:"18G"`
@@ -122,10 +121,5 @@ func main() {
 	if opts.HTTPPort != 0 {
 		go serveHTTP(opts.HTTPPort, cache)
 	}
-	if opts.MetricsPort != 0 {
-		log.Warning("--metrics_port is deprecated, prefer --http_port instead")
-		go serveHTTP(opts.MetricsPort, cache)
-	}
-
 	server.ServeGrpcForever(s, lis)
 }

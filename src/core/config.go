@@ -63,11 +63,16 @@ func readConfigFile(config *Configuration, filename string) error {
 
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
-func ReadConfigFiles(filenames []string) (*Configuration, error) {
+func ReadConfigFiles(filenames []string, profile string) (*Configuration, error) {
 	config := DefaultConfiguration()
 	for _, filename := range filenames {
 		if err := readConfigFile(config, filename); err != nil {
 			return config, err
+		}
+		if profile != "" {
+			if err := readConfigFile(config, filename+"."+profile); err != nil {
+				return config, err
+			}
 		}
 	}
 	// Set default values for slices. These add rather than overwriting so we can't set

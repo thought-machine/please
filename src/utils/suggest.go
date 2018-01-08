@@ -12,7 +12,7 @@ func Suggest(needle string, haystack []string, maxSuggestionDistance int) []stri
 	options := make(suggestions, 0, len(haystack))
 	for _, straw := range haystack {
 		distance := levenshtein.DistanceForStrings(r, []rune(straw), levenshtein.DefaultOptions)
-		if distance <= maxSuggestionDistance {
+		if len(straw) > 0 && distance <= maxSuggestionDistance {
 			options = append(options, suggestion{s: straw, dist: distance})
 		}
 	}
@@ -36,7 +36,7 @@ func PrettyPrintSuggestion(needle string, haystack []string, maxSuggestionDistan
 	for i, o := range options {
 		if i > 0 {
 			if i < len(options)-1 {
-				msg += ", "
+				msg += " , " // Leave a space before the comma so you can select them without getting the question mark
 			} else {
 				msg += " or "
 			}

@@ -17,7 +17,7 @@ const size = 1000
 const numWorkers = 10
 
 func TestBuildLotsOfTargets(t *testing.T) {
-	config, _ := core.ReadConfigFiles(nil)
+	config, _ := core.ReadConfigFiles(nil, "")
 	state := core.NewBuildState(numWorkers, nil, 4, config)
 	state.Parser = &fakeParser{
 		PostBuildFunctions: buildFunctionMap{},

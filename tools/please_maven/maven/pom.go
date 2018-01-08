@@ -217,6 +217,9 @@ func (pom *PomXML) replaceVariables(s string) string {
 	if strings.HasPrefix(s, "${") {
 		if prop, present := pom.PropertiesMap[s[2:len(s)-1]]; !present {
 			log.Fatalf("Failed property lookup %s: %s\n", s, pom.PropertiesMap)
+		} else if strings.HasPrefix(prop, "${") && prop != s {
+			// Some property values can themselves be more properties...
+			return pom.replaceVariables(prop)
 		} else {
 			return prop
 		}
@@ -271,6 +274,7 @@ func (pom *PomXML) Unmarshal(f *Fetch, response []byte) {
 	pom.Version = pom.replaceVariables(pom.Version)
 	// Arbitrarily, some pom files have this different structure with the extra "dependencyManagement" level.
 	pom.Dependencies.Dependency = append(pom.Dependencies.Dependency, pom.DependencyManagement.Dependencies.Dependency...)
+	pom.Dependencies.Dependency = pom.stripTestDependencies(f, pom.Dependencies.Dependency)
 	if !pom.isParent { // Don't fetch dependencies of parents, that just gets silly.
 		pom.HasSources = f.HasSources(&pom.Artifact)
 		for _, dep := range pom.Dependencies.Dependency {
@@ -279,18 +283,24 @@ func (pom *PomXML) Unmarshal(f *Fetch, response []byte) {
 	}
 }
 
+// stripTestDependencies removes all deps that have test scope or otherwise wouldn't be included.
+func (pom *PomXML) stripTestDependencies(f *Fetch, deps []*pomDependency) []*pomDependency {
+	ret := make([]*pomDependency, 0, len(deps))
+	for _, dep := range deps {
+		if dep.Scope == "test" || dep.Scope == "system" {
+			log.Info("Not fetching %s:%s (dep of %s) because of scope", dep.GroupID, dep.ArtifactID, pom.Artifact)
+			continue
+		}
+		if dep.Optional && !f.ShouldInclude(dep.ArtifactID) {
+			log.Info("Not fetching optional dependency %s:%s (of %s)", dep.GroupID, dep.ArtifactID, pom.Artifact)
+			continue
+		}
+		ret = append(ret, dep)
+	}
+	return ret
+}
+
 func (pom *PomXML) handleDependency(f *Fetch, dep *pomDependency) {
-	// This is a bit of a hack; our build model doesn't distinguish these in the way Maven does.
-	// TODO(pebers): Consider allowing specifying these to this tool to produce test-only deps.
-	// Similarly system deps don't actually get fetched from Maven.
-	if dep.Scope == "test" || dep.Scope == "system" {
-		log.Info("Not fetching %s:%s (dep of %s) because of scope", dep.GroupID, dep.ArtifactID, pom.Artifact)
-		return
-	}
-	if dep.Optional && !f.ShouldInclude(dep.ArtifactID) {
-		log.Info("Not fetching optional dependency %s:%s (of %s)", dep.GroupID, dep.ArtifactID, pom.Artifact)
-		return
-	}
 	dep.GroupID = pom.replaceVariables(dep.GroupID)
 	dep.ArtifactID = pom.replaceVariables(dep.ArtifactID)
 	dep.SetVersion(pom.replaceVariables(dep.Version))
@@ -427,7 +437,7 @@ func (v *Version) Matches(ver *Version) bool {
 		return (v.Min.LessThan(ver.Max) && v.Min.GreaterThan(ver.Min))
 	}
 	// If we fail to parse it, they are treated as strings.
-	return v.Raw >= ver.Raw
+	return strings.Trim(v.Raw, "[]") == strings.Trim(ver.Raw, "[]") || v.Raw >= ver.Raw
 }
 
 // LessThan returns true if this version is less than the given version.
@@ -443,7 +453,9 @@ func (v *Version) LessThan(ver *Version) bool {
 func (v *Version) Intersect(v2 *Version) bool {
 	if !v.Parsed || !v2.Parsed {
 		// Fallback logic; one or both versions aren't parsed, so we do string comparisons.
-		if strings.HasPrefix(v.Raw, "[") || strings.HasPrefix(v2.Raw, "[") {
+		if strings.Trim(v.Raw, "[]") == strings.Trim(v2.Raw, "[]") {
+			return true // If they're identical they always intersect.
+		} else if strings.HasPrefix(v.Raw, "[") || strings.HasPrefix(v2.Raw, "[") {
 			return false // No intersection if one specified an exact version
 		} else if v2.Raw > v.Raw {
 			*v = *v2

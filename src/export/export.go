@@ -35,9 +35,9 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 		}
 		// Now rewrite the unused targets out of it
 		victims := []string{}
-		for name, target := range pkg.Targets {
+		for _, target := range pkg.AllTargets() {
 			if !done[target] {
-				victims = append(victims, name)
+				victims = append(victims, target.Label.Name)
 			}
 		}
 		if err := gc.RewriteFile(state, dest, victims); err != nil {

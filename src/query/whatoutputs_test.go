@@ -23,7 +23,7 @@ func makeTarget(g *core.BuildGraph, packageName string, labelName string, output
 		t.AddOutput(out)
 		p.MustRegisterOutput(out, t)
 	}
-	p.Targets[labelName] = t
+	p.AddTarget(t)
 	g.AddTarget(t)
 	return t
 }
@@ -57,8 +57,8 @@ func TestMapKeysContainFullPathFromProjectRoot(t *testing.T) {
 	p1 := graph.PackageOrDie("package1")
 	p2 := graph.PackageOrDie("package2")
 
-	assert.Equal(t, m[path.Join(p1.Targets["target1"].OutDir(), "out1")].String(), label1.String())
-	assert.Equal(t, m[path.Join(p1.Targets["target1"].OutDir(), "out2")].String(), label1.String())
-	assert.Equal(t, m[path.Join(p1.Targets["target2"].OutDir(), "out3")].String(), label2.String())
-	assert.Equal(t, m[path.Join(p2.Targets["target1"].OutDir(), "out4")].String(), label3.String())
+	assert.Equal(t, m[path.Join(p1.Target("target1").OutDir(), "out1")].String(), label1.String())
+	assert.Equal(t, m[path.Join(p1.Target("target1").OutDir(), "out2")].String(), label1.String())
+	assert.Equal(t, m[path.Join(p1.Target("target2").OutDir(), "out3")].String(), label2.String())
+	assert.Equal(t, m[path.Join(p2.Target("target1").OutDir(), "out4")].String(), label3.String())
 }

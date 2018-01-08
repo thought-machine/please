@@ -351,7 +351,7 @@ func (state *BuildState) SetTaskNumbers(active, done int64) {
 func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 	ret := BuildLabels{}
 	addPackage := func(pkg *Package) {
-		for _, target := range pkg.Targets {
+		for _, target := range pkg.AllTargets() {
 			if target.ShouldInclude(state.Include, state.Exclude) && (!state.NeedTests || target.IsTest) {
 				ret = append(ret, target.Label)
 			}

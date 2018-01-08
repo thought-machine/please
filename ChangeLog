@@ -1,3 +1,33 @@
+Version 11.0.1
+--------------
+
+    * Fixed a rare internal data race.
+    * Added a warning for potential cases where one target outputs into a directory written
+      by another target, which can cause subtle build failures.
+
+
+Version 11.0.0
+--------------
+
+    * Now ships with a builtin parser engine so the .so's aren't necessary (although
+      still included for now) and there's no requirement to have cffi or any Python
+      version installed to run.
+    * Interactive debugging for tests; passing `-d` to `plz test` or `plz cover`
+      causes the test to break into an interactive debugger on failure. Currently only
+      works on Python, C and C++ tests.
+    * Altered priority of config files; `/etc/plzconfig` is now the lowest priority and
+      there is an additional `~/.please/plzconfig` immediately after it.
+    * Added --profile flag which selects a config profile, e.g. `--profile dev` will
+      attempt to read `.plzconfig.dev` if it exists.
+    * Added --version flag to `plz update` to force updating to a particular version,
+      and --latest flag to always update to the latest.
+    * parse.experimentaldir config property can now be repeated.
+    * Removed deprecated plz query completions --bash_script / --zsh_script flags
+      in favour of plz --completion_script.
+    * Fixed a bug where Python tests could fail under coverage for non-trivial setups
+      (like where the srcs are outputs of rules from another package).
+
+
 Version 10.3.5
 --------------
 
