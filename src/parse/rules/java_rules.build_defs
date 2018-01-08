@@ -147,43 +147,41 @@ def java_module(name, srcs=None, src_dir=None, resources=None, resources_root=No
                         modular=True)
 
 
-def java_runtime_image(name, main_module, main_class, modules, out=None, srcs=None,
-                       deps=None, data=None, visibility=None, jvm_args=None):
+def java_runtime_image(name, main_module, main_class, modules, out=None,
+                       deps=None, data=None, visibility=None, jlink_args=None):
     """Assembles a set of modules into an executable java runtime image.
 
     Args:
       name (str): Name of the rule.
-      main_module (str): Main module to set in the manifest.
-      main_class (str): Main class to set in the manifest.
+      main_module (str): Main module to set in the manifest. Has to be included in 'modules'.
+      main_class (str): Main class to set in the manifest. Has to belong to 'main_module'.
       modules (list): Modules to be included in the runtime image.
-      out (str): Name of output .jar file. Defaults to name + .jar.
-      srcs (list): Source files to compile.
+      out (str): Name of the folder that contains the runtime image and the binary contained by it. Defaults to 'name'.
       deps (list): Dependencies of this rule.
       data (list): Runtime data files for this rule.
       visibility (list): Visibility declaration of this rule.
-      jvm_args (str): Arguments to pass to the JVM in the run script.
+      jlink_args (str): Arguments to pass to the JVM in the run script.
     """
     if not CONFIG.JAVA_HOME:
         raise Exception('Java home needs to be set to link java runtime images against jmods.')
     if not CONFIG.JLINK_TOOL:
         raise Exception('A jlink tool is required to build java runtime images.')
+    if not modules:
+        raise Exception('You cannot assemble a java runtime image without specifying any modules.')
     deps = deps or []
-    if srcs:
-        lib_rule = java_library(
-            name = '_%s#lib' % name,
-            srcs = srcs,
-            deps = deps,
-        )
-        deps.append(lib_rule)
-
     out = out or name
-    modules = modules or []
-    cmd = ("%s --module-path %s:%s/jmods "
-           "--add-modules %s --launcher %s=%s/%s --output %s" % (
-               CONFIG.JLINK_TOOL,
-               r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
-               CONFIG.JAVA_HOME,
-               ':'.join(modules), name, main_module, main_class, out))
+    jlink_args = jlink_args or '--strip-debug --compress=2'
+    cmd = ("$TOOLS_JLINK --module-path {deps}:{java_home}/jmods "
+           "--add-modules {modules} --launcher {name}={main_module}/{main_class} "
+           "--output {out_dir} {jlink_args}").format(
+               deps=r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
+               java_home=CONFIG.JAVA_HOME,
+               modules=':'.join(modules),
+               name=name,
+               main_module=main_module,
+               main_class=main_class,
+               out_dir=out,
+               jlink_args=jlink_args)
 
     build_rule(
         name=name,
@@ -197,6 +195,7 @@ def java_runtime_image(name, main_module, main_class, modules, out=None, srcs=No
         building_description="Creating runtime image...",
         requires=['java'],
         visibility=visibility,
+        tools={'jlink': [CONFIG.JLINK_TOOL]}
     )
 
 
