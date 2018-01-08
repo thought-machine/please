@@ -133,7 +133,7 @@ def sh_test(name, src=None, labels=None, data=None, deps=None, size=None,
     )
 
 
-def sh_cmd(name, cmd, out=None, shell='/bin/sh', labels=None, deps=None, visibility=None):
+def sh_cmd(name, cmd, srcs=None, out=None, shell='/bin/sh', labels=None, deps=None, visibility=None):
     """Generates a runnable shell script from a command.
 
     This is doable with a genrule with a little effort but it's awkward enough to be nice
@@ -145,6 +145,8 @@ def sh_cmd(name, cmd, out=None, shell='/bin/sh', labels=None, deps=None, visibil
     Args:
       name (str): Name of the rule.
       cmd (str | dict): Command to write into the output script file.
+      srcs (list | dict): Source files. Can be consumed by the generated command (but are not
+                          written into the output in any other way).
       out (str): Name of the output file to create. Defaults to name + .sh.
       shell (str): Shell to invoke in, by default /bin/sh.
       labels (list): Labels to apply to this rule.
@@ -158,6 +160,7 @@ def sh_cmd(name, cmd, out=None, shell='/bin/sh', labels=None, deps=None, visibil
     build_rule(
         name = name,
         outs = [out or name + '.sh'],
+        srcs = srcs,
         cmd = cmds,
         labels = labels,
         deps = deps,
