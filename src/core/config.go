@@ -87,6 +87,11 @@ func ReadConfigFiles(filenames []string) (*Configuration, error) {
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
 	defaultPath(&config.Parse.LintTool, config.Please.Location, "linter")
 
+	// Default values for these guys depend on config.Java.JavaHome if that's been set.
+	if config.Java.JavaHome != "" {
+		defaultPathIfExists(&config.Java.JlinkTool, config.Java.JavaHome, "bin/jlink")
+	}
+
 	if (config.Cache.RPCPrivateKey == "") != (config.Cache.RPCPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
 	}
@@ -109,6 +114,17 @@ func setDefault(conf *[]string, def []string) {
 func defaultPath(conf *string, dir, file string) {
 	if *conf == "" {
 		*conf = path.Join(dir, file)
+	}
+}
+
+// defaultPathIfExists sets a variable to a location in a directory if it's not already set and if the location exists.
+func defaultPathIfExists(conf *string, dir, file string) {
+	if *conf == "" {
+		location := path.Join(dir, file)
+		// check if the location exists
+		if _, err := os.Stat(location); os.IsNotExist(err) {
+			*conf = location
+		}
 	}
 }
 
@@ -164,6 +180,8 @@ func DefaultConfiguration() *Configuration {
 	config.Java.TargetLevel = "8"
 	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2"}
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
+	config.Java.JlinkTool = "jlink"
+	config.Java.JavaHome = ""
 	config.Cpp.CCTool = "gcc"
 	config.Cpp.CppTool = "g++"
 	config.Cpp.LdTool = "ld"
@@ -300,6 +318,8 @@ type Configuration struct {
 	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty."`
 	Java struct {
 		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
+		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." var:"JLINK_TOOL"`
+		JavaHome           string    `help:"Defines the path of the Java Home folder." var:"JAVA_HOME"`
 		JavacWorker        string    `help:"Defines the tool used for the Java persistent compiler. This is significantly (approx 4x) faster for large Java trees than invoking javac separately each time. Default to javac_worker in the install directory, but can be switched off to fall back to javactool and separate invocation." var:"JAVAC_WORKER"`
 		JarCatTool         string    `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to jarcat in the Please install directory." var:"JARCAT_TOOL"`
 		PleaseMavenTool    string    `help:"Defines the tool used to fetch information from Maven in maven_jars rules.\nDefaults to please_maven in the Please install directory." var:"PLEASE_MAVEN_TOOL"`

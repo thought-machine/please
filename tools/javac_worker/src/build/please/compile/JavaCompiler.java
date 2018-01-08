@@ -1,5 +1,8 @@
 package build.please.compile;
 
+import build.please.worker.WorkerProto.BuildRequest;
+import build.please.worker.WorkerProto.BuildResponse;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -14,9 +17,6 @@ import java.util.concurrent.Executors;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
-
-import build.please.worker.WorkerProto.BuildRequest;
-import build.please.worker.WorkerProto.BuildResponse;
 
 public class JavaCompiler {
     /**
@@ -90,51 +90,69 @@ public class JavaCompiler {
     }
 
     private BuildResponse reallyBuild(BuildRequest request) throws IOException {
-        BuildResponse.Builder builder = BuildResponse.newBuilder();
+        BuildResponse.Builder builder = BuildResponse.newBuilder()
+            .setRule(request.getRule());
         // Try to create the output directory
         File file = new File(request.getTempDir() + "/_tmp/META-INF");
         if (!file.mkdirs()) {
             return builder
-                .setRule(request.getRule())
                 .addMessages("Failed to create directory " + file.getPath())
                 .setSuccess(false)
                 .build();
         }
         String tmpDir = request.getTempDir() + "/_tmp";
         DiagnosticReporter reporter = new DiagnosticReporter(builder);
-        StringWriter writer = new StringWriter();
-        javax.tools.JavaCompiler compiler = newCompiler(request);
-        StandardJavaFileManager fileManager = compiler.getStandardFileManager(reporter, null, null);
-        ArrayList<String> srcs = new ArrayList<String>();
-        for (String src : request.getSrcsList()) {
-            srcs.add(src.startsWith("/") ? src : request.getTempDir() + "/" + src);
+        try(StringWriter writer = new StringWriter()) {
+            javax.tools.JavaCompiler compiler = newCompiler(request);
+            StandardJavaFileManager fileManager = compiler.getStandardFileManager(reporter, null, null);
+            ArrayList<String> srcs = new ArrayList<>();
+            for (String src : request.getSrcsList()) {
+                srcs.add(src.startsWith("/") ? src : request.getTempDir() + "/" + src);
+            }
+            Iterable<? extends JavaFileObject> compilationUnits;
+            ArrayList<String> opts = new ArrayList<>();
+            opts.addAll(Arrays.asList(
+                "-d", tmpDir,
+                "-s", tmpDir,
+                "-sourcepath", request.getTempDir()));
+            opts.addAll(request.getOptsList());
+            if (opts.contains("--src_dir")) {
+                // Special flag that indicates that the sources are actually a directory and we should compile everything in it.
+                opts.remove("--src_dir");
+                FileFinder finder = new FileFinder(".java");
+                Files.walkFileTree(new File(request.getTempDir() + "/" + request.getSrcs(0)).toPath(), finder);
+                compilationUnits = fileManager.getJavaFileObjectsFromStrings(finder.getFiles());
+            } else {
+                compilationUnits = fileManager.getJavaFileObjectsFromStrings(srcs);
+            }
+
+            // Find any .jar files and add them to the classpath or module-path
+            FileFinder finder = new FileFinder(".jar");
+            Files.walkFileTree(new File(request.getTempDir()).toPath(), finder);
+
+            if (opts.contains("--modular")) {
+                if (!areModulesSupported()) {
+                  return builder.addMessages("The system java compiler does not support modules")
+                      .setSuccess(false)
+                      .build();
+                }
+                // Special flag that indicates that we're trying to use the new java 9 modular JVM
+                opts.remove("--modular");
+                opts.add("--module-path");
+            } else {
+                opts.add("-classpath");
+            }
+            opts.add(finder.joinFiles(':'));
+            return builder
+                .setSuccess(compiler.getTask(writer, fileManager, reporter, opts, null, compilationUnits).call())
+                .addMessages(writer.toString())
+                .build();
         }
-        Iterable<? extends JavaFileObject> compilationUnits;
-        ArrayList<String> opts = new ArrayList<String>();
-        opts.addAll(Arrays.asList(
-            "-d", tmpDir,
-            "-s", tmpDir,
-            "-sourcepath", request.getTempDir()));
-        opts.addAll(request.getOptsList());
-        if (opts.contains("--src_dir")) {
-            // Special flag that indicates that the sources are actually a directory and we should compile everything in it.
-            opts.remove("--src_dir");
-            FileFinder finder = new FileFinder(".java");
-            Files.walkFileTree(new File(request.getTempDir() + "/" + request.getSrcs(0)).toPath(), finder);
-            compilationUnits = fileManager.getJavaFileObjectsFromStrings(finder.getFiles());
-        } else {
-            compilationUnits = fileManager.getJavaFileObjectsFromStrings(srcs);
-        }
-        // Find any .jar files and add them to the classpath
-        FileFinder finder = new FileFinder(".jar");
-        Files.walkFileTree(new File(request.getTempDir()).toPath(), finder);
-        opts.add("-classpath");
-        opts.add(finder.joinFiles(':'));
-        return builder
-            .setRule(request.getRule())
-            .setSuccess(compiler.getTask(writer, fileManager, reporter, opts, null, compilationUnits).call())
-            .addMessages(writer.toString())
-            .build();
+    }
+
+    private boolean areModulesSupported() {
+        // The java version scheme changed in java 9 from '1.<major>.<minor>' to '<major>.<minor>'
+        return !System.getProperty("java.version").startsWith("1.");
     }
 
     public static void main(String[] args) {

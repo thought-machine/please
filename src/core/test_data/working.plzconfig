@@ -3,5 +3,7 @@ pextool = pexmabob
 
 [java]
 javactool = javac
+jlinktool = jlink
+javahome = /path/to/java/home
 sourcelevel = 8
 targetlevel = 7

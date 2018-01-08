@@ -4,7 +4,7 @@ _maven_packages = {}
 
 
 def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=None, deps=None,
-                 exported_deps=None, visibility=None, test_only=False, javac_flags=None):
+                 modular=False, exported_deps=None, visibility=None, test_only=False, javac_flags=None):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -16,6 +16,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
                             //project/main/resources and resources_root is project/main then
                             the resources in the .jar will be in the subdirectory 'resources'.
       deps (list): Dependencies of this rule.
+      modular (bool): Whether the produced file should be modular. Only supported with java 9+.
       exported_deps (list): Exported dependencies, ie. dependencies that other things depending on this
                             rule will also receive when they're compiling. This is quite important for
                             Java; any dependency that forms part of the public API for your classes
@@ -50,7 +51,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         )
 
         if not CONFIG.JAVAC_TOOL:
-            javac_cmd = '$(worker %s) %s %s' % (CONFIG.JAVAC_WORKER, javac_flags, '--src_dir' if src_dir else '')
+            javac_cmd = '$(worker %s) %s %s %s' % (CONFIG.JAVAC_WORKER, javac_flags, '--modular' if modular else '', '--src_dir' if src_dir else '')
         else:
             javac_cmd = 'mkdir -p _tmp/META-INF && $TOOLS_JAVAC %s -classpath .:%s -d _tmp %s' % (
                 javac_flags,
@@ -111,6 +112,92 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
             requires=['java'],
             test_only=test_only,
         )
+
+
+def java_module(name, srcs=None, src_dir=None, resources=None, resources_root=None, deps=None,
+                visibility=None, test_only=False, javac_flags=None):
+    """Compiles Java source to a modular .jar which can be collected by other rules.
+
+    Args:
+      name (str): Name of the rule
+      srcs (list): Java source files to compile for this library
+      src_dir (str): Directory containing Java source files to compile.
+      resources (list): Resources to include in the .jar file
+      resources_root (str): Root directory to treat resources relative to; ie. if we are in
+                            //project/main/resources and resources_root is project/main then
+                            the resources in the .jar will be in the subdirectory 'resources'.
+      deps (list): Dependencies of this rule.
+      exported_deps (list): Exported dependencies, ie. dependencies that other things depending on this
+                            rule will also receive when they're compiling. This is quite important for
+                            Java; any dependency that forms part of the public API for your classes
+                            should be an exported dependency.
+      visibility (list): Visibility declaration of this rule.
+      test_only (bool): If True, this rule can only be depended on by tests.
+      javac_flags (list): List of flags passed to javac.
+    """
+    return java_library(name=name,
+                        srcs=srcs,
+                        src_dir=src_dir,
+                        resources=resources,
+                        resources_root=resources_root,
+                        deps=deps,
+                        visibility=visibility,
+                        test_only=test_only,
+                        javac_flags=javac_flags,
+                        modular=True)
+
+
+def java_runtime_image(name, main_module, main_class, modules, out=None, srcs=None,
+                       deps=None, data=None, visibility=None, jvm_args=None):
+    """Assembles a set of modules into an executable java runtime image.
+
+    Args:
+      name (str): Name of the rule.
+      main_module (str): Main module to set in the manifest.
+      main_class (str): Main class to set in the manifest.
+      modules (list): Modules to be included in the runtime image.
+      out (str): Name of output .jar file. Defaults to name + .jar.
+      srcs (list): Source files to compile.
+      deps (list): Dependencies of this rule.
+      data (list): Runtime data files for this rule.
+      visibility (list): Visibility declaration of this rule.
+      jvm_args (str): Arguments to pass to the JVM in the run script.
+    """
+    if not CONFIG.JAVA_HOME:
+        raise Exception('Java home needs to be set to link java runtime images against jmods.')
+    if not CONFIG.JLINK_TOOL:
+        raise Exception('A jlink tool is required to build java runtime images.')
+    deps = deps or []
+    if srcs:
+        lib_rule = java_library(
+            name = '_%s#lib' % name,
+            srcs = srcs,
+            deps = deps,
+        )
+        deps.append(lib_rule)
+
+    out = out or name
+    modules = modules or []
+    cmd = ("%s --module-path %s:%s/jmods "
+           "--add-modules %s --launcher %s=%s/%s --output %s" % (
+               CONFIG.JLINK_TOOL,
+               r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
+               CONFIG.JAVA_HOME,
+               ':'.join(modules), name, main_module, main_class, out))
+
+    build_rule(
+        name=name,
+        deps=deps,
+        data=data,
+        outs=[out],
+        cmd=cmd,
+        needs_transitive_deps=True,
+        output_is_complete=True,
+        binary=True,
+        building_description="Creating runtime image...",
+        requires=['java'],
+        visibility=visibility,
+    )
 
 
 def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None, visibility=None,
