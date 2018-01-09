@@ -13,15 +13,16 @@ _LINK_PKGS_CMD = ' '.join([
 ])
 
 
-def go_library(name, srcs, asm_srcs=None, out=None, deps=None, visibility=None, test_only=False,
-               go_tools=None, complete=True, _needs_transitive_deps=False,_all_srcs=False,
-               cover=True):
+def go_library(name, srcs, asm_srcs=None, hdrs=None, out=None, deps=None, visibility=None,
+               test_only=False, go_tools=None, complete=True, _needs_transitive_deps=False,
+               _all_srcs=False, cover=True):
     """Generates a Go library which can be reused by other rules.
 
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to compile.
       asm_srcs (list): Source files to assemble with `go tool assemble`.
+      hdrs (list): Header files needed for assembly. Has no effect if asm_srcs is not given.
       out (str): Name of the output library to compile (defaults to name suffixed with .a)
       deps (list): Dependencies
       visibility (list): Visibility specification
@@ -50,10 +51,13 @@ def go_library(name, srcs, asm_srcs=None, out=None, deps=None, visibility=None, 
         asm_rule = build_rule(
             name = name,
             tag = 'asm',
-            srcs = asm_srcs,
+            srcs = {
+                'asm': asm_srcs,
+                'hdrs': hdrs,
+            },
             outs = [name + '.o'],
             building_description = 'Assembling...',
-            cmd = 'eval `$TOOL env` && $TOOL tool asm -trimpath $TMP_DIR -I ${GOROOT}/pkg/include -D GOOS_${OS} -D GOARCH_${ARCH} -o $OUT $SRCS',
+            cmd = 'eval `$TOOL env` && $TOOL tool asm -trimpath $TMP_DIR -I ${GOROOT}/pkg/include -D GOOS_${OS} -D GOARCH_${ARCH} -o $OUT $SRCS_ASM',
             tools=[CONFIG.GO_TOOL],
             test_only = test_only,
         )
