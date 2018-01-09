@@ -69,7 +69,7 @@ def go_library(name, srcs, asm_srcs=None, hdrs=None, out=None, deps=None, visibi
             },
             outs=[out or name + '.a'],
             tools=[CONFIG.GO_TOOL],
-            cmd = 'cp $SRCS_LIB $OUT && $TOOL tool pack r $OUT $SRCS_ASM',
+            cmd = 'cp $SRCS_LIB $OUT && chmod +w $OUT && $TOOL tool pack r $OUT $SRCS_ASM',
             visibility = visibility,
             building_description = 'Packing...',
             requires = ['go'],

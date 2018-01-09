@@ -1,3 +1,10 @@
+Version 11.1.2
+--------------
+
+    * Fix for go_library when asm_srcs are passed, in some cases build would fail
+      with permissions errors.
+
+
 Version 11.1.0
 --------------
 
