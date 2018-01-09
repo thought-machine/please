@@ -1,5 +1,6 @@
 """Zipfile entry point which supports auto-extracting itself based on zip-safety."""
 
+import imp
 import importlib
 import os
 import runpy
@@ -52,6 +53,52 @@ class ModuleDirImport(object):
     def splitext(self, path, suffixes):
         """Similar to os.path.splitext, but splits our longest known suffix preferentially."""
         for suffix in suffixes:
+            if path.endswith(suffix):
+                return path[:-len(suffix)], suffix
+        return None, None
+
+
+class SoImport(object):
+    """So import. Much binary. Such dynamic. Wow."""
+
+    def __init__(self):
+        import zipfile
+
+        self.suffixes = {x[0]: x for x in imp.get_suffixes() if x[2] == imp.C_EXTENSION}
+        self.suffixes_by_length = sorted(self.suffixes, key=lambda x: -len(x))
+        # Identify all the possible modules we could handle.
+        self.modules = {}
+        if zipfile.is_zipfile(sys.argv[0]):
+            zf = zipfile.ZipFile(sys.argv[0])
+            for name in zf.namelist():
+                path, _ = self.splitext(name)
+                if path:
+                    self.modules[path.replace('/', '.')] = name
+            if self.modules:
+                self.zf = zf
+
+    def find_module(self, fullname, path=None):
+        """Attempt to locate module. Returns self if found, None if not."""
+        if fullname in self.modules:
+            return self
+
+    def load_module(self, fullname):
+        """Actually load a module that we said we'd handle in find_module."""
+        import tempfile
+
+        filename = self.modules[fullname]
+        prefix, ext = self.splitext(filename)
+        suffix = self.suffixes[ext]
+        with tempfile.NamedTemporaryFile(suffix=ext, prefix=os.path.basename(prefix)) as f:
+            f.write(self.zf.read(filename))
+            mod = imp.load_module(fullname, None, f.name, suffix)
+        # Make it look like module came from the original location for nicer tracebacks.
+        mod.__file__ = filename
+        return mod
+
+    def splitext(self, path):
+        """Similar to os.path.splitext, but splits our longest known suffix preferentially."""
+        for suffix in self.suffixes_by_length:
             if path.endswith(suffix):
                 return path[:-len(suffix)], suffix
         return None, None
