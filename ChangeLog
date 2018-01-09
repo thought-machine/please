@@ -1,3 +1,11 @@
+Version 11.1.0
+--------------
+
+    * python_binary and python_test rules can now import binary modules directly
+      via an import hook that dynamically extracts them as needed. Hence zip_safe is
+      not needed in many cases it was previously.
+
+
 Version 11.0.2
 --------------
 
