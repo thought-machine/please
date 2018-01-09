@@ -93,6 +93,7 @@ class SoImport(object):
         suffix = self.suffixes[ext]
         with tempfile.NamedTemporaryFile(suffix=ext, prefix=os.path.basename(prefix)) as f:
             f.write(self.zf.read(filename))
+            f.flush()
             mod = imp.load_module(fullname, None, f.name, suffix)
         # Make it look like module came from the original location for nicer tracebacks.
         mod.__file__ = filename
