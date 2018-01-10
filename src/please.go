@@ -807,7 +807,8 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	if len(items) > 0 {
 		printCompletions(items)
 	} else {
-		cli.InitLogging(0) // Ensure this is quiet
+		cli.InitLogging(0)                // Ensure this is quiet
+		opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
 		config := readConfigAndSetRoot(false)
 		if len(config.Aliases) > 0 {
 			for k, v := range config.Aliases {
