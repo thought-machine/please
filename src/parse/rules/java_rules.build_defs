@@ -176,7 +176,7 @@ def java_runtime_image(name, main_module, main_class, modules, out=None,
            "--output {out_dir} {jlink_args}").format(
                deps=r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
                java_home=CONFIG.JAVA_HOME,
-               modules=':'.join(modules),
+               modules=','.join(modules),
                name=name,
                main_module=main_module,
                main_class=main_class,
