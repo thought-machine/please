@@ -350,6 +350,19 @@ func (state *BuildState) SetTaskNumbers(active, done int64) {
 // from the set of original targets.
 func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 	ret := BuildLabels{}
+	for _, label := range state.OriginalTargets {
+		if label.IsAllTargets() || label.IsAllSubpackages() {
+			ret = append(ret, state.expandOriginalPseudoTarget(label)...)
+		} else {
+			ret = append(ret, label)
+		}
+	}
+	return ret
+}
+
+// expandOriginalPseudoTarget expands one original pseudo-target (i.e. :all or /...) and sorts it
+func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabels {
+	ret := BuildLabels{}
 	addPackage := func(pkg *Package) {
 		for _, target := range pkg.AllTargets() {
 			if target.ShouldInclude(state.Include, state.Exclude) && (!state.NeedTests || target.IsTest) {
@@ -357,17 +370,13 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 			}
 		}
 	}
-	for _, label := range state.OriginalTargets {
-		if label.IsAllTargets() {
-			addPackage(state.Graph.PackageOrDie(label.PackageName))
-		} else if label.IsAllSubpackages() {
-			for name, pkg := range state.Graph.PackageMap() {
-				if label.Includes(BuildLabel{PackageName: name}) {
-					addPackage(pkg)
-				}
+	if label.IsAllTargets() {
+		addPackage(state.Graph.PackageOrDie(label.PackageName))
+	} else {
+		for name, pkg := range state.Graph.PackageMap() {
+			if label.Includes(BuildLabel{PackageName: name}) {
+				addPackage(pkg)
 			}
-		} else {
-			ret = append(ret, label)
 		}
 	}
 	sort.Sort(ret)

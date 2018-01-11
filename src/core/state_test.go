@@ -71,6 +71,22 @@ func TestExpandOriginalSubTargets(t *testing.T) {
 	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{"src/core", "target1"}, {"src/core/tests", "target3"}})
 }
 
+func TestExpandOriginalTargetsOrdering(t *testing.T) {
+	state := NewBuildState(1, nil, 4, DefaultConfiguration())
+	state.OriginalTargets = []BuildLabel{{"src/parse", "parse"}, {"src/core", "..."}, {"src/build", "build"}}
+	addTarget(state, "//src/core:target1", "go")
+	addTarget(state, "//src/core:target2", "py")
+	addTarget(state, "//src/core/tests:target3", "go")
+	expected := BuildLabels{
+		{"src/parse", "parse"},
+		{"src/core", "target1"},
+		{"src/core", "target2"},
+		{"src/core/tests", "target3"},
+		{"src/build", "build"},
+	}
+	assert.Equal(t, expected, state.ExpandOriginalTargets())
+}
+
 func TestComparePendingTasks(t *testing.T) {
 	p := func(taskType TaskType) pendingTask { return pendingTask{Type: taskType} }
 	// NB. "Higher priority" means the task comes first, does not refer to numeric values.
