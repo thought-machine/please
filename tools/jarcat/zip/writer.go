@@ -126,7 +126,10 @@ func (f *File) AddZipFile(filepath string) error {
 		// we can't replace them or leave them out.
 		if strings.HasPrefix(rf.Name, "META-INF/services/") ||
 			strings.HasPrefix(rf.Name, "META-INF/spring") ||
-			rf.Name == "META-INF/please_sourcemap" {
+			rf.Name == "META-INF/please_sourcemap" ||
+			// akka libs each have their own reference.conf. if you are using
+			// akka as a lib-only (e.g akka-remote), those need to be merged together
+			rf.Name == "reference.conf" {
 			if err := f.concatenateFile(rf); err != nil {
 				return err
 			}
