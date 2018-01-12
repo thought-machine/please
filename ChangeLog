@@ -1,3 +1,6 @@
+    * Add support for merging Akka's reference.conf files when building
+      java_library and java_binary targets with akka dependencies
+
 Version 11.1.3
 --------------
 
