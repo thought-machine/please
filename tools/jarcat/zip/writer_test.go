@@ -24,10 +24,64 @@ func TestAddZipFile(t *testing.T) {
 	assertExpected(t, "add_zip_file_test.zip", 0)
 }
 
+// getZipContents is a helper which returns a map of filename -> contents
+func getZipContents(zipfilePath string) (map[string][]byte, error) {
+	reader, err := zip.OpenReader(zipfilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	res := make(map[string][]byte, len(reader.File))
+	for _, file := range reader.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
+		fReader, err := file.Open()
+		if err != nil {
+			return nil, err
+		}
+		defer fReader.Close()
+		contents := make([]byte, file.FileInfo().Size())
+		if _, err := io.ReadFull(fReader, contents); err != nil {
+			return nil, err
+		}
+		res[file.FileInfo().Name()] = contents
+	}
+	return res, nil
+}
+
+func TestAddZipFileConcatenatesSpecialFiles(t *testing.T) {
+	t.Run("Scala Akka reference.conf", func(t *testing.T) {
+		r := require.New(t)
+		f := NewFile("zip_files_with_reference_conf.zip", false)
+
+		err := f.AddZipFile("tools/jarcat/zip/test_data_3/z1.zip")
+		r.NoError(err)
+		err = f.AddZipFile("tools/jarcat/zip/test_data_3/z2.zip")
+		r.NoError(err)
+		f.Close()
+
+		actualContents, err := getZipContents("zip_files_with_reference_conf.zip")
+		r.NoError(err)
+		z1Contents, err := getZipContents("tools/jarcat/zip/test_data_3/z1.zip")
+		r.NoError(err)
+		z2Contents, err := getZipContents("tools/jarcat/zip/test_data_3/z2.zip")
+		r.NoError(err)
+		expectedRefConf := append(z1Contents["reference.conf"], z2Contents["reference.conf"]...)
+		r.EqualValues(actualContents["reference.conf"], expectedRefConf)
+		// OTOH, z2's file1 should just be ignored because it's not a special
+		// case and z1 already added it
+		expectedNormalFile := z1Contents["file1"]
+		r.EqualValues(actualContents["file1"], expectedNormalFile)
+	})
+}
+
 func TestAddFiles(t *testing.T) {
 	f := NewFile("add_files_test.zip", false)
 	f.Suffix = []string{"zip"}
-	err := f.AddFiles("tools")
+	err := f.AddFiles("tools/jarcat/zip/test_data")
+	require.NoError(t, err)
+	err = f.AddFiles("tools/jarcat/zip/test_data_2")
 	require.NoError(t, err)
 	f.Close()
 	assertExpected(t, "add_files_test.zip", 0)
@@ -82,7 +136,9 @@ func TestStoreSuffix(t *testing.T) {
 	f.StoreSuffix = []string{"png"}
 	f.Align = 4
 	f.IncludeOther = true
-	err := f.AddFiles("tools")
+	err := f.AddFiles("tools/jarcat/zip/test_data")
+	require.NoError(t, err)
+	err = f.AddFiles("tools/jarcat/zip/test_data_2")
 	require.NoError(t, err)
 	f.Close()
 
