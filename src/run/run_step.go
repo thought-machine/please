@@ -1,5 +1,4 @@
-// Code for running targets directly through Please.
-
+// Package run implements the "plz run" command.
 package run
 
 import (
@@ -21,13 +20,13 @@ import (
 var log = logging.MustGetLogger("run")
 
 // Run implements the running part of 'plz run'.
-func Run(graph *core.BuildGraph, label core.BuildLabel, args []string) {
-	run(graph, label, args, false, false)
+func Run(state *core.BuildState, label core.BuildLabel, args []string, env bool) {
+	run(state, label, args, false, false, env)
 }
 
 // Parallel runs a series of targets in parallel.
 // Returns true if all were successful.
-func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string, numTasks int, quiet bool) int {
+func Parallel(state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, env bool) int {
 	pool := NewGoroutinePool(numTasks)
 	var g errgroup.Group
 	for _, label := range labels {
@@ -36,7 +35,7 @@ func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string, n
 			var wg sync.WaitGroup
 			wg.Add(1)
 			pool.Submit(func() {
-				if e := run(graph, label, args, true, quiet); e != nil {
+				if e := run(state, label, args, true, quiet, env); e != nil {
 					err = e
 				}
 				wg.Done()
@@ -54,10 +53,10 @@ func Parallel(graph *core.BuildGraph, labels []core.BuildLabel, args []string, n
 
 // Sequential runs a series of targets sequentially.
 // Returns true if all were successful.
-func Sequential(graph *core.BuildGraph, labels []core.BuildLabel, args []string, quiet bool) int {
+func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, env bool) int {
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		if err := run(graph, label, args, true, quiet); err != nil {
+		if err := run(state, label, args, true, quiet, env); err != nil {
 			log.Error("%s", err)
 			return err.code
 		}
@@ -69,8 +68,8 @@ func Sequential(graph *core.BuildGraph, labels []core.BuildLabel, args []string,
 // If fork is true then we fork to run the target and return any error from the subprocesses.
 // If it's false this function never returns (because we either win or die; it's like
 // Game of Thrones except rather less glamorous).
-func run(graph *core.BuildGraph, label core.BuildLabel, args []string, fork, quiet bool) *exitError {
-	target := graph.TargetOrDie(label)
+func run(state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, setenv bool) *exitError {
+	target := state.Graph.TargetOrDie(label)
 	if !target.IsBinary {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
 	}
@@ -90,13 +89,15 @@ func run(graph *core.BuildGraph, label core.BuildLabel, args []string, fork, qui
 	args = append(splitCmd, args...)
 	log.Info("Running target %s...", strings.Join(args, " "))
 	output.SetWindowTitle("plz run: " + strings.Join(args, " "))
+	env := environ(state.Config, setenv)
 	if !fork {
 		// Plain 'plz run'. One way or another we never return from the following line.
-		must(syscall.Exec(splitCmd[0], args, os.Environ()), args)
+		must(syscall.Exec(splitCmd[0], args, env), args)
 	}
 	// Run as a normal subcommand.
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.
 	cmd := core.ExecCommand(splitCmd[0], args[1:]...) // args here don't include argv[0]
+	cmd.Env = env
 	if !quiet {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -106,6 +107,29 @@ func run(graph *core.BuildGraph, label core.BuildLabel, args []string, fork, qui
 	}
 	out, err := cmd.CombinedOutput()
 	return toExitError(err, cmd, out)
+}
+
+// environ returns an appropriate environment for a command.
+func environ(config *core.Configuration, setenv bool) []string {
+	env := os.Environ()
+	if setenv {
+		for _, e := range core.GeneralBuildEnvironment(config) {
+			env = addEnv(env, e)
+		}
+	}
+	return env
+}
+
+// addEnv adds an env var to an existing set, with replacement.
+func addEnv(env []string, e string) []string {
+	name := e[:strings.IndexRune(e, '=')+1]
+	for i, existing := range env {
+		if strings.HasPrefix(existing, name) {
+			env[i] = e
+			return env
+		}
+	}
+	return append(env, e)
 }
 
 // must dies if the given error is non-nil.
