@@ -1,9 +1,14 @@
+Version 11.2.1
+--------------
+
+    * Small fix for some Java coverage instrumentation issues.
+
+
 Version 11.2.0
 --------------
 
     * Add support for merging Akka's reference.conf files when building
       java_library and java_binary targets with akka dependencies
-
     * Add --env flag on plz run that applies config values to the environment
       (notably PATH)
 
