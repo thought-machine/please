@@ -137,6 +137,7 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
+		Env      bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
 		Parallel struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
@@ -357,19 +358,19 @@ var buildFunctions = map[string]func() bool{
 	},
 	"run": func() bool {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false); success {
-			run.Run(state.Graph, opts.Run.Args.Target, opts.Run.Args.Args)
+			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args, opts.Run.Env)
 		}
 		return false // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Parallel(state.Graph, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet))
+			os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
 		}
 		return false
 	},
 	"sequential": func() bool {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Sequential(state.Graph, state.ExpandOriginalTargets(), opts.Run.Sequential.Args, opts.Run.Sequential.Quiet))
+			os.Exit(run.Sequential(state, state.ExpandOriginalTargets(), opts.Run.Sequential.Args, opts.Run.Sequential.Quiet, opts.Run.Env))
 		}
 		return false
 	},
@@ -807,7 +808,8 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	if len(items) > 0 {
 		printCompletions(items)
 	} else {
-		cli.InitLogging(0) // Ensure this is quiet
+		cli.InitLogging(0)                // Ensure this is quiet
+		opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
 		config := readConfigAndSetRoot(false)
 		if len(config.Aliases) > 0 {
 			for k, v := range config.Aliases {

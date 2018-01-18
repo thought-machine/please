@@ -10,7 +10,6 @@ TEST_NAMES = '__TEST_NAMES__'.split(',')
 
 def initialise_coverage():
     """Imports & initialises the coverage module."""
-    sys.meta_path.append(TracerImport())
     import coverage
     from coverage import control as coverage_control
     _original_xml_file = coverage_control.XmlReporter.xml_file
@@ -25,37 +24,6 @@ def initialise_coverage():
             _original_xml_file(self, fr, analysis)
     coverage_control.XmlReporter.xml_file = _xml_file
     return coverage
-
-
-class TracerImport(object):
-    """Import hook to load coverage.tracer.
-
-    This module is binary and improves the speed of coverage quite a bit, but of course isn't
-    easy for us to get out of a .pex file. We also have to package multiple forms of it.
-    """
-
-    def find_module(self, fullname, path=None):
-        if fullname == 'coverage.tracer':
-            return self  # we only handle this one module
-
-    def load_module(self, fullname):
-        mod = sys.modules.get(fullname)
-        if mod:
-            return mod
-        import imp
-        import zipfile
-        try:
-            zf = zipfile.ZipFile(sys.argv[0])
-        except Exception:
-            raise ImportError('Failed to open pex, coverage.tracer will not be available\n')
-        for suffix, mode, type in imp.get_suffixes():
-            try:
-                filename = zf.extract(os.path.join('.bootstrap/coverage', 'tracer' + suffix), '.')
-                with open(filename, mode) as f:
-                    return imp.load_module(fullname, f, filename, (suffix, mode, type))
-            except Exception:
-                pass  # We don't expect to extract any individual suffix.
-        raise ImportError('Failed to extract coverage.tracer module, coverage will be slower\n')
 
 
 def main():

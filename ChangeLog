@@ -1,3 +1,46 @@
+Version 11.2.1
+--------------
+
+    * Small fix for some Java coverage instrumentation issues.
+
+
+Version 11.2.0
+--------------
+
+    * Add support for merging Akka's reference.conf files when building
+      java_library and java_binary targets with akka dependencies
+    * Add --env flag on plz run that applies config values to the environment
+      (notably PATH)
+
+Version 11.1.3
+--------------
+
+    * As much sorting as possible of original targets is now retained when they are passed
+      into subcommands (most notably `plz run sequential`, but could be others too).
+    * Fixed some duplicate flags on proto_library.
+
+
+Version 11.1.2
+--------------
+
+    * Fix for go_library when asm_srcs are passed, in some cases build would fail
+      with permissions errors.
+
+
+Version 11.1.0
+--------------
+
+    * python_binary and python_test rules can now import binary modules directly
+      via an import hook that dynamically extracts them as needed. Hence zip_safe is
+      not needed in many cases it was previously.
+
+
+Version 11.0.2
+--------------
+
+    * Several small fixes to please_maven correcting a few cases.
+
+
 Version 11.0.1
 --------------
 

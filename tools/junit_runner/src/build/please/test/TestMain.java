@@ -68,6 +68,14 @@ public class TestMain {
       }
     }
     if (System.getenv("COVERAGE") != null) {
+      String prefix = System.getProperty("build.please.instrumentationPrefix", "");
+      if (!prefix.isEmpty()) {
+        // User indicates that they want additional classes instrumented, which can be
+        // needed in some cases so classloaders match.
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        ClassFinder finder = new ClassFinder(loader, prefix);
+        allClasses.addAll(finder.getClasses());
+      }
       TestCoverage.RunTestClasses(classes, allClasses);
     } else {
       for (Class testClass : classes) {

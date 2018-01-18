@@ -18,6 +18,7 @@ go_test(
     data = [
         'test_data',
         'test_data_2',
+        'test_data_3',
     ],
     deps = [
         ':zip',

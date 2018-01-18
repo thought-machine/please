@@ -128,6 +128,8 @@ class ClassFinder {
         if (className.startsWith(prefix)) {
             try {
                 classes.add(loader.loadClass(className));
+            } catch (NoClassDefFoundError ex) {
+                // This happens sometimes with some classes. For now we just skip it.
             } catch (ClassNotFoundException ex) {
                 // Theoretically this shouldn't happen, because we've already found it
                 // on the classpath.
