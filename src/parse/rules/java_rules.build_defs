@@ -148,7 +148,7 @@ def java_module(name, srcs=None, src_dir=None, resources=None, resources_root=No
 
 
 def java_runtime_image(name, main_module, main_class, modules, out=None,
-                       deps=None, data=None, visibility=None, jlink_args=None):
+                       deps=None, data=None, visibility=None, jlink_args='--strip-debug --compress=2'):
     """Assembles a set of modules into an executable java runtime image.
 
     Args:
@@ -170,8 +170,7 @@ def java_runtime_image(name, main_module, main_class, modules, out=None,
         raise Exception('You cannot assemble a java runtime image without specifying any modules.')
     deps = deps or []
     out = out or name
-    jlink_args = jlink_args or '--strip-debug --compress=2'
-    cmd = ("$TOOLS_JLINK --module-path {deps}:{java_home}/jmods "
+    cmd = ("$TOOL --module-path {deps}:{java_home}/jmods "
            "--add-modules {modules} --launcher {name}={main_module}/{main_class} "
            "--output {out_dir} {jlink_args}").format(
                deps=r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
@@ -195,7 +194,7 @@ def java_runtime_image(name, main_module, main_class, modules, out=None,
         building_description="Creating runtime image...",
         requires=['java'],
         visibility=visibility,
-        tools={'jlink': [CONFIG.JLINK_TOOL]}
+        tools=[CONFIG.JLINK_TOOL],
     )
 
 

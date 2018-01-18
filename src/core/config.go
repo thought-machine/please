@@ -127,8 +127,7 @@ func defaultPathIfExists(conf *string, dir, file string) {
 	if *conf == "" {
 		location := path.Join(dir, file)
 		// check that the location is valid
-		_, err := os.Stat(location)
-		if err == nil {
+		if _, err := os.Stat(location); err == nil {
 			*conf = location
 		}
 	}

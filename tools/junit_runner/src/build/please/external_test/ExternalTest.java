@@ -1,9 +1,9 @@
 package build.please.external_test;
 
+import static org.junit.Assert.assertEquals;
+
 import build.please.test.TestCoverage;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class ExternalTest {
   // An "external" test, i.e. a test that is not in the same package as the thing it accesses.
