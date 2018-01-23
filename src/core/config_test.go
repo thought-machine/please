@@ -14,6 +14,8 @@ func TestPlzConfigWorking(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "pexmabob", config.Python.PexTool)
 	assert.Equal(t, "javac", config.Java.JavacTool)
+	assert.Equal(t, "jlink", config.Java.JlinkTool)
+	assert.Equal(t, "/path/to/java/home", config.Java.JavaHome)
 	assert.Equal(t, "8", config.Java.SourceLevel)
 	assert.Equal(t, "7", config.Java.TargetLevel)
 }

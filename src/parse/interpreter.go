@@ -134,6 +134,8 @@ func initializeInterpreter(state *core.BuildState) {
 	setConfigValue("USE_PYPI", pythonBool(config.Python.UsePyPI))
 	setConfigValue("JAVAC_TOOL", config.Java.JavacTool)
 	setConfigValue("JAVAC_WORKER", config.Java.JavacWorker)
+	setConfigValue("JLINK_TOOL", config.Java.JlinkTool)
+	setConfigValue("JAVA_HOME", config.Java.JavaHome)
 	setConfigValue("JARCAT_TOOL", config.Java.JarCatTool)
 	setConfigValue("JUNIT_RUNNER", config.Java.JUnitRunner)
 	setConfigValue("DEFAULT_TEST_PACKAGE", config.Java.DefaultTestPackage)

@@ -1,11 +1,13 @@
 package build.please.test;
 
-import java.lang.Class;
-import java.lang.reflect.Method;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.ArrayList;
-import java.util.List;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.Description;
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Request;
+import org.junit.runner.manipulation.Filter;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -14,6 +16,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -22,16 +33,6 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.Description;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Request;
-import org.junit.runner.manipulation.Filter;
 
 
 public class TestMain {
@@ -90,12 +91,27 @@ public class TestMain {
   }
 
   /**
+   * Constructs a URLClassLoader from the current classpath. We can't just get the classloader of the current thread
+   * as its implementation is not guaranteed to be one that allows us to enumerate all the tests available to us.
+   */
+  private static URLClassLoader getClassLoader() throws MalformedURLException {
+    String classpath = ManagementFactory.getRuntimeMXBean().getClassPath();
+    String[] classpathEntries = classpath.split(":");
+    // Convert from String[] to URL[]
+    URL[] classpathUrls = new URL[classpathEntries.length];
+    for (int i = 0; i < classpathEntries.length; i++) {
+      classpathUrls[i] = new File(classpathEntries[i]).toURI().toURL();
+    }
+    return new URLClassLoader(classpathUrls);
+  }
+
+  /**
    * Loads all the available test classes.
    * This is a little complex because we want to try to avoid scanning every single class on our classpath.
    * @param testPackage the test package to load from. If empty we'll look for them by filename.
    */
   private static Set<Class> findClasses(String testPackage) throws Exception {
-    ClassLoader loader = Thread.currentThread().getContextClassLoader();
+    ClassLoader loader = getClassLoader();
     if (testPackage != null && !testPackage.isEmpty()) {
       return new ClassFinder(loader, testPackage).getClasses();
     }
