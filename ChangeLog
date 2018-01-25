@@ -1,3 +1,11 @@
+Version 11.3.0
+--------------
+
+    * Support for Java 9 and JEP-220 features: `java_module` and `java_runtime_image`
+      can be used to build a standalone Java image using modules.
+      New config properties `jlinktool` and `javahome` have been added.
+
+
 Version 11.2.1
 --------------
 
