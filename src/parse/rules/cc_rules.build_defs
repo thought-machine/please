@@ -99,13 +99,15 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     )
 
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs)
+    # TODO(pebers): handle includes and defines in _library_cmds as well.
+    pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs) if (deps or includes or defines) else None
     if len(srcs) > 1:
         # Compile all the sources separately, this is much faster for large numbers of files
         # than giving them all to gcc in one invocation.
         a_rules = []
         for src in srcs:
             a_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_').replace('|', '_'))
-            build_rule(
+            a_rule = build_rule(
                 name=a_name,
                 srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
                 outs=[a_name + '.a'],
@@ -117,11 +119,10 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
                 test_only=test_only,
                 labels=labels,
                 tools=tools,
-                # TODO(pebers): handle includes and defines in _library_cmds as well.
-                pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs) if (deps or includes or defines) else None,
+                pre_build=pre_build,
                 needs_transitive_deps=True,
             )
-            a_rules.append(':' + a_name)
+            a_rules.append(a_rule)
 
         # Combine the archives into one.
         a_rule = build_rule(
@@ -168,7 +169,7 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
             test_only=test_only,
             labels=labels,
             tools=tools,
-            pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs) if (deps or includes or defines) else None,
+            pre_build=pre_build,
             needs_transitive_deps=True,
         )
         if alwayslink:
