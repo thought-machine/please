@@ -10,6 +10,7 @@ except ImportError:
     is_py3 = True
 import imp
 from parser_interface import ffi
+from _ast import ClassDef, SetComp, TryExcept, TryFinally, With, Yield
 
 
 _please_builtins = imp.new_module('_please_builtins')
@@ -58,7 +59,7 @@ def parse_file(c_filename, c_data, c_package_name, c_package):
         filename = ffi_to_string(c_filename)
         package_name = ffi_to_string(c_package_name)
         builtins = _get_globals(c_package, c_package_name)
-        code = _compile_build_code(ffi_to_string(c_data), filename)
+        code = _compile_build_code(ffi_to_string(c_data), filename, builtins)
         exec(code, builtins)
         return ffi.NULL
     except DeferParse as err:
@@ -107,21 +108,24 @@ def _parse_build_code(filename, globals_dict):
     code = _build_code_cache.get(filename)
     if not code:
         with _open(filename) as f:
-            code = _compile_build_code(f.read(), filename)
+            code = _compile_build_code(f.read(), filename, globals_dict)
         _build_code_cache[filename] = code
     exec(code, globals_dict)
 
 
-def _compile_build_code(code, filename):
+def _compile_build_code(code, filename, builtins):
     """Compiles and validates some build code."""
     tree = _compile(code, filename, 'exec', PyCF_ONLY_AST)
-    for node in iter_child_nodes(tree):
+    for node in walk(tree):
         if isinstance(node, Import) or isinstance(node, ImportFrom):
             raise SyntaxError('import not allowed')
         if not is_py3 and isinstance(node, Exec):
             raise SyntaxError('exec not allowed')
         if not is_py3 and isinstance(node, Print):
             raise SyntaxError('print not allowed, use log functions instead')
+        if isinstance(node, (ClassDef, SetComp, TryExcept, TryFinally, With, Yield)):
+            builtins['log'].warning('class, set comprehensions, try/except, with and yield are '
+                                    'not supported in the BUILD language and should be avoided.')
     return _compile(tree, filename, 'exec')
 
 
@@ -646,3 +650,11 @@ def iter_child_nodes(node):
             for item in field:
                 if isinstance(item, AST):
                     yield item
+
+
+def walk(node):
+    """Replacement for ast.walk (we don't have collections in our limited environment)"""
+    for child in iter_child_nodes(node):
+        yield child
+        for grandchild in walk(child):
+            yield grandchild

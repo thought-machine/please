@@ -1,23 +1,3 @@
-# Test that we can reasonably gracefully handle duplicate targets.
-
-genrule(
-    name = 'duplicate_target',
-    cmd = 'echo hello',
-)
-
-duplicate = False
-
-try:
-    genrule(
-        name = 'duplicate_target',
-        cmd = 'echo goodbye',
-    )
-except DuplicateTargetError:
-    duplicate = True
-
-if not duplicate:
-    raise ParseError('Should have found a duplicate target')
-
 # Simulates a code generating rule to test the require / provide mechanism.
 genrule(
     name = 'test_require_py',

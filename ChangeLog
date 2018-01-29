@@ -1,3 +1,11 @@
+Version 11.3.1
+--------------
+
+    * Improved checking for banned or deprecated BUILD language features
+    * Compiled with Go 1.9.3, hopefully this may fix rare "sweep increased allocation count"
+      bugs due to https://github.com/golang/go/issues/22781.
+
+
 Version 11.3.0
 --------------
 
