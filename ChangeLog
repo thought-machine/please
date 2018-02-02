@@ -1,3 +1,11 @@
+Version 11.3.2
+--------------
+
+    * Fix for build failures in a rare case where there's a stale output file that is
+      part of the path for another output in a subdirectory, ultimately failing with
+      "not a directory" errors.
+
+
 Version 11.3.1
 --------------
 

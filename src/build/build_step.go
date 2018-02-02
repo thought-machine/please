@@ -307,7 +307,11 @@ func prepareDirectory(directory string, remove bool) error {
 			return err
 		}
 	}
-	return os.MkdirAll(directory, core.DirPermissions) // drwxrwxr-x
+	err := os.MkdirAll(directory, core.DirPermissions)
+	if err != nil && checkForStaleOutput(directory, err) {
+		err = os.MkdirAll(directory, core.DirPermissions)
+	}
+	return err
 }
 
 // Symlinks the source files of this rule into its temp directory.
@@ -426,6 +430,9 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 // RemoveOutputs removes all generated outputs for a rule.
 func RemoveOutputs(target *core.BuildTarget) error {
 	if err := os.Remove(ruleHashFileName(target)); err != nil && !os.IsNotExist(err) {
+		if checkForStaleOutput(ruleHashFileName(target), err) {
+			return RemoveOutputs(target) // try again
+		}
 		return err
 	}
 	for _, output := range target.Outputs() {
@@ -434,6 +441,23 @@ func RemoveOutputs(target *core.BuildTarget) error {
 		}
 	}
 	return nil
+}
+
+// checkForStaleOutput removes any parents of a file that are files themselves.
+// This is a fix for a specific case where there are old file outputs in plz-out which
+// have the same name as part of a package path.
+// It returns true if something was removed.
+func checkForStaleOutput(filename string, err error) bool {
+	if perr, ok := err.(*os.PathError); ok && perr.Err.Error() == "not a directory" {
+		for dir := path.Dir(filename); dir != "." && dir != "/" && path.Base(dir) != "plz-out"; dir = path.Dir(filename) {
+			if core.FileExists(dir) {
+				log.Warning("Removing %s which appears to be a stale output file", dir)
+				os.Remove(dir)
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // calculateAndCheckRuleHash checks the output hash for a rule.
