@@ -470,10 +470,15 @@ if CONFIG.BAZEL_COMPATIBILITY:
         else:
             include_defs('//%s/%s.bzl' % (get_base_path(), name))  # lint:disable=deprecated-function
 
-    def exports_files(srcs, visibility=None, licenses=None):
-        """No-op implementation to allow parsing to continue.
+    def exports_files(srcs, name='exported_files', visibility=['PUBLIC'], licenses=None):
+        """Makes a bunch of files available as a filegroup.
 
-        The actual semantics can't be easily mimicked in Please because they'd have to refer
-        to the files by label. Right now it seems too hard to support for real, but it's
-        useful to be able to parse BUILD files without getting hung up on this function.
+        Note that the semantics are not the same as Bazel; it lifts the restrictions on those
+        files being available to other packages, whereas we're just creating a rule. It's not
+        impossible to extend Please to support that but right now we're not bothering.
         """
+        filegroup(
+            name = name,
+            srcs = srcs,
+            visibility = visibility,
+        )
