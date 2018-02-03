@@ -1,0 +1,3 @@
+# Extremely basic file to test parser.
+def test(x):
+    pass

@@ -187,3 +187,12 @@ func TryParseNamedOutputLabel(target, currentPath string) (BuildInput, error) {
 	}
 	return TryParseBuildLabel(target, currentPath)
 }
+
+// MustParseNamedOutputLabel is like TryParseNamedOutputLabel but panics on errors.
+func MustParseNamedOutputLabel(target, currentPath string) BuildInput {
+	label, err := TryParseNamedOutputLabel(target, currentPath)
+	if err != nil {
+		panic(err)
+	}
+	return label
+}

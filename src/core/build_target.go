@@ -130,6 +130,10 @@ type BuildTarget struct {
 	// Hash of the function's bytecode. Used for incrementality.
 	// TODO(pebers): unify with RuleHash maybe? seems wasteful to store these separately.
 	PreBuildHash, PostBuildHash []byte `print:"false"`
+	// Replacements for the above.
+	// TODO(peterebden): Collapse these together once we no longer need to support the old model any more.
+	NewPreBuildFunction  PreBuildFunction  `print:"false"`
+	NewPostBuildFunction PostBuildFunction `print:"false"`
 	// Languages this rule requires. These are an arbitrary set and the only meaning is that they
 	// correspond to entries in Provides; if rules match up then it allows choosing a specific
 	// dependency (consider eg. code generated from protobufs; this mechanism allows us to expose
@@ -153,6 +157,18 @@ type BuildTarget struct {
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string
+}
+
+// A PreBuildFunction is a type that allows hooking a pre-build callback.
+type PreBuildFunction interface {
+	// Call calls this pre-build function
+	Call(target *BuildTarget) error
+}
+
+// A PostBuildFunction is a type that allows hooking a post-build callback.
+type PostBuildFunction interface {
+	// Call calls this pre-build function with this target and its output.
+	Call(target *BuildTarget, output string) error
 }
 
 type depInfo struct {
@@ -970,6 +986,16 @@ func (target *BuildTarget) AddOutput(output string) {
 	target.outputs = target.insert(target.outputs, output)
 }
 
+// AddOptionalOutput adds a new optional output to the target if it's not already there.
+func (target *BuildTarget) AddOptionalOutput(output string) {
+	target.OptionalOutputs = target.insert(target.OptionalOutputs, output)
+}
+
+// AddTestOutput adds a new test output to the target if it's not already there.
+func (target *BuildTarget) AddTestOutput(output string) {
+	target.TestOutputs = target.insert(target.TestOutputs, output)
+}
+
 // AddNamedOutput adds a new output to the target under a named group.
 // No attempt to deduplicate against unnamed outputs is currently made.
 func (target *BuildTarget) AddNamedOutput(name, output string) {
@@ -1006,6 +1032,18 @@ func (target *BuildTarget) AddLicence(licence string) {
 		}
 	}
 	target.Licences = append(target.Licences, licence)
+}
+
+// AddHash adds a new acceptable hash to the target.
+func (target *BuildTarget) AddHash(hash string) {
+	target.Hashes = append(target.Hashes, hash)
+}
+
+// AddRequire adds a new requirement to the target.
+func (target *BuildTarget) AddRequire(require string) {
+	target.Requires = append(target.Requires, require)
+	// Requirements are also implicit labels
+	target.AddLabel(require)
 }
 
 // SetContainerSetting sets one of the fields on the container settings by name.

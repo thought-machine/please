@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 
 	"github.com/jessevdk/go-flags"
@@ -34,41 +33,6 @@ var BuildLabelStdin = BuildLabel{PackageName: "", Name: "_STDIN"}
 // OriginalTarget is used to indicate one of the originally requested targets on the command line.
 var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
-const validChars = `\pL\pN\pM!@`
-const packagePart = "[" + validChars + `\._\+-]+`
-const packageName = "(" + packagePart + "(?:/" + packagePart + ")*)"
-const targetName = `([` + validChars + `_\+-][` + validChars + `\._\+-]*(?:#[` + validChars + `_\+-]+)*)`
-
-// Regexes for matching the various ways of writing a build label.
-// Fully specified labels, e.g. //src/core:core
-var absoluteTarget = regexp.MustCompile(fmt.Sprintf("^//(?:%s)?:%s$", packageName, targetName))
-
-// Targets in local package, e.g. :core
-var localTarget = regexp.MustCompile(fmt.Sprintf("^:%s$", targetName))
-
-// Targets with an implicit target name, e.g. //src/core (expands to //src/core:core)
-var implicitTarget = regexp.MustCompile(fmt.Sprintf("^//(?:%s/)?(%s)$", packageName, packagePart))
-
-// All targets underneath a package, e.g. //src/core/...
-var subTargets = regexp.MustCompile(fmt.Sprintf("^//%s/(\\.\\.\\.)$", packageName))
-
-// Sub targets immediately underneath the root; //...
-var rootSubTargets = regexp.MustCompile(fmt.Sprintf("^(//)(\\.\\.\\.)$"))
-
-// The following cases only apply on the command line and can't be used in BUILD files.
-// A relative target, e.g. core:core (expands to //src/core:core if already in src)
-var relativeTarget = regexp.MustCompile(fmt.Sprintf("^%s:%s$", packageName, targetName))
-
-// A relative target with implicitly specified target name, e.g. src/core (expands to //src/core:core)
-var relativeImplicitTarget = regexp.MustCompile(fmt.Sprintf("^(?:%s/)?(%s)$", packageName, packagePart))
-
-// All targets underneath a relative package, e.g. src/core/...
-var relativeSubTargets = regexp.MustCompile(fmt.Sprintf("^(?:%s/)?(\\.\\.\\.)$", packageName))
-
-// Package and target names only, used for validation.
-var packageNameOnly = regexp.MustCompile(fmt.Sprintf("^%s?$", packageName))
-var targetNameOnly = regexp.MustCompile(fmt.Sprintf("^%s$", targetName))
-
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
 	if label.Name != "" {
@@ -96,9 +60,9 @@ func TryNewBuildLabel(pkgName, name string) (BuildLabel, error) {
 
 // validateNames returns an error if the package name of target name isn't accepted.
 func validateNames(pkgName, name string) error {
-	if !packageNameOnly.MatchString(pkgName) {
+	if !validatePackageName(pkgName) {
 		return fmt.Errorf("Invalid package name: %s", pkgName)
-	} else if !targetNameOnly.MatchString(name) {
+	} else if !validateTargetName(name) {
 		return fmt.Errorf("Invalid target name: %s", name)
 	} else if err := validateSuffixes(pkgName, name); err != nil {
 		return err
@@ -116,6 +80,17 @@ func validateSuffixes(pkgName, name string) error {
 		return fmt.Errorf("._build and ._test are reserved suffixes")
 	}
 	return nil
+}
+
+// validatePackageName checks whether this string is a valid package name and returns true if so.
+func validatePackageName(name string) bool {
+	return name == "" || (name[0] != '/' && name[len(name)-1] != '/' && !strings.ContainsAny(name, `|$*?[]{}:()&\`) && !strings.Contains(name, "//"))
+}
+
+// validateTargetName checks whether this string is a valid target name and returns true if so.
+func validateTargetName(name string) bool {
+	return name != "" && !strings.ContainsAny(name, `|$*?[]{}:()&/\`) && (name[0] != '.' || name == "...") &&
+		!strings.HasSuffix(name, buildDirSuffix) && !strings.HasSuffix(name, testDirSuffix)
 }
 
 // ParseBuildLabel parses a single build label from a string. Panics on failure.
@@ -136,39 +111,52 @@ func newBuildLabel(pkgName, name string) (BuildLabel, error) {
 
 // TryParseBuildLabel attempts to parse a single build label from a string. Returns an error if unsuccessful.
 func TryParseBuildLabel(target string, currentPath string) (BuildLabel, error) {
-	matches := absoluteTarget.FindStringSubmatch(target)
-	if matches != nil {
-		return newBuildLabel(matches[1], matches[2])
-	}
-	matches = localTarget.FindStringSubmatch(target)
-	if matches != nil {
-		return newBuildLabel(currentPath, matches[1])
-	}
-	matches = subTargets.FindStringSubmatch(target)
-	if matches != nil {
-		return newBuildLabel(matches[1], matches[2])
-	}
-	matches = rootSubTargets.FindStringSubmatch(target)
-	if matches != nil {
-		return newBuildLabel("", matches[2])
-	}
-	matches = implicitTarget.FindStringSubmatch(target)
-	if matches != nil {
-		if matches[1] != "" {
-			return newBuildLabel(matches[1]+"/"+matches[2], matches[2])
-		}
-		return newBuildLabel(matches[2], matches[2])
+	if pkg, name := parseBuildLabelParts(target, currentPath); name != "" {
+		return BuildLabel{PackageName: pkg, Name: name}, nil
 	}
 	return BuildLabel{}, fmt.Errorf("Invalid build label: %s", target)
+}
+
+// parseBuildLabelParts parses a build label into the package & name parts.
+// If valid, the name string will always be populated; the package string might not be if it's a local form.
+func parseBuildLabelParts(target, currentPath string) (string, string) {
+	if len(target) < 2 { // Always must start with // or : and must have at least one char following.
+		return "", ""
+	} else if target[0] == ':' {
+		if !validateTargetName(target[1:]) {
+			return "", ""
+		}
+		return currentPath, target[1:]
+	} else if target[0] != '/' || target[1] != '/' {
+		return "", ""
+	} else if idx := strings.IndexRune(target, ':'); idx != -1 {
+		pkg := target[2:idx]
+		name := target[idx+1:]
+		// Check ... explicitly to prevent :... which isn't allowed.
+		if !validatePackageName(pkg) || !validateTargetName(name) || name == "..." {
+			return "", ""
+		}
+		return pkg, name
+	} else if !validatePackageName(target[2:]) {
+		return "", ""
+	}
+	// Must be the abbreviated form (//pkg) or subtargets (//pkg/...), there's no : in it.
+	if strings.HasSuffix(target, "/...") {
+		return strings.TrimRight(target[2:len(target)-3], "/"), "..."
+	} else if idx := strings.LastIndexByte(target, '/'); idx != -1 {
+		return target[2:], target[idx+1:]
+	}
+	return target[2:], target[2:]
 }
 
 // As above, but allows parsing of relative labels (eg. src/parse/rules:python_rules)
 // which is convenient at the shell prompt
 func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 	// Try the ones that don't need locating the repo root first.
-	if !strings.HasPrefix(target, ":") {
-		if label, err := TryParseBuildLabel(target, ""); err == nil {
-			return label, nil
+	startsWithColon := strings.HasPrefix(target, ":")
+	if !startsWithColon {
+		if label, err := TryParseBuildLabel(target, ""); err == nil || strings.HasPrefix(target, "//") {
+			return label, err
 		}
 	}
 	// Now we need to locate the repo root and initial package.
@@ -177,26 +165,11 @@ func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 		MustFindRepoRoot()
 		subdir = initialPackage
 	}
-	matches := relativeTarget.FindStringSubmatch(target)
-	if matches != nil {
-		return newBuildLabel(path.Join(subdir, matches[1]), matches[2])
+	if startsWithColon {
+		return TryParseBuildLabel(target, subdir)
 	}
-	matches = relativeSubTargets.FindStringSubmatch(target)
-	if matches != nil {
-		return newBuildLabel(path.Join(subdir, matches[1]), matches[2])
-	}
-	matches = relativeImplicitTarget.FindStringSubmatch(target)
-	if matches != nil {
-		if matches[1] != "" {
-			return newBuildLabel(path.Join(subdir, matches[1], matches[2]), matches[2])
-		}
-		return newBuildLabel(path.Join(subdir, matches[2]), matches[2])
-	}
-	matches = localTarget.FindStringSubmatch(target)
-	if matches != nil {
-		return newBuildLabel(subdir, matches[1])
-	}
-	return BuildLabel{}, fmt.Errorf("Invalid build target label: %s", target)
+	// Presumably it's just underneath this directory (note that if it was absolute we returned above)
+	return TryParseBuildLabel("//"+path.Join(subdir, target), "")
 }
 
 // ParseBuildLabels parses a bunch of build labels from strings. It dies on failure.

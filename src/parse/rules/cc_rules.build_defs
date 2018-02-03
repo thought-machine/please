@@ -15,14 +15,14 @@ _WHOLE_ARCHIVE = '-all_load' if CONFIG.OS == 'darwin' else '--whole-archive'
 _NO_WHOLE_ARCHIVE = '-noall_load' if CONFIG.OS == 'darwin' else '--no-whole-archive'
 
 
-def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False,
-               compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None, defines=None,
-               alwayslink=False, _c=False):
-    """Generate a C or C++ library target.
+def cc_library(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, deps:list=None,
+               visibility:list=None, test_only:bool=False, compiler_flags:list=None, linker_flags:list=None,
+               pkg_config_libs:list=None, includes:list=None, defines:list|dict=None, alwayslink:bool=False, _c=False):
+    """Generate a C++ library target.
 
     Args:
       name (str): Name of the rule
-      srcs (list): C or C++ source files to compile.
+      srcs (list): C++ source files to compile.
       hdrs (list): Header files. These will be made available to dependent rules, so the distinction
                    between srcs and hdrs is important.
       private_hdrs (list): Header files that are available only to this rule and not exported to
@@ -199,9 +199,9 @@ def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibil
     )
 
 
-def cc_object(name, src, hdrs=None, private_hdrs=None, out=None, test_only=False,
-              compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None,
-              defines=None, alwayslink=False, _c=False, visibility=None, deps=None):
+def cc_object(name:str, src:str, hdrs:list=None, private_hdrs:list=None, out:str=None, test_only:bool=False,
+              compiler_flags:list=None, linker_flags:list=None, pkg_config_libs:list=None, includes:list=None,
+              defines:list|dict=None, alwayslink:bool=False, _c=False, visibility:list=None, deps:list=None):
     """Generate a C or C++ object file from a single source.
 
     N.B. This is fairly low-level; for most use cases cc_library should be preferred.
@@ -268,8 +268,8 @@ def cc_object(name, src, hdrs=None, private_hdrs=None, out=None, test_only=False
     )
 
 
-def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None,
-                      deps=None, visibility=None, test_only=False, pkg_config_libs=None, _c=False):
+def cc_static_library(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list=None, linker_flags:list=None,
+                      deps:list=None, visibility:list=None, test_only:bool=False, pkg_config_libs:list=None, _c=False):
     """Generates a C++ static library (.a).
 
     This is essentially just a collection of other cc_library rules into a single archive.
@@ -312,7 +312,7 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
         deps = deps,
         outs = ['lib%s.a' % name],
         cmd = (
-            'for a in `find . -name "*.a"`; do (cd $(dirname $a) && $TOOL x $(basename $a)); done;'
+            'for a in `find . -name "*.a"`; do (cd $(dirname $a) && $TOOL x $(basename $a)); done;' +
             '$TOOL rcs $OUT `find . -name "*.o" | sort`'
         ),
         needs_transitive_deps = True,
@@ -326,10 +326,10 @@ def cc_static_library(name, srcs=None, hdrs=None, compiler_flags=None, linker_fl
     )
 
 
-def cc_shared_object(name, srcs=None, hdrs=None, out='', compiler_flags=None, linker_flags=None,
-                     deps=None, visibility=None, test_only=False, pkg_config_libs=None,
-                     includes=None, _c=False):
-    """Generates a C++ shared object with its dependencies linked in.
+def cc_shared_object(name:str, srcs:list=None, hdrs:list=None, out:str='', compiler_flags:list=None,
+                     linker_flags:list=None, deps:list=None, visibility:list=None, test_only:bool=False,
+                     pkg_config_libs:list=None, includes:list=None, _c=False):
+    """Generates a C++ shared object (.so) with its dependencies linked in.
 
     Args:
       name (str): Name of the rule
@@ -389,8 +389,9 @@ def cc_shared_object(name, srcs=None, hdrs=None, out='', compiler_flags=None, li
     )
 
 
-def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None, linker_flags=None,
-              deps=None, visibility=None, pkg_config_libs=None, test_only=False, static=False, _c=False):
+def cc_binary(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, compiler_flags:list=None,
+              linker_flags:list=None, deps:list=None, visibility:list=None, pkg_config_libs:list=None,
+              test_only:bool=False, static:bool=False, _c=False):
     """Builds a binary from a collection of C++ rules.
 
     Args:
@@ -447,10 +448,10 @@ def cc_binary(name, srcs=None, hdrs=None, private_hdrs=None, compiler_flags=None
     )
 
 
-def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, pkg_config_libs=None,
-            deps=None, data=None, visibility=None, flags='', labels=None, flaky=0, test_outputs=None,
-            size=None, timeout=0, container=False, sandbox=None,
-            write_main=not CONFIG.BAZEL_COMPATIBILITY, _c=False):
+def cc_test(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list=None, linker_flags:list=None,
+            pkg_config_libs:list=None, deps:list=None, data:list=None, visibility:list=None, flags:str='',
+            labels:list=None, flaky:bool|int=0, test_outputs:list=None, size:str=None, timeout:int=0,
+            container:bool|dict=False, sandbox:bool=None, write_main:bool=not CONFIG.BAZEL_COMPATIBILITY, _c=False):
     """Defines a C++ test using UnitTest++.
 
     We template in a main file so you don't have to supply your own.
@@ -535,7 +536,7 @@ def cc_test(name, srcs=None, hdrs=None, compiler_flags=None, linker_flags=None, 
     )
 
 
-def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, namespace=None):
+def cc_embed_binary(name:str, src:str, deps:list=None, visibility:list=None, test_only:bool=False, namespace:str=None):
     """Build rule to embed an arbitrary binary file into a C library.
 
     You can depend on the output of this as though it were a cc_library rule.
@@ -574,7 +575,7 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         deps=deps,
         cmd='; '.join([
             # This replacement roughly mimics what ld will do to munge it into a symbol name.
-            'export ENCODED_FILENAME="${SRCS//[\/\.]/_}"',
+            'export ENCODED_FILENAME="${SRCS//[\\/\\.]/_}"',
             'export BINARY_NAME=' + name,
             'export NAMESPACE=' + namespace,
             'echo "%s" > $OUT' % _CC_HEADER_CONTENTS,
@@ -591,7 +592,7 @@ def cc_embed_binary(name, src, deps=None, visibility=None, test_only=False, name
         # alternative. Requiring an additional tool is a bit suboptimal but probably
         # in the end easier than the alternatives.
         cmd = ' && '.join([
-            'export ENCODED_FILENAME=${SRCS//[\/\.]/_}',
+            'export ENCODED_FILENAME=${SRCS//[\\/\\.]/_}',
             'echo "%s" > embedded.asm' % _CC_DARWIN_ASM_CONTENTS,
             '$TOOLS_ASM -fmacho64 embedded.asm -o ${OUTS/.a/.o}',
             '$TOOLS_AR rcs $OUT ${OUTS/.a/.o}',
@@ -733,17 +734,17 @@ def _build_flags(compiler_flags, pkg_config_libs, defines=None, c=False, dbg=Fal
         compiler_flags = [CONFIG.DEFAULT_DBG_CPPFLAGS if dbg else CONFIG.DEFAULT_OPT_CPPFLAGS] + compiler_flags
     compiler_flags.append('-fPIC')
     if defines:
-        compiler_flags.extend('-D' + define for define in defines)
-    pkg_config_cmd = ' '.join('`pkg-config --cflags %s`' % x for x in pkg_config_libs or [])
+        compiler_flags.extend(['-D' + define for define in defines])
+    pkg_config_cmd = ' '.join(['`pkg-config --cflags %s`' % x for x in pkg_config_libs or []])
     return ' '.join(compiler_flags) + ' ' + pkg_config_cmd
 
 
 def _binary_build_flags(linker_flags, pkg_config_libs, shared=False, alwayslink=''):
     """Builds flags that we'll pass to the linker invocation."""
-    pkg_config_cmd = ' '.join('`pkg-config --libs %s`' % x for x in pkg_config_libs or [])
+    pkg_config_cmd = ' '.join(['`pkg-config --libs %s`' % x for x in pkg_config_libs or []])
     objs = '`find . -name "*.o" -or -name "*.a" | sort`'
     linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
-    if not shared and alwayslink:
+    if (not shared) and alwayslink:
         objs = '%s%s %s %s%s %s' % (linker_prefix, _WHOLE_ARCHIVE, alwayslink, linker_prefix, _NO_WHOLE_ARCHIVE, objs)
     build_id_flag = ''
     if CONFIG.OS != 'darwin':
@@ -757,7 +758,7 @@ def _binary_build_flags(linker_flags, pkg_config_libs, shared=False, alwayslink=
         build_id_flag = linker_prefix + '--build-id=none'
     if shared:
         objs = '-shared %s%s %s %s%s' % (linker_prefix, _WHOLE_ARCHIVE, objs, linker_prefix, _NO_WHOLE_ARCHIVE)
-    linker_flags = ' '.join(linker_prefix + f for f in (linker_flags or []))
+    linker_flags = ' '.join([linker_prefix + f for f in (linker_flags or [])])
     return ' '.join([objs, build_id_flag, linker_flags, pkg_config_cmd])
 
 
@@ -798,8 +799,8 @@ def _library_transitive_labels(c, compiler_flags, pkg_config_libs, archive=True)
     def apply_transitive_labels(name):
         labels = get_labels(name, 'cc:')
         flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
-        flags.extend('-D' + l[4:] for l in labels if l.startswith('def:'))
-        pkg_config_libs.extend(l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs)
+        flags.extend(['-D' + l[4:] for l in labels if l.startswith('def:')])
+        pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs])
         if flags:  # Don't update if there aren't any relevant labels
             cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, ' '.join(flags), archive=archive)
             for k, v in cmds.items():
@@ -813,10 +814,10 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
         labels = get_labels(name, 'cc:')
         linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
         flags = [linker_prefix + l[3:] for l in labels if l.startswith('ld:')]
-        flags.extend('`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:'))
+        flags.extend(['`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:')])
         # ./ here because some weak linkers don't realise ./lib.a is the same file as lib.a
         # and report duplicate symbol errors as a result.
-        alwayslink = ' '.join('./' + l[3:] for l in labels if l.startswith('al:'))
+        alwayslink = ' '.join(['./' + l[3:] for l in labels if l.startswith('al:')])
         # Probably a little optimistic to check this (most binaries are likely to have *some*
         # kind of linker flags to apply), but we might as well.
         if flags or alwayslink:
@@ -824,29 +825,6 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
             for k, v in cmds.items():
                 set_command(name, k, v)
     return apply_transitive_labels
-
-
-# C rules. These call straight through to the c++ versions and just set a flag.
-def c_library(**kwargs):
-    return cc_library(_c=True, **kwargs)
-
-def c_object(**kwargs):
-    return cc_object(_c=True, **kwargs)
-
-def c_static_library(**kwargs):
-    return cc_static_library(_c=True, **kwargs)
-
-def c_shared_object(**kwargs):
-    return cc_shared_object(_c=True, **kwargs)
-
-def c_binary(**kwargs):
-    return cc_binary(_c=True, **kwargs)
-
-def c_test(write_main=False, **kwargs):
-    return cc_test(_c=True, write_main=write_main, **kwargs)
-
-def c_embed_binary(**kwargs):
-    return cc_embed_binary(**kwargs)
 
 
 if CONFIG.BAZEL_COMPATIBILITY:

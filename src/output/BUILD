@@ -36,7 +36,7 @@ for file_name, rule_name in sorted(TEMPLATED_FILES.items()):
         name = rule_name,
         srcs = [file_name],
         outs = [file_name],
-        cmd = 'cat $SRC | %s > $OUT' % ' | '.join(r"sed -e 's/${%s}/%s/g'" % (k, v) for k, v in sorted(REPLACEMENTS.items()))
+        cmd = 'cat $SRC | %s > $OUT' % ' | '.join(["sed -e 's/${%s}/%s/g'" % (k, v) for k, v in sorted(REPLACEMENTS.items())])
     )
 
 go_library(

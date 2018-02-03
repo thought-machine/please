@@ -1,0 +1,9 @@
+_PARSER_BINARIES = {
+    'python27': 'python2.7',
+    'python34': 'python3.4',
+    'python35': 'python3.5',
+    'python36': 'python3.6',
+}
+
+PARSER_TOOL = _PARSER_BINARIES[CONFIG.PARSER_ENGINE]
+PARSER_LIB_NAME = PARSER_TOOL  # Happens to be the same for now.

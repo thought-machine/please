@@ -1,15 +1,14 @@
 deps = []
 
 for src in glob(['*.html'], excludes=['template.html', 'lexicon*.html']):
-    name = src.replace('.', '_')
-    genrule(
-        name = name,
-	srcs = ['template.html', src],
+    templated_rule = genrule(
+        name = src.replace('.', '_'),
+        srcs = ['template.html', src],
         tools = [':templater'],
         outs = [src],
         cmd = '$TOOL $SRCS > $OUT',
     )
-    deps.append(':' + name)
+    deps += [templated_rule]
 
 genrule(
     name = 'lexicon_html',
@@ -30,14 +29,14 @@ genrule(
 # Downscale images from original resolution
 for colour, scale in [('teal', '50%'), ('white', '20%')]:
     for src in glob(['images/%s*.png' % colour]):
-        name = src.replace('.', '_').replace('/', '_')
-        genrule(
-            name = name,
+        image_rule = genrule(
+            name = src.replace('.', '_').replace('/', '_'),
             srcs = [src],
             outs = [src],
-            cmd = 'convert $SRC -crop 500x510+230+30 -resize %s $OUT' % scale,
+            cmd = '$TOOL $SRC -crop 500x510+230+30 -resize %s $OUT' % scale,
+            tools = ['convert'],
         )
-        deps.append(':' + name)
+        deps += [image_rule]
 
 filegroup(
     name = 'docs',

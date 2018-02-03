@@ -289,6 +289,10 @@ type fakeParser struct {
 	PreBuildFunctions  buildFunctionMap
 }
 
+func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+	return nil
+}
+
 func (fake *fakeParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
 	if f, present := fake.PreBuildFunctions[target]; present {
 		return f(target, "")

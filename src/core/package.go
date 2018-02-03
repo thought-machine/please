@@ -67,6 +67,13 @@ func (pkg *Package) AllTargets() []*BuildTarget {
 	return ret
 }
 
+// NumTargets returns the number of targets currently registered in this package.
+func (pkg *Package) NumTargets() int {
+	pkg.mutex.Lock()
+	defer pkg.mutex.Unlock()
+	return len(pkg.targets)
+}
+
 // RegisterSubinclude adds a new subinclude to this package, guaranteeing uniqueness.
 func (pkg *Package) RegisterSubinclude(label BuildLabel) {
 	if !pkg.HasSubinclude(label) {

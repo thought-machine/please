@@ -54,22 +54,60 @@ const cffiUnavailable = 3
 // To ensure we only initialise once.
 var initializeOnce sync.Once
 
+// Indicates deferral.
+var errDeferParse = fmt.Errorf("deferred")
+
 // pythonParser is our implementation of core.Parser. It has no actual state because our parser is a global.
 type pythonParser struct{}
 
+// ParseFile parses a single BUILD file.
+func (p *pythonParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+	if parsePackageFile(state, filename, pkg) {
+		return errDeferParse
+	}
+	return nil
+}
+
 // RunPreBuildFunction runs a pre-build function for a target.
-func (p *pythonParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
-	return RunPreBuildFunction(threadID, state, target)
+func (p *pythonParser) RunPreBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget) error {
+	state.LogBuildResult(tid, target.Label, core.PackageParsing,
+		fmt.Sprintf("Running pre-build function for %s", target.Label))
+	pkg := state.Graph.Package(target.Label.PackageName)
+	changed, err := pkg.EnterBuildCallback(func() error {
+		return runPreBuildFunction(pkg, target)
+	})
+	if err != nil {
+		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed pre-build function for %s", target.Label)
+	} else {
+		rescanDeps(state, changed)
+		state.LogBuildResult(tid, target.Label, core.TargetBuilding,
+			fmt.Sprintf("Finished pre-build function for %s", target.Label))
+	}
+	return err
 }
 
 // RunPostBuildFunction runs a post-build function for a target.
-func (p *pythonParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
-	return RunPostBuildFunction(threadID, state, target, output)
+func (p *pythonParser) RunPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, out string) error {
+	state.LogBuildResult(tid, target.Label, core.PackageParsing,
+		fmt.Sprintf("Running post-build function for %s", target.Label))
+	pkg := state.Graph.Package(target.Label.PackageName)
+	changed, err := pkg.EnterBuildCallback(func() error {
+		log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, out)
+		return runPostBuildFunction(pkg, target, out)
+	})
+	if err != nil {
+		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed post-build function for %s", target.Label)
+	} else {
+		rescanDeps(state, changed)
+		state.LogBuildResult(tid, target.Label, core.TargetBuilding,
+			fmt.Sprintf("Finished post-build function for %s", target.Label))
+	}
+	return err
 }
 
 // UndeferAnyParses undefers any pending parses that are waiting for this target to build.
 func (p *pythonParser) UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
-	UndeferAnyParses(state, target)
+	undeferAnyParses(state, target)
 }
 
 // Code to initialise the Python interpreter.

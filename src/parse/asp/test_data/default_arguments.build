@@ -1,0 +1,3 @@
+def test(name='name', timeout=10,
+         args=None):
+    pass

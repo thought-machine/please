@@ -1,0 +1,11 @@
+log.debug('debug')
+
+log.info('info')
+
+log.notice('notice')
+
+log.warning('warning')
+
+log.error('error')
+
+# We can't test log.fatal here because it terminates the test, even with a fake log backend.

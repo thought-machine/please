@@ -1,0 +1,2 @@
+a = True and not False
+b = 'a' in ['b', 'c', 'a'] and 'b' in ['c', 'b', 'a']

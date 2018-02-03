@@ -1,4 +1,7 @@
-package(python_module_dir = '')
+package(
+    default_python_interpreter = 'python3',
+    python_module_dir = '',
+)
 
 filegroup(
     name = 'rule_args',
@@ -10,7 +13,6 @@ python_binary(
     out = 'linter',
     main = 'linter.py',
     resources = [':rule_args'],
-    shebang = '/usr/bin/env python',
     visibility = ['PUBLIC'],
 )
 

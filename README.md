@@ -34,12 +34,11 @@ build it once manually and then rebuild it again using itself.
 You'll need to have Go 1.9+ installed to build Please although once
 built it can target Go 1.4+.
 
-In order to build Please, you will also need to have Python libraries
-available (you may need to install using `apt-get install libpython-dev`
-or similar) and a usable Python interpreter to build the first time.
-That can be any one of CPython 2, CPython 3 or PyPy; we attempt to
-autodetect which is available at build time. If using CPython you'll
-also need to install `cffi` (using `pip install cffi` or similar).
+To build some of the parser engine backends, you will need to have
+Python libraries available; at least python 2 needs to be installed
+for now and, if available, alternatives will be built for python3
+and PyPy. python3 also needs to be installed to build one or two of
+the builtin tools.
 
 You will also need to have Java 7 or above installed to build some
 of the Java helper programs. Optional dependencies for various tests

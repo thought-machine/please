@@ -1,0 +1,9 @@
+def test(a, b, c=True):
+    return '%s:%s:%s' % (a, b, c)
+
+
+x = test('a', 'b')
+
+y = test(b='b', a='a', c='c')
+
+z = test('a', 'b', c='c')

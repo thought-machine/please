@@ -1,0 +1,4 @@
+build_rule(
+    name = 'lib',
+    cmd = 'true',
+)

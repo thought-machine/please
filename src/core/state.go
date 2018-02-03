@@ -42,11 +42,10 @@ func (t pendingTask) Compare(that queue.Item) int {
 	return int((t.Type & priorityMask) - (that.(pendingTask).Type & priorityMask))
 }
 
-// A Parser allows performing several parsing tasks directly. This is not used for
-// normal BUILD file parsing, but rather pre/post build callbacks etc to decouple
-// the build package from calling straight into parse (since parse is cgo we attempt
-// to minimise any dependencies on it).
+// A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
+	// ParseFile parses a single BUILD file into the given package.
+	ParseFile(state *BuildState, pkg *Package, filename string) error
 	// RunPreBuildFunction runs a pre-build function for a target.
 	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.

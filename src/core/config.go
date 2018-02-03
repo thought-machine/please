@@ -247,7 +247,7 @@ type Configuration struct {
 		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
 		FallbackConfig    string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
 		Lang              string       `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
-		Sandbox           bool         `help:"True to sandbox individual build actions, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
+		Sandbox           bool         `help:"True to sandbox individual build actions, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately." var:"BUILD_SANDBOX"`
 		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use."`
 		Nonce             string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 	}
@@ -282,7 +282,7 @@ type Configuration struct {
 	Test               struct {
 		Timeout          cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
 		DefaultContainer string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only available option is 'docker', we expect to add support for more engines in future." options:"none,docker"`
-		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately."`
+		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately." var:"TEST_SANDBOX"`
 	}
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
@@ -361,7 +361,7 @@ type Configuration struct {
 		Language         []string `help:"Sets the default set of languages that proto rules are built for.\nChosen from the set of {cc, java, go, py}.\nDefaults to all of them!" var:"PROTO_LANGUAGES"`
 		PythonDep        string   `help:"An in-repo dependency that's applied to any Python proto libraries." var:"PROTO_PYTHON_DEP"`
 		JavaDep          string   `help:"An in-repo dependency that's applied to any Java proto libraries." var:"PROTO_JAVA_DEP"`
-		GoDep            string   `help:"An in-repo dependency that's applied to any Go proto libraries." var:"PROTO_JAVA_DEP"`
+		GoDep            string   `help:"An in-repo dependency that's applied to any Go proto libraries." var:"PROTO_GO_DEP"`
 		JsDep            string   `help:"An in-repo dependency that's applied to any Javascript proto libraries." var:"PROTO_JS_DEP"`
 		PythonGrpcDep    string   `help:"An in-repo dependency that's applied to any Python gRPC libraries." var:"GRPC_PYTHON_DEP"`
 		JavaGrpcDep      string   `help:"An in-repo dependency that's applied to any Java gRPC libraries." var:"GRPC_JAVA_DEP"`

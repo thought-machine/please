@@ -1,0 +1,5 @@
+for y in x:
+    for z in y:
+        genrule(
+            name = 'name',
+        )

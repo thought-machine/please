@@ -10,21 +10,28 @@ cgo_library(
         '*_test.go',
         'builtin_rules.bindata.go',
         'interpreter.go',
-    ]) + [':builtin_rules'],
+    ]) + [':builtin_rules_data'],
     linker_flags = [
         '-Lsrc/parse/cffi -lplease_parser_static',
         PARSER_LINKER_FLAGS,
         '-lm -lz -lutil',
     ],
     deps = [
-        ':builtin_rules',
         '//src/core',
+        '//src/parse/asp',
+        '//src/parse/asp/builtins',
         '//src/parse/cffi:please_parser_static',
         '//src/utils',
         '//third_party/go:gcfg',
         '//third_party/go:logging',
     ],
     visibility = ['PUBLIC'],
+)
+
+filegroup(
+    name = 'builtin_rules',
+    srcs = glob(['rules/*.build_defs']),
+    visibility = ['//src/parse/asp/builtins:all'],
 )
 
 # Note that because these scripts are used during the bootstrap process, they can't
@@ -38,14 +45,14 @@ genrule(
 
 genrule(
     name = 'rule_args',
-    srcs = ['extract_rule_args.py'] + glob(['rules/*.build_defs']),
+    srcs = ['extract_rule_args.py'] + [':type_checked_rules'],
     outs = ['rule_args.json'],
     cmd = 'python $SRCS > $OUT',
     visibility = ['PUBLIC'],
 )
 
 go_bindata(
-    name = 'builtin_rules',
+    name = 'builtin_rules_data',
     srcs = [':type_checked_rules'],
 )
 

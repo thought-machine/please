@@ -3,8 +3,9 @@
 _maven_packages = {}
 
 
-def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=None, deps=None,
-                 modular=False, exported_deps=None, visibility=None, test_only=False, javac_flags=None):
+def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
+                 deps:list=None, modular:bool=False, exported_deps:list=None, visibility:list=None,
+                 test_only:bool=False, javac_flags:list=None):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -41,7 +42,7 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         if javac_flags:
             # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
             # it doesn't mean anything to us so we must filter it out.
-            javac_flags = ' '.join(flag for flag in javac_flags if flag != '-extra_checks:off')
+            javac_flags = ' '.join([flag for flag in javac_flags if flag != '-extra_checks:off'])
         else:
             javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
         javac_flags = '-encoding utf8 -source %s -target %s -g %s' % (
@@ -114,8 +115,8 @@ def java_library(name, srcs=None, src_dir=None, resources=None, resources_root=N
         )
 
 
-def java_module(name, srcs=None, src_dir=None, resources=None, resources_root=None, deps=None,
-                visibility=None, test_only=False, javac_flags=None):
+def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
+                deps:list=None, visibility:list=None, test_only:bool=False, javac_flags:list=None):
     """Compiles Java source to a modular .jar which can be collected by other rules.
 
     Args:
@@ -147,8 +148,9 @@ def java_module(name, srcs=None, src_dir=None, resources=None, resources_root=No
                         modular=True)
 
 
-def java_runtime_image(name, main_module, main_class, modules, out=None,
-                       deps=None, data=None, visibility=None, jlink_args='--strip-debug --compress=2'):
+def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, out:str=None,
+                       deps:list=None, data:list=None, visibility:list=None,
+                       jlink_args:str='--strip-debug --compress=2'):
     """Assembles a set of modules into an executable java runtime image.
 
     Args:
@@ -170,8 +172,8 @@ def java_runtime_image(name, main_module, main_class, modules, out=None,
         raise Exception('You cannot assemble a java runtime image without specifying any modules.')
     deps = deps or []
     out = out or name
-    cmd = ("$TOOL --module-path {deps}:{java_home}/jmods "
-           "--add-modules {modules} --launcher {name}={main_module}/{main_class} "
+    cmd = ("$TOOL --module-path {deps}:{java_home}/jmods " +
+           "--add-modules {modules} --launcher {name}={main_module}/{main_class} " +
            "--output {out_dir} {jlink_args}").format(
                deps=r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
                java_home=CONFIG.JAVA_HOME,
@@ -198,8 +200,9 @@ def java_runtime_image(name, main_module, main_class, modules, out=None,
     )
 
 
-def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None, visibility=None,
-                jvm_args=None, self_executable=False, manifest=None):
+def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, deps:list=None,
+                data:list=None, visibility:list=None, jvm_args:str=None,
+                self_executable:bool=False, manifest:str=None):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
@@ -250,9 +253,10 @@ def java_binary(name, main_class=None, out=None, srcs=None, deps=None, data=None
     )
 
 
-def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, visibility=None,
-              flags='', container=False, sandbox=None, timeout=0, flaky=0, test_outputs=None, size=None,
-              test_package=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args=''):
+def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:list=None, labels:list=None,
+              visibility:list=None, flags:str='', container:bool|dict=False, sandbox:bool=None,
+              timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
+              test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str=''):
     """Defines a Java test.
 
     Args:
@@ -314,9 +318,9 @@ def java_test(name, srcs, resources=None, data=None, deps=None, labels=None, vis
     )
 
 
-def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None, combine=False,
-               hash=None, deps=None, visibility=None, filename=None, deps_only=False,
-               optional=None):
+def maven_jars(name:str, id:str='', ids:list=None, repository:str|list=None, exclude:list=None,
+               hashes:list=None, combine:bool=False, hash:str|list=None, deps:list=None,
+               visibility:list=None, filename:str=None, deps_only:bool=False, optional:list=None):
     """Fetches a transitive set of dependencies from Maven.
 
     Args:
@@ -383,9 +387,9 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
                 add_exported_dep(source_name, ':' + artifact)
 
     deps = deps or []
-    exclusions = ' '.join('-e ' + excl for excl in exclude)
-    options = ' '.join('-o ' + option for option in optional) if optional else ''
-    repo_flags = ' '.join('-r ' + repo for repo in repos)
+    exclusions = ' '.join(['-e ' + excl for excl in exclude])
+    options = ' '.join(['-o ' + option for option in optional]) if optional else ''
+    repo_flags = ' '.join(['-r ' + repo for repo in repos])
     build_rule(
         name='_%s#deps' % name,
         cmd='$TOOL %s %s %s %s' % (repo_flags, ' '.join(ids), exclusions, options),
@@ -451,10 +455,10 @@ def maven_jars(name, id='', ids=None, repository=None, exclude=None, hashes=None
         )
 
 
-def maven_jar(name, id, repository=None, hash=None, hashes=None, deps=None,
-              visibility=None, filename=None, sources=True, licences=None,
-              native=False, artifact_type=None, test_only=False,
-              binary=False, classifier='', classifier_sources_override=''):
+def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:list=None, deps:list=None,
+              visibility:list=None, filename:str=None, sources:bool=True, licences:list=None,
+              native:bool=False, artifact_type:str=None, test_only:bool=False,
+              binary:bool=False, classifier:str='', classifier_sources_override:str=''):
     """Fetches a single Java dependency from Maven.
 
     Args:

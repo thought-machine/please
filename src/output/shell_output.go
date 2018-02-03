@@ -188,10 +188,10 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		// Don't stop here after test failure, aggregate them for later.
 		if !keepGoing && result.Status != core.TargetTestFailed {
 			// Reset colour so the entire compiler error output doesn't appear red.
-			log.Errorf("%s failed:${RESET}\n%s", result.Label, result.Err)
+			log.Errorf("%s failed:${RESET}\n%s", result.Label, shortError(result.Err))
 			state.KillAll()
 		} else if !plainOutput { // plain output will have already logged this
-			log.Errorf("%s failed: %s", result.Label, result.Err)
+			log.Errorf("%s failed: %s", result.Label, shortError(result.Err))
 		}
 		*failedTargets = append(*failedTargets, label)
 		if result.Status != core.TargetTestFailed {
@@ -403,7 +403,7 @@ func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buil
 	updateTarget2(buildingTarget, label, active, failed, cached, description, err, colour)
 	if plainOutput {
 		if failed {
-			log.Errorf("%s: %s: %s", label.String(), description, err)
+			log.Errorf("%s: %s: %s", label.String(), description, shortError(err))
 		} else {
 			if !active {
 				active := pluralise(state.NumActive(), "task", "tasks")
@@ -652,7 +652,7 @@ func findGraphCycle(graph *core.BuildGraph, target *core.BuildTarget) []*core.Bu
 	return detectCycle(target, nil)
 }
 
-// Prints all targets in the build graph that are marked to be built but not built yet.
+// unbuiltTargetsMessage returns a message for any targets that are supposed to build but haven't yet.
 func unbuiltTargetsMessage(graph *core.BuildGraph) string {
 	msg := ""
 	for _, target := range graph.AllTargets() {
@@ -670,4 +670,17 @@ func unbuiltTargetsMessage(graph *core.BuildGraph) string {
 		return "\nThe following targets have not yet built:\n" + msg
 	}
 	return ""
+}
+
+// shortError returns the message for an error, shortening it if the error supports that.
+func shortError(err error) string {
+	if se, ok := err.(shortenableError); ok {
+		return se.ShortError()
+	}
+	return err.Error()
+}
+
+// A shortenableError describes any error type that can communicate a short-form error.
+type shortenableError interface {
+	ShortError() string
 }

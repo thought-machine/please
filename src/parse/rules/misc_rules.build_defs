@@ -1,10 +1,12 @@
 """Miscellaneous rules that aren't language-specific."""
 
 
-def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, labels=None, visibility=None,
-            building_description='Building...', hashes=None, timeout=0, binary=False, sandbox=None,
-            needs_transitive_deps=False, output_is_complete=True, test_only=False, secrets=None,
-            requires=None, provides=None, pre_build=None, post_build=None, tools=None):
+def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs:list|dict=None, deps:list=None,
+            labels:list=None, visibility:list=None, building_description:str='Building...',
+            hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
+            needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool=False,
+            secrets:list=None, requires:list=None, provides:dict=None, pre_build:function=None,
+            post_build:function=None, tools:list|dict=None):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -112,9 +114,10 @@ def genrule(name, cmd, srcs=None, out=None, outs=None, deps=None, labels=None, v
     )
 
 
-def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=None, tools=None,
-            data=None, visibility=None, timeout=0, needs_transitive_deps=False, flaky=0, secrets=None,
-            no_test_output=False, output_is_complete=True, requires=None, container=False, sandbox=None):
+def gentest(name:str, test_cmd:str|dict, labels:list=None, cmd:str|dict=None, srcs:list|dict=None, outs:list=None,
+            deps:list=None, tools:list|dict=None, data:list=None, visibility:list=None, timeout:int=0,
+            needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list=None, no_test_output:bool=False,
+            output_is_complete:bool=True, requires:list=None, container:bool|dict=False, sandbox:bool=None):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -174,7 +177,7 @@ def gentest(name, test_cmd, labels=None, cmd=None, srcs=None, outs=None, deps=No
     )
 
 
-def export_file(name, src, visibility=None, binary=False, test_only=False):
+def export_file(name:str, src:str, visibility:list=None, binary:bool=False, test_only:bool=False):
     """Essentially a single-file alias for filegroup.
 
     Args:
@@ -193,9 +196,9 @@ def export_file(name, src, visibility=None, binary=False, test_only=False):
     )
 
 
-def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility=None,
-              labels=None, binary=False, output_is_complete=True, requires=None, provides=None,
-              hashes=None, test_only=False):
+def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_deps:list=None,
+              visibility:list=None, labels:list=None, binary:bool=False, output_is_complete:bool=True,
+              requires:list=None, provides:dict=None, hashes:list=None, test_only:bool=False):
     """Defines a collection of files which other rules can depend on.
 
     Sources can be omitted entirely in which case it acts simply as a rule to collect other rules,
@@ -239,8 +242,8 @@ def filegroup(name, tag='', srcs=None, deps=None, exported_deps=None, visibility
     )
 
 
-def hash_filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=None,
-                   labels=None, test_only=False, requires=None):
+def hash_filegroup(name:str, srcs:list=None, deps:list=None, exported_deps:list=None, visibility:list=None,
+                   labels:list=None, test_only:bool=False, requires:list=None):
     """Copies a set of files to output names which are uniquely hashed based on their contents.
 
     For example, srcs = ["test.txt"] might output "test-b250cnf30f3h.txt".
@@ -271,7 +274,8 @@ def hash_filegroup(name, srcs=None, deps=None, exported_deps=None, visibility=No
     )
 
 
-def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_only=False):
+def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
+                   visibility:list=None, test_only:bool=False):
     """Defines a rule to collect some dependencies from outside the build tree.
 
     This is essentially the same as a filegroup; it will simply copy files from the system
@@ -299,8 +303,9 @@ def system_library(name, srcs, deps=None, hashes=None, visibility=None, test_onl
     )
 
 
-def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
-                licences=None, test_only=False, deps=None, exported_deps=None, _tag=None):
+def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:bool=False,
+                visibility:list=None, licences:list=None, test_only:bool=False, deps:list=None,
+                exported_deps:list=None, _tag=''):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -317,7 +322,7 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
     """
     urls = [url] if isinstance(url, str) else url
-    cmd = ') || ('.join('echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (url, url) for url in urls)
+    cmd = ') || ('.join(['echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (url, url) for url in urls])
     return build_rule(
         name = name,
         tag = _tag,
@@ -335,8 +340,8 @@ def remote_file(name, url, hashes=None, out=None, binary=False, visibility=None,
     )
 
 
-def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
-            visibility=None, labels=None):
+def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, gzip:bool=True,
+            visibility:list=None, labels:list=None):
     """Defines a rule to create a tarball containing outputs of other rules.
 
     File mode and ownership are preserved. However, the atime and mtime of all
@@ -372,7 +377,7 @@ def tarball(name, srcs, out=None, deps=None, subdir=None, gzip=True,
     )
 
 
-def decompose(label):
+def decompose(label:str):
     """Decomposes a build label into the package and name parts.
 
     Consider carefully when you should use this - command replacements may be more appropriate.
@@ -392,7 +397,7 @@ def decompose(label):
         raise ValueError("%s doesn't look like a build label" % label)
 
 
-def check_config(key, section='buildconfig', rule='', example='...'):
+def check_config(key:str, section:str='buildconfig', rule:str='', example:str='...'):
     """Checks the configuration for the given item and raises an exception if it's not set.
 
     Args:

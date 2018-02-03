@@ -1,0 +1,9 @@
+def cc_library(name, srcs=None, hdrs=None, private_hdrs=None, deps=None, visibility=None, test_only=False,
+               compiler_flags=None, linker_flags=None, pkg_config_libs=None, includes=None, defines=None,
+               alwayslink=False, _c=False):
+    """Generate a C or C++ library target."""
+    srcs = srcs or []
+
+    hdrs = hdrs or []
+
+    deps = deps or []

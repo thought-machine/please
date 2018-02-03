@@ -1,0 +1,1 @@
+go_compile_tool = 'compile' if CONFIG.GO_VERSION >= "1.5" else '6g'

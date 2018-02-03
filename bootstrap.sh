@@ -27,10 +27,11 @@ go get github.com/texttheater/golang-levenshtein/levenshtein
 go get github.com/Workiva/go-datastructures/queue
 go get github.com/coreos/go-semver/semver
 go get github.com/djherbis/atime
+go get github.com/alecthomas/participle
+go get github.com/davecgh/go-spew/spew
 
 # Determine which interpreter engines we'll build.
 INTERPRETERS=""
-BOOTSTRAP_INTERPRETER=""
 
 function detect_interpreter {
     set +e
@@ -39,41 +40,24 @@ function detect_interpreter {
         $1 -c 'import cffi' 2> /dev/null
         if [ $? -eq 0 ]; then
 	    notice "$1 is a usable interpreter engine"
-	    if [ -z "$BOOTSTRAP_INTERPRETER" ]; then
-		BOOTSTRAP_INTERPRETER="$1"
-	    fi
-        else
-            warn "$1 doesn't have cffi installed, can't be used for bootstrap."
         fi
     fi
     set -e
 }
 
-# Prefer pypy because we know it has cffi installed already.
-if hash pypy 2>/dev/null ; then
-    notice "pypy detected, will be used for bootstrap"
-    BOOTSTRAP_INTERPRETER="pypy"
-else
-    detect_interpreter "python2"
-    detect_interpreter "python3"
-fi
-if [ -z "$BOOTSTRAP_INTERPRETER" ]; then
-    error "No known Python interpreters found, can't build parser engine"
-    exit 1
-fi
-
+# Use builtin engine for bootstrap.
+export PLZ_OVERRIDES="parse.engine:asp"
 # Clean out old artifacts.
-rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/builtin_rules.go
-# Generate the cffi compiled source
-(cd src/parse/cffi && $BOOTSTRAP_INTERPRETER cffi_compiler.py defs.h please_parser.py)
-# Invoke this tool to embed the Python scripts.
-bin/go-bindata -o src/parse/builtin_rules.bindata.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
+rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/builtin_rules.go src/parse/asp/builtins/builtin_data.bindata.go
+# Compile the builtin rules
+notice "Compiling built-in rules..."
+go run src/parse/asp/main/compiler.go -o plz-out/asp/src/parse/asp/builtins src/parse/asp/builtins/builtins.build_defs src/parse/rules/*.build_defs
+# Embed them into Go
+bin/go-bindata -o src/parse/asp/builtins/builtin_data.bindata.go -pkg builtins -prefix plz-out/asp/src/parse/asp/builtins plz-out/asp/src/parse/asp/builtins
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
-SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
-ENGINE="`ls ${SCRIPT_DIR}/src/parse/cffi/libplease_parser_${BOOTSTRAP_INTERPRETER}.*`"
-go run src/please.go -o parse.engine:$ENGINE --plain_output build //src:please //src:cffi --log_file plz-out/log/bootstrap_build.log
+go run src/please.go --plain_output build //src:please //src:cffi --log_file plz-out/log/bootstrap_build.log
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
 plz-out/bin/src/please --plain_output build //src:please //tools --log_file plz-out/log/tools_build.log

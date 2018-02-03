@@ -1,0 +1,5 @@
+x = y[5:].replace('-', '_').replace('/', '_').replace(':', '_')
+
+z['test'] = 5
+
+l.append(x)

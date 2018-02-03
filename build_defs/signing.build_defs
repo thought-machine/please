@@ -1,6 +1,7 @@
 """Build rules for signing releases using GPG."""
 
-def signed_fpm_deb(name, **kwargs):
+def signed_fpm_deb(name, version, package_name=None, files=None, links=None, post_cmds=None,
+                   visibility=None):
     """Creates a signed deb using FPM.
 
     All arguments are passed through to fpm_deb.
@@ -8,19 +9,26 @@ def signed_fpm_deb(name, **kwargs):
     This will create two rules, one with the expected name that is the deb, and one with
     a _signed suffix that contains the detached .asc file.
     """
-    deb_rule = fpm_deb(name=name, **kwargs)
-    package_name = kwargs.get('package_name', name)
-    version = kwargs.get('version')
+    package_name = package_name or name
+    deb_rule = fpm_deb(
+        name = name,
+        package_name = package_name,
+        version = version,
+        files = files,
+        links = links,
+        post_cmds = post_cmds,
+        visibility = visibility,
+    )
     return detached_signature(
         name = name,
         src = deb_rule,
         out = '%s_%s_%s.deb.asc' % (package_name, version, CONFIG.ARCH),
-        visibility = kwargs.get('visibility'),
+        visibility = visibility,
         labels = ['deb_asc'],
     )
 
 
-def signed_tarball(name, **kwargs):
+def signed_tarball(name, srcs, out, subdir, visibility=None):
     """Creates a signed tarball.
 
     All arguments are passed through to tarball.
@@ -28,12 +36,18 @@ def signed_tarball(name, **kwargs):
     This will create two rules, one with the expected name that is the tarball, and one with
     a _signed suffix that contains the detached .asc file.
     """
-    tar_rule = tarball(name=name, **kwargs)
+    tar_rule = tarball(
+        name = name,
+        srcs = srcs,
+        out = out,
+        subdir = subdir,
+        visibility = visibility,
+    )
     return detached_signature(
         name = name,
         src = tar_rule,
-        out = kwargs.get('out', name + '.tar.gz') + '.asc',
-        visibility = kwargs.get('visibility'),
+        out = out + '.asc',
+        visibility = visibility,
         labels = ['tar_asc'],
     )
 

@@ -1,0 +1,6 @@
+def x(a, b):
+    return a + b
+
+y = x(3, 4)
+
+z = True if y < 10 else False

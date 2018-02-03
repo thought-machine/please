@@ -1,5 +1,3 @@
 python_binary(
     name = 'test1',
 )
-
-cc_library(**kwargs)

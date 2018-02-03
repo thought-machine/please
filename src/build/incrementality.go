@@ -391,9 +391,21 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 		h.Write([]byte(lang))
 		h.Write([]byte(target.Provides[lang].String()))
 	}
-	// Obviously we don't include the code pointer because it's a pointer.
-	h.Write(target.PreBuildHash)
-	h.Write(target.PostBuildHash)
+	if target.NewPreBuildFunction == nil {
+		// Obviously we don't include the code pointer because it's a pointer.
+		h.Write(target.PreBuildHash)
+	} else {
+		// We don't need to hash the function itself because they get rerun every time -
+		// we just need to check whether one is added or removed, which is good since it's
+		// nigh impossible to really verify whether it's changed or not (since it may call
+		// any amount of other stuff).
+		h.Write(boolTrueHashValue)
+	}
+	if target.NewPostBuildFunction == nil {
+		h.Write(target.PostBuildHash)
+	} else {
+		h.Write(boolTrueHashValue)
+	}
 	return h.Sum(nil)
 }
 

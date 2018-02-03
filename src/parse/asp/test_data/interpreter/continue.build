@@ -1,0 +1,6 @@
+a = []
+
+for x in range(6):
+    if x < 4:
+        continue
+    a += [x]

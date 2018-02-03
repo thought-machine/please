@@ -14,8 +14,9 @@ a target which has only had small changes.
 """
 
 
-def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
-                   test_only=False, zip_safe=True, labels=None, interpreter=None, strip=False):
+def python_library(name:str, srcs:list=None, resources:list=None, deps:list=None, visibility:list=None,
+                   test_only:bool=False, zip_safe:bool=True, labels:list=None, interpreter:str=None,
+                   strip:bool=False):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
     Note that each python_library performs some pre-zipping of its inputs before they're combined
@@ -93,8 +94,9 @@ def python_library(name, srcs=None, resources=None, deps=None, visibility=None,
     )
 
 
-def python_binary(name, main, resources=None, out=None, deps=None, visibility=None, zip_safe=None,
-                  interpreter=None, shebang='', labels=None):
+def python_binary(name:str, main:str, resources:list=None, out:str=None, deps:list=None,
+                  visibility:list=None, zip_safe:bool=None, interpreter:str=None, shebang:str='',
+                  labels:list=None):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -175,9 +177,10 @@ def python_binary(name, main, resources=None, out=None, deps=None, visibility=No
     )
 
 
-def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, size=None,
-                flags='', visibility=None, container=False, sandbox=None, timeout=0, flaky=0,
-                test_outputs=None, zip_safe=None, interpreter=None):
+def python_test(name:str, srcs:list, data:list=None, resources:list=None, deps:list=None,
+                labels:list=None, size:str=None, flags:str='', visibility:list=None,
+                container:bool|dict=False, sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
+                test_outputs:list=None, zip_safe:bool=None, interpreter:str=None):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
@@ -275,10 +278,10 @@ def python_test(name, srcs, data=None, resources=None, deps=None, labels=None, s
     )
 
 
-def pip_library(name, version, hashes=None, package_name=None, outs=None, test_only=False,
-                env=None, deps=None, post_install_commands=None, install_subdirectory=False,
-                repo=None, use_pypi=None, patch=None, visibility=None, zip_safe=True,
-                licences=None, pip_flags=None):
+def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
+                test_only:bool=False, env:dict=None, deps:list=None, post_install_commands:list=None,
+                install_subdirectory:bool=False, repo:str=None, use_pypi:bool=None, patch:str|list=None,
+                visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None):
     """Provides a build rule for third-party dependencies to be installed by pip.
 
     Args:
@@ -288,7 +291,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
       outs (list): List of output files / directories. Defaults to [name].
       test_only (bool): If True, can only be used by test rules or other test_only libraries.
-      env (dict): Environment variables to provide during pip install, as a dict (or similar).
+      env (dict): Environment variables to provide during pip install, as a dict.
       deps (list): List of rules this library depends on.
       post_install_commands (list): Commands run after pip install has completed.
       install_subdirectory (bool): Forces the package to install into a subdirectory with this name.
@@ -319,7 +322,7 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
             repo_flag = '-f ' + repo
 
     # Environment variables. Must sort in case we were given a dict.
-    environment = ' '.join('%s=%s' % (k, v) for k, v in sorted((env or {}).items()))
+    environment = ' '.join(['%s=%s' % (k, v) for k, v in sorted((env or {}).items())])
     target = outs[0] if install_subdirectory else '.'
 
     # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
@@ -341,10 +344,10 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
         if CONFIG.OS == 'freebsd':
             # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
             # files for hashes to match correctly.
-            cmd += ' && ' + ' && '.join('patch -p0 < $(location %s)' % patch for patch in patches)
+            cmd += ' && ' + ' && '.join(['patch -p0 < $(location %s)' % patch for patch in patches])
             cmd += ' && find . -name "*.orig" | xargs rm'
         else:
-            cmd += ' && ' + ' && '.join('patch -p0 --no-backup-if-mismatch < $(location %s)' % patch for patch in patches)
+            cmd += ' && ' + ' && '.join(['patch -p0 --no-backup-if-mismatch < $(location %s)' % patch for patch in patches])
 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)
@@ -376,9 +379,10 @@ def pip_library(name, version, hashes=None, package_name=None, outs=None, test_o
     )
 
 
-def python_wheel(name, version, hashes=None, package_name=None, outs=None,
-                 post_install_commands=None, patch=None, licences=None, test_only=False,
-                 repo=None, zip_safe=True, visibility=None, deps=None, name_scheme=None):
+def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
+                 post_install_commands:list=None, patch:str|list=None, licences:list=None,
+                 test_only:bool=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
+                 deps:list=None, name_scheme:str=None):
     """Downloads a Python wheel and extracts it.
 
     This is a lightweight pip-free alternative to pip_library which supports cross-compiling.
@@ -414,7 +418,7 @@ def python_wheel(name, version, hashes=None, package_name=None, outs=None,
     package_name = package_name or name.replace('-', '_')
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:
-        raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly '
+        raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly ' +
                          'to python_wheel')
     urls = []
     if name_scheme:
@@ -448,11 +452,11 @@ def python_wheel(name, version, hashes=None, package_name=None, outs=None,
         'find . -name "*.pyc" -or -name "tests" | xargs rm -rf',
     ]
     if not licences:
-        cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
+        cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | ' +
                    'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
-        cmd.extend('patch -p0 --no-backup-if-mismatch < $(location %s)' % p for p in patches)
+        cmd.extend(['patch -p0 --no-backup-if-mismatch < $(location %s)' % p for p in patches])
     if post_install_commands:
         cmd.extend(post_install_commands)
 

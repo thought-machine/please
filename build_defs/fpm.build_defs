@@ -40,18 +40,19 @@ def fpm_package(name, version, package_type, files=None, dirs=None, links=None, 
     cmds = ['mkdir _tmp']
     srcs = srcs or []
     if files:
-        cmds.extend('mkdir -p _tmp/$(dirname %s) && cp -r $(location %s) _tmp/%s' %
-                    (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(files.items()))
+        cmds.extend(['mkdir -p _tmp/$(dirname %s) && cp -r $(location %s) _tmp/%s' %
+                     (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(files.items())])
         srcs.extend(sorted(files.values()))
     if dirs:
-        cmds.extend('mkdir -p _tmp/%s && cp -r %s _tmp/%s' %
-                    (k, ' '.join('$(locations %s)' % x for x in v), k)
-                    for k, v in sorted(dirs.items()))
-        srcs.extend(x for v in sorted(dirs.values()) for x in v)
+        cmds.extend(['mkdir -p _tmp/%s && cp -r %s _tmp/%s' %
+                     (k, ' '.join(['$(locations %s)' % x for x in v]), k)
+                     for k, v in sorted(dirs.items())])
+        for v in sorted(dirs.values()):
+            srcs.extend(v)
     cmds.append('cd _tmp')
     if links:
-        cmds.extend('mkdir -p $(dirname %s) && ln -s %s %s' %
-                    (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(links.items()))
+        cmds.extend(['mkdir -p $(dirname %s) && ln -s %s %s' %
+                     (k.lstrip('/'), v, k.lstrip('/')) for k, v in sorted(links.items())])
     cmds.append('fpm -s dir -t %s -n "%s" -v "%s" %s -p $OUT .' % (package_type, package_name,
                                                                    version, options))
     if post_cmds:
@@ -126,8 +127,8 @@ def fpm_deb(name, version, files=None, dirs=None, links=None, package_name=None,
 def _deb_deps(cmd, current_label):
     """Returns a pre-build function that updates the fpm command to add .deb dependencies."""
     def _find_deb_deps(name):
-        deps = ' '.join('-d ' + label for label in get_labels(name, 'deb_pkg:')
-                        if label != current_label)
+        deps = ' '.join(['-d ' + label for label in get_labels(name, 'deb_pkg:')
+                         if label != current_label])
         # Insert immediately after fpm, because it doesn't honour flags after positional arguments.
         set_command(name, cmd.replace(' && fpm ', ' && fpm %s ' % deps))
     return _find_deb_deps

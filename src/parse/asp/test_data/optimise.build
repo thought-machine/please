@@ -1,0 +1,10 @@
+"""Test file for optimise() function."""
+
+def x():
+    """Function that doesn't do anything."""
+
+def y():
+    pass
+
+def z():
+    l.append('x')

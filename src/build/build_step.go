@@ -89,7 +89,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		return err
 	}
 	// This must run before we can leave this function successfully by any path.
-	if target.PreBuildFunction != 0 {
+	if target.PreBuildFunction != 0 || target.NewPreBuildFunction != nil {
 		log.Debug("Running pre-build function for %s", target.Label)
 		if err := state.Parser.RunPreBuildFunction(tid, state, target); err != nil {
 			return err
@@ -120,7 +120,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		} else {
 			// If a post-build function ran it may modify the rule definition. In that case we
 			// need to check again whether the rule needs building.
-			if target.PostBuildFunction == 0 || !needsBuilding(state, target, true) {
+			if (target.PostBuildFunction == 0 && target.NewPostBuildFunction == nil) || !needsBuilding(state, target, true) {
 				if target.IsFilegroup {
 					// Small optimisation to ensure we don't need to rehash things unnecessarily.
 					copyFilegroupHashes(state, target)
@@ -173,7 +173,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if state.Cache != nil {
 		// Note that ordering here is quite sensitive since the post-build function can modify
 		// what we would retrieve from the cache.
-		if target.PostBuildFunction != 0 {
+		if target.PostBuildFunction != 0 || target.NewPostBuildFunction != nil {
 			log.Debug("Checking for post-build output file for %s in cache...", target.Label)
 			if state.Cache.RetrieveExtra(target, cacheKey, target.PostBuildOutputFileName()) {
 				if postBuildOutput, err = runPostBuildFunctionIfNeeded(tid, state, target); err != nil {
@@ -199,7 +199,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if err != nil {
 		return err
 	}
-	if target.PostBuildFunction != 0 {
+	if target.PostBuildFunction != 0 || target.NewPostBuildFunction != nil {
 		out = bytes.TrimSpace(out)
 		sout := string(out)
 		if postBuildOutput != "" {
@@ -237,7 +237,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if state.Cache != nil {
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
 		newCacheKey := mustShortTargetHash(state, target)
-		if target.PostBuildFunction != 0 {
+		if target.PostBuildFunction != 0 || target.NewPostBuildFunction != nil {
 			if !bytes.Equal(newCacheKey, cacheKey) {
 				// NB. Important this is stored with the earlier hash - if we calculate the hash
 				//     now, it might be different, and we could of course never retrieve it again.
@@ -544,7 +544,7 @@ func retrieveFromCache(state *core.BuildState, target *core.BuildTarget) ([]byte
 
 // Runs the post-build function for a target if it's got one.
 func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
-	if target.PostBuildFunction != 0 {
+	if target.PostBuildFunction != 0 || target.NewPostBuildFunction != nil {
 		out, err := loadPostBuildOutput(state, target)
 		if err != nil {
 			return "", err

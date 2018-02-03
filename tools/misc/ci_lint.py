@@ -54,7 +54,7 @@ class Linter:
             # We *think* our usage is legit although of course it would be nice to fix
             # the warnings regardless. For now we disable it to get linting of the rest
             # of the package.
-            subprocess.check_call(['go', 'tool', 'vet', '-unsafeptr=false'] + files)
+            subprocess.check_call(['go', 'tool', 'vet', '-unsafeptr=false', '-structtags=false'] + files)
             subprocess.check_call(['golint', '-set_exit_status'] + files)
             return True
         except subprocess.CalledProcessError:

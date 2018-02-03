@@ -6,7 +6,7 @@ ENGINE_DEPENDENCIES = {
     'python3': ['//third_party/python:cffi'],
 }
 
-ENGINES = sorted(ENGINE_DEPENDENCIES)
+ENGINES = sorted(ENGINE_DEPENDENCIES.keys())
 
 # New static parser engine & details of what we need for that.
 # Python 2.7 is the default for now because it is noticeably faster than 3.x.

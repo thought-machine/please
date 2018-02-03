@@ -1,0 +1,3 @@
+CC_MAIN = """
+#include "UnitTest++/UnitTest++.h"
+"""

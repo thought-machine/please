@@ -4,7 +4,7 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 
-_GOPATH = ' '.join('-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':'))
+_GOPATH = ' '.join(['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':')])
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
 _LINK_PKGS_CMD = ' '.join([
     'for FN in `find . -name "*.a" | sort`; do ',
@@ -13,9 +13,9 @@ _LINK_PKGS_CMD = ' '.join([
 ])
 
 
-def go_library(name, srcs, asm_srcs=None, hdrs=None, out=None, deps=None, visibility=None,
-               test_only=False, go_tools=None, complete=True, _needs_transitive_deps=False,
-               _all_srcs=False, cover=True):
+def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=None,
+               visibility:list=None, test_only:bool=False, go_tools:list=None, complete:bool=True,
+               _needs_transitive_deps=False, _all_srcs=False, cover:bool=True):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -115,7 +115,7 @@ def go_library(name, srcs, asm_srcs=None, hdrs=None, out=None, deps=None, visibi
     )
 
 
-def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
+def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list=None, test_only:bool=False):
     """Generates a `go generate` rule.
 
     Args:
@@ -169,9 +169,9 @@ def go_generate(name, srcs, tools, deps=None, visibility=None, test_only=False):
     )
 
 
-def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, compiler_flags=None,
-                linker_flags=None, pkg_config=None, subdir='', deps=None, visibility=None,
-                test_only=False):
+def cgo_library(name:str, srcs:list, go_srcs:list=None, c_srcs:list=None, hdrs:list=None,
+                out:str=None, compiler_flags:list=None, linker_flags:list=None, pkg_config:list=None,
+                subdir:str='', deps:list=None, visibility:list=None, test_only:bool=False):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -276,7 +276,7 @@ def cgo_library(name, srcs, go_srcs=None, c_srcs=None, hdrs=None, out=None, comp
     )
 
 
-def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag=None,
+def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag='',
                    linker_flags=None, deps=None, provides=None, out=None):
     """Defines a rule to merge a cgo object into a Go library."""
     if o_rule:
@@ -306,8 +306,8 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
     )
 
 
-def go_binary(name, srcs=None, asm_srcs=None, out=None, deps=None, visibility=None,
-              test_only=False, static=False):
+def go_binary(name:str, srcs:list=None, asm_srcs:list=None, out:str=None, deps:list=None,
+              visibility:list=None, test_only:bool=False, static:bool=False):
     """Compiles a Go binary.
 
     Args:
@@ -351,9 +351,10 @@ def go_binary(name, srcs=None, asm_srcs=None, out=None, deps=None, visibility=No
     )
 
 
-def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False,
-            sandbox=None, cgo=False, external=False, timeout=0, flaky=0, test_outputs=None,
-            labels=None, size=None, static=False):
+def go_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:list=None,
+            flags:str='', container:bool|dict=False, sandbox:bool=None, cgo:bool=False,
+            external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
+            labels:list=None, size:str=None, static:bool=False):
     """Defines a Go test rule.
 
     Args:
@@ -454,8 +455,9 @@ def go_test(name, srcs, data=None, deps=None, visibility=None, flags='', contain
     )
 
 
-def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', container=False, sandbox=None,
-             timeout=0, flaky=0, test_outputs=None, labels=None, size=None, static=False):
+def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:list=None,
+             flags:str='', container:bool|dict=False, sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
+             test_outputs:list=None, labels:list=None, size:str=None, static:bool=False):
     """Defines a Go test rule over a cgo_library.
 
     If the library you are testing is a cgo_library, you must use this instead of go_test.
@@ -502,8 +504,9 @@ def cgo_test(name, srcs, data=None, deps=None, visibility=None, flags='', contai
     )
 
 
-def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=None, patch=None,
-           binary=False, test_only=False, install=None, revision=None, strip=None):
+def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list=None,
+           visibility:list=None, patch:str=None, binary:bool=False, test_only:bool=False,
+           install:list=None, revision:str=None, strip:list=None):
     """Defines a dependency on a third-party Go library.
 
     Args:
@@ -539,8 +542,8 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         # all available in the GOPATH by detecting their pkg/ folder and using its parent
         'export GOPATH="$TMP_DIR"',
         # loop done like this because the GOPATH export should not be in a SubShell
-        'while IFS= read -r dep_dir; do '
-        'if [ -n "$dep_dir" ]; then export GOPATH="${dep_dir}:${GOPATH}" ; fi ; done '
+        'while IFS= read -r dep_dir; do ' +
+        'if [ -n "$dep_dir" ]; then export GOPATH="${dep_dir}:${GOPATH}" ; fi ; done ' +
         '< <(echo "$existing" | sed -e \'s|pkg/.*||g\' | sort -u)',
 
         'export INSTALL_DIR=$(mktemp -d ${TMP_DIR}/tmp.XXXXX)',
@@ -561,7 +564,7 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
         # go_get built dependencies could be in different dirs so we strip the prefix
         # leading up to `/pkg/`. These have been cached in the "$INSTALL_DIR/pkg/.."
         # during the `go install`. So clean them up from this target's outputs
-        'echo "$existing" | while IFS= read -r pathname; do '
+        'echo "$existing" | while IFS= read -r pathname; do ' +
         'if [ -n "$pathname" ]; then rm -f "$INSTALL_DIR/pkg/${pathname#*/pkg/}" ; fi ; done',
         'cd $TMP_DIR',
         # delete all other dirs with deps. Only src,pkg and maybe bin will remain
@@ -574,7 +577,7 @@ def go_get(name, get=None, outs=None, deps=None, exported_deps=None, visibility=
             'find pkg -name "*.a" | sort',
         ])
     if strip:
-        cmd.extend('rm -rf %s/%s' % (subdir, s) for s in strip)
+        cmd.extend(['rm -rf %s/%s' % (subdir, s) for s in strip])
     build_rule(
         name=name,
         srcs=[patch] if patch else [],
@@ -599,17 +602,12 @@ def _extra_outs(get):
     def _inner(name, output):
         last = '<>'
         for archive in output:
-            try:
-                add_out(name, archive)
-                subpath = archive[archive.find('/', 6) + 1:-2]
-                if (not subpath.startswith(get) and not subpath.startswith(last) and
-                    not get.startswith(subpath) and not last.startswith(subpath)):
-                        add_out(name, 'src/' + subpath)
-            except ParseError:
-                log.error("Looks like you have two go_get rules trying to output the "
-                          "same file; most likely you need to add some dependencies so "
-                          "that shared file is built independently.")
-                raise
+            add_out(name, archive)
+            before, _, after = archive[6:-2].partition('/')
+            subpath = after or before
+            if ((not subpath.startswith(get)) and (not subpath.startswith(last)) and
+                (not get.startswith(subpath)) and (not last.startswith(subpath))):
+                    add_out(name, 'src/' + subpath)
             last = subpath
     return _inner
 
@@ -709,6 +707,6 @@ def _collect_linker_flags(static):
 def _get_ldflags_and_pkgconfig(name):
     """Returns the ldflags and pkg-config invocations for a target."""
     labels = get_labels(name, 'cc:')
-    ldflags = ' '.join(l[3:] for l in labels if l.startswith('ld:'))
-    pkg_config = ' '.join(l[3:] for l in labels if l.startswith('pc:'))
+    ldflags = ' '.join([l[3:] for l in labels if l.startswith('ld:')])
+    pkg_config = ' '.join([l[3:] for l in labels if l.startswith('pc:')])
     return (ldflags, '`pkg-config --libs %s`' % pkg_config) if pkg_config else (ldflags, '')

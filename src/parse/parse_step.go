@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"core"
+	"parse/asp"
 )
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
@@ -28,7 +29,11 @@ import (
 func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) {
 	defer func() {
 		if r := recover(); r != nil {
-			state.LogBuildError(tid, label, core.ParseFailed, fmt.Errorf("%s", r), "Failed to parse package")
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("%s", r)
+			}
+			state.LogBuildError(tid, label, core.ParseFailed, err, "Failed to parse package")
 		}
 	}()
 	// First see if this package already exists; once it's in the graph it will have been parsed.
@@ -81,7 +86,7 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
 func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor core.BuildLabel, noDeps, forSubinclude bool, include, exclude []string) {
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
-		msg := fmt.Sprintf("Parsed build file %s/BUILD but it doesn't contain target %s", label.PackageName, label.Name)
+		msg := fmt.Sprintf("Parsed build file %s but it doesn't contain target %s", pkg.Filename, label.Name)
 		if dependor != core.OriginalTarget {
 			msg += fmt.Sprintf(" (depended on by %s)", dependor)
 		}
@@ -151,8 +156,8 @@ func deferParse(label core.BuildLabel, pkg *core.Package) bool {
 	return true
 }
 
-// UndeferAnyParses un-defers the parsing of a package if it depended on some subinclude target being built.
-func UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
+// undeferAnyParses un-defers the parsing of a package if it depended on some subinclude target being built.
+func undeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
 	pendingTargetMutex.Lock()
 	defer pendingTargetMutex.Unlock()
 	if m, present := deferredParses[target.Label.PackageName]; present {
@@ -202,8 +207,16 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 		panic(fmt.Sprintf("Can't build %s; the directory %s doesn't exist", label, packageName))
 	}
 
-	if parsePackageFile(state, pkg.Filename, pkg) {
+	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err == errDeferParse {
 		return nil // Indicates deferral
+	} else if required, l := asp.RequiresSubinclude(err); required {
+		if deferParse(l, pkg) {
+			return nil // similarly, deferral
+		}
+		// If we get here, the target wasn't available to subinclude before, but is now. Try it again.
+		return parsePackage(state, label, dependor)
+	} else if err != nil {
+		panic(err) // TODO(peterebden): Should just return this...
 	}
 
 	allTargets := pkg.AllTargets()
@@ -312,52 +325,6 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 		}
 		addDep(state, dep, label, false, forceBuild)
 	}
-}
-
-// RunPreBuildFunction runs a pre-build callback function registered on a build target via pre_build = <...>.
-//
-// This is called before the target is built. It doesn't receive any output like the post-build one does but can
-// be useful for other things; for example if you want to investigate a target's transitive labels to adjust
-// its build command, you have to do that here (because in general the transitive dependencies aren't known
-// when the rule is evaluated).
-func RunPreBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget) error {
-	state.LogBuildResult(tid, target.Label, core.PackageParsing,
-		fmt.Sprintf("Running pre-build function for %s", target.Label))
-	pkg := state.Graph.Package(target.Label.PackageName)
-	changed, err := pkg.EnterBuildCallback(func() error {
-		return runPreBuildFunction(pkg, target)
-	})
-	if err != nil {
-		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed pre-build function for %s", target.Label)
-	} else {
-		rescanDeps(state, changed)
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding,
-			fmt.Sprintf("Finished pre-build function for %s", target.Label))
-	}
-	return err
-}
-
-// RunPostBuildFunction runs a post-build callback function registered on a build target via post_build = <...>.
-//
-// This is called after the target has been built and it is given the combined stdout/stderr of
-// the build process. This output is passed to the post-build Python function which can then
-// generate new targets or add dependencies to existing unbuilt targets.
-func RunPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, out string) error {
-	state.LogBuildResult(tid, target.Label, core.PackageParsing,
-		fmt.Sprintf("Running post-build function for %s", target.Label))
-	pkg := state.Graph.Package(target.Label.PackageName)
-	changed, err := pkg.EnterBuildCallback(func() error {
-		log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, out)
-		return runPostBuildFunction(pkg, target, out)
-	})
-	if err != nil {
-		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed post-build function for %s", target.Label)
-	} else {
-		rescanDeps(state, changed)
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding,
-			fmt.Sprintf("Finished post-build function for %s", target.Label))
-	}
-	return err
 }
 
 func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) {

@@ -1,0 +1,4 @@
+genrule(
+    name = 'rule',
+    srcs = ['//something:test_go'] + glob(['*.go']),
+)

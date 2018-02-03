@@ -118,7 +118,7 @@ def _extract_keyword(node, arg, default=''):
 
 
 with zipfile.ZipFile(pex_main.PEX, 'r') as zf:
-    JSON = json.load(zf.open('tools/linter/rule_args.json'))
+    JSON = json.loads(zf.open('tools/linter/rule_args.json').read().decode())
 WHITELISTED_FUNCTIONS = {'subinclude', 'glob', 'include_defs', 'licenses'}
 BUILTIN_FUNCTIONS = {k: _args(v) for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
 DEPRECATED_FUNCTIONS = {'include_defs'}
@@ -162,18 +162,16 @@ def _lint_unsorted_iteration(n):
 def _lint_builtin_functions(n):
     """Lints for incorrect calls to builtin functions."""
     if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in BUILTIN_FUNCTIONS:
-        if n.args or n.starargs:
+        if n.args:
             yield n.lineno, NON_KEYWORD_CALL
         args = BUILTIN_FUNCTIONS[n.func.id]['args']
         for kwd in n.keywords or []:
-            if kwd.arg not in args and not kwd.arg.startswith('_'):
+            if kwd.arg not in args and kwd.arg and not kwd.arg.startswith('_'):
                 yield kwd.value.lineno, INCORRECT_ARGUMENT
-        # Don't check kwargs if the caller is doing a **kwargs into it, assume that'll take care of it.
-        if not n.kwargs:
-            kwds = {kwd.arg for kwd in n.keywords or []}
-            for name, arg in args.items():
-                if arg['required'] and name not in kwds:
-                    yield n.lineno, MISSING_ARGUMENT
+        kwds = {kwd.arg for kwd in n.keywords or []}
+        for name, arg in args.items():
+            if arg['required'] and name not in kwds:
+                yield n.lineno, MISSING_ARGUMENT
 
 
 def _lint_deprecated_functions(n):

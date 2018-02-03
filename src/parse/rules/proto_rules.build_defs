@@ -15,8 +15,8 @@ should be the return value of proto_language.
 _DEFAULT_GRPC_LABELS = ['grpc']
 
 
-def proto_library(name, srcs, deps=None, visibility=None, labels=None,
-                  languages=None, test_only=False, root_dir='', protoc_flags=None):
+def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, labels:list=None,
+                  languages:list|dict=None, test_only:bool=False, root_dir:str='', protoc_flags:list=None):
     """Compile a .proto file to generated code for various languages.
 
     Args:
@@ -43,16 +43,14 @@ def proto_library(name, srcs, deps=None, visibility=None, labels=None,
     # We detect output names for normal sources, but will have to do a post-build rule for
     # any input rules. We could just do that for everything but it's nicer to avoid them
     # when possible since they obscure what's going on with the build graph.
-    file_srcs = [src for src in srcs if src[0] not in {':', '/'}]
+    file_srcs = [src for src in srcs if src[0] not in [':', '/']]
     need_post_build = file_srcs != srcs
     provides = {'proto': ':_%s#proto' % name}
 
     lang_plugins = sorted(languages.items())
     plugins = [plugin for _, plugin in lang_plugins]
     file_extensions = []
-    outs = {ext_lang: [src.replace('.proto', ext) for src in file_srcs for ext in exts]
-                      if plugin['use_file_names'] else []
-            for language, plugin in lang_plugins for ext_lang, exts in plugin['extensions'].items()}
+    outs = _flatten_outs(lang_plugins, file_srcs)
     flags = [' '.join(plugin['protoc_flags']) for plugin in plugins] + protoc_flags
     tools = {lang: plugin.get('tools') for lang, plugin in lang_plugins}
     tools['protoc'] = [CONFIG.PROTOC_TOOL]
@@ -64,10 +62,10 @@ def proto_library(name, srcs, deps=None, visibility=None, labels=None,
     cmds = [cmd, '(mv -f ${PKG}/* .; true)']
 
     # protoc_flags are applied transitively to dependent rules via labels.
-    labels.extend('protoc:' + flag for flag in protoc_flags)
+    labels.extend(['protoc:' + flag for flag in protoc_flags])
 
     # TODO(pebers): genericise these bits?
-    if 'py' in languages and CONFIG.PROTO_PYTHON_PACKAGE:
+    if ('py' in languages) and CONFIG.PROTO_PYTHON_PACKAGE:
         cmds.append('find . -name "*_pb2.py" | xargs sed -i -e "s/from google.protobuf/from %s/g"' %
                     CONFIG.PROTO_PYTHON_PACKAGE)
     if 'go' in languages:
@@ -78,12 +76,15 @@ def proto_library(name, srcs, deps=None, visibility=None, labels=None,
     # Figure out which languages we need to detect output files for.
     # This always happens for Java, and will be needed for any other language where the inputs aren't plain files.
     post_build = None
-    search_extensions = [(lang, exts) for plugin in plugins
-                         for lang, exts in sorted(plugin['extensions'].items())
-                         if need_post_build or not plugin['use_file_names']]
+    search_extensions = []
+    for plugin in plugins:
+        search_extensions += [(lang, exts) for lang, exts in sorted(plugin['extensions'].items())
+                              if need_post_build or not plugin['use_file_names']]
     if search_extensions:
-        all_exts = [ext for _, exts in search_extensions for ext in exts]
-        cmds.append('find . %s | sort' % ' -or '.join('-name "*%s"' % ext for ext in all_exts))
+        all_exts = []
+        for _, exts in search_extensions:
+            all_exts += exts
+        cmds.append('find . %s | sort' % ' -or '.join(['-name "*%s"' % ext for ext in all_exts]))
         post_build = _annotate_outs(search_extensions)
 
     # Plugins can declare their own pre-build functions. If there are any, we need to apply them all in sequence.
@@ -141,8 +142,8 @@ def proto_library(name, srcs, deps=None, visibility=None, labels=None,
     )
 
 
-def grpc_library(name, srcs, deps=None, visibility=None, languages=None, labels=None,
-                 test_only=False, root_dir='', protoc_flags=None):
+def grpc_library(name:str, srcs:list, deps:list=None, visibility:list=None, languages:list|dict=None,
+                 labels:list=None, test_only:bool=False, root_dir:str='', protoc_flags:list=None):
     """Defines a rule for a grpc library.
 
     Args:
@@ -183,8 +184,8 @@ def _go_path_mapping(grpc):
     return _map_go_paths
 
 
-def proto_language(language, extensions, func, use_file_names=True, protoc_flags=None,
-                   tools=None, deps=None, pre_build=None, proto_language=''):
+def proto_language(language:str, extensions:list|dict, func:function, use_file_names:bool=True, protoc_flags:list=None,
+                   tools:list=None, deps:list=None, pre_build:function=None, proto_language:str=''):
     """Returns the definition of how to build a particular language for proto_library.
 
     Args:
@@ -220,7 +221,8 @@ def proto_language(language, extensions, func, use_file_names=True, protoc_flags
 
 def _parent_rule(name):
     """Returns the parent rule, i.e. strips the leading _ and trailing #hashtag."""
-    return name[:name.find('#')].lstrip('_')
+    before, _, _ = name.partition('#')
+    return before.lstrip('_')
 
 
 def _annotate_outs(extensions):
@@ -435,3 +437,16 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
         cmd = 'unzip $SRCS bin/protoc && mv bin/protoc $OUT',
         visibility = visibility,
     )
+
+
+def _flatten_outs(plugins, file_srcs):
+    """Flattens outputs from plugins into one dict."""
+    ret = {}
+    for language, plugin in plugins:
+        for ext_lang, exts in plugin['extensions'].items():
+            l = []
+            if plugin['use_file_names']:
+                for src in file_srcs:
+                    l += [src.replace('.proto', ext) for ext in exts]
+            ret[ext_lang] = l
+    return ret

@@ -1,0 +1,4 @@
+def cc_library():
+    """Generate a C or C++ library target."""
+    if x:
+        pass

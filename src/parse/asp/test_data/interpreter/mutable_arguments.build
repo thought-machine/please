@@ -1,0 +1,6 @@
+def test(a, b=x):
+    return a + b
+
+x = 5
+
+y = test(3)

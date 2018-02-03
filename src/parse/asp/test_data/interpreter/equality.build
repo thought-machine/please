@@ -1,0 +1,18 @@
+# Bools are singletons so 'is' works as expected
+x = True
+y = True
+z = False
+
+a = x == y
+b = x is y
+c = x == z
+d = x is z
+
+# Ints aren't.
+x = 1
+y = 1
+z = 2
+
+e = x == y
+f = x is y
+g = x == z

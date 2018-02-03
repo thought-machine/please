@@ -1,0 +1,1 @@
+options = ' '.join(['-o ' + option for option in optional]) if optional else ''

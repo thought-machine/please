@@ -4,6 +4,9 @@ PEP3107 / PEP0484 style hints would be nicer, of course, but we need to
 retain python 2 compatibility for the foreseeable future.
 We could also write them manually, but I've chosen not to because
 of laziness.
+
+This script is now obsolete in the face of the new parser which does support
+PEP-484 style hints (well, sort of...), but is retained until we migrate completely.
 """
 
 import ast
@@ -13,12 +16,18 @@ import sys
 
 
 DOCSTRING_RE = re.compile(r' *([^ ]+) \(([^\)]+)\):')
+PEP484_RE = re.compile(r':(?:(?:bool|int|str|list|dict|function)\|?)+([,)=])')
+
+
+def remove_type_hints(contents):
+    """Removes all PEP-484 style type hints from the given file."""
+    return PEP484_RE.sub(r'\1', contents)
 
 
 def read_functions(filename):
     """Reads the given python file and yields the function arguments in it."""
     with open(filename) as f:
-        tree = ast.parse(f.read(), f.name)
+        tree = ast.parse(remove_type_hints(f.read()), f.name)
         for i, node in enumerate(ast.iter_child_nodes(tree)):
             if isinstance(node, ast.FunctionDef) and not node.name.startswith('_'):
                 # The c_*** family of functions call through to the cc_family. To keep them simple
@@ -41,16 +50,16 @@ def arg_checks(node):
         rtype = doc.replace('bool', 'int')  # Bools are ints so an int is acceptable.
         if '|' in doc:
             types = rtype.split(' | ')
-            yield 'assert not %s or isinstance(%s, (%s)), "Argument %s to %s must be a %s"' % (
+            yield 'assert (not %s) or isinstance(%s, (%s)), "Argument %s to %s must be a %s"' % (
                 arg, arg, ', '.join(types), arg, node.name, doc.replace('|', 'or'))
         elif i >= min_default:
             if doc == 'function':
                 # Have to check functions a bit specially. Maybe we should document them
                 # as 'callable' instead of 'function'?
-                yield 'assert not %s or callable(%s), "Argument %s to %s must be callable"' % (
+                yield 'assert (not %s) or callable(%s), "Argument %s to %s must be callable"' % (
                     arg, arg, arg, node.name)
             else:
-                yield 'assert not %s or isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
+                yield 'assert (not %s) or isinstance(%s, %s), "Argument %s to %s must be a %s"' % (
                     arg, arg, rtype, arg, node.name, doc)
         else:
             if doc == 'function':
@@ -67,7 +76,7 @@ def process(filename):
         for i, line in enumerate(f):
             if i in checks:
                 f2.write('\n'.join(indent * ' ' + check for check in checks[i]) + '\n\n')
-            f2.write(line)
+            f2.write(remove_type_hints(line))
             indent = len(line) - len(line.lstrip())
 
 

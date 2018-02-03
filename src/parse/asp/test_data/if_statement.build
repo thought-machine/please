@@ -1,0 +1,4 @@
+if condition_a and condition_b:
+    genrule(
+        name = 'rule',
+    )

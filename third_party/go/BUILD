@@ -93,10 +93,18 @@ go_get(
 )
 
 go_get(
+    name = 'spew',
+    get = 'github.com/davecgh/go-spew/spew',
+    patch = 'spew_omit_empty.patch',
+    revision = 'ecdeabc65495df2dec95d7c4a4c3e021903035e5',
+)
+
+go_get(
     name = 'testify',
     get = 'github.com/stretchr/testify',
     install = ['github.com/stretchr/testify/require'],
     revision = 'f390dcf405f7b83c997eac1b06768bb9f44dec18',
+    deps = [':spew'],
 )
 
 go_get(
@@ -248,4 +256,10 @@ go_get(
     name = 'openpgp',
     get = 'golang.org/x/crypto/openpgp',
     revision = '077efaa604f994162e3307fafe5954640763fc08',
+)
+
+go_get(
+    name = 'participle',
+    get = 'github.com/alecthomas/participle',
+    revision = '48f3ab340563c5a91f83efdc0dc3f14f5d9364a2',
 )
