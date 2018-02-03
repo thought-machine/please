@@ -30,30 +30,15 @@ go get github.com/djherbis/atime
 go get github.com/alecthomas/participle
 go get github.com/davecgh/go-spew/spew
 
-# Determine which interpreter engines we'll build.
-INTERPRETERS=""
-
-function detect_interpreter {
-    set +e
-    if hash $1 2>/dev/null ; then
-	INTERPRETERS="$INTERPRETERS //src:please_parser_$1"
-        $1 -c 'import cffi' 2> /dev/null
-        if [ $? -eq 0 ]; then
-	    notice "$1 is a usable interpreter engine"
-        fi
-    fi
-    set -e
-}
-
-# Use builtin engine for bootstrap.
-export PLZ_OVERRIDES="parse.engine:asp"
 # Clean out old artifacts.
-rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/builtin_rules.go src/parse/asp/builtins/builtin_data.bindata.go
+rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/builtin_rules.bindata.go src/parse/asp/builtins/builtin_data.bindata.go
 # Compile the builtin rules
 notice "Compiling built-in rules..."
 go run src/parse/asp/main/compiler.go -o plz-out/asp/src/parse/asp/builtins src/parse/asp/builtins/builtins.build_defs src/parse/rules/*.build_defs
 # Embed them into Go
 bin/go-bindata -o src/parse/asp/builtins/builtin_data.bindata.go -pkg builtins -prefix plz-out/asp/src/parse/asp/builtins plz-out/asp/src/parse/asp/builtins
+# The old version is still needed for things to compile.
+bin/go-bindata -o src/parse/builtin_rules.bindata.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
@@ -70,7 +55,7 @@ fi
 notice "Running tests..."
 
 # Run the set of tests that will work on this machine.
-# We assume the user has Java and Python installed or the build will have already failed,
+# We assume the user has Java installed or the build will have already failed,
 # but some other parts are optional until one actually tries to use the rule.
 EXCLUDES=""
 
