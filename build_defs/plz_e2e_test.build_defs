@@ -2,7 +2,7 @@
 
 def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure=False,
                  expect_output_contains=None, expect_output_doesnt_contain=None,
-                 deps=None, data=None, labels=None, sandbox=False,
+                 deps=None, data=None, labels=None, sandbox=None,
                  expect_file_exists=None, expect_file_doesnt_exist=None):
     # Please isn't really designed to work this way (running a test against the entire source repo)
     # but we can make it do it and it's a convenient way of testing the tool itself.
@@ -39,5 +39,5 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
         deps = deps,
         labels = ['e2e'] + (labels or []),
         no_test_output = True,
-        sandbox = sandbox,
+        sandbox = None,
     )
