@@ -2,14 +2,13 @@
 
 def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure=False,
                  expect_output_contains=None, expect_output_doesnt_contain=None,
-                 deps=None, data=None, labels=None,
+                 deps=None, data=None, labels=None, sandbox=False,
                  expect_file_exists=None, expect_file_doesnt_exist=None):
     # Please isn't really designed to work this way (running a test against the entire source repo)
     # but we can make it do it and it's a convenient way of testing the tool itself.
     cmd = cmd.replace('plz', '$(location //src:please) --nolock -o cache.rpcurl:"" -o parse.engine:asp --log_file plz-out/log/%s.log' % name)
     data = (data or []) + [
         '//src:please',
-        '//src:cffi',
     ]
     if expected_failure:
         test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd
@@ -38,6 +37,7 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
         test_cmd='set -o pipefail; ' + test_cmd,
         data = data,
         deps = deps,
-        labels = ['e2e', 'py2', 'py3', 'pypy'] + (labels or []),
+        labels = ['e2e'] + (labels or []),
         no_test_output = True,
+        sandbox = sandbox,
     )
