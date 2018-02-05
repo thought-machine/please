@@ -312,3 +312,21 @@ func TestUnevenUnindent(t *testing.T) {
 	assertToken(t, l.Next(), Unindent, "", 6, 1, 52)
 	assertToken(t, l.Next(), EOF, "", 6, 1, 52)
 }
+
+const implicitStringConcatenation = `
+str('testing that we can carry these '
+    'over multiple lines')
+`
+
+func TestImplicitStringConcatenation(t *testing.T) {
+	l := NewLexer().Lex(strings.NewReader(implicitStringConcatenation))
+	assertToken(t, l.Next(), Ident, "str", 2, 1, 2)
+	assertToken(t, l.Next(), '(', "(", 2, 4, 5)
+	assertToken(t, l.Next(), String, `"testing that we can carry these over multiple lines"`, 2, 5, 6)
+}
+
+func TestImplicitStringConcatenationOnlyHappensInsideBraces(t *testing.T) {
+	l := NewLexer().Lex(strings.NewReader("'hello' 'world'"))
+	assertToken(t, l.Next(), String, `"hello"`, 1, 1, 1)
+	assertToken(t, l.Next(), String, `"world"`, 1, 9, 9)
+}

@@ -38,11 +38,9 @@ remain unimplemented. Some of the notable differences are:
    as the original (e.g. they may not always modify the original if it originated
    from a surrounding scope).
    Users are encouraged to use the `+=` augmented assignment operator instead.
- * Implicit string concatenation isn't supported.
 
 TODOs (in no particular order of importance):
  * Better guarantees around ordering. Consider banishing sorted().
- * Optimise concatenation of constant string literals.
  * Better operator precedence.
 
 The name is reminiscent of AST, and a play on an asp being a smaller snake than a python.

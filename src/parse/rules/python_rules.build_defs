@@ -418,7 +418,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     package_name = package_name or name.replace('-', '_')
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:
-        raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly ' +
+        raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly '
                          'to python_wheel')
     urls = []
     if name_scheme:
@@ -452,7 +452,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         'find . -name "*.pyc" -or -name "tests" | xargs rm -rf',
     ]
     if not licences:
-        cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | ' +
+        cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
                    'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
     if patch:
         patches = [patch] if isinstance(patch, str) else patch

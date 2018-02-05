@@ -542,8 +542,8 @@ def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list
         # all available in the GOPATH by detecting their pkg/ folder and using its parent
         'export GOPATH="$TMP_DIR"',
         # loop done like this because the GOPATH export should not be in a SubShell
-        'while IFS= read -r dep_dir; do ' +
-        'if [ -n "$dep_dir" ]; then export GOPATH="${dep_dir}:${GOPATH}" ; fi ; done ' +
+        'while IFS= read -r dep_dir; do '
+        'if [ -n "$dep_dir" ]; then export GOPATH="${dep_dir}:${GOPATH}" ; fi ; done '
         '< <(echo "$existing" | sed -e \'s|pkg/.*||g\' | sort -u)',
 
         'export INSTALL_DIR=$(mktemp -d ${TMP_DIR}/tmp.XXXXX)',
@@ -564,7 +564,7 @@ def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list
         # go_get built dependencies could be in different dirs so we strip the prefix
         # leading up to `/pkg/`. These have been cached in the "$INSTALL_DIR/pkg/.."
         # during the `go install`. So clean them up from this target's outputs
-        'echo "$existing" | while IFS= read -r pathname; do ' +
+        'echo "$existing" | while IFS= read -r pathname; do '
         'if [ -n "$pathname" ]; then rm -f "$INSTALL_DIR/pkg/${pathname#*/pkg/}" ; fi ; done',
         'cd $TMP_DIR',
         # delete all other dirs with deps. Only src,pkg and maybe bin will remain

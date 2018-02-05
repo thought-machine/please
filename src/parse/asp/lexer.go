@@ -175,12 +175,7 @@ func (l *lex) nextToken() lexer.Token {
 		return l.consumeInteger(b, pos)
 	case '"', '\'':
 		// String literal, consume to end.
-		if l.b[l.i] == b && l.b[l.i+1] == b {
-			l.i += 2 // Jump over initial quote
-			l.col += 2
-			return l.consumeString(b, pos, true, rawString)
-		}
-		return l.consumeString(b, pos, false, rawString)
+		return l.consumePossiblyTripleQuotedString(b, pos, rawString)
 	case ':':
 		// As noted above, literal colons seem to break the parser.
 		return lexer.Token{Type: Colon, Value: ":", Pos: pos}
@@ -235,6 +230,16 @@ func (l *lex) consumeInteger(initial byte, pos lexer.Position) lexer.Token {
 	return lexer.Token{Type: Int, Value: string(s), Pos: pos}
 }
 
+// consumePossiblyTripleQuotedString consumes all characters until the end of a string token.
+func (l *lex) consumePossiblyTripleQuotedString(quote byte, pos lexer.Position, raw bool) lexer.Token {
+	if l.b[l.i] == quote && l.b[l.i+1] == quote {
+		l.i += 2 // Jump over initial quote
+		l.col += 2
+		return l.consumeString(quote, pos, true, raw)
+	}
+	return l.consumeString(quote, pos, false, raw)
+}
+
 // consumeString consumes all characters until the end of a string literal is reached.
 func (l *lex) consumeString(quote byte, pos lexer.Position, multiline, raw bool) lexer.Token {
 	s := make([]byte, 1, 100) // 100 chars is typically enough for a single string literal.
@@ -264,7 +269,11 @@ func (l *lex) consumeString(quote byte, pos lexer.Position, multiline, raw bool)
 					l.i += 2
 					l.col += 2
 				}
-				return lexer.Token{Type: String, Value: string(s), Pos: pos}
+				token := lexer.Token{Type: String, Value: string(s), Pos: pos}
+				if l.braces > 0 {
+					return l.handleImplicitStringConcatenation(token)
+				}
+				return token
 			}
 		case '\n':
 			if multiline {
@@ -286,6 +295,35 @@ func (l *lex) consumeString(quote byte, pos lexer.Position, multiline, raw bool)
 			s = append(s, c)
 		}
 	}
+}
+
+// handleImplicitStringConcatenation looks ahead after a string token and checks if the next token will be a string; if so
+// we collapse them both into one string now.
+func (l *lex) handleImplicitStringConcatenation(token lexer.Token) lexer.Token {
+	col := l.col
+	line := l.line
+	for i, b := range l.b[l.i:] {
+		switch b {
+		case '\n':
+			col = 0
+			line++
+			continue
+		case ' ':
+			col++
+			continue
+		case '"', '\'':
+			l.i += i + 1
+			l.col = col + 1
+			l.line = line
+			// Note that we don't handle raw strings here. Anecdotally, that seems relatively rare...
+			tok := l.consumePossiblyTripleQuotedString(b, token.Pos, false)
+			token.Value = token.Value[:len(token.Value)-1] + tok.Value[1:]
+			return token
+		default:
+			return token
+		}
+	}
+	return token
 }
 
 // consumeIdent consumes all characters of an identifier.
