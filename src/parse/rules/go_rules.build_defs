@@ -79,8 +79,9 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
 
     deps = deps or []
     # go_test and cgo_library need access to the sources as well.
-    filegroup(
-        name='_%s#srcs' % name,
+    src_rule = filegroup(
+        name = name,
+        tag = 'srcs',
         srcs=srcs,
         exported_deps=deps,
         visibility=visibility,
@@ -90,25 +91,25 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
 
     # Run go generate if needed.
     if go_tools:
-        go_generate(
+        gen_rule = go_generate(
             name='_%s#gen' % name,
             srcs=srcs,
             tools=go_tools,
-            deps=deps + [':_%s#srcs' % name],
+            deps=deps + [src_rule],
             test_only=test_only,
         )
-        srcs += [':_%s#gen' % name]
+        srcs += [gen_rule]
 
     return build_rule(
         name=name,
         srcs=srcs,
-        deps=deps + [':_%s#srcs' % name],
+        deps=deps + [src_rule],
         outs=[out or name + '.a'],
         cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover),
         visibility=visibility,
         building_description="Compiling...",
         requires=['go', 'go_src'] if _all_srcs else ['go'],
-        provides={'go': ':' + name, 'go_src': ':_%s#srcs' % name},
+        provides={'go': ':' + name, 'go_src': src_rule},
         test_only=test_only,
         tools=[CONFIG.GO_TOOL],
         needs_transitive_deps=_needs_transitive_deps,
@@ -154,7 +155,7 @@ def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list
         'mv $PKG_DIR/*.go .',
         'ls *.go'
     ])
-    build_rule(
+    return build_rule(
         name=name,
         srcs=srcs,
         deps=deps,

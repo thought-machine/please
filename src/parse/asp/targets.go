@@ -178,11 +178,13 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 	}
 	if l, ok := obj.(pyList); ok {
 		for _, li := range l {
-			out, ok := li.(pyString)
-			s.Assert(ok, "outs must be strings")
-			anon(string(out))
-			if !optional || !strings.HasPrefix(string(out), "*") {
-				s.pkg.MustRegisterOutput(string(out), t)
+			if li != None {
+				out, ok := li.(pyString)
+				s.Assert(ok, "outs must be strings")
+				anon(string(out))
+				if !optional || !strings.HasPrefix(string(out), "*") {
+					s.pkg.MustRegisterOutput(string(out), t)
+				}
 			}
 		}
 	} else if d, ok := obj.(pyDict); ok {
@@ -191,11 +193,13 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 			l, ok := v.(pyList)
 			s.Assert(ok, "Values must be lists of strings")
 			for _, li := range l {
-				out, ok := li.(pyString)
-				s.Assert(ok, "outs must be strings")
-				named(k, string(out))
-				if !optional || !strings.HasPrefix(string(out), "*") {
-					s.pkg.MustRegisterOutput(string(out), t)
+				if li != None {
+					out, ok := li.(pyString)
+					s.Assert(ok, "outs must be strings")
+					named(k, string(out))
+					if !optional || !strings.HasPrefix(string(out), "*") {
+						s.pkg.MustRegisterOutput(string(out), t)
+					}
 				}
 			}
 		}

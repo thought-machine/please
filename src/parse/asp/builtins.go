@@ -56,6 +56,7 @@ func registerBuiltins(s *scope) {
 		"find":       setNativeCode(s, "find", strFind),
 		"rfind":      setNativeCode(s, "find", strRFind),
 		"format":     setNativeCode(s, "format", strFormat),
+		"count":      setNativeCode(s, "count", strCount),
 	}
 	stringMethods["format"].kwargs = true
 	dictMethods = map[string]*pyFunc{
@@ -377,6 +378,12 @@ func strFormat(s *scope, args []pyObject) pyObject {
 		self = strings.Replace(self, "{"+k+"}", v.String(), -1)
 	}
 	return pyString(strings.Replace(strings.Replace(self, "{{", "{", -1), "}}", "}", -1))
+}
+
+func strCount(s *scope, args []pyObject) pyObject {
+	self := string(args[0].(pyString))
+	needle := string(args[1].(pyString))
+	return pyInt(strings.Count(self, needle))
 }
 
 func boolType(s *scope, args []pyObject) pyObject {

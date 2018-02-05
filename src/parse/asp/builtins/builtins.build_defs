@@ -24,8 +24,6 @@ def zip(args):
 
 def join(self, seq:list):
     pass
-
-
 def split(self, on:str=' '):
     pass
 def replace(self, old:str, new:str):
@@ -50,6 +48,8 @@ def find(self, needle:str):
     pass
 def rfind(self, needle:str):
     pass
+def count(self, needle:str):
+    pass
 
 
 def subinclude(target:str, hash:str=None):
@@ -66,6 +66,16 @@ def callable(obj):
 
 def range(start:int, stop:int=None):
     pass
+def any(seq:list):
+    for x in seq:
+        if x:
+            return True
+    return False
+def all(seq:list):
+    for x in seq:
+        if not x:
+            return False
+    return True
 
 
 def bool(b):
@@ -182,6 +192,7 @@ def dirname(p:str):
 # There is no actual Exception, but str() is similar enough here.
 ParseError = str
 ConfigError = str
+ValueError = str
 
 # These are just placeholders to allocate space in the map.
 PACKAGE_NAME = None
