@@ -48,7 +48,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.OutputIsComplete = isTruthy(18)
 	target.Containerise = container
 	target.Sandbox = isTruthy(20)
-	target.TestOnly = isTruthy(15)
+	target.TestOnly = test || isTruthy(15)
 	if timeout := args[24]; timeout != nil {
 		target.BuildTimeout = time.Duration(timeout.(pyInt)) * time.Second
 	}
@@ -67,7 +67,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 			if flaky == True {
 				target.Flakiness = 3
 				target.AddLabel("flaky") // Automatically label flaky tests
-			} else if i, ok := flaky.(pyInt); ok {
+			} else if i, ok := flaky.(pyInt); ok && i > 0 {
 				target.Flakiness = int(i)
 				target.AddLabel("flaky")
 			}
