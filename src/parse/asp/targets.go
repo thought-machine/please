@@ -93,7 +93,7 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 	if obj == nil || obj == None {
 		return "", nil
 	} else if cmd, ok := obj.(pyString); ok {
-		return string(cmd), nil
+		return strings.TrimSpace(string(cmd)), nil
 	}
 	cmds, ok := obj.(pyDict)
 	s.Assert(ok, "Unknown type for command [%s]", obj.Type())
@@ -103,7 +103,7 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 		if v != None {
 			sv, ok := v.(pyString)
 			s.Assert(ok, "Unknown type for command")
-			m[k] = string(sv)
+			m[k] = strings.TrimSpace(string(sv))
 		}
 	}
 	return "", m
