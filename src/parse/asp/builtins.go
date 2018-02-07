@@ -81,8 +81,11 @@ func registerBuiltins(s *scope) {
 
 // registerSubincludePackage sets up the package for remote subincludes.
 func registerSubincludePackage(s *scope) {
-	pkg := core.NewPackage(subincludePackageName)
-	s.state.Graph.AddPackage(pkg)
+	var pkg *core.Package
+	if pkg = s.state.Graph.Package(subincludePackageName); pkg == nil {
+		pkg = core.NewPackage(subincludePackageName)
+		s.state.Graph.AddPackage(pkg)
+	}
 	s.interpreter.subincludeScope = s.Duplicate(pkg)
 	// Always counts as being in callback mode (i.e. the package is already parsed and we are adding individual targets later).
 	s.interpreter.subincludeScope.Callback = true

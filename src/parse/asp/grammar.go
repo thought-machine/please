@@ -40,8 +40,9 @@ type returnStatement struct {
 type funcDef struct {
 	Name string `"def" @Ident`
 	// *args and **kwargs are not properly supported but we allow them here for some level of compatibility.
-	Arguments  []*argument  `"(" [ @@ { "," { "*" } @@ } ]`
-	Statements []*statement ` ")" Colon EOL { @@ } Unindent`
+	Arguments  []*argument  `"(" [ @@ { "," { "*" } @@ } ] ")" Colon EOL`
+	Docstring  string       `[ @String EOL ]`
+	Statements []*statement `{ @@ } Unindent`
 }
 
 type forStatement struct {

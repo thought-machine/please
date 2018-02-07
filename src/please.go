@@ -299,6 +299,11 @@ var opts struct {
 				Files []string `positional-arg-name:"files" description:"Files to query targets responsible for"`
 			} `positional-args:"true"`
 		} `command:"whatoutputs" description:"Prints out target(s) responsible for outputting provided file(s)"`
+		Rules struct {
+			Args struct {
+				Targets []core.BuildLabel `position-arg-name:"targets" description:"Additional targets to load rules from"`
+			} `positional-args:"true"`
+		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 	} `command:"query" description:"Queries information about the build graph"`
 }
 
@@ -549,6 +554,17 @@ var buildFunctions = map[string]func() bool{
 			}
 			query.WhatOutputs(state.Graph, files, opts.Query.WhatOutputs.EchoFiles)
 		})
+	},
+	"rules": func() bool {
+		config.Parse.Engine = "asp" // Required to extract the rules.
+		targets := opts.Query.Rules.Args.Targets
+		success, state := Please(opts.Query.Rules.Args.Targets, config, true, true, false)
+		if !success {
+			return false
+		}
+		targets = state.ExpandOriginalTargets()
+		parse.PrintRuleArgs(state, targets)
+		return true
 	},
 }
 

@@ -236,7 +236,8 @@ func TestFunctionDef(t *testing.T) {
 	statements, err := newParser().parse("src/parse/asp/test_data/function_def.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
-	assert.Equal(t, 4, len(statements[0].FuncDef.Statements))
+	assert.Equal(t, 3, len(statements[0].FuncDef.Statements))
+	assert.Equal(t, "Generate a C or C++ library target.", stringLiteral(statements[0].FuncDef.Docstring))
 }
 
 func TestComprehension(t *testing.T) {
@@ -380,4 +381,23 @@ func TestExample5(t *testing.T) {
 func TestExample6(t *testing.T) {
 	_, err := newParser().parse("src/parse/asp/test_data/example_6.build")
 	assert.NoError(t, err)
+}
+
+func TestEnvironment(t *testing.T) {
+	p := NewParser(nil)
+	p.MustLoadBuiltins("src/parse/asp/test_data/environment.build", nil, nil)
+	env := p.Environment()
+	f := env.Functions["rust_library"]
+	assert.NotNil(t, f)
+	assert.Equal(t, "Totally builds a Rust library, yeah?", f.Docstring)
+	assert.Equal(t, 3, len(f.Args))
+	assert.Equal(t, "name", f.Args[0].Name)
+	assert.Equal(t, []string{"str"}, f.Args[0].Types)
+	assert.True(t, f.Args[0].Required)
+	assert.Equal(t, "srcs", f.Args[1].Name)
+	assert.Equal(t, []string{"list"}, f.Args[1].Types)
+	assert.True(t, f.Args[1].Required)
+	assert.Equal(t, "deps", f.Args[2].Name)
+	assert.Equal(t, []string{"list"}, f.Args[2].Types)
+	assert.False(t, f.Args[2].Required)
 }

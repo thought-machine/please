@@ -1,0 +1,3 @@
+def rust_library(name:str, srcs:list, deps:list=None):
+    """Totally builds a Rust library, yeah?"""
+    pass

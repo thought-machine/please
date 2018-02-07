@@ -13,23 +13,7 @@ import (
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) {
 	if state.Config.Parse.Engine == "asp" {
-		p := asp.NewParser(state)
-		log.Debug("Loading built-in build rules...")
-		dir, _ := builtins.AssetDir("")
-		sort.Strings(dir)
-		for _, filename := range dir {
-			if strings.HasSuffix(filename, ".gob") {
-				srcFile := strings.TrimSuffix(filename, ".gob")
-				src, _ := builtins.Asset(srcFile)
-				p.MustLoadBuiltins("src/parse/"+srcFile, src, builtins.MustAsset(filename))
-			}
-		}
-		for _, preload := range state.Config.Parse.PreloadBuildDefs {
-			log.Debug("Preloading build defs from %s...", preload)
-			p.MustLoadBuiltins(preload, nil, nil)
-		}
-		log.Debug("Parser initialised")
-		state.Parser = &aspParser{asp: p}
+		state.Parser = &aspParser{asp: newAspParser(state)}
 	} else {
 		// This doesn't actually do any upfront initialisation - it happens behind a mutex later.
 		state.Parser = &pythonParser{}
@@ -39,6 +23,27 @@ func InitParser(state *core.BuildState) {
 // An aspParser implements the core.Parser interface around our asp package.
 type aspParser struct {
 	asp *asp.Parser
+}
+
+// newAspParser creates and returns a new asp.Parser.
+func newAspParser(state *core.BuildState) *asp.Parser {
+	p := asp.NewParser(state)
+	log.Debug("Loading built-in build rules...")
+	dir, _ := builtins.AssetDir("")
+	sort.Strings(dir)
+	for _, filename := range dir {
+		if strings.HasSuffix(filename, ".gob") {
+			srcFile := strings.TrimSuffix(filename, ".gob")
+			src, _ := builtins.Asset(srcFile)
+			p.MustLoadBuiltins("src/parse/"+srcFile, src, builtins.MustAsset(filename))
+		}
+	}
+	for _, preload := range state.Config.Parse.PreloadBuildDefs {
+		log.Debug("Preloading build defs from %s...", preload)
+		p.MustLoadBuiltins(preload, nil, nil)
+	}
+	log.Debug("Parser initialised")
+	return p
 }
 
 func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
