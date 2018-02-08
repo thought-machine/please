@@ -28,8 +28,8 @@ go_get(
 go_get(
     name = 'go-bindata',
     binary = True,
-    get = 'github.com/jteeuwen/go-bindata/...',
-    revision = 'a0ff2567cfb70903282db057e799fd826784d41d',
+    get = 'github.com/kevinburke/go-bindata/...',
+    revision = '46eb4c183bfc1ebb527d9d19bcded39476302eb8',
 )
 
 go_get(
