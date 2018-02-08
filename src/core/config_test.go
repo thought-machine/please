@@ -215,3 +215,10 @@ func TestConfigVerifiesOptions(t *testing.T) {
 	_, err = ReadConfigFiles([]string{"src/core/test_data/testrunner_bad.plzconfig"}, "")
 	assert.Error(t, err)
 }
+
+func TestBuildEnvSection(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/buildenv.plzconfig"}, "")
+	assert.NoError(t, err)
+	expected := []string{"BAR_BAR=first", "FOO_BAR=second"}
+	assert.Equal(t, expected, config.GetBuildEnv())
+}

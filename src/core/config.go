@@ -252,7 +252,7 @@ type Configuration struct {
 		Nonce             string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 	}
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
-	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSWORD for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
+	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
 	Cache       struct {
 		Workers               int          `help:"Number of workers for uploading artifacts to remote caches, which is done asynchronously."`
 		Dir                   string       `help:"Sets the directory to use for the dir cache.\nThe default is .plz-cache, if set to the empty string the dir cache will be disabled."`
@@ -419,7 +419,8 @@ func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvOnce.Do(func() {
 		config.buildEnvStored = []string{}
 		for k, v := range config.BuildEnv {
-			config.buildEnvStored = append(config.buildEnvStored, strings.ToUpper(k)+"="+v)
+			pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
+			config.buildEnvStored = append(config.buildEnvStored, pair)
 		}
 		sort.Strings(config.buildEnvStored)
 	})
