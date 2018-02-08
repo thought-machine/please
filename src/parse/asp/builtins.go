@@ -36,6 +36,8 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "bool", boolType)
 	setNativeCode(s, "str", strType)
 	setNativeCode(s, "join_path", joinPath).varargs = true
+	setNativeCode(s, "get_base_path", packageName)
+	setNativeCode(s, "package_name", packageName)
 	setNativeCode(s, "get_labels", getLabels)
 	setNativeCode(s, "add_dep", addDep)
 	setNativeCode(s, "add_out", addOut)
@@ -86,7 +88,7 @@ func registerSubincludePackage(s *scope) {
 		pkg = core.NewPackage(subincludePackageName)
 		s.state.Graph.AddPackage(pkg)
 	}
-	s.interpreter.subincludeScope = s.Duplicate(pkg)
+	s.interpreter.subincludeScope = s.NewPackagedScope(pkg)
 	// Always counts as being in callback mode (i.e. the package is already parsed and we are adding individual targets later).
 	s.interpreter.subincludeScope.Callback = true
 	// Another small hack - replace the code for these two with native code, must be done after the
@@ -496,6 +498,10 @@ func joinPath(s *scope, args []pyObject) pyObject {
 		l[i] = string(arg.(pyString))
 	}
 	return pyString(path.Join(l...))
+}
+
+func packageName(s *scope, args []pyObject) pyObject {
+	return pyString(s.pkg.Name)
 }
 
 func pyRange(s *scope, args []pyObject) pyObject {

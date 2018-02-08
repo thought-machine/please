@@ -101,7 +101,11 @@ func (i *interpreter) separatePrivateVars() {
 // interpretAll runs a series of statements in the context of the given package.
 // The first return value is for testing only.
 func (i *interpreter) interpretAll(pkg *core.Package, statements []*statement) (s *scope, err error) {
-	s = i.scope.Duplicate(pkg)
+	s = i.scope.NewPackagedScope(pkg)
+	// Config needs a little separate tweaking.
+	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
+	// mutating operations like .setdefault() otherwise.
+	s.Set("CONFIG", i.scope.Lookup("CONFIG").(*pyConfig).Copy())
 	err = i.interpretStatements(s, statements)
 	if err == nil {
 		s.Callback = true // From here on, if anything else uses this scope, it's in a post-build callback.
@@ -184,10 +188,15 @@ type scope struct {
 
 // NewScope creates a new child scope of this one.
 func (s *scope) NewScope() *scope {
+	return s.NewPackagedScope(s.pkg)
+}
+
+// NewPackagedScope creates a new child scope of this one pointing to the given package.
+func (s *scope) NewPackagedScope(pkg *core.Package) *scope {
 	return &scope{
 		interpreter: s.interpreter,
 		state:       s.state,
-		pkg:         s.pkg,
+		pkg:         pkg,
 		parent:      s,
 		locals:      pyDict{},
 		Callback:    s.Callback,
@@ -261,41 +270,6 @@ func (s *scope) AsInt(name string) int {
 		s.Error("Expected an int for %s, not %s", name, obj.Type())
 	}
 	return int(i)
-}
-
-// Duplicate creates a copy of this scope for the new package.
-func (s *scope) Duplicate(pkg *core.Package) *scope {
-	s2 := &scope{
-		interpreter: s.interpreter,
-		state:       s.state,
-		pkg:         pkg,
-		parent:      s.parent,
-		locals:      s.locals.Copy(),
-		Callback:    s.Callback,
-	}
-	// Functions within the original scope point to that for their globals. We require them to point
-	// to this scope instead.
-	for k, v := range s2.locals {
-		if f, ok := v.(*pyFunc); ok {
-			s2.locals[k] = f.Rescope(s2)
-		}
-	}
-	// This is needed to facilitate package_name() / get_base_path()
-	s2.Set("PACKAGE_NAME", pyString(pkg.Name))
-	// Irritatingly we have to reset this here as well.
-	s2.Set("log", pyDict{
-		"debug":   s2.Lookup("debug"),
-		"info":    s2.Lookup("info"),
-		"notice":  s2.Lookup("notice"),
-		"warning": s2.Lookup("warning"),
-		"error":   s2.Lookup("error"),
-		"fatal":   s2.Lookup("fatal"),
-	})
-	// Config needs a little separate tweaking.
-	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
-	// mutating operations like .setdefault() otherwise.
-	s2.Set("CONFIG", s.Lookup("CONFIG").(*pyConfig).Copy())
-	return s2
 }
 
 // Set sets the given variable in this scope.

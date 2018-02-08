@@ -122,11 +122,9 @@ def config_get(self, key:str, default=None):
 
 
 def get_base_path():
-    return PACKAGE_NAME
-
-
+    pass
 def package_name():
-    return PACKAGE_NAME
+    pass
 
 
 def keys(self):
@@ -193,10 +191,6 @@ def dirname(p:str):
 ParseError = str
 ConfigError = str
 ValueError = str
-
-# These are just placeholders to allocate space in the map.
-PACKAGE_NAME = None
-log = None
 
 
 # Post-build callback functions.
