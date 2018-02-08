@@ -223,12 +223,6 @@ func (s *scope) NAssert(condition bool, msg string, args ...interface{}) {
 	}
 }
 
-// Unimplemented emits an error because part of the interpreter isn't implemented yet.
-// Eventually this will be removed once it's all done.
-func (s *scope) Unimplemented(node interface{}) pyObject {
-	return s.Error("Unimplemented AST node: %#v", node)
-}
-
 // Lookup looks up a variable name in this scope, walking back up its ancestor scopes as needed.
 // It panics if the variable is not defined.
 func (s *scope) Lookup(name string) pyObject {
@@ -246,30 +240,6 @@ func (s *scope) Lookup(name string) pyObject {
 // in immediate scope.
 func (s *scope) LocalLookup(name string) pyObject {
 	return s.locals[name]
-}
-
-// AsString returns a variable from this scope as a string. It panics if it's of a different type.
-// This should only be used in cases where you know the variable will exist (e.g. upon entering a function
-// where the arguments have just been created)
-func (s *scope) AsString(name string) string {
-	obj := s.locals[name]
-	ps, ok := obj.(pyString)
-	if !ok {
-		s.Error("Expected a string for %s, not %s", name, obj.Type())
-	}
-	return string(ps)
-}
-
-// AsInt returns a variable from this scope as a string. It panics if it's of a different type.
-// This should only be used in cases where you know the variable will exist (e.g. upon entering a function
-// where the arguments have just been created)
-func (s *scope) AsInt(name string) int {
-	obj := s.locals[name]
-	i, ok := obj.(pyInt)
-	if !ok {
-		s.Error("Expected an int for %s, not %s", name, obj.Type())
-	}
-	return int(i)
 }
 
 // Set sets the given variable in this scope.
@@ -454,7 +424,7 @@ func (s *scope) interpretExpressionHead(expr *expression) pyObject {
 		s.Assert(ok, "Unary - can only be applied to an integer")
 		return pyInt(-int(i))
 	}
-	return s.Unimplemented(*expr)
+	return None
 }
 
 func (s *scope) interpretSlice(obj pyObject, sl *slice) pyObject {
