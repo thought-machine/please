@@ -33,7 +33,7 @@ import (
 )
 
 /*
-#cgo CFLAGS: --std=c99 -Werror
+#cgo CFLAGS: -Werror
 #cgo !freebsd LDFLAGS: -ldl
 #include "interpreter.h"
 */
