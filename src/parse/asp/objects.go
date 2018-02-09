@@ -356,10 +356,10 @@ type pyFunc struct {
 	scope      *scope
 	args       []string
 	argIndices map[string]int
-	defaults   []*expression
+	defaults   []*Expression
 	constants  []pyObject
 	types      [][]string
-	code       []*statement
+	code       []*Statement
 	// If the function is implemented natively, this is the pointer to its real code.
 	nativeCode func(*scope, []pyObject) pyObject
 	// If the function has been bound as a member function, this is the implicit self argument.
@@ -370,7 +370,7 @@ type pyFunc struct {
 	kwargs bool
 }
 
-func newPyFunc(parentScope *scope, def *funcDef) pyObject {
+func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
 	f := &pyFunc{
 		name:       def.Name,
 		scope:      parentScope,
@@ -393,7 +393,7 @@ func newPyFunc(parentScope *scope, def *funcDef) pyObject {
 			} else {
 				if f.defaults == nil {
 					// Minor optimisation: defaults is lazily allocated
-					f.defaults = make([]*expression, len(def.Arguments))
+					f.defaults = make([]*Expression, len(def.Arguments))
 				}
 				f.defaults[i] = arg.Value
 			}
@@ -447,7 +447,7 @@ func (f *pyFunc) Rescope(s *scope) pyObject {
 	}
 }
 
-func (f *pyFunc) Call(s *scope, c *call) pyObject {
+func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
 			return f.callNative(s.NewScope(), c)
@@ -460,7 +460,7 @@ func (f *pyFunc) Call(s *scope, c *call) pyObject {
 	// Handle implicit 'self' parameter for bound functions.
 	args := c.Arguments
 	if f.self != nil {
-		args = append([]callArgument{{Self: f.self}}, args...)
+		args = append([]CallArgument{{self: f.self}}, args...)
 	}
 	for i, a := range args {
 		if a.Value != nil { // Named argument
@@ -471,8 +471,8 @@ func (f *pyFunc) Call(s *scope, c *call) pyObject {
 			s2.Set(a.Expr.Ident.Name, f.validateType(s, idx, a.Value))
 		} else if i >= len(f.args) {
 			s.Error("Too many arguments to %s", f.name)
-		} else if a.Self != nil {
-			s2.Set(f.args[i], a.Self)
+		} else if a.self != nil {
+			s2.Set(f.args[i], a.self)
 		} else {
 			s2.Set(f.args[i], f.validateType(s, i, a.Expr))
 		}
@@ -493,7 +493,7 @@ func (f *pyFunc) Call(s *scope, c *call) pyObject {
 // callNative implements the "calling convention" for functions implemented with native code.
 // For performance reasons these are done differently - rather then receiving a pointer to a scope
 // they receive their arguments as a slice, in which unpassed arguments are nil.
-func (f *pyFunc) callNative(s *scope, c *call) pyObject {
+func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 	args := make([]pyObject, len(f.args))
 	// TODO(peterebden): Falling out of love with this self scheme a bit. Reconsider a
 	//                   unified CallMember instruction on pyObject?
@@ -558,7 +558,7 @@ func (f *pyFunc) Member(obj pyObject) pyObject {
 }
 
 // validateType validates that this argument matches the given type
-func (f *pyFunc) validateType(s *scope, i int, expr *expression) pyObject {
+func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	val := s.interpretExpression(expr)
 	if f.types[i] == nil || val == None {
 		return val

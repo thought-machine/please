@@ -7,184 +7,204 @@ import (
 	"github.com/alecthomas/participle/lexer"
 )
 
-// A fileInput is the top-level structure of a BUILD file.
-type fileInput struct {
-	Statements []*statement `{ @@ } EOF`
+// A FileInput is the top-level structure of a BUILD file.
+type FileInput struct {
+	Statements []*Statement `{ @@ } EOF`
 }
 
-// A statement is the type we work with externally the most; it's a single Python statement.
+// A Statement is the type we work with externally the most; it's a single Python statement.
 // Note that some mildly excessive fiddling is needed since the parser we're using doesn't
 // support backoff (i.e. if an earlier entry matches to its completion but can't consume
 // following tokens, it doesn't then make another choice :( )
-type statement struct {
+type Statement struct {
 	Pos      lexer.Position
 	Pass     string           `( @"pass" EOL`
 	Continue string           `| @"continue" EOL`
-	FuncDef  *funcDef         `| @@`
-	For      *forStatement    `| @@`
-	If       *ifStatement     `| @@`
-	Return   *returnStatement `| "return" @@ EOL`
-	Raise    *expression      `| "raise" @@ EOL`
+	FuncDef  *FuncDef         `| @@`
+	For      *ForStatement    `| @@`
+	If       *IfStatement     `| @@`
+	Return   *ReturnStatement `| "return" @@ EOL`
+	Raise    *Expression      `| "raise" @@ EOL`
 	Assert   *struct {
-		Expr    *expression `@@`
+		Expr    *Expression `@@`
 		Message string      `["," @String]`
 	} `| "assert" @@ EOL`
-	Ident   *identStatement `| @@ EOL`
-	Literal *expression     `| @@ EOL)`
+	Ident   *IdentStatement `| @@ EOL`
+	Literal *Expression     `| @@ EOL)`
 }
 
-type returnStatement struct {
-	Values []*expression `[ @@ { "," @@ } ]`
+// A ReturnStatement implements the Python 'return' statement.
+type ReturnStatement struct {
+	Values []*Expression `[ @@ { "," @@ } ]`
 }
 
-type funcDef struct {
+// A FuncDef implements definition of a new function.
+type FuncDef struct {
 	Name string `"def" @Ident`
 	// *args and **kwargs are not properly supported but we allow them here for some level of compatibility.
-	Arguments  []*argument  `"(" [ @@ { "," { "*" } @@ } ] ")" Colon EOL`
+	// TODO(peterebden): can we remove this now? we should not have them here if they are not supported.
+	Arguments  []*Argument  `"(" [ @@ { "," { "*" } @@ } ] ")" Colon EOL`
 	Docstring  string       `[ @String EOL ]`
-	Statements []*statement `{ @@ } Unindent`
+	Statements []*Statement `{ @@ } Unindent`
 }
 
-type forStatement struct {
+// A ForStatement implements the 'for' statement.
+// Note that it does not support Python's "for-else" construction.
+type ForStatement struct {
 	Names      []string     `"for" @Ident [ { "," @Ident } ] "in"`
-	Expr       expression   `@@ Colon EOL`
-	Statements []*statement `{ @@ } Unindent`
+	Expr       Expression   `@@ Colon EOL`
+	Statements []*Statement `{ @@ } Unindent`
 }
 
-type ifStatement struct {
-	Condition  expression   `"if" @@ Colon EOL`
-	Statements []*statement `{ @@ } Unindent`
+// An IfStatement implements the if-elif-else statement.
+type IfStatement struct {
+	Condition  Expression   `"if" @@ Colon EOL`
+	Statements []*Statement `{ @@ } Unindent`
 	Elif       []struct {
-		Condition  *expression  `"elif" @@ Colon EOL`
-		Statements []*statement `{ @@ } Unindent`
+		Condition  *Expression  `"elif" @@ Colon EOL`
+		Statements []*Statement `{ @@ } Unindent`
 	} `{ @@ }`
-	ElseStatements []*statement `[ "else" Colon EOL { @@ } Unindent ]`
+	ElseStatements []*Statement `[ "else" Colon EOL { @@ } Unindent ]`
 }
 
-type argument struct {
+// An Argument represents an argument to a function definition.
+type Argument struct {
 	Name  string      `@Ident`
 	Type  []string    `[ ":" @( { ( "bool" | "str" | "int" | "list" | "dict" | "function" ) [ "|" ] } ) ]`
-	Value *expression `[ "=" @@ ]`
+	Value *Expression `[ "=" @@ ]`
 }
 
-type expression struct {
-	Pos      lexer.Position
-	UnaryOp  *unaryOp  `( @@`
-	String   string    `| @String`
-	Int      *intl     `| @@` // Should just be *int, but https://github.com/golang/go/issues/23498 :(
-	Bool     string    `| @( "True" | "False" | "None" )`
-	List     *list     `| "[" @@ "]"`
-	Dict     *dict     `| "{" @@ "}"`
-	Tuple    *list     `| "(" @@ ")"`
-	Lambda   *lambda   `| "lambda" @@`
-	Ident    *ident    `| @@ )`
-	Slice    *slice    `[ @@ ]`
-	Property *ident    `[ ( "." @@`
-	Call     *call     `| "(" @@ ")" ) ]`
-	Op       *operator `[ @@ ]`
-	If       *inlineIf `[ @@ ]`
+// An Expression is a generalised Python expression, i.e. anything that can appear where an
+// expression is allowed (including the extra parts like inline if-then-else, operators, etc).
+type Expression struct {
+	Pos     lexer.Position
+	UnaryOp *UnaryOp `( @@`
+	String  string   `| @String`
+	Int     *struct {
+		Int int `@Int`
+	} `| @@` // Should just be *int, but https://github.com/golang/go/issues/23498 :(
+	Bool     string     `| @( "True" | "False" | "None" )`
+	List     *List      `| "[" @@ "]"`
+	Dict     *Dict      `| "{" @@ "}"`
+	Tuple    *List      `| "(" @@ ")"`
+	Lambda   *Lambda    `| "lambda" @@`
+	Ident    *IdentExpr `| @@ )`
+	Slice    *Slice     `[ @@ ]`
+	Property *IdentExpr `[ ( "." @@`
+	Call     *Call      `| "(" @@ ")" ) ]`
+	Op       *struct {
+		Op   Operator    `@("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" | "in" | "not" "in" | "==" | "!=" | ">=" | "<=")`
+		Expr *Expression `@@`
+	} `[ @@ ]`
+	If *InlineIf `[ @@ ]`
 	// Not part of the grammar - applied later to optimise constant expressions.
-	Constant pyObject
+	constant pyObject
 	// Similarly applied to optimise simple lookups of local variables.
-	Local string
+	local string
 }
 
-type intl struct {
-	Int int `@Int`
-}
-
-type unaryOp struct {
+// A UnaryOp represents a unary operation - in our case the only ones we support are negation and not.
+type UnaryOp struct {
 	Op   string     `@( "-" | "not" )`
-	Expr expression `@@`
+	Expr Expression `@@`
 }
 
-type identStatement struct {
+// An IdentStatement implements a statement that begins with an identifier (i.e. anything that
+// starts off with a variable name). It is a little fiddly due to parser limitations.
+type IdentStatement struct {
 	Name   string `@Ident`
 	Unpack *struct {
 		Names []string    `@Ident { "," @Ident }`
-		Expr  *expression `"=" @@`
+		Expr  *Expression `"=" @@`
 	} `( "," @@ `
 	Index *struct {
-		Expr      *expression `@@ "]"`
-		Assign    *expression `( "=" @@`
-		AugAssign *expression `| "+=" @@ )`
+		Expr      *Expression `@@ "]"`
+		Assign    *Expression `( "=" @@`
+		AugAssign *Expression `| "+=" @@ )`
 	} `| "[" @@`
-	Action *identStatementAction `| @@ )`
+	Action *IdentStatementAction `| @@ )`
 }
 
-type identStatementAction struct {
-	Property  *ident      `  "." @@`
-	Call      *call       `| "(" @@ ")"`
-	Assign    *expression `| "=" @@`
-	AugAssign *expression `| "+=" @@`
+// An IdentStatementAction implements actions on an IdentStatement.
+type IdentStatementAction struct {
+	Property  *IdentExpr  `  "." @@`
+	Call      *Call       `| "(" @@ ")"`
+	Assign    *Expression `| "=" @@`
+	AugAssign *Expression `| "+=" @@`
 }
 
-type ident struct {
+// An IdentExpr implements parts of an expression that begin with an identifier (i.e. anything
+// that might be a variable name).
+type IdentExpr struct {
 	Name   string `@Ident`
 	Action []struct {
-		Property *ident `  "." @@`
-		Call     *call  `| "(" @@ ")"`
+		Property *IdentExpr `  "." @@`
+		Call     *Call      `| "(" @@ ")"`
 	} `{ @@ }`
 }
 
-type call struct {
-	Arguments []callArgument `[ @@ ] { "," [ @@ ] }`
+// A Call represents a call site of a function.
+type Call struct {
+	Arguments []CallArgument `[ @@ ] { "," [ @@ ] }`
 }
 
-type callArgument struct {
-	Expr  *expression `@@`
-	Value *expression `[ "=" @@ ]`
-	Self  pyObject    // Not part of the grammar, used later by interpreter for function calls.
+// A CallArgument represents a single argument at a call site of a function.
+type CallArgument struct {
+	Expr  *Expression `@@`
+	Value *Expression `[ "=" @@ ]`
+	self  pyObject    // Not part of the grammar, used later by interpreter for function calls.
 }
 
-type list struct {
-	Values        []*expression  `[ @@ ] { "," [ @@ ] }`
-	Comprehension *comprehension `[ @@ ]`
+// A List represents a list literal, either with or without a comprehension clause.
+type List struct {
+	Values        []*Expression  `[ @@ ] { "," [ @@ ] }`
+	Comprehension *Comprehension `[ @@ ]`
 }
 
-type dict struct {
-	Items         []*dictItem    `[ @@ ] { "," [ @@ ] }`
-	Comprehension *comprehension `[ @@ ]`
+// A Dict represents a dict literal, either with or without a comprehension clause.
+type Dict struct {
+	Items         []*DictItem    `[ @@ ] { "," [ @@ ] }`
+	Comprehension *Comprehension `[ @@ ]`
 }
 
-type dictItem struct {
+// A DictItem represents a single key-value pair in a dict literal.
+type DictItem struct {
 	Key   string     `@( Ident | String ) ":"`
-	Value expression `@@`
+	Value Expression `@@`
 }
 
-type operator struct {
-	Op   Operator    `@("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" | "in" | "not" "in" | "==" | "!=" | ">=" | "<=")`
-	Expr *expression `@@`
-}
-
-type slice struct {
-	// Implements indexing as well as slicing.
-	Start *expression `"[" [ @@ ]`
+// A Slice represents a slice or index expression (e.g. [1], [1:2], [2:], [:], etc).
+type Slice struct {
+	Start *Expression `"[" [ @@ ]`
 	Colon string      `[ @":" ]`
-	End   *expression `[ @@ ] "]"`
+	End   *Expression `[ @@ ] "]"`
 }
 
-type inlineIf struct {
-	Condition *expression `"if" @@`
-	Else      *expression `[ "else" @@ ]`
+// An InlineIf implements the single-line if-then-else construction
+type InlineIf struct {
+	Condition *Expression `"if" @@`
+	Else      *Expression `[ "else" @@ ]`
 }
 
-type comprehension struct {
+// A Comprehension represents a list or dict comprehension clause.
+type Comprehension struct {
 	Names []string    `"for" @Ident [ { "," @Ident } ] "in"`
-	Expr  *expression `@@`
-	If    *expression `[ "if" @@ ]`
+	Expr  *Expression `@@`
+	If    *Expression `[ "if" @@ ]`
 }
 
-type lambda struct {
-	Arguments []lambdaArgument `[ @@ { "," @@ } ] Colon`
-	Expr      expression       `@@`
+// A Lambda is the inline lambda function.
+type Lambda struct {
+	Arguments []LambdaArgument `[ @@ { "," @@ } ] Colon`
+	Expr      Expression       `@@`
 }
 
+// A LambdaArgument represents an argument to a lambda function.
 // Vexingly these can't be normal function arguments any more, because the : for type annotations
 // gets preferentially consumed to the one that ends the lambda itself :(
-type lambdaArgument struct {
+type LambdaArgument struct {
 	Name  string      `@Ident`
-	Value *expression `[ "=" @@ ]`
+	Value *Expression `[ "=" @@ ]`
 }
 
 // An Operator wraps up a Python binary operator to be faster to switch on

@@ -14,7 +14,7 @@ type interpreter struct {
 	scope           *scope
 	parser          *Parser
 	subincludeScope *scope
-	subincludes     map[string][]*statement
+	subincludes     map[string][]*Statement
 	mutex           sync.RWMutex
 }
 
@@ -29,7 +29,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		baseScope:   s,
 		scope:       s,
 		parser:      p,
-		subincludes: map[string][]*statement{},
+		subincludes: map[string][]*Statement{},
 	}
 	s.interpreter = i
 	// Load the global builtin singletons
@@ -43,7 +43,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 }
 
 // LoadBuiltins loads a set of builtins from a file, optionally with its contents.
-func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements []*statement) error {
+func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements []*Statement) error {
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
@@ -63,7 +63,7 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 }
 
 // loadBuiltinStatements loads statements as builtins.
-func (i *interpreter) loadBuiltinStatements(statements []*statement, err error) error {
+func (i *interpreter) loadBuiltinStatements(statements []*Statement, err error) error {
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (i *interpreter) separatePrivateVars() {
 
 // interpretAll runs a series of statements in the context of the given package.
 // The first return value is for testing only.
-func (i *interpreter) interpretAll(pkg *core.Package, statements []*statement) (s *scope, err error) {
+func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (s *scope, err error) {
 	s = i.scope.NewPackagedScope(pkg)
 	// Config needs a little separate tweaking.
 	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
@@ -114,7 +114,7 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*statement) (
 }
 
 // interpretStatements runs a series of statements in the context of the given scope.
-func (i *interpreter) interpretStatements(s *scope, statements []*statement) (err error) {
+func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -129,7 +129,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*statement) (er
 }
 
 // Subinclude returns the statements corresponding to a subinclude() call for a particular file.
-func (i *interpreter) Subinclude(path string) []*statement {
+func (i *interpreter) Subinclude(path string) []*Statement {
 	i.mutex.RLock()
 	stmts, present := i.subincludes[path]
 	i.mutex.RUnlock()
@@ -155,12 +155,12 @@ func (i *interpreter) Subinclude(path string) []*statement {
 // optimiseExpressions performs some general optimisation of expressions by precalculating constants
 // and identifying simple local variable lookups.
 func (i *interpreter) optimiseExpressions(v reflect.Value) {
-	if v.Type() == reflect.TypeOf(&expression{}) && !v.IsNil() {
-		expr := v.Interface().(*expression)
+	if v.Type() == reflect.TypeOf(&Expression{}) && !v.IsNil() {
+		expr := v.Interface().(*Expression)
 		if constant := i.scope.Constant(expr); constant != nil {
-			expr.Constant = constant // Extract constant expression
+			expr.constant = constant // Extract constant expression
 		} else if expr.Ident != nil && expr.Property == nil && expr.Call == nil && expr.Op == nil && expr.If == nil && expr.Slice == nil && len(expr.Ident.Action) == 0 {
-			expr.Local = expr.Ident.Name // Simple variable name lookup
+			expr.local = expr.Ident.Name // Simple variable name lookup
 		}
 	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
 		i.optimiseExpressions(v.Elem())
@@ -250,8 +250,8 @@ func (s *scope) Set(name string, value pyObject) {
 // interpretStatements interprets a series of statements in a particular scope.
 // Note that the return value is only non-nil if a return statement is encountered;
 // it is not implicitly the result of the last statement or anything like that.
-func (s *scope) interpretStatements(statements []*statement) pyObject {
-	var stmt *statement
+func (s *scope) interpretStatements(statements []*Statement) pyObject {
+	var stmt *Statement
 	defer func() {
 		if r := recover(); r != nil {
 			panic(AddStackFrame(stmt.Pos, r))
@@ -295,7 +295,7 @@ func (s *scope) interpretStatements(statements []*statement) pyObject {
 	return nil
 }
 
-func (s *scope) interpretIf(stmt *ifStatement) pyObject {
+func (s *scope) interpretIf(stmt *IfStatement) pyObject {
 	if s.interpretExpression(&stmt.Condition).IsTruthy() {
 		return s.interpretStatements(stmt.Statements)
 	}
@@ -307,7 +307,7 @@ func (s *scope) interpretIf(stmt *ifStatement) pyObject {
 	return s.interpretStatements(stmt.ElseStatements)
 }
 
-func (s *scope) interpretFor(stmt *forStatement) pyObject {
+func (s *scope) interpretFor(stmt *ForStatement) pyObject {
 	for _, li := range s.iterate(&stmt.Expr) {
 		s.unpackNames(stmt.Names, li)
 		if ret := s.interpretStatements(stmt.Statements); ret != nil {
@@ -320,12 +320,12 @@ func (s *scope) interpretFor(stmt *forStatement) pyObject {
 	return nil
 }
 
-func (s *scope) interpretExpression(expr *expression) pyObject {
+func (s *scope) interpretExpression(expr *Expression) pyObject {
 	// Check the optimised sites first
-	if expr.Constant != nil {
-		return expr.Constant
-	} else if expr.Local != "" {
-		return s.Lookup(expr.Local)
+	if expr.constant != nil {
+		return expr.constant
+	} else if expr.local != "" {
+		return s.Lookup(expr.local)
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -376,7 +376,7 @@ func (s *scope) interpretExpression(expr *expression) pyObject {
 	return obj
 }
 
-func (s *scope) interpretExpressionHead(expr *expression) pyObject {
+func (s *scope) interpretExpressionHead(expr *Expression) pyObject {
 	if expr.Ident != nil {
 		obj := s.Lookup(expr.Ident.Name)
 		if len(expr.Ident.Action) == 0 {
@@ -403,14 +403,14 @@ func (s *scope) interpretExpressionHead(expr *expression) pyObject {
 		return l
 	} else if expr.Lambda != nil {
 		// A lambda is just an inline function definition with a single return statement.
-		stmt := &statement{}
-		stmt.Return = &returnStatement{
-			Values: []*expression{&expr.Lambda.Expr},
+		stmt := &Statement{}
+		stmt.Return = &ReturnStatement{
+			Values: []*Expression{&expr.Lambda.Expr},
 		}
-		return newPyFunc(s, &funcDef{
+		return newPyFunc(s, &FuncDef{
 			Name:       "<lambda>",
 			Arguments:  toRealArguments(expr.Lambda.Arguments),
-			Statements: []*statement{stmt},
+			Statements: []*Statement{stmt},
 		})
 	} else if expr.UnaryOp != nil {
 		result := s.interpretExpression(&expr.UnaryOp.Expr)
@@ -427,7 +427,7 @@ func (s *scope) interpretExpressionHead(expr *expression) pyObject {
 	return None
 }
 
-func (s *scope) interpretSlice(obj pyObject, sl *slice) pyObject {
+func (s *scope) interpretSlice(obj pyObject, sl *Slice) pyObject {
 	lst, ok1 := obj.(pyList)
 	str, ok2 := obj.(pyString)
 	s.Assert(ok1 || ok2, "Unsliceable type "+obj.Type())
@@ -441,14 +441,14 @@ func (s *scope) interpretSlice(obj pyObject, sl *slice) pyObject {
 
 // interpretSliceExpression interprets one of the begin or end parts of a slice.
 // expr may be null, if it is the value of def is used instead.
-func (s *scope) interpretSliceExpression(obj pyObject, expr *expression, def pyInt) pyInt {
+func (s *scope) interpretSliceExpression(obj pyObject, expr *Expression, def pyInt) pyInt {
 	if expr == nil {
 		return def
 	}
 	return pyIndex(obj, s.interpretExpression(expr))
 }
 
-func (s *scope) interpretIdent(obj pyObject, expr *ident) pyObject {
+func (s *scope) interpretIdent(obj pyObject, expr *IdentExpr) pyObject {
 	name := expr.Name
 	for _, action := range expr.Action {
 		if action.Property != nil {
@@ -461,7 +461,7 @@ func (s *scope) interpretIdent(obj pyObject, expr *ident) pyObject {
 	return obj
 }
 
-func (s *scope) interpretIdentStatement(stmt *identStatement) {
+func (s *scope) interpretIdentStatement(stmt *IdentStatement) {
 	if stmt.Index != nil {
 		// Need to special-case these, because types are immutable so we can't return a modifiable reference to them.
 		obj := s.Lookup(stmt.Name)
@@ -494,7 +494,7 @@ func (s *scope) interpretIdentStatement(stmt *identStatement) {
 	}
 }
 
-func (s *scope) interpretList(expr *list) pyList {
+func (s *scope) interpretList(expr *List) pyList {
 	if expr.Comprehension == nil {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
@@ -514,7 +514,7 @@ func (s *scope) interpretList(expr *list) pyList {
 	return ret
 }
 
-func (s *scope) interpretDict(expr *dict) pyObject {
+func (s *scope) interpretDict(expr *Dict) pyObject {
 	if expr.Comprehension == nil {
 		d := make(pyDict, len(expr.Items))
 		for _, v := range expr.Items {
@@ -549,7 +549,7 @@ func (s *scope) interpretDict(expr *dict) pyObject {
 // moveComprehensionIf is a small hack to correct a limitation in the parser that attaches an
 // 'if' in a comprehension to the main expression instead (because it thinks it's the start of
 // an inline if statement).
-func (s *scope) moveComprehensionIf(comp *comprehension) {
+func (s *scope) moveComprehensionIf(comp *Comprehension) {
 	if comp.Expr.If != nil {
 		s.Assert(comp.Expr.If.Else == nil, "Invalid syntax")
 		comp.If = comp.Expr.If.Condition
@@ -559,7 +559,7 @@ func (s *scope) moveComprehensionIf(comp *comprehension) {
 
 // evaluateComprehensionExpression runs an expression from a list or dict comprehension, and returns true if the caller
 // should continue to use it, or false if it's been filtered out of the comprehension.
-func (s *scope) evaluateComprehensionExpression(comp *comprehension, li pyObject) bool {
+func (s *scope) evaluateComprehensionExpression(comp *Comprehension, li pyObject) bool {
 	s.unpackNames(comp.Names, li)
 	return comp.If == nil || s.interpretExpression(comp.If).IsTruthy()
 }
@@ -579,7 +579,7 @@ func (s *scope) unpackNames(names []string, obj pyObject) {
 }
 
 // iterate returns the result of the given expression as a pyList, which is our only iterable type.
-func (s *scope) iterate(expr *expression) pyList {
+func (s *scope) iterate(expr *Expression) pyList {
 	o := s.interpretExpression(expr)
 	l, ok := o.(pyList)
 	s.Assert(ok, "Non-iterable type %s; must be a list", o.Type())
@@ -587,7 +587,7 @@ func (s *scope) iterate(expr *expression) pyList {
 }
 
 // evaluateExpressions runs a series of Python expressions in this scope and creates a series of concrete objects from them.
-func (s *scope) evaluateExpressions(exprs []*expression) []pyObject {
+func (s *scope) evaluateExpressions(exprs []*Expression) []pyObject {
 	l := make(pyList, len(exprs))
 	for i, v := range exprs {
 		l[i] = s.interpretExpression(v)
@@ -601,7 +601,7 @@ func stringLiteral(s string) string {
 }
 
 // callObject attempts to call the given object
-func (s *scope) callObject(name string, obj pyObject, c *call) pyObject {
+func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 	// We only allow function objects to be called, so don't bother making it part of the pyObject interface.
 	f, ok := obj.(*pyFunc)
 	if !ok {
@@ -612,7 +612,7 @@ func (s *scope) callObject(name string, obj pyObject, c *call) pyObject {
 
 // Constant returns an object from an expression that describes a constant,
 // e.g. None, "string", 42, [], etc. It returns nil if the expression cannot be determined to be constant.
-func (s *scope) Constant(expr *expression) pyObject {
+func (s *scope) Constant(expr *Expression) pyObject {
 	// Technically some of these might be constant (e.g. 'a,b,c'.split(',') or `1 if True else 2`.
 	// That's probably unlikely to be common though - we could do a generalised constant-folding pass
 	// but it's rare that people would write something of that nature in this language.
@@ -639,10 +639,10 @@ func (s *scope) Constant(expr *expression) pyObject {
 // toRealArguments converts lambda arguments to "real", i.e. function, arguments.
 // The two are (mildly vexingly) not the same because the : of type annotations gets preferentially
 // consumed by the parser to the : that terminates the lambda itself.
-func toRealArguments(largs []lambdaArgument) []*argument {
-	args := make([]*argument, len(largs))
+func toRealArguments(largs []LambdaArgument) []*Argument {
+	args := make([]*Argument, len(largs))
 	for i, larg := range largs {
-		args[i] = &argument{Name: larg.Name, Value: larg.Value}
+		args[i] = &Argument{Name: larg.Name, Value: larg.Value}
 	}
 	return args
 }

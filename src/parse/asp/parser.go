@@ -46,7 +46,7 @@ func NewParser(state *core.BuildState) *Parser {
 
 // newParser creates just the parser with no interpreter.
 func newParser() *Parser {
-	p, err := participle.Build(&fileInput{}, NewLexer())
+	p, err := participle.Build(&FileInput{}, NewLexer())
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
@@ -57,7 +57,7 @@ func newParser() *Parser {
 // Optionally the file contents can be supplied directly.
 // Also optionally a previously parsed form (acquired from ParseToFile) can be supplied.
 func (p *Parser) LoadBuiltins(filename string, contents, encoded []byte) error {
-	var statements []*statement
+	var statements []*Statement
 	if len(encoded) != 0 {
 		decoder := gob.NewDecoder(bytes.NewReader(encoded))
 		if err := decoder.Decode(&statements); err != nil {
@@ -118,7 +118,7 @@ func (p *Parser) ParseFileOnly(filename string) (interface{}, error) {
 }
 
 // parse reads the given file and parses it into a set of statements.
-func (p *Parser) parse(filename string) ([]*statement, error) {
+func (p *Parser) parse(filename string) ([]*Statement, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -134,14 +134,14 @@ func (p *Parser) parse(filename string) ([]*statement, error) {
 
 // parseData reads the given byteslice and parses it into a set of statements.
 // The 'filename' argument is only used in case of errors so doesn't necessarily have to correspond to a real file.
-func (p *Parser) parseData(data []byte, filename string) ([]*statement, error) {
+func (p *Parser) parseData(data []byte, filename string) ([]*Statement, error) {
 	r := &namedReader{r: bytes.NewReader(data), name: filename}
 	return p.parseAndHandleErrors(r, filename)
 }
 
 // parseAndHandleErrors handles errors nicely if the given input fails to parse.
-func (p *Parser) parseAndHandleErrors(r io.ReadSeeker, filename string) ([]*statement, error) {
-	input := &fileInput{}
+func (p *Parser) parseAndHandleErrors(r io.ReadSeeker, filename string) ([]*Statement, error) {
+	input := &FileInput{}
 	err := p.parser.Parse(r, input)
 	if err == nil {
 		return input.Statements, nil
@@ -167,8 +167,8 @@ func (p *Parser) annotate(err error, r io.ReadSeeker) error {
 // into a form we find slightly more useful.
 // This also sneaks in some rewrites to .append and .extend which are very troublesome otherwise
 // (technically that changes the meaning of the code, #dealwithit)
-func (p *Parser) optimise(statements []*statement) []*statement {
-	ret := make([]*statement, 0, len(statements))
+func (p *Parser) optimise(statements []*Statement) []*Statement {
+	ret := make([]*Statement, 0, len(statements))
 	for _, stmt := range statements {
 		if stmt.Literal != nil || stmt.Pass != "" {
 			continue // Neither statement has any effect.
@@ -186,18 +186,18 @@ func (p *Parser) optimise(statements []*statement) []*statement {
 			call := stmt.Ident.Action.Property.Action[0].Call
 			name := stmt.Ident.Action.Property.Name
 			if (name == "append" || name == "extend") && call != nil && len(call.Arguments) == 1 {
-				stmt = &statement{
-					Ident: &identStatement{
+				stmt = &Statement{
+					Ident: &IdentStatement{
 						Name: stmt.Ident.Name,
-						Action: &identStatementAction{
+						Action: &IdentStatementAction{
 							AugAssign: call.Arguments[0].Expr,
 						},
 					},
 				}
 				if name == "append" {
-					stmt.Ident.Action.AugAssign = &expression{
-						List: &list{
-							Values: []*expression{call.Arguments[0].Expr},
+					stmt.Ident.Action.AugAssign = &Expression{
+						List: &List{
+							Values: []*Expression{call.Arguments[0].Expr},
 						},
 					}
 				}

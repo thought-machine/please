@@ -238,26 +238,26 @@ func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
 	remoteFile, ok := s.interpreter.subincludeScope.Lookup("remote_file").(*pyFunc)
 	s.interpreter.subincludeScope.Assert(ok, "remote_file is not callable")
 	// Call using the normal entry point, which is a bit of a faff but it sorts out default arguments and so forth
-	a := []callArgument{
+	a := []CallArgument{
 		{
-			Expr:  &expression{Ident: &ident{Name: "name"}},
-			Value: &expression{String: `"` + name + `"`},
+			Expr:  &Expression{Ident: &IdentExpr{Name: "name"}},
+			Value: &Expression{String: `"` + name + `"`},
 		}, {
-			Expr:  &expression{Ident: &ident{Name: "url"}},
-			Value: &expression{String: `"` + string(target) + `"`},
+			Expr:  &Expression{Ident: &IdentExpr{Name: "url"}},
+			Value: &Expression{String: `"` + string(target) + `"`},
 		},
 	}
 	if args[1] != nil && args[1] != None {
-		a = append(a, callArgument{
-			Expr: &expression{Ident: &ident{Name: "hashes"}},
-			Value: &expression{List: &list{
-				Values: []*expression{{
+		a = append(a, CallArgument{
+			Expr: &Expression{Ident: &IdentExpr{Name: "hashes"}},
+			Value: &Expression{List: &List{
+				Values: []*Expression{{
 					String: `"` + string(args[1].(pyString)) + `"`,
 				}},
 			}},
 		})
 	}
-	remoteFile.Call(s.interpreter.subincludeScope, &call{Arguments: a})
+	remoteFile.Call(s.interpreter.subincludeScope, &Call{Arguments: a})
 	return label
 }
 
