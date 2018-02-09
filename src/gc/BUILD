@@ -1,17 +1,9 @@
-go_bindata(
-    name = 'rewrite',
-    srcs = ['rewrite.py'],
-)
-
 go_library(
     name = 'gc',
-    srcs = [
-        'gc.go',
-        ':rewrite',
-    ],
+    srcs = ['gc.go'],
     deps = [
         '//src/core',
-        '//src/parse',
+        '//src/parse/asp',
         '//third_party/go:logging',
         '//third_party/go:prompter',
     ],

@@ -112,8 +112,7 @@ func (p *Parser) ParseToFile(input, output string) error {
 }
 
 // ParseFileOnly parses the given file but does not interpret it.
-// It returns the parsed form in a deliberately opaque form.
-func (p *Parser) ParseFileOnly(filename string) (interface{}, error) {
+func (p *Parser) ParseFileOnly(filename string) ([]*Statement, error) {
 	return p.parse(filename)
 }
 

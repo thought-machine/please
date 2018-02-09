@@ -8,7 +8,9 @@
 package gc
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -17,7 +19,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
-	"parse"
+	"parse/asp"
 )
 
 var log = logging.MustGetLogger("gc")
@@ -205,14 +207,35 @@ func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*cor
 
 // RewriteFile rewrites a BUILD file to exclude a set of targets.
 func RewriteFile(state *core.BuildState, filename string, targets []string) error {
-	for i, t := range targets {
-		targets[i] = fmt.Sprintf(`"%s"`, t)
+	p := asp.NewParser(nil)
+	stmts, err := p.ParseFileOnly(filename)
+	if err != nil {
+		return err
 	}
-	data := string(MustAsset("rewrite.py"))
-	// Template in the variables we want.
-	data = strings.Replace(data, "__FILENAME__", filename, 1)
-	data = strings.Replace(data, "__TARGETS__", strings.Replace(fmt.Sprintf("%s", targets), " ", ", ", -1), 1)
-	return parse.RunCode(state, data)
+	b, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err // This is very unlikely since we already read it once above, but y'know...
+	}
+	lines := bytes.Split(b, []byte{'\n'})
+	linesToDelete := map[int]bool{}
+	for _, target := range targets {
+		stmt := asp.FindTarget(stmts, target)
+		if stmt == nil {
+			return fmt.Errorf("Can't find target %s in %s", target, filename)
+		}
+		start, end := asp.GetExtents(stmts, stmt, len(lines))
+		for i := start; i <= end; i++ {
+			linesToDelete[i-1] = true // -1 because the extents are 1-indexed
+		}
+	}
+	// Now rewrite the actual file
+	lines2 := make([][]byte, 0, len(lines))
+	for i, line := range lines {
+		if !linesToDelete[i] {
+			lines2 = append(lines2, line)
+		}
+	}
+	return ioutil.WriteFile(filename, bytes.Join(lines2, []byte{'\n'}), 0664)
 }
 
 // removeTargets rewrites the given set of targets out of their BUILD files.

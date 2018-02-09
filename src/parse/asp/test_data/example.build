@@ -10,7 +10,7 @@ go_library(
         '//third_party/go:logging',
         '//third_party/go:participle',
     ],
-    visibility = ['PUBLIC'],
+    visibility = ['//src/parse/...'],
 )
 
 go_test(
@@ -34,36 +34,10 @@ go_test(
 )
 
 go_test(
-    name = 'interpreter_test',
-    srcs = ['interpreter_test.go'],
-    data = ['test_data'],
-    deps = [
-        ':asp',
-        '//src/core',
-        '//src/parse/asp/builtins',
-        '//third_party/go:testify',
-    ],
-)
-
-go_test(
-    name = 'logging_test',
-    srcs = ['logging_test.go'],
-    data = ['test_data'],
-    deps = [
-        ':asp',
-        '//src/core',
-        '//src/parse/asp/builtins',
-        '//third_party/go:logging',
-        '//third_party/go:testify',
-    ],
-)
-
-go_test(
     name = 'util_test',
     srcs = ['util_test.go'],
-    data = ['test_data'],
     deps = [
-        ':asp',
+        ':util',
         '//third_party/go:testify',
     ],
 )
