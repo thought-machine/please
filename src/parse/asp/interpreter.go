@@ -10,7 +10,7 @@ import (
 
 // An interpreter holds the package-independent state about our parsing process.
 type interpreter struct {
-	baseScope       *scope
+	builtinScope    *scope
 	scope           *scope
 	parser          *Parser
 	subincludeScope *scope
@@ -25,20 +25,20 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		state:  state,
 		locals: map[string]pyObject{},
 	}
+	bs := &scope{
+		state:  state,
+		locals: map[string]pyObject{},
+	}
 	i := &interpreter{
-		baseScope:   s,
-		scope:       s,
-		parser:      p,
-		subincludes: map[string]pyDict{},
+		builtinScope: bs,
+		scope:        s,
+		parser:       p,
+		subincludes:  map[string]pyDict{},
 	}
 	s.interpreter = i
-	// Load the global builtin singletons
-	s.Set("True", True)
-	s.Set("False", False)
-	s.Set("None", None)
-	if s.state != nil { // For bootstrap.
-		s.Set("CONFIG", newConfig(s.state.Config))
-	}
+	bs.interpreter = i
+	s.LoadSingletons(state)
+	bs.LoadSingletons(state)
 	return i
 }
 
@@ -48,14 +48,13 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
 	if filename == "builtins.build_defs" || filename == "src/parse/builtins.build_defs" {
-		defer i.separateBaseScope()
-		defer registerBuiltins(i.baseScope)
+		defer registerBuiltins(i.builtinScope)
 	} else if filename == "misc_rules.build_defs" || filename == "src/parse/misc_rules.build_defs" {
-		defer registerSubincludePackage(i.scope)
+		defer registerSubincludePackage(i.builtinScope)
 	}
-	defer i.separatePrivateVars()
+	defer i.scope.SetAll(i.builtinScope.Freeze(), true)
 	if statements != nil {
-		return i.interpretStatements(i.scope, statements)
+		return i.interpretStatements(i.builtinScope, statements)
 	} else if len(contents) != 0 {
 		return i.loadBuiltinStatements(i.parser.parseData(contents, filename))
 	}
@@ -68,34 +67,7 @@ func (i *interpreter) loadBuiltinStatements(statements []*Statement, err error) 
 		return err
 	}
 	i.optimiseExpressions(reflect.ValueOf(statements))
-	return i.interpretStatements(i.scope, i.parser.optimise(statements))
-}
-
-// separateBaseScope adds a new scope deriving from the current one.
-// Essentially the base scope holds the various builtins (but not actual rules)
-// which don't need to get rescoped for every package.
-func (i *interpreter) separateBaseScope() {
-	s := i.scope.NewScope()
-	// These guys need to be copied down to the lower scope.
-	for _, f := range []string{"build_rule", "get_base_path", "get_labels", "has_label", "add_dep",
-		"add_exported_dep", "add_out", "add_licence", "get_command", "set_command"} {
-		s.Set(f, i.scope.Lookup(f).(*pyFunc).Rescope(s))
-	}
-	i.scope = s
-}
-
-// separatePrivateVars moves private variables (i.e. those starting with _) into
-// a base scope so they don't need to be copied for new packages.
-// Unfortunately we cannot do the same for functions that call other build functions
-// (anything that ultimately calls build_rule) and we can't tell from here which
-// functions those are.
-func (i *interpreter) separatePrivateVars() {
-	for k, v := range i.scope.locals {
-		if _, ok := v.(*pyFunc); !ok && k[0] == '_' {
-			i.baseScope.locals[k] = v
-			delete(i.scope.locals, k)
-		}
-	}
+	return i.interpretStatements(i.builtinScope, i.parser.optimise(statements))
 }
 
 // interpretAll runs a series of statements in the context of the given package.
@@ -146,11 +118,12 @@ func (i *interpreter) Subinclude(path string) pyDict {
 	}
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
-	s.interpretStatements(stmts)
 	i.optimiseExpressions(reflect.ValueOf(stmts))
+	s.interpretStatements(stmts)
+	locals := s.Freeze()
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
-	i.subincludes[path] = s.locals
+	i.subincludes[path] = locals
 	return s.locals
 }
 
@@ -249,10 +222,36 @@ func (s *scope) Set(name string, value pyObject) {
 	s.locals[name] = value
 }
 
-// SetAll sets the entire contents of the given dict in this scope.
-func (s *scope) SetAll(d pyDict) {
+// SetAll sets all contents of the given dict in this scope.
+// Optionally it can filter to just public objects (i.e. those not prefixed with an underscore)
+func (s *scope) SetAll(d pyDict, publicOnly bool) {
 	for k, v := range d {
-		s.locals[k] = v
+		if !publicOnly || k[0] != '_' {
+			s.locals[k] = v
+		}
+	}
+}
+
+// Freeze freezes the contents of this scope, preventing mutable objects from being changed.
+// It returns the newly frozen set of locals.
+func (s *scope) Freeze() pyDict {
+	for k, v := range s.locals {
+		if d, ok := v.(pyDict); ok {
+			s.locals[k] = d.Freeze()
+		} else if l, ok := v.(pyList); ok {
+			s.locals[k] = l.Freeze()
+		}
+	}
+	return s.locals
+}
+
+// LoadSingletons loads the global builtin singletons into this scope.
+func (s *scope) LoadSingletons(state *core.BuildState) {
+	s.Set("True", True)
+	s.Set("False", False)
+	s.Set("None", None)
+	if s.state != nil { // For bootstrap.
+		s.Set("CONFIG", newConfig(s.state.Config))
 	}
 }
 
@@ -591,6 +590,11 @@ func (s *scope) unpackNames(names []string, obj pyObject) {
 func (s *scope) iterate(expr *Expression) pyList {
 	o := s.interpretExpression(expr)
 	l, ok := o.(pyList)
+	if !ok {
+		if l, ok := o.(pyFrozenList); ok {
+			return l.pyList
+		}
+	}
 	s.Assert(ok, "Non-iterable type %s; must be a list", o.Type())
 	return l
 }

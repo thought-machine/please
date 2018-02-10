@@ -96,7 +96,7 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 	} else if cmd, ok := obj.(pyString); ok {
 		return strings.TrimSpace(string(cmd)), nil
 	}
-	cmds, ok := obj.(pyDict)
+	cmds, ok := asDict(obj)
 	s.Assert(ok, "Unknown type for command [%s]", obj.Type())
 	// Have to convert all the keys too
 	m := make(map[string]string, len(cmds))
@@ -148,17 +148,17 @@ func addMaybeNamed(s *scope, name string, obj pyObject, anon func(core.BuildInpu
 	if obj == nil {
 		return
 	}
-	if l, ok := obj.(pyList); ok {
+	if l, ok := asList(obj); ok {
 		for _, li := range l {
 			if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
 				anon(bi)
 			}
 		}
-	} else if d, ok := obj.(pyDict); ok {
+	} else if d, ok := asDict(obj); ok {
 		s.Assert(named != nil, "%s cannot be given as a dict", name)
 		for k, v := range d {
 			if v != None {
-				l, ok := v.(pyList)
+				l, ok := asList(v)
 				s.Assert(ok, "Values of %s must be lists of strings", name)
 				for _, li := range l {
 					if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
@@ -177,7 +177,7 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 	if obj == nil {
 		return
 	}
-	if l, ok := obj.(pyList); ok {
+	if l, ok := asList(obj); ok {
 		for _, li := range l {
 			if li != None {
 				out, ok := li.(pyString)
@@ -188,10 +188,10 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 				}
 			}
 		}
-	} else if d, ok := obj.(pyDict); ok {
+	} else if d, ok := asDict(obj); ok {
 		s.Assert(named != nil, "%s cannot be given as a dict", name)
 		for k, v := range d {
-			l, ok := v.(pyList)
+			l, ok := asList(v)
 			s.Assert(ok, "Values must be lists of strings")
 			for _, li := range l {
 				if li != None {
@@ -220,7 +220,7 @@ func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarg
 // addStrings adds an arbitrary set of strings to the target (e.g. labels etc).
 func addStrings(s *scope, name string, obj pyObject, f func(string)) {
 	if obj != nil && obj != None {
-		l, ok := obj.(pyList)
+		l, ok := asList(obj)
 		s.Assert(ok, "Argument %s must be a list, not %s", name, obj.Type())
 		for _, li := range l {
 			str, ok := li.(pyString)
@@ -235,7 +235,7 @@ func addStrings(s *scope, name string, obj pyObject, f func(string)) {
 // addProvides adds a set of provides to the target, which is a dict of string -> label
 func addProvides(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 	if obj != nil && obj != None {
-		d, ok := obj.(pyDict)
+		d, ok := asDict(obj)
 		s.Assert(ok, "Argument %s must be a dict, not %s", name, obj.Type())
 		for k, v := range d {
 			str, ok := v.(pyString)
@@ -248,7 +248,7 @@ func addProvides(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 // setContainerSettings sets any custom container settings on the target.
 func setContainerSettings(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 	if obj != nil && obj != None && obj != True && obj != False {
-		d, ok := obj.(pyDict)
+		d, ok := asDict(obj)
 		s.Assert(ok, "Argument %s must be a dict, not %s", name, obj.Type())
 		for k, v := range d {
 			str, ok := v.(pyString)
@@ -351,4 +351,24 @@ func annotateCallbackError(s *scope, target *core.BuildTarget, err error) error 
 	pkg := s.state.Graph.Package(target.Label.PackageName)
 	f, _ := os.Open(pkg.Filename)
 	return s.interpreter.parser.annotate(err, f)
+}
+
+// asList converts an object to a pyList, accounting for frozen lists.
+func asList(obj pyObject) (pyList, bool) {
+	if l, ok := obj.(pyList); ok {
+		return l, true
+	} else if l, ok := obj.(pyFrozenList); ok {
+		return l.pyList, true
+	}
+	return nil, false
+}
+
+// asDict converts an object to a pyDict, accounting for frozen dicts.
+func asDict(obj pyObject) (pyDict, bool) {
+	if d, ok := obj.(pyDict); ok {
+		return d, true
+	} else if d, ok := obj.(pyFrozenDict); ok {
+		return d.pyDict, true
+	}
+	return nil, false
 }

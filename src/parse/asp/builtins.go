@@ -215,7 +215,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		s.pkg.RegisterSubinclude(l)
 	}
 	for _, out := range t.Outputs() {
-		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out)))
+		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out)), false)
 	}
 	return None
 }

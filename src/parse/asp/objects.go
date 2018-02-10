@@ -239,6 +239,9 @@ func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
 	case Add:
 		l2, ok := operand.(pyList)
 		if !ok {
+			if l2, ok := operand.(pyFrozenList); ok {
+				return append(l, l2.pyList...)
+			}
 			panic("Cannot add list and " + operand.Type())
 		}
 		return append(l, l2...)
@@ -286,6 +289,20 @@ func (l pyList) Len() int {
 
 func (l pyList) String() string {
 	return fmt.Sprintf("%s", []pyObject(l))
+}
+
+// Freeze freezes this list for further updates.
+// Note that this is a "soft" freeze; callers holding the original unfrozen
+// reference can still modify it.
+func (l pyList) Freeze() pyFrozenList {
+	return pyFrozenList{pyList: l}
+}
+
+// A pyFrozenList implements an immutable list.
+type pyFrozenList struct{ pyList }
+
+func (l pyFrozenList) IndexAssign(index, value pyObject) {
+	panic("list is immutable")
 }
 
 type pyDict map[string]pyObject // Dicts can only be keyed by strings
@@ -348,6 +365,27 @@ func (d pyDict) Copy() pyDict {
 		m[k] = v
 	}
 	return m
+}
+
+// Freeze freezes this dict for further updates.
+// Note that this is a "soft" freeze; callers holding the original unfrozen
+// reference can still modify it.
+func (d pyDict) Freeze() pyFrozenDict {
+	return pyFrozenDict{pyDict: d}
+}
+
+// A pyFrozenDict implements an immutable python dict.
+type pyFrozenDict struct{ pyDict }
+
+func (d pyFrozenDict) Property(name string) pyObject {
+	if name == "setdefault" {
+		panic("dict is immutable")
+	}
+	return d.pyDict.Property(name)
+}
+
+func (d pyFrozenDict) IndexAssign(index, value pyObject) {
+	panic("dict is immutable")
 }
 
 type pyFunc struct {
