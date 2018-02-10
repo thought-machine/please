@@ -1,4 +1,6 @@
 """Build rules for signing releases using GPG."""
+subinclude('//build_defs:fpm')
+
 
 def signed_fpm_deb(name, version, package_name=None, files=None, links=None, post_cmds=None,
                    visibility=None):

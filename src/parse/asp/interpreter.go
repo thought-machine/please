@@ -14,7 +14,7 @@ type interpreter struct {
 	scope           *scope
 	parser          *Parser
 	subincludeScope *scope
-	subincludes     map[string][]*Statement
+	subincludes     map[string]pyDict
 	mutex           sync.RWMutex
 }
 
@@ -29,7 +29,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		baseScope:   s,
 		scope:       s,
 		parser:      p,
-		subincludes: map[string][]*Statement{},
+		subincludes: map[string]pyDict{},
 	}
 	s.interpreter = i
 	// Load the global builtin singletons
@@ -128,13 +128,13 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (er
 	return nil // Would have panicked if there was an error
 }
 
-// Subinclude returns the statements corresponding to a subinclude() call for a particular file.
-func (i *interpreter) Subinclude(path string) []*Statement {
+// Subinclude returns the global values corresponding to subincluding the given file.
+func (i *interpreter) Subinclude(path string) pyDict {
 	i.mutex.RLock()
-	stmts, present := i.subincludes[path]
+	globals, present := i.subincludes[path]
 	i.mutex.RUnlock()
 	if present {
-		return stmts
+		return globals
 	}
 	// If we get here, it's not been subincluded already. Parse it now.
 	// Note that there is a race here whereby it's possible for two packages to parse the same
@@ -145,11 +145,13 @@ func (i *interpreter) Subinclude(path string) []*Statement {
 		panic(err) // We're already inside another interpreter, which will handle this for us.
 	}
 	stmts = i.parser.optimise(stmts)
+	s := i.scope.NewScope()
+	s.interpretStatements(stmts)
 	i.optimiseExpressions(reflect.ValueOf(stmts))
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
-	i.subincludes[path] = stmts
-	return stmts
+	i.subincludes[path] = s.locals
+	return s.locals
 }
 
 // optimiseExpressions performs some general optimisation of expressions by precalculating constants
@@ -245,6 +247,13 @@ func (s *scope) LocalLookup(name string) pyObject {
 // Set sets the given variable in this scope.
 func (s *scope) Set(name string, value pyObject) {
 	s.locals[name] = value
+}
+
+// SetAll sets the entire contents of the given dict in this scope.
+func (s *scope) SetAll(d pyDict) {
+	for k, v := range d {
+		s.locals[k] = v
+	}
 }
 
 // interpretStatements interprets a series of statements in a particular scope.

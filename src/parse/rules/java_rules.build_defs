@@ -1,7 +1,5 @@
 """Built-in rules to compile Java code."""
 
-_maven_packages = {}
-
 
 def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
                  deps:list=None, modular:bool=False, exported_deps:list=None, visibility:list=None,
@@ -345,7 +343,6 @@ def maven_jars(name:str, id:str='', ids:list=None, repository:str|list=None, exc
     for id in ids:
         if id.count(':') != 2:
             raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
-    existing_packages = _maven_packages.setdefault(get_base_path(), {})
     exclude = exclude or []
     combine = combine or hash
     source_name = '_%s#src' % name
@@ -365,21 +362,15 @@ def maven_jars(name:str, id:str='', ids:list=None, repository:str|list=None, exc
             group, artifact, version, sources, licences = _parse_maven_artifact(line)
             if artifact in exclude:
                 continue
-            # Deduplicate packages
-            existing = existing_packages.get(artifact)
-            if existing:
-                if existing != '%s:%s:%s' % (group, artifact, version):
-                    raise ValueError('Package version clash in maven_jars: got %s, but already have %s' % (line, existing))
-            else:
-                maven_jar(
-                    name=artifact,
-                    id=line,
-                    repository=repos,
-                    hash=get_hash(id, artifact),
-                    licences=licences,
-                    sources=sources,
-                    # We deliberately don't make this rule visible externally.
-                )
+            maven_jar(
+                name=artifact,
+                id=line,
+                repository=repos,
+                hash=get_hash(id, artifact),
+                licences=licences,
+                sources=sources,
+                # We deliberately don't make this rule visible externally.
+            )
             # Have to account for require/provide on final rule if it's a jar
             final_name = name if deps_only or combine else '_%s#bin' % name
             add_exported_dep(final_name, ':' + artifact)
@@ -485,8 +476,6 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
     """
     if hash and hashes:
         raise ParseError('You can pass only one of hash or hashes to maven_jar')
-    d = _maven_packages.setdefault(get_base_path(), {})
-    d[name] = id
     if not artifact_type:
         id, _, artifact_type = id.partition('@')
         artifact_type = artifact_type or 'jar'

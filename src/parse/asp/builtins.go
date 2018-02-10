@@ -211,11 +211,11 @@ func subinclude(s *scope, args []pyObject) pyObject {
 	if t == nil || t.State() < core.Built {
 		// The target is not yet built. Defer parsing it until it is.
 		panic(errDeferParse{Label: l})
-	} else if l.PackageName != subincludePackageName {
+	} else if l.PackageName != subincludePackageName && s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
 	}
 	for _, out := range t.Outputs() {
-		s.interpretStatements(s.interpreter.Subinclude(path.Join(t.OutDir(), out)))
+		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out)))
 	}
 	return None
 }
@@ -223,14 +223,14 @@ func subinclude(s *scope, args []pyObject) pyObject {
 // subincludeLabel returns the label for a subinclude() call (which might be indirect
 // if the given argument was a URL instead of a build label)
 func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
-	target, ok := args[0].(pyString)
-	s.Assert(ok, "argument to subinclude must be a string")
-	if !strings.HasPrefix(string(target), "http") {
-		return core.ParseBuildLabel(string(target), s.pkg.Name)
+	target := string(args[0].(pyString))
+	s.NAssert(strings.HasPrefix(target, ":"), "Subincludes cannot be from the local package")
+	if !strings.HasPrefix(target, "http") {
+		return core.ParseBuildLabel(target, "")
 	}
 	// Check if this target is already registered (this will always happen eventually because
 	// we re-parse the same package again).
-	name := strings.Replace(path.Base(string(target)), ".", "_", -1)
+	name := strings.Replace(path.Base(target), ".", "_", -1)
 	label := core.NewBuildLabel(subincludePackageName, name)
 	if s.state.Graph.Target(label) != nil {
 		return label
@@ -244,7 +244,7 @@ func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
 			Value: &Expression{String: `"` + name + `"`},
 		}, {
 			Expr:  &Expression{Ident: &IdentExpr{Name: "url"}},
-			Value: &Expression{String: `"` + string(target) + `"`},
+			Value: &Expression{String: `"` + target + `"`},
 		},
 	}
 	if args[1] != nil && args[1] != None {
