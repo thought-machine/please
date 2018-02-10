@@ -105,6 +105,11 @@ type BuildTarget struct {
 	IsHashFilegroup bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
+	// If true, the interactive progress display will try to infer the target's progress
+	// via some heuristics on its output.
+	ShowProgress bool `name:"progress"`
+	// If ShowProgress is true, this is used to store the current progress of the target.
+	Progress float32 `print:"false"`
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings `name:"container"`
 	// Results of test, if it is one

@@ -49,6 +49,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.Containerise = container
 	target.Sandbox = isTruthy(20)
 	target.TestOnly = test || isTruthy(15)
+	target.ShowProgress = isTruthy(36)
 	if timeout := args[24]; timeout != nil {
 		target.BuildTimeout = time.Duration(timeout.(pyInt)) * time.Second
 	}

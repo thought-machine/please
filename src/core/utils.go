@@ -246,7 +246,7 @@ func (sb *safeBuffer) String() string {
 
 // logProgress logs a message once a minute until the given context has expired.
 // Used to provide some notion of progress while waiting for external commands.
-func logProgress(ctx context.Context, label BuildLabel) {
+func logProgress(ctx context.Context, target *BuildTarget) {
 	t := time.NewTicker(1 * time.Minute)
 	defer t.Stop()
 	for i := 1; i < 1000000; i++ {
@@ -255,12 +255,20 @@ func logProgress(ctx context.Context, label BuildLabel) {
 			return
 		case <-t.C:
 			if i == 1 {
-				log.Notice("%s still running after 1 minute", label)
+				log.Notice("%s still running after 1 minute %s", target.Label, progressMessage(target))
 			} else {
-				log.Notice("%s still running after %d minutes", label, i)
+				log.Notice("%s still running after %d minutes %s", target.Label, i, progressMessage(target))
 			}
 		}
 	}
+}
+
+// progressMessage displays a progress message for a target, if it tracks progress.
+func progressMessage(target *BuildTarget) string {
+	if target.ShowProgress {
+		return fmt.Sprintf("(%0.1f%% done)", target.Progress)
+	}
+	return ""
 }
 
 // ExecWithTimeout runs an external command with a timeout.
@@ -290,13 +298,17 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 		cmd.Stdout = io.MultiWriter(&out, &outerr)
 		cmd.Stderr = &outerr
 	}
+	if target != nil && target.ShowProgress {
+		cmd.Stdout = newProgressWriter(target, cmd.Stdout)
+		cmd.Stderr = newProgressWriter(target, cmd.Stderr)
+	}
 	if attachStdStreams {
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
 	if target != nil {
-		go logProgress(ctx, target.Label)
+		go logProgress(ctx, target)
 	}
 	// Start the command, wait for the timeout & then kill it.
 	// We deliberately don't use CommandContext because it will only send SIGKILL which

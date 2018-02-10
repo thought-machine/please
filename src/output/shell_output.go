@@ -41,15 +41,18 @@ type buildingTarget struct {
 }
 
 type buildingTargetData struct {
-	Label       core.BuildLabel
-	Started     time.Time
-	Finished    time.Time
-	Description string
-	Active      bool
-	Failed      bool
-	Cached      bool
-	Err         error
-	Colour      string
+	Label        core.BuildLabel
+	Started      time.Time
+	Finished     time.Time
+	Description  string
+	Active       bool
+	Failed       bool
+	Cached       bool
+	Err          error
+	Colour       string
+	Target       *core.BuildTarget
+	LastProgress float32
+	Eta          time.Duration
 }
 
 // MonitorState monitors the build while it's running (essentially until state.Results is closed)
@@ -182,7 +185,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		aggregatedResults.Aggregate(&result.Tests)
 	}
 	target := state.Graph.Target(label)
-	updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target))
+	updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target), target)
 	if failed {
 		failedTargetMap[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
@@ -399,8 +402,8 @@ func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap ma
 }
 
 func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buildingTarget, label core.BuildLabel,
-	active bool, failed bool, cached bool, description string, err error, colour string) {
-	updateTarget2(buildingTarget, label, active, failed, cached, description, err, colour)
+	active bool, failed bool, cached bool, description string, err error, colour string, target *core.BuildTarget) {
+	updateTarget2(buildingTarget, label, active, failed, cached, description, err, colour, target)
 	if plainOutput {
 		if failed {
 			log.Errorf("%s: %s: %s", label.String(), description, shortError(err))
@@ -415,7 +418,7 @@ func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buil
 	}
 }
 
-func updateTarget2(target *buildingTarget, label core.BuildLabel, active bool, failed bool, cached bool, description string, err error, colour string) {
+func updateTarget2(target *buildingTarget, label core.BuildLabel, active bool, failed bool, cached bool, description string, err error, colour string, t *core.BuildTarget) {
 	target.Lock()
 	defer target.Unlock()
 	target.Label = label
@@ -433,6 +436,7 @@ func updateTarget2(target *buildingTarget, label core.BuildLabel, active bool, f
 	target.Cached = cached
 	target.Err = err
 	target.Colour = colour
+	target.Target = t
 }
 
 func targetColour(target *core.BuildTarget) string {

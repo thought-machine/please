@@ -84,9 +84,24 @@ func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLin
 		target := buildingTargets[i].buildingTargetData
 		buildingTargets[i].Unlock()
 		label := target.Label.Parent()
-		if target.Active {
+		duration := now.Sub(target.Started).Seconds()
+		if target.Active && target.Target != nil && target.Target.ShowProgress && target.Target.Progress > 0.0 {
+			if target.Target.Progress > 1.0 && target.Target.Progress < 100.0 && target.Target.Progress != target.LastProgress {
+				proportionDone := target.Target.Progress / 100.0
+				perPercent := float32(duration) / proportionDone
+				buildingTargets[i].Eta = time.Duration(perPercent * (1.0 - proportionDone) * float32(time.Second)).Truncate(time.Second)
+				buildingTargets[i].LastProgress = target.Target.Progress
+			}
+			if target.Eta > 0 {
+				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%%, est %s remaining)${ERASE_AFTER}\n",
+					duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
+			} else {
+				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%% complete)${ERASE_AFTER}\n",
+					duration, target.Colour, label, target.Description, target.Target.Progress)
+			}
+		} else if target.Active {
 			lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${ERASE_AFTER}\n",
-				now.Sub(target.Started).Seconds(), target.Colour, label, target.Description)
+				duration, target.Colour, label, target.Description)
 		} else if time.Since(target.Finished).Seconds() < 0.5 {
 			// Only display finished targets for half a second after they're done.
 			duration := target.Finished.Sub(target.Started).Seconds()

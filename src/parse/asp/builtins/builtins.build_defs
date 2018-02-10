@@ -11,7 +11,7 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=N
                test_sandbox:bool=CONFIG.TEST_SANDBOX, no_test_output:bool=False, flaky:bool|int=0, build_timeout:int=0,
                test_timeout:int=0, pre_build:function=None, post_build:function=None, requires:list=None, provides:dict=None,
                licences:list=CONFIG.DEFAULT_LICENCES, test_outputs:list=None, system_srcs:list=None, stamp:bool=False,
-               tag:str='', optional_outs:list=None):
+               tag:str='', optional_outs:list=None, progress:bool=False):
     pass
 
 
