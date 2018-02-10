@@ -593,7 +593,7 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 
 
 if CONFIG.BAZEL_COMPATIBILITY:
-    def java_toolchain(javac=None, source_version=None, target_version=None, **kwargs):
+    def java_toolchain(javac=None, source_version=None, target_version=None):
         """Mimics some effort at Bazel compatibility.
 
         This doesn't really have the same semantics and ignores a bunch of arguments but it

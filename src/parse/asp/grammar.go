@@ -40,10 +40,8 @@ type ReturnStatement struct {
 
 // A FuncDef implements definition of a new function.
 type FuncDef struct {
-	Name string `"def" @Ident`
-	// *args and **kwargs are not properly supported but we allow them here for some level of compatibility.
-	// TODO(peterebden): can we remove this now? we should not have them here if they are not supported.
-	Arguments  []*Argument  `"(" [ @@ { "," { "*" } @@ } ] ")" Colon EOL`
+	Name       string       `"def" @Ident`
+	Arguments  []*Argument  `"(" [ @@ { "," @@ } ] ")" Colon EOL`
 	Docstring  string       `[ @String EOL ]`
 	Statements []*Statement `{ @@ } Unindent`
 }
