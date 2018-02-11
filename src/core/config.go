@@ -77,7 +77,11 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 	}
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
-	setDefault(&config.Parse.BuildFileName, []string{"BUILD"})
+	if usingBazelWorkspace {
+		setDefault(&config.Parse.BuildFileName, []string{"BUILD.bazel", "BUILD"})
+	} else {
+		setDefault(&config.Parse.BuildFileName, []string{"BUILD"})
+	}
 	setDefault(&config.Build.Path, []string{"/usr/local/bin", "/usr/bin", "/bin"})
 	setDefault(&config.Cover.FileExtension, []string{".go", ".py", ".java", ".js", ".cc", ".h", ".c"})
 	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc"})
