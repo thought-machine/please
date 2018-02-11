@@ -507,18 +507,16 @@ func (s *scope) interpretList(expr *List) pyList {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
 	cs := s.NewScope()
-	s.moveComprehensionIf(expr.Comprehension)
+	s.moveComprehensionIf(expr.Comprehension, expr.Comprehension.Expr)
 	l := s.iterate(expr.Comprehension.Expr)
 	ret := make(pyList, 0, len(l))
-	for _, li := range l {
-		if cs.evaluateComprehensionExpression(expr.Comprehension, li) {
-			if len(expr.Values) == 1 {
-				ret = append(ret, cs.interpretExpression(expr.Values[0]))
-			} else {
-				ret = append(ret, pyList(cs.evaluateExpressions(expr.Values)))
-			}
+	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
+		if len(expr.Values) == 1 {
+			ret = append(ret, cs.interpretExpression(expr.Values[0]))
+		} else {
+			ret = append(ret, pyList(cs.evaluateExpressions(expr.Values)))
 		}
-	}
+	})
 	return ret
 }
 
@@ -540,35 +538,55 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 	}
 	s.Assert(len(expr.Items) == 1, "must have exactly 1 dict item in a comprehension")
 	cs := s.NewScope()
-	s.moveComprehensionIf(expr.Comprehension)
-	l := s.iterate(expr.Comprehension.Expr)
+	s.moveComprehensionIf(expr.Comprehension, expr.Comprehension.Expr)
+	l := cs.iterate(expr.Comprehension.Expr)
 	ret := make(pyDict, len(l))
-	for _, li := range l {
-		if cs.evaluateComprehensionExpression(expr.Comprehension, li) {
-			k := cs.Lookup(expr.Items[0].Key)
-			key, ok := k.(pyString)
-			cs.Assert(ok, "dict keys must evaluate to strings")
-			ret[string(key)] = cs.interpretExpression(&expr.Items[0].Value)
+	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
+		k := cs.Lookup(expr.Items[0].Key)
+		key, ok := k.(pyString)
+		cs.Assert(ok, "dict keys must evaluate to strings")
+		ret[string(key)] = cs.interpretExpression(&expr.Items[0].Value)
+	})
+	return ret
+}
+
+// evaluateComprehension handles iterating a comprehension's loops.
+// The provided callback function is called with each item to be added to the result.
+func (s *scope) evaluateComprehension(l pyList, comp *Comprehension, callback func(pyObject)) {
+	if comp.Second != nil {
+		s.moveComprehensionIf(comp, comp.Second.Expr)
+		for _, li := range l {
+			s.unpackNames(comp.Names, li)
+			for _, li := range s.iterate(comp.Second.Expr) {
+				if s.evaluateComprehensionExpression(comp, comp.Second.Names, li) {
+					callback(li)
+				}
+			}
+		}
+	} else {
+		for _, li := range l {
+			if s.evaluateComprehensionExpression(comp, comp.Names, li) {
+				callback(li)
+			}
 		}
 	}
-	return ret
 }
 
 // moveComprehensionIf is a small hack to correct a limitation in the parser that attaches an
 // 'if' in a comprehension to the main expression instead (because it thinks it's the start of
 // an inline if statement).
-func (s *scope) moveComprehensionIf(comp *Comprehension) {
-	if comp.Expr.If != nil {
-		s.Assert(comp.Expr.If.Else == nil, "Invalid syntax")
-		comp.If = comp.Expr.If.Condition
-		comp.Expr.If = nil
+func (s *scope) moveComprehensionIf(comp *Comprehension, expr *Expression) {
+	if expr.If != nil {
+		s.Assert(expr.If.Else == nil, "Invalid syntax")
+		comp.If = expr.If.Condition
+		expr.If = nil
 	}
 }
 
 // evaluateComprehensionExpression runs an expression from a list or dict comprehension, and returns true if the caller
 // should continue to use it, or false if it's been filtered out of the comprehension.
-func (s *scope) evaluateComprehensionExpression(comp *Comprehension, li pyObject) bool {
-	s.unpackNames(comp.Names, li)
+func (s *scope) evaluateComprehensionExpression(comp *Comprehension, names []string, li pyObject) bool {
+	s.unpackNames(names, li)
 	return comp.If == nil || s.interpretExpression(comp.If).IsTruthy()
 }
 

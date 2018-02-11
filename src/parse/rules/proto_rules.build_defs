@@ -50,7 +50,9 @@ def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, lab
     lang_plugins = sorted(languages.items())
     plugins = [plugin for _, plugin in lang_plugins]
     file_extensions = []
-    outs = _flatten_outs(lang_plugins, file_srcs)
+    outs = {ext_lang: [src.replace('.proto', ext) for src in file_srcs for ext in exts]
+                      if plugin['use_file_names'] else []
+            for language, plugin in lang_plugins for ext_lang, exts in plugin['extensions'].items()}
     flags = [' '.join(plugin['protoc_flags']) for plugin in plugins] + protoc_flags
     tools = {lang: plugin.get('tools') for lang, plugin in lang_plugins}
     tools['protoc'] = [CONFIG.PROTOC_TOOL]
@@ -76,14 +78,11 @@ def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, lab
     # Figure out which languages we need to detect output files for.
     # This always happens for Java, and will be needed for any other language where the inputs aren't plain files.
     post_build = None
-    search_extensions = []
-    for plugin in plugins:
-        search_extensions += [(lang, exts) for lang, exts in sorted(plugin['extensions'].items())
-                              if need_post_build or not plugin['use_file_names']]
+    search_extensions = [(lang, exts) for plugin in plugins
+                         for lang, exts in sorted(plugin['extensions'].items())
+                         if need_post_build or not plugin['use_file_names']]
     if search_extensions:
-        all_exts = []
-        for _, exts in search_extensions:
-            all_exts += exts
+        all_exts = [ext for _, exts in search_extensions for ext in exts]
         cmds.append('find . %s | sort' % ' -or '.join(['-name "*%s"' % ext for ext in all_exts]))
         post_build = _annotate_outs(search_extensions)
 
@@ -437,16 +436,3 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
         cmd = 'unzip $SRCS bin/protoc && mv bin/protoc $OUT',
         visibility = visibility,
     )
-
-
-def _flatten_outs(plugins, file_srcs):
-    """Flattens outputs from plugins into one dict."""
-    ret = {}
-    for language, plugin in plugins:
-        for ext_lang, exts in plugin['extensions'].items():
-            l = []
-            if plugin['use_file_names']:
-                for src in file_srcs:
-                    l += [src.replace('.proto', ext) for ext in exts]
-            ret[ext_lang] = l
-    return ret

@@ -13,7 +13,7 @@ remain unimplemented. Some of the notable differences are:
  * The `raise` and `assert` statements are supported, but since it is not
    possible to catch exceptions they only serve to signal catastrophic errors.
  * List and dict comprehensions are supported, but not Python's more general
-   generator expressions. Only a single 'for' clause is permitted.
+   generator expressions. Up to two 'for' clauses are permitted.
  * Most builtin functions are not available.
  * Dictionaries are supported, but can only be keyed by strings.
  * The only builtin types are `bool`, `int`, `str`, `list`, `dict` and functions.

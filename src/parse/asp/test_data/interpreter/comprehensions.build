@@ -1,3 +1,5 @@
 file_srcs = [src for src in ['file1', 'file2', ':rule1'] if src[0] not in [':', '/']]
 
 file_numbers = {src: src[-1] for src in file_srcs}
+
+pairs = [file_src + '+' + src for file_src in file_srcs for src in ['file1', 'file2', ':rule1']]

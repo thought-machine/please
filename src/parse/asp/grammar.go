@@ -186,9 +186,13 @@ type InlineIf struct {
 
 // A Comprehension represents a list or dict comprehension clause.
 type Comprehension struct {
-	Names []string    `"for" @Ident [ { "," @Ident } ] "in"`
-	Expr  *Expression `@@`
-	If    *Expression `[ "if" @@ ]`
+	Names  []string    `"for" @Ident [ { "," @Ident } ] "in"`
+	Expr   *Expression `@@`
+	Second *struct {
+		Names []string    `"for" @Ident [ { "," @Ident } ] "in"`
+		Expr  *Expression `@@`
+	} `[ @@ ]`
+	If *Expression `[ "if" @@ ]`
 }
 
 // A Lambda is the inline lambda function.

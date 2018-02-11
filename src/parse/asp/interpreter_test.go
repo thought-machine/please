@@ -107,6 +107,8 @@ func TestComprehensions(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/comprehensions.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, pyList{pyString("file1"), pyString("file2")}, s.Lookup("file_srcs"))
+	assert.EqualValues(t, pyList{pyString("file1+file1"), pyString("file1+file2"), pyString("file1+:rule1"),
+		pyString("file2+file1"), pyString("file2+file2"), pyString("file2+:rule1")}, s.Lookup("pairs"))
 }
 
 func TestEquality(t *testing.T) {
