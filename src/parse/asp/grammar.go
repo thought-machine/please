@@ -67,9 +67,12 @@ type IfStatement struct {
 
 // An Argument represents an argument to a function definition.
 type Argument struct {
-	Name  string      `@Ident`
-	Type  []string    `[ ":" @( { ( "bool" | "str" | "int" | "list" | "dict" | "function" ) [ "|" ] } ) ]`
-	Value *Expression `[ "=" @@ ]`
+	Name string   `@Ident`
+	Type []string `[ ":" @( { ( "bool" | "str" | "int" | "list" | "dict" | "function" ) [ "|" ] } ) ]`
+	// Aliases are an experimental non-Python concept where function arguments can be aliased to different names.
+	// We use this to support compatibility with Bazel & Buck etc in some cases.
+	Aliases []string    `[ "&" ( { @Ident [ "&" ] } ) ]`
+	Value   *Expression `[ "=" @@ ]`
 }
 
 // An Expression is a generalised Python expression, i.e. anything that can appear where an

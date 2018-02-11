@@ -715,6 +715,11 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
 func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
+	if state.Config.Bazel.Compatibility && core.FileExists("WORKSPACE") {
+		// We have to parse the WORKSPACE file before anything else to understand subrepos.
+		// This is a bit crap really since it inhibits parallelism for the first step.
+		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false, state.Include, state.Exclude, false)
+	}
 	for _, target := range targets {
 		if target == core.BuildLabelStdin {
 			for label := range utils.ReadStdin() {

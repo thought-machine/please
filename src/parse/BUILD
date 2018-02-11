@@ -39,7 +39,10 @@ filegroup(
 genrule(
     name = 'type_checked_rules',
     srcs = ['type_checking.py'] + glob(['rules/*.build_defs']),
-    outs = [basename(x) for x in glob(['rules/*.build_defs'])],
+    outs = [basename(x) for x in glob(['rules/*.build_defs'], exclude = [
+        'config_rules.build_defs',
+        'subrepo_rules.build_defs',
+    ])],
     cmd = 'python $SRCS',
 )
 

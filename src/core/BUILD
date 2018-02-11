@@ -158,3 +158,12 @@ go_test(
         '//third_party/go:testify',
     ],
 )
+
+go_test(
+    name = 'subrepo_test',
+    srcs = ['subrepo_test.go'],
+    deps = [
+        ':core',
+        '//third_party/go:testify',
+    ],
+)

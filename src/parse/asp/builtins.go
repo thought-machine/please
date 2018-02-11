@@ -21,10 +21,10 @@ type nativeFunc func(*scope, []pyObject) pyObject
 
 // registerBuiltins sets up the "special" builtins that map to native code.
 func registerBuiltins(s *scope) {
-	// varargs is set here as an optimisation; we don't have to populate all 30-odd arguments
-	// into the argument map. We do have to be careful about reading them though.
 	setNativeCode(s, "build_rule", buildRule)
+	setNativeCode(s, "subrepo", subrepo)
 	setNativeCode(s, "subinclude", subinclude)
+	setNativeCode(s, "load", bazelLoad).varargs = true
 	setNativeCode(s, "package", pkg).kwargs = true
 	setNativeCode(s, "sorted", sorted)
 	setNativeCode(s, "isinstance", isinstance)
@@ -61,6 +61,8 @@ func registerBuiltins(s *scope) {
 		"rfind":      setNativeCode(s, "find", strRFind),
 		"format":     setNativeCode(s, "format", strFormat),
 		"count":      setNativeCode(s, "count", strCount),
+		"upper":      setNativeCode(s, "upper", strUpper),
+		"lower":      setNativeCode(s, "lower", strLower),
 	}
 	stringMethods["format"].kwargs = true
 	dictMethods = map[string]*pyFunc{
@@ -207,8 +209,27 @@ func tagName(name, tag string) string {
 	return name + tag
 }
 
+// bazelLoad implements the load() builtin, which is only available for Bazel compatibility.
+func bazelLoad(s *scope, args []pyObject) pyObject {
+	s.Assert(s.state.Config.Bazel.Compatibility, "load() is only available in Bazel compatibility mode. See `plz help bazel` for more information.")
+	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
+	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
+	l := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
+	s.SetAll(s.interpreter.Subinclude(path.Join(l.PackageName, l.Name)), false)
+	return None
+}
+
 func subinclude(s *scope, args []pyObject) pyObject {
-	l := subincludeLabel(s, args)
+	t := subincludeTarget(s, subincludeLabel(s, args))
+	for _, out := range t.Outputs() {
+		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out)), false)
+	}
+	return None
+}
+
+// subincludeTarget returns the target for a subinclude() call to a label.
+// It panics appropriately if the target is not yet built.
+func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	t := s.state.Graph.Target(l)
 	if t == nil || t.State() < core.Built {
 		// The target is not yet built. Defer parsing it until it is.
@@ -216,10 +237,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 	} else if l.PackageName != subincludePackageName && s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
 	}
-	for _, out := range t.Outputs() {
-		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out)), false)
-	}
-	return None
+	return t
 }
 
 // subincludeLabel returns the label for a subinclude() call (which might be indirect
@@ -391,6 +409,16 @@ func strCount(s *scope, args []pyObject) pyObject {
 	self := string(args[0].(pyString))
 	needle := string(args[1].(pyString))
 	return pyInt(strings.Count(self, needle))
+}
+
+func strUpper(s *scope, args []pyObject) pyObject {
+	self := string(args[0].(pyString))
+	return pyString(strings.ToUpper(self))
+}
+
+func strLower(s *scope, args []pyObject) pyObject {
+	self := string(args[0].(pyString))
+	return pyString(strings.ToLower(self))
 }
 
 func boolType(s *scope, args []pyObject) pyObject {
@@ -669,5 +697,59 @@ func setCommand(s *scope, args []pyObject) pyObject {
 	} else {
 		target.AddCommand(config, command)
 	}
+	return None
+}
+
+// selectFunc implements the select() builtin.
+func selectFunc(s *scope, args []pyObject) pyObject {
+	d, _ := asDict(args[0])
+	var def pyObject
+	// TODO(peterebden): this is an arbitrary match that drops Bazel's order-of-matching rules. Fix.
+	for k, v := range d {
+		if k == "//conditions:default" || k == "default" {
+			def = v
+		} else if selectTarget(s, core.ParseBuildLabel(k, s.pkg.Name)).HasLabel("config:on") {
+			return v
+		}
+	}
+	s.NAssert(def == nil, "None of the select() conditions matched")
+	return def
+}
+
+// selectTarget returns the target to be used for a select() call.
+// It panics appropriately if the target isn't built yet.
+func selectTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
+	if l.PackageName == s.pkg.Name {
+		t := s.pkg.Target(l.Name)
+		s.NAssert(t == nil, "Target %s in select() call has not been defined yet", l.Name)
+		return t
+	}
+	return subincludeTarget(s, l)
+}
+
+// subrepo implements the subrepo() builtin that adds a new repository.
+func subrepo(s *scope, args []pyObject) pyObject {
+	root := func(def string) string {
+		if args[2] != None {
+			return string(args[2].(pyString))
+		}
+		return def
+	}
+
+	name := string(args[0].(pyString))
+	dep := string(args[1].(pyString))
+	if dep == "" {
+		// This is deliberately different to facilitate binding subrepos within the same VCS repo.
+		s.state.Graph.AddSubrepo(&core.Subrepo{Name: name, Root: root(name)})
+		return None
+	}
+	// N.B. The target must be already registered on this package.
+	t := s.pkg.TargetOrDie(core.ParseBuildLabel(dep, s.pkg.Name).Name)
+	s.state.Graph.AddSubrepo(&core.Subrepo{
+		Name:   name,
+		Root:   root(path.Join(t.OutDir(), name)),
+		Target: t,
+	})
+	log.Debug("Registered subrepo %s", name)
 	return None
 }

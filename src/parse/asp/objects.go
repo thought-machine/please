@@ -436,6 +436,9 @@ func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
 				f.defaults[i] = arg.Value
 			}
 		}
+		for _, alias := range arg.Aliases {
+			f.argIndices[alias] = i
+		}
 	}
 	return f
 }
@@ -468,23 +471,6 @@ func (f *pyFunc) String() string {
 	return fmt.Sprintf("<function %s>", f.name)
 }
 
-// Rescope returns a duplicate of this function with a new parent scope.
-func (f *pyFunc) Rescope(s *scope) pyObject {
-	return &pyFunc{
-		name:       f.name,
-		scope:      s,
-		args:       f.args,
-		argIndices: f.argIndices,
-		defaults:   f.defaults,
-		constants:  f.constants,
-		types:      f.types,
-		code:       f.code,
-		nativeCode: f.nativeCode,
-		varargs:    f.varargs,
-		kwargs:     f.kwargs,
-	}
-}
-
 func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
@@ -504,9 +490,13 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 		if a.Value != nil { // Named argument
 			// Unfortunately we can't pick this up readily at parse time.
 			s.NAssert(a.Expr.Val.Ident == nil || len(a.Expr.Val.Ident.Action) > 0, "Illegal argument syntax %s", a.Expr)
-			idx, present := f.argIndices[a.Expr.Val.Ident.Name]
-			s.Assert(present || f.kwargs, "Unknown argument to %s: %s", f.name, a.Expr.Val.Ident.Name)
-			s2.Set(a.Expr.Val.Ident.Name, f.validateType(s, idx, a.Value))
+			name := a.Expr.Val.Ident.Name
+			idx, present := f.argIndices[name]
+			s.Assert(present || f.kwargs, "Unknown argument to %s: %s", f.name, name)
+			if present {
+				name = f.args[idx]
+			}
+			s2.Set(name, f.validateType(s, idx, a.Value))
 		} else if i >= len(f.args) {
 			s.Error("Too many arguments to %s", f.name)
 		} else if a.self != nil {
@@ -606,6 +596,10 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 		if t == actual {
 			return val
 		}
+	}
+	// Using integers in place of booleans seems common in Bazel BUILD files :(
+	if s.state.Config.Bazel.Compatibility && f.types[i][0] == "bool" && actual == "int" {
+		return val
 	}
 	defer func() {
 		panic(AddStackFrame(expr.Pos, recover()))
@@ -731,6 +725,11 @@ func newConfig(config *core.Configuration) *pyConfig {
 	c["DEFAULT_VISIBILITY"] = None
 	c["DEFAULT_TESTONLY"] = False
 	c["DEFAULT_LICENCES"] = None
+	// Bazel supports a 'features' flag to toggle things on and off.
+	// We don't but at least let them call package() without blowing up.
+	if config.Bazel.Compatibility {
+		c["FEATURES"] = pyList{}
+	}
 	// These can't be changed (although really you shouldn't be able to find out the OS at parse time)
 	c["OS"] = pyString(runtime.GOOS)
 	c["ARCH"] = pyString(runtime.GOARCH)

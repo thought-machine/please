@@ -2,9 +2,9 @@
 
 
 def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs:list|dict=None, deps:list=None,
-            labels:list=None, visibility:list=None, building_description:str='Building...',
+            labels:list&features&tags=None, visibility:list=None, building_description:str='Building...',
             hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
-            needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool=False,
+            needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool&testonly=False,
             secrets:list=None, requires:list=None, provides:dict=None, pre_build:function=None,
             post_build:function=None, tools:list|dict=None):
     """A general build rule which allows the user to specify a command.
@@ -114,7 +114,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
     )
 
 
-def gentest(name:str, test_cmd:str|dict, labels:list=None, cmd:str|dict=None, srcs:list|dict=None, outs:list=None,
+def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str|dict=None, srcs:list|dict=None, outs:list=None,
             deps:list=None, tools:list|dict=None, data:list=None, visibility:list=None, timeout:int=0,
             needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list=None, no_test_output:bool=False,
             output_is_complete:bool=True, requires:list=None, container:bool|dict=False, sandbox:bool=None):
@@ -177,7 +177,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list=None, cmd:str|dict=None, sr
     )
 
 
-def export_file(name:str, src:str, visibility:list=None, binary:bool=False, test_only:bool=False):
+def export_file(name:str, src:str, visibility:list=None, binary:bool=False, test_only:bool&testonly=False):
     """Essentially a single-file alias for filegroup.
 
     Args:
@@ -197,8 +197,8 @@ def export_file(name:str, src:str, visibility:list=None, binary:bool=False, test
 
 
 def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_deps:list=None,
-              visibility:list=None, labels:list=None, binary:bool=False, output_is_complete:bool=True,
-              requires:list=None, provides:dict=None, hashes:list=None, test_only:bool=False):
+              visibility:list=None, labels:list&features&tags=None, binary:bool=False, output_is_complete:bool=True,
+              requires:list=None, provides:dict=None, hashes:list=None, test_only:bool&testonly=False):
     """Defines a collection of files which other rules can depend on.
 
     Sources can be omitted entirely in which case it acts simply as a rule to collect other rules,
@@ -243,7 +243,7 @@ def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_dep
 
 
 def hash_filegroup(name:str, srcs:list=None, deps:list=None, exported_deps:list=None, visibility:list=None,
-                   labels:list=None, test_only:bool=False, requires:list=None):
+                   labels:list&features&tags=None, test_only:bool&testonly=False, requires:list=None):
     """Copies a set of files to output names which are uniquely hashed based on their contents.
 
     For example, srcs = ["test.txt"] might output "test-b250cnf30f3h.txt".
@@ -275,7 +275,7 @@ def hash_filegroup(name:str, srcs:list=None, deps:list=None, exported_deps:list=
 
 
 def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
-                   visibility:list=None, test_only:bool=False):
+                   visibility:list=None, test_only:bool&testonly=False):
     """Defines a rule to collect some dependencies from outside the build tree.
 
     This is essentially the same as a filegroup; it will simply copy files from the system
@@ -304,7 +304,7 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
 
 
 def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:bool=False,
-                visibility:list=None, licences:list=None, test_only:bool=False, deps:list=None,
+                visibility:list=None, licences:list=None, test_only:bool&testonly=False, deps:list=None,
                 exported_deps:list=None, _tag=''):
     """Defines a rule to fetch a file over HTTP(S).
 
@@ -322,6 +322,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
     """
     urls = [url] if isinstance(url, str) else url
+    url = urls[0]
     cmd = ') || ('.join(['echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (url, url) for url in urls])
     return build_rule(
         name = name,
@@ -341,7 +342,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
 
 def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, gzip:bool=True,
-            visibility:list=None, labels:list=None):
+            visibility:list=None, labels:list&features&tags=None):
     """Defines a rule to create a tarball containing outputs of other rules.
 
     File mode and ownership are preserved. However, the atime and mtime of all
@@ -458,22 +459,6 @@ if CONFIG.BAZEL_COMPATIBILITY:
             visibility = ['PUBLIC'],
         )
 
-    def load(name, s1=None, s2=None, s3=None, s4=None, s5=None, s6=None):
-        """Vaguely mimics the Bazel load() function which loads things from a .bzl file.
-
-        Conveniently they have a deprecated mode which is a lot like include_defs(), and
-        a more modern one which resembles subinclude(). Unfortunately the latter doesn't
-        require having an actual target to subinclude() from...
-
-        In neither case do we support loading specific symbols.
-        """
-        if name.startswith('//'):
-            subinclude(name)
-        elif name.startswith('/'):
-            include_defs('//%s.bzl' % name)  # lint:disable=deprecated-function
-        else:
-            include_defs('//%s/%s.bzl' % (get_base_path(), name))  # lint:disable=deprecated-function
-
     def exports_files(srcs, name='exported_files', visibility=['PUBLIC'], licenses=None):
         """Makes a bunch of files available as a filegroup.
 
@@ -486,3 +471,7 @@ if CONFIG.BAZEL_COMPATIBILITY:
             srcs = srcs,
             visibility = visibility,
         )
+
+    def licenses(licences):
+        """Sets the default licences for the package."""
+        package(default_licences = licences)

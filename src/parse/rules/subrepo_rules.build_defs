@@ -1,0 +1,69 @@
+"""Contains rules for working with sub-repositories.
+
+These allow downloading targets from another repo and making them available here.
+Each repository has a name, which must be unique (including packages in the
+current repository).
+
+Rules in subrepos can be accessed in one of two ways:
+ - by prefixing them with the name of the repo, for example //my_repo/pkg:target
+   to access what would be //pkg:target within it.
+ - by using Bazel-style @my_repo//pkg:target syntax.
+
+These are still fairly experimental.
+"""
+
+def workspace(name:str):
+    """Defines the name of the current workspace.
+
+    Args:
+      name (str): Name to bind this workspace as.
+    """
+    subrepo(
+        name = name,
+        path = '',
+    )
+
+
+def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=None,
+                 sha256:str=None, visibility:list=None):
+    """Fetches a remote file over HTTP and expands its contents.
+
+    The archive should be either a zipfile or a tarball. Which one to use will be autodetected
+    based on the file extension in the URL given.
+
+    Args:
+      name (str): Name of the rule.
+      urls (list): List of URLs to fetch from. These are assumed to be mirrors and will be
+                   tried in sequence.
+      strip_prefix (str): Prefix to strip from the expanded archive.
+      hashes (list): List of hashes to verify the rule with.
+      visibility (list): Visibility declaration of the rule.
+      sha256 (str): Deprecated. Used for Bazel compat but currently has no effect.
+    """
+    remote_rule = remote_file(
+        name = name,
+        _tag = 'download',
+        url = urls,
+        out = name + '_' + basename(urls[0]),
+        hashes = hashes,
+    )
+    if any([u.endswith('.jar') or u.endswith('.zip') for u in urls]):
+        if strip_prefix:
+            cmd = 'unzip $SRCS && mv %s $OUT' % strip_prefix
+        else:
+            cmd = 'mkdir $OUT && unzip $SRCS -d $OUT'
+    else:
+        if strip_prefix:
+            cmd = 'tar -axf $SRCS && mv %s $OUT' % strip_prefix
+        else:
+            cmd = 'mkdir $OUT && tar -axf $SRCS -C $OUT'
+    extract_rule = build_rule(
+        name = name,
+        srcs = [remote_rule],
+        outs = [name],
+        cmd = cmd,
+    )
+    subrepo(
+        name = name,
+        dep = extract_rule,
+    )

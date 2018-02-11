@@ -15,7 +15,7 @@ a target which has only had small changes.
 
 
 def python_library(name:str, srcs:list=None, resources:list=None, deps:list=None, visibility:list=None,
-                   test_only:bool=False, zip_safe:bool=True, labels:list=None, interpreter:str=None,
+                   test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=None, interpreter:str=None,
                    strip:bool=False):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
@@ -96,7 +96,7 @@ def python_library(name:str, srcs:list=None, resources:list=None, deps:list=None
 
 def python_binary(name:str, main:str, resources:list=None, out:str=None, deps:list=None,
                   visibility:list=None, zip_safe:bool=None, interpreter:str=None, shebang:str='',
-                  labels:list=None):
+                  labels:list&features&tags=None):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -178,7 +178,7 @@ def python_binary(name:str, main:str, resources:list=None, out:str=None, deps:li
 
 
 def python_test(name:str, srcs:list, data:list=None, resources:list=None, deps:list=None,
-                labels:list=None, size:str=None, flags:str='', visibility:list=None,
+                labels:list&features&tags=None, size:str=None, flags:str='', visibility:list=None,
                 container:bool|dict=False, sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
                 test_outputs:list=None, zip_safe:bool=None, interpreter:str=None):
     """Generates a Python test target.
@@ -279,7 +279,7 @@ def python_test(name:str, srcs:list, data:list=None, resources:list=None, deps:l
 
 
 def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
-                test_only:bool=False, env:dict=None, deps:list=None, post_install_commands:list=None,
+                test_only:bool&testonly=False, env:dict=None, deps:list=None, post_install_commands:list=None,
                 install_subdirectory:bool=False, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None):
     """Provides a build rule for third-party dependencies to be installed by pip.
@@ -381,7 +381,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 
 def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
                  post_install_commands:list=None, patch:str|list=None, licences:list=None,
-                 test_only:bool=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
+                 test_only:bool&testonly=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
                  deps:list=None, name_scheme:str=None):
     """Downloads a Python wheel and extracts it.
 

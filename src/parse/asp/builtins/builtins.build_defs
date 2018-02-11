@@ -50,9 +50,17 @@ def rfind(self, needle:str):
     pass
 def count(self, needle:str):
     pass
+def upper(self):
+    pass
+def lower(self):
+    pass
 
 
 def subinclude(target:str, hash:str=None):
+    pass
+def load(target:str, names:str=None):
+    pass
+def subrepo(name:str, dep:str='', path:str=None):
     pass
 
 
@@ -90,7 +98,7 @@ def dict(d):
     raise 'dict is not callable'
 
 
-def glob(includes:list, excludes:list=[], exclude:list=None, hidden:bool=False):
+def glob(include:list, excludes:list=[], exclude:list=None, hidden:bool=False):
     pass
 
 

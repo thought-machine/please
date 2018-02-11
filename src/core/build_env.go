@@ -70,6 +70,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) BuildEn
 		"PKG="+target.Label.PackageName,
 		"PKG_DIR="+target.Label.PackageDir(),
 		"NAME="+target.Label.Name,
+		"CONFIG="+state.Config.Build.Config,
 	)
 	if !test {
 		tmpDir := path.Join(RepoRoot, target.TmpDir())

@@ -8,7 +8,7 @@ you must pay attention to interoperability when needed (e.g. 'extern "C"' and so
 """
 
 def c_library(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, deps:list=None,
-              visibility:list=None, test_only:bool=False, compiler_flags:list=None, linker_flags:list=None,
+              visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=None, linker_flags:list&ldflags&linkopts=None,
               pkg_config_libs:list=None, includes:list=None, defines:list|dict=None, alwayslink:bool=False):
     """Generate a C library target.
 
@@ -54,8 +54,8 @@ def c_library(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, 
 
 
 
-def c_object(name:str, src:str, hdrs:list=None, private_hdrs:list=None, out:str=None, test_only:bool=False,
-             compiler_flags:list=None, linker_flags:list=None, pkg_config_libs:list=None, includes:list=None,
+def c_object(name:str, src:str, hdrs:list=None, private_hdrs:list=None, out:str=None, test_only:bool&testonly=False,
+             compiler_flags:list&cflags&copts=None, linker_flags:list&ldflags&linkopts=None, pkg_config_libs:list=None, includes:list=None,
              defines:list|dict=None, alwayslink:bool=False, visibility:list=None, deps:list=None):
     """Generate a C object file from a single source.
 
@@ -105,8 +105,8 @@ def c_object(name:str, src:str, hdrs:list=None, private_hdrs:list=None, out:str=
     )
 
 
-def c_static_library(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list=None, linker_flags:list=None,
-                     deps:list=None, visibility:list=None, test_only:bool=False, pkg_config_libs:list=None):
+def c_static_library(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list&cflags&copts=None, linker_flags:list&ldflags&linkopts=None,
+                     deps:list=None, visibility:list=None, test_only:bool&testonly=False, pkg_config_libs:list=None):
     """Generates a C static library (.a).
 
     This is essentially just a collection of other c_library rules into a single archive.
@@ -138,8 +138,8 @@ def c_static_library(name:str, srcs:list=None, hdrs:list=None, compiler_flags:li
     )
 
 
-def c_shared_object(name:str, srcs:list=None, hdrs:list=None, out:str='', compiler_flags:list=None,
-                    linker_flags:list=None, deps:list=None, visibility:list=None, test_only:bool=False,
+def c_shared_object(name:str, srcs:list=None, hdrs:list=None, out:str='', compiler_flags:list&cflags&copts=None,
+                    linker_flags:list&ldflags&linkopts=None, deps:list=None, visibility:list=None, test_only:bool&testonly=False,
                     pkg_config_libs:list=None, includes:list=None):
     """Generates a C shared object (.so) with its dependencies linked in.
 
@@ -173,9 +173,9 @@ def c_shared_object(name:str, srcs:list=None, hdrs:list=None, out:str='', compil
     )
 
 
-def c_binary(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, compiler_flags:list=None,
-             linker_flags:list=None, deps:list=None, visibility:list=None, pkg_config_libs:list=None,
-             test_only:bool=False, static:bool=False):
+def c_binary(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, compiler_flags:list&cflags&copts=None,
+             linker_flags:list&ldflags&linkopts=None, deps:list=None, visibility:list=None, pkg_config_libs:list=None,
+             test_only:bool&testonly=False, static:bool=False):
     """Builds a binary from a collection of C rules.
 
     Args:
@@ -208,9 +208,9 @@ def c_binary(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, c
     )
 
 
-def c_test(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list=None, linker_flags:list=None,
+def c_test(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list&cflags&copts=None, linker_flags:list&ldflags&linkopts=None,
            pkg_config_libs:list=None, deps:list=None, data:list=None, visibility:list=None, flags:str='',
-           labels:list=None, flaky:bool|int=0, test_outputs:list=None, size:str=None, timeout:int=0,
+           labels:list&features&tags=None, flaky:bool|int=0, test_outputs:list=None, size:str=None, timeout:int=0,
            container:bool|dict=False, sandbox:bool=None):
     """Defines a C test target.
 

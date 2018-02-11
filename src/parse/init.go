@@ -35,7 +35,7 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 		if strings.HasSuffix(filename, ".gob") {
 			srcFile := strings.TrimSuffix(filename, ".gob")
 			src, _ := builtins.Asset(srcFile)
-			p.MustLoadBuiltins("src/parse/"+srcFile, src, builtins.MustAsset(filename))
+			p.MustLoadBuiltins("src/parse/asp/builtins/"+srcFile, src, builtins.MustAsset(filename))
 		}
 	}
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {

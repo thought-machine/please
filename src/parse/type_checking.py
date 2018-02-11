@@ -16,7 +16,7 @@ import sys
 
 
 DOCSTRING_RE = re.compile(r' *([^ ]+) \(([^\)]+)\):')
-PEP484_RE = re.compile(r':(?:(?:bool|int|str|list|dict|function)\|?)+([,)=])')
+PEP484_RE = re.compile(r':(?:(?:bool|int|str|list|dict|function)\|?(?:&[^,\)=]+)?)+([,)=])')
 
 
 def remove_type_hints(contents):

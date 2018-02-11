@@ -14,7 +14,7 @@ _LINK_PKGS_CMD = ' '.join([
 
 
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=None,
-               visibility:list=None, test_only:bool=False, go_tools:list=None, complete:bool=True,
+               visibility:list=None, test_only:bool&testonly=False, go_tools:list=None, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True):
     """Generates a Go library which can be reused by other rules.
 
@@ -116,7 +116,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     )
 
 
-def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list=None, test_only:bool=False):
+def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list=None, test_only:bool&testonly=False):
     """Generates a `go generate` rule.
 
     Args:
@@ -172,7 +172,7 @@ def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list
 
 def cgo_library(name:str, srcs:list, go_srcs:list=None, c_srcs:list=None, hdrs:list=None,
                 out:str=None, compiler_flags:list=None, linker_flags:list=None, pkg_config:list=None,
-                subdir:str='', deps:list=None, visibility:list=None, test_only:bool=False):
+                subdir:str='', deps:list=None, visibility:list=None, test_only:bool&testonly=False):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -308,7 +308,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
 
 
 def go_binary(name:str, srcs:list=None, asm_srcs:list=None, out:str=None, deps:list=None,
-              visibility:list=None, test_only:bool=False, static:bool=False):
+              visibility:list=None, test_only:bool&testonly=False, static:bool=False):
     """Compiles a Go binary.
 
     Args:
@@ -355,7 +355,7 @@ def go_binary(name:str, srcs:list=None, asm_srcs:list=None, out:str=None, deps:l
 def go_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:list=None,
             flags:str='', container:bool|dict=False, sandbox:bool=None, cgo:bool=False,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
-            labels:list=None, size:str=None, static:bool=False):
+            labels:list&features&tags=None, size:str=None, static:bool=False):
     """Defines a Go test rule.
 
     Args:
@@ -458,7 +458,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:list
 
 def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:list=None,
              flags:str='', container:bool|dict=False, sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
-             test_outputs:list=None, labels:list=None, size:str=None, static:bool=False):
+             test_outputs:list=None, labels:list&features&tags=None, size:str=None, static:bool=False):
     """Defines a Go test rule over a cgo_library.
 
     If the library you are testing is a cgo_library, you must use this instead of go_test.
@@ -506,7 +506,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 
 
 def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list=None,
-           visibility:list=None, patch:str=None, binary:bool=False, test_only:bool=False,
+           visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
            install:list=None, revision:str=None, strip:list=None):
     """Defines a dependency on a third-party Go library.
 

@@ -195,7 +195,7 @@ func (l *lex) nextToken() lexer.Token {
 			return lexer.Token{Type: LexOperator, Value: string([]byte{b, l.b[l.i-1]}), Pos: pos}
 		}
 		fallthrough
-	case ',', '.', '%', '*', '|':
+	case ',', '.', '%', '*', '|', '&':
 		return lexer.Token{Type: rune(b), Value: string(b), Pos: pos}
 	case '#':
 		// Comment character, consume to end of line.
@@ -213,7 +213,7 @@ func (l *lex) nextToken() lexer.Token {
 	case '\t':
 		lexer.Panicf(pos, "Tabs are not permitted in BUILD files, use space-based indentation instead")
 	default:
-		lexer.Panicf(pos, "Unknown character %c", b)
+		lexer.Panicf(pos, "Unknown symbol %c", b)
 	}
 	panic("unreachable")
 }

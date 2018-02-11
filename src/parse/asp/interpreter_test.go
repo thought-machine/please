@@ -180,3 +180,9 @@ func TestContinue(t *testing.T) {
 	require.NoError(t, err)
 	assert.EqualValues(t, pyList{pyInt(4), pyInt(5)}, s.Lookup("a"))
 }
+
+func TestAliases(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/aliases.build")
+	require.NoError(t, err)
+	assert.EqualValues(t, 42, s.Lookup("v"))
+}

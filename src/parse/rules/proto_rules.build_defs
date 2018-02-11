@@ -15,8 +15,8 @@ should be the return value of proto_language.
 _DEFAULT_GRPC_LABELS = ['grpc']
 
 
-def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, labels:list=None,
-                  languages:list|dict=None, test_only:bool=False, root_dir:str='', protoc_flags:list=None):
+def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, labels:list&features&tags=None,
+                  languages:list|dict=None, test_only:bool&testonly=False, root_dir:str='', protoc_flags:list=None):
     """Compile a .proto file to generated code for various languages.
 
     Args:
@@ -142,7 +142,7 @@ def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, lab
 
 
 def grpc_library(name:str, srcs:list, deps:list=None, visibility:list=None, languages:list|dict=None,
-                 labels:list=None, test_only:bool=False, root_dir:str='', protoc_flags:list=None):
+                 labels:list&features&tags=None, test_only:bool&testonly=False, root_dir:str='', protoc_flags:list=None):
     """Defines a rule for a grpc library.
 
     Args:
