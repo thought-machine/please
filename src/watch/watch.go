@@ -144,7 +144,7 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 	}
 }
 
-// command returns the plz commands that should be used for the given labels.
+// commands returns the plz commands that should be used for the given labels.
 func commands(state *core.BuildState, labels []core.BuildLabel, run bool) []string {
 	if run {
 		return []string{"run", "parallel"}
