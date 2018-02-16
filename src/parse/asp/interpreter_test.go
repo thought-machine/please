@@ -153,11 +153,9 @@ func TestUnpacking(t *testing.T) {
 }
 
 func TestPrecedence(t *testing.T) {
-	t.Skip("not ideal but not easy to fix :(")
 	s, err := parseFile("src/parse/asp/test_data/interpreter/precedence.build")
 	require.NoError(t, err)
-	assert.Equal(t, True, s.Lookup("a"))
-	assert.Equal(t, True, s.Lookup("b"))
+	assert.EqualValues(t, pyList{pyString("a.go")}, s.Lookup("file_srcs"))
 }
 
 func TestZip(t *testing.T) {

@@ -76,9 +76,23 @@ type Argument struct {
 // expression is allowed (including the extra parts like inline if-then-else, operators, etc).
 type Expression struct {
 	Pos     lexer.Position
-	UnaryOp *UnaryOp `( @@`
-	String  string   `| @String`
-	Int     *struct {
+	UnaryOp *UnaryOp         `( @@`
+	Val     *ValueExpression `| @@ )`
+	Op      *struct {
+		Op   Operator    `@("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" | "in" | "not" "in" | "==" | "!=" | ">=" | "<=")`
+		Expr *Expression `@@`
+	} `[ @@ ]`
+	If *InlineIf `[ @@ ]`
+	// Not part of the grammar - applied later to optimise constant expressions.
+	constant pyObject
+	// Similarly applied to optimise simple lookups of local variables.
+	local string
+}
+
+// A ValueExpression is the value part of an expression, i.e. without surrounding operators.
+type ValueExpression struct {
+	String string `( @String`
+	Int    *struct {
 		Int int `@Int`
 	} `| @@` // Should just be *int, but https://github.com/golang/go/issues/23498 :(
 	Bool     string     `| @( "True" | "False" | "None" )`
@@ -90,21 +104,12 @@ type Expression struct {
 	Slice    *Slice     `[ @@ ]`
 	Property *IdentExpr `[ ( "." @@`
 	Call     *Call      `| "(" @@ ")" ) ]`
-	Op       *struct {
-		Op   Operator    `@("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" | "in" | "not" "in" | "==" | "!=" | ">=" | "<=")`
-		Expr *Expression `@@`
-	} `[ @@ ]`
-	If *InlineIf `[ @@ ]`
-	// Not part of the grammar - applied later to optimise constant expressions.
-	constant pyObject
-	// Similarly applied to optimise simple lookups of local variables.
-	local string
 }
 
 // A UnaryOp represents a unary operation - in our case the only ones we support are negation and not.
 type UnaryOp struct {
-	Op   string     `@( "-" | "not" )`
-	Expr Expression `@@`
+	Op   string          `@( "-" | "not" )`
+	Expr ValueExpression `@@`
 }
 
 // An IdentStatement implements a statement that begins with an identifier (i.e. anything that

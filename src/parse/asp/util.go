@@ -8,8 +8,8 @@ func FindTarget(statements []*Statement, name string) *Statement {
 	for _, statement := range statements {
 		if ident := statement.Ident; ident != nil && ident.Action != nil && ident.Action.Call != nil {
 			for _, arg := range ident.Action.Call.Arguments {
-				if arg.Expr.Ident != nil && arg.Expr.Ident.Name == "name" {
-					if v := arg.Value; v != nil && v.String != "" && strings.Trim(v.String, `"`) == name {
+				if arg.Expr.Val != nil && arg.Expr.Val.Ident != nil && arg.Expr.Val.Ident.Name == "name" {
+					if v := arg.Value; v != nil && v.Val.String != "" && strings.Trim(v.Val.String, `"`) == name {
 						return statement
 					}
 				}

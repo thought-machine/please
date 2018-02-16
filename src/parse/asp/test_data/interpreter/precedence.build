@@ -1,2 +1,2 @@
-a = True and not False
-b = 'a' in ['b', 'c', 'a'] and 'b' in ['c', 'b', 'a']
+srcs = ['a.go', ':b']
+file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]

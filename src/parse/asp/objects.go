@@ -503,10 +503,10 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	for i, a := range args {
 		if a.Value != nil { // Named argument
 			// Unfortunately we can't pick this up readily at parse time.
-			s.NAssert(a.Expr.Ident == nil || len(a.Expr.Ident.Action) > 0, "Illegal argument syntax %s", a.Expr)
-			idx, present := f.argIndices[a.Expr.Ident.Name]
-			s.Assert(present || f.kwargs, "Unknown argument to %s: %s", f.name, a.Expr.Ident.Name)
-			s2.Set(a.Expr.Ident.Name, f.validateType(s, idx, a.Value))
+			s.NAssert(a.Expr.Val.Ident == nil || len(a.Expr.Val.Ident.Action) > 0, "Illegal argument syntax %s", a.Expr)
+			idx, present := f.argIndices[a.Expr.Val.Ident.Name]
+			s.Assert(present || f.kwargs, "Unknown argument to %s: %s", f.name, a.Expr.Val.Ident.Name)
+			s2.Set(a.Expr.Val.Ident.Name, f.validateType(s, idx, a.Value))
 		} else if i >= len(f.args) {
 			s.Error("Too many arguments to %s", f.name)
 		} else if a.self != nil {
@@ -523,7 +523,7 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	}
 	ret := s2.interpretStatements(f.code)
 	if ret == nil {
-		return s.Lookup("None") // Implicit 'return None' in any function that didn't do that itself.
+		return None // Implicit 'return None' in any function that didn't do that itself.
 	}
 	return ret
 }
@@ -542,12 +542,12 @@ func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 	}
 	for i, a := range c.Arguments {
 		if a.Value != nil { // Named argument
-			if idx, present := f.argIndices[a.Expr.Ident.Name]; present {
+			if idx, present := f.argIndices[a.Expr.Val.Ident.Name]; present {
 				args[idx] = f.validateType(s, idx, a.Value)
 			} else if f.kwargs {
-				s.Set(a.Expr.Ident.Name, s.interpretExpression(a.Value))
+				s.Set(a.Expr.Val.Ident.Name, s.interpretExpression(a.Value))
 			} else {
-				s.Error("Unknown argument to %s: %s", f.name, a.Expr.Ident.Name)
+				s.Error("Unknown argument to %s: %s", f.name, a.Expr.Val.Ident.Name)
 			}
 		} else if i >= len(args) {
 			if !f.varargs {

@@ -134,8 +134,8 @@ func (i *interpreter) optimiseExpressions(v reflect.Value) {
 		expr := v.Interface().(*Expression)
 		if constant := i.scope.Constant(expr); constant != nil {
 			expr.constant = constant // Extract constant expression
-		} else if expr.Ident != nil && expr.Property == nil && expr.Call == nil && expr.Op == nil && expr.If == nil && expr.Slice == nil && len(expr.Ident.Action) == 0 {
-			expr.local = expr.Ident.Name // Simple variable name lookup
+		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Property == nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil && len(expr.Val.Ident.Action) == 0 {
+			expr.local = expr.Val.Ident.Name // Simple variable name lookup
 		}
 	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
 		i.optimiseExpressions(v.Elem())
@@ -343,20 +343,22 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 	if expr.If != nil && !s.interpretExpression(expr.If.Condition).IsTruthy() {
 		return s.interpretExpression(expr.If.Else)
 	}
-	obj := s.interpretExpressionHead(expr)
-	if expr.Slice != nil {
-		if expr.Slice.Colon == "" {
-			// Indexing, much simpler...
-			s.Assert(expr.Slice.End == nil, "Invalid syntax")
-			obj = obj.Operator(Index, s.interpretExpression(expr.Slice.Start))
+	var obj pyObject
+	if expr.Val != nil {
+		obj = s.interpretValueExpression(expr.Val)
+	} else if expr.UnaryOp != nil {
+		obj = s.interpretValueExpression(&expr.UnaryOp.Expr)
+		if expr.UnaryOp.Op == "not" {
+			if obj.IsTruthy() {
+				obj = False
+			} else {
+				obj = True
+			}
 		} else {
-			obj = s.interpretSlice(obj, expr.Slice)
+			i, ok := obj.(pyInt)
+			s.Assert(ok, "Unary - can only be applied to an integer")
+			obj = pyInt(-int(i))
 		}
-	}
-	if expr.Property != nil {
-		obj = s.interpretIdent(obj.Property(expr.Property.Name), expr.Property)
-	} else if expr.Call != nil {
-		obj = s.callObject("", obj, expr.Call)
 	}
 	if expr.Op != nil {
 		switch expr.Op.Op {
@@ -384,7 +386,26 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 	return obj
 }
 
-func (s *scope) interpretExpressionHead(expr *Expression) pyObject {
+func (s *scope) interpretValueExpression(expr *ValueExpression) pyObject {
+	obj := s.interpretValueExpressionPart(expr)
+	if expr.Slice != nil {
+		if expr.Slice.Colon == "" {
+			// Indexing, much simpler...
+			s.Assert(expr.Slice.End == nil, "Invalid syntax")
+			obj = obj.Operator(Index, s.interpretExpression(expr.Slice.Start))
+		} else {
+			obj = s.interpretSlice(obj, expr.Slice)
+		}
+	}
+	if expr.Property != nil {
+		obj = s.interpretIdent(obj.Property(expr.Property.Name), expr.Property)
+	} else if expr.Call != nil {
+		obj = s.callObject("", obj, expr.Call)
+	}
+	return obj
+}
+
+func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 	if expr.Ident != nil {
 		obj := s.Lookup(expr.Ident.Name)
 		if len(expr.Ident.Action) == 0 {
@@ -420,17 +441,6 @@ func (s *scope) interpretExpressionHead(expr *Expression) pyObject {
 			Arguments:  toRealArguments(expr.Lambda.Arguments),
 			Statements: []*Statement{stmt},
 		})
-	} else if expr.UnaryOp != nil {
-		result := s.interpretExpression(&expr.UnaryOp.Expr)
-		if expr.UnaryOp.Op == "not" {
-			if result.IsTruthy() {
-				return s.Lookup("False")
-			}
-			return s.Lookup("True")
-		}
-		i, ok := result.(pyInt)
-		s.Assert(ok, "Unary - can only be applied to an integer")
-		return pyInt(-int(i))
 	}
 	return None
 }
@@ -647,18 +657,18 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	// Technically some of these might be constant (e.g. 'a,b,c'.split(',') or `1 if True else 2`.
 	// That's probably unlikely to be common though - we could do a generalised constant-folding pass
 	// but it's rare that people would write something of that nature in this language.
-	if expr.Slice != nil || expr.Property != nil || expr.Call != nil || expr.Op != nil || expr.If != nil {
+	if expr.Val == nil || expr.Val.Slice != nil || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
 		return nil
-	} else if expr.Bool != "" || expr.String != "" || expr.Int != nil {
-		return s.interpretExpressionHead(expr)
-	} else if expr.List != nil && expr.List.Comprehension == nil {
+	} else if expr.Val.Bool != "" || expr.Val.String != "" || expr.Val.Int != nil {
+		return s.interpretValueExpression(expr.Val)
+	} else if expr.Val.List != nil && expr.Val.List.Comprehension == nil {
 		// Lists can be constant if all their elements are also.
-		for _, v := range expr.List.Values {
+		for _, v := range expr.Val.List.Values {
 			if s.Constant(v) == nil {
 				return nil
 			}
 		}
-		return s.interpretExpressionHead(expr)
+		return s.interpretValueExpression(expr.Val)
 	}
 	// N.B. dicts are not optimised to constants currently because they are mutable (because Go maps have
 	//      pointer semantics). It might be nice to be able to do that later but it is probably not critical -

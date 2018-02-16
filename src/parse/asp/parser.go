@@ -194,11 +194,11 @@ func (p *Parser) optimise(statements []*Statement) []*Statement {
 					},
 				}
 				if name == "append" {
-					stmt.Ident.Action.AugAssign = &Expression{
+					stmt.Ident.Action.AugAssign = &Expression{Val: &ValueExpression{
 						List: &List{
 							Values: []*Expression{call.Arguments[0].Expr},
 						},
-					}
+					}}
 				}
 			}
 		}

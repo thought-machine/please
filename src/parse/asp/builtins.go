@@ -240,21 +240,21 @@ func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
 	// Call using the normal entry point, which is a bit of a faff but it sorts out default arguments and so forth
 	a := []CallArgument{
 		{
-			Expr:  &Expression{Ident: &IdentExpr{Name: "name"}},
-			Value: &Expression{String: `"` + name + `"`},
+			Expr:  &Expression{Val: &ValueExpression{Ident: &IdentExpr{Name: "name"}}},
+			Value: &Expression{Val: &ValueExpression{String: `"` + name + `"`}},
 		}, {
-			Expr:  &Expression{Ident: &IdentExpr{Name: "url"}},
-			Value: &Expression{String: `"` + target + `"`},
+			Expr:  &Expression{Val: &ValueExpression{Ident: &IdentExpr{Name: "url"}}},
+			Value: &Expression{Val: &ValueExpression{String: `"` + target + `"`}},
 		},
 	}
 	if args[1] != nil && args[1] != None {
 		a = append(a, CallArgument{
-			Expr: &Expression{Ident: &IdentExpr{Name: "hashes"}},
-			Value: &Expression{List: &List{
-				Values: []*Expression{{
+			Expr: &Expression{Val: &ValueExpression{Ident: &IdentExpr{Name: "hashes"}}},
+			Value: &Expression{Val: &ValueExpression{List: &List{
+				Values: []*Expression{{Val: &ValueExpression{
 					String: `"` + string(args[1].(pyString)) + `"`,
-				}},
-			}},
+				}}},
+			}}},
 		})
 	}
 	remoteFile.Call(s.interpreter.subincludeScope, &Call{Arguments: a})

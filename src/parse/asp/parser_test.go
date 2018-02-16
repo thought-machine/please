@@ -30,11 +30,11 @@ func TestParseDefaultArguments(t *testing.T) {
 
 	args := statements[0].FuncDef.Arguments
 	assert.Equal(t, "name", args[0].Name)
-	assert.Equal(t, "\"name\"", args[0].Value.String)
+	assert.Equal(t, "\"name\"", args[0].Value.Val.String)
 	assert.Equal(t, "timeout", args[1].Name)
-	assert.Equal(t, 10, args[1].Value.Int.Int)
+	assert.Equal(t, 10, args[1].Value.Val.Int.Int)
 	assert.Equal(t, "args", args[2].Name)
-	assert.Equal(t, "None", args[2].Value.Bool)
+	assert.Equal(t, "None", args[2].Value.Val.Bool)
 }
 
 func TestParseFunctionCalls(t *testing.T) {
@@ -50,28 +50,28 @@ func TestParseFunctionCalls(t *testing.T) {
 	assert.Equal(t, "package", statements[2].Ident.Name)
 	assert.Equal(t, 1, len(statements[2].Ident.Action.Call.Arguments))
 	arg := statements[2].Ident.Action.Call.Arguments[0]
-	assert.Equal(t, "default_visibility", arg.Expr.Ident.Name)
+	assert.Equal(t, "default_visibility", arg.Expr.Val.Ident.Name)
 	assert.NotNil(t, arg.Value)
-	assert.Equal(t, 1, len(arg.Value.List.Values))
-	assert.Equal(t, "\"PUBLIC\"", arg.Value.List.Values[0].String)
+	assert.Equal(t, 1, len(arg.Value.Val.List.Values))
+	assert.Equal(t, "\"PUBLIC\"", arg.Value.Val.List.Values[0].Val.String)
 
 	assert.NotNil(t, statements[3].Ident.Action.Call)
 	assert.Equal(t, "python_library", statements[3].Ident.Name)
 	assert.Equal(t, 2, len(statements[3].Ident.Action.Call.Arguments))
 	args := statements[3].Ident.Action.Call.Arguments
-	assert.Equal(t, "name", args[0].Expr.Ident.Name)
-	assert.Equal(t, "\"lib\"", args[0].Value.String)
-	assert.Equal(t, "srcs", args[1].Expr.Ident.Name)
-	assert.NotNil(t, args[1].Value.List)
-	assert.Equal(t, 2, len(args[1].Value.List.Values))
-	assert.Equal(t, "\"lib1.py\"", args[1].Value.List.Values[0].String)
-	assert.Equal(t, "\"lib2.py\"", args[1].Value.List.Values[1].String)
+	assert.Equal(t, "name", args[0].Expr.Val.Ident.Name)
+	assert.Equal(t, "\"lib\"", args[0].Value.Val.String)
+	assert.Equal(t, "srcs", args[1].Expr.Val.Ident.Name)
+	assert.NotNil(t, args[1].Value.Val.List)
+	assert.Equal(t, 2, len(args[1].Value.Val.List.Values))
+	assert.Equal(t, "\"lib1.py\"", args[1].Value.Val.List.Values[0].Val.String)
+	assert.Equal(t, "\"lib2.py\"", args[1].Value.Val.List.Values[1].Val.String)
 
 	assert.NotNil(t, statements[4].Ident.Action.Call)
 	assert.Equal(t, "subinclude", statements[4].Ident.Name)
 	assert.NotNil(t, statements[4].Ident.Action.Call)
 	assert.Equal(t, 1, len(statements[4].Ident.Action.Call.Arguments))
-	assert.Equal(t, "\"//build_defs:version\"", statements[4].Ident.Action.Call.Arguments[0].Expr.String)
+	assert.Equal(t, "\"//build_defs:version\"", statements[4].Ident.Action.Call.Arguments[0].Expr.Val.String)
 }
 
 func TestParseAssignments(t *testing.T) {
@@ -81,15 +81,15 @@ func TestParseAssignments(t *testing.T) {
 
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
 	assert.Equal(t, "x", statements[0].Ident.Name)
-	ass := statements[0].Ident.Action.Assign.Dict
+	ass := statements[0].Ident.Action.Assign.Val.Dict
 	assert.NotNil(t, ass)
 	assert.Equal(t, 3, len(ass.Items))
 	assert.Equal(t, "\"mickey\"", ass.Items[0].Key)
-	assert.Equal(t, 3, ass.Items[0].Value.Int.Int)
+	assert.Equal(t, 3, ass.Items[0].Value.Val.Int.Int)
 	assert.Equal(t, "\"donald\"", ass.Items[1].Key)
-	assert.Equal(t, "\"sora\"", ass.Items[1].Value.String)
+	assert.Equal(t, "\"sora\"", ass.Items[1].Value.Val.String)
 	assert.Equal(t, "\"goofy\"", ass.Items[2].Key)
-	assert.Equal(t, "riku", ass.Items[2].Value.Ident.Name)
+	assert.Equal(t, "riku", ass.Items[2].Value.Val.Ident.Name)
 }
 
 func TestForStatement(t *testing.T) {
@@ -99,11 +99,11 @@ func TestForStatement(t *testing.T) {
 
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
 	assert.Equal(t, "LANGUAGES", statements[0].Ident.Name)
-	assert.Equal(t, 2, len(statements[0].Ident.Action.Assign.List.Values))
+	assert.Equal(t, 2, len(statements[0].Ident.Action.Assign.Val.List.Values))
 
 	assert.NotNil(t, statements[1].For)
 	assert.Equal(t, []string{"language"}, statements[1].For.Names)
-	assert.Equal(t, "LANGUAGES", statements[1].For.Expr.Ident.Name)
+	assert.Equal(t, "LANGUAGES", statements[1].For.Expr.Val.Ident.Name)
 	assert.Equal(t, 2, len(statements[1].For.Statements))
 }
 
@@ -117,19 +117,19 @@ func TestOperators(t *testing.T) {
 	assert.Equal(t, 2, len(statements[0].Ident.Action.Call.Arguments))
 
 	arg := statements[0].Ident.Action.Call.Arguments[1]
-	assert.Equal(t, "srcs", arg.Expr.Ident.Name)
-	assert.NotNil(t, arg.Value.List)
-	assert.Equal(t, 1, len(arg.Value.List.Values))
-	assert.Equal(t, "\"//something:test_go\"", arg.Value.List.Values[0].String)
+	assert.Equal(t, "srcs", arg.Expr.Val.Ident.Name)
+	assert.NotNil(t, arg.Value.Val.List)
+	assert.Equal(t, 1, len(arg.Value.Val.List.Values))
+	assert.Equal(t, "\"//something:test_go\"", arg.Value.Val.List.Values[0].Val.String)
 	assert.NotNil(t, arg.Value.Op)
 	assert.Equal(t, Add, arg.Value.Op.Op)
-	call := arg.Value.Op.Expr.Ident.Action[0].Call
-	assert.Equal(t, "glob", arg.Value.Op.Expr.Ident.Name)
+	call := arg.Value.Op.Expr.Val.Ident.Action[0].Call
+	assert.Equal(t, "glob", arg.Value.Op.Expr.Val.Ident.Name)
 	assert.NotNil(t, call)
 	assert.Equal(t, 1, len(call.Arguments))
-	assert.NotNil(t, call.Arguments[0].Expr.List)
-	assert.Equal(t, 1, len(call.Arguments[0].Expr.List.Values))
-	assert.Equal(t, "\"*.go\"", call.Arguments[0].Expr.List.Values[0].String)
+	assert.NotNil(t, call.Arguments[0].Expr.Val.List)
+	assert.Equal(t, 1, len(call.Arguments[0].Expr.Val.List.Values))
+	assert.Equal(t, "\"*.go\"", call.Arguments[0].Expr.Val.List.Values[0].Val.String)
 }
 
 func TestIndexing(t *testing.T) {
@@ -139,47 +139,47 @@ func TestIndexing(t *testing.T) {
 
 	assert.Equal(t, "x", statements[0].Ident.Name)
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
-	assert.Equal(t, "\"test\"", statements[0].Ident.Action.Assign.String)
+	assert.Equal(t, "\"test\"", statements[0].Ident.Action.Assign.Val.String)
 
 	assert.Equal(t, "y", statements[1].Ident.Name)
 	assert.NotNil(t, statements[1].Ident.Action.Assign)
-	assert.Equal(t, "x", statements[1].Ident.Action.Assign.Ident.Name)
-	assert.NotNil(t, statements[1].Ident.Action.Assign.Slice)
-	assert.Equal(t, 2, statements[1].Ident.Action.Assign.Slice.Start.Int.Int)
-	assert.Equal(t, "", statements[1].Ident.Action.Assign.Slice.Colon)
-	assert.Nil(t, statements[1].Ident.Action.Assign.Slice.End)
+	assert.Equal(t, "x", statements[1].Ident.Action.Assign.Val.Ident.Name)
+	assert.NotNil(t, statements[1].Ident.Action.Assign.Val.Slice)
+	assert.Equal(t, 2, statements[1].Ident.Action.Assign.Val.Slice.Start.Val.Int.Int)
+	assert.Equal(t, "", statements[1].Ident.Action.Assign.Val.Slice.Colon)
+	assert.Nil(t, statements[1].Ident.Action.Assign.Val.Slice.End)
 
 	assert.Equal(t, "z", statements[2].Ident.Name)
 	assert.NotNil(t, statements[2].Ident.Action.Assign)
-	assert.Equal(t, "x", statements[2].Ident.Action.Assign.Ident.Name)
-	assert.NotNil(t, statements[2].Ident.Action.Assign.Slice)
-	assert.Equal(t, 1, statements[2].Ident.Action.Assign.Slice.Start.Int.Int)
-	assert.Equal(t, ":", statements[2].Ident.Action.Assign.Slice.Colon)
-	assert.Equal(t, -1, statements[2].Ident.Action.Assign.Slice.End.Int.Int)
+	assert.Equal(t, "x", statements[2].Ident.Action.Assign.Val.Ident.Name)
+	assert.NotNil(t, statements[2].Ident.Action.Assign.Val.Slice)
+	assert.Equal(t, 1, statements[2].Ident.Action.Assign.Val.Slice.Start.Val.Int.Int)
+	assert.Equal(t, ":", statements[2].Ident.Action.Assign.Val.Slice.Colon)
+	assert.Equal(t, -1, statements[2].Ident.Action.Assign.Val.Slice.End.Val.Int.Int)
 
 	assert.Equal(t, "a", statements[3].Ident.Name)
 	assert.NotNil(t, statements[3].Ident.Action.Assign)
-	assert.Equal(t, "x", statements[3].Ident.Action.Assign.Ident.Name)
-	assert.NotNil(t, statements[3].Ident.Action.Assign.Slice)
-	assert.Equal(t, 2, statements[3].Ident.Action.Assign.Slice.Start.Int.Int)
-	assert.Equal(t, ":", statements[3].Ident.Action.Assign.Slice.Colon)
-	assert.Nil(t, statements[3].Ident.Action.Assign.Slice.End)
+	assert.Equal(t, "x", statements[3].Ident.Action.Assign.Val.Ident.Name)
+	assert.NotNil(t, statements[3].Ident.Action.Assign.Val.Slice)
+	assert.Equal(t, 2, statements[3].Ident.Action.Assign.Val.Slice.Start.Val.Int.Int)
+	assert.Equal(t, ":", statements[3].Ident.Action.Assign.Val.Slice.Colon)
+	assert.Nil(t, statements[3].Ident.Action.Assign.Val.Slice.End)
 
 	assert.Equal(t, "b", statements[4].Ident.Name)
 	assert.NotNil(t, statements[4].Ident.Action.Assign)
-	assert.Equal(t, "x", statements[4].Ident.Action.Assign.Ident.Name)
-	assert.NotNil(t, statements[4].Ident.Action.Assign.Slice)
-	assert.Nil(t, statements[4].Ident.Action.Assign.Slice.Start)
-	assert.Equal(t, ":", statements[4].Ident.Action.Assign.Slice.Colon)
-	assert.Equal(t, 2, statements[4].Ident.Action.Assign.Slice.End.Int.Int)
+	assert.Equal(t, "x", statements[4].Ident.Action.Assign.Val.Ident.Name)
+	assert.NotNil(t, statements[4].Ident.Action.Assign.Val.Slice)
+	assert.Nil(t, statements[4].Ident.Action.Assign.Val.Slice.Start)
+	assert.Equal(t, ":", statements[4].Ident.Action.Assign.Val.Slice.Colon)
+	assert.Equal(t, 2, statements[4].Ident.Action.Assign.Val.Slice.End.Val.Int.Int)
 
 	assert.Equal(t, "c", statements[5].Ident.Name)
 	assert.NotNil(t, statements[5].Ident.Action.Assign)
-	assert.Equal(t, "x", statements[5].Ident.Action.Assign.Ident.Name)
-	assert.NotNil(t, statements[5].Ident.Action.Assign.Slice)
-	assert.Equal(t, "y", statements[5].Ident.Action.Assign.Slice.Start.Ident.Name)
-	assert.Equal(t, "", statements[5].Ident.Action.Assign.Slice.Colon)
-	assert.Nil(t, statements[5].Ident.Action.Assign.Slice.End)
+	assert.Equal(t, "x", statements[5].Ident.Action.Assign.Val.Ident.Name)
+	assert.NotNil(t, statements[5].Ident.Action.Assign.Val.Slice)
+	assert.Equal(t, "y", statements[5].Ident.Action.Assign.Val.Slice.Start.Val.Ident.Name)
+	assert.Equal(t, "", statements[5].Ident.Action.Assign.Val.Slice.Colon)
+	assert.Nil(t, statements[5].Ident.Action.Assign.Val.Slice.End)
 }
 
 func TestIfStatement(t *testing.T) {
@@ -189,9 +189,9 @@ func TestIfStatement(t *testing.T) {
 
 	ifs := statements[0].If
 	assert.NotNil(t, ifs)
-	assert.Equal(t, "condition_a", ifs.Condition.Ident.Name)
+	assert.Equal(t, "condition_a", ifs.Condition.Val.Ident.Name)
 	assert.Equal(t, And, ifs.Condition.Op.Op)
-	assert.Equal(t, "condition_b", ifs.Condition.Op.Expr.Ident.Name)
+	assert.Equal(t, "condition_b", ifs.Condition.Op.Expr.Val.Ident.Name)
 	assert.Equal(t, 1, len(ifs.Statements))
 	assert.Equal(t, "genrule", ifs.Statements[0].Ident.Name)
 }
@@ -203,13 +203,13 @@ func TestDoubleUnindent(t *testing.T) {
 
 	assert.NotNil(t, statements[0].For)
 	assert.Equal(t, "y", statements[0].For.Names[0])
-	assert.Equal(t, "x", statements[0].For.Expr.Ident.Name)
+	assert.Equal(t, "x", statements[0].For.Expr.Val.Ident.Name)
 	assert.Equal(t, 1, len(statements[0].For.Statements))
 
 	for2 := statements[0].For.Statements[0].For
 	assert.NotNil(t, for2)
 	assert.Equal(t, "z", for2.Names[0])
-	assert.Equal(t, "y", for2.Expr.Ident.Name)
+	assert.Equal(t, "y", for2.Expr.Val.Ident.Name)
 	assert.Equal(t, 1, len(for2.Statements))
 	assert.Equal(t, "genrule", for2.Statements[0].Ident.Name)
 }
@@ -222,14 +222,14 @@ func TestInlineIf(t *testing.T) {
 	assert.Equal(t, "x", statements[0].Ident.Name)
 	ass := statements[0].Ident.Action.Assign
 	assert.NotNil(t, ass)
-	assert.NotNil(t, ass.List)
-	assert.Equal(t, 1, len(ass.List.Values))
+	assert.NotNil(t, ass.Val.List)
+	assert.Equal(t, 1, len(ass.Val.List.Values))
 	assert.NotNil(t, ass.If)
-	assert.Equal(t, "y", ass.If.Condition.Ident.Name)
+	assert.Equal(t, "y", ass.If.Condition.Val.Ident.Name)
 	assert.Equal(t, Is, ass.If.Condition.Op.Op)
-	assert.Equal(t, "None", ass.If.Condition.Op.Expr.Bool)
-	assert.NotNil(t, ass.If.Else.List)
-	assert.Equal(t, 1, len(ass.If.Else.List.Values))
+	assert.Equal(t, "None", ass.If.Condition.Op.Expr.Val.Bool)
+	assert.NotNil(t, ass.If.Else.Val.List)
+	assert.Equal(t, 1, len(ass.If.Else.Val.List.Values))
 }
 
 func TestFunctionDef(t *testing.T) {
@@ -247,9 +247,9 @@ func TestComprehension(t *testing.T) {
 
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
 	assert.NotNil(t, statements[1].Ident.Action.Assign)
-	assert.Equal(t, 1, len(statements[0].Ident.Action.Assign.List.Values))
-	assert.NotNil(t, statements[0].Ident.Action.Assign.List.Comprehension)
-	assert.NotNil(t, statements[1].Ident.Action.Assign.Dict.Comprehension)
+	assert.Equal(t, 1, len(statements[0].Ident.Action.Assign.Val.List.Values))
+	assert.NotNil(t, statements[0].Ident.Action.Assign.Val.List.Comprehension)
+	assert.NotNil(t, statements[1].Ident.Action.Assign.Val.Dict.Comprehension)
 }
 
 func TestMethodsOnLiterals(t *testing.T) {
@@ -302,7 +302,7 @@ func TestDestructuringAssignment(t *testing.T) {
 	assert.Equal(t, 1, len(statements[0].Ident.Unpack.Names))
 	assert.Equal(t, "y", statements[0].Ident.Unpack.Names[0])
 	assert.NotNil(t, statements[0].Ident.Unpack.Expr)
-	assert.Equal(t, "something", statements[0].Ident.Unpack.Expr.Ident.Name)
+	assert.Equal(t, "something", statements[0].Ident.Unpack.Expr.Val.Ident.Name)
 }
 
 func TestMultipleActions(t *testing.T) {
@@ -310,7 +310,7 @@ func TestMultipleActions(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(statements))
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
-	assert.Equal(t, "y", statements[0].Ident.Action.Assign.Ident.Name)
+	assert.Equal(t, "y", statements[0].Ident.Action.Assign.Val.Ident.Name)
 }
 
 func TestAssert(t *testing.T) {
@@ -336,7 +336,7 @@ func TestOptimise(t *testing.T) {
 	assert.NotNil(t, ident)
 	assert.Equal(t, "l", ident.Name)
 	assert.NotNil(t, ident.Action.AugAssign)
-	assert.NotNil(t, ident.Action.AugAssign.List)
+	assert.NotNil(t, ident.Action.AugAssign.Val.List)
 }
 
 func TestMultilineStringQuotes(t *testing.T) {
@@ -349,7 +349,7 @@ func TestMultilineStringQuotes(t *testing.T) {
 	expected := `"
 #include "UnitTest++/UnitTest++.h"
 "`
-	assert.Equal(t, expected, statements[0].Ident.Action.Assign.String)
+	assert.Equal(t, expected, statements[0].Ident.Action.Assign.Val.String)
 }
 
 func TestExample1(t *testing.T) {
