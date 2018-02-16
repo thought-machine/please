@@ -653,6 +653,17 @@ func (target *BuildTarget) HasLabel(label string) bool {
 	return label == "test" && target.IsTest
 }
 
+// PrefixedLabels returns all labels of this target with the given prefix.
+func (target *BuildTarget) PrefixedLabels(prefix string) []string {
+	ret := []string{}
+	for _, l := range target.Labels {
+		if strings.HasPrefix(l, prefix) {
+			ret = append(ret, strings.TrimPrefix(l, prefix))
+		}
+	}
+	return ret
+}
+
 // HasAnyLabel returns true if target has any of these labels.
 func (target *BuildTarget) HasAnyLabel(labels []string) bool {
 	for _, label := range labels {
