@@ -5,6 +5,7 @@ import (
 	"path"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"core"
@@ -34,6 +35,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "len", lenFunc)
 	setNativeCode(s, "glob", glob)
 	setNativeCode(s, "bool", boolType)
+	setNativeCode(s, "int", intType)
 	setNativeCode(s, "str", strType)
 	setNativeCode(s, "join_path", joinPath).varargs = true
 	setNativeCode(s, "get_base_path", packageName)
@@ -392,7 +394,13 @@ func strCount(s *scope, args []pyObject) pyObject {
 }
 
 func boolType(s *scope, args []pyObject) pyObject {
-	return newPyBool(s.Lookup("b").IsTruthy())
+	return newPyBool(args[0].IsTruthy())
+}
+
+func intType(s *scope, args []pyObject) pyObject {
+	i, err := strconv.Atoi(string(args[0].(pyString)))
+	s.Assert(err == nil, "%s", err)
+	return pyInt(i)
 }
 
 func strType(s *scope, args []pyObject) pyObject {
@@ -505,18 +513,17 @@ func packageName(s *scope, args []pyObject) pyObject {
 }
 
 func pyRange(s *scope, args []pyObject) pyObject {
-	start, ok := args[0].(pyInt)
-	stop, ok2 := args[1].(pyInt)
-	if _, isBool := args[1].(pyBool); isBool {
+	start := args[0].(pyInt)
+	stop, isInt := args[1].(pyInt)
+	step := args[2].(pyInt)
+	if !isInt {
 		// Stop not passed so we start at 0 and start is the stop.
 		stop = start
 		start = 0
-		ok2 = true
 	}
-	s.Assert(ok && ok2, "Arguments to range() must be integers")
-	ret := make(pyList, stop-start)
-	for i := start; i < stop; i++ {
-		ret[i-start] = i
+	ret := make(pyList, 0, stop-start)
+	for i := start; i < stop; i += step {
+		ret = append(ret, i)
 	}
 	return ret
 }
