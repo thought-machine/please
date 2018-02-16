@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -25,7 +26,7 @@ const debounceInterval = 50 * time.Millisecond
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels []core.BuildLabel) {
+func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("Error setting up watcher: %s", err)
@@ -33,16 +34,7 @@ func Watch(state *core.BuildState, labels []core.BuildLabel) {
 	// This sets up the actual watches. It must be done in a separate goroutine.
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
-
-	// If any of the targets are tests, we'll run plz test, otherwise just plz build.
-	command := "build"
-	for _, label := range labels {
-		if state.Graph.TargetOrDie(label).IsTest {
-			command = "test"
-			break
-		}
-	}
-	log.Notice("Command: %s", command)
+	cmds := commands(state, labels, run)
 
 	for {
 		select {
@@ -61,27 +53,27 @@ func Watch(state *core.BuildState, labels []core.BuildLabel) {
 					break outer
 				}
 			}
-			runBuild(state, command, labels)
+			runBuild(state, cmds, labels)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
 	}
 }
 
-func runBuild(state *core.BuildState, command string, labels []core.BuildLabel) {
+func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabel) {
 	binary, err := os.Executable()
 	if err != nil {
 		log.Warning("Can't determine current executable, will assume 'plz'")
 		binary = "plz"
 	}
-	cmd := core.ExecCommand(binary, command)
+	cmd := core.ExecCommand(binary, commands...)
 	cmd.Args = append(cmd.Args, "-c", state.Config.Build.Config)
 	for _, label := range labels {
 		cmd.Args = append(cmd.Args, label.String())
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	log.Notice("Running %s %s...", binary, command)
+	log.Notice("Running %s %s...", binary, strings.Join(commands, " "))
 	if err := cmd.Run(); err != nil {
 		// Only log the error if it's not a straightforward non-zero exit; the user will presumably
 		// already have been pestered about that.
@@ -150,4 +142,17 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 			}
 		}
 	}
+}
+
+// commands returns the plz commands that should be used for the given labels.
+func commands(state *core.BuildState, labels []core.BuildLabel, run bool) []string {
+	if run {
+		return []string{"run", "parallel"}
+	}
+	for _, label := range labels {
+		if state.Graph.TargetOrDie(label).IsTest {
+			return []string{"test"}
+		}
+	}
+	return []string{"build"}
 }

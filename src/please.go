@@ -169,6 +169,7 @@ var opts struct {
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
 
 	Watch struct {
+		Run  bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
 		Args struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to watch the sources of for changes"`
 		} `positional-args:"true" required:"true"`
@@ -404,7 +405,7 @@ var buildFunctions = map[string]func() bool{
 	"watch": func() bool {
 		success, state := runBuild(opts.Watch.Args.Targets, false, false)
 		if success {
-			watch.Watch(state, state.ExpandOriginalTargets())
+			watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run)
 		}
 		return success
 	},

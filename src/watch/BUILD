@@ -9,3 +9,13 @@ go_library(
     ],
     visibility = ['PUBLIC'],
 )
+
+go_test(
+    name = 'watch_test',
+    srcs = ['watch_test.go'],
+    deps = [
+        ':watch',
+        '//src/core',
+        '//third_party/go:testify',
+    ],
+)
