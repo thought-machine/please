@@ -1,3 +1,12 @@
+Version 11.4.0
+--------------
+
+    * Added --run flag to plz watch which invokes the targets using `plz run`
+      instead of build / test.
+    * Replace hyphen with underscore in buildenv plzconfig sections (#274)
+    * Added `plz query rules` which prints out the currently known set of rules definitions.
+
+
 Version 11.3.2
 --------------
 
