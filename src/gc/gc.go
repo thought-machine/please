@@ -262,9 +262,8 @@ func gcSibling(graph *core.BuildGraph, t *core.BuildTarget) *core.BuildTarget {
 	for _, l := range t.PrefixedLabels("gc_sibling:") {
 		if t2 := graph.Target(core.NewBuildLabel(t.Label.PackageName, l)); t2 != nil {
 			return t2
-		} else {
-			log.Warning("Target %s declared a gc_sibling of %s, but %s doesn't exist", t.Label, l, l)
 		}
+		log.Warning("Target %s declared a gc_sibling of %s, but %s doesn't exist", t.Label, l, l)
 	}
 	return t
 }
