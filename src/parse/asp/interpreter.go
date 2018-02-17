@@ -519,7 +519,6 @@ func (s *scope) interpretList(expr *List) pyList {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
 	cs := s.NewScope()
-	s.moveComprehensionIf(expr.Comprehension, expr.Comprehension.Expr)
 	l := s.iterate(expr.Comprehension.Expr)
 	ret := make(pyList, 0, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
@@ -548,9 +547,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		}
 		return d
 	}
-	s.Assert(len(expr.Items) == 1, "must have exactly 1 dict item in a comprehension")
 	cs := s.NewScope()
-	s.moveComprehensionIf(expr.Comprehension, expr.Comprehension.Expr)
 	l := cs.iterate(expr.Comprehension.Expr)
 	ret := make(pyDict, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
@@ -566,7 +563,6 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 // The provided callback function is called with each item to be added to the result.
 func (s *scope) evaluateComprehension(l pyList, comp *Comprehension, callback func(pyObject)) {
 	if comp.Second != nil {
-		s.moveComprehensionIf(comp, comp.Second.Expr)
 		for _, li := range l {
 			s.unpackNames(comp.Names, li)
 			for _, li := range s.iterate(comp.Second.Expr) {
@@ -581,17 +577,6 @@ func (s *scope) evaluateComprehension(l pyList, comp *Comprehension, callback fu
 				callback(li)
 			}
 		}
-	}
-}
-
-// moveComprehensionIf is a small hack to correct a limitation in the parser that attaches an
-// 'if' in a comprehension to the main expression instead (because it thinks it's the start of
-// an inline if statement).
-func (s *scope) moveComprehensionIf(comp *Comprehension, expr *Expression) {
-	if expr.If != nil {
-		s.Assert(expr.If.Else == nil, "Invalid syntax")
-		comp.If = expr.If.Condition
-		expr.If = nil
 	}
 }
 

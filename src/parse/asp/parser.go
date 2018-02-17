@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/alecthomas/participle"
 	"github.com/alecthomas/participle/lexer"
 	"gopkg.in/op/go-logging.v1"
 
@@ -31,7 +30,7 @@ func init() {
 
 // A Parser implements parsing of BUILD files.
 type Parser struct {
-	parser      *participle.Parser
+	lexer       lexer.Definition
 	interpreter *interpreter
 	// Stashed set of source code for builtin rules.
 	builtins map[string][]byte
@@ -46,11 +45,7 @@ func NewParser(state *core.BuildState) *Parser {
 
 // newParser creates just the parser with no interpreter.
 func newParser() *Parser {
-	p, err := participle.Build(&FileInput{}, NewLexer())
-	if err != nil {
-		log.Fatalf("%s", err)
-	}
-	return &Parser{parser: p, builtins: map[string][]byte{}}
+	return &Parser{lexer: NewLexer(), builtins: map[string][]byte{}}
 }
 
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.
@@ -140,8 +135,8 @@ func (p *Parser) parseData(data []byte, filename string) ([]*Statement, error) {
 
 // parseAndHandleErrors handles errors nicely if the given input fails to parse.
 func (p *Parser) parseAndHandleErrors(r io.ReadSeeker, filename string) ([]*Statement, error) {
-	input := &FileInput{}
-	err := p.parser.Parse(r, input)
+	p2 := &parser{d: p.lexer, l: p.lexer.Lex(r)}
+	input, err := p2.ParseFileInput()
 	if err == nil {
 		return input.Statements, nil
 	}

@@ -1,0 +1,1 @@
+x = 'abc%s' % 'd' if True else 'e'

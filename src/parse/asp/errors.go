@@ -234,6 +234,15 @@ func reverseSymbol(d lexer.Definition, sym rune) string {
 	return string(sym) // Must be a literal char
 }
 
+// reverseSymbols looks up a series of symbol's names from the lexer.
+func reverseSymbols(d lexer.Definition, syms []rune) []string {
+	ret := make([]string, len(syms))
+	for i, sym := range syms {
+		ret[i] = reverseSymbol(d, sym)
+	}
+	return ret
+}
+
 // A namedReader implements Name() on a Reader, allowing the lexer to automatically retrieve its name.
 // This is a bit awkward but unfortunately all we have when we try to access it is an io.Reader.
 type namedReader struct {
