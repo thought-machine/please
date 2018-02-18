@@ -3,8 +3,6 @@ package asp
 import (
 	"fmt"
 	"strings"
-
-	"github.com/alecthomas/participle/lexer"
 )
 
 // A FileInput is the top-level structure of a BUILD file.
@@ -17,7 +15,7 @@ type FileInput struct {
 // support backoff (i.e. if an earlier entry matches to its completion but can't consume
 // following tokens, it doesn't then make another choice :( )
 type Statement struct {
-	Pos      lexer.Position
+	Pos      Position
 	Pass     string           `( @"pass" EOL`
 	Continue string           `| @"continue" EOL`
 	FuncDef  *FuncDef         `| @@`
@@ -78,7 +76,7 @@ type Argument struct {
 // An Expression is a generalised Python expression, i.e. anything that can appear where an
 // expression is allowed (including the extra parts like inline if-then-else, operators, etc).
 type Expression struct {
-	Pos     lexer.Position
+	Pos     Position
 	UnaryOp *UnaryOp         `( @@`
 	Val     *ValueExpression `| @@ )`
 	Op      *struct {

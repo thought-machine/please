@@ -27,8 +27,6 @@ go get github.com/texttheater/golang-levenshtein/levenshtein
 go get github.com/Workiva/go-datastructures/queue
 go get github.com/coreos/go-semver/semver
 go get github.com/djherbis/atime
-go get github.com/alecthomas/participle
-go get github.com/davecgh/go-spew/spew
 
 # Clean out old artifacts.
 rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/builtin_rules.bindata.go src/parse/asp/builtins/builtin_data.bindata.go

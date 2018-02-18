@@ -8,7 +8,6 @@ go_library(
         '//src/cli',
         '//src/core',
         '//third_party/go:logging',
-        '//third_party/go:participle',
     ],
     visibility = ['PUBLIC'],
 )
@@ -28,7 +27,6 @@ go_test(
     srcs = ['lexer_test.go'],
     deps = [
         ':asp',
-        '//third_party/go:participle',
         '//third_party/go:testify',
     ],
 )

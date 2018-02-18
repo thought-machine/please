@@ -11,13 +11,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/alecthomas/participle/lexer"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
 )
 
-var log = logging.MustGetLogger("participle")
+var log = logging.MustGetLogger("asp")
 
 func init() {
 	// gob needs to know how to encode and decode our types.
@@ -30,7 +29,6 @@ func init() {
 
 // A Parser implements parsing of BUILD files.
 type Parser struct {
-	lexer       lexer.Definition
 	interpreter *interpreter
 	// Stashed set of source code for builtin rules.
 	builtins map[string][]byte
@@ -45,7 +43,7 @@ func NewParser(state *core.BuildState) *Parser {
 
 // newParser creates just the parser with no interpreter.
 func newParser() *Parser {
-	return &Parser{lexer: NewLexer(), builtins: map[string][]byte{}}
+	return &Parser{builtins: map[string][]byte{}}
 }
 
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.
@@ -135,15 +133,12 @@ func (p *Parser) parseData(data []byte, filename string) ([]*Statement, error) {
 
 // parseAndHandleErrors handles errors nicely if the given input fails to parse.
 func (p *Parser) parseAndHandleErrors(r io.ReadSeeker, filename string) ([]*Statement, error) {
-	p2 := &parser{d: p.lexer, l: p.lexer.Lex(r)}
+	p2 := &parser{l: newLexer(r)}
 	input, err := p2.ParseFileInput()
 	if err == nil {
 		return input.Statements, nil
 	}
 	// If we get here, something went wrong. Try to give some nice feedback about it.
-	if lerr, ok := err.(*lexer.Error); ok {
-		err = AddStackFrame(lerr.Pos, err)
-	}
 	return nil, p.annotate(err, r)
 }
 

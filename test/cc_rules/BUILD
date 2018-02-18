@@ -12,7 +12,7 @@ cc_library(
 cc_library(
     name = 'lib2',
     srcs = ['lib2.cc'],
-    hdrs = ['lib2.h'],
+    -hdrs = ['lib2.h'],
     deps = [
         ':lib1',
     ],

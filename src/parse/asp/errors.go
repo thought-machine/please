@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/alecthomas/participle/lexer"
-
 	"cli"
 	"core"
 )
@@ -46,7 +44,7 @@ func RequiresSubinclude(err error) (bool, core.BuildLabel) {
 // An errorStack is an error that carries an internal stack trace.
 type errorStack struct {
 	// From top down, i.e. Stack[0] is the innermost function in the call stack.
-	Stack []lexer.Position
+	Stack []Position
 	// Readers that correspond to each level in the stack trace.
 	// Each may be nil but this will always have the same length as Stack.
 	Readers []io.ReadSeeker
@@ -54,8 +52,14 @@ type errorStack struct {
 	err error
 }
 
+// fail panics on lex/parse errors in a file.
+// For convenience we reuse errorStack although there is of course not really a call stack at this point.
+func fail(pos Position, message string, args ...interface{}) {
+	panic(AddStackFrame(pos, fmt.Errorf(message, args...)))
+}
+
 // AddStackFrame adds a new stack frame to the given errorStack, or wraps an existing error if not.
-func AddStackFrame(pos lexer.Position, err interface{}) error {
+func AddStackFrame(pos Position, err interface{}) error {
 	stack, ok := err.(*errorStack)
 	if !ok {
 		if dp, ok := err.(errDeferParse); ok {
@@ -65,7 +69,7 @@ func AddStackFrame(pos lexer.Position, err interface{}) error {
 		} else {
 			stack = &errorStack{err: fmt.Errorf("%s", err)}
 		}
-	} else if n := len(stack.Stack) - 1; stack.Stack[n].Filename == pos.Filename && stack.Stack[n].Line == pos.Line {
+	} else if n := len(stack.Stack) - 1; n > 0 && stack.Stack[n].Filename == pos.Filename && stack.Stack[n].Line == pos.Line {
 		return stack // Don't duplicate the same line multiple times. Often happens since one line can have multiple expressions.
 	}
 	stack.Stack = append(stack.Stack, pos)
@@ -83,7 +87,10 @@ func AddReader(err error, r io.ReadSeeker) error {
 
 // Error implements the builtin error interface.
 func (stack *errorStack) Error() string {
-	return stack.errorMessage() + "\n" + stack.stackTrace()
+	if len(stack.Stack) > 1 {
+		return stack.errorMessage() + "\n" + stack.stackTrace()
+	}
+	return stack.errorMessage()
 }
 
 // ShortError returns an abbreviated message with jsut what immediately went wrong.
@@ -209,7 +216,7 @@ func (stack *errorStack) AddReader(r io.ReadSeeker) {
 	for i, r2 := range stack.Readers {
 		if r2 == nil {
 			fn := stack.Stack[i].Filename
-			if lexer.NameOfReader(r) == fn {
+			if NameOfReader(r) == fn {
 				stack.Readers[i] = r
 			} else if f, err := os.Open(fn); err == nil {
 				// Maybe it's just a file on disk (e.g. via subinclude)
@@ -224,25 +231,6 @@ func (stack *errorStack) AddReader(r io.ReadSeeker) {
 	}
 }
 
-// reverseSymbol looks up a symbol's name from the lexer. This is not efficient.
-func reverseSymbol(d lexer.Definition, sym rune) string {
-	for k, v := range d.Symbols() {
-		if v == sym {
-			return k
-		}
-	}
-	return string(sym) // Must be a literal char
-}
-
-// reverseSymbols looks up a series of symbol's names from the lexer.
-func reverseSymbols(d lexer.Definition, syms []rune) []string {
-	ret := make([]string, len(syms))
-	for i, sym := range syms {
-		ret[i] = reverseSymbol(d, sym)
-	}
-	return ret
-}
-
 // A namedReader implements Name() on a Reader, allowing the lexer to automatically retrieve its name.
 // This is a bit awkward but unfortunately all we have when we try to access it is an io.Reader.
 type namedReader struct {
@@ -255,7 +243,7 @@ func (r *namedReader) Read(b []byte) (int, error) {
 	return r.r.Read(b)
 }
 
-// Name implements the internal lexer.namedReader interface
+// Name implements the internal namer interface
 func (r *namedReader) Name() string {
 	return r.name
 }

@@ -62,7 +62,7 @@ func main() {
 		Topics:   map[string]string{},
 	}
 	config := core.DefaultConfiguration()
-	v := reflect.ValueOf(*config)
+	v := reflect.ValueOf(config).Elem()
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		f := v.Field(i)

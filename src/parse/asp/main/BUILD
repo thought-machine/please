@@ -7,7 +7,6 @@ go_binary(
         '//src/parse/asp',
         '//src/parse/asp/builtins',
         '//third_party/go:logging',
-        '//third_party/go:participle',
         '//third_party/go:spew',
     ],
 )

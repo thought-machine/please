@@ -4,14 +4,10 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
-	"github.com/alecthomas/participle/lexer"
 )
 
 type parser struct {
-	// TODO(peterebden): Get rid of the lexer interface since we're not using their parser any more.
-	d lexer.Definition
-	l lexer.Lexer
+	l *lex
 }
 
 // ParseFileInput is the only external entry point to this class, it parses a file into a FileInput structure.
@@ -31,25 +27,25 @@ func (p *parser) ParseFileInput() (input *FileInput, err error) {
 	return input, nil
 }
 
-func (p *parser) assert(condition bool, pos lexer.Token, message string, args ...interface{}) {
+func (p *parser) assert(condition bool, pos Token, message string, args ...interface{}) {
 	if !condition {
 		p.fail(pos, message, args...)
 	}
 }
 
-func (p *parser) assertTokenType(tok lexer.Token, expectedType rune) {
+func (p *parser) assertTokenType(tok Token, expectedType rune) {
 	if tok.Type != expectedType {
-		p.fail(tok, "unexpected token %s, expected %s", tok.Value, reverseSymbol(p.d, expectedType))
+		p.fail(tok, "unexpected token %s, expected %s", tok.Value, reverseSymbol(expectedType))
 	}
 }
 
-func (p *parser) next(expectedType rune) lexer.Token {
+func (p *parser) next(expectedType rune) Token {
 	tok := p.l.Next()
 	p.assertTokenType(tok, expectedType)
 	return tok
 }
 
-func (p *parser) nextv(expectedValue string) lexer.Token {
+func (p *parser) nextv(expectedValue string) Token {
 	tok := p.l.Next()
 	if tok.Value != expectedValue {
 		p.fail(tok, "unexpected token %s, expected %s", tok.Value, expectedValue)
@@ -77,18 +73,18 @@ func (p *parser) anythingBut(r rune) bool {
 	return p.l.Peek().Type != r
 }
 
-func (p *parser) oneof(expectedTypes ...rune) lexer.Token {
+func (p *parser) oneof(expectedTypes ...rune) Token {
 	tok := p.l.Next()
 	for _, t := range expectedTypes {
 		if tok.Type == t {
 			return tok
 		}
 	}
-	p.fail(tok, "unexpected token %s, expected one of %s", tok.Value, strings.Join(reverseSymbols(p.d, expectedTypes), " "))
-	return lexer.Token{}
+	p.fail(tok, "unexpected token %s, expected one of %s", tok.Value, strings.Join(reverseSymbols(expectedTypes), " "))
+	return Token{}
 }
 
-func (p *parser) oneofval(expectedValues ...string) lexer.Token {
+func (p *parser) oneofval(expectedValues ...string) Token {
 	tok := p.l.Next()
 	for _, v := range expectedValues {
 		if tok.Value == v {
@@ -96,11 +92,11 @@ func (p *parser) oneofval(expectedValues ...string) lexer.Token {
 		}
 	}
 	p.fail(tok, "unexpected token %s, expected one of %s", tok.Value, strings.Join(expectedValues, ", "))
-	return lexer.Token{}
+	return Token{}
 }
 
-func (p *parser) fail(pos lexer.Token, message string, args ...interface{}) {
-	lexer.Panicf(pos.Pos, message, args...)
+func (p *parser) fail(pos Token, message string, args ...interface{}) {
+	fail(pos.Pos, message, args...)
 }
 
 func (p *parser) parseStatement() *Statement {
@@ -182,7 +178,7 @@ func (p *parser) parseFuncDef() *FuncDef {
 		}
 	}
 	p.next(')')
-	p.next(Colon)
+	p.next(':')
 	p.next(EOL)
 	if tok := p.l.Peek(); tok.Type == String {
 		fd.Docstring = tok.Value
@@ -200,8 +196,8 @@ func (p *parser) parseArgument() *Argument {
 	if tok := p.l.Peek(); tok.Type == ',' || tok.Type == ')' {
 		return a
 	}
-	tok := p.oneof(Colon, '&', '=')
-	if tok.Type == Colon {
+	tok := p.oneof(':', '&', '=')
+	if tok.Type == ':' {
 		// Type annotations
 		for {
 			tok = p.oneofval("bool", "str", "int", "list", "dict", "function")
@@ -238,18 +234,18 @@ func (p *parser) parseIf() *IfStatement {
 	p.nextv("if")
 	i := &IfStatement{}
 	i.Condition = *p.parseExpression()
-	p.next(Colon)
+	p.next(':')
 	p.next(EOL)
 	i.Statements = p.parseStatements()
 	for p.optionalv("elif") {
 		elif := &i.Elif[p.newElement(&i.Elif)]
 		elif.Condition = p.parseExpression()
-		p.next(Colon)
+		p.next(':')
 		p.next(EOL)
 		elif.Statements = p.parseStatements()
 	}
 	if p.optionalv("else") {
-		p.next(Colon)
+		p.next(':')
 		p.next(EOL)
 		i.ElseStatements = p.parseStatements()
 	}
@@ -276,7 +272,7 @@ func (p *parser) parseFor() *ForStatement {
 	f.Names = p.parseIdentList()
 	p.nextv("in")
 	f.Expr = *p.parseExpression()
-	p.next(Colon)
+	p.next(':')
 	p.next(EOL)
 	f.Statements = p.parseStatements()
 	return f
@@ -427,7 +423,7 @@ func (p *parser) parseCall() *Call {
 	c := &Call{}
 	for tok := p.l.Peek(); tok.Type != ')'; tok = p.l.Peek() {
 		arg := CallArgument{Expr: p.parseExpression()}
-		if arg.Expr.Val.Ident != nil && arg.Expr.Val.Ident.Action == nil {
+		if arg.Expr != nil && arg.Expr.Val != nil && arg.Expr.Val.Ident != nil && arg.Expr.Val.Ident.Action == nil {
 			// Bare identifiers can be followed by a = for named arguments.
 			if p.optional('=') {
 				arg.Value = p.parseExpression()
@@ -465,7 +461,7 @@ func (p *parser) parseDict() *Dict {
 	for tok := p.l.Peek(); tok.Type == Ident || tok.Type == String; tok = p.l.Peek() {
 		p.l.Next()
 		di := &DictItem{Key: tok.Value}
-		p.next(Colon)
+		p.next(':')
 		di.Value = *p.parseExpression()
 		d.Items = append(d.Items, di)
 		if !p.optional(',') {
@@ -483,11 +479,11 @@ func (p *parser) parseDict() *Dict {
 func (p *parser) parseSlice() *Slice {
 	s := &Slice{}
 	p.next('[')
-	if p.optional(Colon) {
+	if p.optional(':') {
 		s.Colon = ":"
-	} else if !p.optional(Colon) {
+	} else if !p.optional(':') {
 		s.Start = p.parseExpression()
-		if p.optional(Colon) {
+		if p.optional(':') {
 			s.Colon = ":"
 		}
 	}
@@ -531,7 +527,7 @@ func (p *parser) parseLambda() *Lambda {
 			break
 		}
 	}
-	p.next(Colon)
+	p.next(':')
 	l.Expr = *p.parseExpression()
 	return l
 }
