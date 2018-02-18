@@ -10,7 +10,7 @@ go_library(
         '//src/core',
         '//src/follow/proto:build_event',
         '//src/output',
-        '//third_party/go:context',
+        '//third_party/go:net',
         '//third_party/go:grpc',
         '//third_party/go:logging',
         '//third_party/go:psutil',
