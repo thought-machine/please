@@ -74,7 +74,7 @@ func (p *Parser) MustLoadBuiltins(filename string, contents, encoded []byte) {
 }
 
 // ParseFile parses the contents of a single file in the BUILD language.
-func (p *Parser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 	statements, err := p.parse(filename)
 	if err == nil {
 		if _, err = p.interpreter.interpretAll(pkg, statements); err != nil {
@@ -83,6 +83,19 @@ func (p *Parser) ParseFile(state *core.BuildState, pkg *core.Package, filename s
 		}
 	}
 	return err
+}
+
+// ParseReader parses the contents of the given ReadSeeker as a BUILD file.
+// This is provided as a helper for fuzzing and isn't generally useful otherwise.
+// The first return value is true if parsing succeeds - if the error is still non-nil
+// that indicates that interpretation failed.
+func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker) (bool, error) {
+	stmts, err := p.parseAndHandleErrors(r, "")
+	if err != nil {
+		return false, err
+	}
+	_, err = p.interpreter.interpretAll(pkg, stmts)
+	return true, err
 }
 
 // ParseToFile parses the given file and writes a binary form of the result to the output file.
@@ -133,8 +146,7 @@ func (p *Parser) parseData(data []byte, filename string) ([]*Statement, error) {
 
 // parseAndHandleErrors handles errors nicely if the given input fails to parse.
 func (p *Parser) parseAndHandleErrors(r io.ReadSeeker, filename string) ([]*Statement, error) {
-	p2 := &parser{l: newLexer(r)}
-	input, err := p2.ParseFileInput()
+	input, err := parseFileInput(r)
 	if err == nil {
 		return input.Statements, nil
 	}

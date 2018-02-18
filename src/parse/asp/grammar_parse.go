@@ -1,6 +1,7 @@
 package asp
 
 import (
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -10,8 +11,8 @@ type parser struct {
 	l *lex
 }
 
-// ParseFileInput is the only external entry point to this class, it parses a file into a FileInput structure.
-func (p *parser) ParseFileInput() (input *FileInput, err error) {
+// parseFileInput is the only external entry point to this class, it parses a file into a FileInput structure.
+func parseFileInput(r io.Reader) (input *FileInput, err error) {
 	// The rest of the parser functions signal unhappiness by panicking, we
 	// recover any such failures here and convert to an error.
 	defer func() {
@@ -20,6 +21,7 @@ func (p *parser) ParseFileInput() (input *FileInput, err error) {
 		}
 	}()
 
+	p := &parser{l: newLexer(r)}
 	input = &FileInput{}
 	for tok := p.l.Peek(); tok.Type != EOF; tok = p.l.Peek() {
 		input.Statements = append(input.Statements, p.parseStatement())
@@ -333,6 +335,7 @@ func (p *parser) parseValueExpression() *ValueExpression {
 		ve.String = tok.Value
 		p.l.Next()
 	} else if tok.Type == Int {
+		p.assert(len(tok.Value) < 19, tok, "int literal is too large: %s", tok.Value)
 		p.initField(&ve.Int)
 		i, err := strconv.Atoi(tok.Value)
 		p.assert(err == nil, tok, "invalid int value %s", tok.Value) // Theoretically the lexer shouldn't have fed us this...

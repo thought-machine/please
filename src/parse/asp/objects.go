@@ -94,6 +94,8 @@ func pyIndex(obj, index pyObject) pyInt {
 		panic(obj.Type() + " indices must be integers, not " + index.Type())
 	} else if i < 0 {
 		i = pyInt(obj.Len()) + i // Go doesn't support negative indices
+	} else if int(i) >= obj.Len() {
+		panic(obj.Type() + " index out of range")
 	}
 	return i
 }
@@ -336,8 +338,10 @@ func (d pyDict) Operator(operator Operator, operand pyObject) pyObject {
 		s, ok := operand.(pyString)
 		if !ok {
 			panic("Dict keys must be strings, not " + operand.Type())
+		} else if v, present := d[string(s)]; present {
+			return v
 		}
-		return d[string(s)]
+		panic("unknown dict key: " + s.String())
 	}
 	panic("Unsupported operator on dict")
 }

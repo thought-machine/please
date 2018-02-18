@@ -409,3 +409,24 @@ go_get(
     get = 'golang.org/x/crypto/cast5',
     revision = '077efaa604f994162e3307fafe5954640763fc08',
 )
+
+go_get(
+    name = 'go-fuzz-build',
+    binary = True,
+    get = 'github.com/dvyukov/go-fuzz/go-fuzz-build',
+    revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+)
+
+go_get(
+    name = 'go-fuzz',
+    binary = True,
+    get = 'github.com/dvyukov/go-fuzz/go-fuzz',
+    revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+)
+
+go_get(
+    name = 'go-fuzz-dep',
+    get = 'github.com/dvyukov/go-fuzz/go-fuzz-dep',
+    install = ['github.com/dvyukov/go-fuzz/go-fuzz-defs'],
+    revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+)
