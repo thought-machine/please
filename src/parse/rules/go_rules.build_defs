@@ -529,10 +529,12 @@ def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list
     post_build = None
     if binary and outs and len(outs) != 1:
         raise ValueError(name + ': Binary rules can only have a single output')
+    getroot = get[:-4] if get.endswith('/...') else get
+    subdir = 'src/' + getroot
     if not outs:
-        outs = [('bin/' + name) if binary else ('src/' + get)]
+        outs = [('bin/' + name) if binary else ('src/' + getroot)]
         if not binary:
-            post_build = _extra_outs(get)
+            post_build = _extra_outs(getroot)
     cmd = [
         # the TMP_DIR contains all the compiled dependencies already. Later when
         # we go install, it is difficult to seperate its outputs from the
@@ -553,7 +555,6 @@ def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list
         'cd $INSTALL_DIR',
         '$TOOL get -d ' + get,
     ]
-    subdir = 'src/' + (get[:-4] if get.endswith('/...') else get)
     if revision:
         # Annoyingly -C does not work on git checkout :(
         cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
