@@ -595,7 +595,8 @@ def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list
         test_only=test_only,
         post_build=post_build,
         labels=['go_get:%s@%s' % (get, revision) if revision else 'go_get:%s' % get],
-        sandbox = False,
+        sandbox=False,
+        needs_transitive_deps=True,
     )
 
 
