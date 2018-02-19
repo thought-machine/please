@@ -30,10 +30,10 @@ func TestBuildLotsOfTargets(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numWorkers)
 	for i := 0; i < numWorkers; i++ {
-		go func() {
+		go func(i int) {
 			please(i, state)
 			wg.Done()
-		}()
+		}(i)
 	}
 	// Consume and discard any results
 	go func() {
