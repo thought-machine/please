@@ -48,7 +48,9 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 		return
 	}
 	word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
-	log.Warning("%s to Please version %s (currently %s)", word, config.Please.Version.VersionString(), core.PleaseVersion)
+	if !updateCommand {
+		log.Warning("%s to Please version %s (currently %s)", word, config.Please.Version.VersionString(), core.PleaseVersion)
+	}
 
 	// Must lock here so that the update process doesn't race when running two instances
 	// simultaneously.
