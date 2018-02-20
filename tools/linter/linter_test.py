@@ -34,7 +34,8 @@ class TestLinter(unittest.TestCase):
         """Test unsorted iteration of set() and dict()."""
         self.assertEqual([(1, linter.UNSORTED_SET_ITERATION), (3, linter.UNSORTED_DICT_ITERATION),
                           (14, linter.UNSORTED_SET_ITERATION), (16, linter.UNSORTED_DICT_ITERATION),
-                          (20, linter.UNSORTED_SET_ITERATION), (22, linter.UNSORTED_DICT_ITERATION)],
+                          (20, linter.UNSORTED_SET_ITERATION), (22, linter.UNSORTED_DICT_ITERATION),
+                          (1, linter.DEPRECATED_FUNCTION), (8, linter.DEPRECATED_FUNCTION)],
                          lint('tools/linter/test_data/test_unsorted_iteration'))
 
     @unittest.skip("Appears to be failing on older Python versions, currently unsure exactly why")

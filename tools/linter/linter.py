@@ -83,7 +83,7 @@ ERROR_DESCRIPTIONS = {
     UNSORTED_SET_ITERATION: 'Iteration of sets is not ordered, use sorted()',
     UNSORTED_DICT_ITERATION: 'Iteration of dicts is not ordered, use sorted()',
     NON_KEYWORD_CALL: 'Call to builtin rule without using keyword arguments',
-    DEPRECATED_FUNCTION: 'The function include_defs is deprecated, use subinclude() instead',
+    DEPRECATED_FUNCTION: 'Function is deprecated and will be removed in a future release',
     DEPRECATED_ARGUMENT: 'Deprecated argument',
     MISSING_ARGUMENT: 'Missing required argument',
     INCORRECT_ARGUMENT: 'Unknown argument to built-in function',
@@ -121,7 +121,8 @@ with zipfile.ZipFile(pex_main.PEX, 'r') as zf:
     JSON = json.loads(zf.open('tools/linter/rule_args.json').read().decode())
 WHITELISTED_FUNCTIONS = {'subinclude', 'glob', 'include_defs', 'licenses'}
 BUILTIN_FUNCTIONS = {k: _args(v) for k, v in JSON['functions'].items() if k not in WHITELISTED_FUNCTIONS}
-DEPRECATED_FUNCTIONS = {'include_defs'}
+DEPRECATED_FUNCTIONS = {'include_defs', 'apply', 'filter', 'map', 'set', 'frozenset', 'unicode',
+                        'long', 'globals', 'locals', 'reduce', 'repr'}
 THIRD_PARTY_FUNCTIONS = {
     'maven_jar': lambda n: _extract_keyword(n, 'id').rpartition(':')[0],
     'go_get': lambda n: _extract_keyword(n, 'get'),
