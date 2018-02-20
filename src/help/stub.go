@@ -1,3 +1,5 @@
+// +build bootstrap
+
 // Package help prints help messages about parts of plz.
 package help
 

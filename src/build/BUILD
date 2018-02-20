@@ -1,7 +1,6 @@
 go_library(
     name = 'build',
     srcs = glob(['*.go'], excludes = [
-        '*_stub.go',
         '*_test.go',
     ]),
     deps = [

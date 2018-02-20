@@ -1,4 +1,4 @@
-// +build nobootstrap
+// +build !bootstrap
 
 package utils
 

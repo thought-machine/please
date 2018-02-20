@@ -1,4 +1,4 @@
-// +build ignore
+// +build !bootstrap
 
 // Package gc implements "garbage collection" logic for Please, which is an attempt to identify
 // targets in the repo that are no longer needed.

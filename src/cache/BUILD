@@ -2,7 +2,6 @@ go_library(
     name = 'cache',
     srcs = glob(['*.go'], excludes = [
         '*_test.go',
-        'rpc_cache_stub.go',
     ]),
     deps = [
         '//src/cache/proto:rpc_cache',

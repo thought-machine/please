@@ -1,4 +1,4 @@
-// +build proto
+// +build !bootstrap
 
 // RPC-based remote cache. Similar to HTTP but likely higher performance.
 

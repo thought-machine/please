@@ -1,4 +1,4 @@
-// +build nobootstrap
+// +build !bootstrap
 
 // Package update contains code for Please auto-updating itself.
 // At startup, Please can check a version set in the config file. If that doesn't

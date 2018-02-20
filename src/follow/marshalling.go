@@ -1,4 +1,4 @@
-// +build nobootstrap
+// +build !bootstrap
 
 // Contains routines to marshal between internal structures and
 // proto-generated equivalents.
