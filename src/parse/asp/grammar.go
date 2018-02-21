@@ -85,9 +85,10 @@ type Expression struct {
 	} `[ @@ ]`
 	If *InlineIf `[ @@ ]`
 	// Not part of the grammar - applied later to optimise constant expressions.
-	constant pyObject
+	// Needs to be public for serialisation but should not be used outside this package.
+	Constant pyObject
 	// Similarly applied to optimise simple lookups of local variables.
-	local string
+	Local string
 }
 
 // A ValueExpression is the value part of an expression, i.e. without surrounding operators.

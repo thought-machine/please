@@ -579,10 +579,10 @@ func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 
 // Used above as a convenience wrapper for query functions.
 func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state *core.BuildState)) bool {
+	opts.OutputFlags.PlainOutput = true // No point displaying this for one of these queries.
 	config.Cache.DirClean = false
 	if !needFullParse {
 		opts.ParsePackageOnly = true
-		opts.OutputFlags.PlainOutput = true // No point displaying this for one of these queries.
 	}
 	if len(labels) == 0 {
 		labels = core.WholeGraph

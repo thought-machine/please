@@ -135,9 +135,9 @@ func (i *interpreter) optimiseExpressions(v reflect.Value) {
 	if v.Type() == reflect.TypeOf(&Expression{}) && !v.IsNil() {
 		expr := v.Interface().(*Expression)
 		if constant := i.scope.Constant(expr); constant != nil {
-			expr.constant = constant // Extract constant expression
+			expr.Constant = constant // Extract constant expression
 		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Property == nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil && len(expr.Val.Ident.Action) == 0 {
-			expr.local = expr.Val.Ident.Name // Simple variable name lookup
+			expr.Local = expr.Val.Ident.Name // Simple variable name lookup
 		}
 	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
 		i.optimiseExpressions(v.Elem())
@@ -332,10 +332,10 @@ func (s *scope) interpretFor(stmt *ForStatement) pyObject {
 
 func (s *scope) interpretExpression(expr *Expression) pyObject {
 	// Check the optimised sites first
-	if expr.constant != nil {
-		return expr.constant
-	} else if expr.local != "" {
-		return s.Lookup(expr.local)
+	if expr.Constant != nil {
+		return expr.Constant
+	} else if expr.Local != "" {
+		return s.Lookup(expr.Local)
 	}
 	defer func() {
 		if r := recover(); r != nil {
