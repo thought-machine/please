@@ -557,7 +557,6 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"rules": func() bool {
-		config.Parse.Engine = "asp" // Required to extract the rules.
 		targets := opts.Query.Rules.Args.Targets
 		success, state := Please(opts.Query.Rules.Args.Targets, config, true, true, false)
 		if !success {

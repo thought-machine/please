@@ -65,13 +65,6 @@ python_multiversion_wheel(
     repos = REPOS,
 )
 
-python_multiversion_wheel(
-    name = 'cffi',
-    version = '1.10.0',
-    repos = REPOS,
-    subdir = 'cffi',
-)
-
 python_wheel(
     name = 'attrs',
     version = '17.3.0',

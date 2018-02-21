@@ -1,26 +1,16 @@
 subinclude('//build_defs:engines')
 
-cgo_library(
+go_library(
     name = 'parse',
-    srcs = ['interpreter.go'],
-    hdrs = ['interpreter.h'],
-    c_srcs = ['interpreter.c'],
-    compiler_flags = ['--std=c99 -Werror -DBUILD_STATIC_INTERPRETER'],
-    go_srcs = glob(['*.go'], excludes = [
-        '*_test.go',
-        'builtin_rules.bindata.go',
-        'interpreter.go',
-    ]) + [':builtin_rules_data'],
-    linker_flags = [
-        '-Lsrc/parse/cffi -lplease_parser_static',
-        PARSER_LINKER_FLAGS,
-        '-lm -lz -lutil',
+    srcs = [
+        'init.go',
+        'parse_step.go',
+        'suggest.go',
     ],
     deps = [
         '//src/core',
         '//src/parse/asp',
         '//src/parse/asp/builtins',
-        '//src/parse/cffi:please_parser_static',
         '//src/utils',
         '//third_party/go:gcfg',
         '//third_party/go:logging',
@@ -54,12 +44,7 @@ genrule(
     visibility = ['PUBLIC'],
 )
 
-go_bindata(
-    name = 'builtin_rules_data',
-    srcs = [':type_checked_rules'],
-)
-
-cgo_test(
+go_test(
     name = 'parse_step_test',
     srcs = ['parse_step_test.go'],
     deps = [
@@ -69,20 +54,7 @@ cgo_test(
     ],
 )
 
-cgo_test(
-    name = 'interpreter_test',
-    srcs = ['interpreter_test.go'],
-    data = glob([
-        'test_data/**/TEST_BUILD',
-        'test_data/**/test.py',
-    ]),
-    deps = [
-        ':parse',
-        '//third_party/go:testify',
-    ],
-)
-
-cgo_test(
+go_test(
     name = 'suggest_test',
     srcs = ['suggest_test.go'],
     deps = [

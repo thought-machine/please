@@ -29,7 +29,7 @@ go get github.com/coreos/go-semver/semver
 go get github.com/djherbis/atime
 
 # Clean out old artifacts.
-rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/builtin_rules.bindata.go src/parse/asp/builtins/builtin_data.bindata.go
+rm -rf plz-out src/parse/builtin_rules.bindata.go src/parse/asp/builtins/builtin_data.bindata.go
 # Compile the builtin rules
 notice "Compiling built-in rules..."
 go run src/parse/asp/main/compiler.go -o plz-out/asp/src/parse/asp/builtins src/parse/asp/builtins/builtins.build_defs src/parse/rules/*.build_defs
@@ -40,7 +40,7 @@ bin/go-bindata -o src/parse/builtin_rules.bindata.go -pkg parse -prefix src/pars
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
-go run src/please.go --plain_output build //src:please //src:cffi --log_file plz-out/log/bootstrap_build.log
+go run src/please.go --plain_output build //src:please --log_file plz-out/log/bootstrap_build.log
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
 plz-out/bin/src/please --plain_output build //src:please //tools --log_file plz-out/log/tools_build.log
