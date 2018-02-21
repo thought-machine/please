@@ -470,3 +470,21 @@ go_get(
     ],
     revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
 )
+
+go_get(
+    name = 'godirwalk',
+    get = 'github.com/karrick/godirwalk',
+    revision = '17c244300a0e2101858b851a8df1ae8e796a0bca',
+    strip = [
+        'examples',
+        'testdata',
+        'vendor',
+    ],
+    deps = [':errors'],
+)
+
+go_get(
+    name = 'errors',
+    get = 'github.com/pkg/errors',
+    revision = '30136e27e2ac8d167177e8a583aa4c3fea5be833',
+)

@@ -1,12 +1,13 @@
 package core
 
 import (
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/karrick/godirwalk"
 )
 
 // Used to identify the fixed part at the start of a glob pattern.
@@ -93,10 +94,7 @@ func glob(state *BuildState, rootPath, pattern string, includeHidden bool, exclu
 		return matches, err
 	}
 
-	err = filepath.Walk(rootPath, func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
+	err = godirwalk.Walk(rootPath, &godirwalk.Options{Callback: func(name string, info *godirwalk.Dirent) error {
 		if info.IsDir() {
 			if name != rootPath && IsPackage(state, name) {
 				return filepath.SkipDir // Can't glob past a package boundary
@@ -109,7 +107,7 @@ func glob(state *BuildState, rootPath, pattern string, includeHidden bool, exclu
 			matches = append(matches, name)
 		}
 		return nil
-	})
+	}})
 	return matches, err
 }
 
