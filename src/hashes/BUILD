@@ -1,18 +1,10 @@
-go_bindata(
-    name = 'hash_rewriter',
-    srcs = ['hash_rewriter.py'],
-)
-
 go_library(
     name = 'hashes',
-    srcs = [
-        'rewrite_hashes.go',
-        ':hash_rewriter',
-    ],
+    srcs = ['rewrite_hashes.go'],
     deps = [
         '//src/build',
         '//src/core',
-        '//src/parse',
+        '//src/parse/asp',
         '//third_party/go:logging',
     ],
     visibility = ['PUBLIC'],
@@ -23,7 +15,6 @@ go_test(
     srcs = ['hash_rewriter_test.go'],
     data = [
         'test_data',
-        '//src:cffi',
     ],
     deps = [
         ':hashes',

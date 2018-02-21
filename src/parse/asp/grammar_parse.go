@@ -300,7 +300,7 @@ func (p *parser) parseExpression() *Expression {
 }
 
 func (p *parser) parseUnconditionalExpression() *Expression {
-	e := &Expression{}
+	e := &Expression{Pos: p.l.Peek().Pos}
 	if tok := p.l.Peek(); tok.Type == '-' || tok.Value == "not" {
 		p.l.Next()
 		e.UnaryOp = &UnaryOp{

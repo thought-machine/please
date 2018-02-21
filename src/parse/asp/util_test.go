@@ -57,3 +57,16 @@ func TestGetExtents(t *testing.T) {
 	assert.Equal(t, 36, begin)
 	assert.Equal(t, 200, end)
 }
+
+func TestGetArg(t *testing.T) {
+	p := NewParser(nil)
+	stmts, err := p.ParseFileOnly("src/parse/asp/test_data/example.build")
+	require.NoError(t, err)
+
+	stmt := FindTarget(stmts, "asp")
+	require.NotNil(t, stmt)
+	vis := FindArgument(stmt, "visibility")
+	require.NotNil(t, vis)
+	assert.Equal(t, 13, vis.Expr.Pos.Line)
+	assert.Nil(t, FindArgument(stmt, "wibble"))
+}

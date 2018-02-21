@@ -24,7 +24,6 @@ go_test(
     srcs = ['rewrite_test.go'],
     data = [
         'test_data',
-        '//src:cffi',
     ],
     deps = [
         ':gc',
