@@ -461,9 +461,8 @@ func (p *parser) parseList(opening, closing rune) *List {
 func (p *parser) parseDict() *Dict {
 	d := &Dict{}
 	p.next('{')
-	for tok := p.l.Peek(); tok.Type == Ident || tok.Type == String; tok = p.l.Peek() {
-		p.l.Next()
-		di := &DictItem{Key: tok.Value}
+	for tok := p.l.Peek(); tok.Type != '}'; tok = p.l.Peek() {
+		di := &DictItem{Key: *p.parseExpression()}
 		p.next(':')
 		di.Value = *p.parseExpression()
 		d.Items = append(d.Items, di)

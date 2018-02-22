@@ -535,15 +535,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 	if expr.Comprehension == nil {
 		d := make(pyDict, len(expr.Items))
 		for _, v := range expr.Items {
-			if v.Key[0] == '"' {
-				d[stringLiteral(v.Key)] = s.interpretExpression(&v.Value)
-			} else {
-				str, ok := s.Lookup(v.Key).(pyString)
-				if !ok {
-					s.Error("Bad dict key %s; must be a string", v.Key)
-				}
-				d[string(str)] = s.interpretExpression(&v.Value)
-			}
+			d.IndexAssign(s.interpretExpression(&v.Key), s.interpretExpression(&v.Value))
 		}
 		return d
 	}
@@ -551,10 +543,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 	l := cs.iterate(expr.Comprehension.Expr)
 	ret := make(pyDict, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
-		k := cs.Lookup(expr.Items[0].Key)
-		key, ok := k.(pyString)
-		cs.Assert(ok, "dict keys must evaluate to strings")
-		ret[string(key)] = cs.interpretExpression(&expr.Items[0].Value)
+		ret.IndexAssign(cs.interpretExpression(&expr.Items[0].Key), cs.interpretExpression(&expr.Items[0].Value))
 	})
 	return ret
 }

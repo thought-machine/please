@@ -84,11 +84,11 @@ func TestParseAssignments(t *testing.T) {
 	ass := statements[0].Ident.Action.Assign.Val.Dict
 	assert.NotNil(t, ass)
 	assert.Equal(t, 3, len(ass.Items))
-	assert.Equal(t, "\"mickey\"", ass.Items[0].Key)
+	assert.Equal(t, "\"mickey\"", ass.Items[0].Key.Val.String)
 	assert.Equal(t, 3, ass.Items[0].Value.Val.Int.Int)
-	assert.Equal(t, "\"donald\"", ass.Items[1].Key)
+	assert.Equal(t, "\"donald\"", ass.Items[1].Key.Val.String)
 	assert.Equal(t, "\"sora\"", ass.Items[1].Value.Val.String)
-	assert.Equal(t, "\"goofy\"", ass.Items[2].Key)
+	assert.Equal(t, "\"goofy\"", ass.Items[2].Key.Val.String)
 	assert.Equal(t, "riku", ass.Items[2].Value.Val.Ident.Name)
 }
 

@@ -174,7 +174,7 @@ type Dict struct {
 
 // A DictItem represents a single key-value pair in a dict literal.
 type DictItem struct {
-	Key   string     `@( Ident | String ) ":"`
+	Key   Expression `@( Ident | String ) ":"`
 	Value Expression `@@`
 }
 
