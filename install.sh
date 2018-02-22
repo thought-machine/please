@@ -13,32 +13,16 @@ fi
 
 DEST="${HOME}/.please"
 mkdir -p ${DEST}
-rm -f ${DEST}/please ${DEST}/please_pex ${DEST}/junit_runner.jar ${DEST}/jarcat ${DEST}/please_maven ${DEST}/*.so ${DEST}/linter ${DEST}/_cffi_backend.so ${DEST}/libffi-72499c49.so.6.0.4
-cp -f plz-out/bin/src/please ${DEST}/please
-chmod 0775 ${DEST}/please
+OUTPUTS="`plz-out/bin/src/please query outputs //package:installed_files`"
+for OUTPUT in $OUTPUTS; do
+    TARGET="${DEST}/$(basename $OUTPUT)"
+    cp -f "$OUTPUT" "$TARGET"
+    chmod 0775 "$TARGET"
+done
 ln -sf ${DEST}/please ${DEST}/plz
-cp -f plz-out/bin/src/_cffi_backend.so plz-out/bin/src/libffi-72499c49.so.6.0.4 ${DEST}
-chmod -R 0775 ${DEST}/_cffi_backend.so ${DEST}/libffi-72499c49.so.6.0.4
-cp -f plz-out/bin/tools/please_pex/please_pex ${DEST}/please_pex
-chmod 0775 ${DEST}/please_pex
-cp -f plz-out/bin/tools/junit_runner/junit_runner.jar ${DEST}/junit_runner.jar
-chmod 0664 ${DEST}/junit_runner.jar
-cp -f plz-out/bin/tools/jarcat/jarcat ${DEST}/jarcat
-chmod 0775 ${DEST}/jarcat
-cp -f plz-out/bin/tools/please_maven/please_maven ${DEST}/please_maven
-chmod 0775 ${DEST}/please_maven
-cp -f plz-out/bin/tools/please_diff_graphs/please_diff_graphs ${DEST}/please_diff_graphs
-chmod 0775 ${DEST}/please_diff_graphs
-cp -f plz-out/bin/tools/please_go_test/please_go_test ${DEST}/please_go_test
-chmod 0775 ${DEST}/please_go_test
-cp -f plz-out/bin/tools/linter/linter ${DEST}/please_build_linter
-cp -f plz-out/bin/tools/linter/linter ${DEST}/linter
-chmod 0775 ${DEST}/please_build_linter
-chmod 0775 ${DEST}/linter
-cp -f plz-out/bin/tools/javac_worker/javac_worker ${DEST}/javac_worker
-chmod 0775 ${DEST}/javac_worker
+
 echo "Please installed"
 
-if [ ! -f /usr/local/bin/plz ]; then
+if ! hash plz 2>/dev/null; then
     echo "You might want to run ln -s ~/.please/please /usr/local/bin/plz or add ~/.please to your PATH."
 fi
