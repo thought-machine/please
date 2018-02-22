@@ -29,30 +29,3 @@ go_binary(
         '//third_party/go:logging',
     ],
 )
-
-# Needed at runtime for cffi to do it's thing.
-genrule(
-    name = 'cffi_backend',
-    srcs = ['//third_party/python:cffi'],
-    outs = ['_cffi_backend.so'],
-    binary = True,
-    cmd = 'cp third_party/python/cffi/_cffi_backend.so .',
-)
-
-# This is rather a hack; it is required on Linux but doesn't exist on OSX...
-genrule(
-    name = 'libffi',
-    srcs = ['//third_party/python:cffi'],
-    outs = ['libffi-72499c49.so.6.0.4'],
-    binary = True,
-    cmd = ('cp -r third_party/python/cffi/.libs_cffi_backend/* .' if (CONFIG.OS == 'linux') else 'touch $OUT'),
-)
-
-filegroup(
-    name = 'cffi',
-    srcs = [
-        ':cffi_backend',
-        ':libffi',
-    ],
-    binary = True,
-)

@@ -6,7 +6,6 @@ defaultpiprepo = https://get.please.build/third_party/python/index.html
 moduledir = third_party.python
 
 [parse]
-engine = asp
 ; This is a hack to handle peasant operating systems with case-insensitive file systems.
 ; I don't want to rename my package so we have one slightly differently named build file
 ; in this project.

@@ -12,12 +12,7 @@ import (
 
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) {
-	if state.Config.Parse.Engine == "asp" {
-		state.Parser = &aspParser{asp: newAspParser(state)}
-	} else {
-		// This doesn't actually do any upfront initialisation - it happens behind a mutex later.
-		state.Parser = &pythonParser{}
-	}
+	state.Parser = &aspParser{asp: newAspParser(state)}
 }
 
 // An aspParser implements the core.Parser interface around our asp package.

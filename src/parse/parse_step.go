@@ -13,9 +13,13 @@ import (
 	"path"
 	"sync"
 
+	"gopkg.in/op/go-logging.v1"
+
 	"core"
 	"parse/asp"
 )
+
+var log = logging.MustGetLogger("parse")
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
 // It is not an error if the package has already been parsed.
@@ -233,9 +237,8 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 		panic(fmt.Sprintf("Can't build %s; the directory %s doesn't exist", label, packageName))
 	}
 
-	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err == errDeferParse {
-		return nil // Indicates deferral
-	} else if required, l := asp.RequiresSubinclude(err); required {
+	err := state.Parser.ParseFile(state, pkg, pkg.Filename)
+	if required, l := asp.RequiresSubinclude(err); required {
 		if deferParse(l, pkg.Name) {
 			return nil // similarly, deferral
 		}
