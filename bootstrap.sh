@@ -29,14 +29,12 @@ go get github.com/coreos/go-semver/semver
 go get github.com/djherbis/atime
 
 # Clean out old artifacts.
-rm -rf plz-out src/parse/builtin_rules.bindata.go src/parse/asp/builtins/builtin_data.bindata.go
+rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go
 # Compile the builtin rules
 notice "Compiling built-in rules..."
-go run src/parse/asp/main/compiler.go -o plz-out/asp/src/parse/asp/builtins src/parse/asp/builtins/builtins.build_defs src/parse/rules/*.build_defs
+go run src/parse/asp/main/compiler.go -o plz-out/tmp/src/parse/rules src/parse/rules/*.build_defs
 # Embed them into Go
-bin/go-bindata -o src/parse/asp/builtins/builtin_data.bindata.go -pkg builtins -prefix plz-out/asp/src/parse/asp/builtins plz-out/asp/src/parse/asp/builtins
-# The old version is still needed for things to compile.
-bin/go-bindata -o src/parse/builtin_rules.bindata.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
+bin/go-bindata -o src/parse/rules/builtin_data.bindata.go -pkg rules -prefix plz-out/tmp/src/parse/rules plz-out/tmp/src/parse/rules
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."

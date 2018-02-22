@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"core"
-	"parse/asp/builtins"
+	"parse/rules"
 )
 
 func parseFile(filename string) (*scope, error) {
@@ -19,7 +19,7 @@ func parseFile(filename string) (*scope, error) {
 	state.Config.BuildConfig = map[string]string{"parser-engine": "python27"}
 	pkg := core.NewPackage("test/package")
 	parser := NewParser(state)
-	parser.MustLoadBuiltins("builtins.build_defs", nil, builtins.MustAsset("builtins.build_defs.gob"))
+	parser.MustLoadBuiltins("builtins.build_defs", nil, rules.MustAsset("builtins.build_defs.gob"))
 	statements, err := parser.parse(filename)
 	if err != nil {
 		panic(err)

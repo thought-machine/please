@@ -7,7 +7,7 @@ import (
 
 	"core"
 	"parse/asp"
-	"parse/asp/builtins"
+	"parse/rules"
 )
 
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
@@ -24,13 +24,13 @@ type aspParser struct {
 func newAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
-	dir, _ := builtins.AssetDir("")
+	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)
 	for _, filename := range dir {
 		if strings.HasSuffix(filename, ".gob") {
 			srcFile := strings.TrimSuffix(filename, ".gob")
-			src, _ := builtins.Asset(srcFile)
-			p.MustLoadBuiltins("src/parse/asp/builtins/"+srcFile, src, builtins.MustAsset(filename))
+			src, _ := rules.Asset(srcFile)
+			p.MustLoadBuiltins("src/parse/rules/"+srcFile, src, rules.MustAsset(filename))
 		}
 	}
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {

@@ -12,7 +12,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
-	"parse/asp/builtins"
+	"parse/rules"
 )
 
 type record struct {
@@ -25,7 +25,7 @@ func parseFile(filename string) (*scope, error) {
 	pkg := core.NewPackage("test/package")
 	pkg.Filename = "test/package/BUILD"
 	parser := NewParser(state)
-	parser.MustLoadBuiltins("builtins.build_defs", nil, builtins.MustAsset("builtins.build_defs.gob"))
+	parser.MustLoadBuiltins("builtins.build_defs", nil, rules.MustAsset("builtins.build_defs.gob"))
 	statements, err := parser.parse(filename)
 	if err != nil {
 		panic(err)

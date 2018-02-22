@@ -16,7 +16,7 @@ genrule(
         'lexicon.html',
         'lexicon_entry.html',
         'template.html',
-        '//src/parse:rule_args',
+        '//src/parse/args',
     ],
     outs = ['lexicon.html'],
     cmd = '$TOOLS_LEX > temp.html && $TOOLS_TMPL docs/template.html temp.html > $OUT',

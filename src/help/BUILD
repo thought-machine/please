@@ -2,7 +2,7 @@ genrule(
     name = 'rule_defs',
     srcs = [
         'process.py',
-        '//src/parse:rule_args',
+        '//src/parse/args',
     ],
     outs = ['rule_defs.json'],
     cmd = 'python $SRCS > $OUT',

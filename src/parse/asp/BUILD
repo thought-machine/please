@@ -38,7 +38,7 @@ go_test(
     deps = [
         ':asp',
         '//src/core',
-        '//src/parse/asp/builtins',
+        '//src/parse/rules',
         '//third_party/go:testify',
     ],
 )
@@ -50,7 +50,7 @@ go_test(
     deps = [
         ':asp',
         '//src/core',
-        '//src/parse/asp/builtins',
+        '//src/parse/rules',
         '//third_party/go:logging',
         '//third_party/go:testify',
     ],

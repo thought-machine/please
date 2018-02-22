@@ -7,9 +7,7 @@
 package parse
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path"
 	"sync"
 
@@ -95,22 +93,6 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 		}
 	}
 	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed")
-}
-
-// PrintRuleArgs prints the arguments of all builtin rules (plus any associated ones from the given targets)
-func PrintRuleArgs(state *core.BuildState, labels []core.BuildLabel) {
-	p := newAspParser(state)
-	for _, l := range labels {
-		t := state.Graph.TargetOrDie(l)
-		for _, out := range t.Outputs() {
-			p.MustLoadBuiltins(path.Join(t.OutDir(), out), nil, nil)
-		}
-	}
-	b, err := json.MarshalIndent(p.Environment(), "", "  ")
-	if err != nil {
-		log.Fatalf("Failed JSON encoding: %s", err)
-	}
-	os.Stdout.Write(b)
 }
 
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.

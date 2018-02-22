@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"reflect"
-	"strings"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -137,9 +136,9 @@ func (p *Parser) parse(filename string) ([]*Statement, error) {
 	return stmts, err
 }
 
-// parseData reads the given byteslice and parses it into a set of statements.
+// ParseData reads the given byteslice and parses it into a set of statements.
 // The 'filename' argument is only used in case of errors so doesn't necessarily have to correspond to a real file.
-func (p *Parser) parseData(data []byte, filename string) ([]*Statement, error) {
+func (p *Parser) ParseData(data []byte, filename string) ([]*Statement, error) {
 	r := &namedReader{r: bytes.NewReader(data), name: filename}
 	return p.parseAndHandleErrors(r, filename)
 }
@@ -207,58 +206,4 @@ func (p *Parser) optimise(statements []*Statement) []*Statement {
 		ret = append(ret, stmt)
 	}
 	return ret
-}
-
-// Environment returns the current global environment of the parser.
-func (p *Parser) Environment() *Environment {
-	env := &Environment{Functions: map[string]Function{}}
-	for k, v := range p.interpreter.scope.locals {
-		if f, ok := v.(*pyFunc); ok {
-			env.Functions[k] = fromFunction(f)
-		}
-	}
-	return env
-}
-
-// An Environment describes the global environment of the parser.
-// TODO(peterebden): We may refactor this out in favour of exposing the AST instead.
-type Environment struct {
-	Functions map[string]Function `json:"functions"`
-}
-
-// A Function describes a function within the global environment
-type Function struct {
-	Args      []FunctionArg `json:"args"`
-	Comment   string        `json:"comment,omitempty"`
-	Docstring string        `json:"docstring,omitempty"`
-	Language  string        `json:"language,omitempty"`
-}
-
-// A FunctionArg represents a single argument to a function.
-type FunctionArg struct {
-	Comment    string   `json:"comment,omitempty"`
-	Deprecated bool     `json:"deprecated,omitempty"`
-	Name       string   `json:"name"`
-	Required   bool     `json:"required,omitempty"`
-	Types      []string `json:"types"`
-}
-
-// fromFunction creates a Function from an existing parsed function
-func fromFunction(f *pyFunc) Function {
-	r := Function{
-		Docstring: f.docstring,
-		Comment:   f.docstring,
-	}
-	if idx := strings.IndexRune(f.docstring, '\n'); idx != -1 {
-		r.Comment = f.docstring[:idx]
-	}
-	r.Args = make([]FunctionArg, len(f.args))
-	for i, a := range f.args {
-		r.Args[i] = FunctionArg{
-			Name:     a,
-			Types:    f.types[i],
-			Required: f.constants[i] == nil && (len(f.defaults) <= i || f.defaults[i] == nil),
-		}
-	}
-	return r
 }
