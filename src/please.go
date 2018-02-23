@@ -760,9 +760,8 @@ func testTargets(target core.BuildLabel, args []string, failed bool, resultsFile
 		opts.Cover.Args.Args = []string{}
 		opts.Test.Args.Args = []string{}
 		return append(core.ParseBuildLabels(args), target)
-	} else {
-		return []core.BuildLabel{target}
 	}
+	return []core.BuildLabel{target}
 }
 
 // readConfig sets various things up and reads the initial configuration.
