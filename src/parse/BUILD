@@ -1,5 +1,3 @@
-subinclude('//build_defs:engines')
-
 go_library(
     name = 'parse',
     srcs = [

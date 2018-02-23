@@ -3,7 +3,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:static-interpreter
+       - image: thoughtmachine/please_ubuntu:latest
      steps:
        - checkout
        - run:

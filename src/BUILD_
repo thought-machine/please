@@ -1,6 +1,3 @@
-subinclude('//build_defs:engines')
-package(default_visibility = ['PUBLIC'])
-
 go_binary(
     name = 'please',
     srcs = ['please.go'],
@@ -28,4 +25,5 @@ go_binary(
         '//third_party/go:go-flags',
         '//third_party/go:logging',
     ],
+    visibility = ['PUBLIC'],
 )

@@ -5,12 +5,6 @@ filegroup(
 )
 
 filegroup(
-    name = 'engines',
-    srcs = ['engines.build_defs'],
-    visibility = ['PUBLIC'],
-)
-
-filegroup(
     name = 'fpm',
     srcs = ['fpm.build_defs'],
     visibility = ['//package:all'],
