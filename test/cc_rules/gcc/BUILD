@@ -40,7 +40,7 @@ cc_library(
 cc_shared_object(
     name = 'so_test',
     srcs = ['so_test.cc'],
-    pkg_config_libs = ['python3.5'],
+    pkg_config_libs = ['python3'],
     deps = [
         ':embedded_files',
     ],
