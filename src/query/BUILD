@@ -1,6 +1,6 @@
 go_library(
     name = 'query',
-    srcs = glob(['*.go'], excludes = ['*_test.go']),
+    srcs = glob(['*.go'], exclude = ['*_test.go']),
     deps = [
         '//src/build',
         '//src/core',

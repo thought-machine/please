@@ -67,7 +67,7 @@ type functionArg struct {
 
 func (env *environment) AddAll(stmts []*asp.Statement) {
 	for _, stmt := range stmts {
-		if f := stmt.FuncDef; f != nil && f.Name[0] != '_' {
+		if f := stmt.FuncDef; f != nil && f.Name[0] != '_' && f.Docstring != "" {
 			r := function{
 				Docstring: f.Docstring,
 				Comment:   f.Docstring,

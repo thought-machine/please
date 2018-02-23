@@ -1,6 +1,6 @@
 java_library(
     name = 'junit_runner',
-    srcs = glob(['*.java'], excludes = ['*Test.java']),
+    srcs = glob(['*.java'], exclude = ['*Test.java']),
     exported_deps = [
         '//third_party/java:hamcrest',
         '//third_party/java:junit',

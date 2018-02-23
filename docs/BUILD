@@ -1,6 +1,6 @@
 deps = []
 
-for src in glob(['*.html'], excludes=['template.html', 'lexicon*.html']):
+for src in glob(['*.html'], exclude=['template.html', 'lexicon*.html']):
     templated_rule = genrule(
         name = src.replace('.', '_'),
         srcs = ['template.html', src],

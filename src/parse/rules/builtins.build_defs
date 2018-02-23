@@ -98,7 +98,7 @@ def dict(d):
     raise 'dict is not callable'
 
 
-def glob(include:list, excludes:list=[], exclude:list=None, hidden:bool=False):
+def glob(include:list, exclude:list&excludes=[], hidden:bool=False):
     pass
 
 

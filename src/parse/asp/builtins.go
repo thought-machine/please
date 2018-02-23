@@ -436,17 +436,11 @@ func strType(s *scope, args []pyObject) pyObject {
 }
 
 func glob(s *scope, args []pyObject) pyObject {
-	includes := asStringList(s, args[0], "includes")
-	var excludes []string
-	if args[1] != nil {
-		excludes = asStringList(s, args[1], "excludes")
-	} else if args[2] != nil {
-		// TODO(peterebden): remove excludes in favour of exclude, since Buck prefers the latter now and Bazel requires it.
-		excludes = asStringList(s, args[2], "exclude")
-	}
-	hidden := args[3].IsTruthy()
-	excludes = append(excludes, s.state.Config.Parse.BuildFileName...)
-	return fromStringList(core.Glob(s.pkg.Name, includes, excludes, excludes, hidden))
+	include := asStringList(s, args[0], "include")
+	exclude := asStringList(s, args[1], "exclude")
+	hidden := args[2].IsTruthy()
+	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
+	return fromStringList(core.Glob(s.pkg.Name, include, exclude, exclude, hidden))
 }
 
 func asStringList(s *scope, arg pyObject, name string) []string {

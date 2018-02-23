@@ -10,7 +10,7 @@ genrule(
 
 go_library(
     name = 'core',
-    srcs = glob(['*.go'], excludes = [
+    srcs = glob(['*.go'], exclude = [
         '*_test.go',
         'version.go',
         'exec_*.go',

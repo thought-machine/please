@@ -47,7 +47,7 @@ func main() {
 	tmpl, err := template.New("lexicon.html").Funcs(template.FuncMap{"join": strings.Join}).ParseFiles(
 		"docs/lexicon.html", "docs/lexicon_entry.html")
 	must(err)
-	b, err := ioutil.ReadFile("src/parse/rule_args.json")
+	b, err := ioutil.ReadFile("src/parse/args/rule_args.json")
 	must(err)
 	r := &rules{}
 	must(json.Unmarshal(b, r))
