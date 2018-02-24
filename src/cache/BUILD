@@ -1,6 +1,6 @@
 go_library(
     name = 'cache',
-    srcs = glob(['*.go'], excludes = [
+    srcs = glob(['*.go'], exclude = [
         '*_test.go',
     ]),
     deps = [

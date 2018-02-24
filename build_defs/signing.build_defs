@@ -2,8 +2,8 @@
 subinclude('//build_defs:fpm')
 
 
-def signed_fpm_deb(name, version, package_name=None, files=None, links=None, post_cmds=None,
-                   visibility=None):
+def signed_fpm_deb(name, version, package_name=None, files=None, dirs=None, links=None,
+                   post_cmds=None, visibility=None):
     """Creates a signed deb using FPM.
 
     All arguments are passed through to fpm_deb.
@@ -17,6 +17,7 @@ def signed_fpm_deb(name, version, package_name=None, files=None, links=None, pos
         package_name = package_name,
         version = version,
         files = files,
+        dirs = dirs,
         links = links,
         post_cmds = post_cmds,
         visibility = visibility,

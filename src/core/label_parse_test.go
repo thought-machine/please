@@ -130,3 +130,8 @@ func TestDotsArentAccepted(t *testing.T) {
 func TestPipesArentAccepted(t *testing.T) {
 	assertNotLabel(t, "//src/core:core|build_label.go", "| is not allowed in build labels")
 }
+
+func TestSubrepos(t *testing.T) {
+	assertLabel(t, "@subrepo//pkg:target", "subrepo/pkg", "target")
+	assertLabel(t, "@com_google_googletest//:gtest_main", "com_google_googletest", "gtest_main")
+}

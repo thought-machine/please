@@ -1,6 +1,6 @@
 go_library(
     name = 'asp',
-    srcs = glob(['*.go'], excludes = [
+    srcs = glob(['*.go'], exclude = [
         '*_test.go',
         '*.bindata.go',
     ]),
@@ -8,7 +8,6 @@ go_library(
         '//src/cli',
         '//src/core',
         '//third_party/go:logging',
-        '//third_party/go:participle',
     ],
     visibility = ['PUBLIC'],
 )
@@ -28,7 +27,6 @@ go_test(
     srcs = ['lexer_test.go'],
     deps = [
         ':asp',
-        '//third_party/go:participle',
         '//third_party/go:testify',
     ],
 )
@@ -40,7 +38,7 @@ go_test(
     deps = [
         ':asp',
         '//src/core',
-        '//src/parse/asp/builtins',
+        '//src/parse/rules',
         '//third_party/go:testify',
     ],
 )
@@ -52,7 +50,7 @@ go_test(
     deps = [
         ':asp',
         '//src/core',
-        '//src/parse/asp/builtins',
+        '//src/parse/rules',
         '//third_party/go:logging',
         '//third_party/go:testify',
     ],

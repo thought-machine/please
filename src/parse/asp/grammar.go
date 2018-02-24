@@ -3,8 +3,6 @@ package asp
 import (
 	"fmt"
 	"strings"
-
-	"github.com/alecthomas/participle/lexer"
 )
 
 // A FileInput is the top-level structure of a BUILD file.
@@ -17,7 +15,7 @@ type FileInput struct {
 // support backoff (i.e. if an earlier entry matches to its completion but can't consume
 // following tokens, it doesn't then make another choice :( )
 type Statement struct {
-	Pos      lexer.Position
+	Pos      Position
 	Pass     string           `( @"pass" EOL`
 	Continue string           `| @"continue" EOL`
 	FuncDef  *FuncDef         `| @@`
@@ -67,15 +65,18 @@ type IfStatement struct {
 
 // An Argument represents an argument to a function definition.
 type Argument struct {
-	Name  string      `@Ident`
-	Type  []string    `[ ":" @( { ( "bool" | "str" | "int" | "list" | "dict" | "function" ) [ "|" ] } ) ]`
-	Value *Expression `[ "=" @@ ]`
+	Name string   `@Ident`
+	Type []string `[ ":" @( { ( "bool" | "str" | "int" | "list" | "dict" | "function" ) [ "|" ] } ) ]`
+	// Aliases are an experimental non-Python concept where function arguments can be aliased to different names.
+	// We use this to support compatibility with Bazel & Buck etc in some cases.
+	Aliases []string    `[ "&" ( { @Ident [ "&" ] } ) ]`
+	Value   *Expression `[ "=" @@ ]`
 }
 
 // An Expression is a generalised Python expression, i.e. anything that can appear where an
 // expression is allowed (including the extra parts like inline if-then-else, operators, etc).
 type Expression struct {
-	Pos     lexer.Position
+	Pos     Position
 	UnaryOp *UnaryOp         `( @@`
 	Val     *ValueExpression `| @@ )`
 	Op      *struct {
@@ -84,9 +85,10 @@ type Expression struct {
 	} `[ @@ ]`
 	If *InlineIf `[ @@ ]`
 	// Not part of the grammar - applied later to optimise constant expressions.
-	constant pyObject
+	// Needs to be public for serialisation but should not be used outside this package.
+	Constant pyObject
 	// Similarly applied to optimise simple lookups of local variables.
-	local string
+	Local string
 }
 
 // A ValueExpression is the value part of an expression, i.e. without surrounding operators.
@@ -172,7 +174,7 @@ type Dict struct {
 
 // A DictItem represents a single key-value pair in a dict literal.
 type DictItem struct {
-	Key   string     `@( Ident | String ) ":"`
+	Key   Expression `@( Ident | String ) ":"`
 	Value Expression `@@`
 }
 

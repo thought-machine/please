@@ -27,25 +27,21 @@ go get github.com/texttheater/golang-levenshtein/levenshtein
 go get github.com/Workiva/go-datastructures/queue
 go get github.com/coreos/go-semver/semver
 go get github.com/djherbis/atime
-go get github.com/alecthomas/participle
-go get github.com/davecgh/go-spew/spew
 
 # Clean out old artifacts.
-rm -rf plz-out src/parse/cffi/parser_interface.py src/parse/builtin_rules.bindata.go src/parse/asp/builtins/builtin_data.bindata.go
+rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go
 # Compile the builtin rules
 notice "Compiling built-in rules..."
-go run src/parse/asp/main/compiler.go -o plz-out/asp/src/parse/asp/builtins src/parse/asp/builtins/builtins.build_defs src/parse/rules/*.build_defs
+go run src/parse/asp/main/compiler.go -o plz-out/tmp/src/parse/rules src/parse/rules/*.build_defs
 # Embed them into Go
-bin/go-bindata -o src/parse/asp/builtins/builtin_data.bindata.go -pkg builtins -prefix plz-out/asp/src/parse/asp/builtins plz-out/asp/src/parse/asp/builtins
-# The old version is still needed for things to compile.
-bin/go-bindata -o src/parse/builtin_rules.bindata.go -pkg parse -prefix src/parse/rules/ -ignore BUILD src/parse/rules/
+bin/go-bindata -o src/parse/rules/builtin_data.bindata.go -pkg rules -prefix plz-out/tmp/src/parse/rules plz-out/tmp/src/parse/rules
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
-go run -tags bootstrap src/please.go --plain_output build //src:please //src:cffi --log_file plz-out/log/bootstrap_build.log
+go run -tags bootstrap src/please.go --plain_output build //src:please --log_file plz-out/log/bootstrap_build.log
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
-plz-out/bin/src/please --plain_output build //src:please //tools --log_file plz-out/log/tools_build.log
+plz-out/bin/src/please --plain_output build //package:installed_files --log_file plz-out/log/tools_build.log
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
@@ -91,10 +87,6 @@ fi
 if ! hash python3 2>/dev/null ; then
     warn "python3 not found, excluding python3 tests"
     EXCLUDES="${EXCLUDES} --exclude=py3"
-fi
-if ! hash pypy 2>/dev/null ; then
-    warn "pypy not found, excluding pypy tests"
-    EXCLUDES="${EXCLUDES} --exclude=pypy"
 fi
 if ! hash clang++ 2>/dev/null ; then
     warn "Clang not found, excluding Clang tests"

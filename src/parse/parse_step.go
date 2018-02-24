@@ -7,15 +7,17 @@
 package parse
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path"
 	"sync"
+
+	"gopkg.in/op/go-logging.v1"
 
 	"core"
 	"parse/asp"
 )
+
+var log = logging.MustGetLogger("parse")
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
 // It is not an error if the package has already been parsed.
@@ -45,6 +47,14 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 		activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
 		return
 	}
+	// Check whether this guy exists within a subrepo. If so we will need to make sure that's available first.
+	if subrepo := state.Graph.SubrepoFor(label.PackageName); subrepo != nil && subrepo.Target != nil {
+		if deferParse(subrepo.Target.Label, label.PackageName) {
+			log.Debug("Deferring parse of %s pending subrepo dependency %s", label, subrepo.Target.Label)
+			return
+		}
+	}
+
 	// We use the name here to signal undeferring of a package. If we get that we need to retry the package regardless.
 	if dependor.Name != "_UNDEFER_" && !firstToParse(label, dependor) {
 		// Check this again to avoid a potential race
@@ -83,22 +93,6 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 		}
 	}
 	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed")
-}
-
-// PrintRuleArgs prints the arguments of all builtin rules (plus any associated ones from the given targets)
-func PrintRuleArgs(state *core.BuildState, labels []core.BuildLabel) {
-	p := newAspParser(state)
-	for _, l := range labels {
-		t := state.Graph.TargetOrDie(l)
-		for _, out := range t.Outputs() {
-			p.MustLoadBuiltins(path.Join(t.OutDir(), out), nil, nil)
-		}
-	}
-	b, err := json.MarshalIndent(p.Environment(), "", "  ")
-	if err != nil {
-		log.Fatalf("Failed JSON encoding: %s", err)
-	}
-	os.Stdout.Write(b)
 }
 
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
@@ -157,20 +151,20 @@ func firstToParse(label, dependor core.BuildLabel) bool {
 
 // deferParse defers the parsing of a package until the given label has been built.
 // Returns true if it was deferred, or false if it's already built.
-func deferParse(label core.BuildLabel, pkg *core.Package) bool {
+func deferParse(label core.BuildLabel, pkgName string) bool {
 	pendingTargetMutex.Lock()
 	defer pendingTargetMutex.Unlock()
 	if target := core.State.Graph.Target(label); target != nil && target.State() >= core.Built {
 		return false
 	}
-	log.Debug("Deferring parse of %s pending %s", pkg.Name, label)
+	log.Debug("Deferring parse of %s pending %s", pkgName, label)
 	if m, present := deferredParses[label.PackageName]; present {
-		m[label.Name] = append(m[label.Name], pkg.Name)
+		m[label.Name] = append(m[label.Name], pkgName)
 	} else {
-		deferredParses[label.PackageName] = map[string][]string{label.Name: {pkg.Name}}
+		deferredParses[label.PackageName] = map[string][]string{label.Name: {pkgName}}
 	}
 	log.Debug("Adding pending parse for %s", label)
-	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkg.Name, Name: "all"}, true)
+	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkgName, Name: "all"}, true)
 	return true
 }
 
@@ -225,10 +219,9 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 		panic(fmt.Sprintf("Can't build %s; the directory %s doesn't exist", label, packageName))
 	}
 
-	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err == errDeferParse {
-		return nil // Indicates deferral
-	} else if required, l := asp.RequiresSubinclude(err); required {
-		if deferParse(l, pkg) {
+	err := state.Parser.ParseFile(state, pkg, pkg.Filename)
+	if required, l := asp.RequiresSubinclude(err); required {
+		if deferParse(l, pkg.Name) {
 			return nil // similarly, deferral
 		}
 		// If we get here, the target wasn't available to subinclude before, but is now. Try it again.
@@ -275,13 +268,18 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 func buildFileName(state *core.BuildState, pkgName string) string {
 	// Bazel defines targets in its "external" package from its WORKSPACE file.
 	// We will fake this by treating that as an actual package file...
-	if state.Config.Bazel.Compatibility && pkgName == "external" {
+	// TODO(peterebden): They may be moving away from their "external" nomenclature?
+	if state.Config.Bazel.Compatibility && pkgName == "external" || pkgName == "workspace" {
 		return "WORKSPACE"
 	}
 	for _, buildFileName := range state.Config.Parse.BuildFileName {
 		if filename := path.Join(pkgName, buildFileName); core.FileExists(filename) {
 			return filename
 		}
+	}
+	// Could be a subrepo...
+	if subrepo := state.Graph.SubrepoFor(pkgName); subrepo != nil {
+		return buildFileName(state, subrepo.Dir(pkgName))
 	}
 	return ""
 }

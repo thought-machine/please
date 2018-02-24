@@ -1,4 +1,4 @@
-subinclude('https://raw.githubusercontent.com/thought-machine/please/42d89f7a94350d01d9de6e4a3a476a18e14b09f2/build_defs/plz_e2e_test.build_defs')
+subinclude('https://raw.githubusercontent.com/thought-machine/please/01ba4a0bb5740d61469b12df23d9c793218a7f50/build_defs/plz_e2e_test.build_defs')
 
 plz_e2e_test(
     name = 'remote_subinclude_test',

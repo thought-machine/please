@@ -5,9 +5,8 @@ go_binary(
         '//src/cli',
         '//src/core',
         '//src/parse/asp',
-        '//src/parse/asp/builtins',
+        '//src/parse/rules',
         '//third_party/go:logging',
-        '//third_party/go:participle',
         '//third_party/go:spew',
     ],
 )
@@ -20,5 +19,5 @@ go_binary(
         '//src/parse/asp',
         '//third_party/go:logging',
     ],
-    visibility = ['//src/parse/asp/builtins:all'],
+    visibility = ['//src/parse/rules:all'],
 )

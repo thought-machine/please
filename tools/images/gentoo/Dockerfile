@@ -6,7 +6,7 @@ COPY locale.gen /etc/locale.gen
 RUN emerge --sync -q && locale-gen && eselect locale set en_GB.utf8 && env-update && source /etc/profile && emerge -q portage
 
 # Python
-RUN emerge -q python:2.7 python:3.5 net-misc/curl unzip dev-vcs/git dev-python/cffi
+RUN emerge -q python:3.5 net-misc/curl unzip dev-vcs/git
 RUN emerge -q --newuse world
 
 # Go and Java, protobufs, linter

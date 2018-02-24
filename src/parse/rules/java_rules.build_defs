@@ -3,7 +3,7 @@
 
 def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
                  deps:list=None, modular:bool=False, exported_deps:list=None, visibility:list=None,
-                 test_only:bool=False, javac_flags:list=None):
+                 test_only:bool&testonly=False, javac_flags:list&javacopts=None):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -114,7 +114,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
 
 
 def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
-                deps:list=None, visibility:list=None, test_only:bool=False, javac_flags:list=None):
+                deps:list=None, visibility:list=None, test_only:bool&testonly=False, javac_flags:list&javacopts=None):
     """Compiles Java source to a modular .jar which can be collected by other rules.
 
     Args:
@@ -251,7 +251,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
     )
 
 
-def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:list=None, labels:list=None,
+def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:list=None, labels:list&features&tags=None,
               visibility:list=None, flags:str='', container:bool|dict=False, sandbox:bool=None,
               timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
               test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str=''):
@@ -448,7 +448,7 @@ def maven_jars(name:str, id:str='', ids:list=None, repository:str|list=None, exc
 
 def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:list=None, deps:list=None,
               visibility:list=None, filename:str=None, sources:bool=True, licences:list=None,
-              native:bool=False, artifact_type:str=None, test_only:bool=False,
+              native:bool=False, artifact_type:str=None, test_only:bool&testonly=False,
               binary:bool=False, classifier:str='', classifier_sources_override:str=''):
     """Fetches a single Java dependency from Maven.
 

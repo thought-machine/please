@@ -20,7 +20,7 @@ import (
 	"cli"
 	"core"
 	"parse/asp"
-	"parse/asp/builtins"
+	"parse/rules"
 )
 
 var log = logging.MustGetLogger("parser")
@@ -40,7 +40,7 @@ var opts = struct {
 	Usage: `Test parser for BUILD files using our standalone parser.`,
 }
 
-func parseFile(state *core.BuildState, pkg *core.Package, p *asp.Parser, filename string) error {
+func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 	if opts.ParseOnly || opts.DumpAst {
 		stmts, err := p.ParseFileOnly(filename)
 		if opts.DumpAst {
@@ -54,7 +54,7 @@ func parseFile(state *core.BuildState, pkg *core.Package, p *asp.Parser, filenam
 		}
 		return err
 	}
-	return p.ParseFile(state, pkg, filename)
+	return p.ParseFile(pkg, filename)
 }
 
 // cleanup runs a few arbitrary cleanup steps on the given AST dump.
@@ -108,13 +108,13 @@ func main() {
 	p := asp.NewParser(state)
 
 	log.Debug("Loading built-in build rules...")
-	dir, _ := builtins.AssetDir("")
+	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)
 	for _, filename := range dir {
 		if strings.HasSuffix(filename, ".gob") {
 			srcFile := strings.TrimSuffix(filename, ".gob")
-			src, _ := builtins.Asset(srcFile)
-			p.MustLoadBuiltins("src/parse/"+srcFile, src, builtins.MustAsset(filename))
+			src, _ := rules.Asset(srcFile)
+			p.MustLoadBuiltins("src/parse/asp/builtins/"+srcFile, src, rules.MustAsset(filename))
 		}
 	}
 
@@ -125,7 +125,7 @@ func main() {
 			for file := range ch {
 				pkg := core.NewPackage(file)
 				pkg.Filename = file
-				if err := parseFile(state, pkg, p, file); err != nil {
+				if err := parseFile(pkg, p, file); err != nil {
 					atomic.AddInt64(&errors, 1)
 					log.Error("Error parsing %s: %s", file, err)
 				}

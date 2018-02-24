@@ -171,7 +171,7 @@ def _lint_builtin_functions(n):
                 yield kwd.value.lineno, INCORRECT_ARGUMENT
         kwds = {kwd.arg for kwd in n.keywords or []}
         for name, arg in args.items():
-            if arg['required'] and name not in kwds:
+            if arg.get('required') and name not in kwds:
                 yield n.lineno, MISSING_ARGUMENT
 
 

@@ -4,10 +4,10 @@
 pextool = //tools/please_pex
 defaultpiprepo = https://get.please.build/third_party/python/index.html
 moduledir = third_party.python
+defaultinterpreter = python3
 
 [parse]
-engine = asp
-; This is a hack to handle peasant operating systems with case-insensitive file systems.
+; This is a hack to handle operating systems with case-insensitive file systems.
 ; I don't want to rename my package so we have one slightly differently named build file
 ; in this project.
 buildfilename = BUILD
@@ -27,6 +27,7 @@ keep = //package:all
 keep = //tools
 
 [go]
+filtertool = //tools/please_go_filter
 testtool = //tools/please_go_test
 
 [cpp]

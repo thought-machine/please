@@ -88,6 +88,20 @@ func TestDependentTargets(t *testing.T) {
 	assert.Equal(t, []BuildLabel{target3.Label}, graph.DependentTargets(target2.Label, target1.Label))
 }
 
+func TestSubrepo(t *testing.T) {
+	graph := NewGraph()
+	graph.AddSubrepo(&Subrepo{Name: "test", Root: "plz-out/gen/test"})
+	subrepo := graph.Subrepo("test")
+	assert.NotNil(t, subrepo)
+	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
+	subrepo = graph.SubrepoFor("test/some/package")
+	assert.NotNil(t, subrepo)
+	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
+	subrepo = graph.SubrepoFor("test")
+	assert.NotNil(t, subrepo)
+	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
+}
+
 // makeTarget creates a new build target for us.
 func makeTarget(label string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))

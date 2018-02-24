@@ -175,7 +175,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.GoVersion = "1.6"
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
 	config.Python.PipTool = "pip"
-	config.Python.DefaultInterpreter = "python"
+	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
 	config.Python.UsePyPI = true
 	// Annoyingly pip on OSX doesn't seem to work with this flag (you get the dreaded
@@ -232,7 +232,6 @@ type Configuration struct {
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
 		LintTool         string   `help:"Location of the lint tool for BUILD files."`
-		Engine           string   `help:"Allows forcing a particular parser engine. Can be either a path to a file or the name of an engine (e.g. 'pypy').\nIt is rare that you need to force this, typically Please will try available engines at startup." example:"pypy | python2 | python3 | /usr/lib/libplease_parser_custom.so"`
 		PyLib            string   `help:"Location of the Python library modules that are loaded by the parser. Default is py_lib beside the executable." example:"/usr/lib/python2.7"`
 		ExperimentalDir  []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
 		BuildFileName    []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+."`

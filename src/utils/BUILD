@@ -1,6 +1,6 @@
 go_library(
     name = 'utils',
-    srcs = glob(['*.go'], excludes = [
+    srcs = glob(['*.go'], exclude = [
         'wrapper_script.go',
         'stub.go',
         '*_test.go',

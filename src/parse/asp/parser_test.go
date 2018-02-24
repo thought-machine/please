@@ -84,11 +84,11 @@ func TestParseAssignments(t *testing.T) {
 	ass := statements[0].Ident.Action.Assign.Val.Dict
 	assert.NotNil(t, ass)
 	assert.Equal(t, 3, len(ass.Items))
-	assert.Equal(t, "\"mickey\"", ass.Items[0].Key)
+	assert.Equal(t, "\"mickey\"", ass.Items[0].Key.Val.String)
 	assert.Equal(t, 3, ass.Items[0].Value.Val.Int.Int)
-	assert.Equal(t, "\"donald\"", ass.Items[1].Key)
+	assert.Equal(t, "\"donald\"", ass.Items[1].Key.Val.String)
 	assert.Equal(t, "\"sora\"", ass.Items[1].Value.Val.String)
-	assert.Equal(t, "\"goofy\"", ass.Items[2].Key)
+	assert.Equal(t, "\"goofy\"", ass.Items[2].Key.Val.String)
 	assert.Equal(t, "riku", ass.Items[2].Value.Val.Ident.Name)
 }
 
@@ -383,21 +383,9 @@ func TestExample6(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestEnvironment(t *testing.T) {
-	p := NewParser(nil)
-	p.MustLoadBuiltins("src/parse/asp/test_data/environment.build", nil, nil)
-	env := p.Environment()
-	f := env.Functions["rust_library"]
-	assert.NotNil(t, f)
-	assert.Equal(t, "Totally builds a Rust library, yeah?", f.Docstring)
-	assert.Equal(t, 3, len(f.Args))
-	assert.Equal(t, "name", f.Args[0].Name)
-	assert.Equal(t, []string{"str"}, f.Args[0].Types)
-	assert.True(t, f.Args[0].Required)
-	assert.Equal(t, "srcs", f.Args[1].Name)
-	assert.Equal(t, []string{"list"}, f.Args[1].Types)
-	assert.True(t, f.Args[1].Required)
-	assert.Equal(t, "deps", f.Args[2].Name)
-	assert.Equal(t, []string{"list"}, f.Args[2].Types)
-	assert.False(t, f.Args[2].Required)
+func TestPrecedence(t *testing.T) {
+	stmts, err := newParser().parse("src/parse/asp/test_data/precedence.build")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(stmts))
+	assert.NotNil(t, stmts[0].Ident.Action.Assign.If)
 }

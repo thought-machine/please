@@ -557,7 +557,6 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"rules": func() bool {
-		config.Parse.Engine = "asp" // Required to extract the rules.
 		targets := opts.Query.Rules.Args.Targets
 		success, state := Please(opts.Query.Rules.Args.Targets, config, true, true, false)
 		if !success {
@@ -579,10 +578,10 @@ func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 
 // Used above as a convenience wrapper for query functions.
 func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state *core.BuildState)) bool {
+	opts.OutputFlags.PlainOutput = true // No point displaying this for one of these queries.
 	config.Cache.DirClean = false
 	if !needFullParse {
 		opts.ParsePackageOnly = true
-		opts.OutputFlags.PlainOutput = true // No point displaying this for one of these queries.
 	}
 	if len(labels) == 0 {
 		labels = core.WholeGraph
@@ -715,6 +714,11 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
 func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
+	if state.Config.Bazel.Compatibility && core.FileExists("WORKSPACE") {
+		// We have to parse the WORKSPACE file before anything else to understand subrepos.
+		// This is a bit crap really since it inhibits parallelism for the first step.
+		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false, state.Include, state.Exclude, false)
+	}
 	for _, target := range targets {
 		if target == core.BuildLabelStdin {
 			for label := range utils.ReadStdin() {

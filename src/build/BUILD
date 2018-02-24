@@ -1,8 +1,6 @@
 go_library(
     name = 'build',
-    srcs = glob(['*.go'], excludes = [
-        '*_test.go',
-    ]),
+    srcs = glob(['*.go'], exclude = ['*_test.go']),
     deps = [
         '//src/build/proto:worker',
         '//src/cache',

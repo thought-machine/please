@@ -19,7 +19,7 @@ exit 0\n\
 %s"""
 
 
-def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:list=None):
+def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:list&features&tags=None):
     """Generates a shell script binary, essentially just the given source.
 
     Note that these are individually executable so can only have one source file each.
@@ -42,7 +42,7 @@ def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:l
     )
 
 
-def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:list=None):
+def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:list&features&tags=None):
     """Generates a shell script binary.
 
     The resulting script will contain three things:
@@ -87,7 +87,7 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
     )
 
 
-def sh_test(name:str, src:str=None, labels:list=None, data:list=None, deps:list=None, size:str=None,
+def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=None, deps:list=None, size:str=None,
             visibility:list=None, flags:str='', flaky:bool|int=0, test_outputs:list=None, timeout:int=0,
             container:bool|dict=False, sandbox:bool=None):
     """Generates a shell test. Note that these aren't packaged in a useful way.
@@ -130,7 +130,7 @@ def sh_test(name:str, src:str=None, labels:list=None, data:list=None, deps:list=
 
 
 def sh_cmd(name:str, cmd:str|dict, srcs:list|dict=None, out:list=None, shell:str='/bin/sh',
-           labels:list=None, deps:list=None, visibility:list=None):
+           labels:list&features&tags=None, deps:list=None, visibility:list=None):
     """Generates a runnable shell script from a command.
 
     This is doable with a genrule with a little effort but it's awkward enough to be nice

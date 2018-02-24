@@ -1,6 +1,6 @@
 go_library(
     name = 'cli',
-    srcs = glob(['*.go'], excludes = ['*_test.go']),
+    srcs = glob(['*.go'], exclude = ['*_test.go']),
     deps = [
         '//third_party/go:go-flags',
         '//third_party/go:humanize',

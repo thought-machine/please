@@ -47,6 +47,15 @@ func (pkg *Package) Target(name string) *BuildTarget {
 	return pkg.targets[name]
 }
 
+// TargetOrDie returns the target with the given name, and dies if this package doesn't have one.
+func (pkg *Package) TargetOrDie(name string) *BuildTarget {
+	t := pkg.Target(name)
+	if t == nil {
+		log.Fatalf("Target %s not registered in package %s", name, pkg.Name)
+	}
+	return t
+}
+
 // AddTarget adds a new target to this package with the given name.
 // It doesn't check for duplicates.
 func (pkg *Package) AddTarget(target *BuildTarget) {

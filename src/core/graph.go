@@ -4,8 +4,11 @@
 
 package core
 
-import "sort"
-import "sync"
+import (
+	"sort"
+	"strings"
+	"sync"
+)
 
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
@@ -20,6 +23,8 @@ type BuildGraph struct {
 	pendingRevDeps map[BuildLabel]map[BuildLabel]*BuildTarget
 	// Actual reverse dependencies
 	revDeps map[BuildLabel][]*BuildTarget
+	// Registered subrepos, as a map of their name to their root.
+	subrepos map[string]*Subrepo
 	// Used to arbitrate access to the graph. We parallelise most build operations
 	// and Go maps aren't natively threadsafe so this is needed.
 	mutex sync.RWMutex
@@ -91,6 +96,40 @@ func (graph *BuildGraph) PackageOrDie(name string) *Package {
 	return pkg
 }
 
+// AddSubrepo adds a new subrepo to the graph. It dies if one is already registered by this name.
+func (graph *BuildGraph) AddSubrepo(subrepo *Subrepo) {
+	graph.mutex.Lock()
+	defer graph.mutex.Unlock()
+	if _, present := graph.subrepos[subrepo.Name]; present {
+		log.Fatalf("Subrepo %s is already registered", subrepo.Name)
+	}
+	graph.subrepos[subrepo.Name] = subrepo
+}
+
+// Subrepo returns the subrepo with this name. It returns nil if one isn't registered.
+func (graph *BuildGraph) Subrepo(name string) *Subrepo {
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
+	return graph.subrepos[name]
+}
+
+// SubrepoOrDie returns the subrepo with this name, dying if it doesn't exist.
+func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
+	subrepo := graph.Subrepo(name)
+	if subrepo == nil {
+		log.Fatalf("No registered subrepo by the name %s", name)
+	}
+	return subrepo
+}
+
+// SubrepoFor returns the subrepo for the given package (which may be a subpackage inside the subrepo)
+func (graph *BuildGraph) SubrepoFor(name string) *Subrepo {
+	if idx := strings.IndexRune(name, '/'); idx != -1 {
+		return graph.Subrepo(name[:idx])
+	}
+	return graph.Subrepo(name)
+}
+
 // Len returns the number of targets currently in the graph.
 func (graph *BuildGraph) Len() int {
 	graph.mutex.RLock()
@@ -145,10 +184,11 @@ func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 // Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {
 	return &BuildGraph{
-		targets:        make(map[BuildLabel]*BuildTarget),
-		packages:       make(map[string]*Package),
-		pendingRevDeps: make(map[BuildLabel]map[BuildLabel]*BuildTarget),
-		revDeps:        make(map[BuildLabel][]*BuildTarget),
+		targets:        map[BuildLabel]*BuildTarget{},
+		packages:       map[string]*Package{},
+		pendingRevDeps: map[BuildLabel]map[BuildLabel]*BuildTarget{},
+		revDeps:        map[BuildLabel][]*BuildTarget{},
+		subrepos:       map[string]*Subrepo{},
 	}
 }
 

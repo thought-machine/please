@@ -5,7 +5,7 @@ package(
 
 filegroup(
     name = 'rule_args',
-    srcs = ['//src/parse:rule_args'],
+    srcs = ['//src/parse/args'],
 )
 
 python_binary(

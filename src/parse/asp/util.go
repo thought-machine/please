@@ -42,3 +42,16 @@ func GetExtents(statements []*Statement, statement *Statement, max int) (int, in
 	}
 	return statement.Pos.Line, next.Pos.Line - 1
 }
+
+// FindArgument finds an argument of any one of the given names, or nil if there isn't one.
+// The statement must be a function call (e.g. as returned by FindTarget).
+func FindArgument(statement *Statement, args ...string) *CallArgument {
+	for i, a := range statement.Ident.Action.Call.Arguments {
+		for _, arg := range args {
+			if a.Expr.Val.Ident != nil && a.Expr.Val.Ident.Name == arg && a.Value != nil {
+				return &statement.Ident.Action.Call.Arguments[i]
+			}
+		}
+	}
+	return nil
+}

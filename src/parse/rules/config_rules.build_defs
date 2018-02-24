@@ -1,0 +1,76 @@
+"""Contains the built-in rules select() and config_setting().
+
+These are typically used for platform detection and mimic the Bazel rules of
+similar names. They are not yet complete.
+"""
+
+
+def select(conditions:dict):
+    """Chooses one of a set of config_setting options.
+
+    This can be used to select parts of rules based on config_setting values, for example
+    srcs = select({'//config:linux': ['my_linux.go'], '//config:darwin': ['my_darwin.go']})
+    to configure per-platform choices.
+
+    Args:
+      conditions (dict): Set of conditions to select from.
+    """
+    pass  # This function is implemented natively.
+
+
+def config_setting(name:str, values:dict, visibility:list=None):
+    """Matches a configuration state and allows triggering particular attributes.
+
+    For now this only supports the 'values' aspect of Bazel's rule, we may add
+    more parts later.
+
+    This creates a build rule which always succeeds at building; its output
+    indicates whether the value was matched or not.
+
+    Args:
+      name (str): Name of the rule
+      values (dict): Values to select. If these are all matched then the rule is
+                     satisfied. Currently we only support 'cpu', 'compiler' and 'compilation_mode',
+                     although users are encouraged to avoid the latter where possible
+                     (the dbg/opt cflags settings should be preferred instead).
+                     For example: {'cpu': 'amd64'} is successful if the CPU architecture is amd64.
+      visibility (list): Visibility of the rule.
+    """
+    items = sorted(values.items())
+    on = any([_config_on(k, v) for k, v in sorted(values.items())])
+    return build_rule(
+        name = name,
+        outs = [name],
+        cmd = 'echo true > $OUT' if on else 'echo false > $OUT',
+        visibility = visibility,
+        labels = ['config:on' if on else 'config:off'],
+    )
+
+
+def _config_on(name, value):
+    """Returns a single config condition."""
+    if name == 'cpu':
+        return _CPU_ALIASES.get(value, value) == CONFIG.ARCH
+    elif name == 'compilation_mode':
+        return False  # We don't allow this to be determined at parse time (tbh I thought Blaze didn't either...)
+    elif name == 'compiler':
+        # Unsure what exactly the semantics of this are supposed to be. Taking a guess.
+        return CC_TOOL in _COMPILER_ALIASES.get(value, value)
+    elif name == 'define':
+        # This is the closest thing we have to Bazel's defines right now.
+        return value.upper() in CONFIG
+    else:
+        raise ParseError('Unknown config_setting key %s' % name)
+
+
+# We name CPUs as Go does, but support some additional aliases to match Bazel.
+_CPU_ALIASES = {
+    'x86_64': 'amd64',
+    'k8': 'amd64',
+    'piii': 'x86',
+}
+
+# Similarly 'llvm' is an acceptable alias for Clang.
+_COMPILER_ALIASES = {
+    'llvm': 'clang',
+}

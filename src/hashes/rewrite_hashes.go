@@ -3,8 +3,10 @@
 package hashes
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"runtime"
 	"strings"
 
@@ -12,7 +14,7 @@ import (
 
 	"build"
 	"core"
-	"parse"
+	"parse/asp"
 )
 
 var log = logging.MustGetLogger("hashes")
@@ -51,14 +53,60 @@ func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
 // rewriteHashes rewrites hashes in a single file.
 func rewriteHashes(state *core.BuildState, filename, platform string, hashes map[string]string) error {
 	log.Notice("Rewriting hashes in %s...", filename)
-	data := string(MustAsset("hash_rewriter.py"))
-	// Template in the variables we want.
-	h := make([]string, 0, len(hashes))
-	for k, v := range hashes {
-		h = append(h, fmt.Sprintf(`"%s": "%s"`, k, v))
+	p := asp.NewParser(nil)
+	stmts, err := p.ParseFileOnly(filename)
+	if err != nil {
+		return err
 	}
-	data = strings.Replace(data, "__FILENAME__", filename, 1)
-	data = strings.Replace(data, "__TARGETS__", strings.Join(h, ",\n"), 1)
-	data = strings.Replace(data, "__PLATFORM__", platform, 1)
-	return parse.RunCode(state, data)
+	b, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	lines := bytes.Split(b, []byte{'\n'})
+	for k, v := range hashes {
+		if err := rewriteHash(lines, stmts, platform, k, v); err != nil {
+			return err
+		}
+	}
+	return ioutil.WriteFile(filename, bytes.Join(lines, []byte{'\n'}), 0664)
+}
+
+// rewriteHash rewrites a single hash on a statement.
+func rewriteHash(lines [][]byte, stmts []*asp.Statement, platform, name, hash string) error {
+	stmt := asp.FindTarget(stmts, name)
+	if stmt == nil {
+		return fmt.Errorf("Can't find target %s to rewrite", name)
+	} else if arg := asp.FindArgument(stmt, "hash", "hashes"); arg != nil {
+		if arg.Value.Val != nil && arg.Value.Val.List != nil {
+			for _, h := range arg.Value.Val.List.Values {
+				if line, ok := rewriteLine(lines[h.Pos.Line-1], h.Pos.Column, platform, h.Val.String, hash); ok {
+					lines[h.Pos.Line-1] = line
+					return nil
+				}
+			}
+		} else if arg.Value.Val != nil && arg.Value.Val.String != "" {
+			h := arg.Value
+			if line, ok := rewriteLine(lines[h.Pos.Line-1], h.Pos.Column, platform, h.Val.String, hash); ok {
+				lines[h.Pos.Line-1] = line
+				return nil
+			}
+		}
+	}
+	if platform != "" {
+		return rewriteHash(lines, stmts, "", name, hash)
+	}
+	return fmt.Errorf("Can't find hash or hashes argument on %s", name)
+}
+
+// rewriteLine implements the rewriting logic within a single line.
+// It returns the new line and true if it should be replaced, or false if not.
+func rewriteLine(line []byte, start int, platform, current, new string) ([]byte, bool) {
+	current = strings.Trim(current, `"`) // asp string literals are surrounded by quotes
+	if strings.HasPrefix(current, platform) {
+		if platform != "" {
+			new = platform + ": " + new
+		}
+		return bytes.Join([][]byte{line[:start], []byte(new), line[start+len(current):]}, nil), true
+	}
+	return nil, false
 }

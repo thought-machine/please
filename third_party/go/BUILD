@@ -79,8 +79,8 @@ go_get(
     get = 'golang.org/x/net/...',
     revision = '136a25c244d3019482a795d728110278d6ba09a4',
     deps = [
-        ':text',
         ':terminal',
+        ':text',
     ],
 )
 
@@ -132,10 +132,10 @@ go_get(
 go_get(
     name = 'protobuf',
     get = 'github.com/golang/protobuf/...',
-    strip = [
-        'protoc-gen-go', # avoids conflict with :protoc-gen-go binary.
-    ],
     revision = '130e6b02ab059e7b717a096f397c5b60111cae74',
+    strip = [
+        'protoc-gen-go',  # avoids conflict with :protoc-gen-go binary.
+    ],
 )
 
 go_get(
@@ -337,8 +337,8 @@ go_get(
     get = 'github.com/hashicorp/go-immutable-radix',
     revision = '7f3cd4390caab3250a57f30efdb2a65dd7649ecf',
     deps = [
-        ':simplelru',
         ':go-uuid',
+        ':simplelru',
     ],
 )
 
@@ -411,15 +411,22 @@ go_get(
 )
 
 go_get(
-    name = 'ebnf',
-    get = 'golang.org/x/exp/ebnf',
-    revision = '83bc9a11ae1a00a79c4e59fc5d965d21fe14e6bb',
+    name = 'go-fuzz-build',
+    binary = True,
+    get = 'github.com/dvyukov/go-fuzz/go-fuzz-build',
+    revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
 )
 
 go_get(
-    name = 'participle',
-    get = 'github.com/alecthomas/participle',
-    install = ['github.com/alecthomas/participle/lexer'],
-    revision = '48f3ab340563c5a91f83efdc0dc3f14f5d9364a2',
-    deps = [':ebnf'],
+    name = 'go-fuzz',
+    binary = True,
+    get = 'github.com/dvyukov/go-fuzz/go-fuzz',
+    revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+)
+
+go_get(
+    name = 'go-fuzz-dep',
+    get = 'github.com/dvyukov/go-fuzz/go-fuzz-dep',
+    install = ['github.com/dvyukov/go-fuzz/go-fuzz-defs'],
+    revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
 )

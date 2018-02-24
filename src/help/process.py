@@ -13,7 +13,7 @@ def main(filename):
         data = json.load(f)
     online_help = lambda f: '${RESET}Online help is available at ${BLUE}https://please.build/lexicon.html#%s${RESET}.\n' % f
     m = lambda k, v: '${BOLD_YELLOW}%s${RESET}(%s)\n\n%s\n\n%s' % (k, ', '.join(
-        '${GREEN}%s${RESET}' % a['name'] for a in v['args']), colourise(v['docstring'], v['args'], data['functions']), online_help(k))
+        '${GREEN}%s${RESET}' % a['name'] for a in v['args']), colourise(v.get('docstring', ''), v['args'], data['functions']), online_help(k))
 
     json.dump({
         'topics': {k: m(k, v) for k, v in data['functions'].items()},
@@ -23,7 +23,7 @@ def main(filename):
 
 def colourise(docstring, args, functions):
     def replace(m):
-        if any(arg for arg in args if arg['name'] == m.group(1).strip() and arg['deprecated']):
+        if any(arg for arg in args if arg['name'] == m.group(1).strip() and arg.get('deprecated')):
             return '${GREY}' + m.group(0)
         return '${YELLOW}%s${RESET} ${GREEN}%s${RESET}:' % (m.group(1), m.group(2))
 

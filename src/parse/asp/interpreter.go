@@ -47,16 +47,18 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
-	if filename == "builtins.build_defs" || filename == "src/parse/builtins.build_defs" {
+	if filename == "builtins.build_defs" || filename == "src/parse/rules/builtins.build_defs" {
 		defer registerBuiltins(i.builtinScope)
-	} else if filename == "misc_rules.build_defs" || filename == "src/parse/misc_rules.build_defs" {
+	} else if filename == "misc_rules.build_defs" || filename == "src/parse/rules/misc_rules.build_defs" {
 		defer registerSubincludePackage(i.builtinScope)
+	} else if filename == "config_rules.build_defs" || filename == "src/parse/rules/config_rules.build_defs" {
+		defer setNativeCode(i.builtinScope, "select", selectFunc)
 	}
 	defer i.scope.SetAll(i.builtinScope.Freeze(), true)
 	if statements != nil {
 		return i.interpretStatements(i.builtinScope, statements)
 	} else if len(contents) != 0 {
-		return i.loadBuiltinStatements(i.parser.parseData(contents, filename))
+		return i.loadBuiltinStatements(i.parser.ParseData(contents, filename))
 	}
 	return i.loadBuiltinStatements(i.parser.parse(filename))
 }
@@ -133,9 +135,9 @@ func (i *interpreter) optimiseExpressions(v reflect.Value) {
 	if v.Type() == reflect.TypeOf(&Expression{}) && !v.IsNil() {
 		expr := v.Interface().(*Expression)
 		if constant := i.scope.Constant(expr); constant != nil {
-			expr.constant = constant // Extract constant expression
+			expr.Constant = constant // Extract constant expression
 		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Property == nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil && len(expr.Val.Ident.Action) == 0 {
-			expr.local = expr.Val.Ident.Name // Simple variable name lookup
+			expr.Local = expr.Val.Ident.Name // Simple variable name lookup
 		}
 	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
 		i.optimiseExpressions(v.Elem())
@@ -330,10 +332,10 @@ func (s *scope) interpretFor(stmt *ForStatement) pyObject {
 
 func (s *scope) interpretExpression(expr *Expression) pyObject {
 	// Check the optimised sites first
-	if expr.constant != nil {
-		return expr.constant
-	} else if expr.local != "" {
-		return s.Lookup(expr.local)
+	if expr.Constant != nil {
+		return expr.Constant
+	} else if expr.Local != "" {
+		return s.Lookup(expr.Local)
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -517,7 +519,6 @@ func (s *scope) interpretList(expr *List) pyList {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
 	cs := s.NewScope()
-	s.moveComprehensionIf(expr.Comprehension, expr.Comprehension.Expr)
 	l := s.iterate(expr.Comprehension.Expr)
 	ret := make(pyList, 0, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
@@ -534,28 +535,15 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 	if expr.Comprehension == nil {
 		d := make(pyDict, len(expr.Items))
 		for _, v := range expr.Items {
-			if v.Key[0] == '"' {
-				d[stringLiteral(v.Key)] = s.interpretExpression(&v.Value)
-			} else {
-				str, ok := s.Lookup(v.Key).(pyString)
-				if !ok {
-					s.Error("Bad dict key %s; must be a string", v.Key)
-				}
-				d[string(str)] = s.interpretExpression(&v.Value)
-			}
+			d.IndexAssign(s.interpretExpression(&v.Key), s.interpretExpression(&v.Value))
 		}
 		return d
 	}
-	s.Assert(len(expr.Items) == 1, "must have exactly 1 dict item in a comprehension")
 	cs := s.NewScope()
-	s.moveComprehensionIf(expr.Comprehension, expr.Comprehension.Expr)
 	l := cs.iterate(expr.Comprehension.Expr)
 	ret := make(pyDict, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
-		k := cs.Lookup(expr.Items[0].Key)
-		key, ok := k.(pyString)
-		cs.Assert(ok, "dict keys must evaluate to strings")
-		ret[string(key)] = cs.interpretExpression(&expr.Items[0].Value)
+		ret.IndexAssign(cs.interpretExpression(&expr.Items[0].Key), cs.interpretExpression(&expr.Items[0].Value))
 	})
 	return ret
 }
@@ -564,7 +552,6 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 // The provided callback function is called with each item to be added to the result.
 func (s *scope) evaluateComprehension(l pyList, comp *Comprehension, callback func(pyObject)) {
 	if comp.Second != nil {
-		s.moveComprehensionIf(comp, comp.Second.Expr)
 		for _, li := range l {
 			s.unpackNames(comp.Names, li)
 			for _, li := range s.iterate(comp.Second.Expr) {
@@ -579,17 +566,6 @@ func (s *scope) evaluateComprehension(l pyList, comp *Comprehension, callback fu
 				callback(li)
 			}
 		}
-	}
-}
-
-// moveComprehensionIf is a small hack to correct a limitation in the parser that attaches an
-// 'if' in a comprehension to the main expression instead (because it thinks it's the start of
-// an inline if statement).
-func (s *scope) moveComprehensionIf(comp *Comprehension, expr *Expression) {
-	if expr.If != nil {
-		s.Assert(expr.If.Else == nil, "Invalid syntax")
-		comp.If = expr.If.Condition
-		expr.If = nil
 	}
 }
 

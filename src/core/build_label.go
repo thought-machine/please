@@ -127,6 +127,15 @@ func parseBuildLabelParts(target, currentPath string) (string, string) {
 			return "", ""
 		}
 		return currentPath, target[1:]
+	} else if target[0] == '@' {
+		// @subrepo//pkg:target syntax
+		if idx := strings.Index(target, "//"); idx == -1 {
+			return "", ""
+		} else if pkg, name := parseBuildLabelParts(target[idx:], currentPath); pkg == "" && name == "" {
+			return "", ""
+		} else {
+			return path.Join(target[1:idx], pkg), name // Combine it to //subrepo/pkg:target
+		}
 	} else if target[0] != '/' || target[1] != '/' {
 		return "", ""
 	} else if idx := strings.IndexRune(target, ':'); idx != -1 {

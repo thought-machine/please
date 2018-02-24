@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/alecthomas/participle/lexer"
 )
 
 // Token types.
@@ -15,46 +13,52 @@ const (
 	Ident
 	Int
 	String
+	LexOperator
 	EOL
 	Unindent
-	Colon       // Would prefer not to have this but literal colons seem to deeply upset the parser.
-	LexOperator // Similarly this, it doesn't seem to be able to handle == otherwise.
 )
 
-// indentation is the number of spaces we recognise for indentation - right now it's four spaces only.
-const indentation = 4
-
-// symbols defines our mapping of lexer symbols.
-var symbols = map[string]rune{
-	"EOF":      EOF,
-	"Ident":    Ident,
-	"Int":      Int,
-	"String":   String,
-	"EOL":      EOL,
-	"Unindent": Unindent,
-	"Colon":    Colon,
+// A Token describes each individual lexical element emitted by the lexer.
+type Token struct {
+	// Type of token. If > 0 this is the literal character value; if < 0 it is one of the types above.
+	Type rune
+	// The literal text of the token. Strings are lightly normalised to always be surrounded by quotes (but only one).
+	Value string
+	// The position in the input that the token occurred at.
+	Pos Position
 }
 
-// A definition is an implementation of participle's lexer.Definition,
-// which is a singleton that defines how to create individual lexer instances.
-type definition struct{}
+// A Position describes a position in a source file.
+type Position struct {
+	Filename string
+	Offset   int
+	Line     int
+	Column   int
+}
 
-// NewLexer is a slightly nicer interface to creating a new lexer definition.
-func NewLexer() lexer.Definition {
-	return &definition{}
+type namer interface {
+	Name() string
+}
+
+// NameOfReader returns a name for the given reader, if one can be determined.
+func NameOfReader(r io.Reader) string {
+	if n, ok := r.(namer); ok {
+		return n.Name()
+	}
+	return ""
 }
 
 // Lex implements the lexer.Definition interface.
-func (d *definition) Lex(r io.Reader) lexer.Lexer {
+func newLexer(r io.Reader) *lex {
 	// Read the entire file upfront to avoid bufio etc.
 	// This should work OK as long as BUILD files are relatively small.
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
-		lexer.Panic(lexer.Position{Filename: lexer.NameOfReader(r)}, err.Error())
+		fail(Position{Filename: NameOfReader(r)}, err.Error())
 	}
 	l := &lex{
 		b:        append(b, 0, 0), // Null-terminating the buffer makes things easier later.
-		filename: lexer.NameOfReader(r),
+		filename: NameOfReader(r),
 		indents:  []int{0},
 	}
 	l.Next() // Initial value is zero, this forces it to populate itself.
@@ -65,11 +69,6 @@ func (d *definition) Lex(r io.Reader) lexer.Lexer {
 	return l
 }
 
-// Symbols implements the lexer.Definition interface.
-func (d *definition) Symbols() map[string]rune {
-	return symbols
-}
-
 // A lex implements participle's lexer.Lexer, which is a lexer for a single BUILD file.
 type lex struct {
 	b      []byte
@@ -78,7 +77,7 @@ type lex struct {
 	col    int
 	indent int
 	// The next token. We always look one token ahead in order to facilitate both Peek() and Next().
-	next     lexer.Token
+	next     Token
 	filename string
 	// Used to track how many braces we're within.
 	braces int
@@ -91,13 +90,52 @@ type lex struct {
 	lastEOL bool
 }
 
+// reverseSymbol looks up a symbol's name from the lexer.
+func reverseSymbol(sym rune) string {
+	switch sym {
+	case EOF:
+		return "end of file"
+	case Ident:
+		return "identifier"
+	case Int:
+		return "integer"
+	case String:
+		return "string"
+	case LexOperator:
+		return "operator"
+	case EOL:
+		return "end of line"
+	case Unindent:
+		return "unindent"
+	}
+	return string(sym) // literal character
+}
+
+// reverseSymbols looks up a series of symbol's names from the lexer.
+func reverseSymbols(syms []rune) []string {
+	ret := make([]string, len(syms))
+	for i, sym := range syms {
+		ret[i] = reverseSymbol(sym)
+	}
+	return ret
+}
+
+type lexerError struct {
+	Pos     Position
+	Message string
+}
+
+func (err lexerError) Error() string {
+	return err.Message
+}
+
 // Peek at the next token
-func (l *lex) Peek() lexer.Token {
+func (l *lex) Peek() Token {
 	return l.next
 }
 
 // Next consumes and returns the next token.
-func (l *lex) Next() lexer.Token {
+func (l *lex) Next() Token {
 	ret := l.next
 	l.next = l.nextToken()
 	l.lastEOL = l.next.Type == EOL || l.next.Type == Unindent
@@ -105,13 +143,13 @@ func (l *lex) Next() lexer.Token {
 }
 
 // nextToken consumes and returns the next token.
-func (l *lex) nextToken() lexer.Token {
+func (l *lex) nextToken() Token {
 	// Strip any spaces
 	for l.b[l.i] == ' ' {
 		l.i++
 		l.col++
 	}
-	pos := lexer.Position{
+	pos := Position{
 		Filename: l.filename,
 		// These are all 1-indexed for niceness.
 		Offset: l.i + 1,
@@ -120,7 +158,7 @@ func (l *lex) nextToken() lexer.Token {
 	}
 	if l.unindents > 0 {
 		l.unindents--
-		return lexer.Token{Type: Unindent, Pos: pos}
+		return Token{Type: Unindent, Pos: pos}
 	}
 	b := l.b[l.i]
 	rawString := b == 'r' && (l.b[l.i+1] == '"' || l.b[l.i+1] == '\'')
@@ -136,7 +174,7 @@ func (l *lex) nextToken() lexer.Token {
 	switch b {
 	case 0:
 		// End of file (we null terminate it above so this is easy to spot)
-		return lexer.Token{Type: EOF, Pos: pos}
+		return Token{Type: EOF, Pos: pos}
 	case '\n':
 		// End of line, read indent to next non-space character
 		lastIndent := l.indent
@@ -162,13 +200,13 @@ func (l *lex) nextToken() lexer.Token {
 				l.indents = l.indents[:len(l.indents)-1]
 			}
 			if l.indent != l.indents[len(l.indents)-1] {
-				lexer.Panic(pos, "Unexpected indent")
+				fail(pos, "Unexpected indent")
 			}
 		} else if lastIndent != l.indent {
 			l.indents = append(l.indents, l.indent)
 		}
 		if l.braces == 0 && !l.lastEOL {
-			return lexer.Token{Type: EOL, Pos: pos}
+			return Token{Type: EOL, Pos: pos}
 		}
 		return l.nextToken()
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
@@ -176,30 +214,27 @@ func (l *lex) nextToken() lexer.Token {
 	case '"', '\'':
 		// String literal, consume to end.
 		return l.consumePossiblyTripleQuotedString(b, pos, rawString)
-	case ':':
-		// As noted above, literal colons seem to break the parser.
-		return lexer.Token{Type: Colon, Value: ":", Pos: pos}
 	case '(', '[', '{':
 		l.braces++
-		return lexer.Token{Type: rune(b), Value: string(b), Pos: pos}
+		return Token{Type: rune(b), Value: string(b), Pos: pos}
 	case ')', ']', '}':
 		if l.braces > 0 { // Don't let it go negative, it fouls things up
 			l.braces--
 		}
-		return lexer.Token{Type: rune(b), Value: string(b), Pos: pos}
+		return Token{Type: rune(b), Value: string(b), Pos: pos}
 	case '=', '!', '+', '<', '>':
 		// Look ahead one byte to see if this is an augmented assignment or comparison.
 		if l.b[l.i] == '=' {
 			l.i++
 			l.col++
-			return lexer.Token{Type: LexOperator, Value: string([]byte{b, l.b[l.i-1]}), Pos: pos}
+			return Token{Type: LexOperator, Value: string([]byte{b, l.b[l.i-1]}), Pos: pos}
 		}
 		fallthrough
-	case ',', '.', '%', '*', '|':
-		return lexer.Token{Type: rune(b), Value: string(b), Pos: pos}
+	case ',', '.', '%', '*', '|', '&', ':':
+		return Token{Type: rune(b), Value: string(b), Pos: pos}
 	case '#':
 		// Comment character, consume to end of line.
-		for l.b[l.i] != '\n' {
+		for l.b[l.i] != '\n' && l.b[l.i] != 0 {
 			l.i++
 			l.col++
 		}
@@ -209,17 +244,17 @@ func (l *lex) nextToken() lexer.Token {
 		if l.b[l.i] >= '0' && l.b[l.i] <= '9' {
 			return l.consumeInteger(b, pos)
 		}
-		return lexer.Token{Type: rune(b), Value: string(b), Pos: pos}
+		return Token{Type: rune(b), Value: string(b), Pos: pos}
 	case '\t':
-		lexer.Panicf(pos, "Tabs are not permitted in BUILD files, use space-based indentation instead")
+		fail(pos, "Tabs are not permitted in BUILD files, use space-based indentation instead")
 	default:
-		lexer.Panicf(pos, "Unknown character %c", b)
+		fail(pos, "Unknown symbol %c", b)
 	}
 	panic("unreachable")
 }
 
 // consumeInteger consumes all characters until the end of an integer literal is reached.
-func (l *lex) consumeInteger(initial byte, pos lexer.Position) lexer.Token {
+func (l *lex) consumeInteger(initial byte, pos Position) Token {
 	s := make([]byte, 1, 10)
 	s[0] = initial
 	for c := l.b[l.i]; c >= '0' && c <= '9'; c = l.b[l.i] {
@@ -227,11 +262,11 @@ func (l *lex) consumeInteger(initial byte, pos lexer.Position) lexer.Token {
 		l.col++
 		s = append(s, c)
 	}
-	return lexer.Token{Type: Int, Value: string(s), Pos: pos}
+	return Token{Type: Int, Value: string(s), Pos: pos}
 }
 
 // consumePossiblyTripleQuotedString consumes all characters until the end of a string token.
-func (l *lex) consumePossiblyTripleQuotedString(quote byte, pos lexer.Position, raw bool) lexer.Token {
+func (l *lex) consumePossiblyTripleQuotedString(quote byte, pos Position, raw bool) Token {
 	if l.b[l.i] == quote && l.b[l.i+1] == quote {
 		l.i += 2 // Jump over initial quote
 		l.col += 2
@@ -241,7 +276,7 @@ func (l *lex) consumePossiblyTripleQuotedString(quote byte, pos lexer.Position, 
 }
 
 // consumeString consumes all characters until the end of a string literal is reached.
-func (l *lex) consumeString(quote byte, pos lexer.Position, multiline, raw bool) lexer.Token {
+func (l *lex) consumeString(quote byte, pos Position, multiline, raw bool) Token {
 	s := make([]byte, 1, 100) // 100 chars is typically enough for a single string literal.
 	s[0] = '"'
 	escaped := false
@@ -269,7 +304,7 @@ func (l *lex) consumeString(quote byte, pos lexer.Position, multiline, raw bool)
 					l.i += 2
 					l.col += 2
 				}
-				token := lexer.Token{Type: String, Value: string(s), Pos: pos}
+				token := Token{Type: String, Value: string(s), Pos: pos}
 				if l.braces > 0 {
 					return l.handleImplicitStringConcatenation(token)
 				}
@@ -284,7 +319,7 @@ func (l *lex) consumeString(quote byte, pos lexer.Position, multiline, raw bool)
 			}
 			fallthrough
 		case 0:
-			lexer.Panic(pos, "Unterminated string literal")
+			fail(pos, "Unterminated string literal")
 		case '\\':
 			if !raw {
 				escaped = true
@@ -299,7 +334,7 @@ func (l *lex) consumeString(quote byte, pos lexer.Position, multiline, raw bool)
 
 // handleImplicitStringConcatenation looks ahead after a string token and checks if the next token will be a string; if so
 // we collapse them both into one string now.
-func (l *lex) handleImplicitStringConcatenation(token lexer.Token) lexer.Token {
+func (l *lex) handleImplicitStringConcatenation(token Token) Token {
 	col := l.col
 	line := l.line
 	for i, b := range l.b[l.i:] {
@@ -327,7 +362,7 @@ func (l *lex) handleImplicitStringConcatenation(token lexer.Token) lexer.Token {
 }
 
 // consumeIdent consumes all characters of an identifier.
-func (l *lex) consumeIdent(pos lexer.Position) lexer.Token {
+func (l *lex) consumeIdent(pos Position) Token {
 	s := make([]rune, 0, 100)
 	for {
 		c := rune(l.b[l.i])
@@ -338,7 +373,7 @@ func (l *lex) consumeIdent(pos lexer.Position) lexer.Token {
 			l.i += n
 			l.col += n
 			if !unicode.IsLetter(c) && !unicode.IsDigit(c) {
-				lexer.Panicf(pos, "Illegal Unicode identifier %c", c)
+				fail(pos, "Illegal Unicode identifier %c", c)
 			}
 			s = append(s, c)
 			continue
@@ -348,14 +383,14 @@ func (l *lex) consumeIdent(pos lexer.Position) lexer.Token {
 		switch c {
 		case ' ':
 			// End of identifier, but no unconsuming needed.
-			return lexer.Token{Type: Ident, Value: string(s), Pos: pos}
+			return Token{Type: Ident, Value: string(s), Pos: pos}
 		case '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			s = append(s, c)
 		default:
 			// End of identifier. Unconsume the last character so it gets handled next time.
 			l.i--
 			l.col--
-			return lexer.Token{Type: Ident, Value: string(s), Pos: pos}
+			return Token{Type: Ident, Value: string(s), Pos: pos}
 		}
 	}
 }
