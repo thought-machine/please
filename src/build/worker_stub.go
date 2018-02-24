@@ -1,3 +1,5 @@
+// +build bootstrap
+
 // Contains a stub for the buildMaybeRemotely function which is used during the
 // initial bootstrap when we don't have protobufs etc available.
 

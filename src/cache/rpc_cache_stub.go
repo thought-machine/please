@@ -1,3 +1,5 @@
+// +build bootstrap
+
 // Only used at initial bootstrap or when used with 'go run' so we don't have to worry
 // about proto compilation until that's sorted.
 

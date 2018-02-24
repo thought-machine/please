@@ -209,14 +209,14 @@ plz_e2e_test(
 
 # Test re-runs.
 go_test(
-    name = '_num_runs_test',
+    name = 'num_runs_go_test',
     srcs = ['num_runs_test.go'],
     labels = ['manual'],
 )
 
 plz_e2e_test(
     name = 'num_runs_test',
-    cmd = 'plz test -p --num_runs=5 //test:_num_runs_test',
+    cmd = 'plz test -p --num_runs=5 //test:num_runs_go_test',
     expect_output_contains = '5 passed',
 )
 
@@ -234,12 +234,12 @@ plz_e2e_test(
 )
 
 go_test(
-    name = '_affectedtests_test',
+    name = 'affectedtests_test',
     srcs = ['affectedtests_test.go'],
 )
 
 go_test(
-    name = '_affectedtests_manual_test',
+    name = 'affectedtests_manual_test',
     srcs = ['affectedtests_test.go'],
     labels = ['manual'],
 )
@@ -299,7 +299,7 @@ plz_e2e_test(
 
 # Test the extra output functionality.
 go_test(
-    name = '_extra_test_output_test',
+    name = 'extra_test_output_go_test',
     srcs = ['extra_test_output_test.go'],
     container = True,
     labels = ['manual'],
@@ -308,7 +308,7 @@ go_test(
 
 plz_e2e_test(
     name = 'extra_test_output_test',
-    cmd = 'plz test //test:_extra_test_output_test',
+    cmd = 'plz test //test:extra_test_output_go_test',
     expect_file_exists = '../../../bin/test/truth.txt',
     labels = ['container'],
 )

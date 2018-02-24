@@ -1,3 +1,5 @@
+// +build bootstrap
+
 package utils
 
 // InitConfig is a stub used during initial bootstrap.

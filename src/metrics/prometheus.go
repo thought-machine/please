@@ -1,4 +1,4 @@
-// +build prometheus
+// +build !bootstrap
 
 // Package metrics contains support for reporting metrics to an external server,
 // currently a Prometheus pushgateway. Because plz runs as a transient process

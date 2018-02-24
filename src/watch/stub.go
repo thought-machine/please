@@ -1,3 +1,5 @@
+// +build bootstrap
+
 // Used at initial bootstrap time to cut down on dependencies.
 
 package watch

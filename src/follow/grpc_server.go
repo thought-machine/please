@@ -1,4 +1,4 @@
-// +build nobootstrap
+// +build !bootstrap
 
 // Package follow implements remote connections to other plz processes.
 // Specifically it implements a gRPC server and client that can stream

@@ -1,3 +1,5 @@
+// +build bootstrap
+
 package hashes
 
 import "core"

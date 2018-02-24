@@ -1,4 +1,5 @@
-// +build proto
+// +build !bootstrap
+
 // Contains functions related to dispatching work to remote processes.
 // Right now those processes must be on the same box because they use
 // the local temporary directories, but in the future this might form
