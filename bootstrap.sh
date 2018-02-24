@@ -14,7 +14,8 @@ function error {
 
 # Fetch the Go dependencies manually
 notice "Installing Go dependencies..."
-export GOPATH="${PWD}"
+mkdir -p "${PWD}/.bootstrap"
+export GOPATH="${PWD}/.bootstrap:${PWD}"
 go get golang.org/x/crypto/ssh/terminal
 go get golang.org/x/sync/errgroup
 go get golang.org/x/tools/cover
