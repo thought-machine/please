@@ -174,7 +174,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.GoVersion = "1.6"
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
 	config.Python.PipTool = "pip"
-	config.Python.DefaultInterpreter = "python"
+	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
 	config.Python.UsePyPI = true
 	// Annoyingly pip on OSX doesn't seem to work with this flag (you get the dreaded
