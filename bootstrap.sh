@@ -8,9 +8,9 @@ function notice {
 function warn {
     >&2 echo -e "\033[33m$1\033[0m"
 }
-function error {
-    >&2 echo -e "\033[31m$1\033[0m"
-}
+
+# PLZ_ARGS can be set to pass arguments to all plz invocations in this script.
+PLZ_ARGS="${PLZ_ARGS:-}"
 
 # Fetch the Go dependencies manually
 notice "Installing Go dependencies..."
@@ -39,10 +39,10 @@ go run src/parse/asp/main/compiler.go -o plz-out/tmp/src/parse/rules src/parse/r
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
-go run -tags bootstrap src/please.go build //src:please --log_file plz-out/log/bootstrap_build.log
+go run -tags bootstrap src/please.go $PLZ_ARGS build //src:please --log_file plz-out/log/bootstrap_build.log
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
-plz-out/bin/src/please build //package:installed_files --log_file plz-out/log/tools_build.log
+plz-out/bin/src/please $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
@@ -103,7 +103,7 @@ if [ ! -d "/usr/include/google/protobuf" ]; then
     EXCLUDES="${EXCLUDES} --exclude=proto"
 fi
 
-plz-out/bin/src/please test ... $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 $@
+plz-out/bin/src/please $PLZ_ARGS test ... $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 $@
 
 # Lint needs python3.
 if hash python3 2>/dev/null ; then

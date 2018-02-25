@@ -4,11 +4,13 @@ jobs:
      working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu:latest
+     environment:
+       PLZ_ARGS: "-p"
      steps:
        - checkout
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh -p --exclude no_circleci --test_results_file plz-out/results/test_results.xml
+           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
        - store_test_results:
            path: plz-out/results/test_results.xml
        - run:
@@ -17,7 +19,7 @@ jobs:
        - run:
            name: Package
            command: |
-             ./plz-out/bin/src/please build -p //package:all --exclude asc &&
+             ./plz-out/bin/src/please build //package:all --exclude asc &&
              mkdir /tmp/artifacts &&
              mv plz-out/gen/package/*.deb plz-out/gen/package/*.tar.gz /tmp/artifacts
        - store_artifacts:
@@ -26,6 +28,8 @@ jobs:
    build-darwin:
       macos:
         xcode: "9.0"
+      environment:
+        PLZ_ARGS: "-p"
       steps:
        - checkout
        - run:
@@ -33,13 +37,13 @@ jobs:
            command: brew install go python3 pypy unittest-cpp nasm pkg-config
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh -p --exclude no_circleci --test_results_file plz-out/results/test_results.xml
+           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
        - store_test_results:
            path: plz-out/results/test_results.xml
        - run:
            name: Package
            command: |
-             ./plz-out/bin/src/please build -p //package:all --exclude asc --exclude deb &&
+             ./plz-out/bin/src/please build //package:all --exclude asc --exclude deb &&
              mkdir /tmp/artifacts &&
              mv plz-out/gen/package/*.tar.gz /tmp/artifacts
        - store_artifacts:
