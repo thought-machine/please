@@ -517,6 +517,10 @@ def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list
            install:list=None, revision:str=None, strip:list=None):
     """Defines a dependency on a third-party Go library.
 
+    Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
+    You will need to add those as separate rules; `go list -f '{{.Deps}}' <package>` can be
+    useful to discover what they should be.
+
     Args:
       name (str): Name of the rule
       get (str): Target to get (eg. "github.com/gorilla/mux")
@@ -533,60 +537,38 @@ def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list
                       not for other version control systems.
       strip (list): List of paths to strip from the installed target.
     """
-    post_build = None
     if binary and outs and len(outs) != 1:
         raise ValueError(name + ': Binary rules can only have a single output')
     getroot = get[:-4] if get.endswith('/...') else get
     subdir = 'src/' + getroot
     if not outs:
-        outs = [('bin/' + name) if binary else ('src/' + getroot)]
-        if not binary:
-            post_build = _extra_outs(getroot)
+        if binary:
+            outs = ['bin/' + name]
+        else:
+            outs = {
+                'src': ['src/' + getroot],
+                'pkg': ['pkg/%s_%s/%s' % (CONFIG.OS, CONFIG.ARCH, getroot)],
+            }
     cmd = [
-        # the TMP_DIR contains all the compiled dependencies already. Later when
-        # we go install, it is difficult to seperate its outputs from the
-        # deps outputs, hence why we capture them here in advance
-        'export existing="$(find $TMP_DIR -name \"*.a\")"',
-
-        # go_get dependencies could be in different paths, make sure they are
-        # all available in the GOPATH by detecting their pkg/ folder and using its parent
-        'export GOPATH="$TMP_DIR"',
-        # loop done like this because the GOPATH export should not be in a SubShell
-        'while IFS= read -r dep_dir; do '
-        'if [ -n "$dep_dir" ]; then export GOPATH="${dep_dir}:${GOPATH}" ; fi ; done '
-        '< <(echo "$existing" | sed -e \'s|pkg/.*||g\' | sort -u)',
-
-        'export INSTALL_DIR=$(mktemp -d ${TMP_DIR}/tmp.XXXXX)',
-        'export GOPATH="$INSTALL_DIR:$GOPATH"',
-
-        'cd $INSTALL_DIR',
+        'rm -rf src pkg',
+        'export GOPATH="$TMP_DIR" DEST="%s"' % subdir,
         '$TOOL get -d ' + get,
     ]
     if revision:
         # Annoyingly -C does not work on git checkout :(
-        cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
+        cmd.append('(cd $DEST && git checkout -q %s)' % revision)
     if patch:
-        cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$(location %s)' % (subdir, patch))
-    cmd.append('$TOOL install -gcflags "-trimpath $INSTALL_DIR" ' + ' '.join([get] + (install or [])))
-    # Remove anything that was there already.
-    cmd.extend([
-        # go_get built dependencies could be in different dirs so we strip the prefix
-        # leading up to `/pkg/`. These have been cached in the "$INSTALL_DIR/pkg/.."
-        # during the `go install`. So clean them up from this target's outputs
-        'echo "$existing" | while IFS= read -r pathname; do '
-        'if [ -n "$pathname" ]; then rm -f "$INSTALL_DIR/pkg/${pathname#*/pkg/}" ; fi ; done',
-        'cd $TMP_DIR',
-        # delete all other dirs with deps. Only src,pkg and maybe bin will remain
-        'ls | (grep -v $(basename $INSTALL_DIR) || true) | xargs rm -rf',
-        'mv $INSTALL_DIR/* $TMP_DIR/'
-    ])
+        cmd.append('patch -s -d $DEST -p1 < ${TMP_DIR}/$SRCS')
+    cmd.append('$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join([get] + (install or [])))
     if not binary:
-        cmd.extend([
+        cmd += [
             'find . -name .git | xargs rm -rf',
-            'find pkg -name "*.a" | sort',
-        ])
+            # Outputs are created one directory down from where we want them.
+            # For most it doesn't matter but the top-level one will get lost.
+            'if [ -f ${OUTS_PKG}.a ]; then mkdir -p $OUTS_PKG && mv ${OUTS_PKG}.a $OUTS_PKG; fi',
+        ]
     if strip:
-        cmd.extend(['rm -rf %s/%s' % (subdir, s) for s in strip])
+        cmd += ['rm -rf %s/%s' % (subdir, s) for s in strip]
     build_rule(
         name=name,
         srcs=[patch] if patch else [],
@@ -600,26 +582,10 @@ def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list
         binary=binary,
         requires=['go'],
         test_only=test_only,
-        post_build=post_build,
         labels=['go_get:%s@%s' % (get, revision) if revision else 'go_get:%s' % get],
         sandbox=False,
         needs_transitive_deps=True,
     )
-
-
-def _extra_outs(get):
-    """Attaches extra outputs to go_get rules."""
-    def _inner(name, output):
-        last = '<>'
-        for archive in output:
-            add_out(name, archive)
-            before, _, after = archive[6:-2].partition('/')
-            subpath = after or before
-            if ((not subpath.startswith(get)) and (not subpath.startswith(last)) and
-                (not get.startswith(subpath)) and (not last.startswith(subpath))):
-                    add_out(name, 'src/' + subpath)
-            last = subpath
-    return _inner
 
 
 def _replace_test_package(name, output, static):
