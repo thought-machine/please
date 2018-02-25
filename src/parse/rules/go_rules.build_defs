@@ -512,19 +512,24 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
     )
 
 
-def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list=None,
+def go_get(name:str, get:str, deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
-           install:list=None, revision:str=None, strip:list=None):
+           install:list=None, revision:str=None, strip:list=None, hashes:list=None):
     """Defines a dependency on a third-party Go library.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
     You will need to add those as separate rules; `go list -f '{{.Deps}}' <package>` can be
     useful to discover what they should be.
 
+    Note also that while a single go_get is sufficient to compile all parts of a library,
+    one may also want separate ones for a binary. Since two rules can't both output the same
+    source files (and you only want to download them once anyway) you should handle that by
+    marking the non-binary rule as a dependency of the binary one - if you don't there may
+    be warnings issued about conflicting output files.
+
     Args:
       name (str): Name of the rule
       get (str): Target to get (eg. "github.com/gorilla/mux")
-      outs (list): Output files from the rule. Default autodetects.
       deps (list): Dependencies
       exported_deps (list): Dependencies to make available to anything using this rule.
       visibility (list): Visibility specification
@@ -536,55 +541,83 @@ def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list
       revision (str): Git hash to check out before building. Only works for git at present,
                       not for other version control systems.
       strip (list): List of paths to strip from the installed target.
+      hashes (list): List of hashes to verify the downloaded sources against.
     """
-    if binary and outs and len(outs) != 1:
-        raise ValueError(name + ': Binary rules can only have a single output')
+    if hashes and not revision:
+        log.warning("You shouldn't specify hashes on go_get without specifying revision as well")
+    labels = ['go_get:%s@%s' % (get, revision) if revision else 'go_get:%s' % get]
     getroot = get[:-4] if get.endswith('/...') else get
     subdir = 'src/' + getroot
-    if not outs:
-        if binary:
-            outs = ['bin/' + name]
-        else:
-            outs = {
-                'src': ['src/' + getroot],
-                'pkg': ['pkg/%s_%s/%s' % (CONFIG.OS, CONFIG.ARCH, getroot)],
-            }
-    cmd = [
-        'rm -rf src pkg',
-        'export GOPATH="$TMP_DIR" DEST="%s"' % subdir,
-        '$TOOL get -d ' + get,
-    ]
-    if revision:
-        # Annoyingly -C does not work on git checkout :(
-        cmd.append('(cd $DEST && git checkout -q %s)' % revision)
-    if patch:
-        cmd.append('patch -s -d $DEST -p1 < ${TMP_DIR}/$SRCS')
-    cmd.append('$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join([get] + (install or [])))
-    if not binary:
-        cmd += [
-            'find . -name .git | xargs rm -rf',
-            # Outputs are created one directory down from where we want them.
-            # For most it doesn't matter but the top-level one will get lost.
-            'if [ -f ${OUTS_PKG}.a ]; then mkdir -p $OUTS_PKG && mv ${OUTS_PKG}.a $OUTS_PKG; fi',
+
+    if get.startswith('github.com') and revision and get.count('/') >= 2:
+        # Optimisation for github, which lets us download zipfiles at a particular sha instead of
+        # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
+        parts = get.split('/')
+        repo = '/'.join(parts[:3])
+        cmd = [
+            'rm -rf src/' + repo,
+            'curl -fsSLo github.zip https://%s/archive/%s.zip' % (repo, revision),
+            'unzip -qq github.zip',
+            'mv %s* src/%s' % (parts[2], repo),
         ]
+    else:
+        cmd = [
+            'rm -rf src pkg',
+            'export GOPATH="$TMP_DIR"',
+            '$TOOL get -d ' + get,
+        ]
+        if revision:
+            # Annoyingly -C does not work on git checkout :(
+            cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
+        cmd.append('find . -name .git | xargs rm -rf')
+    if patch:
+        cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$SRCS' % subdir)
     if strip:
         cmd += ['rm -rf %s/%s' % (subdir, s) for s in strip]
+    # This is an awkward case, as noted above one may want to build a binary from an existing library
+    # so we have to special case here to allow them both to use the same source download.
+    get_rule = None if binary and deps else build_rule(
+        name = name,
+        tag = 'get',
+        srcs = [patch] if patch else [],
+        outs = [subdir],
+        tools = [CONFIG.GO_TOOL],
+        visibility = visibility,
+        building_description = 'Fetching...',
+        cmd = ' && '.join(cmd),
+        requires = ['go'],
+        test_only = test_only,
+        labels = labels,
+        sandbox = False,
+    )
+
+    # Now compile it in a separate step.
+    cmd = [
+        'export GOPATH="$TMP_DIR:$TMP_DIR/$PKG"',
+        '$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join([get] + (install or [])),
+        # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
+        'rm -rf bin' if binary else 'rm -rf pkg',
+        'mv $PKG/bin .' if binary else 'mv $PKG/pkg .',
+    ]
+    if not binary:
+        # Outputs are created one directory down from where we want them.
+        # For most it doesn't matter but the top-level one will get lost.
+        cmd.append(' if [ -f ${OUTS}.a ]; then mkdir -p $OUTS && mv ${OUTS}.a $OUTS; fi')
     build_rule(
-        name=name,
-        srcs=[patch] if patch else [],
-        outs=outs,
-        deps=deps,
-        exported_deps=exported_deps,
-        tools=[CONFIG.GO_TOOL],
-        visibility=visibility,
-        building_description='Fetching...',
-        cmd=' && '.join(cmd),
-        binary=binary,
-        requires=['go'],
-        test_only=test_only,
-        labels=['go_get:%s@%s' % (get, revision) if revision else 'go_get:%s' % get],
-        sandbox=False,
-        needs_transitive_deps=True,
+        name = name,
+        outs = [('bin/' + name) if binary else ('pkg/%s_%s/%s' % (CONFIG.OS, CONFIG.ARCH, getroot))],
+        deps = deps + [get_rule],
+        exported_deps = exported_deps,
+        tools = [CONFIG.GO_TOOL],
+        visibility = visibility,
+        building_description = 'Compiling...',
+        cmd = ' && '.join(cmd),
+        binary = binary,
+        requires = ['go'],
+        test_only = test_only,
+        labels = labels,
+        sandbox = False,
+        needs_transitive_deps = True,
     )
 
 

@@ -44,6 +44,7 @@ go_get(
     binary = True,
     get = 'github.com/kevinburke/go-bindata/...',
     revision = '46eb4c183bfc1ebb527d9d19bcded39476302eb8',
+    strip = ['testdata'],
 )
 
 go_get(
@@ -133,9 +134,6 @@ go_get(
     name = 'protobuf',
     get = 'github.com/golang/protobuf/...',
     revision = '130e6b02ab059e7b717a096f397c5b60111cae74',
-    strip = [
-        'protoc-gen-go',  # avoids conflict with :protoc-gen-go binary.
-    ],
 )
 
 go_get(
