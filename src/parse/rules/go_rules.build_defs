@@ -537,8 +537,10 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
       patch (str): Patch file to apply
       binary (bool): True if the output of the rule is a binary.
       test_only (bool): If true this rule will only be visible to tests.
-      install (list): Allows specifying extra packages to install. Convenient in some cases where we
-                      want to go get something with an extra subpackage.
+      install (list): Allows specifying the exact list of packages to install. If this is not passed,
+                      the package passed to 'get' is installed. If you pass this for subpackages, you
+                      will need to explicitly add an empty string to the list if you want to install
+                      the root package from this repo.
       revision (str): Git hash to check out before building. Only works for git at present,
                       not for other version control systems.
       strip (list): List of paths to strip from the installed target.
@@ -592,6 +594,7 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
         requires = ['go'],
         test_only = test_only,
         labels = labels,
+        hashes = hashes,
         sandbox = False,
     )
 

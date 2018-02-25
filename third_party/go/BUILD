@@ -299,9 +299,9 @@ go_get(
     name = 'grpc-middleware',
     get = 'github.com/grpc-ecosystem/go-grpc-middleware',
     install = [
-        'github.com/grpc-ecosystem/go-grpc-middleware/retry',
-        'github.com/grpc-ecosystem/go-grpc-middleware/util/metautils',
-        'github.com/grpc-ecosystem/go-grpc-middleware/util/backoffutils',
+        'retry',
+        'util/metautils',
+        'util/backoffutils',
     ],
     revision = 'fa8fef87dcecac0bda02d36abb3c790ab9e0030b',
     deps = [
