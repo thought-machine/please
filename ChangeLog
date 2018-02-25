@@ -6,6 +6,9 @@ Version 12.0.0
       The still-unnamed BUILD language is now a much tighter subset of Python, which
       will hopefully not present too many issues unless one is doing particularly fiddly
       things in BUILD files.
+    * Go rules now filter their sources via build tags (including implicit ones derived from
+      filenames) as `go build` would. This can be suppressed by setting `filter_srcs = False`
+      if the old behaviour is preferred.
     * The default Python interpreter is now python3. It can be set to python in the
       .plzconfig if one prefers the old behaviour.
 
