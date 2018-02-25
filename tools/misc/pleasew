@@ -65,41 +65,5 @@ for x in `ls "$DIR"`; do
     ln -sf "${DIR}/${x}" "$LOCATION"
 done
 ln -sf "${DIR}/please" "${LOCATION}/plz"
-
-# Check if they've got any parser engines available.
-if [ -f "/usr/lib/libpypy-c.so" ] || [ -f "/usr/local/lib/libpypy-c.so" ]; then
-    echo -e "${GREEN}Found libpypy for parser engine${RESET}"
-    exec "$TARGET" $@
-fi
-echo -e "${YELLOW}PyPy not found, will check cpython...${RESET}"
-
-# Not worth trying to figure out where libpython might be.
-if ! hash python 2>/dev/null ; then
-    echo -e "${RED}Can't find python, you'll need either Python or PyPy installed for the parser.${RESET}"
-    exit 1
-fi
-
-set +e
-python -c 'import cffi' 2> /dev/null
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}Found cpython and cffi for parser engine${RESET}"
-    exec "$TARGET" $@
-fi
-
-echo -e "${RED}cffi not installed; you will need to install it: sudo pip install 'cffi>=1.5.0'${RESET}"
-if ! hash pip 2>/dev/null ; then
-    echo -e "${RED}pip doesn't seem to be installed${RESET}"
-    exit 1
-fi
-read -p "${YELLOW}Do you want to install it now? [y/N] ${RESET}" -n 1 -r
-echo -e
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo -e "${RED}OK, stopping.${RESET}"
-    exit 1
-fi
-if [ `sudo pip install 'cffi>=1.5.0'` ]; then
-    echo -e "${RED}pip failed${RESET}"
-    exit 1
-fi
 echo -e "${GREEN}Should be good to go now, running plz...${RESET}"
 exec "$TARGET" $@
