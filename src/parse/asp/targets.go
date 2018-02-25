@@ -224,8 +224,8 @@ func addStrings(s *scope, name string, obj pyObject, f func(string)) {
 		s.Assert(ok, "Argument %s must be a list, not %s", name, obj.Type())
 		for _, li := range l {
 			str, ok := li.(pyString)
-			s.Assert(ok, "%s must be strings", name)
-			if str != "" {
+			s.Assert(ok || li == None, "%s must be strings", name)
+			if str != "" && li != None {
 				f(string(str))
 			}
 		}
