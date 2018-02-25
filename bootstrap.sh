@@ -35,7 +35,7 @@ rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_
 notice "Compiling built-in rules..."
 go run src/parse/asp/main/compiler.go -o plz-out/tmp/src/parse/rules src/parse/rules/*.build_defs
 # Embed them into Go
-bin/go-bindata -o src/parse/rules/builtin_data.bindata.go -pkg rules -prefix plz-out/tmp/src/parse/rules plz-out/tmp/src/parse/rules
+.bootstrap/bin/go-bindata -o src/parse/rules/builtin_data.bindata.go -pkg rules -prefix plz-out/tmp/src/parse/rules plz-out/tmp/src/parse/rules
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
