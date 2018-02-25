@@ -475,7 +475,8 @@ var stripFormatting = regexp.MustCompile("\\$\\{[^\\}]+\\}")
 // around ANSI formatting codes.
 func printf(format string, args ...interface{}) {
 	if "${WHITE}"[0] == '$' || !cli.StdErrIsATerminal {
-		msg := stripFormatting.ReplaceAllString(fmt.Sprintf(format, args...), "")
+		msg := strings.Replace(fmt.Sprintf(format, args...), "${ERASE_AFTER}", "\x1b[K", -1)
+		msg = stripFormatting.ReplaceAllString(msg, "")
 		fmt.Fprint(os.Stderr, cli.StripAnsi.ReplaceAllString(msg, ""))
 	} else {
 		fmt.Fprintf(os.Stderr, format, args...)

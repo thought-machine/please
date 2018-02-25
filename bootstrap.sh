@@ -39,10 +39,10 @@ bin/go-bindata -o src/parse/rules/builtin_data.bindata.go -pkg rules -prefix plz
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
-go run -tags bootstrap src/please.go --plain_output build //src:please --log_file plz-out/log/bootstrap_build.log
+go run -tags bootstrap src/please.go build //src:please --log_file plz-out/log/bootstrap_build.log
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
-plz-out/bin/src/please --plain_output build //package:installed_files --log_file plz-out/log/tools_build.log
+plz-out/bin/src/please build //package:installed_files --log_file plz-out/log/tools_build.log
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
