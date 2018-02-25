@@ -5,8 +5,8 @@ go_library(
         '//src/build',
         '//src/core',
         '//src/metrics',
-        '//third_party/go:cover',
         '//third_party/go:logging',
+        '//third_party/go:tools',
     ],
     visibility = ['PUBLIC'],
 )

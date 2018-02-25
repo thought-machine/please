@@ -13,12 +13,6 @@ go_get(
 )
 
 go_get(
-    name = 'cover',
-    get = 'golang.org/x/tools/cover',
-    revision = 'c0008c5889c0d5091cdfefd2bfb08bff96527879',
-)
-
-go_get(
     name = 'warnings',
     get = 'gopkg.in/warnings.v0',
     revision = 'v0.1.2',
@@ -28,9 +22,10 @@ go_get(
     name = 'gcfg',
     get = 'gopkg.in/gcfg.v1',
     install = [
-        'gopkg.in/gcfg.v1/scanner',
-        'gopkg.in/gcfg.v1/token',
-        'gopkg.in/gcfg.v1/types',
+        '',
+        'scanner',
+        'token',
+        'types',
     ],
     patch = 'gcfg_dynamic_fields.patch',
     revision = '27e4946190b4a327b539185f2b5b1f7c84730728',
@@ -89,6 +84,18 @@ go_get(
     name = 'text',
     get = 'golang.org/x/text/...',
     revision = '4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1',
+    deps = [
+        ':tools',
+    ],
+)
+
+go_get(
+    name = 'tools',
+    get = 'golang.org/x/tools',
+    install = [
+        'cover',
+    ],
+    revision = '2ae76fd1560b622911f444c1e66b70a857e1de67',
 )
 
 go_get(
@@ -187,6 +194,7 @@ go_get(
     binary = True,
     get = 'golang.org/x/tools/cmd/stringer',
     revision = 'f8ecfdb6b66ec67ca930b39806519a2b72d1eaca',
+    deps = [':tools'],
 )
 
 go_get(

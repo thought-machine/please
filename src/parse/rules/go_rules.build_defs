@@ -512,7 +512,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
     )
 
 
-def go_get(name:str, get:str, deps:list=[], exported_deps:list=None,
+def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
            install:list=None, revision:str=None, strip:list=None, hashes:list=None):
     """Defines a dependency on a third-party Go library.
@@ -530,6 +530,7 @@ def go_get(name:str, get:str, deps:list=[], exported_deps:list=None,
     Args:
       name (str): Name of the rule
       get (str): Target to get (eg. "github.com/gorilla/mux")
+      repo (str): Location of a Git repository to fetch from.
       deps (list): Dependencies
       exported_deps (list): Dependencies to make available to anything using this rule.
       visibility (list): Visibility specification
@@ -549,23 +550,26 @@ def go_get(name:str, get:str, deps:list=[], exported_deps:list=None,
     getroot = get[:-4] if get.endswith('/...') else get
     subdir = 'src/' + getroot
 
+    # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
+    # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
     if get.startswith('github.com') and revision and get.count('/') >= 2:
-        # Optimisation for github, which lets us download zipfiles at a particular sha instead of
-        # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
-        parts = get.split('/')
-        repo = '/'.join(parts[:3])
-        cmd = [
-            'rm -rf src/' + repo,
-            'curl -fsSLo github.zip https://%s/archive/%s.zip' % (repo, revision),
-            'unzip -qq github.zip',
-            'mv %s* src/%s' % (parts[2], repo),
-        ]
+        cmd = _go_github_repo_cmd(getroot, getroot, revision)
+    elif get.startswith('golang.org/x/') and revision and not repo:
+        # We know about these guys...
+        cmd = _go_github_repo_cmd(getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision)
     else:
-        cmd = [
-            'rm -rf src pkg',
-            'export GOPATH="$TMP_DIR"',
-            '$TOOL get -d ' + get,
-        ]
+        if repo:
+            # we've been told exactly where to get the source from.
+            cmd = ['git clone %s %s' % (repo, getroot)]
+        else:
+            # Ultimate fallback to go get.
+            # This has some more restrictions than the above (e.g. go get won't fetch a directory
+            # with no Go files in it, even if passed -d).
+            cmd = [
+                'rm -rf src pkg',
+                'export GOPATH="$TMP_DIR"',
+                '$TOOL get -d ' + get,
+            ]
         if revision:
             # Annoyingly -C does not work on git checkout :(
             cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
@@ -591,10 +595,15 @@ def go_get(name:str, get:str, deps:list=[], exported_deps:list=None,
         sandbox = False,
     )
 
+    if install:
+        install = [i if i.startswith(get) else (get + '/' + i) for i in install]
+    else:
+        install = [get]
+
     # Now compile it in a separate step.
     cmd = [
         'export GOPATH="$TMP_DIR:$TMP_DIR/$PKG"',
-        '$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join([get] + (install or [])),
+        '$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join(install),
         # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
         'rm -rf bin' if binary else 'rm -rf pkg',
         'mv $PKG/bin .' if binary else 'mv $PKG/pkg .',
@@ -619,6 +628,21 @@ def go_get(name:str, get:str, deps:list=[], exported_deps:list=None,
         sandbox = False,
         needs_transitive_deps = True,
     )
+
+
+def _go_github_repo_cmd(get, repo, revision):
+    """Returns a partial command to fetch a Go repo from Github."""
+    parts = get.split('/')
+    out = '/'.join(parts[:3])
+    if repo.count('/') > 2:
+        parts = repo.split('/')
+        repo = '/'.join(parts[:3])
+    return [
+        'rm -rf src/' + out,
+        'curl -fsSLo github.zip https://%s/archive/%s.zip' % (repo, revision),
+        'unzip -qq github.zip',
+        'mv %s* src/%s' % (parts[2], out),
+    ]
 
 
 def _replace_test_package(name, output, static):
