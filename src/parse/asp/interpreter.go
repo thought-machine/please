@@ -465,7 +465,7 @@ func (s *scope) interpretSliceExpression(obj pyObject, expr *Expression, def pyI
 	if expr == nil {
 		return def
 	}
-	return pyIndex(obj, s.interpretExpression(expr))
+	return pyIndex(obj, s.interpretExpression(expr), true)
 }
 
 func (s *scope) interpretIdent(obj pyObject, expr *IdentExpr) pyObject {

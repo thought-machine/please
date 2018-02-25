@@ -132,6 +132,7 @@ func TestSlicing(t *testing.T) {
 	assert.Equal(t, pyList{pyInt(2)}, s.Lookup("d"))
 	assert.Equal(t, pyInt(3), s.Lookup("e"))
 	assert.Equal(t, pyList{pyInt(1), pyInt(2)}, s.Lookup("f"))
+	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3)}, s.Lookup("g"))
 }
 
 func TestSorting(t *testing.T) {

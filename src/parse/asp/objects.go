@@ -88,13 +88,16 @@ func (b pyBool) String() string {
 type pyInt int
 
 // pyIndex converts an object that's being used as an index to an int.
-func pyIndex(obj, index pyObject) pyInt {
+func pyIndex(obj, index pyObject, slice bool) pyInt {
 	i, ok := index.(pyInt)
 	if !ok {
 		panic(obj.Type() + " indices must be integers, not " + index.Type())
 	} else if i < 0 {
 		i = pyInt(obj.Len()) + i // Go doesn't support negative indices
-	} else if int(i) >= obj.Len() {
+	} else if int(i) > obj.Len() {
+		if slice {
+			return pyInt(obj.Len())
+		}
 		panic(obj.Type() + " index out of range")
 	}
 	return i
@@ -205,7 +208,7 @@ func (s pyString) Operator(operator Operator, operand pyObject) pyObject {
 	case NotIn:
 		return newPyBool(!strings.Contains(string(s), string(s2)))
 	case Index:
-		return pyString(s[pyIndex(s, operand)])
+		return pyString(s[pyIndex(s, operand, false)])
 	}
 	panic("unknown operator")
 }
@@ -255,7 +258,7 @@ func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
 		}
 		return newPyBool(operator == NotIn)
 	case Index:
-		return l[pyIndex(l, operand)]
+		return l[pyIndex(l, operand, false)]
 	case LessThan:
 		// Needed for sorting.
 		l2, ok := operand.(pyList)
