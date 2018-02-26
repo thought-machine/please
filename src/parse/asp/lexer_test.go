@@ -76,6 +76,12 @@ func TestLexStringEscape(t *testing.T) {
 	assertToken(t, l.Next(), EOF, "", 1, 11, 11)
 }
 
+func TestLexStringEscape2(t *testing.T) {
+	l := newLexer(strings.NewReader(`'echo -n "import \( \";'`))
+	assertToken(t, l.Next(), String, `"echo -n "import \( ";"`, 1, 1, 1)
+	assertToken(t, l.Next(), EOF, "", 1, 25, 25)
+}
+
 func TestLexRawString(t *testing.T) {
 	l := newLexer(strings.NewReader(`x = r'\n\\'`))
 	assertToken(t, l.Next(), Ident, "x", 1, 1, 1)

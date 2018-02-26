@@ -290,8 +290,10 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw bool) Token
 			} else if c == '\n' && multiline {
 				l.line++
 				l.col = 0
-			} else {
+			} else if c == '\\' || c == '\'' || c == '"' {
 				s = append(s, c)
+			} else {
+				s = append(s, '\\', c)
 			}
 			escaped = false
 			continue
