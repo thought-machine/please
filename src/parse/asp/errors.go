@@ -113,7 +113,12 @@ func (stack *errorStack) stackTrace() string {
 	stack.equaliseLengths(lines)
 	stack.equaliseLengths(cols)
 	// Add final message & colours if appropriate
+	lastLine := 0
+	lastFile := ""
 	for i, frame := range stack.Stack {
+		if frame.Line == lastLine && frame.Filename == lastFile {
+			continue // Don't show the same line twice.
+		}
 		_, line, _ := stack.readLine(stack.Readers[i], frame.Line-1)
 		if line == "" {
 			line = "<source unavailable>"
@@ -127,6 +132,8 @@ func (stack *errorStack) stackTrace() string {
 		} else {
 			ret[i] = fmt.Sprintf("%s%s%s   %s", yellow, s, reset, line)
 		}
+		lastLine = frame.Line
+		lastFile = frame.Filename
 	}
 	msg := "Traceback:\n"
 	if cli.StdErrIsATerminal {

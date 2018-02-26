@@ -27,12 +27,7 @@
           <td>{{ .Name }}</td>
           <td>{{ if .Required }}yes{{ end }}</td>
           <td>{{ join .Types " or " }}</td>
-          <td>
-            {{- range $i, $comment := .Comment -}}
-            {{- if gt $i 0 }}<br/>{{ end -}}
-            {{- $comment -}}
-            {{- end -}}
-          </td>
+          <td>{{ .Comment }}</td>
         </tr>
       {{ end }}
       </tbody>

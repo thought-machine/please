@@ -24,7 +24,7 @@ func (r *rules) Named(name string) rule {
 
 type rule struct {
 	Args []struct {
-		Comment    []string `json:"comment"`
+		Comment    string   `json:"comment"`
 		Deprecated bool     `json:"deprecated"`
 		Name       string   `json:"name"`
 		Required   bool     `json:"required"`
