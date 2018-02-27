@@ -292,7 +292,7 @@ func fileHash(h *hash.Hash, filename string) error {
 // Note that we have to hash on the declared fields, we obviously can't hash pointers etc.
 // incrementality_test will warn if new fields are added to the struct but not here.
 func RuleHash(target *core.BuildTarget, runtime, postBuild bool) []byte {
-	if runtime || (postBuild && target.PostBuildFunction != 0) {
+	if runtime || (postBuild && target.PostBuildFunction != nil) {
 		return ruleHash(target, runtime)
 	}
 	// Non-post-build hashes get stored on the target itself.
@@ -391,21 +391,12 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 		h.Write([]byte(lang))
 		h.Write([]byte(target.Provides[lang].String()))
 	}
-	if target.NewPreBuildFunction == nil {
-		// Obviously we don't include the code pointer because it's a pointer.
-		h.Write(target.PreBuildHash)
-	} else {
-		// We don't need to hash the function itself because they get rerun every time -
-		// we just need to check whether one is added or removed, which is good since it's
-		// nigh impossible to really verify whether it's changed or not (since it may call
-		// any amount of other stuff).
-		h.Write(boolTrueHashValue)
-	}
-	if target.NewPostBuildFunction == nil {
-		h.Write(target.PostBuildHash)
-	} else {
-		h.Write(boolTrueHashValue)
-	}
+	// We don't need to hash the functions themselves because they get rerun every time -
+	// we just need to check whether one is added or removed, which is good since it's
+	// nigh impossible to really verify whether it's changed or not (since it may call
+	// any amount of other stuff).
+	hashBool(h, target.PreBuildFunction != nil)
+	hashBool(h, target.PostBuildFunction != nil)
 	return h.Sum(nil)
 }
 

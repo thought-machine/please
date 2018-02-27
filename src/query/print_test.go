@@ -97,9 +97,14 @@ func TestTestOutput(t *testing.T) {
 	assert.Equal(t, expected, s)
 }
 
+type postBuildFunction struct{}
+
+func (f postBuildFunction) Call(target *core.BuildTarget, output string) error { return nil }
+func (f postBuildFunction) String() string                                     { return "<func ref>" }
+
 func TestPostBuildOutput(t *testing.T) {
 	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_post_build_output", ""))
-	target.PostBuildFunction = 1
+	target.PostBuildFunction = postBuildFunction{}
 	target.AddCommand("opt", "/bin/true")
 	target.AddCommand("dbg", "/bin/false")
 	s := testPrint(target)
@@ -109,7 +114,7 @@ func TestPostBuildOutput(t *testing.T) {
           'dbg': '/bin/false',
           'opt': '/bin/true',
       },
-      post_build = <python ref>,
+      post_build = '<func ref>',
   )
 
 `

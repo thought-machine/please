@@ -128,17 +128,9 @@ type BuildTarget struct {
 	// if changed locally will still force a rebuild. They're not copied into the source directory
 	// (or indeed anywhere by plz).
 	Secrets []string
-	// Python functions to call before / after target is built. Allows deferred manipulation of the
-	// build graph.
-	PreBuildFunction  uintptr `name:"pre_build"`
-	PostBuildFunction uintptr `name:"post_build"`
-	// Hash of the function's bytecode. Used for incrementality.
-	// TODO(pebers): unify with RuleHash maybe? seems wasteful to store these separately.
-	PreBuildHash, PostBuildHash []byte `print:"false"`
-	// Replacements for the above.
-	// TODO(peterebden): Collapse these together once we no longer need to support the old model any more.
-	NewPreBuildFunction  PreBuildFunction  `print:"false"`
-	NewPostBuildFunction PostBuildFunction `print:"false"`
+	// BUILD language functions to call before / after target is built. Allows deferred manipulation of the build graph.
+	PreBuildFunction  PreBuildFunction  `name:"pre_build"`
+	PostBuildFunction PostBuildFunction `name:"post_build"`
 	// Languages this rule requires. These are an arbitrary set and the only meaning is that they
 	// correspond to entries in Provides; if rules match up then it allows choosing a specific
 	// dependency (consider eg. code generated from protobufs; this mechanism allows us to expose
@@ -166,12 +158,14 @@ type BuildTarget struct {
 
 // A PreBuildFunction is a type that allows hooking a pre-build callback.
 type PreBuildFunction interface {
+	fmt.Stringer
 	// Call calls this pre-build function
 	Call(target *BuildTarget) error
 }
 
 // A PostBuildFunction is a type that allows hooking a post-build callback.
 type PostBuildFunction interface {
+	fmt.Stringer
 	// Call calls this pre-build function with this target and its output.
 	Call(target *BuildTarget, output string) error
 }

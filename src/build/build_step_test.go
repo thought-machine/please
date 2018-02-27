@@ -88,12 +88,11 @@ func TestPreBuildFunction(t *testing.T) {
 	// Test modifying a command in the pre-build function.
 	state, target := newState("//package1:target6")
 	target.AddOutput("file6")
-	target.Command = ""                // Target now won't produce the needed output
-	target.PreBuildFunction = 12345678 // Needs to be nonzero so build knows to do something with it.
-	state.Parser.(*fakeParser).PreBuildFunctions[target] = func(target *core.BuildTarget, output string) error {
+	target.Command = "" // Target now won't produce the needed output
+	target.PreBuildFunction = preBuildFunction(func(target *core.BuildTarget) error {
 		target.Command = "echo 'wibble wibble wibble' > $OUT"
 		return nil
-	}
+	})
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
@@ -103,12 +102,11 @@ func TestPostBuildFunction(t *testing.T) {
 	// Test modifying a command in the post-build function.
 	state, target := newState("//package1:target7")
 	target.Command = "echo 'wibble wibble wibble' | tee file7"
-	target.PostBuildFunction = 12345678 // Again, needs to be nonzero.
-	state.Parser.(*fakeParser).PostBuildFunctions[target] = func(target *core.BuildTarget, output string) error {
+	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
 		target.AddOutput("file7")
 		assert.Equal(t, "wibble wibble wibble", output)
 		return nil
-	}
+	})
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
@@ -132,13 +130,12 @@ func TestPostBuildFunctionAndCache(t *testing.T) {
 	state, target := newState("//package1:target9")
 	target.AddOutput("file9")
 	target.Command = "echo 'wibble wibble wibble' | tee $OUT"
-	target.PostBuildFunction = 12345678
 	called := false
-	state.Parser.(*fakeParser).PostBuildFunctions[target] = func(target *core.BuildTarget, output string) error {
+	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
 		called = true
 		assert.Equal(t, "wibble wibble wibble", output)
 		return nil
-	}
+	})
 	state.Cache = cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
@@ -152,14 +149,13 @@ func TestPostBuildFunctionAndCache2(t *testing.T) {
 	state, target := newState("//package1:target10")
 	target.AddOutput("file10")
 	target.Command = "echo 'wibble wibble wibble' | tee $OUT"
-	target.PostBuildFunction = 12345678
 	called := false
-	state.Parser.(*fakeParser).PostBuildFunctions[target] = func(target *core.BuildTarget, output string) error {
+	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
 		assert.False(t, called, "Must only call post-build function once (issue #113)")
 		called = true
 		assert.Equal(t, "retrieved from cache", output) // comes from implementation below
 		return nil
-	}
+	})
 	state.Cache = cache
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
@@ -233,10 +229,7 @@ func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 	target.Command = fmt.Sprintf("echo 'output of %s' > $OUT", target.Label)
 	state.Graph.AddTarget(target)
-	state.Parser = &fakeParser{
-		PostBuildFunctions: buildFunctionMap{},
-		PreBuildFunctions:  buildFunctionMap{},
-	}
+	state.Parser = &fakeParser{}
 	return state, target
 }
 
@@ -282,11 +275,7 @@ func (*mockCache) Clean(target *core.BuildTarget) {}
 func (*mockCache) CleanAll()                      {}
 func (*mockCache) Shutdown()                      {}
 
-type buildFunctionMap map[*core.BuildTarget]func(*core.BuildTarget, string) error
-
 type fakeParser struct {
-	PostBuildFunctions buildFunctionMap
-	PreBuildFunctions  buildFunctionMap
 }
 
 func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
@@ -294,21 +283,25 @@ func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, fil
 }
 
 func (fake *fakeParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
-	if f, present := fake.PreBuildFunctions[target]; present {
-		return f(target, "")
-	}
-	return nil
+	return target.PreBuildFunction.Call(target)
 }
 
 func (fake *fakeParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
-	if f, present := fake.PostBuildFunctions[target]; present {
-		return f(target, output)
-	}
-	return nil
+	return target.PostBuildFunction.Call(target, output)
 }
 
 func (fake *fakeParser) UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
 }
+
+type preBuildFunction func(*core.BuildTarget) error
+type postBuildFunction func(*core.BuildTarget, string) error
+
+func (f preBuildFunction) Call(target *core.BuildTarget) error { return f(target) }
+func (f preBuildFunction) String() string                      { return "" }
+func (f postBuildFunction) Call(target *core.BuildTarget, output string) error {
+	return f(target, output)
+}
+func (f postBuildFunction) String() string { return "" }
 
 func TestMain(m *testing.M) {
 	cache = &mockCache{}

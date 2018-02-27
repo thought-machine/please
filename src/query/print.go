@@ -198,12 +198,11 @@ func (p *printer) genericPrint(v reflect.Value) (string, bool) {
 		return "True", v.Bool()
 	case reflect.Int, reflect.Int32:
 		return fmt.Sprintf("%d", v.Int()), v.Int() > 0
-	case reflect.Uintptr:
-		return "<python ref>", v.Uint() != 0
 	case reflect.Struct, reflect.Interface:
 		if stringer, ok := v.Interface().(fmt.Stringer); ok {
 			return p.quote(stringer.String()), true
 		}
+		return "", false
 	case reflect.Int64:
 		if v.Type().Name() == "Duration" {
 			secs := v.Interface().(time.Duration).Seconds()

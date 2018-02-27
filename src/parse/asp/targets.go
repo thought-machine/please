@@ -136,10 +136,10 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addProvides(s, "provides", args[29], t)
 	setContainerSettings(s, "container", args[19], t)
 	if f := callbackFunction(s, "pre_build", args[26], 1, "argument"); f != nil {
-		t.NewPreBuildFunction = &preBuildFunction{f: f, s: s}
+		t.PreBuildFunction = &preBuildFunction{f: f, s: s}
 	}
 	if f := callbackFunction(s, "post_build", args[27], 2, "arguments"); f != nil {
-		t.NewPostBuildFunction = &postBuildFunction{f: f, s: s}
+		t.PostBuildFunction = &postBuildFunction{f: f, s: s}
 	}
 }
 
@@ -327,6 +327,10 @@ func (f *preBuildFunction) Call(target *core.BuildTarget) error {
 	return annotateCallbackError(s, target, s.interpreter.interpretStatements(s, f.f.code))
 }
 
+func (f *preBuildFunction) String() string {
+	return f.f.String()
+}
+
 // A postBuildFunction implements the core.PostBuildFunction interface
 type postBuildFunction struct {
 	f *pyFunc
@@ -340,6 +344,10 @@ func (f *postBuildFunction) Call(target *core.BuildTarget, output string) error 
 	s.Set(f.f.args[0], pyString(target.Label.Name))
 	s.Set(f.f.args[1], fromStringList(strings.Split(strings.TrimSpace(output), "\n")))
 	return annotateCallbackError(s, target, s.interpreter.interpretStatements(s, f.f.code))
+}
+
+func (f *postBuildFunction) String() string {
+	return f.f.String()
 }
 
 // annotateCallbackError adds some information to an error on failure about where it was in the file.
