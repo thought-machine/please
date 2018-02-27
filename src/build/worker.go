@@ -116,6 +116,7 @@ func getOrStartWorker(config *core.Configuration, worker string) (*workerServer,
 	}
 	go w.sendRequests(stdin)
 	go w.readResponses(stdout)
+	go w.wait()
 	workerMap[worker] = w
 	return w, nil
 }
@@ -165,6 +166,23 @@ func (w *workerServer) readResponses(stdout io.Reader) {
 	}
 }
 
+// wait waits for the process to terminate. If it dies unexpectedly this handles various failures.
+func (w *workerServer) wait() {
+	if err := w.process.Wait(); err != nil && !w.closing {
+		log.Error("Worker process died unexpectedly: %s", err)
+		history := string(w.process.Stderr.(*stderrLogger).history)
+		w.responseMutex.Lock()
+		for label, ch := range w.responses {
+			ch <- &pb.BuildResponse{
+				Rule:     label,
+				Messages: []string{fmt.Sprintf("Worker failed: %s\n%s", err, history)},
+			}
+		}
+		w.responseMutex.Unlock()
+
+	}
+}
+
 func (w *workerServer) Error(msg string, args ...interface{}) {
 	if !w.closing {
 		log.Error(msg, args...)
@@ -173,7 +191,8 @@ func (w *workerServer) Error(msg string, args ...interface{}) {
 
 // stderrLogger is used to log any errors from our worker tools.
 type stderrLogger struct {
-	buffer []byte
+	buffer  []byte
+	history []byte
 	// suppress will silence any further logging messages when set.
 	suppress bool
 }
@@ -185,6 +204,7 @@ func (l *stderrLogger) Write(msg []byte) (int, error) {
 		if !l.suppress {
 			log.Error("Error from remote worker: %s", strings.TrimSpace(string(l.buffer)))
 		}
+		l.history = append(l.history, l.buffer...)
 		l.buffer = nil
 	}
 	return len(msg), nil
@@ -194,10 +214,8 @@ func (l *stderrLogger) Write(msg []byte) (int, error) {
 func StopWorkers() {
 	for name, worker := range workerMap {
 		log.Debug("Killing build worker %s", name)
-		worker.closing = true // suppress any error messages from worker
-		if l, ok := worker.process.Stderr.(*stderrLogger); ok {
-			l.suppress = true // Make sure we don't print anything as they die.
-		}
+		worker.closing = true                                 // suppress any error messages from worker
+		worker.process.Stderr.(*stderrLogger).suppress = true // Make sure we don't print anything as they die.
 		worker.process.Process.Kill()
 	}
 }
