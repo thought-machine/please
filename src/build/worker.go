@@ -29,6 +29,7 @@ type workerServer struct {
 	responses     map[string]chan *pb.BuildResponse
 	responseMutex sync.Mutex
 	process       *exec.Cmd
+	stderr        *stderrLogger
 	closing       bool
 }
 
@@ -105,7 +106,8 @@ func getOrStartWorker(config *core.Configuration, worker string) (*workerServer,
 	if err != nil {
 		return nil, err
 	}
-	cmd.Stderr = &stderrLogger{}
+	stderr := &stderrLogger{}
+	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
@@ -113,9 +115,11 @@ func getOrStartWorker(config *core.Configuration, worker string) (*workerServer,
 		requests:  make(chan *pb.BuildRequest),
 		responses: map[string]chan *pb.BuildResponse{},
 		process:   cmd,
+		stderr:    stderr,
 	}
 	go w.sendRequests(stdin)
 	go w.readResponses(stdout)
+	go w.wait()
 	workerMap[worker] = w
 	return w, nil
 }
@@ -165,6 +169,22 @@ func (w *workerServer) readResponses(stdout io.Reader) {
 	}
 }
 
+// wait waits for the process to terminate. If it dies unexpectedly this handles various failures.
+func (w *workerServer) wait() {
+	if err := w.process.Wait(); err != nil && !w.closing {
+		log.Error("Worker process died unexpectedly: %s", err)
+		w.responseMutex.Lock()
+		for label, ch := range w.responses {
+			ch <- &pb.BuildResponse{
+				Rule:     label,
+				Messages: []string{fmt.Sprintf("Worker failed: %s\n%s", err, string(w.stderr.History))},
+			}
+		}
+		w.responseMutex.Unlock()
+
+	}
+}
+
 func (w *workerServer) Error(msg string, args ...interface{}) {
 	if !w.closing {
 		log.Error(msg, args...)
@@ -173,18 +193,20 @@ func (w *workerServer) Error(msg string, args ...interface{}) {
 
 // stderrLogger is used to log any errors from our worker tools.
 type stderrLogger struct {
-	buffer []byte
+	buffer  []byte
+	History []byte
 	// suppress will silence any further logging messages when set.
-	suppress bool
+	Suppress bool
 }
 
 // Write implements the io.Writer interface
 func (l *stderrLogger) Write(msg []byte) (int, error) {
 	l.buffer = append(l.buffer, msg...)
 	if len(l.buffer) > 0 && l.buffer[len(l.buffer)-1] == '\n' {
-		if !l.suppress {
+		if !l.Suppress {
 			log.Error("Error from remote worker: %s", strings.TrimSpace(string(l.buffer)))
 		}
+		l.History = append(l.History, l.buffer...)
 		l.buffer = nil
 	}
 	return len(msg), nil
@@ -194,10 +216,8 @@ func (l *stderrLogger) Write(msg []byte) (int, error) {
 func StopWorkers() {
 	for name, worker := range workerMap {
 		log.Debug("Killing build worker %s", name)
-		worker.closing = true // suppress any error messages from worker
-		if l, ok := worker.process.Stderr.(*stderrLogger); ok {
-			l.suppress = true // Make sure we don't print anything as they die.
-		}
+		worker.closing = true         // suppress any error messages from worker
+		worker.stderr.Suppress = true // Make sure we don't print anything as they die.
 		worker.process.Process.Kill()
 	}
 }
