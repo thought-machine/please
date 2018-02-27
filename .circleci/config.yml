@@ -25,6 +25,23 @@ jobs:
        - store_artifacts:
            path: /tmp/artifacts
 
+   build-linux-alt:
+     working_directory: ~/please
+     docker:
+       - image: thoughtmachine/please_ubuntu_alt:latest
+     environment:
+       PLZ_ARGS: "-p"
+     steps:
+       - checkout
+       - run:
+           name: Bootstrap & Build
+           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
+       - store_test_results:
+           path: plz-out/results/test_results.xml
+       - run:
+           name: Lint
+           command: ./tools/misc/ci_lint.py
+
    build-darwin:
       macos:
         xcode: "9.0"
@@ -54,4 +71,5 @@ workflows:
   build-all:
     jobs:
       - build-linux
+      - build-linux-alt
       - build-darwin

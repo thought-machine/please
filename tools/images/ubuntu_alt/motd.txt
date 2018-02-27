@@ -1,5 +1,7 @@
-This is a prebuilt image based on Ubuntu Artful which contains
+This is a prebuilt image based on Ubuntu Bionic which contains
 everything you should need to build Please.
+Note that it's an alternative to the standard image so some
+minor issues may exist.
 
 Run the following to get started:
  git clone https://github.com/thought-machine/please.git
