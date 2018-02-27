@@ -14,7 +14,7 @@ import (
 )
 
 func looksLikeJUnitXMLTestResults(b []byte) bool {
-	return bytes.HasPrefix(b, []byte{'<', '?', 'x', 'm', 'l'})
+	return bytes.HasPrefix(b, []byte{'<', '?', 'x', 'm', 'l'}) || bytes.HasPrefix(b, []byte{'<', 't', 'e', 's', 't'})
 }
 
 func parseJUnitXMLTestResults(bytes []byte) (core.TestResults, error) {

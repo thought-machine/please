@@ -113,6 +113,7 @@ var opts struct {
 		TestResultsFile cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		ShowOutput      bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug           bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
+		Failed          bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -131,6 +132,7 @@ var opts struct {
 		CoverageResultsFile cli.Filepath `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
 		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
+		Failed              bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -336,8 +338,8 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"test": func() bool {
+		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
 		os.RemoveAll(string(opts.Test.TestResultsFile))
-		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args)
 		success, state := runBuild(targets, true, true)
 		test.WriteResultsToFileOrDie(state.Graph, string(opts.Test.TestResultsFile))
 		return success || opts.Test.FailingTestsOk
@@ -348,9 +350,9 @@ var buildFunctions = map[string]func() bool{
 		} else {
 			opts.BuildFlags.Config = "cover"
 		}
+		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
 		os.RemoveAll(string(opts.Cover.TestResultsFile))
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
-		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args)
 		success, state := runBuild(targets, true, true)
 		test.WriteResultsToFileOrDie(state.Graph, string(opts.Cover.TestResultsFile))
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
@@ -744,16 +746,22 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 // testTargets handles test targets which can be given in two formats; a list of targets or a single
 // target with a list of trailing arguments.
 // Alternatively they can be completely omitted in which case we test everything under the working dir.
-func testTargets(target core.BuildLabel, args []string) []core.BuildLabel {
-	if target.Name == "" {
+// One can also pass a 'failed' flag which runs the failed tests from last time.
+func testTargets(target core.BuildLabel, args []string, failed bool, resultsFile cli.Filepath) []core.BuildLabel {
+	if failed {
+		targets, args := test.LoadPreviousFailures(string(resultsFile))
+		// Have to reset these - it doesn't matter which gets which.
+		opts.Test.Args.Args = args
+		opts.Cover.Args.Args = nil
+		return targets
+	} else if target.Name == "" {
 		return core.InitialPackage()
 	} else if len(args) > 0 && core.LooksLikeABuildLabel(args[0]) {
 		opts.Cover.Args.Args = []string{}
 		opts.Test.Args.Args = []string{}
 		return append(core.ParseBuildLabels(args), target)
-	} else {
-		return []core.BuildLabel{target}
 	}
+	return []core.BuildLabel{target}
 }
 
 // readConfig sets various things up and reads the initial configuration.

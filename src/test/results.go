@@ -3,6 +3,7 @@
 package test
 
 import (
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,7 +13,7 @@ import (
 )
 
 func parseTestResults(target *core.BuildTarget, outputFile string, cached bool) (core.TestResults, error) {
-	results, err := parseTestResultsDir(target, outputFile)
+	results, err := parseTestResultsDir(outputFile)
 	results.Cached = cached
 	target.Results.Aggregate(&results)
 	// Ensure that the target has a failure if we encountered an error
@@ -28,7 +29,7 @@ func parseTestResults(target *core.BuildTarget, outputFile string, cached bool) 
 	return results, err
 }
 
-func parseTestResultsImpl(target *core.BuildTarget, outputFile string) (core.TestResults, error) {
+func parseTestResultsImpl(outputFile string) (core.TestResults, error) {
 	bytes, err := ioutil.ReadFile(outputFile)
 	if err != nil {
 		return core.TestResults{}, err
@@ -42,7 +43,7 @@ func parseTestResultsImpl(target *core.BuildTarget, outputFile string) (core.Tes
 	}
 }
 
-func parseTestResultsDir(target *core.BuildTarget, outputDir string) (core.TestResults, error) {
+func parseTestResultsDir(outputDir string) (core.TestResults, error) {
 	results := core.TestResults{}
 	if !core.PathExists(outputDir) {
 		return results, fmt.Errorf("Didn't find any test results in %s", outputDir)
@@ -51,7 +52,7 @@ func parseTestResultsDir(target *core.BuildTarget, outputDir string) (core.TestR
 		if err != nil {
 			return err
 		} else if !info.IsDir() {
-			fileResults, err := parseTestResultsImpl(target, path)
+			fileResults, err := parseTestResultsImpl(path)
 			if err != nil {
 				return fmt.Errorf("Error parsing %s: %s", path, err)
 			}
@@ -60,4 +61,33 @@ func parseTestResultsDir(target *core.BuildTarget, outputDir string) (core.TestR
 		return nil
 	})
 	return results, err
+}
+
+// LoadPreviousFailures loads any failed tests from the given results file.
+// It returns the set of targets that should be run and any arguments for them.
+func LoadPreviousFailures(filename string) ([]core.BuildLabel, []string) {
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("Failed to read previous test results: %s", err)
+	}
+	defer f.Close()
+	// We have to read directly since the TestResults struct doesn't have all the information
+	// we'll need (e.g. it discards test suite names).
+	junit := jUnitXMLTestResults{}
+	if err := xml.NewDecoder(f).Decode(&junit); err != nil {
+		log.Fatalf("Failed to read previous test results: %s", err)
+	}
+	labels := []core.BuildLabel{}
+	args := []string{}
+	for _, suite := range junit.TestSuites {
+		if suite.Failures > 0 {
+			labels = append(labels, core.ParseBuildLabel(suite.Name, "")) // These always have complete labels
+			for _, c := range suite.TestCases {
+				if c.Failure != nil || c.Error != nil {
+					args = append(args, c.Name)
+				}
+			}
+		}
+	}
+	return labels, args
 }
