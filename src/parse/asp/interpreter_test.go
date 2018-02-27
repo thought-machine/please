@@ -159,6 +159,12 @@ func TestPrecedence(t *testing.T) {
 	assert.EqualValues(t, pyList{pyString("a.go")}, s.Lookup("file_srcs"))
 }
 
+func TestPrecedence2(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/precedence2.build")
+	require.NoError(t, err)
+	assert.True(t, s.Lookup("y").IsTruthy())
+}
+
 func TestZip(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/zip.build")
 	require.NoError(t, err)

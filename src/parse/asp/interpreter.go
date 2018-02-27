@@ -362,27 +362,27 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 			obj = pyInt(-int(i))
 		}
 	}
-	if expr.Op != nil {
-		switch expr.Op.Op {
+	for _, op := range expr.Op {
+		switch op.Op {
 		case And, Or:
 			// Careful here to mimic lazy-evaluation semantics (import for `x = x or []` etc)
-			if obj.IsTruthy() == (expr.Op.Op == And) {
-				obj = s.interpretExpression(expr.Op.Expr)
+			if obj.IsTruthy() == (op.Op == And) {
+				obj = s.interpretExpression(op.Expr)
 			}
 		case Equal:
-			obj = newPyBool(reflect.DeepEqual(obj, s.interpretExpression(expr.Op.Expr)))
+			obj = newPyBool(reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
 		case NotEqual:
-			obj = newPyBool(!reflect.DeepEqual(obj, s.interpretExpression(expr.Op.Expr)))
+			obj = newPyBool(!reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
 		case Is:
 			// Is only works on boolean types.
 			b1, isBool1 := obj.(pyBool)
-			b2, isBool2 := s.interpretExpression(expr.Op.Expr).(pyBool)
+			b2, isBool2 := s.interpretExpression(op.Expr).(pyBool)
 			obj = newPyBool(isBool1 && isBool2 && b1 == b2)
 		case In, NotIn:
 			// the implementation of in is defined by the right-hand side, not the left.
-			obj = s.interpretExpression(expr.Op.Expr).Operator(expr.Op.Op, obj)
+			obj = s.interpretExpression(op.Expr).Operator(op.Op, obj)
 		default:
-			obj = obj.Operator(expr.Op.Op, s.interpretExpression(expr.Op.Expr))
+			obj = obj.Operator(op.Op, s.interpretExpression(op.Expr))
 		}
 	}
 	return obj

@@ -320,9 +320,15 @@ func (p *parser) parseUnconditionalExpression() *Expression {
 	}
 	if op, present := operators[tok.Value]; present {
 		p.l.Next()
-		p.initField(&e.Op)
-		e.Op.Op = op
-		e.Op.Expr = p.parseUnconditionalExpression()
+		o := &e.Op[p.newElement(&e.Op)]
+		o.Op = op
+		o.Expr = p.parseUnconditionalExpression()
+		if len(o.Expr.Op) > 0 && o.Expr.Op[0].Op.IsLogical() {
+			// Hoist logical operator back up here to fix precedence. This is a bit of a hack and
+			// might not be perfect in all cases...
+			e.Op = append(e.Op, o.Expr.Op...)
+			o.Expr.Op = nil
+		}
 		tok = p.l.Peek()
 	}
 	return e

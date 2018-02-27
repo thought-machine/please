@@ -1,0 +1,3 @@
+labels = ['a', 'b', 'c']
+
+y = 'x' in labels or 'b' in labels

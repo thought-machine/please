@@ -79,16 +79,19 @@ type Expression struct {
 	Pos     Position
 	UnaryOp *UnaryOp         `( @@`
 	Val     *ValueExpression `| @@ )`
-	Op      *struct {
-		Op   Operator    `@("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" | "in" | "not" "in" | "==" | "!=" | ">=" | "<=")`
-		Expr *Expression `@@`
-	} `[ @@ ]`
-	If *InlineIf `[ @@ ]`
+	Op      []OpExpression   `{ @@ }`
+	If      *InlineIf        `[ @@ ]`
 	// Not part of the grammar - applied later to optimise constant expressions.
 	// Needs to be public for serialisation but should not be used outside this package.
 	Constant pyObject
 	// Similarly applied to optimise simple lookups of local variables.
 	Local string
+}
+
+// An OpExpression is a operator combined with its following expression.
+type OpExpression struct {
+	Op   Operator    `@("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" | "in" | "not" "in" | "==" | "!=" | ">=" | "<=")`
+	Expr *Expression `@@`
 }
 
 // A ValueExpression is the value part of an expression, i.e. without surrounding operators.

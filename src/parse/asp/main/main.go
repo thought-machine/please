@@ -114,7 +114,7 @@ func main() {
 		if strings.HasSuffix(filename, ".gob") {
 			srcFile := strings.TrimSuffix(filename, ".gob")
 			src, _ := rules.Asset(srcFile)
-			p.MustLoadBuiltins("src/parse/asp/builtins/"+srcFile, src, rules.MustAsset(filename))
+			p.MustLoadBuiltins("src/parse/rules/"+srcFile, src, rules.MustAsset(filename))
 		}
 	}
 
