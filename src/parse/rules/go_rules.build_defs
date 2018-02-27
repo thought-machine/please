@@ -139,24 +139,16 @@ def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list
                 add_out(rule_name, out)
 
     # All the tools must be in the $PATH.
-
-    gopath = ' | '.join([
-        'find . -type d -name src',
-        'grep -v "^\.$"',
-        'sed "s|^\.|$TMP_DIR|g"',
-        'sed "/^\s*$/d"',
-        'tr "\n" ":"',
-        'sed -e "s/:$//" -e "s/src$//g"'
-    ])
     cmd = ' && '.join([
         # It's essential that we copy all .a files up a directory as well; we tend to output them one level
         # down from where Go expects them to be.
         _LINK_PKGS_CMD,
         # It's also essential that the compiled .a files are under this prefix, otherwise gcimporter won't find them.
         'mkdir pkg',
+        'ln -s . src',
         'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
         'export PATH="$(echo "$TOOLS_GEN " | sed -E -e \'s|/[^/]+[ ]|:|g\')$PATH"',
-        'GOPATH="$TMP_DIR$(echo ":$(%s)" | sed "s/:$//g")" $TOOLS_GO generate $SRCS' % gopath,
+        'GOPATH="%s" $TOOLS_GO generate $SRCS' % CONFIG.GOPATH,
         'mv $PKG_DIR/*.go .',
         'ls *.go'
     ])
