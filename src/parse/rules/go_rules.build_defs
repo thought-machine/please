@@ -147,7 +147,6 @@ def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list
         'mkdir pkg',
         'ln -s . src',
         'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
-        'ln -s . src',
         'export PATH="$(echo "$TOOLS_GEN " | sed -E -e \'s|/[^/]+[ ]|:|g\')$PATH"',
         'GOPATH="%s" $TOOLS_GO generate $SRCS' % CONFIG.GOPATH,
         'mv $PKG_DIR/*.go .',
