@@ -139,6 +139,7 @@ func setLogCode(s *scope, name string, f func(format string, args ...interface{}
 // This is the main interface point; every build rule ultimately calls this to add
 // new objects to the build graph.
 func buildRule(s *scope, args []pyObject) pyObject {
+	s.NAssert(s.pkg == nil, "Cannot create new build rules in this context")
 	// We need to set various defaults from config here; it is useful to put it on the rule but not often so
 	// because most rules pass them through anyway.
 	// TODO(peterebden): when we get rid of the old parser, put these defaults on all the build rules and
