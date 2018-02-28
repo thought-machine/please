@@ -172,7 +172,6 @@ func DefaultConfiguration() *Configuration {
 	config.Docker.RemoveTimeout = cli.Duration(20 * time.Second)
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
-	config.Go.GoVersion = "1.6"
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
 	config.Python.PipTool = "pip"
 	config.Python.DefaultInterpreter = "python3"
@@ -306,7 +305,6 @@ type Configuration struct {
 	} `help:"Please supports a form of 'garbage collection', by which it means identifying targets that are not used for anything. By default binary targets and all their transitive dependencies are always considered non-garbage, as are any tests directly on those. The config options here allow tweaking this behaviour to retain more things.\n\nNote that it's a very good idea that your BUILD files are in the standard format when running this."`
 	Go struct {
 		GoTool     string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
-		GoVersion  string `help:"String identifying the version of the Go compiler.\nThis is only now really important for anyone targeting versions of Go earlier than 1.5 since some of the tool names have changed (6g and 6l became compile and link in Go 1.5).\nWe're pretty sure that targeting Go 1.4 works; we're not sure about 1.3 (never tried) but 1.2 certainly doesn't since some of the flags to go tool pack are different. We assume nobody is terribly bothered about this..." var:"GO_VERSION"`
 		GoRoot     string `help:"If set, will set the GOROOT environment variable appropriately during build actions."`
 		TestTool   string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules." var:"GO_TEST_TOOL"`
 		GoPath     string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`

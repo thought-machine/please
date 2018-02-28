@@ -674,11 +674,10 @@ def _replace_test_package(name, output, static):
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True):
     """Returns the commands to run for building a Go library."""
-    go_compile_tool = 'compile' if CONFIG.GO_VERSION >= "1.5" else '6g'
     filter_cmd = 'export SRCS="$(${TOOLS_FILTER} ${SRCS})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
-    compile_cmd = '$TOOLS_GO tool %s -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (go_compile_tool, complete_flag, _GOPATH)
+    compile_cmd = '$TOOLS_GO tool compile -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (complete_flag, _GOPATH)
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
@@ -694,8 +693,7 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
 
 def _go_binary_cmds(static=False, ldflags='', pkg_config=''):
     """Returns the commands to run for linking a Go binary."""
-    _go_link_tool = 'link' if CONFIG.GO_VERSION >= "1.5" else '6l'
-    _link_cmd = '$TOOLS_GO tool %s -tmpdir $TMP_DIR -extld $TOOLS_LD %s -L . -o ${OUT} ' % (_go_link_tool, _GOPATH.replace('-I ', '-L '))
+    _link_cmd = '$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s -L . -o ${OUT} ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     if static:

@@ -32,7 +32,7 @@ To build Please yourself, run `./bootstrap.sh` in the repo root.
 This will set up the minimal environment needed to build Please,
 build it once manually and then rebuild it again using itself.
 You'll need to have Go 1.9+ installed to build Please although once
-built it can target Go 1.4+.
+built it can target any version from 1.5+ onwards.
 
 To build some of the parser engine backends, you will need to have
 Python libraries available; at least python 2 needs to be installed
