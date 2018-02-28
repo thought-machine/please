@@ -147,6 +147,7 @@ def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list
         'mkdir pkg',
         'ln -s . src',
         'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
+        'ln -s . src',
         'export PATH="$(echo "$TOOLS_GEN " | sed -E -e \'s|/[^/]+[ ]|:|g\')$PATH"',
         'GOPATH="%s" $TOOLS_GO generate $SRCS' % CONFIG.GOPATH,
         'mv $PKG_DIR/*.go .',
@@ -164,6 +165,7 @@ def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list
         visibility=visibility,
         test_only=test_only,
         post_build=_post_build,
+        requires = ['go', 'go_src'],
     )
 
 
@@ -504,114 +506,143 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
     )
 
 
-def go_get(name:str, get:str, outs:list=None, deps:list=None, exported_deps:list=None,
+def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
-           install:list=None, revision:str=None, strip:list=None):
+           install:list=None, revision:str=None, strip:list=None, hashes:list=None):
     """Defines a dependency on a third-party Go library.
+
+    Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
+    You will need to add those as separate rules; `go list -f '{{.Deps}}' <package>` can be
+    useful to discover what they should be.
+
+    Note also that while a single go_get is sufficient to compile all parts of a library,
+    one may also want separate ones for a binary. Since two rules can't both output the same
+    source files (and you only want to download them once anyway) you should handle that by
+    marking the non-binary rule as a dependency of the binary one - if you don't there may
+    be warnings issued about conflicting output files.
 
     Args:
       name (str): Name of the rule
       get (str): Target to get (eg. "github.com/gorilla/mux")
-      outs (list): Output files from the rule. Default autodetects.
+      repo (str): Location of a Git repository to fetch from.
       deps (list): Dependencies
       exported_deps (list): Dependencies to make available to anything using this rule.
       visibility (list): Visibility specification
       patch (str): Patch file to apply
       binary (bool): True if the output of the rule is a binary.
       test_only (bool): If true this rule will only be visible to tests.
-      install (list): Allows specifying extra packages to install. Convenient in some cases where we
-                      want to go get something with an extra subpackage.
+      install (list): Allows specifying the exact list of packages to install. If this is not passed,
+                      the package passed to 'get' is installed. If you pass this for subpackages, you
+                      will need to explicitly add an empty string to the list if you want to install
+                      the root package from this repo.
       revision (str): Git hash to check out before building. Only works for git at present,
                       not for other version control systems.
       strip (list): List of paths to strip from the installed target.
+      hashes (list): List of hashes to verify the downloaded sources against.
     """
-    post_build = None
-    if binary and outs and len(outs) != 1:
-        raise ValueError(name + ': Binary rules can only have a single output')
+    if hashes and not revision:
+        log.warning("You shouldn't specify hashes on go_get without specifying revision as well")
+    labels = ['go_get:%s@%s' % (get, revision) if revision else 'go_get:%s' % get]
     getroot = get[:-4] if get.endswith('/...') else get
     subdir = 'src/' + getroot
-    if not outs:
-        outs = [('bin/' + name) if binary else ('src/' + getroot)]
-        if not binary:
-            post_build = _extra_outs(getroot)
-    cmd = [
-        # the TMP_DIR contains all the compiled dependencies already. Later when
-        # we go install, it is difficult to seperate its outputs from the
-        # deps outputs, hence why we capture them here in advance
-        'export existing="$(find $TMP_DIR -name \"*.a\")"',
 
-        # go_get dependencies could be in different paths, make sure they are
-        # all available in the GOPATH by detecting their pkg/ folder and using its parent
-        'export GOPATH="$TMP_DIR"',
-        # loop done like this because the GOPATH export should not be in a SubShell
-        'while IFS= read -r dep_dir; do '
-        'if [ -n "$dep_dir" ]; then export GOPATH="${dep_dir}:${GOPATH}" ; fi ; done '
-        '< <(echo "$existing" | sed -e \'s|pkg/.*||g\' | sort -u)',
-
-        'export INSTALL_DIR=$(mktemp -d ${TMP_DIR}/tmp.XXXXX)',
-        'export GOPATH="$INSTALL_DIR:$GOPATH"',
-
-        'cd $INSTALL_DIR',
-        '$TOOL get -d ' + get,
-    ]
-    if revision:
-        # Annoyingly -C does not work on git checkout :(
-        cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
+    # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
+    # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
+    if get.startswith('github.com') and revision and get.count('/') >= 2:
+        cmd = _go_github_repo_cmd(getroot, getroot, revision)
+    elif get.startswith('golang.org/x/') and revision and not repo:
+        # We know about these guys...
+        cmd = _go_github_repo_cmd(getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision)
+    else:
+        if repo:
+            # we've been told exactly where to get the source from.
+            cmd = ['git clone %s %s' % (repo, getroot)]
+        else:
+            # Ultimate fallback to go get.
+            # This has some more restrictions than the above (e.g. go get won't fetch a directory
+            # with no Go files in it, even if passed -d).
+            cmd = [
+                'rm -rf src pkg',
+                'export GOPATH="$TMP_DIR"',
+                '$TOOL get -d ' + get,
+            ]
+        if revision:
+            # Annoyingly -C does not work on git checkout :(
+            cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
+        cmd.append('find . -name .git | xargs rm -rf')
     if patch:
-        cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$(location %s)' % (subdir, patch))
-    cmd.append('$TOOL install -gcflags "-trimpath $INSTALL_DIR" ' + ' '.join([get] + (install or [])))
-    # Remove anything that was there already.
-    cmd.extend([
-        # go_get built dependencies could be in different dirs so we strip the prefix
-        # leading up to `/pkg/`. These have been cached in the "$INSTALL_DIR/pkg/.."
-        # during the `go install`. So clean them up from this target's outputs
-        'echo "$existing" | while IFS= read -r pathname; do '
-        'if [ -n "$pathname" ]; then rm -f "$INSTALL_DIR/pkg/${pathname#*/pkg/}" ; fi ; done',
-        'cd $TMP_DIR',
-        # delete all other dirs with deps. Only src,pkg and maybe bin will remain
-        'ls | (grep -v $(basename $INSTALL_DIR) || true) | xargs rm -rf',
-        'mv $INSTALL_DIR/* $TMP_DIR/'
-    ])
-    if not binary:
-        cmd.extend([
-            'find . -name .git | xargs rm -rf',
-            'find pkg -name "*.a" | sort',
-        ])
+        cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$SRCS' % subdir)
     if strip:
-        cmd.extend(['rm -rf %s/%s' % (subdir, s) for s in strip])
+        cmd += ['rm -rf %s/%s' % (subdir, s) for s in strip]
+    # This is an awkward case, as noted above one may want to build a binary from an existing library
+    # so we have to special case here to allow them both to use the same source download.
+    get_rule = None if binary and deps else build_rule(
+        name = name,
+        tag = 'get',
+        srcs = [patch] if patch else [],
+        outs = [subdir],
+        tools = [CONFIG.GO_TOOL],
+        visibility = visibility,
+        building_description = 'Fetching...',
+        cmd = ' && '.join(cmd),
+        requires = ['go'],
+        test_only = test_only,
+        labels = labels,
+        hashes = hashes,
+        sandbox = False,
+    )
+
+    if install:
+        install = [i if i.startswith(getroot) else (getroot + '/' + i) for i in install]
+    else:
+        install = [get]
+
+    # Now compile it in a separate step.
+    cmd = [
+        'export GOPATH="$TMP_DIR:$TMP_DIR/$PKG_DIR"',
+        '$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join(install),
+    ]
+    if package_name():
+        cmd += [
+            # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
+            'rm -rf bin' if binary else 'rm -rf pkg',
+            'mv $PKG_DIR/bin .' if binary else 'mv $PKG_DIR/pkg .',
+        ]
+    if not binary:
+        # Outputs are created one directory down from where we want them.
+        # For most it doesn't matter but the top-level one will get lost.
+        cmd.append(' if [ -f ${OUTS}.a ]; then mkdir -p $OUTS && mv ${OUTS}.a $OUTS; fi')
     build_rule(
-        name=name,
-        srcs=[patch] if patch else [],
-        outs=outs,
-        deps=deps,
-        exported_deps=exported_deps,
-        tools=[CONFIG.GO_TOOL],
-        visibility=visibility,
-        building_description='Fetching...',
-        cmd=' && '.join(cmd),
-        binary=binary,
-        requires=['go'],
-        test_only=test_only,
-        post_build=post_build,
-        labels=['go_get:%s@%s' % (get, revision) if revision else 'go_get:%s' % get],
-        sandbox=False,
-        needs_transitive_deps=True,
+        name = name,
+        outs = [('bin/' + name) if binary else ('pkg/%s_%s/%s' % (CONFIG.OS, CONFIG.ARCH, getroot))],
+        deps = deps + [get_rule],
+        exported_deps = exported_deps,
+        tools = [CONFIG.GO_TOOL],
+        visibility = visibility,
+        building_description = 'Compiling...',
+        cmd = ' && '.join(cmd),
+        binary = binary,
+        requires = ['go'],
+        test_only = test_only,
+        labels = labels,
+        sandbox = False,
+        needs_transitive_deps = True,
     )
 
 
-def _extra_outs(get):
-    """Attaches extra outputs to go_get rules."""
-    def _inner(name, output):
-        last = '<>'
-        for archive in output:
-            add_out(name, archive)
-            before, _, after = archive[6:-2].partition('/')
-            subpath = after or before
-            if ((not subpath.startswith(get)) and (not subpath.startswith(last)) and
-                (not get.startswith(subpath)) and (not last.startswith(subpath))):
-                    add_out(name, 'src/' + subpath)
-            last = subpath
-    return _inner
+def _go_github_repo_cmd(get, repo, revision):
+    """Returns a partial command to fetch a Go repo from Github."""
+    parts = get.split('/')
+    out = '/'.join(parts[:3])
+    if repo.count('/') > 2:
+        parts = repo.split('/')
+        repo = '/'.join(parts[:3])
+    return [
+        'rm -rf src/' + out,
+        'curl -fsSLo github.zip https://%s/archive/%s.zip' % (repo, revision),
+        'unzip -qq github.zip',
+        'mv %s* src/%s' % (parts[2], out),
+    ]
 
 
 def _replace_test_package(name, output, static):

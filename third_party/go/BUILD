@@ -13,12 +13,6 @@ go_get(
 )
 
 go_get(
-    name = 'cover',
-    get = 'golang.org/x/tools/cover',
-    revision = 'c0008c5889c0d5091cdfefd2bfb08bff96527879',
-)
-
-go_get(
     name = 'warnings',
     get = 'gopkg.in/warnings.v0',
     revision = 'v0.1.2',
@@ -28,9 +22,10 @@ go_get(
     name = 'gcfg',
     get = 'gopkg.in/gcfg.v1',
     install = [
-        'gopkg.in/gcfg.v1/scanner',
-        'gopkg.in/gcfg.v1/token',
-        'gopkg.in/gcfg.v1/types',
+        '',
+        'scanner',
+        'token',
+        'types',
     ],
     patch = 'gcfg_dynamic_fields.patch',
     revision = '27e4946190b4a327b539185f2b5b1f7c84730728',
@@ -44,6 +39,7 @@ go_get(
     binary = True,
     get = 'github.com/kevinburke/go-bindata/...',
     revision = '46eb4c183bfc1ebb527d9d19bcded39476302eb8',
+    strip = ['testdata'],
 )
 
 go_get(
@@ -88,6 +84,18 @@ go_get(
     name = 'text',
     get = 'golang.org/x/text/...',
     revision = '4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1',
+    deps = [
+        ':tools',
+    ],
+)
+
+go_get(
+    name = 'tools',
+    get = 'golang.org/x/tools',
+    install = [
+        'cover',
+    ],
+    revision = '2ae76fd1560b622911f444c1e66b70a857e1de67',
 )
 
 go_get(
@@ -95,24 +103,25 @@ go_get(
     exported_deps = [':net'],
     get = 'google.golang.org/grpc',
     install = [
-        'google.golang.org/grpc/balancer',
-        'google.golang.org/grpc/codes',
-        'google.golang.org/grpc/connectivity',
-        'google.golang.org/grpc/credentials',
-        'google.golang.org/grpc/grpclb/grpc_lb_v1/messages',
-        'google.golang.org/grpc/grpclog',
-        'google.golang.org/grpc/health',
-        'google.golang.org/grpc/health/grpc_health_v1',
-        'google.golang.org/grpc/internal',
-        'google.golang.org/grpc/keepalive',
-        'google.golang.org/grpc/metadata',
-        'google.golang.org/grpc/naming',
-        'google.golang.org/grpc/peer',
-        'google.golang.org/grpc/resolver',
-        'google.golang.org/grpc/stats',
-        'google.golang.org/grpc/status',
-        'google.golang.org/grpc/tap',
-        'google.golang.org/grpc/transport',
+        '',
+        'balancer',
+        'codes',
+        'connectivity',
+        'credentials',
+        'grpclb/grpc_lb_v1/messages',
+        'grpclog',
+        'health',
+        'health/grpc_health_v1',
+        'internal',
+        'keepalive',
+        'metadata',
+        'naming',
+        'peer',
+        'resolver',
+        'stats',
+        'status',
+        'tap',
+        'transport',
     ],
     revision = 'v1.7.0',
     deps = [
@@ -133,9 +142,6 @@ go_get(
     name = 'protobuf',
     get = 'github.com/golang/protobuf/...',
     revision = '130e6b02ab059e7b717a096f397c5b60111cae74',
-    strip = [
-        'protoc-gen-go',  # avoids conflict with :protoc-gen-go binary.
-    ],
 )
 
 go_get(
@@ -159,10 +165,10 @@ go_get(
     name = 'testify',
     get = 'github.com/stretchr/testify',
     install = [
-        'github.com/stretchr/testify/assert',
-        'github.com/stretchr/testify/require',
-        'github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew',
-        'github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib',
+        'assert',
+        'require',
+        'vendor/github.com/davecgh/go-spew/spew',
+        'vendor/github.com/pmezard/go-difflib/difflib',
     ],
     revision = 'f390dcf405f7b83c997eac1b06768bb9f44dec18',
     deps = [':spew'],
@@ -189,6 +195,7 @@ go_get(
     binary = True,
     get = 'golang.org/x/tools/cmd/stringer',
     revision = 'f8ecfdb6b66ec67ca930b39806519a2b72d1eaca',
+    deps = [':tools'],
 )
 
 go_get(
@@ -232,19 +239,40 @@ go_get(
 go_get(
     name = 'prometheus',
     get = 'github.com/prometheus/client_golang/prometheus/...',
-    install = [
-        'github.com/prometheus/client_model/go',
-        'github.com/prometheus/common/expfmt',
-        'github.com/prometheus/common/model',
-        'github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg',
-    ],
     revision = 'c5b7fccd204277076155f10851dad72b76a49317',
     deps = [
         ':grpc',
         ':pbutil',
         ':procfs',
+        ':prometheus_client_model',
+        ':prometheus_common',
         ':protobuf',
         ':quantile',
+    ],
+)
+
+go_get(
+    name = 'prometheus_common',
+    get = 'github.com/prometheus/common',
+    install = [
+        'expfmt',
+        'model',
+        'internal/bitbucket.org/ww/goautoneg',
+    ],
+    revision = '89604d197083d4781071d3c65855d24ecfb0a563',
+    deps = [
+        ':pbutil',
+        ':prometheus_client_model',
+        ':protobuf',
+    ],
+)
+
+go_get(
+    name = 'prometheus_client_model',
+    get = 'github.com/prometheus/client_model/go',
+    revision = '99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c',
+    deps = [
+        ':protobuf',
     ],
 )
 
@@ -271,9 +299,9 @@ go_get(
     name = 'grpc-middleware',
     get = 'github.com/grpc-ecosystem/go-grpc-middleware',
     install = [
-        'github.com/grpc-ecosystem/go-grpc-middleware/retry',
-        'github.com/grpc-ecosystem/go-grpc-middleware/util/metautils',
-        'github.com/grpc-ecosystem/go-grpc-middleware/util/backoffutils',
+        'retry',
+        'util/metautils',
+        'util/backoffutils',
     ],
     revision = 'fa8fef87dcecac0bda02d36abb3c790ab9e0030b',
     deps = [
@@ -317,7 +345,8 @@ go_get(
     name = 'go-multierror',
     get = 'github.com/hashicorp/go-multierror',
     install = [
-        'github.com/hashicorp/go-multierror/vendor/github.com/hashicorp/errwrap',
+        '',
+        'vendor/github.com/hashicorp/errwrap',
     ],
     revision = 'b7773ae218740a7be65057fc60b366a49b538a44',
 )
@@ -383,9 +412,9 @@ go_get(
     name = 'psutil',
     get = 'github.com/shirou/gopsutil',
     install = [
-        'github.com/shirou/gopsutil/cpu',
-        'github.com/shirou/gopsutil/internal/common',
-        'github.com/shirou/gopsutil/mem',
+        'cpu',
+        'internal/common',
+        'mem',
     ],
     revision = 'v2.17.09',
     deps = [':unix'],
@@ -415,6 +444,7 @@ go_get(
     binary = True,
     get = 'github.com/dvyukov/go-fuzz/go-fuzz-build',
     revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+    deps = [':go-fuzz-dep'],
 )
 
 go_get(
@@ -422,11 +452,15 @@ go_get(
     binary = True,
     get = 'github.com/dvyukov/go-fuzz/go-fuzz',
     revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+    deps = [':go-fuzz-dep'],
 )
 
 go_get(
     name = 'go-fuzz-dep',
-    get = 'github.com/dvyukov/go-fuzz/go-fuzz-dep',
-    install = ['github.com/dvyukov/go-fuzz/go-fuzz-defs'],
+    get = 'github.com/dvyukov/go-fuzz',
+    install = [
+        'go-fuzz-dep',
+        'go-fuzz-defs',
+    ],
     revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
 )
