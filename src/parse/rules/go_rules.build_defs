@@ -607,12 +607,15 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
 
     # Now compile it in a separate step.
     cmd = [
-        'export GOPATH="$TMP_DIR:$TMP_DIR/$PKG"',
+        'export GOPATH="$TMP_DIR:$TMP_DIR/$PKG_DIR"',
         '$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join(install),
-        # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
-        'rm -rf bin' if binary else 'rm -rf pkg',
-        'mv $PKG/bin .' if binary else 'mv $PKG/pkg .',
     ]
+    if package_name():
+        cmd += [
+            # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
+            'rm -rf bin' if binary else 'rm -rf pkg',
+            'mv $PKG_DIR/bin .' if binary else 'mv $PKG_DIR/pkg .',
+        ]
     if not binary:
         # Outputs are created one directory down from where we want them.
         # For most it doesn't matter but the top-level one will get lost.

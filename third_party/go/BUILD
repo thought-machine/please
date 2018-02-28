@@ -444,6 +444,7 @@ go_get(
     binary = True,
     get = 'github.com/dvyukov/go-fuzz/go-fuzz-build',
     revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+    deps = [':go-fuzz-dep'],
 )
 
 go_get(
@@ -451,11 +452,15 @@ go_get(
     binary = True,
     get = 'github.com/dvyukov/go-fuzz/go-fuzz',
     revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+    deps = [':go-fuzz-dep'],
 )
 
 go_get(
     name = 'go-fuzz-dep',
-    get = 'github.com/dvyukov/go-fuzz/go-fuzz-dep',
-    install = ['go-fuzz-defs'],
+    get = 'github.com/dvyukov/go-fuzz',
+    install = [
+        'go-fuzz-dep',
+        'go-fuzz-defs',
+    ],
     revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
 )
