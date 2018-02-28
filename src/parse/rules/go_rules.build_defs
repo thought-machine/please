@@ -601,7 +601,7 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
     )
 
     if install:
-        install = [i if i.startswith(get) else (get + '/' + i) for i in install]
+        install = [i if i.startswith(getroot) else (getroot + '/' + i) for i in install]
     else:
         install = [get]
 
