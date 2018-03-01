@@ -170,8 +170,8 @@ def split_path(p:str):
 
 
 def splitext(p:str):
-    before, _, after = p.rpartition('.')
-    return before, after
+    before, dot, after = p.rpartition('.')
+    return (before, dot + after) if before else (after, '')
 
 
 def basename(p:str):
@@ -183,7 +183,7 @@ def basename(p:str):
 def dirname(p:str):
     """Returns the directory component of a pathname"""
     before, _, after = p.rpartition('/')
-    return before or after
+    return before
 
 
 # Exception types.

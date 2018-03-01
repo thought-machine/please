@@ -193,3 +193,18 @@ func TestAliases(t *testing.T) {
 	require.NoError(t, err)
 	assert.EqualValues(t, 42, s.Lookup("v"))
 }
+
+func TestPaths(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/paths.build")
+	require.NoError(t, err)
+	assert.EqualValues(t, "a/b/c", s.Lookup("a"))
+	assert.EqualValues(t, "a/c", s.Lookup("b"))
+	assert.EqualValues(t, pyList{pyString("a/b"), pyString("c")}, s.Lookup("c"))
+	assert.EqualValues(t, pyList{pyString(""), pyString("a")}, s.Lookup("d"))
+	assert.EqualValues(t, pyList{pyString("a/test"), pyString(".txt")}, s.Lookup("e"))
+	assert.EqualValues(t, pyList{pyString("a/test"), pyString("")}, s.Lookup("f"))
+	assert.EqualValues(t, "c", s.Lookup("g"))
+	assert.EqualValues(t, "a", s.Lookup("h"))
+	assert.EqualValues(t, "a/b", s.Lookup("i"))
+	assert.EqualValues(t, "", s.Lookup("j"))
+}
