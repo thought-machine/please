@@ -389,3 +389,9 @@ func TestPrecedence(t *testing.T) {
 	assert.Equal(t, 1, len(stmts))
 	assert.NotNil(t, stmts[0].Ident.Action.Assign.If)
 }
+
+func TestMissingNewlines(t *testing.T) {
+	stmts, err := newParser().parse("src/parse/asp/test_data/no_newline.build")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(stmts))
+}

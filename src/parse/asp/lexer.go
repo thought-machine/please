@@ -28,6 +28,14 @@ type Token struct {
 	Pos Position
 }
 
+// String implements the fmt.Stringer interface
+func (tok Token) String() string {
+	if tok.Value != "" {
+		return tok.Value
+	}
+	return reverseSymbol(tok.Type)
+}
+
 // A Position describes a position in a source file.
 type Position struct {
 	Filename string
@@ -55,6 +63,11 @@ func newLexer(r io.Reader) *lex {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		fail(Position{Filename: NameOfReader(r)}, err.Error())
+	}
+	// If the file doesn't end in a newline, we will reject it with an "unexpected end of file"
+	// error. That's a bit crap so quietly fix it up here.
+	if len(b) > 0 && b[len(b)-1] != '\n' {
+		b = append(b, '\n')
 	}
 	l := &lex{
 		b:        append(b, 0, 0), // Null-terminating the buffer makes things easier later.

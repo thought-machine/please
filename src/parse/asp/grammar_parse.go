@@ -37,7 +37,7 @@ func (p *parser) assert(condition bool, pos Token, message string, args ...inter
 
 func (p *parser) assertTokenType(tok Token, expectedType rune) {
 	if tok.Type != expectedType {
-		p.fail(tok, "unexpected token %s, expected %s", tok.Value, reverseSymbol(expectedType))
+		p.fail(tok, "unexpected token %s, expected %s", tok, reverseSymbol(expectedType))
 	}
 }
 
@@ -50,7 +50,7 @@ func (p *parser) next(expectedType rune) Token {
 func (p *parser) nextv(expectedValue string) Token {
 	tok := p.l.Next()
 	if tok.Value != expectedValue {
-		p.fail(tok, "unexpected token %s, expected %s", tok.Value, expectedValue)
+		p.fail(tok, "unexpected token %s, expected %s", tok, expectedValue)
 	}
 	return tok
 }
@@ -341,10 +341,10 @@ func (p *parser) parseValueExpression() *ValueExpression {
 		ve.String = tok.Value
 		p.l.Next()
 	} else if tok.Type == Int {
-		p.assert(len(tok.Value) < 19, tok, "int literal is too large: %s", tok.Value)
+		p.assert(len(tok.Value) < 19, tok, "int literal is too large: %s", tok)
 		p.initField(&ve.Int)
 		i, err := strconv.Atoi(tok.Value)
-		p.assert(err == nil, tok, "invalid int value %s", tok.Value) // Theoretically the lexer shouldn't have fed us this...
+		p.assert(err == nil, tok, "invalid int value %s", tok) // Theoretically the lexer shouldn't have fed us this...
 		ve.Int.Int = i
 		p.l.Next()
 	} else if tok.Value == "False" || tok.Value == "True" || tok.Value == "None" {
@@ -361,7 +361,7 @@ func (p *parser) parseValueExpression() *ValueExpression {
 	} else if tok.Type == Ident {
 		ve.Ident = p.parseIdentExpr()
 	} else {
-		p.fail(tok, "Unexpected token %s", tok.Value)
+		p.fail(tok, "Unexpected token %s", tok)
 	}
 	tok = p.l.Peek()
 	if tok.Type == '[' {
@@ -406,7 +406,7 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 		p.initField(&i.Action)
 		i.Action.Assign = p.parseExpression()
 	default:
-		p.assert(tok.Value == "+=", tok, "Unexpected token %s, expected one of , [ . ( = +=", tok.Value)
+		p.assert(tok.Value == "+=", tok, "Unexpected token %s, expected one of , [ . ( = +=", tok)
 		p.initField(&i.Action)
 		i.Action.AugAssign = p.parseExpression()
 	}
