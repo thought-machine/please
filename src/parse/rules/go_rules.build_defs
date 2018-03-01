@@ -598,7 +598,7 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
 
     # Now compile it in a separate step.
     cmd = [
-        'export GOPATH="$TMP_DIR:$TMP_DIR/$PKG_DIR"',
+        'export GOPATH="%s"' % CONFIG.GOPATH,
         '$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join(install),
     ]
     if package_name():

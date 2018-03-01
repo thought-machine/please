@@ -172,7 +172,7 @@ func DefaultConfiguration() *Configuration {
 	config.Docker.RemoveTimeout = cli.Duration(20 * time.Second)
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
-	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
+	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG_DIR:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
 	config.Python.PipTool = "pip"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
