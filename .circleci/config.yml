@@ -51,7 +51,7 @@ jobs:
        - checkout
        - run:
            name: Install deps
-           command: brew install go python3 unittest-cpp nasm pkg-config
+           command: brew install go unittest-cpp nasm pkg-config && brew upgrade python
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
