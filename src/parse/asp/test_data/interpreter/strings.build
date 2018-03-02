@@ -1,0 +1,8 @@
+TOYS = """
+acpi base64 basename blkid blockdev bunzip2 bzcat cal cat catv chattr
+whoami xargs xxd yes
+"""
+
+TOYS2 = TOYS.strip().replace('\n', ' ').split(' ')
+
+TOYS3 = TOYS.strip()

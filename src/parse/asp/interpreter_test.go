@@ -208,3 +208,14 @@ func TestPaths(t *testing.T) {
 	assert.EqualValues(t, "a/b", s.Lookup("i"))
 	assert.EqualValues(t, "", s.Lookup("j"))
 }
+
+func TestStrings(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/strings.build")
+	require.NoError(t, err)
+	assert.EqualValues(t, pyList{
+		pyString("acpi"), pyString("base64"), pyString("basename"), pyString("blkid"), pyString("blockdev"),
+		pyString("bunzip2"), pyString("bzcat"), pyString("cal"), pyString("cat"), pyString("catv"),
+		pyString("chattr"), pyString("whoami"), pyString("xargs"), pyString("xxd"), pyString("yes"),
+	}, s.Lookup("TOYS2"))
+	assert.EqualValues(t, "acpi base64 basename blkid blockdev bunzip2 bzcat cal cat catv chattr\nwhoami xargs xxd yes", s.Lookup("TOYS3"))
+}

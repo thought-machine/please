@@ -38,12 +38,12 @@ def endswith(self, s:str):
     pass
 def format(self):
     pass
-def lstrip(self, cutset:str):
+def lstrip(self, cutset:str=' \n'):
     pass
-def rstrip(self, cutset:str):
+def rstrip(self, cutset:str=' \n'):
     pass
-def strip(self, cutset:str=' '):
-    return self.lstrip(cutset).rstrip(cutset)
+def strip(self, cutset:str=' \n'):
+    pass
 def find(self, needle:str):
     pass
 def rfind(self, needle:str):

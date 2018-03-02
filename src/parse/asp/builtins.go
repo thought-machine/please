@@ -56,7 +56,7 @@ func registerBuiltins(s *scope) {
 		"endswith":   setNativeCode(s, "endswith", strEndsWith),
 		"lstrip":     setNativeCode(s, "lstrip", strLStrip),
 		"rstrip":     setNativeCode(s, "rstrip", strRStrip),
-		"strip":      s.Lookup("strip").(*pyFunc),
+		"strip":      setNativeCode(s, "strip", strStrip),
 		"find":       setNativeCode(s, "find", strFind),
 		"rfind":      setNativeCode(s, "find", strRFind),
 		"format":     setNativeCode(s, "format", strFormat),
@@ -384,6 +384,12 @@ func strRStrip(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	cutset := args[1].(pyString)
 	return pyString(strings.TrimRight(string(self), string(cutset)))
+}
+
+func strStrip(s *scope, args []pyObject) pyObject {
+	self := args[0].(pyString)
+	cutset := args[1].(pyString)
+	return pyString(strings.Trim(string(self), string(cutset)))
 }
 
 func strFind(s *scope, args []pyObject) pyObject {
