@@ -29,7 +29,6 @@ func makeTarget(g *core.BuildGraph, packageName string, labelName string, output
 }
 
 func TestConstructsMapFromGraph(t *testing.T) {
-	core.State = &core.BuildState{}
 	graph := core.NewGraph()
 	m := filesToLabelMap(graph)
 	assert.Equal(t, 0, len(m))
@@ -44,7 +43,6 @@ func TestConstructsMapFromGraph(t *testing.T) {
 }
 
 func TestMapKeysContainFullPathFromProjectRoot(t *testing.T) {
-	core.State = &core.BuildState{}
 	graph := core.NewGraph()
 	makeTarget(graph, "package1", "target1", []string{"out1", "out2"})
 	makeTarget(graph, "package1", "target2", []string{"out3"})

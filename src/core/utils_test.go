@@ -175,14 +175,16 @@ func TestExecWithTimeoutDeadline(t *testing.T) {
 }
 
 func TestExecWithTimeoutOutput(t *testing.T) {
-	out, stderr, err := ExecWithTimeoutShell(nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello", false)
+	state := NewDefaultBuildState()
+	out, stderr, err := ExecWithTimeoutShell(state, nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello", false)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello\n", string(out))
 	assert.Equal(t, "hello\n", string(stderr))
 }
 
 func TestExecWithTimeoutStderr(t *testing.T) {
-	out, stderr, err := ExecWithTimeoutShell(nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello 1>&2", false)
+	state := NewDefaultBuildState()
+	out, stderr, err := ExecWithTimeoutShell(state, nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello 1>&2", false)
 	assert.NoError(t, err)
 	assert.Equal(t, "", string(out))
 	assert.Equal(t, "hello\n", string(stderr))

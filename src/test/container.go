@@ -15,7 +15,7 @@ import (
 
 func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	testDir := path.Join(core.RepoRoot, target.TestDir())
-	replacedCmd := build.ReplaceTestSequences(target, target.GetTestCommand())
+	replacedCmd := build.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	replacedCmd += " " + strings.Join(state.TestArgs, " ")
 	containerName := state.Config.Docker.DefaultImage
 	if target.ContainerSettings != nil && target.ContainerSettings.DockerImage != "" {
@@ -46,7 +46,7 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]b
 	command = append(command, "-v", testDir+":/tmp/test_in", "-w", "/tmp/test_in", containerName, "bash", "-o", "pipefail", "-c", replacedCmd)
 	log.Debug("Running containerised test %s: %s", target.Label, strings.Join(command, " "))
 	_, out, err := core.ExecWithTimeout(target, target.TestDir(), nil, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, false, command)
-	retrieveResultsAndRemoveContainer(target, cidfile, err == nil)
+	retrieveResultsAndRemoveContainer(state, target, cidfile, err == nil)
 	return out, err
 }
 
@@ -76,24 +76,24 @@ func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarg
 
 // retrieveResultsAndRemoveContainer copies the test.results file out of the Docker container and into
 // the expected location. It then removes the container.
-func retrieveResultsAndRemoveContainer(target *core.BuildTarget, containerFile string, warn bool) {
+func retrieveResultsAndRemoveContainer(state *core.BuildState, target *core.BuildTarget, containerFile string, warn bool) {
 	cid, err := ioutil.ReadFile(containerFile)
 	if err != nil {
 		log.Warning("Failed to read Docker container file %s", containerFile)
 		return
 	}
 	if !target.NoTestOutput {
-		retrieveFile(target, cid, "test.results", warn)
+		retrieveFile(state, target, cid, "test.results", warn)
 	}
-	if core.State.NeedCoverage {
-		retrieveFile(target, cid, "test.coverage", false)
+	if state.NeedCoverage {
+		retrieveFile(state, target, cid, "test.coverage", false)
 	}
 	for _, output := range target.TestOutputs {
-		retrieveFile(target, cid, output, false)
+		retrieveFile(state, target, cid, output, false)
 	}
 	// Give this some time to complete. Processes inside the container might not be ready
 	// to shut down immediately.
-	timeout := core.State.Config.Docker.RemoveTimeout
+	timeout := state.Config.Docker.RemoveTimeout
 	for i := 0; i < 5; i++ {
 		cmd := []string{"docker", "rm", "-f", string(cid)}
 		if _, err := core.ExecWithTimeoutSimple(timeout, cmd...); err == nil {
@@ -104,9 +104,9 @@ func retrieveResultsAndRemoveContainer(target *core.BuildTarget, containerFile s
 }
 
 // retrieveFile retrieves a single file (or directory) from a Docker container.
-func retrieveFile(target *core.BuildTarget, cid []byte, filename string, warn bool) {
+func retrieveFile(state *core.BuildState, target *core.BuildTarget, cid []byte, filename string, warn bool) {
 	log.Debug("Attempting to retrieve file %s for %s...", filename, target.Label)
-	timeout := core.State.Config.Docker.ResultsTimeout
+	timeout := state.Config.Docker.ResultsTimeout
 	cmd := []string{"docker", "cp", string(cid) + ":/tmp/test/" + filename, target.TestDir()}
 	if out, err := core.ExecWithTimeoutSimple(timeout, cmd...); err != nil {
 		if warn {

@@ -49,7 +49,7 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 	}
 	// Check whether this guy exists within a subrepo. If so we will need to make sure that's available first.
 	if subrepo := state.Graph.SubrepoFor(label.PackageName); subrepo != nil && subrepo.Target != nil {
-		if deferParse(subrepo.Target.Label, label.PackageName) {
+		if deferParse(state, subrepo.Target.Label, label.PackageName) {
 			log.Debug("Deferring parse of %s pending subrepo dependency %s", label, subrepo.Target.Label)
 			return
 		}
@@ -65,7 +65,7 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 			// It should be essentially idempotent but we need to make sure that the task with
 			// forSubinclude = true is processed at some point, not just ones where it's false.
 			log.Debug("Re-adding pending parse for %s", label)
-			core.State.AddPendingParse(label, dependor, true)
+			state.AddPendingParse(label, dependor, true)
 		} else {
 			log.Debug("Skipping pending parse for %s", label)
 		}
@@ -151,10 +151,10 @@ func firstToParse(label, dependor core.BuildLabel) bool {
 
 // deferParse defers the parsing of a package until the given label has been built.
 // Returns true if it was deferred, or false if it's already built.
-func deferParse(label core.BuildLabel, pkgName string) bool {
+func deferParse(state *core.BuildState, label core.BuildLabel, pkgName string) bool {
 	pendingTargetMutex.Lock()
 	defer pendingTargetMutex.Unlock()
-	if target := core.State.Graph.Target(label); target != nil && target.State() >= core.Built {
+	if target := state.Graph.Target(label); target != nil && target.State() >= core.Built {
 		return false
 	}
 	log.Debug("Deferring parse of %s pending %s", pkgName, label)
@@ -164,7 +164,7 @@ func deferParse(label core.BuildLabel, pkgName string) bool {
 		deferredParses[label.PackageName] = map[string][]string{label.Name: {pkgName}}
 	}
 	log.Debug("Adding pending parse for %s", label)
-	core.State.AddPendingParse(label, core.BuildLabel{PackageName: pkgName, Name: "all"}, true)
+	state.AddPendingParse(label, core.BuildLabel{PackageName: pkgName, Name: "all"}, true)
 	return true
 }
 
@@ -221,7 +221,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 
 	err := state.Parser.ParseFile(state, pkg, pkg.Filename)
 	if required, l := asp.RequiresSubinclude(err); required {
-		if deferParse(l, pkg.Name) {
+		if deferParse(state, l, pkg.Name) {
 			return nil // similarly, deferral
 		}
 		// If we get here, the target wasn't available to subinclude before, but is now. Try it again.

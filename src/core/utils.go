@@ -343,16 +343,16 @@ func runCommand(cmd *exec.Cmd, ch chan error) {
 // ExecWithTimeoutShell runs an external command within a Bash shell.
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
-func ExecWithTimeoutShell(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
-	return ExecWithTimeoutShellStdStreams(target, dir, env, timeout, defaultTimeout, showOutput, cmd, sandbox, false)
+func ExecWithTimeoutShell(state *BuildState, target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
+	return ExecWithTimeoutShellStdStreams(state, target, dir, env, timeout, defaultTimeout, showOutput, cmd, sandbox, false)
 }
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
-func ExecWithTimeoutShellStdStreams(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
+func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
 	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
 	// Runtime check is a little ugly, but we know this only works on Linux right now.
 	if sandbox && runtime.GOOS == "linux" {
-		tool, err := LookPath(State.Config.Build.PleaseSandboxTool, State.Config.Build.Path)
+		tool, err := LookPath(state.Config.Build.PleaseSandboxTool, state.Config.Build.Path)
 		if err != nil {
 			return nil, nil, err
 		}

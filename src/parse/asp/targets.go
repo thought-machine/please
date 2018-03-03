@@ -291,14 +291,14 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	} else if strings.Contains(src, "/") {
 		// Target is in a subdirectory, check nobody else owns that.
 		for dir := path.Dir(path.Join(s.pkg.Name, src)); dir != s.pkg.Name && dir != "."; dir = path.Dir(dir) {
-			s.Assert(!core.IsPackage(dir), "Trying to use file %s, but that belongs to another package (%s)", src, dir)
+			s.Assert(!core.IsPackage(s.state, dir), "Trying to use file %s, but that belongs to another package (%s)", src, dir)
 		}
 	} else if tool {
 		// "go" as a source is interpreted as a file, as a tool it's interpreted as something on the PATH.
 		return core.SystemPathLabel{Name: src, Path: s.state.Config.Build.Path}
 	}
 	// Make sure it's not the actual build file.
-	for _, filename := range core.State.Config.Parse.BuildFileName {
+	for _, filename := range s.state.Config.Parse.BuildFileName {
 		s.Assert(filename != src, "You can't specify the BUILD file as an input to a rule")
 	}
 	return core.FileLabel{File: src, Package: s.pkg.Name}

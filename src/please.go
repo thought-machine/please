@@ -494,7 +494,8 @@ var buildFunctions = map[string]func() bool{
 		files := opts.Query.AffectedTargets.Args.Files
 		targets := core.WholeGraph
 		if opts.Query.AffectedTargets.Intransitive {
-			targets = core.FindOwningPackages(files)
+			state := core.NewBuildState(1, nil, 1, config)
+			targets = core.FindOwningPackages(state, files)
 		}
 		return runQuery(true, targets, func(state *core.BuildState) {
 			if len(files) == 1 && files[0] == "-" {
@@ -546,7 +547,7 @@ var buildFunctions = map[string]func() bool{
 			if len(opts.Query.Graph.Args.Targets) == 0 {
 				state.OriginalTargets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
 			}
-			query.Graph(state.Graph, state.ExpandOriginalTargets())
+			query.Graph(state, state.ExpandOriginalTargets())
 		})
 	},
 	"whatoutputs": func() bool {

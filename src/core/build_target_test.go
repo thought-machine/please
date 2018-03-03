@@ -10,49 +10,49 @@ import (
 )
 
 func TestCanSee(t *testing.T) {
-	NewBuildState(1, nil, 1, DefaultConfiguration())
+	state := NewDefaultBuildState()
 	target1 := makeTarget("//src/build/python:lib1", "")
 	target2 := makeTarget("//src/build/python:lib2", "PUBLIC")
 	target3 := makeTarget("//src/test/python:lib3", "//src/test/...")
 	target4 := makeTarget("//src/test/python/moar:lib4", "")
 
 	// target2 is public so anything can import it
-	assert.True(t, target3.CanSee(target2), "couldn't see public target")
-	assert.True(t, target4.CanSee(target2), "couldn't see public target")
+	assert.True(t, target3.CanSee(state, target2), "couldn't see public target")
+	assert.True(t, target4.CanSee(state, target2), "couldn't see public target")
 
 	// target1 is not public, other things can't import it
-	assert.False(t, target3.CanSee(target1), "could see private target")
-	assert.False(t, target4.CanSee(target1), "could see private target")
+	assert.False(t, target3.CanSee(state, target1), "could see private target")
+	assert.False(t, target4.CanSee(state, target1), "could see private target")
 
 	// target2 is in the same package as target1 so can implicitly see it
-	assert.True(t, target2.CanSee(target1), "couldn't see target in the same package")
+	assert.True(t, target2.CanSee(state, target1), "couldn't see target in the same package")
 
 	// target3 is only visible to a subtree, things outside it can't see it
-	assert.False(t, target1.CanSee(target3), "could see target with restricted visibility")
-	assert.False(t, target2.CanSee(target3), "could see target with restricted visibility")
+	assert.False(t, target1.CanSee(state, target3), "could see target with restricted visibility")
+	assert.False(t, target2.CanSee(state, target3), "could see target with restricted visibility")
 
 	// Targets in that subtree can though.
-	assert.True(t, target4.CanSee(target3), "couldn't see target within its visibility spec")
+	assert.True(t, target4.CanSee(state, target3), "couldn't see target within its visibility spec")
 
 	// Sub-targets can see things visible to their parents.
 	target5 := makeTarget("//src/build/python:lib5", "//src/test/python:test5")
 	target6 := makeTarget("//src/test/python:_test5#pex", "")
-	assert.True(t, target6.CanSee(target5))
-	assert.False(t, target5.CanSee(target6))
+	assert.True(t, target6.CanSee(state, target5))
+	assert.False(t, target5.CanSee(state, target6))
 }
 
 func TestCanSeeExperimental(t *testing.T) {
 	config := DefaultConfiguration()
 	config.Parse.ExperimentalDir = []string{"experimental"}
-	NewBuildState(1, nil, 1, config)
+	state := NewBuildState(1, nil, 1, config)
 
 	target1 := makeTarget("//src/core:target1", "")
 	target2 := makeTarget("//experimental/user:target2", "PUBLIC")
 
 	// target2 can see target1 since it's in experimental, which suppress normal visibility constraints.
-	assert.True(t, target2.CanSee(target1))
+	assert.True(t, target2.CanSee(state, target1))
 	// target1 can't see target2 because it's in experimental, even though it's public.
-	assert.False(t, target1.CanSee(target2))
+	assert.False(t, target1.CanSee(state, target2))
 }
 
 func TestCheckDependencyVisibility(t *testing.T) {
@@ -67,32 +67,32 @@ func TestCheckDependencyVisibility(t *testing.T) {
 	target7 := makeTarget("//src/test/python:test1", "", target5, target4)
 	target7.IsTest = true
 
-	graph := NewGraph()
-	graph.AddTarget(target1)
-	graph.AddTarget(target2)
-	graph.AddTarget(target3)
-	graph.AddTarget(target4)
-	graph.AddTarget(target5)
-	graph.AddTarget(target6)
-	graph.AddTarget(target7)
+	state := NewDefaultBuildState()
+	state.Graph.AddTarget(target1)
+	state.Graph.AddTarget(target2)
+	state.Graph.AddTarget(target3)
+	state.Graph.AddTarget(target4)
+	state.Graph.AddTarget(target5)
+	state.Graph.AddTarget(target6)
+	state.Graph.AddTarget(target7)
 
 	// Deps should all be correct at this point
-	assert.NoError(t, target1.CheckDependencyVisibility(graph))
-	assert.NoError(t, target2.CheckDependencyVisibility(graph))
-	assert.NoError(t, target3.CheckDependencyVisibility(graph))
-	assert.NoError(t, target4.CheckDependencyVisibility(graph))
-	assert.NoError(t, target5.CheckDependencyVisibility(graph))
-	assert.NoError(t, target6.CheckDependencyVisibility(graph))
-	assert.NoError(t, target7.CheckDependencyVisibility(graph))
+	assert.NoError(t, target1.CheckDependencyVisibility(state))
+	assert.NoError(t, target2.CheckDependencyVisibility(state))
+	assert.NoError(t, target3.CheckDependencyVisibility(state))
+	assert.NoError(t, target4.CheckDependencyVisibility(state))
+	assert.NoError(t, target5.CheckDependencyVisibility(state))
+	assert.NoError(t, target6.CheckDependencyVisibility(state))
+	assert.NoError(t, target7.CheckDependencyVisibility(state))
 
 	// Now if we add a dep on this mock library, lib2 will fail because it's not a test.
 	target2.resolveDependency(target5.Label, target5)
-	assert.Error(t, target2.CheckDependencyVisibility(graph))
+	assert.Error(t, target2.CheckDependencyVisibility(state))
 
 	// Similarly to above test, if we add a dep on something that can't be seen, we should
 	// get errors back from this function.
 	target3.resolveDependency(target1.Label, target1)
-	assert.Error(t, target3.CheckDependencyVisibility(graph))
+	assert.Error(t, target3.CheckDependencyVisibility(state))
 }
 
 func TestAddOutput(t *testing.T) {
@@ -244,41 +244,41 @@ func TestGetCommandConfig(t *testing.T) {
 }
 
 func TestGetCommand(t *testing.T) {
-	state := NewBuildState(10, nil, 2, DefaultConfiguration())
+	state := NewDefaultBuildState()
 	state.Config.Build.Config = "dbg"
 	state.Config.Build.FallbackConfig = "opt"
 	target := makeTarget("//src/core:target1", "PUBLIC")
 	target.Command = "test1"
-	assert.Equal(t, "test1", target.GetCommand())
+	assert.Equal(t, "test1", target.GetCommand(state))
 	assert.Panics(t, func() { target.AddCommand("opt", "test2") },
 		"Should panic when adding a config command to a target with a command already")
 	target.Command = ""
 	target.AddCommand("opt", "test3")
 	target.AddCommand("dbg", "test4")
-	assert.Equal(t, "test4", target.GetCommand(), "Current config is dbg")
+	assert.Equal(t, "test4", target.GetCommand(state), "Current config is dbg")
 	state.Config.Build.Config = "opt"
-	assert.Equal(t, "test3", target.GetCommand(), "Current config is opt")
+	assert.Equal(t, "test3", target.GetCommand(state), "Current config is opt")
 	state.Config.Build.Config = "fast"
-	assert.Equal(t, "test3", target.GetCommand(), "Default config is opt, should fall back to that")
+	assert.Equal(t, "test3", target.GetCommand(state), "Default config is opt, should fall back to that")
 }
 
 func TestGetTestCommand(t *testing.T) {
-	state := NewBuildState(10, nil, 2, DefaultConfiguration())
+	state := NewDefaultBuildState()
 	state.Config.Build.Config = "dbg"
 	state.Config.Build.FallbackConfig = "opt"
 	target := makeTarget("//src/core:target1", "PUBLIC")
 	target.TestCommand = "test1"
-	assert.Equal(t, "test1", target.GetTestCommand())
+	assert.Equal(t, "test1", target.GetTestCommand(state))
 	assert.Panics(t, func() { target.AddTestCommand("opt", "test2") },
 		"Should panic when adding a config command to a target with a command already")
 	target.TestCommand = ""
 	target.AddTestCommand("opt", "test3")
 	target.AddTestCommand("dbg", "test4")
-	assert.Equal(t, "test4", target.GetTestCommand(), "Current config is dbg")
+	assert.Equal(t, "test4", target.GetTestCommand(state), "Current config is dbg")
 	state.Config.Build.Config = "opt"
-	assert.Equal(t, "test3", target.GetTestCommand(), "Current config is opt")
+	assert.Equal(t, "test3", target.GetTestCommand(state), "Current config is opt")
 	state.Config.Build.Config = "fast"
-	assert.Equal(t, "test3", target.GetTestCommand(), "Default config is opt, should fall back to that")
+	assert.Equal(t, "test3", target.GetTestCommand(state), "Default config is opt, should fall back to that")
 }
 
 func TestHasSource(t *testing.T) {

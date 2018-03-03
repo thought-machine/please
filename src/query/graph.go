@@ -12,9 +12,9 @@ import (
 )
 
 // Graph prints a representation of the build graph as JSON.
-func Graph(graph *core.BuildGraph, targets []core.BuildLabel) {
+func Graph(state *core.BuildState, targets []core.BuildLabel) {
 	log.Notice("Generating graph...")
-	g := makeJSONGraph(graph, targets)
+	g := makeJSONGraph(state, targets)
 	log.Notice("Marshalling...")
 	b, err := json.MarshalIndent(g, "", "    ")
 	if err != nil {
@@ -52,31 +52,31 @@ type JSONTarget struct {
 	TestOnly bool     `json:"test_only,omitempty" note:"true if target should be restricted to test code"`
 }
 
-func makeJSONGraph(graph *core.BuildGraph, targets []core.BuildLabel) *JSONGraph {
+func makeJSONGraph(state *core.BuildState, targets []core.BuildLabel) *JSONGraph {
 	ret := JSONGraph{Packages: map[string]JSONPackage{}}
 	if len(targets) == 0 {
-		for pkg := range makeAllPackages(graph) {
+		for pkg := range makeAllPackages(state) {
 			ret.Packages[pkg.name] = pkg
 		}
 	} else {
 		done := map[core.BuildLabel]struct{}{}
 		for _, target := range targets {
-			addJSONTarget(graph, &ret, target, done)
+			addJSONTarget(state, &ret, target, done)
 		}
 	}
 	return &ret
 }
 
 // makeAllPackages constructs all the JSONPackage objects for this graph in parallel.
-func makeAllPackages(graph *core.BuildGraph) <-chan JSONPackage {
+func makeAllPackages(state *core.BuildState) <-chan JSONPackage {
 	ch := make(chan JSONPackage, 100)
 	go func() {
-		packages := graph.PackageMap()
+		packages := state.Graph.PackageMap()
 		var wg sync.WaitGroup
 		wg.Add(len(packages))
 		for _, pkg := range packages {
 			go func(pkg *core.Package) {
-				ch <- makeJSONPackage(graph, pkg)
+				ch <- makeJSONPackage(state, pkg)
 				wg.Done()
 			}(pkg)
 		}
@@ -86,61 +86,61 @@ func makeAllPackages(graph *core.BuildGraph) <-chan JSONPackage {
 	return ch
 }
 
-func addJSONTarget(graph *core.BuildGraph, ret *JSONGraph, label core.BuildLabel, done map[core.BuildLabel]struct{}) {
+func addJSONTarget(state *core.BuildState, ret *JSONGraph, label core.BuildLabel, done map[core.BuildLabel]struct{}) {
 	if _, present := done[label]; present {
 		return
 	}
 	done[label] = struct{}{}
 	if label.IsAllTargets() {
-		pkg := graph.PackageOrDie(label.PackageName)
+		pkg := state.Graph.PackageOrDie(label.PackageName)
 		for _, target := range pkg.AllTargets() {
-			addJSONTarget(graph, ret, target.Label, done)
+			addJSONTarget(state, ret, target.Label, done)
 		}
 		return
 	}
-	target := graph.TargetOrDie(label)
+	target := state.Graph.TargetOrDie(label)
 	if _, present := ret.Packages[label.PackageName]; present {
-		ret.Packages[label.PackageName].Targets[label.Name] = makeJSONTarget(graph, target)
+		ret.Packages[label.PackageName].Targets[label.Name] = makeJSONTarget(state, target)
 	} else {
 		ret.Packages[label.PackageName] = JSONPackage{
 			Targets: map[string]JSONTarget{
-				label.Name: makeJSONTarget(graph, target),
+				label.Name: makeJSONTarget(state, target),
 			},
 		}
 	}
 	for _, dep := range target.Dependencies() {
-		addJSONTarget(graph, ret, dep.Label, done)
+		addJSONTarget(state, ret, dep.Label, done)
 	}
 }
 
-func makeJSONPackage(graph *core.BuildGraph, pkg *core.Package) JSONPackage {
+func makeJSONPackage(state *core.BuildState, pkg *core.Package) JSONPackage {
 	targets := map[string]JSONTarget{}
 	for _, target := range pkg.AllTargets() {
-		targets[target.Label.Name] = makeJSONTarget(graph, target)
+		targets[target.Label.Name] = makeJSONTarget(state, target)
 	}
 	return JSONPackage{name: pkg.Name, Targets: targets}
 }
 
-func makeJSONTarget(graph *core.BuildGraph, target *core.BuildTarget) JSONTarget {
+func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget {
 	t := JSONTarget{}
-	for in := range core.IterSources(graph, target) {
+	for in := range core.IterSources(state.Graph, target) {
 		t.Inputs = append(t.Inputs, in.Src)
 	}
 	for _, out := range target.Outputs() {
 		t.Outputs = append(t.Outputs, path.Join(target.Label.PackageName, out))
 	}
-	for _, src := range target.AllSourcePaths(graph) {
+	for _, src := range target.AllSourcePaths(state.Graph) {
 		t.Sources = append(t.Sources, src)
 	}
 	for _, dep := range target.Dependencies() {
 		t.Deps = append(t.Deps, dep.Label.String())
 	}
-	for data := range core.IterRuntimeFiles(graph, target, false) {
+	for data := range core.IterRuntimeFiles(state.Graph, target, false) {
 		t.Data = append(t.Data, data.Src)
 	}
 	t.Labels = target.Labels
 	t.Requires = target.Requires
-	rawHash := append(build.RuleHash(target, true, false), core.State.Hashes.Config...)
+	rawHash := append(build.RuleHash(state, target, true, false), state.Hashes.Config...)
 	t.Hash = base64.RawStdEncoding.EncodeToString(rawHash)
 	t.Test = target.IsTest
 	t.Binary = target.IsBinary

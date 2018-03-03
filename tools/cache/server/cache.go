@@ -164,7 +164,11 @@ func (cache *Cache) removeAndDeleteFile(p string, file *cachedFile) {
 func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) {
 	ret := map[string][]byte{}
 	if core.IsGlob(artPath) {
-		for _, art := range core.Glob(cache.rootPath, []string{artPath}, nil, nil, true) {
+		// N.B. NewDefaultBuildState here is not really correct (we don't know what the config is
+		// and assuming the default isn't correct) but it's only used for determining BUILD file names
+		// so likely the only time it would make a difference is if we'd been asked to cache a file named BUILD
+		// when the BUILD file name had been changed to something else.
+		for _, art := range core.Glob(core.NewDefaultBuildState(), cache.rootPath, []string{artPath}, nil, nil, true) {
 			fullPath := path.Join(cache.rootPath, art)
 			lock := cache.lockFile(fullPath, false, 0)
 			body, err := ioutil.ReadFile(fullPath)

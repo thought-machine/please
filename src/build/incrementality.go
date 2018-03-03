@@ -73,12 +73,12 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 		}
 		return true
 	}
-	newRuleHash := RuleHash(target, false, postBuild)
+	newRuleHash := RuleHash(state, target, false, postBuild)
 	if !bytes.Equal(oldRuleHash, newRuleHash) {
 		log.Debug("Need to rebuild %s, rule has changed (was %s, need %s)", target.Label, b64(oldRuleHash), b64(newRuleHash))
 		return true
 	}
-	newSourceHash, err := sourceHash(state.Graph, target)
+	newSourceHash, err := sourceHash(state, target)
 	if err != nil || !bytes.Equal(oldSourceHash, newSourceHash) {
 		log.Debug("Need to rebuild %s, sources have changed (was %s, need %s)", target.Label, b64(oldSourceHash), b64(newSourceHash))
 		return true
@@ -134,8 +134,8 @@ func anyDependencyHasChanged(target *core.BuildTarget) bool {
 	return inner(target)
 }
 
-func mustSourceHash(graph *core.BuildGraph, target *core.BuildTarget) []byte {
-	b, err := sourceHash(graph, target)
+func mustSourceHash(state *core.BuildState, target *core.BuildTarget) []byte {
+	b, err := sourceHash(state, target)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
@@ -143,9 +143,9 @@ func mustSourceHash(graph *core.BuildGraph, target *core.BuildTarget) []byte {
 }
 
 // Calculate the hash of all sources of this rule
-func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error) {
+func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
-	for source := range core.IterSources(graph, target) {
+	for source := range core.IterSources(state.Graph, target) {
 		result, err := pathHash(source.Src, false)
 		if err != nil {
 			return nil, err
@@ -159,9 +159,9 @@ func sourceHash(graph *core.BuildGraph, target *core.BuildTarget) ([]byte, error
 			// in the same way we calculate a hash of sources for the rule, but that is
 			// impractical for some cases (notably npm) where tools can be very large.
 			// Instead we assume calculating the target hash is sufficient.
-			h.Write(mustTargetHash(core.State, graph.TargetOrDie(*label)))
+			h.Write(mustTargetHash(state, state.Graph.TargetOrDie(*label)))
 		} else {
-			result, err := pathHash(tool.FullPaths(graph)[0], false)
+			result, err := pathHash(tool.FullPaths(state.Graph)[0], false)
 			if err != nil {
 				return nil, err
 			}
@@ -291,19 +291,19 @@ func fileHash(h *hash.Hash, filename string) error {
 // Optionally it can include parts of the rule that affect runtime (most obviously test-time).
 // Note that we have to hash on the declared fields, we obviously can't hash pointers etc.
 // incrementality_test will warn if new fields are added to the struct but not here.
-func RuleHash(target *core.BuildTarget, runtime, postBuild bool) []byte {
+func RuleHash(state *core.BuildState, target *core.BuildTarget, runtime, postBuild bool) []byte {
 	if runtime || (postBuild && target.PostBuildFunction != nil) {
-		return ruleHash(target, runtime)
+		return ruleHash(state, target, runtime)
 	}
 	// Non-post-build hashes get stored on the target itself.
 	if len(target.RuleHash) != 0 {
 		return target.RuleHash
 	}
-	target.RuleHash = ruleHash(target, false) // This is never a runtime hash.
+	target.RuleHash = ruleHash(state, target, false) // This is never a runtime hash.
 	return target.RuleHash
 }
 
-func ruleHash(target *core.BuildTarget, runtime bool) []byte {
+func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []byte {
 	h := sha1.New()
 	h.Write([]byte(target.Label.String()))
 	for _, dep := range target.DeclaredDependencies() {
@@ -349,11 +349,11 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 
 	// Note that we only hash the current command here; whatever's set in commands that we're not going
 	// to run is uninteresting to us.
-	h.Write([]byte(target.GetCommand()))
+	h.Write([]byte(target.GetCommand(state)))
 
 	if runtime {
 		// Similarly, we only hash the current command here again.
-		h.Write([]byte(target.GetTestCommand()))
+		h.Write([]byte(target.GetTestCommand(state)))
 		for _, datum := range target.Data {
 			h.Write([]byte(datum.String()))
 		}
@@ -366,7 +366,7 @@ func ruleHash(target *core.BuildTarget, runtime bool) []byte {
 			}
 		}
 		if target.Containerise {
-			h.Write(core.State.Hashes.Containerisation)
+			h.Write(state.Hashes.Containerisation)
 		}
 	}
 
@@ -502,9 +502,9 @@ func storePostBuildOutput(state *core.BuildState, target *core.BuildTarget, out 
 
 // targetHash returns the hash for a target and any error encountered while calculating it.
 func targetHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	hash := append(RuleHash(target, false, false), RuleHash(target, false, true)...)
+	hash := append(RuleHash(state, target, false, false), RuleHash(state, target, false, true)...)
 	hash = append(hash, state.Hashes.Config...)
-	hash2, err := sourceHash(state.Graph, target)
+	hash2, err := sourceHash(state, target)
 	if err != nil {
 		return nil, err
 	}
@@ -529,9 +529,9 @@ func mustShortTargetHash(state *core.BuildState, target *core.BuildTarget) []byt
 // all rolled into one. Essentially this is one hash needed to determine if the runtime
 // state is consistent.
 func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	hash := append(RuleHash(target, true, false), RuleHash(target, true, true)...)
+	hash := append(RuleHash(state, target, true, false), RuleHash(state, target, true, true)...)
 	hash = append(hash, state.Hashes.Config...)
-	sh, err := sourceHash(state.Graph, target)
+	sh, err := sourceHash(state, target)
 	if err != nil {
 		return nil, err
 	}
@@ -552,9 +552,9 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 	fmt.Printf("%s:\n", target.Label)
 	fmt.Printf("  Config: %s\n", b64(state.Hashes.Config))
-	fmt.Printf("    Rule: %s (pre-build)\n", b64(RuleHash(target, false, false)))
-	fmt.Printf("    Rule: %s (post-build)\n", b64(RuleHash(target, false, true)))
-	fmt.Printf("  Source: %s\n", b64(mustSourceHash(state.Graph, target)))
+	fmt.Printf("    Rule: %s (pre-build)\n", b64(RuleHash(state, target, false, false)))
+	fmt.Printf("    Rule: %s (post-build)\n", b64(RuleHash(state, target, false, true)))
+	fmt.Printf("  Source: %s\n", b64(mustSourceHash(state, target)))
 	// Note that the logic here mimics sourceHash, but I don't want to pollute that with
 	// optional printing nonsense since it's on our hot path.
 	for source := range core.IterSources(state.Graph, target) {

@@ -14,7 +14,7 @@ import (
 // buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
 // or locally if not.
 func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
-	worker, _, localCmd := workerCommandAndArgs(target)
+	worker, _, localCmd := workerCommandAndArgs(state, target)
 	if worker == "" {
 		return runBuildCommand(state, target, localCmd, inputHash)
 	}

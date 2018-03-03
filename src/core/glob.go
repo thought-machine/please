@@ -19,10 +19,10 @@ func IsGlob(pattern string) bool {
 
 // Glob implements matching using Go's built-in filepath.Glob, but extends it to support
 // Ant-style patterns using **.
-func Glob(rootPath string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
+func Glob(state *BuildState, rootPath string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
 	filenames := []string{}
 	for _, include := range includes {
-		matches, err := glob(rootPath, include, includeHidden, prefixedExcludes)
+		matches, err := glob(state, rootPath, include, includeHidden, prefixedExcludes)
 		if err != nil {
 			panic(err)
 		}
@@ -57,7 +57,7 @@ func shouldExcludeMatch(match string, excludes []string) bool {
 	return false
 }
 
-func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]string, error) {
+func glob(state *BuildState, rootPath, pattern string, includeHidden bool, excludes []string) ([]string, error) {
 	// Go's Glob function doesn't handle Ant-style ** patterns. Do it ourselves if we have to,
 	// but we prefer not since our solution will have to do a potentially inefficient walk.
 	if !strings.Contains(pattern, "*") {
@@ -98,7 +98,7 @@ func glob(rootPath, pattern string, includeHidden bool, excludes []string) ([]st
 			return err
 		}
 		if info.IsDir() {
-			if name != rootPath && IsPackage(name) {
+			if name != rootPath && IsPackage(state, name) {
 				return filepath.SkipDir // Can't glob past a package boundary
 			} else if !includeHidden && strings.HasPrefix(info.Name(), ".") {
 				return filepath.SkipDir // Don't descend into hidden directories
@@ -118,22 +118,22 @@ var isPackageMemo = map[string]bool{}
 var isPackageMutex sync.RWMutex
 
 // IsPackage returns true if the given directory name is a package (i.e. contains a build file)
-func IsPackage(name string) bool {
+func IsPackage(state *BuildState, name string) bool {
 	isPackageMutex.RLock()
 	ret, present := isPackageMemo[name]
 	isPackageMutex.RUnlock()
 	if present {
 		return ret
 	}
-	ret = isPackageInternal(name)
+	ret = isPackageInternal(state, name)
 	isPackageMutex.Lock()
 	isPackageMemo[name] = ret
 	isPackageMutex.Unlock()
 	return ret
 }
 
-func isPackageInternal(name string) bool {
-	for _, buildFileName := range State.Config.Parse.BuildFileName {
+func isPackageInternal(state *BuildState, name string) bool {
+	for _, buildFileName := range state.Config.Parse.BuildFileName {
 		if FileExists(path.Join(name, buildFileName)) {
 			return true
 		}

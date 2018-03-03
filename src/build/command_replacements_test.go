@@ -14,9 +14,10 @@ import (
 )
 
 var wd string
+var state *core.BuildState
 
 func init() {
-	core.NewBuildState(1, nil, 1, core.DefaultConfiguration())
+	state = core.NewDefaultBuildState()
 	wd, _ = os.Getwd()
 }
 
@@ -25,7 +26,7 @@ func TestLocation(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "ln -s $(location //path/to:target2) ${OUT}", target2)
 
 	expected := "ln -s path/to/target2.py ${OUT}"
-	cmd := replaceSequences(target1)
+	cmd := replaceSequences(state, target1)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -37,7 +38,7 @@ func TestLocations(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "cat $(locations //path/to:target2) > ${OUT}", target2)
 
 	expected := "cat path/to/target2.py path/to/target2_other.py > ${OUT}"
-	cmd := replaceSequences(target1)
+	cmd := replaceSequences(state, target1)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -49,7 +50,7 @@ func TestExe(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "path/to/target2.py -o ${OUT}"
-	cmd := replaceSequences(target1)
+	cmd := replaceSequences(state, target1)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -61,7 +62,7 @@ func TestOutExe(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "plz-out/bin/path/to/target2.py -o ${OUT}"
-	cmd := replaceSequences(target1)
+	cmd := replaceSequences(state, target1)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -74,7 +75,7 @@ func TestJavaExe(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "java -jar path/to/target2.py -o ${OUT}"
-	cmd := replaceSequences(target1)
+	cmd := replaceSequences(state, target1)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -87,7 +88,7 @@ func TestJavaOutExe(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "java -jar plz-out/bin/path/to/target2.py -o ${OUT}"
-	cmd := replaceSequences(target1)
+	cmd := replaceSequences(state, target1)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -100,7 +101,7 @@ func TestReplacementsForTest(t *testing.T) {
 	target1.IsTest = true
 
 	expected := "./target1.py path/to/target2.py"
-	cmd := ReplaceTestSequences(target1, target1.Command)
+	cmd := ReplaceTestSequences(state, target1, target1.Command)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -111,7 +112,7 @@ func TestDataReplacementForTest(t *testing.T) {
 	target.Data = append(target.Data, core.FileLabel{File: "test_data.txt", Package: "path/to"})
 
 	expected := "cat path/to/test_data.txt"
-	cmd := ReplaceTestSequences(target, target.Command)
+	cmd := ReplaceTestSequences(state, target, target.Command)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -120,7 +121,7 @@ func TestDataReplacementForTest(t *testing.T) {
 func TestAmpersandReplacement(t *testing.T) {
 	target := makeTarget("//path/to:target1", "cat $(location b&b.txt)", nil)
 	expected := "cat \"path/to/b&b.txt\""
-	cmd := ReplaceSequences(target, target.Command)
+	cmd := ReplaceSequences(state, target, target.Command)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -133,7 +134,7 @@ func TestToolReplacement(t *testing.T) {
 
 	wd, _ := os.Getwd()
 	expected := quote(path.Join(wd, "plz-out/gen/path/to/target2.py"))
-	cmd := ReplaceSequences(target1, target1.Command)
+	cmd := ReplaceSequences(state, target1, target1.Command)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -145,7 +146,7 @@ func TestDirReplacement(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(dir //path/to:target2)", target2)
 
 	expected := "path/to"
-	cmd := ReplaceSequences(target1, target1.Command)
+	cmd := ReplaceSequences(state, target1, target1.Command)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -159,7 +160,7 @@ func TestToolDirReplacement(t *testing.T) {
 
 	wd, _ := os.Getwd()
 	expected := quote(path.Join(wd, "plz-out/gen/path/to"))
-	cmd := ReplaceSequences(target1, target1.Command)
+	cmd := ReplaceSequences(state, target1, target1.Command)
 	if cmd != expected {
 		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
 	}
@@ -168,17 +169,17 @@ func TestToolDirReplacement(t *testing.T) {
 func TestBazelCompatReplacements(t *testing.T) {
 	// Check that we don't do any of these things normally.
 	target := makeTarget("//path/to:target", "cp $< $@", nil)
-	assert.Equal(t, "cp $< $@", replaceSequences(target))
+	assert.Equal(t, "cp $< $@", replaceSequences(state, target))
 	// In Bazel compat mode we do though.
 	state := core.NewBuildState(1, nil, 1, core.DefaultConfiguration())
 	state.Config.Bazel.Compatibility = true
-	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(target))
+	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(state, target))
 	// @D is the output dir, for us it's the tmp dir.
 	target.Command = "cp $SRCS $@D"
-	assert.Equal(t, "cp $SRCS $TMP_DIR", replaceSequences(target))
+	assert.Equal(t, "cp $SRCS $TMP_DIR", replaceSequences(state, target))
 	// This parenthesised syntax seems to be allowed too.
 	target.Command = "cp $(<) $(@)"
-	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(target))
+	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(state, target))
 }
 
 func TestHashReplacement(t *testing.T) {
@@ -190,11 +191,11 @@ func TestHashReplacement(t *testing.T) {
 
 	target2 := makeTarget("//path/to:target2", "cp $< $@", nil)
 	target := makeTarget("//path/to:target", "echo $(hash //path/to:target2)", target2)
-	assert.Panics(t, func() { replaceSequences(target) }, "Can't use $(hash ) on a non-stamped target")
+	assert.Panics(t, func() { replaceSequences(state, target) }, "Can't use $(hash ) on a non-stamped target")
 	target.Stamp = true
 	// Note that this hash is determined arbitrarily, it doesn't matter for this test
 	// precisely what its value is.
-	assert.Equal(t, "echo gB4sUwsLkB1ODYKUxYrKGlpdYUI", replaceSequences(target))
+	assert.Equal(t, "echo gB4sUwsLkB1ODYKUxYrKGlpdYUI", replaceSequences(state, target))
 }
 
 func TestWorkerReplacement(t *testing.T) {
@@ -202,7 +203,7 @@ func TestWorkerReplacement(t *testing.T) {
 	tool.IsBinary = true
 	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg", tool)
 	target.Tools = append(target.Tools, tool.Label)
-	worker, remoteArgs, localCmd := workerCommandAndArgs(target)
+	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
 	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "", localCmd)
@@ -211,7 +212,7 @@ func TestWorkerReplacement(t *testing.T) {
 func TestSystemWorkerReplacement(t *testing.T) {
 	target := makeTarget("//path/to:target", "$(worker /usr/bin/javac) --some_arg", nil)
 	target.Tools = append(target.Tools, core.SystemFileLabel{Path: "/usr/bin/javac"})
-	worker, remoteArgs, localCmd := workerCommandAndArgs(target)
+	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
 	assert.Equal(t, "/usr/bin/javac", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "", localCmd)
@@ -222,7 +223,7 @@ func TestLocalCommandWorker(t *testing.T) {
 	tool.IsBinary = true
 	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg && find . | xargs rm && echo hello", tool)
 	target.Tools = append(target.Tools, tool.Label)
-	worker, remoteArgs, localCmd := workerCommandAndArgs(target)
+	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
 	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
@@ -233,12 +234,12 @@ func TestWorkerCommandAndArgsMustComeFirst(t *testing.T) {
 	tool.IsBinary = true
 	target := makeTarget("//path/to:target", "something something $(worker javac)", tool)
 	target.Tools = append(target.Tools, tool.Label)
-	assert.Panics(t, func() { workerCommandAndArgs(target) })
+	assert.Panics(t, func() { workerCommandAndArgs(state, target) })
 }
 
 func TestWorkerReplacementWithNoWorker(t *testing.T) {
 	target := makeTarget("//path/to:target", "echo hello", nil)
-	worker, remoteArgs, localCmd := workerCommandAndArgs(target)
+	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
 	assert.Equal(t, "", worker)
 	assert.Equal(t, "", remoteArgs)
 	assert.Equal(t, "echo hello", localCmd)

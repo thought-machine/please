@@ -16,9 +16,11 @@ import (
 const size = 1000
 const numWorkers = 10
 
+var state *core.BuildState
+
 func TestBuildLotsOfTargets(t *testing.T) {
 	config, _ := core.ReadConfigFiles(nil, "")
-	state := core.NewBuildState(numWorkers, nil, 4, config)
+	state = core.NewBuildState(numWorkers, nil, 4, config)
 	state.Parser = &fakeParser{
 		PostBuildFunctions: buildFunctionMap{},
 	}
@@ -100,11 +102,11 @@ func postBuild(target *core.BuildTarget, out string) error {
 		return fmt.Errorf("shouldn't be calling a post-build function on %s", target.Label)
 	}
 	parent := label(target.Flakiness / 10)
-	newTarget := addTarget(core.State, target.Flakiness+size)
+	newTarget := addTarget(state, target.Flakiness+size)
 
 	// This mimics what interpreter.go does.
-	core.State.Graph.TargetOrDie(parent).AddMaybeExportedDependency(newTarget.Label, false, false)
-	core.State.Graph.AddDependency(parent, newTarget.Label)
+	state.Graph.TargetOrDie(parent).AddMaybeExportedDependency(newTarget.Label, false, false)
+	state.Graph.AddDependency(parent, newTarget.Label)
 	return nil
 }
 

@@ -274,7 +274,7 @@ func prepareTestDir(graph *core.BuildGraph, target *core.BuildTarget) error {
 
 // testCommandAndEnv returns the test command & environment for a target.
 func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget) (string, []string) {
-	replacedCmd := build.ReplaceTestSequences(target, target.GetTestCommand())
+	replacedCmd := build.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	env := core.BuildEnvironment(state, target, true)
 	if len(state.TestArgs) > 0 {
 		args := strings.Join(state.TestArgs, " ")
@@ -287,7 +287,7 @@ func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget) (string
 func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	replacedCmd, env := testCommandAndEnv(state, target)
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	_, out, err := core.ExecWithTimeoutShellStdStreams(target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd, target.TestSandbox, state.DebugTests)
+	_, out, err := core.ExecWithTimeoutShellStdStreams(state, target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd, target.TestSandbox, state.DebugTests)
 	return out, err
 }
 

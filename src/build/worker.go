@@ -40,7 +40,7 @@ var workerMutex sync.Mutex
 // buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
 // or locally if not.
 func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
-	worker, workerArgs, localCmd := workerCommandAndArgs(target)
+	worker, workerArgs, localCmd := workerCommandAndArgs(state, target)
 	if worker == "" {
 		return runBuildCommand(state, target, localCmd, inputHash)
 	}

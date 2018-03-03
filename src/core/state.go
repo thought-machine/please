@@ -153,11 +153,6 @@ type SystemStats struct {
 	}
 }
 
-// State is a singleton instance of the most recently constructed BuildState.
-// We would prefer not to have this but it ended up being inevitable for some of the
-// parsing code that doesn't have ready access to other Go variables.
-var State *BuildState
-
 // AddActiveTarget increments the counter for a newly active build target.
 func (state *BuildState) AddActiveTarget() {
 	atomic.AddInt64(&state.numActive, 1)
@@ -398,7 +393,7 @@ func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
 func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configuration) *BuildState {
-	State = &BuildState{
+	state := &BuildState{
 		Graph:        NewGraph(),
 		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
 		Results:      make(chan *BuildResult, numThreads*100),
@@ -415,13 +410,13 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		numWorkers:   numThreads,
 		Stats:        &SystemStats{},
 	}
-	State.Hashes.Config = config.Hash()
-	State.Hashes.Containerisation = config.ContainerisationHash()
+	state.Hashes.Config = config.Hash()
+	state.Hashes.Containerisation = config.ContainerisationHash()
 	config.Please.NumThreads = numThreads
 	for _, exp := range config.Parse.ExperimentalDir {
-		State.experimentalLabels = append(State.experimentalLabels, BuildLabel{PackageName: exp, Name: "..."})
+		state.experimentalLabels = append(state.experimentalLabels, BuildLabel{PackageName: exp, Name: "..."})
 	}
-	return State
+	return state
 }
 
 // NewDefaultBuildState creates a BuildState for the default configuration.

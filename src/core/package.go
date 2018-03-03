@@ -202,20 +202,20 @@ func (pkg *Package) verifyOutputs() []string {
 }
 
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.
-func FindOwningPackages(files []string) []BuildLabel {
+func FindOwningPackages(state *BuildState, files []string) []BuildLabel {
 	ret := make([]BuildLabel, len(files))
 	for i, file := range files {
-		ret[i] = FindOwningPackage(file)
+		ret[i] = FindOwningPackage(state, file)
 	}
 	return ret
 }
 
 // FindOwningPackage returns a build label identifying the package that owns a given file.
-func FindOwningPackage(file string) BuildLabel {
+func FindOwningPackage(state *BuildState, file string) BuildLabel {
 	f := file
 	for f != "." {
 		f = path.Dir(f)
-		if IsPackage(f) {
+		if IsPackage(state, f) {
 			return BuildLabel{PackageName: f, Name: "all"}
 		}
 	}

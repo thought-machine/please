@@ -66,38 +66,38 @@ var workerReplacement = regexp.MustCompile(`^(.*)\$\(worker ([^\)]+)\) *([^&]*)(
 
 // Replace escape sequences in the target's command.
 // For example, $(location :blah) -> the output of rule blah.
-func replaceSequences(target *core.BuildTarget) string {
-	return ReplaceSequences(target, target.GetCommand())
+func replaceSequences(state *core.BuildState, target *core.BuildTarget) string {
+	return ReplaceSequences(state, target, target.GetCommand(state))
 }
 
 // ReplaceSequences replaces escape sequences in the given string.
-func ReplaceSequences(target *core.BuildTarget, command string) string {
-	return replaceSequencesInternal(target, command, false)
+func ReplaceSequences(state *core.BuildState, target *core.BuildTarget, command string) string {
+	return replaceSequencesInternal(state, target, command, false)
 }
 
 // ReplaceTestSequences replaces escape sequences in the given string when running a test.
-func ReplaceTestSequences(target *core.BuildTarget, command string) string {
+func ReplaceTestSequences(state *core.BuildState, target *core.BuildTarget, command string) string {
 	if command == "" {
 		// An empty test command implies running the test binary.
-		return replaceSequencesInternal(target, fmt.Sprintf("$(exe :%s)", target.Label.Name), true)
+		return replaceSequencesInternal(state, target, fmt.Sprintf("$(exe :%s)", target.Label.Name), true)
 	}
-	return replaceSequencesInternal(target, command, true)
+	return replaceSequencesInternal(state, target, command, true)
 }
 
 // workerCommandAndArgs returns the worker & its command (if any) and subsequent local command for the rule.
-func workerCommandAndArgs(target *core.BuildTarget) (string, string, string) {
-	match := workerReplacement.FindStringSubmatch(target.GetCommand())
+func workerCommandAndArgs(state *core.BuildState, target *core.BuildTarget) (string, string, string) {
+	match := workerReplacement.FindStringSubmatch(target.GetCommand(state))
 	if match == nil {
-		return "", "", ReplaceSequences(target, target.GetCommand())
+		return "", "", ReplaceSequences(state, target, target.GetCommand(state))
 	} else if match[1] != "" {
 		panic("$(worker) replacements cannot have any commands preceding them.")
 	}
 	return replaceSequence(target, core.ExpandHomePath(match[2]), true, false, false, false, false, false),
-		replaceSequencesInternal(target, strings.TrimSpace(match[3]), false),
-		replaceSequencesInternal(target, match[4], false)
+		replaceSequencesInternal(state, target, strings.TrimSpace(match[3]), false),
+		replaceSequencesInternal(state, target, match[4], false)
 }
 
-func replaceSequencesInternal(target *core.BuildTarget, command string, test bool) string {
+func replaceSequencesInternal(state *core.BuildState, target *core.BuildTarget, command string, test bool) string {
 	cmd := locationReplacement.ReplaceAllStringFunc(command, func(in string) string {
 		return replaceSequence(target, in[11:len(in)-1], false, false, false, false, false, test)
 	})
@@ -122,7 +122,7 @@ func replaceSequencesInternal(target *core.BuildTarget, command string, test boo
 		}
 		return replaceSequence(target, in[7:len(in)-1], false, true, true, false, true, test)
 	})
-	if core.State.Config.Bazel.Compatibility {
+	if state.Config.Bazel.Compatibility {
 		// Bazel allows several obscure Make-style variable expansions.
 		// Our replacement here is not very principled but should work better than not doing it at all.
 		cmd = strings.Replace(cmd, "$<", "$SRCS", -1)

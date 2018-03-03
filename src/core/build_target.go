@@ -496,8 +496,8 @@ func (target *BuildTarget) allDependenciesResolved() bool {
 }
 
 // isExperimental returns true if the given target is in the "experimental" tree
-func isExperimental(target *BuildTarget) bool {
-	for _, exp := range State.experimentalLabels {
+func isExperimental(state *BuildState, target *BuildTarget) bool {
+	for _, exp := range state.experimentalLabels {
 		if exp.Includes(target.Label) {
 			return true
 		}
@@ -506,12 +506,12 @@ func isExperimental(target *BuildTarget) bool {
 }
 
 // CanSee returns true if target can see the given dependency, or false if not.
-func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
+func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 	// Targets are always visible to other targets in the same directory.
 	if target.Label.PackageName == dep.Label.PackageName {
 		return true
 	}
-	if isExperimental(dep) && !isExperimental(target) {
+	if isExperimental(state, dep) && !isExperimental(state, target) {
 		log.Error("Target %s cannot depend on experimental target %s", target.Label, dep.Label)
 		return false
 	}
@@ -520,7 +520,7 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 			return true
 		}
 	}
-	if isExperimental(target) {
+	if isExperimental(state, target) {
 		log.Warning("Visibility restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
 		return true
 	}
@@ -529,13 +529,13 @@ func (target *BuildTarget) CanSee(dep *BuildTarget) bool {
 
 // CheckDependencyVisibility checks that all declared dependencies of this target are visible to it.
 // Returns an error if not, or nil if all's well.
-func (target *BuildTarget) CheckDependencyVisibility(graph *BuildGraph) error {
+func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 	for _, d := range target.dependencies {
-		dep := graph.TargetOrDie(d.declared)
-		if !target.CanSee(dep) {
+		dep := state.Graph.TargetOrDie(d.declared)
+		if !target.CanSee(state, dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
 		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
-			if isExperimental(target) {
+			if isExperimental(state, target) {
 				log.Warning("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
 			} else {
 				return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
@@ -822,8 +822,8 @@ func (target *BuildTarget) AddTestCommand(config, command string) {
 }
 
 // GetCommand returns the command we should use to build this target for the current config.
-func (target *BuildTarget) GetCommand() string {
-	return target.getCommand(target.Commands, target.Command)
+func (target *BuildTarget) GetCommand(state *BuildState) string {
+	return target.getCommand(state, target.Commands, target.Command)
 }
 
 // GetCommandConfig returns the command we should use to build this target for the given config.
@@ -835,16 +835,16 @@ func (target *BuildTarget) GetCommandConfig(config string) string {
 }
 
 // GetTestCommand returns the command we should use to test this target for the current config.
-func (target *BuildTarget) GetTestCommand() string {
-	return target.getCommand(target.TestCommands, target.TestCommand)
+func (target *BuildTarget) GetTestCommand(state *BuildState) string {
+	return target.getCommand(state, target.TestCommands, target.TestCommand)
 }
 
-func (target *BuildTarget) getCommand(commands map[string]string, singleCommand string) string {
+func (target *BuildTarget) getCommand(state *BuildState, commands map[string]string, singleCommand string) string {
 	if commands == nil {
 		return singleCommand
-	} else if command, present := commands[State.Config.Build.Config]; present {
+	} else if command, present := commands[state.Config.Build.Config]; present {
 		return command // Has command for current config, good
-	} else if command, present := commands[State.Config.Build.FallbackConfig]; present {
+	} else if command, present := commands[state.Config.Build.FallbackConfig]; present {
 		return command // Has command for default config, fall back to that
 	}
 	// Oh dear, target doesn't have any matching config. Panicking is a bit heavy here, instead
@@ -858,7 +858,7 @@ func (target *BuildTarget) getCommand(commands map[string]string, singleCommand 
 		}
 	}
 	log.Warning("%s doesn't have a command for %s (or %s), falling back to %s",
-		target.Label, State.Config.Build.Config, State.Config.Build.FallbackConfig, highestConfig)
+		target.Label, state.Config.Build.Config, state.Config.Build.FallbackConfig, highestConfig)
 	return highestCommand
 }
 

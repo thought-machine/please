@@ -355,7 +355,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 	fmt.Printf("Temp directories prepared, total time %s:\n", duration)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
-		cmd := build.ReplaceSequences(target, target.GetCommand())
+		cmd := build.ReplaceSequences(state, target, target.GetCommand(state))
 		env := core.BuildEnvironment(state, target, false)
 		fmt.Printf("  %s: %s\n", label, target.TmpDir())
 		fmt.Printf("    Command: %s\n", cmd)
