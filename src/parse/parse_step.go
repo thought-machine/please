@@ -31,27 +31,23 @@ var log = logging.MustGetLogger("parse")
 // 'forSubinclude' is set when the parse is required for a subinclude target so should proceed
 // even when we're not otherwise building targets.
 func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			err, ok := r.(error)
-			if !ok {
-				err = fmt.Errorf("%s", r)
-			}
-			state.LogBuildError(tid, label, core.ParseFailed, err, "Failed to parse package")
-		}
-	}()
+	if err := parse(tid, state, label, dependor, noDeps, include, exclude, forSubinclude); err != nil {
+		state.LogBuildError(tid, label, core.ParseFailed, err, "Failed to parse package")
+	}
+}
+
+func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) error {
 	// First see if this package already exists; once it's in the graph it will have been parsed.
 	pkg := state.Graph.Package(label.PackageName)
 	if pkg != nil {
 		// Does exist, all we need to do is toggle on this target
-		activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
-		return
+		return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
 	}
 	// Check whether this guy exists within a subrepo. If so we will need to make sure that's available first.
 	if subrepo := state.Graph.SubrepoFor(label.PackageName); subrepo != nil && subrepo.Target != nil {
 		if deferParse(state, subrepo.Target.Label, label.PackageName) {
 			log.Debug("Deferring parse of %s pending subrepo dependency %s", label, subrepo.Target.Label)
-			return
+			return nil
 		}
 	}
 
@@ -59,7 +55,7 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 	if dependor.Name != "_UNDEFER_" && !firstToParse(label, dependor) {
 		// Check this again to avoid a potential race
 		if pkg = state.Graph.Package(label.PackageName); pkg != nil {
-			activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
+			return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
 		} else if forSubinclude {
 			// Need to make sure this guy happens, so re-add him to the queue.
 			// It should be essentially idempotent but we need to make sure that the task with
@@ -69,14 +65,16 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 		} else {
 			log.Debug("Skipping pending parse for %s", label)
 		}
-		return
+		return nil
 	}
 	// If we get here then it falls to us to parse this package
 	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
-	pkg = parsePackage(state, label, dependor)
-	if pkg == nil {
+	pkg, err := parsePackage(state, label, dependor)
+	if err != nil {
+		return err
+	} else if pkg == nil {
 		state.LogBuildResult(tid, label, core.PackageParsed, "Deferred")
-		return
+		return nil
 	}
 
 	// Now add any lurking pending targets for this package.
@@ -89,23 +87,26 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 		for _, dependor := range dependors {
 			log.Debug("Undeferring pending target %s now we've got %s", dependor, targetName)
 			lbl := core.BuildLabel{PackageName: label.PackageName, Name: targetName}
-			activateTarget(state, pkg, lbl, dependor, noDeps, forSubinclude, include, exclude)
+			if err := activateTarget(state, pkg, lbl, dependor, noDeps, forSubinclude, include, exclude); err != nil {
+				return err
+			}
 		}
 	}
 	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed")
+	return nil
 }
 
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
-func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor core.BuildLabel, noDeps, forSubinclude bool, include, exclude []string) {
+func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor core.BuildLabel, noDeps, forSubinclude bool, include, exclude []string) error {
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
 		msg := fmt.Sprintf("Parsed build file %s but it doesn't contain target %s", pkg.Filename, label.Name)
 		if dependor != core.OriginalTarget {
 			msg += fmt.Sprintf(" (depended on by %s)", dependor)
 		}
-		panic(msg + suggestTargets(pkg, label, dependor))
+		return fmt.Errorf(msg + suggestTargets(pkg, label, dependor))
 	}
 	if noDeps && !dependor.IsAllTargets() { // IsAllTargets indicates requirement for parse
-		return // Some kinds of query don't need a full recursive parse.
+		return nil // Some kinds of query don't need a full recursive parse.
 	} else if label.IsAllTargets() {
 		for _, target := range pkg.AllTargets() {
 			// Don't activate targets that were added in a post-build function; that causes a race condition
@@ -124,6 +125,7 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 			addDep(state, l, dependor, false, forSubinclude || dependor.IsAllTargets())
 		}
 	}
+	return nil
 }
 
 // Used to arbitrate single access to these maps
@@ -203,31 +205,31 @@ func getDependingTarget(packageName string) string {
 
 // parsePackage performs the initial parse of a package.
 // It's assumed that the caller used firstToParse to ascertain that they only call this once per package.
-func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core.Package {
+func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) (*core.Package, error) {
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
 	if pkg.Filename = buildFileName(state, packageName); pkg.Filename == "" {
 		exists := core.PathExists(packageName)
 		// Handle quite a few cases to provide more obvious error messages.
 		if dependor != core.OriginalTarget && exists {
-			panic(fmt.Sprintf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, packageName))
+			return nil, fmt.Errorf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, packageName)
 		} else if dependor != core.OriginalTarget {
-			panic(fmt.Sprintf("%s depends on %s, but the directory %s doesn't exist", dependor, label, packageName))
+			return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist", dependor, label, packageName)
 		} else if exists {
-			panic(fmt.Sprintf("Can't build %s; there's no BUILD file in %s/", label, packageName))
+			return nil, fmt.Errorf("Can't build %s; there's no BUILD file in %s/", label, packageName)
 		}
-		panic(fmt.Sprintf("Can't build %s; the directory %s doesn't exist", label, packageName))
+		return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, packageName)
 	}
 
 	err := state.Parser.ParseFile(state, pkg, pkg.Filename)
 	if required, l := asp.RequiresSubinclude(err); required {
 		if deferParse(state, l, pkg.Name) {
-			return nil // similarly, deferral
+			return nil, nil // similarly, deferral
 		}
 		// If we get here, the target wasn't available to subinclude before, but is now. Try it again.
 		return parsePackage(state, label, dependor)
 	} else if err != nil {
-		panic(err) // TODO(peterebden): Should just return this...
+		return nil, err
 	}
 
 	allTargets := pkg.AllTargets()
@@ -262,7 +264,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) *core
 	// since it only issues warnings sometimes.
 	go pkg.VerifyOutputs()
 	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
-	return pkg
+	return pkg, nil
 }
 
 func buildFileName(state *core.BuildState, pkgName string) string {
