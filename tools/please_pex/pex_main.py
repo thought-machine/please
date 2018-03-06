@@ -168,6 +168,15 @@ def profile(filename):
     return _profile
 
 
+def interact(main):
+    """If PEX_INTERPRETER is set, then starts an interactive console, otherwise runs main()."""
+    if os.environ.get('PEX_INTERPRETER', '0') != '0':
+        import code
+        code.interact()
+    else:
+        return main()
+
+
 def main():
     """Runs the 'real' entry point of the pex.
 

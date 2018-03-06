@@ -5,9 +5,9 @@ def run():
     clean_sys_path()
     if not ZIP_SAFE:
         with explode_zip()():
-            return main()
+            return interact(main)
     else:
-        return main()
+        return interact(main)
 
 
 if __name__ == '__main__':
