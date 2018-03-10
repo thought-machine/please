@@ -23,6 +23,7 @@ type nativeFunc func(*scope, []pyObject) pyObject
 func registerBuiltins(s *scope) {
 	setNativeCode(s, "build_rule", buildRule)
 	setNativeCode(s, "subrepo", subrepo)
+	setNativeCode(s, "fail", builtinFail)
 	setNativeCode(s, "subinclude", subinclude)
 	setNativeCode(s, "load", bazelLoad).varargs = true
 	setNativeCode(s, "package", pkg).kwargs = true
@@ -217,6 +218,12 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
 	l := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
 	s.SetAll(s.interpreter.Subinclude(path.Join(l.PackageName, l.Name)), false)
+	return None
+}
+
+// builtinFail raises an immediate error that can't be intercepted.
+func builtinFail(s *scope, args []pyObject) pyObject {
+	s.Error(string(args[0].(pyString)))
 	return None
 }
 

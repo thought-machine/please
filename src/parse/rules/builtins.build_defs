@@ -55,6 +55,8 @@ def upper(self):
 def lower(self):
     pass
 
+def fail(msg:str):
+    pass
 
 def subinclude(target:str, hash:str=None):
     pass
