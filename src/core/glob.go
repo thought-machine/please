@@ -94,11 +94,11 @@ func glob(state *BuildState, rootPath, pattern string, includeHidden bool, exclu
 		return matches, err
 	}
 
-	err = godirwalk.Walk(rootPath, &godirwalk.Options{Callback: func(name string, info *godirwalk.Dirent) error {
-		if info.IsDir() {
+	err = Walk(rootPath, func(name string, isDir bool) error {
+		if isDir {
 			if name != rootPath && IsPackage(state, name) {
 				return filepath.SkipDir // Can't glob past a package boundary
-			} else if !includeHidden && strings.HasPrefix(info.Name(), ".") {
+			} else if !includeHidden && strings.HasPrefix(path.Base(name), ".") {
 				return filepath.SkipDir // Don't descend into hidden directories
 			} else if shouldExcludeMatch(name, excludes) {
 				return filepath.SkipDir
@@ -107,8 +107,17 @@ func glob(state *BuildState, rootPath, pattern string, includeHidden bool, exclu
 			matches = append(matches, name)
 		}
 		return nil
-	}})
+	})
 	return matches, err
+}
+
+// Walk implements an equivalent to filepath.Walk.
+// It's implemented over github.com/karrick/godirwalk but the provided interface doesn't use that
+// to make it a little easier to handle.
+func Walk(rootPath string, callback func(name string, isDir bool) error) error {
+	return godirwalk.Walk(rootPath, &godirwalk.Options{Callback: func(name string, info *godirwalk.Dirent) error {
+		return callback(name, info.IsDir())
+	}})
 }
 
 // Memoize this to cut down on filesystem operations
