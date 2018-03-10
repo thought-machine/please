@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"core"
 )
@@ -48,10 +47,8 @@ func parseTestResultsDir(outputDir string) (core.TestResults, error) {
 	if !core.PathExists(outputDir) {
 		return results, fmt.Errorf("Didn't find any test results in %s", outputDir)
 	}
-	err := filepath.Walk(outputDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		} else if !info.IsDir() {
+	err := core.Walk(outputDir, func(path string, isDir bool) error {
+		if !isDir {
 			fileResults, err := parseTestResultsImpl(path)
 			if err != nil {
 				return fmt.Errorf("Error parsing %s: %s", path, err)

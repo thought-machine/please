@@ -224,10 +224,8 @@ func pathHashImpl(path string) ([]byte, error) {
 		return h.Sum(nil), err
 	}
 	if err == nil && info.IsDir() {
-		err = filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			} else if info.Mode()&os.ModeSymlink != 0 {
+		err = core.WalkMode(path, func(p string, isDir bool, mode os.FileMode) error {
+			if mode&os.ModeSymlink != 0 {
 				// Is a symlink, must verify that it's not a link outside the tmp dir.
 				deref, err := filepath.EvalSymlinks(p)
 				if err != nil {
@@ -242,7 +240,7 @@ func pathHashImpl(path string) ([]byte, error) {
 				// Just write something to the hash indicating that we found something here,
 				// otherwise rules might be marked as unchanged if they added additional symlinks.
 				h.Write(boolTrueHashValue)
-			} else if !info.IsDir() {
+			} else if !isDir {
 				return fileHash(&h, p)
 			}
 			return nil

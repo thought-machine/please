@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"time"
 
 	"core"
@@ -28,10 +27,8 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files ...str
 	if cache.Writeable {
 		for out := range cacheArtifacts(target, files...) {
 			if info, err := os.Stat(out); err == nil && info.IsDir() {
-				filepath.Walk(out, func(name string, info os.FileInfo, err error) error {
-					if err != nil {
-						return err
-					} else if !info.IsDir() {
+				core.Walk(out, func(name string, isDir bool) error {
+					if !isDir {
 						cache.StoreExtra(target, key, name)
 					}
 					return nil
