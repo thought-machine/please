@@ -413,6 +413,10 @@ type pyFunc struct {
 	varargs bool
 	// True if this function accepts arbitrary keyword arguments (e.g. package(), str.format()).
 	kwargs bool
+	// True if this function may only be called using keyword arguments.
+	// This is the case for all builtin build rules, although for now it cannot be specified
+	// on any user-defined ones.
+	kwargsonly bool
 }
 
 func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
@@ -424,6 +428,7 @@ func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
 		constants:  make([]pyObject, len(def.Arguments)),
 		types:      make([][]string, len(def.Arguments)),
 		code:       def.Statements,
+		kwargsonly: def.KeywordsOnly,
 	}
 	if def.Docstring != "" {
 		f.docstring = stringLiteral(def.Docstring)
@@ -491,7 +496,9 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	// Handle implicit 'self' parameter for bound functions.
 	args := c.Arguments
 	if f.self != nil {
-		args = append([]CallArgument{{self: f.self}}, args...)
+		args = append([]CallArgument{{
+			Expr: &Expression{Constant: f.self},
+		}}, args...)
 	}
 	for i, a := range args {
 		if a.Value != nil { // Named argument
@@ -504,11 +511,9 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 				name = f.args[idx]
 			}
 			s2.Set(name, f.validateType(s, idx, a.Value))
-		} else if i >= len(f.args) {
-			s.Error("Too many arguments to %s", f.name)
-		} else if a.self != nil {
-			s2.Set(f.args[i], a.self)
 		} else {
+			s.NAssert(i >= len(f.args), "Too many arguments to %s", f.name)
+			s.NAssert(f.kwargsonly, "Function %s can only be called with keyword arguments", f.name)
 			s2.Set(f.args[i], f.validateType(s, i, a.Expr))
 		}
 	}
@@ -547,11 +552,10 @@ func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 				s.Error("Unknown argument to %s: %s", f.name, a.Expr.Val.Ident.Name)
 			}
 		} else if i >= len(args) {
-			if !f.varargs {
-				s.Error("Too many arguments to %s", f.name)
-			}
+			s.Assert(f.varargs, "Too many arguments to %s", f.name)
 			args = append(args, s.interpretExpression(a.Expr))
 		} else {
+			s.NAssert(f.kwargsonly, "Function %s can only be called with keyword arguments", f.name)
 			args[i+offset] = f.validateType(s, i+offset, a.Expr)
 		}
 	}

@@ -42,6 +42,9 @@ type FuncDef struct {
 	Arguments  []*Argument  `"(" [ @@ { "," @@ } ] ")" Colon EOL`
 	Docstring  string       `[ @String EOL ]`
 	Statements []*Statement `{ @@ } Unindent`
+	// Not part of the grammar. Used to indicate internal targets that can only
+	// be called using keyword arguments.
+	KeywordsOnly bool
 }
 
 // A ForStatement implements the 'for' statement.
@@ -160,7 +163,6 @@ type Call struct {
 type CallArgument struct {
 	Expr  *Expression `@@`
 	Value *Expression `[ "=" @@ ]`
-	self  pyObject    // Not part of the grammar, used later by interpreter for function calls.
 }
 
 // A List represents a list literal, either with or without a comprehension clause.

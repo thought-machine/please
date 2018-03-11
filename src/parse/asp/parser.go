@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strings"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -105,6 +106,11 @@ func (p *Parser) ParseToFile(input, output string) error {
 	}
 	stmts = p.optimise(stmts)
 	p.interpreter.optimiseExpressions(reflect.ValueOf(stmts))
+	for _, stmt := range stmts {
+		if stmt.FuncDef != nil {
+			stmt.FuncDef.KeywordsOnly = !whitelistedKwargs(stmt.FuncDef.Name, input)
+		}
+	}
 	f, err := os.Create(output)
 	if err != nil {
 		return err
@@ -206,4 +212,19 @@ func (p *Parser) optimise(statements []*Statement) []*Statement {
 		ret = append(ret, stmt)
 	}
 	return ret
+}
+
+// whitelistedKwargs returns true if the given built-in function name is allowed to
+// be called as non-kwargs.
+// TODO(peterebden): Come up with a syntax that exposes this directly in the file.
+func whitelistedKwargs(name, filename string) bool {
+	if name[0] == '_' || (strings.HasSuffix(filename, "builtins.build_defs") && name != "build_rule") {
+		return true // Don't care about anything private, or non-rule builtins.
+	}
+	return map[string]bool{
+		"workspace":    true,
+		"decompose":    true,
+		"check_config": true,
+		"select":       true,
+	}[name]
 }
