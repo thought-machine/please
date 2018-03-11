@@ -18,10 +18,3 @@ go_library(
     srcs = [':builtin_data'],
     visibility = ['//src/parse/...'],
 )
-
-gentest(
-    name = 'lint_builtin_rules_test',
-    data = build_defs + ['//tools/linter'],
-    no_test_output = True,
-    test_cmd = '$(location //tools/linter) $PKG/*.build_defs',
-)

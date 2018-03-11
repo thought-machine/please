@@ -1,8 +1,0 @@
-# This is not okay to call without keywords
-python_binary('test_binary', 'test_main.py')
-# Nor can you do it this way
-args = ['test_binary', 'test_main.py']
-python_binary(*args)
-# But these are.
-glob(['*.py'])
-subinclude('//build_defs:go_bindata')

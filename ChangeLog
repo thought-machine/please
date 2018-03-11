@@ -12,6 +12,8 @@ Version 12.0.0
     * The default Python interpreter is now python3. It can be set to python in the
       .plzconfig if one prefers the old behaviour.
     * The GoVersion config attribute has been removed, and with it support for versions < 1.5.
+    * The BUILD file linter (accessed via `plz tool lint`) has been removed. The warnings that
+      it reported are essentially all now prohibited by the parser.
 
 
 Version 11.4.0

@@ -1,8 +1,0 @@
-python_binary(
-    name = 'test1',
-    main = 'test1.py',
-)
-python_binary(
-    name = 'test2',
-    src = 'test2.py',
-)

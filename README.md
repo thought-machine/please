@@ -43,9 +43,9 @@ build it once manually and then rebuild it again using itself.
 You'll need to have Go 1.9+ installed to build Please although once
 built it can target any version from 1.5+ onwards.
 
-You will also need to have Python 3 and Java 7 or above installed to build
+You will also need to have Java 7 or above installed to build
 some of the helper programs. Optional dependencies for various tests
-include unittest++ (`sudo apt-get install libunittest++-dev`), clang,
+include Python, unittest++ (`sudo apt-get install libunittest++-dev`), clang,
 gold and docker - none of those are required to build components so
 their tests will be excluded if they aren't available.
 

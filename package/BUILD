@@ -10,7 +10,6 @@ filegroup(
         '//tools/jarcat',
         '//tools/javac_worker',
         '//tools/junit_runner',
-        '//tools/linter',
         '//tools/please_diff_graphs',
         '//tools/please_go_filter',
         '//tools/please_go_test',
@@ -44,15 +43,6 @@ signed_fpm_deb(
     version = VERSION,
     files = {
         '/usr/bin/plz_http_cache_server': '//tools/cache:http_cache_server',
-    },
-)
-
-signed_fpm_deb(
-    name = 'plz_build_linter',
-    package_name = 'please-build-lint',
-    version = VERSION,
-    files = {
-        '/opt/please/please_build_linter': '//tools/linter',
     },
 )
 

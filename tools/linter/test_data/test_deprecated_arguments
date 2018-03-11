@@ -1,4 +1,0 @@
-go_binary(
-    name = 'test',
-    main = 'test.go',
-)
