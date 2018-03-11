@@ -4,12 +4,13 @@ package gotest
 import (
 	"go/build"
 	"io/ioutil"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
+
+	"core"
 )
 
 var log = logging.MustGetLogger("buildgo")
@@ -31,11 +32,11 @@ func FindCoverVars(dir string, exclude, srcs []string) ([]CoverVar, error) {
 	}
 	ret := []CoverVar{}
 
-	err := filepath.Walk(dir, func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		} else if _, present := excludeMap[name]; present {
-			return filepath.SkipDir
+	err := core.Walk(dir, func(name string, isDir bool) error {
+		if _, present := excludeMap[name]; present {
+			if isDir {
+				return filepath.SkipDir
+			}
 		} else if strings.HasSuffix(name, ".a") && !strings.ContainsRune(path.Base(name), '#') {
 			vars, err := findCoverVars(name, srcs)
 			if err != nil {

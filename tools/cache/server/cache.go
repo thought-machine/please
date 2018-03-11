@@ -195,10 +195,8 @@ func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) 
 	}
 	defer lock.RUnlock()
 
-	if err := filepath.Walk(fullPath, func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		} else if !info.IsDir() {
+	if err := core.Walk(fullPath, func(name string, isDir bool) error {
+		if !isDir {
 			body, err := ioutil.ReadFile(name)
 			if err != nil {
 				return err
@@ -218,10 +216,8 @@ func (cache *Cache) retrieveDir(artPath string) (map[string][]byte, error) {
 	log.Debug("Searching dir %s for artifacts", artPath)
 	ret := map[string][]byte{}
 	fullPath := path.Join(cache.rootPath, artPath)
-	err := filepath.Walk(fullPath, func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		} else if !info.IsDir() {
+	err := core.Walk(fullPath, func(name string, isDir bool) error {
+		if !isDir {
 			// Must strip cache path off the front of this.
 			m, err := cache.RetrieveArtifact(name[len(cache.rootPath)+1:])
 			if err != nil {
