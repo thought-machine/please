@@ -111,6 +111,7 @@ go_get(
         'connectivity',
         'credentials',
         'encoding',
+        'encoding/gzip',
         'encoding/proto',
         'grpclb/grpc_lb_v1/messages',
         'grpclog',

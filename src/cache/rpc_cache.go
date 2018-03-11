@@ -23,6 +23,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
 
@@ -48,6 +49,7 @@ type rpcCache struct {
 	maxMsgSize int
 	nodes      []cacheNode
 	hostname   string
+	compressor grpc.CallOption
 }
 
 type cacheNode struct {
@@ -133,7 +135,7 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
 	cache.runRPC(key, func(cache *rpcCache) (bool, []*pb.Artifact) {
-		_, err := cache.client.Store(ctx, &req)
+		_, err := cache.client.Store(ctx, &req, cache.compressor)
 		if err != nil {
 			log.Warning("Error communicating with RPC cache server: %s", err)
 			cache.error()
@@ -174,7 +176,7 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
 	success, artifacts := cache.runRPC(req.Hash, func(cache *rpcCache) (bool, []*pb.Artifact) {
-		response, err := cache.client.Retrieve(ctx, req)
+		response, err := cache.client.Retrieve(ctx, req, cache.compressor)
 		if err != nil {
 			log.Warning("Failed to retrieve artifacts for %s: %s", target.Label, err)
 			cache.error()
@@ -231,7 +233,7 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name}
 		req.Artifacts = []*pb.Artifact{&artifact}
 		cache.runRPC(zeroKey, func(cache *rpcCache) (bool, []*pb.Artifact) {
-			response, err := cache.client.Delete(context.Background(), &req)
+			response, err := cache.client.Delete(context.Background(), &req, cache.compressor)
 			if err != nil || !response.Success {
 				log.Errorf("Failed to remove %s from RPC cache", target.Label)
 				return false, nil
@@ -250,7 +252,7 @@ func (cache *rpcCache) CleanAll() {
 		log.Debug("Cleaning entire RPC cache")
 		req := pb.DeleteRequest{Everything: true}
 		cache.runRPC(zeroKey, func(cache *rpcCache) (bool, []*pb.Artifact) {
-			if response, err := cache.client.Delete(context.Background(), &req); err != nil || !response.Success {
+			if response, err := cache.client.Delete(context.Background(), &req, cache.compressor); err != nil || !response.Success {
 				log.Errorf("Failed to clean RPC cache: %s", err)
 				return false, nil
 			}
@@ -391,6 +393,7 @@ func newRPCCacheInternal(url string, config *core.Configuration, isSubnode bool)
 		timeout:    time.Duration(config.Cache.RPCTimeout),
 		startTime:  time.Now(),
 		maxMsgSize: int(config.Cache.RPCMaxMsgSize),
+		compressor: grpc.UseCompressor("gzip"),
 	}
 	go cache.connect(url, config, isSubnode)
 	return cache, nil
