@@ -103,7 +103,7 @@ if [ ! -d "/usr/include/google/protobuf" ]; then
     EXCLUDES="${EXCLUDES} --exclude=proto"
 fi
 
-plz-out/bin/src/please $PLZ_ARGS test ... $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 $@
+plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} ... $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 $@
 
 # Lint needs python3.
 if hash python3 2>/dev/null ; then

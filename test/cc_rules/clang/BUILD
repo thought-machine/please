@@ -3,6 +3,7 @@
 # might use underneath - ie. we are not passing -fuse-ld or similar).
 
 package(
+    cpp_coverage = '',  # Not all Clang versions support -fprofile-dir
     cpp_tool = 'clang++',
     ld_tool = 'gold',
 )
