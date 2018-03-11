@@ -225,6 +225,15 @@
       connected to the current terminal, stdin is not connected (because it'd not be clear
       which process would consume it).</p>
 
+    <h2><a name="watch">plz watch</a></h2>
+
+    <p>Watches a set of targets for changes. Whenever any one of their source files (or that
+      of any dependency) is changed, the targets will be rebuilt. If any of them are tests, then
+      they will be run as well.</p>
+
+    <p>Optionally you can pass the <code>--run</code> flag if you'd like the targets to be run
+      (using <code>plz run</code>) instead of just built / tested.</p>
+
     <h2><a name="query">plz query</a></h2>
 
     <p>This allows you to introspect various aspects of the build graph. There are
@@ -240,6 +249,7 @@
         <li><code>print</code>: Prints a representation of a single target</li>
         <li><code>reverseDeps</code>: Queries all the reverse dependencies of a target.</li>
         <li><code>somepath</code>: Queries for a path between two targets</li>
+        <li><code>rules</code>: Prints out a machine-parseable description of all currently known build rules.</li>
       </ul>
     </p>
 
@@ -283,6 +293,9 @@
 
     <p>One can of course achieve the same effect via running <code>plz build</code> and
       reading the actual hash when it fails, but this way is generally considered nicer.</p>
+
+    <p>The <code>--update</code> flag will cause Please to rewrite the BUILD file with
+      any changed hashes that it can find.</p>
 
   <h2><a name="init">plz init</a></h2>
 

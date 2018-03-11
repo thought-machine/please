@@ -2,6 +2,17 @@
 
     <p>This is the reference for the complete set of builtin rules & functions.</p>
 
+    <ul>
+      <li><a href="#builtins">Builtin rules and functions</a></li>
+      <li><a href="#cc">C and C++ rules</a></li>
+      <li><a href="#go">Go rules</a></li>
+      <li><a href="#java">Java rules</a></li>
+      <li><a href="#misc">Miscellaneous rules</a></li>
+      <li><a href="#proto">Protocol buffer rules</a></li>
+      <li><a href="#python">Python rules</a></li>
+      <li><a href="#sh">Shell rules</a></li>
+    </ul>
+
     <h2><a name="builtins">Builtin functions</a></h2>
 
     <h3><a name="subinclude">subinclude</a></h3>
@@ -173,7 +184,7 @@
 
     <h3><a name="package">package</a></h3>
 
-    <p><pre class="rule"><code>package(**kwargs)</code></pre></p>
+    <p><pre class="rule"><code>package(...)</code></pre></p>
 
     <p>Defines settings affecting the current package - for example, default visibility.</p>
 
@@ -218,8 +229,8 @@
     <p>Consider carefully when you should use this - command replacements may be more appropriate.<br/>
       Most rules should be able to accept labels without having to know anything about their structure.</p>
 
-    <p>The input label can be given in either relative or absolute form. A ValueError will be
-      raised if it's not a structurally valid label.</p>
+    <p>The input label can be given in either relative or absolute form. It will fail with an error
+      if it's not a structurally valid label.</p>
 
 
     <h2><a name="cc">C and C++ rules</a></h2>
@@ -260,7 +271,9 @@
     <p>Built-in rules to compile Java code.</p>
 
     {{ template "lexicon_entry.html" .Named "java_library" }}
+    {{ template "lexicon_entry.html" .Named "java_module" }}
     {{ template "lexicon_entry.html" .Named "java_binary" }}
+    {{ template "lexicon_entry.html" .Named "java_runtime_image" }}
     {{ template "lexicon_entry.html" .Named "java_test" }}
     {{ template "lexicon_entry.html" .Named "maven_jar" }}
     {{ template "lexicon_entry.html" .Named "maven_jars" }}
@@ -296,16 +309,15 @@
     <h2><a name="python">Python rules</a></h2>
 
     <p>Rules to build Python code.</p>
-    <p>The output artifacts for Python rules are .pex files (see https://github.com/pantsbuild/pex).</p>
-    <p>Pex is a rather nice system for combining Python code and all needed dependencies
-(excluding the actual interpreter and possibly some system level bits) into a single file.</p>
-    <p>The process of compiling pex files can be a little slow when including many large files, as
-      often happens when one's binary includes large compiled dependencies (eg. numpy...). Hence
-      we have a fairly elaborate optimisation whereby each python_library rule builds a little
-      zipfile containing just its sources, and all of those are combined at the end to produce
-      the final .pex. This builds at roughly the same pace for a clean build of a single target,
-      but is drastically faster for building many targets with similar dependencies or rebuilding
-      a target which has only had small changes.</p>
+    <p>The output artifacts for Python rules are .zip files similar to
+      <a href="https://github.com/pantsbuild/pex">.pex</a> files (and are suffixed as such).</p>
+    <p>This combines all the in-repo dependencies into a single file that can be deployed and run
+      on any system that has a suitable Python interpreter. Please optimises this process to
+      improve incrementality and includes some hooks to make running from a zipfile as transparent
+      as possible; nonetheless certain file-based operations may not work since there is not a
+      real file system available. If necessary various Python rules can be annotated with
+      <code>zip_safe</code> to control this; if a binary is zip-unsafe it will extract itself before
+      running.</p>
 
     {{ template "lexicon_entry.html" .Named "python_library" }}
     {{ template "lexicon_entry.html" .Named "python_binary" }}

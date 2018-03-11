@@ -5,33 +5,114 @@
       invocations of builtins like <code>java_binary</code> which create new BUILD targets.</p>
 
     <p>However, you can do much more with it; the syntax is actually a restricted Python subset
-      so it's possible to script the creation of build targets in elaborate ways.</p>
+      so it's possible to script the creation of build targets in elaborate ways. See
+      <a href="#grammar">below</a> for a formal description of the grammar.</p>
 
-    <h2>Syntax</h2>
+    <p>You can do most things that one might consider "simple" Python; <code>for</code> and
+      <code>if</code> statements, define functions, create lists and dicts, etc. Conventionally
+      we keep complex logic in build_defs files but at present there is no difference in accepted
+      syntax between the two.</p>
 
-    <p>Formally, the grammar for the BUILD files is defined as for Python since we interpret
-      them as such (using <a href="http://pypy.org">PyPy</a>, as it happens). The only exceptions
-      to this are that the <code>import</code>, <code>print</code> and <code>exec</code>
-      keywords are disallowed. This means you can cheerfully have loops, classes, exceptions etc
-      as you want.</p>
+    <p>Since it is not possible to <code>import</code> things, one obviously requires a different
+      method of sharing code; in Please that is <a href="lexicon.html#subinclude">subinclude</a>.
+      This function takes the output of a build rule elsewhere in the repo and makes it available
+      in the context of the currently executing file - for example, if it has defined a function,
+      that function is now available in your BUILD file at the top level.</p>
 
-    <p>The reason these are disallowed is in an effort to keep BUILD file parsing reliable and
-      efficient. Allowing import of arbitrary modules opens the door for all kinds of bad things
-      to be done at parse time (we know, we did this in build systems we've used in the past
-      and it did not have a happy ending). There are other solutions for these anyway (well not
-      <code>exec</code>, but you weren't going to use that anyway, right?); see
-      <code><a href="lexicon.html#subinclude">subinclude</a></code> and
-      <code><a href="lexicon.html#log">log</a></code>.</p>
+    <p>See <a href="lexicon.html">here</a> for a full description of available builtin rules.</p>
 
-    <p>Similarly, a number of the standard builtins are not available; an incomplete list of these
-      includes <code>execfile</code>, <code>eval</code>, <code>file</code> and <code>open</code>.<br/>
-      Again, if BUILD files were able to open and read arbitrary files, it would be possible to
-      do many bad things which would ultimately lead to builds being slow or unreliable.</p>
+    <h2>Types</h2>
 
-    <p>Note that BUILD files are parsed in-order, so invocations of functions that affect global
-      defaults (notably <code><a href="lexicon.html#package">package</a></code>) will only
-      affect build rules declared after them. However the rules themselves can be declared in any
-      order, it isn't necessary to declare dependencies before rules that depend on them.</p>
+    <p>The set of builtin types are again a subset of Python's:
+      <ul>
+	<li>Integers (all integers are 64-bit signed integers)</li>
+	<li>Strings</li>
+	<li>Lists</li>
+	<li>Dictionaries</li>
+	<li>Functions</li>
+	<li><code>True</code>, <code>False</code> and <code>None</code> are singletons which are
+	  instantiated by name.</li>
+      </ul>
+    </p>
+
+    <p>Specifically there are no classes, sets, floats or bytes. Tuples don't exist as a standalone
+      type, in various cases lists are generated as a replacement. In some cases the runtime may
+      prohibit modification of a list or dict when they can be shared between multiple BUILD files
+      in order to prevent one from seeing another's modifications.</p>
+
+    <p>Dictionaries are somewhat restricted in function; they may only be keyed by strings and cannot
+      be iterated directly - i.e. one must use <code>keys()</code>, <code>values()</code> or
+      <code>items()</code>. The results of all these functions are always consistently ordered.</p>
+
+    <h2>Functions</h2>
+
+    <p>The following functions are available as builtins; unless otherwise noted they mimic Python's
+      builtins in most cases (although this is not guaranteed to every possible nuance).
+      <ul>
+	<li><code>len</code></li>
+	<li><code>enumerate</code></li>
+	<li><code>zip</code></li>
+	<li><code>isinstance</code></li>
+	<li><code>range</code></li>
+	<li><code>any</code></li>
+	<li><code>all</code></li>
+	<li><code>sorted</code></li>
+      </ul>
+    </p>
+
+    <p>Several additional builtin functions are also available:
+      <ul>
+	<li><code>package_name</code> - returns the package being currently parsed.</li>
+	<li><code>join_path</code> - like <code>os.path.join</code></li>
+	<li><code>split_path</code> - like <code>os.path.split</code></li>
+	<li><code>splitext</code> - like <code>os.path.splitext</code></li>
+	<li><code>basename</code> - like <code>os.path.basename</code></li>
+	<li><code>dirname</code> - like <code>os.path.dirname</code></li>
+      </ul>
+    </p>
+
+    <p>The following are available as member functions of strings:
+      <ul>
+	<li><code>join</code></li>
+	<li><code>split</code></li>
+	<li><code>replace</code></li>
+	<li><code>partition</code></li>
+	<li><code>rpartition</code></li>
+	<li><code>startswith</code></li>
+	<li><code>endswith</code></li>
+	<li><code>format</code> - although this lacks some functionality, <code>%</code> is generally preferred</li>
+	<li><code>lstrip</code></li>
+	<li><code>rstrip</code></li>
+	<li><code>strip</code></li>
+	<li><code>find</code></li>
+	<li><code>rfind</code></li>
+	<li><code>count</code></li>
+	<li><code>upper</code></li>
+	<li><code>lower</code></li>
+      </ul>
+    </p>
+
+    <p>The following are available as member functions of dictionaries:
+      <ul>
+	<li><code>keys</code></li>
+	<li><code>values</code></li>
+	<li><code>items</code></li>
+	<li><code>copy</code></li>
+      </ul>
+    </p>
+
+    <p>Finally, messages can be logged to Please's usual logging mechanism. These
+      may or may not be displayed depending on the <code>-v</code> flag; by default only
+      <code>warning</code> and above are visible.
+      <ul>
+	<li><code>log.debug</code></li>
+	<li><code>log.info</code></li>
+	<li><code>log.notice</code></li>
+	<li><code>log.warning</code></li>
+	<li><code>log.error</code></li>
+	<li><code>log.fatal</code> - this will cause the process to exit immediately and unsuccessfully.</li>
+      </ul>
+    </p>
 
     <h2>Style</h2>
 
@@ -43,7 +124,7 @@
       # Taken from //src/core/BUILD in the Please repo
       go_library(
           name = 'core',
-          srcs = glob(['*.go'], excludes=['*_test.go', 'version.go']) + [':version'],
+          srcs = glob(['*.go'], exclude=['*_test.go', 'version.go']) + [':version'],
           visibility = ['PUBLIC'],
           deps = [
               '//third_party/go:gcfg',
@@ -82,3 +163,75 @@
     <p>If you'd like an autoformatter for BUILD files, Google's
       <a href="https://github.com/bazelbuild/buildifier">Buildifier</a> is very good & fast.
       We use a slightly modified version of it internally & on the Please repo.</p>
+
+    <h2><a name="grammar">Grammar</a></h2>
+
+    <p>The grammar is defined as (more or less) the following, where <code>Ident</code>,
+      <code>String</code>, <code>Int</code> and <code>EOL</code> are token types emitted by the lexer.</p>
+
+    <pre><code>
+        # Start symbol for the grammar, representing the top-level structure of a file.
+        file_input = { statement } ;
+
+        # Any single statement. Must occur on its own line.
+        statement = ( "pass" | "continue" | func_def | for | if | return |
+	              raise | assert | ident_statement | literal ) EOL;
+        return = "return" [ expression { "," expression } ] ;
+        raise = "raise" expression ;
+        assert = "assert" expression [ "," String ] ;
+        for = "for" Ident { "," Ident } "in" expression ":" EOL { statement } ;
+        if = "if" expression ":" EOL { statement }
+             [ "elif" expression ":" EOL { statement } ]
+             [ "else" ":" EOL { statement } ];
+        func_def = "def" Ident "(" [ argument { "," argument } ] ")" ":" EOL
+                   [ String EOL ]
+                   { statement } ;
+        argument = Ident [ ":" String { "|" String } ] { "&" Ident } [ "=" expression ] ;
+        ident_statement = Ident
+                          ( { "," Ident } "=" expression
+                          | ( "[" expression "]" ( "=" | "+=" ) expression)
+                          | ( "." ident | call | "=" expression | "+=" expression ) ) ;
+
+        # Any generalised expression, with all the trimmings.
+        expression = [ "-" | "not" ] value [ operator expression ]
+	             [ "if" expression "else" expression ] ;
+        value = ( String | Int | "True" | "False" | "None" | list | dict | tuple | lambda | ident )
+	        [ slice ] [ ( "." ident | call ) ] ;
+        ident = Ident { "." ident | call } ;
+        call = "(" [ arg { "," arg } ] ")" ;
+        arg = expression | ident "=" expression;
+        list = "[" expression { "," expression } comprehension "]" ;
+        tuple = "(" expression { "," expression } ")" ;
+        dict = "[" expression ":" expression { "," expression ":" expression } comprehension "]" ;
+        comprehension = "for" Ident { "," Ident } "in" expression
+                        [ "for" Ident { "," Ident } "in" expression ]
+                        [ "if" expression ] ;
+        slice = "[" [ expression ] [ ":" expression ] "]" ;
+        lambda = "lambda" [ lambda_arg { "," lambda_arg } ] ":" expression ;
+        lambda_arg = Ident [ "=" expression ] ;
+        operator = ("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" |
+	            "in" | "not" "in" | "==" | "!=" | ">=" | "<=") ;
+
+    </code></pre>
+
+    <p>As mentioned above, this is similar to Python but lacks the <code>import</code>, <code>try</code>,
+      <code>except</code>, <code>finally</code>, <code>class</code>, <code>global</code>,
+      <code>nonlocal</code>, <code>while</code> and <code>async</code> keywords. The implementation
+      may happen to permit using these as identifiers although it's discouraged (some tools might
+      attempt to operate on the file using Python's <code>ast</code> module for convenience, which would not
+      be possible if those keywords are used).<br/>
+      As a result, while <code>raise</code> and <code>assert</code> <b>are</b> supported, it's
+      not possible to catch and handle the resulting exceptions. These hence function only to
+      signal an error condition which results in immediate termination.</p>
+
+    <p>A more limited set of operators than in Python are available. The provided set are
+      considered sufficient for use in BUILD files.</p>
+
+    <p>Function annotations similar to <a href="https://www.python.org/dev/peps/pep-3107">PEP-3107</a>
+      / <a href="https://www.python.org/dev/peps/pep-0484">PEP-484</a> are available, although
+      they have first-class meaning as type hints. The arguments are annotated with the expected
+      type or types (separated by <code>|</code>) and when called the type of the argument will
+      be verified to match. This makes it easier to give useful feedback to users if they
+      make mistakes in their BUILD files (e.g. passing a string where a list is required).</p>
+
+    <p>Varargs and kwargs functions are not supported.</p>

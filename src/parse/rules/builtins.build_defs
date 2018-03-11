@@ -70,10 +70,6 @@ def isinstance(obj, types:function|list):
     pass
 
 
-def callable(obj):
-    pass
-
-
 def range(start:int, stop:int=None, step:int=1):
     pass
 def any(seq:list):

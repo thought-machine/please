@@ -1,0 +1,70 @@
+<h1>Third-party dependencies</h1>
+
+<p>Sooner or later, most projects end up needing a dependency on some
+  third-party libraries, and one of the jobs of the build system is to
+  manage those as well. Please is no exception to this, but it bears a
+  little discussion since most systems handle this differently.</p>
+
+<p>In Please, third-party dependencies can be created in any BUILD file
+  and manipulated as any other build rule. We encourage methods of fetching
+  them that are repeatable; typically each language has one that matches
+  up to a common package manager, for example:
+  <ul>
+    <li><a href="lexicon.html#go_get">go_get</a></li>
+    <li><a href="lexicon.html#pip_library">pip_library</a></li>
+    <li><a href="lexicon.html#maven_jar">maven_jar</a></li>
+  </ul>
+  Each of these require explicit declarations of all their dependencies in the
+  BUILD file; this is how we pin dependencies & guarantee reproducibility.<br/>
+  There are one or two alternatives that show slightly different approaches
+  (e.g. <a href="lexicon.html#python_wheel">python_wheel</a> or
+  <a href="lexicon.html#maven_jars">maven_jars</a>) as well, and
+  <a href="lexicon.html#remote_file">remote_file</a> which is a general tool to
+  download anything (although often more work is required to actually build it)</p>
+
+<p>The typical idiom we use is to place BUILD files under a third_party directory,
+  to make it clear where they're coming from. Commonly we separate them by language
+  for multi-language repos as well.<br/>
+  See <a href="https://github.com/thought-machine/please/tree/master/third_party/go">third_party/go</a>,
+  <a href="https://github.com/thought-machine/please/tree/master/third_party/python">third_party/python</a> and
+  <a href="https://github.com/thought-machine/please/tree/master/third_party/java">third_party/java</a>
+  in Please's repo for some examples of what these look like.</p>
+
+<p>There's no explicit command to download third-party dependencies (e.g. <code>plz fetch</code> or similar).
+  Dependencies are built as part of the build process along with everything else, so
+  their downloads can be parallelised with compiling other targets.</p>
+
+<h2>Comparison to other systems</h2>
+
+<p>For users familiar with Bazel, we expect that writing BUILD files won't be
+  challenging, the main difference being that there is no direct equivalent to
+  Bazel's WORKSPACE file. As mentioned above, third-party dependencies can occur
+  wherever you choose to put them in normal BUILD files.<br/>
+  Right now there is no direct equivalent to Bazel's <code>new_http_archive</code>
+  and similar, but this is definitely on the <s>roadmap</s> wishlist.</p>
+
+<p>If you've used Buck before, the model is pretty similar to fetching Maven jars
+  using the bucklet for it. This is not entirely coincidental since we were previously
+  using Buck so initially Please had to mimic the same interface - but we also
+  quite liked it and decided to keep on in the same way.</p>
+
+<p>If you're coming from Gradle or Maven, it's a little more alien due to being less language-specific
+  and requiring full transitive dependencies to be specified.<br/>
+  <a href="lexicon.html#maven_jars">maven_jars</a> is the closest equivalent to declaring
+  Maven dependencies in the same way that Gradle does it; it works by communicating with
+  Maven repositories to find dependencies and generating more BUILD rules for them. This can
+  be a little unreliable though, since the Maven package format is complex, and your dependencies
+  aren't fully within your control and can change between builds - we recommend
+  <a href="lexicon.html#maven_jar">maven_jar</a> instead, but understand it's more work to set up.</p>
+
+<p><code>requirements.txt</code> files from Python are not usually especially difficult to
+  translate using <a href="lexicon.html#pip_library">pip_library</a>; again we require listing
+  transitive dependencies explicitly, but this is not normally too onerous for Python.<br/>
+  Since Please needs to know precisely what will be output, the rules can sometimes need a little
+  tweaking when the output names don't correspond to the package names (or often a package outputs
+  a single .py file instead of a directory).</p>
+
+<p><a href="lexicon.html#go_get">go_get</a> works pretty similarly to the usual <code>go get</code>
+  tool, but again only outputs a single package at a time. Writing up the dependencies can be
+  eased by using something like <code>go list -f '{{.Deps}}' &lt;package&gt;</code> to discover
+  all the dependencies for the package in question.</p>

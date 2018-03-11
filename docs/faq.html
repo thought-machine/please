@@ -8,33 +8,19 @@
       Further dependencies shouldn't be necessary after that, assuming you have what you need for
       the languages you want to work on (e.g. you'll need a JDK to use Please for Java).</p>
 
-    <p>To compile it, a few more things are needed. On Linux we primarily support Ubuntu,
+    <p>To compile it, one needs Go installed, plus a few other things for various other
+      builtin tools. On Linux we primarily support Ubuntu;
       <a href="https://www.ubuntu.com/desktop/1710">Artful</a> is the easiest to get it working on, but
       <a href="http://releases.ubuntu.com/16.04/">Xenial</a> is supported for most features too.
       See <a href="https://github.com/thought-machine/please/blob/master/tools/images/ubuntu">tools/images/ubuntu</a>
       for information and a Dockerfile for setting up a recommended environment.</p>
 
-    <p>To build on OSX, you will need to add some extra packages; we recommend using
-      <a href="https://brew.sh">Homebrew</a> to add at least <code>go</code>, <code>pypy</code>
-      and <code>pkg-config</code>.<br/>
+    <p>To build on OSX, you will similarly need to add some extra packages; we recommend using
+      <a href="https://brew.sh">Homebrew</a> to add at least <code>go</code> and <code>python3</code>.
       <code>unittest-cpp</code> and <code>nasm</code> will be needed for Please's C++ tests.</p>
 
-    <p>It can self-host and passes all the core tests on FreeBSD. A little more work is required
-      to set everything up; it'd be nice to streamline this at some point. Notable issues include:
-      <ul>
-        <li>The RPC cache is unavailable because gRPC does not compile on FreeBSD yet.
-          See <a href="https://github.com/grpc/grpc/issues/1035">the upstream issue</a>
-          for more details.<br/>
-          This should have no notable downsides for clients other than them not being able
-          to communicate with such a cache.</li>
-        <li>You'll need Bash installed.</li>
-        <li><code>go tool link</code> appears to invoke <code>gcc</code> instead of <code>cc</code>,
-          so you'll either need it installed or to provide a symlink.</li>
-        <li>The ports install of Python doesn't provide some of the symlinks we'd like
-          (specifically it only has <code>python2.7</code> and we'd like <code>python2</code> and
-          <code>python</code>).</li>
-      </ul>
-    </p>
+    <p>It has been built on FreeBSD before, so it should be technically possible; this hasn't
+      been tested for some time though.</p>
 
     <p>Windows is unfortunately not supported natively, since it's just too different from the
       Unix environment Please is designed for. It might well be possible to make it work using
@@ -117,6 +103,10 @@
       compile before the tests begin. The parsing process is also very fast due to having an
       in-process Python interpreter.</p>
 
+    <p>It being written in Go and being an entirely native binary means great performance and fast
+      startup times; internally it's also highly parallelised and can take full advantage of the
+      underlying hardware.</p>
+
     <p>Finally, the rules themselves are optimised in various ways; for example, the construction of
       the final .jar from a <code>java_binary</code> is an efficient concatenation of other .jar
       files without any recompression. Similarly the output .pex from a <code>python_binary</code>
@@ -126,15 +116,11 @@
 
     <h3>How do you parse the BUILD files? What format are they?</h3>
 
-    <p>The BUILD files are a (slightly) restricted dialect of Python. Please has a built-in
-      Python interpreter, allowing a tight integration and a rich API with things like callbacks.</p>
+    <p>The currently-unnamed BUILD language is a restricted subset of Python; see
+      <a href="language.html">here</a> for more details, documentation and a formal grammar.</p>
 
-    <p>The restrictions on the format are essentially that <code>import</code> and <code>print</code>
-      are banned, and a number of the normal builtins are not available.<br/>
-      A small handful of <code>os</code> members are available directly as globals
-      (named <code>join_path</code>, <code>split_path</code>, <code>splitext</code>,
-      <code>basename</code> and <code>dirname</code>) since they're extremely relevant to
-      the kinds of things rules typically do.</p>
+    <p>This provides a nice balance between an elegant and powerful language, but also one that can
+      be interpreted more easily than Python itself, and that is reasonably familiar to many developers.</p>
 
     <p>One downside to this is that the BUILD files are a little hard to automatically edit or
       update compared to a data format like XML, Yaml or JSON. We think this is worth the tradeoff
@@ -148,25 +134,9 @@
 
     <h3>Okay, but what exactly are you using to parse the files?</h3>
 
-    <p>The built-in parser is currently a statically linked CPython 2.7.
-      This is a little unfortunate due to its approaching end-of-life,
-      but there are several reasons for it:
-      <ul>
-	<li>PyPy typically doesn't ship with static libraries.<br/>
-	  We're not sure how much work this would be to implement but we would
-	  at least require custom builds which would be very awkward for users
-	  (at least the users who wanted to compile Please themselves).</li>
-	<li>CPython 3 is significantly (approximately 30%) slower for this use case.<br/>
-	  We suspect the difference is due to <code>str</code> / <code>bytes</code> issues
-	  around interfacing with cffi; hopefully we can improve it later.</li>
-	<li>Rather less significantly, there are several relevant versions of Python 3
-	  (at least 3.4, 3.5 and 3.6 remain widespread) which means a little more work
-	  to detect appropriately.</li>
-      </ul>
-      The exact parser in use is really an implementation detail though; we try to use the
-      BUILD language as a common subset of the various options so we aren't tied to any one.<br/>
-      Hence the linter can warn on some python2isms which we can't readily prevent at
-      runtime (e.g. <code>iteritems</code> etc).</p>
+    <p>The built-in parser is an internal pure Go implementation. It's evolved through several implementations
+      over time; ultimately this provides maximum control and performance (because we are not subject to
+      Python's GIL, or cgo calling overhead).</p>
 
 
     <h3>How does Please build itself? Do I need Please to build Please?</h3>
@@ -208,12 +178,12 @@
       hosted repo but transferred the project to Github in preparation for open sourcing it.
 
     <p>We've got some build rules in our internal repo that aren't built into Please yet.
-      We intend to move them into this repo as we can, but the ones left aren't easy to genericise
+      We intend to open source as we can, but the ones left aren't easy to genericise
       for various reasons.</p>
 
     <p>There are some additional rules available at
       <a href="https://github.com/thought-machine/pleasings">https://github.com/thought-machine/pleasings</a>,
-      which are either not well tested enough that we want to build them in, or are
+      which we either do not want to guarantee compatibility for, are still experimental, or are
       sufficiently esoteric that we don't want the build process for Please to require them.</p>
 
 

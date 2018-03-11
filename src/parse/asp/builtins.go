@@ -29,7 +29,6 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "package", pkg).kwargs = true
 	setNativeCode(s, "sorted", sorted)
 	setNativeCode(s, "isinstance", isinstance)
-	setNativeCode(s, "callable", callable)
 	setNativeCode(s, "range", pyRange)
 	setNativeCode(s, "enumerate", enumerate)
 	setNativeCode(s, "zip", zip).varargs = true
@@ -325,11 +324,6 @@ func isType(obj pyObject, name string) bool {
 		return name == "dict"
 	}
 	return false
-}
-
-func callable(s *scope, args []pyObject) pyObject {
-	_, ok := args[0].(*pyFunc)
-	return newPyBool(ok)
 }
 
 func strJoin(s *scope, args []pyObject) pyObject {
