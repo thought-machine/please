@@ -16,7 +16,8 @@ mkdir -p ${DEST}
 OUTPUTS="`plz-out/bin/src/please query outputs //package:installed_files`"
 for OUTPUT in $OUTPUTS; do
     TARGET="${DEST}/$(basename $OUTPUT)"
-    cp -f "$OUTPUT" "$TARGET"
+    rm "$TARGET"  # Important so we don't write through symlinks.
+    cp "$OUTPUT" "$TARGET"
     chmod 0775 "$TARGET"
 done
 ln -sf "${DEST}/please" "${DEST}/plz"

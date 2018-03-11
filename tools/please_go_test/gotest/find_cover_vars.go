@@ -2,6 +2,7 @@
 package gotest
 
 import (
+	"go/build"
 	"io/ioutil"
 	"os"
 	"path"
@@ -60,14 +61,16 @@ func findCoverVars(filepath string, srcs []string) ([]CoverVar, error) {
 	importPath := collapseFinalDir(strings.TrimPrefix(strings.TrimSuffix(filepath, ".a"), "src/"))
 	ret := make([]CoverVar, 0, len(fi))
 	for _, info := range fi {
-		if info.Name() != file && strings.HasSuffix(info.Name(), ".a") {
+		name := info.Name()
+		if name != file && strings.HasSuffix(name, ".a") {
 			log.Warning("multiple .a files in %s, can't determine coverage variables accurately", dir)
 			return nil, nil
-		}
-		if strings.HasSuffix(info.Name(), ".go") && !info.IsDir() && !contains(path.Join(dir, info.Name()), srcs) {
-			// N.B. The scheme here must match what we do in go_rules.build_defs
-			v := "GoCover_" + strings.Replace(info.Name(), ".", "_", -1)
-			ret = append(ret, coverVar(dir, importPath, v))
+		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
+			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
+				// N.B. The scheme here must match what we do in go_rules.build_defs
+				v := "GoCover_" + strings.Replace(name, ".", "_", -1)
+				ret = append(ret, coverVar(dir, importPath, v))
+			}
 		}
 	}
 	return ret, nil
