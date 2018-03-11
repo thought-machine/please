@@ -14,11 +14,9 @@ func parseXMLCoverageResults(target *core.BuildTarget, coverage *core.TestCovera
 	}
 	for _, pkg := range xcoverage.Packages.Package {
 		for _, cls := range pkg.Classes.Class {
-			if strings.HasPrefix(cls.Filename, core.RepoRoot) {
-				cls.Filename = cls.Filename[len(core.RepoRoot):]
-			}
+			filename := strings.TrimPrefix(cls.Filename, core.RepoRoot)
 			// There can be multiple classes per file so we must merge here, not overwrite.
-			coverage.Files[cls.Filename] = core.MergeCoverageLines(coverage.Files[cls.Filename], parseXMLLines(cls.Lines.Line))
+			coverage.Files[filename] = core.MergeCoverageLines(coverage.Files[filename], parseXMLLines(cls.Lines.Line))
 		}
 	}
 	coverage.Tests[target.Label] = coverage.Files

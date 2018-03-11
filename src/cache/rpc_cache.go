@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/status"
 
 	pb "cache/proto/rpc_cache"
 	"cache/tools"
@@ -31,7 +32,6 @@ import (
 )
 
 const maxErrors = 5
-const replicas = 2
 
 // We use zeroKey in cases where we need to supply a hash but it actually doesn't matter.
 var zeroKey = []byte{0, 0, 0, 0}
@@ -296,7 +296,7 @@ func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode
 	resp, err := client.ListNodes(ctx, &pb.ListRequest{})
 	// For compatibility with older servers, handle an error code of Unimplemented and treat
 	// as an unclustered server (because of course they can't be clustered).
-	if err != nil && grpc.Code(err) != codes.Unimplemented {
+	if err != nil && status.Code(err) != codes.Unimplemented {
 		cache.Connecting = false
 		log.Warning("Failed to contact RPC cache: %s", err)
 		return

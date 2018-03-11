@@ -102,13 +102,6 @@ func ParseBuildLabel(target, currentPath string) BuildLabel {
 	return label
 }
 
-// newBuildLabel creates a new build label after parsing.
-// It is only used internally because it skips some checks; we know those are valid because
-// they already run implicitly as part of us parsing the label.
-func newBuildLabel(pkgName, name string) (BuildLabel, error) {
-	return BuildLabel{pkgName, name}, validateSuffixes(pkgName, name)
-}
-
 // TryParseBuildLabel attempts to parse a single build label from a string. Returns an error if unsuccessful.
 func TryParseBuildLabel(target string, currentPath string) (BuildLabel, error) {
 	if pkg, name := parseBuildLabelParts(target, currentPath); name != "" {

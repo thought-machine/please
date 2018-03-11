@@ -64,12 +64,6 @@ var dirReplacement = regexp.MustCompile(`\$\(dir ([^\)]+)\)`)
 var hashReplacement = regexp.MustCompile(`\$\(hash ([^\)]+)\)`)
 var workerReplacement = regexp.MustCompile(`^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`)
 
-// Replace escape sequences in the target's command.
-// For example, $(location :blah) -> the output of rule blah.
-func replaceSequences(state *core.BuildState, target *core.BuildTarget) string {
-	return ReplaceSequences(state, target, target.GetCommand(state))
-}
-
 // ReplaceSequences replaces escape sequences in the given string.
 func ReplaceSequences(state *core.BuildState, target *core.BuildTarget, command string) string {
 	return replaceSequencesInternal(state, target, command, false)

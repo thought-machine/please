@@ -460,9 +460,7 @@ func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f b
 	if label := source.nonOutputLabel(); label != nil {
 		ret := []string{}
 		for _, providedLabel := range graph.TargetOrDie(*label).ProvideFor(target) {
-			for _, file := range f(providedLabel, graph) {
-				ret = append(ret, file)
-			}
+			ret = append(ret, f(providedLabel, graph)...)
 		}
 		return ret
 	}
@@ -864,10 +862,7 @@ func (target *BuildTarget) getCommand(state *BuildState, commands map[string]str
 
 // AllSources returns all the sources of this rule.
 func (target *BuildTarget) AllSources() []BuildInput {
-	ret := make([]BuildInput, 0, len(target.Sources))
-	for _, source := range target.Sources {
-		ret = append(ret, source)
-	}
+	ret := target.Sources[:]
 	if target.NamedSources != nil {
 		keys := make([]string, 0, len(target.NamedSources))
 		for k := range target.NamedSources {
@@ -875,9 +870,7 @@ func (target *BuildTarget) AllSources() []BuildInput {
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			for _, source := range target.NamedSources[k] {
-				ret = append(ret, source)
-			}
+			ret = append(ret, target.NamedSources[k]...)
 		}
 	}
 	return ret
@@ -913,9 +906,7 @@ func (target *BuildTarget) AllTools() []BuildInput {
 	tools := make([]BuildInput, len(target.Tools), len(target.Tools)+len(target.namedTools)*2)
 	copy(tools, target.Tools)
 	for _, name := range target.ToolNames() {
-		for _, tool := range target.namedTools[name] {
-			tools = append(tools, tool)
-		}
+		tools = append(tools, target.namedTools[name]...)
 	}
 	return tools
 }

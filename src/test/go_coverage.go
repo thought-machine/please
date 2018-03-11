@@ -32,7 +32,7 @@ func parseBlocks(blocks []cover.ProfileBlock) []core.LineCoverage {
 		return nil
 	}
 	lastLine := blocks[len(blocks)-1].EndLine
-	ret := make([]core.LineCoverage, lastLine, lastLine)
+	ret := make([]core.LineCoverage, lastLine)
 	for _, block := range blocks {
 		for line := block.StartLine - 1; line < block.EndLine; line++ {
 			if block.Count > 0 {

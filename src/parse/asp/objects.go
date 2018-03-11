@@ -222,7 +222,7 @@ func (s pyString) Len() int {
 }
 
 func (s pyString) String() string {
-	return fmt.Sprintf("%s", string(s))
+	return string(s)
 }
 
 type pyList []pyObject

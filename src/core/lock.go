@@ -4,6 +4,7 @@
 package core
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -42,7 +43,7 @@ func AcquireRepoLock() {
 	}
 
 	// Record the operation performed.
-	if _, err = lockFile.Seek(0, os.SEEK_SET); err == nil {
+	if _, err = lockFile.Seek(0, io.SeekStart); err == nil {
 		if n, err := lockFile.Write([]byte(strings.Join(os.Args[1:], " ") + "\n")); err == nil {
 			lockFile.Truncate(int64(n))
 		}

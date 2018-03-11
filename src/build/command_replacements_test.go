@@ -259,3 +259,7 @@ func makeTarget(name string, command string, dep *core.BuildTarget) *core.BuildT
 	}
 	return target
 }
+
+func replaceSequences(state *core.BuildState, target *core.BuildTarget) string {
+	return ReplaceSequences(state, target, target.GetCommand(state))
+}

@@ -122,15 +122,14 @@ func makeJSONPackage(state *core.BuildState, pkg *core.Package) JSONPackage {
 }
 
 func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget {
-	t := JSONTarget{}
+	t := JSONTarget{
+		Sources: target.AllSourcePaths(state.Graph),
+	}
 	for in := range core.IterSources(state.Graph, target) {
 		t.Inputs = append(t.Inputs, in.Src)
 	}
 	for _, out := range target.Outputs() {
 		t.Outputs = append(t.Outputs, path.Join(target.Label.PackageName, out))
-	}
-	for _, src := range target.AllSourcePaths(state.Graph) {
-		t.Sources = append(t.Sources, src)
 	}
 	for _, dep := range target.Dependencies() {
 		t.Deps = append(t.Deps, dep.Label.String())

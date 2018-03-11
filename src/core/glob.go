@@ -10,7 +10,7 @@ import (
 )
 
 // Used to identify the fixed part at the start of a glob pattern.
-var initialFixedPart = regexp.MustCompile("([^\\*]+)/(.*)")
+var initialFixedPart = regexp.MustCompile(`([^\*]+)/(.*)`)
 
 // IsGlob returns true if the given pattern requires globbing (i.e. contains characters that would be expanded by it)
 func IsGlob(pattern string) bool {

@@ -16,8 +16,8 @@ import (
 )
 
 // Not sure what the -6 suffixes are about.
-var testStart = regexp.MustCompile("^=== RUN (.*)(?:-6)?$")
-var testResult = regexp.MustCompile("^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \\((.*)s\\)$")
+var testStart = regexp.MustCompile(`^=== RUN (.*)(?:-6)?$`)
+var testResult = regexp.MustCompile(`^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \((.*)s\)$`)
 
 func parseGoTestResults(data []byte) (core.TestResults, error) {
 	results := core.TestResults{}

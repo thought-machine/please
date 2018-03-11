@@ -59,7 +59,7 @@ type buildingTargetData struct {
 // and prints output while it's happening.
 func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest, shouldRun, showStatus bool, traceFile string) bool {
 	failedTargetMap := map[core.BuildLabel]error{}
-	buildingTargets := make([]buildingTarget, numThreads, numThreads)
+	buildingTargets := make([]buildingTarget, numThreads)
 
 	displayDone := make(chan struct{})
 	stop := make(chan struct{})
@@ -410,7 +410,7 @@ func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buil
 		} else {
 			if !active {
 				active := pluralise(state.NumActive(), "task", "tasks")
-				log.Info("[%d/%s] %s: %s [%3.1fs]", state.NumDone(), active, label.String(), description, time.Now().Sub(buildingTarget.Started).Seconds())
+				log.Info("[%d/%s] %s: %s [%3.1fs]", state.NumDone(), active, label.String(), description, time.Since(buildingTarget.Started).Seconds())
 			} else {
 				log.Info("%s: %s", label.String(), description)
 			}
@@ -469,7 +469,7 @@ func targetColour2(target *core.BuildTarget) string {
 }
 
 // Used to strip the formatting stuff when running directly through 'go run'.
-var stripFormatting = regexp.MustCompile("\\$\\{[^\\}]+\\}")
+var stripFormatting = regexp.MustCompile(`\$\{[^\}]+\}`)
 
 // printf is used throughout this package to print something to stderr with some niceties
 // around ANSI formatting codes.

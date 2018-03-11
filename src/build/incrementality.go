@@ -418,7 +418,7 @@ func hashOptionalBool(writer hash.Hash, b bool) {
 // Arrays will be empty if there's an error reading the file.
 // If postBuild is true then the rule hash will be the post-build one if present.
 func readRuleHashFile(filename string, postBuild bool) ([]byte, []byte, []byte, []byte) {
-	contents := make([]byte, hashFileLength, hashFileLength)
+	contents := make([]byte, hashFileLength)
 	file, err := os.Open(filename)
 	if err != nil {
 		if !os.IsNotExist(err) {

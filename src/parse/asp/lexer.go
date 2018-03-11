@@ -133,15 +133,6 @@ func reverseSymbols(syms []rune) []string {
 	return ret
 }
 
-type lexerError struct {
-	Pos     Position
-	Message string
-}
-
-func (err lexerError) Error() string {
-	return err.Message
-}
-
 // Peek at the next token
 func (l *lex) Peek() Token {
 	return l.next
