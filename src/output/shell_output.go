@@ -468,21 +468,6 @@ func targetColour2(target *core.BuildTarget) string {
 	return "${WHITE}"
 }
 
-// Used to strip the formatting stuff when running directly through 'go run'.
-var stripFormatting = regexp.MustCompile(`\$\{[^\}]+\}`)
-
-// printf is used throughout this package to print something to stderr with some niceties
-// around ANSI formatting codes.
-func printf(format string, args ...interface{}) {
-	if "${WHITE}"[0] == '$' || !cli.StdErrIsATerminal {
-		msg := strings.Replace(fmt.Sprintf(format, args...), "${ERASE_AFTER}", "\x1b[K", -1)
-		msg = stripFormatting.ReplaceAllString(msg, "")
-		fmt.Fprint(os.Stderr, cli.StripAnsi.ReplaceAllString(msg, ""))
-	} else {
-		fmt.Fprintf(os.Stderr, format, args...)
-	}
-}
-
 // Since this is a gentleman's build tool, we'll make an effort to get plurals correct
 // in at least this one place.
 func pluralise(num int, singular, plural string) string {

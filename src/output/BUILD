@@ -11,6 +11,7 @@ replace_ansi_escapes(
 go_library(
     name = 'output',
     srcs = [
+        'print.go',
         'trace.go',
         ':ansi_replacements',
     ],
