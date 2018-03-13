@@ -25,7 +25,7 @@ The following help topics are available:
 %s`
 
 // maxSuggestionDistance is the maximum Levenshtein edit distance we'll suggest help topics at.
-const maxSuggestionDistance = 5
+const maxSuggestionDistance = 4
 
 var backtickRegex = regexp.MustCompile("\\`[^\\`\n]+\\`")
 

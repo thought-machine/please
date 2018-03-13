@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
@@ -60,6 +61,10 @@ type buildingTargetData struct {
 func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest, shouldRun, showStatus bool, traceFile string) bool {
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads)
+
+	if len(state.Config.Please.Motd) != 0 {
+		printf("%s\n", state.Config.Please.Motd[rand.Intn(len(state.Config.Please.Motd))])
+	}
 
 	displayDone := make(chan struct{})
 	stop := make(chan struct{})
