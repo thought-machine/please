@@ -173,7 +173,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG_DIR:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
-	config.Python.PipTool = "pip"
+	config.Python.PipTool = "pip3"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
 	config.Python.UsePyPI = true
