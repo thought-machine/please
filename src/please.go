@@ -669,7 +669,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.DebugTests = debugTests
-	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput || state.DebugTests
+	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	parse.InitParser(state)
 	if config.Events.Port != 0 && shouldBuild {
