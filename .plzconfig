@@ -4,7 +4,6 @@
 pextool = //tools/please_pex
 defaultpiprepo = https://get.please.build/third_party/python/index.html
 moduledir = third_party.python
-defaultinterpreter = python3
 
 [parse]
 ; This is a hack to handle operating systems with case-insensitive file systems.

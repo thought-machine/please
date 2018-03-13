@@ -101,3 +101,9 @@ python_test(
     srcs = ['python_coverage_test.py'],
     labels = ['py3'],
 )
+
+python_test(
+    name = 'numpy_test',
+    srcs = ['numpy_test.py'],
+    deps = ['//third_party/python:numpy'],
+)
