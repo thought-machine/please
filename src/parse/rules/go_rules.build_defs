@@ -306,7 +306,8 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
 
 
 def go_binary(name:str, srcs:list=None, asm_srcs:list=None, out:str=None, deps:list=None,
-              visibility:list=None, test_only:bool&testonly=False, static:bool=False, filter_srcs:bool=True):
+              visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
+              filter_srcs:bool=True):
     """Compiles a Go binary.
 
     Args:
@@ -355,7 +356,7 @@ def go_binary(name:str, srcs:list=None, asm_srcs:list=None, out:str=None, deps:l
 def go_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:list=None,
             flags:str='', container:bool|dict=False, sandbox:bool=None, cgo:bool=False,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
-            labels:list&features&tags=None, size:str=None, static:bool=False):
+            labels:list&features&tags=None, size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC):
     """Defines a Go test rule.
 
     Args:

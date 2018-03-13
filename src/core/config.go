@@ -305,13 +305,14 @@ type Configuration struct {
 		KeepLabel []string     `help:"Defines a target label to be kept; for example, if you set this to go, no Go targets would ever be considered for deletion." example:"go"`
 	} `help:"Please supports a form of 'garbage collection', by which it means identifying targets that are not used for anything. By default binary targets and all their transitive dependencies are always considered non-garbage, as are any tests directly on those. The config options here allow tweaking this behaviour to retain more things.\n\nNote that it's a very good idea that your BUILD files are in the standard format when running this."`
 	Go struct {
-		GoTool     string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
-		GoRoot     string `help:"If set, will set the GOROOT environment variable appropriately during build actions."`
-		TestTool   string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules." var:"GO_TEST_TOOL"`
-		GoPath     string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
-		ImportPath string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
-		CgoCCTool  string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
-		FilterTool string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
+		GoTool        string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
+		GoRoot        string `help:"If set, will set the GOROOT environment variable appropriately during build actions."`
+		TestTool      string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules." var:"GO_TEST_TOOL"`
+		GoPath        string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
+		ImportPath    string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
+		CgoCCTool     string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
+		FilterTool    string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
+		DefaultStatic bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
 	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths."`
 	Python struct {
 		PipTool            string  `help:"The tool that is invoked during pip_library rules." var:"PIP_TOOL"`
