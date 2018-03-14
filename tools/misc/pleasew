@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -u
 
 RED="\x1B[31m"
 GREEN="\x1B[32m"
