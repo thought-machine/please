@@ -8,7 +8,7 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
     # but we can make it do it and it's a convenient way of testing the tool itself.
 
     def _e2e_test_cmd(cmd):
-        cmd = cmd.replace('plz ', '$(location //src:please) --nolock -o cache.rpcurl:"" --log_file plz-out/log/%s.log ' % name)
+        cmd = cmd.replace('plz ', '$(location //src:please) --nolock -o cache.rpcurl:"" -o cache.dirclean:false --log_file plz-out/log/%s.log ' % name)
         if expected_failure:
             test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd
         else:
