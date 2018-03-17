@@ -228,7 +228,6 @@ func (state *BuildState) TaskDone() {
 	if atomic.AddInt64(&state.numPending, -1) <= 0 {
 		state.Stop(state.numWorkers)
 	}
-	log.Debug("TaskDone %d", state.numPending)
 }
 
 // Stop adds n stop tasks to the list of pending tasks, which stops n workers after all their other tasks are done.
