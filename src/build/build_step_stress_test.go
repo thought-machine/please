@@ -82,7 +82,7 @@ func label(i int) core.BuildLabel {
 // please mimics the core build 'loop' from src/please.go.
 func please(tid int, state *core.BuildState) {
 	for {
-		label, _, t := state.NextTask()
+		label, _, t, _ := state.NextTask()
 		switch t {
 		case core.Stop, core.Kill:
 			return
@@ -116,8 +116,8 @@ type fakeParser struct {
 	PostBuildFunctions buildFunctionMap
 }
 
-func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
-	return nil
+func (fake *fakeParser) ParseFile(threadID int, state *core.BuildState, pkg *core.Package, filename string) (bool, error) {
+	return false, nil
 }
 
 func (fake *fakeParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {

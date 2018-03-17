@@ -596,23 +596,32 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 	return false
 }
 
-func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
+func please(wg *sync.WaitGroup, tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
 	for {
-		label, dependor, t := state.NextTask()
+		label, dependor, t, ttid := state.NextTask()
 		switch t {
 		case core.Stop, core.Kill:
+			wg.Done()
 			return
+		case core.Replace:
+			go please(wg, ttid, state, parsePackageOnly, include, exclude) // Spawn a new replacement.
+			state.TaskDone()
 		case core.Parse, core.SubincludeParse:
-			parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude, t == core.SubincludeParse)
+			deferred := parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude, t == core.SubincludeParse)
 			if opts.VisibilityParse && state.IsOriginalTarget(label) {
 				parseForVisibleTargets(state, label)
 			}
+			state.TaskDone()
+			if deferred {
+				return // This thread is done.
+			}
 		case core.Build, core.SubincludeBuild:
 			build.Build(tid, state, label)
+			state.TaskDone()
 		case core.Test:
 			test.Test(tid, state, label)
+			state.TaskDone()
 		}
-		state.TaskDone()
 	}
 }
 
@@ -694,10 +703,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	var wg sync.WaitGroup
 	wg.Add(config.Please.NumThreads)
 	for i := 0; i < config.Please.NumThreads; i++ {
-		go func(tid int) {
-			please(tid, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
-			wg.Done()
-		}(i)
+		go please(&wg, i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	}
 	// Wait until they've all exited, which they'll do once they have no tasks left.
 	go func() {

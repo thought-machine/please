@@ -30,7 +30,7 @@ func parseFile(filename string) (*scope, error) {
 	if err != nil {
 		panic(err)
 	}
-	return parser.interpreter.interpretAll(pkg, statements)
+	return parser.interpreter.interpretAll(0, pkg, statements)
 }
 
 // assertRecords asserts equality of a series of logging records.

@@ -24,23 +24,6 @@ const (
 	grey      = "\033[30m"
 )
 
-// errDeferParse indicates that a package needs to wait until another target is built.
-type errDeferParse struct {
-	Label core.BuildLabel // The target we're waiting for
-}
-
-func (err errDeferParse) Error() string {
-	return "Requires build of " + err.Label.String()
-}
-
-// RequiresSubinclude returns true if the error requires another target to be built, along with the target in question.
-func RequiresSubinclude(err error) (bool, core.BuildLabel) {
-	if dp, ok := err.(errDeferParse); ok {
-		return true, dp.Label
-	}
-	return false, core.BuildLabel{}
-}
-
 // An errorStack is an error that carries an internal stack trace.
 type errorStack struct {
 	// From top down, i.e. Stack[0] is the innermost function in the call stack.
@@ -62,9 +45,7 @@ func fail(pos Position, message string, args ...interface{}) {
 func AddStackFrame(pos Position, err interface{}) error {
 	stack, ok := err.(*errorStack)
 	if !ok {
-		if dp, ok := err.(errDeferParse); ok {
-			return dp // Does not need stack information
-		} else if e, ok := err.(error); ok {
+		if e, ok := err.(error); ok {
 			stack = &errorStack{err: e}
 		} else {
 			stack = &errorStack{err: fmt.Errorf("%s", err)}

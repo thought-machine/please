@@ -235,13 +235,14 @@ func subinclude(s *scope, args []pyObject) pyObject {
 }
 
 // subincludeTarget returns the target for a subinclude() call to a label.
-// It panics appropriately if the target is not yet built.
+// It blocks until the target exists and is built.
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
-	t := s.state.Graph.Target(l)
-	if t == nil || t.State() < core.Built {
-		// The target is not yet built. Defer parsing it until it is.
-		panic(errDeferParse{Label: l})
-	} else if l.PackageName != subincludePackageName && s.pkg != nil {
+	if s.pkg == nil {
+		// Really we should not get here, but it's hard to prove that's not the case. Make the best of it.
+		return s.WaitForBuiltTarget(l, l.PackageName)
+	}
+	t := s.WaitForBuiltTarget(l, s.pkg.Name)
+	if l.PackageName != subincludePackageName {
 		s.pkg.RegisterSubinclude(l)
 	}
 	return t

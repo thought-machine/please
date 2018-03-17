@@ -156,7 +156,7 @@ func assertPendingParses(t *testing.T, state *core.BuildState, targets ...string
 	state.Stop(1)
 	pending := []core.BuildLabel{}
 	for {
-		label, _, typ := state.NextTask()
+		label, _, typ, _ := state.NextTask()
 		if typ == core.Stop {
 			break
 		} else if typ != core.Parse && typ != core.SubincludeParse {
@@ -176,7 +176,7 @@ func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string
 	state.Stop(1)
 	pending := []core.BuildLabel{}
 	for {
-		label, _, typ := state.NextTask()
+		label, _, typ, _ := state.NextTask()
 		if typ == core.Stop {
 			break
 		} else if typ != core.Build && typ != core.SubincludeBuild {
