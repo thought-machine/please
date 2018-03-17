@@ -186,11 +186,14 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		result.Tests.Failed = 1 // Ensure there's one test failure when there're no results to parse.
 	}
 	// Only aggregate test results the first time it finishes.
-	if buildingTargets[result.ThreadID].Active && !active {
-		aggregatedResults.Aggregate(&result.Tests)
+	var target *core.BuildTarget
+	if result.ThreadID != core.NoThread {
+		if buildingTargets[result.ThreadID].Active && !active {
+			aggregatedResults.Aggregate(&result.Tests)
+		}
+		target = state.Graph.Target(label)
+		updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target), target)
 	}
-	target := state.Graph.Target(label)
-	updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target), target)
 	if failed {
 		failedTargetMap[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
@@ -207,7 +210,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		}
 	} else if stopped {
 		failedTargetMap[result.Label] = nil
-	} else if plainOutput && state.ShowTestOutput && result.Status == core.TargetTested {
+	} else if plainOutput && state.ShowTestOutput && result.Status == core.TargetTested && target != nil {
 		// If using interactive output we'll print it afterwards.
 		printf("Finished test %s:\n%s\n", label, target.Results.Output)
 	}
