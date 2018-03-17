@@ -55,7 +55,7 @@ def _config_on(name, value):
         return False  # We don't allow this to be determined at parse time (tbh I thought Blaze didn't either...)
     elif name == 'compiler':
         # Unsure what exactly the semantics of this are supposed to be. Taking a guess.
-        return CC_TOOL in _COMPILER_ALIASES.get(value, value)
+        return CONFIG.CC_TOOL in _COMPILER_ALIASES.get(value, value)
     elif name == 'define':
         # This is the closest thing we have to Bazel's defines right now.
         return value.upper() in CONFIG

@@ -707,11 +707,15 @@ func setCommand(s *scope, args []pyObject) pyObject {
 func selectFunc(s *scope, args []pyObject) pyObject {
 	d, _ := asDict(args[0])
 	var def pyObject
+	pkgName := ""
+	if s.pkg != nil {
+		pkgName = s.pkg.Name
+	}
 	// TODO(peterebden): this is an arbitrary match that drops Bazel's order-of-matching rules. Fix.
 	for k, v := range d {
 		if k == "//conditions:default" || k == "default" {
 			def = v
-		} else if selectTarget(s, core.ParseBuildLabel(k, s.pkg.Name)).HasLabel("config:on") {
+		} else if selectTarget(s, core.ParseBuildLabel(k, pkgName)).HasLabel("config:on") {
 			return v
 		}
 	}
@@ -722,7 +726,7 @@ func selectFunc(s *scope, args []pyObject) pyObject {
 // selectTarget returns the target to be used for a select() call.
 // It panics appropriately if the target isn't built yet.
 func selectTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
-	if l.PackageName == s.pkg.Name {
+	if s.pkg != nil && l.PackageName == s.pkg.Name {
 		t := s.pkg.Target(l.Name)
 		s.NAssert(t == nil, "Target %s in select() call has not been defined yet", l.Name)
 		return t
