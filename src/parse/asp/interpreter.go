@@ -266,6 +266,10 @@ func (s *scope) WaitForBuiltTarget(label core.BuildLabel, packageName string) *c
 	target, deferred := s.state.WaitForBuiltTarget(s.tid, label, packageName)
 	for s2 := s; deferred && s2 != nil && s2.pkg != nil; s2 = s2.parent {
 		s2.Deferred = deferred
+		s2.tid = core.NoThread
+	}
+	if deferred {
+		s.tid = core.NoThread
 	}
 	return target
 }

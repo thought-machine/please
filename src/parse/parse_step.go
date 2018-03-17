@@ -45,12 +45,14 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 		// Does exist, all we need to do is toggle on this target
 		return deferred, activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
 	}
+	tid = updateTid(tid, deferred)
 	// If we get here then it falls to us to parse this package.
 	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
 
 	// Check whether this guy exists within a subrepo. If so we will need to make sure that's available first.
 	if subrepo := state.Graph.SubrepoFor(label.PackageName); subrepo != nil && subrepo.Target != nil {
 		_, deferred = state.WaitForBuiltTarget(tid, subrepo.Target.Label, label.PackageName)
+		tid = updateTid(tid, deferred)
 	}
 	pkg, deferred, err := parsePackage(tid, state, label, dependor)
 	if err != nil {
@@ -58,6 +60,13 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 	}
 	state.LogBuildResult(core.NoThread, label, core.PackageParsed, "Parsed package")
 	return deferred, activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
+}
+
+func updateTid(tid int, deferred bool) int {
+	if deferred {
+		return core.NoThread
+	}
+	return tid
 }
 
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.

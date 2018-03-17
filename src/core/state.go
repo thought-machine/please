@@ -199,9 +199,11 @@ func (state *BuildState) AddPendingTest(label BuildLabel) {
 
 // replaceThread registers a task to replace one of the worker threads.
 func (state *BuildState) replaceThread(tid int) {
-	atomic.AddInt64(&state.numActive, 1)
-	atomic.AddInt64(&state.numPending, 1)
-	state.pendingTasks.Put(pendingTask{Type: Replace, Tid: tid})
+	if tid != NoThread {
+		atomic.AddInt64(&state.numActive, 1)
+		atomic.AddInt64(&state.numPending, 1)
+		state.pendingTasks.Put(pendingTask{Type: Replace, Tid: tid})
+	}
 }
 
 // NextTask receives the next task that should be processed according to the priority queues.

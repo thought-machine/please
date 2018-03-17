@@ -604,6 +604,7 @@ func please(wg *sync.WaitGroup, tid int, state *core.BuildState, parsePackageOnl
 			wg.Done()
 			return
 		case core.Replace:
+			wg.Add(1)
 			go please(wg, ttid, state, parsePackageOnly, include, exclude) // Spawn a new replacement.
 			state.TaskDone()
 		case core.Parse, core.SubincludeParse:
@@ -613,6 +614,7 @@ func please(wg *sync.WaitGroup, tid int, state *core.BuildState, parsePackageOnl
 			}
 			state.TaskDone()
 			if deferred {
+				wg.Done()
 				return // This thread is done.
 			}
 		case core.Build, core.SubincludeBuild:
