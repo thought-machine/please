@@ -16,6 +16,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
+	"core"
 	"third_party/go/zip"
 )
 
@@ -191,24 +192,19 @@ func (f *File) AddZipFile(filepath string) error {
 	return nil
 }
 
-// walk is a filepath.WalkFunc-compatible function which walks a file tree,
-// adding all the files it finds within it.
-func (f *File) walk(path string, info os.FileInfo, err error) error {
-	if err != nil {
-		return err
-	} else if path != f.input && (info.Mode()&os.ModeSymlink) != 0 {
+// walk is a callback to walk a file tree and add all files found in it.
+func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
+	if path != f.input && (mode&os.ModeSymlink) != 0 {
 		if resolved, err := filepath.EvalSymlinks(path); err != nil {
 			return err
-		} else if stat, err := os.Stat(resolved); err != nil {
-			return err
-		} else if stat.IsDir() {
+		} else if isDir {
 			// TODO(peterebden): Is this case still needed?
-			return filepath.Walk(resolved, f.walk)
+			return core.WalkMode(resolved, f.walk)
 		}
 	}
 	if path == f.filename {
 		return nil
-	} else if !info.IsDir() {
+	} else if !isDir {
 		if !f.matchesSuffix(path, f.ExcludeSuffix) {
 			if f.matchesSuffix(path, f.Suffix) {
 				log.Debug("Adding zip file %s", path)
@@ -238,7 +234,7 @@ func (f *File) walk(path string, info os.FileInfo, err error) error {
 // AddFiles walks the given directory and adds any zip files (determined by suffix) that it finds within.
 func (f *File) AddFiles(in string) error {
 	f.input = in
-	return filepath.Walk(in, f.walk)
+	return core.WalkMode(in, f.walk)
 }
 
 // shouldExcludeSuffix returns true if the given filename has a suffix that should be excluded.
