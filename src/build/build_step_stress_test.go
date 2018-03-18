@@ -82,7 +82,7 @@ func label(i int) core.BuildLabel {
 // please mimics the core build 'loop' from src/please.go.
 func please(tid int, state *core.BuildState) {
 	for {
-		label, _, t, _ := state.NextTask()
+		label, _, t := state.NextTask()
 		switch t {
 		case core.Stop, core.Kill:
 			return

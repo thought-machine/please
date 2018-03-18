@@ -27,7 +27,6 @@ type TaskType int
 // to be treated equivalently.
 const (
 	Kill            TaskType = 0x0000 | 0
-	Replace                  = 0x0800 | 0
 	SubincludeBuild          = 0x1000 | 1
 	SubincludeParse          = 0x2000 | 2
 	Build                    = 0x4000 | 3
@@ -41,7 +40,6 @@ type pendingTask struct {
 	Label    BuildLabel // Label of target to parse
 	Dependor BuildLabel // The target that depended on it (only for parse tasks)
 	Type     TaskType
-	Tid      int // For Replace tasks, this indicates the thread id that should be replaced. It's zero for other tasks.
 }
 
 func (t pendingTask) Compare(that queue.Item) int {
@@ -84,6 +82,8 @@ type BuildState struct {
 	Config *Configuration
 	// Parser implementation. Other things can call this to perform various external parse tasks.
 	Parser Parser
+	// Used to spawn new workers when old ones need to be replaced.
+	NewWorker func(threadID int)
 	// Hashes of variouts bits of the configuration, used for incrementality.
 	Hashes struct {
 		// Hash of the general config, not including specialised bits.
@@ -200,20 +200,18 @@ func (state *BuildState) AddPendingTest(label BuildLabel) {
 // replaceThread registers a task to replace one of the worker threads.
 func (state *BuildState) replaceThread(tid int) {
 	if tid != NoThread {
-		atomic.AddInt64(&state.numActive, 1)
-		atomic.AddInt64(&state.numPending, 1)
-		state.pendingTasks.Put(pendingTask{Type: Replace, Tid: tid})
+		go state.NewWorker(tid)
 	}
 }
 
 // NextTask receives the next task that should be processed according to the priority queues.
-func (state *BuildState) NextTask() (BuildLabel, BuildLabel, TaskType, int) {
+func (state *BuildState) NextTask() (BuildLabel, BuildLabel, TaskType) {
 	t, err := state.pendingTasks.Get(1)
 	if err != nil {
 		log.Fatalf("error receiving next task: %s", err)
 	}
 	task := t[0].(pendingTask)
-	return task.Label, task.Dependor, task.Type, task.Tid
+	return task.Label, task.Dependor, task.Type
 }
 
 func (state *BuildState) addPending(label BuildLabel, t TaskType) {

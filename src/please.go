@@ -598,15 +598,11 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 
 func please(wg *sync.WaitGroup, tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
 	for {
-		label, dependor, t, ttid := state.NextTask()
+		label, dependor, t := state.NextTask()
 		switch t {
 		case core.Stop, core.Kill:
 			wg.Done()
 			return
-		case core.Replace:
-			wg.Add(1)
-			go please(wg, ttid, state, parsePackageOnly, include, exclude) // Spawn a new replacement.
-			state.TaskDone()
 		case core.Parse, core.SubincludeParse:
 			deferred := parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude, t == core.SubincludeParse)
 			if opts.VisibilityParse && state.IsOriginalTarget(label) {
@@ -704,6 +700,10 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	// Start up all the build workers
 	var wg sync.WaitGroup
 	wg.Add(config.Please.NumThreads)
+	state.NewWorker = func(tid int) {
+		wg.Add(1)
+		please(&wg, tid, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+	}
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go please(&wg, i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	}
