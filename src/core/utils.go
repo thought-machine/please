@@ -164,13 +164,11 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 // If 'fallback' is true then we'll fall back to a copy if linking fails.
 func RecursiveCopyFile(from string, to string, mode os.FileMode, link, fallback bool) error {
 	if info, err := os.Stat(from); err == nil && info.IsDir() {
-		return filepath.Walk(from, func(name string, info os.FileInfo, err error) error {
+		return WalkMode(from, func(name string, isDir bool, fileMode os.FileMode) error {
 			dest := path.Join(to, name[len(from):])
-			if err != nil {
-				return err
-			} else if info.IsDir() {
+			if isDir {
 				return os.MkdirAll(dest, DirPermissions)
-			} else if (info.Mode() & os.ModeSymlink) != 0 {
+			} else if (fileMode & os.ModeSymlink) != 0 {
 				fi, err := os.Stat(name)
 				if err != nil {
 					return err

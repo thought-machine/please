@@ -24,14 +24,13 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 		if rootPath == "" {
 			rootPath = "."
 		}
-		if err := filepath.Walk(rootPath, func(name string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err // stop on any error
-			} else if name == core.OutDir || (info.IsDir() && strings.HasPrefix(info.Name(), ".") && name != ".") {
+		if err := core.Walk(rootPath, func(name string, isDir bool) error {
+			basename := path.Base(name)
+			if name == core.OutDir || (isDir && strings.HasPrefix(basename, ".") && name != ".") {
 				return filepath.SkipDir // Don't walk output or hidden directories
-			} else if info.IsDir() && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
+			} else if isDir && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
 				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
-			} else if isABuildFile(info.Name(), config) && !info.IsDir() {
+			} else if isABuildFile(basename, config) && !isDir {
 				dir, _ := path.Split(name)
 				ch <- strings.TrimRight(dir, "/")
 			} else if core.ContainsString(name, config.Parse.ExperimentalDir) {
@@ -39,7 +38,7 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 			}
 			// Check against blacklist
 			for _, dir := range config.Parse.BlacklistDirs {
-				if dir == info.Name() || strings.HasPrefix(name, dir) {
+				if dir == basename || strings.HasPrefix(name, dir) {
 					return filepath.SkipDir
 				}
 			}

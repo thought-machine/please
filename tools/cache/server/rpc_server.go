@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -28,6 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "cache/proto/rpc_cache"
+	"core"
 	"tools/cache/cluster"
 )
 
@@ -197,10 +197,8 @@ func extractAddress(ctx context.Context) string {
 
 func loadKeys(filename string) map[string]*x509.Certificate {
 	ret := map[string]*x509.Certificate{}
-	if err := filepath.Walk(filename, func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		} else if !info.IsDir() {
+	if err := core.Walk(filename, func(name string, isDir bool) error {
+		if !isDir {
 			data, err := ioutil.ReadFile(name)
 			if err != nil {
 				log.Fatalf("Failed to read cert from %s: %s", name, err)

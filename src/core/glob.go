@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/karrick/godirwalk"
 )
 
 // Used to identify the fixed part at the start of a glob pattern.
@@ -93,14 +95,11 @@ func glob(state *BuildState, rootPath, pattern string, includeHidden bool, exclu
 		return matches, err
 	}
 
-	err = filepath.Walk(rootPath, func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
+	err = Walk(rootPath, func(name string, isDir bool) error {
+		if isDir {
 			if name != rootPath && IsPackage(state, name) {
 				return filepath.SkipDir // Can't glob past a package boundary
-			} else if !includeHidden && strings.HasPrefix(info.Name(), ".") {
+			} else if !includeHidden && strings.HasPrefix(path.Base(name), ".") {
 				return filepath.SkipDir // Don't descend into hidden directories
 			} else if shouldExcludeMatch(name, excludes) {
 				return filepath.SkipDir
@@ -111,6 +110,28 @@ func glob(state *BuildState, rootPath, pattern string, includeHidden bool, exclu
 		return nil
 	})
 	return matches, err
+}
+
+// Walk implements an equivalent to filepath.Walk.
+// It's implemented over github.com/karrick/godirwalk but the provided interface doesn't use that
+// to make it a little easier to handle.
+func Walk(rootPath string, callback func(name string, isDir bool) error) error {
+	return WalkMode(rootPath, func(name string, isDir bool, mode os.FileMode) error {
+		return callback(name, isDir)
+	})
+}
+
+// WalkMode is like Walk but the callback receives an additional type specifying the file mode.
+func WalkMode(rootPath string, callback func(name string, isDir bool, mode os.FileMode) error) error {
+	// Compatibility with filepath.Walk which allows passing a file as the root argument.
+	if info, err := os.Stat(rootPath); err != nil {
+		return err
+	} else if !info.IsDir() {
+		return callback(rootPath, false, info.Mode())
+	}
+	return godirwalk.Walk(rootPath, &godirwalk.Options{Callback: func(name string, info *godirwalk.Dirent) error {
+		return callback(name, info.IsDir(), info.ModeType())
+	}})
 }
 
 // Memoize this to cut down on filesystem operations

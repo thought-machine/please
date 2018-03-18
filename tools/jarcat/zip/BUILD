@@ -2,6 +2,7 @@ go_library(
     name = 'zip',
     srcs = ['writer.go'],
     deps = [
+        '//src/core',
         '//third_party/go:logging',
         '//third_party/go:testify',
         '//third_party/go/zip',

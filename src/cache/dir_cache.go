@@ -218,10 +218,9 @@ func findSize(path string) (uint64, error) {
 func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 	entries := []cacheEntry{}
 	var totalSize uint64
-	if err := filepath.Walk(cache.Dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		} else if (len(info.Name()) == 28 || len(info.Name()) == 29) && info.Name()[27] == '=' {
+	if err := core.Walk(cache.Dir, func(path string, isDir bool) error {
+		name := filepath.Base(path)
+		if isDir && (len(name) == 28 || len(name) == 29) && name[27] == '=' {
 			// Directory has the right length. We do this in an attempt to clean only entire
 			// entries in the cache, not just individual files from them.
 			// 28 == length of 20-byte sha1 hash, encoded to base64, which always gets a trailing =
@@ -235,6 +234,10 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 			if err != nil {
 				return err
 			}
+			info, err := os.Stat(path)
+			if err != nil {
+				return err
+			}
 			entries = append(entries, cacheEntry{
 				Path:  path,
 				Size:  size,
@@ -242,9 +245,8 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 			})
 			totalSize += size
 			return filepath.SkipDir
-		} else {
-			return nil // nothing particularly to do for other entries
 		}
+		return nil // nothing particularly to do for other entries
 	}); err != nil {
 		log.Error("error walking cache directory: %s\n", err)
 		return totalSize

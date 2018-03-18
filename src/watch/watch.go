@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -123,10 +122,10 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.BuildInput, dirs map[string]struct{}, files cmap.ConcurrentMap) {
 	if source.Label() == nil {
 		for _, src := range source.Paths(state.Graph) {
-			if err := filepath.Walk(src, func(src string, info os.FileInfo, err error) error {
+			if err := core.Walk(src, func(src string, isDir bool) error {
 				files.Set(src, struct{}{})
 				dir := src
-				if info, err := os.Stat(src); err == nil && !info.IsDir() {
+				if !isDir {
 					dir = path.Dir(src)
 				}
 				if _, present := dirs[dir]; !present {
@@ -136,7 +135,7 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 						log.Error("Failed to add watch on %s: %s", src, err)
 					}
 				}
-				return err
+				return nil
 			}); err != nil {
 				log.Error("Failed to add watch on %s: %s", src, err)
 			}

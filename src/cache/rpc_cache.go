@@ -14,7 +14,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -103,10 +102,8 @@ func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*
 	outDir := target.OutDir()
 	root := path.Join(outDir, file)
 	totalSize := 1000 // Allow a little space for encoding overhead.
-	err := filepath.Walk(root, func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		} else if !info.IsDir() {
+	err := core.Walk(root, func(name string, isDir bool) error {
+		if !isDir {
 			content, err := ioutil.ReadFile(name)
 			if err != nil {
 				return err
