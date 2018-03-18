@@ -325,10 +325,19 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     environment = ' '.join(['%s=%s' % (k, v) for k, v in sorted((env or {}).items())])
     target = outs[0] if install_subdirectory else '.'
 
-    # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
-    # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
-    # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
-    cmd = '[ -f /etc/debian_version ] && [ $TOOL == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; '
+    if CONFIG.OS == 'linux':
+        # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
+        # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
+        # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
+        cmd = '[ -f /etc/debian_version ] && [ $TOOL == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; '
+    elif CONFIG.OS == 'darwin':
+        # Fix for Homebrew which fails with a superficially similar issue.
+        # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
+        # but that prevents downloading binary wheels. This is more fiddly but seems to work.
+        # Unfortunately it does *not* work similarly on the Debian problem :(
+        cmd = 'echo "[install]\nprefix=" > setup.cfg;'
+    else:
+        cmd = ''
     cmd += '$TOOL install --no-deps --no-compile --no-cache-dir --default-timeout=60 $SYS_FLAG --target=' + target
     cmd += ' -q -b build %s %s %s %s' % (repo_flag, index_flag, pip_flags, package_name)
     cmd += ' && find . -name "*.pyc" -or -name "tests" | xargs rm -rf'
