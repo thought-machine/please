@@ -3,7 +3,7 @@ MAINTAINER peter.ebden@gmail.com
 
 # Most dependencies; Python, Java, Clang and Ruby (only used for fpm)
 RUN apt-get update && \
-    apt-get install -y python3.6 python3-dev openjdk-9-jdk-headless \
+    apt-get install -y python3.6 python3-dev python3-pip openjdk-9-jdk-headless \
     curl unzip git locales pkg-config zlib1g-dev \
     clang libunittest++-dev ruby ruby-dev rubygems golint && \
     apt-get clean

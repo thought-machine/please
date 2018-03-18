@@ -1,6 +1,5 @@
 subinclude('//build_defs:multiversion_wheel')
 package(
-    default_python_interpreter = 'python3',
     default_visibility = ['PUBLIC'],
     python_wheel_repo = 'https://get.please.build/third_party/python/py3',
 )
@@ -113,4 +112,11 @@ python_wheel(
         ':py',
         ':six',
     ],
+)
+
+pip_library(
+    name = 'numpy',
+    version = '1.12.1',
+    test_only = True,
+    zip_safe = False,
 )
