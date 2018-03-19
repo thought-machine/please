@@ -227,7 +227,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
         )
         deps.append(lib_rule)
     if self_executable:
-        preamble = '#!/bin/sh\nexec java %s -jar $0 $@' % (jvm_args or '')
+        preamble = '#!/bin/sh\nexec java %s -jar $0 ${@}' % (jvm_args or '')
         cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
     else:
         # This is essentially a hack to get past some Java things (notably Jersey) failing
