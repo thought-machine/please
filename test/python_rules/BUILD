@@ -105,5 +105,9 @@ python_test(
 python_test(
     name = 'numpy_test',
     srcs = ['numpy_test.py'],
+    labels = [
+        'py3',
+        'pip',
+    ],
     deps = ['//third_party/python:numpy'],
 )
