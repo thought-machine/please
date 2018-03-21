@@ -144,6 +144,7 @@ func DefaultConfiguration() *Configuration {
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.DownloadLocation = "https://get.please.build"
+	config.Please.NumOldVersions = 10
 	config.Build.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Build.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
 	config.Build.Timeout = cli.Duration(10 * time.Minute)
@@ -227,6 +228,8 @@ type Configuration struct {
 		Location         string      `help:"Defines the directory Please is installed into.\nDefaults to ~/.please but you might want it to be somewhere else if you're installing via another method (e.g. the debs and install script still use /opt/please)."`
 		SelfUpdate       bool        `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
 		DownloadLocation cli.URL     `help:"Defines the location to download Please from when self-updating. Defaults to the Please web server, but you can point it to some location of your own if you prefer to keep traffic within your network or use home-grown versions."`
+		NumOldVersions   int         `help:"Number of old versions to keep from autoupdates."`
+		Autoclean        bool        `help:"Automatically clean stale versions without prompting"`
 		NumThreads       int         `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed." example:"6"`
 		Motd             []string    `help:"Message of the day; is displayed once at the top during builds. If multiple are given, one is randomly chosen."`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
