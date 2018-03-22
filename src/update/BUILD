@@ -1,6 +1,7 @@
 go_library(
     name = 'update',
     srcs = [
+        'clean.go',
         'update.go',
         'verify.go',
         ':pubkey',
@@ -10,6 +11,7 @@ go_library(
         '//src/core',
         '//third_party/go:logging',
         '//third_party/go:openpgp',
+        '//third_party/go:prompter',
         '//third_party/go:semver',
     ],
     visibility = ['PUBLIC'],

@@ -45,6 +45,7 @@ var minSignedVersion = semver.Version{Major: 9, Minor: 2}
 // will always update even if the version exists.
 func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify bool) {
 	if !shouldUpdate(config, updatesEnabled, updateCommand) && !forceUpdate {
+		clean(config, updateCommand)
 		return
 	}
 	word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
@@ -67,6 +68,9 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 
 	// Download it.
 	newPlease := downloadAndLinkPlease(config, verify)
+
+	// Clean out any old ones
+	clean(config, updateCommand)
 
 	// Now run the new one.
 	args := filterArgs(forceUpdate, append([]string{newPlease}, os.Args[1:]...))
