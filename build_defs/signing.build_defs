@@ -27,7 +27,7 @@ def signed_fpm_deb(name, version, package_name=None, files=None, dirs=None, link
         src = deb_rule,
         out = '%s_%s_%s.deb.asc' % (package_name, version, CONFIG.ARCH),
         visibility = visibility,
-        labels = ['deb_asc'],
+        labels = ['deb_asc', 'manual'],
     )
 
 
@@ -51,7 +51,7 @@ def signed_tarball(name, srcs, out, subdir, visibility=None):
         src = tar_rule,
         out = out + '.asc',
         visibility = visibility,
-        labels = ['tar_asc'],
+        labels = ['tar_asc', 'manual'],
     )
 
 
