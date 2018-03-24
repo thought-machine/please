@@ -74,9 +74,8 @@ func (i *interpreter) loadBuiltinStatements(statements []*Statement, err error) 
 
 // interpretAll runs a series of statements in the context of the given package.
 // The first return value is for testing only.
-func (i *interpreter) interpretAll(tid int, pkg *core.Package, statements []*Statement) (s *scope, err error) {
+func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (s *scope, err error) {
 	s = i.scope.NewPackagedScope(pkg)
-	s.tid = tid
 	// Config needs a little separate tweaking.
 	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
 	// mutating operations like .setdefault() otherwise.
@@ -160,11 +159,8 @@ type scope struct {
 	pkg         *core.Package
 	parent      *scope
 	locals      pyDict
-	tid         int
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
-	// True if during the parse we were deferred waiting for something to build.
-	Deferred bool
 }
 
 // NewScope creates a new child scope of this one.
@@ -259,19 +255,6 @@ func (s *scope) LoadSingletons(state *core.BuildState) {
 	if s.state != nil { // For bootstrap.
 		s.Set("CONFIG", newConfig(s.state.Config))
 	}
-}
-
-// WaitForBuiltTarget is a convenience wrapper around the state.WaitForBuiltTarget function.
-func (s *scope) WaitForBuiltTarget(label core.BuildLabel, packageName string) *core.BuildTarget {
-	target, deferred := s.state.WaitForBuiltTarget(s.tid, label, packageName)
-	for s2 := s; deferred && s2 != nil && s2.pkg != nil; s2 = s2.parent {
-		s2.Deferred = deferred
-		s2.tid = core.NoThread
-	}
-	if deferred {
-		s.tid = core.NoThread
-	}
-	return target
 }
 
 // interpretStatements interprets a series of statements in a particular scope.

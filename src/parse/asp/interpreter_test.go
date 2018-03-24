@@ -26,7 +26,7 @@ func parseFile(filename string) (*scope, error) {
 	}
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(reflect.ValueOf(statements))
-	return parser.interpreter.interpretAll(0, pkg, statements)
+	return parser.interpreter.interpretAll(pkg, statements)
 }
 
 func TestBasic(t *testing.T) {

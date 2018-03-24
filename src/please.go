@@ -596,22 +596,22 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 	return false
 }
 
-func please(wg *sync.WaitGroup, tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
+func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
 	for {
 		label, dependor, t := state.NextTask()
 		switch t {
 		case core.Stop, core.Kill:
-			wg.Done()
 			return
 		case core.Parse, core.SubincludeParse:
-			deferred := parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude, t == core.SubincludeParse)
-			if opts.VisibilityParse && state.IsOriginalTarget(label) {
-				parseForVisibleTargets(state, label)
-			}
-			state.TaskDone()
-			if deferred {
-				wg.Done()
-				return // This thread is done.
+			t := t
+			label := label
+			dependor := dependor
+			state.ParsePool <- func() {
+				parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude, t == core.SubincludeParse)
+				if opts.VisibilityParse && state.IsOriginalTarget(label) {
+					parseForVisibleTargets(state, label)
+				}
+				state.TaskDone()
 			}
 		case core.Build, core.SubincludeBuild:
 			build.Build(tid, state, label)
@@ -700,12 +700,11 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	// Start up all the build workers
 	var wg sync.WaitGroup
 	wg.Add(config.Please.NumThreads)
-	state.NewWorker = func(tid int) {
-		wg.Add(1)
-		please(&wg, tid, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
-	}
 	for i := 0; i < config.Please.NumThreads; i++ {
-		go please(&wg, i, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+		go func(tid int) {
+			please(tid, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+			wg.Done()
+		}(i)
 	}
 	// Wait until they've all exited, which they'll do once they have no tasks left.
 	go func() {

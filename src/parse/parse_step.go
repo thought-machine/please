@@ -28,45 +28,32 @@ var log = logging.MustGetLogger("parse")
 // targets with at least one matching label are added. Any targets with a label in 'exclude' are not added.
 // 'forSubinclude' is set when the parse is required for a subinclude target so should proceed
 // even when we're not otherwise building targets.
-//
-// It returns true if this thread was deferred and something else will replace it, otherwise false.
-func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) bool {
-	deferred, err := parse(tid, state, label, dependor, noDeps, include, exclude, forSubinclude)
-	if err != nil {
-		state.LogBuildError(core.NoThread, label, core.ParseFailed, err, "Failed to parse package")
+func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) {
+	if err := parse(tid, state, label, dependor, noDeps, include, exclude, forSubinclude); err != nil {
+		state.LogBuildError(tid, label, core.ParseFailed, err, "Failed to parse package")
 	}
-	return deferred
 }
 
-func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) (bool, error) {
+func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) error {
 	// See if something else has parsed this package first.
-	pkg, deferred := state.WaitForPackage(tid, label.PackageName)
+	pkg := state.WaitForPackage(label.PackageName)
 	if pkg != nil {
 		// Does exist, all we need to do is toggle on this target
-		return deferred, activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
+		return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
 	}
-	tid = updateTid(tid, deferred)
 	// If we get here then it falls to us to parse this package.
 	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
 
 	// Check whether this guy exists within a subrepo. If so we will need to make sure that's available first.
 	if subrepo := state.Graph.SubrepoFor(label.PackageName); subrepo != nil && subrepo.Target != nil {
-		_, deferred = state.WaitForBuiltTarget(tid, subrepo.Target.Label, label.PackageName)
-		tid = updateTid(tid, deferred)
+		state.WaitForBuiltTarget(subrepo.Target.Label, label.PackageName)
 	}
-	pkg, deferred, err := parsePackage(tid, state, label, dependor)
+	pkg, err := parsePackage(state, label, dependor)
 	if err != nil {
-		return deferred, err
+		return err
 	}
-	state.LogBuildResult(core.NoThread, label, core.PackageParsed, "Parsed package")
-	return deferred, activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
-}
-
-func updateTid(tid int, deferred bool) int {
-	if deferred {
-		return core.NoThread
-	}
-	return tid
+	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed package")
+	return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
 }
 
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
@@ -102,25 +89,23 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 }
 
 // parsePackage performs the initial parse of a package.
-func parsePackage(tid int, state *core.BuildState, label, dependor core.BuildLabel) (*core.Package, bool, error) {
+func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) (*core.Package, error) {
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
 	if pkg.Filename = buildFileName(state, packageName); pkg.Filename == "" {
 		exists := core.PathExists(packageName)
 		// Handle quite a few cases to provide more obvious error messages.
 		if dependor != core.OriginalTarget && exists {
-			return nil, false, fmt.Errorf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, packageName)
+			return nil, fmt.Errorf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, packageName)
 		} else if dependor != core.OriginalTarget {
-			return nil, false, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist", dependor, label, packageName)
+			return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist", dependor, label, packageName)
 		} else if exists {
-			return nil, false, fmt.Errorf("Can't build %s; there's no BUILD file in %s/", label, packageName)
+			return nil, fmt.Errorf("Can't build %s; there's no BUILD file in %s/", label, packageName)
 		}
-		return nil, false, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, packageName)
+		return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, packageName)
 	}
-
-	deferred, err := state.Parser.ParseFile(tid, state, pkg, pkg.Filename)
-	if err != nil {
-		return nil, deferred, err
+	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
+		return nil, err
 	}
 
 	allTargets := pkg.AllTargets()
@@ -155,7 +140,7 @@ func parsePackage(tid int, state *core.BuildState, label, dependor core.BuildLab
 	// since it only issues warnings sometimes.
 	go pkg.VerifyOutputs()
 	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
-	return pkg, deferred, nil
+	return pkg, nil
 }
 
 func buildFileName(state *core.BuildState, pkgName string) string {

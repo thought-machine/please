@@ -41,8 +41,8 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) ParseFile(threadID int, state *core.BuildState, pkg *core.Package, filename string) (bool, error) {
-	return p.asp.ParseFile(threadID, pkg, filename)
+func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+	return p.asp.ParseFile(pkg, filename)
 }
 
 func (p *aspParser) UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
