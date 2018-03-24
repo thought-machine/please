@@ -432,10 +432,10 @@ def _test_size_and_timeout(size, timeout, labels):
 
 
 _SIZE_TIMEOUTS = {
-    'enormous': 600,
-    'large': 100,
-    'medium': 40,
-    'small': 10,
+    'enormous': 3600,
+    'large': 900,
+    'medium': 300,
+    'small': 60,
 }
 
 _TIMEOUT_NAMES = {

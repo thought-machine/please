@@ -398,7 +398,11 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan SourcePair {
 			outDir := dependency.OutDir()
 			for _, dep := range dependency.Outputs() {
 				depPath := path.Join(outDir, dep)
-				tmpPath := path.Join(tmpDir, dependency.Label.PackageName, dep)
+				pkgName := dependency.Label.PackageName
+				if dependency.Subrepo != nil {
+					pkgName = dependency.Subrepo.MakeRelativeName(pkgName)
+				}
+				tmpPath := path.Join(tmpDir, pkgName, dep)
 				if !donePaths[tmpPath] {
 					ch <- SourcePair{depPath, tmpPath}
 					donePaths[tmpPath] = true

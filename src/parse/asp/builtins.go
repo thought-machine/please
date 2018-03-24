@@ -38,7 +38,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "int", intType)
 	setNativeCode(s, "str", strType)
 	setNativeCode(s, "join_path", joinPath).varargs = true
-	setNativeCode(s, "get_base_path", packageName)
+	setNativeCode(s, "get_base_path", getBasePath)
 	setNativeCode(s, "package_name", packageName)
 	setNativeCode(s, "get_labels", getLabels)
 	setNativeCode(s, "add_dep", addDep)
@@ -449,7 +449,7 @@ func glob(s *scope, args []pyObject) pyObject {
 	exclude := asStringList(s, args[1], "exclude")
 	hidden := args[2].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
-	return fromStringList(core.Glob(s.state, s.pkg.Name, include, exclude, exclude, hidden))
+	return fromStringList(core.Glob(s.state, s.pkg.SourceRoot(), include, exclude, exclude, hidden))
 }
 
 func asStringList(s *scope, arg pyObject, name string) []string {
@@ -539,7 +539,14 @@ func joinPath(s *scope, args []pyObject) pyObject {
 	return pyString(path.Join(l...))
 }
 
+func getBasePath(s *scope, args []pyObject) pyObject {
+	return pyString(s.pkg.Name)
+}
+
 func packageName(s *scope, args []pyObject) pyObject {
+	if s.pkg.Subrepo != nil {
+		return pyString(s.pkg.Subrepo.MakeRelativeName(s.pkg.Name))
+	}
 	return pyString(s.pkg.Name)
 }
 

@@ -17,6 +17,8 @@ type Package struct {
 	Filename string
 	// Subincluded build defs files that this package imported
 	Subincludes []BuildLabel
+	// If the package is in a subrepo, this is the subrepo it belongs to. It's nil if not.
+	Subrepo *Subrepo
 	// Targets contained within the package
 	targets map[string]*BuildTarget
 	// Set of output files from rules.
@@ -54,6 +56,15 @@ func (pkg *Package) TargetOrDie(name string) *BuildTarget {
 		log.Fatalf("Target %s not registered in package %s", name, pkg.Name)
 	}
 	return t
+}
+
+// SourceRoot returns the root directory of source files for this package.
+// This is equivalent to .Name for in-repo packages but differs for those in subrepos.
+func (pkg *Package) SourceRoot() string {
+	if pkg.Subrepo != nil {
+		return pkg.Subrepo.Dir(pkg.Name)
+	}
+	return pkg.Name
 }
 
 // AddTarget adds a new target to this package with the given name.

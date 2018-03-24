@@ -15,9 +15,10 @@ _WHOLE_ARCHIVE = '-all_load' if CONFIG.OS == 'darwin' else '--whole-archive'
 _NO_WHOLE_ARCHIVE = '-noall_load' if CONFIG.OS == 'darwin' else '--no-whole-archive'
 
 
-def cc_library(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list&textual_hdrs=None, deps:list=None,
-               visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=None, linker_flags:list&ldflags&linkopts=None,
-               pkg_config_libs:list=None, includes:list=None, defines:list|dict=None, alwayslink:bool=False, _c=False):
+def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:list=[],
+               visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
+               linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], includes:list=[],
+               defines:list|dict=[], alwayslink:bool=False, linkstatic:bool=False, _c=False, textual_hdrs:list=[]):
     """Generate a C++ library target.
 
     Args:
@@ -42,25 +43,19 @@ def cc_library(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list&textu
       alwayslink (bool): If True, any binaries / tests using this library will link in all symbols,
                          even if they don't directly reference them. This is useful for e.g. having
                          static members that register themselves at construction time.
+      linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect.
+      textual_hdrs (list): Also provided for Bazel compatibility. Effectively works the same as hdrs for now.
     """
-    srcs = srcs or []
-    hdrs = hdrs or []
-    deps = deps or []
-    compiler_flags = compiler_flags or []
-    linker_flags = linker_flags or []
-    pkg_config_libs = pkg_config_libs or []
-    includes = includes or []
-    defines = defines or []
-
     # Bazel suggests passing nonexported header files in 'srcs'. We however treat
     # srcs as things to actually compile and must mark a distinction.
     if CONFIG.BAZEL_COMPATIBILITY:
-        src_hdrs = [src for src in srcs if src.endswith('.h')]
-        private_hdrs = (private_hdrs or []) + src_hdrs
-        srcs = [src for src in srcs if not src.endswith('.h')]
+        src_hdrs = [src for src in srcs if src.endswith('.h') or src.endswith('.inc')]
+        srcs = [src for src in srcs if src not in src_hdrs]
         # This is rather nasty; people seem to be relying on being able to reuse
-        # headers that they've put in srcs. We hence need to re-export them here.
+        # headers that they've put in srcs. We hence need to re-export them here, but really
+        # they should be added to private_hdrs instead.
         hdrs += src_hdrs
+        hdrs += textual_hdrs
         # Found this in a few cases... can't pass -pthread to the linker.
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
 
@@ -68,9 +63,10 @@ def cc_library(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list&textu
     if isinstance(defines, dict):
         defines = [k if v is None else r'%s=\"%s\"' % (k, v) for k, v in sorted(defines.items())]
 
+    pkg_name = package_name()
     labels = (['cc:ld:' + flag for flag in linker_flags] +
               ['cc:pc:' + lib for lib in pkg_config_libs] +
-              ['cc:inc:%s/%s' % (get_base_path(), include) for include in includes] +
+              ['cc:inc:' + join_path(pkg_name, include) for include in includes] +
               ['cc:def:' + define for define in defines])
 
 
@@ -199,9 +195,9 @@ def cc_library(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list&textu
     )
 
 
-def cc_object(name:str, src:str, hdrs:list=None, private_hdrs:list=None, out:str=None, test_only:bool&testonly=False,
-              compiler_flags:list&cflags&copts=None, linker_flags:list&ldflags&linkopts=None, pkg_config_libs:list=None, includes:list=None,
-              defines:list|dict=None, alwayslink:bool=False, _c=False, visibility:list=None, deps:list=None):
+def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None, test_only:bool&testonly=False,
+              compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], includes:list=[],
+              defines:list|dict=[], alwayslink:bool=False, _c=False, visibility:list=None, deps:list=[]):
     """Generate a C or C++ object file from a single source.
 
     N.B. This is fairly low-level; for most use cases cc_library should be preferred.
@@ -231,13 +227,6 @@ def cc_object(name:str, src:str, hdrs:list=None, private_hdrs:list=None, out:str
                          even if they don't directly reference them. This is useful for e.g. having
                          static members that register themselves at construction time.
     """
-    deps = deps or []
-    compiler_flags = compiler_flags or []
-    linker_flags = linker_flags or []
-    pkg_config_libs = pkg_config_libs or []
-    includes = includes or []
-    defines = defines or []
-
     # Handle defines being passed as a dict, as a nicety for the user.
     if isinstance(defines, dict):
         defines = [k if v is None else r'%s=\"%s\"' % (k, v) for k, v in sorted(defines.items())]
@@ -268,8 +257,8 @@ def cc_object(name:str, src:str, hdrs:list=None, private_hdrs:list=None, out:str
     )
 
 
-def cc_static_library(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list&cflags&copts=None, linker_flags:list&ldflags&linkopts=None,
-                      deps:list=None, visibility:list=None, test_only:bool&testonly=False, pkg_config_libs:list=None, _c=False):
+def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
+                      deps:list=[], visibility:list=None, test_only:bool&testonly=False, pkg_config_libs:list=[], _c=False):
     """Generates a C++ static library (.a).
 
     This is essentially just a collection of other cc_library rules into a single archive.
@@ -287,10 +276,9 @@ def cc_static_library(name:str, srcs:list=None, hdrs:list=None, compiler_flags:l
       test_only (bool): If True, is only available to other test rules.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
     """
-    deps = deps or []
     provides = None
     if srcs:
-        cc_library(
+        lib_rule = cc_library(
             name = '_%s#lib' % name,
             srcs = srcs,
             hdrs = hdrs,
@@ -301,8 +289,7 @@ def cc_static_library(name:str, srcs:list=None, hdrs:list=None, compiler_flags:l
             pkg_config_libs = pkg_config_libs,
             _c=_c,
         )
-        deps.append(':_%s#lib' % name)
-        deps.append(':_%s#lib_hdrs' % name)
+        deps += [lib_rule, ':_%s#lib_hdrs' % name]
         provides = {
             'cc_hdrs': ':_%s#lib_hdrs' % name,
             'cc': ':' + name,
@@ -326,9 +313,9 @@ def cc_static_library(name:str, srcs:list=None, hdrs:list=None, compiler_flags:l
     )
 
 
-def cc_shared_object(name:str, srcs:list=None, hdrs:list=None, out:str='', compiler_flags:list&cflags&copts=None,
-                     linker_flags:list&ldflags&linkopts=None, deps:list=None, visibility:list=None, test_only:bool&testonly=False,
-                     pkg_config_libs:list=None, includes:list=None, _c=False):
+def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_flags:list&cflags&copts=[],
+                     linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, test_only:bool&testonly=False,
+                     pkg_config_libs:list=[], includes:list=[], _c=False):
     """Generates a C++ shared object (.so) with its dependencies linked in.
 
     Args:
@@ -345,13 +332,11 @@ def cc_shared_object(name:str, srcs:list=None, hdrs:list=None, out:str='', compi
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
       includes (list): Include directories to be added to the compiler's lookup path.
     """
-    linker_flags = linker_flags or []
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
-    deps = deps or []
     provides = None
     if srcs:
-        cc_library(
+        lib_rule = cc_library(
             name = '_%s#lib' % name,
             srcs = srcs,
             hdrs = hdrs,
@@ -363,8 +348,7 @@ def cc_shared_object(name:str, srcs:list=None, hdrs:list=None, out:str='', compi
             includes = includes,
             _c=_c,
         )
-        deps.append(':_%s#lib' % name)
-        deps.append(':_%s#lib_hdrs' % name)
+        deps += [lib_rule, ':_%s#lib_hdrs' % name]
         provides = {
             'cc_hdrs': ':_%s#lib_hdrs' % name,
             'cc': ':' + name,
@@ -389,9 +373,9 @@ def cc_shared_object(name:str, srcs:list=None, hdrs:list=None, out:str='', compi
     )
 
 
-def cc_binary(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, compiler_flags:list&cflags&copts=None,
-              linker_flags:list&ldflags&linkopts=None, deps:list=None, visibility:list=None, pkg_config_libs:list=None,
-              test_only:bool&testonly=False, static:bool=False, _c=False):
+def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compiler_flags:list&cflags&copts=[],
+              linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, pkg_config_libs:list=[],
+              test_only:bool&testonly=False, static:bool=False, _c=False, linkstatic:bool=False):
     """Builds a binary from a collection of C++ rules.
 
     Args:
@@ -407,8 +391,11 @@ def cc_binary(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, 
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
       test_only (bool): If True, this rule can only be used by tests.
       static (bool): If True, the binary will be linked statically.
+      linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
+                         link roughly equivalently to their "mostly-static" mode.
     """
-    linker_flags = linker_flags or []
+    if CONFIG.BAZEL_COMPATIBILITY:
+        linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     if static:
@@ -416,9 +403,8 @@ def cc_binary(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, 
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
     if srcs:
         if static:
-            compiler_flags = compiler_flags or []
             compiler_flags.append('-static -static-libgcc')
-        cc_library(
+        lib_rule = cc_library(
             name='_%s#lib' % name,
             srcs=srcs,
             hdrs=hdrs,
@@ -429,8 +415,7 @@ def cc_binary(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, 
             test_only=test_only,
             _c=_c,
         )
-        deps = deps or []
-        deps.append(':_%s#lib' % name)
+        deps.append(lib_rule)
     return build_rule(
         name=name,
         outs=[name],
@@ -448,9 +433,9 @@ def cc_binary(name:str, srcs:list=None, hdrs:list=None, private_hdrs:list=None, 
     )
 
 
-def cc_test(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list&cflags&copts=None, linker_flags:list&ldflags&linkopts=None,
-            pkg_config_libs:list=None, deps:list=None, data:list=None, visibility:list=None, flags:str='',
-            labels:list&features&tags=None, flaky:bool|int=0, test_outputs:list=None, size:str=None, timeout:int=0,
+def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
+            pkg_config_libs:list=[], deps:list=[], data:list=[], visibility:list=[], flags:str='',
+            labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=[], size:str=None, timeout:int=0,
             container:bool|dict=False, sandbox:bool=None, write_main:bool=not CONFIG.BAZEL_COMPATIBILITY, _c=False):
     """Defines a C++ test using UnitTest++.
 
@@ -477,20 +462,20 @@ def cc_test(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list&cflags
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       write_main (bool): Whether or not to write a main() for these tests.
     """
+    if CONFIG.BAZEL_COMPATIBILITY:
+        linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
-    srcs = srcs or []
-    linker_flags = linker_flags or []
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     if write_main:
         linker_flags.append('-lUnitTest++')
-        genrule(
+        main_rule = genrule(
             name='_%s#main' % name,
             outs=['_%s_main.cc' % name],
             cmd='echo \'%s\' > $OUT' % _CC_TEST_MAIN_CONTENTS,
             test_only=True,
         )
-        srcs.append(':_%s#main' % name)
+        srcs.append(main_rule)
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
     test_cmd = None if not CONFIG.CPP_COVERAGE else {
         'opt': '$TEST %s' % flags,
@@ -498,7 +483,7 @@ def cc_test(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list&cflags
         'cover': '$TEST %s; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R' % flags,
     }
     if srcs:
-        cc_library(
+        lib_rule = cc_library(
             name='_%s#lib' % name,
             srcs=srcs,
             hdrs=hdrs,
@@ -509,8 +494,7 @@ def cc_test(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list&cflags
             alwayslink=True,
             _c=_c,
         )
-        deps = deps or []
-        deps.append(':_%s#lib' % name)
+        deps.append(lib_rule)
     return build_rule(
         name=name,
         outs=[name],
@@ -536,7 +520,7 @@ def cc_test(name:str, srcs:list=None, hdrs:list=None, compiler_flags:list&cflags
     )
 
 
-def cc_embed_binary(name:str, src:str, deps:list=None, visibility:list=None, test_only:bool&testonly=False, namespace:str=None):
+def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_only:bool&testonly=False, namespace:str=None):
     """Build rule to embed an arbitrary binary file into a C library.
 
     You can depend on the output of this as though it were a cc_library rule.

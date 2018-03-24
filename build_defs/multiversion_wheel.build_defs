@@ -1,6 +1,6 @@
 def python_multiversion_wheel(name, version, repos, hashes=None, package_name=None, outs=None,
                               subdir='.', licences=None, test_only=False, zip_safe=True,
-                              visibility=None, deps=None):
+                              visibility=None, deps=[]):
     """Downloads and combines multiple Python wheels.
 
     This is an extended version of python_wheel that allows fetching multiple wheels for

@@ -42,6 +42,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	s.Assert(err == nil, "Invalid build target name %s", name)
 
 	target := core.NewBuildTarget(label)
+	target.Subrepo = s.pkg.Subrepo
 	target.IsBinary = isTruthy(13)
 	target.IsTest = test
 	target.NeedsTransitiveDependencies = isTruthy(17)
@@ -219,6 +220,10 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 // addDependencies adds dependencies to a target, which may or may not be exported.
 func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarget, exported bool) {
 	addStrings(s, name, obj, func(str string) {
+		if s.state.Config.Bazel.Compatibility && !core.LooksLikeABuildLabel(str) && !strings.HasPrefix(str, "@") {
+			// *sigh*... Bazel seems to allow an implicit : on the start of dependencies
+			str = ":" + str
+		}
 		label := core.ParseBuildLabel(str, s.pkg.Name)
 		target.AddMaybeExportedDependency(label, exported, false)
 	})
@@ -272,7 +277,16 @@ func parseVisibility(s *scope, vis string) core.BuildLabel {
 	if vis == "PUBLIC" || (s.state.Config.Bazel.Compatibility && vis == "//visibility:public") {
 		return core.WholeGraph[0]
 	}
-	return core.ParseBuildLabel(vis, s.pkg.Name)
+	l := core.ParseBuildLabel(vis, s.pkg.Name)
+	if s.state.Config.Bazel.Compatibility {
+		// Bazel has a couple of special aliases for this stuff.
+		if l.Name == "__pkg__" {
+			l.Name = "all"
+		} else if l.Name == "__subpackages__" {
+			l.Name = "..."
+		}
+	}
+	return l
 }
 
 func parseBuildInput(s *scope, in pyObject, name string, systemAllowed, tool bool) core.BuildInput {
@@ -307,6 +321,13 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	// Make sure it's not the actual build file.
 	for _, filename := range s.state.Config.Parse.BuildFileName {
 		s.Assert(filename != src, "You can't specify the BUILD file as an input to a rule")
+	}
+	if s.pkg.Subrepo != nil {
+		return core.SubrepoFileLabel{
+			File:        src,
+			Package:     s.pkg.Subrepo.MakeRelativeName(s.pkg.Name),
+			FullPackage: s.pkg.Subrepo.Dir(s.pkg.Name),
+		}
 	}
 	return core.FileLabel{File: src, Package: s.pkg.Name}
 }

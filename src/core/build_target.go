@@ -38,6 +38,8 @@ type BuildTarget struct {
 
 	// Identifier of this build target
 	Label BuildLabel `name:"name"`
+	// If this target is in a subrepo, this will be the one it's in.
+	Subrepo *Subrepo `print:"false"`
 	// Dependencies of this target.
 	// Maps the original declaration to whatever dependencies actually got attached,
 	// which may be more than one in some cases. Also contains info about exporting etc.

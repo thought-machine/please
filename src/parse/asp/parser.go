@@ -197,6 +197,7 @@ func (p *Parser) optimise(statements []*Statement) []*Statement {
 			name := stmt.Ident.Action.Property.Name
 			if (name == "append" || name == "extend") && call != nil && len(call.Arguments) == 1 {
 				stmt = &Statement{
+					Pos: stmt.Pos,
 					Ident: &IdentStatement{
 						Name: stmt.Ident.Name,
 						Action: &IdentStatementAction{

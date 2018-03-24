@@ -45,10 +45,11 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
 
 	// Check whether this guy exists within a subrepo. If so we will need to make sure that's available first.
-	if subrepo := state.Graph.SubrepoFor(label.PackageName); subrepo != nil && subrepo.Target != nil {
+	subrepo := state.Graph.SubrepoFor(label.PackageName)
+	if subrepo != nil && subrepo.Target != nil {
 		state.WaitForBuiltTarget(subrepo.Target.Label, label.PackageName)
 	}
-	pkg, err := parsePackage(state, label, dependor)
+	pkg, err := parsePackage(state, label, dependor, subrepo)
 	if err != nil {
 		return err
 	}
@@ -89,9 +90,10 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 }
 
 // parsePackage performs the initial parse of a package.
-func parsePackage(state *core.BuildState, label, dependor core.BuildLabel) (*core.Package, error) {
+func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subrepo *core.Subrepo) (*core.Package, error) {
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
+	pkg.Subrepo = subrepo
 	if pkg.Filename = buildFileName(state, packageName); pkg.Filename == "" {
 		exists := core.PathExists(packageName)
 		// Handle quite a few cases to provide more obvious error messages.

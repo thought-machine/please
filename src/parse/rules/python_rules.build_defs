@@ -14,8 +14,8 @@ a target which has only had small changes.
 """
 
 
-def python_library(name:str, srcs:list=None, resources:list=None, deps:list=None, visibility:list=None,
-                   test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=None, interpreter:str=None,
+def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
+                   test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[], interpreter:str=None,
                    strip:bool=False):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
@@ -42,8 +42,6 @@ def python_library(name:str, srcs:list=None, resources:list=None, deps:list=None
                          'pypy' or whatever.
       strip (bool): If True, the original sources are stripped and only bytecode is output.
     """
-    deps = deps or []
-    labels = labels or []
     if not zip_safe:
         labels.append('py:zip-unsafe')
     if srcs or resources:
@@ -84,7 +82,7 @@ def python_library(name:str, srcs:list=None, resources:list=None, deps:list=None
 
     return filegroup(
         name=name,
-        srcs=resources if strip else ((srcs or []) + (resources or [])),
+        srcs=resources if strip else (srcs + resources),
         deps=deps,
         visibility=visibility,
         output_is_complete=False,
@@ -94,9 +92,9 @@ def python_library(name:str, srcs:list=None, resources:list=None, deps:list=None
     )
 
 
-def python_binary(name:str, main:str, resources:list=None, out:str=None, deps:list=None,
+def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list=[],
                   visibility:list=None, zip_safe:bool=None, interpreter:str=None, shebang:str='',
-                  labels:list&features&tags=None):
+                  labels:list&features&tags=[]):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -177,7 +175,7 @@ def python_binary(name:str, main:str, resources:list=None, out:str=None, deps:li
     )
 
 
-def python_test(name:str, srcs:list, data:list=None, resources:list=None, deps:list=None,
+def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=[],
                 labels:list&features&tags=None, size:str=None, flags:str='', visibility:list=None,
                 container:bool|dict=False, sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
                 test_outputs:list=None, zip_safe:bool=None, interpreter:str=None):
@@ -257,7 +255,7 @@ def python_test(name:str, srcs:list, data:list=None, resources:list=None, deps:l
         deps=deps,
         # N.B. the actual test sources are passed as data files as well. This is needed for pytest but
         #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
-        data=(data or []) + srcs,
+        data=data + srcs,
         outs=['%s.pex' % name],
         labels=labels,
         cmd=_PYTHON_BINARY_CMDS,
@@ -279,7 +277,7 @@ def python_test(name:str, srcs:list, data:list=None, resources:list=None, deps:l
 
 
 def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
-                test_only:bool&testonly=False, env:dict=None, deps:list=None, post_install_commands:list=None,
+                test_only:bool&testonly=False, env:dict=None, deps:list=[], post_install_commands:list=None,
                 install_subdirectory:bool=False, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None):
     """Provides a build rule for third-party dependencies to be installed by pip.
@@ -389,7 +387,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
                  post_install_commands:list=None, patch:str|list=None, licences:list=None,
                  test_only:bool&testonly=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
-                 deps:list=None, name_scheme:str=None):
+                 deps:list=[], name_scheme:str=None):
     """Downloads a Python wheel and extracts it.
 
     This is a lightweight pip-free alternative to pip_library which supports cross-compiling.
@@ -421,7 +419,6 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                          are `url_base`, `package_name`, and `version`).
     """
     outs = outs or [name]
-    deps = deps or []
     package_name = package_name or name.replace('-', '_')
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:

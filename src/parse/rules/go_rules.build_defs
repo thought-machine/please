@@ -13,7 +13,7 @@ _LINK_PKGS_CMD = ' '.join([
 ])
 
 
-def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=None,
+def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, go_tools:list=None, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True, filter_srcs:bool=True):
     """Generates a Go library which can be reused by other rules.
@@ -78,7 +78,6 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             test_only = test_only,
         )
 
-    deps = deps or []
     # go_test and cgo_library need access to the sources as well.
     src_rule = filegroup(
         name = name,
@@ -168,9 +167,9 @@ def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list
     )
 
 
-def cgo_library(name:str, srcs:list, go_srcs:list=None, c_srcs:list=None, hdrs:list=None,
-                out:str=None, compiler_flags:list=None, linker_flags:list=None, pkg_config:list=None,
-                subdir:str='', deps:list=None, visibility:list=None, test_only:bool&testonly=False):
+def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
+                out:str=None, compiler_flags:list=[], linker_flags:list=[], pkg_config:list=[],
+                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -201,12 +200,6 @@ def cgo_library(name:str, srcs:list, go_srcs:list=None, c_srcs:list=None, hdrs:l
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
     """
-    deps = deps or []
-    go_srcs = go_srcs or []
-    c_srcs = c_srcs or []
-    hdrs = hdrs or []
-    compiler_flags = compiler_flags or []
-    linker_flags = linker_flags or []
     file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
     post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
     subdir2 = (subdir + '/') if subdir and not subdir.endswith('/') else subdir
@@ -305,7 +298,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
     )
 
 
-def go_binary(name:str, srcs:list=None, asm_srcs:list=None, out:str=None, deps:list=None,
+def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[],
               visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
               filter_srcs:bool=True):
     """Compiles a Go binary.

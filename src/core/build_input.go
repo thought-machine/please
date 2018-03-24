@@ -63,6 +63,45 @@ func (label FileLabel) String() string {
 	return label.File
 }
 
+// A SubrepoFileLabel represents a file in the current package within a subrepo.
+type SubrepoFileLabel struct {
+	// Name of the file
+	File string
+	// Name of the package
+	Package string
+	// The full path, including the subrepo root.
+	FullPackage string
+}
+
+// Paths returns a slice of paths to the files of this input.
+func (label SubrepoFileLabel) Paths(graph *BuildGraph) []string {
+	return []string{path.Join(label.Package, label.File)}
+}
+
+// FullPaths is like Paths but includes the leading plz-out/gen directory.
+func (label SubrepoFileLabel) FullPaths(graph *BuildGraph) []string {
+	return []string{path.Join(label.FullPackage, label.File)}
+}
+
+// LocalPaths returns paths within the local package
+func (label SubrepoFileLabel) LocalPaths(graph *BuildGraph) []string {
+	return []string{label.File}
+}
+
+// Label returns the build rule associated with this input. For a SubrepoFileLabel it's always nil.
+func (label SubrepoFileLabel) Label() *BuildLabel {
+	return nil
+}
+
+func (label SubrepoFileLabel) nonOutputLabel() *BuildLabel {
+	return nil
+}
+
+// String returns a string representation of this input.
+func (label SubrepoFileLabel) String() string {
+	return label.File
+}
+
 // SystemFileLabel represents an absolute system dependency, which is not managed by the build system.
 type SystemFileLabel struct {
 	Path string

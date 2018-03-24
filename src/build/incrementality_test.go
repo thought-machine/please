@@ -62,6 +62,7 @@ var KnownFields = map[string]bool{
 
 	// These fields we have thought about and decided that they shouldn't contribute to the
 	// hash because they don't affect the actual output of the target.
+	"Subrepo":             true,
 	"AddedPostBuild":      true,
 	"Flakiness":           true,
 	"NoTestOutput":        true,

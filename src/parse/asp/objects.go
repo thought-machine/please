@@ -65,7 +65,7 @@ func (b pyBool) Property(name string) pyObject {
 }
 
 func (b pyBool) Operator(operator Operator, operand pyObject) pyObject {
-	panic("not implemented")
+	panic(fmt.Sprintf("operator %s not implemented on type bool", operator))
 }
 
 func (b pyBool) IndexAssign(index, value pyObject) {
