@@ -100,6 +100,8 @@ func (p *printer) PrintTarget() {
 		p.printf("hash_filegroup(\n")
 	} else if p.target.IsFilegroup {
 		p.printf("filegroup(\n")
+	} else if p.target.IsRemoteFile {
+		p.printf("remote_file(\n")
 	} else {
 		p.printf("build_rule(\n")
 	}

@@ -326,11 +326,11 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
     """
     urls = [url] if isinstance(url, str) else url
     url = urls[0]
-    cmd = ') || ('.join(['echo "Fetching %s..." && curl -fsSL %s -o $OUT' % (url, url) for url in urls])
     return build_rule(
         name = name,
         tag = _tag,
-        cmd = '(%s)' % cmd,
+        cmd = '',
+        _urls = urls,
         outs = [out or url[url.rfind('/') + 1:]],
         binary = binary,
         visibility = visibility,

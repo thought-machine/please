@@ -29,6 +29,7 @@ go get github.com/Workiva/go-datastructures/queue
 go get github.com/coreos/go-semver/semver
 go get github.com/djherbis/atime
 go get github.com/karrick/godirwalk
+go get github.com/hashicorp/go-multierror
 
 # Clean out old artifacts.
 rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go

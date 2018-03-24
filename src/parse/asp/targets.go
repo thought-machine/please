@@ -18,7 +18,7 @@ const hashFilegroupCommand = pyString("hash_filegroup")
 // createTarget creates a new build target as part of build_rule().
 func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	isTruthy := func(i int) bool {
-		return args[i] != nil && args[i] != False && (args[i] == &True || args[i].IsTruthy())
+		return args[i] != nil && args[i] != None && (args[i] == &True || args[i].IsTruthy())
 	}
 
 	name := string(args[0].(pyString))
@@ -50,6 +50,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.Sandbox = isTruthy(20)
 	target.TestOnly = test || isTruthy(15)
 	target.ShowProgress = isTruthy(36)
+	target.IsRemoteFile = isTruthy(37)
 	if timeout := args[24]; timeout != nil {
 		target.BuildTimeout = time.Duration(timeout.(pyInt)) * time.Second
 	}
@@ -112,7 +113,13 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 
 // populateTarget sets the assorted attributes on a build target.
 func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
-	addMaybeNamed(s, "srcs", args[3], t.AddSource, t.AddNamedSource, false, false)
+	if t.IsRemoteFile {
+		for _, url := range args[37].(pyList) {
+			t.AddSource(core.URLLabel(url.(pyString)))
+		}
+	} else {
+		addMaybeNamed(s, "srcs", args[3], t.AddSource, t.AddNamedSource, false, false)
+	}
 	addMaybeNamed(s, "tools", args[9], t.AddTool, t.AddNamedTool, true, true)
 	addMaybeNamed(s, "system_srcs", args[32], t.AddSource, nil, true, false)
 	addMaybeNamed(s, "data", args[4], t.AddDatum, nil, false, false)

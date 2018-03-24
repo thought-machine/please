@@ -7,14 +7,18 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
@@ -35,6 +39,9 @@ var buildingFilegroupMutex sync.Mutex
 
 // goDirOnce guards the creation of plz-out/go, which we only attempt once per process.
 var goDirOnce sync.Once
+
+// httpClient is the shared http client that we use for fetching remote files.
+var httpClient http.Client
 
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
@@ -251,6 +258,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 // runBuildCommand runs the actual command to build a target.
 // On success it returns the stdout of the target, otherwise an error.
 func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command string, inputHash []byte) ([]byte, error) {
+	if target.IsRemoteFile {
+		return nil, fetchRemoteFile(state, target)
+	}
 	env := core.StampedBuildEnvironment(state, target, false, inputHash)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	out, combined, err := core.ExecWithTimeoutShell(state, target, target.TmpDir(), env, target.BuildTimeout, state.Config.Build.Timeout, state.ShowAllOutput, command, target.Sandbox)
@@ -714,4 +724,72 @@ func symlinkIfNotExists(oldDir, newDir string) {
 			log.Warning("Failed to create %s: %s", newDir, err)
 		}
 	}
+}
+
+// fetchRemoteFile fetches a remote file from a URL.
+// This is a builtin for better efficiency and more control over the whole process.
+func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
+	if err := prepareDirectory(target.OutDir(), false); err != nil {
+		return err
+	} else if err := prepareDirectory(target.TmpDir(), false); err != nil {
+		return err
+	} else if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
+		return err
+	}
+	httpClient.Timeout = time.Duration(state.Config.Build.Timeout) // Can't set this when we init the client because config isn't loaded then.
+	var err error
+	for _, src := range target.Sources {
+		if e := fetchOneRemoteFile(state, target, string(src.(core.URLLabel))); e != nil {
+			err = multierror.Append(err, e)
+		} else {
+			break
+		}
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url string) error {
+	env := core.BuildEnvironment(state, target, false)
+	url = os.Expand(url, env.ReplaceEnvironment)
+	tmpPath := path.Join(target.TmpDir(), target.Outputs()[0])
+	f, err := os.Create(tmpPath)
+	if err != nil {
+		return err
+	}
+	resp, err := httpClient.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	var r io.Reader = resp.Body
+	if length := resp.Header.Get("Content-Length"); length != "" {
+		if i, err := strconv.Atoi(length); err == nil {
+			r = &progressReader{Reader: resp.Body, Target: target, Total: float32(i)}
+		}
+	}
+	target.ShowProgress = true // Required for it to actually display
+	h := sha1.New()
+	if _, err := io.Copy(io.MultiWriter(f, h), r); err != nil {
+		return err
+	}
+	setPathHash(tmpPath, h.Sum(nil))
+	return f.Close()
+}
+
+// A progressReader tracks progress from a HTTP response and marks it on the given target.
+type progressReader struct {
+	Reader      io.Reader
+	Target      *core.BuildTarget
+	Done, Total float32
+}
+
+// Read implements the io.Reader interface
+func (r *progressReader) Read(b []byte) (int, error) {
+	n, err := r.Reader.Read(b)
+	r.Done += float32(n)
+	r.Target.Progress = 100.0 * r.Done / r.Total
+	return n, err
 }

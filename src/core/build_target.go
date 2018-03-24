@@ -103,6 +103,8 @@ type BuildTarget struct {
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a hash_filegroup.
 	IsHashFilegroup bool `print:"false"`
+	// Marks the target as a remote_file.
+	IsRemoteFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
 	// If true, the interactive progress display will try to infer the target's progress

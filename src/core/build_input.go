@@ -196,3 +196,35 @@ func MustParseNamedOutputLabel(target, currentPath string) BuildInput {
 	}
 	return label
 }
+
+// A URLLabel represents a remote input that's defined by a URL.
+type URLLabel string
+
+// Paths returns an empty slice always (since there are no real source paths)
+func (label URLLabel) Paths(graph *BuildGraph) []string {
+	return nil
+}
+
+// FullPaths returns an empty slice always (since there are no real source paths)
+func (label URLLabel) FullPaths(graph *BuildGraph) []string {
+	return nil
+}
+
+// LocalPaths returns an empty slice always (since there are no real source paths)
+func (label URLLabel) LocalPaths(graph *BuildGraph) []string {
+	return nil
+}
+
+// Label returns the build rule associated with this input. For a URLLabel it's always nil.
+func (label URLLabel) Label() *BuildLabel {
+	return nil
+}
+
+func (label URLLabel) nonOutputLabel() *BuildLabel {
+	return nil
+}
+
+// String returns a string representation of this input.
+func (label URLLabel) String() string {
+	return string(label)
+}

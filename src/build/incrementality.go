@@ -265,6 +265,15 @@ func movePathHash(oldPath, newPath string, copy bool) {
 	pathHashMutex.Unlock()
 }
 
+// setPathHash is used to directly set a hash for a path.
+// This is used for remote files where we download them & therefore know the hash as they come in.
+// TODO(peterebden): We should probably use this more for things like caches and so forth...
+func setPathHash(path string, hash []byte) {
+	pathHashMutex.Lock()
+	pathHashMemoizer[path] = hash
+	pathHashMutex.Unlock()
+}
+
 // ensureRelative ensures a path is relative to the repo root.
 // This is important for getting best performance from memoizing the path hashes.
 func ensureRelative(path string) string {
@@ -376,6 +385,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	hashOptionalBool(h, target.Stamp)
 	hashOptionalBool(h, target.IsFilegroup)
 	hashOptionalBool(h, target.IsHashFilegroup)
+	hashOptionalBool(h, target.IsRemoteFile)
 	for _, require := range target.Requires {
 		h.Write([]byte(require))
 	}
