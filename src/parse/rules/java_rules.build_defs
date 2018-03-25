@@ -2,7 +2,7 @@
 
 
 def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
-                 deps:list=None, modular:bool=False, exported_deps:list=None, visibility:list=None,
+                 deps:list=[], modular:bool=False, exported_deps:list=None, visibility:list=None,
                  test_only:bool&testonly=False, javac_flags:list&javacopts=None):
     """Compiles Java source to a .jar which can be collected by other rules.
 
@@ -29,17 +29,18 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
     if srcs or src_dir:
         if resources:
             # Split up resources into a separate rule so we don't have to try to build them here.
-            deps = (deps or []) + [':_%s#res' % name]
-            java_library(
+            res_rule = java_library(
                 name = '_%s#res' % name,
                 resources = resources,
                 resources_root = resources_root,
                 test_only=test_only,
             )
+            deps += [res_rule]
 
         if javac_flags:
             # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
             # it doesn't mean anything to us so we must filter it out.
+            # TODO(peterebden): Push this nonsense down into the javac_worker binary so we don't have to know about it here.
             javac_flags = ' '.join([flag for flag in javac_flags if flag != '-extra_checks:off'])
         else:
             javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
@@ -147,7 +148,7 @@ def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None,
 
 
 def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, out:str=None,
-                       deps:list=None, data:list=None, visibility:list=None,
+                       deps:list=[], data:list=None, visibility:list=None,
                        jlink_args:str='--strip-debug --compress=2'):
     """Assembles a set of modules into an executable java runtime image.
 
@@ -168,7 +169,6 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
         raise Exception('A jlink tool is required to build java runtime images.')
     if not modules:
         raise Exception('You cannot assemble a java runtime image without specifying any modules.')
-    deps = deps or []
     out = out or name
     cmd = ("$TOOL --module-path {deps}:{java_home}/jmods " +
            "--add-modules {modules} --launcher {name}={main_module}/{main_class} " +
@@ -198,7 +198,7 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
     )
 
 
-def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, deps:list=None,
+def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, deps:list=[],
                 data:list=None, visibility:list=None, jvm_args:str=None,
                 self_executable:bool=False, manifest:str=None):
     """Compiles a .jar from a set of Java libraries.
@@ -218,7 +218,6 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
     """
     if main_class and manifest:
         raise ParseError("Can't pass both main_class and manifest to java_binary")
-    deps = deps or []
     if srcs:
         lib_rule = java_library(
             name = '_%s#lib' % name,
@@ -316,8 +315,8 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
     )
 
 
-def maven_jars(name:str, id:str='', ids:list=None, repository:str|list=None, exclude:list=None,
-               hashes:list=None, combine:bool=False, hash:str|list=None, deps:list=None,
+def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclude:list=[],
+               hashes:list=None, combine:bool=False, hash:str|list=None, deps:list=[],
                visibility:list=None, filename:str=None, deps_only:bool=False, optional:list=None):
     """Fetches a transitive set of dependencies from Maven.
 
@@ -337,13 +336,11 @@ def maven_jars(name:str, id:str='', ids:list=None, repository:str|list=None, exc
                         have a top-level target as a facade which doesn't have actual code.
       optional (list): List of optional dependencies to fetch. By default we fetch none of them.
     """
-    ids = ids or []
     if id:
         ids.append(id)
     for id in ids:
         if id.count(':') != 2:
             raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
-    exclude = exclude or []
     combine = combine or hash
     source_name = '_%s#src' % name
     repository = repository or CONFIG.DEFAULT_MAVEN_REPO
@@ -377,7 +374,6 @@ def maven_jars(name:str, id:str='', ids:list=None, repository:str|list=None, exc
             if combine:
                 add_exported_dep(source_name, ':' + artifact)
 
-    deps = deps or []
     exclusions = ' '.join(['-e ' + excl for excl in exclude])
     options = ' '.join(['-o ' + option for option in optional]) if optional else ''
     repo_flags = ' '.join(['-r ' + repo for repo in repos])

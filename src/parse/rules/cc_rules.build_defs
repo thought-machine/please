@@ -131,7 +131,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
-            deps = (deps or []) + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
+            deps = deps + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
             tools = [CONFIG.AR_TOOL],
         )
         if alwayslink:
@@ -545,7 +545,7 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_
       namespace (str): Allows specifying the namespace the symbols will be available in.
     """
     if src.startswith(':') or src.startswith('/'):
-        deps = (deps or []) + [src]
+        deps += [src]
     namespace = namespace or CONFIG.DEFAULT_NAMESPACE
     if not namespace:
         raise ValueError('You must either pass namespace= to cc_library or set the default namespace in .plzconfig')
@@ -709,9 +709,8 @@ int main(int argc, const char** argv) {
 """
 
 
-def _build_flags(compiler_flags, pkg_config_libs, defines=None, c=False, dbg=False):
+def _build_flags(compiler_flags:list, pkg_config_libs:list, defines=None, c=False, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
-    compiler_flags = compiler_flags or []
     if c:
         compiler_flags = [CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS] + compiler_flags
     else:
@@ -719,13 +718,13 @@ def _build_flags(compiler_flags, pkg_config_libs, defines=None, c=False, dbg=Fal
     compiler_flags.append('-fPIC')
     if defines:
         compiler_flags.extend(['-D' + define for define in defines])
-    pkg_config_cmd = ' '.join(['`pkg-config --cflags %s`' % x for x in pkg_config_libs or []])
+    pkg_config_cmd = ' '.join(['`pkg-config --cflags %s`' % x for x in pkg_config_libs])
     return ' '.join(compiler_flags) + ' ' + pkg_config_cmd
 
 
-def _binary_build_flags(linker_flags, pkg_config_libs, shared=False, alwayslink=''):
+def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, alwayslink=''):
     """Builds flags that we'll pass to the linker invocation."""
-    pkg_config_cmd = ' '.join(['`pkg-config --libs %s`' % x for x in pkg_config_libs or []])
+    pkg_config_cmd = ' '.join(['`pkg-config --libs %s`' % x for x in pkg_config_libs])
     objs = '`find . -name "*.o" -or -name "*.a" | sort`'
     linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
     if (not shared) and alwayslink:
@@ -742,7 +741,7 @@ def _binary_build_flags(linker_flags, pkg_config_libs, shared=False, alwayslink=
         build_id_flag = linker_prefix + '--build-id=none'
     if shared:
         objs = '-shared %s%s %s %s%s' % (linker_prefix, _WHOLE_ARCHIVE, objs, linker_prefix, _NO_WHOLE_ARCHIVE)
-    linker_flags = ' '.join([linker_prefix + f for f in (linker_flags or [])])
+    linker_flags = ' '.join([linker_prefix + f for f in linker_flags])
     return ' '.join([objs, build_id_flag, linker_flags, pkg_config_cmd])
 
 

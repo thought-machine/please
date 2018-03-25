@@ -1,0 +1,4 @@
+def test(y:list=[]):
+    return y + [1]
+
+x = test(y = None)

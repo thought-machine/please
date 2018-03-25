@@ -15,8 +15,8 @@ should be the return value of proto_language.
 _DEFAULT_GRPC_LABELS = ['grpc']
 
 
-def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, labels:list&features&tags=None,
-                  languages:list|dict=None, test_only:bool&testonly=False, root_dir:str='', protoc_flags:list=None):
+def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, labels:list&features&tags=[],
+                  languages:list|dict=None, test_only:bool&testonly=False, root_dir:str='', protoc_flags:list=[]):
     """Compile a .proto file to generated code for various languages.
 
     Args:
@@ -36,9 +36,6 @@ def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, lab
                            will be necessary for them to build too).
     """
     languages = _merge_dicts(languages or CONFIG.PROTO_LANGUAGES, proto_languages())
-    labels = labels or []
-    deps = deps or []
-    protoc_flags = protoc_flags or []
 
     # We detect output names for normal sources, but will have to do a post-build rule for
     # any input rules. We could just do that for everything but it's nicer to avoid them
@@ -64,7 +61,7 @@ def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, lab
     cmds = [cmd, '(mv -f ${PKG}/* .; true)']
 
     # protoc_flags are applied transitively to dependent rules via labels.
-    labels.extend(['protoc:' + flag for flag in protoc_flags])
+    labels += ['protoc:' + flag for flag in protoc_flags]
 
     # TODO(pebers): genericise these bits?
     if ('py' in languages) and CONFIG.PROTO_PYTHON_PACKAGE:
@@ -142,7 +139,7 @@ def proto_library(name:str, srcs:list, deps:list=None, visibility:list=None, lab
 
 
 def grpc_library(name:str, srcs:list, deps:list=None, visibility:list=None, languages:list|dict=None,
-                 labels:list&features&tags=None, test_only:bool&testonly=False, root_dir:str='', protoc_flags:list=None):
+                 labels:list&features&tags=[], test_only:bool&testonly=False, root_dir:str='', protoc_flags:list=None):
     """Defines a rule for a grpc library.
 
     Args:
@@ -165,7 +162,7 @@ def grpc_library(name:str, srcs:list, deps:list=None, visibility:list=None, lang
         deps = deps,
         languages = _merge_dicts(languages or CONFIG.PROTO_LANGUAGES, grpc_languages()),
         visibility = visibility,
-        labels = (labels or []) + _DEFAULT_GRPC_LABELS,
+        labels = labels + _DEFAULT_GRPC_LABELS,
         test_only = test_only,
         root_dir = root_dir,
         protoc_flags = protoc_flags,

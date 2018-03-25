@@ -599,8 +599,13 @@ func (f *pyFunc) Member(obj pyObject) pyObject {
 // validateType validates that this argument matches the given type
 func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	val := s.interpretExpression(expr)
-	if f.types[i] == nil || val == None {
+	if f.types[i] == nil {
 		return val
+	} else if val == None {
+		if f.constants[i] == nil && f.defaults[i] == nil {
+			return val
+		}
+		return f.defaultArg(s, i, f.args[i])
 	}
 	actual := val.Type()
 	for _, t := range f.types[i] {
