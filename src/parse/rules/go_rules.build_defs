@@ -541,11 +541,12 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
     if get.startswith('github.com') and revision and get.count('/') >= 2:
-        cmd = _go_github_repo_cmd(getroot, getroot, revision)
+        cmd, get_deps = _go_github_repo_cmd(name, getroot, getroot, revision)
     elif get.startswith('golang.org/x/') and revision and not repo:
         # We know about these guys...
-        cmd = _go_github_repo_cmd(getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision)
+        cmd, get_deps = _go_github_repo_cmd(name, getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision)
     else:
+        get_deps = []
         if repo:
             # we've been told exactly where to get the source from.
             cmd = ['git clone %s %s' % (repo, getroot)]
@@ -563,7 +564,7 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
             cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
         cmd.append('find . -name .git | xargs rm -rf')
     if patch:
-        cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$SRCS' % subdir)
+        cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$SRCS_PATCH' % subdir)
     if strip:
         cmd += ['rm -rf %s/%s' % (subdir, s) for s in strip]
     # This is an awkward case, as noted above one may want to build a binary from an existing library
@@ -571,7 +572,10 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
     get_rule = None if binary and deps else build_rule(
         name = name,
         tag = 'get',
-        srcs = [patch] if patch else [],
+        srcs = {
+            'patch': [patch],
+            'get': get_deps,
+        },
         outs = [subdir],
         tools = [CONFIG.GO_TOOL],
         visibility = visibility,
@@ -622,19 +626,24 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
     )
 
 
-def _go_github_repo_cmd(get, repo, revision):
+def _go_github_repo_cmd(name, get, repo, revision):
     """Returns a partial command to fetch a Go repo from Github."""
     parts = get.split('/')
     out = '/'.join(parts[:3])
     if repo.count('/') > 2:
         parts = repo.split('/')
         repo = '/'.join(parts[:3])
+    remote_rule = remote_file(
+        name = name,
+        _tag = 'download',
+        url = 'https://%s/archive/%s.zip' % (repo, revision),
+        out = name + '.zip',
+    )
     return [
         'rm -rf src/' + out,
-        'curl -fsSLo github.zip https://%s/archive/%s.zip' % (repo, revision),
-        'unzip -qq github.zip',
+        'unzip -qq $SRCS_GET',
         'mv %s* src/%s' % (parts[2], out),
-    ]
+    ], [remote_rule]
 
 
 def _replace_test_package(name, output, static):
