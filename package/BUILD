@@ -8,8 +8,8 @@ filegroup(
     srcs = [
         '//src:please',
         '//tools/jarcat',
-        '//tools/javac_worker',
-        '//tools/junit_runner',
+        '//tools/java:javac_worker',
+        '//tools/java:junit_runner',
         '//tools/please_diff_graphs',
         '//tools/please_go_filter',
         '//tools/please_go_test',

@@ -31,6 +31,13 @@ go get github.com/djherbis/atime
 go get github.com/karrick/godirwalk
 go get github.com/hashicorp/go-multierror
 
+# Detect javac presence and swap to compiling locally if we find it.
+if hash javac 2>/dev/null ; then
+    PLZ_ARGS="$PLZ_ARGS -o buildconfig.build_java:true"
+else
+    warn "javac not found, using prebuilt Java plugins"
+fi
+
 # Clean out old artifacts.
 rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go
 # Compile the builtin rules
@@ -98,6 +105,10 @@ fi
 if ! hash gold 2>/dev/null ; then
     warn "Gold not found, excluding Gold tests"
     EXCLUDES="${EXCLUDES} --exclude=gold"
+fi
+if ! hash java 2>/dev/null ; then
+    warn "Java not found, excluding Java tests"
+    EXCLUDES="${EXCLUDES} --exclude=java"
 fi
 # If the proto files are installed in a different location, their tests won't work.
 if [ ! -d "/usr/include/google/protobuf" ]; then

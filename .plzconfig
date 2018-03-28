@@ -34,9 +34,11 @@ defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 
 [java]
-javacworker = //tools/javac_worker
+; By default these next two use prebuilt versions - bootstrap.sh will override this if
+; it detects Java is installed and it can build them locally.
+javacworker = //tools/java:javac_worker
+junitrunner = //tools/java:junit_runner
 jarcattool = //tools/jarcat
-junitrunner = //tools/junit_runner
 pleasemaventool = //tools/please_maven
 ; We want the default to remain at java 8 because obviously it's significantly better,
 ; but the builtin packages here support java 7 fine so it's nice not to require more.
