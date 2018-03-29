@@ -763,6 +763,9 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("Error retrieving %s: %s", url, resp.Status)
+	}
 	var r io.Reader = resp.Body
 	if length := resp.Header.Get("Content-Length"); length != "" {
 		if i, err := strconv.Atoi(length); err == nil {
