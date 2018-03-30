@@ -323,12 +323,12 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     environment = ' '.join(['%s=%s' % (k, v) for k, v in sorted((env or {}).items())])
     target = outs[0] if install_subdirectory else '.'
 
-    cmd = '$TOOL install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
+    cmd = '$TOOLS_PIP install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
     if CONFIG.OS == 'linux':
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
-        cmd = '[ -f /etc/debian_version ] && [ $TOOL == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; ' + cmd + ' $SYS_FLAG'
+        cmd = '[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; ' + cmd + ' $SYS_FLAG'
     elif CONFIG.OS == 'darwin':
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
@@ -357,30 +357,39 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)
 
-    build_rule(
-        name = '_%s#install' % name,
+    cmd += ' && $TOOLS_JARCAT -d -i .'
+
+    wheel_rule = build_rule(
+        name = name,
+        tag = 'wheel',
         cmd = cmd,
-        outs = outs,
+        outs = [name + '.whl'],
         srcs = patches if patch else [],
         deps = install_deps,
         building_description = 'Fetching...',
         hashes = hashes,
-        requires=['py'],
-        test_only=test_only,
-        licences=licences,
-        tools=[CONFIG.PIP_TOOL],
-        post_build=None if licences else _add_licences,
+        requires = ['py'],
+        test_only = test_only,
+        licences = licences,
+        tools = {
+            'pip': [CONFIG.PIP_TOOL],
+            'jarcat': [CONFIG.JARCAT_TOOL],
+        },
+        post_build = None if licences else _add_licences,
         sandbox = False,
+        labels = ['py:zip-unsafe'] if not zip_safe else None,
     )
-    # Get this to do the pex pre-zipping stuff.
-    python_library(
+    return build_rule(
         name = name,
-        srcs = [':_%s#install' % name],
-        deps = deps,
+        srcs = [wheel_rule],
+        outs = outs,
+        cmd = 'unzip $SRCS',
+        test_only = test_only,
+        labels = ['py', 'pip:%s==%s' % (package_name, version)],
+        provides = {'py': wheel_rule},
         visibility = visibility,
-        test_only=test_only,
-        zip_safe=zip_safe,
-        labels = ['pip:%s==%s' % (package_name, version)],
+        test_only = test_only,
+        deps = deps,
     )
 
 
@@ -519,8 +528,8 @@ def _add_licences(name, output):
 
 # The commands that we use for python_binary and python_test rules.
 _PYTHON_BINARY_CMDS = {
-    'opt': '$TOOL -i . -o $OUTS --suffix=.pex.zip --preamble_from="$SRC" --include_other --add_init_py --strict',
-    'stripped': '$TOOL -i . -o $OUTS --suffix=.pex.zip --preamble_from="$SRC" --include_other --add_init_py --strict -e .py -x "*.py"',
+    'opt': '$TOOL -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
+    'stripped': '$TOOL -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict -e .py -x "*.py"',
 }
 
 
