@@ -468,33 +468,37 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                    'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
-        cmd.extend(['patch -p0 --no-backup-if-mismatch < $(location %s)' % p for p in patches])
+        cmd += ['patch -p0 --no-backup-if-mismatch < $(location %s)' % p for p in patches]
     if post_install_commands:
-        cmd.extend(post_install_commands)
+        cmd += post_install_commands
+    cmd += ['$TOOL -d --prefix $PKG -i ' + ' -i '.join(outs)]
 
-    install_rule = build_rule(
+    wheel_rule = build_rule(
         name = name,
-        tag = 'install',
+        tag = 'wheel',
         cmd = ' && '.join(cmd),
-        outs = outs,
+        outs = [name + '.whl'],
         srcs = patches if patch else None,
         building_description = 'Downloading...',
         hashes = hashes,
         requires = ['py'],
         test_only = test_only,
         licences = licences,
+        tools = [CONFIG.JARCAT_TOOL],
         post_build = None if licences else _add_licences,
         sandbox = False,
+        labels = ['py:zip-unsafe'] if not zip_safe else None,
     )
-    # Get this to do the pex pre-zipping stuff.
-    python_library(
+    return build_rule(
         name = name,
-        srcs = [install_rule],
+        srcs = [wheel_rule],
+        outs = outs,
+        cmd = 'unzip $SRCS',
         deps = deps,
         visibility = visibility,
         test_only = test_only,
-        zip_safe = zip_safe,
         labels = ['whl:%s==%s' % (package_name, version)],
+        provides = {'py': wheel_rule},
     )
 
 
