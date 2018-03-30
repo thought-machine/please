@@ -289,7 +289,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
       outs (list): List of output files / directories. Defaults to [name].
       test_only (bool): If True, can only be used by test rules or other test_only libraries.
-      env (dict): Environment variables to provide during pip install, as a dict.
+      env (dict): Deprecated, has no effect.
       deps (list): List of rules this library depends on.
       post_install_commands (list): Commands run after pip install has completed.
       install_subdirectory (bool): Forces the package to install into a subdirectory with this name.
@@ -303,7 +303,6 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     """
     package_name = '%s==%s' % (package_name or name, version)
     outs = outs or [name]
-    install_deps = []
     post_install_commands = post_install_commands or []
     post_build = None
     use_pypi = CONFIG.USE_PYPI if use_pypi is None else use_pypi
@@ -319,8 +318,6 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         else:
             repo_flag = '-f ' + repo
 
-    # Environment variables. Must sort in case we were given a dict.
-    environment = ' '.join(['%s=%s' % (k, v) for k, v in sorted((env or {}).items())])
     target = outs[0] if install_subdirectory else '.'
 
     cmd = '$TOOLS_PIP install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
@@ -357,7 +354,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)
 
-    cmd += ' && $TOOLS_JARCAT -d -i .'
+    cmd += ' && $TOOLS_JARCAT -d -i ' + ' -i '.join(outs)
 
     wheel_rule = build_rule(
         name = name,
@@ -365,7 +362,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         cmd = cmd,
         outs = [name + '.whl'],
         srcs = patches if patch else [],
-        deps = install_deps,
+        deps = deps,
         building_description = 'Fetching...',
         hashes = hashes,
         requires = ['py'],
@@ -385,7 +382,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         outs = outs,
         cmd = 'unzip $SRCS',
         test_only = test_only,
-        labels = ['py', 'pip:%s==%s' % (package_name, version)],
+        labels = ['py', 'pip:' + package_name],
         provides = {'py': wheel_rule},
         visibility = visibility,
         test_only = test_only,
