@@ -75,7 +75,7 @@ var opts = struct {
 
 	Tar    bool     `long:"tar" description:"Write a tarball instead of a zipfile. Note that most other flags are not honoured if this is given."`
 	Gzip   bool     `short:"z" long:"gzip" description:"Apply gzip compression to the tar file. Only has an effect if --tar is passed."`
-	Prefix string   `long:"prefix" description:"Prefix all tarball entries with this directory name."`
+	Prefix string   `long:"prefix" description:"Prefix all entries with this directory name."`
 	Srcs   []string `long:"srcs" env:"SRCS" env-delim:" " description:"Source files for the tarball."`
 }{
 	Usage: `
@@ -130,6 +130,7 @@ func main() {
 	f.AddInitPy = opts.AddInitPy
 	f.DirEntries = !opts.NoDirEntries
 	f.Align = opts.Align
+	f.Prefix = opts.Prefix
 
 	if opts.PreambleFrom != "" {
 		opts.Preamble = mustReadPreamble(opts.PreambleFrom)

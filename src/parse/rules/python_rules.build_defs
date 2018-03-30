@@ -354,7 +354,9 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)
 
-    cmd += ' && $TOOLS_JARCAT -d -i ' + ' -i '.join(outs)
+    # TODO(peterebden): --prefix preserves the old behaviour here, but I'm not sure how intuitive that is; leaving it
+    #                   out puts everything at the top level of the pex, which is more normal for Python really.
+    cmd += ' && $TOOLS_JARCAT -d --prefix $PKG -i ' + ' -i '.join(outs)
 
     wheel_rule = build_rule(
         name = name,

@@ -741,13 +741,10 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 		if e := fetchOneRemoteFile(state, target, string(src.(core.URLLabel))); e != nil {
 			err = multierror.Append(err, e)
 		} else {
-			break
+			return nil
 		}
 	}
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url string) error {

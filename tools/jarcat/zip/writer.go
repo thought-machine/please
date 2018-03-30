@@ -57,6 +57,8 @@ type File struct {
 	DirEntries bool
 	// Align aligns entries to a multiple of this many bytes.
 	Align int
+	// Prefix stores all files with this prefix.
+	Prefix string
 	// files tracks the files that we've written so far.
 	files map[string]fileRecord
 	// concatenatedFiles tracks the files that are built up as we go.
@@ -172,6 +174,9 @@ func (f *File) AddZipFile(filepath string) error {
 		}
 		if f.StripPrefix != "" {
 			rf.Name = strings.TrimPrefix(rf.Name, f.StripPrefix)
+		}
+		if f.Prefix != "" {
+			rf.Name = path.Join(f.Prefix, rf.Name)
 		}
 		// Java tools don't seem to like writing a data descriptor for stored items.
 		// Unsure if this is a limitation of the format or a problem of those tools.
@@ -370,6 +375,7 @@ func (f *File) addFile(fh *zip.FileHeader, r io.Reader, crc uint32) error {
 
 // WriteFile writes a complete file to the writer.
 func (f *File) WriteFile(filename string, data []byte) error {
+	filename = path.Join(f.Prefix, filename)
 	fh := zip.FileHeader{
 		Name:   filename,
 		Method: zip.Deflate,
@@ -408,6 +414,7 @@ func (f *File) align(h *zip.FileHeader) {
 
 // WriteDir writes a directory entry to the writer.
 func (f *File) WriteDir(filename string) error {
+	filename = path.Join(f.Prefix, filename)
 	filename += "/" // Must have trailing slash to tell it it's a directory.
 	fh := zip.FileHeader{
 		Name:   filename,
