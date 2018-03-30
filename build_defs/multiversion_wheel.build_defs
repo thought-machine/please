@@ -1,5 +1,5 @@
 def python_multiversion_wheel(name, version, repos, hashes=None, package_name=None, outs=None,
-                              subdir='.', licences=None, test_only=False, zip_safe=True,
+                              subdir='.', licences=None, test_only=False,
                               visibility=None, deps=[]):
     """Downloads and combines multiple Python wheels.
 
@@ -32,7 +32,6 @@ def python_multiversion_wheel(name, version, repos, hashes=None, package_name=No
       licences (list): Licences that this rule is subject to.
       test_only (bool): If True, this library can only be used by tests.
       repo (str): Repository to download wheels from.
-      zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
       visibility (list): Visibility declaration.
       deps (list): Dependencies of this rule.
     """
@@ -44,9 +43,8 @@ def python_multiversion_wheel(name, version, repos, hashes=None, package_name=No
         out = '%s-%s-%d.whl' % (package_name, version, i + 1),
     ) for i, repo in enumerate(repos)]
 
-    extract_rule = build_rule(
+    return build_rule(
         name = name,
-        tag = 'extract',
         srcs = file_rules,
         outs = outs or [package_name],
         cmd = 'mkdir -p %s && for SRC in $SRCS; do unzip -o -qq -d %s $SRC; done && rm -rf %s/*.egg-info %s/*.dist-info' %
@@ -55,15 +53,6 @@ def python_multiversion_wheel(name, version, repos, hashes=None, package_name=No
         building_description = 'Extracting...',
         requires = ['py'],
         test_only = test_only,
-    )
-
-    # Get this to do the pex pre-zipping stuff.
-    return python_library(
-        name = name,
-        srcs = [extract_rule],
-        deps = deps,
         visibility = visibility,
-        test_only = test_only,
-        zip_safe = zip_safe,
         labels = ['whl:%s==%s' % (package_name, version)],
     )
