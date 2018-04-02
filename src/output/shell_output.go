@@ -178,6 +178,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	failed := result.Status == core.ParseFailed || result.Status == core.TargetBuildFailed || result.Status == core.TargetTestFailed
 	cached := result.Status == core.TargetCached || result.Tests.Cached
 	stopped := result.Status == core.TargetBuildStopped
+	parse := result.Status == core.PackageParsing || result.Status == core.PackageParsed || result.Status == core.ParseFailed
 	if shouldTrace {
 		addTrace(result, buildingTargets[result.ThreadID].Label, active)
 	}
@@ -190,7 +191,9 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		aggregatedResults.Aggregate(&result.Tests)
 	}
 	target := state.Graph.Target(label)
-	updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target), target)
+	if !parse { // Parse tasks happen on a different set of threads.
+		updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target), target)
+	}
 	if failed {
 		failedTargetMap[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
