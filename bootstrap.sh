@@ -5,6 +5,13 @@ set -eu
 function notice {
     >&2 echo -e "\033[32m$1\033[0m"
 }
+function noticen {
+    >&2 echo -n -e "\033[32m$1\033[0m"
+}
+function go_get {
+    go get $1
+    noticen "."
+}
 function warn {
     >&2 echo -e "\033[33m$1\033[0m"
 }
@@ -13,23 +20,24 @@ function warn {
 PLZ_ARGS="${PLZ_ARGS:-}"
 
 # Fetch the Go dependencies manually
-notice "Installing Go dependencies..."
+noticen "Installing Go dependencies..."
 mkdir -p "${PWD}/.bootstrap"
 export GOPATH="${PWD}/.bootstrap:${PWD}"
-go get golang.org/x/crypto/ssh/terminal
-go get golang.org/x/sync/errgroup
-go get golang.org/x/tools/cover
-go get gopkg.in/op/go-logging.v1
-go get gopkg.in/gcfg.v1
-go get github.com/kevinburke/go-bindata/...
-go get github.com/jessevdk/go-flags
-go get github.com/dustin/go-humanize
-go get github.com/texttheater/golang-levenshtein/levenshtein
-go get github.com/Workiva/go-datastructures/queue
-go get github.com/coreos/go-semver/semver
-go get github.com/djherbis/atime
-go get github.com/karrick/godirwalk
-go get github.com/hashicorp/go-multierror
+go_get golang.org/x/crypto/ssh/terminal
+go_get golang.org/x/sync/errgroup
+go_get golang.org/x/tools/cover
+go_get gopkg.in/op/go-logging.v1
+go_get gopkg.in/gcfg.v1
+go_get github.com/kevinburke/go-bindata/...
+go_get github.com/jessevdk/go-flags
+go_get github.com/dustin/go-humanize
+go_get github.com/texttheater/golang-levenshtein/levenshtein
+go_get github.com/Workiva/go-datastructures/queue
+go_get github.com/coreos/go-semver/semver
+go_get github.com/djherbis/atime
+go_get github.com/karrick/godirwalk
+go_get github.com/hashicorp/go-multierror
+notice ""
 
 # Detect javac presence and swap to compiling locally if we find it.
 if hash javac 2>/dev/null ; then
@@ -96,7 +104,7 @@ if ! hash python2 2>/dev/null ; then
 fi
 if ! hash python3 2>/dev/null ; then
     warn "python3 not found, excluding python3 tests"
-    EXCLUDES="${EXCLUDES} --exclude=py3"
+    EXCLUDES="${EXCLUDES} --exclude=py3 --exclude python3"
 fi
 if ! hash clang++ 2>/dev/null ; then
     warn "Clang not found, excluding Clang tests"

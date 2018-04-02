@@ -50,6 +50,7 @@ sh_test(
     name = 'rule_main_test',
     src = 'rule_main_test.sh',
     data = [':rule_main_pex'],
+    labels = ['python3'],
 )
 
 # Used to test zip-safety flags.

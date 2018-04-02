@@ -98,6 +98,7 @@ plz_e2e_test(
     name = 'no_coverage_output_test',
     cmd = 'plz test //test:_no_coverage_output_test',
     expect_file_doesnt_exist = '../../../bin/test/.test_coverage__no_coverage_output_test*',
+    labels = ['python3'],
 )
 
 # Test that we do generate it when using plz cover.
@@ -174,6 +175,7 @@ plz_e2e_test(
     name = 'individual_python_test',
     cmd = 'plz test //test:individual_test_run_py TestRunningIndividualTests.test_first_thing',
     expect_output_contains = '1 test target and 1 test run',
+    labels = ['python3'],
 )
 
 java_test(
@@ -189,6 +191,7 @@ plz_e2e_test(
     name = 'individual_java_test',
     cmd = 'plz test //test:individual_test_run_java testFirstThing',
     expect_output_contains = '1 test target and 1 test run',
+    labels = ['java'],
 )
 
 java_test(
