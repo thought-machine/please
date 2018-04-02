@@ -111,3 +111,13 @@ python_test(
     ],
     deps = ['//third_party/python:numpy'],
 )
+
+python_test(
+    name = 'tensorflow_test',
+    srcs = ['tensorflow_test.py'],
+    labels = [
+        'py3',
+        'pip',
+    ],
+    deps = ['//third_party/python:tensorflow'],
+)

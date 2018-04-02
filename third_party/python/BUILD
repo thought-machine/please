@@ -116,7 +116,17 @@ python_wheel(
 
 pip_library(
     name = 'numpy',
-    version = '1.12.1',
+    version = '1.14.0',
     test_only = True,
     zip_safe = False,
+)
+
+pip_library(
+    name = "tensorflow",
+    version = "1.4.0",
+    test_only = True,
+    deps = [
+        ":numpy",
+        ":protobuf",
+    ],
 )

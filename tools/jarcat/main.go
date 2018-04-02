@@ -51,7 +51,7 @@ func mustReadPreamble(path string) string {
 var opts = struct {
 	Usage                 string
 	Out                   string            `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
-	In                    string            `short:"i" long:"input" description:"Input directory" required:"true"`
+	In                    []string          `short:"i" long:"input" description:"Input directory" required:"true"`
 	Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
 	ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
 	ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
@@ -75,7 +75,7 @@ var opts = struct {
 
 	Tar    bool     `long:"tar" description:"Write a tarball instead of a zipfile. Note that most other flags are not honoured if this is given."`
 	Gzip   bool     `short:"z" long:"gzip" description:"Apply gzip compression to the tar file. Only has an effect if --tar is passed."`
-	Prefix string   `long:"prefix" description:"Prefix all tarball entries with this directory name."`
+	Prefix string   `long:"prefix" description:"Prefix all entries with this directory name."`
 	Srcs   []string `long:"srcs" env:"SRCS" env-delim:" " description:"Source files for the tarball."`
 }{
 	Usage: `
@@ -130,6 +130,7 @@ func main() {
 	f.AddInitPy = opts.AddInitPy
 	f.DirEntries = !opts.NoDirEntries
 	f.Align = opts.Align
+	f.Prefix = opts.Prefix
 
 	if opts.PreambleFrom != "" {
 		opts.Preamble = mustReadPreamble(opts.PreambleFrom)
@@ -150,5 +151,7 @@ func main() {
 		must(err)
 		must(f.WriteFile("META-INF/MANIFEST.MF", b))
 	}
-	must(f.AddFiles(opts.In))
+	for _, filename := range opts.In {
+		must(f.AddFiles(filename))
+	}
 }

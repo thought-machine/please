@@ -289,7 +289,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
       outs (list): List of output files / directories. Defaults to [name].
       test_only (bool): If True, can only be used by test rules or other test_only libraries.
-      env (dict): Environment variables to provide during pip install, as a dict.
+      env (dict): Deprecated, has no effect.
       deps (list): List of rules this library depends on.
       post_install_commands (list): Commands run after pip install has completed.
       install_subdirectory (bool): Forces the package to install into a subdirectory with this name.
@@ -303,7 +303,6 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     """
     package_name = '%s==%s' % (package_name or name, version)
     outs = outs or [name]
-    install_deps = []
     post_install_commands = post_install_commands or []
     post_build = None
     use_pypi = CONFIG.USE_PYPI if use_pypi is None else use_pypi
@@ -319,16 +318,14 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         else:
             repo_flag = '-f ' + repo
 
-    # Environment variables. Must sort in case we were given a dict.
-    environment = ' '.join(['%s=%s' % (k, v) for k, v in sorted((env or {}).items())])
     target = outs[0] if install_subdirectory else '.'
 
-    cmd = '$TOOL install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
+    cmd = '$TOOLS_PIP install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
     if CONFIG.OS == 'linux':
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
-        cmd = '[ -f /etc/debian_version ] && [ $TOOL == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; ' + cmd + ' $SYS_FLAG'
+        cmd = '[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; ' + cmd + ' $SYS_FLAG'
     elif CONFIG.OS == 'darwin':
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
@@ -357,30 +354,41 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)
 
-    build_rule(
-        name = '_%s#install' % name,
+    # TODO(peterebden): --prefix preserves the old behaviour here, but I'm not sure how intuitive that is; leaving it
+    #                   out puts everything at the top level of the pex, which is more normal for Python really.
+    cmd += ' && $TOOLS_JARCAT -d --prefix $PKG -i ' + ' -i '.join(outs)
+
+    wheel_rule = build_rule(
+        name = name,
+        tag = 'wheel',
         cmd = cmd,
-        outs = outs,
+        outs = [name + '.whl'],
         srcs = patches if patch else [],
-        deps = install_deps,
+        deps = deps,
         building_description = 'Fetching...',
         hashes = hashes,
-        requires=['py'],
-        test_only=test_only,
-        licences=licences,
-        tools=[CONFIG.PIP_TOOL],
-        post_build=None if licences else _add_licences,
+        requires = ['py'],
+        test_only = test_only,
+        licences = licences,
+        tools = {
+            'pip': [CONFIG.PIP_TOOL],
+            'jarcat': [CONFIG.JARCAT_TOOL],
+        },
+        post_build = None if licences else _add_licences,
         sandbox = False,
+        labels = ['py:zip-unsafe'] if not zip_safe else None,
     )
-    # Get this to do the pex pre-zipping stuff.
-    python_library(
+    return build_rule(
         name = name,
-        srcs = [':_%s#install' % name],
-        deps = deps,
+        srcs = [wheel_rule],
+        outs = outs,
+        cmd = 'unzip $SRCS && mv $PKG/* .',
+        test_only = test_only,
+        labels = ['py', 'pip:' + package_name],
+        provides = {'py': wheel_rule},
         visibility = visibility,
-        test_only=test_only,
-        zip_safe=zip_safe,
-        labels = ['pip:%s==%s' % (package_name, version)],
+        test_only = test_only,
+        deps = deps,
     )
 
 
@@ -460,33 +468,37 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                    'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
-        cmd.extend(['patch -p0 --no-backup-if-mismatch < $(location %s)' % p for p in patches])
+        cmd += ['patch -p0 --no-backup-if-mismatch < $(location %s)' % p for p in patches]
     if post_install_commands:
-        cmd.extend(post_install_commands)
+        cmd += post_install_commands
+    cmd += ['$TOOL -d --prefix $PKG -i ' + ' -i '.join(outs)]
 
-    install_rule = build_rule(
+    wheel_rule = build_rule(
         name = name,
-        tag = 'install',
+        tag = 'wheel',
         cmd = ' && '.join(cmd),
-        outs = outs,
+        outs = [name + '.whl'],
         srcs = patches if patch else None,
         building_description = 'Downloading...',
-        hashes = hashes,
         requires = ['py'],
         test_only = test_only,
         licences = licences,
+        tools = [CONFIG.JARCAT_TOOL],
         post_build = None if licences else _add_licences,
         sandbox = False,
+        labels = ['py:zip-unsafe'] if not zip_safe else None,
     )
-    # Get this to do the pex pre-zipping stuff.
-    python_library(
+    return build_rule(
         name = name,
-        srcs = [install_rule],
+        srcs = [wheel_rule],
+        hashes = hashes,  # TODO(peterebden): Move this onto wheel_rule when we're willing to break hash compatibility.
+        outs = outs,
+        cmd = 'unzip $SRCS && mv $PKG/* .',
         deps = deps,
         visibility = visibility,
         test_only = test_only,
-        zip_safe = zip_safe,
         labels = ['whl:%s==%s' % (package_name, version)],
+        provides = {'py': wheel_rule},
     )
 
 
@@ -519,8 +531,8 @@ def _add_licences(name, output):
 
 # The commands that we use for python_binary and python_test rules.
 _PYTHON_BINARY_CMDS = {
-    'opt': '$TOOL -i . -o $OUTS --suffix=.pex.zip --preamble_from="$SRC" --include_other --add_init_py --strict',
-    'stripped': '$TOOL -i . -o $OUTS --suffix=.pex.zip --preamble_from="$SRC" --include_other --add_init_py --strict -e .py -x "*.py"',
+    'opt': '$TOOL -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
+    'stripped': '$TOOL -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict -e .py -x "*.py"',
 }
 
 

@@ -307,8 +307,8 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
 
 
 def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:bool=False,
-                visibility:list=None, licences:list=None, test_only:bool&testonly=False, deps:list=None,
-                exported_deps:list=None, _tag=''):
+                visibility:list=None, licences:list=None, test_only:bool&testonly=False,
+                labels:list=[], deps:list=None, exported_deps:list=None, _tag=''):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -340,6 +340,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         deps = deps,
         exported_deps = exported_deps,
         test_only = test_only,
+        labels = labels,
         sandbox = False,
     )
 
