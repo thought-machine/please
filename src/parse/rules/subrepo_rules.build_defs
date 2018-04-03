@@ -31,14 +31,50 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=Non
     The archive should be either a zipfile or a tarball. Which one to use will be autodetected
     based on the file extension in the URL given.
 
+    This is still experimental and known not to work in many cases.
+
     Args:
-      name (str): Name of the rule.
-      urls (list): List of URLs to fetch from. These are assumed to be mirrors and will be
+      name: Name of the rule.
+      urls: List of URLs to fetch from. These are assumed to be mirrors and will be
+            tried in sequence.
+      strip_prefix: Prefix to strip from the expanded archive.
+      hashes: List of hashes to verify the rule with.
+      sha256: Used for Bazel compat but currently has no effect.
+      visibility: Visibility declaration of the rule.
+    """
+    new_http_archive(
+        name = name,
+        urls = urls,
+        strip_prefix = strip_prefix,
+        hashes = hashes,
+        sha256 = sha256,
+        visibility = visibility,
+    )
+
+
+def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
+                     strip_prefix:str=None, hashes:str|list=None, sha256:str=None, visibility:list=None):
+    """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
+
+    The archive should be either a zipfile or a tarball. Which one to use will be autodetected
+    based on the file extension in the URL given.
+
+    The given build file (via build_file or build_file_contents) will replace any existing file
+    and will therefore be used to build the contents of the subrepo.
+
+    This is still experimental and known not to work in many cases.
+
+    Args:
+      name: Name of the rule.
+      urls: List of URLs to fetch from. These are assumed to be mirrors and will be
                    tried in sequence.
-      strip_prefix (str): Prefix to strip from the expanded archive.
-      hashes (list): List of hashes to verify the rule with.
-      visibility (list): Visibility declaration of the rule.
-      sha256 (str): Deprecated. Used for Bazel compat but currently has no effect.
+      build_file: The file to use as a BUILD file for this subrepository.
+      build_file_content: Text content to use for the BUILD file for the subrepository.
+                          We suggest using build_file instead, but this is provided for Bazel compatibility.
+      strip_prefix: Prefix to strip from the expanded archive.
+      hashes: List of hashes to verify the rule with.
+      sha256: Used for Bazel compat but currently has no effect.
+      visibility: Visibility declaration of the rule.
     """
     remote_rule = remote_file(
         name = name,
@@ -49,17 +85,25 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=Non
     )
     if any([u.endswith('.jar') or u.endswith('.zip') for u in urls]):
         if strip_prefix:
-            cmd = 'unzip $SRCS && mv %s $OUT' % strip_prefix
+            cmd = 'unzip $SRCS_REMOTE && mv %s $OUT' % strip_prefix
         else:
-            cmd = 'mkdir $OUT && unzip $SRCS -d $OUT'
+            cmd = 'mkdir $OUT && unzip $SRCS_REMOTE -d $OUT'
     else:
         if strip_prefix:
-            cmd = 'tar -axf $SRCS && mv %s $OUT' % strip_prefix
+            cmd = 'tar -axf $SRCS_REMOTE && mv %s $OUT' % strip_prefix
         else:
-            cmd = 'mkdir $OUT && tar -axf $SRCS -C $OUT'
+            cmd = 'mkdir $OUT && tar -axf $SRCS_REMOTE -C $OUT'
+    if build_file:
+        cmd += ' && mv $SRCS_BUILD $OUT/' + CONFIG.BUILD_FILE_NAMES[0]
+    elif build_file_content:
+        cmd += ' && cat > $OUT/%s << EOF\n%s\nEOF' % (CONFIG.BUILD_FILE_NAMES[0], build_file_content)
+
     extract_rule = build_rule(
         name = name,
-        srcs = [remote_rule],
+        srcs = {
+            'remote': [remote_rule],
+            'build': [build_file],
+        },
         outs = [name],
         cmd = cmd,
     )
