@@ -640,7 +640,7 @@ def _go_github_repo_cmd(name, get, repo, revision):
         out = name + '.zip',
     )
     return [
-        'rm -rf src/' + out,
+        'mkdir -p $(dirname src/%s)' % out,
         'unzip -qq $SRCS_GET',
         'mv %s* src/%s' % (parts[2], out),
     ], [remote_rule]

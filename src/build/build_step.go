@@ -278,22 +278,7 @@ func prepareDirectories(target *core.BuildTarget) error {
 	if err := prepareDirectory(target.TmpDir(), true); err != nil {
 		return err
 	}
-	if err := prepareDirectory(target.OutDir(), false); err != nil {
-		return err
-	}
-	// Nicety for the build rules: create any directories that it's
-	// declared it'll create files in.
-	for _, out := range target.Outputs() {
-		if dir := path.Dir(out); dir != "." {
-			outPath := path.Join(target.TmpDir(), dir)
-			if !core.PathExists(outPath) {
-				if err := os.MkdirAll(outPath, core.DirPermissions); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
+	return prepareDirectory(target.OutDir(), false)
 }
 
 func prepareDirectory(directory string, remove bool) error {
