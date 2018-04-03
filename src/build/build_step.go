@@ -735,7 +735,13 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url string) error {
 	env := core.BuildEnvironment(state, target, false)
 	url = os.Expand(url, env.ReplaceEnvironment)
-	tmpPath := path.Join(target.TmpDir(), target.Outputs()[0])
+	out := target.Outputs()[0]
+	tmpPath := path.Join(target.TmpDir(), out)
+	if strings.Contains(out, "/") {
+		if err := os.MkdirAll(path.Dir(tmpPath), core.DirPermissions); err != nil {
+			return err
+		}
+	}
 	f, err := os.Create(tmpPath)
 	if err != nil {
 		return err
