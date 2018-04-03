@@ -10,19 +10,19 @@ YELLOW="\x1B[33m"
 RESET="\x1B[0m"
 
 BUCKET="s3://get.please.build"
-PLZ="plz-out/bin/src/please"
 
 VERSION="$(cat VERSION)"
 eval $(go env)
 echo -e "${GREEN}Identifying outputs...${RESET}"
-FILES="$($PLZ query alltargets -p //package:all --include tar --include tar_asc | $PLZ query outputs -p -)"
+TARGETS="//package:please_tarball //package:servers_tarball"
+
 
 if [ "$GOOS" == "linux" ]; then
     # For Linux we upload debs as well.
-    DEBS="$($PLZ query alltargets -p //package:all --include deb --include deb_asc | $PLZ query outputs -p -)"
-    FILES="$FILES $DEBS"
+    TARGETS="$TARGETS //package:please //package:plz_rpc_cache_server //package:plz_http_cache_server"
 fi
 
+FILES="$(plz-out/bin/src/please query outputs $TARGETS ${TARGETS// /_signed }_signed)"
 UPLOADED=''
 for FILE in $FILES; do
     BN="$(basename $FILE)"
