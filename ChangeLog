@@ -1,3 +1,18 @@
+Version 12.1.0
+--------------
+
+    * `pip_library` rules output single .whl files for better cache performance (#297)
+    * Corrected some distutils errors when using Homebrew's `pip3` (#294)
+    * Initial (still experimental) implementation of `http_archive` and
+      `new_http_archive` rules.
+    * Various other improvements to Bazel compatibility.
+    * `remote_file` now has a builtin implementation and can show progress.
+    * A lot of internal refactoring around the implementation of subinclude().
+      Parse tasks now happen off the main worker 'threads' so they don't block them.
+      This is a prerequisite for subrepo support.
+    * Migrated most uses of `filepath.Walk` to `godirwalk` (#273).
+
+
 Version 12.0.0
 --------------
 
