@@ -33,7 +33,7 @@ for colour, scale in [('teal', '50%'), ('white', '20%')]:
             name = src.replace('.', '_').replace('/', '_'),
             srcs = [src],
             outs = [src],
-            cmd = '$TOOL $SRC -crop 500x510+230+30 -resize %s $OUT' % scale,
+            cmd = 'mkdir images && $TOOL $SRC -crop 500x510+230+30 -resize %s $OUT' % scale,
             tools = ['convert'],
         )
         deps += [image_rule]
