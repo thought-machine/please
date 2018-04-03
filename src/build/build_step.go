@@ -278,7 +278,22 @@ func prepareDirectories(target *core.BuildTarget) error {
 	if err := prepareDirectory(target.TmpDir(), true); err != nil {
 		return err
 	}
-	return prepareDirectory(target.OutDir(), false)
+	if err := prepareDirectory(target.OutDir(), false); err != nil {
+		return err
+	}
+	// Nicety for the build rules: create any directories that it's
+	// declared it'll create files in.
+	for _, out := range target.Outputs() {
+		if dir := path.Dir(out); dir != "." {
+			outPath := path.Join(target.TmpDir(), dir)
+			if !core.PathExists(outPath) {
+				if err := os.MkdirAll(outPath, core.DirPermissions); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func prepareDirectory(directory string, remove bool) error {
@@ -735,13 +750,7 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url string) error {
 	env := core.BuildEnvironment(state, target, false)
 	url = os.Expand(url, env.ReplaceEnvironment)
-	out := target.Outputs()[0]
-	tmpPath := path.Join(target.TmpDir(), out)
-	if strings.Contains(out, "/") {
-		if err := os.MkdirAll(path.Dir(tmpPath), core.DirPermissions); err != nil {
-			return err
-		}
-	}
+	tmpPath := path.Join(target.TmpDir(), target.Outputs()[0])
 	f, err := os.Create(tmpPath)
 	if err != nil {
 		return err

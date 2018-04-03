@@ -426,7 +426,6 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
       name_scheme (str): The templatized wheel naming scheme (available template variables
                          are `url_base`, `package_name`, and `version`).
     """
-    outs = outs or [name]
     package_name = package_name or name.replace('-', '_')
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:
@@ -471,7 +470,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         cmd += ['patch -p0 --no-backup-if-mismatch < $(location %s)' % p for p in patches]
     if post_install_commands:
         cmd += post_install_commands
-    cmd += ['$TOOL -d --prefix $PKG -i ' + ' -i '.join(outs)]
+    cmd += ['$TOOL -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
 
     wheel_rule = build_rule(
         name = name,
@@ -489,12 +488,18 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         sandbox = False,
         labels = ['py:zip-unsafe'] if not zip_safe else None,
     )
+    cmd = 'unzip $SRCS && mv $PKG/* .'
+    if outs:
+        # Hacky solution to handle things being in subdirectories in awkward ways.
+        before, _, after = outs[0].partition('/')
+        if after:
+            cmd = 'rm -rf %s && %s' % (before, cmd)
     return build_rule(
         name = name,
         srcs = [wheel_rule],
         hashes = hashes,  # TODO(peterebden): Move this onto wheel_rule when we're willing to break hash compatibility.
-        outs = outs,
-        cmd = 'unzip $SRCS && mv $PKG/* .',
+        outs = outs or [name],
+        cmd = cmd,
         deps = deps,
         visibility = visibility,
         test_only = test_only,
