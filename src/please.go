@@ -875,7 +875,7 @@ func main() {
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.OutputFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
-		os.Exit(0) // Ignore other errors if --version was passed.
+		os.Exit(0) // Ignore other flags if --version was passed.
 	}
 	if opts.OutputFlags.Colour {
 		output.SetColouredOutput(true)
@@ -919,10 +919,21 @@ func main() {
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
 	if flagsErr != nil || len(extraArgs) > 0 {
-		argv := strings.Join(os.Args[1:], " ")
-		for k, v := range config.Aliases {
-			argv = strings.Replace(argv, k, v, 1)
+		for idx, arg := range os.Args[1:] {
+			// Please should not touch anything that comes after `--`
+			if arg == "--" {
+				break
+			}
+			for k, v := range config.Aliases {
+				if arg == k {
+					// We could insert every token in v into os.Args at this point and then we could have
+					// aliases defined in terms of other aliases but that seems rather like overkill so just
+					// stick the replacement in wholesale instead.
+					os.Args[idx+1] = v
+				}
+			}
 		}
+		argv := strings.Join(os.Args[1:], " ")
 		parser = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, strings.Fields(os.Args[0]+" "+argv))
 		command = activeCommand(parser.Command)
 	}
