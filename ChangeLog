@@ -11,6 +11,7 @@ Version 12.1.0
       Parse tasks now happen off the main worker 'threads' so they don't block them.
       This is a prerequisite for subrepo support.
     * Migrated most uses of `filepath.Walk` to `godirwalk` (#273).
+    * Fixed handling of aliases (#298)
 
 
 Version 12.0.0
