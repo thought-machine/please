@@ -1,3 +1,10 @@
+Version 12.1.1
+--------------
+
+    * Fix to incrementality in python_library rules where in some cases bytecode
+      was generated inconsistently.
+
+
 Version 12.1.0
 --------------
 
