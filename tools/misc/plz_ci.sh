@@ -23,6 +23,7 @@
 # It's a bit more involved though and for many cases this script is easier.
 
 set -eu
+set -o pipefail
 
 # Set $ORIGIN to a branch or tag name if you want to build vs. something other than master.
 ORIGIN="${ORIGIN:-origin/master}"
