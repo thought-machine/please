@@ -168,19 +168,6 @@ func RecursiveCopyFile(from string, to string, mode os.FileMode, link, fallback 
 			dest := path.Join(to, name[len(from):])
 			if isDir {
 				return os.MkdirAll(dest, DirPermissions)
-			} else if (fileMode & os.ModeSymlink) != 0 {
-				fi, err := os.Stat(name)
-				if err != nil {
-					return err
-				}
-				if fi.IsDir() {
-					return RecursiveCopyFile(name+"/", dest+"/", mode, link, fallback)
-				}
-				// 0 indicates inheriting the existing mode bits.
-				if mode == 0 {
-					mode = info.Mode()
-				}
-				return copyOrLinkFile(name, dest, mode, link, fallback)
 			}
 			return copyOrLinkFile(name, dest, mode, link, fallback)
 		})
