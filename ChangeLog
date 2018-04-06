@@ -1,3 +1,9 @@
+Version 12.1.2
+--------------
+
+    * Fix for some errors relating to symlinks in outputs.
+
+
 Version 12.1.1
 --------------
 
