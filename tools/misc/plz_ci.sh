@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # This script implements an example CI flow using plz, which will run all affected tests
 # based on files that have changed vs. master.
