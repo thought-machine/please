@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # This script implements an example CI flow using plz, which will run all affected tests
 # based on files that have changed vs. master.
@@ -23,6 +23,7 @@
 # It's a bit more involved though and for many cases this script is easier.
 
 set -eu
+set -o pipefail
 
 # Set $ORIGIN to a branch or tag name if you want to build vs. something other than master.
 ORIGIN="${ORIGIN:-origin/master}"
