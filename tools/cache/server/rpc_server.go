@@ -84,7 +84,7 @@ func storeArtifact(cache *Cache, os, arch string, hash []byte, artifacts []*pb.A
 	for _, artifact := range artifacts {
 		dir := path.Join(arch, artifact.Package, artifact.Target, hashStr)
 		file := path.Join(dir, artifact.File)
-		if err := cache.StoreArtifact(file, artifact.Body); err != nil {
+		if err := cache.StoreArtifact(file, artifact.Body, artifact.Symlink); err != nil {
 			return false
 		}
 		go cache.StoreMetadata(dir, hostname, address, peer)
@@ -104,20 +104,21 @@ func (r *RPCCacheServer) Retrieve(ctx context.Context, req *pb.RetrieveRequest) 
 	for _, artifact := range req.Artifacts {
 		root := path.Join(arch, artifact.Package, artifact.Target, hash)
 		fileRoot := path.Join(root, artifact.File)
-		art, err := r.cache.RetrieveArtifact(fileRoot)
+		arts, err := r.cache.RetrieveArtifact(fileRoot)
 		if err != nil {
 			log.Debug("Failed to retrieve artifact %s: %s", fileRoot, err)
 			r.retrieveFailures.WithLabelValues(req.Arch).Inc()
 			return &pb.RetrieveResponse{Success: false}, nil
 		}
-		for name, body := range art {
+		for _, art := range arts {
 			response.Artifacts = append(response.Artifacts, &pb.Artifact{
 				Package: artifact.Package,
 				Target:  artifact.Target,
-				File:    name[len(root)+1:],
-				Body:    body,
+				File:    art.File[len(root)+1:],
+				Body:    art.Body,
+				Symlink: art.Symlink,
 			})
-			total += len(body)
+			total += len(art.Body)
 		}
 	}
 	r.retrievedCounter.WithLabelValues(req.Arch).Inc()

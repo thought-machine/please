@@ -90,7 +90,7 @@ func TestGlob(t *testing.T) {
 	ret, err := cache.RetrieveArtifact("darwin_amd64/**/*.ext")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(ret))
-	assert.Contains(t, ret, "darwin_amd64/pack/label/hash/label.ext")
+	assert.Equal(t, ret[0].File, "darwin_amd64/pack/label/hash/label.ext")
 }
 
 func TestStore(t *testing.T) {
@@ -98,7 +98,7 @@ func TestStore(t *testing.T) {
 	reader := strings.NewReader(fileContent)
 	key, err := ioutil.ReadAll(reader)
 
-	err = cache.StoreArtifact("/darwin_amd64/somepack/somelabel/somehash/somelabel.ext", key)
+	err = cache.StoreArtifact("/darwin_amd64/somepack/somelabel/somehash/somelabel.ext", key, "")
 	if err != nil {
 		t.Error(err)
 	}

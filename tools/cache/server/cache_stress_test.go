@@ -30,7 +30,7 @@ func TestStoreFiles(t *testing.T) {
 	for _, i := range rand.Perm(size) {
 		go func(i int) {
 			path, contents := artifact(i)
-			assert.NoError(t, cache.StoreArtifact(path, contents))
+			assert.NoError(t, cache.StoreArtifact(path, contents, ""))
 			wg.Done()
 		}(i)
 	}
@@ -44,14 +44,14 @@ func TestRetrieveFiles(t *testing.T) {
 	for _, i := range rand.Perm(size) {
 		go func(i int) {
 			path, contents := artifact(i)
-			art, err := cache.RetrieveArtifact(path)
+			arts, err := cache.RetrieveArtifact(path)
 			if os.IsNotExist(err) { // It's allowed not to exist.
 				wg.Done()
 				return
 			}
 			assert.NoError(t, err)
-			assert.Equal(t, 1, len(art))
-			assert.Equal(t, contents, art[path])
+			assert.Equal(t, 1, len(arts))
+			assert.Equal(t, contents, arts[0].Body)
 			wg.Done()
 		}(i)
 	}

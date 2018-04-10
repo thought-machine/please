@@ -18,6 +18,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/streamrail/concurrent-map"
 
+	pb "cache/proto/rpc_cache"
 	"core"
 )
 
@@ -161,8 +162,8 @@ func (cache *Cache) removeAndDeleteFile(p string, file *cachedFile) {
 // file directory to see if the file exists in the given path. If found, the function will
 // return whatever's been stored there, which might be a directory and therefore contain
 // multiple files to be returned.
-func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) {
-	ret := map[string][]byte{}
+func (cache *Cache) RetrieveArtifact(artPath string) ([]*pb.Artifact, error) {
+	ret := []*pb.Artifact{}
 	if core.IsGlob(artPath) {
 		// N.B. NewDefaultBuildState here is not really correct (we don't know what the config is
 		// and assuming the default isn't correct) but it's only used for determining BUILD file names
@@ -178,7 +179,7 @@ func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) 
 			if err != nil {
 				return nil, err
 			}
-			ret[art] = body
+			ret = append(ret, &pb.Artifact{File: art, Body: body})
 		}
 		return ret, nil
 	}
@@ -195,13 +196,25 @@ func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) 
 	}
 	defer lock.RUnlock()
 
-	if err := core.Walk(fullPath, func(name string, isDir bool) error {
+	if info, err := os.Lstat(fullPath); err == nil && (info.Mode()&os.ModeSymlink) != 0 {
+		dest, err := os.Readlink(fullPath)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, &pb.Artifact{
+			File:    fullPath[len(cache.rootPath)+1:],
+			Symlink: dest,
+		})
+	} else if err := core.Walk(fullPath, func(name string, isDir bool) error {
 		if !isDir {
 			body, err := ioutil.ReadFile(name)
 			if err != nil {
 				return err
 			}
-			ret[name[len(cache.rootPath)+1:]] = body
+			ret = append(ret, &pb.Artifact{
+				File: name[len(cache.rootPath)+1:],
+				Body: body,
+			})
 		}
 		return nil
 	}); err != nil {
@@ -212,20 +225,18 @@ func (cache *Cache) RetrieveArtifact(artPath string) (map[string][]byte, error) 
 
 // retrieveDir retrieves a directory of artifacts. We don't track the directory itself
 // but allow its traversal to retrieve them.
-func (cache *Cache) retrieveDir(artPath string) (map[string][]byte, error) {
+func (cache *Cache) retrieveDir(artPath string) ([]*pb.Artifact, error) {
 	log.Debug("Searching dir %s for artifacts", artPath)
-	ret := map[string][]byte{}
+	ret := []*pb.Artifact{}
 	fullPath := path.Join(cache.rootPath, artPath)
 	err := core.Walk(fullPath, func(name string, isDir bool) error {
 		if !isDir {
 			// Must strip cache path off the front of this.
-			m, err := cache.RetrieveArtifact(name[len(cache.rootPath)+1:])
+			arts, err := cache.RetrieveArtifact(name[len(cache.rootPath)+1:])
 			if err != nil {
 				return err
 			}
-			for k, v := range m {
-				ret[k] = v
-			}
+			ret = append(ret, arts...)
 		}
 		return nil
 	})
@@ -235,7 +246,7 @@ func (cache *Cache) retrieveDir(artPath string) (map[string][]byte, error) {
 // StoreArtifact takes in the artifact content and path as parameters and creates a file with
 // the given content in the given path.
 // The function will return the first error found in the process, or nil if the process is successful.
-func (cache *Cache) StoreArtifact(artPath string, key []byte) error {
+func (cache *Cache) StoreArtifact(artPath string, key []byte, symlink string) error {
 	log.Info("Storing artifact %s", artPath)
 	lock := cache.lockFile(artPath, true, int64(len(key)))
 	defer lock.Unlock()
@@ -248,11 +259,19 @@ func (cache *Cache) StoreArtifact(artPath string, key []byte) error {
 		os.RemoveAll(dirPath)
 		return err
 	}
-	log.Debug("Writing artifact to %s", fullPath)
-	if err := core.WriteFile(bytes.NewReader(key), fullPath, 0); err != nil {
-		log.Errorf("Could not create %s artifact: %s", fullPath, err)
-		cache.removeAndDeleteFile(artPath, lock)
-		return err
+	if symlink != "" {
+		if err := os.Symlink(symlink, fullPath); err != nil {
+			log.Errorf("Could not create %s symlink: %s", fullPath, err)
+			cache.removeAndDeleteFile(artPath, lock)
+			return err
+		}
+	} else {
+		log.Debug("Writing artifact to %s", fullPath)
+		if err := core.WriteFile(bytes.NewReader(key), fullPath, 0); err != nil {
+			log.Errorf("Could not create %s artifact: %s", fullPath, err)
+			cache.removeAndDeleteFile(artPath, lock)
+			return err
+		}
 	}
 	return nil
 }

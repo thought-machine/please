@@ -35,7 +35,7 @@ func (s *httpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	log.Debug("GET %s", r.URL.Path)
 	artifactPath := strings.TrimPrefix(r.URL.Path, "/artifact/")
 
-	art, err := s.cache.RetrieveArtifact(artifactPath)
+	arts, err := s.cache.RetrieveArtifact(artifactPath)
 	if err != nil && os.IsNotExist(err) {
 		w.WriteHeader(http.StatusNotFound)
 		log.Debug("%s doesn't exist in http cache", artifactPath)
@@ -54,12 +54,12 @@ func (s *httpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	mw := multipart.NewWriter(w)
 	defer mw.Close()
 	w.Header().Set("Content-Type", mw.FormDataContentType())
-	for name, body := range art {
-		if part, err := mw.CreateFormFile(name, name); err != nil {
-			log.Errorf("Failed to create form file %s: %s", name, err)
+	for _, art := range arts {
+		if part, err := mw.CreateFormFile(art.File, art.File); err != nil {
+			log.Errorf("Failed to create form file %s: %s", art.File, err)
 			w.WriteHeader(http.StatusInternalServerError)
-		} else if _, err := io.Copy(part, bytes.NewReader(body)); err != nil {
-			log.Errorf("Failed to write form file %s: %s", name, err)
+		} else if _, err := io.Copy(part, bytes.NewReader(art.Body)); err != nil {
+			log.Errorf("Failed to write form file %s: %s", art.File, err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}
@@ -74,7 +74,8 @@ func (s *httpServer) postHandler(w http.ResponseWriter, r *http.Request) {
 	artifact, err := ioutil.ReadAll(r.Body)
 	filePath, fileName := path.Split(strings.TrimPrefix(r.URL.Path, "/artifact"))
 	if err == nil {
-		if err := s.cache.StoreArtifact(strings.TrimPrefix(r.URL.Path, "/artifact"), artifact); err != nil {
+		// N.B. We cannot store symlinks here.
+		if err := s.cache.StoreArtifact(strings.TrimPrefix(r.URL.Path, "/artifact"), artifact, ""); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Errorf("Failed to store artifact %s: %s", fileName, err)
 			return

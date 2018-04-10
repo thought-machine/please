@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -334,14 +333,8 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		if !core.PathExists(tmpOutput) {
 			return nil, true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
 		}
-		// If output is a symlink, dereference it. Otherwise, for efficiency,
-		// we can just move it without a full copy (saves copying large .jar files etc).
-		dereferencedPath, err := filepath.EvalSymlinks(tmpOutput)
-		if err != nil {
-			return nil, true, err
-		}
 		// NB. false -> not filegroup, we wouldn't be here if it was.
-		outputChanged, err := moveOutput(target, dereferencedPath, realOutput, false)
+		outputChanged, err := moveOutput(target, tmpOutput, realOutput, false)
 		if err != nil {
 			return nil, true, err
 		}
@@ -379,7 +372,6 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 	// file because other things might be using it already (because more than one filegroup can
 	// own the same file).
 	if filegroup && realOutputExists && core.IsSameFile(tmpOutput, realOutput) {
-		log.Debug("real output %s is same file", realOutput)
 		movePathHash(tmpOutput, realOutput, filegroup) // make sure this is updated regardless
 		return false, nil
 	}

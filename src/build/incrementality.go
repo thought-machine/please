@@ -209,21 +209,18 @@ func pathHashImpl(path string) ([]byte, error) {
 	h := sha1.New()
 	info, err := os.Lstat(path)
 	if err == nil && info.Mode()&os.ModeSymlink != 0 {
-		// Dereference symlink and try again
-		deref, err := filepath.EvalSymlinks(path)
+		// Handle symlinks specially (don't attempt to read their contents).
+		dest, err := os.Readlink(path)
 		if err != nil {
 			return nil, err
 		}
-		// Write something indicating this was a link; important so we rebuild correctly
-		// when eg. a filegroup is changed from link=False to link=True.
-		// Don't want to hash all file mode bits, the others could change depending on
-		// whether we retrieved from cache or not so they're probably a bit too fragile.
+		// Write something arbitrary indicating this is a symlink.
+		// This isn't quite perfect - it could potentially get mixed up with a file with the
+		// appropriate contents, but that is not really likely.
 		h.Write(boolTrueHashValue)
-		d, err := pathHashImpl(deref)
-		h.Write(d)
-		return h.Sum(nil), err
-	}
-	if err == nil && info.IsDir() {
+		h.Write([]byte(dest))
+		return h.Sum(nil), nil
+	} else if err == nil && info.IsDir() {
 		err = core.WalkMode(path, func(p string, isDir bool, mode os.FileMode) error {
 			if mode&os.ModeSymlink != 0 {
 				// Is a symlink, must verify that it's not a link outside the tmp dir.

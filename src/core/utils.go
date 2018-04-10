@@ -107,13 +107,13 @@ func StartedAtRepoRoot() bool {
 
 // PathExists returns true if the given path exists, as a file or a directory.
 func PathExists(filename string) bool {
-	_, err := os.Stat(filename)
+	_, err := os.Lstat(filename)
 	return err == nil
 }
 
 // FileExists returns true if the given path exists and is a file.
 func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
+	info, err := os.Lstat(filename)
 	return err == nil && !info.IsDir()
 }
 

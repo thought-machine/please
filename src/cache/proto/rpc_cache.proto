@@ -26,6 +26,8 @@ message Artifact {
     string file = 3;
     // Contents of it
     bytes body = 4;
+    // If the artifact is a symlink, this is non-empty and contains its destination.
+    string symlink = 5;
 }
 
 message StoreRequest {

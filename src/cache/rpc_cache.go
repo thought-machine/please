@@ -98,10 +98,23 @@ func (cache *rpcCache) StoreExtra(target *core.BuildTarget, key []byte, file str
 }
 
 func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*pb.Artifact, int, error) {
-	artifacts := []*pb.Artifact{}
 	outDir := target.OutDir()
 	root := path.Join(outDir, file)
 	totalSize := 1000 // Allow a little space for encoding overhead.
+	if info, err := os.Lstat(root); err == nil && (info.Mode()&os.ModeSymlink) != 0 {
+		// Artifact is a symlink.
+		dest, err := os.Readlink(root)
+		if err != nil {
+			return nil, totalSize, err
+		}
+		return []*pb.Artifact{{
+			Package: target.Label.PackageName,
+			Target:  target.Label.Name,
+			File:    file,
+			Symlink: dest,
+		}}, totalSize, nil
+	}
+	artifacts := []*pb.Artifact{}
 	err := core.Walk(root, func(name string, isDir bool) error {
 		if !isDir {
 			content, err := ioutil.ReadFile(name)
@@ -202,7 +215,7 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 		}
 	}
 	for _, artifact := range artifacts {
-		if !cache.writeFile(target, artifact.File, artifact.Body) {
+		if !cache.writeFile(target, artifact.File, artifact.Body, artifact.Symlink) {
 			return false
 		}
 	}
@@ -210,13 +223,18 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 	return len(artifacts) > 0
 }
 
-func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []byte) bool {
+func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []byte, symlink string) bool {
 	out := path.Join(target.OutDir(), file)
 	if err := os.MkdirAll(path.Dir(out), core.DirPermissions); err != nil {
 		log.Warning("Failed to create directory for artifacts: %s", err)
 		return false
 	}
-	if err := core.WriteFile(bytes.NewReader(body), out, fileMode(target)); err != nil {
+	if symlink != "" {
+		if err := os.Symlink(symlink, out); err != nil {
+			log.Warning("RPC cache failed to create symlink %s", err)
+			return false
+		}
+	} else if err := core.WriteFile(bytes.NewReader(body), out, fileMode(target)); err != nil {
 		log.Warning("RPC cache failed to write file %s", err)
 		return false
 	}
