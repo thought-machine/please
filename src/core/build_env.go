@@ -55,7 +55,9 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 	if config.Cpp.PkgConfigPath != "" {
 		env = append(env, "PKG_CONFIG_PATH="+config.Cpp.PkgConfigPath)
 	}
-	return append(env, config.GetBuildEnv()...)
+	env = append(env, config.GetBuildEnv()...)
+	env = append(env, config.GetPassEnv()...)
+	return env
 }
 
 // BuildEnvironment creates the shell env vars to be passed

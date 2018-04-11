@@ -121,6 +121,11 @@
         The build config to use when one is chosen and a required target does not have
         one by the same name. Also defaults to <code>opt</code>.</li>
 
+      <li><b>PassEnv</b> (repeated string)<br/>
+        A list of environment variables to pass from the current environment to build rules. For example
+        <code>PassEnv = HTTP_PROXY</code>
+        would copy your HTTP_PROXY environment variable to the build env for any rules.</li>
+
     </ul>
 
     <h3>[Cache]</h3>

@@ -1,0 +1,3 @@
+[Build]
+PassEnv = FOO
+PassEnv = BAR
