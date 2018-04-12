@@ -114,7 +114,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
         data=data,
         deps=deps,
         outs=[name + '.sh'],
-        cmd='ln -s ${SRC} ${OUT}',
+        cmd='mv ${SRC} ${OUT}',
         test_cmd='$TEST %s' % flags,
         visibility=visibility,
         labels=labels,
