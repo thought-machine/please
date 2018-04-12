@@ -393,7 +393,7 @@ gentest(
     name = 'symlink_test',
     data = [':symlink_gen'],
     no_test_output = True,
-    test_cmd = 'test ! -L test/symlink_test.txt',
+    test_cmd = 'test -L test/symlink_test.txt',
 )
 
 # This rule tests the no_test_output flag. If that isn't honoured
