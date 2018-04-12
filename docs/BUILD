@@ -1,6 +1,6 @@
 deps = []
 
-for src in glob(['*.html'], exclude=['template.html', 'lexicon*.html']):
+for src in glob(['*.html'], exclude=['template.html', 'lexicon*.html', 'language.html']):
     templated_rule = genrule(
         name = src.replace('.', '_'),
         srcs = ['template.html', src],
@@ -26,6 +26,23 @@ genrule(
     },
 )
 
+genrule(
+    name = 'language_html',
+    srcs = {
+        'html': [
+            'template.html',
+            'language.html',
+        ],
+        'grammar': ['grammar.txt'],
+    },
+    outs = ['language.html'],
+    cmd = '$TOOLS_TEMPLATE $SRCS_HTML | $TOOLS_GRAMMAR > $OUT',
+    tools = {
+        'grammar': [':grammar_templater'],
+        'template': [':templater'],
+    },
+)
+
 # Downscale images from original resolution
 for colour, scale in [('teal', '50%'), ('white', '20%')]:
     for src in glob(['images/%s*.png' % colour]):
@@ -41,6 +58,7 @@ for colour, scale in [('teal', '50%'), ('white', '20%')]:
 filegroup(
     name = 'docs',
     srcs = deps + [
+        ':language_html',
         ':lexicon_html',
         'styles.css',
         'action.js',
@@ -58,4 +76,9 @@ go_binary(
 go_binary(
     name = 'lexicon_templater',
     srcs = ['template_lexicon.go'],
+)
+
+go_binary(
+    name = 'grammar_templater',
+    srcs = ['template_grammar.go'],
 )

@@ -1,0 +1,41 @@
+# Start symbol for the grammar, representing the top-level structure of a file.
+file_input = { statement };
+
+# Any single statement. Must occur on its own line.
+statement = ( "pass" | "continue" | func_def | for | if | return |
+          raise | assert | ident_statement | literal ) EOL;
+return = "return" [ expression { "," expression } ];
+raise = "raise" expression;
+assert = "assert" expression [ "," String ];
+for = "for" Ident { "," Ident } "in" expression ":" EOL { statement };
+if = "if" expression ":" EOL { statement }
+     [ "elif" expression ":" EOL { statement } ]
+     [ "else" ":" EOL { statement } ];
+func_def = "def" Ident "(" [ argument { "," argument } ] ")" ":" EOL
+           [ String EOL ]
+           { statement };
+argument = Ident [ ":" String { "|" String } ] { "&" Ident } [ "=" expression ];
+ident_statement = Ident
+                  ( { "," Ident } "=" expression
+                  | ( "[" expression "]" ( "=" | "+=" ) expression)
+                  | ( "." ident | call | "=" expression | "+=" expression ) );
+
+# Any generalised expression, with all the trimmings.
+expression = [ "-" | "not" ] value [ operator expression ]
+             [ "if" expression "else" expression ];
+value = ( String | Int | "True" | "False" | "None" | list | dict | tuple | lambda | ident )
+        [ slice ] [ ( "." ident | call ) ];
+ident = Ident { "." ident | call };
+call = "(" [ arg { "," arg } ] ")";
+arg = expression | ident "=" expression;
+list = "[" expression { "," expression } comprehension "]";
+tuple = "(" expression { "," expression } ")";
+dict = "[" expression ":" expression { "," expression ":" expression } comprehension "]";
+comprehension = "for" Ident { "," Ident } "in" expression
+                [ "for" Ident { "," Ident } "in" expression ]
+                [ "if" expression ];
+slice = "[" [ expression ] [ ":" expression ] "]";
+lambda = "lambda" [ lambda_arg { "," lambda_arg } ] ":" expression;
+lambda_arg = Ident [ "=" expression ];
+operator = ("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" |
+            "in" | "not" "in" | "==" | "!=" | ">=" | "<=" );

@@ -250,3 +250,15 @@ footer a {
 .icon {
     float: right;
 }
+.grammar-string {
+    color: #29ABE2;
+}
+.grammar-syntax {
+    color: #00FFA9;
+}
+.grammar-comment {
+    color: #999999;
+}
+.grammar-token {
+    font-weight: bold;
+}
