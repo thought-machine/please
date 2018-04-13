@@ -220,7 +220,7 @@ func TestStrings(t *testing.T) {
 	assert.EqualValues(t, "acpi base64 basename blkid blockdev bunzip2 bzcat cal cat catv chattr\nwhoami xargs xxd yes", s.Lookup("TOYS3"))
 }
 
-func TestArgumentCompatbility(t *testing.T) {
+func TestArgumentCompatibility(t *testing.T) {
 	// This isn't a totally obvious property of the interpreter, but when an argument specifies
 	// a type and is given None, we adopt the default. This allows external functions to use None
 	// for various arguments (e.g. deps), but internally we can treat them as lists.

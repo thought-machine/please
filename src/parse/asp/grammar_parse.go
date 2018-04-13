@@ -430,11 +430,15 @@ func (p *parser) parseIdentExpr() *IdentExpr {
 func (p *parser) parseCall() *Call {
 	// The leading ( has already been consumed (because that fits better at the various call sites)
 	c := &Call{}
+	names := map[string]bool{}
 	for tok := p.l.Peek(); tok.Type != ')'; tok = p.l.Peek() {
 		arg := CallArgument{Expr: p.parseExpression()}
 		if arg.Expr != nil && arg.Expr.Val != nil && arg.Expr.Val.Ident != nil && arg.Expr.Val.Ident.Action == nil {
 			// Bare identifiers can be followed by a = for named arguments.
 			if p.optional('=') {
+				name := arg.Expr.Val.Ident.Name
+				p.assert(!names[name], tok, "Repeated argument %s", name)
+				names[name] = true
 				arg.Value = p.parseExpression()
 			}
 		}

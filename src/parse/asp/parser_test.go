@@ -395,3 +395,8 @@ func TestMissingNewlines(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(stmts))
 }
+
+func TestRepeatedArguments(t *testing.T) {
+	_, err := newParser().parse("src/parse/asp/test_data/repeated_arguments.build")
+	assert.Error(t, err)
+}
