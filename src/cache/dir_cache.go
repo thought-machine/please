@@ -15,6 +15,7 @@ import (
 	"github.com/dustin/go-humanize"
 
 	"core"
+	"fs"
 )
 
 type dirCache struct {
@@ -218,7 +219,7 @@ func findSize(path string) (uint64, error) {
 func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 	entries := []cacheEntry{}
 	var totalSize uint64
-	if err := core.Walk(cache.Dir, func(path string, isDir bool) error {
+	if err := fs.Walk(cache.Dir, func(path string, isDir bool) error {
 		name := filepath.Base(path)
 		if isDir && (len(name) == 28 || len(name) == 29) && name[27] == '=' {
 			// Directory has the right length. We do this in an attempt to clean only entire

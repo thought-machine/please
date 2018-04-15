@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"core"
+	"fs"
 )
 
 func parseTestResults(target *core.BuildTarget, outputFile string, cached bool) (core.TestResults, error) {
@@ -47,7 +48,7 @@ func parseTestResultsDir(outputDir string) (core.TestResults, error) {
 	if !core.PathExists(outputDir) {
 		return results, fmt.Errorf("Didn't find any test results in %s", outputDir)
 	}
-	err := core.Walk(outputDir, func(path string, isDir bool) error {
+	err := fs.Walk(outputDir, func(path string, isDir bool) error {
 		if !isDir {
 			fileResults, err := parseTestResultsImpl(path)
 			if err != nil {

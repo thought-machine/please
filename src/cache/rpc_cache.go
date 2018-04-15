@@ -29,6 +29,7 @@ import (
 	pb "cache/proto/rpc_cache"
 	"cache/tools"
 	"cli"
+	"fs"
 )
 
 const maxErrors = 5
@@ -115,7 +116,7 @@ func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*
 		}}, totalSize, nil
 	}
 	artifacts := []*pb.Artifact{}
-	err := core.Walk(root, func(name string, isDir bool) error {
+	err := fs.Walk(root, func(name string, isDir bool) error {
 		if !isDir {
 			content, err := ioutil.ReadFile(name)
 			if err != nil {

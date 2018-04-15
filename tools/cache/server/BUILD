@@ -8,6 +8,7 @@ go_library(
     deps = [
         '//src/cache/proto:rpc_cache',
         '//src/core',
+        '//src/fs',
         '//third_party/go:atime',
         '//third_party/go:concurrent-map',
         '//third_party/go:grpc',

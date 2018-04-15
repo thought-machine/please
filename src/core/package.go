@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"fs"
 )
 
 // Package is a representation of a package, ie. the part of the system (one or more
@@ -226,7 +228,7 @@ func FindOwningPackage(state *BuildState, file string) BuildLabel {
 	f := file
 	for f != "." {
 		f = path.Dir(f)
-		if IsPackage(state, f) {
+		if fs.IsPackage(state.Config.Parse.BuildFileName, f) {
 			return BuildLabel{PackageName: f, Name: "all"}
 		}
 	}

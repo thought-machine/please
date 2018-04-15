@@ -13,6 +13,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"fs"
 )
 
 var log = logging.MustGetLogger("parse")
@@ -126,7 +127,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 				pkg.MustRegisterOutput(out, target)
 			}
 			for _, out := range target.TestOutputs {
-				if !core.IsGlob(out) {
+				if !fs.IsGlob(out) {
 					pkg.MustRegisterOutput(out, target)
 				}
 			}
@@ -153,7 +154,7 @@ func buildFileName(state *core.BuildState, pkgName string) string {
 		return "WORKSPACE"
 	}
 	for _, buildFileName := range state.Config.Parse.BuildFileName {
-		if filename := path.Join(pkgName, buildFileName); core.FileExists(filename) {
+		if filename := path.Join(pkgName, buildFileName); fs.FileExists(filename) {
 			return filename
 		}
 	}

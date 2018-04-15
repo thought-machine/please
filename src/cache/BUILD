@@ -8,6 +8,7 @@ go_library(
         '//src/cache/tools',
         '//src/cli',
         '//src/core',
+        '//src/fs',
         '//third_party/go:atime',
         '//third_party/go:grpc',
         '//third_party/go:humanize',

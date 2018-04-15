@@ -16,7 +16,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
+	"fs"
 	"third_party/go/zip"
 )
 
@@ -204,7 +204,7 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 			return err
 		} else if isDir {
 			// TODO(peterebden): Is this case still needed?
-			return core.WalkMode(resolved, f.walk)
+			return fs.WalkMode(resolved, f.walk)
 		}
 	}
 	if path == f.filename {
@@ -239,7 +239,7 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 // AddFiles walks the given directory and adds any zip files (determined by suffix) that it finds within.
 func (f *File) AddFiles(in string) error {
 	f.input = in
-	return core.WalkMode(in, f.walk)
+	return fs.WalkMode(in, f.walk)
 }
 
 // shouldExcludeSuffix returns true if the given filename has a suffix that should be excluded.

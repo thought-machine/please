@@ -18,6 +18,7 @@ go_library(
     ],
     deps = [
         '//src/cli',
+        '//src/fs',
         '//third_party/go:gcfg',
         '//third_party/go:go-flags',
         '//third_party/go:godirwalk',
@@ -106,16 +107,6 @@ go_test(
 go_test(
     name = 'lock_test',
     srcs = ['lock_test.go'],
-    deps = [
-        ':core',
-        '//third_party/go:testify',
-    ],
-)
-
-go_test(
-    name = 'glob_test',
-    srcs = ['glob_test.go'],
-    data = glob(['test_data/**/*.txt']),
     deps = [
         ':core',
         '//third_party/go:testify',

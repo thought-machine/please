@@ -1,6 +1,6 @@
 // Tests for our glob functions.
 
-package core
+package fs
 
 import (
 	"testing"

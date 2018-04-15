@@ -16,6 +16,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"fs"
 )
 
 var log = logging.MustGetLogger("watch")
@@ -122,7 +123,7 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.BuildInput, dirs map[string]struct{}, files cmap.ConcurrentMap) {
 	if source.Label() == nil {
 		for _, src := range source.Paths(state.Graph) {
-			if err := core.Walk(src, func(src string, isDir bool) error {
+			if err := fs.Walk(src, func(src string, isDir bool) error {
 				files.Set(src, struct{}{})
 				dir := src
 				if !isDir {

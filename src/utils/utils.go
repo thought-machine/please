@@ -11,6 +11,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"fs"
 )
 
 var log = logging.MustGetLogger("utils")
@@ -24,7 +25,7 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 		if rootPath == "" {
 			rootPath = "."
 		}
-		if err := core.Walk(rootPath, func(name string, isDir bool) error {
+		if err := fs.Walk(rootPath, func(name string, isDir bool) error {
 			basename := path.Base(name)
 			if name == core.OutDir || (isDir && strings.HasPrefix(basename, ".") && name != ".") {
 				return filepath.SkipDir // Don't walk output or hidden directories

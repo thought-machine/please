@@ -5,7 +5,7 @@ go_library(
         'write_test_main.go',
     ],
     deps = [
-        '//src/core',
+        '//src/fs',
         '//third_party/go:logging',
     ],
     visibility = ['//tools/please_go_test:all'],

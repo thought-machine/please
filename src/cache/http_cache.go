@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"core"
+	"fs"
 )
 
 type httpCache struct {
@@ -27,7 +28,7 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files ...str
 	if cache.Writeable {
 		for out := range cacheArtifacts(target, files...) {
 			if info, err := os.Stat(out); err == nil && info.IsDir() {
-				core.Walk(out, func(name string, isDir bool) error {
+				fs.Walk(out, func(name string, isDir bool) error {
 					if !isDir {
 						cache.StoreExtra(target, key, name)
 					}

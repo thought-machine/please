@@ -20,6 +20,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"fs"
 )
 
 var cache core.Cache
@@ -167,7 +168,7 @@ func TestInitPyCreation(t *testing.T) {
 	target1 := newPyFilegroup(state, "//pypkg:target1", "file1.py")
 	target2 := newPyFilegroup(state, "//pypkg:target2", "__init__.py")
 	assert.NoError(t, buildFilegroup(0, state, target1))
-	assert.True(t, core.FileExists("plz-out/gen/pypkg/__init__.py"))
+	assert.True(t, fs.FileExists("plz-out/gen/pypkg/__init__.py"))
 	assert.NoError(t, buildFilegroup(0, state, target2))
 	d, err := ioutil.ReadFile("plz-out/gen/pypkg/__init__.py")
 	assert.NoError(t, err)
@@ -178,18 +179,18 @@ func TestRecursiveInitPyCreation(t *testing.T) {
 	state, _ := newState("//package1/package2:wevs")
 	target1 := newPyFilegroup(state, "//package1/package2:target1", "file1.py")
 	assert.NoError(t, buildFilegroup(0, state, target1))
-	assert.True(t, core.FileExists("plz-out/gen/package1/package2/__init__.py"))
-	assert.True(t, core.FileExists("plz-out/gen/package1/__init__.py"))
+	assert.True(t, fs.FileExists("plz-out/gen/package1/package2/__init__.py"))
+	assert.True(t, fs.FileExists("plz-out/gen/package1/__init__.py"))
 }
 
 func TestCreatePlzOutGo(t *testing.T) {
 	state, target := newState("//gopkg:target")
 	target.AddLabel("go")
 	target.AddOutput("file1.go")
-	assert.False(t, core.PathExists("plz-out/go"))
+	assert.False(t, fs.PathExists("plz-out/go"))
 	assert.NoError(t, buildTarget(1, state, target))
-	assert.True(t, core.PathExists("plz-out/go/src"))
-	assert.True(t, core.PathExists("plz-out/go/pkg/"+runtime.GOOS+"_"+runtime.GOARCH))
+	assert.True(t, fs.PathExists("plz-out/go/src"))
+	assert.True(t, fs.PathExists("plz-out/go/pkg/"+runtime.GOOS+"_"+runtime.GOARCH))
 }
 
 func TestLicenceEnforcement(t *testing.T) {

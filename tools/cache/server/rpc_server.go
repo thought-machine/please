@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "cache/proto/rpc_cache"
-	"core"
+	"fs"
 	"tools/cache/cluster"
 )
 
@@ -198,7 +198,7 @@ func extractAddress(ctx context.Context) string {
 
 func loadKeys(filename string) map[string]*x509.Certificate {
 	ret := map[string]*x509.Certificate{}
-	if err := core.Walk(filename, func(name string, isDir bool) error {
+	if err := fs.Walk(filename, func(name string, isDir bool) error {
 		if !isDir {
 			data, err := ioutil.ReadFile(name)
 			if err != nil {

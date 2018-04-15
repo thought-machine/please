@@ -20,6 +20,7 @@ import (
 
 	pb "cache/proto/rpc_cache"
 	"core"
+	"fs"
 )
 
 // metadataFileName is the filename we store metadata in.
@@ -164,12 +165,11 @@ func (cache *Cache) removeAndDeleteFile(p string, file *cachedFile) {
 // multiple files to be returned.
 func (cache *Cache) RetrieveArtifact(artPath string) ([]*pb.Artifact, error) {
 	ret := []*pb.Artifact{}
-	if core.IsGlob(artPath) {
-		// N.B. NewDefaultBuildState here is not really correct (we don't know what the config is
-		// and assuming the default isn't correct) but it's only used for determining BUILD file names
-		// so likely the only time it would make a difference is if we'd been asked to cache a file named BUILD
+	if fs.IsGlob(artPath) {
+		// N.B. strictly speaking we should have a real config here about what BUILD file names are,
+		// but likely the only time it would make a difference is if we'd been asked to cache a file named BUILD
 		// when the BUILD file name had been changed to something else.
-		for _, art := range core.Glob(core.NewDefaultBuildState(), cache.rootPath, []string{artPath}, nil, nil, true) {
+		for _, art := range fs.Glob(nil, cache.rootPath, []string{artPath}, nil, nil, true) {
 			fullPath := path.Join(cache.rootPath, art)
 			lock := cache.lockFile(fullPath, false, 0)
 			body, err := ioutil.ReadFile(fullPath)
@@ -205,7 +205,7 @@ func (cache *Cache) RetrieveArtifact(artPath string) ([]*pb.Artifact, error) {
 			File:    fullPath[len(cache.rootPath)+1:],
 			Symlink: dest,
 		})
-	} else if err := core.Walk(fullPath, func(name string, isDir bool) error {
+	} else if err := fs.Walk(fullPath, func(name string, isDir bool) error {
 		if !isDir {
 			body, err := ioutil.ReadFile(name)
 			if err != nil {
@@ -229,7 +229,7 @@ func (cache *Cache) retrieveDir(artPath string) ([]*pb.Artifact, error) {
 	log.Debug("Searching dir %s for artifacts", artPath)
 	ret := []*pb.Artifact{}
 	fullPath := path.Join(cache.rootPath, artPath)
-	err := core.Walk(fullPath, func(name string, isDir bool) error {
+	err := fs.Walk(fullPath, func(name string, isDir bool) error {
 		if !isDir {
 			// Must strip cache path off the front of this.
 			arts, err := cache.RetrieveArtifact(name[len(cache.rootPath)+1:])

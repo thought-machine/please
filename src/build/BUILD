@@ -5,6 +5,7 @@ go_library(
         '//src/build/proto:worker',
         '//src/cache',
         '//src/core',
+        '//src/fs',
         '//src/metrics',
         '//third_party/go:go-multierror',
         '//third_party/go:logging',
@@ -38,6 +39,7 @@ go_test(
     deps = [
         ':build',
         '//src/core',
+        '//src/fs',
         '//src/output',
         '//third_party/go:testify',
     ],

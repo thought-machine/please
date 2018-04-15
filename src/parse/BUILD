@@ -8,6 +8,7 @@ go_library(
     ],
     deps = [
         '//src/core',
+        '//src/fs',
         '//src/parse/asp',
         '//src/parse/rules',
         '//src/utils',

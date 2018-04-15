@@ -3,6 +3,7 @@ go_library(
     srcs = ['watch.go'],
     deps = [
         '//src/core',
+        '//src/fs',
         '//third_party/go:concurrent-map',
         '//third_party/go:fsnotify',
         '//third_party/go:logging',

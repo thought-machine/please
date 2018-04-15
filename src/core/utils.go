@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"cli"
+	"fs"
 )
 
 // RepoRoot is the root of the Please repository
@@ -105,18 +106,6 @@ func StartedAtRepoRoot() bool {
 	return RepoRoot == initialWorkingDir
 }
 
-// PathExists returns true if the given path exists, as a file or a directory.
-func PathExists(filename string) bool {
-	_, err := os.Lstat(filename)
-	return err == nil
-}
-
-// FileExists returns true if the given path exists and is a file.
-func FileExists(filename string) bool {
-	info, err := os.Lstat(filename)
-	return err == nil && !info.IsDir()
-}
-
 // CopyFile copies a file from 'from' to 'to', with an attempt to perform a copy & rename
 // to avoid chaos if anything goes wrong partway.
 func CopyFile(from string, to string, mode os.FileMode) error {
@@ -164,7 +153,7 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 // If 'fallback' is true then we'll fall back to a copy if linking fails.
 func RecursiveCopyFile(from string, to string, mode os.FileMode, link, fallback bool) error {
 	if info, err := os.Stat(from); err == nil && info.IsDir() {
-		return WalkMode(from, func(name string, isDir bool, fileMode os.FileMode) error {
+		return fs.WalkMode(from, func(name string, isDir bool, fileMode os.FileMode) error {
 			dest := path.Join(to, name[len(from):])
 			if isDir {
 				return os.MkdirAll(dest, DirPermissions)
@@ -184,26 +173,6 @@ func copyOrLinkFile(from, to string, mode os.FileMode, link, fallback bool) erro
 		}
 	}
 	return CopyFile(from, to, mode)
-}
-
-// IsSameFile returns true if two filenames describe the same underlying file (i.e. inode)
-func IsSameFile(a, b string) bool {
-	i1, err1 := getInode(a)
-	i2, err2 := getInode(b)
-	return err1 == nil && err2 == nil && i1 == i2
-}
-
-// getInode returns the inode of a file.
-func getInode(filename string) (uint64, error) {
-	fi, err := os.Stat(filename)
-	if err != nil {
-		return 0, err
-	}
-	s, ok := fi.Sys().(*syscall.Stat_t)
-	if !ok {
-		return 0, fmt.Errorf("Not a syscall.Stat_t")
-	}
-	return s.Ino, nil
 }
 
 // safeBuffer is an io.Writer that ensures that only one thread writes to it at a time.
@@ -677,4 +646,10 @@ func ContainsString(needle string, haystack []string) bool {
 		}
 	}
 	return false
+}
+
+// PathExists is an alias to fs.PathExists.
+// TODO(peterebden): Remove and migrate everything over.
+func PathExists(filename string) bool {
+	return fs.PathExists(filename)
 }

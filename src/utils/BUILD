@@ -7,6 +7,7 @@ go_library(
     ]) + [':bindata'],
     deps = [
         '//src/core',
+        '//src/fs',
         '//third_party/go:levenshtein',
         '//third_party/go:logging',
         '//third_party/go:prompter',

@@ -10,7 +10,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
+	"fs"
 )
 
 var log = logging.MustGetLogger("buildgo")
@@ -32,7 +32,7 @@ func FindCoverVars(dir string, exclude, srcs []string) ([]CoverVar, error) {
 	}
 	ret := []CoverVar{}
 
-	err := core.Walk(dir, func(name string, isDir bool) error {
+	err := fs.Walk(dir, func(name string, isDir bool) error {
 		if _, present := excludeMap[name]; present {
 			if isDir {
 				return filepath.SkipDir

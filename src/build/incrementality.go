@@ -29,6 +29,7 @@ import (
 	"sync"
 
 	"core"
+	"fs"
 )
 
 const hashLength = sha1.Size
@@ -221,7 +222,7 @@ func pathHashImpl(path string) ([]byte, error) {
 		h.Write([]byte(dest))
 		return h.Sum(nil), nil
 	} else if err == nil && info.IsDir() {
-		err = core.WalkMode(path, func(p string, isDir bool, mode os.FileMode) error {
+		err = fs.WalkMode(path, func(p string, isDir bool, mode os.FileMode) error {
 			if mode&os.ModeSymlink != 0 {
 				// Is a symlink, must verify that it's not a link outside the tmp dir.
 				deref, err := filepath.EvalSymlinks(p)
@@ -254,12 +255,14 @@ func movePathHash(oldPath, newPath string, copy bool) {
 	oldPath = ensureRelative(oldPath)
 	newPath = ensureRelative(newPath)
 	pathHashMutex.Lock()
-	pathHashMemoizer[newPath] = pathHashMemoizer[oldPath]
-	// If the path is in plz-out/tmp we aren't ever going to use it again, so free some space.
-	if !copy && strings.HasPrefix(oldPath, core.TmpDir) {
-		delete(pathHashMemoizer, oldPath)
+	defer pathHashMutex.Unlock()
+	if oldHash, present := pathHashMemoizer[oldPath]; present {
+		pathHashMemoizer[newPath] = oldHash
+		// If the path is in plz-out/tmp we aren't ever going to use it again, so free some space.
+		if !copy && strings.HasPrefix(oldPath, core.TmpDir) {
+			delete(pathHashMemoizer, oldPath)
+		}
 	}
-	pathHashMutex.Unlock()
 }
 
 // setPathHash is used to directly set a hash for a path.

@@ -4,7 +4,6 @@ package build
 import (
 	"bytes"
 	"crypto/sha1"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -21,6 +20,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"fs"
 	"metrics"
 )
 
@@ -28,13 +28,6 @@ var log = logging.MustGetLogger("build")
 
 // Type that indicates that we're stopping the build of a target in a nonfatal way.
 var errStop = fmt.Errorf("stopping build")
-
-// buildingFilegroupOutputs is used to track any file that's being built by a filegroup right now.
-// This avoids race conditions with them where two filegroups can race to build the same file
-// simultaneously (that's impossible with other targets because we prohibit two rules from
-// outputting the same file, for this and other reasons).
-var buildingFilegroupOutputs = map[string]*sync.Mutex{}
-var buildingFilegroupMutex sync.Mutex
 
 // goDirOnce guards the creation of plz-out/go, which we only attempt once per process.
 var goDirOnce sync.Once
@@ -138,11 +131,22 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			log.Debug("Rebuilding %s after post-build function", target.Label)
 		}
 	}
+	oldOutputHash, outputHashErr := OutputHash(target)
 	if target.IsFilegroup {
 		log.Debug("Building %s...", target.Label)
-		return buildFilegroup(tid, state, target)
+		if err := buildFilegroup(tid, state, target); err != nil {
+			return err
+		} else if newOutputHash, err := calculateAndCheckRuleHash(state, target); err != nil {
+			return err
+		} else if !bytes.Equal(newOutputHash, oldOutputHash) {
+			target.SetState(core.Built)
+			state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
+		} else {
+			target.SetState(core.Unchanged)
+			state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
+		}
+		return nil
 	}
-	oldOutputHash, outputHashErr := OutputHash(target)
 	if err := prepareDirectories(target); err != nil {
 		return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 	}
@@ -333,8 +337,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		if !core.PathExists(tmpOutput) {
 			return nil, true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
 		}
-		// NB. false -> not filegroup, we wouldn't be here if it was.
-		outputChanged, err := moveOutput(target, tmpOutput, realOutput, false)
+		outputChanged, err := moveOutput(target, tmpOutput, realOutput)
 		if err != nil {
 			return nil, true, err
 		}
@@ -348,11 +351,11 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	// Optional outputs get moved but don't contribute to the hash or for incrementality.
 	// Glob patterns are supported on these.
 	extraOuts := []string{}
-	for _, output := range core.Glob(state, tmpDir, target.OptionalOutputs, nil, nil, true) {
+	for _, output := range fs.Glob(state.Config.Parse.BuildFileName, tmpDir, target.OptionalOutputs, nil, nil, true) {
 		log.Debug("Discovered optional output %s", output)
 		tmpOutput := path.Join(tmpDir, output)
 		realOutput := path.Join(outDir, output)
-		if _, err := moveOutput(target, tmpOutput, realOutput, false); err != nil {
+		if _, err := moveOutput(target, tmpOutput, realOutput); err != nil {
 			return nil, changed, err
 		}
 		extraOuts = append(extraOuts, output)
@@ -360,22 +363,13 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	return extraOuts, changed, nil
 }
 
-func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegroup bool) (bool, error) {
+func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string) (bool, error) {
 	// hash the file
 	newHash, err := pathHash(tmpOutput, false)
 	if err != nil {
 		return true, err
 	}
-	realOutputExists := core.PathExists(realOutput)
-	// If this is a filegroup we hardlink the outputs over and so the two files may actually be
-	// the same file. If so don't do anything else and especially don't delete & recreate the
-	// file because other things might be using it already (because more than one filegroup can
-	// own the same file).
-	if filegroup && realOutputExists && core.IsSameFile(tmpOutput, realOutput) {
-		movePathHash(tmpOutput, realOutput, filegroup) // make sure this is updated regardless
-		return false, nil
-	}
-	if realOutputExists {
+	if fs.PathExists(realOutput) {
 		if oldHash, err := pathHash(realOutput, false); err != nil {
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
@@ -387,7 +381,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 			return true, err
 		}
 	}
-	movePathHash(tmpOutput, realOutput, filegroup)
+	movePathHash(tmpOutput, realOutput, false)
 	// Check if we need a directory for this output.
 	dir := path.Dir(realOutput)
 	if !core.PathExists(dir) {
@@ -402,7 +396,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string, filegrou
 			return true, err
 		}
 	} else {
-		if err := core.RecursiveCopyFile(tmpOutput, realOutput, target.OutMode(), filegroup, false); err != nil {
+		if err := core.RecursiveCopyFile(tmpOutput, realOutput, target.OutMode(), false, false); err != nil {
 			return true, err
 		}
 	}
@@ -437,7 +431,7 @@ func RemoveOutputs(target *core.BuildTarget) error {
 func checkForStaleOutput(filename string, err error) bool {
 	if perr, ok := err.(*os.PathError); ok && perr.Err.Error() == "not a directory" {
 		for dir := path.Dir(filename); dir != "." && dir != "/" && path.Base(dir) != "plz-out"; dir = path.Dir(filename) {
-			if core.FileExists(dir) {
+			if fs.FileExists(dir) {
 				log.Warning("Removing %s which appears to be a stale output file", dir)
 				os.Remove(dir)
 				return true
@@ -577,118 +571,6 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 	}
 	if len(target.Licences) > 0 && len(state.Config.Licences.Accept) > 0 {
 		panic(fmt.Sprintf("None of the licences for %s are accepted in this repository: %s", target.Label, strings.Join(target.Licences, ", ")))
-	}
-}
-
-// buildFilegroup runs the manual build steps for a filegroup rule.
-// We don't force this to be done in bash to avoid errors with maximum command lengths,
-// and it's actually quite fiddly to get just so there.
-func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) error {
-	if err := prepareDirectory(target.OutDir(), false); err != nil {
-		return err
-	}
-	if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
-		return err
-	}
-	changed := false
-	outDir := target.OutDir()
-	localSources := target.AllLocalSourcePaths(state.Graph)
-	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		out, _ := filegroupOutputPath(target, outDir, localSources[i], source)
-		c, err := buildFilegroupFile(target, source, out)
-		if err != nil {
-			return err
-		}
-		changed = changed || c
-	}
-	if target.HasLabel("py") && !target.IsBinary {
-		// Pre-emptively create __init__.py files so the outputs can be loaded dynamically.
-		// It's a bit cheeky to do non-essential language-specific logic but this enables
-		// a lot of relatively normal Python workflows.
-		// Errors are deliberately ignored.
-		if pkg := state.Graph.Package(target.Label.PackageName); pkg == nil || !pkg.HasOutput("__init__.py") {
-			// Don't create this if someone else is going to create this in the package.
-			createInitPy(outDir)
-		}
-	}
-	if _, err := calculateAndCheckRuleHash(state, target); err != nil {
-		return err
-	} else if changed {
-		target.SetState(core.Built)
-	} else {
-		target.SetState(core.Unchanged)
-	}
-	state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
-	return nil
-}
-
-func buildFilegroupFile(target *core.BuildTarget, fromPath, toPath string) (bool, error) {
-	buildingFilegroupMutex.Lock()
-	m, present := buildingFilegroupOutputs[toPath]
-	if !present {
-		m = &sync.Mutex{}
-		buildingFilegroupOutputs[toPath] = m
-	}
-	m.Lock()
-	buildingFilegroupMutex.Unlock()
-	changed, err := moveOutput(target, fromPath, toPath, true)
-	m.Unlock()
-	buildingFilegroupMutex.Lock()
-	delete(buildingFilegroupOutputs, toPath)
-	buildingFilegroupMutex.Unlock()
-	return changed, err
-}
-
-// copyFilegroupHashes copies the hashes of the inputs of this filegroup to their outputs.
-// This is a small optimisation to ensure we don't need to recalculate them unnecessarily.
-func copyFilegroupHashes(state *core.BuildState, target *core.BuildTarget) {
-	outDir := target.OutDir()
-	localSources := target.AllLocalSourcePaths(state.Graph)
-	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		if out, _ := filegroupOutputPath(target, outDir, localSources[i], source); out != source {
-			movePathHash(source, out, true)
-		}
-	}
-}
-
-// updateHashFilegroupPaths sets the output paths on a hash_filegroup rule.
-// Unlike normal filegroups, hash filegroups can't calculate these themselves very readily.
-func updateHashFilegroupPaths(state *core.BuildState, target *core.BuildTarget) {
-	outDir := target.OutDir()
-	localSources := target.AllLocalSourcePaths(state.Graph)
-	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		_, relOut := filegroupOutputPath(target, outDir, localSources[i], source)
-		target.AddOutput(relOut)
-	}
-}
-
-// filegroupOutputPath returns the output path for a single filegroup source.
-func filegroupOutputPath(target *core.BuildTarget, outDir, source, full string) (string, string) {
-	if !target.IsHashFilegroup {
-		return path.Join(outDir, source), source
-	}
-	// Hash filegroups have a hash embedded into the output name.
-	ext := path.Ext(source)
-	before := source[:len(source)-len(ext)]
-	hash, err := pathHash(full, false)
-	if err != nil {
-		panic(err)
-	}
-	out := before + "-" + base64.RawURLEncoding.EncodeToString(hash) + ext
-	return path.Join(outDir, out), out
-}
-
-func createInitPy(dir string) {
-	initPy := path.Join(dir, "__init__.py")
-	if core.PathExists(initPy) {
-		return
-	}
-	if f, err := os.OpenFile(initPy, os.O_RDONLY|os.O_CREATE, 0444); err == nil {
-		f.Close()
-	}
-	dir = path.Dir(dir)
-	if dir != core.GenDir && dir != "." && !core.PathExists(path.Join(dir, "__init__.py")) {
-		createInitPy(dir)
 	}
 }
 

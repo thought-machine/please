@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"core"
+	"fs"
 )
 
 // filegroupCommand is the command we put on filegroup rules.
@@ -312,7 +313,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	} else if strings.Contains(src, "/") {
 		// Target is in a subdirectory, check nobody else owns that.
 		for dir := path.Dir(path.Join(s.pkg.Name, src)); dir != s.pkg.Name && dir != "."; dir = path.Dir(dir) {
-			s.Assert(!core.IsPackage(s.state, dir), "Trying to use file %s, but that belongs to another package (%s)", src, dir)
+			s.Assert(!fs.IsPackage(s.state.Config.Parse.BuildFileName, dir), "Trying to use file %s, but that belongs to another package (%s)", src, dir)
 		}
 	} else if tool {
 		// "go" as a source is interpreted as a file, as a tool it's interpreted as something on the PATH.
