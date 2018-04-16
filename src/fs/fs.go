@@ -3,6 +3,8 @@ package fs
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"syscall"
@@ -46,4 +48,57 @@ func getInode(filename string) (uint64, error) {
 		return 0, fmt.Errorf("Not a syscall.Stat_t")
 	}
 	return s.Ino, nil
+}
+
+// CopyFile copies a file from 'from' to 'to', with an attempt to perform a copy & rename
+// to avoid chaos if anything goes wrong partway.
+func CopyFile(from string, to string, mode os.FileMode) error {
+	fromFile, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer fromFile.Close()
+	return WriteFile(fromFile, to, mode)
+}
+
+// WriteFile writes data from a reader to the file named 'to', with an attempt to perform
+// a copy & rename to avoid chaos if anything goes wrong partway.
+func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
+	if err := os.RemoveAll(to); err != nil {
+		return err
+	}
+	dir, file := path.Split(to)
+	if err := os.MkdirAll(dir, DirPermissions); err != nil {
+		return err
+	}
+	tempFile, err := ioutil.TempFile(dir, file)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(tempFile, fromFile); err != nil {
+		return err
+	}
+	if err := tempFile.Close(); err != nil {
+		return err
+	}
+	// OK, now file is written; adjust permissions appropriately.
+	if mode == 0 {
+		mode = 0664
+	}
+	if err := os.Chmod(tempFile.Name(), mode); err != nil {
+		return err
+	}
+	// And move it to its final destination.
+	return os.Rename(tempFile.Name(), to)
+}
+
+// CopyOrLinkFile either copies or hardlinks a file based on the link argument.
+// Falls back to a copy if link fails and fallback is true.
+func CopyOrLinkFile(from, to string, mode os.FileMode, link, fallback bool) error {
+	if link {
+		if err := os.Link(from, to); err == nil || !fallback {
+			return err
+		}
+	}
+	return CopyFile(from, to, mode)
 }

@@ -3,6 +3,7 @@ go_library(
     srcs = ['export.go'],
     deps = [
         '//src/core',
+        '//src/fs',
         '//src/gc',
         '//third_party/go:logging',
     ],

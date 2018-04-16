@@ -3,6 +3,7 @@ go_library(
     srcs = ['gc.go'],
     deps = [
         '//src/core',
+        '//src/fs',
         '//src/parse/asp',
         '//third_party/go:logging',
         '//third_party/go:prompter',

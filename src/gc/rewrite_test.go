@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"core"
+	"fs"
 )
 
 func TestRewriteFile(t *testing.T) {
@@ -16,7 +17,7 @@ func TestRewriteFile(t *testing.T) {
 	state.Config.Parse.PyLib = "src"
 	// Copy file to avoid any issues with links etc.
 	wd, _ := os.Getwd()
-	err := core.CopyFile("src/gc/test_data/before.build", path.Join(wd, "test.build"), 0644)
+	err := fs.CopyFile("src/gc/test_data/before.build", path.Join(wd, "test.build"), 0644)
 	assert.NoError(t, err)
 	assert.NoError(t, RewriteFile(state, "test.build", []string{"prometheus", "cover"}))
 	rewritten, err := ioutil.ReadFile("test.build")

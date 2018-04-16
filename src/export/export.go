@@ -11,6 +11,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"fs"
 	"gc"
 )
 
@@ -85,7 +86,7 @@ func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 			if err := os.MkdirAll(outDir, core.DirPermissions); err != nil {
 				log.Fatalf("Failed to create export dir %s: %s", outDir, err)
 			}
-			if err := core.CopyFile(path.Join(target.OutDir(), out), fullPath, target.OutMode()); err != nil {
+			if err := fs.CopyFile(path.Join(target.OutDir(), out), fullPath, target.OutMode()); err != nil {
 				log.Fatalf("Failed to copy export file: %s", err)
 			}
 		}

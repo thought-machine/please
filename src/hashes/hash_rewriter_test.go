@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"core"
+	"fs"
 )
 
 func TestRewriteHashes(t *testing.T) {
@@ -16,7 +17,7 @@ func TestRewriteHashes(t *testing.T) {
 	state.Config.Parse.PyLib = "src"
 	// Copy file to avoid any issues with links etc.
 	wd, _ := os.Getwd()
-	err := core.CopyFile("src/hashes/test_data/before.build", path.Join(wd, "test.build"), 0644)
+	err := fs.CopyFile("src/hashes/test_data/before.build", path.Join(wd, "test.build"), 0644)
 	assert.NoError(t, err)
 	assert.NoError(t, rewriteHashes(state, "test.build", "test_x86", map[string]string{
 		"test1": "b9643f8154a9e9912d730a931d329afc82a44a52",

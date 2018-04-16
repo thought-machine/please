@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -106,48 +105,6 @@ func StartedAtRepoRoot() bool {
 	return RepoRoot == initialWorkingDir
 }
 
-// CopyFile copies a file from 'from' to 'to', with an attempt to perform a copy & rename
-// to avoid chaos if anything goes wrong partway.
-func CopyFile(from string, to string, mode os.FileMode) error {
-	fromFile, err := os.Open(from)
-	if err != nil {
-		return err
-	}
-	defer fromFile.Close()
-	return WriteFile(fromFile, to, mode)
-}
-
-// WriteFile writes data from a reader to the file named 'to', with an attempt to perform
-// a copy & rename to avoid chaos if anything goes wrong partway.
-func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
-	if err := os.RemoveAll(to); err != nil {
-		return err
-	}
-	dir, file := path.Split(to)
-	if err := os.MkdirAll(dir, DirPermissions); err != nil {
-		return err
-	}
-	tempFile, err := ioutil.TempFile(dir, file)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(tempFile, fromFile); err != nil {
-		return err
-	}
-	if err := tempFile.Close(); err != nil {
-		return err
-	}
-	// OK, now file is written; adjust permissions appropriately.
-	if mode == 0 {
-		mode = 0664
-	}
-	if err := os.Chmod(tempFile.Name(), mode); err != nil {
-		return err
-	}
-	// And move it to its final destination.
-	return os.Rename(tempFile.Name(), to)
-}
-
 // RecursiveCopyFile copies either a single file or a directory.
 // If 'link' is true then we'll hardlink files instead of copying them.
 // If 'fallback' is true then we'll fall back to a copy if linking fails.
@@ -158,21 +115,10 @@ func RecursiveCopyFile(from string, to string, mode os.FileMode, link, fallback 
 			if isDir {
 				return os.MkdirAll(dest, DirPermissions)
 			}
-			return copyOrLinkFile(name, dest, mode, link, fallback)
+			return fs.CopyOrLinkFile(name, dest, mode, link, fallback)
 		})
 	}
-	return copyOrLinkFile(from, to, mode, link, fallback)
-}
-
-// Either copies or hardlinks a file based on the link argument.
-// Falls back to a copy if link fails and fallback is true.
-func copyOrLinkFile(from, to string, mode os.FileMode, link, fallback bool) error {
-	if link {
-		if err := os.Link(from, to); err == nil || !fallback {
-			return err
-		}
-	}
-	return CopyFile(from, to, mode)
+	return fs.CopyOrLinkFile(from, to, mode, link, fallback)
 }
 
 // safeBuffer is an io.Writer that ensures that only one thread writes to it at a time.

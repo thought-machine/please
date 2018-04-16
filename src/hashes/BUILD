@@ -19,6 +19,7 @@ go_test(
     deps = [
         ':hashes',
         '//src/core',
+        '//src/fs',
         '//third_party/go:testify',
     ],
 )

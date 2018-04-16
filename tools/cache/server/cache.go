@@ -267,7 +267,7 @@ func (cache *Cache) StoreArtifact(artPath string, key []byte, symlink string) er
 		}
 	} else {
 		log.Debug("Writing artifact to %s", fullPath)
-		if err := core.WriteFile(bytes.NewReader(key), fullPath, 0); err != nil {
+		if err := fs.WriteFile(bytes.NewReader(key), fullPath, 0); err != nil {
 			log.Errorf("Could not create %s artifact: %s", fullPath, err)
 			cache.removeAndDeleteFile(artPath, lock)
 			return err
