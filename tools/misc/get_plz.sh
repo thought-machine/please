@@ -31,16 +31,14 @@ done
 ln -sf "${LOCATION}/please" "${LOCATION}/plz"
 
 if ! hash plz 2>/dev/null; then
-    echo "Adding ~/.please to PATH..."
-    export PATH="${PATH}:~/.please"
-    if [ -n "$ZSH_VERSION" ]; then
-        echo 'export PATH="${PATH}:~/.please"' >> ~/.zshrc
-        echo "You may need to run source ~/.zshrc to pick up the new PATH."
-    elif [ -n "$BASH_VERSION" ]; then
-        echo 'export PATH="${PATH}:~/.please"' >> ~/.bashrc
-        echo "You may need to run source ~/.bashrc to pick up the new PATH."
+    echo "Adding plz to PATH..."
+    if [ -d ~/.local/bin ]; then
+        ln -s ~/.please/plz ~/.local/bin/plz
+    elif [ -f ~/.profile ]; then
+        echo 'export PATH="${PATH}:~/.please"' >> ~/.profile
+        echo "You may need to run 'source ~/.profile' to pick up the new PATH."
     else
-        echo "Unknown shell, won't attempt to modify rc files."
+        echo "Unsure how to add to PATH, not modifying anything."
     fi
 fi
 
