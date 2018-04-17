@@ -4,20 +4,14 @@ Note that these do pretty much nothing beyond collecting the files. In future we
 implement something more advanced (ala .sar files or whatever).
 """
 
-# Used by sh_binary to separate the compressed files from the actual script.
-_TARBALL_BOUNDARY = '__TARFILE_FOLLOWS__'
-
 # NB: This string is formatted strangely due to bash variable expansion being a massive pain.
 _SH_BINARY_TMPL_PREFIX = """
-SKIP=\\\\$(awk '/^%s/ { print NR + 1; exit 0; }' \\\\$0)\n\
-THIS=\\\\$0\n\
-tail -n +\\\\$SKIP \\\\$THIS | tar -xz -C \\\\$(dirname \\\\$0)
+unzip \\\\$0\n\
 """
 
 _SH_BINARY_TMPL_SUFFIX = """
 exit 0\n\
-%s"""
-
+"""
 
 def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:list&features&tags=None):
     """Generates a shell script binary, essentially just the given source.
@@ -41,14 +35,17 @@ def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:l
         labels=labels,
     )
 
-
 def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:list&features&tags=None):
     """Generates a shell script binary.
 
+    It assumes that zip/unzip are in your path.
+
+    TODO(fabian): Update this to use jarcat (or something with a deterministic output).
+
     The resulting script will contain three things:
-    1) Code necessary to untar dependent files.
+    1) Code necessary to unzip dependent files.
     2) The user defined shell script.
-    3) The tar ball containing all dependent files.
+    3) The zipfile containing all dependent files.
 
     Args:
       name (str): Name of the rule
@@ -57,19 +54,20 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
       visibility (list): Visibility declaration of the rule.
       labels (list): List of labels.
     """
-    # No need to go through tar/untar and injecting code if there are no dependencies
+    # No need to go through zip/unzip and injecting code if there are no dependencies
     if deps:
         cmds = ' && '.join([
             # Use the same shebang as the original script
             'head -1 $SRCS > $OUT',
             # Inject bash code to untar the compressed files.
-            'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_PREFIX % _TARBALL_BOUNDARY),
+            'echo "%s" >> $OUT' % _SH_BINARY_TMPL_PREFIX,
             # Inject the user defined script.
             'cat $SRCS >> $OUT',
             # Inject the tar ball boundary.
-            'echo "%s" >> $OUT' % (_SH_BINARY_TMPL_SUFFIX % _TARBALL_BOUNDARY),
+            'echo "%s" >> $OUT' % _SH_BINARY_TMPL_SUFFIX,
             # Compress the dependent files and dump out into the bash script.
-            'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\\.\\///g" | tar zc -f - --files-from - >> $OUT',
+            'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\\.\\///g" | zip _%s#zipfile -@' % name,
+            'cat _%s#zipfile.zip >> $OUT' % name,
         ])
     else:
         cmds = 'cp $SRCS $OUT'
@@ -85,7 +83,6 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
         labels = labels,
         visibility = visibility,
     )
-
 
 def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=None, deps:list=None, size:str=None,
             visibility:list=None, flags:str='', flaky:bool|int=0, test_outputs:list=None, timeout:int=0,
@@ -127,7 +124,6 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
         container=container,
         test_sandbox=sandbox,
     )
-
 
 def sh_cmd(name:str, cmd:str|dict, srcs:list|dict=None, out:list=None, shell:str='/bin/sh',
            labels:list&features&tags=None, deps:list=None, visibility:list=None):
