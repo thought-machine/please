@@ -40,6 +40,8 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
 
     It assumes that zip/unzip are in your path.
 
+    TODO(fabian): Update this to use jarcat (or something with a deterministic output).
+
     The resulting script will contain three things:
     1) Code necessary to unzip dependent files.
     2) The user defined shell script.
