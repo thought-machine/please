@@ -218,11 +218,13 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 				}
 			} else if f.IncludeOther && !f.HasExistingFile(path) {
 				log.Debug("Including existing non-zip file %s", path)
-				if b, err := ioutil.ReadFile(path); err != nil {
+				if info, err := os.Lstat(path); err != nil {
+					return err
+				} else if b, err := ioutil.ReadFile(path); err != nil {
 					return fmt.Errorf("Error reading %s to zipfile: %s", path, err)
 				} else if err := f.StripBytecodeTimestamp(path, b); err != nil {
 					return err
-				} else if err := f.WriteFile(path, b); err != nil {
+				} else if err := f.WriteFile(path, b, info.Mode()&os.ModePerm); err != nil {
 					return err
 				}
 			}
@@ -299,7 +301,7 @@ func (f *File) AddInitPyFiles() error {
 			}
 			log.Debug("Adding %s", initPyPath)
 			f.files[initPyPath] = fileRecord{}
-			if err := f.WriteFile(initPyPath, []byte{}); err != nil {
+			if err := f.WriteFile(initPyPath, []byte{}, 0644); err != nil {
 				return err
 			}
 		}
@@ -310,7 +312,7 @@ func (f *File) AddInitPyFiles() error {
 // AddManifest adds a manifest to the given zip writer with a Main-Class entry (and a couple of others)
 func (f *File) AddManifest(mainClass string) error {
 	manifest := fmt.Sprintf("Manifest-Version: 1.0\nMain-Class: %s\n", mainClass)
-	return f.WriteFile("META-INF/MANIFEST.MF", []byte(manifest))
+	return f.WriteFile("META-INF/MANIFEST.MF", []byte(manifest), 0644)
 }
 
 // HasExistingFile returns true if the writer has already written the given file.
@@ -353,7 +355,7 @@ func (f *File) handleConcatenatedFiles() error {
 	}
 	sort.Strings(files)
 	for _, name := range files {
-		if err := f.WriteFile(name, f.concatenatedFiles[name]); err != nil {
+		if err := f.WriteFile(name, f.concatenatedFiles[name], 0644); err != nil {
 			return err
 		}
 	}
@@ -374,12 +376,13 @@ func (f *File) addFile(fh *zip.FileHeader, r io.Reader, crc uint32) error {
 }
 
 // WriteFile writes a complete file to the writer.
-func (f *File) WriteFile(filename string, data []byte) error {
+func (f *File) WriteFile(filename string, data []byte, mode os.FileMode) error {
 	filename = path.Join(f.Prefix, filename)
 	fh := zip.FileHeader{
 		Name:   filename,
 		Method: zip.Deflate,
 	}
+	fh.SetMode(mode)
 	fh.SetModTime(modTime)
 
 	for _, ext := range f.StoreSuffix {

@@ -149,7 +149,7 @@ func main() {
 	if opts.Manifest != "" {
 		b, err := ioutil.ReadFile(opts.Manifest)
 		must(err)
-		must(f.WriteFile("META-INF/MANIFEST.MF", b))
+		must(f.WriteFile("META-INF/MANIFEST.MF", b, 0644))
 	}
 	for _, filename := range opts.In.Get() {
 		must(f.AddFiles(filename))

@@ -100,7 +100,7 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	}
 	// We always append the final if __name__ == '__main__' bit.
 	b = append(b, MustAsset("pex_run.py")...)
-	return f.WriteFile("__main__.py", b)
+	return f.WriteFile("__main__.py", b, 0644)
 }
 
 // pythonBool returns a Python bool representation of a Go bool.
