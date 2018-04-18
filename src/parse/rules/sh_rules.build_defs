@@ -26,7 +26,6 @@ chmod +x $tmp/$(basename $0)
 exec $tmp/$(basename $0)
 exit 0
 __SCRIPT_STARTS_HERE__
-trap "rm -rf $(dirname $0)" EXIT HUP TERM INT QUIT USR1 USR2
 """.replace('$', '\\\$').replace('"', '\\"')
 
 _SH_BINARY_TMPL_SUFFIX = """
