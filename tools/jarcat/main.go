@@ -51,7 +51,7 @@ func mustReadPreamble(path string) string {
 var opts = struct {
 	Usage                 string
 	Out                   string            `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
-	In                    []string          `short:"i" long:"input" description:"Input directory" required:"true"`
+	In                    cli.StdinStrings  `short:"i" long:"input" description:"Input directory" required:"true"`
 	Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
 	ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
 	ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
@@ -98,7 +98,7 @@ Any apparent relationship between the name of this tool and bonsai kittens is co
 }
 
 func main() {
-	cli.ParseFlagsOrDie("Jarcat", "9.3.2", &opts)
+	cli.ParseFlagsOrDie("Jarcat", "12.1.4", &opts)
 	if opts.DumbMode {
 		opts.Suffix = nil
 		opts.ExcludeSuffix = nil
@@ -151,7 +151,7 @@ func main() {
 		must(err)
 		must(f.WriteFile("META-INF/MANIFEST.MF", b))
 	}
-	for _, filename := range opts.In {
+	for _, filename := range opts.In.Get() {
 		must(f.AddFiles(filename))
 	}
 }

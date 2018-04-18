@@ -584,16 +584,6 @@ func moveDir(dir string) (string, error) {
 	return name, os.Rename(dir, name)
 }
 
-// ContainsString returns true if the given slice contains an individual string.
-func ContainsString(needle string, haystack []string) bool {
-	for _, straw := range haystack {
-		if needle == straw {
-			return true
-		}
-	}
-	return false
-}
-
 // PathExists is an alias to fs.PathExists.
 // TODO(peterebden): Remove and migrate everything over.
 func PathExists(filename string) bool {

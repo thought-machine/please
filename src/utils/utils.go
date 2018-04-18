@@ -2,14 +2,13 @@
 package utils
 
 import (
-	"bufio"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
 
+	"cli"
 	"core"
 	"fs"
 )
@@ -34,7 +33,7 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 			} else if isABuildFile(basename, config) && !isDir {
 				dir, _ := path.Split(name)
 				ch <- strings.TrimRight(dir, "/")
-			} else if core.ContainsString(name, config.Parse.ExperimentalDir) {
+			} else if cli.ContainsString(name, config.Parse.ExperimentalDir) {
 				return filepath.SkipDir // Skip the experimental directory if it's set
 			}
 			// Check against blacklist
@@ -52,8 +51,6 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 	return ch
 }
 
-var seenStdin = false // Used to track that we don't try to read stdin twice
-
 // isABuildFile returns true if given filename is a build file name.
 func isABuildFile(name string, config *core.Configuration) bool {
 	for _, buildFileName := range config.Parse.BuildFileName {
@@ -62,40 +59,4 @@ func isABuildFile(name string, config *core.Configuration) bool {
 		}
 	}
 	return false
-}
-
-// ReadStdin reads a sequence of space-delimited words from standard input.
-// Words are pushed onto the returned channel asynchronously.
-func ReadStdin() <-chan string {
-	c := make(chan string)
-	if seenStdin {
-		log.Fatalf("Repeated - on command line; can't reread stdin.")
-	}
-	seenStdin = true
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		scanner.Split(bufio.ScanWords)
-		for scanner.Scan() {
-			s := strings.TrimSpace(scanner.Text())
-			if s != "" {
-				c <- s
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			log.Fatalf("Error reading stdin: %s", err)
-		}
-		close(c)
-	}()
-	return c
-}
-
-// ReadAllStdin reads standard input in its entirety to a slice.
-// Since this reads it completely before returning it won't handle a slow input
-// very nicely. ReadStdin is therefore preferable when possible.
-func ReadAllStdin() []string {
-	var ret []string
-	for s := range ReadStdin() {
-		ret = append(ret, s)
-	}
-	return ret
 }
