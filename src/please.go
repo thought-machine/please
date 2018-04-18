@@ -272,14 +272,14 @@ var opts struct {
 		Completions struct {
 			Cmd  string `long:"cmd" description:"Command to complete for" default:"build"`
 			Args struct {
-				Fragments []string `positional-arg-name:"fragment" description:"Initial fragment to attempt to complete"`
+				Fragments cli.StdinStrings `positional-arg-name:"fragment" description:"Initial fragment to attempt to complete"`
 			} `positional-args:"true"`
 		} `command:"completions" subcommands-optional:"true" description:"Prints possible completions for a string."`
 		AffectedTargets struct {
 			Tests        bool `long:"tests" description:"Shows only affected tests, no other targets."`
 			Intransitive bool `long:"intransitive" description:"Shows only immediately affected targets, not transitive dependencies."`
 			Args         struct {
-				Files []string `positional-arg-name:"files" description:"Files to query affected tests for"`
+				Files cli.StdinStrings `positional-arg-name:"files" required:"true" description:"Files to query affected tests for"`
 			} `positional-args:"true"`
 		} `command:"affectedtargets" description:"Prints any targets affected by a set of files."`
 		Input struct {
@@ -300,7 +300,7 @@ var opts struct {
 		WhatOutputs struct {
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
 			Args      struct {
-				Files []string `positional-arg-name:"files" description:"Files to query targets responsible for"`
+				Files cli.StdinStrings `positional-arg-name:"files" required:"true" description:"Files to query targets responsible for"`
 			} `positional-args:"true"`
 		} `command:"whatoutputs" description:"Prints out target(s) responsible for outputting provided file(s)"`
 		Rules struct {
@@ -499,10 +499,7 @@ var buildFunctions = map[string]func() bool{
 			targets = core.FindOwningPackages(state, files)
 		}
 		return runQuery(true, targets, func(state *core.BuildState) {
-			if len(files) == 1 && files[0] == "-" {
-				files = cli.ReadAllStdin()
-			}
-			query.AffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
+			query.AffectedTargets(state.Graph, files.Get(), opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
 		})
 	},
 	"input": func() bool {
@@ -518,10 +515,7 @@ var buildFunctions = map[string]func() bool{
 	"completions": func() bool {
 		// Somewhat fiddly because the inputs are not necessarily well-formed at this point.
 		opts.ParsePackageOnly = true
-		fragments := opts.Query.Completions.Args.Fragments
-		if len(fragments) == 1 && fragments[0] == "-" {
-			fragments = cli.ReadAllStdin()
-		}
+		fragments := opts.Query.Completions.Args.Fragments.Get()
 		if opts.Query.Completions.Cmd == "help" {
 			// Special-case completing help topics rather than build targets.
 			if len(fragments) == 0 {
@@ -552,12 +546,8 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"whatoutputs": func() bool {
-		files := opts.Query.WhatOutputs.Args.Files
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			if len(files) == 1 && files[0] == "-" {
-				files = cli.ReadAllStdin()
-			}
-			query.WhatOutputs(state.Graph, files, opts.Query.WhatOutputs.EchoFiles)
+			query.WhatOutputs(state.Graph, opts.Query.WhatOutputs.Args.Files.Get(), opts.Query.WhatOutputs.EchoFiles)
 		})
 	},
 	"rules": func() bool {
@@ -732,7 +722,7 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 	}
 	for _, target := range targets {
 		if target == core.BuildLabelStdin {
-			for label := range utils.ReadStdin() {
+			for label := range cli.ReadStdin() {
 				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0], true)
 			}
 		} else {

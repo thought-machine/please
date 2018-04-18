@@ -42,3 +42,27 @@ func ReadAllStdin() []string {
 	}
 	return ret
 }
+
+// StdinStrings is a type used for flags; it accepts a slice of strings but also
+// if it's a single - it reads its contents from stdin.
+type StdinStrings []string
+
+// Get reads stdin if needed and returns the contents of this slice.
+func (s StdinStrings) Get() []string {
+	if len(s) == 1 && s[0] == "-" {
+		return ReadAllStdin()
+	} else if ContainsString("-", s) {
+		log.Fatalf("Cannot pass - to read stdin along with other arguments.")
+	}
+	return s
+}
+
+// ContainsString returns true if the given slice contains an individual string.
+func ContainsString(needle string, haystack []string) bool {
+	for _, straw := range haystack {
+		if needle == straw {
+			return true
+		}
+	}
+	return false
+}

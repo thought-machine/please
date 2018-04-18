@@ -2,13 +2,13 @@
 package utils
 
 import (
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
 
+	"cli"
 	"core"
 	"fs"
 )
@@ -33,7 +33,7 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 			} else if isABuildFile(basename, config) && !isDir {
 				dir, _ := path.Split(name)
 				ch <- strings.TrimRight(dir, "/")
-			} else if core.ContainsString(name, config.Parse.ExperimentalDir) {
+			} else if cli.ContainsString(name, config.Parse.ExperimentalDir) {
 				return filepath.SkipDir // Skip the experimental directory if it's set
 			}
 			// Check against blacklist

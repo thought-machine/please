@@ -467,7 +467,7 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		case reflect.String:
 			// verify this is a legit setting for this field
 			if options := subfield.Tag.Get("options"); options != "" {
-				if !ContainsString(v, strings.Split(options, ",")) {
+				if !cli.ContainsString(v, strings.Split(options, ",")) {
 					return fmt.Errorf("Invalid value %s for field %s; options are %s", v, k, options)
 				}
 			}

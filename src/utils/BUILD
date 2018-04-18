@@ -6,6 +6,7 @@ go_library(
         '*_test.go',
     ]) + [':bindata'],
     deps = [
+        '//src/cli',
         '//src/core',
         '//src/fs',
         '//third_party/go:levenshtein',
