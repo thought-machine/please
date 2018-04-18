@@ -1,3 +1,9 @@
+Version 12.1.5
+--------------
+
+    * Use jarcat when creating archives for sh_binary rules.
+    * Extract sh_binary content into a temporary directory to execute script in.
+
 Version 12.1.4
 --------------
 
