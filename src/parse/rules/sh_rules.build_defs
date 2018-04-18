@@ -63,10 +63,10 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
             'echo "%s" >> _tmp.txt' % _SH_BINARY_TMPL_PREFIX,
             # Inject the user defined script.
             'cat $SRCS >> _tmp.txt',
-            # Inject the tar ball boundary.
+            # Inject a final exit so it doesn't try to execute the zipfile contents.
             'echo "%s" >> _tmp.txt' % _SH_BINARY_TMPL_SUFFIX,
             # Compress the dependent files and dump out into the bash script.
-            'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\\.\\///g" | $TOOL -i - -o $OUT --preamble_file _tmp.txt',
+            'find . -type f | grep -v $SRCS | sort | $TOOL -d -i - -o $OUT --preamble_file _tmp.txt --strip_prefix ./',
         ])
     else:
         cmds = 'cp $SRCS $OUT'
