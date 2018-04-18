@@ -58,15 +58,15 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
     if deps:
         cmds = ' && '.join([
             # Use the same shebang as the original script
-            'head -1 $SRCS > $OUT',
+            'head -1 $SRCS > _tmp.txt',
             # Inject bash code to untar the compressed files.
-            'echo "%s" >> $OUT' % _SH_BINARY_TMPL_PREFIX,
+            'echo "%s" >> _tmp.txt' % _SH_BINARY_TMPL_PREFIX,
             # Inject the user defined script.
-            'cat $SRCS >> $OUT',
+            'cat $SRCS >> _tmp.txt',
             # Inject the tar ball boundary.
-            'echo "%s" >> $OUT' % _SH_BINARY_TMPL_SUFFIX,
+            'echo "%s" >> _tmp.txt' % _SH_BINARY_TMPL_SUFFIX,
             # Compress the dependent files and dump out into the bash script.
-            'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\\.\\///g" | $TOOL -i - -o $OUT',
+            'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\\.\\///g" | $TOOL -i - -o $OUT --preamble_file _tmp.txt',
         ])
     else:
         cmds = 'cp $SRCS $OUT'
