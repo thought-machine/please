@@ -500,7 +500,7 @@ var buildFunctions = map[string]func() bool{
 		}
 		return runQuery(true, targets, func(state *core.BuildState) {
 			if len(files) == 1 && files[0] == "-" {
-				files = utils.ReadAllStdin()
+				files = cli.ReadAllStdin()
 			}
 			query.AffectedTargets(state.Graph, files, opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
 		})
@@ -520,7 +520,7 @@ var buildFunctions = map[string]func() bool{
 		opts.ParsePackageOnly = true
 		fragments := opts.Query.Completions.Args.Fragments
 		if len(fragments) == 1 && fragments[0] == "-" {
-			fragments = utils.ReadAllStdin()
+			fragments = cli.ReadAllStdin()
 		}
 		if opts.Query.Completions.Cmd == "help" {
 			// Special-case completing help topics rather than build targets.
@@ -555,7 +555,7 @@ var buildFunctions = map[string]func() bool{
 		files := opts.Query.WhatOutputs.Args.Files
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
 			if len(files) == 1 && files[0] == "-" {
-				files = utils.ReadAllStdin()
+				files = cli.ReadAllStdin()
 			}
 			query.WhatOutputs(state.Graph, files, opts.Query.WhatOutputs.EchoFiles)
 		})

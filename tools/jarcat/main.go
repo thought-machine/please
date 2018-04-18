@@ -98,7 +98,7 @@ Any apparent relationship between the name of this tool and bonsai kittens is co
 }
 
 func main() {
-	cli.ParseFlagsOrDie("Jarcat", "9.3.2", &opts)
+	cli.ParseFlagsOrDie("Jarcat", "12.1.4", &opts)
 	if opts.DumbMode {
 		opts.Suffix = nil
 		opts.ExcludeSuffix = nil

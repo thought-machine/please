@@ -66,8 +66,7 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
             # Inject the tar ball boundary.
             'echo "%s" >> $OUT' % _SH_BINARY_TMPL_SUFFIX,
             # Compress the dependent files and dump out into the bash script.
-            'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\\.\\///g" | zip _%s#zipfile -@' % name,
-            'cat _%s#zipfile.zip >> $OUT' % name,
+            'find . -type f | grep -v $SRCS | grep -v $(echo $OUT | sed "s|$TMP_DIR||g") | sed "s/^\\.\\///g" | $TOOL -i - -o $OUT',
         ])
     else:
         cmds = 'cp $SRCS $OUT'
@@ -76,6 +75,7 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
         name = name,
         srcs = [main],
         outs = ['%s.sh' % name],
+        tools = [CONFIG.JARCAT_TOOL],
         cmd = cmds,
         deps = deps,
         binary = True,
