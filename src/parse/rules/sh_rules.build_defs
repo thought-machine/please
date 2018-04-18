@@ -4,13 +4,33 @@ Note that these do pretty much nothing beyond collecting the files. In future we
 implement something more advanced (ala .sar files or whatever).
 """
 
-# NB: This string is formatted strangely due to bash variable expansion being a massive pain.
 _SH_BINARY_TMPL_PREFIX = """
-unzip \\\\$0\n\
-"""
+__is_darwin() {
+    [[ $(uname) == *"Darwin"* ]]
+}
+__is_linux() {
+    [[ $(uname) == *"Linux"* ]]
+}
+__mktmpdir() {
+    __is_darwin && mktemp -d -t $(openssl rand -base64 6) || mktemp -d
+}
+
+tmp=$(__mktmpdir)
+unzip $0 -d $tmp
+
+START=$(awk "/^__SCRIPT_STARTS_HERE__/ { print NR + 1; exit 0; }" $0)
+END=$(awk "/^__SCRIPT_ENDS_HERE__/ { print NR - 1; exit 0; }" $0)
+head -n $END $0 | tail -n $(($END-$START+1)) > $tmp/$(basename $0)
+chmod +x $tmp/$(basename $0)
+
+exec $tmp/$(basename $0)
+exit 0
+__SCRIPT_STARTS_HERE__
+trap "rm -rf $(dirname $0)" EXIT HUP TERM INT QUIT USR1 USR2
+""".replace('$', '\\\$').replace('"', '\\"')
 
 _SH_BINARY_TMPL_SUFFIX = """
-exit 0\n\
+__SCRIPT_ENDS_HERE__\
 """
 
 def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:list&features&tags=None):
@@ -66,7 +86,7 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
             # Inject a final exit so it doesn't try to execute the zipfile contents.
             'echo "%s" >> _tmp.txt' % _SH_BINARY_TMPL_SUFFIX,
             # Compress the dependent files and dump out into the bash script.
-            'find . -type f | grep -v $SRCS | sort | $TOOL -d -i - -o $OUT --preamble_file _tmp.txt --strip_prefix ./',
+            'find . -type f | grep -v $SRCS | sort | grep -v "_tmp.txt" | $TOOL -d -i - -o $OUT --preamble_file _tmp.txt --strip_prefix ./',
         ])
     else:
         cmds = 'cp $SRCS $OUT'
