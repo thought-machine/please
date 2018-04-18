@@ -224,15 +224,13 @@ func TestBuildEnvSection(t *testing.T) {
 	assert.Equal(t, expected, config.GetBuildEnv())
 }
 
-func TestPassEnvSection(t *testing.T) {
+func TestPassEnv(t *testing.T) {
 	err := os.Setenv("FOO", "first")
 	assert.NoError(t, err)
 	err = os.Setenv("BAR", "second")
 	assert.NoError(t, err)
 	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, "")
-	assert.Contains(t, config.Build.PassEnv, "FOO")
-	assert.Contains(t, config.Build.PassEnv, "BAR")
 	assert.NoError(t, err)
 	expected := []string{"BAR=second", "FOO=first"}
-	assert.Equal(t, expected, config.GetPassEnv())
+	assert.Equal(t, expected, config.GetBuildEnv())
 }

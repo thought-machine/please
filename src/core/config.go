@@ -428,26 +428,24 @@ func (config *Configuration) ContainerisationHash() []byte {
 func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvOnce.Do(func() {
 		config.buildEnvStored = []string{}
+
+		// from the BuildEnv config keyword
 		for k, v := range config.BuildEnv {
 			pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
 			config.buildEnvStored = append(config.buildEnvStored, pair)
 		}
+
+		// from the user's environment based on the PassEnv config keyword
+		for _, k := range config.Build.PassEnv {
+			v, isSet := os.LookupEnv(k)
+			if isSet {
+				config.buildEnvStored = append(config.buildEnvStored, k+"="+v)
+			}
+		}
+
 		sort.Strings(config.buildEnvStored)
 	})
 	return config.buildEnvStored
-}
-
-// GetPassEnv returns environment variables from the user's shell.
-func (config *Configuration) GetPassEnv() []string {
-	envVars := []string{}
-	for _, k := range config.Build.PassEnv {
-		v, isSet := os.LookupEnv(k)
-		if isSet {
-			envVars = append(envVars, k+"="+v)
-		}
-	}
-	sort.Strings(envVars)
-	return envVars
 }
 
 // ApplyOverrides applies a set of overrides to the config.
