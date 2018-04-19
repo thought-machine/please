@@ -1,3 +1,8 @@
+Version 12.1.6
+--------------
+
+    * Make sure run arguments are passed into sh_binary.
+
 Version 12.1.5
 --------------
 
