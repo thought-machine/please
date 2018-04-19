@@ -5,32 +5,11 @@ implement something more advanced (ala .sar files or whatever).
 """
 
 _SH_BINARY_TMPL_PREFIX = """
-__is_darwin() {
-    [[ $(uname) == *"Darwin"* ]]
-}
-__is_linux() {
-    [[ $(uname) == *"Linux"* ]]
-}
-__mktmpdir() {
-    __is_darwin && mktemp -d -t $(openssl rand -base64 6) || mktemp -d
-}
-
-tmp=$(__mktmpdir)
-unzip $0 -d $tmp
-
-START=$(awk "/^__SCRIPT_STARTS_HERE__/ { print NR + 1; exit 0; }" $0)
-END=$(awk "/^__SCRIPT_ENDS_HERE__/ { print NR - 1; exit 0; }" $0)
-head -n $END $0 | tail -n $(($END-$START+1)) > $tmp/$(basename $0)
-chmod +x $tmp/$(basename $0)
-
-cd $tmp && exec ./$(basename $0) $@
-exit 0
-__SCRIPT_STARTS_HERE__
-trap "rm -rf $(dirname $0)" EXIT HUP TERM INT QUIT USR1 USR2
+unzip -o $0
 """.replace('$', '\\\$').replace('"', '\\"')
 
 _SH_BINARY_TMPL_SUFFIX = """
-__SCRIPT_ENDS_HERE__\
+exit 0\n\
 """
 
 def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:list&features&tags=None):
