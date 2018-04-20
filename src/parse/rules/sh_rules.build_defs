@@ -5,7 +5,7 @@ implement something more advanced (ala .sar files or whatever).
 """
 
 _SH_BINARY_TMPL_PREFIX = """
-unzip -o $0
+unzip -o $0 -d $(dirname $0)
 """.replace('$', '\\\$').replace('"', '\\"')
 
 _SH_BINARY_TMPL_SUFFIX = """
