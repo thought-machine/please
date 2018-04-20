@@ -1,18 +1,10 @@
-Version 12.1.6
+Version 12.1.8
 --------------
 
     * Make sure run arguments are passed into sh_binary.
-
-Version 12.1.5
---------------
-
     * Use jarcat when creating archives for sh_binary rules.
-    * Extract sh_binary content into a temporary directory to execute script in.
-
-Version 12.1.4
---------------
-
     * Fix sh_binary to use zip/unzip instead of tar.
+    * Ensure sh_binary extracts files into the same directory as the script being run.
 
 Version 12.1.3
 --------------
