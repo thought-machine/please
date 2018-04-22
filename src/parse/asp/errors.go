@@ -139,10 +139,8 @@ func (stack *errorStack) equaliseLengths(sl []string) {
 
 // errorMessage returns the first part of the error message (i.e. the main message & file context)
 func (stack *errorStack) errorMessage() string {
-	// Take the outermost call in the stack since that is usually the most relevant to people.
-	n := len(stack.Stack) - 1
-	frame := stack.Stack[n]
-	if before, line, after := stack.readLine(stack.Readers[n], frame.Line-1); line != "" || before != "" || after != "" {
+	frame := stack.Stack[0]
+	if before, line, after := stack.readLine(stack.Readers[0], frame.Line-1); line != "" || before != "" || after != "" {
 		charsBefore := frame.Column - 1
 		if charsBefore < 0 { // strings.Repeat panics if negative
 			charsBefore = 0
