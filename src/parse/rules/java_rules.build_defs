@@ -2,6 +2,7 @@
 
 
 def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
+                 source_level:str=None, target_level:str=None, release_level:str=None,
                  deps:list=[], modular:bool=False, exported_deps:list=None, visibility:list=None,
                  test_only:bool&testonly=False, javac_flags:list&javacopts=None):
     """Compiles Java source to a .jar which can be collected by other rules.
@@ -15,6 +16,10 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
                             //project/main/resources and resources_root is project/main then
                             the resources in the .jar will be in the subdirectory 'resources'.
       deps (list): Dependencies of this rule.
+      source_level (str): The source level when compiling.
+      target_level (str): The target level when compiling.
+      release_level (str): The release level when compiling. source_level and target_level will be ignored.
+                           Only supported with a java 9+ compiler.
       modular (bool): Whether the produced file should be modular. Only supported with java 9+.
       exported_deps (list): Exported dependencies, ie. dependencies that other things depending on this
                             rule will also receive when they're compiling. This is quite important for
@@ -44,11 +49,27 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             javac_flags = ' '.join([flag for flag in javac_flags if flag != '-extra_checks:off'])
         else:
             javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
-        javac_flags = '-encoding utf8 -source %s -target %s -g %s' % (
-            CONFIG.JAVA_SOURCE_LEVEL,
-            CONFIG.JAVA_TARGET_LEVEL,
-            javac_flags,
-        )
+
+        javac_flags = '-encoding utf8 %s' % javac_flags
+
+        # The priority is the following (top -> higher priority):
+        # - release_level argument
+        # - source_level and target_level arguments
+        # - release_level config
+        # - source_level and target_level config
+        if release_level:
+            javac_flags = '--release %s %s' % (release_level, javac_flags)
+        elif source_level or release_level:
+            javac_flags = '-target %s %s' % (target_level or CONFIG.JAVA_TARGET_LEVEL, javac_flags)
+            javac_flags = '-source %s %s' % (source_level or CONFIG.JAVA_SOURCE_LEVEL, javac_flags)
+        elif CONFIG.JAVA_RELEASE_LEVEL:
+            javac_flags = '--release %s %s' % (CONFIG.JAVA_RELEASE_LEVEL, javac_flags)
+        else:
+            javac_flags = '-encoding utf8 -source %s -target %s -g %s' % (
+                CONFIG.JAVA_SOURCE_LEVEL,
+                CONFIG.JAVA_TARGET_LEVEL,
+                javac_flags,
+            )
 
         if not CONFIG.JAVAC_TOOL:
             javac_cmd = '$(worker %s) %s %s %s' % (CONFIG.JAVAC_WORKER, javac_flags, '--modular' if modular else '', '--src_dir' if src_dir else '')
@@ -115,7 +136,8 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
 
 
 def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
-                deps:list=None, visibility:list=None, test_only:bool&testonly=False, javac_flags:list&javacopts=None):
+                release_level:str=None, deps:list=None, visibility:list=None,
+                test_only:bool&testonly=False, javac_flags:list&javacopts=None):
     """Compiles Java source to a modular .jar which can be collected by other rules.
 
     Args:
@@ -126,6 +148,7 @@ def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None,
       resources_root (str): Root directory to treat resources relative to; ie. if we are in
                             //project/main/resources and resources_root is project/main then
                             the resources in the .jar will be in the subdirectory 'resources'.
+      release_level (str): The release level when compiling. Only supported with a java 9+ compiler.
       deps (list): Dependencies of this rule.
       exported_deps (list): Exported dependencies, ie. dependencies that other things depending on this
                             rule will also receive when they're compiling. This is quite important for
@@ -140,6 +163,7 @@ def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None,
                         src_dir=src_dir,
                         resources=resources,
                         resources_root=resources_root,
+                        release_level=release_level,
                         deps=deps,
                         visibility=visibility,
                         test_only=test_only,
@@ -148,7 +172,7 @@ def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None,
 
 
 def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, out:str=None,
-                       deps:list=[], data:list=None, visibility:list=None,
+                       release_level:str=None, deps:list=[], data:list=None, visibility:list=None,
                        jlink_args:str='--strip-debug --compress=2'):
     """Assembles a set of modules into an executable java runtime image.
 
@@ -157,6 +181,7 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
       main_module (str): Main module to set in the manifest. Has to be included in 'modules'.
       main_class (str): Main class to set in the manifest. Has to belong to 'main_module'.
       modules (list): Modules to be included in the runtime image.
+      release_level (str): The release level when compiling. Only supported with a java 9+ compiler.
       out (str): Name of the folder that contains the runtime image and the binary contained by it. Defaults to 'name'.
       deps (list): Dependencies of this rule.
       data (list): Runtime data files for this rule.
@@ -198,8 +223,9 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
     )
 
 
-def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, deps:list=[],
-                data:list=None, visibility:list=None, jvm_args:str=None,
+def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None,
+                source_level:str=None, target_level:str=None, release_level:str=None,
+                deps:list=[], data:list=None, visibility:list=None, jvm_args:str=None,
                 self_executable:bool=False, manifest:str=None):
     """Compiles a .jar from a set of Java libraries.
 
@@ -208,6 +234,10 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
       main_class (str): Main class to set in the manifest.
       out (str): Name of output .jar file. Defaults to name + .jar.
       srcs (list): Source files to compile.
+      source_level (str): The source level when compiling.
+      target_level (str): The target level when compiling.
+      release_level (str): The release level when compiling. source_level and target_level will be ignored.
+                           Only supported with a java 9+ compiler.
       deps (list): Dependencies of this rule.
       data (list): Runtime data files for this rule.
       visibility (list): Visibility declaration of this rule.
@@ -223,6 +253,9 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
             name = '_%s#lib' % name,
             srcs = srcs,
             deps = deps,
+            source_level = source_level,
+            target_level = target_level,
+            release_level = release_level
         )
         deps.append(lib_rule)
     if self_executable:

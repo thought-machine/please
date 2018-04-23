@@ -18,6 +18,7 @@ func TestPlzConfigWorking(t *testing.T) {
 	assert.Equal(t, "/path/to/java/home", config.Java.JavaHome)
 	assert.Equal(t, "8", config.Java.SourceLevel)
 	assert.Equal(t, "7", config.Java.TargetLevel)
+	assert.Equal(t, "10", config.Java.ReleaseLevel)
 }
 
 func TestPlzConfigFailing(t *testing.T) {
@@ -32,6 +33,7 @@ func TestPlzConfigProfile(t *testing.T) {
 	assert.Equal(t, "/opt/java/bin/javac", config.Java.JavacTool)
 	assert.Equal(t, "8", config.Java.SourceLevel)
 	assert.Equal(t, "8", config.Java.TargetLevel)
+	assert.Equal(t, "10", config.Java.ReleaseLevel)
 }
 
 func TestMultiplePlzConfigFiles(t *testing.T) {
