@@ -1,6 +1,7 @@
 package core
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -222,5 +223,16 @@ func TestBuildEnvSection(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/buildenv.plzconfig"}, "")
 	assert.NoError(t, err)
 	expected := []string{"BAR_BAR=first", "FOO_BAR=second"}
+	assert.Equal(t, expected, config.GetBuildEnv())
+}
+
+func TestPassEnv(t *testing.T) {
+	err := os.Setenv("FOO", "first")
+	assert.NoError(t, err)
+	err = os.Setenv("BAR", "second")
+	assert.NoError(t, err)
+	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, "")
+	assert.NoError(t, err)
+	expected := []string{"BAR=second", "FOO=first"}
 	assert.Equal(t, expected, config.GetBuildEnv())
 }

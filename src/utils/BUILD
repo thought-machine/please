@@ -6,6 +6,7 @@ go_library(
         '*_test.go',
     ]) + [':bindata'],
     deps = [
+        '//src/cli',
         '//src/core',
         '//src/fs',
         '//third_party/go:levenshtein',
@@ -22,14 +23,4 @@ go_bindata(
         '//tools/misc:wrapper_script',
     ],
     prefix = 'tools/misc',
-)
-
-go_test(
-    name = 'utils_test',
-    srcs = ['utils_test.go'],
-    data = ['test_data/stdin.txt'],
-    deps = [
-        ':utils',
-        '//third_party/go:testify',
-    ],
 )

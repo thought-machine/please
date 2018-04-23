@@ -83,6 +83,7 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 		setDefault(&config.Parse.BuildFileName, []string{"BUILD"})
 	}
 	setDefault(&config.Build.Path, []string{"/usr/local/bin", "/usr/bin", "/bin"})
+	setDefault(&config.Build.PassEnv, []string{})
 	setDefault(&config.Cover.FileExtension, []string{".go", ".py", ".java", ".js", ".cc", ".h", ".c"})
 	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc"})
 	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go", "js"})
@@ -258,6 +259,7 @@ type Configuration struct {
 		Sandbox           bool         `help:"True to sandbox individual build actions, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately." var:"BUILD_SANDBOX"`
 		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use."`
 		Nonce             string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
+		PassEnv           []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 	}
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
@@ -428,10 +430,21 @@ func (config *Configuration) ContainerisationHash() []byte {
 func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvOnce.Do(func() {
 		config.buildEnvStored = []string{}
+
+		// from the BuildEnv config keyword
 		for k, v := range config.BuildEnv {
 			pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
 			config.buildEnvStored = append(config.buildEnvStored, pair)
 		}
+
+		// from the user's environment based on the PassEnv config keyword
+		for _, k := range config.Build.PassEnv {
+			v, isSet := os.LookupEnv(k)
+			if isSet {
+				config.buildEnvStored = append(config.buildEnvStored, k+"="+v)
+			}
+		}
+
 		sort.Strings(config.buildEnvStored)
 	})
 	return config.buildEnvStored
@@ -469,7 +482,7 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		case reflect.String:
 			// verify this is a legit setting for this field
 			if options := subfield.Tag.Get("options"); options != "" {
-				if !ContainsString(v, strings.Split(options, ",")) {
+				if !cli.ContainsString(v, strings.Split(options, ",")) {
 					return fmt.Errorf("Invalid value %s for field %s; options are %s", v, k, options)
 				}
 			}

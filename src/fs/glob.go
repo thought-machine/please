@@ -121,7 +121,8 @@ func Walk(rootPath string, callback func(name string, isDir bool) error) error {
 	})
 }
 
-// WalkMode is like Walk but the callback receives an additional type specifying the file mode.
+// WalkMode is like Walk but the callback receives an additional type specifying the file mode type.
+// N.B. This only includes the bits of the mode that determine the mode type, not the permissions.
 func WalkMode(rootPath string, callback func(name string, isDir bool, mode os.FileMode) error) error {
 	// Compatibility with filepath.Walk which allows passing a file as the root argument.
 	if info, err := os.Stat(rootPath); err != nil {

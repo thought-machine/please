@@ -1,4 +1,4 @@
-package utils
+package cli
 
 import (
 	"os"
@@ -22,7 +22,7 @@ func TestReadAllEmptyStdin(t *testing.T) {
 
 func TestReadStdin(t *testing.T) {
 	seenStdin = false
-	f, err := os.Open("src/utils/test_data/stdin.txt")
+	f, err := os.Open("src/cli/test_data/stdin.txt")
 	assert.NoError(t, err)
 	defer f.Close()
 
@@ -45,7 +45,7 @@ func TestReadStdin(t *testing.T) {
 
 func TestReadAllStdin(t *testing.T) {
 	seenStdin = false
-	f, err := os.Open("src/utils/test_data/stdin.txt")
+	f, err := os.Open("src/cli/test_data/stdin.txt")
 	assert.NoError(t, err)
 	defer f.Close()
 
