@@ -43,7 +43,7 @@ h1, h2, h3, h4 {
     font-size: medium;
     text-transform: uppercase;
 }
-.green {
+.green, .experimental {
     color: #00FFA9;
 }
 .caps {

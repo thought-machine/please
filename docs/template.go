@@ -16,6 +16,7 @@ var iconImages = map[string]string{
 	"cache.html":            "teal3.png",
 	"commands.html":         "teal6.png",
 	"config.html":           "teal5.png",
+	"cross_compiling.html":  "teal5.png",
 	"dependencies.html":     "teal3.png",
 	"faq.html":              "teal4.png",
 	"intermediate.html":     "teal2.png",
