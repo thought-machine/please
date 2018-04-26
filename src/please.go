@@ -47,6 +47,7 @@ var opts struct {
 	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
 		Config     string          `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
+		Arch       cli.Arch        `short:"a" long:"arch" description:"Architecture to compile for."`
 		RepoRoot   cli.Filepath    `short:"r" long:"repo_root" description:"Root of repository to build."`
 		KeepGoing  bool            `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
 		NumThreads int             `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
@@ -720,6 +721,10 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 		// This is a bit crap really since it inhibits parallelism for the first step.
 		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false, state.Include, state.Exclude, false)
 	}
+	if opts.BuildFlags.Arch.Arch != "" {
+		// Set up a new subrepo for this architecture.
+		state.Graph.AddSubrepo(core.SubrepoForArch(state, opts.BuildFlags.Arch))
+	}
 	for _, target := range targets {
 		if target == core.BuildLabelStdin {
 			for label := range cli.ReadStdin() {
@@ -733,6 +738,9 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 }
 
 func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool) {
+	if opts.BuildFlags.Arch.Arch != "" {
+		target.PackageName = path.Join(opts.BuildFlags.Arch.String(), target.PackageName)
+	}
 	if target.IsAllSubpackages() {
 		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
 			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"), addToList)

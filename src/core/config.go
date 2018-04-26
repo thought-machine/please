@@ -141,11 +141,12 @@ func defaultPathIfExists(conf *string, dir, file string) {
 
 // DefaultConfiguration returns the default configuration object with no overrides.
 func DefaultConfiguration() *Configuration {
-	config := Configuration{}
+	config := Configuration{buildEnvStored: &storedBuildEnv{}}
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
+	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
 	config.Build.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Build.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
 	config.Build.Timeout = cli.Duration(10 * time.Minute)
@@ -250,6 +251,7 @@ type Configuration struct {
 		Port int `help:"Port to start the streaming build event server on."`
 	} `help:"The [events] section in the config contains settings relating to the internal build event system & streaming them externally."`
 	Build struct {
+		Arch              cli.Arch     `help:"Architecture to compile for. Defaults to the host architecture."`
 		Timeout           cli.Duration `help:"Default timeout for Dockerised tests, in seconds. Default is twenty minutes."`
 		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
 		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
@@ -388,8 +390,12 @@ type Configuration struct {
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
 
 	// buildEnvStored is a cached form of BuildEnv.
-	buildEnvStored []string
-	buildEnvOnce   sync.Once
+	buildEnvStored *storedBuildEnv
+}
+
+type storedBuildEnv struct {
+	Env  []string
+	Once sync.Once
 }
 
 // Hash returns a hash of the parts of this configuration that affect building targets in general.
@@ -426,26 +432,33 @@ func (config *Configuration) ContainerisationHash() []byte {
 
 // GetBuildEnv returns the build environment configured for this config object.
 func (config *Configuration) GetBuildEnv() []string {
-	config.buildEnvOnce.Do(func() {
-		config.buildEnvStored = []string{}
+	config.buildEnvStored.Once.Do(func() {
+		env := []string{
+			// Need to know these for certain rules, particularly Go rules.
+			"ARCH=" + config.Build.Arch.Arch,
+			"OS=" + config.Build.Arch.OS,
+			// These are slightly modified forms that are more convenient for some things.
+			"XARCH=" + config.Build.Arch.XArch(),
+			"XOS=" + config.Build.Arch.XOS(),
+		}
 
 		// from the BuildEnv config keyword
 		for k, v := range config.BuildEnv {
 			pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
-			config.buildEnvStored = append(config.buildEnvStored, pair)
+			env = append(env, pair)
 		}
 
 		// from the user's environment based on the PassEnv config keyword
 		for _, k := range config.Build.PassEnv {
-			v, isSet := os.LookupEnv(k)
-			if isSet {
-				config.buildEnvStored = append(config.buildEnvStored, k+"="+v)
+			if v, isSet := os.LookupEnv(k); isSet {
+				env = append(env, k+"="+v)
 			}
 		}
 
-		sort.Strings(config.buildEnvStored)
+		sort.Strings(env)
+		config.buildEnvStored.Env = env
 	})
-	return config.buildEnvStored
+	return config.buildEnvStored.Env
 }
 
 // ApplyOverrides applies a set of overrides to the config.

@@ -59,6 +59,14 @@ func TestPackageDir(t *testing.T) {
 	assert.Equal(t, ".", label.PackageDir())
 }
 
+func TestLooksLikeABuildLabel(t *testing.T) {
+	assert.True(t, LooksLikeABuildLabel("//src/core"))
+	assert.True(t, LooksLikeABuildLabel(":core"))
+	assert.True(t, LooksLikeABuildLabel("@test_x86:core"))
+	assert.False(t, LooksLikeABuildLabel("core"))
+	assert.False(t, LooksLikeABuildLabel("@test_x86"))
+}
+
 func TestComplete(t *testing.T) {
 	label := BuildLabel{}
 	completions := label.Complete("//src/c")

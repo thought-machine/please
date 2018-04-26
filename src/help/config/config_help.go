@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"core"
@@ -52,6 +53,8 @@ func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options
 		return fmt.Sprintf("%d", f.Uint())
 	} else if t.Name() == "BuildLabel" {
 		return "//src/core:core"
+	} else if t.Name() == "Arch" {
+		return runtime.GOOS + "_" + runtime.GOARCH
 	}
 	panic(fmt.Sprintf("Unknown type: %s", t.Kind()))
 }

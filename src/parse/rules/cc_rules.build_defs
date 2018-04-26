@@ -583,7 +583,7 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_
         ])
         tools['asm'] = [CONFIG.ASM_TOOL]
     else:
-        cmd = '$TOOLS_LD -r --format binary -o ${OUTS/.a/.o} $SRC && $TOOLS_AR rcs $OUT ${OUTS/.a/.o}'
+        cmd = '$TOOLS_LD -r --format binary %s -o ${OUTS/.a/.o} $SRC && $TOOLS_AR rcs $OUT ${OUTS/.a/.o}' % CONFIG.DEFAULT_LDFLAGS
         tools['ld'] = [CONFIG.LD_TOOL]
 
     lib_rule = build_rule(
@@ -709,20 +709,24 @@ int main(int argc, const char** argv) {
 """
 
 
+def _default_cflags(c, dbg):
+    """Returns the default cflags / cppflags for opt/dbg as appropriate."""
+    if c:
+        return CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS
+    else:
+        return CONFIG.DEFAULT_DBG_CPPFLAGS if dbg else CONFIG.DEFAULT_OPT_CPPFLAGS
+
+
 def _build_flags(compiler_flags:list, pkg_config_libs:list, defines=None, c=False, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
-    if c:
-        compiler_flags = [CONFIG.DEFAULT_DBG_CFLAGS if dbg else CONFIG.DEFAULT_OPT_CFLAGS] + compiler_flags
-    else:
-        compiler_flags = [CONFIG.DEFAULT_DBG_CPPFLAGS if dbg else CONFIG.DEFAULT_OPT_CPPFLAGS] + compiler_flags
-    compiler_flags.append('-fPIC')
+    compiler_flags += [_default_cflags(c, dbg), '-fPIC']
     if defines:
-        compiler_flags.extend(['-D' + define for define in defines])
+        compiler_flags += ['-D' + define for define in defines]
     pkg_config_cmd = ' '.join(['`pkg-config --cflags %s`' % x for x in pkg_config_libs])
     return ' '.join(compiler_flags) + ' ' + pkg_config_cmd
 
 
-def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, alwayslink=''):
+def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, alwayslink='', c=False, dbg=False):
     """Builds flags that we'll pass to the linker invocation."""
     pkg_config_cmd = ' '.join(['`pkg-config --libs %s`' % x for x in pkg_config_libs])
     objs = '`find . -name "*.o" -or -name "*.a" | sort`'
@@ -742,6 +746,8 @@ def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, a
     if shared:
         objs = '-shared %s%s %s %s%s' % (linker_prefix, _WHOLE_ARCHIVE, objs, linker_prefix, _NO_WHOLE_ARCHIVE)
     linker_flags = ' '.join([linker_prefix + f for f in linker_flags])
+    if not CONFIG.LINK_WITH_LD_TOOL:
+        linker_flags += ' ' + _default_cflags(c, dbg)
     return ' '.join([objs, build_id_flag, linker_flags, pkg_config_cmd])
 
 
@@ -766,13 +772,14 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags='', archive=Tr
 
 def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False, alwayslink=''):
     """Returns the commands needed for a cc_binary, cc_test or cc_shared_object rule."""
-    flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink)
+    dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=True)
+    opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=False)
     cmds = {
-        'dbg': '$TOOL -o ${OUT} %s %s' % (flags, extra_flags),
-        'opt': '$TOOL -o ${OUT} %s %s' % (flags, extra_flags),
+        'dbg': '$TOOL -o ${OUT} %s %s' % (dbg_flags, extra_flags),
+        'opt': '$TOOL -o ${OUT} %s %s' % (opt_flags, extra_flags),
     }
     if CONFIG.CPP_COVERAGE:
-        cmds['cover'] = '$TOOL -o ${OUT} %s %s %s' % (flags, extra_flags, _COVERAGE_FLAGS)
+        cmds['cover'] = '$TOOL -o ${OUT} %s %s %s' % (dbg_flags, extra_flags, _COVERAGE_FLAGS)
     return cmds, [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
                   CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL]
 

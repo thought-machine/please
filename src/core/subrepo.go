@@ -1,6 +1,8 @@
 package core
 
 import (
+	"cli"
+	"fmt"
 	"path"
 	"strings"
 )
@@ -14,6 +16,16 @@ type Subrepo struct {
 	Root string
 	// If this repo is output by a target, this is the target that creates it. Can be nil.
 	Target *BuildTarget
+	// If this repo has a different configuration (e.g. it's for a different architecture), it's stored here
+	State *BuildState
+}
+
+// SubrepoForArch creates a new subrepo for the given architecture.
+func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
+	return &Subrepo{
+		Name:  arch.String(),
+		State: state.ForArch(arch),
+	}
 }
 
 // MakeRelative makes a build label that is within this subrepo relative to it (i.e. strips the leading name part).
@@ -24,8 +36,11 @@ func (s *Subrepo) MakeRelative(label BuildLabel) BuildLabel {
 
 // MakeRelativeName is as MakeRelative but operates only on the package name.
 func (s *Subrepo) MakeRelativeName(name string) string {
-	if !strings.HasPrefix(name, s.Name) {
-		panic("cannot make label relative, it is not within this subrepo")
+	// Check for nil, makes it easier to call this without having so many conditionals.
+	if s == nil {
+		return name
+	} else if !strings.HasPrefix(name, s.Name) {
+		panic(fmt.Errorf("cannot make label %s relative, it is not within this subrepo (%s)", name, s.Name))
 	}
 	return strings.TrimPrefix(name[len(s.Name):], "/")
 }

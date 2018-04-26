@@ -216,24 +216,17 @@ func (label NamedOutputLabel) String() string {
 	return label.BuildLabel.String() + "|" + label.Output
 }
 
-// TryParseNamedOutputLabel attempts to parse a build output label. It's allowed to just be
+// MustParseNamedOutputLabel attempts to parse a build output label. It's allowed to just be
 // a normal build label as well.
 // The syntax is an extension of normal build labels: //package:target|output
-func TryParseNamedOutputLabel(target, currentPath string) (BuildInput, error) {
+// If the label refers to a subrepo then that's returned separately.
+func MustParseNamedOutputLabel(target string, pkg *Package) (BuildInput, string) {
 	if index := strings.IndexRune(target, '|'); index != -1 && index != len(target)-1 {
-		label, err := TryParseBuildLabel(target[:index], currentPath)
-		return NamedOutputLabel{BuildLabel: label, Output: target[index+1:]}, err
+		label, subrepo := ParseBuildLabelSubrepo(target[:index], pkg)
+		return NamedOutputLabel{BuildLabel: label.ForPackage(pkg), Output: target[index+1:]}, subrepo
 	}
-	return TryParseBuildLabel(target, currentPath)
-}
-
-// MustParseNamedOutputLabel is like TryParseNamedOutputLabel but panics on errors.
-func MustParseNamedOutputLabel(target, currentPath string) BuildInput {
-	label, err := TryParseNamedOutputLabel(target, currentPath)
-	if err != nil {
-		panic(err)
-	}
-	return label
+	label, subrepo := ParseBuildLabelSubrepo(target, pkg)
+	return label.ForPackage(pkg), subrepo
 }
 
 // A URLLabel represents a remote input that's defined by a URL.

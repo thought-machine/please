@@ -39,6 +39,7 @@ var httpClient http.Client
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 	start := time.Now()
 	target := state.Graph.TargetOrDie(label)
+	state = state.ForTarget(target)
 	target.SetState(core.Building)
 	if err := buildTarget(tid, state, target); err != nil {
 		if err == errStop {

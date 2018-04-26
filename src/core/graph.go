@@ -106,6 +106,17 @@ func (graph *BuildGraph) AddSubrepo(subrepo *Subrepo) {
 	graph.subrepos[subrepo.Name] = subrepo
 }
 
+// MaybeAddSubrepo adds the given subrepo to the graph, or returns the existing one if one is already registered.
+func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
+	graph.mutex.Lock()
+	defer graph.mutex.Unlock()
+	if s, present := graph.subrepos[subrepo.Name]; present {
+		return s
+	}
+	graph.subrepos[subrepo.Name] = subrepo
+	return subrepo
+}
+
 // Subrepo returns the subrepo with this name. It returns nil if one isn't registered.
 func (graph *BuildGraph) Subrepo(name string) *Subrepo {
 	graph.mutex.RLock()

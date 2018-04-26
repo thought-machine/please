@@ -16,6 +16,7 @@ go_binary(
     srcs = ['compiler.go'],
     deps = [
         '//src/cli',
+        '//src/core',
         '//src/parse/asp',
         '//third_party/go:logging',
     ],

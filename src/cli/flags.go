@@ -231,3 +231,53 @@ func (f *Filepath) Complete(match string) []flags.Completion {
 	}
 	return ret
 }
+
+// Arch represents a combined Go-style operating system and architecture pair, as in "linux_amd64".
+type Arch struct {
+	OS, Arch string
+}
+
+// NewArch constructs a new Arch instance.
+func NewArch(os, arch string) Arch {
+	return Arch{OS: os, Arch: arch}
+}
+
+// String prints this Arch to its string representation.
+func (arch *Arch) String() string {
+	return arch.OS + "_" + arch.Arch
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface
+func (arch *Arch) UnmarshalText(text []byte) error {
+	return arch.UnmarshalFlag(string(text))
+}
+
+// UnmarshalFlag implements the flags.Unmarshaler interface.
+func (arch *Arch) UnmarshalFlag(in string) error {
+	if parts := strings.Split(in, "_"); len(parts) == 2 && !strings.ContainsRune(in, '/') {
+		arch.OS = parts[0]
+		arch.Arch = parts[1]
+		return nil
+	}
+	return fmt.Errorf("Can't parse architecture %s (should be a Go-style arch pair, like 'linux_amd64' etc)", in)
+}
+
+// XOS returns the "alternative" OS spelling which some things prefer.
+// The difference here is that "darwin" is instead returned as "osx".
+func (arch *Arch) XOS() string {
+	if arch.OS == "darwin" {
+		return "osx"
+	}
+	return arch.OS
+}
+
+// XArch returns the "alternative" architecture spelling which some things prefer.
+// In this case amd64 is instead returned as x86_64 and x86 as x86_32.
+func (arch *Arch) XArch() string {
+	if arch.Arch == "amd64" {
+		return "x86_64"
+	} else if arch.Arch == "x86" {
+		return "x86_32"
+	}
+	return arch.Arch
+}

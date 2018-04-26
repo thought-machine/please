@@ -512,15 +512,26 @@ func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 	// Targets are always visible to other targets in the same directory.
 	if target.Label.PackageName == dep.Label.PackageName {
 		return true
-	}
-	if isExperimental(state, dep) && !isExperimental(state, target) {
+	} else if isExperimental(state, dep) && !isExperimental(state, target) {
 		log.Error("Target %s cannot depend on experimental target %s", target.Label, dep.Label)
 		return false
 	}
+	parent := target.Label.Parent()
+	// Visibility constraints currently do not include subrepos to handle cross-compiling nicely.
+	// This is a little dodgy (you can see into non-cross-compiled subrepos by duplicating their
+	// package names) but not the biggest concern right now.
+	if target.Subrepo != nil {
+		parent = target.Subrepo.MakeRelative(parent)
+	}
 	for _, vis := range dep.Visibility {
-		if vis.Includes(target.Label.Parent()) {
+		if vis.Includes(parent) {
+			return true
+		} else if dep.Subrepo != nil && dep.Subrepo.MakeRelative(vis).Includes(parent) {
 			return true
 		}
+	}
+	if dep.Subrepo != nil && dep.Subrepo.MakeRelative(dep.Label).PackageName == parent.PackageName {
+		return true
 	}
 	if isExperimental(state, target) {
 		log.Warning("Visibility restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)

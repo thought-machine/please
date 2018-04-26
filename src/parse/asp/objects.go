@@ -3,7 +3,6 @@ package asp
 import (
 	"fmt"
 	"reflect"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -706,8 +705,7 @@ func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 }
 
 // newConfig creates a new pyConfig object from the configuration.
-// This is typically only created once at global scope, other scopes copy it with
-// .Copy()
+// This is typically only created once at global scope, other scopes copy it with .Copy()
 func newConfig(config *core.Configuration) *pyConfig {
 	c := make(pyDict, 100)
 	v := reflect.ValueOf(config).Elem()
@@ -746,8 +744,7 @@ func newConfig(config *core.Configuration) *pyConfig {
 	if config.Bazel.Compatibility {
 		c["FEATURES"] = pyList{}
 	}
-	// These can't be changed (although really you shouldn't be able to find out the OS at parse time)
-	c["OS"] = pyString(runtime.GOOS)
-	c["ARCH"] = pyString(runtime.GOARCH)
+	c["OS"] = pyString(config.Build.Arch.OS)
+	c["ARCH"] = pyString(config.Build.Arch.Arch)
 	return &pyConfig{base: c}
 }

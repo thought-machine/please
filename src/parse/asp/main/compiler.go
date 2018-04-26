@@ -8,6 +8,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"cli"
+	"core"
 	"parse/asp"
 )
 
@@ -31,7 +32,7 @@ func main() {
 	if err := os.MkdirAll(opts.OutputDir, os.ModeDir|0775); err != nil {
 		log.Fatalf("%s", err)
 	}
-	p := asp.NewParser(nil)
+	p := asp.NewParser(core.NewDefaultBuildState())
 	for _, filename := range opts.Args.BuildFiles {
 		out := path.Join(opts.OutputDir, path.Base(filename)) + ".gob"
 		if err := p.ParseToFile(filename, out); err != nil {

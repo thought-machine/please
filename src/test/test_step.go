@@ -27,7 +27,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
 	startTime := time.Now()
 	target := state.Graph.TargetOrDie(label)
-	test(tid, state, label, target)
+	test(tid, state.ForTarget(target), label, target)
 	metrics.Record(target, time.Since(startTime))
 }
 

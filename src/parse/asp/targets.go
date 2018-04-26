@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"cli"
 	"core"
 	"fs"
 )
@@ -225,8 +226,7 @@ func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarg
 			// *sigh*... Bazel seems to allow an implicit : on the start of dependencies
 			str = ":" + str
 		}
-		label := core.ParseBuildLabel(str, s.pkg.Name)
-		target.AddMaybeExportedDependency(label, exported, false)
+		target.AddMaybeExportedDependency(parseLabel(s, str), exported, false)
 	})
 }
 
@@ -253,7 +253,7 @@ func addProvides(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 		for k, v := range d {
 			str, ok := v.(pyString)
 			s.Assert(ok, "%s keys must be strings", name)
-			t.AddProvide(k, core.ParseBuildLabel(string(str), s.pkg.Name))
+			t.AddProvide(k, parseLabel(s, string(str)))
 		}
 	}
 }
@@ -278,7 +278,7 @@ func parseVisibility(s *scope, vis string) core.BuildLabel {
 	if vis == "PUBLIC" || (s.state.Config.Bazel.Compatibility && vis == "//visibility:public") {
 		return core.WholeGraph[0]
 	}
-	l := core.ParseBuildLabel(vis, s.pkg.Name)
+	l := parseLabel(s, vis)
 	if s.state.Config.Bazel.Compatibility {
 		// Bazel has a couple of special aliases for this stuff.
 		if l.Name == "__pkg__" {
@@ -303,7 +303,9 @@ func parseBuildInput(s *scope, in pyObject, name string, systemAllowed, tool boo
 // Identifies if the file is owned by this package and returns an error if not.
 func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput {
 	if core.LooksLikeABuildLabel(src) {
-		return core.MustParseNamedOutputLabel(src, s.pkg.Name)
+		label, subrepo := core.MustParseNamedOutputLabel(src, s.pkg)
+		verifyArchSubrepo(s, subrepo)
+		return label
 	}
 	s.Assert(src != "", "Empty source path")
 	s.Assert(!strings.Contains(src, "../"), "%s is an invalid path; build target paths can't contain ../", src)
@@ -331,6 +333,24 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 		}
 	}
 	return core.FileLabel{File: src, Package: s.pkg.Name}
+}
+
+// parseLabel parses a build label, handling potential cross-architecture labels.
+func parseLabel(s *scope, label string) core.BuildLabel {
+	l, subrepo := core.ParseBuildLabelSubrepo(label, s.pkg)
+	verifyArchSubrepo(s, subrepo)
+	return l.ForPackage(s.pkg)
+}
+
+// verifyArchSubrepo creates a subrepo for the given architecture if one doesn't exist.
+func verifyArchSubrepo(s *scope, subrepo string) {
+	if subrepo != "" && s.state.Graph.Subrepo(subrepo) == nil {
+		// Subrepo is specified but doesn't exist - might be an arch-specific one.
+		var arch cli.Arch
+		if err := arch.UnmarshalFlag(subrepo); err == nil {
+			s.state.Graph.MaybeAddSubrepo(core.SubrepoForArch(s.state, arch))
+		}
+	}
 }
 
 // callbackFunction extracts a pre- or post-build function for a target.

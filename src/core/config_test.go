@@ -2,6 +2,7 @@ package core
 
 import (
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -220,7 +221,14 @@ func TestConfigVerifiesOptions(t *testing.T) {
 func TestBuildEnvSection(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/buildenv.plzconfig"}, "")
 	assert.NoError(t, err)
-	expected := []string{"BAR_BAR=first", "FOO_BAR=second"}
+	expected := []string{
+		"ARCH=" + runtime.GOARCH,
+		"BAR_BAR=first",
+		"FOO_BAR=second",
+		"OS=" + runtime.GOOS,
+		"XARCH=x86_64",
+		"XOS=" + xos(),
+	}
 	assert.Equal(t, expected, config.GetBuildEnv())
 }
 
@@ -231,6 +239,20 @@ func TestPassEnv(t *testing.T) {
 	assert.NoError(t, err)
 	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, "")
 	assert.NoError(t, err)
-	expected := []string{"BAR=second", "FOO=first"}
+	expected := []string{
+		"ARCH=" + runtime.GOARCH,
+		"BAR=second",
+		"FOO=first",
+		"OS=" + runtime.GOOS,
+		"XARCH=x86_64",
+		"XOS=" + xos(),
+	}
 	assert.Equal(t, expected, config.GetBuildEnv())
+}
+
+func xos() string {
+	if runtime.GOOS == "darwin" {
+		return "osx"
+	}
+	return runtime.GOOS
 }
