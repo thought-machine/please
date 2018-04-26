@@ -18,13 +18,16 @@ type Subrepo struct {
 	Target *BuildTarget
 	// If this repo has a different configuration (e.g. it's for a different architecture), it's stored here
 	State *BuildState
+	// True if this subrepo was created for a different architecture
+	IsCrossCompile bool
 }
 
 // SubrepoForArch creates a new subrepo for the given architecture.
 func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
 	return &Subrepo{
-		Name:  arch.String(),
-		State: state.ForArch(arch),
+		Name:           arch.String(),
+		State:          state.ForArch(arch),
+		IsCrossCompile: true,
 	}
 }
 

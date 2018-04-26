@@ -281,3 +281,11 @@ func (arch *Arch) XArch() string {
 	}
 	return arch.Arch
 }
+
+// GoArch returns the architecture as Go would name it.
+func (arch *Arch) GoArch() string {
+	if arch.Arch == "x86" {
+		return "386"
+	}
+	return arch.Arch
+}

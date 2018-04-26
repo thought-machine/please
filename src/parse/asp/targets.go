@@ -303,6 +303,13 @@ func parseBuildInput(s *scope, in pyObject, name string, systemAllowed, tool boo
 // Identifies if the file is owned by this package and returns an error if not.
 func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput {
 	if core.LooksLikeABuildLabel(src) {
+		if tool && s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile {
+			// Tools always use the host configuration.
+			// TODO(peterebden): this should really use something involving named output labels;
+			//                   right now we don't have a package handy to call that but we
+			//                   don't use them for tools anywhere either...
+			return core.ParseBuildLabel(src, s.pkg.Subrepo.MakeRelativeName(s.pkg.Name))
+		}
 		label, subrepo := core.MustParseNamedOutputLabel(src, s.pkg)
 		verifyArchSubrepo(s, subrepo)
 		return label

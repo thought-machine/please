@@ -148,3 +148,10 @@ func TestXArch(t *testing.T) {
 	a = NewArch("linux", "arm")
 	assert.Equal(t, "arm", a.XArch())
 }
+
+func TestGoArch(t *testing.T) {
+	a := NewArch("darwin", "amd64")
+	assert.Equal(t, "amd64", a.GoArch())
+	a = NewArch("linux", "x86")
+	assert.Equal(t, "386", a.GoArch())
+}

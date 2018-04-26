@@ -434,12 +434,15 @@ func (config *Configuration) ContainerisationHash() []byte {
 func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvStored.Once.Do(func() {
 		env := []string{
-			// Need to know these for certain rules, particularly Go rules.
+			// Need to know these for certain rules.
 			"ARCH=" + config.Build.Arch.Arch,
 			"OS=" + config.Build.Arch.OS,
 			// These are slightly modified forms that are more convenient for some things.
 			"XARCH=" + config.Build.Arch.XArch(),
 			"XOS=" + config.Build.Arch.XOS(),
+			// It's easier to just make these available for Go-based rules.
+			"GOARCH=" + config.Build.Arch.GoArch(),
+			"GOOS=" + config.Build.Arch.OS,
 		}
 
 		// from the BuildEnv config keyword

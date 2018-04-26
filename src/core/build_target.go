@@ -532,6 +532,8 @@ func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 	}
 	if dep.Subrepo != nil && dep.Subrepo.MakeRelative(dep.Label).PackageName == parent.PackageName {
 		return true
+	} else if dep.Label.PackageName == parent.PackageName {
+		return true
 	}
 	if isExperimental(state, target) {
 		log.Warning("Visibility restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
