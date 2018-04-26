@@ -44,11 +44,17 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             javac_flags = ' '.join([flag for flag in javac_flags if flag != '-extra_checks:off'])
         else:
             javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
-        javac_flags = '-encoding utf8 -source %s -target %s -g %s' % (
-            CONFIG.JAVA_SOURCE_LEVEL,
-            CONFIG.JAVA_TARGET_LEVEL,
-            javac_flags,
-        )
+
+        javac_flags = '-encoding utf8 %s' % javac_flags
+
+        if CONFIG.JAVA_RELEASE_LEVEL:
+            javac_flags = '--release %s %s' % (CONFIG.JAVA_RELEASE_LEVEL, javac_flags)
+        else:
+            javac_flags = '-encoding utf8 -source %s -target %s -g %s' % (
+                CONFIG.JAVA_SOURCE_LEVEL,
+                CONFIG.JAVA_TARGET_LEVEL,
+                javac_flags,
+            )
 
         if not CONFIG.JAVAC_TOOL:
             javac_cmd = '$(worker %s) %s %s %s' % (CONFIG.JAVAC_WORKER, javac_flags, '--modular' if modular else '', '--src_dir' if src_dir else '')

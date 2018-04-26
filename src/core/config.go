@@ -190,6 +190,7 @@ func DefaultConfiguration() *Configuration {
 	config.Java.DefaultTestPackage = ""
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"
+	config.Java.ReleaseLevel = ""
 	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2"}
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
 	config.Java.JlinkTool = "jlink"
@@ -342,6 +343,7 @@ type Configuration struct {
 		PleaseMavenTool    string    `help:"Defines the tool used to fetch information from Maven in maven_jars rules.\nDefaults to please_maven in the Please install directory." var:"PLEASE_MAVEN_TOOL"`
 		JUnitRunner        string    `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the Please install directory." var:"JUNIT_RUNNER"`
 		DefaultTestPackage string    `help:"The Java classpath to search for functions annotated with @Test. If not specified the compiled sources will be searched for files named *Test.java." var:"DEFAULT_TEST_PACKAGE"`
+		ReleaseLevel       string    `help:"The default Java release level when compiling.\nSourceLevel and TargetLevel are ignored if this is set. Bear in mind that this flag is only supported in Java version 9+." var:"JAVA_RELEASE_LEVEL"`
 		SourceLevel        string    `help:"The default Java source level when compiling. Defaults to 8." var:"JAVA_SOURCE_LEVEL"`
 		TargetLevel        string    `help:"The default Java bytecode level to target. Defaults to 8." var:"JAVA_TARGET_LEVEL"`
 		JavacFlags         string    `help:"Additional flags to pass to javac when compiling libraries." example:"-Xmx1200M" var:"JAVAC_FLAGS"`

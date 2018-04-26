@@ -7,3 +7,4 @@ jlinktool = jlink
 javahome = /path/to/java/home
 sourcelevel = 8
 targetlevel = 7
+releaseLevel = 10
