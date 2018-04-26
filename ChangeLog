@@ -1,3 +1,12 @@
+Version 12.2.0
+--------------
+
+    * Initial cross-compiling support via new --arch flag.
+      See the docs for more info: https://please.build/cross_compiling.html
+    * Added support for the Java --release flag (new in Java 9/10).
+    * Support to pass environment variables (#302, fixes #205)
+
+
 Version 12.1.8
 --------------
 

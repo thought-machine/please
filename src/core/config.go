@@ -144,6 +144,7 @@ func DefaultConfiguration() *Configuration {
 	config := Configuration{buildEnvStored: &storedBuildEnv{}}
 	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
+	config.Please.Autoclean = true
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
