@@ -1,0 +1,63 @@
+<h1>Cross-compiling</h1>
+
+<p class="experimental">This feature is still experimental; some aspects may not work fully
+  or at all just yet. Proceed with caution!</p>
+
+<p>From v12.2 onwards, Please has limited cross-compiling support. This allows you to
+  instruct it to build outputs for other architectures alongside the host architecture.<br/>
+  This is triggered by passing the <code>--arch</code> flag when invoking plz.</p>
+
+<p>The outputs from a cross-compiled build will be in a directory under plz-out prefixed
+  with the architecture - e.g. <code>plz-out/bin/linux_x86</code>,
+  <code>plz-out/gen/darwin_amd64</code> etc.</p>
+
+<h3>Technical notes</h3>
+
+<p>When compiling a target for a different binary, the BUILD file will be re-parsed for it.
+  The <code>CONFIG.ARCH</code> and <code>CONFIG.OS</code> properties will update appropriately,
+  which is necessary for some rules to work correctly. Similarly, when the rule builds, the
+  <code>OS</code> and <code>ARCH</code> environment variables will be set to the target architecture
+  for that build target.</p>
+
+<p>The distinction between <code>srcs</code>, <code>tools</code> and <code>deps</code> is
+  <b>extremely</b> important when cross-compiling. <code>srcs</code> always match the architecture
+  of the target, as do <code>deps</code> unless explicitly requested (e.g. by prefixing with
+  the required arch, as in <code>@linux_x86//package:target</code>).<br/>
+  Conversely, <code>tools</code> always use the host architecture since they are executed on
+  the host during the build.</p>
+
+<p>The <a href="config.html">config file</a> for any target architecture is read
+  (if present) and applied for targets compiling for that architecture - i.e.
+  <code>.plzconfig_linux_x86</code> etc. Typically you will need to create this file and
+  modify appropriate settings for compiler flags etc.</p>
+
+<p>Architectures are currently always two-part tags in a similar format to Go's - i.e.
+  <code>linux_amd64</code> etc. These are passed in as a single flag but decomposed into
+  separate OS and architecture parts for later operations. You can request whatever architecture
+  you want, but obviously the build will probably not succeed unless you have tools set up etc.</p>
+
+<h3>Language status</h3>
+
+<p>The various builtin languages have differing levels of support. Currently they are as follows:
+  <ul>
+    <li><b>C</b> & <b>C++</b>: Works at least for basic cases; there is an example in the
+      <a href="https://github.com/thought-machine/please/tree/master/test/cross_compile">Please repo</a>
+      which tests a simple amd64 -> x86 compilation.<br/>
+      You will need to alter the config file to make this work - see the
+      <a href="https://github.com/thought-machine/please/blob/master/.plzconfig_linux_x86">example for x86</a>
+      for some examples of the settings to change.<br/>
+      So far this has not been tested in anger on a more complex setup.</li>
+    <li><b>Go</b>: Generally works, but you currently have to have a copy of the standard
+      library available for the target architecture. Go can produce that via something like
+      <code>GOOS="linux" GOARCH="386" go install -i std</code>.</li>
+    <li><b>Python</b>: Currently has very limited support. Theoretically it will mostly work
+      for pure Python; for binary modules built locally they'll need a similar approach to C.<br/>
+      For third-party binary modules <a href="lexicon.html#pip_library">pip_library</a> is unlikely
+      to work since pip can't be instructed to use a different architecture;
+      <a href="lexicon.html#python_wheel">python_wheel</a> should be fine but requires something else
+      to have built & hosted the .whl file.</li>
+    <li><b>Java</b>: This is not terribly relevant to Java since it effectively always targets
+      the same JVM architecture. <a href="lexicon.html#maven_jar">maven_jar</a> rules that
+      specify <code>native = True</code> will download for the target architecture.</li>
+  </ul>
+</p>
