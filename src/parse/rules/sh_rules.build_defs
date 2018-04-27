@@ -5,12 +5,13 @@ implement something more advanced (ala .sar files or whatever).
 """
 
 _SH_BINARY_TMPL_PREFIX = """
-unzip -o $0 -d $(dirname $0)
+unzip -qo $0 -d $(dirname $0)
 """.replace('$', '\\\$').replace('"', '\\"')
 
 _SH_BINARY_TMPL_SUFFIX = """
 exit 0\n\
 """
+
 
 def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:list&features&tags=None):
     """Generates a shell script binary, essentially just the given source.
@@ -25,7 +26,7 @@ def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:l
       visibility (list): Visibility declaration of the rule.
       labels (list): List of labels.
     """
-    filegroup(
+    return filegroup(
         name=name,
         srcs=[src],
         deps=deps,
@@ -34,12 +35,11 @@ def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:l
         labels=labels,
     )
 
+
 def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:list&features&tags=None):
     """Generates a shell script binary.
 
-    It assumes that zip/unzip are in your path.
-
-    TODO(fabian): Update this to use jarcat (or something with a deterministic output).
+    It assumes that unzip is in your path.
 
     The resulting script will contain three things:
     1) Code necessary to unzip dependent files.
@@ -70,7 +70,7 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
     else:
         cmds = 'cp $SRCS $OUT'
 
-    build_rule(
+    return build_rule(
         name = name,
         srcs = [main],
         outs = ['%s.sh' % name],
@@ -82,6 +82,7 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
         labels = labels,
         visibility = visibility,
     )
+
 
 def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=None, deps:list=None, size:str=None,
             visibility:list=None, flags:str='', flaky:bool|int=0, test_outputs:list=None, timeout:int=0,
@@ -104,7 +105,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
-    build_rule(
+    return build_rule(
         name=name,
         srcs=[src or test],
         data=data,
@@ -123,6 +124,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
         container=container,
         test_sandbox=sandbox,
     )
+
 
 def sh_cmd(name:str, cmd:str|dict, srcs:list|dict=None, out:list=None, shell:str='/bin/sh',
            labels:list&features&tags=None, deps:list=None, visibility:list=None):
@@ -149,7 +151,7 @@ def sh_cmd(name:str, cmd:str|dict, srcs:list|dict=None, out:list=None, shell:str
         cmds = 'cat > $OUT << EOF\n#!%s\n%s\nEOF' % (shell, cmd)
     else:
         cmds = {k: 'cat > $OUT << EOF\n#!%s\n%s\nEOF' % (shell, v) for k, v in cmd.items()}
-    build_rule(
+    return build_rule(
         name = name,
         outs = [out or name + '.sh'],
         srcs = srcs,
