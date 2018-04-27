@@ -719,7 +719,7 @@ def _default_cflags(c, dbg):
 
 def _build_flags(compiler_flags:list, pkg_config_libs:list, defines=None, c=False, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
-    compiler_flags += [_default_cflags(c, dbg), '-fPIC']
+    compiler_flags = [_default_cflags(c, dbg), '-fPIC'] + compiler_flags  # N.B. order is important!
     if defines:
         compiler_flags += ['-D' + define for define in defines]
     pkg_config_cmd = ' '.join(['`pkg-config --cflags %s`' % x for x in pkg_config_libs])
