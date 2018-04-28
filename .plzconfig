@@ -9,7 +9,7 @@ moduledir = third_party.python
 ; I don't want to rename my package so we have one slightly differently named build file
 ; in this project.
 buildfilename = BUILD
-buildfilename = BUILD_
+buildfilename = BUILD.plz
 ; Blacklist the third-party dirs, we never need to descend into those.
 blacklistdirs = github.com
 blacklistdirs = golang.org
