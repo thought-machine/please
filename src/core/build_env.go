@@ -68,8 +68,10 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, test bool) BuildEn
 			"SRCS="+strings.Join(sources, " "),
 			"OUTS="+strings.Join(target.Outputs(), " "),
 			"HOME="+tmpDir,
+			"TOOLS="+strings.Join(toolPaths(state, target.Tools), " "),
+			// Set a consistent hash seed for Python. Important for build determinism.
+			"PYTHONHASHSEED=42",
 		)
-		env = append(env, "TOOLS="+strings.Join(toolPaths(state, target.Tools), " "))
 		// The OUT variable is only available on rules that have a single output.
 		if len(target.Outputs()) == 1 {
 			env = append(env, "OUT="+path.Join(RepoRoot, target.TmpDir(), target.Outputs()[0]))
