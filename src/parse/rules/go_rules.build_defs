@@ -168,7 +168,7 @@ def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list
 
 
 def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
-                out:str=None, compiler_flags:list=[], linker_flags:list=[], pkg_config:list=[],
+                out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
                 subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False):
     """Generates a Go library which can be reused by other rules.
 
