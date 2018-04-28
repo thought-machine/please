@@ -56,7 +56,7 @@ func NameOfReader(r io.Reader) string {
 	return ""
 }
 
-// Lex implements the lexer.Definition interface.
+// newLexer creates a new lex instance.
 func newLexer(r io.Reader) *lex {
 	// Read the entire file upfront to avoid bufio etc.
 	// This should work OK as long as BUILD files are relatively small.
@@ -82,7 +82,7 @@ func newLexer(r io.Reader) *lex {
 	return l
 }
 
-// A lex implements participle's lexer.Lexer, which is a lexer for a single BUILD file.
+// A lex is a lexer for a single BUILD file.
 type lex struct {
 	b      []byte
 	i      int
@@ -95,7 +95,7 @@ type lex struct {
 	// Used to track how many braces we're within.
 	braces int
 	// Pending unindent tokens. This is a bit yuck but means the parser doesn't need to
-	// concern itself about indentation (which is good because our parser doesn't do that...)
+	// concern itself about indentation.
 	unindents int
 	// Current levels of indentation
 	indents []int

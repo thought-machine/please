@@ -1,10 +1,5 @@
 package asp
 
-import (
-	"fmt"
-	"strings"
-)
-
 // A FileInput is the top-level structure of a BUILD file.
 type FileInput struct {
 	Statements []*Statement `{ @@ } EOF`
@@ -261,16 +256,6 @@ const (
 	// Index is used in the parser, but not when parsing code.
 	Index = -iota
 )
-
-// Capture implements capturing for the parser.
-func (o *Operator) Capture(values []string) error {
-	op, present := operators[strings.Join(values, " ")]
-	if !present {
-		return fmt.Errorf("Unknown operator: %s", values[0])
-	}
-	*o = op
-	return nil
-}
 
 // IsComparison returns true if this operator is a comparison operator.
 func (o Operator) IsComparison() bool {
