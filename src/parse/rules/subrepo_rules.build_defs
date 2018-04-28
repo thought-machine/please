@@ -85,9 +85,9 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
     )
     if any([u.endswith('.jar') or u.endswith('.zip') for u in urls]):
         if strip_prefix:
-            cmd = 'unzip $SRCS_REMOTE && mv %s $OUT' % strip_prefix
+            cmd = '$TOOL x $SRCS_REMOTE -s ' + strip_prefix
         else:
-            cmd = 'mkdir $OUT && unzip $SRCS_REMOTE -d $OUT'
+            cmd = '$TOOL x $SRCS_REMOTE'
     else:
         if strip_prefix:
             cmd = 'tar -axf $SRCS_REMOTE && mv %s $OUT' % strip_prefix

@@ -429,7 +429,8 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
         name = name,
         srcs = [download_rule],
         outs = ['protoc'],
+        tools = [CONFIG.JARCAT_TOOL],
         binary = True,
-        cmd = 'unzip $SRCS bin/protoc && mv bin/protoc $OUT',
+        cmd = '$TOOL x $SRCS bin/protoc',
         visibility = visibility,
     )

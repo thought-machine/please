@@ -49,13 +49,15 @@ func ParseFlags(appname string, data interface{}, args []string, completionHandl
 
 // ParseFlagsOrDie parses the app's flags and dies if unsuccessful.
 // Also dies if any unexpected arguments are passed.
-func ParseFlagsOrDie(appname, version string, data interface{}) *flags.Parser {
+// It returns the active command if there is one.
+func ParseFlagsOrDie(appname, version string, data interface{}) string {
 	return ParseFlagsFromArgsOrDie(appname, version, data, os.Args)
 }
 
 // ParseFlagsFromArgsOrDie is similar to ParseFlagsOrDie but allows control over the
 // flags passed.
-func ParseFlagsFromArgsOrDie(appname, version string, data interface{}, args []string) *flags.Parser {
+// It returns the active command if there is one.
+func ParseFlagsFromArgsOrDie(appname, version string, data interface{}, args []string) string {
 	parser, extraArgs, err := ParseFlags(appname, data, args, nil)
 	if err != nil && err.(*flags.Error).Type == flags.ErrUnknownFlag && strings.Contains(err.(*flags.Error).Message, "`version'") {
 		fmt.Printf("%s version %s\n", appname, version)
@@ -72,7 +74,25 @@ func ParseFlagsFromArgsOrDie(appname, version string, data interface{}, args []s
 		parser.WriteHelp(os.Stderr)
 		os.Exit(1)
 	}
-	return parser
+	if parser.Command != nil {
+		return ActiveCommand(parser.Command)
+	}
+	return ""
+}
+
+// ActiveCommand returns the name of the currently active command.
+func ActiveCommand(command *flags.Command) string {
+	if command.Active != nil {
+		return ActiveCommand(command.Active)
+	}
+	return command.Name
+}
+
+// PrintCompletions prints a set of completions to stdout.
+func PrintCompletions(items []flags.Completion) {
+	for _, item := range items {
+		fmt.Println(item.Item)
+	}
 }
 
 // writeUsage prints any usage specified on the flag struct.

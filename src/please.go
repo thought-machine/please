@@ -809,14 +809,6 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *c
 	return Please(targets, config, pretty, shouldBuild, shouldTest)
 }
 
-// activeCommand returns the name of the currently active command.
-func activeCommand(command *flags.Command) string {
-	if command.Active != nil {
-		return activeCommand(command.Active)
-	}
-	return command.Name
-}
-
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
 func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.BuildFlags.RepoRoot == "" {
@@ -844,7 +836,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 // may do a little more if we think we need to handle aliases.
 func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	if len(items) > 0 {
-		printCompletions(items)
+		cli.PrintCompletions(items)
 	} else {
 		cli.InitLogging(0)                // Ensure this is quiet
 		opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
@@ -860,13 +852,6 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	}
 	// Regardless of what happened, always exit with 0 at this point.
 	os.Exit(0)
-}
-
-// printCompletions prints a set of completions to stdout.
-func printCompletions(items []flags.Completion) {
-	for _, item := range items {
-		fmt.Println(item.Item)
-	}
 }
 
 func main() {
@@ -887,7 +872,7 @@ func main() {
 	// Init logging, but don't do file output until we've chdir'd.
 	cli.InitLogging(opts.OutputFlags.Verbosity)
 
-	command := activeCommand(parser.Command)
+	command := cli.ActiveCommand(parser.Command)
 	if opts.Complete != "" {
 		// Completion via PLZ_COMPLETE env var sidesteps other commands
 		opts.Query.Completions.Cmd = command
@@ -933,8 +918,7 @@ func main() {
 			}
 		}
 		argv := strings.Join(os.Args[1:], " ")
-		parser = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, strings.Fields(os.Args[0]+" "+argv))
-		command = activeCommand(parser.Command)
+		command = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, strings.Fields(os.Args[0]+" "+argv))
 	}
 
 	if opts.ProfilePort != 0 {

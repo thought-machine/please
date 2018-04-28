@@ -541,10 +541,10 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
     if get.startswith('github.com') and revision and get.count('/') >= 2:
-        cmd, get_deps = _go_github_repo_cmd(name, getroot, getroot, revision)
+        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, getroot, revision)
     elif get.startswith('golang.org/x/') and revision and not repo:
         # We know about these guys...
-        cmd, get_deps = _go_github_repo_cmd(name, getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision)
+        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision)
     else:
         get_deps = []
         if repo:
@@ -563,6 +563,7 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
             # Annoyingly -C does not work on git checkout :(
             cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
         cmd.append('find . -name .git | xargs rm -rf')
+        tools = [CONFIG.GO_TOOL]
     if patch:
         cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$SRCS_PATCH' % subdir)
     if strip:
@@ -577,7 +578,7 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
             'get': get_deps,
         },
         outs = [subdir],
-        tools = [CONFIG.GO_TOOL],
+        tools = tools,
         visibility = visibility,
         building_description = 'Fetching...',
         cmd = ' && '.join(cmd),
@@ -641,9 +642,9 @@ def _go_github_repo_cmd(name, get, repo, revision):
     )
     return [
         'rm -rf src/' + out,
-        'unzip -qq $SRCS_GET',
+        '$TOOL x $SRCS_GET',
         'mv %s* src/%s' % (parts[2], out),
-    ], [remote_rule]
+    ], [remote_rule], [CONFIG.JARCAT_TOOL]
 
 
 def _replace_test_package(name, output, static):

@@ -45,7 +45,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
     if not zip_safe:
         labels.append('py:zip-unsafe')
     if srcs or resources:
-        cmd = '$TOOLS_JARCAT -d -o ${OUTS} -i .'
+        cmd = '$TOOLS_JARCAT z -d -o ${OUTS} -i .'
         interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
         if srcs:
             # This is a bit of a hack, but rather annoying. We want to put bytecode in its 'legacy' location
@@ -356,7 +356,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 
     # TODO(peterebden): --prefix preserves the old behaviour here, but I'm not sure how intuitive that is; leaving it
     #                   out puts everything at the top level of the pex, which is more normal for Python really.
-    cmd += ' && $TOOLS_JARCAT -d --prefix $PKG -i ' + ' -i '.join(outs)
+    cmd += ' && $TOOLS_JARCAT z -d --prefix $PKG_DIR -i ' + ' -i '.join(outs)
 
     wheel_rule = build_rule(
         name = name,
@@ -382,7 +382,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         name = name,
         srcs = [wheel_rule],
         outs = outs,
-        cmd = 'unzip $SRCS && mv $PKG/* .',
+        cmd = '$TOOL x $SRCS -s $PKG_DIR',
+        tools = [CONFIG.JARCAT_TOOL],
         labels = ['py', 'pip:' + package_name],
         provides = {'py': wheel_rule},
         visibility = visibility,
@@ -456,7 +457,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     curl_commands = ' || '.join(['curl -fsSO {url}'.format(url=url) for url in urls])
     cmd = [
         curl_commands,
-        'unzip -q *.whl',
+        '$TOOL x *.whl',
         # Strip any bytecode, it might lead to nondeterminism. Similarly some wheels annoyingly
         # contain test code that we don't want.
         'find . -name "*.pyc" -or -name "tests" | xargs rm -rf',
@@ -469,7 +470,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         cmd += ['patch -p0 --no-backup-if-mismatch < $(location %s)' % p for p in patches]
     if post_install_commands:
         cmd += post_install_commands
-    cmd += ['$TOOL -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
+    cmd += ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
 
     wheel_rule = build_rule(
         name = name,
@@ -487,7 +488,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         sandbox = False,
         labels = ['py:zip-unsafe'] if not zip_safe else None,
     )
-    cmd = 'unzip $SRCS && mv $PKG/* .'
+    cmd = '$TOOL x $SRCS -s $PKG_DIR'
     if outs:
         # Hacky solution to handle things being in subdirectories in awkward ways.
         before, _, after = outs[0].partition('/')
@@ -498,6 +499,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         srcs = [wheel_rule],
         hashes = hashes,  # TODO(peterebden): Move this onto wheel_rule when we're willing to break hash compatibility.
         outs = outs or [name],
+        tools = [CONFIG.JARCAT_TOOL],
         cmd = cmd,
         deps = deps,
         visibility = visibility,
@@ -536,8 +538,8 @@ def _add_licences(name, output):
 
 # The commands that we use for python_binary and python_test rules.
 _PYTHON_BINARY_CMDS = {
-    'opt': '$TOOL -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
-    'stripped': '$TOOL -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict -e .py -x "*.py"',
+    'opt': '$TOOL z -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
+    'stripped': '$TOOL z -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict -e .py -x "*.py"',
 }
 
 

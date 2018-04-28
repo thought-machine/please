@@ -346,7 +346,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
 
 def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, gzip:bool=True,
-            visibility:list=None, labels:list&features&tags=None):
+            visibility:list=None, labels:list&features&tags=[]):
     """Defines a rule to create a tarball containing outputs of other rules.
 
     File mode and ownership are preserved. However, the atime and mtime of all
@@ -363,7 +363,7 @@ def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, 
       labels (list): Labels associated with this rule.
     """
     out = out or (name + ('.tar.gz' if gzip else '.tar'))
-    cmd = '$TOOL --tar -i .'
+    cmd = '$TOOL tar '
     if gzip:
         cmd += ' -z'
     if subdir:
@@ -377,7 +377,7 @@ def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, 
         outs = [out],
         deps = deps,
         visibility = visibility,
-        labels = (labels or []) + ['tar'],
+        labels = labels + ['tar'],
         output_is_complete = True,
     )
 

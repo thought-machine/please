@@ -16,6 +16,7 @@ import (
 
 	"cli"
 	"tools/jarcat/tar"
+	"tools/jarcat/unzip"
 	"tools/jarcat/zip"
 )
 
@@ -49,34 +50,50 @@ func mustReadPreamble(path string) string {
 }
 
 var opts = struct {
-	Usage                 string
-	Out                   string            `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
-	In                    cli.StdinStrings  `short:"i" long:"input" description:"Input directory" required:"true"`
-	Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
-	ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
-	ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
-	ExcludeInternalPrefix []string          `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
-	IncludeInternalPrefix []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
-	StripPrefix           string            `long:"strip_prefix" description:"Prefix to strip off file names"`
-	Preamble              string            `short:"p" long:"preamble" description:"Leading string to prepend to written zip file"`
-	PreambleFrom          string            `long:"preamble_from" description:"Read the first line of this file and use as --preamble."`
-	PreambleFile          string            `long:"preamble_file" description:"Concatenate zip file onto the end of this file"`
-	MainClass             string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
-	Manifest              string            `long:"manifest" description:"Use the given file as a Java manifest"`
-	Align                 int               `short:"a" long:"align" description:"Align zip members to a multiple of this number of bytes."`
-	Verbosity             int               `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
-	Strict                bool              `long:"strict" description:"Disallow duplicate files"`
-	IncludeOther          bool              `long:"include_other" description:"Add files that are not jar files as well"`
-	AddInitPy             bool              `long:"add_init_py" description:"Adds __init__.py files to all directories"`
-	DumbMode              bool              `short:"d" long:"dumb" description:"Dumb mode, an alias for --suffix='' --exclude_suffix='' --include_other"`
-	NoDirEntries          bool              `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
-	RenameDirs            map[string]string `short:"r" long:"rename_dir" description:"Rename directories within zip file"`
-	StoreSuffix           []string          `short:"u" long:"store_suffix" description:"Suffix of filenames to store instead of deflate (i.e. without compression). Note that this only affects files found with --include_other."`
+	Usage     string
+	Verbosity int `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
 
-	Tar    bool     `long:"tar" description:"Write a tarball instead of a zipfile. Note that most other flags are not honoured if this is given."`
-	Gzip   bool     `short:"z" long:"gzip" description:"Apply gzip compression to the tar file. Only has an effect if --tar is passed."`
-	Prefix string   `long:"prefix" description:"Prefix all entries with this directory name."`
-	Srcs   []string `long:"srcs" env:"SRCS" env-delim:" " description:"Source files for the tarball."`
+	Zip struct {
+		In                    cli.StdinStrings  `short:"i" long:"input" description:"Input directory" required:"true"`
+		Out                   string            `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
+		Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
+		ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
+		ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
+		ExcludeInternalPrefix []string          `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
+		IncludeInternalPrefix []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
+		StripPrefix           string            `long:"strip_prefix" description:"Prefix to strip off file names"`
+		Preamble              string            `short:"p" long:"preamble" description:"Leading string to prepend to written zip file"`
+		PreambleFrom          string            `long:"preamble_from" description:"Read the first line of this file and use as --preamble."`
+		PreambleFile          string            `long:"preamble_file" description:"Concatenate zip file onto the end of this file"`
+		MainClass             string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
+		Manifest              string            `long:"manifest" description:"Use the given file as a Java manifest"`
+		Align                 int               `short:"a" long:"align" description:"Align zip members to a multiple of this number of bytes."`
+		Strict                bool              `long:"strict" description:"Disallow duplicate files"`
+		IncludeOther          bool              `long:"include_other" description:"Add files that are not jar files as well"`
+		AddInitPy             bool              `long:"add_init_py" description:"Adds __init__.py files to all directories"`
+		DumbMode              bool              `short:"d" long:"dumb" description:"Dumb mode, an alias for --suffix='' --exclude_suffix='' --include_other"`
+		NoDirEntries          bool              `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
+		RenameDirs            map[string]string `short:"r" long:"rename_dir" description:"Rename directories within zip file"`
+		StoreSuffix           []string          `short:"u" long:"store_suffix" description:"Suffix of filenames to store instead of deflate (i.e. without compression). Note that this only affects files found with --include_other."`
+		Prefix                string            `long:"prefix" description:"Prefix all entries with this directory name."`
+	} `command:"zip" alias:"z" description:"Writes an output zipfile"`
+
+	Tar struct {
+		Gzip   bool     `short:"z" long:"gzip" description:"Apply gzip compression to the tar file. Only has an effect if --tar is passed."`
+		Out    string   `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
+		Srcs   []string `long:"srcs" env:"SRCS" env-delim:" " description:"Source files for the tarball."`
+		Prefix string   `long:"prefix" description:"Prefix all entries with this directory name."`
+	} `command:"tar" alias:"t" description:"Builds a tarball instead of a zipfile."`
+
+	Unzip struct {
+		Args struct {
+			In   string `positional-arg-name:"input" required:"true" description:"Input zipfile"`
+			File string `positional-arg-name:"file" description:"File to extract"`
+		} `positional-args:"true"`
+		StripPrefix string `short:"s" long:"strip_prefix" description:"Strip this prefix from extracted files"`
+		OutDir      string `short:"o" long:"out" description:"Output directory"`
+		Out         string `long:"out_file" hidden:"true" env:"OUT"`
+	} `command:"unzip" alias:"u" alias:"x" description:"Unzips a zipfile"`
 }{
 	Usage: `
 Jarcat is a binary shipped with Please that helps it operate on .jar and .zip files.
@@ -98,60 +115,72 @@ Any apparent relationship between the name of this tool and bonsai kittens is co
 }
 
 func main() {
-	cli.ParseFlagsOrDie("Jarcat", "12.1.4", &opts)
-	if opts.DumbMode {
-		opts.Suffix = nil
-		opts.ExcludeSuffix = nil
-		opts.IncludeOther = true
+	command := cli.ParseFlagsOrDie("Jarcat", "12.1.4", &opts)
+	if opts.Zip.DumbMode {
+		opts.Zip.Suffix = nil
+		opts.Zip.ExcludeSuffix = nil
+		opts.Zip.IncludeOther = true
 	}
 	cli.InitLogging(opts.Verbosity)
 
-	if opts.Tar {
-		if err := tar.Write(opts.Out, opts.Srcs, opts.Prefix, opts.Gzip); err != nil {
+	if command == "tar" {
+		if err := tar.Write(opts.Tar.Out, opts.Tar.Srcs, opts.Tar.Prefix, opts.Tar.Gzip); err != nil {
 			log.Fatalf("Error writing tarball: %s\n", err)
+		}
+		os.Exit(0)
+	} else if command == "unzip" {
+		// This comes up if we're in the root directory. Ignore it.
+		if opts.Unzip.StripPrefix == "." {
+			opts.Unzip.StripPrefix = ""
+		}
+		if opts.Unzip.Args.File != "" && opts.Unzip.OutDir == "" {
+			opts.Unzip.OutDir = opts.Unzip.Out
+		}
+		if err := unzip.Extract(opts.Unzip.Args.In, opts.Unzip.OutDir, opts.Unzip.Args.File, opts.Unzip.StripPrefix); err != nil {
+			log.Fatalf("Error extracting zipfile: %s", err)
 		}
 		os.Exit(0)
 	}
 
-	if opts.ExcludeJavaPrefixes {
-		opts.ExcludeInternalPrefix = javaExcludePrefixes
+	if opts.Zip.ExcludeJavaPrefixes {
+		opts.Zip.ExcludeInternalPrefix = javaExcludePrefixes
 	}
 
-	f := zip.NewFile(opts.Out, opts.Strict)
+	f := zip.NewFile(opts.Zip.Out, opts.Zip.Strict)
 	defer f.Close()
-	f.RenameDirs = opts.RenameDirs
-	f.Include = opts.IncludeInternalPrefix
-	f.Exclude = opts.ExcludeInternalPrefix
-	f.StripPrefix = opts.StripPrefix
-	f.Suffix = opts.Suffix
-	f.ExcludeSuffix = opts.ExcludeSuffix
-	f.StoreSuffix = opts.StoreSuffix
-	f.IncludeOther = opts.IncludeOther
-	f.AddInitPy = opts.AddInitPy
-	f.DirEntries = !opts.NoDirEntries
-	f.Align = opts.Align
-	f.Prefix = opts.Prefix
+	f.RenameDirs = opts.Zip.RenameDirs
+	f.Include = opts.Zip.IncludeInternalPrefix
+	f.Exclude = opts.Zip.ExcludeInternalPrefix
+	f.StripPrefix = opts.Zip.StripPrefix
+	f.Suffix = opts.Zip.Suffix
+	f.ExcludeSuffix = opts.Zip.ExcludeSuffix
+	f.StoreSuffix = opts.Zip.StoreSuffix
+	f.IncludeOther = opts.Zip.IncludeOther
+	f.AddInitPy = opts.Zip.AddInitPy
+	f.DirEntries = !opts.Zip.NoDirEntries
+	f.Align = opts.Zip.Align
+	f.Prefix = opts.Zip.Prefix
 
-	if opts.PreambleFrom != "" {
-		opts.Preamble = mustReadPreamble(opts.PreambleFrom)
+	if opts.Zip.PreambleFrom != "" {
+		opts.Zip.Preamble = mustReadPreamble(opts.Zip.PreambleFrom)
 	}
-	if opts.Preamble != "" {
-		must(f.WritePreamble([]byte(opts.Preamble + "\n")))
+	if opts.Zip.Preamble != "" {
+		must(f.WritePreamble([]byte(opts.Zip.Preamble + "\n")))
 	}
-	if opts.PreambleFile != "" {
-		b, err := ioutil.ReadFile(opts.PreambleFile)
+	if opts.Zip.PreambleFile != "" {
+		b, err := ioutil.ReadFile(opts.Zip.PreambleFile)
 		must(err)
 		must(f.WritePreamble(b))
 	}
-	if opts.MainClass != "" {
-		must(f.AddManifest(opts.MainClass))
+	if opts.Zip.MainClass != "" {
+		must(f.AddManifest(opts.Zip.MainClass))
 	}
-	if opts.Manifest != "" {
-		b, err := ioutil.ReadFile(opts.Manifest)
+	if opts.Zip.Manifest != "" {
+		b, err := ioutil.ReadFile(opts.Zip.Manifest)
 		must(err)
 		must(f.WriteFile("META-INF/MANIFEST.MF", b, 0644))
 	}
-	for _, filename := range opts.In.Get() {
+	for _, filename := range opts.Zip.In.Get() {
 		must(f.AddFiles(filename))
 	}
 }

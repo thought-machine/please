@@ -5,5 +5,5 @@
 go_library(
     name = 'zip',
     srcs = glob(['*.go']),
-    visibility = ['//tools/jarcat/zip'],
+    visibility = ['//tools/jarcat/...'],
 )

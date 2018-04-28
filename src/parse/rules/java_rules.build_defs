@@ -69,7 +69,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             javac_cmd,
             'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g" | sort > _tmp/META-INF/please_sourcemap',
             'cd _tmp',
-            '$TOOLS_JARCAT -d -o $OUT -i .',
+            '$TOOLS_JARCAT z -d -o $OUT -i .',
         ])
         return build_rule(
             name=name,
@@ -90,9 +90,9 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
     elif resources:
         # Can't run javac since there are no java files.
         if resources_root:
-            cmd = 'cd ${PKG}/%s && $TOOL -d -o ${OUT} -i .' % resources_root
+            cmd = 'cd ${PKG}/%s && $TOOL z -d -o ${OUT} -i .' % resources_root
         else:
-            cmd = '$TOOL -d -o ${OUTS} -i .'
+            cmd = '$TOOL z -d -o ${OUTS} -i .'
         return build_rule(
             name=name,
             srcs=resources,
@@ -534,13 +534,14 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
             name = name,
             tag = 'classes',
             srcs = [bin_rule],
-            cmd = 'unzip $SRC classes.jar && mv classes.jar $OUT',
+            cmd = '$TOOL x $SRC classes.jar',
             outs = [name + '.jar'],
             visibility = visibility,
             licences = licences,
             requires = ['java'],
             exported_deps = deps,
             test_only=test_only,
+            tools = [CONFIG.JARCAT_TOOL],
         )
         provides = {
             'java': classes_rule,
@@ -584,7 +585,7 @@ def _parse_maven_artifact(id, sources=True, licences=None):
 
 def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
     """Returns the command we'd use to invoke jarcat, and the tool paths required."""
-    cmd = '$TOOLS_JARCAT -i . -o ${OUTS} -j'
+    cmd = '$TOOLS_JARCAT z -i . -o ${OUTS} -j'
     if main_class:
         cmd += ' -m "%s"' % main_class
     if preamble:
