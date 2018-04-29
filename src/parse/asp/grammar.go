@@ -34,7 +34,7 @@ type ReturnStatement struct {
 // A FuncDef implements definition of a new function.
 type FuncDef struct {
 	Name       string       `"def" @Ident`
-	Arguments  []*Argument  `"(" [ @@ { "," @@ } ] ")" Colon EOL`
+	Arguments  []Argument   `"(" [ @@ { "," @@ } ] ")" Colon EOL`
 	Docstring  string       `[ @String EOL ]`
 	Statements []*Statement `{ @@ } Unindent`
 	// Not part of the grammar. Used to indicate internal targets that can only
@@ -212,16 +212,8 @@ type Comprehension struct {
 
 // A Lambda is the inline lambda function.
 type Lambda struct {
-	Arguments []LambdaArgument `[ @@ { "," @@ } ] Colon`
-	Expr      Expression       `@@`
-}
-
-// A LambdaArgument represents an argument to a lambda function.
-// Vexingly these can't be normal function arguments any more, because the : for type annotations
-// gets preferentially consumed to the one that ends the lambda itself :(
-type LambdaArgument struct {
-	Name  string      `@Ident`
-	Value *Expression `[ "=" @@ ]`
+	Arguments []Argument `[ @@ { "," @@ } ] Colon`
+	Expr      Expression `@@`
 }
 
 // An Operator wraps up a Python binary operator to be faster to switch on

@@ -191,8 +191,8 @@ func (p *parser) parseFuncDef() *FuncDef {
 	return fd
 }
 
-func (p *parser) parseArgument() *Argument {
-	a := &Argument{
+func (p *parser) parseArgument() Argument {
+	a := Argument{
 		Name: p.next(Ident).Value,
 	}
 	if tok := p.l.Peek(); tok.Type == ',' || tok.Type == ')' {
@@ -530,7 +530,7 @@ func (p *parser) parseLambda() *Lambda {
 	p.nextv("lambda")
 	for tok := p.l.Peek(); tok.Type == Ident; tok = p.l.Peek() {
 		p.l.Next()
-		arg := LambdaArgument{Name: tok.Value}
+		arg := Argument{Name: tok.Value}
 		if p.optional('=') {
 			arg.Value = p.parseExpression()
 		}

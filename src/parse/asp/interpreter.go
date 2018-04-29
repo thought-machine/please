@@ -483,7 +483,7 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 		}
 		return newPyFunc(s, &FuncDef{
 			Name:       "<lambda>",
-			Arguments:  toRealArguments(expr.Lambda.Arguments),
+			Arguments:  expr.Lambda.Arguments,
 			Statements: []*Statement{stmt},
 		})
 	}
@@ -696,15 +696,4 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	//      we might also be able to do a more aggressive pass in cases where we know we're passing a constant
 	//      to a builtin that won't modify it (e.g. calling build_rule with a constant dict).
 	return nil
-}
-
-// toRealArguments converts lambda arguments to "real", i.e. function, arguments.
-// The two are (mildly vexingly) not the same because the : of type annotations gets preferentially
-// consumed by the parser to the : that terminates the lambda itself.
-func toRealArguments(largs []LambdaArgument) []*Argument {
-	args := make([]*Argument, len(largs))
-	for i, larg := range largs {
-		args[i] = &Argument{Name: larg.Name, Value: larg.Value}
-	}
-	return args
 }

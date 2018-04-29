@@ -534,8 +534,6 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 // they receive their arguments as a slice, in which unpassed arguments are nil.
 func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 	args := make([]pyObject, len(f.args))
-	// TODO(peterebden): Falling out of love with this self scheme a bit. Reconsider a
-	//                   unified CallMember instruction on pyObject?
 	offset := 0
 	if f.self != nil {
 		args[0] = f.self
