@@ -235,13 +235,13 @@ func (p *parser) parseArgument() Argument {
 func (p *parser) parseIf() *IfStatement {
 	p.nextv("if")
 	i := &IfStatement{}
-	i.Condition = *p.parseExpression()
+	p.parseExpressionInPlace(&i.Condition)
 	p.next(':')
 	p.next(EOL)
 	i.Statements = p.parseStatements()
 	for p.optionalv("elif") {
 		elif := &i.Elif[p.newElement(&i.Elif)]
-		elif.Condition = *p.parseExpression()
+		p.parseExpressionInPlace(&elif.Condition)
 		p.next(':')
 		p.next(EOL)
 		elif.Statements = p.parseStatements()
@@ -273,7 +273,7 @@ func (p *parser) parseFor() *ForStatement {
 	p.nextv("for")
 	f.Names = p.parseIdentList()
 	p.nextv("in")
-	f.Expr = *p.parseExpression()
+	p.parseExpressionInPlace(&f.Expr)
 	p.next(':')
 	p.next(EOL)
 	f.Statements = p.parseStatements()
@@ -291,16 +291,31 @@ func (p *parser) parseIdentList() []string {
 
 func (p *parser) parseExpression() *Expression {
 	e := p.parseUnconditionalExpression()
+	p.parseInlineIf(e)
+	return e
+}
+
+func (p *parser) parseExpressionInPlace(e *Expression) {
+	e.Pos = p.l.Peek().Pos
+	p.parseUnconditionalExpressionInPlace(e)
+	p.parseInlineIf(e)
+}
+
+func (p *parser) parseInlineIf(e *Expression) {
 	if p.optionalv("if") {
 		e.If = &InlineIf{Condition: p.parseExpression()}
 		p.nextv("else")
 		e.If.Else = p.parseExpression()
 	}
-	return e
 }
 
 func (p *parser) parseUnconditionalExpression() *Expression {
 	e := &Expression{Pos: p.l.Peek().Pos}
+	p.parseUnconditionalExpressionInPlace(e)
+	return e
+}
+
+func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 	if tok := p.l.Peek(); tok.Type == '-' || tok.Value == "not" {
 		p.l.Next()
 		e.UnaryOp = &UnaryOp{
@@ -333,7 +348,6 @@ func (p *parser) parseUnconditionalExpression() *Expression {
 		}
 		tok = p.l.Peek()
 	}
-	return e
 }
 
 func (p *parser) parseValueExpression() *ValueExpression {
@@ -443,7 +457,7 @@ func (p *parser) parseCall() *Call {
 			p.assert(!names[arg.Name], tok, "Repeated argument %s", arg.Name)
 			names[arg.Name] = true
 		}
-		arg.Value = p.parseExpression()
+		p.parseExpressionInPlace(&arg.Value)
 		c.Arguments = append(c.Arguments, arg)
 		if !p.optional(',') {
 			break
@@ -474,9 +488,10 @@ func (p *parser) parseDict() *Dict {
 	d := &Dict{}
 	p.next('{')
 	for tok := p.l.Peek(); tok.Type != '}'; tok = p.l.Peek() {
-		di := &DictItem{Key: *p.parseExpression()}
+		di := &DictItem{}
+		p.parseExpressionInPlace(&di.Key)
 		p.next(':')
-		di.Value = *p.parseExpression()
+		p.parseExpressionInPlace(&di.Value)
 		d.Items = append(d.Items, di)
 		if !p.optional(',') {
 			break
@@ -542,6 +557,6 @@ func (p *parser) parseLambda() *Lambda {
 		}
 	}
 	p.next(':')
-	l.Expr = *p.parseExpression()
+	p.parseExpressionInPlace(&l.Expr)
 	return l
 }

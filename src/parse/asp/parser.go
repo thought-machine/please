@@ -201,14 +201,14 @@ func (p *Parser) optimise(statements []*Statement) []*Statement {
 					Ident: &IdentStatement{
 						Name: stmt.Ident.Name,
 						Action: &IdentStatementAction{
-							AugAssign: call.Arguments[0].Value,
+							AugAssign: &call.Arguments[0].Value,
 						},
 					},
 				}
 				if name == "append" {
 					stmt.Ident.Action.AugAssign = &Expression{Val: &ValueExpression{
 						List: &List{
-							Values: []*Expression{call.Arguments[0].Value},
+							Values: []*Expression{&call.Arguments[0].Value},
 						},
 					}}
 				}

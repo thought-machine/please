@@ -270,16 +270,16 @@ func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
 	a := []CallArgument{
 		{
 			Name:  "name",
-			Value: &Expression{Val: &ValueExpression{String: `"` + name + `"`}},
+			Value: Expression{Val: &ValueExpression{String: `"` + name + `"`}},
 		}, {
 			Name:  "url",
-			Value: &Expression{Val: &ValueExpression{String: `"` + target + `"`}},
+			Value: Expression{Val: &ValueExpression{String: `"` + target + `"`}},
 		},
 	}
 	if args[1] != nil && args[1] != None {
 		a = append(a, CallArgument{
 			Name: "hashes",
-			Value: &Expression{Val: &ValueExpression{List: &List{
+			Value: Expression{Val: &ValueExpression{List: &List{
 				Values: []*Expression{{Val: &ValueExpression{
 					String: `"` + string(args[1].(pyString)) + `"`,
 				}}},
