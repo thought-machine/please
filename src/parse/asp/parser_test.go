@@ -226,7 +226,7 @@ func TestInlineIf(t *testing.T) {
 	assert.Equal(t, 1, len(ass.Val.List.Values))
 	assert.NotNil(t, ass.If)
 	assert.Equal(t, "y", ass.If.Condition.Val.Ident.Name)
-	assert.Equal(t, Is, ass.If.Condition.Op[0].Op)
+	assert.EqualValues(t, Is, ass.If.Condition.Op[0].Op)
 	assert.Equal(t, "None", ass.If.Condition.Op[0].Expr.Val.Bool)
 	assert.NotNil(t, ass.If.Else.Val.List)
 	assert.Equal(t, 1, len(ass.If.Else.Val.List.Values))

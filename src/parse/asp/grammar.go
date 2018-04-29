@@ -216,56 +216,41 @@ type Lambda struct {
 	Expr      Expression `@@`
 }
 
-// An Operator wraps up a Python binary operator to be faster to switch on
-// and to add some useful extra methods.
-type Operator int
+// An Operator defines a unary or binary operator.
+type Operator rune
 
 const (
-	// ComparisonOperator is used to mark comparison operators
-	ComparisonOperator Operator = 0x100
-	// LogicalOperator is used to mark logical operators.
-	LogicalOperator Operator = 0x200
 	// Add etc are arithmetic operators - these are implemented on a per-type basis
-	Add Operator = iota
+	Add Operator = '+'
 	// Subtract implements binary - (only works on integers)
-	Subtract
+	Subtract = '-'
 	// Modulo implements % (including string interpolation)
-	Modulo
+	Modulo = '%'
 	// LessThan implements <
-	LessThan
+	LessThan = '<'
 	// GreaterThan implements >
-	GreaterThan
+	GreaterThan = '>'
 	// LessThanOrEqual implements <=
-	LessThanOrEqual
+	LessThanOrEqual = '≤'
 	// GreaterThanOrEqual implements >=
-	GreaterThanOrEqual
+	GreaterThanOrEqual = '≥'
 	// Equal etc are comparison operators - also on a per-type basis but have slightly different rules.
-	Equal = iota | ComparisonOperator
+	Equal = '＝'
 	// NotEqual implements !=
-	NotEqual
+	NotEqual = '≠'
 	// In implements the in operator
-	In
+	In = '∈'
 	// NotIn implements "not in" as a single operator.
-	NotIn
+	NotIn = '∉'
 	// And etc are logical operators - these are implemented type-independently
-	And Operator = iota | LogicalOperator
+	And Operator = '&'
 	// Or implements the or operator
-	Or
+	Or = '|'
 	// Is implements type identity.
-	Is
+	Is = '≡'
 	// Index is used in the parser, but not when parsing code.
-	Index = -iota
+	Index = '['
 )
-
-// IsComparison returns true if this operator is a comparison operator.
-func (o Operator) IsComparison() bool {
-	return (o & ComparisonOperator) == ComparisonOperator
-}
-
-// IsLogical returns true if this operator is a logical operator.
-func (o Operator) IsLogical() bool {
-	return (o & LogicalOperator) == LogicalOperator
-}
 
 // String implements the fmt.Stringer interface. It is not especially efficient and is
 // normally only used for errors & debugging.

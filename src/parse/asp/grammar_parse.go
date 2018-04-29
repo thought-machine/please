@@ -323,11 +323,13 @@ func (p *parser) parseUnconditionalExpression() *Expression {
 		o := &e.Op[p.newElement(&e.Op)]
 		o.Op = op
 		o.Expr = p.parseUnconditionalExpression()
-		if len(o.Expr.Op) > 0 && o.Expr.Op[0].Op.IsLogical() {
-			// Hoist logical operator back up here to fix precedence. This is a bit of a hack and
-			// might not be perfect in all cases...
-			e.Op = append(e.Op, o.Expr.Op...)
-			o.Expr.Op = nil
+		if len(o.Expr.Op) > 0 {
+			if op := o.Expr.Op[0].Op; op == And || op == Or || op == Is {
+				// Hoist logical operator back up here to fix precedence. This is a bit of a hack and
+				// might not be perfect in all cases...
+				e.Op = append(e.Op, o.Expr.Op...)
+				o.Expr.Op = nil
+			}
 		}
 		tok = p.l.Peek()
 	}
