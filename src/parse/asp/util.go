@@ -8,8 +8,8 @@ func FindTarget(statements []*Statement, name string) *Statement {
 	for _, statement := range statements {
 		if ident := statement.Ident; ident != nil && ident.Action != nil && ident.Action.Call != nil {
 			for _, arg := range ident.Action.Call.Arguments {
-				if arg.Expr.Val != nil && arg.Expr.Val.Ident != nil && arg.Expr.Val.Ident.Name == "name" {
-					if v := arg.Value; v != nil && v.Val.String != "" && strings.Trim(v.Val.String, `"`) == name {
+				if arg.Name == "name" {
+					if arg.Value.Val != nil && arg.Value.Val.String != "" && strings.Trim(arg.Value.Val.String, `"`) == name {
 						return statement
 					}
 				}
@@ -48,7 +48,7 @@ func GetExtents(statements []*Statement, statement *Statement, max int) (int, in
 func FindArgument(statement *Statement, args ...string) *CallArgument {
 	for i, a := range statement.Ident.Action.Call.Arguments {
 		for _, arg := range args {
-			if a.Expr.Val.Ident != nil && a.Expr.Val.Ident.Name == arg && a.Value != nil {
+			if a.Name == arg {
 				return &statement.Ident.Action.Call.Arguments[i]
 			}
 		}

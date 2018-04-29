@@ -164,8 +164,8 @@ type Call struct {
 
 // A CallArgument represents a single argument at a call site of a function.
 type CallArgument struct {
-	Expr  *Expression `@@`
-	Value *Expression `[ "=" @@ ]`
+	Name  string      `[ @@ "=" ]`
+	Value *Expression `@@`
 }
 
 // A List represents a list literal, either with or without a comprehension clause.

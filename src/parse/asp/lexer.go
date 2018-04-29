@@ -146,13 +146,23 @@ func (l *lex) Next() Token {
 	return ret
 }
 
-// nextToken consumes and returns the next token.
-func (l *lex) nextToken() Token {
-	// Strip any spaces
+// AssignFollows is a hack to do extra lookahead which makes it easier to parse
+// named call arguments. It returns true if the token after next is an assign operator.
+func (l *lex) AssignFollows() bool {
+	l.stripSpaces()
+	return l.b[l.i] == '=' && l.b[l.i+1] != '='
+}
+
+func (l *lex) stripSpaces() {
 	for l.b[l.i] == ' ' {
 		l.i++
 		l.col++
 	}
+}
+
+// nextToken consumes and returns the next token.
+func (l *lex) nextToken() Token {
+	l.stripSpaces()
 	pos := Position{
 		Filename: l.filename,
 		// These are all 1-indexed for niceness.

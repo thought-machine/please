@@ -50,7 +50,7 @@ func TestParseFunctionCalls(t *testing.T) {
 	assert.Equal(t, "package", statements[2].Ident.Name)
 	assert.Equal(t, 1, len(statements[2].Ident.Action.Call.Arguments))
 	arg := statements[2].Ident.Action.Call.Arguments[0]
-	assert.Equal(t, "default_visibility", arg.Expr.Val.Ident.Name)
+	assert.Equal(t, "default_visibility", arg.Name)
 	assert.NotNil(t, arg.Value)
 	assert.Equal(t, 1, len(arg.Value.Val.List.Values))
 	assert.Equal(t, "\"PUBLIC\"", arg.Value.Val.List.Values[0].Val.String)
@@ -59,9 +59,9 @@ func TestParseFunctionCalls(t *testing.T) {
 	assert.Equal(t, "python_library", statements[3].Ident.Name)
 	assert.Equal(t, 2, len(statements[3].Ident.Action.Call.Arguments))
 	args := statements[3].Ident.Action.Call.Arguments
-	assert.Equal(t, "name", args[0].Expr.Val.Ident.Name)
+	assert.Equal(t, "name", args[0].Name)
 	assert.Equal(t, "\"lib\"", args[0].Value.Val.String)
-	assert.Equal(t, "srcs", args[1].Expr.Val.Ident.Name)
+	assert.Equal(t, "srcs", args[1].Name)
 	assert.NotNil(t, args[1].Value.Val.List)
 	assert.Equal(t, 2, len(args[1].Value.Val.List.Values))
 	assert.Equal(t, "\"lib1.py\"", args[1].Value.Val.List.Values[0].Val.String)
@@ -71,7 +71,7 @@ func TestParseFunctionCalls(t *testing.T) {
 	assert.Equal(t, "subinclude", statements[4].Ident.Name)
 	assert.NotNil(t, statements[4].Ident.Action.Call)
 	assert.Equal(t, 1, len(statements[4].Ident.Action.Call.Arguments))
-	assert.Equal(t, "\"//build_defs:version\"", statements[4].Ident.Action.Call.Arguments[0].Expr.Val.String)
+	assert.Equal(t, "\"//build_defs:version\"", statements[4].Ident.Action.Call.Arguments[0].Value.Val.String)
 }
 
 func TestParseAssignments(t *testing.T) {
@@ -117,7 +117,7 @@ func TestOperators(t *testing.T) {
 	assert.Equal(t, 2, len(statements[0].Ident.Action.Call.Arguments))
 
 	arg := statements[0].Ident.Action.Call.Arguments[1]
-	assert.Equal(t, "srcs", arg.Expr.Val.Ident.Name)
+	assert.Equal(t, "srcs", arg.Name)
 	assert.NotNil(t, arg.Value.Val.List)
 	assert.Equal(t, 1, len(arg.Value.Val.List.Values))
 	assert.Equal(t, "\"//something:test_go\"", arg.Value.Val.List.Values[0].Val.String)
@@ -127,9 +127,9 @@ func TestOperators(t *testing.T) {
 	assert.Equal(t, "glob", arg.Value.Op[0].Expr.Val.Ident.Name)
 	assert.NotNil(t, call)
 	assert.Equal(t, 1, len(call.Arguments))
-	assert.NotNil(t, call.Arguments[0].Expr.Val.List)
-	assert.Equal(t, 1, len(call.Arguments[0].Expr.Val.List.Values))
-	assert.Equal(t, "\"*.go\"", call.Arguments[0].Expr.Val.List.Values[0].Val.String)
+	assert.NotNil(t, call.Arguments[0].Value.Val.List)
+	assert.Equal(t, 1, len(call.Arguments[0].Value.Val.List.Values))
+	assert.Equal(t, "\"*.go\"", call.Arguments[0].Value.Val.List.Values[0].Val.String)
 }
 
 func TestIndexing(t *testing.T) {

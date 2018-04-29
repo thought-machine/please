@@ -432,16 +432,16 @@ func (p *parser) parseCall() *Call {
 	c := &Call{}
 	names := map[string]bool{}
 	for tok := p.l.Peek(); tok.Type != ')'; tok = p.l.Peek() {
-		arg := CallArgument{Expr: p.parseExpression()}
-		if arg.Expr != nil && arg.Expr.Val != nil && arg.Expr.Val.Ident != nil && arg.Expr.Val.Ident.Action == nil {
-			// Bare identifiers can be followed by a = for named arguments.
-			if p.optional('=') {
-				name := arg.Expr.Val.Ident.Name
-				p.assert(!names[name], tok, "Repeated argument %s", name)
-				names[name] = true
-				arg.Value = p.parseExpression()
-			}
+		arg := CallArgument{}
+		if tok.Type == Ident && p.l.AssignFollows() {
+			// Named argument.
+			arg.Name = tok.Value
+			p.next(Ident)
+			p.next('=')
+			p.assert(!names[arg.Name], tok, "Repeated argument %s", arg.Name)
+			names[arg.Name] = true
 		}
+		arg.Value = p.parseExpression()
 		c.Arguments = append(c.Arguments, arg)
 		if !p.optional(',') {
 			break

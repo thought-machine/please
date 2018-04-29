@@ -67,6 +67,6 @@ func TestGetArg(t *testing.T) {
 	require.NotNil(t, stmt)
 	vis := FindArgument(stmt, "visibility")
 	require.NotNil(t, vis)
-	assert.Equal(t, 13, vis.Expr.Pos.Line)
+	assert.Equal(t, 13, vis.Value.Pos.Line)
 	assert.Nil(t, FindArgument(stmt, "wibble"))
 }

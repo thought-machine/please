@@ -496,14 +496,12 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	args := c.Arguments
 	if f.self != nil {
 		args = append([]CallArgument{{
-			Expr: &Expression{Optimised: &OptimisedExpression{Constant: f.self}},
+			Value: &Expression{Optimised: &OptimisedExpression{Constant: f.self}},
 		}}, args...)
 	}
 	for i, a := range args {
-		if a.Value != nil { // Named argument
-			// Unfortunately we can't pick this up readily at parse time.
-			s.NAssert(a.Expr.Val.Ident == nil || len(a.Expr.Val.Ident.Action) > 0, "Illegal argument syntax %s", a.Expr)
-			name := a.Expr.Val.Ident.Name
+		if a.Name != "" { // Named argument
+			name := a.Name
 			idx, present := f.argIndices[name]
 			s.Assert(present || f.kwargs, "Unknown argument to %s: %s", f.name, name)
 			if present {
@@ -513,7 +511,7 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 		} else {
 			s.NAssert(i >= len(f.args), "Too many arguments to %s", f.name)
 			s.NAssert(f.kwargsonly, "Function %s can only be called with keyword arguments", f.name)
-			s2.Set(f.args[i], f.validateType(s, i, a.Expr))
+			s2.Set(f.args[i], f.validateType(s, i, a.Value))
 		}
 	}
 	// Now make sure any arguments with defaults are set, and check any others have been passed.
@@ -540,20 +538,20 @@ func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 		offset = 1
 	}
 	for i, a := range c.Arguments {
-		if a.Value != nil { // Named argument
-			if idx, present := f.argIndices[a.Expr.Val.Ident.Name]; present {
+		if a.Name != "" { // Named argument
+			if idx, present := f.argIndices[a.Name]; present {
 				args[idx] = f.validateType(s, idx, a.Value)
 			} else if f.kwargs {
-				s.Set(a.Expr.Val.Ident.Name, s.interpretExpression(a.Value))
+				s.Set(a.Name, s.interpretExpression(a.Value))
 			} else {
-				s.Error("Unknown argument to %s: %s", f.name, a.Expr.Val.Ident.Name)
+				s.Error("Unknown argument to %s: %s", f.name, a.Name)
 			}
 		} else if i >= len(args) {
 			s.Assert(f.varargs, "Too many arguments to %s", f.name)
-			args = append(args, s.interpretExpression(a.Expr))
+			args = append(args, s.interpretExpression(a.Value))
 		} else {
 			s.NAssert(f.kwargsonly, "Function %s can only be called with keyword arguments", f.name)
-			args[i+offset] = f.validateType(s, i+offset, a.Expr)
+			args[i+offset] = f.validateType(s, i+offset, a.Value)
 		}
 	}
 
