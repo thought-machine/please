@@ -82,7 +82,8 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 	// Config needs a little separate tweaking.
 	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
 	// mutating operations like .setdefault() otherwise.
-	s.Set("CONFIG", i.pkgConfig(pkg).Copy())
+	s.config = i.pkgConfig(pkg).Copy()
+	s.Set("CONFIG", s.config)
 	err = i.interpretStatements(s, statements)
 	if err == nil {
 		s.Callback = true // From here on, if anything else uses this scope, it's in a post-build callback.
@@ -155,15 +156,20 @@ func (i *interpreter) pkgConfig(pkg *core.Package) *pyConfig {
 	return i.getConfig(i.scope.state.Config)
 }
 
-// optimiseExpressions performs some general optimisation of expressions by precalculating constants
+// optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
 // and identifying simple local variable lookups.
 func (i *interpreter) optimiseExpressions(v reflect.Value) {
 	if v.Type() == reflect.TypeOf(&Expression{}) && !v.IsNil() {
 		expr := v.Interface().(*Expression)
 		if constant := i.scope.Constant(expr); constant != nil {
 			expr.Constant = constant // Extract constant expression
-		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Property == nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil && len(expr.Val.Ident.Action) == 0 {
-			expr.Local = expr.Val.Ident.Name // Simple variable name lookup
+		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil {
+			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
+				expr.Local = expr.Val.Ident.Name // Simple variable name lookup
+			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
+				expr.Config = expr.Val.Ident.Action[0].Property.Name
+				expr.Val = nil
+			}
 		}
 	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
 		i.optimiseExpressions(v.Elem())
@@ -185,6 +191,7 @@ type scope struct {
 	pkg         *core.Package
 	parent      *scope
 	locals      pyDict
+	config      *pyConfig
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 }
@@ -202,6 +209,7 @@ func (s *scope) NewPackagedScope(pkg *core.Package) *scope {
 		pkg:         pkg,
 		parent:      s,
 		locals:      pyDict{},
+		config:      s.config,
 		Callback:    s.Callback,
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
@@ -283,7 +291,8 @@ func (s *scope) LoadSingletons(state *core.BuildState) {
 	s.Set("False", False)
 	s.Set("None", None)
 	if state != nil {
-		s.Set("CONFIG", s.interpreter.getConfig(state.Config))
+		s.config = s.interpreter.getConfig(state.Config)
+		s.Set("CONFIG", s.config)
 	}
 }
 
@@ -366,6 +375,8 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 		return expr.Constant
 	} else if expr.Local != "" {
 		return s.Lookup(expr.Local)
+	} else if expr.Config != "" {
+		return s.config.Property(expr.Config)
 	}
 	defer func() {
 		if r := recover(); r != nil {

@@ -14,7 +14,7 @@ import (
 	"parse/rules"
 )
 
-func parseFile(filename string) (*scope, error) {
+func parseFileToStatements(filename string) (*scope, []*Statement, error) {
 	state := core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
 	state.Config.BuildConfig = map[string]string{"parser-engine": "python27"}
 	pkg := core.NewPackage("test/package")
@@ -26,7 +26,13 @@ func parseFile(filename string) (*scope, error) {
 	}
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(reflect.ValueOf(statements))
-	return parser.interpreter.interpretAll(pkg, statements)
+	s, err := parser.interpreter.interpretAll(pkg, statements)
+	return s, statements, err
+}
+
+func parseFile(filename string) (*scope, error) {
+	s, _, err := parseFileToStatements(filename)
+	return s, err
 }
 
 func TestBasic(t *testing.T) {
@@ -227,4 +233,15 @@ func TestArgumentCompatibility(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/argument_compatibility.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, pyList{pyInt(1)}, s.Lookup("x"))
+}
+
+func TestOptimiseConfig(t *testing.T) {
+	s, statements, err := parseFileToStatements("src/parse/asp/test_data/interpreter/optimise_config.build")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(statements))
+	assert.NotNil(t, statements[0].Ident)
+	assert.NotNil(t, statements[0].Ident.Action)
+	assert.NotNil(t, statements[0].Ident.Action.Assign)
+	assert.Equal(t, "GO_TOOL", statements[0].Ident.Action.Assign.Config)
+	assert.EqualValues(t, "go", s.Lookup("x"))
 }
