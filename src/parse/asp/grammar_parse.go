@@ -241,7 +241,7 @@ func (p *parser) parseIf() *IfStatement {
 	i.Statements = p.parseStatements()
 	for p.optionalv("elif") {
 		elif := &i.Elif[p.newElement(&i.Elif)]
-		elif.Condition = p.parseExpression()
+		elif.Condition = *p.parseExpression()
 		p.next(':')
 		p.next(EOL)
 		elif.Statements = p.parseStatements()

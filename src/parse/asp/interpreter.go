@@ -350,7 +350,7 @@ func (s *scope) interpretIf(stmt *IfStatement) pyObject {
 		return s.interpretStatements(stmt.Statements)
 	}
 	for _, elif := range stmt.Elif {
-		if s.interpretExpression(elif.Condition).IsTruthy() {
+		if s.interpretExpression(&elif.Condition).IsTruthy() {
 			return s.interpretStatements(elif.Statements)
 		}
 	}

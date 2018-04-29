@@ -55,7 +55,7 @@ type IfStatement struct {
 	Condition  Expression   `"if" @@ Colon EOL`
 	Statements []*Statement `{ @@ } Unindent`
 	Elif       []struct {
-		Condition  *Expression  `"elif" @@ Colon EOL`
+		Condition  Expression   `"elif" @@ Colon EOL`
 		Statements []*Statement `{ @@ } Unindent`
 	} `{ @@ }`
 	ElseStatements []*Statement `[ "else" Colon EOL { @@ } Unindent ]`
