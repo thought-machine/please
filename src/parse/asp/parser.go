@@ -180,7 +180,7 @@ func (p *Parser) annotate(err error, r io.ReadSeeker) error {
 func (p *Parser) optimise(statements []*Statement) []*Statement {
 	ret := make([]*Statement, 0, len(statements))
 	for _, stmt := range statements {
-		if stmt.Literal != nil || stmt.Pass != "" {
+		if stmt.Literal != nil || stmt.Pass {
 			continue // Neither statement has any effect.
 		} else if stmt.FuncDef != nil {
 			stmt.FuncDef.Statements = p.optimise(stmt.FuncDef.Statements)

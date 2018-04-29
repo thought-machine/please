@@ -10,20 +10,20 @@ type FileInput struct {
 // support backoff (i.e. if an earlier entry matches to its completion but can't consume
 // following tokens, it doesn't then make another choice :( )
 type Statement struct {
-	Pos      Position
-	Pass     string           `( @"pass" EOL`
-	Continue string           `| @"continue" EOL`
-	FuncDef  *FuncDef         `| @@`
-	For      *ForStatement    `| @@`
-	If       *IfStatement     `| @@`
-	Return   *ReturnStatement `| "return" @@ EOL`
-	Raise    *Expression      `| "raise" @@ EOL`
-	Assert   *struct {
+	Pos     Position
+	FuncDef *FuncDef         `| @@`
+	For     *ForStatement    `| @@`
+	If      *IfStatement     `| @@`
+	Return  *ReturnStatement `| "return" @@ EOL`
+	Raise   *Expression      `| "raise" @@ EOL`
+	Assert  *struct {
 		Expr    *Expression `@@`
 		Message string      `["," @String]`
 	} `| "assert" @@ EOL`
-	Ident   *IdentStatement `| @@ EOL`
-	Literal *Expression     `| @@ EOL)`
+	Ident    *IdentStatement `| @@ EOL`
+	Literal  *Expression     `| @@ EOL)`
+	Pass     bool            `( @"pass" EOL`
+	Continue bool            `| @"continue" EOL`
 }
 
 // A ReturnStatement implements the Python 'return' statement.

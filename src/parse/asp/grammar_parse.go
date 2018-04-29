@@ -107,11 +107,11 @@ func (p *parser) parseStatement() *Statement {
 	s.Pos = tok.Pos
 	switch tok.Value {
 	case "pass":
-		s.Pass = "pass"
+		s.Pass = true
 		p.l.Next()
 		p.next(EOL)
 	case "continue":
-		s.Continue = "continue"
+		s.Continue = true
 		p.l.Next()
 		p.next(EOL)
 	case "def":

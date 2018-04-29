@@ -15,7 +15,7 @@ func TestParseBasic(t *testing.T) {
 	assert.Equal(t, 1, len(statements[0].FuncDef.Arguments))
 	assert.Equal(t, "x", statements[0].FuncDef.Arguments[0].Name)
 	assert.Equal(t, 1, len(statements[0].FuncDef.Statements))
-	assert.Equal(t, "pass", statements[0].FuncDef.Statements[0].Pass)
+	assert.True(t, statements[0].FuncDef.Statements[0].Pass)
 }
 
 func TestParseDefaultArguments(t *testing.T) {
@@ -26,7 +26,7 @@ func TestParseDefaultArguments(t *testing.T) {
 	assert.Equal(t, "test", statements[0].FuncDef.Name)
 	assert.Equal(t, 3, len(statements[0].FuncDef.Arguments))
 	assert.Equal(t, 1, len(statements[0].FuncDef.Statements))
-	assert.Equal(t, "pass", statements[0].FuncDef.Statements[0].Pass)
+	assert.True(t, statements[0].FuncDef.Statements[0].Pass)
 
 	args := statements[0].FuncDef.Arguments
 	assert.Equal(t, "name", args[0].Name)
