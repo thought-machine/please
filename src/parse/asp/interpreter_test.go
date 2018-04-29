@@ -242,6 +242,6 @@ func TestOptimiseConfig(t *testing.T) {
 	assert.NotNil(t, statements[0].Ident)
 	assert.NotNil(t, statements[0].Ident.Action)
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
-	assert.Equal(t, "GO_TOOL", statements[0].Ident.Action.Assign.Config)
+	assert.Equal(t, "GO_TOOL", statements[0].Ident.Action.Assign.Optimised.Config)
 	assert.EqualValues(t, "go", s.Lookup("x"))
 }

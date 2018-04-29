@@ -79,8 +79,14 @@ type Expression struct {
 	Val     *ValueExpression `| @@ )`
 	Op      []OpExpression   `{ @@ }`
 	If      *InlineIf        `[ @@ ]`
-	// Not part of the grammar - applied later to optimise constant expressions.
-	// Needs to be public for serialisation but should not be used outside this package.
+	// For internal optimisation - do not use outside this package.
+	Optimised *OptimisedExpression
+}
+
+// An OptimisedExpression contains information to optimise certain aspects of execution of
+// an expression. It must be public for serialisation but shouldn't be used outside this package.
+type OptimisedExpression struct {
+	// Used to optimise constant expressions.
 	Constant pyObject
 	// Similarly applied to optimise simple lookups of local variables.
 	Local string

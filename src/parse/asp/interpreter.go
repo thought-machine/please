@@ -162,12 +162,13 @@ func (i *interpreter) optimiseExpressions(v reflect.Value) {
 	if v.Type() == reflect.TypeOf(&Expression{}) && !v.IsNil() {
 		expr := v.Interface().(*Expression)
 		if constant := i.scope.Constant(expr); constant != nil {
-			expr.Constant = constant // Extract constant expression
+			expr.Optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
+			expr.Val = nil
 		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil {
 			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
-				expr.Local = expr.Val.Ident.Name // Simple variable name lookup
+				expr.Optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
 			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
-				expr.Config = expr.Val.Ident.Action[0].Property.Name
+				expr.Optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
 				expr.Val = nil
 			}
 		}
@@ -371,12 +372,13 @@ func (s *scope) interpretFor(stmt *ForStatement) pyObject {
 
 func (s *scope) interpretExpression(expr *Expression) pyObject {
 	// Check the optimised sites first
-	if expr.Constant != nil {
-		return expr.Constant
-	} else if expr.Local != "" {
-		return s.Lookup(expr.Local)
-	} else if expr.Config != "" {
-		return s.config.Property(expr.Config)
+	if expr.Optimised != nil {
+		if expr.Optimised.Constant != nil {
+			return expr.Optimised.Constant
+		} else if expr.Optimised.Local != "" {
+			return s.Lookup(expr.Optimised.Local)
+		}
+		return s.config.Property(expr.Optimised.Config)
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -674,7 +676,9 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	// Technically some of these might be constant (e.g. 'a,b,c'.split(',') or `1 if True else 2`.
 	// That's probably unlikely to be common though - we could do a generalised constant-folding pass
 	// but it's rare that people would write something of that nature in this language.
-	if expr.Val == nil || expr.Val.Slice != nil || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
+	if expr.Optimised != nil && expr.Optimised.Constant != nil {
+		return expr.Optimised.Constant
+	} else if expr.Val == nil || expr.Val.Slice != nil || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
 		return nil
 	} else if expr.Val.Bool != "" || expr.Val.String != "" || expr.Val.Int != nil {
 		return s.interpretValueExpression(expr.Val)

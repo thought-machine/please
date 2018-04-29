@@ -496,7 +496,7 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	args := c.Arguments
 	if f.self != nil {
 		args = append([]CallArgument{{
-			Expr: &Expression{Constant: f.self},
+			Expr: &Expression{Optimised: &OptimisedExpression{Constant: f.self}},
 		}}, args...)
 	}
 	for i, a := range args {
