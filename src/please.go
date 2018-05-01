@@ -314,7 +314,7 @@ var opts struct {
 			After           string `short:"a" long:"after" required:"true" description:"Revision to check out for the state after"`
 			CheckoutCommand string `long:"checkout_command" default:"git checkout %s" description:"Command to run to check out the before/after revisions."`
 			Args            struct {
-				Files []string `positional-arg-name:"files" description:"Files to consider changed"`
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to consider changed"`
 			} `positional-args:"true"`
 		} `command:"changes" description:"Calculates the difference between two different states of the build graph"`
 	} `command:"query" description:"Queries information about the build graph"`
@@ -571,6 +571,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"changes": func() bool {
 		opts.OutputFlags.PlainOutput = true
+		files := opts.Query.Changes.Args.Files.Get()
 		if opts.Query.Changes.Before != "" {
 			query.MustCheckout(opts.Query.Changes.Before, opts.Query.Changes.CheckoutCommand)
 		}
@@ -583,7 +584,7 @@ var buildFunctions = map[string]func() bool{
 		if !success {
 			return false
 		}
-		for _, target := range query.DiffGraphs(before, after, opts.Query.Changes.Args.Files) {
+		for _, target := range query.DiffGraphs(before, after, files) {
 			fmt.Printf("%s\n", target)
 		}
 		return true
