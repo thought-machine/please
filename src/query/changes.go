@@ -28,11 +28,12 @@ func MustCheckout(revision, command string) {
 // (because this is designed to be fed into 'plz test' and we can't test targets that no longer exist).
 func DiffGraphs(before, after *core.BuildState, files []string) []core.BuildLabel {
 	log.Notice("Calculating difference...")
+	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
 	targets := after.Graph.AllTargets()
 	ret := make(core.BuildLabels, 0, len(targets))
 	done := make(map[*core.BuildTarget]struct{}, len(targets))
 	for _, t2 := range targets {
-		if t1 := before.Graph.Target(t2.Label); t1 == nil || changed(before, after, t1, t2, files) {
+		if t1 := before.Graph.Target(t2.Label); t1 == nil || changed(before, after, t1, t2, files) || configChanged {
 			ret = append(ret, addRevdeps(after.Graph, t2, done)...)
 		}
 	}
