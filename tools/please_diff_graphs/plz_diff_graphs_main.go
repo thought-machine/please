@@ -14,9 +14,13 @@ import (
 	"os"
 	"strings"
 
+	"gopkg.in/op/go-logging.v1"
+
 	"cli"
 	"tools/please_diff_graphs/diff"
 )
+
+var log = logging.MustGetLogger("plz_diff_graphs")
 
 var opts = struct {
 	Usage        string
