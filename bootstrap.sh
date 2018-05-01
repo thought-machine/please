@@ -37,6 +37,7 @@ go_get github.com/coreos/go-semver/semver
 go_get github.com/djherbis/atime
 go_get github.com/karrick/godirwalk
 go_get github.com/hashicorp/go-multierror
+go_get github.com/google/shlex
 notice ""
 
 # Detect javac presence and swap to compiling locally if we find it.
