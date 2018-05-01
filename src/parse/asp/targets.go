@@ -252,7 +252,7 @@ func addProvides(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 		s.Assert(ok, "Argument %s must be a dict, not %s", name, obj.Type())
 		for k, v := range d {
 			str, ok := v.(pyString)
-			s.Assert(ok, "%s keys must be strings", name)
+			s.Assert(ok, "%s values must be strings", name)
 			t.AddProvide(k, parseLabel(s, string(str)))
 		}
 	}

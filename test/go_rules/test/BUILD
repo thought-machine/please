@@ -7,15 +7,6 @@ go_library(
     visibility = ['//test/...'],
 )
 
-go_library(
-    name = 'generate_test',
-    srcs = ['generate.go'],
-    go_tools = [
-        '//third_party/go:stringer',
-    ],
-    visibility = ['//test/...'],
-)
-
 # Tests a go 'external test', where you can have files in the same directory
 # with a _test suffix.
 go_test(

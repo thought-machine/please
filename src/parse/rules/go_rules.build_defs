@@ -123,6 +123,9 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
 def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list=None, test_only:bool&testonly=False):
     """Generates a `go generate` rule.
 
+    Deprecated, use https://github.com/thought-machine/pleasings/blob/master/go/go_generate.build_defs instead.
+    This will probably be removed in plz v13+.
+
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to run go generate over.
@@ -131,6 +134,8 @@ def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
     """
+    log.warning('The builtin go_generate is deprecated, see https://github.com/thought-machine/pleasings/blob/master/go/go_generate.build_defs for an alternative.')
+
     # We simply capture all go files produced by go generate.
     def _post_build(rule_name, output):
         for out in output:
@@ -498,9 +503,10 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
     )
 
 
-def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None,
+def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
-           install:list=None, revision:str=None, strip:list=None, hashes:list=None):
+           install:list=None, revision:str|list=None, strip:list=None, hashes:list=None,
+           extra_outs:list=[]):
     """Defines a dependency on a third-party Go library.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -515,7 +521,9 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
 
     Args:
       name (str): Name of the rule
-      get (str): Target to get (eg. "github.com/gorilla/mux")
+      get (str): Target to get (eg. "github.com/gorilla/mux"). Can also be a list of multiple in
+                 which case they are fetched separately and compiled together, which can be useful
+                 for avoiding issues with circular dependencies.
       repo (str): Location of a Git repository to fetch from.
       deps (list): Dependencies
       exported_deps (list): Dependencies to make available to anything using this rule.
@@ -531,7 +539,77 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
                       not for other version control systems.
       strip (list): List of paths to strip from the installed target.
       hashes (list): List of hashes to verify the downloaded sources against.
+      extra_outs (list): List of additional output files after the compile.
     """
+    if isinstance(get, str):
+        get = [get]
+        revision = [revision]
+        tags = ['get']
+    else:
+        tags = [basename(dirname(g)) for g in get]
+        revision = revision or [None for g in get]
+    all_installs = []
+    outs = extra_outs
+    provides = None
+    for getone, revision, tag in zip(get, revision, tags):
+        get_rule, getroot = _go_get_download(
+            name = name,
+            tag = tag,
+            get = getone,
+            repo = repo,
+            patch = patch,
+            hashes = hashes,
+            test_only = test_only,
+            revision = revision,
+            strip = strip,
+        )
+        outs += [getroot]
+        deps += [get_rule]
+        provides = {'go': ':' + name, 'go_src': get_rule}
+        if install:
+            all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in install]
+        else:
+            all_installs += [getone]
+
+    # Now compile it in a separate step.
+    cmd = [
+        'export GOPATH="%s"' % CONFIG.GOPATH,
+        '$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join(all_installs or install),
+    ]
+    if package_name():
+        cmd += [
+            # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
+            'rm -rf bin' if binary else 'rm -rf pkg',
+            'mv $PKG_DIR/bin .' if binary else 'mv $PKG_DIR/pkg .',
+        ]
+    if binary:
+        outs = ['bin/' + name]
+    else:
+        # Outputs are created one directory down from where we want them.
+        # For most it doesn't matter but the top-level one will get lost.
+        cmd += [' if [ -f ${OUTS}.a ]; then mkdir -p $OUTS && mv ${OUTS}.a $OUTS; fi']
+        outs = ['pkg/%s_%s/%s' % (CONFIG.OS, CONFIG.ARCH, out) for out in outs]
+    return build_rule(
+        name = name,
+        outs = outs,
+        deps = deps,
+        exported_deps = exported_deps,
+        tools = [CONFIG.GO_TOOL],
+        visibility = visibility,
+        building_description = 'Compiling...',
+        cmd = ' && '.join(cmd),
+        binary = binary,
+        requires = ['go'],
+        test_only = test_only,
+        sandbox = False,
+        needs_transitive_deps = True,
+        provides = provides,
+    )
+
+
+def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, hashes:list=None,
+                     test_only:bool&testonly=False, revision:str=None, strip:list=None,
+                     labels:list=[]):
     if hashes and not revision:
         log.warning("You shouldn't specify hashes on go_get without specifying revision as well")
     labels = ['go_get:%s@%s' % (get, revision) if revision else 'go_get:%s' % get]
@@ -568,18 +646,15 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
         cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$SRCS_PATCH' % subdir)
     if strip:
         cmd += ['rm -rf %s/%s' % (subdir, s) for s in strip]
-    # This is an awkward case, as noted above one may want to build a binary from an existing library
-    # so we have to special case here to allow them both to use the same source download.
-    get_rule = None if binary and deps else build_rule(
+    return build_rule(
         name = name,
-        tag = 'get',
+        tag = tag,
         srcs = {
             'patch': [patch],
             'get': get_deps,
         },
         outs = [subdir],
         tools = tools,
-        visibility = visibility,
         building_description = 'Fetching...',
         cmd = ' && '.join(cmd),
         requires = ['go'],
@@ -587,44 +662,7 @@ def go_get(name:str, get:str, repo:str='', deps:list=[], exported_deps:list=None
         labels = labels,
         hashes = hashes,
         sandbox = False,
-    )
-
-    if install:
-        install = [i if i.startswith(getroot) else (getroot + '/' + i) for i in install]
-    else:
-        install = [get]
-
-    # Now compile it in a separate step.
-    cmd = [
-        'export GOPATH="%s"' % CONFIG.GOPATH,
-        '$TOOL install -gcflags "-trimpath $TMP_DIR" ' + ' '.join(install),
-    ]
-    if package_name():
-        cmd += [
-            # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
-            'rm -rf bin' if binary else 'rm -rf pkg',
-            'mv $PKG_DIR/bin .' if binary else 'mv $PKG_DIR/pkg .',
-        ]
-    if not binary:
-        # Outputs are created one directory down from where we want them.
-        # For most it doesn't matter but the top-level one will get lost.
-        cmd.append(' if [ -f ${OUTS}.a ]; then mkdir -p $OUTS && mv ${OUTS}.a $OUTS; fi')
-    build_rule(
-        name = name,
-        outs = [('bin/' + name) if binary else ('pkg/%s_%s/%s' % (CONFIG.OS, CONFIG.ARCH, getroot))],
-        deps = deps + [get_rule],
-        exported_deps = exported_deps,
-        tools = [CONFIG.GO_TOOL],
-        visibility = visibility,
-        building_description = 'Compiling...',
-        cmd = ' && '.join(cmd),
-        binary = binary,
-        requires = ['go'],
-        test_only = test_only,
-        labels = labels,
-        sandbox = False,
-        needs_transitive_deps = True,
-    )
+    ), getroot
 
 
 def _go_github_repo_cmd(name, get, repo, revision):

@@ -157,8 +157,8 @@ go_get(
 go_get(
     name = 'protoc-gen-go',
     binary = True,
-    get = 'github.com/golang/protobuf/protoc-gen-go',
-    revision = '130e6b02ab059e7b717a096f397c5b60111cae74',
+    get = [],
+    install = ['github.com/golang/protobuf/protoc-gen-go'],
     deps = [
         ':protobuf',
     ],
@@ -198,14 +198,6 @@ go_get(
         ':go-isatty',
         ':terminal',
     ],
-)
-
-go_get(
-    name = 'stringer',
-    binary = True,
-    get = 'golang.org/x/tools/cmd/stringer',
-    revision = 'f8ecfdb6b66ec67ca930b39806519a2b72d1eaca',
-    deps = [':tools'],
 )
 
 go_get(
@@ -452,16 +444,16 @@ go_get(
 go_get(
     name = 'go-fuzz-build',
     binary = True,
-    get = 'github.com/dvyukov/go-fuzz/go-fuzz-build',
-    revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+    get = [],
+    install = ['github.com/dvyukov/go-fuzz/go-fuzz-build'],
     deps = [':go-fuzz-dep'],
 )
 
 go_get(
     name = 'go-fuzz',
     binary = True,
-    get = 'github.com/dvyukov/go-fuzz/go-fuzz',
-    revision = '445b00a1141b27425541ee8d7dc2f524faf202a9',
+    get = [],
+    install = ['github.com/dvyukov/go-fuzz/go-fuzz'],
     deps = [':go-fuzz-dep'],
 )
 
