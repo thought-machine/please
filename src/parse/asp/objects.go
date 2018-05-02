@@ -3,6 +3,7 @@ package asp
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -378,6 +379,16 @@ func (d pyDict) Copy() pyDict {
 // reference can still modify it.
 func (d pyDict) Freeze() pyFrozenDict {
 	return pyFrozenDict{pyDict: d}
+}
+
+// Keys returns the keys of this dict, in order.
+func (d pyDict) Keys() []string {
+	ret := make([]string, 0, len(d))
+	for k := range d {
+		ret = append(ret, k)
+	}
+	sort.Strings(ret)
+	return ret
 }
 
 // A pyFrozenDict implements an immutable python dict.

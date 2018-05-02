@@ -490,27 +490,27 @@ func dictGet(s *scope, args []pyObject) pyObject {
 
 func dictKeys(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyDict)
-	ret := make(pyList, 0, len(self))
-	for k := range self {
-		ret = append(ret, pyString(k))
+	ret := make(pyList, len(self))
+	for i, k := range self.Keys() {
+		ret[i] = pyString(k)
 	}
 	return ret
 }
 
 func dictValues(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyDict)
-	ret := make(pyList, 0, len(self))
-	for _, v := range self {
-		ret = append(ret, v)
+	ret := make(pyList, len(self))
+	for i, k := range self.Keys() {
+		ret[i] = self[k]
 	}
 	return ret
 }
 
 func dictItems(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyDict)
-	ret := make(pyList, 0, len(self))
-	for k, v := range self {
-		ret = append(ret, pyList{pyString(k), v})
+	ret := make(pyList, len(self))
+	for i, k := range self.Keys() {
+		ret[i] = pyList{pyString(k), self[k]}
 	}
 	return ret
 }
