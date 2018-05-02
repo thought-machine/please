@@ -96,7 +96,6 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 	defaultPath(&config.Java.JarCatTool, config.Please.Location, "jarcat")
 	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
 	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
-	defaultPath(&config.Parse.LintTool, config.Please.Location, "linter")
 
 	// Default values for these guys depend on config.Java.JavaHome if that's been set.
 	if config.Java.JavaHome != "" {
@@ -238,8 +237,6 @@ type Configuration struct {
 		Motd             []string    `help:"Message of the day; is displayed once at the top during builds. If multiple are given, one is randomly chosen."`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
-		LintTool         string   `help:"Location of the lint tool for BUILD files."`
-		PyLib            string   `help:"Location of the Python library modules that are loaded by the parser. Default is py_lib beside the executable." example:"/usr/lib/python2.7"`
 		ExperimentalDir  []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
 		BuildFileName    []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+."`
 		BlacklistDirs    []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`

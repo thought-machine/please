@@ -13,8 +13,7 @@ import (
 )
 
 func TestRewriteFile(t *testing.T) {
-	state := core.NewBuildState(0, nil, 4, core.DefaultConfiguration())
-	state.Config.Parse.PyLib = "src"
+	state := core.NewDefaultBuildState()
 	// Copy file to avoid any issues with links etc.
 	wd, _ := os.Getwd()
 	err := fs.CopyFile("src/gc/test_data/before.build", path.Join(wd, "test.build"), 0644)
