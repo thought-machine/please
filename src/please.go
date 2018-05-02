@@ -310,9 +310,9 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
-			Before          string `short:"b" long:"before" description:"Revision to check out for the state before"`
-			After           string `short:"a" long:"after" required:"true" description:"Revision to check out for the state after"`
+			Since           string `short:"s" long:"since" description:"Revision to compare against"`
 			CheckoutCommand string `long:"checkout_command" default:"git checkout %s" description:"Command to run to check out the before/after revisions."`
+			CurrentCommand  string `long:"current_revision_command" default:"git rev-parse HEAD" description:"Command to run to get the current revision (which will be checked out again at the end)"`
 			Args            struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to consider changed"`
 			} `positional-args:"true"`
@@ -571,15 +571,14 @@ var buildFunctions = map[string]func() bool{
 	},
 	"changes": func() bool {
 		opts.OutputFlags.PlainOutput = true
+		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
 		files := opts.Query.Changes.Args.Files.Get()
-		if opts.Query.Changes.Before != "" {
-			query.MustCheckout(opts.Query.Changes.Before, opts.Query.Changes.CheckoutCommand)
-		}
+		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
 		success, before := runBuild(core.WholeGraph, false, false)
 		if !success {
 			return false
 		}
-		query.MustCheckout(opts.Query.Changes.After, opts.Query.Changes.CheckoutCommand)
+		query.MustCheckout(original, opts.Query.Changes.CheckoutCommand)
 		success, after := runBuild(core.WholeGraph, false, false)
 		if !success {
 			return false
