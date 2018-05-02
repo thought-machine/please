@@ -43,18 +43,21 @@ func DiffGraphs(before, after *core.BuildState, files []string) []core.BuildLabe
 	log.Notice("Calculating difference...")
 	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
 	targets := after.Graph.AllTargets()
-	ret := make(core.BuildLabels, 0, len(targets))
 	done := make(map[*core.BuildTarget]struct{}, len(targets))
 	for _, t2 := range targets {
 		if t1 := before.Graph.Target(t2.Label); t1 == nil || changed(before, after, t1, t2, files) || configChanged {
-			ret = append(ret, addRevdeps(after.Graph, t2, done)...)
+			addRevdeps(after.Graph, t2, done)
 		}
 	}
-	sort.Sort(ret) // reverse dependencies aren't guaranteed to be consistent
+	ret := make(core.BuildLabels, 0, len(done))
+	for target := range done {
+		ret = append(ret, target.Label)
+	}
+	sort.Sort(ret)
 	return ret
 }
 
-// changed returns true if the given two targets are equivalent.
+// changed returns true if the given two targets are not equivalent.
 func changed(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget, files []string) bool {
 	for _, f := range files {
 		if t2.HasSource(f) {
@@ -67,15 +70,11 @@ func changed(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget, files []string) 
 }
 
 // addRevdeps walks back up the reverse dependencies of a target, marking them all changed.
-// It returns the list of any that have, plus the target itself.
-func addRevdeps(graph *core.BuildGraph, target *core.BuildTarget, done map[*core.BuildTarget]struct{}) []core.BuildLabel {
-	if _, present := done[target]; present {
-		return nil
+func addRevdeps(graph *core.BuildGraph, target *core.BuildTarget, done map[*core.BuildTarget]struct{}) {
+	if _, present := done[target]; !present {
+		done[target] = struct{}{}
+		for _, revdep := range graph.ReverseDependencies(target) {
+			addRevdeps(graph, revdep, done)
+		}
 	}
-	done[target] = struct{}{}
-	ret := []core.BuildLabel{target.Label}
-	for _, revdep := range graph.ReverseDependencies(target) {
-		ret = append(ret, addRevdeps(graph, revdep, done)...)
-	}
-	return ret
 }
