@@ -5,6 +5,8 @@ Version 12.2.0
       See the docs for more info: https://please.build/cross_compiling.html
     * Added support for the Java --release flag (new in Java 9/10).
     * Support to pass environment variables (#302, fixes #205)
+    * Added 'plz query changes' subcommand. This supersedes the old workflow
+      involving plz_diff_graphs and is considerably faster.
 
 
 Version 12.1.8
