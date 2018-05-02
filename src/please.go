@@ -310,7 +310,7 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
-			Since           string `short:"s" long:"since" description:"Revision to compare against"`
+			Since           string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
 			CheckoutCommand string `long:"checkout_command" default:"git checkout %s" description:"Command to run to check out the before/after revisions."`
 			CurrentCommand  string `long:"current_revision_command" default:"git rev-parse HEAD" description:"Command to run to get the current revision (which will be checked out again at the end)"`
 			Args            struct {
@@ -570,7 +570,6 @@ var buildFunctions = map[string]func() bool{
 		return true
 	},
 	"changes": func() bool {
-		opts.OutputFlags.PlainOutput = true
 		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
 		files := opts.Query.Changes.Args.Files.Get()
 		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
@@ -600,8 +599,6 @@ func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 
 // Used above as a convenience wrapper for query functions.
 func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state *core.BuildState)) bool {
-	opts.OutputFlags.PlainOutput = true // No point displaying this for one of these queries.
-	config.Cache.DirClean = false
 	if !needFullParse {
 		opts.ParsePackageOnly = true
 	}
@@ -924,8 +921,11 @@ func main() {
 	}
 	// Read the config now
 	config = readConfigAndSetRoot(command == "update")
-	// Set this in case anything wants to use it soon
-	core.NewBuildState(config.Please.NumThreads, nil, opts.OutputFlags.Verbosity, config)
+	if parser.Command.Active != nil && parser.Command.Active.Name == "query" {
+		// Query commands don't need either of these set.
+		opts.OutputFlags.PlainOutput = true
+		config.Cache.DirClean = false
+	}
 
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
