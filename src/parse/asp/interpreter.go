@@ -697,3 +697,11 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	//      to a builtin that won't modify it (e.g. calling build_rule with a constant dict).
 	return nil
 }
+
+// pkgFilename returns the filename of the current package, or the empty string if there is none.
+func (s *scope) pkgFilename() string {
+	if s.pkg != nil {
+		return s.pkg.Filename
+	}
+	return ""
+}
