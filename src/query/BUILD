@@ -6,6 +6,7 @@ go_library(
         '//src/core',
         '//src/utils',
         '//third_party/go:logging',
+        '//third_party/go:shlex',
     ],
     visibility = ['PUBLIC'],
 )
@@ -33,6 +34,16 @@ go_test(
 go_test(
     name = 'whatoutputs_test',
     srcs = ['whatoutputs_test.go'],
+    deps = [
+        ':query',
+        '//src/core',
+        '//third_party/go:testify',
+    ],
+)
+
+go_test(
+    name = 'changes_test',
+    srcs = ['changes_test.go'],
     deps = [
         ':query',
         '//src/core',

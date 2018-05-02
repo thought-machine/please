@@ -14,9 +14,13 @@ import (
 	"os"
 	"strings"
 
+	"gopkg.in/op/go-logging.v1"
+
 	"cli"
 	"tools/please_diff_graphs/diff"
 )
+
+var log = logging.MustGetLogger("plz_diff_graphs")
 
 var opts = struct {
 	Usage        string
@@ -69,6 +73,7 @@ func readStdin() []string {
 func main() {
 	cli.ParseFlagsOrDie("Please graph differ", "9.1.2", &opts)
 	cli.InitLogging(opts.Verbosity)
+	log.Warning("plz_diff_graphs has been deprecated in favour of 'plz query changes', consider using that instead")
 	before := diff.ParseGraphOrDie(opts.Before)
 	after := diff.ParseGraphOrDie(opts.After)
 	if len(opts.ChangedFiles.Files) == 1 && opts.ChangedFiles.Files[0] == "-" {
