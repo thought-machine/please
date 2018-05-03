@@ -1,23 +1,12 @@
-# We prefer Ubuntu 17.10 because it makes the installation of some packages simpler
-# and is more up-to-date than 16.04.
-# If you want to replicate this image on 16.04 the main difference is UnitTest++
-# which you'll need to compile your own copy of - their version is too old (we need v2)
-# and has some naming idiosyncrasies which are too hard to support).
-FROM ubuntu:artful
+FROM ubuntu:bionic
 MAINTAINER peter.ebden@gmail.com
 
-# Most dependencies; Python, Java, Clang and Ruby (only used for fpm)
+# Most dependencies; Go, Python, Java, Clang and Ruby (only used for fpm)
 RUN apt-get update && \
-    apt-get install -y python3.5 python3-dev python3-pip openjdk-8-jdk-headless \
-    curl unzip git locales pkg-config zlib1g-dev \
-    clang libunittest++-dev ruby ruby-dev rubygems golint && \
+    apt-get install -y python3 python3-dev python3-pip openjdk-8-jdk-headless \
+    curl git locales pkg-config zlib1g-dev \
+    clang libunittest++-dev ruby ruby-dev rubygems golang-go golint && \
     apt-get clean
-
-# Go
-# We can't install this above because the latest available version for Artful is 1.8
-# and we require >= 1.9 for various minor features.
-RUN curl -fsSL https://dl.google.com/go/go1.10.linux-amd64.tar.gz | tar -xzC /usr/local
-RUN ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 
 # Locale
 RUN locale-gen en_GB.UTF-8
