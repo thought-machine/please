@@ -46,7 +46,9 @@ func DiffGraphs(before, after *core.BuildState, files []string) []core.BuildLabe
 	done := make(map[*core.BuildTarget]struct{}, len(targets))
 	for _, t2 := range targets {
 		if t1 := before.Graph.Target(t2.Label); t1 == nil || changed(before, after, t1, t2, files) || configChanged {
-			addRevdeps(after.Graph, t2, done)
+			if after.ShouldInclude(t2) {
+				addRevdeps(after.Graph, t2, done)
+			}
 		}
 	}
 	ret := make(core.BuildLabels, 0, len(done))

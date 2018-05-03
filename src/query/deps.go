@@ -16,7 +16,7 @@ func printTarget(state *core.BuildState, target *core.BuildTarget, indent string
 		return
 	}
 	targets[target] = true
-	if target.ShouldInclude(state.Include, state.Exclude) {
+	if state.ShouldInclude(target) {
 		fmt.Printf("%s%s\n", indent, target.Label)
 	}
 	if !unique {

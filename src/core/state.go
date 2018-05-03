@@ -279,6 +279,16 @@ func (state *BuildState) SetIncludeAndExclude(include, exclude []string) {
 	}
 }
 
+// ShouldInclude returns true if the given target is included by the include/exclude flags.
+func (state *BuildState) ShouldInclude(target *BuildTarget) bool {
+	for _, e := range state.ExcludeTargets {
+		if e.Includes(target.Label) {
+			return false
+		}
+	}
+	return target.ShouldInclude(state.Include, state.Exclude)
+}
+
 // AddOriginalTarget adds one of the original targets and enqueues it for parsing / building.
 func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 	// Check it's not excluded first.

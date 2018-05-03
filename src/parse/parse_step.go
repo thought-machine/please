@@ -73,7 +73,7 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 		for _, target := range pkg.AllTargets() {
 			// Don't activate targets that were added in a post-build function; that causes a race condition
 			// between the post-build functions running and other things trying to activate them too early.
-			if target.ShouldInclude(include, exclude) && !target.AddedPostBuild {
+			if state.ShouldInclude(target) && !target.AddedPostBuild {
 				// Must always do this for coverage because we need to calculate sources of
 				// non-test targets later on.
 				if !state.NeedTests || target.IsTest || state.NeedCoverage {

@@ -7,7 +7,7 @@ import "fmt"
 // dependency on the given set of files.
 // Targets are filtered by given include / exclude labels and if 'tests' is true only
 // test targets will be returned.
-func AffectedTargets(graph *core.BuildGraph, files, include, exclude []string, tests, transitive bool) {
+func AffectedTargets(state *core.BuildState, files, include, exclude []string, tests, transitive bool) {
 	affectedTargets := make(chan *core.BuildTarget, 100)
 	done := make(chan bool)
 
@@ -18,8 +18,8 @@ func AffectedTargets(graph *core.BuildGraph, files, include, exclude []string, t
 
 	// Check all the targets to see if any own one of these files
 	go func() {
-		for _, target := range graph.AllTargets() {
-			for _, source := range target.AllSourcePaths(graph) {
+		for _, target := range state.Graph.AllTargets() {
+			for _, source := range target.AllSourcePaths(state.Graph) {
 				if _, present := filePaths[source]; present {
 					affectedTargets <- target
 					break
@@ -39,12 +39,12 @@ func AffectedTargets(graph *core.BuildGraph, files, include, exclude []string, t
 				affectedTargets <- target
 			}
 		}
-		for _, pkg := range graph.PackageMap() {
+		for _, pkg := range state.Graph.PackageMap() {
 			if _, present := filePaths[pkg.Filename]; present {
 				invalidatePackage(pkg)
 			} else {
 				for _, subinclude := range pkg.Subincludes {
-					for _, source := range graph.TargetOrDie(subinclude).AllSourcePaths(graph) {
+					for _, source := range state.Graph.TargetOrDie(subinclude).AllSourcePaths(state.Graph) {
 						if _, present := filePaths[source]; present {
 							invalidatePackage(pkg)
 							break
@@ -56,7 +56,7 @@ func AffectedTargets(graph *core.BuildGraph, files, include, exclude []string, t
 		done <- true
 	}()
 
-	go handleAffectedTargets(graph, affectedTargets, done, include, exclude, tests, transitive)
+	go handleAffectedTargets(state, affectedTargets, done, include, exclude, tests, transitive)
 
 	<-done
 	<-done
@@ -64,7 +64,7 @@ func AffectedTargets(graph *core.BuildGraph, files, include, exclude []string, t
 	<-done
 }
 
-func handleAffectedTargets(graph *core.BuildGraph, affectedTargets <-chan *core.BuildTarget, done chan<- bool, include, exclude []string, tests, transitive bool) {
+func handleAffectedTargets(state *core.BuildState, affectedTargets <-chan *core.BuildTarget, done chan<- bool, include, exclude []string, tests, transitive bool) {
 	seenTargets := map[*core.BuildTarget]bool{}
 
 	var inner func(*core.BuildTarget)
@@ -72,11 +72,11 @@ func handleAffectedTargets(graph *core.BuildGraph, affectedTargets <-chan *core.
 		if !seenTargets[target] {
 			seenTargets[target] = true
 			if transitive {
-				for _, revdep := range graph.ReverseDependencies(target) {
+				for _, revdep := range state.Graph.ReverseDependencies(target) {
 					inner(revdep)
 				}
 			}
-			if (!tests || target.IsTest) && target.ShouldInclude(include, exclude) {
+			if (!tests || target.IsTest) && state.ShouldInclude(target) {
 				fmt.Printf("%s\n", target.Label)
 			}
 		}

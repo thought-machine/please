@@ -19,6 +19,10 @@ func TestTargetsChanged(t *testing.T) {
 
 	t2.Command = "nope nope nope"
 	assert.EqualValues(t, []core.BuildLabel{t2.Label, t4.Label}, DiffGraphs(s1, s2, nil))
+
+	t2.AddLabel("nope")
+	s2.SetIncludeAndExclude(nil, []string{"nope"})
+	assert.EqualValues(t, []core.BuildLabel{}, DiffGraphs(s1, s2, nil))
 }
 
 func addTarget(state *core.BuildState, label string, dep *core.BuildTarget, sources ...string) *core.BuildTarget {

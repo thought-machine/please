@@ -508,7 +508,7 @@ var buildFunctions = map[string]func() bool{
 			targets = core.FindOwningPackages(state, files)
 		}
 		return runQuery(true, targets, func(state *core.BuildState) {
-			query.AffectedTargets(state.Graph, files.Get(), opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
+			query.AffectedTargets(state, files.Get(), opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
 		})
 	},
 	"input": func() bool {
