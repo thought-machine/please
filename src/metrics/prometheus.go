@@ -10,6 +10,7 @@ import (
 	"os/user"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/shlex"
@@ -41,6 +42,9 @@ type metrics struct {
 // m is the singleton metrics instance.
 var m *metrics
 
+// initOnce is used to ensure that InitFromConfig only initialises once (because Prometheus panics otherwise).
+var initOnce sync.Once
+
 // InitFromConfig sets up the initial metrics from the configuration.
 func InitFromConfig(config *core.Configuration) {
 	if config.Metrics.PushGatewayURL != "" {
@@ -49,14 +53,17 @@ func InitFromConfig(config *core.Configuration) {
 				log.Fatalf("%s", r)
 			}
 		}()
-		m = initMetrics(config.Metrics.PushGatewayURL.String(), time.Duration(config.Metrics.PushFrequency),
-			time.Duration(config.Metrics.PushTimeout), config.CustomMetricLabels, config.Metrics.PerTest)
-		prometheus.MustRegister(m.buildCounter)
-		prometheus.MustRegister(m.cacheCounter)
-		prometheus.MustRegister(m.testCounter)
-		prometheus.MustRegister(m.buildHistogram)
-		prometheus.MustRegister(m.cacheHistogram)
-		prometheus.MustRegister(m.testHistogram)
+
+		initOnce.Do(func() {
+			m = initMetrics(config.Metrics.PushGatewayURL.String(), time.Duration(config.Metrics.PushFrequency),
+				time.Duration(config.Metrics.PushTimeout), config.CustomMetricLabels, config.Metrics.PerTest)
+			prometheus.MustRegister(m.buildCounter)
+			prometheus.MustRegister(m.cacheCounter)
+			prometheus.MustRegister(m.testCounter)
+			prometheus.MustRegister(m.buildHistogram)
+			prometheus.MustRegister(m.cacheHistogram)
+			prometheus.MustRegister(m.testHistogram)
+		})
 	}
 }
 
