@@ -46,9 +46,7 @@ func DiffGraphs(before, after *core.BuildState, files []string) []core.BuildLabe
 	done := make(map[*core.BuildTarget]struct{}, len(targets))
 	for _, t2 := range targets {
 		if t1 := before.Graph.Target(t2.Label); t1 == nil || changed(before, after, t1, t2, files) || configChanged {
-			if after.ShouldInclude(t2) {
-				addRevdeps(after.Graph, t2, done)
-			}
+			addRevdeps(after, t2, done)
 		}
 	}
 	ret := make(core.BuildLabels, 0, len(done))
@@ -72,11 +70,11 @@ func changed(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget, files []string) 
 }
 
 // addRevdeps walks back up the reverse dependencies of a target, marking them all changed.
-func addRevdeps(graph *core.BuildGraph, target *core.BuildTarget, done map[*core.BuildTarget]struct{}) {
-	if _, present := done[target]; !present {
+func addRevdeps(state *core.BuildState, target *core.BuildTarget, done map[*core.BuildTarget]struct{}) {
+	if _, present := done[target]; !present && state.ShouldInclude(target) {
 		done[target] = struct{}{}
-		for _, revdep := range graph.ReverseDependencies(target) {
-			addRevdeps(graph, revdep, done)
+		for _, revdep := range state.Graph.ReverseDependencies(target) {
+			addRevdeps(state, revdep, done)
 		}
 	}
 }
