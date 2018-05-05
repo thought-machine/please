@@ -1,4 +1,4 @@
-def go_bindata(name, srcs, package=None, input_dir=None, prefix='$PKG', out=None,
+def go_bindata(name, srcs, input_dir=None, prefix='$PKG', out=None,
                memcopy=False, metadata=False, compress=False, visibility=None,
                test_only=False):
     """Defines a rule that invokes go-bindata to embed data into Go code."""
@@ -6,7 +6,7 @@ def go_bindata(name, srcs, package=None, input_dir=None, prefix='$PKG', out=None
         '' if memcopy else '-nomemcopy',
         '' if metadata else '-nometadata',
         '' if compress else '-nocompress',
-        package or '$(basename $PKG)',
+        '$(basename $PKG)',
         ('-prefix ' + prefix) if prefix else '',
         input_dir or prefix or '$PKG',
     )

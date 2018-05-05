@@ -264,6 +264,8 @@ func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
 	if s.state.Graph.Target(label) != nil {
 		return label
 	}
+	log.Warning("Direct remote subincludes are deprecated in favour of using subrepos.")
+	log.Warning("See https://github.com/thought-machine/pleasings for an introduction of how to use them.")
 	remoteFile, ok := s.interpreter.subincludeScope.Lookup("remote_file").(*pyFunc)
 	s.interpreter.subincludeScope.Assert(ok, "remote_file is not callable")
 	// Call using the normal entry point, which is a bit of a faff but it sorts out default arguments and so forth

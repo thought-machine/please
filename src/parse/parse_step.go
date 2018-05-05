@@ -18,6 +18,10 @@ import (
 
 var log = logging.MustGetLogger("parse")
 
+// errTryAgain is used to indicate that an attempt to parse should be retried.
+// This is a little bit of a hack around subrepos.
+var errTryAgain = fmt.Errorf("retry parse")
+
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
 // It is not an error if the package has already been parsed.
 //
@@ -45,17 +49,27 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 	// If we get here then it falls to us to parse this package.
 	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
 
-	// Check whether this guy exists within a subrepo. If so we will need to make sure that's available first.
+	pkg, err := parsePackage(state, label, dependor, checkSubrepo(state, label))
+	if err != nil {
+		if err != errTryAgain {
+			return err
+		}
+		pkg, err = parsePackage(state, label, dependor, checkSubrepo(state, label))
+		if err != nil {
+			return err
+		}
+	}
+	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed package")
+	return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
+}
+
+// checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
+func checkSubrepo(state *core.BuildState, label core.BuildLabel) *core.Subrepo {
 	subrepo := state.Graph.SubrepoFor(label.PackageName)
 	if subrepo != nil && subrepo.Target != nil {
 		state.WaitForBuiltTarget(subrepo.Target.Label, label.PackageName)
 	}
-	pkg, err := parsePackage(state, label, dependor, subrepo)
-	if err != nil {
-		return err
-	}
-	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed package")
-	return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
+	return subrepo
 }
 
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
@@ -96,6 +110,13 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	pkg := core.NewPackage(packageName)
 	pkg.Subrepo = subrepo
 	if pkg.Filename = buildFileName(state, packageName); pkg.Filename == "" {
+		// Could indicate that we're looking for a subrepo that hasn't been loaded yet.
+		// TODO(peterebden): Ideally we'd like to be able to define these anywhere, so this is a bit of a hack for now.
+		if fs.IsPackage(state.Config.Parse.BuildFileName, core.RepoRoot) && state.Graph.Package("") == nil {
+			state.AddPendingParse(core.BuildLabel{PackageName: "", Name: "all"}, label, false)
+			state.WaitForPackage("")
+			return nil, errTryAgain
+		}
 		exists := core.PathExists(packageName)
 		// Handle quite a few cases to provide more obvious error messages.
 		if dependor != core.OriginalTarget && exists {
