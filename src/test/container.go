@@ -5,6 +5,7 @@ package test
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -14,6 +15,13 @@ import (
 )
 
 func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
+	// Unset Docker environment variables. These typically cause things to fail if set
+	// in inexplicable ways. If these turn out to be otherwise useful we may make this configurable.
+	os.Unsetenv("DOCKER_TLS_VERIFY")
+	os.Unsetenv("DOCKER_HOST")
+	os.Unsetenv("DOCKER_CERT_PATH")
+	os.Unsetenv("DOCKER_API_VERSION")
+
 	testDir := path.Join(core.RepoRoot, target.TestDir())
 	replacedCmd := build.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	replacedCmd += " " + strings.Join(state.TestArgs, " ")
