@@ -10,14 +10,16 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"core"
 )
 
 // Not sure what the -6 suffixes are about.
 var testStart = regexp.MustCompile(`^=== RUN (.*)(?:-6)?$`)
-var testResult = regexp.MustCompile(`^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \((.*)s\)$`)
+var testResult = regexp.MustCompile(`^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \(([0-9]+\.[0-9]+)s\)$`)
 
 func parseGoTestResults(data []byte) (core.TestResults, error) {
 	results := core.TestResults{}
@@ -33,21 +35,28 @@ func parseGoTestResults(data []byte) (core.TestResults, error) {
 			if !testsStarted[testName] {
 				continue
 			}
+			f, _ := strconv.ParseFloat(string(testResultMatches[3]), 64)
+			duration := time.Duration(f * float64(time.Second))
 			results.NumTests++
 			if bytes.Equal(testResultMatches[1], []byte("PASS")) {
 				results.Passed++
-				results.Passes = append(results.Passes, testName)
+				results.Results = append(results.Results, core.TestResult{
+					Name: testName, Success: true, Duration: duration,
+				})
 			} else if bytes.Equal(testResultMatches[1], []byte("SKIP")) {
 				results.Skipped++
-				i++ // Skip following line too that has the reason for being skipped
+				i++ // Following line has the reason for being skipped
+				results.Results = append(results.Results, core.TestResult{
+					Name: testName, Skipped: true, Duration: duration, Type: string(bytes.TrimSpace(lines[i])),
+				})
 			} else {
 				output := ""
 				for j := i + 1; j < len(lines) && !bytes.HasPrefix(lines[j], []byte("===")); j++ {
 					output += string(lines[j]) + "\n"
 				}
 				results.Failed++
-				results.Failures = append(results.Failures, core.TestFailure{
-					Name: testName, Type: "FAILURE", Traceback: output, Stdout: "", Stderr: "",
+				results.Results = append(results.Results, core.TestResult{
+					Name: testName, Type: "FAILURE", Traceback: output, Stdout: "", Stderr: "", Duration: duration,
 				})
 			}
 		} else if bytes.Equal(line, []byte("PASS")) {

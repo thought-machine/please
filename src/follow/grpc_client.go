@@ -138,7 +138,7 @@ func streamResources(state *core.BuildState, client pb.PlzEventsClient) {
 
 // runOutput is just a wrapper around output.MonitorState for convenience in testing.
 func runOutput(state *core.BuildState) bool {
-	success := output.MonitorState(state, state.Config.Please.NumThreads, state.Verbosity >= 4, false, false, state.NeedTests, false, false, "")
+	success := output.MonitorState(state, state.Config.Please.NumThreads, state.Verbosity >= 4, false, false, state.NeedTests, false, false, false, "")
 	output.PrintDisconnectionMessage(success, remoteClosed, remoteDisconnected)
 	return success
 }

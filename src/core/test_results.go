@@ -15,21 +15,23 @@ type TestResults struct {
 	ExpectedFailures int // Number of tests that were expected to fail (counts as a pass, but displayed differently)
 	Skipped          int // Number of tests skipped (also count as passes)
 	Flakes           int // Number of failed attempts to run the test
-	Failures         []TestFailure
-	Passes           []string
+	Results          []TestResult
 	Output           string        // Stdout / stderr from the test.
 	Cached           bool          // True if the test results were retrieved from cache
 	TimedOut         bool          // True if the test failed because we timed it out.
 	Duration         time.Duration // Length of time this test took
 }
 
-// TestFailure represents information about a test failure.
-type TestFailure struct {
-	Name      string // Name of failed test
-	Type      string // Type of failure, eg. type of exception raised
-	Traceback string // Traceback
-	Stdout    string // Standard output during test
-	Stderr    string // Standard error during test
+// TestResult represents detailed information about a test result
+type TestResult struct {
+	Name      string        // Name of failed test
+	Type      string        // Type of failure, eg. type of exception raised
+	Traceback string        // Traceback
+	Stdout    string        // Standard output during test
+	Stderr    string        // Standard error during test
+	Duration  time.Duration // Time the test took
+	Success   bool          // True if the test was successful
+	Skipped   bool          // True if the test was skipped
 }
 
 // Aggregate aggregates the given results into this one.
@@ -40,8 +42,7 @@ func (results *TestResults) Aggregate(r *TestResults) {
 	results.ExpectedFailures += r.ExpectedFailures
 	results.Skipped += r.Skipped
 	results.Flakes += r.Flakes
-	results.Failures = append(results.Failures, r.Failures...)
-	results.Passes = append(results.Passes, r.Passes...)
+	results.Results = append(results.Results, r.Results...)
 	results.Duration += r.Duration
 	// Output can't really be aggregated sensibly.
 }

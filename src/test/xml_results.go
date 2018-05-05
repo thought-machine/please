@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"core"
 )
@@ -47,18 +48,23 @@ func appendResult(test jUnitXMLTest, results *core.TestResults) {
 		appendResult2(test, results, jUnitXMLFailure{"", "FAILURE", test.Stacktrace})
 	} else {
 		results.Passed++
-		results.Passes = append(results.Passes, test.Name)
+		results.Results = append(results.Results, core.TestResult{
+			Name:     test.Name,
+			Success:  true,
+			Duration: test.Duration(),
+		})
 	}
 }
 
 func appendResult2(test jUnitXMLTest, results *core.TestResults, failure jUnitXMLFailure) {
 	results.Failed++
-	results.Failures = append(results.Failures, core.TestFailure{
+	results.Results = append(results.Results, core.TestResult{
 		Name:      combineNames(test.ClassName, test.Name),
 		Type:      failure.Type,
 		Traceback: messageOrTraceback(failure), // TODO(pebers): store both of these, not just one.
 		Stdout:    test.Stdout,
 		Stderr:    test.Stderr,
+		Duration:  test.Duration(),
 	})
 }
 
@@ -104,6 +110,10 @@ type jUnitXMLTest struct {
 	Stderr     string           `xml:"stderr,omitempty"`
 }
 
+func (j jUnitXMLTest) Duration() time.Duration {
+	return time.Duration(j.Time * float64(time.Second))
+}
+
 type jUnitXMLFailure struct {
 	Message   string `xml:"message,attr,omitempty"`
 	Type      string `xml:"type,attr,omitempty"`
@@ -124,20 +134,21 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 				Failures: target.Results.Failed,
 				Tests:    target.Results.NumTests,
 			}
-			for _, pass := range target.Results.Passes {
-				suite.TestCases = append(suite.TestCases, jUnitXMLTest{Name: pass})
-			}
-			for _, fail := range target.Results.Failures {
-				suite.TestCases = append(suite.TestCases, jUnitXMLTest{
-					Name:   fail.Name,
-					Type:   fail.Type,
-					Stdout: fail.Stdout,
-					Stderr: fail.Stderr,
-					Error: &jUnitXMLFailure{
-						Type:      fail.Type,
-						Traceback: fail.Traceback,
-					},
-				})
+			for _, result := range target.Results.Results {
+				if result.Success {
+					suite.TestCases = append(suite.TestCases, jUnitXMLTest{Name: result.Name})
+				} else {
+					suite.TestCases = append(suite.TestCases, jUnitXMLTest{
+						Name:   result.Name,
+						Type:   result.Type,
+						Stdout: result.Stdout,
+						Stderr: result.Stderr,
+						Error: &jUnitXMLFailure{
+							Type:      result.Type,
+							Traceback: result.Traceback,
+						},
+					})
+				}
 			}
 			results.TestSuites = append(results.TestSuites, suite)
 		}

@@ -32,8 +32,7 @@ func toProto(r *core.BuildResult) *pb.BuildEventResponse {
 			ExpectedFailures: int32(t.ExpectedFailures),
 			Skipped:          int32(t.Skipped),
 			Flakes:           int32(t.Flakes),
-			Failures:         toProtoTestFailures(t.Failures),
-			Passes:           t.Passes,
+			Results:          toProtoTestResults(t.Results),
 			Output:           t.Output,
 			Duration:         int64(t.Duration),
 			Cached:           t.Cached,
@@ -56,16 +55,19 @@ func toProtos(results []*core.BuildResult, active, done int) []*pb.BuildEventRes
 	return ret
 }
 
-// toProtoTestFailures converts a slice of test failures to the proto equivalent.
-func toProtoTestFailures(failures []core.TestFailure) []*pb.TestFailure {
-	ret := make([]*pb.TestFailure, len(failures))
-	for i, f := range failures {
-		ret[i] = &pb.TestFailure{
-			Name:      f.Name,
-			Type:      f.Type,
-			Traceback: f.Traceback,
-			Stdout:    f.Stdout,
-			Stderr:    f.Stderr,
+// toProtoTestResults converts a slice of test failures to the proto equivalent.
+func toProtoTestResults(results []core.TestResult) []*pb.TestResult {
+	ret := make([]*pb.TestResult, len(results))
+	for i, r := range results {
+		ret[i] = &pb.TestResult{
+			Name:      r.Name,
+			Type:      r.Type,
+			Traceback: r.Traceback,
+			Stdout:    r.Stdout,
+			Stderr:    r.Stderr,
+			Duration:  int64(r.Duration),
+			Success:   r.Success,
+			Skipped:   r.Skipped,
 		}
 	}
 	return ret
@@ -101,8 +103,7 @@ func fromProto(r *pb.BuildEventResponse) *core.BuildResult {
 			ExpectedFailures: int(t.ExpectedFailures),
 			Skipped:          int(t.Skipped),
 			Flakes:           int(t.Flakes),
-			Failures:         fromProtoTestFailures(t.Failures),
-			Passes:           t.Passes,
+			Results:          fromProtoTestResults(t.Results),
 			Output:           t.Output,
 			Duration:         time.Duration(t.Duration),
 			Cached:           t.Cached,
@@ -111,16 +112,19 @@ func fromProto(r *pb.BuildEventResponse) *core.BuildResult {
 	}
 }
 
-// fromProtoTestFailures converts a slice of proto test failures to the internal equivalent.
-func fromProtoTestFailures(failures []*pb.TestFailure) []core.TestFailure {
-	ret := make([]core.TestFailure, len(failures))
-	for i, f := range failures {
-		ret[i] = core.TestFailure{
-			Name:      f.Name,
-			Type:      f.Type,
-			Traceback: f.Traceback,
-			Stdout:    f.Stdout,
-			Stderr:    f.Stderr,
+// fromProtoTestResults converts a slice of proto test failures to the internal equivalent.
+func fromProtoTestResults(results []*pb.TestResult) []core.TestResult {
+	ret := make([]core.TestResult, len(results))
+	for i, r := range results {
+		ret[i] = core.TestResult{
+			Name:      r.Name,
+			Type:      r.Type,
+			Traceback: r.Traceback,
+			Stdout:    r.Stdout,
+			Stderr:    r.Stderr,
+			Duration:  time.Duration(r.Duration),
+			Success:   r.Success,
+			Skipped:   r.Skipped,
 		}
 	}
 	return ret

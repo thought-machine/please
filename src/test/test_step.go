@@ -164,7 +164,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			} else if err == nil {
 				target.Results.NumTests++
 				target.Results.Failed++
-				target.Results.Failures = append(target.Results.Failures, core.TestFailure{
+				target.Results.Results = append(target.Results.Results, core.TestResult{
 					Name:   "Missing results",
 					Stdout: string(out),
 				})
@@ -174,7 +174,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			} else {
 				target.Results.NumTests++
 				target.Results.Failed++
-				target.Results.Failures = append(target.Results.Failures, core.TestFailure{
+				target.Results.Results = append(target.Results.Results, core.TestResult{
 					Name:   "Test failed with no results",
 					Stdout: string(out),
 				})
@@ -191,7 +191,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			} else if err != nil && results.Failed == 0 {
 				// Add a failure result to the test so it shows up in the final aggregation.
 				target.Results.Failed = 1
-				target.Results.Failures = append(results.Failures, core.TestFailure{
+				target.Results.Results = append(results.Results, core.TestResult{
 					Name:   "Return value",
 					Type:   fmt.Sprintf("%s", err),
 					Stdout: string(out),
@@ -217,8 +217,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 	}
 	if numSucceeded >= successesRequired {
-		target.Results.Failures = nil // Remove any failures, they don't count
-		target.Results.Failed = 0     // (they'll be picked up as flakes below)
+		target.Results.Failed = 0 // Remove any failures, they don't count (they'll be picked up as flakes below)
 		if numSucceeded > 0 && numFlakes > 0 {
 			target.Results.Flakes = numFlakes
 		}

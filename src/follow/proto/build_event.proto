@@ -115,9 +115,9 @@ message TestResults {
     // Number of failed attempts to run the test
     int32 flakes = 6;
     // Tests that failed, if any.
-    repeated TestFailure failures = 7;
-    // Names of tests that passed.
-    repeated string passes = 8;
+    repeated TestResult results = 7;
+    // Deprecated, no longer used.
+    repeated string deprecated_passes = 8;
     // Combined stdout / stderr from the test.
     string output = 9;
     // Duration that the test ran for, in nanoseconds.
@@ -128,7 +128,7 @@ message TestResults {
     bool timed_out = 12;
 }
 
-message TestFailure {
+message TestResult {
     // Name of the failing test.
     string name = 1;
     // Type of failure, e.g. the type of exception raised.
@@ -139,6 +139,12 @@ message TestFailure {
     string stdout = 4;
     // Standard error during test.
     string stderr = 5;
+    // Time the individual test took
+    int64 duration = 6;
+    // True if the test passed
+    bool success = 7;
+    // True if the test was skipped
+    bool skipped = 8;
 }
 
 message ResourceUsageRequest{

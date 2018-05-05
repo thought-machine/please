@@ -116,6 +116,7 @@ var opts struct {
 		ShowOutput      bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug           bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed          bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
+		Detailed        bool         `long:"detailed" description:"Prints more detailed output after tests."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -135,6 +136,7 @@ var opts struct {
 		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed              bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
+		Detailed            bool         `long:"detailed" description:"Prints more detailed output after tests."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -711,6 +713,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	if state.DebugTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
+	detailedTests := shouldTest && (opts.Test.Detailed || opts.Cover.Detailed || (len(targets) == 1 && !targets[0].IsAllTargets() && !targets[0].IsAllSubpackages()))
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, targets)
 	// Start up all the build workers
@@ -729,7 +732,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	}()
 	// Draw stuff to the screen while there are still results coming through.
 	shouldRun := !opts.Run.Args.Target.IsEmpty()
-	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.Build.ShowStatus, string(opts.OutputFlags.TraceFile))
+	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
 	metrics.Stop()
 	build.StopWorkers()
 	if c != nil {
