@@ -74,15 +74,27 @@ func ReplaceTestSequences(state *core.BuildState, target *core.BuildTarget, comm
 	if command == "" {
 		// An empty test command implies running the test binary.
 		return replaceSequencesInternal(state, target, fmt.Sprintf("$(exe :%s)", target.Label.Name), true)
+	} else if strings.HasPrefix(command, "$(worker") {
+		_, _, command = workerAndArgs(state, target, command)
+		return command
 	}
 	return replaceSequencesInternal(state, target, command, true)
 }
 
+// TestWorkerCommand returns the worker & its arguments (if any) for a test, and the command to run for the test itself.
+func TestWorkerCommand(state *core.BuildState, target *core.BuildTarget) (string, string, string) {
+	return workerAndArgs(state, target, target.GetTestCommand(state))
+}
+
 // workerCommandAndArgs returns the worker & its command (if any) and subsequent local command for the rule.
 func workerCommandAndArgs(state *core.BuildState, target *core.BuildTarget) (string, string, string) {
-	match := workerReplacement.FindStringSubmatch(target.GetCommand(state))
+	return workerAndArgs(state, target, target.GetCommand(state))
+}
+
+func workerAndArgs(state *core.BuildState, target *core.BuildTarget, command string) (string, string, string) {
+	match := workerReplacement.FindStringSubmatch(command)
 	if match == nil {
-		return "", "", ReplaceSequences(state, target, target.GetCommand(state))
+		return "", "", ReplaceSequences(state, target, command)
 	} else if match[1] != "" {
 		panic("$(worker) replacements cannot have any commands preceding them.")
 	}

@@ -51,7 +51,7 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 		return nil, err
 	}
 	log.Debug("Sending remote build request to %s; opts %s", worker, workerArgs)
-	resp, err := buildRemotely(state.Config, worker, &pb.BuildRequest{
+	resp, err := buildRemotely(state, worker, &pb.BuildRequest{
 		Rule:    target.Label.String(),
 		Labels:  target.Labels,
 		TempDir: path.Join(core.RepoRoot, target.TmpDir()),
@@ -74,8 +74,8 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 }
 
 // buildRemotely runs a single build request and returns its response.
-func buildRemotely(config *core.Configuration, worker string, req *pb.BuildRequest) (*pb.BuildResponse, error) {
-	w, err := getOrStartWorker(config, worker)
+func buildRemotely(state *core.BuildState, worker string, req *pb.BuildRequest) (*pb.BuildResponse, error) {
+	w, err := getOrStartWorker(state, worker)
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +88,20 @@ func buildRemotely(config *core.Configuration, worker string, req *pb.BuildReque
 	return response, nil
 }
 
+// EnsureWorkerStarted ensures that a worker server is started and has responded saying it's ready.
+func EnsureWorkerStarted(state *core.BuildState, worker string, label core.BuildLabel) error {
+	resp, err := buildRemotely(state, worker, &pb.BuildRequest{
+		Rule: label.String(),
+		Test: true,
+	})
+	if err == nil && !resp.Success {
+		return fmt.Errorf(strings.Join(resp.Messages, "\n"))
+	}
+	return err
+}
+
 // getOrStartWorker either retrieves an existing worker process or starts a new one.
-func getOrStartWorker(config *core.Configuration, worker string) (*workerServer, error) {
+func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, error) {
 	workerMutex.Lock()
 	defer workerMutex.Unlock()
 	if w, present := workerMap[worker]; present {
@@ -97,7 +109,7 @@ func getOrStartWorker(config *core.Configuration, worker string) (*workerServer,
 	}
 	// Need to create a new process
 	cmd := core.ExecCommand(worker)
-	cmd.Env = core.GeneralBuildEnvironment(config)
+	cmd.Env = core.GeneralBuildEnvironment(state.Config)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -121,6 +133,7 @@ func getOrStartWorker(config *core.Configuration, worker string) (*workerServer,
 	go w.readResponses(stdout)
 	go w.wait()
 	workerMap[worker] = w
+	state.Stats.NumWorkerProcesses = len(workerMap)
 	return w, nil
 }
 

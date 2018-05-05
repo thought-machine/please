@@ -155,11 +155,12 @@ func fromProtoError(s string) error {
 // resourceToProto converts the internal resource stats to a proto message.
 func resourceToProto(stats *core.SystemStats) *pb.ResourceUsageResponse {
 	return &pb.ResourceUsageResponse{
-		NumCpus:  int32(stats.CPU.Count),
-		CpuUse:   stats.CPU.Used,
-		IoWait:   stats.CPU.IOWait,
-		MemTotal: stats.Memory.Total,
-		MemUsed:  stats.Memory.Used,
+		NumCpus:            int32(stats.CPU.Count),
+		CpuUse:             stats.CPU.Used,
+		IoWait:             stats.CPU.IOWait,
+		MemTotal:           stats.Memory.Total,
+		MemUsed:            stats.Memory.Used,
+		NumWorkerProcesses: int32(stats.NumWorkerProcesses),
 	}
 }
 
@@ -172,5 +173,6 @@ func resourceFromProto(r *pb.ResourceUsageResponse) *core.SystemStats {
 	s.Memory.Total = r.MemTotal
 	s.Memory.Used = r.MemUsed
 	s.Memory.UsedPercent = 100.0 * float64(r.MemUsed) / float64(r.MemTotal)
+	s.NumWorkerProcesses = int(r.NumWorkerProcesses)
 	return s
 }

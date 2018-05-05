@@ -26,6 +26,9 @@ message BuildRequest {
     repeated string srcs = 3;
     // Compiler options
     repeated string opts = 4;
+    // If true, this message relates to a test and is simply waiting for the server
+    // to be up before continuing.
+    bool test = 6;
 }
 
 message BuildResponse {

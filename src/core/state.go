@@ -170,6 +170,10 @@ type SystemStats struct {
 		Used, IOWait float64
 		Count        int
 	}
+	// Number of currently running worker processes.
+	// N.B. These are background workers as started by $(worker) commands, not the internal worker
+	//      threads tracked in the state object.
+	NumWorkerProcesses int
 }
 
 // AddActiveTarget increments the counter for a newly active build target.

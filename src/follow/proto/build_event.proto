@@ -161,4 +161,6 @@ message ResourceUsageResponse{
     uint64 mem_total = 4;
     // Total amount of memory in use.
     uint64 mem_used = 5;
+    // Number of inferior worker processes.
+    int32 num_worker_processes = 6;
 }

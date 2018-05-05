@@ -75,6 +75,9 @@ func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLin
 		printStat("CPU use", state.Stats.CPU.Used, state.Stats.CPU.Count)
 		printStat("I/O", state.Stats.CPU.IOWait, state.Stats.CPU.Count)
 		printStat("Mem use", state.Stats.Memory.UsedPercent, 1)
+		if state.Stats.NumWorkerProcesses > 0 {
+			printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", state.Stats.NumWorkerProcesses)
+		}
 		printf("${ERASE_AFTER}\n")
 	}
 	for i := 0; i < len(buildingTargets) && i < maxLines; i++ {

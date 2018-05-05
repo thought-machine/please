@@ -23,3 +23,8 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 
 // StopWorkers does nothing, because in the stub we don't have any workers.
 func StopWorkers() {}
+
+// EnsureWorkerStarted always returns an error, because in the stub we don't support workers.
+func EnsureWorkerStarted(state *core.BuildState, worker string, label core.BuildLabel) error {
+	return fmt.Errorf("Remote worker support has not been compiled in")
+}

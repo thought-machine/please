@@ -128,6 +128,10 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove cached test files")
 		return
 	}
+	if err := startTestWorkerIfNeeded(tid, state, target); err != nil {
+		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to start test worker")
+		return
+	}
 	numSucceeded := 0
 	numFlakes := 0
 	numRuns, successesRequired := calcNumRuns(state.NumTestRuns, target.Flakiness)
@@ -373,4 +377,16 @@ func calcNumRuns(numRuns, flakiness int) (int, int) {
 		return flakiness, 1
 	}
 	return 1, 1
+}
+
+// startTestWorkerIfNeeded starts a worker server if the test needs one.
+func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
+	worker, _, _ := build.TestWorkerCommand(state, target)
+	if worker == "" {
+		return nil
+	}
+	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Starting test worker...")
+	err := build.EnsureWorkerStarted(state, worker, target.Label)
+	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
+	return err
 }
