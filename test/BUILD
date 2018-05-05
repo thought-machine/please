@@ -48,10 +48,9 @@ build_rule(
 )
 
 # Test that we count test output correctly. Also indirectly tests access to test data files.
-# Note that we're stripping coloured output for now. Later we should probably have a flag or something.
 plz_e2e_test(
     name = 'test_output_test',
-    cmd = 'plz test //test:test_output_test_1 //test:test_output_test_2 | sed "s/\033\\[[0-9;]*[a-zA-Z]//g"',
+    cmd = 'plz test //test:test_output_test_1 //test:test_output_test_2',
     expect_output_contains = '6 tests run; 6 passed.',
     # Invokes a containerised test although it's not itself.
     labels = ['container'],
