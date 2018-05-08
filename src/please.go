@@ -713,7 +713,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	if state.DebugTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
-	detailedTests := shouldTest && (opts.Test.Detailed || opts.Cover.Detailed || (len(targets) == 1 && !targets[0].IsAllTargets() && !targets[0].IsAllSubpackages()))
+	detailedTests := shouldTest && (opts.Test.Detailed || opts.Cover.Detailed || (len(targets) == 1 && !targets[0].IsAllTargets() && !targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, targets)
 	// Start up all the build workers
