@@ -29,7 +29,7 @@ func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
 			if len(target.Hashes) == 0 {
 				continue
 			}
-			h, err := build.OutputHash(target)
+			h, err := build.OutputHash(state, target)
 			if err != nil {
 				log.Fatalf("%s\n", err)
 			}

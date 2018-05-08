@@ -19,17 +19,12 @@ import (
 	"encoding/gob"
 	"fmt"
 	"hash"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"sort"
-	"strings"
-	"sync"
 
 	"core"
-	"fs"
 )
 
 const hashLength = sha1.Size
@@ -84,7 +79,7 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 		log.Debug("Need to rebuild %s, sources have changed (was %s, need %s)", target.Label, b64(oldSourceHash), b64(newSourceHash))
 		return true
 	}
-	newSecretHash, err := secretHash(target)
+	newSecretHash, err := secretHash(state, target)
 	if err != nil || !bytes.Equal(oldSecretHash, newSecretHash) {
 		log.Debug("Need to rebuild %s, secrets have changed (was %s, need %s)", target.Label, b64(oldSecretHash), b64(newSecretHash))
 		return true
@@ -147,7 +142,7 @@ func mustSourceHash(state *core.BuildState, target *core.BuildTarget) []byte {
 func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
 	for source := range core.IterSources(state.Graph, target) {
-		result, err := pathHash(source.Src, false)
+		result, err := state.PathHasher.Hash(source.Src, false)
 		if err != nil {
 			return nil, err
 		}
@@ -162,7 +157,7 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 			// Instead we assume calculating the target hash is sufficient.
 			h.Write(mustTargetHash(state, state.Graph.TargetOrDie(*label)))
 		} else {
-			result, err := pathHash(tool.FullPaths(state.Graph)[0], false)
+			result, err := state.PathHasher.Hash(tool.FullPaths(state.Graph)[0], false)
 			if err != nil {
 				return nil, err
 			}
@@ -170,128 +165,6 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 		}
 	}
 	return h.Sum(nil), nil
-}
-
-// Used to memoize the results of pathHash so we don't hash the same files multiple times.
-var pathHashMemoizer = map[string][]byte{}
-var pathHashMutex sync.RWMutex // Of course it will be accessed concurrently.
-
-// Calculate the hash of a single path which might be a file or a directory
-// This is the memoized form that only hashes each path once, unless recalc is true in which
-// case it will force a recalculation of the hash.
-func pathHash(path string, recalc bool) ([]byte, error) {
-	path = ensureRelative(path)
-	if !recalc {
-		pathHashMutex.RLock()
-		cached, present := pathHashMemoizer[path]
-		pathHashMutex.RUnlock()
-		if present {
-			return cached, nil
-		}
-	}
-	result, err := pathHashImpl(path)
-	if err == nil {
-		pathHashMutex.Lock()
-		pathHashMemoizer[path] = result
-		pathHashMutex.Unlock()
-	}
-	return result, err
-}
-
-func mustPathHash(path string) []byte {
-	hash, err := pathHash(path, false)
-	if err != nil {
-		panic(err)
-	}
-	return hash
-}
-
-func pathHashImpl(path string) ([]byte, error) {
-	h := sha1.New()
-	info, err := os.Lstat(path)
-	if err == nil && info.Mode()&os.ModeSymlink != 0 {
-		// Handle symlinks specially (don't attempt to read their contents).
-		dest, err := os.Readlink(path)
-		if err != nil {
-			return nil, err
-		}
-		// Write something arbitrary indicating this is a symlink.
-		// This isn't quite perfect - it could potentially get mixed up with a file with the
-		// appropriate contents, but that is not really likely.
-		h.Write(boolTrueHashValue)
-		h.Write([]byte(dest))
-		return h.Sum(nil), nil
-	} else if err == nil && info.IsDir() {
-		err = fs.WalkMode(path, func(p string, isDir bool, mode os.FileMode) error {
-			if mode&os.ModeSymlink != 0 {
-				// Is a symlink, must verify that it's not a link outside the tmp dir.
-				deref, err := filepath.EvalSymlinks(p)
-				if err != nil {
-					return err
-				}
-				if !strings.HasPrefix(deref, path) {
-					return fmt.Errorf("Output %s links outside the build dir (to %s)", p, deref)
-				}
-				// Deliberately do not attempt to read it. We will read the contents later since
-				// it is a link within the temp dir anyway, and if it's a link to a directory
-				// it can introduce a cycle.
-				// Just write something to the hash indicating that we found something here,
-				// otherwise rules might be marked as unchanged if they added additional symlinks.
-				h.Write(boolTrueHashValue)
-			} else if !isDir {
-				return fileHash(&h, p)
-			}
-			return nil
-		})
-	} else {
-		err = fileHash(&h, path) // let this handle any other errors
-	}
-	return h.Sum(nil), err
-}
-
-// movePathHash is used when we move files from tmp to out and there was one there before; that's
-// the only case in which the hash of a filepath could change.
-func movePathHash(oldPath, newPath string, copy bool) {
-	oldPath = ensureRelative(oldPath)
-	newPath = ensureRelative(newPath)
-	pathHashMutex.Lock()
-	defer pathHashMutex.Unlock()
-	if oldHash, present := pathHashMemoizer[oldPath]; present {
-		pathHashMemoizer[newPath] = oldHash
-		// If the path is in plz-out/tmp we aren't ever going to use it again, so free some space.
-		if !copy && strings.HasPrefix(oldPath, core.TmpDir) {
-			delete(pathHashMemoizer, oldPath)
-		}
-	}
-}
-
-// setPathHash is used to directly set a hash for a path.
-// This is used for remote files where we download them & therefore know the hash as they come in.
-// TODO(peterebden): We should probably use this more for things like caches and so forth...
-func setPathHash(path string, hash []byte) {
-	pathHashMutex.Lock()
-	pathHashMemoizer[path] = hash
-	pathHashMutex.Unlock()
-}
-
-// ensureRelative ensures a path is relative to the repo root.
-// This is important for getting best performance from memoizing the path hashes.
-func ensureRelative(path string) string {
-	if strings.HasPrefix(path, core.RepoRoot) {
-		return strings.TrimLeft(strings.TrimPrefix(path, core.RepoRoot), "/")
-	}
-	return path
-}
-
-// Calculate the hash of a single file
-func fileHash(h *hash.Hash, filename string) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(*h, file)
-	file.Close()
-	return err
 }
 
 // RuleHash calculates a hash for the relevant bits of this rule that affect its output.
@@ -457,7 +330,7 @@ func writeRuleHashFile(state *core.BuildState, target *core.BuildTarget) error {
 	if err != nil {
 		return err
 	}
-	secretHash, err := secretHash(target)
+	secretHash, err := secretHash(state, target)
 	if err != nil {
 		return err
 	}
@@ -546,7 +419,7 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 	h := sha1.New()
 	h.Write(sh)
 	for source := range core.IterRuntimeFiles(state.Graph, target, true) {
-		result, err := pathHash(source.Src, false)
+		result, err := state.PathHasher.Hash(source.Src, false)
 		if err != nil {
 			return result, err
 		}
@@ -566,25 +439,25 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 	// Note that the logic here mimics sourceHash, but I don't want to pollute that with
 	// optional printing nonsense since it's on our hot path.
 	for source := range core.IterSources(state.Graph, target) {
-		fmt.Printf("  Source: %s: %s\n", source.Src, b64(mustPathHash(source.Src)))
+		fmt.Printf("  Source: %s: %s\n", source.Src, b64(state.PathHasher.MustHash(source.Src)))
 	}
 	for _, tool := range target.AllTools() {
 		if label := tool.Label(); label != nil {
 			fmt.Printf("    Tool: %s: %s\n", *label, b64(mustShortTargetHash(state, state.Graph.TargetOrDie(*label))))
 		} else {
-			fmt.Printf("    Tool: %s: %s\n", tool, b64(mustPathHash(tool.FullPaths(state.Graph)[0])))
+			fmt.Printf("    Tool: %s: %s\n", tool, b64(state.PathHasher.MustHash(tool.FullPaths(state.Graph)[0])))
 		}
 	}
 }
 
 // secretHash calculates a hash for any secrets of a target.
-func secretHash(target *core.BuildTarget) ([]byte, error) {
+func secretHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	if len(target.Secrets) == 0 {
 		return noSecrets, nil
 	}
 	h := sha1.New()
 	for _, secret := range target.Secrets {
-		ph, err := pathHash(secret, false)
+		ph, err := state.PathHasher.Hash(secret, false)
 		if err != nil && os.IsNotExist(err) {
 			return noSecrets, nil // Not having the secrets is not an error yet.
 		} else if err != nil {

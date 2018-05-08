@@ -132,7 +132,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			log.Debug("Rebuilding %s after post-build function", target.Label)
 		}
 	}
-	oldOutputHash, outputHashErr := OutputHash(target)
+	oldOutputHash, outputHashErr := OutputHash(state, target)
 	if target.IsFilegroup {
 		log.Debug("Building %s...", target.Label)
 		if err := buildFilegroup(tid, state, target); err != nil {
@@ -338,7 +338,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		if !core.PathExists(tmpOutput) {
 			return nil, true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
 		}
-		outputChanged, err := moveOutput(target, tmpOutput, realOutput)
+		outputChanged, err := moveOutput(state, target, tmpOutput, realOutput)
 		if err != nil {
 			return nil, true, err
 		}
@@ -356,7 +356,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		log.Debug("Discovered optional output %s", output)
 		tmpOutput := path.Join(tmpDir, output)
 		realOutput := path.Join(outDir, output)
-		if _, err := moveOutput(target, tmpOutput, realOutput); err != nil {
+		if _, err := moveOutput(state, target, tmpOutput, realOutput); err != nil {
 			return nil, changed, err
 		}
 		extraOuts = append(extraOuts, output)
@@ -364,14 +364,14 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	return extraOuts, changed, nil
 }
 
-func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string) (bool, error) {
+func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, realOutput string) (bool, error) {
 	// hash the file
-	newHash, err := pathHash(tmpOutput, false)
+	newHash, err := state.PathHasher.Hash(tmpOutput, false)
 	if err != nil {
 		return true, err
 	}
 	if fs.PathExists(realOutput) {
-		if oldHash, err := pathHash(realOutput, false); err != nil {
+		if oldHash, err := state.PathHasher.Hash(realOutput, false); err != nil {
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
 			// We already have the same file in the current location. Don't bother moving it.
@@ -382,7 +382,7 @@ func moveOutput(target *core.BuildTarget, tmpOutput, realOutput string) (bool, e
 			return true, err
 		}
 	}
-	movePathHash(tmpOutput, realOutput, false)
+	state.PathHasher.MoveHash(tmpOutput, realOutput, false)
 	// Check if we need a directory for this output.
 	dir := path.Dir(realOutput)
 	if !core.PathExists(dir) {
@@ -444,7 +444,7 @@ func checkForStaleOutput(filename string, err error) bool {
 
 // calculateAndCheckRuleHash checks the output hash for a rule.
 func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	hash, err := OutputHash(target)
+	hash, err := OutputHash(state, target)
 	if err != nil {
 		return nil, err
 	}
@@ -464,14 +464,14 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 }
 
 // OutputHash calculates the hash of a target's outputs.
-func OutputHash(target *core.BuildTarget) ([]byte, error) {
+func OutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
 	for _, output := range target.Outputs() {
 		// NB. Always force a recalculation of the output hashes here. Memoisation is not
 		//     useful because by definition we are rebuilding a target, and can actively hurt
 		//     in cases where we compare the retrieved cache artifacts with what was there before.
 		filename := path.Join(target.OutDir(), output)
-		h2, err := pathHash(filename, true)
+		h2, err := state.PathHasher.Hash(filename, true)
 		if err != nil {
 			return nil, err
 		}
@@ -488,8 +488,8 @@ func OutputHash(target *core.BuildTarget) ([]byte, error) {
 }
 
 // mustOutputHash calculates the hash of a target's outputs. It panics on any errors.
-func mustOutputHash(target *core.BuildTarget) []byte {
-	hash, err := OutputHash(target)
+func mustOutputHash(state *core.BuildState, target *core.BuildTarget) []byte {
+	hash, err := OutputHash(state, target)
 	if err != nil {
 		panic(err)
 	}
@@ -649,7 +649,7 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	if _, err := io.Copy(io.MultiWriter(f, h), r); err != nil {
 		return err
 	}
-	setPathHash(tmpPath, h.Sum(nil))
+	state.PathHasher.SetHash(tmpPath, h.Sum(nil))
 	return f.Close()
 }
 

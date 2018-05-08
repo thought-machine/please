@@ -10,6 +10,7 @@ import (
 	"github.com/Workiva/go-datastructures/queue"
 
 	"cli"
+	"fs"
 )
 
 // startTime is as close as we can conveniently get to process start time.
@@ -89,6 +90,8 @@ type BuildState struct {
 		// Hash of the config relating to containerisation for tests.
 		Containerisation []byte
 	}
+	// Tracks file hashes during the build.
+	PathHasher *fs.PathHasher
 	// Level of verbosity during the build
 	Verbosity int
 	// Cache to store / retrieve old build results.
@@ -540,6 +543,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
 		Results:      make(chan *BuildResult, numThreads*100),
 		LastResults:  make([]*BuildResult, numThreads),
+		PathHasher:   fs.NewPathHasher(RepoRoot),
 		StartTime:    startTime,
 		Config:       config,
 		Verbosity:    verbosity,

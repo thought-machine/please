@@ -37,7 +37,7 @@ type filegroupBuilder struct {
 var theFilegroupBuilder *filegroupBuilder
 
 // Build builds a single filegroup file.
-func (builder *filegroupBuilder) Build(target *core.BuildTarget, from, to string) error {
+func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.BuildTarget, from, to string) error {
 	builder.mutex.Lock()
 	defer builder.mutex.Unlock()
 	if builder.built[to] {
@@ -58,7 +58,7 @@ func (builder *filegroupBuilder) Build(target *core.BuildTarget, from, to string
 		return err
 	}
 	builder.built[to] = true
-	movePathHash(from, to, true) // In case we've already hashed the source, don't do it again.
+	state.PathHasher.MoveHash(from, to, true)
 	return nil
 }
 
@@ -75,8 +75,8 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 	outDir := target.OutDir()
 	localSources := target.AllLocalSourcePaths(state.Graph)
 	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		out, _ := filegroupOutputPath(target, outDir, localSources[i], source)
-		if err := theFilegroupBuilder.Build(target, source, out); err != nil {
+		out, _ := filegroupOutputPath(state, target, outDir, localSources[i], source)
+		if err := theFilegroupBuilder.Build(state, target, source, out); err != nil {
 			return err
 		}
 	}
@@ -99,8 +99,8 @@ func copyFilegroupHashes(state *core.BuildState, target *core.BuildTarget) {
 	outDir := target.OutDir()
 	localSources := target.AllLocalSourcePaths(state.Graph)
 	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		if out, _ := filegroupOutputPath(target, outDir, localSources[i], source); out != source {
-			movePathHash(source, out, true)
+		if out, _ := filegroupOutputPath(state, target, outDir, localSources[i], source); out != source {
+			state.PathHasher.MoveHash(source, out, true)
 		}
 	}
 }
@@ -111,20 +111,20 @@ func updateHashFilegroupPaths(state *core.BuildState, target *core.BuildTarget) 
 	outDir := target.OutDir()
 	localSources := target.AllLocalSourcePaths(state.Graph)
 	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		_, relOut := filegroupOutputPath(target, outDir, localSources[i], source)
+		_, relOut := filegroupOutputPath(state, target, outDir, localSources[i], source)
 		target.AddOutput(relOut)
 	}
 }
 
 // filegroupOutputPath returns the output path for a single filegroup source.
-func filegroupOutputPath(target *core.BuildTarget, outDir, source, full string) (string, string) {
+func filegroupOutputPath(state *core.BuildState, target *core.BuildTarget, outDir, source, full string) (string, string) {
 	if !target.IsHashFilegroup {
 		return path.Join(outDir, source), source
 	}
 	// Hash filegroups have a hash embedded into the output name.
 	ext := path.Ext(source)
 	before := source[:len(source)-len(ext)]
-	hash, err := pathHash(full, false)
+	hash, err := state.PathHasher.Hash(full, false)
 	if err != nil {
 		panic(err)
 	}

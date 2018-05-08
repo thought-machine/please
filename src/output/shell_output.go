@@ -371,7 +371,7 @@ func printBuildResults(state *core.BuildState, duration time.Duration, showStatu
 func printHashes(state *core.BuildState, duration time.Duration) {
 	fmt.Printf("Hashes calculated, total time %s:\n", duration)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
-		hash, err := build.OutputHash(state.Graph.TargetOrDie(label))
+		hash, err := build.OutputHash(state, state.Graph.TargetOrDie(label))
 		if err != nil {
 			fmt.Printf("  %s: cannot calculate: %s\n", label, err)
 		} else {
