@@ -46,6 +46,14 @@ func appendResult(test jUnitXMLTest, results *core.TestResults) {
 		appendResult2(test, results, *test.Error)
 	} else if test.Type == "FAILURE" || test.Success == "false" || test.Stacktrace != "" {
 		appendResult2(test, results, jUnitXMLFailure{"", "FAILURE", test.Stacktrace})
+	} else if test.Skipped != nil {
+		results.Skipped++
+		results.Results = append(results.Results, core.TestResult{
+			Name:      test.Name,
+			Skipped:   true,
+			Type:      test.Skipped.Type,
+			Traceback: test.Skipped.Message,
+		})
 	} else {
 		results.Passed++
 		results.Results = append(results.Results, core.TestResult{
@@ -102,6 +110,7 @@ type jUnitXMLTest struct {
 	Name       string           `xml:"name,attr"`
 	Failure    *jUnitXMLFailure `xml:"failure,omitempty"`
 	Error      *jUnitXMLFailure `xml:"error,omitempty"`
+	Skipped    *jUnitXMLFailure `xml:"skipped,omitempty"`
 	Time       float64          `xml:"time,attr,omitempty"`
 	Type       string           `xml:"type,attr,omitempty"`
 	Success    string           `xml:"success,attr,omitempty"`
@@ -137,6 +146,15 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 			for _, result := range target.Results.Results {
 				if result.Success {
 					suite.TestCases = append(suite.TestCases, jUnitXMLTest{Name: result.Name})
+				} else if result.Skipped {
+					suite.TestCases = append(suite.TestCases, jUnitXMLTest{
+						Name: result.Name,
+						Type: "skip",
+						Skipped: &jUnitXMLFailure{
+							Type:    result.Type,
+							Message: result.Traceback,
+						},
+					})
 				} else {
 					suite.TestCases = append(suite.TestCases, jUnitXMLTest{
 						Name:   result.Name,
