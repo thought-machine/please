@@ -4,16 +4,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"core"
 )
 
 func TestGoFailure(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_test_failure.txt", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 4, results.NumTests)
 	assert.Equal(t, 2, results.Passed)
 	assert.Equal(t, 2, results.Failed)
@@ -23,10 +21,7 @@ func TestGoFailure(t *testing.T) {
 
 func TestGoPassed(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_test_pass.txt", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 4, results.NumTests)
 	assert.Equal(t, 4, results.Passed)
 	assert.Equal(t, 0, results.Failed)
@@ -36,10 +31,7 @@ func TestGoPassed(t *testing.T) {
 
 func TestGoMultipleFailure(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_multiple_failure.txt", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 2, results.NumTests)
 	assert.Equal(t, 0, results.Passed)
 	assert.Equal(t, 2, results.Failed)
@@ -49,10 +41,7 @@ func TestGoMultipleFailure(t *testing.T) {
 
 func TestGoSkipped(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_test_skip.txt", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 4, results.NumTests)
 	assert.Equal(t, 3, results.Passed)
 	assert.Equal(t, 0, results.Failed)
@@ -62,20 +51,14 @@ func TestGoSkipped(t *testing.T) {
 
 func TestGoSubtests(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_subtests.txt", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 7, results.NumTests)
 	assert.Equal(t, 7, results.Passed)
 }
 
 func TestBuckXML(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/junit.xml", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 4, results.NumTests)
 	assert.Equal(t, 4, results.Passed)
 	assert.Equal(t, 0, results.Failed)
@@ -85,10 +68,7 @@ func TestBuckXML(t *testing.T) {
 
 func TestJUnitXML(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/xmlrunner-junit.xml", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 2, results.NumTests)
 	assert.Equal(t, 1, results.Passed)
 	assert.Equal(t, 1, results.Failed)
@@ -98,10 +78,7 @@ func TestJUnitXML(t *testing.T) {
 
 func TestKarmaXML(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/karma-junit.xml", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 10, results.NumTests)
 	assert.Equal(t, 10, results.Passed)
 	assert.Equal(t, 0, results.Failed)
@@ -111,10 +88,7 @@ func TestKarmaXML(t *testing.T) {
 
 func TestUnitTestXML(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/unittest.xml", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 2, results.NumTests)
 	assert.Equal(t, 0, results.Passed)
 	assert.Equal(t, 2, results.Failed)
@@ -122,12 +96,17 @@ func TestUnitTestXML(t *testing.T) {
 	assert.Equal(t, 0, results.ExpectedFailures)
 }
 
+func TestSkip(t *testing.T) {
+	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/xmlrunner-skipped.xml", false)
+	require.NoError(t, err)
+	assert.Equal(t, 2, results.NumTests)
+	assert.Equal(t, 1, results.Passed)
+	assert.Equal(t, 1, results.Skipped)
+}
+
 func TestGoSuite(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_test_suite.txt", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 7, results.NumTests)
 	assert.Equal(t, 5, results.Passed)
 	assert.Equal(t, 1, results.Failed)
@@ -137,10 +116,7 @@ func TestGoSuite(t *testing.T) {
 
 func TestGoIgnoreUnknownOutput(t *testing.T) {
 	results, err := parseTestResults(new(core.BuildTarget), "src/test/test_data/go_test_ignore_logs.txt", false)
-	if err != nil {
-		t.Errorf("Unable to parse file: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 4, results.NumTests)
 	assert.Equal(t, 4, results.Passed)
 	assert.Equal(t, 0, results.Failed)
