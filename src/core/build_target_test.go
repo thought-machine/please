@@ -290,6 +290,16 @@ func TestHasSource(t *testing.T) {
 	assert.False(t, target.HasSource("file3.go"))
 }
 
+func TestHasAbsoluteSource(t *testing.T) {
+	target := makeTarget("//src/core:target1", "")
+	target.Sources = append(target.Sources, FileLabel{File: "file1.go"})
+	target.AddNamedSource("wevs", FileLabel{File: "file2.go"})
+	assert.False(t, target.HasSource("src/core/file1.go"))
+	assert.True(t, target.HasAbsoluteSource("src/core/file1.go"))
+	assert.True(t, target.HasAbsoluteSource("src/core/file2.go"))
+	assert.False(t, target.HasSource("src/core/file3.go"))
+}
+
 func TestToolPath(t *testing.T) {
 	target := makeTarget("//src/core:target1", "")
 	target.AddOutput("file1.go")

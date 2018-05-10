@@ -915,6 +915,12 @@ func (target *BuildTarget) HasSource(source string) bool {
 	return false
 }
 
+// HasAbsoluteSource returns true if this target has the given file as a source.
+// The input source includes the target's package name.
+func (target *BuildTarget) HasAbsoluteSource(source string) bool {
+	return target.HasSource(strings.TrimPrefix(source, target.Label.PackageName+"/"))
+}
+
 // AllTools returns all the tools for this rule in some canonical order.
 func (target *BuildTarget) AllTools() []BuildInput {
 	if target.namedTools == nil {

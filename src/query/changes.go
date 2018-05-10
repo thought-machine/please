@@ -60,7 +60,7 @@ func DiffGraphs(before, after *core.BuildState, files []string) []core.BuildLabe
 // changed returns true if the given two targets are not equivalent.
 func changed(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget, files []string) bool {
 	for _, f := range files {
-		if t2.HasSource(f) {
+		if t2.HasAbsoluteSource(f) {
 			return true
 		}
 	}

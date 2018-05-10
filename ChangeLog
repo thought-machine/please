@@ -1,3 +1,9 @@
+Version 12.2.5
+--------------
+
+    * Fixed calculation of sources in `plz query changes` (#314)
+
+
 Version 12.2.4
 --------------
 
