@@ -422,7 +422,11 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabel
 		}
 	}
 	if label.IsAllTargets() {
-		addPackage(state.Graph.PackageOrDie(label.PackageName))
+		if pkg := state.Graph.Package(label.PackageName); pkg != nil {
+			addPackage(pkg)
+		} else {
+			log.Warning("Package %s does not exist in graph", label.PackageName)
+		}
 	} else {
 		for name, pkg := range state.Graph.PackageMap() {
 			if label.Includes(BuildLabel{PackageName: name}) {

@@ -575,10 +575,9 @@ var buildFunctions = map[string]func() bool{
 		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
 		files := opts.Query.Changes.Args.Files.Get()
 		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
-		success, before := runBuild(core.WholeGraph, false, false)
-		if !success {
-			return false
-		}
+		_, before := runBuild(core.WholeGraph, false, false)
+		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
+		//      assume that anything we don't know about has changed.
 		query.MustCheckout(original, opts.Query.Changes.CheckoutCommand)
 		success, after := runBuild(core.WholeGraph, false, false)
 		if !success {
