@@ -36,6 +36,20 @@ func TestReplaceEnvironment(t *testing.T) {
 	assert.Equal(t, "", os.Expand("$WIBBLE", env.ReplaceEnvironment))
 }
 
+func TestReplace(t *testing.T) {
+	env := BuildEnv{
+		"TMP_DIR=/home/user/please/src/core",
+		"PKG=src/core",
+		"SRCS=core.go build_env.go",
+	}
+	env.Replace("PKG", "src/test")
+	assert.EqualValues(t, BuildEnv{
+		"TMP_DIR=/home/user/please/src/core",
+		"PKG=src/test",
+		"SRCS=core.go build_env.go",
+	}, env)
+}
+
 func TestRedact(t *testing.T) {
 	env := BuildEnv{
 		"WHATEVER=12345",

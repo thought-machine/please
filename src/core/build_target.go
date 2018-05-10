@@ -236,8 +236,6 @@ type TargetContainerSettings struct {
 	DockerImage string `name:"docker_image"`
 	// Username / Uid to run as
 	DockerUser string `name:"docker_user"`
-	// Extra arguments to pass to 'docker run'
-	DockerRunArgs string `name:"docker_run_args"`
 }
 
 // ToMap returns this struct as a map.

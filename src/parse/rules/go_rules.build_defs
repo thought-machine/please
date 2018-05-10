@@ -437,7 +437,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], visibility:list=N
         outs=[name],
         tools=tools,
         cmd=cmds,
-        test_cmd='$TEST %s | tee test.results' % flags,
+        test_cmd='$TEST %s | tee $RESULTS_FILE' % flags,
         visibility=visibility,
         container=container,
         test_sandbox=sandbox,

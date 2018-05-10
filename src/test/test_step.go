@@ -278,7 +278,7 @@ func prepareTestDir(graph *core.BuildGraph, target *core.BuildTarget) error {
 // testCommandAndEnv returns the test command & environment for a target.
 func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget) (string, []string) {
 	replacedCmd := build.ReplaceTestSequences(state, target, target.GetTestCommand(state))
-	env := core.BuildEnvironment(state, target, true)
+	env := core.TestEnvironment(state, target, path.Join(core.RepoRoot, target.TestDir()))
 	if len(state.TestArgs) > 0 {
 		args := strings.Join(state.TestArgs, " ")
 		replacedCmd += " " + args

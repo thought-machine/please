@@ -1,3 +1,12 @@
+Version 13.0.0
+--------------
+
+    * Can now start shared test workers in a similar way to shared build workers.
+    * Worker protocol has been changed to JSON instead of protobuf.
+    * Now communicating with Docker using a proper API instead of execing the CLI.
+      docker_run_args is no longer supported as a result.
+
+
 Version 12.2.5
 --------------
 

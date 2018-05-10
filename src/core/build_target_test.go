@@ -140,9 +140,6 @@ func TestSetContainerSettings(t *testing.T) {
 
 	target.SetContainerSetting("dockeruser", "")
 	assert.Equal(t, "", target.ContainerSettings.DockerUser)
-
-	target.SetContainerSetting("dockerrunargs", "-it")
-	assert.Equal(t, "-it", target.ContainerSettings.DockerRunArgs)
 }
 
 func TestOutputs(t *testing.T) {

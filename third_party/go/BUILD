@@ -484,3 +484,80 @@ go_get(
     get = 'github.com/pkg/errors',
     revision = '30136e27e2ac8d167177e8a583aa4c3fea5be833',
 )
+
+go_get(
+    name = 'docker',
+    get = 'docker.io/go-docker',
+    install = [
+        '',
+        'api/...',
+    ],
+    revision = 'v1.0.0',
+    deps = [
+        ':docker-distribution',
+        ':errors',
+        ':go-connections',
+        ':go-digest',
+        ':go-units',
+        ':gogo-protobuf',
+        ':image-spec',
+        ':net',
+    ],
+)
+
+go_get(
+    name = 'docker-distribution',
+    get = 'github.com/docker/distribution',
+    install = [
+        'reference',
+        'digestset',
+    ],
+    revision = 'edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c',
+    strip = ['vendor'],
+    deps = [
+        ':go-digest',
+        ':net',
+    ],
+)
+
+go_get(
+    name = 'go-connections',
+    get = 'github.com/docker/go-connections/...',
+    revision = 'v0.3.0',
+    deps = [
+        ':errors',
+        ':net',
+    ],
+)
+
+go_get(
+    name = 'go-units',
+    get = 'github.com/docker/go-units',
+    revision = 'v0.3.2',
+)
+
+go_get(
+    name = 'gogo-protobuf',
+    get = 'github.com/gogo/protobuf',
+    install = ['proto'],
+    revision = 'v0.4',
+)
+
+go_get(
+    name = 'go-digest',
+    get = 'github.com/opencontainers/go-digest',
+    revision = 'v1.0.0-rc1',
+)
+
+go_get(
+    name = 'image-spec',
+    get = 'github.com/opencontainers/image-spec',
+    install = [
+        'specs-go/...',
+    ],
+    revision = 'v1.0.0',
+    deps = [
+        ':errors',
+        ':go-digest',
+    ],
+)

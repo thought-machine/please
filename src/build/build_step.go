@@ -264,7 +264,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	if target.IsRemoteFile {
 		return nil, fetchRemoteFile(state, target)
 	}
-	env := core.StampedBuildEnvironment(state, target, false, inputHash)
+	env := core.StampedBuildEnvironment(state, target, inputHash)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	out, combined, err := core.ExecWithTimeoutShell(state, target, target.TmpDir(), env, target.BuildTimeout, state.Config.Build.Timeout, state.ShowAllOutput, command, target.Sandbox)
 	if err != nil {
@@ -623,7 +623,7 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 }
 
 func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url string) error {
-	env := core.BuildEnvironment(state, target, false)
+	env := core.BuildEnvironment(state, target)
 	url = os.Expand(url, env.ReplaceEnvironment)
 	tmpPath := path.Join(target.TmpDir(), target.Outputs()[0])
 	f, err := os.Create(tmpPath)

@@ -1,11 +1,15 @@
 go_library(
     name = 'test',
-    srcs = glob(['*.go'], exclude = ['*_test.go']),
+    srcs = glob(['*.go'], exclude = [
+        '*_stub.go',
+        '*_test.go',
+    ]),
     deps = [
         '//src/build',
         '//src/core',
         '//src/fs',
         '//src/metrics',
+        '//third_party/go:docker',
         '//third_party/go:logging',
         '//third_party/go:tools',
     ],
@@ -36,14 +40,6 @@ go_test(
     srcs = ['container_test.go'],
     container = True,
     data = ['test_data/container_data.txt'],
-)
-
-go_test(
-    name = 'container_args_test',
-    srcs = ['container_args_test.go'],
-    container = {
-        'docker_run_args': '-e TEST_VALUE=WIBBLE',
-    },
 )
 
 go_test(

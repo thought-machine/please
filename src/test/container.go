@@ -1,70 +1,154 @@
+//+build !bootstrap
+
 // Support for containerising tests. Currently Docker only.
 
 package test
 
 import (
+	"archive/tar"
+	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
+
+	"docker.io/go-docker"
+	"docker.io/go-docker/api"
+	"docker.io/go-docker/api/types"
+	"docker.io/go-docker/api/types/container"
+	"docker.io/go-docker/api/types/mount"
 
 	"build"
 	"core"
 )
 
-func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	// Unset Docker environment variables. These typically cause things to fail if set
-	// in inexplicable ways. If these turn out to be otherwise useful we may make this configurable.
-	os.Unsetenv("DOCKER_TLS_VERIFY")
-	os.Unsetenv("DOCKER_HOST")
-	os.Unsetenv("DOCKER_CERT_PATH")
-	os.Unsetenv("DOCKER_API_VERSION")
+var dockerClient *docker.Client
+var dockerClientOnce sync.Once
 
-	testDir := path.Join(core.RepoRoot, target.TestDir())
+func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
+	const testDir = "/tmp/test"
+	const resultsFile = testDir + "/test.results"
+
+	dockerClientOnce.Do(func() {
+		dockerClient, err = docker.NewClient(docker.DefaultDockerHost, api.DefaultVersion, nil, nil)
+		if err != nil {
+			log.Error("%s", err)
+		} else {
+			dockerClient.NegotiateAPIVersion(context.Background())
+			log.Debug("Docker client negotiated API version %s", dockerClient.ClientVersion())
+		}
+	})
+	if err != nil {
+		return nil, err
+	} else if dockerClient == nil {
+		return nil, fmt.Errorf("failed to initialise Docker client")
+	}
+
+	targetTestDir := path.Join(core.RepoRoot, target.TestDir())
 	replacedCmd := build.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	replacedCmd += " " + strings.Join(state.TestArgs, " ")
-	containerName := state.Config.Docker.DefaultImage
-	if target.ContainerSettings != nil && target.ContainerSettings.DockerImage != "" {
-		containerName = target.ContainerSettings.DockerImage
-	}
 	// Gentle hack: remove the absolute path from the command
-	replacedCmd = strings.Replace(replacedCmd, testDir, "/tmp/test", -1)
-	// Fiddly hack follows to handle docker run --rm failing saying "Cannot destroy container..."
-	// "Driver aufs failed to remove root filesystem... device or resource busy"
-	cidfile := path.Join(testDir, ".container_id")
-	// Using C.UTF-8 for LC_ALL because it works. Not sure it's strictly
-	// correct to mix that with LANG=en_GB.UTF-8
-	command := []string{"docker", "run", "--cidfile", cidfile, "-e", "LC_ALL=C.UTF-8"}
+	replacedCmd = strings.Replace(replacedCmd, targetTestDir, targetTestDir, -1)
+
+	env := core.TestEnvironment(state, target, testDir)
+	env.Replace("RESULTS_FILE", resultsFile)
+	env.Replace("GTEST_OUTPUT", "xml:"+resultsFile)
+
+	config := &container.Config{
+		Image: state.Config.Docker.DefaultImage,
+		// TODO(peterebden): Do we still need LC_ALL here? It was kinda hacky before...
+		Env:        append(env, "LC_ALL=C.UTF-8"),
+		WorkingDir: testDir,
+		Cmd:        []string{"bash", "-uo", "pipefail", "-c", replacedCmd},
+		Tty:        true, // This makes it a lot easier to read later on.
+	}
 	if target.ContainerSettings != nil {
-		if target.ContainerSettings.DockerRunArgs != "" {
-			command = append(command, strings.Split(target.ContainerSettings.DockerRunArgs, " ")...)
+		if target.ContainerSettings.DockerImage != "" {
+			config.Image = target.ContainerSettings.DockerImage
 		}
-		if target.ContainerSettings.DockerUser != "" {
-			command = append(command, "-u", target.ContainerSettings.DockerUser)
+		config.User = target.ContainerSettings.DockerUser
+	}
+	hostConfig := &container.HostConfig{}
+	// Bind-mount individual files in (not a directory) to avoid ownership issues.
+	for out := range core.IterRuntimeFiles(state.Graph, target, false) {
+		hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+			Type:   mount.TypeBind,
+			Source: path.Join(core.RepoRoot, out.Src),
+			Target: path.Join(config.WorkingDir, out.Tmp),
+		})
+	}
+	log.Debug("Running %s in container. Equivalent command: docker run -it --rm -e %s -w %s -v %s:%s -u \"%s\" %s %s",
+		target.Label, strings.Join(config.Env, " -e "), config.WorkingDir, targetTestDir, config.WorkingDir,
+		config.User, config.Image, strings.Join(config.Cmd, " "))
+	c, err := dockerClient.ContainerCreate(context.Background(), config, hostConfig, nil, "")
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create container: %s", err)
+	}
+	for _, warning := range c.Warnings {
+		log.Warning("%s creating container: %s", target.Label, warning)
+	}
+	defer func() {
+		if err := dockerClient.ContainerStop(context.Background(), c.ID, nil); err != nil {
+			log.Warning("Failed to stop container for %s: %s", target.Label, err)
+			return // ContainerRemove will fail if it's not stopped.
 		}
-	} else {
-		command = append(command, state.Config.Docker.RunArgs...)
+		if err := dockerClient.ContainerRemove(context.Background(), c.ID, types.ContainerRemoveOptions{
+			RemoveVolumes: true,
+			Force:         true,
+		}); err != nil {
+			log.Warning("Failed to remove container for %s: %s", target.Label, err)
+		}
+	}()
+	if err := dockerClient.ContainerStart(context.Background(), c.ID, types.ContainerStartOptions{}); err != nil {
+		return nil, fmt.Errorf("Failed to start container: %s", err)
 	}
-	for _, env := range core.BuildEnvironment(state, target, true) {
-		command = append(command, "-e", strings.Replace(env, testDir, "/tmp/test", -1))
+
+	timeout := target.TestTimeout
+	if timeout == 0 {
+		timeout = time.Duration(state.Config.Test.Timeout)
 	}
-	replacedCmd = "mkdir -p /tmp/test && cp -r /tmp/test_in/* /tmp/test && cd /tmp/test && " + replacedCmd
-	command = append(command, "-v", testDir+":/tmp/test_in", "-w", "/tmp/test_in", containerName, "bash", "-o", "pipefail", "-c", replacedCmd)
-	log.Debug("Running containerised test %s: %s", target.Label, strings.Join(command, " "))
-	_, out, err := core.ExecWithTimeout(target, target.TestDir(), nil, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, false, command)
-	retrieveResultsAndRemoveContainer(state, target, cidfile, err == nil)
-	return out, err
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	waitChan, errChan := dockerClient.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
+	var status int64
+	select {
+	case body := <-waitChan:
+		status = body.StatusCode
+	case err := <-errChan:
+		return nil, fmt.Errorf("Container failed running: %s", err)
+	}
+	// Now retrieve the results and any other files.
+	if !target.NoTestOutput {
+		retrieveFile(state, target, c.ID, resultsFile, true)
+	}
+	if state.NeedCoverage {
+		retrieveFile(state, target, c.ID, path.Join(testDir, "test.coverage"), false)
+	}
+	for _, output := range target.TestOutputs {
+		retrieveFile(state, target, c.ID, path.Join(testDir, output), false)
+	}
+	r, err := dockerClient.ContainerLogs(context.Background(), c.ID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("Error retrieving container output: %s", err)
+	} else if status != 0 {
+		return b, fmt.Errorf("Exit code %d", status)
+	}
+	return b, nil
 }
 
 func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%s", r)
-		}
-	}()
-
 	if target.Containerise {
 		if state.Config.Test.DefaultContainer == core.ContainerImplementationNone {
 			log.Warning("Target %s specifies that it should be tested in a container, but test "+
@@ -82,45 +166,47 @@ func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarg
 	return runTest(state, target)
 }
 
-// retrieveResultsAndRemoveContainer copies the test.results file out of the Docker container and into
-// the expected location. It then removes the container.
-func retrieveResultsAndRemoveContainer(state *core.BuildState, target *core.BuildTarget, containerFile string, warn bool) {
-	cid, err := ioutil.ReadFile(containerFile)
-	if err != nil {
-		log.Warning("Failed to read Docker container file %s", containerFile)
-		return
-	}
-	if !target.NoTestOutput {
-		retrieveFile(state, target, cid, "test.results", warn)
-	}
-	if state.NeedCoverage {
-		retrieveFile(state, target, cid, "test.coverage", false)
-	}
-	for _, output := range target.TestOutputs {
-		retrieveFile(state, target, cid, output, false)
-	}
-	// Give this some time to complete. Processes inside the container might not be ready
-	// to shut down immediately.
-	timeout := state.Config.Docker.RemoveTimeout
-	for i := 0; i < 5; i++ {
-		cmd := []string{"docker", "rm", "-f", string(cid)}
-		if _, err := core.ExecWithTimeoutSimple(timeout, cmd...); err == nil {
-			return
+// retrieveFile retrieves a single file (or directory) from a Docker container.
+func retrieveFile(state *core.BuildState, target *core.BuildTarget, cid string, filename string, warn bool) {
+	if err := retrieveOneFile(state, target, cid, filename); err != nil {
+		if warn {
+			log.Warning("Failed to retrieve output for %s: %s", target.Label, err)
+		} else {
+			log.Debug("Failed to retrieve output for %s: %s", target.Label, err)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 
-// retrieveFile retrieves a single file (or directory) from a Docker container.
-func retrieveFile(state *core.BuildState, target *core.BuildTarget, cid []byte, filename string, warn bool) {
+// retrieveOneFile retrieves a single file from a Docker container.
+func retrieveOneFile(state *core.BuildState, target *core.BuildTarget, cid string, filename string) error {
 	log.Debug("Attempting to retrieve file %s for %s...", filename, target.Label)
-	timeout := state.Config.Docker.ResultsTimeout
-	cmd := []string{"docker", "cp", string(cid) + ":/tmp/test/" + filename, target.TestDir()}
-	if out, err := core.ExecWithTimeoutSimple(timeout, cmd...); err != nil {
-		if warn {
-			log.Warning("Failed to retrieve results for %s: %s [%s]", target.Label, err, out)
-		} else {
-			log.Debug("Failed to retrieve results for %s: %s [%s]", target.Label, err, out)
+	r, _, err := dockerClient.CopyFromContainer(context.Background(), cid, filename)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	// Files come out as a tarball (this isn't documented but seems empirically true).
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break // End of archive
+		} else if err != nil {
+			return err
+		} else if hdr.Mode&int64(os.ModeDir) != 0 || strings.HasSuffix(hdr.Name, "/") {
+			continue // Don't do anything specific with directories, only the files in them.
+		}
+		out := path.Join(target.TestDir(), hdr.Name)
+		if err := os.MkdirAll(path.Dir(out), core.DirPermissions); err != nil {
+			return err
+		}
+		f, err := os.Create(out)
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(f, tr); err != nil {
+			return err
 		}
 	}
+	return nil
 }
