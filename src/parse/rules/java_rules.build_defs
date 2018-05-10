@@ -3,7 +3,7 @@
 
 def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
                  deps:list=[], modular:bool=False, exported_deps:list=None, visibility:list=None,
-                 test_only:bool&testonly=False, javac_flags:list&javacopts=None):
+                 test_only:bool&testonly=False, javac_flags:list&javacopts=None, labels:list=[]):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -23,6 +23,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
       visibility (list): Visibility declaration of this rule.
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
+      labels (list): Additional labels to apply to this rule.
     """
     if srcs and src_dir:
         raise ParseError('You cannot pass both srcs and src_dir to java_library')
@@ -81,6 +82,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             cmd=cmd,
             building_description="Compiling...",
             requires=['java'],
+            labels = labels,
             test_only=test_only,
             tools={
                 'javac': [CONFIG.JAVAC_TOOL or CONFIG.JAVAC_WORKER],
@@ -103,6 +105,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             cmd=cmd,
             building_description="Linking...",
             requires=['java'],
+            labels = labels,
             test_only=test_only,
             tools=[CONFIG.JARCAT_TOOL],
         )
@@ -116,6 +119,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             visibility=visibility,
             output_is_complete=False,
             requires=['java'],
+            labels = labels,
             test_only=test_only,
         )
 

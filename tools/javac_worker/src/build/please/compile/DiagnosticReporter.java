@@ -6,24 +6,22 @@ import javax.tools.Diagnostic;
 import javax.tools.DiagnosticListener;
 import javax.tools.JavaFileObject;
 
-import build.please.worker.WorkerProto;
-
 class DiagnosticReporter implements DiagnosticListener<JavaFileObject> {
 
-  private final WorkerProto.BuildResponse.Builder responseBuilder;
+  private BuildResponse response;
 
-  DiagnosticReporter(WorkerProto.BuildResponse.Builder responseBuilder) {
-    this.responseBuilder = responseBuilder;
+  DiagnosticReporter(BuildResponse response) {
+    this.response = response;
   }
 
   @Override
   public void report(Diagnostic<? extends JavaFileObject> diagnostic) {
     // No i18n here obviously...
     if (diagnostic.getSource() != null) {
-      responseBuilder.addMessages(diagnostic.getSource().getName() + ":" + diagnostic.getLineNumber() + ":" +
+      response.withMessage(diagnostic.getSource().getName() + ":" + diagnostic.getLineNumber() + ":" +
           diagnostic.getColumnNumber() + ": " + diagnostic.getMessage(Locale.ENGLISH));
     } else {
-      responseBuilder.addMessages(diagnostic.getMessage(Locale.ENGLISH));
+      response.withMessage(diagnostic.getMessage(Locale.ENGLISH));
     }
   }
 }

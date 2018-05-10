@@ -1,17 +1,22 @@
 package main
 
 import (
-	"encoding/binary"
+	"encoding/json"
 	"net/http"
 	"os"
 
-	"github.com/golang/protobuf/proto"
 	"gopkg.in/op/go-logging.v1"
-
-	pb "build/proto/worker"
 )
 
 var log = logging.MustGetLogger("worker")
+
+// A BuildMessage is a minimal subset of BuildRequest / BuildResponse that we use here.
+// This illustrates one scheme for using it without necessarily requiring the protobufs
+// (although that is also a valid approach, as javac_worker illustrates).
+type BuildMessage struct {
+	Rule    string `json:"rule"`
+	Success bool   `json:"success"`
+}
 
 func main() {
 	// Start a web server that we use to communicate with the other tests.
@@ -22,25 +27,16 @@ func main() {
 
 	// Now loop, reading requests forever.
 	// These are just used to indicate that we're ready to receive a new test.
+	decoder := json.NewDecoder(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
 	for {
-		var size int32
-		if err := binary.Read(os.Stdin, binary.LittleEndian, &size); err != nil {
-			log.Fatalf("Failed to read stdin: %s", err)
+		msg := &BuildMessage{}
+		if err := decoder.Decode(msg); err != nil {
+			log.Fatalf("Failed to decode input: %s", err)
 		}
-		buf := make([]byte, size)
-		if _, err := os.Stdin.Read(buf); err != nil {
-			log.Fatalf("Failed to read stdin: %s", err)
+		msg.Success = true
+		if err := encoder.Encode(msg); err != nil {
+			log.Fatalf("Failed to encode output: %s", err)
 		}
-		request := pb.BuildRequest{}
-		if err := proto.Unmarshal(buf, &request); err != nil {
-			log.Fatalf("Error unmarshaling response: %s", err)
-		}
-		response := pb.BuildResponse{Success: true, Rule: request.Rule}
-		b, err := proto.Marshal(&response)
-		if err != nil { // This shouldn't really happen
-			log.Fatalf("Error serialising proto: %s", err)
-		}
-		binary.Write(os.Stdout, binary.LittleEndian, int32(len(b)))
-		os.Stdout.Write(b)
 	}
 }

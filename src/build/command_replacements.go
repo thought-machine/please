@@ -98,7 +98,7 @@ func workerAndArgs(state *core.BuildState, target *core.BuildTarget, command str
 	} else if match[1] != "" {
 		panic("$(worker) replacements cannot have any commands preceding them.")
 	}
-	return replaceSequence(state, target, core.ExpandHomePath(match[2]), true, false, false, false, false, false),
+	return replaceSequence(state, target, core.ExpandHomePath(match[2]), true, false, false, true, false, false),
 		replaceSequencesInternal(state, target, strings.TrimSpace(match[3]), false),
 		replaceSequencesInternal(state, target, match[4], false)
 }

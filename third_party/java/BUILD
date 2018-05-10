@@ -40,6 +40,11 @@ maven_jar(
 maven_jar(
     name = 'protobuf',
     id = 'com.google.protobuf:protobuf-java:3.4.0',
-    hash = 'ea1115a7983c2c23b7d90ccef4a83675f4e3df9c',
-    sources = False,
+    hash = 'sha1: ea1115a7983c2c23b7d90ccef4a83675f4e3df9c',
+)
+
+maven_jar(
+    name = 'gson',
+    id = 'com.google.code.gson:gson:2.8.4',
+    hash = 'sha1: 19b10af44e08894efb629d90115b0c391eaaf55a',
 )

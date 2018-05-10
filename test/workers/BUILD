@@ -2,7 +2,6 @@ go_binary(
     name = 'worker',
     srcs = ['worker.go'],
     deps = [
-        '//src/build/proto:worker',
         '//third_party/go:logging',
         '//third_party/go:protobuf',
     ],

@@ -1,7 +1,8 @@
 package build.please.compile;
 
-import build.please.worker.WorkerProto.BuildRequest;
-import build.please.worker.WorkerProto.BuildResponse;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -18,42 +20,32 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
+
 public class JavaCompiler {
     /**
      * run reads requests from stdin and sends them to stdout until they are closed.
      */
     public void run() {
         ExecutorService executor = Executors.newFixedThreadPool(8);
-        final byte[] readBuffer = new byte[4];
-        final byte[] writeBuffer = new byte[4];
-        while (true) {
-            try {
-                readStdin(readBuffer);
-                ByteBuffer bb = ByteBuffer.wrap(readBuffer);
-                bb.order(ByteOrder.LITTLE_ENDIAN);
-                final byte[] pb = new byte[bb.getInt()];
-                readStdin(pb);
-                executor.submit(new Runnable() {
-                   public void run() {
-                       try {
-                           BuildResponse response = build(BuildRequest.parseFrom(pb));
-                           byte[] arr = response.toByteArray();
-                           synchronized (writeBuffer) {
-                               ByteBuffer bb = ByteBuffer.wrap(writeBuffer);
-                               bb.order(ByteOrder.LITTLE_ENDIAN);
-                               bb.putInt(arr.length);
-                               System.out.write(bb.array());
-                               System.out.write(arr);
-                           }
-                       } catch (IOException ex) {
-                           System.err.printf("I/O error: %s", ex.toString());
-                       }
-                   }
+        final Gson gson = new GsonBuilder()
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .create();
+        Scanner input = new Scanner(System.in);
+        while (input.hasNext()) {
+            final BuildRequest request = gson.fromJson(input.nextLine(), BuildRequest.class);
+            executor.submit(new Runnable() {
+                    public void run() {
+                        try {
+                            BuildResponse response = build(request);
+                            String msg = gson.toJson(response);
+                            synchronized (this) {
+                                System.out.println(msg);
+                            }
+                        } catch (IOException ex) {
+                            System.err.printf("I/O error: %s", ex.toString());
+                        }
+                    }
                 });
-            } catch (IOException ex) {
-                System.err.printf("I/O error: %s", ex.toString());
-                break;
-            }
         }
     }
 
@@ -73,11 +65,7 @@ public class JavaCompiler {
         try {
             return reallyBuild(request);
         } catch (Exception ex) {
-            return BuildResponse.newBuilder()
-                .setRule(request.getRule())
-                .setSuccess(false)
-                .addMessages(ex.toString())
-                .build();
+            return new BuildResponse(request.rule).withMessage(ex.toString());
         }
     }
 
@@ -90,37 +78,33 @@ public class JavaCompiler {
     }
 
     private BuildResponse reallyBuild(BuildRequest request) throws IOException {
-        BuildResponse.Builder builder = BuildResponse.newBuilder()
-            .setRule(request.getRule());
+        BuildResponse response = new BuildResponse(request.rule);
         // Try to create the output directory
-        File file = new File(request.getTempDir() + "/_tmp/META-INF");
+        File file = new File(request.tempDir + "/_tmp/META-INF");
         if (!file.mkdirs()) {
-            return builder
-                .addMessages("Failed to create directory " + file.getPath())
-                .setSuccess(false)
-                .build();
+            return response.withMessage("Failed to create directory " + file.getPath());
         }
-        String tmpDir = request.getTempDir() + "/_tmp";
-        DiagnosticReporter reporter = new DiagnosticReporter(builder);
+        String tmpDir = request.tempDir + "/_tmp";
+        DiagnosticReporter reporter = new DiagnosticReporter(response);
         try(StringWriter writer = new StringWriter()) {
             javax.tools.JavaCompiler compiler = newCompiler(request);
             StandardJavaFileManager fileManager = compiler.getStandardFileManager(reporter, null, null);
             ArrayList<String> srcs = new ArrayList<>();
-            for (String src : request.getSrcsList()) {
-                srcs.add(src.startsWith("/") ? src : request.getTempDir() + "/" + src);
+            for (String src : request.srcs) {
+                srcs.add(src.startsWith("/") ? src : request.tempDir + "/" + src);
             }
             Iterable<? extends JavaFileObject> compilationUnits;
             ArrayList<String> opts = new ArrayList<>();
             opts.addAll(Arrays.asList(
                 "-d", tmpDir,
                 "-s", tmpDir,
-                "-sourcepath", request.getTempDir()));
-            opts.addAll(request.getOptsList());
+                "-sourcepath", request.tempDir));
+            opts.addAll(request.opts);
             if (opts.contains("--src_dir")) {
                 // Special flag that indicates that the sources are actually a directory and we should compile everything in it.
                 opts.remove("--src_dir");
                 FileFinder finder = new FileFinder(".java");
-                Files.walkFileTree(new File(request.getTempDir() + "/" + request.getSrcs(0)).toPath(), finder);
+                Files.walkFileTree(new File(request.tempDir + "/" + request.srcs.get(0)).toPath(), finder);
                 compilationUnits = fileManager.getJavaFileObjectsFromStrings(finder.getFiles());
             } else {
                 compilationUnits = fileManager.getJavaFileObjectsFromStrings(srcs);
@@ -128,14 +112,11 @@ public class JavaCompiler {
 
             // Find any .jar files and add them to the classpath or module-path
             FileFinder finder = new FileFinder(".jar");
-            Files.walkFileTree(new File(request.getTempDir()).toPath(), finder);
+            Files.walkFileTree(new File(request.tempDir).toPath(), finder);
 
             if (opts.contains("--modular")) {
                 if (!areModulesSupported()) {
-                  return builder.addMessages("The system java compiler does not support modules")
-                      .setSuccess(false)
-                      .build();
-                }
+                    return response.withMessage("The system java compiler does not support modules");               }
                 // Special flag that indicates that we're trying to use the new java 9 modular JVM
                 opts.remove("--modular");
                 opts.add("--module-path");
@@ -143,10 +124,8 @@ public class JavaCompiler {
                 opts.add("-classpath");
             }
             opts.add(finder.joinFiles(':'));
-            return builder
-                .setSuccess(compiler.getTask(writer, fileManager, reporter, opts, null, compilationUnits).call())
-                .addMessages(writer.toString())
-                .build();
+            response.success = compiler.getTask(writer, fileManager, reporter, opts, null, compilationUnits).call();
+            return response.withMessage(writer.toString());
         }
     }
 

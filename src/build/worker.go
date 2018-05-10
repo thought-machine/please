@@ -8,15 +8,17 @@
 package build
 
 import (
-	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
 	"path"
 	"strings"
 	"sync"
+	"syscall"
+	"time"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/shlex"
 
 	pb "build/proto/worker"
@@ -50,7 +52,7 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("Sending remote build request to %s; opts %s", worker, workerArgs)
+	log.Debug("Sending remote build request for %s to %s; opts %s", target.Label, worker, workerArgs)
 	resp, err := buildRemotely(state, worker, &pb.BuildRequest{
 		Rule:    target.Label.String(),
 		Labels:  target.Labels,
@@ -139,35 +141,25 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 
 // sendRequests sends requests to a running worker server.
 func (w *workerServer) sendRequests(stdin io.Writer) {
+	m := &jsonpb.Marshaler{OrigName: true}
 	for request := range w.requests {
-		b, err := proto.Marshal(request)
-		if err != nil { // This shouldn't really happen
-			log.Error("Failed to serialise request: %s", err)
+		if err := m.Marshal(stdin, request); err != nil {
+			log.Error("Failed to write request: %s", err)
 			continue
 		}
-		// Protos can't be streamed so we have to do our own framing.
-		binary.Write(stdin, binary.LittleEndian, int32(len(b)))
-		stdin.Write(b)
+		stdin.Write([]byte{'\n'}) // Newline delimit them as a nicety.
 	}
 }
 
 // readResponses reads the responses from a running worker server and dispatches them appropriately.
 func (w *workerServer) readResponses(stdout io.Reader) {
-	var size int32
+	decoder := json.NewDecoder(stdout)
+	u := &jsonpb.Unmarshaler{AllowUnknownFields: true}
 	for {
-		if err := binary.Read(stdout, binary.LittleEndian, &size); err != nil {
-			w.Error("Failed to read response: %s", err)
-			break
-		}
-		buf := make([]byte, size)
-		if _, err := stdout.Read(buf); err != nil {
-			w.Error("Failed to read response: %s", err)
-			break
-		}
 		response := pb.BuildResponse{}
-		if err := proto.Unmarshal(buf, &response); err != nil {
-			w.Error("Error unmarshaling response: %s", err)
-			continue
+		if err := u.UnmarshalNext(decoder, &response); err != nil {
+			w.Error("Failed to read response: %s", err)
+			break
 		}
 		w.responseMutex.Lock()
 		ch, present := w.responses[response.Rule]
@@ -227,10 +219,19 @@ func (l *stderrLogger) Write(msg []byte) (int, error) {
 
 // StopWorkers stops any running worker processes.
 func StopWorkers() {
+	if len(workerMap) == 0 {
+		return
+	}
 	for name, worker := range workerMap {
-		log.Debug("Killing build worker %s", name)
+		log.Debug("Terminating build worker %s", name)
 		worker.closing = true         // suppress any error messages from worker
 		worker.stderr.Suppress = true // Make sure we don't print anything as they die.
+		syscall.Kill(worker.process.Process.Pid, syscall.SIGTERM)
+	}
+	time.Sleep(50 * time.Millisecond) // Brief pause to let them shut down first.
+	for name, worker := range workerMap {
+		log.Debug("Killing build worker %s", name)
 		worker.process.Process.Kill()
 	}
+	workerMap = map[string]*workerServer{}
 }

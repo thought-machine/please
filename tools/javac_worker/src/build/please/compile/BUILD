@@ -6,7 +6,7 @@ java_library(
     name = 'compile',
     srcs = glob(['*.java']),
     deps = [
-        '//src/build/proto:worker',
+        '//third_party/java:gson',
     ],
     visibility = ['//tools/javac_worker:all'],
 )
