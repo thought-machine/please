@@ -63,7 +63,8 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	buildingTargets := make([]buildingTarget, numThreads)
 
 	if len(state.Config.Please.Motd) != 0 {
-		printf("%s\n", state.Config.Please.Motd[rand.Intn(len(state.Config.Please.Motd))])
+		r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
+		printf("%s\n", state.Config.Please.Motd[r.Intn(len(state.Config.Please.Motd))])
 	}
 
 	displayDone := make(chan struct{})
