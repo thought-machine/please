@@ -15,8 +15,6 @@ import (
 // A few sneaky globals for when we don't have a scope handy
 var stringMethods, dictMethods, configMethods map[string]*pyFunc
 
-const subincludePackageName = "_remote"
-
 // A nativeFunc is a function that implements a builtin function natively.
 type nativeFunc func(*scope, []pyObject) pyObject
 
@@ -88,14 +86,6 @@ func registerBuiltins(s *scope) {
 
 // registerSubincludePackage sets up the package for remote subincludes.
 func registerSubincludePackage(s *scope) {
-	var pkg *core.Package
-	if pkg = s.state.Graph.Package(subincludePackageName); pkg == nil {
-		pkg = core.NewPackage(subincludePackageName)
-		s.state.Graph.AddPackage(pkg)
-	}
-	s.interpreter.subincludeScope = s.NewPackagedScope(pkg)
-	// Always counts as being in callback mode (i.e. the package is already parsed and we are adding individual targets later).
-	s.interpreter.subincludeScope.Callback = true
 	// Another small hack - replace the code for these two with native code, must be done after the
 	// declarations which are in misc_rules.
 	buildRule := s.Lookup("build_rule").(*pyFunc)
@@ -243,9 +233,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		return s.state.WaitForBuiltTarget(l, l.PackageName)
 	}
 	t := s.state.WaitForBuiltTarget(l, s.pkg.Name)
-	if l.PackageName != subincludePackageName {
-		s.pkg.RegisterSubinclude(l)
-	}
+	s.pkg.RegisterSubinclude(l)
 	return t
 }
 
@@ -254,41 +242,8 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
 	target := string(args[0].(pyString))
 	s.NAssert(strings.HasPrefix(target, ":"), "Subincludes cannot be from the local package")
-	if !strings.HasPrefix(target, "http") {
-		return core.ParseBuildLabel(target, "")
-	}
-	// Check if this target is already registered (this will always happen eventually because
-	// we re-parse the same package again).
-	name := strings.Replace(path.Base(target), ".", "_", -1)
-	label := core.NewBuildLabel(subincludePackageName, name)
-	if s.state.Graph.Target(label) != nil {
-		return label
-	}
-	log.Warning("Direct remote subincludes are deprecated in favour of using subrepos.")
-	log.Warning("See https://github.com/thought-machine/pleasings for an introduction of how to use them.")
-	remoteFile, ok := s.interpreter.subincludeScope.Lookup("remote_file").(*pyFunc)
-	s.interpreter.subincludeScope.Assert(ok, "remote_file is not callable")
-	// Call using the normal entry point, which is a bit of a faff but it sorts out default arguments and so forth
-	a := []CallArgument{
-		{
-			Name:  "name",
-			Value: Expression{Val: &ValueExpression{String: `"` + name + `"`}},
-		}, {
-			Name:  "url",
-			Value: Expression{Val: &ValueExpression{String: `"` + target + `"`}},
-		},
-	}
-	if args[1] != nil && args[1] != None {
-		a = append(a, CallArgument{
-			Name: "hashes",
-			Value: Expression{Val: &ValueExpression{List: &List{
-				Values: []*Expression{{Val: &ValueExpression{
-					String: `"` + string(args[1].(pyString)) + `"`,
-				}}},
-			}}},
-		})
-	}
-	remoteFile.Call(s.interpreter.subincludeScope, &Call{Arguments: a})
+	label := core.ParseBuildLabel(target, "")
+	s.NAssert(s.pkg != nil && label.PackageName == s.pkg.Name, "Subincludes cannot be from the local package")
 	return label
 }
 

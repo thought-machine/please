@@ -10,14 +10,13 @@ import (
 
 // An interpreter holds the package-independent state about our parsing process.
 type interpreter struct {
-	builtinScope    *scope
-	scope           *scope
-	parser          *Parser
-	subincludeScope *scope
-	subincludes     map[string]pyDict
-	config          map[*core.Configuration]*pyConfig
-	mutex           sync.RWMutex
-	configMutex     sync.RWMutex
+	builtinScope *scope
+	scope        *scope
+	parser       *Parser
+	subincludes  map[string]pyDict
+	config       map[*core.Configuration]*pyConfig
+	mutex        sync.RWMutex
+	configMutex  sync.RWMutex
 }
 
 // newInterpreter creates and returns a new interpreter instance.

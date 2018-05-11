@@ -35,13 +35,6 @@
     <pre><code>subinclude('//build_defs:my_build_rules')</code></pre>
     </p>
 
-    <p>Note that you can also <code>subinclude</code> remote files as follows:
-
-    <pre><code>subinclude('https://raw.githubusercontent.com/thought-machine/pleasings/master/grm/grm.build_defs')</code></pre>
-
-    These are deduplicated internally so they're only downloaded & parsed once, so it's reasonably
-    performant, although it's still often preferable to vendorise them yourself.</p>
-
     <h3><a name="glob">glob</a></h3>
 
     <p><pre class="rule"><code>glob(includes, excludes=None, hidden=False)</code></pre></p>
