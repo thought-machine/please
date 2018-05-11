@@ -29,7 +29,7 @@ import (
 var dockerClient *docker.Client
 var dockerClientOnce sync.Once
 
-func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
+func runContainerisedTest(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
 	const testDir = "/tmp/test"
 	const resultsFile = testDir + "/test.results"
 
@@ -88,7 +88,25 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) (out
 		target.Label, strings.Join(config.Env, " -e "), config.WorkingDir, targetTestDir, config.WorkingDir,
 		config.User, config.Image, strings.Join(config.Cmd, " "))
 	c, err := dockerClient.ContainerCreate(context.Background(), config, hostConfig, nil, "")
-	if err != nil {
+	if err != nil && docker.IsErrNotFound(err) {
+		// Image doesn't exist, need to try to pull it.
+		// N.B. This is where we would authenticate if needed. Right now we are not doing anything.
+		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Pulling image...")
+		r, err := dockerClient.ImagePull(context.Background(), config.Image, types.ImagePullOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("Failed to pull image: %s", err)
+		}
+		defer r.Close()
+		// I assume we have to exhaust this Reader before continuing. The docs are not super clear on how we know at what point the pull has completed.
+		if _, err := io.Copy(ioutil.Discard, r); err != nil {
+			return nil, fmt.Errorf("Failed to pull image: %s", err)
+		}
+		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
+		c, err = dockerClient.ContainerCreate(context.Background(), config, hostConfig, nil, "")
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create container: %s", err)
+		}
+	} else if err != nil {
 		return nil, fmt.Errorf("Failed to create container: %s", err)
 	}
 	for _, warning := range c.Warnings {
@@ -151,14 +169,14 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) (out
 	return b, nil
 }
 
-func runPossiblyContainerisedTest(state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
+func runPossiblyContainerisedTest(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
 	if target.Containerise {
 		if state.Config.Test.DefaultContainer == core.ContainerImplementationNone {
 			log.Warning("Target %s specifies that it should be tested in a container, but test "+
 				"containers are disabled in your .plzconfig.", target.Label)
 			return runTest(state, target)
 		}
-		out, err = runContainerisedTest(state, target)
+		out, err = runContainerisedTest(tid, state, target)
 		if err != nil && state.Config.Docker.AllowLocalFallback {
 			log.Warning("Failed to run %s containerised: %s %s. Falling back to local version.",
 				target.Label, out, err)

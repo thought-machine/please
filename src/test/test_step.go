@@ -300,7 +300,7 @@ func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget
 		state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
 		return []byte{}, err
 	}
-	return runPossiblyContainerisedTest(state, target)
+	return runPossiblyContainerisedTest(tid, state, target)
 }
 
 // Parses the coverage output for a single target.
