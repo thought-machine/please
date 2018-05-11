@@ -66,12 +66,6 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) (out
 		Cmd:        []string{"bash", "-uo", "pipefail", "-c", replacedCmd},
 		Tty:        true, // This makes it a lot easier to read later on.
 	}
-	if target.ContainerSettings != nil {
-		if target.ContainerSettings.DockerImage != "" {
-			config.Image = target.ContainerSettings.DockerImage
-		}
-		config.User = target.ContainerSettings.DockerUser
-	}
 	hostConfig := &container.HostConfig{}
 	// Bind-mount individual files in (not a directory) to avoid ownership issues.
 	for out := range core.IterRuntimeFiles(state.Graph, target, false) {
@@ -80,6 +74,15 @@ func runContainerisedTest(state *core.BuildState, target *core.BuildTarget) (out
 			Source: path.Join(core.RepoRoot, out.Src),
 			Target: path.Join(config.WorkingDir, out.Tmp),
 		})
+	}
+	if target.ContainerSettings != nil {
+		if target.ContainerSettings.DockerImage != "" {
+			config.Image = target.ContainerSettings.DockerImage
+		}
+		config.User = target.ContainerSettings.DockerUser
+		if target.ContainerSettings.Tmpfs != "" {
+			hostConfig.Tmpfs = map[string]string{target.ContainerSettings.Tmpfs: "exec"}
+		}
 	}
 	log.Debug("Running %s in container. Equivalent command: docker run -it --rm -e %s -w %s -v %s:%s -u \"%s\" %s %s",
 		target.Label, strings.Join(config.Env, " -e "), config.WorkingDir, targetTestDir, config.WorkingDir,
