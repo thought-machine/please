@@ -10,7 +10,6 @@ filegroup(
         '//tools/jarcat',
         '//tools/java:javac_worker',
         '//tools/java:junit_runner',
-        '//tools/please_diff_graphs',
         '//tools/please_go_filter',
         '//tools/please_go_test',
         '//tools/please_maven',
@@ -24,7 +23,6 @@ signed_fpm_deb(
     dirs = {'/opt/please': [':installed_files']},
     links = {
         '/usr/bin/plz': '/opt/please/please',
-        '/usr/bin/plz_diff_graphs': '/opt/please/please_diff_graphs',
     },
 )
 

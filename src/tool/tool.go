@@ -6,7 +6,6 @@ package tool
 
 import (
 	"os"
-	"path"
 	"strings"
 	"syscall"
 
