@@ -98,7 +98,14 @@ func (hasher *PathHasher) hash(path string) ([]byte, error) {
 		// This isn't quite perfect - it could potentially get mixed up with a file with the
 		// appropriate contents, but that is not really likely.
 		h.Write(boolTrueHashValue)
-		h.Write([]byte(dest))
+		if rel := hasher.ensureRelative(dest); rel != dest || !filepath.IsAbs(dest) {
+			// Inside the root of our repo so it's something we manage - just hash its (relative) destination
+			h.Write([]byte(rel))
+		} else {
+			// Outside the repo; it's a system tool, so we hash its contents.
+			err := hasher.fileHash(h, dest)
+			return h.Sum(nil), err
+		}
 		return h.Sum(nil), nil
 	} else if err == nil && info.IsDir() {
 		err = WalkMode(path, func(p string, isDir bool, mode os.FileMode) error {
@@ -118,23 +125,23 @@ func (hasher *PathHasher) hash(path string) ([]byte, error) {
 				// otherwise rules might be marked as unchanged if they added additional symlinks.
 				h.Write(boolTrueHashValue)
 			} else if !isDir {
-				return hasher.fileHash(&h, p)
+				return hasher.fileHash(h, p)
 			}
 			return nil
 		})
 	} else {
-		err = hasher.fileHash(&h, path) // let this handle any other errors
+		err = hasher.fileHash(h, path) // let this handle any other errors
 	}
 	return h.Sum(nil), err
 }
 
 // Calculate the hash of a single file
-func (hasher *PathHasher) fileHash(h *hash.Hash, filename string) error {
+func (hasher *PathHasher) fileHash(h hash.Hash, filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(*h, file)
+	_, err = io.Copy(h, file)
 	file.Close()
 	return err
 }

@@ -2,21 +2,14 @@ package core
 
 import (
 	"encoding/base64"
-	"os"
 	"path"
-	"regexp"
 	"strings"
+
+	"fs"
 )
 
-var home = os.Getenv("HOME")
-var homeRex = regexp.MustCompile("(?:^|:)(~(?:[/:]|$))")
-
-// ExpandHomePath expands all prefixes of ~ without a user specifier TO $HOME.
-func ExpandHomePath(path string) string {
-	return homeRex.ReplaceAllStringFunc(path, func(subpath string) string {
-		return strings.Replace(subpath, "~", home, -1)
-	})
-}
+// ExpandHomePath is an alias to the function in fs for compatibility.
+var ExpandHomePath func(string) string = fs.ExpandHomePath
 
 // A BuildEnv is a representation of the build environment that also knows how to log itself.
 type BuildEnv []string
