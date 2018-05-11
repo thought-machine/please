@@ -277,7 +277,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
 
 
 def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
-                test_only:bool&testonly=False, env:dict=None, deps:list=[], post_install_commands:list=None,
+                test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
                 install_subdirectory:bool=False, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None):
     """Provides a build rule for third-party dependencies to be installed by pip.
@@ -289,7 +289,6 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
       outs (list): List of output files / directories. Defaults to [name].
       test_only (bool): If True, can only be used by test rules or other test_only libraries.
-      env (dict): Deprecated, has no effect.
       deps (list): List of rules this library depends on.
       post_install_commands (list): Commands run after pip install has completed.
       install_subdirectory (bool): Forces the package to install into a subdirectory with this name.
