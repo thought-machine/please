@@ -520,7 +520,8 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
     )
 
 
-def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_only:bool&testonly=False, namespace:str=None):
+def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
+                    test_only:bool&testonly=False, namespace:str=None, _c:bool=False):
     """Build rule to embed an arbitrary binary file into a C library.
 
     You can depend on the output of this as though it were a cc_library rule.
@@ -547,10 +548,10 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_
     if src.startswith(':') or src.startswith('/'):
         deps += [src]
     namespace = namespace or CONFIG.DEFAULT_NAMESPACE
-    if not namespace:
+    if not namespace and not _c:
         raise ValueError('You must either pass namespace= to cc_library or set the default namespace in .plzconfig')
     darwin = CONFIG.OS == 'darwin'
-
+    hdr_contents = _C_HEADER_CONTENTS if _c else _CC_HEADER_CONTENTS
     hdr_rule = build_rule(
         name=name,
         tag='hdr',
@@ -560,9 +561,9 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_
         cmd='; '.join([
             # This replacement roughly mimics what ld will do to munge it into a symbol name.
             'export ENCODED_FILENAME="${SRCS//[\\/\\.]/_}"',
-            'export BINARY_NAME=' + name,
-            'export NAMESPACE=' + namespace,
-            'echo "%s" > $OUT' % _CC_HEADER_CONTENTS,
+            'export BINARY_NAME="%s"' % name,
+            'export NAMESPACE="%s"' % namespace,
+            'echo "%s" > $OUT' % hdr_contents,
         ]),
         visibility=visibility,
         building_description='Writing header...',
@@ -641,6 +642,27 @@ inline char* ${BINARY_NAME}_end_nc() {
 #ifdef __cplusplus
 }  // namespace ${NAMESPACE}
 #endif  // __cplusplus
+"""
+
+_C_HEADER_CONTENTS = """\
+extern const char _binary_${ENCODED_FILENAME}_start[];
+extern const char _binary_${ENCODED_FILENAME}_end[];
+
+inline const char* ${BINARY_NAME}_start() {
+  return _binary_${ENCODED_FILENAME}_start;
+}
+inline const char* ${BINARY_NAME}_end() {
+  return _binary_${ENCODED_FILENAME}_end;
+}
+inline unsigned long ${BINARY_NAME}_size() {
+  return _binary_${ENCODED_FILENAME}_end - _binary_${ENCODED_FILENAME}_start;
+}
+inline char* ${BINARY_NAME}_start_nc() {
+  return (char*)(_binary_${ENCODED_FILENAME}_start);
+}
+inline char* ${BINARY_NAME}_end_nc() {
+  return (char*)(_binary_${ENCODED_FILENAME}_end);
+}
 """
 
 # We duplicate the symbols with _ and __ preceding, the compiler fails if _ is not

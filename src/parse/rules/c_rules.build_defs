@@ -259,8 +259,7 @@ def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copt
     )
 
 
-def c_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_only:list=False,
-                   namespace:str=None):
+def c_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_only:list=False):
     """Build rule to embed an arbitrary binary file into a C library.
 
     You can depend on the output of this as though it were a c_library rule.
@@ -282,10 +281,6 @@ def c_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_o
       deps (list): Dependencies.
       visibility (list): Rule visibility.
       test_only (bool): If True, is only available to test rules.
-      namespace (str): Deprecated. Allows specifying the namespace the symbols will be available in.
-                       Since C does not have namespaces, the generated code will surround it in #ifdef
-                       macros for C++, and in C it will be available in global scope - so semantically it
-                       only really makes sense to pass 'namespace' to a cc_embed_binary rule.
     """
     return cc_embed_binary(
         name = name,
@@ -293,5 +288,5 @@ def c_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_o
         deps = deps,
         visibility = visibility,
         test_only = test_only,
-        namespace = namespace,
+        _c = True,
     )

@@ -19,7 +19,7 @@ genrule(
     cmd = 'echo "testing message 3" > $OUT',
 )
 
-cc_embed_binary(
+c_embed_binary(
     name = 'embedded_file_3',
     src = ':embedded_file_3_gen',
     deps = [':embedded_file_3_gen'],
