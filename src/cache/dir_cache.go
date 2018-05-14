@@ -54,7 +54,7 @@ func (cache *dirCache) storeFiles(target *core.BuildTarget, key []byte, suffix s
 		}
 	}
 	cache.markDir(cacheDir, totalSize)
-	if err := os.Rename(tmpDir, cacheDir); err != nil {
+	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 	}
 }
