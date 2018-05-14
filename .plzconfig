@@ -55,10 +55,6 @@ protocgoplugin = //third_party/go:protoc-gen-go
 defaultimage = thoughtmachine/please_test:v2
 allowlocalfallback = false
 
-[cache]
-; Too hard to make this guy work during initial bootstrap.
-dircachecleaner = none
-
 [licences]
 accept = MIT
 accept = MIT License

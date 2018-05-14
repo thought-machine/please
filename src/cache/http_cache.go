@@ -26,7 +26,7 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files ...str
 	// TODO(pebers): Change this to upload using multipart, it's quite slow doing every file separately
 	//               for targets with many files.
 	if cache.Writeable {
-		for out := range cacheArtifacts(target, files...) {
+		for _, out := range cacheArtifacts(target, files...) {
 			if info, err := os.Stat(out); err == nil && info.IsDir() {
 				fs.Walk(out, func(name string, isDir bool) error {
 					if !isDir {
@@ -73,7 +73,7 @@ func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte) bool {
 	// so we must assume that a target with no artifacts can't be retrieved. It's a weird
 	// case but a test already exists in the plz test suite so...
 	retrieved := false
-	for out := range cacheArtifacts(target) {
+	for _, out := range cacheArtifacts(target) {
 		if !cache.RetrieveExtra(target, key, out) {
 			return false
 		}

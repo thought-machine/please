@@ -1,0 +1,3 @@
+; Config file used for CI.
+[cache]
+dircompress = true

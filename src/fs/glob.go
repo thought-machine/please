@@ -125,7 +125,7 @@ func Walk(rootPath string, callback func(name string, isDir bool) error) error {
 // N.B. This only includes the bits of the mode that determine the mode type, not the permissions.
 func WalkMode(rootPath string, callback func(name string, isDir bool, mode os.FileMode) error) error {
 	// Compatibility with filepath.Walk which allows passing a file as the root argument.
-	if info, err := os.Stat(rootPath); err != nil {
+	if info, err := os.Lstat(rootPath); err != nil {
 		return err
 	} else if !info.IsDir() {
 		return callback(rootPath, false, info.Mode())

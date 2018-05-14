@@ -63,7 +63,7 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, files ...stri
 		log.Debug("Storing %s in RPC cache...", target.Label)
 		artifacts := []*pb.Artifact{}
 		totalSize := 0
-		for out := range cacheArtifacts(target, files...) {
+		for _, out := range cacheArtifacts(target, files...) {
 			artifacts2, size, err := cache.loadArtifacts(target, out)
 			if err != nil {
 				log.Warning("RPC cache failed to load artifact %s: %s", out, err)
@@ -160,7 +160,7 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
 		return false
 	}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
-	for out := range cacheArtifacts(target) {
+	for _, out := range cacheArtifacts(target) {
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name, File: out}
 		req.Artifacts = append(req.Artifacts, &artifact)
 	}

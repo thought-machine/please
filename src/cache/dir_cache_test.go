@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,18 +26,27 @@ func writeFile(filename string, size int) {
 	}
 }
 
-func cachePath(target *core.BuildTarget) string {
+func cachePath(target *core.BuildTarget, compress bool) string {
+	if compress {
+		return path.Join(".plz-cache-"+target.Label.PackageName, target.Label.PackageName, target.Label.Name, b64Hash+".tar.gz")
+	}
 	return path.Join(".plz-cache-"+target.Label.PackageName, target.Label.PackageName, target.Label.Name, b64Hash, target.Outputs()[0])
 }
 
 func inCache(target *core.BuildTarget) bool {
-	dest := cachePath(target)
+	dest := cachePath(target, false)
+	log.Debug("Checking for %s", dest)
+	return core.PathExists(dest)
+}
+
+func inCompressedCache(target *core.BuildTarget) bool {
+	dest := cachePath(target, true)
 	log.Debug("Checking for %s", dest)
 	return core.PathExists(dest)
 }
 
 func TestStoreAndRetrieve(t *testing.T) {
-	cache := makeCache(".plz-cache-test1")
+	cache := makeCache(".plz-cache-test1", false)
 	target := makeTarget("//test1:target1", 20)
 	cache.Store(target, hash)
 	// Should now exist in cache at this path
@@ -51,7 +59,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 }
 
 func TestCleanNoop(t *testing.T) {
-	cache := makeCache(".plz-cache-test2")
+	cache := makeCache(".plz-cache-test2", false)
 	target1 := makeTarget("//test2:target1", 2000)
 	cache.Store(target1, hash)
 	assert.True(t, inCache(target1))
@@ -66,7 +74,7 @@ func TestCleanNoop(t *testing.T) {
 }
 
 func TestCleanNoop2(t *testing.T) {
-	cache := makeCache(".plz-cache-test3")
+	cache := makeCache(".plz-cache-test3", false)
 	target1 := makeTarget("//test3:target1", 2000)
 	cache.Store(target1, hash)
 	assert.True(t, inCache(target1))
@@ -82,12 +90,12 @@ func TestCleanNoop2(t *testing.T) {
 }
 
 func TestCleanForReal(t *testing.T) {
-	cache := makeCache(".plz-cache-test4")
+	cache := makeCache(".plz-cache-test4", false)
 	target1 := makeTarget("//test4:target1", 2000)
 	cache.Store(target1, hash)
 	assert.True(t, inCache(target1))
 	target2 := makeTarget("//test4:target2", 2000)
-	writeFile(cachePath(target2), 2000)
+	writeFile(cachePath(target2, false), 2000)
 	assert.True(t, inCache(target2))
 	// This time it should clean target2, because target1 has just been stored
 	totalSize := cache.clean(10000, 1000)
@@ -97,9 +105,9 @@ func TestCleanForReal(t *testing.T) {
 }
 
 func TestCleanForReal2(t *testing.T) {
-	cache := makeCache(".plz-cache-test5")
+	cache := makeCache(".plz-cache-test5", false)
 	target1 := makeTarget("//test5:target1", 2000)
-	writeFile(cachePath(target1), 2000)
+	writeFile(cachePath(target1, false), 2000)
 	assert.True(t, inCache(target1))
 	target2 := makeTarget("//test5:target2", 2000)
 	cache.Store(target2, hash)
@@ -111,31 +119,40 @@ func TestCleanForReal2(t *testing.T) {
 	assert.True(t, inCache(target2))
 }
 
-func TestCleanForReal3(t *testing.T) {
-	t.Skip("Failing on CI, not sure why")
-	if runtime.GOOS != "linux" {
-		// The various sizes that follow assume specific things about Linux's filesystem
-		// (specifically that directories will cost 4k - which might also be ext4 specific?).
-		t.Skip("assumes things about Linux's filesystem")
-	}
-	cache := makeCache(".plz-cache-test6")
-	target1 := makeTarget("//test6:target1", 2000)
-	writeFile(cachePath(target1), 2000)
-	assert.True(t, inCache(target1))
-	target2 := makeTarget("//test6:target2", 2000)
-	writeFile(cachePath(target2), 2000)
-	assert.True(t, inCache(target2))
-	// This time it should clean one of the two targets, but it is indeterminate which one.
-	// N.B. We allow a bit over the 6k you'd expect - each directory costs 4k as well.
-	totalSize := cache.clean(12000, 11000)
-	assert.EqualValues(t, 10096, totalSize) // again +4k for a directory
-	assert.True(t, inCache(target1) != inCache(target2))
+func TestStoreAndRetrieveCompressed(t *testing.T) {
+	cache := makeCache(".plz-cache-test6", true)
+	target := makeTarget("//test6:target6", 20)
+	cache.Store(target, hash)
+	// Should now exist in cache at this path
+	assert.True(t, inCompressedCache(target))
+	assert.True(t, cache.Retrieve(target, hash))
+	// Should be able to store it again without problems
+	cache.Store(target, hash)
+	assert.True(t, inCompressedCache(target))
+	assert.True(t, cache.Retrieve(target, hash))
 }
 
-func makeCache(dir string) *dirCache {
+func TestCleanCompressed(t *testing.T) {
+	cache := makeCache(".plz-cache-test7", true)
+	target1 := makeTarget("//test7:target1", 2000)
+	writeFile(cachePath(target1, true), 2000)
+	assert.True(t, inCompressedCache(target1))
+	target2 := makeTarget("//test7:target2", 2000)
+	cache.Store(target2, hash)
+	assert.True(t, inCompressedCache(target2))
+	// Don't want to assert the size here since it depends on how well gzip compresses.
+	// It's a bit hard to know exactly what the sizes here should be too but we'll guess
+	// and assume it won't change dramatically.
+	cache.clean(3000, 1000)
+	assert.False(t, inCompressedCache(target1))
+	assert.True(t, inCompressedCache(target2))
+}
+
+func makeCache(dir string, compress bool) *dirCache {
 	config := core.DefaultConfiguration()
 	config.Cache.Dir = dir
 	config.Cache.DirClean = false // We will do this explicitly
+	config.Cache.DirCompress = compress
 	return newDirCache(config)
 }
 

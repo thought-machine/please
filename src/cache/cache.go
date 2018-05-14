@@ -147,18 +147,7 @@ func (mplex cacheMultiplexer) Shutdown() {
 	}
 }
 
-// Yields all cacheable artifacts from this target. Useful for cache implementations
-// to not have to reinvent logic around post-build functions etc.
-func cacheArtifacts(target *core.BuildTarget, files ...string) <-chan string {
-	ch := make(chan string, 10)
-	go func() {
-		for _, out := range target.Outputs() {
-			ch <- out
-		}
-		for _, file := range files {
-			ch <- file
-		}
-		close(ch)
-	}()
-	return ch
+// Returns all cacheable artifacts from this target.
+func cacheArtifacts(target *core.BuildTarget, files ...string) []string {
+	return append(target.Outputs(), files...)
 }

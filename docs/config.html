@@ -137,13 +137,6 @@
         The default is <code>.plz-cache</code>, if set to the empty string the dir cache will
         be disabled.</li>
 
-      <li><b>DirCacheCleaner</b><br/>
-        The binary to use for cleaning the directory cache.<br/>
-        Defaults to <code>cache_cleaner</code> in the plz install directory.<br/>
-        Can also be set to the empty string to disable attempting to run it - note that this
-        will of course lead to the dir cache growing without limit which may ruin your day
-        if it fills your disk :)</li>
-
       <li><b>DirCacheHighWaterMark</b> (size)<br/>
         Starts cleaning the directory cache when it is over this number of bytes.<br/>
         Can also be given with human-readable suffixes like 10G, 200MB etc.</li>

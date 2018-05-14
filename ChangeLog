@@ -5,6 +5,9 @@ Version 13.0.0
     * Worker protocol has been changed to JSON instead of protobuf.
     * Now communicating with Docker using a proper API instead of execing the CLI.
       docker_run_args is no longer supported as a result.
+    * Directory cache now supports a `dircompress` config option which stores artifacts
+      as gzipped tarballs. This is slower to save / restore but results in fewer files
+      and less space used.
 
 
 Version 12.2.5
