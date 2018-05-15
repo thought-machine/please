@@ -314,7 +314,7 @@ var opts struct {
 		Changes struct {
 			Since           string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
 			CheckoutCommand string `long:"checkout_command" default:"git checkout %s" description:"Command to run to check out the before/after revisions."`
-			CurrentCommand  string `long:"current_revision_command" default:"git rev-parse HEAD" description:"Command to run to get the current revision (which will be checked out again at the end)"`
+			CurrentCommand  string `long:"current_revision_command" default:"git rev-parse --abbrev-ref HEAD" description:"Command to run to get the current revision (which will be checked out again at the end)"`
 			Args            struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to consider changed"`
 			} `positional-args:"true"`
