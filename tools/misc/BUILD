@@ -1,11 +1,11 @@
 filegroup(
-    name = 'wrapper_script',
-    srcs = ['pleasew'],
-    visibility = ['PUBLIC'],
+    name = "wrapper_script",
+    srcs = ["pleasew"],
+    visibility = ["PUBLIC"],
 )
 
 filegroup(
-    name = 'completion_script',
-    srcs = ['plz_complete.sh'],
-    visibility = ['PUBLIC'],
+    name = "completion_script",
+    srcs = ["plz_complete.sh"],
+    visibility = ["PUBLIC"],
 )

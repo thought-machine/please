@@ -1,12 +1,12 @@
-package(python_test_runner = 'pytest')
+package(python_test_runner = "pytest")
 
 python_library(
-    name = 'inc',
-    srcs = ['inc.py'],
+    name = "inc",
+    srcs = ["inc.py"],
 )
 
 python_test(
-    name = 'pytest_test',
-    srcs = ['test_runner.py'],
-    deps = [':inc'],
+    name = "pytest_test",
+    srcs = ["test_runner.py"],
+    deps = [":inc"],
 )

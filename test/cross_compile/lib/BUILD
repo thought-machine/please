@@ -2,26 +2,26 @@
 # aspects of the cross-compilation code.
 
 go_binary(
-    name = 'generator',
-    srcs = ['main.go'],
+    name = "generator",
+    srcs = ["main.go"],
 )
 
 genrule(
-    name = 'generated',
-    outs = ['gen.txt'],
-    cmd = '$TOOL > $OUT',
-    tools = [':generator'],
+    name = "generated",
+    outs = ["gen.txt"],
+    cmd = "$TOOL > $OUT",
+    tools = [":generator"],
 )
 
 c_embed_binary(
-    name = 'embed',
-    src = ':generated',
+    name = "embed",
+    src = ":generated",
 )
 
 c_library(
-    name = 'lib',
-    srcs = ['lib.c'],
-    hdrs = ['lib.h'],
-    deps = [':embed'],
-    visibility = ['//test/cross_compile:all'],
+    name = "lib",
+    srcs = ["lib.c"],
+    hdrs = ["lib.h"],
+    visibility = ["//test/cross_compile:all"],
+    deps = [":embed"],
 )

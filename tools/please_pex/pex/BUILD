@@ -1,18 +1,18 @@
 go_bindata(
-    name = 'main_files',
-    srcs = ['//tools/please_pex:pex_data'],
-    input_dir = 'tools/please_pex',
-    prefix = 'tools/please_pex',
+    name = "main_files",
+    srcs = ["//tools/please_pex:pex_data"],
+    input_dir = "tools/please_pex",
+    prefix = "tools/please_pex",
 )
 
 go_library(
-    name = 'pex',
+    name = "pex",
     srcs = [
-        'pex.go',
-        ':main_files',
+        "pex.go",
+        ":main_files",
     ],
+    visibility = ["//tools/please_pex:all"],
     deps = [
-        '//tools/jarcat/zip',
+        "//tools/jarcat/zip",
     ],
-    visibility = ['//tools/please_pex:all'],
 )

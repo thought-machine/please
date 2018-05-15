@@ -1,8 +1,8 @@
 filegroup(
-    name = 'asciinema',
+    name = "asciinema",
     srcs = [
-        'asciinema-player.css',
-        'asciinema-player.js',
+        "asciinema-player.css",
+        "asciinema-player.js",
     ],
-    visibility = ['//docs/...'],
+    visibility = ["//docs/..."],
 )

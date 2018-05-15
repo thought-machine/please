@@ -1,16 +1,16 @@
 go_binary(
-    name = 'worker',
-    srcs = ['worker.go'],
+    name = "worker",
+    srcs = ["worker.go"],
     deps = [
-        '//third_party/go:logging',
-        '//third_party/go:protobuf',
+        "//third_party/go:logging",
+        "//third_party/go:protobuf",
     ],
 )
 
 go_binary(
-    name = 'test_bin',
-    srcs = ['test.go'],
-    deps = ['//third_party/go:logging'],
+    name = "test_bin",
+    srcs = ["test.go"],
+    deps = ["//third_party/go:logging"],
 )
 
 for i in range(1, 6):

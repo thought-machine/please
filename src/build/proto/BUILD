@@ -1,12 +1,12 @@
 # This is a dependency of our in-repo compiler, so we must use the system compiler.
-package(javac_tool = 'javac')
+package(javac_tool = "javac")
 
 proto_library(
-    name = 'worker',
-    srcs = ['worker.proto'],
+    name = "worker",
+    srcs = ["worker.proto"],
     languages = [
-        'go',
-        'java',
+        "go",
+        "java",
     ],
-    visibility = ['PUBLIC'],
+    visibility = ["PUBLIC"],
 )

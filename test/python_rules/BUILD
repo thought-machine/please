@@ -1,124 +1,124 @@
 # Test for a panic provoked by a python_library using a proto_library as a resource.
 proto_library(
-    name = 'test_proto',
-    srcs = ['test.proto'],
+    name = "test_proto",
+    srcs = ["test.proto"],
 )
 
 python_library(
-    name = 'proto_lib',
-    srcs = ['proto_lib.py'],
-    resources = [':test_proto'],
+    name = "proto_lib",
+    srcs = ["proto_lib.py"],
+    resources = [":test_proto"],
 )
 
 python_test(
-    name = 'proto_test',
-    srcs = ['proto_test.py'],
-    deps = [':proto_lib'],
+    name = "proto_test",
+    srcs = ["proto_test.py"],
+    deps = [":proto_lib"],
 )
 
 python_library(
-    name = 'strip_source',
-    srcs = ['strip_source.py'],
+    name = "strip_source",
+    srcs = ["strip_source.py"],
     strip = True,
 )
 
 python_test(
-    name = 'strip_source_test',
-    srcs = ['strip_source_test.py'],
-    labels = ['py3'],
-    deps = [':strip_source'],
+    name = "strip_source_test",
+    srcs = ["strip_source_test.py"],
+    labels = ["py3"],
+    deps = [":strip_source"],
 )
 
 # Test that has no actual tests in it. Should still count as a pass.
 python_test(
-    name = 'empty_test',
-    srcs = ['empty_test.py'],
+    name = "empty_test",
+    srcs = ["empty_test.py"],
 )
 
 # Test that the build rules accept a python_binary that has a rule as the main.
 filegroup(
-    name = 'rule_main',
-    srcs = ['rule_main.py'],
+    name = "rule_main",
+    srcs = ["rule_main.py"],
 )
 
 python_binary(
-    name = 'rule_main_pex',
-    main = ':rule_main',
+    name = "rule_main_pex",
+    main = ":rule_main",
 )
 
 sh_test(
-    name = 'rule_main_test',
-    src = 'rule_main_test.sh',
-    data = [':rule_main_pex'],
-    labels = ['python3'],
+    name = "rule_main_test",
+    src = "rule_main_test.sh",
+    data = [":rule_main_pex"],
+    labels = ["python3"],
 )
 
 # Used to test zip-safety flags.
 python_test(
-    name = 'zip_unsafe_test',
-    srcs = ['zip_unsafe_test.py'],
-    labels = ['cc'],  # Depends on cc rules to build
+    name = "zip_unsafe_test",
+    srcs = ["zip_unsafe_test.py"],
+    labels = ["cc"],  # Depends on cc rules to build
     deps = [
-        '//test/cc_rules/gcc:so_test_py',
+        "//test/cc_rules/gcc:so_test_py",
     ],
 )
 
 # Test flags on python_test
 python_test(
-    name = 'flags_test',
-    srcs = ['flags_test.py'],
-    flags = '--test_flag',
+    name = "flags_test",
+    srcs = ["flags_test.py"],
+    flags = "--test_flag",
 )
 
 # Tests for a subtle case where python_test rules should get a pex when
 # specified as data, but not when depending directly.
 python_binary(
-    name = 'data_dep',
-    main = 'data_dep.py',
+    name = "data_dep",
+    main = "data_dep.py",
 )
 
 python_test(
-    name = 'data_dep_test',
-    srcs = ['data_dep_test.py'],
-    data = [':data_dep'],
-    deps = [':data_dep'],
+    name = "data_dep_test",
+    srcs = ["data_dep_test.py"],
+    data = [":data_dep"],
+    deps = [":data_dep"],
 )
 
 python_test(
-    name = 'data_dep_only_test',
-    srcs = ['data_dep_only_test.py'],
-    data = [':data_dep'],
+    name = "data_dep_only_test",
+    srcs = ["data_dep_only_test.py"],
+    data = [":data_dep"],
 )
 
 python_test(
-    name = 'python2_coverage_test',
-    srcs = ['python_coverage_test.py'],
-    interpreter = 'python2',
-    labels = ['py2'],
+    name = "python2_coverage_test",
+    srcs = ["python_coverage_test.py"],
+    interpreter = "python2",
+    labels = ["py2"],
 )
 
 python_test(
-    name = 'python3_coverage_test',
-    srcs = ['python_coverage_test.py'],
-    labels = ['py3'],
+    name = "python3_coverage_test",
+    srcs = ["python_coverage_test.py"],
+    labels = ["py3"],
 )
 
 python_test(
-    name = 'numpy_test',
-    srcs = ['numpy_test.py'],
+    name = "numpy_test",
+    srcs = ["numpy_test.py"],
     labels = [
-        'py3',
-        'pip',
+        "py3",
+        "pip",
     ],
-    deps = ['//third_party/python:numpy'],
+    deps = ["//third_party/python:numpy"],
 )
 
 python_test(
-    name = 'tensorflow_test',
-    srcs = ['tensorflow_test.py'],
+    name = "tensorflow_test",
+    srcs = ["tensorflow_test.py"],
     labels = [
-        'py3',
-        'pip',
+        "py3",
+        "pip",
     ],
-    deps = ['//third_party/python:tensorflow'],
+    deps = ["//third_party/python:tensorflow"],
 )

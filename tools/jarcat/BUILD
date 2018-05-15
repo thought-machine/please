@@ -1,21 +1,21 @@
 go_binary(
-    name = 'jarcat',
-    srcs = ['main.go'],
+    name = "jarcat",
+    srcs = ["main.go"],
+    visibility = ["PUBLIC"],
     deps = [
-        '//src/cli',
-        '//third_party/go:logging',
-        '//tools/jarcat/tar',
-        '//tools/jarcat/unzip',
-        '//tools/jarcat/zip',
+        "//src/cli",
+        "//third_party/go:logging",
+        "//tools/jarcat/tar",
+        "//tools/jarcat/unzip",
+        "//tools/jarcat/zip",
     ],
-    visibility = ['PUBLIC'],
 )
 
 go_binary(
-    name = 'jarcat_unzip',
-    srcs = ['unzip_main.go'],
+    name = "jarcat_unzip",
+    srcs = ["unzip_main.go"],
+    visibility = ["//third_party/go:all"],
     deps = [
-        '//tools/jarcat/unzip',
+        "//tools/jarcat/unzip",
     ],
-    visibility = ['//third_party/go:all'],
 )

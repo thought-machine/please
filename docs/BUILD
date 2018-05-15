@@ -11,35 +11,35 @@ for src in glob(['*.html'], exclude=['template.html', 'lexicon*.html', 'language
     deps += [templated_rule]
 
 genrule(
-    name = 'lexicon_html',
+    name = "lexicon_html",
     srcs = [
-        'lexicon.html',
-        'lexicon_entry.html',
-        'template.html',
-        '//src/parse/args',
+        "lexicon.html",
+        "lexicon_entry.html",
+        "template.html",
+        "//src/parse/args",
     ],
-    outs = ['lexicon.html'],
-    cmd = '$TOOLS_LEX > temp.html && $TOOLS_TMPL docs/template.html temp.html > $OUT',
+    outs = ["lexicon.html"],
+    cmd = "$TOOLS_LEX > temp.html && $TOOLS_TMPL docs/template.html temp.html > $OUT",
     tools = {
-        'lex': [':lexicon_templater'],
-        'tmpl': [':templater'],
+        "lex": [":lexicon_templater"],
+        "tmpl": [":templater"],
     },
 )
 
 genrule(
-    name = 'language_html',
+    name = "language_html",
     srcs = {
-        'html': [
-            'template.html',
-            'language.html',
+        "html": [
+            "template.html",
+            "language.html",
         ],
-        'grammar': ['grammar.txt'],
+        "grammar": ["grammar.txt"],
     },
-    outs = ['language.html'],
-    cmd = '$TOOLS_TEMPLATE $SRCS_HTML | $TOOLS_GRAMMAR > $OUT',
+    outs = ["language.html"],
+    cmd = "$TOOLS_TEMPLATE $SRCS_HTML | $TOOLS_GRAMMAR > $OUT",
     tools = {
-        'grammar': [':grammar_templater'],
-        'template': [':templater'],
+        "grammar": [":grammar_templater"],
+        "template": [":templater"],
     },
 )
 
@@ -56,29 +56,29 @@ for colour, scale in [('teal', '50%'), ('white', '20%')]:
         deps += [image_rule]
 
 filegroup(
-    name = 'docs',
+    name = "docs",
     srcs = deps + [
-        ':language_html',
-        ':lexicon_html',
-        'styles.css',
-        'action.js',
-        'images/thoughtmachine.png',
-        'plz-recording.json',
-        '//third_party/js:asciinema',
+        ":language_html",
+        ":lexicon_html",
+        "styles.css",
+        "action.js",
+        "images/thoughtmachine.png",
+        "plz-recording.json",
+        "//third_party/js:asciinema",
     ],
 )
 
 go_binary(
-    name = 'templater',
-    srcs = ['template.go'],
+    name = "templater",
+    srcs = ["template.go"],
 )
 
 go_binary(
-    name = 'lexicon_templater',
-    srcs = ['template_lexicon.go'],
+    name = "lexicon_templater",
+    srcs = ["template_lexicon.go"],
 )
 
 go_binary(
-    name = 'grammar_templater',
-    srcs = ['template_grammar.go'],
+    name = "grammar_templater",
+    srcs = ["template_grammar.go"],
 )

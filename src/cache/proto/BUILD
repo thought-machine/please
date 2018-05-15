@@ -1,12 +1,12 @@
 grpc_library(
-    name = 'rpc_cache',
+    name = "rpc_cache",
     srcs = [
-        'rpc_cache.proto',
-        'rpc_server.proto',
+        "rpc_cache.proto",
+        "rpc_server.proto",
     ],
-    languages = ['go'],
+    languages = ["go"],
     visibility = [
-        '//src/cache/...',
-        '//tools/cache/...',
+        "//src/cache/...",
+        "//tools/cache/...",
     ],
 )

@@ -1,20 +1,20 @@
 go_library(
-    name = 'tool',
-    srcs = ['tool.go'],
+    name = "tool",
+    srcs = ["tool.go"],
+    visibility = ["PUBLIC"],
     deps = [
-        '//src/core',
-        '//third_party/go:go-flags',
-        '//third_party/go:logging',
+        "//src/core",
+        "//third_party/go:go-flags",
+        "//third_party/go:logging",
     ],
-    visibility = ['PUBLIC'],
 )
 
 go_test(
-    name = 'tool_test',
-    srcs = ['tool_test.go'],
+    name = "tool_test",
+    srcs = ["tool_test.go"],
     deps = [
-        ':tool',
-        '//src/core',
-        '//third_party/go:testify',
+        ":tool",
+        "//src/core",
+        "//third_party/go:testify",
     ],
 )

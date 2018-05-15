@@ -1,48 +1,48 @@
 # Test on the builtin go rules
-subinclude('//build_defs:plz_e2e_test')
+subinclude("//build_defs:plz_e2e_test")
 
 go_library(
-    name = 'go_rules_test_lib',
-    srcs = ['go_rules_test_lib.go'],
+    name = "go_rules_test_lib",
+    srcs = ["go_rules_test_lib.go"],
     test_only = True,
     deps = [
-        '//test/go_rules/test',
+        "//test/go_rules/test",
     ],
 )
 
 go_binary(
-    name = 'go_rules_test_bin',
-    srcs = ['go_rules_test_bin.go'],
+    name = "go_rules_test_bin",
+    srcs = ["go_rules_test_bin.go"],
     test_only = True,
     deps = [
-        ':go_rules_test_lib',
-        '//test/go_rules/test',
+        ":go_rules_test_lib",
+        "//test/go_rules/test",
     ],
 )
 
 gentest(
-    name = 'go_rules_test',
+    name = "go_rules_test",
     data = [
-        ':go_rules_test_bin',
+        ":go_rules_test_bin",
     ],
     no_test_output = True,
-    test_cmd = '$(location :go_rules_test_bin)',
+    test_cmd = "$(location :go_rules_test_bin)",
 )
 
 # Test that doesn't have any actual test cases in it.
 go_test(
-    name = 'empty_test',
-    srcs = ['empty_test.go'],
+    name = "empty_test",
+    srcs = ["empty_test.go"],
 )
 
 # Test in which only one case passes
 go_test(
-    name = 'single_test',
-    srcs = ['single_test.go'],
-    labels = ['manual'],
+    name = "single_test",
+    srcs = ["single_test.go"],
+    labels = ["manual"],
 )
 
 plz_e2e_test(
-    name = 'go_test_spec_test',
-    cmd = 'plz test //test/go_rules:single_test Test2',
+    name = "go_test_spec_test",
+    cmd = "plz test //test/go_rules:single_test Test2",
 )
