@@ -14,7 +14,7 @@ _LINK_PKGS_CMD = ' '.join([
 
 
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
-               visibility:list=None, test_only:bool&testonly=False, go_tools:list=None, complete:bool=True,
+               visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True, filter_srcs:bool=True):
     """Generates a Go library which can be reused by other rules.
 
@@ -27,7 +27,6 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
       deps (list): Dependencies
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
-      go_tools (list): A list of targets to pre-process your src files with go generate.
       complete (bool): Indicates whether the library is complete or not (ie. buildable with
                        `go tool build -complete`). In nearly all cases this is True (the main
                        exception being for cgo).
@@ -43,7 +42,6 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             srcs = srcs,
             deps = deps,
             test_only = test_only,
-            go_tools = go_tools,
             complete = False,
             cover = cover,
             _needs_transitive_deps = _needs_transitive_deps,
@@ -89,17 +87,6 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         test_only=test_only,
     )
 
-    # Run go generate if needed.
-    if go_tools:
-        gen_rule = go_generate(
-            name='_%s#gen' % name,
-            srcs=srcs,
-            tools=go_tools,
-            deps=deps + [src_rule],
-            test_only=test_only,
-        )
-        srcs += [gen_rule]
-
     tools = { 'go': [CONFIG.GO_TOOL] }
     if filter_srcs:
         tools['filter'] = [CONFIG.GO_FILTER_TOOL]
@@ -117,58 +104,6 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         test_only=test_only,
         tools=tools,
         needs_transitive_deps=_needs_transitive_deps,
-    )
-
-
-def go_generate(name:str, srcs:list, tools:list, deps:list=None, visibility:list=None, test_only:bool&testonly=False):
-    """Generates a `go generate` rule.
-
-    Deprecated, use https://github.com/thought-machine/pleasings/blob/master/go/go_generate.build_defs instead.
-    This will probably be removed in plz v13+.
-
-    Args:
-      name (str): Name of the rule.
-      srcs (list): Go source files to run go generate over.
-      tools (list): A list of targets which represent binaries to be used via `go generate`.
-      deps (list): Dependencies
-      visibility (list): Visibility specification
-      test_only (bool): If True, is only visible to test rules.
-    """
-    log.warning('The builtin go_generate is deprecated, see https://github.com/thought-machine/pleasings/blob/master/go/go_generate.build_defs for an alternative.')
-
-    # We simply capture all go files produced by go generate.
-    def _post_build(rule_name, output):
-        for out in output:
-            if out.endswith('.go') and srcs and out not in srcs:
-                add_out(rule_name, out)
-
-    # All the tools must be in the $PATH.
-    cmd = ' && '.join([
-        # It's essential that we copy all .a files up a directory as well; we tend to output them one level
-        # down from where Go expects them to be.
-        _LINK_PKGS_CMD,
-        # It's also essential that the compiled .a files are under this prefix, otherwise gcimporter won't find them.
-        'mkdir pkg',
-        'ln -s . src',
-        'ln -s $TMP_DIR pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH),
-        'export PATH="$(echo "$TOOLS_GEN " | sed -E -e \'s|/[^/]+[ ]|:|g\')$PATH"',
-        'GOPATH="%s" $TOOLS_GO generate $SRCS' % CONFIG.GOPATH,
-        'mv $PKG_DIR/*.go .',
-        'ls *.go'
-    ])
-    return build_rule(
-        name=name,
-        srcs=srcs,
-        deps=deps,
-        tools={
-            'go': [CONFIG.GO_TOOL],
-            'gen': tools,
-        },
-        cmd=cmd,
-        visibility=visibility,
-        test_only=test_only,
-        post_build=_post_build,
-        requires = ['go', 'go_src'],
     )
 
 
