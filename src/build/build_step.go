@@ -10,10 +10,8 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -143,6 +141,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			target.SetState(core.Unchanged)
 			state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
 		}
+		buildLinks(state, target)
 		return nil
 	}
 	if err := prepareDirectories(target); err != nil {
@@ -166,6 +165,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 				target.SetState(core.Unchanged)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
 			}
+			buildLinks(state, target)
 			return true // got from cache
 		}
 		return false
@@ -221,6 +221,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	} else {
 		target.SetState(core.Unchanged)
 	}
+	buildLinks(state, target)
 	if state.Cache != nil {
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
 		newCacheKey := mustShortTargetHash(state, target)
@@ -566,27 +567,25 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 	}
 }
 
-// createPlzOutGo creates a directory plz-out/go that contains src / pkg links which
-// make it easier to set up one's GOPATH appropriately.
-func createPlzOutGo() {
-	dir := path.Join(core.RepoRoot, core.OutDir, "go")
-	genDir := path.Join(core.RepoRoot, core.GenDir)
-	srcDir := path.Join(dir, "src")
-	pkgDir := path.Join(dir, "pkg")
-	archDir := path.Join(pkgDir, runtime.GOOS+"_"+runtime.GOARCH)
-	if err := os.MkdirAll(pkgDir, core.DirPermissions); err != nil {
-		log.Warning("Failed to create %s: %s", pkgDir, err)
-		return
+// buildLinks builds links from the given target if it's labelled appropriately.
+// For example, Go targets may link themselves into plz-out/go/src etc.
+func buildLinks(state *core.BuildState, target *core.BuildTarget) {
+	for _, dest := range target.PrefixedLabels("link:") {
+		destDir := path.Join(core.RepoRoot, dest, target.Label.PackageName)
+		srcDir := path.Join(core.RepoRoot, target.OutDir())
+		for _, out := range target.Outputs() {
+			symlinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out))
+		}
 	}
-	symlinkIfNotExists(genDir, srcDir)
-	symlinkIfNotExists(genDir, archDir)
 }
 
-// symlinkIfNotExists creates newDir as a link to oldDir if it doesn't already exist.
-func symlinkIfNotExists(oldDir, newDir string) {
-	if !core.PathExists(newDir) {
-		if err := os.Symlink(oldDir, newDir); err != nil && !os.IsExist(err) {
-			log.Warning("Failed to create %s: %s", newDir, err)
+// symlinkIfNotExists creates dest as a link to src if it doesn't already exist.
+func symlinkIfNotExists(src, dest string) {
+	if !fs.PathExists(dest) {
+		if err := fs.EnsureDir(dest); err != nil {
+			log.Warning("Failed to create directory for %s: %s", dest, err)
+		} else if err := os.Symlink(src, dest); err != nil && !os.IsExist(err) {
+			log.Warning("Failed to create %s: %s", dest, err)
 		}
 	}
 }

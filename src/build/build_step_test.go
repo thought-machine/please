@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -185,12 +184,11 @@ func TestRecursiveInitPyCreation(t *testing.T) {
 
 func TestCreatePlzOutGo(t *testing.T) {
 	state, target := newState("//gopkg:target")
-	target.AddLabel("go")
+	target.AddLabel("link:plz-out/go/src")
 	target.AddOutput("file1.go")
 	assert.False(t, fs.PathExists("plz-out/go"))
 	assert.NoError(t, buildTarget(1, state, target))
-	assert.True(t, fs.PathExists("plz-out/go/src"))
-	assert.True(t, fs.PathExists("plz-out/go/pkg/"+runtime.GOOS+"_"+runtime.GOARCH))
+	assert.True(t, fs.PathExists("plz-out/go/src/gopkg/file1.go"))
 }
 
 func TestLicenceEnforcement(t *testing.T) {
