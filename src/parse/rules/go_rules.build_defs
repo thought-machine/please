@@ -36,6 +36,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
                     code that you never want to be instrumented.
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
     """
+    private = name.startswith('_')
     if asm_srcs:
         lib_rule = go_library(
             name = '_%s#lib' % name,
@@ -72,7 +73,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             visibility = visibility,
             building_description = 'Packing...',
             requires = ['go'],
-            labels = ['go:pkg'],
+            labels = [] if private else ['go:pkg'],
             provides = {'go': ':' + name, 'go_src': lib_rule},
             test_only = test_only,
         )
@@ -85,7 +86,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         exported_deps=deps,
         visibility=visibility,
         requires=['go'],
-        labels = ['go:src'],
+        labels = [] if private else ['link:plz-out/go/src'],
         test_only=test_only,
     )
 
@@ -103,6 +104,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         building_description="Compiling...",
         requires=['go', 'go_src'] if _all_srcs else ['go'],
         provides={'go': ':' + name, 'go_src': src_rule},
+        labels = [] if private else ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
         test_only=test_only,
         tools=tools,
         needs_transitive_deps=_needs_transitive_deps,
@@ -200,7 +202,8 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
         visibility = visibility,
         test_only = test_only,
         linker_flags = linker_flags,
-        out=out,
+        out = out,
+        labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
         provides = {
             'go': ':' + name,
             'go_src': go_rule,
@@ -211,7 +214,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
 
 
 def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag='',
-                   linker_flags=None, deps=None, provides=None, out=None):
+                   linker_flags:list=[], deps=None, provides=None, out=None, labels:list=[]):
     """Defines a rule to merge a cgo object into a Go library."""
     if o_rule:
         cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOLS_AR x $SRCS_O && $TOOLS_GO tool pack r $OUT *.o'
@@ -233,7 +236,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
         },
         visibility = visibility,
         test_only = test_only,
-        labels = ['cc:ld:' + flag for flag in (linker_flags or [])],
+        labels = ['cc:ld:' + flag for flag in linker_flags] + labels,
         requires = ['go', 'cgo'],
         provides = provides,
         deps = deps,
@@ -335,6 +338,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], visibility:list=N
             tag = 'cgo',
             a_rule = lib_rule,
             visibility = visibility,
+            labels = ['go:pkg'],
             test_only = True,
             deps = deps,
         )

@@ -29,9 +29,6 @@ var log = logging.MustGetLogger("build")
 // Type that indicates that we're stopping the build of a target in a nonfatal way.
 var errStop = fmt.Errorf("stopping build")
 
-// goDirOnce guards the creation of plz-out/go, which we only attempt once per process.
-var goDirOnce sync.Once
-
 // httpClient is the shared http client that we use for fetching remote files.
 var httpClient http.Client
 
@@ -150,12 +147,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 	if err := prepareDirectories(target); err != nil {
 		return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
-	}
-
-	// Similarly to the createInitPy special-casing, this is not very nice, but makes it
-	// rather easier to have a consistent GOPATH setup.
-	if target.HasLabel("go") {
-		goDirOnce.Do(createPlzOutGo)
 	}
 
 	retrieveArtifacts := func() bool {
