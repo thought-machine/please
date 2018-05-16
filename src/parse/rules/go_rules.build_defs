@@ -72,6 +72,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             visibility = visibility,
             building_description = 'Packing...',
             requires = ['go'],
+            labels = ['go:pkg'],
             provides = {'go': ':' + name, 'go_src': lib_rule},
             test_only = test_only,
         )
@@ -84,6 +85,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         exported_deps=deps,
         visibility=visibility,
         requires=['go'],
+        labels = ['go:src'],
         test_only=test_only,
     )
 
