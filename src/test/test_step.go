@@ -36,6 +36,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	hash, err := build.RuntimeHash(state, target)
 	if err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to calculate target hash")
+		target.Results.NumTests++
+		target.Results.Failed++
 		return
 	}
 	// Check the cached output files if the target wasn't rebuilt.
@@ -126,10 +128,14 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	// Remove any cached test result file.
 	if err := RemoveCachedTestFiles(target); err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove cached test files")
+		target.Results.NumTests++
+		target.Results.Failed++
 		return
 	}
 	if err := startTestWorkerIfNeeded(tid, state, target); err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to start test worker")
+		target.Results.NumTests++
+		target.Results.Failed++
 		return
 	}
 	numSucceeded := 0
