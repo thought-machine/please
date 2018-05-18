@@ -207,7 +207,7 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 			return fs.WalkMode(resolved, f.walk)
 		}
 	}
-	if path == f.filename {
+	if samePaths(path, f.filename) {
 		return nil
 	} else if !isDir {
 		if !f.matchesSuffix(path, f.ExcludeSuffix) {
@@ -236,6 +236,21 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 		}
 	}
 	return nil
+}
+
+// samePaths returns true if two paths are the same (taking relative/absolute paths into account).
+func samePaths(a, b string) bool {
+	if path.IsAbs(a) && path.IsAbs(b) {
+		return a == b
+	}
+	wd, _ := os.Getwd()
+	if !path.IsAbs(a) {
+		a = path.Join(wd, a)
+	}
+	if !path.IsAbs(b) {
+		b = path.Join(wd, b)
+	}
+	return a == b
 }
 
 // AddFiles walks the given directory and adds any zip files (determined by suffix) that it finds within.

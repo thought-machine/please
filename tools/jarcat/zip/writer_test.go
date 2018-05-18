@@ -150,3 +150,10 @@ func TestStoreSuffix(t *testing.T) {
 	assert.Equal(t, "tools/jarcat/zip/test_data/kitten.png", png.Name)
 	assert.Equal(t, zip.Store, png.Method)
 }
+
+func TestIsSamePath(t *testing.T) {
+	assert.True(t, samePaths("a", "a"))
+	assert.True(t, samePaths("a", "./a"))
+	assert.True(t, samePaths("/a", "/a"))
+	assert.False(t, samePaths("/a", "./a"))
+}
