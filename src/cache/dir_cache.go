@@ -33,18 +33,24 @@ type dirCache struct {
 }
 
 func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files ...string) {
-	cache.storeFiles(target, key, "", cacheArtifacts(target, files...))
+	cache.storeFiles(target, key, "", cacheArtifacts(target, files...), true)
 }
 
 func (cache *dirCache) StoreExtra(target *core.BuildTarget, key []byte, out string) {
-	cache.storeFiles(target, key, out, []string{out})
+	cache.storeFiles(target, key, out, []string{out}, false)
 }
 
 // storeFiles stores the given files in the cache, either compressed or not.
-func (cache *dirCache) storeFiles(target *core.BuildTarget, key []byte, suffix string, files []string) {
+func (cache *dirCache) storeFiles(target *core.BuildTarget, key []byte, suffix string, files []string, clean bool) {
 	cacheDir := cache.getPath(target, key, suffix)
 	tmpDir := cache.getFullPath(target, key, suffix, "=")
 	cache.markDir(cacheDir, 0)
+	if clean {
+		if err := os.RemoveAll(cacheDir); err != nil {
+			log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
+			return
+		}
+	}
 	var totalSize uint64
 	if cache.Compress {
 		totalSize = cache.storeCompressed(target, tmpDir, files)
