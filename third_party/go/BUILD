@@ -133,6 +133,7 @@ go_get(
         "tap",
         "transport",
     ],
+    repo = "github.com/grpc/grpc-go",
     revision = "v1.10.0",
     deps = [
         ":protobuf",
@@ -492,6 +493,7 @@ go_get(
         "",
         "api/...",
     ],
+    repo = "github.com/docker/go-docker",
     revision = "v1.0.0",
     deps = [
         ":docker-distribution",

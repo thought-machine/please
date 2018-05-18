@@ -323,6 +323,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
       visibility (list): Visibility declaration of the rule.
       licences (list): List of licences that apply to this rule.
       test_only (bool): If true the rule is only visible to test targets.
+      labels (list): Labels to apply to this rule.
       deps (list): List of extra dependencies for this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
     """
