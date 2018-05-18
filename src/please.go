@@ -696,6 +696,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	parse.InitParser(state)
+	build.Init(state)
 	if config.Events.Port != 0 && shouldBuild {
 		shutdown := follow.InitialiseServer(state, config.Events.Port)
 		defer shutdown()
