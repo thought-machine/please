@@ -602,7 +602,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
         cmd = ' && '.join(cmd),
         requires = ['go'],
         test_only = test_only,
-        labels = labels,
+        labels = labels + ['link:plz-out/go/vendor'],
         hashes = hashes,
         sandbox = False,
     ), getroot
