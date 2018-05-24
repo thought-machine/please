@@ -33,10 +33,12 @@ type dirCache struct {
 }
 
 func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files ...string) {
+	log.Debug("Store %s", target.Label)
 	cache.storeFiles(target, key, "", cacheArtifacts(target, files...), true)
 }
 
 func (cache *dirCache) StoreExtra(target *core.BuildTarget, key []byte, out string) {
+	log.Debug("StoreExtra %s %s", target.Label, out)
 	cache.storeFiles(target, key, out, []string{out}, false)
 }
 
@@ -44,6 +46,7 @@ func (cache *dirCache) StoreExtra(target *core.BuildTarget, key []byte, out stri
 func (cache *dirCache) storeFiles(target *core.BuildTarget, key []byte, suffix string, files []string, clean bool) {
 	cacheDir := cache.getPath(target, key, suffix)
 	tmpDir := cache.getFullPath(target, key, suffix, "=")
+	log.Debug("storeFiles %s %s %s", target.Label, cacheDir, tmpDir)
 	cache.markDir(cacheDir, 0)
 	if clean {
 		if err := os.RemoveAll(cacheDir); err != nil {
@@ -61,7 +64,7 @@ func (cache *dirCache) storeFiles(target *core.BuildTarget, key []byte, suffix s
 	}
 	cache.markDir(cacheDir, totalSize)
 	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
-		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
+		log.Fatalf("Failed to create cache directory %s: %s", cacheDir, err)
 	}
 }
 
