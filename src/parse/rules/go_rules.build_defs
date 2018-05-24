@@ -338,7 +338,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], visibility:list=N
             tag = 'cgo',
             a_rule = lib_rule,
             visibility = visibility,
-            labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG_ARCH)],
+            labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
             test_only = True,
             deps = deps,
         )
