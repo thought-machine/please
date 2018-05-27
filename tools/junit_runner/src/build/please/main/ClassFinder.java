@@ -1,4 +1,4 @@
-package build.please.test;
+package build.please.main;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +25,7 @@ class ClassFinder {
 
     private final String prefix;
     private final ClassLoader loader;
-    private final Set<Class> classes = new LinkedHashSet<Class>();
+    private final Set<Class<?>> classes = new LinkedHashSet<>();
 
     public ClassFinder(ClassLoader loader) throws IOException {
         this.prefix = "";
@@ -38,7 +38,7 @@ class ClassFinder {
         scan(getClassPathEntries(loader));
     }
 
-    public Set<Class> getClasses() {
+    public Set<Class<?>> getClasses() {
         return classes;
     }
 

@@ -2,7 +2,7 @@ package build.please.external_test;
 
 import static org.junit.Assert.assertEquals;
 
-import build.please.test.TestCoverage;
+import build.please.common.source.SourceMap;
 import org.junit.Test;
 
 public class ExternalTest {
@@ -11,7 +11,8 @@ public class ExternalTest {
   @Test
   public void testDeriveOriginalFilename() {
     assertEquals("src/build/java/build/please/test/TestCoverage",
-                 TestCoverage.deriveOriginalFilename("src/build/java/build/please/test",
-                                                     "build/please/test/TestCoverage"));
+                 SourceMap.deriveOriginalFilename(
+                     "src/build/java/build/please/test",
+                     "build/please/test/TestCoverage"));
   }
 }

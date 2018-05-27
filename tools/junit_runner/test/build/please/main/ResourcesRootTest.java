@@ -1,6 +1,5 @@
-package build.please.test;
+package build.please.main;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import ch.qos.logback.classic.Level;
@@ -15,7 +14,7 @@ public class ResourcesRootTest {
   // Test for setting resources_root on a java_library rule. Logback is the motivating case here.
 
   @Test
-  public void testAutoConfigurationLevel() throws Exception {
+  public void testAutoConfigurationLevel() {
     // If logback-test.xml is on the classpath the level will get set to INFO. By default it's DEBUG.
     LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
     Logger logger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME);

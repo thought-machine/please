@@ -1,16 +1,14 @@
-package build.please.test;
+package build.please.test.runner;
 
-import org.junit.runner.notification.RunListener;
+import build.please.test.result.*;
+import org.junit.Ignore;
 import org.junit.runner.Description;
-import org.junit.runner.Request;
 import org.junit.runner.Result;
-import org.junit.runner.Runner;
 import org.junit.runner.notification.Failure;
+import org.junit.runner.notification.RunListener;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 
@@ -18,24 +16,28 @@ class TestListener extends RunListener {
   // Listener for JUnit tests.
   // Heavily based on Buck's version.
 
-  private List<TestResult> results;
+  private List<TestCaseResult> results;
   private PrintStream originalOut, originalErr, stdOutStream, stdErrStream;
   private ByteArrayOutputStream rawStdOutBytes, rawStdErrBytes;
   private Result result;
   private RunListener resultListener;
-  private Failure assumptionFailure;
   private boolean captureOutput;
   private static final String ENCODING = "UTF-8";
 
   private long startTime = System.currentTimeMillis();
 
-  public TestListener(List<TestResult> results) {
+  public TestListener(List<TestCaseResult> results, boolean captureOutput) {
     this.results = results;
-    this.captureOutput = System.getProperty("PLZ_NO_OUTPUT_CAPTURE") == null;
+    this.captureOutput = captureOutput;
   }
 
   @Override
   public void testStarted(Description description) throws Exception {
+    result = new Result();
+    resultListener = result.createListener();
+    resultListener.testRunStarted(description);
+    resultListener.testStarted(description);
+
     rawStdOutBytes = new ByteArrayOutputStream();
     rawStdErrBytes = new ByteArrayOutputStream();
     stdOutStream = new PrintStream(rawStdOutBytes, true, ENCODING);
@@ -49,19 +51,13 @@ class TestListener extends RunListener {
       System.setOut(stdOutStream);
       System.setErr(stdErrStream);
     }
-
-    result = new Result();
-    resultListener = result.createListener();
-    resultListener.testRunStarted(description);
-    resultListener.testStarted(description);
   }
 
   @Override
   public void testFinished(Description description) throws Exception {
     // Shutdown single-test result.
-    resultListener.testFinished(description);
     resultListener.testRunFinished(result);
-    resultListener = null;
+    resultListener.testFinished(description);
 
     // Restore the original stdout/stderr.
     if (captureOutput) {
@@ -87,44 +83,43 @@ class TestListener extends RunListener {
 						    result.getFailures()));
     }
 
-    Failure failure;
-    String type;
-    if (assumptionFailure != null) {
-      failure = assumptionFailure;
-      type = "ASSUMPTION_VIOLATION";
-      // Clear the assumption-failure field before the next test result appears.
-      assumptionFailure = null;
-    } else if (numFailures == 0) {
-      failure = null;
-      type = "SUCCESS";
-    } else {
-      failure = result.getFailures().get(0);
-      type = "FAILURE";
-    }
-
     String stdOut = rawStdOutBytes.size() == 0 ? null : rawStdOutBytes.toString(ENCODING);
     String stdErr = rawStdErrBytes.size() == 0 ? null : rawStdErrBytes.toString(ENCODING);
 
-    results.add(new TestResult(className,
-			       methodName,
-			       result.getRunTime(),
-			       type,
-			       failure == null ? null : failure.getException(),
-			       stdOut,
-			       stdErr));
+    if (result.getFailureCount() > 0) {
+      // Should only ever be 0 or 1
+      Failure failure = result.getFailures().get(0);
+      if (failure.getException() instanceof AssertionError) {
+        // All JUnit "test failures" are AssertionErrors.
+        results.add(new FailureCaseResult(className, methodName,
+            result.getRunTime(),
+            failure.getMessage(),
+            failure.getException().getClass().getName(),
+            stdOut, stdErr,
+            failure.getTrace()));
+      } else {
+        // Anything else is a problem running the test itself.
+        results.add(new ErrorCaseResult(className, methodName,
+            result.getRunTime(),
+            failure.getMessage(),
+            failure.getException().getClass().getName(),
+            stdOut, stdErr,
+            failure.getTrace()));
+      }
+    } else {
+      results.add(new SuccessCaseResult(className, methodName,
+          result.getRunTime(),
+          stdOut, stdErr));
+    }
+    resultListener = null;
   }
 
   /**
    * The regular listener we created from the singular result, in this class, will not by
-   * default treat assumption failures as regular failures, and will not store them.  As a
-   * consequence, we store them ourselves!
-   *
-   * We store the assumption-failure in a temporary field, which we'll make sure we clear each
-   * time we write results.
+   * default treat assumption failures as regular failures, and will not store them.
    */
   @Override
   public void testAssumptionFailure(Failure failure) {
-    assumptionFailure = failure;
     if (resultListener != null) {
       // Left in only to help catch future bugs -- right now this does nothing.
       resultListener.testAssumptionFailure(failure);
@@ -145,6 +140,10 @@ class TestListener extends RunListener {
     if (resultListener != null) {
       resultListener.testIgnored(description);
     }
+    String skippedReason = description.getAnnotation(Ignore.class).value();
+    // We never call started/finished for ignored tests so no result exists.
+    this.results.add(new SkippedCaseResult(description.getClassName(), description.getMethodName(),
+        0, skippedReason, null, null));
   }
 
   /**
@@ -152,18 +151,18 @@ class TestListener extends RunListener {
    * testStarted() has been called).  The known example is a @BeforeClass that throws an
    * exception, but there may be others.
    * <p>
-   * Recording these unexpected failures helps us propagate failures back up to the "buck test"
+   * Recording these unexpected failures helps us propagate failures back up to the "plz test"
    * process.
    */
   private void recordUnpairedFailure(Failure failure) {
     long runtime = System.currentTimeMillis() - startTime;
     Description description = failure.getDescription();
-    results.add(new TestResult(description.getClassName(),
-			       description.getMethodName(),
-			       runtime,
-			       "FAILURE",
-			       failure.getException(),
-			       null,
-			       null));
+    results.add(new ErrorCaseResult(description.getClassName(), description.getMethodName(),
+        runtime,
+        failure.getMessage(),
+        failure.getException().getClass().getName(),
+        null,
+        null,
+        failure.getTrace()));
   }
 }
