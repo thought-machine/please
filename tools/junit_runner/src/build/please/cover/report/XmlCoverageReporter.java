@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class XmlCoverageReporter {
-  public Document writeResults(CoverageBuilder coverageBuilder, Set<String> testClassNames) throws Exception {
+  public Document buildDocument(CoverageBuilder coverageBuilder, Set<String> testClassNames) throws Exception {
     Map<String, String> sourceMap = SourceMap.readSourceMap();
     DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
     Document doc = docBuilder.newDocument();

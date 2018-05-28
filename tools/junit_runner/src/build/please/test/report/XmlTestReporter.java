@@ -11,7 +11,7 @@ import java.util.Map;
 // Strongly based on the Maven Surefire Plugin's XML reporter
 public class XmlTestReporter {
   // Based on the Maven Surefire Plugin code
-  public Document writeSuiteResult(TestSuiteResult suiteResult) throws Exception {
+  public Document buildDocument(TestSuiteResult suiteResult) throws Exception {
     DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
     Document doc = docBuilder.newDocument();
     doc.setXmlVersion("1.0");

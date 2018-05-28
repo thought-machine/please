@@ -25,7 +25,7 @@ class ClassFinder {
 
     private final String prefix;
     private final ClassLoader loader;
-    private final Set<Class<?>> classes = new LinkedHashSet<>();
+    private final Set<String> classes = new LinkedHashSet<>();
 
     public ClassFinder(ClassLoader loader) throws IOException {
         this.prefix = "";
@@ -38,7 +38,7 @@ class ClassFinder {
         scan(getClassPathEntries(loader));
     }
 
-    public Set<Class<?>> getClasses() {
+    public Set<String> getClasses() {
         return classes;
     }
 
@@ -127,13 +127,9 @@ class ClassFinder {
         String className = filename.substring(0, classNameEnd).replace('/', '.');
         if (className.startsWith(prefix)) {
             try {
-                classes.add(loader.loadClass(className));
+                classes.add(className);
             } catch (NoClassDefFoundError ex) {
                 // This happens sometimes with some classes. For now we just skip it.
-            } catch (ClassNotFoundException ex) {
-                // Theoretically this shouldn't happen, because we've already found it
-                // on the classpath.
-                throw new IllegalStateException(ex);
             }
         }
     }

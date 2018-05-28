@@ -13,19 +13,19 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 
 public class PrettyPrintingXmlWriter {
-    public static void writeXMLDocumentToFile(String filename, Document doc) throws Exception {
-        // Create an XML transformer that pretty-prints with a 2-space indent.
-        TransformerFactory transformerFactory = TransformerFactory.newInstance();
-        Transformer trans = transformerFactory.newTransformer();
-        trans.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
-        trans.setOutputProperty(OutputKeys.INDENT, "yes");
-        trans.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+  public static void writeXMLDocumentToFile(String filename, Document doc) throws Exception {
+    // Create an XML transformer that pretty-prints with a 2-space indent.
+    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    Transformer trans = transformerFactory.newTransformer();
+    trans.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+    trans.setOutputProperty(OutputKeys.INDENT, "yes");
+    trans.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
 
-        File outputFile = new File(filename);
-        OutputStream output = new BufferedOutputStream(new FileOutputStream(outputFile));
-        StreamResult streamResult = new StreamResult(output);
-        DOMSource source = new DOMSource(doc);
-        trans.transform(source, streamResult);
-        output.close();
-    }
+    File outputFile = new File(filename);
+    OutputStream output = new BufferedOutputStream(new FileOutputStream(outputFile));
+    StreamResult streamResult = new StreamResult(output);
+    DOMSource source = new DOMSource(doc);
+    trans.transform(source, streamResult);
+    output.close();
+  }
 }

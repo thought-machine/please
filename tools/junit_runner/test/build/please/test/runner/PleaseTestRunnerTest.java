@@ -18,7 +18,7 @@ public class PleaseTestRunnerTest {
 
   @Before
   public void setUp() {
-    this.pleaseTestRunner = new PleaseTestRunner(false);
+    this.pleaseTestRunner = new AlwaysAcceptingPleaseTestRunner(false);
   }
 
   @Test
@@ -84,6 +84,21 @@ public class PleaseTestRunnerTest {
 
     TestCaseResult methodResult = result.caseResults.get(0);
     Assert.assertTrue(methodResult instanceof SuccessCaseResult);
+  }
+
+  @Test
+  public void testRunTest_captureOutput() {
+    PleaseTestRunner runner = new AlwaysAcceptingPleaseTestRunner(true);
+    TestSuiteResult result = runner.runTest(CaptureOutput.class);
+    Assert.assertEquals(CaptureOutput.class.getName(), result.testClassName);
+    Assert.assertEquals(1, result.caseResults.size());
+
+    TestCaseResult methodResult = result.caseResults.get(0);
+    Assert.assertTrue(methodResult instanceof FailureCaseResult);
+    FailureCaseResult failureResult = (FailureCaseResult) methodResult;
+
+    Assert.assertEquals("This should go to stdout.\n", failureResult.getStdOut());
+    Assert.assertEquals("This should go to stderr.\n", failureResult.getStdErr());
   }
 }
 

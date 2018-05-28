@@ -24,7 +24,7 @@ public class TestSuiteResult {
     }
 
     /**
-     * @return <code>true</code> if any of the results were an abnormal exit.
+     * @return <code>true</code> if any of the results were a test failure exit.
      */
     public boolean isFailure() {
         for (TestCaseResult result: caseResults) {

@@ -1,5 +1,6 @@
 package build.please.test.result;
 
+import org.junit.runner.notification.Failure;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -20,6 +21,18 @@ public final class FailureCaseResult extends TestCaseResult {
     this.message = message;
     this.type = type;
     this.stackTrace = stackTrace;
+  }
+
+  public static TestCaseResult fromFailure(Failure failure, long runTime, String stdOut, String stdErr) {
+    return new FailureCaseResult(
+        failure.getDescription().getClassName(),
+        failure.getDescription().getMethodName(),
+        runTime,
+        failure.getMessage(),
+        failure.getException().getClass().getName(),
+        stdOut,
+        stdErr,
+        failure.getTrace());
   }
 
   @Override

@@ -87,29 +87,17 @@ class TestListener extends RunListener {
     String stdErr = rawStdErrBytes.size() == 0 ? null : rawStdErrBytes.toString(ENCODING);
 
     if (result.getFailureCount() > 0) {
-      // Should only ever be 0 or 1
+      // Probably only ever 0 or 1, but JUnit only cares about the first one so copy that behaviour here.
       Failure failure = result.getFailures().get(0);
       if (failure.getException() instanceof AssertionError) {
         // All JUnit "test failures" are AssertionErrors.
-        results.add(new FailureCaseResult(className, methodName,
-            result.getRunTime(),
-            failure.getMessage(),
-            failure.getException().getClass().getName(),
-            stdOut, stdErr,
-            failure.getTrace()));
+        results.add(FailureCaseResult.fromFailure(failure, result.getRunTime(), stdOut, stdErr));
       } else {
         // Anything else is a problem running the test itself.
-        results.add(new ErrorCaseResult(className, methodName,
-            result.getRunTime(),
-            failure.getMessage(),
-            failure.getException().getClass().getName(),
-            stdOut, stdErr,
-            failure.getTrace()));
+        results.add(ErrorCaseResult.fromFailure(failure, result.getRunTime(), stdOut, stdErr));
       }
     } else {
-      results.add(new SuccessCaseResult(className, methodName,
-          result.getRunTime(),
-          stdOut, stdErr));
+      results.add(new SuccessCaseResult(className, methodName, result.getRunTime(), stdOut, stdErr));
     }
     resultListener = null;
   }

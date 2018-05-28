@@ -56,5 +56,13 @@ public abstract class TestCaseResult {
   public String getName() {
     return name;
   }
+
+  public String getStdOut() {
+    return stdOut;
+  }
+
+  public String getStdErr() {
+    return stdErr;
+  }
 }
 

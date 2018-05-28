@@ -19,7 +19,7 @@ public class XmlTestReporterTest {
   @Test
   public void testWriteSuiteResult_noResults() throws Exception {
     TestSuiteResult result = new TestSuiteResult();
-    Document doc = reporter.writeSuiteResult(result);
+    Document doc = reporter.buildDocument(result);
 
     NodeList list = doc.getElementsByTagName("testcase");
     Assert.assertEquals(0, list.getLength());
