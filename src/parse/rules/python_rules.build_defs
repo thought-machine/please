@@ -330,8 +330,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
         # but that prevents downloading binary wheels. This is more fiddly but seems to work.
         # Unfortunately it does *not* work similarly on the Debian problem :(
-        cmd = 'echo "[install]\nprefix=" > setup.cfg; ' + cmd
-    cmd += ' -q -b build %s %s %s %s' % (repo_flag, index_flag, pip_flags, package_name)
+        cmd = 'echo "[install]\nprefix=" > .pydistutils.cfg; ' + cmd
+    cmd += ' -b build %s %s %s %s' % (repo_flag, index_flag, pip_flags, package_name)
     cmd += ' && find . -name "*.pyc" -or -name "tests" | xargs rm -rf'
 
     if not licences:
