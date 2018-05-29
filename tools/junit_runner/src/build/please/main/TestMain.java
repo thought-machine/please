@@ -41,7 +41,6 @@ public class TestMain {
 
     String testPackage = System.getProperty("build.please.testpackage");
     Set<String> allClasses = findClasses(testPackage);
-    Set<String> testClasses = new HashSet<>();
     if (allClasses.isEmpty()) {
       throw new RuntimeException("No test classes found");
     }
@@ -94,7 +93,7 @@ public class TestMain {
       numTests += result.caseResults.size();
 
       PrettyPrintingXmlWriter.writeXMLDocumentToFile(
-          new File(RESULTS_DIR, "TEST-" + result.testClassName + ".xml").getPath(),
+          new File(RESULTS_DIR, "TEST-" + result.getClassName() + ".xml").getPath(),
           doc);
     }
 

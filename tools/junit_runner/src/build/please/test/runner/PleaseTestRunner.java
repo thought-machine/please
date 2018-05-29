@@ -1,17 +1,14 @@
 package build.please.test.runner;
 
 import build.please.common.test.NotATest;
-import build.please.test.result.TestCaseResult;
 import build.please.test.result.TestSuiteResult;
 import org.junit.Test;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
-import org.junit.runner.Result;
 import org.junit.runner.manipulation.Filter;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -26,12 +23,9 @@ public class PleaseTestRunner {
   }
 
   public TestSuiteResult runTest(Class testClass) {
-    TestSuiteResult result = new TestSuiteResult();
-    result.testClassName = testClass.getName();
-
-    List<TestCaseResult> results = new ArrayList<>();
     JUnitCore core = new JUnitCore();
-    core.addListener(new TestListener(results, captureOutput));
+    TestListener listener = new TestListener(captureOutput);
+    core.addListener(listener);
 
     if (isATestClass(testClass)) {
       Request request = Request.aClass(testClass);
@@ -40,12 +34,10 @@ public class PleaseTestRunner {
         request = request.filterWith(Filter.matchMethodDescription(testDescription(testClass, aMethodsToTest)));
       }
 
-      Result junitResult = core.run(request);
-      result.duration = junitResult.getRunTime();
+      core.run(request);
     }
-    result.caseResults.addAll(results);
 
-    return result;
+    return listener.getResult();
   }
 
   /**

@@ -34,7 +34,7 @@ public class XmlTestReporter {
     Element root = doc.createElement("testsuite");
     root.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
     root.setAttribute("xsi:noNamespaceSchemaLocation", "http://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd");
-    root.setAttribute("name", result.testClassName);
+    root.setAttribute("name", result.getClassName());
     root.setAttribute("time", Double.toString(result.duration / 1000.0));
 
     int tests = 0;

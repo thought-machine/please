@@ -9,29 +9,23 @@ public final class FailureCaseResult extends TestCaseResult {
   private final String type;
   private final String stackTrace;
 
-  public FailureCaseResult(String testClassName,
+  private FailureCaseResult(String testClassName,
                            String testMethodName,
-                           long durationMillis,
                            String message,
                            String type,
-                           String stdOut,
-                           String stdErr,
                            String stackTrace) {
-    super(testClassName, testMethodName, durationMillis, stdOut, stdErr);
+    super(testClassName, testMethodName);
     this.message = message;
     this.type = type;
     this.stackTrace = stackTrace;
   }
 
-  public static TestCaseResult fromFailure(Failure failure, long runTime, String stdOut, String stdErr) {
+  public static TestCaseResult fromFailure(Failure failure) {
     return new FailureCaseResult(
         failure.getDescription().getClassName(),
         failure.getDescription().getMethodName(),
-        runTime,
         failure.getMessage(),
         failure.getException().getClass().getName(),
-        stdOut,
-        stdErr,
         failure.getTrace());
   }
 

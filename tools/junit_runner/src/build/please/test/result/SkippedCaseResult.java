@@ -4,15 +4,12 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 public final class SkippedCaseResult extends TestCaseResult {
-  public final String message;
+  private final String message;
 
   public SkippedCaseResult(String testClassName,
                            String testMethodName,
-                           long durationMillis,
-                           String message,
-                           String stdOut,
-                           String stdErr) {
-    super(testClassName, testMethodName, durationMillis, stdOut, stdErr);
+                           String message) {
+    super(testClassName, testMethodName);
     this.message = message;
   }
 

@@ -24,7 +24,7 @@ public class PleaseTestRunnerTest {
   @Test
   public void testRunTest() {
     TestSuiteResult result = pleaseTestRunner.runTest(OnlySuccess.class);
-    Assert.assertEquals(OnlySuccess.class.getName(), result.testClassName);
+    Assert.assertEquals(OnlySuccess.class.getName(), result.getClassName());
     Assert.assertEquals(1, result.caseResults.size());
 
     TestCaseResult methodResult = result.caseResults.get(0);
@@ -36,7 +36,7 @@ public class PleaseTestRunnerTest {
   @Test
   public void testRunTest_skipped() {
     TestSuiteResult result = pleaseTestRunner.runTest(SkippedAndSuccess.class);
-    Assert.assertEquals(SkippedAndSuccess.class.getName(), result.testClassName);
+    Assert.assertEquals(SkippedAndSuccess.class.getName(), result.getClassName());
     Assert.assertEquals(2, result.caseResults.size());
 
     for (TestCaseResult tcr: result.caseResults) {
@@ -51,7 +51,7 @@ public class PleaseTestRunnerTest {
   @Test
   public void testRunTest_failure() {
     TestSuiteResult result = pleaseTestRunner.runTest(AssertionFailure.class);
-    Assert.assertEquals(AssertionFailure.class.getName(), result.testClassName);
+    Assert.assertEquals(AssertionFailure.class.getName(), result.getClassName());
     Assert.assertEquals(1, result.caseResults.size());
 
     TestCaseResult methodResult = result.caseResults.get(0);
@@ -65,7 +65,7 @@ public class PleaseTestRunnerTest {
   @Test
   public void testRunTest_error() {
     TestSuiteResult result = pleaseTestRunner.runTest(Error.class);
-    Assert.assertEquals(Error.class.getName(), result.testClassName);
+    Assert.assertEquals(Error.class.getName(), result.getClassName());
     Assert.assertEquals(1, result.caseResults.size());
 
     TestCaseResult methodResult = result.caseResults.get(0);
@@ -79,7 +79,7 @@ public class PleaseTestRunnerTest {
   @Test
   public void testRunTest_otherRunner() {
     TestSuiteResult result = pleaseTestRunner.runTest(Parameterized.class);
-    Assert.assertEquals(Parameterized.class.getName(), result.testClassName);
+    Assert.assertEquals(Parameterized.class.getName(), result.getClassName());
     Assert.assertEquals(1, result.caseResults.size()); // Ignored tests don't count here
 
     TestCaseResult methodResult = result.caseResults.get(0);
@@ -90,7 +90,7 @@ public class PleaseTestRunnerTest {
   public void testRunTest_captureOutput() {
     PleaseTestRunner runner = new AlwaysAcceptingPleaseTestRunner(true);
     TestSuiteResult result = runner.runTest(CaptureOutput.class);
-    Assert.assertEquals(CaptureOutput.class.getName(), result.testClassName);
+    Assert.assertEquals(CaptureOutput.class.getName(), result.getClassName());
     Assert.assertEquals(1, result.caseResults.size());
 
     TestCaseResult methodResult = result.caseResults.get(0);

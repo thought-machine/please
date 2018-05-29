@@ -13,24 +13,30 @@ public abstract class TestCaseResult {
   private final String className;
   private final String name;
   private final String group;
-  protected final long durationMillis;
-  private final String stdOut;
-  private final String stdErr;
+  long durationMillis;
+  private String stdOut;
+  private String stdErr;
 
   public TestCaseResult(String className,
-                        String name,
-                        long durationMillis,
-                        String stdOut,
-                        String stdErr) {
+                        String name) {
     this.className = className;
     this.name = name;
     this.group = null;
-    this.durationMillis = durationMillis;
-    this.stdOut = stdOut;
-    this.stdErr = stdErr;
   }
 
   public abstract boolean isSuccess();
+
+  public void setStdOut(String stdOut) {
+    this.stdOut = stdOut;
+  }
+
+  public void setStdErr(String stdErr) {
+    this.stdErr = stdErr;
+  }
+
+  public void setDuration(long durationMillis) {
+    this.durationMillis = durationMillis;
+  }
 
   public void renderToXml(Document doc, Element testCaseElement) {
     testCaseElement.setAttribute("name", name);

@@ -7,9 +7,17 @@ import java.util.List;
  * Collated results for all methods in a class
  */
 public class TestSuiteResult {
-    public String testClassName;
+    private String testClassName;
     public List<TestCaseResult> caseResults = new LinkedList<>();
     public long duration;
+
+    public TestSuiteResult(String className) {
+        this.testClassName = className;
+    }
+
+    public String getClassName() {
+        return this.testClassName;
+    }
 
     /**
      * @return <code>true</code> if any of the results were an abnormal exit.

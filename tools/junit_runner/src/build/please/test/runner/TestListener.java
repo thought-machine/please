@@ -9,35 +9,36 @@ import org.junit.runner.notification.RunListener;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 
 class TestListener extends RunListener {
-  // Listener for JUnit tests.
-  // Heavily based on Buck's version.
+  private TestSuiteResult result;
+  private Long currentTestStart;
 
-  private List<TestCaseResult> results;
+  private TestCaseResult currentState = null;
   private PrintStream originalOut, originalErr, stdOutStream, stdErrStream;
   private ByteArrayOutputStream rawStdOutBytes, rawStdErrBytes;
-  private Result result;
-  private RunListener resultListener;
   private boolean captureOutput;
   private static final String ENCODING = "UTF-8";
 
-  private long startTime = System.currentTimeMillis();
-
-  public TestListener(List<TestCaseResult> results, boolean captureOutput) {
-    this.results = results;
+  TestListener(boolean captureOutput) {
     this.captureOutput = captureOutput;
+  }
+
+  public TestSuiteResult getResult() {
+    return this.result;
+  }
+
+  @Override
+  public void testRunStarted(Description description) {
+    this.result = new TestSuiteResult(description.getClassName());
+    this.currentTestStart = null;
+    this.currentState = null;
   }
 
   @Override
   public void testStarted(Description description) throws Exception {
-    result = new Result();
-    resultListener = result.createListener();
-    resultListener.testRunStarted(description);
-    resultListener.testStarted(description);
-
     rawStdOutBytes = new ByteArrayOutputStream();
     rawStdErrBytes = new ByteArrayOutputStream();
     stdOutStream = new PrintStream(rawStdOutBytes, true, ENCODING);
@@ -51,13 +52,13 @@ class TestListener extends RunListener {
       System.setOut(stdOutStream);
       System.setErr(stdErrStream);
     }
+
+    this.currentTestStart = System.nanoTime();
   }
 
   @Override
   public void testFinished(Description description) throws Exception {
-    // Shutdown single-test result.
-    resultListener.testRunFinished(result);
-    resultListener.testFinished(description);
+    long duration = System.nanoTime() - this.currentTestStart;
 
     // Restore the original stdout/stderr.
     if (captureOutput) {
@@ -69,88 +70,52 @@ class TestListener extends RunListener {
     stdOutStream.flush();
     stdErrStream.flush();
 
-    int numFailures = result.getFailureCount();
-    String className = description.getClassName();
-    String methodName = description.getMethodName();
-    // In practice, I have seen one case of a test having more than one failure:
-    // com.xtremelabs.robolectric.shadows.H2DatabaseTest#shouldUseH2DatabaseMap() had 2
-    // failures. However, I am not sure what to make of it, so we let it through.
-    if (numFailures < 0) {
-      throw new IllegalStateException(String.format("Unexpected number of failures while testing %s#%s(): %d (%s)",
-						    className,
-						    methodName,
-						    numFailures,
-						    result.getFailures()));
-    }
-
     String stdOut = rawStdOutBytes.size() == 0 ? null : rawStdOutBytes.toString(ENCODING);
     String stdErr = rawStdErrBytes.size() == 0 ? null : rawStdErrBytes.toString(ENCODING);
 
-    if (result.getFailureCount() > 0) {
-      // Probably only ever 0 or 1, but JUnit only cares about the first one so copy that behaviour here.
-      Failure failure = result.getFailures().get(0);
-      if (failure.getException() instanceof AssertionError) {
-        // All JUnit "test failures" are AssertionErrors.
-        results.add(FailureCaseResult.fromFailure(failure, result.getRunTime(), stdOut, stdErr));
-      } else {
-        // Anything else is a problem running the test itself.
-        results.add(ErrorCaseResult.fromFailure(failure, result.getRunTime(), stdOut, stdErr));
-      }
-    } else {
-      results.add(new SuccessCaseResult(className, methodName, result.getRunTime(), stdOut, stdErr));
+    if (currentState == null) {
+      currentState = SuccessCaseResult.fromDescription(description);
     }
-    resultListener = null;
+
+    currentState.setDuration(TimeUnit.NANOSECONDS.toMillis(duration));
+    currentState.setStdOut(stdOut);
+    currentState.setStdErr(stdErr);
+
+    result.caseResults.add(currentState);
+  }
+
+  @Override
+  public void testRunFinished(Result result) {
+    this.result.duration = result.getRunTime();
   }
 
   /**
-   * The regular listener we created from the singular result, in this class, will not by
-   * default treat assumption failures as regular failures, and will not store them.
+   * AssumptionFailures must not cause a test error...
    */
   @Override
   public void testAssumptionFailure(Failure failure) {
-    if (resultListener != null) {
-      // Left in only to help catch future bugs -- right now this does nothing.
-      resultListener.testAssumptionFailure(failure);
-    }
   }
 
   @Override
-  public void testFailure(Failure failure) throws Exception {
-    if (resultListener == null) {
-      recordUnpairedFailure(failure);
+  public void testFailure(Failure failure) {
+    if (failure.getException() instanceof AssertionError) {
+      // All JUnit "test failures" are AssertionErrors.
+      currentState = FailureCaseResult.fromFailure(failure);
     } else {
-      resultListener.testFailure(failure);
+      // Anything else is a problem running the test itself.
+      currentState = ErrorCaseResult.fromFailure(failure);
     }
   }
 
   @Override
-  public void testIgnored(Description description) throws Exception {
-    if (resultListener != null) {
-      resultListener.testIgnored(description);
-    }
+  public void testIgnored(Description description) {
     String skippedReason = description.getAnnotation(Ignore.class).value();
     // We never call started/finished for ignored tests so no result exists.
-    this.results.add(new SkippedCaseResult(description.getClassName(), description.getMethodName(),
-        0, skippedReason, null, null));
-  }
+    currentState = new SkippedCaseResult(description.getClassName(), description.getMethodName(), skippedReason);
+    currentState.setDuration(0);
+    currentState.setStdOut(null);
+    currentState.setStdErr(null);
 
-  /**
-   * It's possible to encounter a Failure before we've started any tests (and therefore before
-   * testStarted() has been called).  The known example is a @BeforeClass that throws an
-   * exception, but there may be others.
-   * <p>
-   * Recording these unexpected failures helps us propagate failures back up to the "plz test"
-   * process.
-   */
-  private void recordUnpairedFailure(Failure failure) {
-    long runtime = System.currentTimeMillis() - startTime;
-    Description description = failure.getDescription();
-    results.add(new ErrorCaseResult(description.getClassName(), description.getMethodName(),
-        runtime,
-        failure.getMessage(),
-        failure.getException().getClass().getName(),
-        null,
-        null,
-        failure.getTrace()));
+    this.result.caseResults.add(currentState);
   }
 }
