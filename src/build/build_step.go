@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,7 +28,8 @@ var log = logging.MustGetLogger("build")
 // Type that indicates that we're stopping the build of a target in a nonfatal way.
 var errStop = fmt.Errorf("stopping build")
 
-// goDirOnce guards the creation of plz-out/go, which we only attempt once per process.
+// goDirOnce is used to check old versions of plz-out/go.
+// This will be removed again soon.
 var goDirOnce sync.Once
 
 // httpClient is the shared http client that we use for fetching remote files.
@@ -37,6 +37,7 @@ var httpClient http.Client
 
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
+	goDirOnce.Do(cleanupPlzOutGo)
 	start := time.Now()
 	target := state.Graph.TargetOrDie(label)
 	state = state.ForTarget(target)
@@ -146,16 +147,11 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			target.SetState(core.Unchanged)
 			state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
 		}
+		buildLinks(state, target)
 		return nil
 	}
 	if err := prepareDirectories(target); err != nil {
 		return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
-	}
-
-	// Similarly to the createInitPy special-casing, this is not very nice, but makes it
-	// rather easier to have a consistent GOPATH setup.
-	if target.HasLabel("go") {
-		goDirOnce.Do(createPlzOutGo)
 	}
 
 	retrieveArtifacts := func() bool {
@@ -175,6 +171,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 				target.SetState(core.Unchanged)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
 			}
+			buildLinks(state, target)
 			return true // got from cache
 		}
 		return false
@@ -230,6 +227,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	} else {
 		target.SetState(core.Unchanged)
 	}
+	buildLinks(state, target)
 	if state.Cache != nil {
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
 		newCacheKey := mustShortTargetHash(state, target)
@@ -575,27 +573,25 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 	}
 }
 
-// createPlzOutGo creates a directory plz-out/go that contains src / pkg links which
-// make it easier to set up one's GOPATH appropriately.
-func createPlzOutGo() {
-	dir := path.Join(core.RepoRoot, core.OutDir, "go")
-	genDir := path.Join(core.RepoRoot, core.GenDir)
-	srcDir := path.Join(dir, "src")
-	pkgDir := path.Join(dir, "pkg")
-	archDir := path.Join(pkgDir, runtime.GOOS+"_"+runtime.GOARCH)
-	if err := os.MkdirAll(pkgDir, core.DirPermissions); err != nil {
-		log.Warning("Failed to create %s: %s", pkgDir, err)
-		return
+// buildLinks builds links from the given target if it's labelled appropriately.
+// For example, Go targets may link themselves into plz-out/go/src etc.
+func buildLinks(state *core.BuildState, target *core.BuildTarget) {
+	for _, dest := range target.PrefixedLabels("link:") {
+		destDir := path.Join(core.RepoRoot, dest, target.Label.PackageName)
+		srcDir := path.Join(core.RepoRoot, target.OutDir())
+		for _, out := range target.Outputs() {
+			symlinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out))
+		}
 	}
-	symlinkIfNotExists(genDir, srcDir)
-	symlinkIfNotExists(genDir, archDir)
 }
 
-// symlinkIfNotExists creates newDir as a link to oldDir if it doesn't already exist.
-func symlinkIfNotExists(oldDir, newDir string) {
-	if !core.PathExists(newDir) {
-		if err := os.Symlink(oldDir, newDir); err != nil && !os.IsExist(err) {
-			log.Warning("Failed to create %s: %s", newDir, err)
+// symlinkIfNotExists creates dest as a link to src if it doesn't already exist.
+func symlinkIfNotExists(src, dest string) {
+	if !fs.PathExists(dest) {
+		if err := fs.EnsureDir(dest); err != nil {
+			log.Warning("Failed to create directory for %s: %s", dest, err)
+		} else if err := os.Symlink(src, dest); err != nil && !os.IsExist(err) {
+			log.Warning("Failed to create %s: %s", dest, err)
 		}
 	}
 }
@@ -666,4 +662,15 @@ func (r *progressReader) Read(b []byte) (int, error) {
 	r.Done += float32(n)
 	r.Target.Progress = 100.0 * r.Done / r.Total
 	return n, err
+}
+
+func cleanupPlzOutGo() {
+	removeIfSymlink("plz-out/go/src")
+	removeIfSymlink("plz-out/go/pkg/" + core.OsArch)
+}
+
+func removeIfSymlink(name string) {
+	if fi, err := os.Lstat(name); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+		os.Remove(name)
+	}
 }
