@@ -100,6 +100,10 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 		if state.Verbosity > 0 {
 			printFailedBuildResults(failedNonTests, failedTargetMap, duration)
 		}
+		if !keepGoing {
+			// Die immediately and unsuccessfully, this avoids awkward interactions with various things later.
+			os.Exit(-1)
+		}
 	}
 	// Check all the targets we wanted to build actually have been built.
 	for _, label := range state.ExpandOriginalTargets() {

@@ -572,10 +572,14 @@ var buildFunctions = map[string]func() bool{
 		return true
 	},
 	"changes": func() bool {
+		// Temporarily set this flag on to avoid fatal errors from the first parse.
+		keepGoing := opts.BuildFlags.KeepGoing
+		opts.BuildFlags.KeepGoing = true
 		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
 		files := opts.Query.Changes.Args.Files.Get()
 		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
 		_, before := runBuild(core.WholeGraph, false, false)
+		opts.BuildFlags.KeepGoing = keepGoing
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		query.MustCheckout(original, opts.Query.Changes.CheckoutCommand)
