@@ -1,4 +1,4 @@
-package build.please.cover.runner;
+package build.please.cover.runner.testdata;
 
 import build.please.common.test.NotATest;
 import org.junit.Before;

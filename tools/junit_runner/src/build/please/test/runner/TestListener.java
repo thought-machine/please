@@ -82,6 +82,8 @@ class TestListener extends RunListener {
     currentState.setStdErr(stdErr);
 
     result.caseResults.add(currentState);
+
+    currentState = null;
   }
 
   @Override
@@ -111,11 +113,11 @@ class TestListener extends RunListener {
   public void testIgnored(Description description) {
     String skippedReason = description.getAnnotation(Ignore.class).value();
     // We never call started/finished for ignored tests so no result exists.
-    currentState = new SkippedCaseResult(description.getClassName(), description.getMethodName(), skippedReason);
-    currentState.setDuration(0);
-    currentState.setStdOut(null);
-    currentState.setStdErr(null);
+    TestCaseResult result = new SkippedCaseResult(description.getClassName(), description.getMethodName(), skippedReason);
+    result.setDuration(0);
+    result.setStdOut(null);
+    result.setStdErr(null);
 
-    this.result.caseResults.add(currentState);
+    this.result.caseResults.add(result);
   }
 }

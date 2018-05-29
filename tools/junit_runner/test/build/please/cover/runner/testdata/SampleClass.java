@@ -1,4 +1,4 @@
-package build.please.cover.runner;
+package build.please.cover.runner.testdata;
 
 public class SampleClass {
   private int result;

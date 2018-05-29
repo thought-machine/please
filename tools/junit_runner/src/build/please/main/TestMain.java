@@ -2,6 +2,7 @@ package build.please.main;
 
 import build.please.common.report.PrettyPrintingXmlWriter;
 import build.please.common.source.SourceMap;
+import build.please.common.test.NotATest;
 import build.please.cover.report.XmlCoverageReporter;
 import build.please.cover.result.CoverageRunResult;
 import build.please.cover.runner.PleaseCoverageRunner;
@@ -16,7 +17,6 @@ import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 

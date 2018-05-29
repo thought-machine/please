@@ -21,12 +21,8 @@ public class InstrumentingClassLoader extends ClassLoader {
 
   void addInstrumentedClasses(Set<String> classes) {
     for (String cls : classes) {
-      addInstrumentedClass(cls);
+        instrumentedClasses.put(cls, null);
     }
-  }
-
-  void addInstrumentedClass(String cls) {
-    instrumentedClasses.put(cls, null);
   }
 
   Iterable<Class<?>> getInstrumentedClasses() {
@@ -35,6 +31,11 @@ public class InstrumentingClassLoader extends ClassLoader {
 
   @Override
   protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+    Class<?> c = findLoadedClass(name);
+    if (c != null) {
+      return c;
+    }
+
     try {
       Class cls = instrumentedClasses.get(name);
       if (cls != null) {

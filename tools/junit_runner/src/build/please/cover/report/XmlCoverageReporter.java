@@ -31,7 +31,7 @@ public class XmlCoverageReporter {
     pkg.appendChild(classes);
 
     for (final IClassCoverage cc : coverageBuilder.getClasses()) {
-      if (cc.getName().startsWith("build/please/test") || testClassNames.contains(cc.getName().replace("/", "."))) {
+      if (cc.getName().startsWith("build/please") || testClassNames.contains(cc.getName().replace("/", "."))) {
         continue;  // keep these out of results
       }
 

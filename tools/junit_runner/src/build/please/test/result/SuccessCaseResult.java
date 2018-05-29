@@ -8,7 +8,7 @@ public final class SuccessCaseResult extends TestCaseResult {
     super(testClassName, testMethodName);
   }
 
-  public static TestCaseResult fromDescription(Description description) {
+  public static SuccessCaseResult fromDescription(Description description) {
     return new SuccessCaseResult(description.getClassName(), description.getMethodName());
   }
 

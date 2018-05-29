@@ -25,55 +25,33 @@ public class PleaseCoverageRunnerTest {
     Assert.assertTrue(result.testResults.isEmpty());
   }
 
+  /**
+   * This test is reverse-engineered from getting coverage information and plugging it into the assertions
+   */
   @Test
   public void testCoverageRunner_runTests() throws Exception {
     PleaseTestRunner testRunner = new AlwaysAcceptingPleaseTestRunner(true);
     PleaseCoverageRunner coverageRunner = new PleaseCoverageRunner(testRunner);
 
     Set<String> testClasses = new HashSet<>();
-    testClasses.add("build.please.cover.runner.SampleClassTest");
+    testClasses.add("build.please.cover.runner.testdata.SampleClassTest");
 
     Set<String> otherClasses = new HashSet<>();
-    otherClasses.add("build.please.cover.runner.SampleClass");
+    otherClasses.add("build.please.cover.runner.testdata.SampleClass");
 
-    coverageRunner.instrument(testClasses, false);
-    coverageRunner.instrument(otherClasses, false);
+    coverageRunner.instrument(testClasses);
+    coverageRunner.instrument(otherClasses);
 
     CoverageRunResult result = coverageRunner.runTests(testClasses);
 
-    Assert.assertTrue(result.testClassNames.contains("build.please.cover.runner.SampleClassTest"));
+    Assert.assertTrue(result.testClassNames.contains("build.please.cover.runner.testdata.SampleClassTest"));
     Assert.assertEquals(1, result.testResults.size());
 
     Assert.assertEquals(2, result.coverageBuilder.getClasses().size());
     for (IClassCoverage classCoverage: result.coverageBuilder.getClasses()) {
-      if (classCoverage.getName().equals("build/please/cover/runner/SampleClass")) {
-        System.out.println("class name:   " + classCoverage.getName());
-        System.out.println("class id:     " + Long.valueOf(classCoverage.getId()));
-        System.out.println("instructions: " + Integer.valueOf(classCoverage.getInstructionCounter().getTotalCount()));
-        System.out.println("     covered: " + Integer.valueOf(classCoverage.getInstructionCounter().getCoveredCount()));
-        System.out.println("branches:     " + Integer.valueOf(classCoverage.getBranchCounter().getTotalCount()));
-        System.out.println(" covered:     " + Integer.valueOf(classCoverage.getBranchCounter().getCoveredCount()));
-        System.out.println("lines:        " + Integer.valueOf(classCoverage.getLineCounter().getTotalCount()));
-        System.out.println("covered:      " + Integer.valueOf(classCoverage.getLineCounter().getCoveredCount()));
-        System.out.println("methods:      " + Integer.valueOf(classCoverage.getMethodCounter().getTotalCount()));
-        System.out.println("covered:      " + Integer.valueOf(classCoverage.getMethodCounter().getCoveredCount()));
-        System.out.println("complexity:   " + Integer.valueOf(classCoverage.getComplexityCounter().getTotalCount()));
-        System.out.println("   covered:   " + Integer.valueOf(classCoverage.getComplexityCounter().getCoveredCount()));
-
+      if (classCoverage.getName().equals("build/please/cover/runner/testdata/SampleClass")) {
         for (IMethodCoverage methodCoverage : classCoverage.getMethods()) {
-          System.out.println("method name:  " + methodCoverage.getName());
-          System.out.println("instructions: " + Integer.valueOf(methodCoverage.getInstructionCounter().getTotalCount()));
-          System.out.println("     covered: " + Integer.valueOf(methodCoverage.getInstructionCounter().getCoveredCount()));
-          System.out.println("branches:     " + Integer.valueOf(methodCoverage.getBranchCounter().getTotalCount()));
-          System.out.println(" covered:     " + Integer.valueOf(methodCoverage.getBranchCounter().getCoveredCount()));
-          System.out.println("lines:        " + Integer.valueOf(methodCoverage.getLineCounter().getTotalCount()));
-          System.out.println("covered:      " + Integer.valueOf(methodCoverage.getLineCounter().getCoveredCount()));
-          System.out.println("methods:      " + Integer.valueOf(methodCoverage.getMethodCounter().getTotalCount()));
-          System.out.println("covered:      " + Integer.valueOf(methodCoverage.getMethodCounter().getCoveredCount()));
-          System.out.println("complexity:   " + Integer.valueOf(methodCoverage.getComplexityCounter().getTotalCount()));
-          System.out.println("   covered:   " + Integer.valueOf(methodCoverage.getComplexityCounter().getCoveredCount()));
           if (methodCoverage.getName().equals("<init>")) {
-//            Assert.assertEquals(3, methodCoverage.getInstructionCounter().getTotalCount());
           } else if (methodCoverage.getName().equals("coveredMethod")) {
             Assert.assertEquals(26, methodCoverage.getInstructionCounter().getTotalCount());
             Assert.assertEquals(21, methodCoverage.getInstructionCounter().getCoveredCount());
@@ -84,7 +62,8 @@ public class PleaseCoverageRunnerTest {
             Assert.fail("Found coverage for unexpected method: " + methodCoverage.getName());
           }
         }
-      } else if (classCoverage.getName().equals("build/please/cover/runner/SampleClassTest")) {
+      } else if (classCoverage.getName().equals("build/please/cover/runner/testdata/SampleClassTest")) {
+        // We don't really care about the Test coverage, but it's nice to have I guess.
       } else {
           Assert.fail("Found coverage for unexpected class: " + classCoverage.getName());
       }

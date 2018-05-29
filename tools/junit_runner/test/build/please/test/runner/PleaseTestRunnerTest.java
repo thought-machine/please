@@ -1,8 +1,11 @@
 package build.please.test.runner;
 
 import build.please.test.result.*;
+import build.please.test.runner.testdata.*;
+import build.please.test.runner.testdata.Error;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -99,6 +102,11 @@ public class PleaseTestRunnerTest {
 
     Assert.assertEquals("This should go to stdout.\n", failureResult.getStdOut());
     Assert.assertEquals("This should go to stderr.\n", failureResult.getStdErr());
+  }
+
+  @Test
+  @Ignore("Schtop, this method is not ready yet!")
+  public void testRunTest_skipception() {
   }
 }
 

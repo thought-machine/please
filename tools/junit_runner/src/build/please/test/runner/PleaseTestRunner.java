@@ -1,6 +1,5 @@
 package build.please.test.runner;
 
-import build.please.common.test.NotATest;
 import build.please.test.result.TestSuiteResult;
 import org.junit.Test;
 import org.junit.runner.Description;
@@ -23,19 +22,21 @@ public class PleaseTestRunner {
   }
 
   public TestSuiteResult runTest(Class testClass) {
+    if (!isATestClass(testClass)) {
+      return null;
+    }
+
     JUnitCore core = new JUnitCore();
     TestListener listener = new TestListener(captureOutput);
     core.addListener(listener);
 
-    if (isATestClass(testClass)) {
-      Request request = Request.aClass(testClass);
+    Request request = Request.aClass(testClass);
 
-      for (String aMethodsToTest : methodsToTest) {
-        request = request.filterWith(Filter.matchMethodDescription(testDescription(testClass, aMethodsToTest)));
-      }
-
-      core.run(request);
+    for (String aMethodsToTest : methodsToTest) {
+      request = request.filterWith(Filter.matchMethodDescription(testDescription(testClass, aMethodsToTest)));
     }
+
+    core.run(request);
 
     return listener.getResult();
   }
@@ -55,17 +56,21 @@ public class PleaseTestRunner {
   public List<TestSuiteResult> runTests(Set<String> classes) throws ClassNotFoundException {
     List<TestSuiteResult> results = new LinkedList<>();
     for (String clz : classes) {
-      results.add(runTest(getClass().getClassLoader().loadClass(clz)));
+      TestSuiteResult testSuiteResult = runTest(getClass().getClassLoader().loadClass(clz));
+      if (testSuiteResult != null) {
+        results.add(testSuiteResult);
+      }
     }
     return results;
   }
 
   protected boolean isATestClass(Class<?> clz) {
-    if (clz.getAnnotation(NotATest.class) == null) {
-      for (Method method : clz.getMethods()) {
-        if (method.getAnnotation(Test.class) != null) {
-          return true;
-        }
+    if (clz.getName().startsWith("build.please.test.runner.testdata")) {
+      return false;
+    }
+    for (Method method : clz.getMethods()) {
+      if (method.getAnnotation(Test.class) != null) {
+        return true;
       }
     }
     return false;

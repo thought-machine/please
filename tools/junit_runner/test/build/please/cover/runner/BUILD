@@ -3,11 +3,11 @@ java_test(name="please_coverage_runner_test",
               "PleaseCoverageRunnerTest.java",
           ],
           deps=[
-              ":sample_class_test",
               "//tools/junit_runner/src/build/please/cover/result",
               "//tools/junit_runner/src/build/please/cover/runner",
               "//tools/junit_runner/src/build/please/test/result",
               "//tools/junit_runner/src/build/please/test/runner",
+              "//tools/junit_runner/test/build/please/cover/runner/testdata",
               "//tools/junit_runner/test/build/please/test/runner:test_runner",
               "//third_party/java:junit",
               "//third_party/java/jacoco",
@@ -19,18 +19,8 @@ java_test(name="instrumenting_class_loader_test",
               "InstrumentingClassLoaderTest.java",
           ],
           deps=[
-              ":sample_class_test",
               "//tools/junit_runner/src/build/please/cover/runner",
+              "//tools/junit_runner/test/build/please/cover/runner/testdata",
               "//third_party/java:junit",
               "//third_party/java/jacoco",
           ])
-
-java_library(name="sample_class_test",
-             srcs=[
-                 "SampleClass.java",
-                 "SampleClassTest.java",
-             ],
-             deps=[
-                 "//tools/junit_runner/src/build/please/common/test",
-                 "//third_party/java:junit",
-             ])

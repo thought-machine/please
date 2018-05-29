@@ -31,8 +31,8 @@ public class InstrumentingClassLoaderTest {
   @Test
   public void testLoadClass() throws Exception {
     Set<String> classes = new HashSet<>();
-    String sampleClassTestName = "build.please.cover.runner.SampleClassTest";
-    String sampleClassName = "build.please.cover.runner.SampleClass";
+    String sampleClassTestName = "build.please.cover.runner.testdata.SampleClassTest";
+    String sampleClassName = "build.please.cover.runner.testdata.SampleClass";
     classes.add(sampleClassTestName);
     classes.add(sampleClassName);
     this.instrumentingClassLoader.addInstrumentedClasses(classes);

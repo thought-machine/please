@@ -1,4 +1,4 @@
-package build.please.test.runner;
+package build.please.test.runner.testdata;
 
 import build.please.common.test.NotATest;
 import org.junit.Ignore;

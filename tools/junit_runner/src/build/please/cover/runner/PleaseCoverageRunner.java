@@ -1,10 +1,10 @@
 package build.please.cover.runner;
 
 import build.please.cover.result.CoverageRunResult;
+import build.please.test.result.TestSuiteResult;
 import build.please.test.runner.PleaseTestRunner;
 import org.jacoco.core.analysis.Analyzer;
 import org.jacoco.core.analysis.CoverageBuilder;
-import org.jacoco.core.analysis.IClassCoverage;
 import org.jacoco.core.data.ExecutionDataStore;
 import org.jacoco.core.data.SessionInfoStore;
 import org.jacoco.core.instr.Instrumenter;
@@ -30,16 +30,9 @@ public class PleaseCoverageRunner {
   }
 
   public void instrument(Set<String> classes) throws ClassNotFoundException {
-    instrument(classes, true);
-  }
-
-  void instrument(Set<String> classes, boolean ignoreInternal) throws ClassNotFoundException {
+    instrumentingClassLoader.addInstrumentedClasses(classes);
     for (String cls : classes) {
-      this.instrumentingClassLoader.addInstrumentedClass(cls);
-      // don't instrument the test runner classes here, nobody else wants to see them.
-      if (!ignoreInternal || !cls.startsWith("build.please.")) {
-        instrumentingClassLoader.loadClass(cls);
-      }
+      instrumentingClassLoader.loadClass(cls);
     }
   }
 
@@ -56,8 +49,11 @@ public class PleaseCoverageRunner {
     Thread.currentThread().setContextClassLoader(instrumentingClassLoader);
 
     for (String testClass: classes) {
-      result.testClassNames.add(testClass);
-      result.testResults.add(runner.runTest(instrumentingClassLoader.loadClass(testClass)));
+      TestSuiteResult testSuiteResult = runner.runTest(instrumentingClassLoader.loadClass(testClass));
+      if (testSuiteResult != null) {
+        result.testClassNames.add(testClass);
+        result.testResults.add(testSuiteResult);
+      }
     }
 
     Thread.currentThread().setContextClassLoader(originalClassLoader);
