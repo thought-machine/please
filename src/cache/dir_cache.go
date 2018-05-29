@@ -33,24 +33,26 @@ type dirCache struct {
 }
 
 func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files ...string) {
-	cache.storeFiles(target, key, "", cacheArtifacts(target, files...), true)
+	cacheDir := cache.getPath(target, key, "")
+	tmpDir := cache.getFullPath(target, key, "", "=")
+	cache.markDir(cacheDir, 0)
+	if err := os.RemoveAll(cacheDir); err != nil {
+		log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
+		return
+	}
+	cache.storeFiles(target, key, "", cacheDir, tmpDir, cacheArtifacts(target, files...), true)
+	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
+		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
+	}
 }
 
 func (cache *dirCache) StoreExtra(target *core.BuildTarget, key []byte, out string) {
-	cache.storeFiles(target, key, out, []string{out}, false)
+	cacheDir := cache.getPath(target, key, out)
+	cache.storeFiles(target, key, out, cacheDir, cacheDir, []string{out}, false)
 }
 
 // storeFiles stores the given files in the cache, either compressed or not.
-func (cache *dirCache) storeFiles(target *core.BuildTarget, key []byte, suffix string, files []string, clean bool) {
-	cacheDir := cache.getPath(target, key, suffix)
-	tmpDir := cache.getFullPath(target, key, suffix, "=")
-	cache.markDir(cacheDir, 0)
-	if clean {
-		if err := os.RemoveAll(cacheDir); err != nil {
-			log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
-			return
-		}
-	}
+func (cache *dirCache) storeFiles(target *core.BuildTarget, key []byte, suffix, cacheDir, tmpDir string, files []string, clean bool) {
 	var totalSize uint64
 	if cache.Compress {
 		totalSize = cache.storeCompressed(target, tmpDir, files)
@@ -60,9 +62,6 @@ func (cache *dirCache) storeFiles(target *core.BuildTarget, key []byte, suffix s
 		}
 	}
 	cache.markDir(cacheDir, totalSize)
-	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
-		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
-	}
 }
 
 // storeCompressed stores all the given files in the cache as a single compressed tarball.
