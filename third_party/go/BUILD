@@ -563,3 +563,11 @@ go_get(
         ":go-digest",
     ],
 )
+
+go_get(
+    name = "buildifier",
+    binary = True,
+    get = "github.com/bazelbuild/buildtools",
+    install = ["buildifier"],
+    revision = "0.11.1",
+)

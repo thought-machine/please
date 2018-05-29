@@ -2,22 +2,22 @@
 # Due to the nature of how we exercise the issue the test itself cannot be in this package.
 
 python_library(
-    name = 'cycle_1',
-    deps = [':cycle_2'],
+    name = "cycle_1",
+    deps = [":cycle_2"],
 )
 
 python_library(
-    name = 'cycle_2',
-    deps = [':cycle_1'],
+    name = "cycle_2",
+    deps = [":cycle_1"],
 )
 
 gentest(
-    name = 'cycle_test',
-    labels = ['cycle'],
+    name = "cycle_test",
+    labels = ["cycle"],
     no_test_output = True,
-    test_cmd = 'true',
+    test_cmd = "true",
     deps = [
-        ':cycle_1',
-        ':cycle_2',
+        ":cycle_1",
+        ":cycle_2",
     ],
 )
