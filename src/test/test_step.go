@@ -54,7 +54,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	cachedTest := func() {
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)
-		results, err := parseTestResults(target, cachedOutputFile, true)
+		results, err := parseTestResults(target, cachedOutputFile, true, state.Config.Test.SurefireDir)
 		target.Results.Duration = time.Since(startTime)
 		target.Results.Cached = true
 		if err != nil {
@@ -193,7 +193,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 				resultMsg = fmt.Sprintf("Test failed with no results. Output: %s", string(out))
 			}
 		} else {
-			results, err2 := parseTestResults(target, outputFile, false)
+			results, err2 := parseTestResults(target, outputFile, false, state.Config.Test.SurefireDir)
 			if err2 != nil {
 				resultErr = err2
 				resultMsg = fmt.Sprintf("Couldn't parse test output file: %s. Stdout: %s", err2, string(out))

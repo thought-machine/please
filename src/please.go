@@ -113,6 +113,7 @@ var opts struct {
 		FailingTestsOk  bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NumRuns         int          `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		TestResultsFile cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		SurefireDir     cli.Filepath `long:"surefir_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
 		ShowOutput      bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug           bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed          bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
@@ -352,6 +353,8 @@ var buildFunctions = map[string]func() bool{
 	"test": func() bool {
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
 		os.RemoveAll(string(opts.Test.TestResultsFile))
+		os.MkdirAll(string(opts.Test.SurefireDir), os.ModePerm)
+		config.Test.SurefireDir = opts.Test.SurefireDir
 		success, state := runBuild(targets, true, true)
 		test.WriteResultsToFileOrDie(state.Graph, string(opts.Test.TestResultsFile))
 		return success || opts.Test.FailingTestsOk
