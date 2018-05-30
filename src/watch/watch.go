@@ -35,6 +35,7 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
 	cmds := commands(state, labels, run)
+	var cmd *exec.Cmd
 
 	for {
 		select {
@@ -43,6 +44,11 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 			if !files.Has(event.Name) {
 				log.Notice("Skipping notification for %s", event.Name)
 				continue
+			}
+			if cmd != nil {
+				log.Info("Killing old process %d", cmd.Process.Pid)
+				core.KillProcess(cmd)
+				cmd = nil
 			}
 			// Quick debounce; poll and discard all events for the next brief period.
 		outer:
@@ -53,14 +59,17 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 					break outer
 				}
 			}
-			runBuild(state, cmds, labels)
+			cmd = runBuild(state, cmds, labels)
+			if !run {
+				cmd.Wait()
+			}
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
 	}
 }
 
-func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabel) {
+func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabel) *exec.Cmd {
 	binary, err := os.Executable()
 	if err != nil {
 		log.Warning("Can't determine current executable, will assume 'plz'")
@@ -74,13 +83,14 @@ func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabe
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	log.Notice("Running %s %s...", binary, strings.Join(commands, " "))
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
 		// Only log the error if it's not a straightforward non-zero exit; the user will presumably
 		// already have been pestered about that.
 		if _, ok := err.(*exec.ExitError); !ok {
 			log.Error("Failed to run %s: %s", binary, err)
 		}
 	}
+	return cmd
 }
 
 func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel, files cmap.ConcurrentMap) {
@@ -147,7 +157,10 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 // commands returns the plz commands that should be used for the given labels.
 func commands(state *core.BuildState, labels []core.BuildLabel, run bool) []string {
 	if run {
-		return []string{"run", "parallel"}
+		if len(labels) > 1 {
+			return []string{"run", "parallel"}
+		}
+		return []string{"run"}
 	}
 	for _, label := range labels {
 		if state.Graph.TargetOrDie(label).IsTest {

@@ -223,13 +223,7 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 	case err = <-ch:
 		// Do nothing.
 	case <-time.After(timeout):
-		// Send a relatively gentle signal that it can catch.
-		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			log.Notice("Failed to kill subprocess: %s", err)
-		}
-		time.Sleep(10 * time.Millisecond)
-		// Send a more forceful signal.
-		cmd.Process.Kill()
+		KillProcess(cmd)
 		err = fmt.Errorf("Timeout exceeded: %s", outerr.String())
 	}
 	return out.Bytes(), outerr.Bytes(), err
@@ -266,6 +260,31 @@ func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir 
 func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, error) {
 	_, out, err := ExecWithTimeout(nil, "", nil, time.Duration(timeout), timeout, false, false, cmd)
 	return out, err
+}
+
+// KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
+// shortly after if it hasn't exited.
+func KillProcess(cmd *exec.Cmd) {
+	if !killProcess(cmd, syscall.SIGTERM, 30*time.Millisecond) && !killProcess(cmd, syscall.SIGKILL, time.Second) {
+		log.Error("Failed to kill inferior process")
+	}
+}
+
+// killProcess implements the two-step killing of processes with a SIGTERM and a SIGKILL if
+// that's unsuccessful. It returns true if the process exited within the timeout.
+func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool {
+	// This is a bit of a fiddle. We want to wait for the process to exit but only for just so
+	// long (we do not want to get hung up if it ignores our SIGTERM).
+	log.Debug("Sending signal %s to %d", sig, cmd.Process.Pid)
+	syscall.Kill(cmd.Process.Pid, sig)
+	ch := make(chan error)
+	go runCommand(cmd, ch)
+	select {
+	case <-ch:
+		return true
+	case <-time.After(timeout):
+		return false
+	}
 }
 
 // A SourcePair represents a source file with its source and temporary locations.
