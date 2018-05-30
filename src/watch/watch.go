@@ -4,6 +4,7 @@
 package watch
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -35,6 +36,7 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
 	cmds := commands(state, labels, run)
+	var cancel func()
 
 	for {
 		select {
@@ -43,6 +45,11 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 			if !files.Has(event.Name) {
 				log.Notice("Skipping notification for %s", event.Name)
 				continue
+			}
+			if cancel != nil {
+				log.Info("Killing old process")
+				cancel()
+				cancel = nil
 			}
 			// Quick debounce; poll and discard all events for the next brief period.
 		outer:
@@ -53,20 +60,21 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 					break outer
 				}
 			}
-			runBuild(state, cmds, labels)
+			cancel = runBuild(state, cmds, labels)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
 	}
 }
 
-func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabel) {
+func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabel) func() {
 	binary, err := os.Executable()
 	if err != nil {
 		log.Warning("Can't determine current executable, will assume 'plz'")
 		binary = "plz"
 	}
-	cmd := core.ExecCommand(binary, commands...)
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, binary, commands...)
 	cmd.Args = append(cmd.Args, "-c", state.Config.Build.Config)
 	for _, label := range labels {
 		cmd.Args = append(cmd.Args, label.String())
@@ -74,13 +82,14 @@ func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabe
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	log.Notice("Running %s %s...", binary, strings.Join(commands, " "))
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
 		// Only log the error if it's not a straightforward non-zero exit; the user will presumably
 		// already have been pestered about that.
 		if _, ok := err.(*exec.ExitError); !ok {
 			log.Error("Failed to run %s: %s", binary, err)
 		}
 	}
+	return cancel
 }
 
 func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel, files cmap.ConcurrentMap) {
