@@ -131,3 +131,21 @@ pip_library(
         ":protobuf",
     ],
 )
+
+pip_library(
+    name = "pytz",
+    test_only = True,
+    version = "2018.4",
+)
+
+pip_library(
+    name = "pandas",
+    test_only = True,
+    version = "0.22.0",
+    deps = [
+        ":dateutil",
+        ":numpy",
+        ":pytz",
+        ":six",
+    ]
+)

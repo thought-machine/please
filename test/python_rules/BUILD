@@ -122,3 +122,13 @@ python_test(
     ],
     deps = ["//third_party/python:tensorflow"],
 )
+
+python_test(
+    name = "pandas_test",
+    srcs = ["pandas_test.py"],
+    labels = [
+        "py3",
+        "pip",
+    ],
+    deps = ["//third_party/python:pandas"],
+)
