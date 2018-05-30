@@ -128,6 +128,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 				}
 				target.SetState(core.Reused)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
+				buildLinks(state, target)
 				return nil // Nothing needs to be done.
 			}
 			log.Debug("Rebuilding %s after post-build function", target.Label)
