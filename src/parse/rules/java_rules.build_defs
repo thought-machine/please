@@ -296,7 +296,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
         # Deliberately not visible outside this package.
     )
     # As above, would be nicer if we could make the jars self-executing again.
-    cmd, tools = _jarcat_cmd('build.please.test.TestMain')
+    cmd, tools = _jarcat_cmd('build.please.main.TestMain')
     tools['junit'] = [CONFIG.JUNIT_RUNNER]
     cmd = 'ln -s $TOOLS_JUNIT . && ' + cmd
     test_cmd = 'java -Dbuild.please.testpackage=%s %s -jar $(location :%s) %s' % (
