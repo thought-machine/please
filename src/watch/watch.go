@@ -4,7 +4,6 @@
 package watch
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -36,7 +35,7 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
 	cmds := commands(state, labels, run)
-	var cancel func()
+	var cmd *exec.Cmd
 
 	for {
 		select {
@@ -46,10 +45,10 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 				log.Notice("Skipping notification for %s", event.Name)
 				continue
 			}
-			if cancel != nil {
-				log.Info("Killing old process")
-				cancel()
-				cancel = nil
+			if cmd != nil {
+				log.Info("Killing old process %d", cmd.Process.Pid)
+				core.KillProcess(cmd)
+				cmd = nil
 			}
 			// Quick debounce; poll and discard all events for the next brief period.
 		outer:
@@ -60,21 +59,23 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 					break outer
 				}
 			}
-			cancel = runBuild(state, cmds, labels)
+			cmd = runBuild(state, cmds, labels)
+			if !run {
+				cmd.Wait()
+			}
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
 	}
 }
 
-func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabel) func() {
+func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabel) *exec.Cmd {
 	binary, err := os.Executable()
 	if err != nil {
 		log.Warning("Can't determine current executable, will assume 'plz'")
 		binary = "plz"
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, binary, commands...)
+	cmd := core.ExecCommand(binary, commands...)
 	cmd.Args = append(cmd.Args, "-c", state.Config.Build.Config)
 	for _, label := range labels {
 		cmd.Args = append(cmd.Args, label.String())
@@ -89,7 +90,7 @@ func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabe
 			log.Error("Failed to run %s: %s", binary, err)
 		}
 	}
-	return cancel
+	return cmd
 }
 
 func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel, files cmap.ConcurrentMap) {
@@ -156,7 +157,10 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 // commands returns the plz commands that should be used for the given labels.
 func commands(state *core.BuildState, labels []core.BuildLabel, run bool) []string {
 	if run {
-		return []string{"run", "parallel"}
+		if len(labels) > 1 {
+			return []string{"run", "parallel"}
+		}
+		return []string{"run"}
 	}
 	for _, label := range labels {
 		if state.Graph.TargetOrDie(label).IsTest {

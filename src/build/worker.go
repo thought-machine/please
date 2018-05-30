@@ -15,8 +15,6 @@ import (
 	"path"
 	"strings"
 	"sync"
-	"syscall"
-	"time"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/shlex"
@@ -219,19 +217,11 @@ func (l *stderrLogger) Write(msg []byte) (int, error) {
 
 // StopWorkers stops any running worker processes.
 func StopWorkers() {
-	if len(workerMap) == 0 {
-		return
-	}
 	for name, worker := range workerMap {
 		log.Debug("Terminating build worker %s", name)
 		worker.closing = true         // suppress any error messages from worker
 		worker.stderr.Suppress = true // Make sure we don't print anything as they die.
-		syscall.Kill(worker.process.Process.Pid, syscall.SIGTERM)
-	}
-	time.Sleep(50 * time.Millisecond) // Brief pause to let them shut down first.
-	for name, worker := range workerMap {
-		log.Debug("Killing build worker %s", name)
-		worker.process.Process.Kill()
+		core.KillProcess(worker.process)
 	}
 	workerMap = map[string]*workerServer{}
 }
