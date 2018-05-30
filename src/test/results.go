@@ -39,11 +39,11 @@ func parseTestResultsImpl(outputFile string, surefireDir cli.Filepath) (core.Tes
 	if len(bytes) == 0 {
 		return core.TestResults{}, fmt.Errorf("No results")
 	} else if looksLikeJUnitXMLTestResults(bytes) {
-	    if surefireDir != "" {
-            surefireResult := filepath.Join(string(surefireDir), filepath.Base(outputFile))
-            if err := fs.CopyOrLinkFile(outputFile, surefireResult, os.ModePerm, true, true); err != nil {
-                log.Errorf("Error linking %s to %s - %s", surefireResult, outputFile, err)
-            }
+		if surefireDir != "" {
+			surefireResult := filepath.Join(string(surefireDir), filepath.Base(outputFile))
+			if err := fs.CopyOrLinkFile(outputFile, surefireResult, os.ModePerm, true, true); err != nil {
+				log.Errorf("Error linking %s to %s - %s", surefireResult, outputFile, err)
+			}
 		}
 		return parseJUnitXMLTestResults(bytes)
 	} else {
