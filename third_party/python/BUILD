@@ -147,5 +147,5 @@ pip_library(
         ":numpy",
         ":pytz",
         ":six",
-    ]
+    ],
 )

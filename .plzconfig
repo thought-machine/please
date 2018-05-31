@@ -47,7 +47,6 @@ targetlevel = 7
 
 [proto]
 protoctool = //third_party/proto:protoc
-pythonpackage = google.protobuf
 grpcjavaplugin = //third_party/java:protoc-gen-grpc-java
 protocgoplugin = //third_party/go:protoc-gen-go
 

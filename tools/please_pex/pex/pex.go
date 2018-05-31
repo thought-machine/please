@@ -86,7 +86,7 @@ func (pw *Writer) Write(out, moduleDir string) error {
 
 	// Always write pex_main.py, with some templating.
 	b := MustAsset("pex_main.py")
-	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(moduleDir), 1)
+	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(strings.Replace(moduleDir, ".", "/", -1)), 1)
 	b = bytes.Replace(b, []byte("__ENTRY_POINT__"), []byte(pw.realEntryPoint), 1)
 	b = bytes.Replace(b, []byte("__ZIP_SAFE__"), []byte(pythonBool(pw.zipSafe)), 1)
 

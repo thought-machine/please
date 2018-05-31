@@ -63,10 +63,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     # protoc_flags are applied transitively to dependent rules via labels.
     labels += ['protoc:' + flag for flag in protoc_flags]
 
-    # TODO(pebers): genericise these bits?
-    if ('py' in languages) and CONFIG.PROTO_PYTHON_PACKAGE:
-        cmds.append('find . -name "*_pb2.py" | xargs sed -i -e "s/from google.protobuf/from %s/g"' %
-                    CONFIG.PROTO_PYTHON_PACKAGE)
+    # TODO(pebers): genericise this bit?
     if 'go' in languages:
         base_path = get_base_path()
         labels += ['proto:go-map: %s/%s=%s/%s' % (base_path, src, base_path, name) for src in srcs

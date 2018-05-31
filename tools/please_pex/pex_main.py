@@ -19,45 +19,6 @@ ENTRY_POINT = '__ENTRY_POINT__'
 ZIP_SAFE = __ZIP_SAFE__
 
 
-class ModuleDirImport(object):
-    """Allows the given directory to be imported as though it was at the top level."""
-
-    def __init__(self, package=MODULE_DIR):
-        self.modules = set(self._listdir(package.replace('.', '/')))
-        self.prefix = package + '.'
-
-    def find_module(self, fullname, path=None):
-        """Attempt to locate module. Returns self if found, None if not."""
-        name, _, _ = fullname.partition('.')
-        if name in self.modules:
-            return self
-
-    def load_module(self, fullname):
-        mod = importlib.import_module(self.prefix + fullname)
-        mod.__name__ = fullname  # Make sure it has the expected name.
-        sys.modules[fullname] = mod
-        return mod
-
-    def _listdir(self, dirname):
-        """Yields the contents of the given directory as Python modules."""
-        import imp, zipfile
-        suffixes = sorted([x[0] for x in imp.get_suffixes()], key=lambda x: -len(x))
-        with zipfile.ZipFile(PEX, 'r') as zf:
-            for name in zf.namelist():
-                if name.startswith(dirname):
-                    path, _ = self.splitext(name[len(dirname)+1:], suffixes)
-                    if path:
-                        path, _, _ = path.partition('/')
-                        yield path.replace('/', '.')
-
-    def splitext(self, path, suffixes):
-        """Similar to os.path.splitext, but splits our longest known suffix preferentially."""
-        for suffix in suffixes:
-            if path.endswith(suffix):
-                return path[:-len(suffix)], suffix
-        return None, None
-
-
 class SoImport(object):
     """So import. Much binary. Such dynamic. Wow."""
 
@@ -75,7 +36,10 @@ class SoImport(object):
                 if path:
                     if path.startswith('.bootstrap/'):
                         path = path[len('.bootstrap/'):]
-                    self.modules.setdefault(path.replace('/', '.'), name)
+                    importpath = path.replace('/', '.')
+                    self.modules.setdefault(importpath, name)
+                    if path.startswith(MODULE_DIR):
+                        self.modules.setdefault(importpath[len(MODULE_DIR)+1:], name)
             if self.modules:
                 self.zf = zf
 
@@ -107,9 +71,27 @@ class SoImport(object):
         return None, None
 
 
-def override_import(package=MODULE_DIR):
-    """Augments system importer to allow importing from the given module as though it were at the top level."""
-    sys.meta_path.insert(0, ModuleDirImport(package))
+class ModuleDirImport(object):
+    """Handles imports to a directory equivalently to them being at the top level.
+
+    This means that if one writes `import third_party.python.six`, it's imported like `import six`,
+    but becomes accessible under both names. This handles both the fully-qualified import names
+    and packages importing as their expected top-level names internally.
+    """
+
+    def __init__(self, module_dir=MODULE_DIR):
+        self.prefix = module_dir.replace('/', '.') + '.'
+
+    def find_module(self, fullname, path=None):
+        """Attempt to locate module. Returns self if found, None if not."""
+        if fullname.startswith(self.prefix):
+            return self
+
+    def load_module(self, fullname):
+        """Actually load a module that we said we'd handle in find_module."""
+        module = importlib.import_module(fullname[len(self.prefix):])
+        sys.modules[fullname] = module
+        return module
 
 
 def clean_sys_path():
