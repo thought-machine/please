@@ -406,6 +406,14 @@ func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildRe
 }
 
 func (state *BuildState) logResult(result *BuildResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			// This is basically always "send on closed channel" which can happen because this
+			// channel gets closed while there might still be some other workers doing stuff.
+			// At that point we don't care much because the build has already failed.
+			log.Notice("%s", r)
+		}
+	}()
 	state.Results <- result
 	if state.RemoteResults != nil {
 		state.RemoteResults <- result
