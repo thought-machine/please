@@ -95,8 +95,10 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 		return config.Please.Version.Semver() != core.PleaseVersion
 	} else if (!updatesEnabled || !config.Please.SelfUpdate) && !updateCommand {
 		// Update is required but has been skipped (--noupdate or whatever)
-		word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
-		log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, core.PleaseVersion)
+		if config.Please.Version.Major != 0 {
+			word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
+			log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, core.PleaseVersion)
+		}
 		return false
 	} else if config.Please.Location == "" {
 		log.Warning("Please location not set in config, cannot auto-update.")
