@@ -133,6 +133,8 @@ type BuildState struct {
 	ShowAllOutput bool
 	// True to attach a debugger on test failure.
 	DebugTests bool
+	// True once we have killed the workers, so we only do it once.
+	workersKilled bool
 	// Number of running workers
 	numWorkers int
 	// Experimental directories
@@ -147,6 +149,7 @@ type stateProgress struct {
 	// Used to count the number of currently active/pending targets
 	numActive  int64
 	numPending int64
+	numRunning int64
 	numDone    int64
 	mutex      sync.Mutex
 	// Used to track subinclude() calls that block until targets are built.
@@ -218,6 +221,9 @@ func (state *BuildState) NextTask() (BuildLabel, BuildLabel, TaskType) {
 		log.Fatalf("error receiving next task: %s", err)
 	}
 	task := t[0].(pendingTask)
+	if task.Type == Build || task.Type == SubincludeBuild || task.Type == Test {
+		atomic.AddInt64(&state.progress.numRunning, 1)
+	}
 	return task.Label, task.Dependor, task.Type
 }
 
@@ -228,8 +234,11 @@ func (state *BuildState) addPending(label BuildLabel, t TaskType) {
 
 // TaskDone indicates that a single task is finished. Should be called after one is finished with
 // a task returned from NextTask(), or from a call to ExtraTask().
-func (state *BuildState) TaskDone() {
+func (state *BuildState) TaskDone(wasBuildOrTest bool) {
 	atomic.AddInt64(&state.progress.numDone, 1)
+	if wasBuildOrTest {
+		atomic.AddInt64(&state.progress.numRunning, -1)
+	}
 	if atomic.AddInt64(&state.progress.numPending, -1) <= 0 {
 		state.Stop(state.numWorkers)
 	}
@@ -251,7 +260,32 @@ func (state *BuildState) Kill(n int) {
 
 // KillAll kills all the workers.
 func (state *BuildState) KillAll() {
-	state.Kill(state.numWorkers)
+	if !state.workersKilled {
+		state.workersKilled = true
+		state.Kill(state.numWorkers)
+	}
+}
+
+// DelayedKillAll waits until no workers are running
+func (state *BuildState) DelayedKillAll() {
+	for state.anyRunningTasks() {
+	}
+	if state.progress.numPending > 0 {
+		log.Error("All workers seem deadlocked, stopping.")
+		state.KillAll()
+	}
+}
+
+// anyRunningTasks checks over a little while whether there are any tasks still running and
+// returns true if so.
+func (state *BuildState) anyRunningTasks() bool {
+	for i := 0; i < 10; i++ {
+		if state.progress.numRunning > 0 {
+			return true
+		}
+		time.Sleep(10 * time.Millisecond) // Give it a little time to see if anything wakes.
+	}
+	return state.progress.numRunning > 0
 }
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
@@ -560,6 +594,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		Stats:        &SystemStats{},
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
+			numRunning:      1, // Similarly.
 			numPending:      1,
 			pendingTargets:  map[BuildLabel]chan struct{}{},
 			pendingPackages: map[string]chan struct{}{},

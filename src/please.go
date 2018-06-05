@@ -632,14 +632,14 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 				if opts.VisibilityParse && state.IsOriginalTarget(label) {
 					parseForVisibleTargets(state, label)
 				}
-				state.TaskDone()
+				state.TaskDone(false)
 			}
 		case core.Build, core.SubincludeBuild:
 			build.Build(tid, state, label)
-			state.TaskDone()
+			state.TaskDone(true)
 		case core.Test:
 			test.Test(tid, state, label)
-			state.TaskDone()
+			state.TaskDone(true)
 		}
 	}
 }
@@ -765,7 +765,7 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 			findOriginalTask(state, target, true)
 		}
 	}
-	state.TaskDone() // initial target adding counts as one.
+	state.TaskDone(true) // initial target adding counts as one.
 }
 
 func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool) {

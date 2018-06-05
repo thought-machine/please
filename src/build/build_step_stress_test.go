@@ -44,7 +44,7 @@ func TestBuildLotsOfTargets(t *testing.T) {
 			log.Info("%s", result.Description)
 		}
 	}()
-	state.TaskDone() // Initial target adding counts as one.
+	state.TaskDone(true) // Initial target adding counts as one.
 	wg.Wait()
 }
 
@@ -91,7 +91,7 @@ func please(tid int, state *core.BuildState) {
 		default:
 			panic(fmt.Sprintf("unexpected task type: %d", t))
 		}
-		state.TaskDone()
+		state.TaskDone(true)
 	}
 }
 

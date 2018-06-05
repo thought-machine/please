@@ -206,6 +206,10 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		} else if !plainOutput { // plain output will have already logged this
 			log.Errorf("%s failed: %s", result.Label, shortError(result.Err))
 		}
+		if keepGoing {
+			// This will wait until we've finished up all possible tasks then kill everything off.
+			go state.DelayedKillAll()
+		}
 		*failedTargets = append(*failedTargets, label)
 		if result.Status != core.TargetTestFailed {
 			*failedNonTests = append(*failedNonTests, label)
