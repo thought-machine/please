@@ -235,6 +235,7 @@ type Configuration struct {
 		Autoclean        bool        `help:"Automatically clean stale versions without prompting"`
 		NumThreads       int         `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed." example:"6"`
 		Motd             []string    `help:"Message of the day; is displayed once at the top during builds. If multiple are given, one is randomly chosen."`
+		DefaultRepo      string      `help:"Location of the default repository; this is used if plz is invoked when not inside a repo, it changes to that directory then does its thing."`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
 		ExperimentalDir  []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`

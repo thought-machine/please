@@ -43,7 +43,7 @@ const DirPermissions = os.ModeDir | 0775
 // It returns true if the repo root was found.
 func FindRepoRoot() bool {
 	initialWorkingDir, _ = os.Getwd()
-	RepoRoot, initialPackage = getRepoRoot(ConfigFileName, false)
+	RepoRoot, initialPackage = getRepoRoot(ConfigFileName)
 	return RepoRoot != ""
 }
 
@@ -52,14 +52,29 @@ func FindRepoRoot() bool {
 func MustFindRepoRoot() string {
 	if RepoRoot != "" {
 		return RepoRoot
+	} else if FindRepoRoot() {
+		return RepoRoot
 	}
-	if !FindRepoRoot() {
-		RepoRoot, initialPackage = getRepoRoot("WORKSPACE", true)
+	RepoRoot, initialPackage = getRepoRoot("WORKSPACE")
+	if RepoRoot != "" {
 		log.Warning("No .plzconfig file found to define the repo root.")
 		log.Warning("Falling back to Bazel WORKSPACE at %s", path.Join(RepoRoot, "WORKSPACE"))
 		usingBazelWorkspace = true
+		return RepoRoot
 	}
-	return RepoRoot
+	// Check the config for a default repo location. Of course, we have to load system-level config
+	// in order to do that...
+	config, err := ReadConfigFiles([]string{MachineConfigFileName, ExpandHomePath(UserConfigFileName)}, "")
+	if err != nil {
+		log.Fatalf("Error reading config file: %s", err)
+	}
+	if config.Please.DefaultRepo != "" {
+		log.Warning("Using default repo at %s", config.Please.DefaultRepo)
+		RepoRoot = ExpandHomePath(config.Please.DefaultRepo)
+		return RepoRoot
+	}
+	log.Fatalf("Couldn't locate the repo root. Are you sure you're inside a plz repo?")
+	return ""
 }
 
 // InitialPackage returns a label corresponding to the initial package we started in.
@@ -79,7 +94,7 @@ func InitialPackage() []BuildLabel {
 }
 
 // getRepoRoot returns the root directory of the current repo and the initial package.
-func getRepoRoot(filename string, die bool) (string, string) {
+func getRepoRoot(filename string) (string, string) {
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Couldn't determine working directory: %s", err)
@@ -92,9 +107,6 @@ func getRepoRoot(filename string, die bool) (string, string) {
 		}
 		dir, _ = path.Split(dir)
 		dir = strings.TrimRight(dir, "/")
-	}
-	if die {
-		log.Fatalf("Couldn't locate the repo root. Are you sure you're inside a plz repo?")
 	}
 	return "", ""
 }
