@@ -47,7 +47,7 @@ def python_multiversion_wheel(name, version, repos, hashes=None, package_name=No
         name = name,
         srcs = file_rules,
         outs = outs or [package_name],
-        cmd = 'mkdir -p %s && for SRC in $SRCS; do unzip -o -qq -d %s $SRC; done && rm -rf %s/*.egg-info %s/*.dist-info' %
+        cmd = 'mkdir -p %s && for SRC in $SRCS; do $TOOL x -o %s $SRC; done && rm -rf %s/*.egg-info %s/*.dist-info' %
             (subdir, subdir, subdir, subdir),
         hashes = hashes,
         building_description = 'Extracting...',
@@ -55,4 +55,5 @@ def python_multiversion_wheel(name, version, repos, hashes=None, package_name=No
         test_only = test_only,
         visibility = visibility,
         labels = ['whl:%s==%s' % (package_name, version)],
+        tools = [CONFIG.JARCAT_TOOL],
     )
