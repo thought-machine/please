@@ -86,47 +86,47 @@ public class JavaCompiler {
         }
         String tmpDir = request.tempDir + "/_tmp";
         DiagnosticReporter reporter = new DiagnosticReporter(response);
-        try(StringWriter writer = new StringWriter()) {
+        try (StringWriter writer = new StringWriter()) {
             javax.tools.JavaCompiler compiler = newCompiler(request);
-            StandardJavaFileManager fileManager = compiler.getStandardFileManager(reporter, null, null);
-            ArrayList<String> srcs = new ArrayList<>();
-            for (String src : request.srcs) {
-                srcs.add(src.startsWith("/") ? src : request.tempDir + "/" + src);
-            }
-            Iterable<? extends JavaFileObject> compilationUnits;
-            ArrayList<String> opts = new ArrayList<>();
-            opts.addAll(Arrays.asList(
-                "-d", tmpDir,
-                "-s", tmpDir,
-                "-sourcepath", request.tempDir));
-            opts.addAll(request.opts);
-            if (opts.contains("--src_dir")) {
-                // Special flag that indicates that the sources are actually a directory and we should compile everything in it.
-                opts.remove("--src_dir");
-                FileFinder finder = new FileFinder(".java");
-                Files.walkFileTree(new File(request.tempDir + "/" + request.srcs.get(0)).toPath(), finder);
-                compilationUnits = fileManager.getJavaFileObjectsFromStrings(finder.getFiles());
-            } else {
-                compilationUnits = fileManager.getJavaFileObjectsFromStrings(srcs);
-            }
+            try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(reporter, null, null)) {
+                ArrayList<String> srcs = new ArrayList<>();
+                for (String src : request.srcs) {
+                    srcs.add(src.startsWith("/") ? src : request.tempDir + "/" + src);
+                }
+                Iterable<? extends JavaFileObject> compilationUnits;
+                ArrayList<String> opts = new ArrayList<>();
+                opts.addAll(Arrays.asList(
+                    "-d", tmpDir,
+                    "-s", tmpDir,
+                    "-sourcepath", request.tempDir));
+                opts.addAll(request.opts);
+                if (opts.contains("--src_dir")) {
+                    // Special flag that indicates that the sources are actually a directory and we should compile everything in it.
+                    opts.remove("--src_dir");
+                    FileFinder finder = new FileFinder(".java");
+                    Files.walkFileTree(new File(request.tempDir + "/" + request.srcs.get(0)).toPath(), finder);
+                    compilationUnits = fileManager.getJavaFileObjectsFromStrings(finder.getFiles());
+                } else {
+                    compilationUnits = fileManager.getJavaFileObjectsFromStrings(srcs);
+                }
 
-            // Find any .jar files and add them to the classpath or module-path
-            FileFinder finder = new FileFinder(".jar");
-            Files.walkFileTree(new File(request.tempDir).toPath(), finder);
+                // Find any .jar files and add them to the classpath or module-path
+                FileFinder finder = new FileFinder(".jar");
+                Files.walkFileTree(new File(request.tempDir).toPath(), finder);
 
-            if (opts.contains("--modular")) {
-                if (!areModulesSupported()) {
-                    return response.withMessage("The system java compiler does not support modules");               }
-                // Special flag that indicates that we're trying to use the new java 9 modular JVM
-                opts.remove("--modular");
-                opts.add("--module-path");
-            } else {
-                opts.add("-classpath");
+                if (opts.contains("--modular")) {
+                    if (!areModulesSupported()) {
+                        return response.withMessage("The system java compiler does not support modules");               }
+                    // Special flag that indicates that we're trying to use the new java 9 modular JVM
+                    opts.remove("--modular");
+                    opts.add("--module-path");
+                } else {
+                    opts.add("-classpath");
+                }
+                opts.add(finder.joinFiles(':'));
+                response.success = compiler.getTask(writer, fileManager, reporter, opts, null, compilationUnits).call();
+                return response.withMessage(writer.toString());
             }
-            opts.add(finder.joinFiles(':'));
-            response.success = compiler.getTask(writer, fileManager, reporter, opts, null, compilationUnits).call();
-            fileManager.close();
-            return response.withMessage(writer.toString());
         }
     }
 
