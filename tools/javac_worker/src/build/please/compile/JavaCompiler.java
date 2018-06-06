@@ -26,7 +26,7 @@ public class JavaCompiler {
      * run reads requests from stdin and sends them to stdout until they are closed.
      */
     public void run() {
-        ExecutorService executor = createExecutor();
+        ExecutorService executor = Executors.newFixedThreadPool(8);
         final Gson gson = new GsonBuilder()
             .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
             .create();
@@ -47,13 +47,6 @@ public class JavaCompiler {
                     }
                 });
         }
-    }
-
-    /**
-     * Overriding this allows customising the threadpool that is used.
-     */
-    protected ExecutorService createExecutor() {
-        return Executors.newCachedThreadPool();
     }
 
     /**
