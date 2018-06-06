@@ -125,6 +125,7 @@ public class JavaCompiler {
             }
             opts.add(finder.joinFiles(':'));
             response.success = compiler.getTask(writer, fileManager, reporter, opts, null, compilationUnits).call();
+            fileManager.close();
             return response.withMessage(writer.toString());
         }
     }
