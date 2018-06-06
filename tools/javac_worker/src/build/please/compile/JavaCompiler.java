@@ -53,7 +53,7 @@ public class JavaCompiler {
      * Overriding this allows customising the threadpool that is used.
      */
     protected ExecutorService createExecutor() {
-        return Executors.newFixedThreadPool(8);
+        return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     }
 
     /**
