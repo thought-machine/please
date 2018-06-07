@@ -308,7 +308,7 @@ func strPartition(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	sep := args[1].(pyString)
 	if idx := strings.Index(string(self), string(sep)); idx != -1 {
-		return pyList{self[:idx], self[idx : idx+1], self[idx+1:]}
+		return pyList{self[:idx], self[idx : idx+len(sep)], self[idx+len(sep):]}
 	}
 	return pyList{self, pyString(""), pyString("")}
 }

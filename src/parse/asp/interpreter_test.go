@@ -245,3 +245,10 @@ func TestOptimiseConfig(t *testing.T) {
 	assert.Equal(t, "GO_TOOL", statements[0].Ident.Action.Assign.Optimised.Config)
 	assert.EqualValues(t, "go", s.Lookup("x"))
 }
+
+func TestPartition(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, "27", s.Lookup("major"))
+	assert.EqualValues(t, "3", s.Lookup("minor"))
+}

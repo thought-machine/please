@@ -1,0 +1,1 @@
+major, _, minor = '27.0.3'.partition('.0.')
