@@ -54,7 +54,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	cachedTest := func() {
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)
-		results, err := parseTestResults(target, cachedOutputFile, true, state.Config.Test.SurefireDir)
+		results, err := parseTestResults(target, cachedOutputFile, true)
 		target.Results.Duration = time.Since(startTime)
 		target.Results.Cached = true
 		if err != nil {
@@ -193,7 +193,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 				resultMsg = fmt.Sprintf("Test failed with no results. Output: %s", string(out))
 			}
 		} else {
-			results, err2 := parseTestResults(target, outputFile, false, state.Config.Test.SurefireDir)
+			results, err2 := parseTestResults(target, outputFile, false)
 			if err2 != nil {
 				resultErr = err2
 				resultMsg = fmt.Sprintf("Couldn't parse test output file: %s. Stdout: %s", err2, string(out))
@@ -234,12 +234,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		// Success, clean things up
 		if moveAndCacheOutputFiles(&target.Results, &coverage) {
 			logTestSuccess(state, tid, label, &target.Results, &coverage)
-		}
-		// Clean up the test directory.
-		if state.CleanWorkdirs {
-			if err := os.RemoveAll(target.TestDir()); err != nil {
-				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
-			}
 		}
 	} else {
 		state.LogTestResult(tid, label, core.TargetTestFailed, &target.Results, &coverage, resultErr, resultMsg)

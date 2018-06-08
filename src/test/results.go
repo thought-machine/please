@@ -7,15 +7,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
-	"cli"
 	"core"
 	"fs"
 )
 
-func parseTestResults(target *core.BuildTarget, outputFile string, cached bool, surefireDir cli.Filepath) (core.TestResults, error) {
-	results, err := parseTestResultsDir(outputFile, surefireDir)
+func parseTestResults(target *core.BuildTarget, outputFile string, cached bool) (core.TestResults, error) {
+	results, err := parseTestResultsDir(outputFile)
 	results.Cached = cached
 	target.Results.Aggregate(&results)
 	// Ensure that the target has a failure if we encountered an error
@@ -31,7 +29,7 @@ func parseTestResults(target *core.BuildTarget, outputFile string, cached bool, 
 	return results, err
 }
 
-func parseTestResultsImpl(outputFile string, surefireDir cli.Filepath) (core.TestResults, error) {
+func parseTestResultsImpl(outputFile string) (core.TestResults, error) {
 	bytes, err := ioutil.ReadFile(outputFile)
 	if err != nil {
 		return core.TestResults{}, err
@@ -39,26 +37,20 @@ func parseTestResultsImpl(outputFile string, surefireDir cli.Filepath) (core.Tes
 	if len(bytes) == 0 {
 		return core.TestResults{}, fmt.Errorf("No results")
 	} else if looksLikeJUnitXMLTestResults(bytes) {
-		if surefireDir != "" {
-			surefireResult := filepath.Join(string(surefireDir), filepath.Base(outputFile))
-			if err := fs.CopyOrLinkFile(outputFile, surefireResult, os.ModePerm, true, true); err != nil {
-				log.Errorf("Error linking %s to %s - %s", surefireResult, outputFile, err)
-			}
-		}
 		return parseJUnitXMLTestResults(bytes)
 	} else {
 		return parseGoTestResults(bytes)
 	}
 }
 
-func parseTestResultsDir(outputDir string, surefireDir cli.Filepath) (core.TestResults, error) {
+func parseTestResultsDir(outputDir string) (core.TestResults, error) {
 	results := core.TestResults{}
 	if !core.PathExists(outputDir) {
 		return results, fmt.Errorf("Didn't find any test results in %s", outputDir)
 	}
 	err := fs.Walk(outputDir, func(path string, isDir bool) error {
 		if !isDir {
-			fileResults, err := parseTestResultsImpl(path, surefireDir)
+			fileResults, err := parseTestResultsImpl(path)
 			if err != nil {
 				return fmt.Errorf("Error parsing %s: %s", path, err)
 			}

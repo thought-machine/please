@@ -352,11 +352,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"test": func() bool {
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
-		os.RemoveAll(string(opts.Test.TestResultsFile))
-		os.MkdirAll(string(opts.Test.SurefireDir), os.ModePerm)
-		config.Test.SurefireDir = opts.Test.SurefireDir
-		success, state := runBuild(targets, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, string(opts.Test.TestResultsFile))
+		success, _ := doTest(targets)
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
@@ -366,13 +362,12 @@ var buildFunctions = map[string]func() bool{
 			opts.BuildFlags.Config = "cover"
 		}
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
-		os.RemoveAll(string(opts.Cover.TestResultsFile))
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
-		success, state := runBuild(targets, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, string(opts.Cover.TestResultsFile))
+		success, state := doTest(targets)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile))
+
 		if opts.Cover.LineCoverageReport {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile)
 		} else if !opts.Cover.NoCoverageReport {
@@ -645,6 +640,23 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 			state.TaskDone(true)
 		}
 	}
+}
+
+func doTest(targets []core.BuildLabel) (bool, *core.BuildState) {
+	os.RemoveAll(string(opts.Test.SurefireDir))
+	os.RemoveAll(string(opts.Test.TestResultsFile))
+	os.MkdirAll(string(opts.Test.SurefireDir), 0755)
+	success, state := runBuild(targets, true, true)
+	test.CopySurefireXmlFilesToDir(state.Graph, string(opts.Test.SurefireDir))
+	test.WriteResultsToFileOrDie(state.Graph, string(opts.Test.TestResultsFile))
+	if !opts.FeatureFlags.KeepWorkdirs {
+		for _, target := range targets {
+			if err := os.RemoveAll(target.TestDir()); err != nil {
+				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
+			}
+		}
+	}
+	return success, state
 }
 
 // parseForVisibleTargets adds parse tasks for any targets that the given label is visible to.
