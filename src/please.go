@@ -650,15 +650,6 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	success, state := runBuild(targets, true, true)
 	test.CopySurefireXmlFilesToDir(state.Graph, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
-	if !opts.FeatureFlags.KeepWorkdirs {
-		for _, target := range state.Graph.AllTargets() {
-			if target.IsTest {
-				if err := os.RemoveAll(target.TestDir()); err != nil {
-					log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
-				}
-			}
-		}
-	}
 	return success, state
 }
 

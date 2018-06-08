@@ -235,6 +235,12 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if moveAndCacheOutputFiles(&target.Results, &coverage) {
 			logTestSuccess(state, tid, label, &target.Results, &coverage)
 		}
+		// Clean up the test directory.
+		if state.CleanWorkdirs {
+			if err := os.RemoveAll(target.TestDir()); err != nil {
+				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
+			}
+		}
 	} else {
 		state.LogTestResult(tid, label, core.TargetTestFailed, &target.Results, &coverage, resultErr, resultMsg)
 	}
