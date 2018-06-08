@@ -9,6 +9,7 @@ import (
 )
 
 func CopySurefireXmlFilesToDir(graph *core.BuildGraph, surefireDir string) {
+	outputDirs := make(map[string]struct{})
 	for _, target := range graph.AllTargets() {
 		if target.IsTest {
 			outputDir := target.OutDir()
@@ -16,18 +17,22 @@ func CopySurefireXmlFilesToDir(graph *core.BuildGraph, surefireDir string) {
 				// Unable to find tests
 				continue
 			}
-			fs.Walk(outputDir, func(path string, isDir bool) error {
-				if !isDir {
-					bytes, _ := ioutil.ReadFile(path)
-					if looksLikeJUnitXMLTestResults(bytes) {
-						surefireResult := filepath.Join(surefireDir, filepath.Base(path))
-						if err := fs.CopyOrLinkFile(path, surefireResult, 0644, true, true); err != nil {
-							log.Errorf("Error linking %s to %s - %s", surefireResult, path, err)
-						}
+			outputDirs[outputDir] = struct{}{}
+		}
+	}
+
+	for outputDir := range outputDirs {
+		fs.Walk(outputDir, func(path string, isDir bool) error {
+			if !isDir {
+				bytes, _ := ioutil.ReadFile(path)
+				if looksLikeJUnitXMLTestResults(bytes) {
+					surefireResult := filepath.Join(surefireDir, filepath.Base(path))
+					if err := fs.CopyOrLinkFile(path, surefireResult, 0644, true, true); err != nil {
+						log.Errorf("Error linking %s to %s - %s", surefireResult, path, err)
 					}
 				}
-				return nil
-			})
-		}
+			}
+			return nil
+		})
 	}
 }
