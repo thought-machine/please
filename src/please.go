@@ -133,6 +133,7 @@ var opts struct {
 		IncludeAllFiles     bool         `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
 		IncludeFile         []string     `long:"include_file" description:"Filenames to filter coverage display to"`
 		TestResultsFile     cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		SurefireDir         cli.Filepath `long:"surefir_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
 		CoverageResultsFile cli.Filepath `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
 		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
@@ -352,7 +353,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"test": func() bool {
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
-		success, _ := doTest(targets)
+		success, _ := doTest(targets, opts.Test.SurefireDir, opts.Test.TestResultsFile)
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
@@ -363,7 +364,7 @@ var buildFunctions = map[string]func() bool{
 		}
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
-		success, state := doTest(targets)
+		success, state := doTest(targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile))
@@ -642,17 +643,19 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 	}
 }
 
-func doTest(targets []core.BuildLabel) (bool, *core.BuildState) {
-	os.RemoveAll(string(opts.Test.SurefireDir))
-	os.RemoveAll(string(opts.Test.TestResultsFile))
-	os.MkdirAll(string(opts.Test.SurefireDir), 0755)
+func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
+	os.RemoveAll(string(surefireDir))
+	os.RemoveAll(string(resultsFile))
+	os.MkdirAll(string(surefireDir),0755)
 	success, state := runBuild(targets, true, true)
-	test.CopySurefireXmlFilesToDir(state.Graph, string(opts.Test.SurefireDir))
-	test.WriteResultsToFileOrDie(state.Graph, string(opts.Test.TestResultsFile))
+	test.CopySurefireXmlFilesToDir(state.Graph, string(surefireDir))
+	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
 	if !opts.FeatureFlags.KeepWorkdirs {
-		for _, target := range targets {
-			if err := os.RemoveAll(target.TestDir()); err != nil {
-				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
+		for _, target := range state.Graph.AllTargets() {
+			if target.IsTest {
+				if err := os.RemoveAll(target.TestDir()); err != nil {
+					log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
+				}
 			}
 		}
 	}

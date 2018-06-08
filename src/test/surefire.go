@@ -3,7 +3,6 @@ package test
 import (
 	"io/ioutil"
 	"path/filepath"
-	"os"
 
 	"core"
 	"fs"
@@ -25,7 +24,7 @@ func CopySurefireXmlFilesToDir(graph *core.BuildGraph, surefireDir string) {
 					if looksLikeJUnitXMLTestResults(bytes) {
 			    		log.Infof("Found target with tests: %v", target)
 						surefireResult := filepath.Join(surefireDir, filepath.Base(path))
-						if err := fs.CopyOrLinkFile(path, surefireResult, os.ModePerm, true, true); err != nil {
+						if err := fs.CopyOrLinkFile(path, surefireResult, 0644, true, true); err != nil {
 							log.Errorf("Error linking %s to %s - %s", surefireResult, path, err)
 						}
 					}
