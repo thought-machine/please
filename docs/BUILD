@@ -82,3 +82,13 @@ go_binary(
     name = "grammar_templater",
     srcs = ["template_grammar.go"],
 )
+
+# Convenient for popping open the docs in a browser after building (must use 'plz run').
+sh_cmd(
+    name = "view",
+    cmd = "sensible-browser $(out_location :index_html)",
+    deps = [
+        ":docs",
+        ":index_html",
+    ],
+)

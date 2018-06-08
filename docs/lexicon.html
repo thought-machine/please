@@ -225,6 +225,20 @@
     <p>The input label can be given in either relative or absolute form. It will fail with an error
       if it's not a structurally valid label.</p>
 
+    <h3><a name="canonicalise">canonicalise</a></h3>
+
+    <p><pre class="rule"><code>canonicalise(label)</code></pre></p>
+
+    <p>Converts the given build label to its full form.</p>
+
+    <p>For example:
+      <ul>
+        <li><code>//package:target</code> -> <code>//package:target</code></li>
+        <li><code>//package</code> -> <code>//package:package</code></li>
+        <li><code>:target</code> -> <code>//current_package:target</code></li>
+      </ul>
+    </p>
+
 
     <h2><a name="cc">C and C++ rules</a></h2>
 

@@ -39,6 +39,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "join_path", joinPath).varargs = true
 	setNativeCode(s, "get_base_path", getBasePath)
 	setNativeCode(s, "package_name", packageName)
+	setNativeCode(s, "canonicalise", canonicalise)
 	setNativeCode(s, "get_labels", getLabels)
 	setNativeCode(s, "add_dep", addDep)
 	setNativeCode(s, "add_out", addOut)
@@ -506,6 +507,12 @@ func packageName(s *scope, args []pyObject) pyObject {
 		return pyString(s.pkg.Subrepo.MakeRelativeName(s.pkg.Name))
 	}
 	return pyString(s.pkg.Name)
+}
+
+func canonicalise(s *scope, args []pyObject) pyObject {
+	s.Assert(s.pkg != nil, "Cannot call canonicalise() from this context")
+	label := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
+	return pyString(label.String())
 }
 
 func pyRange(s *scope, args []pyObject) pyObject {

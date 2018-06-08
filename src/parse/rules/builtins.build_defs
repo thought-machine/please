@@ -124,6 +124,16 @@ def get_base_path():
 def package_name():
     pass
 
+def canonicalise(label:str):
+    """Converts the given build label to its full form.
+
+    For example:
+      //package:target -> //package:target
+      //package -> //package:package
+      :target -> //current_package:target
+    """
+    pass
+
 
 def keys(self):
     pass
