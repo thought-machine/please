@@ -1,8 +1,9 @@
 java_binary(
-    name = 'bin'
-    deps = [':jarjar'],
-    main_class = 'org.pantsbuild.jarjar.Main',
-    visibility = ['//tools/...'],
+    name = "bin",
+    main_class = "org.pantsbuild.jarjar.Main",
+    self_executable = True,
+    visibility = ["//tools/..."],
+    deps = [":jarjar"],
 )
 
 maven_jar(

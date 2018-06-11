@@ -1,0 +1,3 @@
+rule org.jacoco.** build.please.vendored.org.jacoco.@1
+rule org.objectweb.** build.please.vendored.org.objectweb.@1
+rule org.hamcrest.** build.please.vendored.org.hamcrest.@1
