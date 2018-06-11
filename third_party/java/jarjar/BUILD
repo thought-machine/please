@@ -1,3 +1,10 @@
+java_binary(
+    name = 'bin'
+    deps = [':jarjar'],
+    main_class = 'org.pantsbuild.jarjar.Main',
+    visibility = ['//tools/...'],
+)
+
 maven_jar(
     name = "jarjar",
     hash = "0e91aeb9659631d5a0e1082ed94f1bcfa143760f",
