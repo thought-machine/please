@@ -279,7 +279,8 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
 def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
                 test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
                 install_subdirectory:bool=False, repo:str=None, use_pypi:bool=None, patch:str|list=None,
-                visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None):
+                visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
+                keep_tests:bool=None):
     """Provides a build rule for third-party dependencies to be installed by pip.
 
     Args:
@@ -299,6 +300,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
       zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
       licences (list): Licences this rule is subject to. Default attempts to detect from package metadata.
       pip_flags (str): List of additional flags to pass to pip.
+      keep_tests (bool): Flag to keep 'tests' namespace within dependency. Default is to remove.
     """
     package_name = '%s==%s' % (package_name or name, version)
     outs = outs or [name]
@@ -332,7 +334,11 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         # Unfortunately it does *not* work similarly on the Debian problem :(
         cmd = 'echo "[install]\nprefix=" > .pydistutils.cfg; ' + cmd
     cmd += ' -b build %s %s %s %s' % (repo_flag, index_flag, pip_flags, package_name)
-    cmd += ' && find . -name "*.pyc" -or -name "tests" | xargs rm -rf'
+
+    rms = '-or -name "tests"'
+    if keep_tests:
+        rms = ''
+    cmd += ' && find . -name "*.pyc" %s | xargs rm -rf' % (rms)
 
     if not licences:
         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat'
