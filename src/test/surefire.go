@@ -11,7 +11,7 @@ import (
 func CopySurefireXmlFilesToDir(graph *core.BuildGraph, surefireDir string) {
 	outputDirs := make(map[string]struct{})
 	for _, target := range graph.AllTargets() {
-		if target.IsTest {
+		if target.IsTest && !target.NoTestOutput {
 			outputDir := target.OutDir()
 			if !core.PathExists(outputDir) {
 				// Unable to find tests
