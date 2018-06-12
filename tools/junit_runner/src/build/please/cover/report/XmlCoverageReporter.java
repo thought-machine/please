@@ -1,9 +1,9 @@
 package build.please.cover.report;
 
 import build.please.common.source.SourceMap;
-import org.jacoco.core.analysis.CoverageBuilder;
-import org.jacoco.core.analysis.IClassCoverage;
-import org.jacoco.core.analysis.ICounter;
+import build.please.vendored.org.jacoco.core.analysis.CoverageBuilder;
+import build.please.vendored.org.jacoco.core.analysis.IClassCoverage;
+import build.please.vendored.org.jacoco.core.analysis.ICounter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 

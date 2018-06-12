@@ -2,7 +2,7 @@ java_binary(
     name = "bin",
     main_class = "org.pantsbuild.jarjar.Main",
     self_executable = True,
-    visibility = ["//tools/..."],
+    visibility = ["//third_party/java/jacoco:all"],
     deps = [":jarjar"],
 )
 

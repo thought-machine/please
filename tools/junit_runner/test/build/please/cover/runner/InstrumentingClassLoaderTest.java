@@ -1,14 +1,14 @@
 package build.please.cover.runner;
 
-import org.jacoco.core.analysis.Analyzer;
-import org.jacoco.core.analysis.CoverageBuilder;
-import org.jacoco.core.analysis.IClassCoverage;
-import org.jacoco.core.data.ExecutionDataStore;
-import org.jacoco.core.data.SessionInfoStore;
-import org.jacoco.core.instr.Instrumenter;
-import org.jacoco.core.runtime.IRuntime;
-import org.jacoco.core.runtime.LoggerRuntime;
-import org.jacoco.core.runtime.RuntimeData;
+import build.please.vendored.org.jacoco.core.analysis.Analyzer;
+import build.please.vendored.org.jacoco.core.analysis.CoverageBuilder;
+import build.please.vendored.org.jacoco.core.analysis.IClassCoverage;
+import build.please.vendored.org.jacoco.core.data.ExecutionDataStore;
+import build.please.vendored.org.jacoco.core.data.SessionInfoStore;
+import build.please.vendored.org.jacoco.core.instr.Instrumenter;
+import build.please.vendored.org.jacoco.core.runtime.IRuntime;
+import build.please.vendored.org.jacoco.core.runtime.LoggerRuntime;
+import build.please.vendored.org.jacoco.core.runtime.RuntimeData;
 import org.junit.Before;
 import org.junit.Test;
 
