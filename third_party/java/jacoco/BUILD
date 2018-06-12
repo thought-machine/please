@@ -1,11 +1,22 @@
-java_library(
-    name = "jacoco",
-    exported_deps = [
+java_binary(
+    name = "jacoco_all",
+    deps = [
         ":asm",
         ":jacoco.agent",
         ":jacoco.core",
         ":jacoco.report",
     ],
+)
+
+genrule(
+    name = "jacoco",
+    srcs = {
+        "jar": [":jacoco_all"],
+        "rules": ["jarjar_rules.txt"],
+    },
+    outs = ["jacoco_shaded.jar"],
+    cmd = "$TOOL process $SRCS_RULES $SRCS_JAR $OUT",
+    tools = ["//third_party/java/jarjar:bin"],
     visibility = ["PUBLIC"],
 )
 
