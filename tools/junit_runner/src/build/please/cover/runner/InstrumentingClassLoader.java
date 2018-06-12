@@ -1,6 +1,6 @@
 package build.please.cover.runner;
 
-import org.jacoco.core.instr.Instrumenter;
+import build.please.vendored.org.jacoco.core.instr.Instrumenter;
 
 import java.io.IOException;
 import java.io.InputStream;

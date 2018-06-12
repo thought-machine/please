@@ -3,8 +3,8 @@ package build.please.cover.runner;
 import build.please.cover.result.CoverageRunResult;
 import build.please.test.runner.AlwaysAcceptingPleaseTestRunner;
 import build.please.test.runner.PleaseTestRunner;
-import org.jacoco.core.analysis.IClassCoverage;
-import org.jacoco.core.analysis.IMethodCoverage;
+import build.please.vendored.org.jacoco.core.analysis.IClassCoverage;
+import build.please.vendored.org.jacoco.core.analysis.IMethodCoverage;
 import org.junit.Assert;
 import org.junit.Test;
 

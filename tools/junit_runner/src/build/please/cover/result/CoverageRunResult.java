@@ -1,7 +1,7 @@
 package build.please.cover.result;
 
 import build.please.test.result.TestSuiteResult;
-import org.jacoco.core.analysis.CoverageBuilder;
+import build.please.vendored.org.jacoco.core.analysis.CoverageBuilder;
 
 import java.util.HashSet;
 import java.util.LinkedList;
