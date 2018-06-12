@@ -132,10 +132,15 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		target.Results.Failed++
 		return
 	}
-	if err := startTestWorkerIfNeeded(tid, state, target); err != nil {
+	if worker, err := startTestWorkerIfNeeded(tid, state, target); err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to start test worker")
 		target.Results.NumTests++
 		target.Results.Failed++
+		target.Results.Results = append(target.Results.Results, core.TestResult{
+			Name:   worker,
+			Type:   "Failed to start worker",
+			Stderr: err.Error(),
+		})
 		return
 	}
 	numSucceeded := 0
@@ -386,13 +391,15 @@ func calcNumRuns(numRuns, flakiness int) (int, int) {
 }
 
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
-func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
+func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
 	worker, _, _ := build.TestWorkerCommand(state, target)
 	if worker == "" {
-		return nil
+		return "", nil
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Starting test worker...")
 	err := build.EnsureWorkerStarted(state, worker, target.Label)
-	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
-	return err
+	if err != nil {
+		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
+	}
+	return worker, err
 }
