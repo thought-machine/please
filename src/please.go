@@ -113,6 +113,7 @@ var opts struct {
 		FailingTestsOk  bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NumRuns         int          `long:"num_runs" short:"n" description:"Number of times to run each test target."`
 		TestResultsFile cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		SurefireDir     cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
 		ShowOutput      bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug           bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed          bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
@@ -132,6 +133,7 @@ var opts struct {
 		IncludeAllFiles     bool         `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
 		IncludeFile         []string     `long:"include_file" description:"Filenames to filter coverage display to"`
 		TestResultsFile     cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		SurefireDir         cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
 		CoverageResultsFile cli.Filepath `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
 		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
@@ -351,9 +353,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"test": func() bool {
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
-		os.RemoveAll(string(opts.Test.TestResultsFile))
-		success, state := runBuild(targets, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, string(opts.Test.TestResultsFile))
+		success, _ := doTest(targets, opts.Test.SurefireDir, opts.Test.TestResultsFile)
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
@@ -363,13 +363,12 @@ var buildFunctions = map[string]func() bool{
 			opts.BuildFlags.Config = "cover"
 		}
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
-		os.RemoveAll(string(opts.Cover.TestResultsFile))
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
-		success, state := runBuild(targets, true, true)
-		test.WriteResultsToFileOrDie(state.Graph, string(opts.Cover.TestResultsFile))
+		success, state := doTest(targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile))
+
 		if opts.Cover.LineCoverageReport {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile)
 		} else if !opts.Cover.NoCoverageReport {
@@ -642,6 +641,16 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 			state.TaskDone(true)
 		}
 	}
+}
+
+func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
+	os.RemoveAll(string(surefireDir))
+	os.RemoveAll(string(resultsFile))
+	os.MkdirAll(string(surefireDir),0755)
+	success, state := runBuild(targets, true, true)
+	test.CopySurefireXmlFilesToDir(state.Graph, string(surefireDir))
+	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
+	return success, state
 }
 
 // parseForVisibleTargets adds parse tasks for any targets that the given label is visible to.
