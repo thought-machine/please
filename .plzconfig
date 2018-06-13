@@ -3,6 +3,7 @@
 ; Other projects using Please wouldn't normally need to do anything like this.
 pextool = //tools/please_pex
 moduledir = third_party.python
+defaultinterpreter = python3.7
 
 [parse]
 ; This is a hack to handle operating systems with case-insensitive file systems.
