@@ -398,7 +398,7 @@ func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.Build
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Starting test worker...")
 	err := build.EnsureWorkerStarted(state, worker, target.Label)
-	if err != nil {
+	if err == nil {
 		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
 	}
 	return worker, err
