@@ -455,23 +455,46 @@ func (f *File) WritePreamble(preamble []byte) error {
 // This is important so our output is deterministic.
 func (f *File) StripBytecodeTimestamp(filename string, contents []byte) error {
 	if strings.HasSuffix(filename, ".pyc") || strings.HasSuffix(filename, ".pyo") {
-		if len(contents) < 8 {
+		if len(contents) < 12 {
 			log.Warning("Invalid bytecode file, will not strip timestamp")
+		} else if f.isPy37(contents) {
+			// Check whether this is hash verified. This is probably unlikely since we don't
+			// pass appropriate flags but at this point it doesn't hurt to check.
+			if (contents[4] & 1) != 0 {
+				// Is hash verified. It should never be checked though.
+				contents[4] &^= 2
+			} else {
+				// Timestamp verified, zero it out.
+				f.zeroPycTimestamp(contents, 8)
+			}
 		} else {
 			// The .pyc format starts with a two-byte magic number, a \r\n, then a four-byte
 			// timestamp. It is that timestamp we are interested in; we overwrite it with
 			// the same mtime we use in the zipfile directory (it's important that it is
 			// deterministic, but also that it matches, otherwise zipimport complains).
-			var buf bytes.Buffer
-			binary.Write(&buf, binary.LittleEndian, modTime.Unix())
-			b := buf.Bytes()
-			contents[4] = b[0]
-			contents[5] = b[1]
-			contents[6] = b[2]
-			contents[7] = b[3]
+			f.zeroPycTimestamp(contents, 4)
 		}
 	}
 	return nil
+}
+
+// isPy37 determines if the leading magic number in a .pyc corresponds to Python 3.7.
+// This is important to us because the structure changed (see PEP 552) and we have to handle that.
+func (f *File) isPy37(b []byte) bool {
+	i := (int(b[1]) << 8) + int(b[0])
+	// Python 2 versions use magic numbers in the 20-60,000 range. Ensure it's not one of them.
+	return i >= 3394 && i < 10000
+}
+
+// zeroPycTimestamp zeroes out a .pyc timestamp at a given offset.
+func (f *File) zeroPycTimestamp(contents []byte, offset int) {
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.LittleEndian, modTime.Unix())
+	b := buf.Bytes()
+	contents[offset+0] = b[0]
+	contents[offset+1] = b[1]
+	contents[offset+2] = b[2]
+	contents[offset+3] = b[3]
 }
 
 type nopCloser struct {

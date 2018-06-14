@@ -10,6 +10,7 @@ REPOS = [
     "https://get.please.build/third_party/python/py34",
     "https://get.please.build/third_party/python/py35",
     "https://get.please.build/third_party/python/py36",
+    "https://get.please.build/third_party/python/py37",
 ]
 
 python_wheel(
