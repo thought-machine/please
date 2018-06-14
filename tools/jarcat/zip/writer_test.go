@@ -157,3 +157,11 @@ func TestIsSamePath(t *testing.T) {
 	assert.True(t, samePaths("/a", "/a"))
 	assert.False(t, samePaths("/a", "./a"))
 }
+
+func TestIsPy37(t *testing.T) {
+	f := NewFile("test_is_py37.zip", false)
+	assert.False(t, f.isPy37([]byte("\x03\xf3\r\n"))) // 2.7.15
+	assert.False(t, f.isPy37([]byte("\xee\x0c\r\n"))) // 3.4.3
+	assert.False(t, f.isPy37([]byte("3\r\r\n")))      // 3.6.2
+	assert.True(t, f.isPy37([]byte("B\r\r\n")))       // 3.7rc1
+}

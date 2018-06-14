@@ -484,7 +484,7 @@ func (f *File) isPy37(b []byte) bool {
 	// should probably convert this to a proper int...
 	if b[1] < 13 {
 		return false
-	} else if b[1] > 13 {
+	} else if b[1] > 13 && b[1] < 20 {
 		return true
 	}
 	// This corresponds to 3.7.0rc1; it's probably not quite accurate but unlikely to matter.
