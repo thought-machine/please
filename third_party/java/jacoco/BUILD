@@ -2,10 +2,10 @@ java_binary(
     name = "jacoco_all",
     deps = [
         ":asm",
+        ":asm-analysis",
         ":asm-commons",
         ":asm-tree",
         ":asm-util",
-        ":asm-analysis",
         ":jacoco.agent",
         ":jacoco.core",
         ":jacoco.report",
