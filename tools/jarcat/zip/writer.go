@@ -481,14 +481,9 @@ func (f *File) StripBytecodeTimestamp(filename string, contents []byte) error {
 // isPy37 determines if the leading magic number in a .pyc corresponds to Python 3.7.
 // This is important to us because the structure changed (see PEP 552) and we have to handle that.
 func (f *File) isPy37(b []byte) bool {
-	// should probably convert this to a proper int...
-	if b[1] < 13 {
-		return false
-	} else if b[1] > 13 && b[1] < 20 {
-		return true
-	}
-	// This corresponds to 3.7.0rc1; it's probably not quite accurate but unlikely to matter.
-	return b[0] >= 66
+	i := (int(b[1]) << 8) + int(b[0])
+	// Python 2 versions use magic numbers in the 20-60,000 range. Ensure it's not one of them.
+	return i >= 3394 && i < 10000
 }
 
 // zeroPycTimestamp zeroes out a .pyc timestamp at a given offset.
