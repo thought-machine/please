@@ -164,4 +164,6 @@ func TestIsPy37(t *testing.T) {
 	assert.False(t, f.isPy37([]byte("\xee\x0c\r\n"))) // 3.4.3
 	assert.False(t, f.isPy37([]byte("3\r\r\n")))      // 3.6.2
 	assert.True(t, f.isPy37([]byte("B\r\r\n")))       // 3.7rc1
+	assert.False(t, f.isPy37([]byte{0, 0, 0, 0}))
+	assert.False(t, f.isPy37([]byte{255, 255, 255, 255}))
 }

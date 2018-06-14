@@ -455,7 +455,7 @@ func (f *File) WritePreamble(preamble []byte) error {
 // This is important so our output is deterministic.
 func (f *File) StripBytecodeTimestamp(filename string, contents []byte) error {
 	if strings.HasSuffix(filename, ".pyc") || strings.HasSuffix(filename, ".pyo") {
-		if len(contents) < 8 {
+		if len(contents) < 12 {
 			log.Warning("Invalid bytecode file, will not strip timestamp")
 		} else if f.isPy37(contents) {
 			// Check whether this is hash verified. This is probably unlikely since we don't
