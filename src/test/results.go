@@ -12,30 +12,18 @@ import (
 	"fs"
 )
 
-func parseTestResults(target *core.BuildTarget, outputFile string, cached bool) (core.TestResults, error) {
+func parseTestResults(outputFile string) (core.TestSuite, error) {
 	results, err := parseTestResultsDir(outputFile)
-	results.Cached = cached
-	target.Results.Aggregate(&results)
-	// Ensure that the target has a failure if we encountered an error
-	if err != nil && target.Results.Failed == 0 {
-		target.Results.NumTests++
-		target.Results.Failed++
-	}
-	// Ensure that there is one success if the target succeeded but there are no tests.
-	if err == nil && target.Results.Failed == 0 && target.Results.NumTests == 0 {
-		target.Results.NumTests++
-		target.Results.Passed++
-	}
 	return results, err
 }
 
-func parseTestResultsImpl(outputFile string) (core.TestResults, error) {
+func parseTestResultsImpl(outputFile string) (core.TestSuite, error) {
 	bytes, err := ioutil.ReadFile(outputFile)
 	if err != nil {
-		return core.TestResults{}, err
+		return core.TestSuite{}, err
 	}
 	if len(bytes) == 0 {
-		return core.TestResults{}, fmt.Errorf("No results")
+		return core.TestSuite{}, fmt.Errorf("No results")
 	} else if looksLikeJUnitXMLTestResults(bytes) {
 		return parseJUnitXMLTestResults(bytes)
 	} else {
@@ -43,8 +31,8 @@ func parseTestResultsImpl(outputFile string) (core.TestResults, error) {
 	}
 }
 
-func parseTestResultsDir(outputDir string) (core.TestResults, error) {
-	results := core.TestResults{}
+func parseTestResultsDir(outputDir string) (core.TestSuite, error) {
+	results := core.TestSuite{}
 	if !core.PathExists(outputDir) {
 		return results, fmt.Errorf("Didn't find any test results in %s", outputDir)
 	}

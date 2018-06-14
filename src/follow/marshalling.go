@@ -32,7 +32,7 @@ func toProto(r *core.BuildResult) *pb.BuildEventResponse {
 			ExpectedFailures: int32(t.ExpectedFailures),
 			Skipped:          int32(t.Skipped),
 			Flakes:           int32(t.Flakes),
-			Results:          toProtoTestResults(t.Results),
+			Results:          toProtoTestResults(t.TestCases),
 			Output:           t.Output,
 			Duration:         int64(t.Duration),
 			Cached:           t.Cached,

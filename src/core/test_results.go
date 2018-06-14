@@ -7,44 +7,139 @@ import (
 	"time"
 )
 
-// TestResults describes a set of test results for a test target.
-type TestResults struct {
-	NumTests         int // Total number of test cases in the test target.
-	Passed           int // Number of tests that passed outright.
-	Failed           int // Number of tests that failed.
-	ExpectedFailures int // Number of tests that were expected to fail (counts as a pass, but displayed differently)
-	Skipped          int // Number of tests skipped (also count as passes)
-	Flakes           int // Number of failed attempts to run the test
-	Results          []TestResult
-	Output           string        // Stdout / stderr from the test.
-	Cached           bool          // True if the test results were retrieved from cache
-	TimedOut         bool          // True if the test failed because we timed it out.
-	Duration         time.Duration // Length of time this test took
+// TestSuite describes all the test results for a target.
+type TestSuite struct {
+	Name      string     // The name of the test suite (usually the target name)
+	Cached    bool       // True if the test results were retrieved from cache
+	TimedOut  bool       // True if the test failed because we timed it out.
+	TestCases []TestCase // The test cases that ran during this target
 }
 
-// TestResult represents detailed information about a test result
-type TestResult struct {
-	Name      string        // Name of failed test
-	Type      string        // Type of failure, eg. type of exception raised
-	Traceback string        // Traceback
-	Stdout    string        // Standard output during test
-	Stderr    string        // Standard error during test
-	Duration  time.Duration // Time the test took
-	Success   bool          // True if the test was successful
-	Skipped   bool          // True if the test was skipped
+func (testSuite *TestSuite) Errors() uint {
+	errors := uint(0)
+
+	for _, result := range testSuite.TestCases {
+		for _, execution := range result.Executions {
+			if execution.Error != nil {
+				errors++
+			}
+		}
+	}
+
+	return errors
 }
 
-// Aggregate aggregates the given results into this one.
-func (results *TestResults) Aggregate(r *TestResults) {
-	results.NumTests += r.NumTests
-	results.Passed += r.Passed
-	results.Failed += r.Failed
-	results.ExpectedFailures += r.ExpectedFailures
-	results.Skipped += r.Skipped
-	results.Flakes += r.Flakes
-	results.Results = append(results.Results, r.Results...)
-	results.Duration += r.Duration
-	// Output can't really be aggregated sensibly.
+func (testSuite *TestSuite) Failures() uint {
+	failures := uint(0)
+
+	for _, result := range testSuite.TestCases {
+		for _, execution := range result.Executions {
+			if execution.Failure != nil {
+				failures++
+			}
+		}
+	}
+
+	return failures
+}
+
+func (testSuite *TestSuite) Skips() uint {
+	skips := uint(0)
+
+	for _, result := range testSuite.TestCases {
+		for _, execution := range result.Executions {
+			if execution.Skip != nil {
+				skips++
+			}
+		}
+	}
+
+	return skips
+}
+
+func (testSuite *TestSuite) Duration() time.Duration {
+	duration := time.Duration(0)
+
+	for _, result := range testSuite.TestCases {
+		for _, execution := range result.Executions {
+			if execution.Duration != nil {
+				duration = duration + *execution.Duration
+			}
+		}
+	}
+
+	return duration
+}
+
+func (testSuite *TestSuite) Tests() uint {
+	return uint(len(testSuite.TestCases))
+}
+
+// TestCase describes a set of test results for a test target.
+type TestCase struct {
+	ClassName  string          // ClassName of test (optional, for languages that don't have classes)
+	Name       string          // Name of test
+	Executions []TestExecution // The results of executing the test, possibly multiple times
+}
+
+func (testCase TestCase) Success() *TestExecution {
+	for _, execution := range testCase.Executions {
+		if execution.Failure == nil &&
+			execution.Error == nil &&
+			execution.Skip == nil {
+			return &execution
+		}
+	}
+	return nil
+}
+
+func (testCase TestCase) Skip() *TestExecution {
+	for _, execution := range testCase.Executions {
+		if execution.Skip != nil {
+			return &execution
+		}
+	}
+	return nil
+}
+
+func (testCase TestCase) Failures() []TestExecution {
+	failures := make([]TestExecution, 0)
+	for _, execution := range testCase.Executions {
+		if execution.Failure != nil {
+			failures = append(failures, execution)
+		}
+	}
+	return failures
+}
+
+func (testCase TestCase) Errors() []TestExecution {
+	errors := make([]TestExecution, 0)
+	for _, execution := range testCase.Executions {
+		if execution.Error != nil {
+			errors = append(errors, execution)
+		}
+	}
+	return errors
+}
+
+// TestExecution represents one execution of a test class.
+type TestExecution struct {
+	Failure  *TestResultFailure // The failure, if any, running the test (usually an assertion that failed)
+	Error    *TestResultFailure // The error, if any, running the test (usually some other abnormal exit)
+	Skip     *TestResultSkip    // The reason for skipping the test, if it was skipped
+	Stdout   string             // Standard output during test
+	Stderr   string             // Standard error during test
+	Duration *time.Duration     // How long the test took (if it did not fail abnormally)
+}
+
+type TestResultFailure struct {
+	Type      string // The type of error (e.g. "AssertionError")
+	Message   string // The reason for error (e.g. "1 != 2")
+	Traceback string // The trace of the error (if known)
+}
+
+type TestResultSkip struct {
+	Message string // The reason for skipping the test
 }
 
 // A LineCoverage represents a single line of coverage, which can be in one of several states.

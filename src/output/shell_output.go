@@ -56,7 +56,7 @@ type buildingTargetData struct {
 	Eta          time.Duration
 }
 
-// MonitorState monitors the build while it's running (essentially until state.Results is closed)
+// MonitorState monitors the build while it's running (essentially until state.TestCases is closed)
 // and prints output while it's happening.
 func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest, shouldRun, showStatus, detailedTests bool, traceFile string) bool {
 	failedTargetMap := map[core.BuildLabel]error{}
@@ -236,7 +236,7 @@ func printTestResults(state *core.BuildState, aggregatedResults core.TestResults
 			} else {
 				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_WHITE}Took %s${RESET}\n",
 					target.Label, target.Results.Passed, target.Results.Skipped, target.Results.Failed, target.Results.Duration.Round(durationGranularity))
-				for _, failure := range target.Results.Results {
+				for _, failure := range target.Results.TestCases {
 					if failure.Success {
 						continue
 					}
@@ -270,12 +270,12 @@ func printTestResults(state *core.BuildState, aggregatedResults core.TestResults
 			if detailed {
 				// Determine max width of test name so we align them
 				width := 0
-				for _, result := range target.Results.Results {
+				for _, result := range target.Results.TestCases {
 					if len(result.Name) > width {
 						width = len(result.Name)
 					}
 				}
-				for _, result := range target.Results.Results {
+				for _, result := range target.Results.TestCases {
 					if result.Success {
 						printf(fmt.Sprintf("    ${GREEN}%%-%ds${RESET} ${BOLD_GREEN}PASS${RESET} %%s\n", width+1), result.Name, result.Duration)
 					} else if result.Skipped {
