@@ -280,7 +280,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
                 test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
                 install_subdirectory:bool=False, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
-                keep_tests:bool=None):
+                strip:list=[]):
     """Provides a build rule for third-party dependencies to be installed by pip.
 
     Args:
@@ -300,7 +300,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
       zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
       licences (list): Licences this rule is subject to. Default attempts to detect from package metadata.
       pip_flags (str): List of additional flags to pass to pip.
-      keep_tests (bool): Flag to keep 'tests' namespace within dependency. Default is to remove.
+      strip (list): Files to strip after install. Note that these are done at any level.
     """
     package_name = '%s==%s' % (package_name or name, version)
     outs = outs or [name]
@@ -335,10 +335,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         cmd = 'echo "[install]\nprefix=" > .pydistutils.cfg; ' + cmd
     cmd += ' -b build %s %s %s %s' % (repo_flag, index_flag, pip_flags, package_name)
 
-    rms = '-or -name "tests"'
-    if keep_tests:
-        rms = ''
-    cmd += ' && find . -name "*.pyc" %s | xargs rm -rf' % (rms)
+    if strip:
+        cmd += ' && find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])
 
     if not licences:
         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat'
@@ -400,7 +398,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
                  post_install_commands:list=None, patch:str|list=None, licences:list=None,
                  test_only:bool&testonly=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
-                 deps:list=[], name_scheme:str=None):
+                 deps:list=[], name_scheme:str=None, strip:list=['*.pyc', 'tests']):
     """Downloads a Python wheel and extracts it.
 
     This is a lightweight pip-free alternative to pip_library which supports cross-compiling.
@@ -430,6 +428,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
       deps (list): Dependencies of this rule.
       name_scheme (str): The templatized wheel naming scheme (available template variables
                          are `url_base`, `package_name`, and `version`).
+      strip (list): Files to strip after install. Note that these are done at any level.
     """
     package_name = package_name or name.replace('-', '_')
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
@@ -463,10 +462,9 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     cmd = [
         curl_commands,
         '$TOOL x *.whl',
-        # Strip any bytecode, it might lead to nondeterminism. Similarly some wheels annoyingly
-        # contain test code that we don't want.
-        'find . -name "*.pyc" -or -name "tests" | xargs rm -rf',
     ]
+    if strip:
+        cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
     if not licences:
         cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
                    'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')

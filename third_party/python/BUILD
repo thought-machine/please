@@ -117,63 +117,63 @@ python_wheel(
 )
 
 python_wheel(
-  name = "behave",
-  outs = [
-    "behave"
-  ],
-  version = "1.2.6",
-  hashes = ["sha1: f0908034da87e831cc10cc972db7f0de6de77ba7"],
-  deps = [
-    ":six",
-    ":parse",
-    ":parse_type",
-    ":traceback2",
-    ":enum34",
-    ":win_unicode_console",
-    ":colorama"
-  ],
+    name = "behave",
+    outs = [
+        "behave",
+    ],
+    hashes = ["sha1: f0908034da87e831cc10cc972db7f0de6de77ba7"],
+    version = "1.2.6",
+    deps = [
+        ":colorama",
+        ":enum34",
+        ":parse",
+        ":parse_type",
+        ":six",
+        ":traceback2",
+        ":win_unicode_console",
+    ],
 )
 
 python_wheel(
-  name = "parse",
-  version = "1.8.2",
-  hashes = ['sha1: 87572632723b2adab2294adb0a58108576b75317'],
-  outs = [
-      "parse.py",
-  ],
+    name = "parse",
+    outs = [
+        "parse.py",
+    ],
+    hashes = ["sha1: 87572632723b2adab2294adb0a58108576b75317"],
+    version = "1.8.2",
 )
 
 python_wheel(
     name = "parse_type",
-    hashes = ['sha1: e928e6f948e6085d8141ecdafbb07df51828afda'],
+    hashes = ["sha1: e928e6f948e6085d8141ecdafbb07df51828afda"],
     version = "0.4.2",
 )
 
 python_wheel(
     name = "traceback2",
+    hashes = ["sha1: 2c4b215a5e4c352d785a8977c3afb1a73f79153b"],
+    licences = ["PSF"],
     version = "1.4.0",
-    hashes = ['sha1: 2c4b215a5e4c352d785a8977c3afb1a73f79153b'],
-    licences = ['PSF']
 )
 
 python_wheel(
     name = "enum34",
     package_name = "enum",
-    hashes = ['sha1: 95fa8672f6190129fa657c0b29ac8ff378cb9f8d'],
-    outs = ['enum'],
+    outs = ["enum"],
+    hashes = ["sha1: 95fa8672f6190129fa657c0b29ac8ff378cb9f8d"],
     version = "1.1.6",
 )
 
 python_wheel(
     name = "win_unicode_console",
-    hashes = ['sha1: de9e0946c0f0774cbb6c9e340096da07a2b8b4db'],
+    hashes = ["sha1: de9e0946c0f0774cbb6c9e340096da07a2b8b4db"],
     version = "0.5",
 )
 
 python_wheel(
-  name = "colorama",
-  hashes = ['sha1: ee2bb9f67cd75e82dacab3ffcd92dd3e4d032a24'],
-  version = "0.3.9",
+    name = "colorama",
+    hashes = ["sha1: ee2bb9f67cd75e82dacab3ffcd92dd3e4d032a24"],
+    version = "0.3.9",
 )
 
 pip_library(
