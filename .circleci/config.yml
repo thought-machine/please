@@ -32,6 +32,8 @@ jobs:
              mv plz-out/gen/package/*.deb plz-out/gen/package/*.tar.gz /tmp/artifacts
        - store_artifacts:
            path: /tmp/artifacts
+       - store_artifacts:
+           path: plz-out/log
        - save_cache:
            key: bootstrap-linux-{{ checksum "bootstrap.sh" }}
            paths: [ ".bootstrap" ]
@@ -63,6 +65,8 @@ jobs:
            path: plz-out/results/test_results.xml
        - store_test_results:
            path: plz-out/surefire-reports
+       - store_artifacts:
+           path: plz-out/log
        - run:
            name: Lint
            command: ./tools/misc/ci_lint.py
@@ -98,6 +102,8 @@ jobs:
            path: plz-out/results/test_results.xml
        - store_test_results:
            path: plz-out/surefire-reports
+       - store_artifacts:
+           path: plz-out/log
        - run:
            name: Package
            command: |
