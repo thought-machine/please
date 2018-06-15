@@ -19,7 +19,7 @@ type Writer struct {
 	shebang                    string
 	realEntryPoint             string
 	testSrcs                   []string
-	testIncludes, testExcludes []string
+	testIncludes			   []string
 	testRunner                 string
 }
 
@@ -46,20 +46,44 @@ func (pw *Writer) SetShebang(shebang string) {
 
 // SetTest sets this Writer to write tests using the given sources.
 // This overrides the entry point given earlier.
-func (pw *Writer) SetTest(srcs []string, usePyTest bool) {
+func (pw *Writer) SetTest(srcs []string, testRunner string) {
 	pw.realEntryPoint = "test_main"
 	pw.testSrcs = srcs
-	if usePyTest {
+
+	commonIncludes := []string{
+		".bootstrap/coverage",
+		".bootstrap/__init__.py",
+		".bootstrap/six.py",
+	}
+
+	if testRunner == "pytest" {
 		// We only need xmlrunner for unittest, the equivalent is builtin to pytest.
-		pw.testExcludes = []string{".bootstrap/xmlrunner/*"}
+		pw.testIncludes = append(commonIncludes,
+			".bootstrap/pytest.py",
+			".bootstrap/_pytest",
+			".bootstrap/py",
+			".bootstrap/pluggy",
+			".bootstrap/attr",
+			".bootstrap/funcsigs",
+			".bootstrap/pkg_resources",
+		)
+
 		pw.testRunner = "pytest.py"
+	} else if testRunner == "behave" {
+		pw.testIncludes = append(commonIncludes,
+			".bootstrap/behave",
+			".bootstrap/parse.py",
+			".bootstrap/parse_type",
+			".bootstrap/traceback2",
+			".bootstrap/enum",
+			".bootstrap/win_unicode_console",
+			".bootstrap/colorama",
+		)
+		pw.testRunner = "behave.py"
 	} else {
-		pw.testIncludes = []string{
-			".bootstrap/xmlrunner",
-			".bootstrap/coverage",
-			".bootstrap/__init__.py",
-			".bootstrap/six.py",
-		}
+		pw.testIncludes = append(commonIncludes,
+			".bootstrap/xmlrunner")
+
 		pw.testRunner = "unittest.py"
 	}
 }
@@ -78,7 +102,6 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	// jarcat it directly in (nifty, huh?).
 	if len(pw.testSrcs) != 0 {
 		f.Include = pw.testIncludes
-		f.Exclude = pw.testExcludes
 		if err := f.AddZipFile(os.Args[0]); err != nil {
 			return err
 		}
