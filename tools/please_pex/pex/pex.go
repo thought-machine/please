@@ -58,7 +58,6 @@ func (pw *Writer) SetTest(srcs []string, testRunner string) {
 
 	if testRunner == "pytest" {
 		// We only need xmlrunner for unittest, the equivalent is builtin to pytest.
-		//pw.testExcludes = []string{".bootstrap/xmlrunner/*"}
 		pw.testIncludes = append(commonIncludes,
 			   				".bootstrap/pytest.py",
 								  ".bootstrap/_pytest",
@@ -82,12 +81,6 @@ func (pw *Writer) SetTest(srcs []string, testRunner string) {
 								)
 		pw.testRunner = "behave.py"
 	} else {
-		//pw.testIncludes = []string{
-		//	".bootstrap/xmlrunner",
-		//	".bootstrap/coverage",
-		//	".bootstrap/__init__.py",
-		//	".bootstrap/six.py",
-		//}
 		pw.testIncludes = append(commonIncludes,
 							".bootstrap/xmlrunner")
 
