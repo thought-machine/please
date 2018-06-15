@@ -19,7 +19,7 @@ var opts = struct {
 	TestSrcs    []string `long:"test_srcs" env:"SRCS" env-delim:" " description:"Test source files"`
 	Test        bool     `short:"t" long:"test" description:"True if we're to build a test"`
 	Interpreter string   `short:"i" long:"interpreter" env:"TOOLS_INTERPRETER" description:"Python interpreter to use"`
-	TestRunner  string   `short:"r" long:"test_runner" choice:"unittest" choice:"pytest" default:"unittest" description:"Test runner to use"`
+	TestRunner  string   `short:"r" long:"test_runner" choice:"unittest" choice:"pytest" choice:"behave" default:"unittest" description:"Test runner to use"`
 	Shebang     string   `short:"s" long:"shebang" description:"Explicitly set shebang to this"`
 	ZipSafe     bool     `long:"zip_safe" description:"Marks this pex as zip-safe"`
 	NoZipSafe   bool     `long:"nozip_safe" description:"Marks this pex as zip-unsafe"`
@@ -41,7 +41,7 @@ func main() {
 		w.SetShebang(opts.Shebang)
 	}
 	if opts.Test {
-		w.SetTest(opts.TestSrcs, opts.TestRunner == "pytest")
+		w.SetTest(opts.TestSrcs, opts.TestRunner)
 	}
 	if err := w.Write(opts.Out, opts.ModuleDir); err != nil {
 		log.Fatalf("%s", err)

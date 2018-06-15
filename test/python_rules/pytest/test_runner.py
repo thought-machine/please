@@ -17,3 +17,4 @@ def test_answer():
 def test_pytest_is_importable():
     """Slightly more useful test; if pytest can't be imported, this can't be working..."""
     assert pytest
+
