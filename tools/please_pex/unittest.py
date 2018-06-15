@@ -22,7 +22,7 @@ def filter_suite(suite, test_names):
     return new_suite
 
 
-def import_tests(test_names):
+def import_tests():
     """Yields the set of test modules, from file if necessary."""
     # We have files available locally, but there may (likely) also be python files in the same
     # Python package within the pex. We can't just import them because the parent package exists
@@ -47,7 +47,7 @@ def run_tests(test_names):
     # N.B. import must be deferred until we have set up import paths.
     import xmlrunner
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(module)
-                               for module in import_tests(test_names))
+                               for module in import_tests())
     if test_names:
         suite = filter_suite(suite, test_names)
         if suite.countTestCases() == 0:
