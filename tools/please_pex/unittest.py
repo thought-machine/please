@@ -26,7 +26,7 @@ def get_suite(test_names, raise_on_empty=False):
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(module)
                                for module in import_tests())
     # Filter to test name only, this ensures the extra flags does not get swallowed
-    test_names = (filter(lambda x: not x.startswith('-'), test_names))
+    test_names = list(filter(lambda x: not x.startswith('-'), test_names))
 
     # filter results if test_names is not empty
     if test_names:
