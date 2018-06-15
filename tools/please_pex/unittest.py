@@ -18,7 +18,8 @@ def filter_suite(suite, test_names):
     """Reduces a test suite to just the tests matching the given names."""
     new_suite = unittest.suite.TestSuite()
     for name in test_names:
-        new_suite.addTests(cls for cls, class_name in list_classes(suite) if name in class_name)
+        new_suite.addTests(cls for cls, class_name in list_classes(suite)
+                           if name in class_name)
     return new_suite
 
 
@@ -48,6 +49,9 @@ def run_tests(test_names):
     import xmlrunner
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(module)
                                for module in import_tests())
+
+    test_names = list(filter(lambda x: not x.startswith('-'), test_names))
+
     if test_names:
         suite = filter_suite(suite, test_names)
         if suite.countTestCases() == 0:
