@@ -19,7 +19,7 @@ type Writer struct {
 	shebang                    string
 	realEntryPoint             string
 	testSrcs                   []string
-	testIncludes, testExcludes []string
+	testIncludes			   []string
 	testRunner                 string
 }
 
@@ -102,7 +102,6 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	// jarcat it directly in (nifty, huh?).
 	if len(pw.testSrcs) != 0 {
 		f.Include = pw.testIncludes
-		f.Exclude = pw.testExcludes
 		if err := f.AddZipFile(os.Args[0]); err != nil {
 			return err
 		}
