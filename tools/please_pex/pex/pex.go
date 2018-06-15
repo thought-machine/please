@@ -59,30 +59,30 @@ func (pw *Writer) SetTest(srcs []string, testRunner string) {
 	if testRunner == "pytest" {
 		// We only need xmlrunner for unittest, the equivalent is builtin to pytest.
 		pw.testIncludes = append(commonIncludes,
-			   				".bootstrap/pytest.py",
-								  ".bootstrap/_pytest",
-								  ".bootstrap/py",
-								  ".bootstrap/pluggy",
-								  ".bootstrap/attr",
-								  ".bootstrap/funcsigs",
-								  ".bootstrap/pkg_resources",
-								  	)
+			".bootstrap/pytest.py",
+			".bootstrap/_pytest",
+			".bootstrap/py",
+			".bootstrap/pluggy",
+			".bootstrap/attr",
+			".bootstrap/funcsigs",
+			".bootstrap/pkg_resources",
+		)
 
 		pw.testRunner = "pytest.py"
 	} else if testRunner == "behave" {
 		pw.testIncludes = append(commonIncludes,
-							".bootstrap/behave",
-							".bootstrap/parse.py",
-							".bootstrap/parse_type",
-							".bootstrap/traceback2",
-							".bootstrap/enum",
-							".bootstrap/win_unicode_console",
-							".bootstrap/colorama",
-								)
+			".bootstrap/behave",
+			".bootstrap/parse.py",
+			".bootstrap/parse_type",
+			".bootstrap/traceback2",
+			".bootstrap/enum",
+			".bootstrap/win_unicode_console",
+			".bootstrap/colorama",
+		)
 		pw.testRunner = "behave.py"
 	} else {
 		pw.testIncludes = append(commonIncludes,
-							".bootstrap/xmlrunner")
+			".bootstrap/xmlrunner")
 
 		pw.testRunner = "unittest.py"
 	}
