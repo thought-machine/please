@@ -15,42 +15,54 @@ type TestSuite struct {
 	TestCases []TestCase // The test cases that ran during this target
 }
 
+// Passes returns the number of TestCases which succeeded (not skipped).
+func (suite TestSuite) Passes() uint {
+	passes := uint(0)
+
+	for _, result := range suite.TestCases {
+		if result.Success() != nil {
+			passes++
+		}
+	}
+
+	return passes
+}
+
+// Errors returns the number of TestCases which did not succeed and returned some error.
 func (testSuite *TestSuite) Errors() uint {
 	errors := uint(0)
 
 	for _, result := range testSuite.TestCases {
-		for _, execution := range result.Executions {
-			if execution.Error != nil {
-				errors++
-			}
+		// No success result, not skipped, some errors (don't care about the presence of failures)
+		if result.Success() == nil && result.Skip() == nil && len(result.Errors()) > 0 {
+			errors++
 		}
 	}
 
 	return errors
 }
 
+// Failures returns the number of TestCases which did not succeed and returned some failure.
 func (testSuite *TestSuite) Failures() uint {
 	failures := uint(0)
 
 	for _, result := range testSuite.TestCases {
-		for _, execution := range result.Executions {
-			if execution.Failure != nil {
-				failures++
-			}
+		// No success result, not skipped, no errors, but some failures.
+		if result.Success() == nil && result.Skip() == nil && len(result.Errors()) == 0 && len(result.Failures()) > 0 {
+			failures++
 		}
 	}
 
 	return failures
 }
 
+// Skips returns the number of TestCases that were skipped.
 func (testSuite *TestSuite) Skips() uint {
 	skips := uint(0)
 
 	for _, result := range testSuite.TestCases {
-		for _, execution := range result.Executions {
-			if execution.Skip != nil {
-				skips++
-			}
+		if result.Skip() != nil {
+			skips++
 		}
 	}
 
@@ -120,6 +132,16 @@ func (testCase TestCase) Errors() []TestExecution {
 		}
 	}
 	return errors
+}
+
+func (testCase TestCase) Duration() *time.Duration {
+	if testCase.Success() != nil {
+		return testCase.Success().Duration
+	} else if len(testCase.Failures()) > 0{
+		return testCase.Failures()[0].Duration
+	}
+	// Unable to determine duration of this test case.
+	return nil
 }
 
 // TestExecution represents one execution of a test class.

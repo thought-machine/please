@@ -42,7 +42,7 @@ func parseTestResultsDir(outputDir string) (core.TestSuite, error) {
 			if err != nil {
 				return fmt.Errorf("Error parsing %s: %s", path, err)
 			}
-			results.Aggregate(&fileResults)
+			results.TestCases = append(results.TestCases, fileResults.TestCases...)
 		}
 		return nil
 	})
