@@ -230,7 +230,6 @@ func printTestResults(state *core.BuildState, aggregatedResults core.TestSuite, 
 			target := state.Graph.TargetOrDie(failed)
 			if target.Results.Failures() == 0 {
 				if target.Results.TimedOut {
-					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
 				} else {
 					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
 				}
@@ -262,41 +261,63 @@ func printTestResults(state *core.BuildState, aggregatedResults core.TestSuite, 
 	// Print individual test results
 	i := 0
 	for _, target := range state.Graph.AllTargets() {
-		if target.IsTest && len(target.Results.TestCases) > 0 {
-			if target.Results.Errors() > 0 {
-				printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
-			} else if target.Results.Failures() > 0 {
-				printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
-			} else {
-				// Succeeded or skipped
-				printf("${GREEN}%s${RESET} %s\n", target.Label, 	testResultMessage(target.Results))
-			}
-			if detailed {
-				// Determine max width of test name so we align them
-				width := 0
-				for _, result := range target.Results.TestCases {
-					if len(result.Name) > width {
-						width = len(result.Name)
+		if target.IsTest {
+			if len(target.Results.TestCases) > 0 {
+				if target.Results.Errors() > 0 {
+					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+				} else if target.Results.Failures() > 0 {
+					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+				} else {
+					// Succeeded or skipped
+					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+				}
+				if detailed {
+					// Determine max width of test name so we align them
+					width := 0
+					for _, result := range target.Results.TestCases {
+						if len(result.Name) > width {
+							width = len(result.Name)
+						}
+					}
+					format := fmt.Sprintf("%%-%ds", width+1)
+					for _, result := range target.Results.TestCases {
+						name := fmt.Sprintf(format, result.Name)
+						for _, execution := range result.Executions {
+							if execution.Error != nil {
+								printf("    ${CYAN}%s${RESET} ${BOLD_CYAN}ERROR${RESET}\n", name)
+							} else if execution.Failure != nil {
+								printf("    ${RED}%s${RESET} ${BOLD_RED}FAILURE${RESET} %s\n", name, execution.Duration)
+							} else if execution.Skip != nil {
+								// Not usually interesting to have a duration when we did no work.
+								printf("    ${YELLOW}%s${RESET} ${BOLD_YELLOW}SKIP${RESET}\n", name)
+							} else {
+								printf("    ${GREEN}%s${RESET} ${BOLD_GREEN}PASS${RESET} %s\n", name, result.Duration())
+							}
+							if state.ShowTestOutput {
+								if execution.Stdout != "" {
+									printf("        STDOUT:\n")
+									for _, line := range strings.Split(execution.Stdout, "\n") {
+										printf("        %s\n", line)
+									}
+								}
+								if execution.Stderr != "" {
+									printf("        STDERR:\n")
+									for _, line := range strings.Split(execution.Stderr, "\n") {
+										printf("        %s\n", line)
+									}
+								}
+							}
+						}
 					}
 				}
-				for _, result := range target.Results.TestCases {
-					if result.Success() != nil {
-						printf(fmt.Sprintf("    ${GREEN}%%-%ds${RESET} ${BOLD_GREEN}PASS${RESET} %%s\n", width+1), result.Name, result.Duration)
-					} else if result.Skip() != nil {
-						printf(fmt.Sprintf("    ${YELLOW}%%-%ds${RESET} ${BOLD_YELLOW}SKIP${RESET} %%s\n", width+1), result.Name, result.Duration)
-					} else {
-						printf(fmt.Sprintf("    ${RED}%%-%ds${RESET} ${BOLD_RED}FAIL${RESET} %%s\n", width+1), result.Name, result.Duration)
-					}
-				}
+				i++
+			} else if target.Results.TimedOut {
+				printf("${RED}%s${RESET} ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
 			}
-			if state.ShowTestOutput && target.Results.Output != "" {
-				printf("Test output:\n%s\n", target.Results.Output)
-			}
-			i++
 		}
 	}
 	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}. Total time %s.${RESET}\n",
-		pluralise(i, "test target", "test targets"), testResultMessage(aggregatedResults, failedTargets), duration))
+		pluralise(i, "test target", "test targets"), testResultMessage(aggregatedResults), duration))
 }
 
 // logProgress continually logs progress messages every 10s explaining where we're up to.
@@ -338,6 +359,9 @@ func testResultMessage(results core.TestSuite) string {
 	}
 	if results.Flakes > 0 {
 		msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.Flakes, "flake", "flakes"))
+	}
+	if results.TimedOut {
+		msg += fmt.Sprintf(", ${RED_ON_WHITE}TIMED OUT${RESET}")
 	}
 	if results.Cached {
 		msg += " ${GREEN}[cached]${RESET}"
