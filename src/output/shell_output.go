@@ -181,7 +181,8 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	cached := result.Status == core.TargetCached || result.Tests.Cached
 	stopped := result.Status == core.TargetBuildStopped
 	parse := result.Status == core.PackageParsing || result.Status == core.PackageParsed || result.Status == core.ParseFailed
-	if shouldTrace {
+	// Parse events can overlap in weird ways that mess up the display.
+	if shouldTrace && !parse {
 		addTrace(result, buildingTargets[result.ThreadID].Label, active)
 	}
 	if failed && result.Tests.NumTests == 0 && result.Tests.Failed == 0 {

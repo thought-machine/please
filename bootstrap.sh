@@ -130,7 +130,7 @@ if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ]; then
     EXCLUDES="${EXCLUDES} --exclude=x86"
 fi
 
-plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 $@
+plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
 
 # Lint needs python3.
 if hash python3 2>/dev/null ; then
