@@ -28,7 +28,7 @@ def initialise_coverage():
 
 def main():
     """Runs the tests. Returns an appropriate exit code."""
-    args = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
+    args = [arg for arg in sys.argv[1:]]
     # Add .bootstrap dir to path, after the initial pex entry
     sys.path = sys.path[:1] + [os.path.join(sys.path[0], '.bootstrap')] + sys.path[1:]
     if os.getenv('COVERAGE'):
