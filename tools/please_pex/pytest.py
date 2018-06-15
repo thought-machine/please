@@ -8,8 +8,20 @@ def run_tests(args):
     args = args or []
 
     # Added this so the original filter functionality by name does not change
-    if args and not args[0].startswith('-'):
-        args += ['-k', ' '.join(args)]
+    if args:
+        filtered_tests = ' '
+
+        for i in args:
+            if not i.startswith('-'):
+                filtered_tests += f"{i}"
+                args.remove(i)
+
+        if filtered_tests:
+            try:
+                args.remove('-k')
+            except ValueError:
+                pass
+            args += ['-k', filtered_tests]
 
     args += ['--junitxml', 'test.results'] + TEST_NAMES
 
