@@ -48,14 +48,11 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	cachedCoverageFile := path.Join(target.OutDir(), coverageFileName)
 	needCoverage := state.NeedCoverage && !target.NoTestOutput
 
-	target.Results.Name = target.Label.String()
-
-	cachedTest := func() {
+	cachedTestResults := func() core.TestSuite {
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)
 		results, err := parseTestResults(cachedOutputFile)
 		results.Cached = true
-		target.Results = results
 		if err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to parse cached test file %s", cachedOutputFile)
 		} else if results.Failures() > 0 {
@@ -63,6 +60,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		} else {
 			logTestSuccess(state, tid, label, &results, &coverage)
 		}
+		return results
 	}
 
 	moveAndCacheOutputFiles := func(results *core.TestSuite, coverage *core.TestCoverage) bool {
@@ -121,9 +119,15 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
 	if state.NumTestRuns <= 1 && !needToRun() {
-		cachedTest()
+		target.Results = cachedTestResults()
 		return
 	}
+
+	// Fresh set of results for this target.
+	target.Results = core.TestSuite{
+		Name: target.Label.String(),
+	}
+
 	// Remove any cached test result file.
 	if err := RemoveCachedTestFiles(target); err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove cached test files")
@@ -135,7 +139,11 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			Name: worker,
 			Executions: []core.TestExecution{
 				{
-					Stderr: err.Error(),
+					Failure: &core.TestResultFailure{
+						Message:   "Failed to start test worker",
+						Type:      "WorkerFail",
+						Traceback: err.Error(),
+					},
 				},
 			},
 		}
@@ -155,7 +163,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i+1, numRuns))
 		}
 		startTime := time.Now() // reset this for next time
-		out, err := prepareAndRunTest(tid, state, target)
+		out, runError := prepareAndRunTest(tid, state, target)
 		duration := time.Since(startTime)
 
 		// This is all pretty involved; there are lots of different possibilities of what could happen.
@@ -165,20 +173,21 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		// Tests can opt out of the file requirement individually, in which case they're judged only
 		// by their return value.
 		// But of course, we still have to consider all the alternatives here and handle them nicely.
-		target.Results.TimedOut = err == context.DeadlineExceeded
+		target.Results.TimedOut = runError == context.DeadlineExceeded
 		if !core.PathExists(outputFile) {
-			if err == nil && target.NoTestOutput {
+			if runError == nil && target.NoTestOutput {
 				testCase := core.TestCase{
 					Name: target.Results.Name,
 					Executions: []core.TestExecution{
 						{
 							Duration: &duration,
+							Stdout:   string(out),
 						},
 					},
 				}
 				target.Results.TestCases = append(target.Results.TestCases, testCase)
 				numSucceeded++
-			} else if err == nil {
+			} else if runError == nil {
 				testCase := core.TestCase{
 					Name: target.Results.Name,
 					Executions: []core.TestExecution{
@@ -203,29 +212,30 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 						{
 							Duration: &duration,
 							Error: &core.TestResultFailure{
-								Message: "Test errored with no results",
-								Type:    "NoResults",
+								Message:   "Test errored with no results",
+								Type:      "NoResults",
+								Traceback: runError.Error(),
 							},
 							Stdout: string(out),
 						},
 					},
 				}
 				target.Results.TestCases = append(target.Results.TestCases, testCase)
-				numFlakes++
-				resultErr = err
+				resultErr = runError
 				resultMsg = fmt.Sprintf("Test failed with no results. Output: %s", string(out))
+				numFlakes++
 			}
 		} else {
-			results, err2 := parseTestResults(outputFile)
+			results, parseError := parseTestResults(outputFile)
+			results.Name = target.Label.String()
 			// TODO(agenticarus): If this flakes and we run multiple times, we need to aggregate here, that's why it existed.
 			// At least we can be sure the name matches etc.
-			// target.Results.Aggregate(results)
-			target.Results = results
-			if err2 != nil {
-				resultErr = err2
-				resultMsg = fmt.Sprintf("Couldn't parse test output file: %s. Stdout: %s", err2, string(out))
+			target.Results.Aggregate(results)
+			if parseError != nil {
+				resultErr = parseError
+				resultMsg = fmt.Sprintf("Couldn't parse test output file: %s. Stdout: %s", parseError, string(out))
 				numFlakes++
-			} else if err != nil && results.Failures() == 0 {
+			} else if runError != nil && results.Failures() == 0 {
 				// Add a failure result to the test so it shows up in the final aggregation.
 				testCase := core.TestCase{
 					Name: results.Name,
@@ -233,17 +243,18 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 						{
 							Failure: &core.TestResultFailure{
 								Type:    "ReturnValue",
-								Message: fmt.Sprintf("%s", err),
+								Message: fmt.Sprintf("%s", runError),
 							},
-							Stdout: string(out),
+							Duration: &duration,
+							Stdout:   string(out),
 						},
 					},
 				}
 				target.Results.TestCases = append(target.Results.TestCases, testCase)
 				numFlakes++
-				resultErr = err
-				resultMsg = fmt.Sprintf("Test returned nonzero but reported no errors: %s. Output: %s", err, string(out))
-			} else if err == nil && results.Failures() != 0 {
+				resultErr = runError
+				resultMsg = fmt.Sprintf("Test returned nonzero but reported no errors: %s. Output: %s", runError, string(out))
+			} else if runError == nil && results.Failures() != 0 {
 				resultErr = fmt.Errorf("Test returned 0 but still reported failures")
 				resultMsg = fmt.Sprintf("Test returned 0 but still reported failures. Stdout: %s", string(out))
 				numFlakes++
@@ -282,7 +293,7 @@ func logTestSuccess(state *core.BuildState, tid int, label core.BuildLabel, resu
 		description = fmt.Sprintf("%d %s passed. %d skipped",
 			results.Tests(), tests, results.Skips())
 	} else {
-		description = fmt.Sprintf("%d %s passed.", results.TestCases, tests)
+		description = fmt.Sprintf("%d %s passed.", len(results.TestCases), tests)
 	}
 	state.LogTestResult(tid, label, core.TargetTested, results, coverage, nil, description)
 }

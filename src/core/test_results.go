@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"fmt"
 )
 
 // TestSuite describes all the test results for a target.
@@ -86,6 +87,25 @@ func (testSuite *TestSuite) Duration() time.Duration {
 func (testSuite *TestSuite) Tests() uint {
 	return uint(len(testSuite.TestCases))
 }
+func (testSuite *TestSuite) Aggregate(suite2 TestSuite) {
+	extraTestCases := make([]TestCase, 0)
+
+	OUTER:
+	for idx2 := range suite2.TestCases {
+		testCase2 := &suite2.TestCases[idx2]
+		for idx1, _ := range testSuite.TestCases {
+			testCase := &testSuite.TestCases[idx1]
+			if testCase.ClassName == testCase2.ClassName && testCase.Name == testCase2.Name {
+				testCase.Aggregate(testCase2)
+				continue OUTER
+			}
+		}
+		// No matching test case, just add it in afterwards
+		extraTestCases = append(extraTestCases, *testCase2)
+	}
+
+	testSuite.TestCases = append(testSuite.TestCases, extraTestCases...)
+}
 
 // TestCase describes a set of test results for a test target.
 type TestCase struct {
@@ -144,7 +164,15 @@ func (testCase TestCase) Duration() *time.Duration {
 	return nil
 }
 
-// TestExecution represents one execution of a test class.
+func (testCase *TestCase) Aggregate(testCase2 *TestCase) {
+	if testCase.ClassName != testCase2.ClassName || testCase.Name != testCase2.Name {
+		panic(fmt.Sprintf("Unable to aggregate testcases as classnames and test names are different"))
+	}
+	testCase.Executions = append(testCase.Executions, testCase2.Executions...)
+}
+
+// TestExecution represents one execution of a test class. The absence of a Failure, Error or Skip implies the test
+// executed successfully.
 type TestExecution struct {
 	Failure  *TestResultFailure // The failure, if any, running the test (usually an assertion that failed)
 	Error    *TestResultFailure // The error, if any, running the test (usually some other abnormal exit)

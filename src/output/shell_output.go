@@ -264,8 +264,10 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 	}
 	// Print individual test results
 	targets := 0
+	aggregate := core.TestSuite{}
 	for _, target := range state.Graph.AllTargets() {
 		if target.IsTest {
+			aggregate.Aggregate(target.Results)
 			if len(target.Results.TestCases) > 0 {
 				if target.Results.Errors() > 0 {
 					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
@@ -308,7 +310,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 		}
 	}
 	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}. Total time %s.${RESET}\n",
-		pluralise(targets, "test target", "test targets"), "", duration))
+		pluralise(targets, "test target", "test targets"), testResultMessage(aggregate), duration))
 }
 
 func showExecutionOutput(execution core.TestExecution) {
@@ -413,7 +415,7 @@ func testResultMessage(results core.TestSuite) string {
 	//	//	msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.Flakes, "flake", "flakes"))
 	//	//}
 	if results.TimedOut {
-		msg += fmt.Sprintf(", ${RED_ON_WHITE}TIMED OUT${RESET}")
+		msg += ", ${RED_ON_WHITE}TIMED OUT${RESET}"
 	}
 	if results.Cached {
 		msg += " ${GREEN}[cached]${RESET}"

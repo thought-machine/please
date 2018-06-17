@@ -64,6 +64,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 					Duration: &duration,
 				})
 			}
+			results.TestCases = append(results.TestCases, testCase)
 		} else if bytes.Equal(line, []byte("PASS")) {
 			// Do nothing, all's well.
 		} else if bytes.Equal(line, []byte("FAIL")) {
