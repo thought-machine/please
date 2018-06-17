@@ -240,7 +240,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 				}
 			} else {
 				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_CYAN}%3d errored ${BOLD_WHITE}Took %s${RESET}\n",
-					target.Label, target.Results.Passes(), target.Results.Skips(), target.Results.Failures(), target.Results.Errors(), target.Results.Duration().Round(durationGranularity))
+					target.Label, target.Results.Passes(), target.Results.Skips(), target.Results.Failures(), target.Results.Errors(), target.Results.Duration.Round(durationGranularity))
 				for _, failingTestCase := range target.Results.TestCases {
 					if failingTestCase.Success() != nil {
 						continue
@@ -408,8 +408,8 @@ func logProgress(state *core.BuildState, buildingTargets *[]buildingTarget, stop
 // Produces a string describing the results of one test (or a single aggregation).
 func testResultMessage(results core.TestSuite) string {
 	msg := fmt.Sprintf("%s run", pluralise(int(results.Tests()), "test", "tests"))
-	if results.Duration() >= 0.0 {
-		msg += fmt.Sprintf(" in %s", results.Duration().Round(testDurationGranularity))
+	if results.Duration >= 0.0 {
+		msg += fmt.Sprintf(" in %s", results.Duration.Round(testDurationGranularity))
 	}
 	msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passes())
 	if results.Errors() > 0 {

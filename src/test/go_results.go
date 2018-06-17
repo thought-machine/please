@@ -38,6 +38,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 			f, _ := strconv.ParseFloat(string(testResultMatches[3]), 64)
 			duration := time.Duration(f * float64(time.Second))
 			testCase := core.TestCase{
+				ClassName: "GoTest",
 				Name: testName,
 			}
 			if bytes.Equal(testResultMatches[1], []byte("PASS")) {

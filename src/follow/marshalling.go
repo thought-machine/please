@@ -35,7 +35,7 @@ func toProto(r *core.BuildResult) *pb.BuildEventResponse {
 			Flakes:           0,
 			Results:          toProtoTestResults(t.TestCases),
 			Output:           "",
-			Duration:         int64(t.Duration()),
+			Duration:         int64(t.Duration),
 			Cached:           t.Cached,
 			TimedOut:         t.TimedOut,
 		},

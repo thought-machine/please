@@ -312,7 +312,7 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 				Failures: testSuite.Failures(),
 				Skipped:  testSuite.Skips(),
 				Tests:    testSuite.Tests(),
-				Timed:    &Timed{testSuite.Duration().Seconds()},
+				Timed:    &Timed{testSuite.Duration.Seconds()},
 				// TODO(agenticarus): Test groups not yet implemented, and don't tend to show up in UIs anyway.
 				// Group:    "",
 			}

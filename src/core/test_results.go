@@ -10,10 +10,11 @@ import (
 
 // TestSuite describes all the test results for a target.
 type TestSuite struct {
-	Name      string     // The name of the test suite (usually the target name)
-	Cached    bool       // True if the test results were retrieved from cache
-	TimedOut  bool       // True if the test failed because we timed it out.
-	TestCases []TestCase // The test cases that ran during this target
+	Name      string        // The name of the test suite (usually the target name)
+	Cached    bool          // True if the test results were retrieved from cache
+	Duration  time.Duration // The length of time it took to run this target.
+	TimedOut  bool          // True if the test failed because we timed it out.
+	TestCases []TestCase    // The test cases that ran during this target
 }
 
 // Passes returns the number of TestCases which succeeded (not skipped).
@@ -70,27 +71,13 @@ func (testSuite *TestSuite) Skips() uint {
 	return skips
 }
 
-func (testSuite *TestSuite) Duration() time.Duration {
-	duration := time.Duration(0)
-
-	for _, result := range testSuite.TestCases {
-		for _, execution := range result.Executions {
-			if execution.Duration != nil {
-				duration = duration + *execution.Duration
-			}
-		}
-	}
-
-	return duration
-}
-
 func (testSuite *TestSuite) Tests() uint {
 	return uint(len(testSuite.TestCases))
 }
 func (testSuite *TestSuite) Aggregate(suite2 TestSuite) {
 	extraTestCases := make([]TestCase, 0)
 
-	OUTER:
+OUTER:
 	for idx2 := range suite2.TestCases {
 		testCase2 := &suite2.TestCases[idx2]
 		for idx1, _ := range testSuite.TestCases {
@@ -157,7 +144,7 @@ func (testCase TestCase) Errors() []TestExecution {
 func (testCase TestCase) Duration() *time.Duration {
 	if testCase.Success() != nil {
 		return testCase.Success().Duration
-	} else if len(testCase.Failures()) > 0{
+	} else if len(testCase.Failures()) > 0 {
 		return testCase.Failures()[0].Duration
 	}
 	// Unable to determine duration of this test case.

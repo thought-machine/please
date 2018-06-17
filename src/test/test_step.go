@@ -125,7 +125,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// Fresh set of results for this target.
 	target.Results = core.TestSuite{
-		Name: target.Label.String(),
+		Name: toClassName(target.Label.String()),
 	}
 
 	// Remove any cached test result file.
@@ -151,7 +151,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return
 	}
 	numSucceeded := 0
-	numFlakes := 0
 	numRuns, successesRequired := calcNumRuns(state.NumTestRuns, target.Flakiness)
 	var resultErr error
 	resultMsg := ""
@@ -173,6 +172,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		// Tests can opt out of the file requirement individually, in which case they're judged only
 		// by their return value.
 		// But of course, we still have to consider all the alternatives here and handle them nicely.
+		target.Results.Duration = duration
 		target.Results.TimedOut = runError == context.DeadlineExceeded
 		if !core.PathExists(outputFile) {
 			if runError == nil && target.NoTestOutput {
@@ -204,7 +204,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 				target.Results.TestCases = append(target.Results.TestCases, testCase)
 				resultErr = fmt.Errorf("Test failed to produce output results file")
 				resultMsg = fmt.Sprintf("Test apparently succeeded but failed to produce %s. Output: %s", outputFile, string(out))
-				numFlakes++
 			} else {
 				testCase := core.TestCase{
 					Name: target.Results.Name,
@@ -223,21 +222,24 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 				target.Results.TestCases = append(target.Results.TestCases, testCase)
 				resultErr = runError
 				resultMsg = fmt.Sprintf("Test failed with no results. Output: %s", string(out))
-				numFlakes++
 			}
 		} else {
 			results, parseError := parseTestResults(outputFile)
-			results.Name = target.Label.String()
-			// TODO(agenticarus): If this flakes and we run multiple times, we need to aggregate here, that's why it existed.
-			// At least we can be sure the name matches etc.
+			for idx, _ := range results.TestCases {
+				testCase := &results.TestCases[idx]
+				if testCase.ClassName == "GoTest" {
+					testCase.ClassName = fmt.Sprintf("%s.GoTest", toClassName(target.Label.String()))
+				}
+			}
 			target.Results.Aggregate(results)
 			if parseError != nil {
 				resultErr = parseError
 				resultMsg = fmt.Sprintf("Couldn't parse test output file: %s. Stdout: %s", parseError, string(out))
-				numFlakes++
 			} else if runError != nil && results.Failures() == 0 {
 				// Add a failure result to the test so it shows up in the final aggregation.
 				testCase := core.TestCase{
+					// We don't know the type of test we ran :(
+					ClassName: fmt.Sprintf("%s.Test", toClassName(target.Label.String())),
 					Name: results.Name,
 					Executions: []core.TestExecution{
 						{
@@ -251,17 +253,14 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 					},
 				}
 				target.Results.TestCases = append(target.Results.TestCases, testCase)
-				numFlakes++
 				resultErr = runError
 				resultMsg = fmt.Sprintf("Test returned nonzero but reported no errors: %s. Output: %s", runError, string(out))
 			} else if runError == nil && results.Failures() != 0 {
 				resultErr = fmt.Errorf("Test returned 0 but still reported failures")
 				resultMsg = fmt.Sprintf("Test returned 0 but still reported failures. Stdout: %s", string(out))
-				numFlakes++
 			} else if results.Failures() != 0 {
 				resultErr = fmt.Errorf("Tests failed")
 				resultMsg = fmt.Sprintf("Tests failed. Stdout: %s", string(out))
-				numFlakes++
 			} else {
 				numSucceeded++
 			}
@@ -284,6 +283,12 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	} else {
 		state.LogTestResult(tid, label, core.TargetTestFailed, &target.Results, &coverage, resultErr, resultMsg)
 	}
+}
+
+// targetLabel is of the form //src/core:config_test
+// So the "classname" is src.core
+func toClassName(targetLabel string) string {
+	return strings.Replace(strings.Replace(targetLabel[2:], "/", ".", -1), ":", ".", -1)
 }
 
 func logTestSuccess(state *core.BuildState, tid int, label core.BuildLabel, results *core.TestSuite, coverage *core.TestCoverage) {
