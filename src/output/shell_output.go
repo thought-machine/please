@@ -267,7 +267,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 	aggregate := core.TestSuite{}
 	for _, target := range state.Graph.AllTargets() {
 		if target.IsTest {
-			aggregate.Aggregate(target.Results)
+			aggregate.TestCases = append(aggregate.TestCases, target.Results.TestCases...)
 			if len(target.Results.TestCases) > 0 {
 				if target.Results.Errors() > 0 {
 					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
