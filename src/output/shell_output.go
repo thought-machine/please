@@ -223,14 +223,24 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 	if len(failedTargets) > 0 {
 		for _, failed := range failedTargets {
 			target := state.Graph.TargetOrDie(failed)
-			if target.Results.Failures() == 0 {
+			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
 				if target.Results.TimedOut {
 				} else {
 					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
+					target.Results.TestCases = append(target.Results.TestCases, core.TestCase{
+						Executions: []core.TestExecution{
+							{
+								Error: &core.TestResultFailure{
+									Type: "FailedToRun",
+									Message: "Failed to run test",
+								},
+							},
+						},
+					})
 				}
 			} else {
-				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_WHITE}Took %s${RESET}\n",
-					target.Label, target.Results.Passes(), target.Results.Skips(), target.Results.Failures(), target.Results.Duration().Round(durationGranularity))
+				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_CYAN}%3d errored ${BOLD_WHITE}Took %s${RESET}\n",
+					target.Label, target.Results.Passes(), target.Results.Skips(), target.Results.Failures(), target.Results.Errors(), target.Results.Duration().Round(durationGranularity))
 				for _, failingTestCase := range target.Results.TestCases {
 					if failingTestCase.Success() != nil {
 						continue
@@ -244,7 +254,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 					} else if len(failingTestCase.Errors()) > 0 {
 						execution = failingTestCase.Errors()[0]
 						failure = execution.Error
-						printf("${BOLD_RED}Error: %s in %s${RESET}\n", failure.Type, failingTestCase.Name)
+						printf("${BOLD_CYAN}Error: %s in %s${RESET}\n", failure.Type, failingTestCase.Name)
 					}
 					if failure != nil {
 						printf("%s\n", failure.Traceback)
