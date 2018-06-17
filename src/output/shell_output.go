@@ -290,7 +290,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 						printf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name)))
 						if len(result.Executions) > 1 {
 							for run, execution := range result.Executions {
-								printf("        RUN %d: %s\n", run, formatTestExecution(execution))
+								printf("        RUN %d: %s\n", run+1, formatTestExecution(execution))
 								if state.ShowTestOutput {
 									showExecutionOutput(execution)
 								}

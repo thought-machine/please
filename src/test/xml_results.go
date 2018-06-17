@@ -396,21 +396,21 @@ func toXmlTestCase(result core.TestCase) jUnitXMLTest {
 			} else if execution.Failure != nil {
 				if !doneFirst {
 					testcase.Failure = &jUnitXMLFailure{
-						Message:   execution.Error.Message,
-						Traceback: execution.Error.Traceback,
-						Type:      execution.Error.Type,
+						Message:   execution.Failure.Message,
+						Traceback: execution.Failure.Traceback,
+						Type:      execution.Failure.Type,
 					}
 					testcase.Stderr = execution.Stderr
 					testcase.Stdout = execution.Stdout
 					doneFirst = true
 				} else {
 					testcase.RerunFailure = append(testcase.RerunFailure, jUnitXMLRerunFailure{
-						Message:   execution.Error.Message,
+						Message:   execution.Failure.Message,
 						Stderr:    execution.Stderr,
 						Stdout:    execution.Stdout,
 						Timed:     Timed{execution.Duration.Seconds()},
-						Traceback: execution.Error.Traceback,
-						Type:      execution.Error.Type,
+						Traceback: execution.Failure.Traceback,
+						Type:      execution.Failure.Type,
 					})
 				}
 				if !setDuration {
