@@ -131,13 +131,15 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	}
 	if worker, err := startTestWorkerIfNeeded(tid, state, target); err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to start test worker")
-		target.Results.NumTests++
-		target.Results.Failed++
-		target.Results.Results = append(target.Results.Results, core.TestResult{
-			Name:   worker,
-			Type:   "Failed to start worker",
-			Stderr: err.Error(),
-		})
+		testCase := core.TestCase{
+			Name: worker,
+			Executions: []core.TestExecution{
+				{
+					Stderr: err.Error(),
+				},
+			},
+		}
+		target.Results.TestCases = append(target.Results.TestCases, testCase)
 		return
 	}
 	numSucceeded := 0

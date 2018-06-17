@@ -179,17 +179,17 @@ func Record(target *core.BuildTarget, duration time.Duration) {
 }
 
 func (m *metrics) record(target *core.BuildTarget, duration time.Duration) {
-	if target.Results.NumTests > 0 {
+	if len(target.Results.TestCases) > 0 {
 		// Tests have run
 		m.cacheCounter.WithLabelValues(b(target.Results.Cached)).Inc()
 		if m.perTest {
-			m.testCounter.WithLabelValues(b(target.Results.Failed == 0), target.Label.String()).Inc()
+			m.testCounter.WithLabelValues(b(target.Results.Failures() == 0), target.Label.String()).Inc()
 		} else {
-			m.testCounter.WithLabelValues(b(target.Results.Failed == 0)).Inc()
+			m.testCounter.WithLabelValues(b(target.Results.Failures() == 0)).Inc()
 		}
 		if target.Results.Cached {
 			m.cacheHistogram.WithLabelValues().Observe(duration.Seconds())
-		} else if target.Results.Failed == 0 {
+		} else if target.Results.Failures() == 0 {
 			if m.perTest {
 				m.testHistogram.WithLabelValues(target.Label.String()).Observe(duration.Seconds())
 			} else {

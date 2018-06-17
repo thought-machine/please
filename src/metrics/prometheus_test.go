@@ -42,10 +42,10 @@ func TestTargetStates(t *testing.T) {
 	m.record(target, time.Millisecond)
 	target.SetState(core.Built)
 	m.record(target, time.Millisecond)
-	target.Results.NumTests = 3
-	m.record(target, time.Millisecond)
-	target.Results.Failed = 1
-	m.record(target, time.Millisecond)
+	//target.Results.NumTests = 3
+	//m.record(target, time.Millisecond)
+	//target.Results.Failed = 1
+	//m.record(target, time.Millisecond)
 	target.Results.Cached = true
 	m.record(target, time.Millisecond)
 	m.stop()

@@ -283,7 +283,7 @@ type jUnitXMLSkipped struct {
 }
 
 type Timed struct {
-	Time float64
+	Time float64 `xml:"time,attr"`
 }
 
 func (j Timed) Duration() time.Duration {
