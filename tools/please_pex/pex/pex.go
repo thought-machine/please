@@ -15,12 +15,12 @@ import (
 
 // A Writer implements writing a .pex file in various steps.
 type Writer struct {
-	zipSafe                    bool
-	shebang                    string
-	realEntryPoint             string
-	testSrcs                   []string
-	testIncludes			   []string
-	testRunner                 string
+	zipSafe        bool
+	shebang        string
+	realEntryPoint string
+	testSrcs       []string
+	testIncludes   []string
+	testRunner     string
 }
 
 // NewWriter constructs a new Writer.
