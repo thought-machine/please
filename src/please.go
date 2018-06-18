@@ -646,7 +646,7 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
 	os.RemoveAll(string(surefireDir))
 	os.RemoveAll(string(resultsFile))
-	os.MkdirAll(string(surefireDir),0755)
+	os.MkdirAll(string(surefireDir), 0755)
 	success, state := runBuild(targets, true, true)
 	test.CopySurefireXmlFilesToDir(state.Graph, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))

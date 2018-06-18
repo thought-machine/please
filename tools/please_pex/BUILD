@@ -1,12 +1,12 @@
 filegroup(
     name = "pex_data",
     srcs = [
+        "behave.py",
         "pex_main.py",
         "pex_run.py",
         "pytest.py",
         "test_main.py",
         "unittest.py",
-        "behave.py",
     ],
     visibility = ["//tools/please_pex/pex:all"],
 )
