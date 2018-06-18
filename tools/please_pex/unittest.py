@@ -14,15 +14,35 @@ def list_classes(suite):
             yield test, test.__class__.__module__ + '.' + test.id()
 
 
-def filter_suite(suite, test_names):
-    """Reduces a test suite to just the tests matching the given names."""
-    new_suite = unittest.suite.TestSuite()
-    for name in test_names:
-        new_suite.addTests(cls for cls, class_name in list_classes(suite) if name in class_name)
-    return new_suite
+def get_suite(test_names, raise_on_empty=False):
+    """
+    Get the test suite to run the test
+
+    :param test_names: Name of the tests to be filtered
+    :param raise_on_empty: raise Exception if result filtered is empty
+
+    :return: unittest.suite.TestSuite
+    """
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(module)
+                               for module in import_tests())
+    # Filter to test name only, this ensures the extra flags does not get swallowed
+    test_names = list(filter(lambda x: not x.startswith('-'), test_names))
+
+    # filter results if test_names is not empty
+    if test_names:
+        new_suite = unittest.suite.TestSuite()
+        for name in test_names:
+            new_suite.addTests(cls for cls, class_name in list_classes(suite)
+                               if name in class_name)
+        if raise_on_empty and suite.countTestCases() == 0:
+            raise Exception('No matching tests found')
+
+        return new_suite
+
+    return suite
 
 
-def import_tests(test_names):
+def import_tests():
     """Yields the set of test modules, from file if necessary."""
     # We have files available locally, but there may (likely) also be python files in the same
     # Python package within the pex. We can't just import them because the parent package exists
@@ -46,12 +66,8 @@ def run_tests(test_names):
     """Runs tests using unittest, returns the number of failures."""
     # N.B. import must be deferred until we have set up import paths.
     import xmlrunner
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(module)
-                               for module in import_tests(test_names))
-    if test_names:
-        suite = filter_suite(suite, test_names)
-        if suite.countTestCases() == 0:
-            raise Exception('No matching tests found')
+    suite = get_suite(test_names, raise_on_empty=True)
+
     runner = xmlrunner.XMLTestRunner(output='test.results', outsuffix='')
     results = runner.run(suite)
     return len(results.errors) + len(results.failures)
