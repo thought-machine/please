@@ -13,7 +13,7 @@ def run_tests(args):
 
         for i in args:
             if not i.startswith('-'):
-                filtered_tests += f"{i}"
+                filtered_tests += i
                 args.remove(i)
 
         if filtered_tests:
