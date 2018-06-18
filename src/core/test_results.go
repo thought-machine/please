@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"fmt"
 )
 
 // TestSuite describes all the test results for a target.
@@ -74,27 +73,22 @@ func (testSuite *TestSuite) Skips() uint {
 func (testSuite *TestSuite) Tests() uint {
 	return uint(len(testSuite.TestCases))
 }
-func (testSuite *TestSuite) Aggregate(suite2 TestSuite) {
-	extraTestCases := make([]TestCase, 0)
 
-OUTER:
-	for idx2 := range suite2.TestCases {
-		testCase2 := &suite2.TestCases[idx2]
-		for idx1, _ := range testSuite.TestCases {
-			testCase := &testSuite.TestCases[idx1]
-			if testCase.ClassName == testCase2.ClassName && testCase.Name == testCase2.Name {
-				testCase.Aggregate(testCase2)
+func (suite *TestSuite) Add(cases ... TestCase) {
+	OUTER:
+	for _, testCase := range cases {
+		for idx, _ := range suite.TestCases {
+			originalTestCase := &suite.TestCases[idx]
+			if originalTestCase.Name == testCase.Name && originalTestCase.ClassName == testCase.ClassName {
+				originalTestCase.Add(testCase.Executions...)
 				continue OUTER
 			}
 		}
-		// No matching test case, just add it in afterwards
-		extraTestCases = append(extraTestCases, *testCase2)
+		suite.TestCases = append(suite.TestCases, testCase)
 	}
-
-	testSuite.TestCases = append(testSuite.TestCases, extraTestCases...)
 }
 
-// TestCase describes a set of test results for a test target.
+// TestCase describes a set of test results for a test method.
 type TestCase struct {
 	ClassName  string          // ClassName of test (optional, for languages that don't have classes)
 	Name       string          // Name of test
@@ -151,14 +145,11 @@ func (testCase TestCase) Duration() *time.Duration {
 	return nil
 }
 
-func (testCase *TestCase) Aggregate(testCase2 *TestCase) {
-	if testCase.ClassName != testCase2.ClassName || testCase.Name != testCase2.Name {
-		panic(fmt.Sprintf("Unable to aggregate testcases as classnames and test names are different"))
-	}
-	testCase.Executions = append(testCase.Executions, testCase2.Executions...)
+func (testCase *TestCase) Add(executions ... TestExecution) {
+	testCase.Executions = append(testCase.Executions, executions...)
 }
 
-// TestExecution represents one execution of a test class. The absence of a Failure, Error or Skip implies the test
+// TestExecution represents one execution of a test method. The absence of a Failure, Error or Skip implies the test
 // executed successfully.
 type TestExecution struct {
 	Failure  *TestResultFailure // The failure, if any, running the test (usually an assertion that failed)

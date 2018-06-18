@@ -97,7 +97,7 @@ func TestAggregateTestResults(t *testing.T) {
 			},
 		},
 	}
-	suite1.Aggregate(suite2)
+	suite1.Add(suite2.TestCases...)
 
 	assert.Equal(t, uint(2), suite1.Tests())
 	assert.Equal(t, uint(2), suite1.Passes())

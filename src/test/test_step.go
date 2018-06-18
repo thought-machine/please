@@ -151,119 +151,32 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		target.Results.TestCases = append(target.Results.TestCases, testCase)
 		return
 	}
-	numSucceeded := 0
+
 	numRuns, successesRequired := calcNumRuns(state.NumTestRuns, target.Flakiness)
-	var resultErr error
+	var resultErr error = fmt.Errorf("test failed")
 	resultMsg := ""
 	var coverage core.TestCoverage
 
 	// TODO(agenticarus): Push the flakiness down into the test runners to speed them up?
-	for i := 0; i < numRuns && numSucceeded < successesRequired; i++ {
+	for i := 0; i < numRuns && target.Results.Passes() < successesRequired; i++ {
 		if numRuns > 1 {
 			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("Testing (%d of %d)...", i+1, numRuns))
 		}
-		startTime := time.Now() // reset this for next time
-		out, runError := prepareAndRunTest(tid, state, target)
-		duration := time.Since(startTime)
 
-		// This is all pretty involved; there are lots of different possibilities of what could happen.
-		// The contract is that the test must return zero on success or non-zero on failure (Unix FTW).
-		// If it's successful, it must produce a parseable file named "test.results" in its temp folder.
-		// (alternatively, this can be a directory containing parseable files).
-		// Tests can opt out of the file requirement individually, in which case they're judged only
-		// by their return value.
-		// But of course, we still have to consider all the alternatives here and handle them nicely.
-		target.Results.Duration = duration
-		target.Results.TimedOut = runError == context.DeadlineExceeded
-		if !core.PathExists(outputFile) {
-			if runError == nil && target.NoTestOutput {
-				testCase := core.TestCase{
-					Name: target.Results.Name,
-					Executions: []core.TestExecution{
-						{
-							Duration: &duration,
-							Stdout:   string(out),
-						},
-					},
-				}
-				target.Results.TestCases = append(target.Results.TestCases, testCase)
-				numSucceeded++
-			} else if runError == nil {
-				testCase := core.TestCase{
-					Name: target.Results.Name,
-					Executions: []core.TestExecution{
-						{
-							Duration: &duration,
-							Failure: &core.TestResultFailure{
-								Message: "Missing results",
-								Type:    "MissingResults",
-							},
-							Stdout: string(out),
-						},
-					},
-				}
-				target.Results.TestCases = append(target.Results.TestCases, testCase)
-				resultErr = fmt.Errorf("Test failed to produce output results file")
-				resultMsg = fmt.Sprintf("Test apparently succeeded but failed to produce %s. Output: %s", outputFile, string(out))
-			} else {
-				testCase := core.TestCase{
-					Name: target.Results.Name,
-					Executions: []core.TestExecution{
-						{
-							Duration: &duration,
-							Error: &core.TestResultFailure{
-								Message:   "Test errored with no results",
-								Type:      "NoResults",
-								Traceback: runError.Error(),
-							},
-							Stdout: string(out),
-						},
-					},
-				}
-				target.Results.TestCases = append(target.Results.TestCases, testCase)
-				resultErr = runError
-				resultMsg = fmt.Sprintf("Test failed with no results. Output: %s", string(out))
-			}
+		testCases := doTest(tid, state, target, outputFile)
+
+		if state.NumTestRuns > 0 {
+			// Treat each test case separately
+			target.Results.TestCases = append(target.Results.TestCases, testCases...)
 		} else {
-			results, parseError := parseTestResults(outputFile)
-			target.Results.Aggregate(results)
-			if parseError != nil {
-				resultErr = parseError
-				resultMsg = fmt.Sprintf("Couldn't parse test output file: %s. Stdout: %s", parseError, string(out))
-			} else if runError != nil && results.Failures() == 0 {
-				// Add a failure result to the test so it shows up in the final aggregation.
-				testCase := core.TestCase{
-					// We don't know the type of test we ran :(
-					Name: results.Name,
-					Executions: []core.TestExecution{
-						{
-							Failure: &core.TestResultFailure{
-								Type:    "ReturnValue",
-								Message: fmt.Sprintf("%s", runError),
-							},
-							Duration: &duration,
-							Stdout:   string(out),
-						},
-					},
-				}
-				target.Results.TestCases = append(target.Results.TestCases, testCase)
-				resultErr = runError
-				resultMsg = fmt.Sprintf("Test returned nonzero but reported no errors: %s. Output: %s", runError, string(out))
-			} else if runError == nil && results.Failures() != 0 {
-				resultErr = fmt.Errorf("Test returned 0 but still reported failures")
-				resultMsg = fmt.Sprintf("Test returned 0 but still reported failures. Stdout: %s", string(out))
-			} else if results.Failures() != 0 {
-				resultErr = fmt.Errorf("Tests failed")
-				resultMsg = fmt.Sprintf("Tests failed. Stdout: %s", string(out))
-			} else {
-				numSucceeded++
-			}
+			// Ram their executions together if they're for the same test case
+			target.Results.Add(testCases...)
 		}
 	}
 
 	coverage = parseCoverageFile(target, coverageFile)
 
-	if numSucceeded >= successesRequired {
+	if target.Results.Passes() >= successesRequired {
 		// Success, clean things up
 		if moveAndCacheOutputFiles(&target.Results, &coverage) {
 			logTestSuccess(state, tid, label, &target.Results, &coverage)
@@ -332,6 +245,15 @@ func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	return out, err
 }
 
+func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string) []core.TestCase {
+	startTime := time.Now()
+	out, runError := prepareAndRunTest(tid, state, target)
+	duration := time.Since(startTime)
+
+	target.Results.TimedOut = runError == context.DeadlineExceeded
+	return parseTestOutput(out, runError, duration, target, outputFile)
+}
+
 // prepareAndRunTest sets up a test directory and runs the test.
 func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
 	if err = prepareTestDir(state.Graph, target); err != nil {
@@ -339,6 +261,149 @@ func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget
 		return []byte{}, err
 	}
 	return runPossiblyContainerisedTest(tid, state, target)
+}
+
+func parseTestOutput(out []byte, runError error, duration time.Duration, target *core.BuildTarget, outputFile string) []core.TestCase {
+	// This is all pretty involved; there are lots of different possibilities of what could happen.
+	// The contract is that the test must return zero on success or non-zero on failure (Unix FTW).
+	// If it's successful, it must produce a parseable file named "test.results" in its temp folder.
+	// (alternatively, this can be a directory containing parseable files).
+	// Tests can opt out of the file requirement individually, in which case they're judged only
+	// by their return value.
+	// But of course, we still have to consider all the alternatives here and handle them nicely.
+
+	// No output and no execution error and output not expected - OK
+	// No output and no execution error and output expected - SYNTHETIC ERROR - Missing Results
+	// No output and execution error - SYNTHETIC ERROR - Failed to Run
+	// Output and no execution error - PARSE OUTPUT - Ignore noTestOutput
+	// Output and execution error - PARSE OUTPUT + SYNTHETIC ERROR - Incomplete Run
+	if !core.PathExists(outputFile) {
+		if runError == nil && target.NoTestOutput {
+			return []core.TestCase{
+				{
+					// Need a name so that multiple runs get collated correctly.
+					Name: target.Results.Name,
+					Executions: []core.TestExecution{
+						{
+							Duration: &duration,
+							Stdout:   string(out),
+						},
+					},
+				},
+			}
+		}
+		if runError == nil {
+			return []core.TestCase{
+				{
+					Name: target.Results.Name,
+					Executions: []core.TestExecution{
+						{
+							Duration: &duration,
+							Error: &core.TestResultFailure{
+								Message: "Test failed to produce output results file",
+								Type:    "MissingResults",
+							},
+							Stdout: string(out),
+						},
+					},
+				},
+			}
+		}
+
+		return []core.TestCase{
+			{
+				Name: target.Results.Name,
+				Executions: []core.TestExecution{
+					{
+						Duration: &duration,
+						Error: &core.TestResultFailure{
+							Message:   "Test failed with no results",
+							Type:      "NoResults",
+							Traceback: runError.Error(),
+						},
+						Stdout: string(out),
+					},
+				},
+			},
+		}
+	}
+
+	results, parseError := parseTestResults(outputFile)
+	if parseError != nil {
+		if runError != nil {
+			return []core.TestCase{
+				{
+					Name: target.Results.Name,
+					Executions: []core.TestExecution{
+						{
+							Duration: &duration,
+							Error: &core.TestResultFailure{
+								Message:   "Test failed with no results",
+								Type:      "NoResults",
+								Traceback: runError.Error(),
+							},
+							Stdout: string(out),
+						},
+					},
+				},
+			}
+		}
+
+		return []core.TestCase{
+			{
+				Name: target.Results.Name,
+				Executions: []core.TestExecution{
+					{
+						Duration: &duration,
+						Error: &core.TestResultFailure{
+							Message:   "Couldn't parse test output file",
+							Type:      "NoResults",
+							Traceback: parseError.Error(),
+						},
+						Stdout: string(out),
+					},
+				},
+			},
+		}
+	}
+
+	parsedTestCases := results.TestCases
+
+	if runError != nil && results.Failures() == 0 {
+		// Add a failure result to the test so it shows up in the final aggregation.
+		parsedTestCases = append(parsedTestCases, core.TestCase{
+			// We don't know the type of test we ran :(
+			Name: target.Results.Name,
+			Executions: []core.TestExecution{
+				{
+					Duration: &duration,
+					Error: &core.TestResultFailure{
+						Type:      "ReturnValue",
+						Message:   "Test returned nonzero but reported no errors",
+						Traceback: runError.Error(),
+					},
+					Stdout: string(out),
+				},
+			},
+		})
+	} else if runError == nil && results.Failures() != 0 {
+		parsedTestCases = append(parsedTestCases, core.TestCase{
+			// We don't know the type of test we ran :(
+			Name: target.Results.Name,
+			Executions: []core.TestExecution{
+				{
+					Duration: &duration,
+					Failure: &core.TestResultFailure{
+						Type:      "ReturnValue",
+						Message:   "Test returned 0 but still reported failures",
+					},
+					Stdout: string(out),
+				},
+			},
+		})
+	}
+
+	return parsedTestCases
 }
 
 // Parses the coverage output for a single target.

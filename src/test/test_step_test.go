@@ -8,7 +8,7 @@ import (
 
 func TestCalcNumRuns(t *testing.T) {
 	// Helper for assert
-	nr := func(a, b int) []interface{} { return []interface{}{a, b} }
+	nr := func(a, b uint) []interface{} { return []interface{}{a, b} }
 
 	// Check that multiplication works.
 	assert.Equal(t, nr(1, 1), nr(calcNumRuns(1, 1)))

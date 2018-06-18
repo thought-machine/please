@@ -43,6 +43,7 @@ go_test(
     srcs = ["container_test.go"],
     container = True,
     data = ["test_data/container_data.txt"],
+    flaky = 3,
 )
 
 go_test(
