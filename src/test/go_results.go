@@ -25,6 +25,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	results := core.TestSuite{}
 	lines := bytes.Split(data, []byte{'\n'})
 	testsStarted := map[string]bool{}
+	var suiteDuration time.Duration
 	for i, line := range lines {
 		testStartMatches := testStart.FindSubmatch(line)
 		testResultMatches := testResult.FindSubmatch(line)
@@ -37,8 +38,8 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 			}
 			f, _ := strconv.ParseFloat(string(testResultMatches[3]), 64)
 			duration := time.Duration(f * float64(time.Second))
+			suiteDuration += duration
 			testCase := core.TestCase{
-				ClassName: "GoTest",
 				Name: testName,
 			}
 			if bytes.Equal(testResultMatches[1], []byte("PASS")) {
@@ -74,5 +75,6 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 			}
 		}
 	}
+	results.Duration = suiteDuration
 	return results, nil
 }

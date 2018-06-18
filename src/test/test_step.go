@@ -52,6 +52,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)
 		results, err := parseTestResults(cachedOutputFile)
+		results.Name = target.Label.String()
 		results.Cached = true
 		if err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to parse cached test file %s", cachedOutputFile)
@@ -125,7 +126,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// Fresh set of results for this target.
 	target.Results = core.TestSuite{
-		Name: toClassName(target.Label.String()),
+		Name: target.Label.String(),
 	}
 
 	// Remove any cached test result file.
@@ -225,12 +226,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			}
 		} else {
 			results, parseError := parseTestResults(outputFile)
-			for idx, _ := range results.TestCases {
-				testCase := &results.TestCases[idx]
-				if testCase.ClassName == "GoTest" {
-					testCase.ClassName = fmt.Sprintf("%s.GoTest", toClassName(target.Label.String()))
-				}
-			}
 			target.Results.Aggregate(results)
 			if parseError != nil {
 				resultErr = parseError
@@ -239,7 +234,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 				// Add a failure result to the test so it shows up in the final aggregation.
 				testCase := core.TestCase{
 					// We don't know the type of test we ran :(
-					ClassName: fmt.Sprintf("%s.Test", toClassName(target.Label.String())),
 					Name: results.Name,
 					Executions: []core.TestExecution{
 						{
@@ -283,12 +277,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	} else {
 		state.LogTestResult(tid, label, core.TargetTestFailed, &target.Results, &coverage, resultErr, resultMsg)
 	}
-}
-
-// targetLabel is of the form //src/core:config_test
-// So the "classname" is src.core
-func toClassName(targetLabel string) string {
-	return strings.Replace(strings.Replace(targetLabel[2:], "/", ".", -1), ":", ".", -1)
 }
 
 func logTestSuccess(state *core.BuildState, tid int, label core.BuildLabel, results *core.TestSuite, coverage *core.TestCoverage) {

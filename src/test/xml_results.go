@@ -19,31 +19,34 @@ func looksLikeJUnitXMLTestResults(b []byte) bool {
 
 func parseJUnitXMLTestResults(bytes []byte) (core.TestSuite, error) {
 	results := core.TestSuite{}
-	junitCase := jUnitXMLTestResults{}
-	if err := xml.Unmarshal(bytes, &junitCase); err != nil {
+	junitFile := jUnitXMLTestResults{}
+	if err := xml.Unmarshal(bytes, &junitFile); err != nil {
 		return results, err
 	}
-	if len(junitCase.Tests) > 0 {
-		for _, test := range junitCase.Tests {
+	var duration time.Duration
+	if len(junitFile.Tests) > 0 {
+		for _, test := range junitFile.Tests {
 			result := core.TestCase{
 				ClassName: test.ClassName,
 				Name:      test.Name,
 			}
 			appendResult(test, &result)
 			results.TestCases = append(results.TestCases, result)
+			duration += test.Duration()
 		}
 	}
-	if len(junitCase.TestCases) > 0 {
-		for _, test := range junitCase.TestCases {
+	if len(junitFile.TestCases) > 0 {
+		for _, test := range junitFile.TestCases {
 			result := core.TestCase{
 				ClassName: test.ClassName,
 				Name:      test.Name,
 			}
 			appendResult(test, &result)
 			results.TestCases = append(results.TestCases, result)
+			duration += test.Duration()
 		}
 	}
-	for _, testSuite := range junitCase.TestSuites {
+	for _, testSuite := range junitFile.TestSuites {
 		for _, test := range testSuite.TestCases {
 			result := core.TestCase{
 				ClassName: test.ClassName,
@@ -52,7 +55,9 @@ func parseJUnitXMLTestResults(bytes []byte) (core.TestSuite, error) {
 			appendResult(test, &result)
 			results.TestCases = append(results.TestCases, result)
 		}
+		duration += testSuite.Duration()
 	}
+	results.Duration = duration
 	return results, nil
 }
 
@@ -239,7 +244,7 @@ type jUnitXMLError struct {
 	Message string `xml:"message,attr,omitempty"`
 	Type    string `xml:"type,attr"`
 
-	Traceback string `xml:"chardata"`
+	Traceback string `xml:",chardata"`
 }
 
 type jUnitXMLFailure struct {
@@ -247,14 +252,14 @@ type jUnitXMLFailure struct {
 	Timed          `xml:"time,attr"`
 	Type    string `xml:"type,attr"`
 
-	Traceback string `xml:"chardata"`
+	Traceback string `xml:",chardata"`
 }
 
 type jUnitXMLFlaky struct {
 	Message string `xml:"message,attr,omitempty"`
 	Type    string `xml:"type,attr"`
 
-	Traceback string `xml:"chardata"`
+	Traceback string `xml:",chardata"`
 	Stdout    string `xml:"system-out,omitempty"`
 	Stderr    string `xml:"system-err,omitempty"`
 }
@@ -263,7 +268,7 @@ type jUnitXMLRerunError struct {
 	Message string `xml:"message,attr,omitempty"`
 	Type    string `xml:"type,attr"`
 
-	Traceback string `xml:"chardata"`
+	Traceback string `xml:",chardata"`
 	Stdout    string `xml:"system-out,omitempty"`
 	Stderr    string `xml:"system-err,omitempty"`
 }
@@ -273,7 +278,7 @@ type jUnitXMLRerunFailure struct {
 	Timed          `xml:"time,attr"`
 	Type    string `xml:"type,attr"`
 
-	Traceback string `xml:"chardata"`
+	Traceback string `xml:",chardata"`
 	Stdout    string `xml:"system-out,omitempty"`
 	Stderr    string `xml:"system-err,omitempty"`
 }
@@ -303,25 +308,41 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	}
 	xmlTestResults := jUnitXMLTestResults{}
 	xmlTestResults.XMLName.Local = "testsuites"
+
+	// Collapse any testsuite with the same name
+	xmlSuites := make(map[string]jUnitXMLTestSuite)
 	for _, target := range graph.AllTargets() {
 		testSuite := target.Results
 		if len(testSuite.TestCases) > 0 {
-			xmlTestSuite := jUnitXMLTestSuite{
-				Name:     target.Label.String(),
-				Errors:   testSuite.Errors(),
-				Failures: testSuite.Failures(),
-				Skipped:  testSuite.Skips(),
-				Tests:    testSuite.Tests(),
-				Timed:    &Timed{testSuite.Duration.Seconds()},
-				// TODO(agenticarus): Test groups not yet implemented, and don't tend to show up in UIs anyway.
-				// Group:    "",
+			var xmlTestSuite jUnitXMLTestSuite
+			if _, ok := xmlSuites[testSuite.Name]; ok {
+				xmlTestSuite = xmlSuites[testSuite.Name]
+				xmlTestSuite.Errors += testSuite.Errors()
+				xmlTestSuite.Failures += testSuite.Failures()
+				xmlTestSuite.Skipped += testSuite.Skips()
+				xmlTestSuite.Timed.Time += testSuite.Duration.Seconds()
+			} else {
+				xmlTestSuite = jUnitXMLTestSuite{
+					Name:     testSuite.Name,
+					Errors:   testSuite.Errors(),
+					Failures: testSuite.Failures(),
+					Skipped:  testSuite.Skips(),
+					Timed:    &Timed{testSuite.Duration.Seconds()},
+				}
 			}
 			for _, testCase := range testSuite.TestCases {
 				xmlTest := toXmlTestCase(testCase)
 				xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
 			}
-			xmlTestResults.TestSuites = append(xmlTestResults.TestSuites, xmlTestSuite)
+			xmlSuites[testSuite.Name] = xmlTestSuite
+			for _, testCase := range testSuite.TestCases {
+				xmlTest := toXmlTestCase(testCase)
+				xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
+			}
 		}
+	}
+	for _, xmlTestSuite := range xmlSuites {
+		xmlTestResults.TestSuites = append(xmlTestResults.TestSuites, xmlTestSuite)
 	}
 	if b, err := xml.MarshalIndent(xmlTestResults, "", "    "); err != nil {
 		log.Fatalf("Failed to serialise XML: %s", err)
