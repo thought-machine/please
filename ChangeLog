@@ -2,12 +2,16 @@ Version 13.0.0
 --------------
 
     * Can now start shared test workers in a similar way to shared build workers.
-    * Worker protocol has been changed to JSON instead of protobuf.
+	* Worker protocol has been changed to JSON instead of protobuf. This isn't compatible
+	  with older versions, but they shouldn't normally mix anyway.
     * Now communicating with Docker using a proper API instead of execing the CLI.
       docker_run_args is no longer supported as a result.
     * Directory cache now supports a `dircompress` config option which stores artifacts
       as gzipped tarballs. This is slower to save / restore but results in fewer files
       and less space used.
+    * Support behave as a Python test runner.
+    * Supports Python 3.7
+    * Better preservation of XML test results
 
 
 Version 12.2.5
