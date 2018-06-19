@@ -12,7 +12,6 @@ def run_tests(args=None):
     from behave.__main__ import main
 
     args = args or []
-    features_dir = get_features_dir()
-    args += [features_dir, '--junit',
+    args += [get_features_dir(), '--junit',
              '--junit-directory', 'test.results']
     main(args)
