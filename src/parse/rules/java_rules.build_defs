@@ -303,9 +303,10 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
     test_cmd = 'java -Dbuild.please.testpackage=%s %s -jar $(location :%s) %s' % (
         test_package, jvm_args, name, flags)
 
+    deps = [':_%s#lib' % name]
     if worker:
         test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
-        deps += [':_%s#lib' % name] + [worker]
+        deps += [worker]
 
     build_rule(
         name=name,
