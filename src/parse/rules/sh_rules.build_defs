@@ -106,15 +106,20 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
+
+    test_cmd = '$TEST %s' % flags
+    if worker:
+        test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
+        deps += [worker]
+
     return build_rule(
         name=name,
         srcs=[src or test],
         data=data,
         deps=deps,
-        worker=worker,
         outs=[name + '.sh'],
         cmd='mv ${SRC} ${OUT}',
-        test_cmd='$TEST %s' % flags,
+        test_cmd=test_cmd,
         visibility=visibility,
         labels=labels,
         binary=True,

@@ -478,11 +478,6 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         )
         srcs.append(main_rule)
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
-    # test_cmd = None if not CONFIG.CPP_COVERAGE else {
-    #     'opt': '$TEST %s' % flags,
-    #     'dbg': '$TEST %s' % flags,
-    #     'cover': '$TEST %s; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R' % flags,
-    # }
 
     if srcs:
         lib_rule = cc_library(
@@ -498,15 +493,17 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         )
         deps.append(lib_rule)
 
-    test_cmd = '$TEST' % flags
+    test_cmd = '$TEST %s' % flags
     if worker:
         test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
         deps += [worker]
 
-    test_cmds = {k: test_cmd for k in ['opt', 'dbg']}
     if CONFIG.CPP_COVERAGE:
-        test_cmds['cover'] = test_cmd + '; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.' \
-                                        'gcda && cat *.gcov > test.coverage; exit $R'
+        test_cmd = {
+            'opt': test_cmd,
+            'dbg': test_cmd,
+            'cover': test_cmd + '; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R'
+        }
 
     return build_rule(
         name=name,
