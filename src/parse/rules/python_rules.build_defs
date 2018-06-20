@@ -194,6 +194,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
                         vs. srcs is important here; srcs are passed to unittest for it to run
                         and it may or may not be happy if given non-Python files.
       deps (list): Dependencies of this rule.
+      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
       labels (list): Labels for this rule.
       size (str): Test size (enormous, large, medium or small).
       flags (str): Flags to apply to the test command.
