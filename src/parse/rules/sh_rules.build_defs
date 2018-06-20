@@ -84,8 +84,8 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
     )
 
 
-def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=None, deps:list=None, size:str=None,
-            visibility:list=None, flags:str='', flaky:bool|int=0, test_outputs:list=None, timeout:int=0,
+def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=None, deps:list=None, worker:str='',
+            size:str=None, visibility:list=None, flags:str='', flaky:bool|int=0, test_outputs:list=None, timeout:int=0,
             container:bool|dict=False, sandbox:bool=None):
     """Generates a shell test. Note that these aren't packaged in a useful way.
 
@@ -95,6 +95,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
       labels (list): Labels to apply to this test.
       data (list): Runtime data for the test.
       deps (list): Dependencies of this rule
+      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
       size (str): Test size (enormous, large, medium or small).
       visibility (list): Visibility declaration of the rule.
       flags (str): Flags to apply to the test invocation.
@@ -110,6 +111,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
         srcs=[src or test],
         data=data,
         deps=deps,
+        worker=worker,
         outs=[name + '.sh'],
         cmd='mv ${SRC} ${OUT}',
         test_cmd='$TEST %s' % flags,
