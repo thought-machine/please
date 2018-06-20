@@ -252,14 +252,14 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
     test_cmd = '$TEST ' + flags
     if worker:
         worker_cmd = '$(worker %s) && ' % worker
-
         test_cmd = worker_cmd + test_cmd
+        deps += [worker]
 
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     build_rule(
         name=name,
         srcs=[pex_rule],
-        deps=deps + [worker],
+        deps=deps,
         # N.B. the actual test sources are passed as data files as well. This is needed for pytest but
         #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
         data=data + srcs,
