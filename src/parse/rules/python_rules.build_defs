@@ -175,7 +175,7 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
     )
 
 
-def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=[],
+def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=[], worker:str='',
                 labels:list&features&tags=None, size:str=None, flags:str='', visibility:list=None,
                 container:bool|dict=False, sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
                 test_outputs:list=None, zip_safe:bool=None, interpreter:str=None):
@@ -248,6 +248,12 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         )
         deps = [pex_rule, lib_rule]
 
+    test_cmd = '$TEST ' + flags
+    if worker:
+        worker_cmd = '$(worker %s) && ' % worker
+
+        test_cmd = worker_cmd + test_cmd
+
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     build_rule(
         name=name,
@@ -259,7 +265,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         outs=['%s.pex' % name],
         labels=labels,
         cmd=_PYTHON_BINARY_CMDS,
-        test_cmd = '$TEST ' + flags,
+        test_cmd=test_cmd,
         needs_transitive_deps=True,
         output_is_complete=True,
         binary=True,
