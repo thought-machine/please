@@ -1,3 +1,9 @@
+Version 13.0.1
+--------------
+
+    * Minor fixes to Prometheus metrics and behave test runner.
+
+
 Version 13.0.0
 --------------
 

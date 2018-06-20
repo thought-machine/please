@@ -7,10 +7,10 @@ package metrics
 
 import (
 	"fmt"
+	"os"
 	"os/user"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/shlex"
@@ -37,13 +37,14 @@ type metrics struct {
 	timeout                                       time.Duration
 	buildCounter, cacheCounter, testCounter       *prometheus.CounterVec
 	buildHistogram, cacheHistogram, testHistogram *prometheus.HistogramVec
+	registry                                      *prometheus.Registry
 }
 
 // m is the singleton metrics instance.
 var m *metrics
 
-// initOnce is used to ensure that InitFromConfig only initialises once (because Prometheus panics otherwise).
-var initOnce sync.Once
+// buckets are the buckets we use for build histograms.
+var buckets = []float64{0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0}
 
 // InitFromConfig sets up the initial metrics from the configuration.
 func InitFromConfig(config *core.Configuration) {
@@ -54,16 +55,8 @@ func InitFromConfig(config *core.Configuration) {
 			}
 		}()
 
-		initOnce.Do(func() {
-			m = initMetrics(config.Metrics.PushGatewayURL.String(), time.Duration(config.Metrics.PushFrequency),
-				time.Duration(config.Metrics.PushTimeout), config.CustomMetricLabels, config.Metrics.PerTest)
-			prometheus.MustRegister(m.buildCounter)
-			prometheus.MustRegister(m.cacheCounter)
-			prometheus.MustRegister(m.testCounter)
-			prometheus.MustRegister(m.buildHistogram)
-			prometheus.MustRegister(m.cacheHistogram)
-			prometheus.MustRegister(m.testHistogram)
-		})
+		m = initMetrics(config.Metrics.PushGatewayURL.String(), time.Duration(config.Metrics.PushFrequency),
+			time.Duration(config.Metrics.PushTimeout), config.CustomMetricLabels, config.Metrics.PerTest)
 	}
 }
 
@@ -72,8 +65,14 @@ func InitFromConfig(config *core.Configuration) {
 func initMetrics(url string, frequency, timeout time.Duration, customLabels map[string]string, perTest bool) *metrics {
 	u, err := user.Current()
 	if err != nil {
-		log.Warning("Can't determine current user name for metrics")
-		u = &user.User{Username: "unknown"}
+		// we've observed os/user failing in some cases involving LDAP logins; fall back to the
+		// env var if it is set.
+		if username := os.Getenv("USER"); username != "" {
+			u = &user.User{Username: username}
+		} else {
+			log.Warning("Can't determine current user name for metrics: %s", err)
+			u = &user.User{Username: "unknown"}
+		}
 	}
 	constLabels := prometheus.Labels{
 		"user": u.Username,
@@ -84,10 +83,11 @@ func initMetrics(url string, frequency, timeout time.Duration, customLabels map[
 	}
 
 	m = &metrics{
-		url:     url,
-		timeout: timeout,
-		ticker:  time.NewTicker(frequency),
-		perTest: perTest,
+		url:      url,
+		timeout:  timeout,
+		ticker:   time.NewTicker(frequency),
+		perTest:  perTest,
+		registry: prometheus.NewRegistry(),
 	}
 
 	// Count of builds for each target.
@@ -115,7 +115,7 @@ func initMetrics(url string, frequency, timeout time.Duration, customLabels map[
 	m.buildHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:        "build_durations_histogram",
 		Help:        "Durations of individual build targets",
-		Buckets:     prometheus.LinearBuckets(0, 0.1, 100),
+		Buckets:     buckets,
 		ConstLabels: constLabels,
 	}, []string{})
 
@@ -123,7 +123,7 @@ func initMetrics(url string, frequency, timeout time.Duration, customLabels map[
 	m.cacheHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:        "cache_durations_histogram",
 		Help:        "Durations to retrieve artifacts from the cache",
-		Buckets:     prometheus.LinearBuckets(0, 0.1, 100),
+		Buckets:     buckets,
 		ConstLabels: constLabels,
 	}, []string{})
 
@@ -131,9 +131,17 @@ func initMetrics(url string, frequency, timeout time.Duration, customLabels map[
 	m.testHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:        "test_durations_histogram",
 		Help:        "Durations to run tests",
-		Buckets:     prometheus.LinearBuckets(0, 1, 100),
+		Buckets:     buckets,
 		ConstLabels: constLabels,
 	}, addTest([]string{}, perTest))
+
+	m.registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
+	m.registry.MustRegister(m.buildCounter)
+	m.registry.MustRegister(m.cacheCounter)
+	m.registry.MustRegister(m.testCounter)
+	m.registry.MustRegister(m.buildHistogram)
+	m.registry.MustRegister(m.cacheHistogram)
+	m.registry.MustRegister(m.testHistogram)
 
 	go m.keepPushing()
 
@@ -242,7 +250,7 @@ func (m *metrics) pushMetrics() int {
 	start := time.Now()
 	m.newMetrics = false
 	if err := deadline(func() error {
-		return push.AddFromGatherer("please", push.HostnameGroupingKey(), m.url, prometheus.DefaultGatherer)
+		return push.AddFromGatherer("please", push.HostnameGroupingKey(), m.url, m.registry)
 	}, m.timeout); err != nil {
 		log.Warning("Could not push metrics to the repository: %s", err)
 		m.newMetrics = true
