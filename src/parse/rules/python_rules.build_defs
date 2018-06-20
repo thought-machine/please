@@ -251,8 +251,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
 
     test_cmd = '$TEST ' + flags
     if worker:
-        worker_cmd = '$(worker %s) && ' % worker
-        test_cmd = worker_cmd + test_cmd
+        test_cmd += '$(worker %s) && ' % worker
         deps += [worker]
 
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
