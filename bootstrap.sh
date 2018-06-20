@@ -95,7 +95,11 @@ else
         fi
     fi
 fi
-if ! hash docker 2>/dev/null ; then
+eval `go env`
+if [ "$GOOS" != "linux" ] ; then
+    warn "Containerised tests disabled due to not being on Linux"
+    EXCLUDES="${EXCLUDES} --exclude=container"
+elif ! hash docker 2>/dev/null ; then
     warn "Docker not found, excluding containerised tests"
     EXCLUDES="${EXCLUDES} --exclude=container"
 fi
