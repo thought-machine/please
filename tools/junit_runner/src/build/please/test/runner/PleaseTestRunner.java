@@ -36,7 +36,7 @@ public class PleaseTestRunner {
       request = request.filterWith(Filter.matchMethodDescription(testDescription(testClass, aMethodsToTest)));
     }
 
-    // TODO(agenticarus): Perhaps handle flakes at this level?
+    // TODO(agenticarus): Handle tests running only one method
     core.run(request);
 
     return listener.getResult();

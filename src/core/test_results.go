@@ -25,6 +25,25 @@ type TestSuite struct {
 	Timestamp  string            // ISO8601 formatted datetime when the test ran.
 }
 
+// Collapse adds the results of one test suite to the current one.
+func (testSuite *TestSuite) Collapse(incoming TestSuite) {
+	testSuite.TestCases = append(testSuite.TestCases, incoming.TestCases...)
+	testSuite.Duration += incoming.Duration
+	testSuite.TimedOut = testSuite.TimedOut || incoming.TimedOut
+	if testSuite.Properties == nil {
+		testSuite.Properties = make(map[string]string)
+	}
+	testSuite.Properties = addAll(testSuite.Properties, incoming.Properties)
+}
+
+func addAll(map1 map[string]string, map2 map[string]string) map[string]string {
+	for k, v := range map2 {
+		map1[k] = v
+	}
+	return map1
+}
+
+// Tests returns the number of TestCases.
 func (testSuite *TestSuite) Tests() uint {
 	return uint(len(testSuite.TestCases))
 }
@@ -83,13 +102,15 @@ func (testSuite *TestSuite) Skips() uint {
 	return skips
 }
 
+// Add puts test cases together if they have the same name and classname, allowing callers to treat
+// multiple test cases as if they were merely multiple executions of the same test.
 func (testSuite *TestSuite) Add(cases ... TestCase) {
 OUTER:
 	for _, testCase := range cases {
 		for idx := range testSuite.TestCases {
 			originalTestCase := &testSuite.TestCases[idx]
 			if originalTestCase.Name == testCase.Name && originalTestCase.ClassName == testCase.ClassName {
-				originalTestCase.Add(testCase.Executions...)
+				originalTestCase.Executions = append(originalTestCase.Executions, testCase.Executions...)
 				continue OUTER
 			}
 		}
@@ -104,6 +125,7 @@ type TestCase struct {
 	Executions []TestExecution // The results of executing the test, possibly multiple times
 }
 
+// Success returns either the successful execution of a test case, or nil if it was never successfully executed.
 func (testCase TestCase) Success() *TestExecution {
 	for _, execution := range testCase.Executions {
 		if execution.Failure == nil &&
@@ -115,6 +137,7 @@ func (testCase TestCase) Success() *TestExecution {
 	return nil
 }
 
+// Skip returns the either the skipped execution of a test case, or nil if it was never skipped.
 func (testCase TestCase) Skip() *TestExecution {
 	for _, execution := range testCase.Executions {
 		if execution.Skip != nil {
@@ -124,6 +147,7 @@ func (testCase TestCase) Skip() *TestExecution {
 	return nil
 }
 
+// Failures returns all failing executions of a test case.
 func (testCase TestCase) Failures() []TestExecution {
 	failures := make([]TestExecution, 0)
 	for _, execution := range testCase.Executions {
@@ -134,6 +158,7 @@ func (testCase TestCase) Failures() []TestExecution {
 	return failures
 }
 
+// Errors returns all abnormal executions of a test case.
 func (testCase TestCase) Errors() []TestExecution {
 	errors := make([]TestExecution, 0)
 	for _, execution := range testCase.Executions {
@@ -144,6 +169,7 @@ func (testCase TestCase) Errors() []TestExecution {
 	return errors
 }
 
+// Duration calculates how long the test case took to run to success or failure (or nil if skipped or abnormal exit).
 func (testCase TestCase) Duration() *time.Duration {
 	if testCase.Success() != nil {
 		return testCase.Success().Duration
@@ -154,19 +180,17 @@ func (testCase TestCase) Duration() *time.Duration {
 	return nil
 }
 
+// TestCases is named so we can add a method to it.
 type TestCases []TestCase
 
+// AllSucceeded checks that every test case either passed or was skipped.
 func (testCases TestCases) AllSucceeded() bool {
 	for _, testCase := range testCases {
-		if testCase.Success() == nil {
+		if testCase.Success() == nil && testCase.Skip() == nil {
 			return false
 		}
 	}
 	return true
-}
-
-func (testCase *TestCase) Add(executions ... TestExecution) {
-	testCase.Executions = append(testCase.Executions, executions...)
 }
 
 // TestExecution represents one execution of a test method. The absence of a Failure, Error or Skip implies the test
@@ -180,12 +204,14 @@ type TestExecution struct {
 	Duration *time.Duration     // How long the test took (if it did not fail abnormally)
 }
 
+// TestResultFailure stores the information related to the failure - stack trace, exception type etc.
 type TestResultFailure struct {
 	Type      string // The type of error (e.g. "AssertionError")
 	Message   string // The reason for error (e.g. "1 != 2")
 	Traceback string // The trace of the error (if known)
 }
 
+// TestResultSkip stores the reason for skipping a test.
 type TestResultSkip struct {
 	Message string // The reason for skipping the test
 }

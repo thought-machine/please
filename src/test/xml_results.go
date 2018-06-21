@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"core"
-	"fmt"
 	"io"
+	"fmt"
 )
 
 func looksLikeJUnitXMLTestResults(b []byte) bool {
@@ -69,6 +69,8 @@ func parseJUnitXMLTestResults(data []byte) (core.TestSuites, error) {
 
 func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
 	testSuite := core.TestSuite{
+		Package:    xmlTestSuite.Package,
+		Name:       xmlTestSuite.Name,
 		HostName:   xmlTestSuite.HostName,
 		Timestamp:  xmlTestSuite.Timestamp,
 		Duration:   xmlTestSuite.Duration(),
@@ -230,7 +232,7 @@ type jUnitXMLTestSuites struct {
 	Name     string `xml:"name,attr,omitempty"`
 	Skipped  uint   `xml:"skipped,attr,omitempty"`
 	Tests    uint   `xml:"tests,attr,omitempty"`
-	*Timed           `xml:"time,attr,omitempty"`
+	Timed           `xml:"time,attr,omitempty"`
 
 	TestSuites []jUnitXMLTestSuite `xml:"testsuite,omitempty"`
 
@@ -360,8 +362,9 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 			testSuite := target.Results
 			if len(testSuite.TestCases) > 0 {
 				var xmlTestSuite jUnitXMLTestSuite
-				if _, ok := xmlSuites[testSuite.Name]; ok {
+				if _, ok := xmlSuites[fmt.Sprintf("%s.%s", testSuite.Package, testSuite.Name)]; ok {
 					xmlTestSuite = xmlSuites[testSuite.Name]
+					xmlTestSuite.Tests += testSuite.Tests()
 					xmlTestSuite.Errors += testSuite.Errors()
 					xmlTestSuite.Failures += testSuite.Failures()
 					xmlTestSuite.Skipped += testSuite.Skips()
@@ -369,8 +372,10 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 				} else {
 					xmlTestSuite = jUnitXMLTestSuite{
 						Name:       testSuite.Name,
+						Package:    testSuite.Package,
 						HostName:   testSuite.HostName,
 						Timestamp:  testSuite.Timestamp,
+						Tests:      testSuite.Tests(),
 						Errors:     testSuite.Errors(),
 						Failures:   testSuite.Failures(),
 						Skipped:    testSuite.Skips(),
@@ -380,9 +385,12 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 				}
 				for _, testCase := range testSuite.TestCases {
 					xmlTest := toXmlTestCase(testCase)
+					if xmlTest.ClassName == "" {
+						xmlTest.ClassName = fmt.Sprintf("%s.%s", testSuite.Package, testSuite.Name)
+					}
 					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
 				}
-				xmlSuites[testSuite.Name] = xmlTestSuite
+				xmlSuites[fmt.Sprintf("%s.%s", testSuite.Package, testSuite.Name)] = xmlTestSuite
 				for _, testCase := range testSuite.TestCases {
 					xmlTest := toXmlTestCase(testCase)
 					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
@@ -408,8 +416,6 @@ func toXmlProperties(props map[string]string) jUnitXMLProperties {
 			Value: v,
 		})
 	}
-	fmt.Printf("%v\n", props)
-	fmt.Printf("%v\n", out)
 	return out
 }
 

@@ -209,8 +209,8 @@ java_test(
 plz_e2e_test(
     name = "no_java_test",
     cmd = "plz test -p //test:no_test_run_java wibblewobble",
-    expect_output_contains = "1 failed",
-    expected_failure = True,
+    expect_output_contains = "0 tests run",
+    expected_failure = False,
 )
 
 # Test re-runs.

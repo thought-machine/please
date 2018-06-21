@@ -19,8 +19,6 @@ jobs:
            command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
        - store_test_results:
            path: plz-out/results/test_results.xml
-       - store_test_results:
-           path: plz-out/surefire-reports
        - run:
            name: Lint
            command: ./tools/misc/ci_lint.py
@@ -63,8 +61,6 @@ jobs:
            command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
        - store_test_results:
            path: plz-out/results/test_results.xml
-       - store_test_results:
-           path: plz-out/surefire-reports
        - store_artifacts:
            path: plz-out/log
        - run:
@@ -100,8 +96,6 @@ jobs:
            command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
        - store_test_results:
            path: plz-out/results/test_results.xml
-       - store_test_results:
-           path: plz-out/surefire-reports
        - store_artifacts:
            path: plz-out/log
        - run:

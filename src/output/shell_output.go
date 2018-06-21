@@ -223,6 +223,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 	if len(failedTargets) > 0 {
 		for _, failed := range failedTargets {
 			target := state.Graph.TargetOrDie(failed)
+			printf("Found failing target: %s", failed.Label().String())
 			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
 				if target.Results.TimedOut {
 				} else {

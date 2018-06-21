@@ -126,10 +126,15 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return
 	}
 
+	hostname, err := os.Hostname(); if err != nil {
+		hostname = "unknown"
+	}
+
 	// Fresh set of results for this target.
 	target.Results = core.TestSuite{
-		Package:   target.Label.PackageName,
+		Package:   strings.Replace(target.Label.PackageName, "/", ".", -1),
 		Name:      target.Label.Name,
+		HostName:  hostname,
 		Timestamp: time.Now().Format(time.RFC3339),
 	}
 
@@ -187,13 +192,9 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 				break
 			}
 		}
-		target.Results.TimedOut = target.Results.TimedOut || flakeResults.TimedOut
-		target.Results.HostName = flakeResults.HostName
-		target.Results.Duration += flakeResults.Duration
-		target.Results.Properties = utils.AddAll(target.Results.Properties, flakeResults.Properties)
 		// Each set of executions is now treated separately
 		// So if you ask for 3 runs you get 3 separate `PASS`es.
-		target.Results.TestCases = append(target.Results.TestCases, flakeResults.TestCases...)
+		target.Results.Collapse(flakeResults)
 	}
 
 	coverage = parseCoverageFile(target, coverageFile)

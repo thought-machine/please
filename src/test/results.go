@@ -24,8 +24,12 @@ func parseTestResultsImpl(outputFile string) (core.TestSuite, error) {
 	if len(bytes) == 0 {
 		return core.TestSuite{}, fmt.Errorf("No results")
 	} else if looksLikeJUnitXMLTestResults(bytes) {
-		// TODO(agenticarus): Collapse these multiple testsuites into one (probably just ram the test cases together)
-		return parseJUnitXMLTestResults(bytes)
+		testSuites, err := parseJUnitXMLTestResults(bytes)
+		testSuite := core.TestSuite{}
+		for _, suite := range testSuites.TestSuites {
+			testSuite.Collapse(suite)
+		}
+		return testSuite, err
 	} else {
 		return parseGoTestResults(bytes)
 	}
@@ -42,7 +46,7 @@ func parseTestResultsDir(outputDir string) (core.TestSuite, error) {
 			if err != nil {
 				return fmt.Errorf("Error parsing %s: %s", path, err)
 			}
-			results.Aggregate(fileResults)
+			results.Collapse(fileResults)
 		}
 		return nil
 	})
