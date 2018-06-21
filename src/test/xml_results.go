@@ -11,54 +11,86 @@ import (
 	"time"
 
 	"core"
+	"fmt"
+	"io"
 )
 
 func looksLikeJUnitXMLTestResults(b []byte) bool {
 	return bytes.HasPrefix(b, []byte{'<', '?', 'x', 'm', 'l'}) || bytes.HasPrefix(b, []byte{'<', 't', 'e', 's', 't'})
 }
 
-func parseJUnitXMLTestResults(bytes []byte) (core.TestSuite, error) {
-	results := core.TestSuite{}
-	junitFile := jUnitXMLTestResults{}
-	if err := xml.Unmarshal(bytes, &junitFile); err != nil {
-		return results, err
-	}
-	var duration time.Duration
-	if len(junitFile.Tests) > 0 {
-		for _, test := range junitFile.Tests {
-			result := core.TestCase{
-				ClassName: test.ClassName,
-				Name:      test.Name,
+func parseJUnitXMLTestResults(data []byte) (core.TestSuites, error) {
+	results := core.TestSuites{}
+	decoder := xml.NewDecoder(bytes.NewReader(data))
+	for {
+		token, err := decoder.Token()
+		switch err {
+		case nil:
+		case io.EOF:
+			return results, nil
+		default:
+			log.Fatalf("error: %s", err)
+		}
+
+		switch tok := token.(type) {
+		case xml.StartElement:
+			switch tok.Name.Local {
+			case "test":
+				fallthrough
+			case "testcase":
+				// One or more bare tests, put each one in a synthetic test suite
+				testSuite := core.TestSuite{}
+				xmlTest := jUnitXMLTest{}
+				testCase := core.TestCase{}
+				decoder.DecodeElement(&xmlTest, &tok)
+				appendResult(xmlTest, &testCase)
+				testSuite.TestCases = append(testSuite.TestCases, testCase)
+				testSuite.Duration += xmlTest.Duration()
+				results.TestSuites = append(results.TestSuites, testSuite)
+			case "testsuite": // Just a single test suite (this is the usual output from junit, for example)
+				xmlTestSuite := jUnitXMLTestSuite{}
+				decoder.DecodeElement(&xmlTestSuite, &tok)
+				results.TestSuites = append(results.TestSuites, toCoreTestSuite(xmlTestSuite))
+			case "testsuites": // We might have a collection of existing test suites, if we're parsing our own output.
+				xmlTestSuites := jUnitXMLTestSuites{}
+				decoder.DecodeElement(&xmlTestSuites, &tok)
+
+				var duration time.Duration
+				for _, xmlTestSuite := range xmlTestSuites.TestSuites {
+					results.TestSuites = append(results.TestSuites, toCoreTestSuite(xmlTestSuite))
+					duration += xmlTestSuite.Duration()
+				}
 			}
-			appendResult(test, &result)
-			results.TestCases = append(results.TestCases, result)
-			duration += test.Duration()
 		}
 	}
-	if len(junitFile.TestCases) > 0 {
-		for _, test := range junitFile.TestCases {
-			result := core.TestCase{
-				ClassName: test.ClassName,
-				Name:      test.Name,
-			}
-			appendResult(test, &result)
-			results.TestCases = append(results.TestCases, result)
-			duration += test.Duration()
-		}
-	}
-	for _, testSuite := range junitFile.TestSuites {
-		for _, test := range testSuite.TestCases {
-			result := core.TestCase{
-				ClassName: test.ClassName,
-				Name:      test.Name,
-			}
-			appendResult(test, &result)
-			results.TestCases = append(results.TestCases, result)
-		}
-		duration += testSuite.Duration()
-	}
-	results.Duration = duration
+
 	return results, nil
+}
+
+func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
+	testSuite := core.TestSuite{
+		HostName:   xmlTestSuite.HostName,
+		Timestamp:  xmlTestSuite.Timestamp,
+		Duration:   xmlTestSuite.Duration(),
+		Properties: toCoreProperties(xmlTestSuite.Properties),
+	}
+	for _, test := range xmlTestSuite.TestCases {
+		result := core.TestCase{
+			ClassName: test.ClassName,
+			Name:      test.Name,
+		}
+		appendResult(test, &result)
+		testSuite.TestCases = append(testSuite.TestCases, result)
+	}
+	return testSuite
+}
+
+func toCoreProperties(properties jUnitXMLProperties) map[string]string {
+	props := make(map[string]string)
+	for _, prop := range properties.Property {
+		props[prop.Name] = prop.Value
+	}
+	return props
 }
 
 func appendResult(test jUnitXMLTest, results *core.TestCase) {
@@ -102,16 +134,14 @@ func appendResult(test jUnitXMLTest, results *core.TestCase) {
 }
 
 func appendFailure(test jUnitXMLTest, results *core.TestCase, failure jUnitXMLFailure) {
-	duration := failure.Duration()
 	results.Executions = append(results.Executions, core.TestExecution{
 		Failure: &core.TestResultFailure{
 			Message:   failure.Message,
 			Type:      failure.Type,
 			Traceback: failure.Traceback,
 		},
-		Stdout:   test.Stdout,
-		Stderr:   test.Stderr,
-		Duration: &duration,
+		Stdout: test.Stdout,
+		Stderr: test.Stderr,
 	})
 }
 
@@ -194,31 +224,46 @@ func appendSuccess(test jUnitXMLTest, results *core.TestCase) {
 	})
 }
 
-type jUnitXMLTestResults struct {
-	TestSuites []jUnitXMLTestSuite `xml:"testsuite"`
-	TestCases  []jUnitXMLTest      `xml:"testcase"`
-	Tests      []jUnitXMLTest      `xml:"test"`
-	XMLName    xml.Name
+type jUnitXMLTestSuites struct {
+	Errors   uint   `xml:"errors,attr,omitempty"`
+	Failures uint   `xml:"failures,attr,omitempty"`
+	Name     string `xml:"name,attr,omitempty"`
+	Skipped  uint   `xml:"skipped,attr,omitempty"`
+	Tests    uint   `xml:"tests,attr,omitempty"`
+	*Timed           `xml:"time,attr,omitempty"`
+
+	TestSuites []jUnitXMLTestSuite `xml:"testsuite,omitempty"`
+
+	XMLName xml.Name `xml:"testsuites"`
 }
 
 type jUnitXMLTestSuite struct {
-	Name     string `xml:"name,attr"`
-	Errors   uint   `xml:"errors,attr"`
-	Failures uint   `xml:"failures,attr"`
-	Group    string `xml:"group,attr,omitempty"`
-	Skipped  uint   `xml:"skipped,attr"`
-	Tests    uint   `xml:"tests,attr"`
-	*Timed          `xml:"time,attr,omitempty"`
+	Name  string `xml:"name,attr"`
+	Tests uint   `xml:"tests,attr"`
+
+	Errors    uint   `xml:"errors,attr,omitempty"`
+	Failures  uint   `xml:"failures,attr,omitempty"`
+	HostName  string `xml:"hostname,attr,omitempty"`
+	Skipped   uint   `xml:"skipped,attr,omitempty"`
+	Package   string `xml:"package,attr,omitempty"`
+	Timed            `xml:"time,attr,omitempty"`
+	Timestamp string `xml:"timestamp,attr,omitempty"`
 
 	Properties jUnitXMLProperties `xml:"properties,omitempty"`
 	TestCases  []jUnitXMLTest     `xml:"testcase"`
+	Stdout     string             `xml:"system-out,omitempty"`
+	Stderr     string             `xml:"system-err,omitempty"`
+
+	XMLName xml.Name `xml:"testsuite"`
 }
 
 type jUnitXMLTest struct {
-	ClassName string `xml:"classname,attr,omitempty"`
-	Name      string `xml:"name,attr"`
-	Group     string `xml:"group,attr,omitempty"`
-	Timed            `xml:"time,attr"`
+	Name string `xml:"name,attr"`
+
+	Assertions uint   `xml:"assertions,attr,omitempty"`
+	ClassName  string `xml:"classname,attr,omitempty"`
+	Status     string `xml:"status,attr,omitempty"`
+	Timed             `xml:"time,attr,omitempty"`
 
 	Error        *jUnitXMLError         `xml:"error,omitempty"`
 	FlakyError   []jUnitXMLFlaky        `xml:"flakyError,omitempty"`
@@ -236,8 +281,8 @@ type jUnitXMLProperties struct {
 }
 
 type jUnitXMLProperty struct {
-	Name  string `xml:"name"`
-	Value string `xml:"value"`
+	Name  string `xml:"name,attr"`
+	Value string `xml:"value,attr"`
 }
 
 type jUnitXMLError struct {
@@ -249,7 +294,6 @@ type jUnitXMLError struct {
 
 type jUnitXMLFailure struct {
 	Message string `xml:"message,attr,omitempty"`
-	Timed          `xml:"time,attr"`
 	Type    string `xml:"type,attr"`
 
 	Traceback string `xml:",chardata"`
@@ -306,38 +350,43 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	if err := os.MkdirAll(path.Dir(filename), core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory for test output")
 	}
-	xmlTestResults := jUnitXMLTestResults{}
+	xmlTestResults := jUnitXMLTestSuites{}
 	xmlTestResults.XMLName.Local = "testsuites"
 
 	// Collapse any testsuite with the same name
 	xmlSuites := make(map[string]jUnitXMLTestSuite)
 	for _, target := range graph.AllTargets() {
-		testSuite := target.Results
-		if len(testSuite.TestCases) > 0 {
-			var xmlTestSuite jUnitXMLTestSuite
-			if _, ok := xmlSuites[testSuite.Name]; ok {
-				xmlTestSuite = xmlSuites[testSuite.Name]
-				xmlTestSuite.Errors += testSuite.Errors()
-				xmlTestSuite.Failures += testSuite.Failures()
-				xmlTestSuite.Skipped += testSuite.Skips()
-				xmlTestSuite.Timed.Time += testSuite.Duration.Seconds()
-			} else {
-				xmlTestSuite = jUnitXMLTestSuite{
-					Name:     testSuite.Name,
-					Errors:   testSuite.Errors(),
-					Failures: testSuite.Failures(),
-					Skipped:  testSuite.Skips(),
-					Timed:    &Timed{testSuite.Duration.Seconds()},
+		if target.IsTest {
+			testSuite := target.Results
+			if len(testSuite.TestCases) > 0 {
+				var xmlTestSuite jUnitXMLTestSuite
+				if _, ok := xmlSuites[testSuite.Name]; ok {
+					xmlTestSuite = xmlSuites[testSuite.Name]
+					xmlTestSuite.Errors += testSuite.Errors()
+					xmlTestSuite.Failures += testSuite.Failures()
+					xmlTestSuite.Skipped += testSuite.Skips()
+					xmlTestSuite.Timed.Time += testSuite.Duration.Seconds()
+				} else {
+					xmlTestSuite = jUnitXMLTestSuite{
+						Name:       testSuite.Name,
+						HostName:   testSuite.HostName,
+						Timestamp:  testSuite.Timestamp,
+						Errors:     testSuite.Errors(),
+						Failures:   testSuite.Failures(),
+						Skipped:    testSuite.Skips(),
+						Timed:      Timed{testSuite.Duration.Seconds()},
+						Properties: toXmlProperties(testSuite.Properties),
+					}
 				}
-			}
-			for _, testCase := range testSuite.TestCases {
-				xmlTest := toXmlTestCase(testCase)
-				xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
-			}
-			xmlSuites[testSuite.Name] = xmlTestSuite
-			for _, testCase := range testSuite.TestCases {
-				xmlTest := toXmlTestCase(testCase)
-				xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
+				for _, testCase := range testSuite.TestCases {
+					xmlTest := toXmlTestCase(testCase)
+					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
+				}
+				xmlSuites[testSuite.Name] = xmlTestSuite
+				for _, testCase := range testSuite.TestCases {
+					xmlTest := toXmlTestCase(testCase)
+					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
+				}
 			}
 		}
 	}
@@ -351,12 +400,23 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	}
 }
 
+func toXmlProperties(props map[string]string) jUnitXMLProperties {
+	out := jUnitXMLProperties{}
+	for k, v := range props {
+		out.Property = append(out.Property, jUnitXMLProperty{
+			Name:  k,
+			Value: v,
+		})
+	}
+	fmt.Printf("%v\n", props)
+	fmt.Printf("%v\n", out)
+	return out
+}
+
 func toXmlTestCase(result core.TestCase) jUnitXMLTest {
 	testcase := jUnitXMLTest{
 		ClassName: result.ClassName,
 		Name:      result.Name,
-		// TODO(agenticarus): Test groups are not supported yet
-		// Group: "",
 	}
 	success := result.Success()
 	failures := result.Failures()

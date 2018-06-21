@@ -7,20 +7,33 @@ import (
 	"time"
 )
 
+// TestSuites describes a collection of test results for a set of targets.
+type TestSuites struct {
+	TestSuites []TestSuite // The test results for each separate target
+}
+
 // TestSuite describes all the test results for a target.
 type TestSuite struct {
-	Name      string        // The name of the test suite (usually the target name)
-	Cached    bool          // True if the test results were retrieved from cache
-	Duration  time.Duration // The length of time it took to run this target.
-	TimedOut  bool          // True if the test failed because we timed it out.
-	TestCases []TestCase    // The test cases that ran during this target
+	Package    string            // The package name of the test suite (usually the first part of the target label).
+	Name       string            // The name of the test suite (usually the last part of the target label).
+	Cached     bool              // True if the test results were retrieved from cache.
+	Duration   time.Duration     // The length of time it took to run this target (may be different from the sum of times of test cases).
+	TimedOut   bool              // True if the test failed because we timed it out.
+	TestCases  TestCases         // The test cases that ran during execution of this target.
+	Properties map[string]string // The system properties at the time of the test.
+	HostName   string            // The name of the host the test ran on.
+	Timestamp  string            // ISO8601 formatted datetime when the test ran.
+}
+
+func (testSuite *TestSuite) Tests() uint {
+	return uint(len(testSuite.TestCases))
 }
 
 // Passes returns the number of TestCases which succeeded (not skipped).
-func (suite TestSuite) Passes() uint {
+func (testSuite TestSuite) Passes() uint {
 	passes := uint(0)
 
-	for _, result := range suite.TestCases {
+	for _, result := range testSuite.TestCases {
 		if result.Success() != nil {
 			passes++
 		}
@@ -29,7 +42,7 @@ func (suite TestSuite) Passes() uint {
 	return passes
 }
 
-// Errors returns the number of TestCases which did not succeed and returned some error.
+// Errors returns the number of TestCases which did not succeed and returned some abnormal error.
 func (testSuite *TestSuite) Errors() uint {
 	errors := uint(0)
 
@@ -70,21 +83,17 @@ func (testSuite *TestSuite) Skips() uint {
 	return skips
 }
 
-func (testSuite *TestSuite) Tests() uint {
-	return uint(len(testSuite.TestCases))
-}
-
-func (suite *TestSuite) Add(cases ... TestCase) {
-	OUTER:
+func (testSuite *TestSuite) Add(cases ... TestCase) {
+OUTER:
 	for _, testCase := range cases {
-		for idx, _ := range suite.TestCases {
-			originalTestCase := &suite.TestCases[idx]
+		for idx := range testSuite.TestCases {
+			originalTestCase := &testSuite.TestCases[idx]
 			if originalTestCase.Name == testCase.Name && originalTestCase.ClassName == testCase.ClassName {
 				originalTestCase.Add(testCase.Executions...)
 				continue OUTER
 			}
 		}
-		suite.TestCases = append(suite.TestCases, testCase)
+		testSuite.TestCases = append(testSuite.TestCases, testCase)
 	}
 }
 
@@ -143,6 +152,17 @@ func (testCase TestCase) Duration() *time.Duration {
 	}
 	// Unable to determine duration of this test case.
 	return nil
+}
+
+type TestCases []TestCase
+
+func (testCases TestCases) AllSucceeded() bool {
+	for _, testCase := range testCases {
+		if testCase.Success() == nil {
+			return false
+		}
+	}
+	return true
 }
 
 func (testCase *TestCase) Add(executions ... TestExecution) {
@@ -228,7 +248,7 @@ func MergeCoverageLines(existing, coverage []LineCoverage) []LineCoverage {
 
 // OrderedFiles returns an ordered slice of all the files we have coverage information for.
 func (coverage *TestCoverage) OrderedFiles() []string {
-	files := []string{}
+	var files []string
 	for file := range coverage.Files {
 		if strings.HasPrefix(file, RepoRoot) {
 			file = strings.TrimLeft(file[len(RepoRoot):], "/")

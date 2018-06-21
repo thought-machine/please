@@ -116,7 +116,7 @@ type BuildTarget struct {
 	Progress float32 `print:"false"`
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings `name:"container"`
-	// TestCases of test, if it is one
+	// The results of this test target, if it is one.
 	Results TestSuite `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.

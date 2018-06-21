@@ -13,8 +13,7 @@ import (
 )
 
 func parseTestResults(outputFile string) (core.TestSuite, error) {
-	results, err := parseTestResultsDir(outputFile)
-	return results, err
+	return parseTestResultsDir(outputFile)
 }
 
 func parseTestResultsImpl(outputFile string) (core.TestSuite, error) {
@@ -25,6 +24,7 @@ func parseTestResultsImpl(outputFile string) (core.TestSuite, error) {
 	if len(bytes) == 0 {
 		return core.TestSuite{}, fmt.Errorf("No results")
 	} else if looksLikeJUnitXMLTestResults(bytes) {
+		// TODO(agenticarus): Collapse these multiple testsuites into one (probably just ram the test cases together)
 		return parseJUnitXMLTestResults(bytes)
 	} else {
 		return parseGoTestResults(bytes)
@@ -42,8 +42,7 @@ func parseTestResultsDir(outputDir string) (core.TestSuite, error) {
 			if err != nil {
 				return fmt.Errorf("Error parsing %s: %s", path, err)
 			}
-			results.Duration = fileResults.Duration
-			results.TestCases = append(results.TestCases, fileResults.TestCases...)
+			results.Aggregate(fileResults)
 		}
 		return nil
 	})
@@ -60,7 +59,7 @@ func LoadPreviousFailures(filename string) ([]core.BuildLabel, []string) {
 	defer f.Close()
 	// We have to read directly since the TestResults struct doesn't have all the information
 	// we'll need (e.g. it discards test suite names).
-	junit := jUnitXMLTestResults{}
+	junit := jUnitXMLTestSuites{}
 	if err := xml.NewDecoder(f).Decode(&junit); err != nil {
 		log.Fatalf("Failed to read previous test results: %s", err)
 	}
