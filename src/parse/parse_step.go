@@ -9,6 +9,7 @@ package parse
 import (
 	"fmt"
 	"path"
+	"time"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -41,7 +42,7 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 
 func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) error {
 	// See if something else has parsed this package first.
-	pkg := state.WaitForPackage(label.PackageName)
+	pkg := state.WaitForPackage(label.PackageName, true)
 	if pkg != nil {
 		// Does exist, all we need to do is toggle on this target
 		return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
@@ -114,7 +115,13 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 		// TODO(peterebden): Ideally we'd like to be able to define these anywhere, so this is a bit of a hack for now.
 		if fs.IsPackage(state.Config.Parse.BuildFileName, core.RepoRoot) && state.Graph.Package("") == nil {
 			state.AddPendingParse(core.BuildLabel{PackageName: "", Name: "all"}, label, false)
-			state.WaitForPackage("")
+			// TODO(peterebden): This is an even more awkward hack than the one noted above. We
+			//                   need to wait until the parse we triggered above succeeds and are
+			//                   effectively polling to check it :(
+			var pkg *core.Package
+			for ; pkg == nil; pkg = state.WaitForPackage("", false) {
+				time.Sleep(5 * time.Millisecond)
+			}
 			return nil, errTryAgain
 		}
 		exists := core.PathExists(packageName)
