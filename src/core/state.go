@@ -495,7 +495,7 @@ func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 // WaitForPackage either returns the given package which is already parsed and available,
 // or returns nil if nothing's parsed it already, in which case everything else calling this
 // will wait for the caller to parse it themselves.
-func (state *BuildState) WaitForPackage(packageName string, register bool) *Package {
+func (state *BuildState) WaitForPackage(packageName string) *Package {
 	if p := state.Graph.Package(packageName); p != nil {
 		return p
 	}
@@ -506,9 +506,6 @@ func (state *BuildState) WaitForPackage(packageName string, register bool) *Pack
 		<-ch
 		state.ParsePool.StopWorker()
 		return state.Graph.Package(packageName)
-	} else if !register {
-		state.progress.pendingPackageMutex.Unlock()
-		return nil
 	}
 	// Nothing's registered this so we do it ourselves.
 	state.progress.pendingPackages[packageName] = make(chan struct{})
