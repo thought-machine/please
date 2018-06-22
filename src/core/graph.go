@@ -6,7 +6,6 @@ package core
 
 import (
 	"sort"
-	"strings"
 	"sync"
 )
 
@@ -34,8 +33,7 @@ type BuildGraph struct {
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
-	_, present := graph.targets[target.Label]
-	if present {
+	if _, present := graph.targets[target.Label]; present {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
 	graph.targets[target.Label] = target
@@ -131,14 +129,6 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 		log.Fatalf("No registered subrepo by the name %s", name)
 	}
 	return subrepo
-}
-
-// SubrepoFor returns the subrepo for the given package (which may be a subpackage inside the subrepo)
-func (graph *BuildGraph) SubrepoFor(name string) *Subrepo {
-	if idx := strings.IndexRune(name, '/'); idx != -1 {
-		return graph.Subrepo(name[:idx])
-	}
-	return graph.Subrepo(name)
 }
 
 // Len returns the number of targets currently in the graph.

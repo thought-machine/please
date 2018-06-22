@@ -65,7 +65,10 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
 func checkSubrepo(state *core.BuildState, label core.BuildLabel) *core.Subrepo {
-	subrepo := state.Graph.SubrepoFor(label.PackageName)
+	if label.Subrepo == "" {
+		return nil
+	}
+	subrepo := state.Graph.Subrepo(label.Subrepo)
 	if subrepo != nil && subrepo.Target != nil {
 		state.WaitForBuiltTarget(subrepo.Target.Label, label.PackageName)
 	}
@@ -109,7 +112,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
 	pkg.Subrepo = subrepo
-	if pkg.Filename = buildFileName(state, packageName); pkg.Filename == "" {
+	if pkg.Filename = buildFileName(state, label.PackageName, label.Subrepo); pkg.Filename == "" {
 		// Could indicate that we're looking for a subrepo that hasn't been loaded yet.
 		// TODO(peterebden): Ideally we'd like to be able to define these anywhere, so this is a bit of a hack for now.
 		if fs.IsPackage(state.Config.Parse.BuildFileName, core.RepoRoot) && state.Graph.Package("") == nil {
@@ -168,7 +171,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	return pkg, nil
 }
 
-func buildFileName(state *core.BuildState, pkgName string) string {
+func buildFileName(state *core.BuildState, pkgName, subrepo string) string {
 	// Bazel defines targets in its "external" package from its WORKSPACE file.
 	// We will fake this by treating that as an actual package file...
 	// TODO(peterebden): They may be moving away from their "external" nomenclature?
@@ -181,8 +184,8 @@ func buildFileName(state *core.BuildState, pkgName string) string {
 		}
 	}
 	// Could be a subrepo...
-	if subrepo := state.Graph.SubrepoFor(pkgName); subrepo != nil {
-		return buildFileName(state, subrepo.Dir(pkgName))
+	if subrepo != "" {
+		return buildFileName(state, state.Graph.Subrepo(subrepo).Dir(pkgName), "")
 	}
 	return ""
 }

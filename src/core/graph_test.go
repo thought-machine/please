@@ -94,12 +94,6 @@ func TestSubrepo(t *testing.T) {
 	subrepo := graph.Subrepo("test")
 	assert.NotNil(t, subrepo)
 	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
-	subrepo = graph.SubrepoFor("test/some/package")
-	assert.NotNil(t, subrepo)
-	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
-	subrepo = graph.SubrepoFor("test")
-	assert.NotNil(t, subrepo)
-	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
 }
 
 // makeTarget creates a new build target for us.
