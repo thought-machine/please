@@ -113,8 +113,9 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 		// Could indicate that we're looking for a subrepo that hasn't been loaded yet.
 		// TODO(peterebden): Ideally we'd like to be able to define these anywhere, so this is a bit of a hack for now.
 		if fs.IsPackage(state.Config.Parse.BuildFileName, core.RepoRoot) && state.Graph.Package("") == nil {
-			state.AddPendingParse(core.BuildLabel{PackageName: "", Name: "all"}, label, false)
-			state.WaitForPackage("")
+			if _, err := parsePackage(state, core.BuildLabel{PackageName: "", Name: "all"}, label, nil); err != nil {
+				return nil, err
+			}
 			return nil, errTryAgain
 		}
 		exists := core.PathExists(packageName)
