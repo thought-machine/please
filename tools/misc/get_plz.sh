@@ -35,7 +35,7 @@ if ! hash plz 2>/dev/null; then
     if [ -d ~/.local/bin ]; then
         ln -s ~/.please/plz ~/.local/bin/plz
     elif [ -f ~/.profile ]; then
-        echo 'export PATH="${PATH}:~/.please"' >> ~/.profile
+        echo 'export PATH="${PATH}:${HOME}/.please"' >> ~/.profile
         echo "You may need to run 'source ~/.profile' to pick up the new PATH."
     else
         echo "Unsure how to add to PATH, not modifying anything."
