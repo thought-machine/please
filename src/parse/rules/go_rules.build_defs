@@ -291,7 +291,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     )
 
 
-def go_test(name:str, srcs:list, data:list=None, deps:list=[], visibility:list=None,
+def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', visibility:list=None,
             flags:str='', container:bool|dict=False, sandbox:bool=None, cgo:bool=False,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
             labels:list&features&tags=None, size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC):
@@ -302,6 +302,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], visibility:list=N
       srcs (list): Go source files to compile.
       data (list): Runtime data files for the test.
       deps (list): Dependencies
+      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
       visibility (list): Visibility specification
       flags (str): Flags to apply to the test invocation.
       container (bool | dict): True to run this test in a container.
@@ -370,6 +371,12 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], visibility:list=N
         test_only=True,
     )
     cmds, tools = _go_binary_cmds(static=static)
+
+    test_cmd = '$TEST %s | tee $RESULTS_FILE' % flags
+    if worker:
+        test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
+        deps += [worker]
+
     build_rule(
         name=name,
         srcs=[':_%s#main_lib' % name],
@@ -378,7 +385,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], visibility:list=N
         outs=[name],
         tools=tools,
         cmd=cmds,
-        test_cmd='$TEST %s | tee $RESULTS_FILE' % flags,
+        test_cmd=test_cmd,
         visibility=visibility,
         container=container,
         test_sandbox=sandbox,

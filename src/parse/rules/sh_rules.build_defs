@@ -84,8 +84,8 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
     )
 
 
-def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=None, deps:list=None, size:str=None,
-            visibility:list=None, flags:str='', flaky:bool|int=0, test_outputs:list=None, timeout:int=0,
+def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=None, deps:list=None, worker:str='',
+            size:str=None, visibility:list=None, flags:str='', flaky:bool|int=0, test_outputs:list=None, timeout:int=0,
             container:bool|dict=False, sandbox:bool=None):
     """Generates a shell test. Note that these aren't packaged in a useful way.
 
@@ -95,6 +95,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
       labels (list): Labels to apply to this test.
       data (list): Runtime data for the test.
       deps (list): Dependencies of this rule
+      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
       size (str): Test size (enormous, large, medium or small).
       visibility (list): Visibility declaration of the rule.
       flags (str): Flags to apply to the test invocation.
@@ -105,6 +106,12 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
+
+    test_cmd = '$TEST %s' % flags
+    if worker:
+        test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
+        deps += [worker]
+
     return build_rule(
         name=name,
         srcs=[src or test],
@@ -112,7 +119,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
         deps=deps,
         outs=[name + '.sh'],
         cmd='mv ${SRC} ${OUT}',
-        test_cmd='$TEST %s' % flags,
+        test_cmd=test_cmd,
         visibility=visibility,
         labels=labels,
         binary=True,

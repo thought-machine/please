@@ -434,7 +434,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
 
 
 def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-            pkg_config_libs:list=[], deps:list=[], data:list=[], visibility:list=[], flags:str='',
+            pkg_config_libs:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=[], flags:str='',
             labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=[], size:str=None, timeout:int=0,
             container:bool|dict=False, sandbox:bool=None, write_main:bool=not CONFIG.BAZEL_COMPATIBILITY, _c=False):
     """Defines a C++ test using UnitTest++.
@@ -450,6 +450,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
       linker_flags (list): Flags to pass to the linker.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
       deps (list): Dependent rules.
+      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
       data (list): Runtime data files for this test.
       visibility (list): Visibility declaration for this rule.
       flags (str): Flags to apply to the test invocation.
@@ -477,11 +478,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         )
         srcs.append(main_rule)
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
-    test_cmd = None if not CONFIG.CPP_COVERAGE else {
-        'opt': '$TEST %s' % flags,
-        'dbg': '$TEST %s' % flags,
-        'cover': '$TEST %s; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R' % flags,
-    }
+
     if srcs:
         lib_rule = cc_library(
             name='_%s#lib' % name,
@@ -495,6 +492,19 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             _c=_c,
         )
         deps.append(lib_rule)
+
+    test_cmd = '$TEST %s' % flags
+    if worker:
+        test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
+        deps += [worker]
+
+    if CONFIG.CPP_COVERAGE:
+        test_cmd = {
+            'opt': test_cmd,
+            'dbg': test_cmd,
+            'cover': test_cmd + '; R=$?; cp $GCNO_DIR/*.gcno . && gcov *.gcda && cat *.gcov > test.coverage; exit $R'
+        }
+
     return build_rule(
         name=name,
         outs=[name],

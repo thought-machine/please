@@ -260,9 +260,9 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
     )
 
 
-def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:list=None, labels:list&features&tags=None,
-              visibility:list=None, flags:str='', container:bool|dict=False, sandbox:bool=None,
-              timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
+def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:list=None, worker:str='',
+              labels:list&features&tags=None, visibility:list=None, flags:str='', container:bool|dict=False,
+              sandbox:bool=None, timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
               test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str=''):
     """Defines a Java test.
 
@@ -272,6 +272,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
       resources (list): Resources to include in the .jar file
       data (list): Runtime data files for this rule.
       deps (list): Dependencies of this rule.
+      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
       labels (list): Labels to attach to this test.
       visibility (list): Visibility declaration of this rule.
       flags (str): Flags to pass to the test invocation.
@@ -301,13 +302,19 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
     cmd = 'ln -s $TOOLS_JUNIT . && ' + cmd
     test_cmd = 'java -Dbuild.please.testpackage=%s %s -jar $(location :%s) %s' % (
         test_package, jvm_args, name, flags)
+
+    deps = [':_%s#lib' % name]
+    if worker:
+        test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
+        deps += [worker]
+
     build_rule(
         name=name,
         cmd=cmd,
         test_cmd=test_cmd,
         data=data,
         outs=[name + '.jar'],
-        deps=[':_%s#lib' % name],
+        deps=deps,
         visibility=visibility,
         container=container,
         test_sandbox=sandbox,
