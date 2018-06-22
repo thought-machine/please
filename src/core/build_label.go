@@ -39,7 +39,7 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
 	if label.Subrepo != "" {
-		return "@" + "//" + label.PackageName + ":" + label.Name
+		return "@" + label.Subrepo + "//" + label.PackageName + ":" + label.Name
 	}
 	return "//" + label.PackageName + ":" + label.Name
 }
@@ -107,20 +107,23 @@ func ParseBuildLabel(target, currentPath string) BuildLabel {
 
 // TryParseBuildLabel attempts to parse a single build label from a string. Returns an error if unsuccessful.
 func TryParseBuildLabel(target, currentPath string) (BuildLabel, error) {
-	if pkg, name, _ := parseBuildLabelParts(target, currentPath, nil); name != "" {
-		return BuildLabel{PackageName: pkg, Name: name}, nil
+	if pkg, name, subrepo := parseBuildLabelParts(target, currentPath, nil); name != "" {
+		return BuildLabel{PackageName: pkg, Name: name, Subrepo: subrepo}, nil
 	}
 	return BuildLabel{}, fmt.Errorf("Invalid build label: %s", target)
 }
 
-// ParseBuildLabelSubrepo parses a build label, and returns a separate indicator of the subrepo it was in.
+// ParseBuildLabelSubrepo parses a build label in the context of a package.
 // It panics on error.
-func ParseBuildLabelSubrepo(target string, pkg *Package) (BuildLabel, string) {
+func ParseBuildLabelContext(target string, pkg *Package) BuildLabel {
 	if p, name, subrepo := parseBuildLabelParts(target, pkg.Name, pkg.Subrepo); name != "" {
-		return BuildLabel{PackageName: p, Name: name}, subrepo
+		if subrepo == "" && pkg.Subrepo != nil {
+			subrepo = pkg.Subrepo.Name
+		}
+		return BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}
 	}
 	// It's gonna fail, let this guy panic for us.
-	return ParseBuildLabel(target, pkg.Name), ""
+	return ParseBuildLabel(target, pkg.Name)
 }
 
 // parseBuildLabelParts parses a build label into the package & name parts.
@@ -142,14 +145,7 @@ func parseBuildLabelParts(target, currentPath string, subrepo *Subrepo) (string,
 			}
 		}
 		pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, subrepo)
-		if pkg == "" && name == "" {
-			return "", "", ""
-		}
-		s := target[1:idx]
-		if subrepo == nil || !strings.HasPrefix(pkg, s) {
-			pkg = path.Join(s, pkg) // Combine it to //subrepo/pkg:target
-		}
-		return pkg, name, s
+		return pkg, name, target[1:idx]
 	} else if target[0] != '/' || target[1] != '/' {
 		return "", "", ""
 	} else if idx := strings.IndexRune(target, ':'); idx != -1 {

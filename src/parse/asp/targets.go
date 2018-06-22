@@ -310,8 +310,10 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 			//                   don't use them for tools anywhere either...
 			return core.ParseBuildLabel(src, s.pkg.Subrepo.MakeRelativeName(s.pkg.Name))
 		}
-		label, subrepo := core.MustParseNamedOutputLabel(src, s.pkg)
-		verifyArchSubrepo(s, subrepo)
+		label := core.MustParseNamedOutputLabel(src, s.pkg)
+		if l := label.Label(); l != nil && l.Subrepo != "" {
+			verifyArchSubrepo(s, l.Subrepo)
+		}
 		return label
 	}
 	s.Assert(src != "", "Empty source path")
@@ -344,8 +346,8 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 
 // parseLabel parses a build label, handling potential cross-architecture labels.
 func parseLabel(s *scope, label string) core.BuildLabel {
-	l, subrepo := core.ParseBuildLabelSubrepo(label, s.pkg)
-	verifyArchSubrepo(s, subrepo)
+	l := core.ParseBuildLabelContext(label, s.pkg)
+	verifyArchSubrepo(s, l.Subrepo)
 	return l.ForPackage(s.pkg)
 }
 
