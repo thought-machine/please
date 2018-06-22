@@ -18,9 +18,12 @@ var log = logging.MustGetLogger("core")
 // like :ham are always parsed into an absolute form.
 // There is also implicit expansion of the final element of a target (ala Blaze)
 // so //spam/eggs is equivalent to //spam/eggs:eggs
+//
+// It can also be in a subrepo, in which case the syntax is @subrepo//spam/eggs:ham.
 type BuildLabel struct {
 	PackageName string
 	Name        string
+	Subrepo     string
 }
 
 // WholeGraph represents parsing the entire graph (i.e. //...).
@@ -35,10 +38,10 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
-	if label.Name != "" {
-		return "//" + label.PackageName + ":" + label.Name
+	if label.Subrepo != "" {
+		return "@" + "//" + label.PackageName + ":" + label.Name
 	}
-	return "//" + label.PackageName
+	return "//" + label.PackageName + ":" + label.Name
 }
 
 // NewBuildLabel constructs a new build label from the given components. Panics on failure.

@@ -34,7 +34,7 @@ func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
 // MakeRelative makes a build label that is within this subrepo relative to it (i.e. strips the leading name part).
 // The caller should already know that it is within this repo, otherwise this will panic.
 func (s *Subrepo) MakeRelative(label BuildLabel) BuildLabel {
-	return BuildLabel{s.MakeRelativeName(label.PackageName), label.Name}
+	return BuildLabel{PackageName: s.MakeRelativeName(label.PackageName), Name: label.Name}
 }
 
 // MakeRelativeName is as MakeRelative but operates only on the package name.
