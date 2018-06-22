@@ -143,6 +143,11 @@ func (w *workerServer) sendRequests(stdin io.Writer) {
 	for request := range w.requests {
 		if err := m.Marshal(stdin, request); err != nil {
 			log.Error("Failed to write request: %s", err)
+			w.dispatchResponse(&pb.BuildResponse{
+				Rule:     request.Rule,
+				Success:  false,
+				Messages: []string{err.Error()},
+			})
 			continue
 		}
 		stdin.Write([]byte{'\n'}) // Newline delimit them as a nicety.
@@ -159,16 +164,21 @@ func (w *workerServer) readResponses(stdout io.Reader) {
 			w.Error("Failed to read response: %s", err)
 			break
 		}
-		w.responseMutex.Lock()
-		ch, present := w.responses[response.Rule]
-		delete(w.responses, response.Rule)
-		w.responseMutex.Unlock()
-		if present {
-			log.Debug("Got response from remote worker for %s, success: %v", response.Rule, response.Success)
-			ch <- &response
-		} else {
-			w.Error("Couldn't find response channel for %s", response.Rule)
-		}
+		w.dispatchResponse(&response)
+	}
+}
+
+// dispatchResponse sends a single response on the appropriate channel.
+func (w *workerServer) dispatchResponse(response *pb.BuildResponse) {
+	w.responseMutex.Lock()
+	ch, present := w.responses[response.Rule]
+	delete(w.responses, response.Rule)
+	w.responseMutex.Unlock()
+	if present {
+		log.Debug("Got response from remote worker for %s, success: %v", response.Rule, response.Success)
+		ch <- response
+	} else {
+		w.Error("Couldn't find response channel for %s", response.Rule)
 	}
 }
 
@@ -177,14 +187,13 @@ func (w *workerServer) wait() {
 	if err := w.process.Wait(); err != nil && !w.closing {
 		log.Error("Worker process died unexpectedly: %s", err)
 		w.responseMutex.Lock()
+		defer w.responseMutex.Unlock()
 		for label, ch := range w.responses {
 			ch <- &pb.BuildResponse{
 				Rule:     label,
 				Messages: []string{fmt.Sprintf("Worker failed: %s\n%s", err, string(w.stderr.History))},
 			}
 		}
-		w.responseMutex.Unlock()
-
 	}
 }
 
