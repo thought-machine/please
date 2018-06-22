@@ -112,6 +112,9 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
 	pkg.Subrepo = subrepo
+	if subrepo != nil {
+		pkg.SubrepoName = subrepo.Name
+	}
 	if pkg.Filename = buildFileName(state, label.PackageName, label.Subrepo); pkg.Filename == "" {
 		// Could indicate that we're looking for a subrepo that hasn't been loaded yet.
 		// TODO(peterebden): Ideally we'd like to be able to define these anywhere, so this is a bit of a hack for now.

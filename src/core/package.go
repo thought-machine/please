@@ -15,6 +15,9 @@ import (
 type Package struct {
 	// Name of the package, ie. //spam/eggs
 	Name string
+	// If this package is in a subrepo, this is the name of the subrepo.
+	// Equivalent to Subrepo.Name but avoids NPEs.
+	SubrepoName string
 	// Filename of the build file that defined this package
 	Filename string
 	// Subincluded build defs files that this package imported

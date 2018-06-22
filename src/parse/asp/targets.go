@@ -42,6 +42,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	}
 	label, err := core.TryNewBuildLabel(s.pkg.Name, name)
 	s.Assert(err == nil, "Invalid build target name %s", name)
+	label.Subrepo = s.pkg.SubrepoName
 
 	target := core.NewBuildTarget(label)
 	target.Subrepo = s.pkg.Subrepo
@@ -308,7 +309,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 			// TODO(peterebden): this should really use something involving named output labels;
 			//                   right now we don't have a package handy to call that but we
 			//                   don't use them for tools anywhere either...
-			return core.ParseBuildLabel(src, s.pkg.Subrepo.MakeRelativeName(s.pkg.Name))
+			return core.ParseBuildLabelContext(src, s.pkg)
 		}
 		label := core.MustParseNamedOutputLabel(src, s.pkg)
 		if l := label.Label(); l != nil && l.Subrepo != "" {
