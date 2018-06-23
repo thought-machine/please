@@ -12,7 +12,6 @@ import (
 
 	"core"
 	"io"
-	"fmt"
 )
 
 func looksLikeJUnitXMLTestResults(b []byte) bool {
@@ -362,7 +361,7 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 			testSuite := target.Results
 			if len(testSuite.TestCases) > 0 {
 				var xmlTestSuite jUnitXMLTestSuite
-				if _, ok := xmlSuites[fmt.Sprintf("%s.%s", testSuite.Package, testSuite.Name)]; ok {
+				if _, ok := xmlSuites[testSuite.JavaStyleName()]; ok {
 					xmlTestSuite = xmlSuites[testSuite.Name]
 					xmlTestSuite.Tests += testSuite.Tests()
 					xmlTestSuite.Errors += testSuite.Errors()
@@ -386,16 +385,17 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 				for _, testCase := range testSuite.TestCases {
 					xmlTest := toXmlTestCase(testCase)
 					if xmlTest.ClassName == "" {
-						xmlTest.ClassName = fmt.Sprintf("%s.%s", testSuite.Package, testSuite.Name)
+						xmlTest.ClassName = testSuite.JavaStyleName()
 					}
 					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
 				}
-				xmlSuites[fmt.Sprintf("%s.%s", testSuite.Package, testSuite.Name)] = xmlTestSuite
+				xmlSuites[testSuite.JavaStyleName()] = xmlTestSuite
 				for _, testCase := range testSuite.TestCases {
 					xmlTest := toXmlTestCase(testCase)
 					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
 				}
 			}
+			xmlTestResults.Time += testSuite.Duration.Seconds()
 		}
 	}
 	for _, xmlTestSuite := range xmlSuites {

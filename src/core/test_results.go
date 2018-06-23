@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"fmt"
 )
 
 // TestSuites describes a collection of test results for a set of targets.
@@ -23,6 +24,11 @@ type TestSuite struct {
 	Properties map[string]string // The system properties at the time of the test.
 	HostName   string            // The name of the host the test ran on.
 	Timestamp  string            // ISO8601 formatted datetime when the test ran.
+}
+
+// JavaStyleName pretends we are using a language that has package names and classnames etc.
+func (testSuite TestSuite) JavaStyleName() string {
+	return fmt.Sprintf("%s.%s", testSuite.Package, testSuite.Name)
 }
 
 // Collapse adds the results of one test suite to the current one.

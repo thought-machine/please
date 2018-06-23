@@ -185,6 +185,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			flakeResults.TimedOut = flakeResults.TimedOut || testSuite.TimedOut
 			flakeResults.HostName = testSuite.HostName
 			flakeResults.Properties = testSuite.Properties
+			// Each set of executions is treated as a group
+			// So if a test flakes three times, three executions will be part of one test case.
 			flakeResults.Add(testSuite.TestCases...)
 
 			// If execution succeeded, we can break out of the flake loop
@@ -211,13 +213,25 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			}
 		}
 	} else {
-		// TODO(agenticarus): This sucks, do we need it? Probably.
-		var resultErr error = fmt.Errorf("Sad times")
+		var resultErr error
 		var resultMsg string
 		if target.Results.Failures() > 0 {
 			resultMsg = "Tests failed"
+			for _, testCase := range target.Results.TestCases {
+				if len(testCase.Failures()) > 0 {
+					resultErr = fmt.Errorf(testCase.Failures()[0].Failure.Message)
+				}
+			}
 		} else if target.Results.Errors() > 0 {
 			resultMsg = "Tests errored"
+			for _, testCase := range target.Results.TestCases {
+				if len(testCase.Errors()) > 0 {
+					resultErr = fmt.Errorf(testCase.Errors()[0].Error.Message)
+				}
+			}
+		} else {
+			resultErr = fmt.Errorf("unknown error")
+			resultMsg = "Something went wrong"
 		}
 		state.LogTestResult(tid, label, core.TargetTestFailed, &target.Results, &coverage, resultErr, resultMsg)
 	}
