@@ -19,9 +19,9 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
         elif expected_output:
             test_cmd += 'diff -au output $(location %s)' % expected_output
         elif expect_output_contains:
-            test_cmd += 'if [ ! grep -v "%s" output; then cat output; exit 1 ]; fi' % expect_output_contains
+            test_cmd += 'if ! grep -q "%s" output; then cat output; exit 1; fi' % expect_output_contains
         elif expect_output_doesnt_contain:
-            test_cmd += 'if [ ! grep "%s" output; then cat output; exit 1 ]; fi' % expect_output_doesnt_contain
+            test_cmd += 'if grep -q "%s" output; then cat output; exit 1; fi' % expect_output_doesnt_contain
         elif expect_file_exists:
             test_cmd += 'if [ ! -f %s ]; then cat output; exit 1; fi' % expect_file_exists
         elif expect_file_doesnt_exist:
