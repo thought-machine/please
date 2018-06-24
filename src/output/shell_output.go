@@ -223,7 +223,6 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 	if len(failedTargets) > 0 {
 		for _, failed := range failedTargets {
 			target := state.Graph.TargetOrDie(failed)
-			printf("Found failing target: %s", failed.Label().String())
 			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
 				if target.Results.TimedOut {
 				} else {
@@ -240,7 +239,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 					})
 				}
 			} else {
-				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_CYAN}%3d errored ${BOLD_WHITE}Took %s${RESET}\n",
+				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_CYAN}%3d errored${RESET} Took ${BOLD_WHITE}%s${RESET}\n",
 					target.Label, target.Results.Passes(), target.Results.Skips(), target.Results.Failures(), target.Results.Errors(), target.Results.Duration.Round(durationGranularity))
 				for _, failingTestCase := range target.Results.TestCases {
 					if failingTestCase.Success() != nil {
@@ -251,26 +250,23 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 					if len(failingTestCase.Failures()) > 0 {
 						execution = failingTestCase.Failures()[0]
 						failure = execution.Failure
-						printf("${BOLD_RED}Failure: %s in %s${RESET}\n", failure.Type, failingTestCase.Name)
+						printf("${BOLD_RED}Failure${RESET}: ${RED}%s${RESET} in %s\n", failure.Type, failingTestCase.Name)
 					} else if len(failingTestCase.Errors()) > 0 {
 						execution = failingTestCase.Errors()[0]
 						failure = execution.Error
-						printf("${BOLD_CYAN}Error: %s in %s${RESET}\n", failure.Type, failingTestCase.Name)
+						printf("${BOLD_CYAN}Error${RESET}: ${CYAN}%s${RESET} in %s\n", failure.Type, failingTestCase.Name)
 					}
 					if failure != nil {
 						printf("%s\n", failure.Traceback)
 						if len(execution.Stdout) > 0 {
-							printf("${BOLD_RED}Standard output:${RESET}\n%s\n", execution.Stdout)
+							printf("${BOLD_RED}Standard output${RESET}:\n%s\n", execution.Stdout)
 						}
 						if len(execution.Stderr) > 0 {
-							printf("${BOLD_RED}Standard error:${RESET}\n%s\n", execution.Stderr)
+							printf("${BOLD_RED}Standard error${RESET}:\n%s\n", execution.Stderr)
 						}
 					}
 				}
 			}
-			//if target.Results.Flakes > 0 {
-			//	printf("${BOLD_MAGENTA}Flaky target; made %s before giving up${RESET}\n", pluralise(target.Results.Flakes, "attempt", "attempts"))
-			//}
 		}
 	}
 	// Print individual test results
@@ -382,7 +378,7 @@ func formatTestExecution(execution core.TestExecution) string {
 	} else if execution.Failure != nil {
 		duration := ""
 		if execution.Duration != nil {
-			duration = fmt.Sprintf(" %s", execution.Duration.Round(testDurationGranularity))
+			duration = fmt.Sprintf(" ${BOLD_WHITE}%s${RESET}", execution.Duration.Round(testDurationGranularity))
 		}
 		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", duration)
 	} else if execution.Skip != nil {
@@ -391,7 +387,7 @@ func formatTestExecution(execution core.TestExecution) string {
 	} else {
 		duration := ""
 		if execution.Duration != nil {
-			duration = fmt.Sprintf(" %s", execution.Duration.Round(testDurationGranularity))
+			duration = fmt.Sprintf(" ${BOLD_WHITE}%s${RESET}", execution.Duration.Round(testDurationGranularity))
 		}
 		return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", duration)
 	}
@@ -422,7 +418,7 @@ func logProgress(state *core.BuildState, buildingTargets *[]buildingTarget, stop
 func testResultMessage(results core.TestSuite) string {
 	msg := fmt.Sprintf("%s run", pluralise(int(results.Tests()), "test", "tests"))
 	if results.Duration >= 0.0 {
-		msg += fmt.Sprintf(" in %s", results.Duration.Round(testDurationGranularity))
+		msg += fmt.Sprintf(" in ${BOLD_WHITE}%s${RESET}", results.Duration.Round(testDurationGranularity))
 	}
 	msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passes())
 	if results.Errors() > 0 {

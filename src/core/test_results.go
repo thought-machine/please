@@ -54,6 +54,7 @@ func (testSuite *TestSuite) Tests() uint {
 	return uint(len(testSuite.TestCases))
 }
 
+// FlakyPasses returns the number of TestCases which succeeded after some number of executions.
 func (testSuite TestSuite) FlakyPasses() uint {
 	flakyPasses := uint(0)
 
@@ -128,7 +129,6 @@ OUTER:
 		for idx := range testSuite.TestCases {
 			originalTestCase := &testSuite.TestCases[idx]
 			if originalTestCase.Name == testCase.Name && originalTestCase.ClassName == testCase.ClassName {
-				log.Infof("Adding %v", testCase)
 				originalTestCase.Executions = append(originalTestCase.Executions, testCase.Executions...)
 				continue OUTER
 			}
