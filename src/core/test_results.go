@@ -54,12 +54,24 @@ func (testSuite *TestSuite) Tests() uint {
 	return uint(len(testSuite.TestCases))
 }
 
+func (testSuite TestSuite) FlakyPasses() uint {
+	flakyPasses := uint(0)
+
+	for _, result := range testSuite.TestCases {
+		if result.Success() != nil && len(result.Executions) > 1 {
+			flakyPasses++
+		}
+	}
+
+	return flakyPasses
+}
+
 // Passes returns the number of TestCases which succeeded (not skipped).
 func (testSuite TestSuite) Passes() uint {
 	passes := uint(0)
 
 	for _, result := range testSuite.TestCases {
-		if result.Success() != nil {
+		if result.Success() != nil && len(result.Executions) == 1 {
 			passes++
 		}
 	}
@@ -116,6 +128,7 @@ OUTER:
 		for idx := range testSuite.TestCases {
 			originalTestCase := &testSuite.TestCases[idx]
 			if originalTestCase.Name == testCase.Name && originalTestCase.ClassName == testCase.ClassName {
+				log.Infof("Adding %v", testCase)
 				originalTestCase.Executions = append(originalTestCase.Executions, testCase.Executions...)
 				continue OUTER
 			}

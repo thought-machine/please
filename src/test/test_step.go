@@ -53,7 +53,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)
 		results, err := parseTestResults(cachedOutputFile)
-		results.Package = target.Label.PackageName
+		results.Package = strings.Replace(target.Label.PackageName, "/", ".", -1)
 		results.Name = target.Label.Name
 		results.Cached = true
 		if err != nil {
@@ -166,8 +166,11 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	// Always run the test this number of times
 	for runs := 1; runs <= state.NumTestRuns; runs++ {
 		status := "Testing"
+		var runStatus string
 		if state.NumTestRuns > 1 {
-			status = status + fmt.Sprintf(" (run %d of %d)", runs, state.NumTestRuns)
+			runStatus = status + fmt.Sprintf(" (run %d of %d)", runs, state.NumTestRuns)
+		} else {
+			runStatus = status
 		}
 		// New group of test cases for each group of flaky runs
 		flakeResults := core.TestSuite{}
@@ -175,16 +178,20 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		// Flakiness will be `3` if `flaky` is `True` in the build_def.
 		numFlakes := utils.Max(target.Flakiness, 1)
 		for flakes := 1; flakes <= numFlakes; flakes++ {
+			var flakeStatus string
 			if numFlakes > 1 {
-				status = status + fmt.Sprintf(" (flake %d of %d)", flakes, numFlakes)
+				flakeStatus = runStatus + fmt.Sprintf(" (flake %d of %d)", flakes, numFlakes)
+			} else {
+				flakeStatus = runStatus
 			}
-			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("%s...", status))
+			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("%s...", flakeStatus))
 
 			testSuite := doTest(tid, state, target, outputFile)
 
 			flakeResults.TimedOut = flakeResults.TimedOut || testSuite.TimedOut
 			flakeResults.HostName = testSuite.HostName
 			flakeResults.Properties = testSuite.Properties
+			flakeResults.Duration += testSuite.Duration
 			// Each set of executions is treated as a group
 			// So if a test flakes three times, three executions will be part of one test case.
 			flakeResults.Add(testSuite.TestCases...)
@@ -304,7 +311,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFil
 	parsedSuite := parseTestOutput(out, runError, duration, target, outputFile)
 
 	return core.TestSuite{
-		Package:    target.Label.PackageName,
+		Package:   	strings.Replace(target.Label.PackageName, "/", ".", -1),
 		Name:       target.Label.Name,
 		HostName:   hostname,
 		Duration:   duration,

@@ -344,6 +344,10 @@ func formatTestCase(result core.TestCase, name string) string {
 		return fmt.Sprintf("%s (No results)", formatTestName(result, name))
 	}
 	var outcome core.TestExecution
+	if len(result.Executions) > 1 && result.Success() != nil {
+		return fmt.Sprintf("%s ${BOLD_MAGENTA}%s${RESET}", formatTestName(result, name), "FLAKY PASS")
+	}
+
 	if result.Success() != nil {
 		outcome = *result.Success()
 	} else if result.Skip() != nil {
@@ -376,12 +380,20 @@ func formatTestExecution(execution core.TestExecution) string {
 	if execution.Error != nil {
 		return "${BOLD_CYAN}ERROR${RESET}"
 	} else if execution.Failure != nil {
-		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", execution.Duration.Round(testDurationGranularity))
+		duration := ""
+		if execution.Duration != nil {
+			duration = fmt.Sprintf(" %s", execution.Duration.Round(testDurationGranularity))
+		}
+		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", duration)
 	} else if execution.Skip != nil {
 		// Not usually interesting to have a duration when we did no work.
 		return "${BOLD_YELLOW}SKIP${RESET}"
 	} else {
-		return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", execution.Duration.Round(testDurationGranularity))
+		duration := ""
+		if execution.Duration != nil {
+			duration = fmt.Sprintf(" %s", execution.Duration.Round(testDurationGranularity))
+		}
+		return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", duration)
 	}
 }
 
@@ -422,9 +434,9 @@ func testResultMessage(results core.TestSuite) string {
 	if results.Skips() > 0 {
 		msg += fmt.Sprintf(", ${BOLD_YELLOW}%d skipped${RESET}", results.Skips())
 	}
-	//if results.Flakes > 0 {
-	//	//	msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.Flakes, "flake", "flakes"))
-	//	//}
+	if results.FlakyPasses() > 0 {
+		msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(int(results.FlakyPasses()), "flake", "flakes"))
+	}
 	if results.TimedOut {
 		msg += ", ${RED_ON_WHITE}TIMED OUT${RESET}"
 	}

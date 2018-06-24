@@ -135,24 +135,28 @@ func appendResult(test jUnitXMLTest, results *core.TestCase) {
 }
 
 func appendFailure(test jUnitXMLTest, results *core.TestCase, failure jUnitXMLFailure) {
+	d := time.Duration(test.Time)
 	results.Executions = append(results.Executions, core.TestExecution{
 		Failure: &core.TestResultFailure{
 			Message:   failure.Message,
 			Type:      failure.Type,
 			Traceback: failure.Traceback,
 		},
+		Duration: &d,
 		Stdout: test.Stdout,
 		Stderr: test.Stderr,
 	})
 }
 
 func appendFlakyFailure(test jUnitXMLTest, results *core.TestCase, flake jUnitXMLFlaky) {
+	d := time.Duration(test.Time)
 	results.Executions = append(results.Executions, core.TestExecution{
 		Failure: &core.TestResultFailure{
 			Message:   flake.Message,
 			Type:      flake.Type,
 			Traceback: flake.Traceback,
 		},
+		Duration: &d,
 		Stdout: test.Stdout,
 		Stderr: test.Stderr,
 	})
@@ -171,12 +175,14 @@ func appendFlakyError(test jUnitXMLTest, results *core.TestCase, flake jUnitXMLF
 }
 
 func appendRerunFailure(test jUnitXMLTest, results *core.TestCase, flake jUnitXMLRerunFailure) {
+	d := time.Duration(test.Time)
 	results.Executions = append(results.Executions, core.TestExecution{
 		Failure: &core.TestResultFailure{
 			Message:   flake.Message,
 			Type:      flake.Type,
 			Traceback: flake.Traceback,
 		},
+		Duration: &d,
 		Stdout: test.Stdout,
 		Stderr: test.Stderr,
 	})
