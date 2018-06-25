@@ -61,6 +61,7 @@ func (cache *httpCache) StoreExtra(target *core.BuildTarget, key []byte, file st
 		response, err := http.Post(cache.URL+"/artifact/"+artifact, "application/octet-stream", file)
 		if err != nil {
 			log.Warning("Failed to send artifact to %s: %s", cache.URL+"/artifact/"+artifact, err)
+			return
 		} else if response.StatusCode < 200 || response.StatusCode > 299 {
 			log.Warning("Failed to send artifact to %s: got response %s", cache.URL+"/artifact/"+artifact, response.Status)
 		}
