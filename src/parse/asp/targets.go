@@ -349,7 +349,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 func parseLabel(s *scope, label string) core.BuildLabel {
 	l := core.ParseBuildLabelContext(label, s.pkg)
 	verifyArchSubrepo(s, l.Subrepo)
-	return l.ForPackage(s.pkg)
+	return l
 }
 
 // verifyArchSubrepo creates a subrepo for the given architecture if one doesn't exist.

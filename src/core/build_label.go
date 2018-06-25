@@ -113,7 +113,7 @@ func TryParseBuildLabel(target, currentPath string) (BuildLabel, error) {
 	return BuildLabel{}, fmt.Errorf("Invalid build label: %s", target)
 }
 
-// ParseBuildLabelSubrepo parses a build label in the context of a package.
+// ParseBuildLabelContext parses a build label in the context of a package.
 // It panics on error.
 func ParseBuildLabelContext(target string, pkg *Package) BuildLabel {
 	if p, name, subrepo := parseBuildLabelParts(target, pkg.Name, pkg.Subrepo); name != "" {
@@ -272,16 +272,6 @@ func (label BuildLabel) Label() *BuildLabel {
 
 func (label BuildLabel) nonOutputLabel() *BuildLabel {
 	return &label
-}
-
-// ForPackage converts this build label to one that's relative for the given package.
-func (label BuildLabel) ForPackage(pkg *Package) BuildLabel {
-	// TODO(peterebden): HasPrefix here is not super elegant. We should probably be able to avoid it
-	//                   if we were more selective about calling this.
-	if pkg.Subrepo != nil && !strings.HasPrefix(label.PackageName, pkg.Subrepo.Name) {
-		return BuildLabel{PackageName: path.Join(pkg.Subrepo.Name, label.PackageName), Name: label.Name}
-	}
-	return label
 }
 
 // UnmarshalFlag unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.

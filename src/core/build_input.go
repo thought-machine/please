@@ -222,9 +222,9 @@ func (label NamedOutputLabel) String() string {
 func MustParseNamedOutputLabel(target string, pkg *Package) BuildInput {
 	if index := strings.IndexRune(target, '|'); index != -1 && index != len(target)-1 {
 		label := ParseBuildLabelContext(target[:index], pkg)
-		return NamedOutputLabel{BuildLabel: label.ForPackage(pkg), Output: target[index+1:]}
+		return NamedOutputLabel{BuildLabel: label, Output: target[index+1:]}
 	}
-	return ParseBuildLabelContext(target, pkg).ForPackage(pkg)
+	return ParseBuildLabelContext(target, pkg)
 }
 
 // A URLLabel represents a remote input that's defined by a URL.
