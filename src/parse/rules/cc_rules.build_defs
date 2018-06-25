@@ -436,7 +436,8 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
 def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
             pkg_config_libs:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=[], flags:str='',
             labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=[], size:str=None, timeout:int=0,
-            container:bool|dict=False, sandbox:bool=None, write_main:bool=not CONFIG.BAZEL_COMPATIBILITY, _c=False):
+            container:bool|dict=False, sandbox:bool=None, write_main:bool=not CONFIG.BAZEL_COMPATIBILITY,
+            linkstatic:bool=False, _c=False):
     """Defines a C++ test using UnitTest++.
 
     We template in a main file so you don't have to supply your own.
@@ -462,6 +463,8 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
       container (bool | dict): If true the test is run in a container (eg. Docker).
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       write_main (bool): Whether or not to write a main() for these tests.
+      linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
+                         link roughly equivalently to their "mostly-static" mode.
     """
     if CONFIG.BAZEL_COMPATIBILITY:
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
