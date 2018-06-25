@@ -343,6 +343,15 @@ func (label BuildLabel) PackageDir() string {
 	return label.PackageName
 }
 
+// SubrepoLabel returns a build label corresponding to the subrepo part of this build label.
+func (label BuildLabel) SubrepoLabel() BuildLabel {
+	if idx := strings.LastIndexByte(label.Subrepo, '/'); idx != -1 {
+		return BuildLabel{PackageName: label.Subrepo[:idx], Name: label.Subrepo[idx+1:]}
+	}
+	// This is legit, the subrepo is defined at the root.
+	return BuildLabel{Name: label.Subrepo}
+}
+
 // Complete implements the flags.Completer interface, which is used for shell completion.
 // Unfortunately it's rather awkward to handle here; we need to do a proper parse in order
 // to find out what the possible build labels are, and we're not ready for that yet.
