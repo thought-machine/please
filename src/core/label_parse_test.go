@@ -4,7 +4,7 @@ package core
 
 import "testing"
 
-func assertLabel(t *testing.T, in, pkg, name string) {
+func assertLabel(t *testing.T, in, pkg, name string) BuildLabel {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Failed to parse %s: %s", in, r)
@@ -16,6 +16,14 @@ func assertLabel(t *testing.T, in, pkg, name string) {
 	}
 	if label.Name != name {
 		t.Errorf("Incorrect parse of %s: target name should be %s, was %s", in, name, label.Name)
+	}
+	return label
+}
+
+func assertSubrepoLabel(t *testing.T, in, pkg, name, subrepo string) {
+	label := assertLabel(t, in, pkg, name)
+	if label.Subrepo != subrepo {
+		t.Errorf("Incorrect parse of %s: subrepo should be %s, was %s", in, subrepo, label.Subrepo)
 	}
 }
 
@@ -132,7 +140,7 @@ func TestPipesArentAccepted(t *testing.T) {
 }
 
 func TestSubrepos(t *testing.T) {
-	assertLabel(t, "@subrepo//pkg:target", "subrepo/pkg", "target")
-	assertLabel(t, "@com_google_googletest//:gtest_main", "com_google_googletest", "gtest_main")
-	assertLabel(t, "@test_x86:target", "test_x86/current_package", "target")
+	assertSubrepoLabel(t, "@subrepo//pkg:target", "pkg", "target", "subrepo")
+	assertSubrepoLabel(t, "@com_google_googletest//:gtest_main", "", "gtest_main", "com_google_googletest")
+	assertSubrepoLabel(t, "@test_x86:target", "current_package", "target", "test_x86")
 }
