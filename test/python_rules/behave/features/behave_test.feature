@@ -6,5 +6,6 @@ Feature: Please Integration with Behave
 
   Scenario: Run a dummy test
     Given we have behave installed
-      When we implement 6 tests
-      Then behave will test them for us!
+    And  we should see our custom flags in context
+    When we implement 6 tests
+    Then behave will test them for us!
