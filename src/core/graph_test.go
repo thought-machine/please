@@ -17,7 +17,7 @@ func TestAddPackage(t *testing.T) {
 	graph := NewGraph()
 	pkg := NewPackage("src/core")
 	graph.AddPackage(pkg)
-	assert.Equal(t, pkg, graph.PackageOrDie("src/core"))
+	assert.Equal(t, pkg, graph.Package("src/core", ""))
 }
 
 func TestTarget(t *testing.T) {

@@ -338,7 +338,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	if s.pkg.Subrepo != nil {
 		return core.SubrepoFileLabel{
 			File:        src,
-			Package:     s.pkg.Subrepo.MakeRelativeName(s.pkg.Name),
+			Package:     s.pkg.Name,
 			FullPackage: s.pkg.Subrepo.Dir(s.pkg.Name),
 		}
 	}
