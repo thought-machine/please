@@ -13,7 +13,7 @@ func ReverseDeps(graph *core.BuildGraph, labels []core.BuildLabel) {
 	uniqueTargets := make(map[core.BuildLabel]struct{})
 
 	for _, label := range labels {
-		for _, child := range graph.PackageOrDie(label.PackageName).AllChildren(graph.TargetOrDie(label)) {
+		for _, child := range graph.PackageOrDie(label).AllChildren(graph.TargetOrDie(label)) {
 			for _, target := range graph.ReverseDependencies(child) {
 				if parent := target.Parent(graph); parent != nil {
 					uniqueTargets[parent.Label] = struct{}{}

@@ -156,7 +156,7 @@ type stateProgress struct {
 	pendingTargets     map[BuildLabel]chan struct{}
 	pendingTargetMutex sync.Mutex
 	// Used to track general package parsing requests.
-	pendingPackages     map[string]chan struct{}
+	pendingPackages     map[packageKey]chan struct{}
 	pendingPackageMutex sync.Mutex
 	// The set of known states
 	allStates []*BuildState
@@ -353,7 +353,7 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 	if status == PackageParsed {
 		// We may have parse tasks waiting for this package to exist, check for them.
 		state.progress.pendingPackageMutex.Lock()
-		if ch, present := state.progress.pendingPackages[label.PackageName]; present {
+		if ch, present := state.progress.pendingPackages[packageKey{Name: label.PackageName, Subrepo: label.Subrepo}]; present {
 			close(ch) // This signals to anyone waiting that it's done.
 		}
 		state.progress.pendingPackageMutex.Unlock()
@@ -464,7 +464,7 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabel
 		}
 	}
 	if label.IsAllTargets() {
-		if pkg := state.Graph.Package(label.PackageName); pkg != nil {
+		if pkg := state.Graph.PackageByLabel(label); pkg != nil {
 			addPackage(pkg)
 		} else {
 			log.Warning("Package %s does not exist in graph", label.PackageName)
@@ -495,22 +495,23 @@ func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 // WaitForPackage either returns the given package which is already parsed and available,
 // or returns nil if nothing's parsed it already, in which case everything else calling this
 // will wait for the caller to parse it themselves.
-func (state *BuildState) WaitForPackage(packageName string) *Package {
-	if p := state.Graph.Package(packageName); p != nil {
+func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
+	if p := state.Graph.PackageByLabel(label); p != nil {
 		return p
 	}
+	key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
 	state.progress.pendingPackageMutex.Lock()
-	if ch, present := state.progress.pendingPackages[packageName]; present {
+	if ch, present := state.progress.pendingPackages[key]; present {
 		state.progress.pendingPackageMutex.Unlock()
 		state.ParsePool.AddWorker()
 		<-ch
 		state.ParsePool.StopWorker()
-		return state.Graph.Package(packageName)
+		return state.Graph.PackageByLabel(label)
 	}
 	// Nothing's registered this so we do it ourselves.
-	state.progress.pendingPackages[packageName] = make(chan struct{})
+	state.progress.pendingPackages[key] = make(chan struct{})
 	state.progress.pendingPackageMutex.Unlock()
-	return state.Graph.Package(packageName) // Important to check again; it's possible to race against this whole lot.
+	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
 }
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
@@ -605,7 +606,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 			numRunning:      1, // Similarly.
 			numPending:      1,
 			pendingTargets:  map[BuildLabel]chan struct{}{},
-			pendingPackages: map[string]chan struct{}{},
+			pendingPackages: map[packageKey]chan struct{}{},
 		},
 	}
 	state.progress.allStates = []*BuildState{state}

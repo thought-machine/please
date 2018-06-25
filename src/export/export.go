@@ -27,7 +27,7 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	// Now write all the build files
 	packages := map[*core.Package]bool{}
 	for target := range done {
-		packages[state.Graph.PackageOrDie(target.Label.PackageName)] = true
+		packages[state.Graph.PackageOrDie(target.Label)] = true
 	}
 	for pkg := range packages {
 		dest := path.Join(dir, pkg.Filename)
@@ -71,7 +71,7 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 			export(graph, dir, dep, done)
 		}
 	}
-	for _, subinclude := range graph.PackageOrDie(target.Label.PackageName).Subincludes {
+	for _, subinclude := range graph.PackageOrDie(target.Label).Subincludes {
 		export(graph, dir, graph.TargetOrDie(subinclude), done)
 	}
 }

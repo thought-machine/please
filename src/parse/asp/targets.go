@@ -380,7 +380,7 @@ type preBuildFunction struct {
 }
 
 func (f *preBuildFunction) Call(target *core.BuildTarget) error {
-	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label.PackageName))
+	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label))
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))
 	return annotateCallbackError(s, target, s.interpreter.interpretStatements(s, f.f.code))
@@ -398,7 +398,7 @@ type postBuildFunction struct {
 
 func (f *postBuildFunction) Call(target *core.BuildTarget, output string) error {
 	log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, output)
-	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label.PackageName))
+	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label))
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))
 	s.Set(f.f.args[1], fromStringList(strings.Split(strings.TrimSpace(output), "\n")))
@@ -415,7 +415,7 @@ func annotateCallbackError(s *scope, target *core.BuildTarget, err error) error 
 		return nil
 	}
 	// Something went wrong, find the BUILD file and attach some info.
-	pkg := s.state.Graph.Package(target.Label.PackageName)
+	pkg := s.state.Graph.PackageByLabel(target.Label)
 	f, _ := os.Open(pkg.Filename)
 	return s.interpreter.parser.annotate(err, f)
 }

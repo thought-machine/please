@@ -41,7 +41,7 @@ func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 
 func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) error {
 	// See if something else has parsed this package first.
-	pkg := state.WaitForPackage(label.PackageName)
+	pkg := state.WaitForPackage(label)
 	if pkg != nil {
 		// Does exist, all we need to do is toggle on this target
 		return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
@@ -118,7 +118,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	if pkg.Filename = buildFileName(state, label.PackageName, label.Subrepo); pkg.Filename == "" {
 		// Could indicate that we're looking for a subrepo that hasn't been loaded yet.
 		// TODO(peterebden): Ideally we'd like to be able to define these anywhere, so this is a bit of a hack for now.
-		if fs.IsPackage(state.Config.Parse.BuildFileName, core.RepoRoot) && state.Graph.Package("") == nil {
+		if fs.IsPackage(state.Config.Parse.BuildFileName, core.RepoRoot) && state.Graph.Package("", "") == nil {
 			if _, err := parsePackage(state, core.BuildLabel{PackageName: "", Name: "all"}, label, nil); err != nil {
 				return nil, err
 			}
@@ -196,7 +196,7 @@ func buildFileName(state *core.BuildState, pkgName, subrepo string) string {
 // Adds a single target to the build queue.
 func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, forceBuild bool) {
 	// Stop at any package that's not loaded yet
-	if state.Graph.Package(label.PackageName) == nil {
+	if state.Graph.PackageByLabel(label) == nil {
 		if forceBuild {
 			log.Debug("Adding forced pending parse of %s", label)
 		}

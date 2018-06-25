@@ -74,7 +74,7 @@ func TestAddDepRescan(t *testing.T) {
 
 	// Add new target & dep to target1
 	target4 := makeTarget("//package1:target4")
-	state.Graph.Package("package1").AddTarget(target4)
+	state.Graph.Package("package1", "").AddTarget(target4)
 	state.Graph.AddTarget(target4)
 	target1 := state.Graph.TargetOrDie(buildLabel("//package1:target1"))
 	target1.AddDependency(buildLabel("//package1:target4"))

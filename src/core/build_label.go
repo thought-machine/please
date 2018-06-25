@@ -368,6 +368,20 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	return ret
 }
 
+// A packageKey is a cut-down version of BuildLabel that only contains the package part.
+// It's used to key maps and so forth that don't care about the target name.
+type packageKey struct {
+	Name, Subrepo string
+}
+
+// String implements the traditional fmt.Stringer interface.
+func (key packageKey) String() string {
+	if key.Subrepo != "" {
+		return "@" + key.Subrepo + "//" + key.Name
+	}
+	return key.Name
+}
+
 // LooksLikeABuildLabel returns true if the string appears to be a build label, false if not.
 // Useful for cases like rule sources where sources can be a filename or a label.
 func LooksLikeABuildLabel(str string) bool {

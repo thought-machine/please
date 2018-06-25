@@ -130,7 +130,7 @@ func addTarget(state *BuildState, name string, labels ...string) {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Labels = labels
 	target.IsTest = strings.HasSuffix(name, "_test")
-	pkg := state.Graph.Package(target.Label.PackageName)
+	pkg := state.Graph.PackageByLabel(target.Label)
 	if pkg == nil {
 		pkg = NewPackage(target.Label.PackageName)
 		state.Graph.AddPackage(pkg)
