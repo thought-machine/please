@@ -1,0 +1,2 @@
+# This should fail, you shouldn't be able to assign to constants or keywords.
+False = True

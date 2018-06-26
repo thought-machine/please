@@ -400,3 +400,8 @@ func TestRepeatedArguments(t *testing.T) {
 	_, err := newParser().parse("src/parse/asp/test_data/repeated_arguments.build")
 	assert.Error(t, err)
 }
+
+func TestConstantAssignments(t *testing.T) {
+	_, err := newParser().parse("src/parse/asp/test_data/constant_assign.build")
+	assert.Error(t, err)
+}

@@ -7,6 +7,45 @@ import (
 	"strings"
 )
 
+// keywords are the list of reserved keywords in the language. They can't be assigned to.
+// Not all of these have meaning in the build language (and many never will), but they are
+// reserved in Python and for practical reasons it is useful to remain a subset of Python.
+var keywords = map[string]struct{}{
+	"False":    struct{}{},
+	"None":     struct{}{},
+	"True":     struct{}{},
+	"and":      struct{}{},
+	"as":       struct{}{},
+	"assert":   struct{}{},
+	"break":    struct{}{},
+	"class":    struct{}{},
+	"continue": struct{}{},
+	"def":      struct{}{},
+	"del":      struct{}{},
+	"elif":     struct{}{},
+	"else":     struct{}{},
+	"except":   struct{}{},
+	"finally":  struct{}{},
+	"for":      struct{}{},
+	"from":     struct{}{},
+	"global":   struct{}{},
+	"if":       struct{}{},
+	"import":   struct{}{},
+	"in":       struct{}{},
+	"is":       struct{}{},
+	"lambda":   struct{}{},
+	"nonlocal": struct{}{},
+	"not":      struct{}{},
+	"or":       struct{}{},
+	"pass":     struct{}{},
+	"raise":    struct{}{},
+	"return":   struct{}{},
+	"try":      struct{}{},
+	"while":    struct{}{},
+	"with":     struct{}{},
+	"yield":    struct{}{},
+}
+
 type parser struct {
 	l *lex
 }
@@ -393,10 +432,13 @@ func (p *parser) parseValueExpression() *ValueExpression {
 }
 
 func (p *parser) parseIdentStatement() *IdentStatement {
+	tok := p.l.Peek()
 	i := &IdentStatement{
 		Name: p.next(Ident).Value,
 	}
-	tok := p.l.Next()
+	_, reserved := keywords[i.Name]
+	p.assert(!reserved, tok, "Cannot operate on keyword or constant %s", i.Name)
+	tok = p.l.Next()
 	switch tok.Type {
 	case ',':
 		p.initField(&i.Unpack)
