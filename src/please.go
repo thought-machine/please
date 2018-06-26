@@ -227,8 +227,8 @@ var opts struct {
 		Retries int          `long:"retries" description:"Number of times to retry the connection"`
 		Delay   cli.Duration `long:"delay" default:"1s" description:"Delay between timeouts"`
 		Args    struct {
-			URL cli.URL `positional-arg-name:"URL" required:"true" description:"URL of remote server to connect to, e.g. 10.23.0.5:7777"`
-		} `positional-args:"true" required:"true"`
+			URL cli.URL `positional-arg-name:"URL" required:"yes" description:"URL of remote server to connect to, e.g. 10.23.0.5:7777"`
+		} `positional-args:"true" required:"yes"`
 	} `command:"follow" description:"Connects to a remote Please instance to stream build events from."`
 
 	Help struct {
@@ -446,6 +446,10 @@ var buildFunctions = map[string]func() bool{
 		}
 		return success
 	},
+	"init": func() bool {
+		utils.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
+		return true
+	},
 	"export": func() bool {
 		success, state := runBuild(opts.Export.Args.Targets, false, false)
 		if success {
@@ -454,10 +458,6 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"follow": func() bool {
-		// go-flags doesn't seem to honour the `required` tag on non-slice positional args.
-		if opts.Follow.Args.URL.String() == "" {
-			log.Fatalf("The required argument of the URL to connect to was not provided")
-		}
 		// This is only temporary, ConnectClient will alter it to match the server.
 		state := core.NewBuildState(1, nil, opts.OutputFlags.Verbosity, config)
 		return follow.ConnectClient(state, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay))
@@ -922,14 +922,11 @@ func main() {
 		opts.Query.Completions.Cmd = command
 		opts.Query.Completions.Args.Fragments = []string{opts.Complete}
 		command = "completions"
-	} else if command == "init" {
+	} else if command == "help" || command == "follow" || command == "init" {
+		// These commands don't use a config file, allowing them to be run outside a repo.
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
 			cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, os.Args)
 		}
-		// If we're running plz init then we obviously don't expect to read a config file.
-		utils.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
-		os.Exit(0)
-	} else if command == "help" || command == "follow" {
 		config = core.DefaultConfiguration()
 		if !buildFunctions[command]() {
 			os.Exit(1)
