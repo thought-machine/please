@@ -227,8 +227,8 @@ var opts struct {
 		Retries int          `long:"retries" description:"Number of times to retry the connection"`
 		Delay   cli.Duration `long:"delay" default:"1s" description:"Delay between timeouts"`
 		Args    struct {
-			URL cli.URL `positional-arg-name:"URL" required:"true" description:"URL of remote server to connect to, e.g. 10.23.0.5:7777"`
-		} `positional-args:"true"`
+			URL cli.URL `positional-arg-name:"URL" required:"yes" description:"URL of remote server to connect to, e.g. 10.23.0.5:7777"`
+		} `positional-args:"true" required:"yes"`
 	} `command:"follow" description:"Connects to a remote Please instance to stream build events from."`
 
 	Help struct {
@@ -445,6 +445,10 @@ var buildFunctions = map[string]func() bool{
 				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly, opts.Gc.NoPrompt, opts.Gc.DryRun, opts.Gc.Git)
 		}
 		return success
+	},
+	"init": func() bool {
+		utils.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
+		return true
 	},
 	"export": func() bool {
 		success, state := runBuild(opts.Export.Args.Targets, false, false)
@@ -918,14 +922,11 @@ func main() {
 		opts.Query.Completions.Cmd = command
 		opts.Query.Completions.Args.Fragments = []string{opts.Complete}
 		command = "completions"
-	} else if command == "init" {
+	} else if command == "help" || command == "follow" || command == "init" {
+		// These commands don't use a config file, allowing them to be run outside a repo.
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
 			cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, os.Args)
 		}
-		// If we're running plz init then we obviously don't expect to read a config file.
-		utils.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
-		os.Exit(0)
-	} else if command == "help" || command == "follow" {
 		config = core.DefaultConfiguration()
 		if !buildFunctions[command]() {
 			os.Exit(1)

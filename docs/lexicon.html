@@ -11,6 +11,7 @@
       <li><a href="#proto">Protocol buffer rules</a></li>
       <li><a href="#python">Python rules</a></li>
       <li><a href="#sh">Shell rules</a></li>
+      <li><a href="#subrepo">Subrepo rules</a></li>
     </ul>
 
     <h2><a name="builtins">Builtin functions</a></h2>
@@ -342,3 +343,12 @@
     {{ template "lexicon_entry.html" .Named "sh_binary" }}
     {{ template "lexicon_entry.html" .Named "sh_cmd" }}
     {{ template "lexicon_entry.html" .Named "sh_test" }}
+
+
+    <h2><a name="subrepo">Subrepo rules</a></h2>
+
+    <p>Rules for defining subrepos. See <a href="subrepos.html">the docs</a> for more information
+      on subrepos in general.</p>
+
+    {{ template "lexicon_entry.html" .Named "http_archive" }}
+    {{ template "lexicon_entry.html" .Named "new_http_archive" }}

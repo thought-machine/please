@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,4 +31,10 @@ func TestRuleArgs(t *testing.T) {
 	assert.False(t, arg.Deprecated)
 	assert.Equal(t, []string{"list"}, arg.Types)
 	assert.Equal(t, "Header files. These will be made available to dependent rules, so the distinction between srcs and hdrs is important.", arg.Comment)
+}
+
+func TestMultilineComment(t *testing.T) {
+	env := getRuleArgs(core.NewDefaultBuildState(), nil)
+	rule := env.Functions["new_http_archive"]
+	assert.True(t, strings.Count(rule.Comment, "\n") > 1)
 }
