@@ -6,6 +6,11 @@ def step_impl(context):
     pass
 
 
+@given('we should see our custom flags in context')
+def step_impl(context):
+    assert context.config.userdata['test_value'] == 'this value should show up in my context'
+
+
 @when('we implement {number:d} tests')
 def step_impl(context, number):
     assert number > 1 or number == 0
