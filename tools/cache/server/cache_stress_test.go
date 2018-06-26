@@ -16,7 +16,7 @@ import (
 
 var cache *Cache
 
-const size = 1000
+const size = 100
 
 func init() {
 	logging.SetLevel(logging.NOTICE, "server")
@@ -24,7 +24,7 @@ func init() {
 }
 
 func TestStoreFiles(t *testing.T) {
-	// Store 1000 files in parallel
+	// Store 100 files in parallel
 	var wg sync.WaitGroup
 	wg.Add(size)
 	for _, i := range rand.Perm(size) {
@@ -38,7 +38,7 @@ func TestStoreFiles(t *testing.T) {
 }
 
 func TestRetrieveFiles(t *testing.T) {
-	// Store 1000 files in parallel
+	// Store 100 files in parallel
 	var wg sync.WaitGroup
 	wg.Add(size)
 	for _, i := range rand.Perm(size) {
@@ -59,7 +59,7 @@ func TestRetrieveFiles(t *testing.T) {
 }
 
 func TestDeleteFiles(t *testing.T) {
-	// Delete 1000 files in parallel
+	// Delete 100 files in parallel
 	var wg sync.WaitGroup
 	wg.Add(size)
 	for _, i := range rand.Perm(size) {
