@@ -16,7 +16,7 @@
         <li><code>.plzconfig.local</code></li>
       </ul>
       One would normally check in <code>.plzconfig</code> (and arch-specific equivalents if needed).<br/>
-      /etc/plzconfig is there to facilitate per-machine config in cases where the repo is often
+      <code>/etc/plzconfig</code> is there to facilitate per-machine config in cases where the repo is often
       deleted - this is quite common in CI systems.<br/>
       Finally you normally add <code>.plzconfig.local</code> to .gitignore to allow people to override
       settings locally if needed.</p>
@@ -359,7 +359,8 @@
         <code>pypy</code>.</li>
 
       <li><b>TestRunner</b><br/>
-        The test runner used to discover & run Python tests; one of unittest, pytest or behave.</li>
+        The test runner used to discover &amp; run Python tests; one of <code>unittest</code>,
+        <code>pytest</code> or <code>behave</code>.</li>
 
       <li><b>ModuleDir</b><br/>
         Defines a directory containing modules from which they can be imported at the top level.<br/>
