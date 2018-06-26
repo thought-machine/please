@@ -228,7 +228,7 @@ var opts struct {
 		Delay   cli.Duration `long:"delay" default:"1s" description:"Delay between timeouts"`
 		Args    struct {
 			URL cli.URL `positional-arg-name:"URL" required:"true" description:"URL of remote server to connect to, e.g. 10.23.0.5:7777"`
-		} `positional-args:"true"`
+		} `positional-args:"true" required:"true"`
 	} `command:"follow" description:"Connects to a remote Please instance to stream build events from."`
 
 	Help struct {

@@ -44,6 +44,21 @@
           Takes priority over <code>--include</code>.<br/>
           You can also pass build expressions to <code>--exclude</code> to exclude targets
           as well as by label.</li>
+
+        <li><code>-a, --arch</code><br/>
+          Architecture to compile for. By default Please will build for the host architecture,
+          but has some support for targeting others. See <a href="cross_compiling.html">the
+          cross-compiling docs</a> for more information.</li>
+
+        <li><code>-o, --override</code><br/>
+          Allows overriding individual config settings on a temporary basis; for example
+          <code>-o python.testrunner:pytest</code>. See the <a href="config.html">config
+          reference</a> for more information on what can be overridden.</li>
+
+        <li><code>--profile</code><br/>
+          Defines a profile of config file to load from the repo. For example,
+          <code>--profile ci</code> will load <code>.plzconfig.ci</code>. This can be useful to
+          canonicalise certain settings for non-common or scripted configurations.</li>
       </ul>
     </p>
 
@@ -98,6 +113,13 @@
 
         <li><code>--version</code><br/>
           Prints the version of the tool and exits immediately.</li>
+
+        <li><code>--show_all_output</code><br/>
+          Prints all output of each building process as they run. Implies <code>--plain_output</code>.</li>
+
+        <li><code>--completion_script</code><br/>
+          Prints the bash / zsh completion script to stdout. This can be used in a <code>.bashrc</code>
+        or <code>.zshrc</code>, e.g. <code>source <(plz --completion_script)</code>.</li>
       </ul>
 
     <h3>Options that enable / disable certain features:</h3>
@@ -354,6 +376,13 @@
 	    Only prints the sources to be removed (not targets). Useful to pipe them into another program.</li>
     </ul>
   </p>
+
+  <h2><a name="follow">plz follow</a></h2>
+
+  <p>Connects to a remote instance of plz and follows its progress locally.<br/>
+    The remote process must have opened a port to stream events on (see the
+    <a href="config.html#events">events</a> section of the config), in which case the client
+    will connect and show what it's doing using the normal animated display.</p>
 
   <h2><a name="help">plz help</a></h2>
 
