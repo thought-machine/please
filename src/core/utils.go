@@ -269,9 +269,9 @@ func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir 
 
 // ExecWithTimeoutSimple runs an external command with a timeout.
 // It's a simpler version of ExecWithTimeout that gives less control.
-func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, error) {
-	_, out, err := ExecWithTimeout(nil, "", nil, time.Duration(timeout), timeout, false, false, cmd)
-	return out, err
+func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, []byte, error) {
+	stdout, stderr, err := ExecWithTimeout(nil, "", nil, time.Duration(timeout), timeout, false, false, cmd)
+	return stdout, stderr, err
 }
 
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
