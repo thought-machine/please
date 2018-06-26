@@ -53,7 +53,7 @@ message BuildEventResponse{
     // Description of what's going on.
     string description = 6;
     // If the target was a test, this will contain the results of it.
-    TestResults test_results = 7;
+    TestSuite test_results = 7;
     // Labels of the target
     repeated string labels = 8;
     // Number of tasks that are currently "activated", i.e. to be done before the build ends.
@@ -101,50 +101,59 @@ enum BuildResultStatus {
     TargetTestFailed = 11;
 }
 
-message TestResults {
-    // Total number of test cases in the test target.
-    int32 num_tests = 1;
-    // Number of tests that passed outright.
-    int32 passed = 2;
-    // Number of tests that failed.
-    int32 failed = 3;
-    // Number of tests that were expected to fail (counts as a pass, but displayed differently)
-    int32 expected_failures = 4;
-    // Number of tests skipped (also count as passes)
-    int32 skipped = 5;
-    // Number of failed attempts to run the test
-    int32 flakes = 6;
-    // Tests that failed, if any.
-    repeated TestResult results = 7;
-    // Deprecated, no longer used.
-    repeated string deprecated_passes = 8;
-    // Combined stdout / stderr from the test.
-    string output = 9;
+message TestSuite {
+    // The package name of the test suite.
+    string package = 1;
+    // The name of the test suite.
+    string name = 2;
+    // True if the test results were cached.
+    bool cached = 3;
     // Duration that the test ran for, in nanoseconds.
-    int64 duration = 10;
-    // True if the test results were cached (i.e. it was not actually rerun).
-    bool cached = 11;
-    // True if the test failed because we timed it out.
-    bool timed_out = 12;
+    int64 duration = 4;
+    // True if the test failed due to a timeout.
+    bool timed_out = 5;
+    // The test cases that make up this test suite.
+    repeated TestCase test_cases = 6;
+    // Any system properties that were set at the time of execution.
+    map<string, string> properties = 7;
+    // Host name of the server the tests were run on.
+    string hostname = 8;
+    // Timestamp of the start of test execution.
+    string timestamp = 9;
 }
 
-message TestResult {
-    // Name of the failing test.
-    string name = 1;
-    // Type of failure, e.g. the type of exception raised.
-    string type = 2;
-    // Traceback of the failure point, if applicable.
-    string traceback = 3;
-    // Standard output from this test case.
+message TestCase {
+    // The class name of the test.
+    string class_name = 1;
+    // The name of the test.
+    string name = 2;
+    // The separate executions that make up this test case.
+    repeated TestExecution test_executions = 3;
+}
+
+message TestExecution {
+    // The failure, if any, from this attempt at running the test.
+    TestFailure failure = 1;
+    // The error, if any, from this attempt at running the test.
+    TestFailure error = 2;
+    // The reason for skipping the test, if any.
+    TestSkip skip = 3;
+    // Stdout from executing the test.
     string stdout = 4;
-    // Standard error during test.
+    // Stderr from executing the test.
     string stderr = 5;
-    // Time the individual test took
+    // How long this test took to run (in nanoseconds).
     int64 duration = 6;
-    // True if the test passed
-    bool success = 7;
-    // True if the test was skipped
-    bool skipped = 8;
+}
+
+message TestFailure {
+    string type = 1;
+    string message = 2;
+    string traceback = 3;
+}
+
+message TestSkip {
+    string message = 1;
 }
 
 message ResourceUsageRequest{

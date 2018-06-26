@@ -72,7 +72,7 @@ func (testSuite TestSuite) Passes() uint {
 	passes := uint(0)
 
 	for _, result := range testSuite.TestCases {
-		if result.Success() != nil && len(result.Executions) == 1 {
+		if len(result.Failures()) == 0 && len(result.Errors()) == 0  && result.Skip() == nil {
 			passes++
 		}
 	}

@@ -57,7 +57,7 @@ func TestMergeCoverageLines8(t *testing.T) {
 	assert.Equal(t, empty, coverage)
 }
 
-func TestAggregateTestResults(t *testing.T) {
+func TestAdd(t *testing.T) {
 	duration10 := time.Duration(10)
 	duration20 := time.Duration(20)
 	suite1 := TestSuite{
