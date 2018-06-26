@@ -96,10 +96,7 @@ func (graph *BuildGraph) Package(name, subrepo string) *Package {
 func (graph *BuildGraph) PackageOrDie(label BuildLabel) *Package {
 	pkg := graph.PackageByLabel(label)
 	if pkg == nil {
-		if label.Subrepo != "" {
-			log.Fatalf("Package @%s//%s doesn't exist in graph", label.Subrepo, label.PackageName)
-		}
-		log.Fatalf("Package %s doesn't exist in graph", label.PackageName)
+		log.Fatalf("Package %s doesn't exist in graph", packageKey{Name: label.PackageName, Subrepo: label.Subrepo})
 	}
 	return pkg
 }
