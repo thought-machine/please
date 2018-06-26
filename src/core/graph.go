@@ -6,7 +6,6 @@ package core
 
 import (
 	"sort"
-	"strings"
 	"sync"
 )
 
@@ -18,7 +17,7 @@ type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets map[BuildLabel]*BuildTarget
 	// Map of all currently known packages.
-	packages map[string]*Package
+	packages map[packageKey]*Package
 	// Reverse dependencies that are pending on targets actually being added to the graph.
 	pendingRevDeps map[BuildLabel]map[BuildLabel]*BuildTarget
 	// Actual reverse dependencies
@@ -34,8 +33,7 @@ type BuildGraph struct {
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
-	_, present := graph.targets[target.Label]
-	if present {
+	if _, present := graph.targets[target.Label]; present {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
 	graph.targets[target.Label] = target
@@ -56,12 +54,13 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 
 // AddPackage adds a new package to the graph with given name.
 func (graph *BuildGraph) AddPackage(pkg *Package) {
+	key := packageKey{Name: pkg.Name, Subrepo: pkg.SubrepoName}
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
-	if _, present := graph.packages[pkg.Name]; present {
-		panic("Attempt to readd existing package: " + pkg.Name)
+	if _, present := graph.packages[key]; present {
+		panic("Attempt to readd existing package: " + key.String())
 	}
-	graph.packages[pkg.Name] = pkg
+	graph.packages[key] = pkg
 }
 
 // Target retrieves a target from the graph by label
@@ -80,18 +79,24 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 	return target
 }
 
-// Package retrieves a package from the graph by name
-func (graph *BuildGraph) Package(name string) *Package {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return graph.packages[name]
+// PackageByLabel retrieves a package from the graph using the appropriate parts of the given label.
+// The Name entry is ignored.
+func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
+	return graph.Package(label.PackageName, label.Subrepo)
 }
 
-// PackageOrDie retrieves a package by name, and dies if it can't be found.
-func (graph *BuildGraph) PackageOrDie(name string) *Package {
-	pkg := graph.Package(name)
+// Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
+func (graph *BuildGraph) Package(name, subrepo string) *Package {
+	graph.mutex.RLock()
+	defer graph.mutex.RUnlock()
+	return graph.packages[packageKey{Name: name, Subrepo: subrepo}]
+}
+
+// PackageOrDie retrieves a package by label, and dies if it can't be found.
+func (graph *BuildGraph) PackageOrDie(label BuildLabel) *Package {
+	pkg := graph.PackageByLabel(label)
 	if pkg == nil {
-		log.Fatalf("Package %s doesn't exist in graph", name)
+		log.Fatalf("Package %s doesn't exist in graph", packageKey{Name: label.PackageName, Subrepo: label.Subrepo})
 	}
 	return pkg
 }
@@ -133,14 +138,6 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 	return subrepo
 }
 
-// SubrepoFor returns the subrepo for the given package (which may be a subpackage inside the subrepo)
-func (graph *BuildGraph) SubrepoFor(name string) *Subrepo {
-	if idx := strings.IndexRune(name, '/'); idx != -1 {
-		return graph.Subrepo(name[:idx])
-	}
-	return graph.Subrepo(name)
-}
-
 // Len returns the number of targets currently in the graph.
 func (graph *BuildGraph) Len() int {
 	graph.mutex.RLock()
@@ -165,8 +162,8 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 	graph.mutex.RLock()
 	defer graph.mutex.RUnlock()
 	packages := make(map[string]*Package, len(graph.packages))
-	for name, pkg := range graph.packages {
-		packages[name] = pkg
+	for k, v := range graph.packages {
+		packages[k.String()] = v
 	}
 	return packages
 }
@@ -196,7 +193,7 @@ func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 func NewGraph() *BuildGraph {
 	return &BuildGraph{
 		targets:        map[BuildLabel]*BuildTarget{},
-		packages:       map[string]*Package{},
+		packages:       map[packageKey]*Package{},
 		pendingRevDeps: map[BuildLabel]map[BuildLabel]*BuildTarget{},
 		revDeps:        map[BuildLabel][]*BuildTarget{},
 		subrepos:       map[string]*Subrepo{},

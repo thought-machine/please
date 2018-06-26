@@ -240,14 +240,14 @@ func RewriteFile(state *core.BuildState, filename string, targets []string) erro
 
 // removeTargets rewrites the given set of targets out of their BUILD files.
 func removeTargets(state *core.BuildState, labels core.BuildLabels) error {
-	byPackage := map[string][]string{}
+	byPackage := map[*core.Package][]string{}
 	for _, l := range labels {
-		byPackage[l.PackageName] = append(byPackage[l.PackageName], l.Name)
+		pkg := state.Graph.PackageOrDie(l)
+		byPackage[pkg] = append(byPackage[pkg], l.Name)
 	}
-	for pkgName, victims := range byPackage {
-		filename := state.Graph.PackageOrDie(pkgName).Filename
-		log.Notice("Rewriting %s to remove %s...\n", filename, strings.Join(victims, ", "))
-		if err := RewriteFile(state, filename, victims); err != nil {
+	for pkg, victims := range byPackage {
+		log.Notice("Rewriting %s to remove %s...\n", pkg.Filename, strings.Join(victims, ", "))
+		if err := RewriteFile(state, pkg.Filename, victims); err != nil {
 			return err
 		}
 	}

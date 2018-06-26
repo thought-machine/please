@@ -2,9 +2,7 @@ package core
 
 import (
 	"cli"
-	"fmt"
 	"path"
-	"strings"
 )
 
 // A Subrepo stores information about a registered subrepository, typically one
@@ -31,24 +29,7 @@ func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
 	}
 }
 
-// MakeRelative makes a build label that is within this subrepo relative to it (i.e. strips the leading name part).
-// The caller should already know that it is within this repo, otherwise this will panic.
-func (s *Subrepo) MakeRelative(label BuildLabel) BuildLabel {
-	return BuildLabel{s.MakeRelativeName(label.PackageName), label.Name}
-}
-
-// MakeRelativeName is as MakeRelative but operates only on the package name.
-func (s *Subrepo) MakeRelativeName(name string) string {
-	// Check for nil, makes it easier to call this without having so many conditionals.
-	if s == nil {
-		return name
-	} else if !strings.HasPrefix(name, s.Name) {
-		panic(fmt.Errorf("cannot make label %s relative, it is not within this subrepo (%s)", name, s.Name))
-	}
-	return strings.TrimPrefix(name[len(s.Name):], "/")
-}
-
 // Dir returns the directory for a package of this name.
 func (s *Subrepo) Dir(dir string) string {
-	return path.Join(s.Root, s.MakeRelativeName(dir))
+	return path.Join(s.Root, dir)
 }

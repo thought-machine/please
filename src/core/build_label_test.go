@@ -83,6 +83,17 @@ func TestCompleteError(t *testing.T) {
 	assert.Equal(t, 0, len(completions))
 }
 
+func TestSubrepoLabel(t *testing.T) {
+	label := BuildLabel{Subrepo: "test"}
+	assert.EqualValues(t, BuildLabel{PackageName: "", Name: "test"}, label.SubrepoLabel())
+	label.Subrepo = "package/test"
+	assert.EqualValues(t, BuildLabel{PackageName: "package", Name: "test"}, label.SubrepoLabel())
+	// This isn't really valid (the caller shouldn't need to call it in such a case)
+	// but we want to make sure it doesn't panic.
+	label.Subrepo = ""
+	assert.EqualValues(t, BuildLabel{PackageName: "", Name: ""}, label.SubrepoLabel())
+}
+
 func TestMain(m *testing.M) {
 	// Used to support TestComplete, the function it's testing re-execs
 	// itself thinking that it's actually plz.

@@ -517,22 +517,12 @@ func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 		return false
 	}
 	parent := target.Label.Parent()
-	// Visibility constraints currently do not include subrepos to handle cross-compiling nicely.
-	// This is a little dodgy (you can see into non-cross-compiled subrepos by duplicating their
-	// package names) but not the biggest concern right now.
-	if target.Subrepo != nil {
-		parent = target.Subrepo.MakeRelative(parent)
-	}
 	for _, vis := range dep.Visibility {
 		if vis.Includes(parent) {
 			return true
-		} else if dep.Subrepo != nil && dep.Subrepo.MakeRelative(vis).Includes(parent) {
-			return true
 		}
 	}
-	if dep.Subrepo != nil && dep.Subrepo.MakeRelative(dep.Label).PackageName == parent.PackageName {
-		return true
-	} else if dep.Label.PackageName == parent.PackageName {
+	if dep.Label.PackageName == parent.PackageName {
 		return true
 	}
 	if isExperimental(state, target) {

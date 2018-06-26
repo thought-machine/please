@@ -92,7 +92,7 @@ func addJSONTarget(state *core.BuildState, ret *JSONGraph, label core.BuildLabel
 	}
 	done[label] = struct{}{}
 	if label.IsAllTargets() {
-		pkg := state.Graph.PackageOrDie(label.PackageName)
+		pkg := state.Graph.PackageOrDie(label)
 		for _, target := range pkg.AllTargets() {
 			addJSONTarget(state, ret, target.Label, done)
 		}

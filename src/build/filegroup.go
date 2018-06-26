@@ -86,7 +86,7 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 		// It's a bit cheeky to do non-essential language-specific logic but this enables
 		// a lot of relatively normal Python workflows.
 		// Errors are deliberately ignored.
-		if pkg := state.Graph.Package(target.Label.PackageName); pkg == nil || !pkg.HasOutput("__init__.py") {
+		if pkg := state.Graph.PackageByLabel(target.Label); pkg == nil || !pkg.HasOutput("__init__.py") {
 			// Don't create this if someone else is going to create this in the package.
 			createInitPy(outDir)
 		}

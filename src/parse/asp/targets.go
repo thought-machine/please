@@ -42,6 +42,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	}
 	label, err := core.TryNewBuildLabel(s.pkg.Name, name)
 	s.Assert(err == nil, "Invalid build target name %s", name)
+	label.Subrepo = s.pkg.SubrepoName
 
 	target := core.NewBuildTarget(label)
 	target.Subrepo = s.pkg.Subrepo
@@ -308,10 +309,12 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 			// TODO(peterebden): this should really use something involving named output labels;
 			//                   right now we don't have a package handy to call that but we
 			//                   don't use them for tools anywhere either...
-			return core.ParseBuildLabel(src, s.pkg.Subrepo.MakeRelativeName(s.pkg.Name))
+			return core.ParseBuildLabelContext(src, s.pkg)
 		}
-		label, subrepo := core.MustParseNamedOutputLabel(src, s.pkg)
-		verifyArchSubrepo(s, subrepo)
+		label := core.MustParseNamedOutputLabel(src, s.pkg)
+		if l := label.Label(); l != nil && l.Subrepo != "" {
+			verifyArchSubrepo(s, l.Subrepo)
+		}
 		return label
 	}
 	s.Assert(src != "", "Empty source path")
@@ -335,7 +338,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	if s.pkg.Subrepo != nil {
 		return core.SubrepoFileLabel{
 			File:        src,
-			Package:     s.pkg.Subrepo.MakeRelativeName(s.pkg.Name),
+			Package:     s.pkg.Name,
 			FullPackage: s.pkg.Subrepo.Dir(s.pkg.Name),
 		}
 	}
@@ -344,9 +347,9 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 
 // parseLabel parses a build label, handling potential cross-architecture labels.
 func parseLabel(s *scope, label string) core.BuildLabel {
-	l, subrepo := core.ParseBuildLabelSubrepo(label, s.pkg)
-	verifyArchSubrepo(s, subrepo)
-	return l.ForPackage(s.pkg)
+	l := core.ParseBuildLabelContext(label, s.pkg)
+	verifyArchSubrepo(s, l.Subrepo)
+	return l
 }
 
 // verifyArchSubrepo creates a subrepo for the given architecture if one doesn't exist.
@@ -377,7 +380,7 @@ type preBuildFunction struct {
 }
 
 func (f *preBuildFunction) Call(target *core.BuildTarget) error {
-	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label.PackageName))
+	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label))
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))
 	return annotateCallbackError(s, target, s.interpreter.interpretStatements(s, f.f.code))
@@ -395,7 +398,7 @@ type postBuildFunction struct {
 
 func (f *postBuildFunction) Call(target *core.BuildTarget, output string) error {
 	log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, output)
-	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label.PackageName))
+	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label))
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))
 	s.Set(f.f.args[1], fromStringList(strings.Split(strings.TrimSpace(output), "\n")))
@@ -412,7 +415,7 @@ func annotateCallbackError(s *scope, target *core.BuildTarget, err error) error 
 		return nil
 	}
 	// Something went wrong, find the BUILD file and attach some info.
-	pkg := s.state.Graph.Package(target.Label.PackageName)
+	pkg := s.state.Graph.PackageByLabel(target.Label)
 	f, _ := os.Open(pkg.Filename)
 	return s.interpreter.parser.annotate(err, f)
 }

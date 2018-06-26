@@ -17,7 +17,7 @@ func TestAddPackage(t *testing.T) {
 	graph := NewGraph()
 	pkg := NewPackage("src/core")
 	graph.AddPackage(pkg)
-	assert.Equal(t, pkg, graph.PackageOrDie("src/core"))
+	assert.Equal(t, pkg, graph.Package("src/core", ""))
 }
 
 func TestTarget(t *testing.T) {
@@ -92,12 +92,6 @@ func TestSubrepo(t *testing.T) {
 	graph := NewGraph()
 	graph.AddSubrepo(&Subrepo{Name: "test", Root: "plz-out/gen/test"})
 	subrepo := graph.Subrepo("test")
-	assert.NotNil(t, subrepo)
-	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
-	subrepo = graph.SubrepoFor("test/some/package")
-	assert.NotNil(t, subrepo)
-	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
-	subrepo = graph.SubrepoFor("test")
 	assert.NotNil(t, subrepo)
 	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
 }

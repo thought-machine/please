@@ -783,7 +783,7 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 
 func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool) {
 	if opts.BuildFlags.Arch.Arch != "" {
-		target.PackageName = path.Join(opts.BuildFlags.Arch.String(), target.PackageName)
+		target.Subrepo = opts.BuildFlags.Arch.String()
 	}
 	if target.IsAllSubpackages() {
 		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {

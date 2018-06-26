@@ -8,7 +8,7 @@ import (
 
 func TestParseNamedOutputLabel(t *testing.T) {
 	pkg := NewPackage("")
-	input, _ := MustParseNamedOutputLabel("//src/core:target1|test", pkg)
+	input := MustParseNamedOutputLabel("//src/core:target1|test", pkg)
 	label, ok := input.(NamedOutputLabel)
 	assert.True(t, ok)
 	assert.Equal(t, "src/core", label.PackageName)
@@ -18,7 +18,7 @@ func TestParseNamedOutputLabel(t *testing.T) {
 
 func TestParseNamedOutputLabelRelative(t *testing.T) {
 	pkg := NewPackage("src/core")
-	input, _ := MustParseNamedOutputLabel(":target1|test", pkg)
+	input := MustParseNamedOutputLabel(":target1|test", pkg)
 	label, ok := input.(NamedOutputLabel)
 	assert.True(t, ok)
 	assert.Equal(t, "src/core", label.PackageName)
@@ -28,7 +28,7 @@ func TestParseNamedOutputLabelRelative(t *testing.T) {
 
 func TestParseNamedOutputLabelNoOutput(t *testing.T) {
 	pkg := NewPackage("")
-	input, _ := MustParseNamedOutputLabel("//src/core:target1", pkg)
+	input := MustParseNamedOutputLabel("//src/core:target1", pkg)
 	_, ok := input.(NamedOutputLabel)
 	assert.False(t, ok)
 	label, ok := input.(BuildLabel)
@@ -42,4 +42,28 @@ func TestParseNamedOutputLabelEmptyOutput(t *testing.T) {
 	assert.Panics(t, func() {
 		MustParseNamedOutputLabel("//src/core:target1|", pkg)
 	})
+}
+
+func TestParseNamedOutputLabelSubrepo(t *testing.T) {
+	pkg := NewPackage("")
+	input := MustParseNamedOutputLabel("@test_x86//src/core:target1", pkg)
+	_, ok := input.(NamedOutputLabel)
+	assert.False(t, ok)
+	label, ok := input.(BuildLabel)
+	assert.True(t, ok)
+	assert.Equal(t, "src/core", label.PackageName)
+	assert.Equal(t, "target1", label.Name)
+	assert.Equal(t, "test_x86", label.Subrepo)
+}
+
+func TestParseNamedOutputLabelRelativeSubrepo(t *testing.T) {
+	pkg := NewPackage("src/core")
+	input := MustParseNamedOutputLabel("@test_x86:target1", pkg)
+	_, ok := input.(NamedOutputLabel)
+	assert.False(t, ok)
+	label, ok := input.(BuildLabel)
+	assert.True(t, ok)
+	assert.Equal(t, "src/core", label.PackageName)
+	assert.Equal(t, "target1", label.Name)
+	assert.Equal(t, "test_x86", label.Subrepo)
 }

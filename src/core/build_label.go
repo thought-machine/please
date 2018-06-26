@@ -18,9 +18,12 @@ var log = logging.MustGetLogger("core")
 // like :ham are always parsed into an absolute form.
 // There is also implicit expansion of the final element of a target (ala Blaze)
 // so //spam/eggs is equivalent to //spam/eggs:eggs
+//
+// It can also be in a subrepo, in which case the syntax is @subrepo//spam/eggs:ham.
 type BuildLabel struct {
 	PackageName string
 	Name        string
+	Subrepo     string
 }
 
 // WholeGraph represents parsing the entire graph (i.e. //...).
@@ -35,10 +38,10 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
-	if label.Name != "" {
-		return "//" + label.PackageName + ":" + label.Name
+	if label.Subrepo != "" {
+		return "@" + label.Subrepo + "//" + label.PackageName + ":" + label.Name
 	}
-	return "//" + label.PackageName
+	return "//" + label.PackageName + ":" + label.Name
 }
 
 // NewBuildLabel constructs a new build label from the given components. Panics on failure.
@@ -104,20 +107,23 @@ func ParseBuildLabel(target, currentPath string) BuildLabel {
 
 // TryParseBuildLabel attempts to parse a single build label from a string. Returns an error if unsuccessful.
 func TryParseBuildLabel(target, currentPath string) (BuildLabel, error) {
-	if pkg, name, _ := parseBuildLabelParts(target, currentPath, nil); name != "" {
-		return BuildLabel{PackageName: pkg, Name: name}, nil
+	if pkg, name, subrepo := parseBuildLabelParts(target, currentPath, nil); name != "" {
+		return BuildLabel{PackageName: pkg, Name: name, Subrepo: subrepo}, nil
 	}
 	return BuildLabel{}, fmt.Errorf("Invalid build label: %s", target)
 }
 
-// ParseBuildLabelSubrepo parses a build label, and returns a separate indicator of the subrepo it was in.
+// ParseBuildLabelContext parses a build label in the context of a package.
 // It panics on error.
-func ParseBuildLabelSubrepo(target string, pkg *Package) (BuildLabel, string) {
+func ParseBuildLabelContext(target string, pkg *Package) BuildLabel {
 	if p, name, subrepo := parseBuildLabelParts(target, pkg.Name, pkg.Subrepo); name != "" {
-		return BuildLabel{PackageName: p, Name: name}, subrepo
+		if subrepo == "" && pkg.Subrepo != nil {
+			subrepo = pkg.Subrepo.Name
+		}
+		return BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}
 	}
 	// It's gonna fail, let this guy panic for us.
-	return ParseBuildLabel(target, pkg.Name), ""
+	return ParseBuildLabel(target, pkg.Name)
 }
 
 // parseBuildLabelParts parses a build label into the package & name parts.
@@ -139,14 +145,7 @@ func parseBuildLabelParts(target, currentPath string, subrepo *Subrepo) (string,
 			}
 		}
 		pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, subrepo)
-		if pkg == "" && name == "" {
-			return "", "", ""
-		}
-		s := target[1:idx]
-		if subrepo == nil || !strings.HasPrefix(pkg, s) {
-			pkg = path.Join(s, pkg) // Combine it to //subrepo/pkg:target
-		}
-		return pkg, name, s
+		return pkg, name, target[1:idx]
 	} else if target[0] != '/' || target[1] != '/' {
 		return "", "", ""
 	} else if idx := strings.IndexRune(target, ':'); idx != -1 {
@@ -275,16 +274,6 @@ func (label BuildLabel) nonOutputLabel() *BuildLabel {
 	return &label
 }
 
-// ForPackage converts this build label to one that's relative for the given package.
-func (label BuildLabel) ForPackage(pkg *Package) BuildLabel {
-	// TODO(peterebden): HasPrefix here is not super elegant. We should probably be able to avoid it
-	//                   if we were more selective about calling this.
-	if pkg.Subrepo != nil && !strings.HasPrefix(label.PackageName, pkg.Subrepo.Name) {
-		return BuildLabel{PackageName: path.Join(pkg.Subrepo.Name, label.PackageName), Name: label.Name}
-	}
-	return label
-}
-
 // UnmarshalFlag unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.
 func (label *BuildLabel) UnmarshalFlag(value string) error {
 	// This is only allowable here, not in any other usage of build labels.
@@ -344,6 +333,15 @@ func (label BuildLabel) PackageDir() string {
 	return label.PackageName
 }
 
+// SubrepoLabel returns a build label corresponding to the subrepo part of this build label.
+func (label BuildLabel) SubrepoLabel() BuildLabel {
+	if idx := strings.LastIndexByte(label.Subrepo, '/'); idx != -1 {
+		return BuildLabel{PackageName: label.Subrepo[:idx], Name: label.Subrepo[idx+1:]}
+	}
+	// This is legit, the subrepo is defined at the root.
+	return BuildLabel{Name: label.Subrepo}
+}
+
 // Complete implements the flags.Completer interface, which is used for shell completion.
 // Unfortunately it's rather awkward to handle here; we need to do a proper parse in order
 // to find out what the possible build labels are, and we're not ready for that yet.
@@ -367,6 +365,20 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 		}
 	}
 	return ret
+}
+
+// A packageKey is a cut-down version of BuildLabel that only contains the package part.
+// It's used to key maps and so forth that don't care about the target name.
+type packageKey struct {
+	Name, Subrepo string
+}
+
+// String implements the traditional fmt.Stringer interface.
+func (key packageKey) String() string {
+	if key.Subrepo != "" {
+		return "@" + key.Subrepo + "//" + key.Name
+	}
+	return key.Name
 }
 
 // LooksLikeABuildLabel returns true if the string appears to be a build label, false if not.

@@ -43,7 +43,7 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	return append(GeneralBuildEnvironment(state.Config),
 		"PKG="+target.Label.PackageName,
-		"PKG_DIR="+target.Subrepo.MakeRelativeName(target.Label.PackageDir()),
+		"PKG_DIR="+target.Label.PackageDir(),
 		"NAME="+target.Label.Name,
 		"CONFIG="+state.Config.Build.Config,
 	)

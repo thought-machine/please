@@ -11,7 +11,7 @@ func SomePath(graph *core.BuildGraph, label1 core.BuildLabel, label2 core.BuildL
 	// trickiness is worth supporting.
 	// Of course this calculation is also quadratic but it's not very obvious how to avoid that.
 	if label1.IsAllTargets() {
-		for _, target := range graph.PackageOrDie(label1.PackageName).AllTargets() {
+		for _, target := range graph.PackageOrDie(label1).AllTargets() {
 			if querySomePath1(graph, target, label2, false) {
 				return
 			}
@@ -25,7 +25,7 @@ func SomePath(graph *core.BuildGraph, label1 core.BuildLabel, label2 core.BuildL
 func querySomePath1(graph *core.BuildGraph, target1 *core.BuildTarget, label2 core.BuildLabel, print bool) bool {
 	// Now we do the same for label2.
 	if label2.IsAllTargets() {
-		for _, target2 := range graph.PackageOrDie(label2.PackageName).AllTargets() {
+		for _, target2 := range graph.PackageOrDie(label2).AllTargets() {
 			if querySomePath2(graph, target1, target2, false) {
 				return true
 			}

@@ -9,7 +9,7 @@ import (
 
 func TestExpandOriginalTargets(t *testing.T) {
 	state := NewBuildState(1, nil, 4, DefaultConfiguration())
-	state.OriginalTargets = []BuildLabel{{"src/core", "all"}, {"src/parse", "parse"}}
+	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}, {PackageName: "src/parse", Name: "parse"}}
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
 
@@ -27,14 +27,14 @@ func TestExpandOriginalTargets(t *testing.T) {
 	// //src/parse:parse doesn't have 'go' but was explicitly requested so will be
 	// added anyway.
 	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{
-		{"src/core", "target1"},
-		{"src/parse", "parse"},
+		{PackageName: "src/core", Name: "target1"},
+		{PackageName: "src/parse", Name: "parse"},
 	})
 }
 
 func TestExpandOriginalTestTargets(t *testing.T) {
 	state := NewBuildState(1, nil, 4, DefaultConfiguration())
-	state.OriginalTargets = []BuildLabel{{"src/core", "all"}}
+	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}}
 	state.NeedTests = true
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
@@ -46,21 +46,21 @@ func TestExpandOriginalTestTargets(t *testing.T) {
 	addTarget(state, "//src/core:target4_test", "go", "manual")
 	// Only the one target comes out here; it must be a test and otherwise follows
 	// the same include / exclude logic as the previous test.
-	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{"src/core", "target1_test"}})
+	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{PackageName: "src/core", Name: "target1_test"}})
 }
 
 func TestExpandVisibleOriginalTargets(t *testing.T) {
 	state := NewBuildState(1, nil, 4, DefaultConfiguration())
-	state.OriginalTargets = []BuildLabel{{"src/core", "all"}}
+	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}}
 
 	addTarget(state, "//src/core:target1", "py")
 	addTarget(state, "//src/core:_target1#zip", "py")
-	assert.Equal(t, state.ExpandVisibleOriginalTargets(), BuildLabels{{"src/core", "target1"}})
+	assert.Equal(t, state.ExpandVisibleOriginalTargets(), BuildLabels{{PackageName: "src/core", Name: "target1"}})
 }
 
 func TestExpandOriginalSubTargets(t *testing.T) {
 	state := NewBuildState(1, nil, 4, DefaultConfiguration())
-	state.OriginalTargets = []BuildLabel{{"src/core", "..."}}
+	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "..."}}
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
 	addTarget(state, "//src/core:target1", "go")
@@ -68,21 +68,28 @@ func TestExpandOriginalSubTargets(t *testing.T) {
 	addTarget(state, "//src/core/tests:target3", "go")
 	// Only the one target comes out here; it must be a test and otherwise follows
 	// the same include / exclude logic as the previous test.
-	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{"src/core", "target1"}, {"src/core/tests", "target3"}})
+	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{
+		{PackageName: "src/core", Name: "target1"},
+		{PackageName: "src/core/tests", Name: "target3"},
+	})
 }
 
 func TestExpandOriginalTargetsOrdering(t *testing.T) {
 	state := NewBuildState(1, nil, 4, DefaultConfiguration())
-	state.OriginalTargets = []BuildLabel{{"src/parse", "parse"}, {"src/core", "..."}, {"src/build", "build"}}
+	state.OriginalTargets = []BuildLabel{
+		{PackageName: "src/parse", Name: "parse"},
+		{PackageName: "src/core", Name: "..."},
+		{PackageName: "src/build", Name: "build"},
+	}
 	addTarget(state, "//src/core:target1", "go")
 	addTarget(state, "//src/core:target2", "py")
 	addTarget(state, "//src/core/tests:target3", "go")
 	expected := BuildLabels{
-		{"src/parse", "parse"},
-		{"src/core", "target1"},
-		{"src/core", "target2"},
-		{"src/core/tests", "target3"},
-		{"src/build", "build"},
+		{PackageName: "src/parse", Name: "parse"},
+		{PackageName: "src/core", Name: "target1"},
+		{PackageName: "src/core", Name: "target2"},
+		{PackageName: "src/core/tests", Name: "target3"},
+		{PackageName: "src/build", Name: "build"},
 	}
 	assert.Equal(t, expected, state.ExpandOriginalTargets())
 }
@@ -123,7 +130,7 @@ func addTarget(state *BuildState, name string, labels ...string) {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Labels = labels
 	target.IsTest = strings.HasSuffix(name, "_test")
-	pkg := state.Graph.Package(target.Label.PackageName)
+	pkg := state.Graph.PackageByLabel(target.Label)
 	if pkg == nil {
 		pkg = NewPackage(target.Label.PackageName)
 		state.Graph.AddPackage(pkg)

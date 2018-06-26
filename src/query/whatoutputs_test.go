@@ -14,7 +14,7 @@ func makeTarget(g *core.BuildGraph, packageName string, labelName string, output
 	l := core.ParseBuildLabel(fmt.Sprintf("//%s:%s", packageName, labelName), "")
 	t := core.NewBuildTarget(l)
 
-	p := g.Package(packageName)
+	p := g.Package(packageName, "")
 	if p == nil {
 		p = core.NewPackage(packageName)
 		g.AddPackage(p)
@@ -52,8 +52,8 @@ func TestMapKeysContainFullPathFromProjectRoot(t *testing.T) {
 	label2 := core.ParseBuildLabel("//package1:target2", "")
 	label3 := core.ParseBuildLabel("//package2:target1", "")
 
-	p1 := graph.PackageOrDie("package1")
-	p2 := graph.PackageOrDie("package2")
+	p1 := graph.Package("package1", "")
+	p2 := graph.Package("package2", "")
 
 	assert.Equal(t, m[path.Join(p1.Target("target1").OutDir(), "out1")].String(), label1.String())
 	assert.Equal(t, m[path.Join(p1.Target("target1").OutDir(), "out2")].String(), label1.String())

@@ -22,9 +22,10 @@ var log = logging.MustGetLogger("hashes")
 // RewriteHashes rewrites the hashes in a BUILD file.
 func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
 	// Collect the targets per-package so we only rewrite each file once.
-	m := map[string]map[string]string{}
+	m := map[*core.Package]map[string]string{}
 	for _, l := range labels {
-		for _, target := range state.Graph.PackageOrDie(l.PackageName).AllChildren(state.Graph.TargetOrDie(l)) {
+		pkg := state.Graph.PackageOrDie(l)
+		for _, target := range pkg.AllChildren(state.Graph.TargetOrDie(l)) {
 			// Ignore targets with no hash specified.
 			if len(target.Hashes) == 0 {
 				continue
@@ -36,15 +37,15 @@ func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
 			// Interior targets won't appear in the BUILD file directly, look for their parent instead.
 			l := target.Label.Parent()
 			hashStr := hex.EncodeToString(h)
-			if m2, present := m[l.PackageName]; present {
+			if m2, present := m[pkg]; present {
 				m2[l.Name] = hashStr
 			} else {
-				m[l.PackageName] = map[string]string{l.Name: hashStr}
+				m[pkg] = map[string]string{l.Name: hashStr}
 			}
 		}
 	}
-	for pkgName, hashes := range m {
-		if err := rewriteHashes(state, state.Graph.PackageOrDie(pkgName).Filename, runtime.GOOS+"_"+runtime.GOARCH, hashes); err != nil {
+	for pkg, hashes := range m {
+		if err := rewriteHashes(state, pkg.Filename, runtime.GOOS+"_"+runtime.GOARCH, hashes); err != nil {
 			log.Fatalf("%s\n", err)
 		}
 	}
