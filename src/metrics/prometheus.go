@@ -56,27 +56,28 @@ func InitFromConfig(config *core.Configuration) {
 		}()
 
 		m = initMetrics(config.Metrics.PushGatewayURL.String(), time.Duration(config.Metrics.PushFrequency),
-			time.Duration(config.Metrics.PushTimeout), config.CustomMetricLabels, config.Metrics.PerTest)
+			time.Duration(config.Metrics.PushTimeout), config.CustomMetricLabels, config.Metrics.PerTest, config.Metrics.PerUser)
 	}
 }
 
 // initMetrics initialises a new metrics instance.
 // This is deliberately not exposed but is useful for testing.
-func initMetrics(url string, frequency, timeout time.Duration, customLabels map[string]string, perTest bool) *metrics {
-	u, err := user.Current()
-	if err != nil {
-		// we've observed os/user failing in some cases involving LDAP logins; fall back to the
-		// env var if it is set.
-		if username := os.Getenv("USER"); username != "" {
-			u = &user.User{Username: username}
-		} else {
-			log.Warning("Can't determine current user name for metrics: %s", err)
-			u = &user.User{Username: "unknown"}
+func initMetrics(url string, frequency, timeout time.Duration, customLabels map[string]string, perTest, perUser bool) *metrics {
+	constLabels := prometheus.Labels{}
+	if perUser {
+		u, err := user.Current()
+		if err != nil {
+			// we've observed os/user failing in some cases involving LDAP logins; fall back to the
+			// env var if it is set.
+			if username := os.Getenv("USER"); username != "" {
+				u = &user.User{Username: username}
+			} else {
+				log.Warning("Can't determine current user name for metrics: %s", err)
+				u = &user.User{Username: "unknown"}
+			}
 		}
-	}
-	constLabels := prometheus.Labels{
-		"user": u.Username,
-		"arch": runtime.GOOS + "_" + runtime.GOARCH,
+		constLabels["user"] = u.Username
+		constLabels["arch"] = runtime.GOOS + "_" + runtime.GOARCH
 	}
 	for k, v := range customLabels {
 		constLabels[k] = deriveLabelValue(v)

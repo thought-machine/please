@@ -166,6 +166,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.RPCMaxMsgSize.UnmarshalFlag("200MiB")
 	config.Metrics.PushFrequency = cli.Duration(400 * time.Millisecond)
 	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)
+	config.Metrics.PerUser = true
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Test.DefaultContainer = ContainerImplementationDocker
 	config.Docker.DefaultImage = "ubuntu:trusty"
@@ -288,6 +289,7 @@ type Configuration struct {
 		PushFrequency  cli.Duration `help:"The frequency, in milliseconds, to push statistics at." example:"400ms"`
 		PushTimeout    cli.Duration `help:"Timeout on pushes to the metrics repository." example:"500ms"`
 		PerTest        bool         `help:"Emit per-test duration metrics. Off by default because they generate increased load on Prometheus."`
+		PerUser        bool         `help:"Emit per-user metrics. On by default for compatibility, but will generate more load on Prometheus."`
 	} `help:"A section of options relating to reporting metrics. Currently only pushing metrics to a Prometheus pushgateway is supported, which is enabled by the pushgatewayurl setting."`
 	CustomMetricLabels map[string]string `help:"Allows defining custom labels to be applied to metrics. The key is the name of the label, and the value is a command to be run, the output of which becomes the label's value. For example, to attach the current Git branch to all metrics:\n\n[custommetriclabels]\nbranch = git rev-parse --abbrev-ref HEAD\n\nBe careful when defining new labels, it is quite possible to overwhelm the metric collector by creating metric sets with too high cardinality."`
 	Test               struct {
