@@ -258,7 +258,7 @@ type Configuration struct {
 		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
 		FallbackConfig    string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
 		Lang              string       `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
-		Sandbox           bool         `help:"True to sandbox individual build actions, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately." var:"BUILD_SANDBOX"`
+		Sandbox           bool         `help:"True to sandbox individual build actions, which isolates them using namespaces. Only works on Linux and requires please_sandbox to be installed separately." var:"BUILD_SANDBOX"`
 		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use."`
 		Nonce             string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 		PassEnv           []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
@@ -307,7 +307,6 @@ type Configuration struct {
 		Timeout            cli.Duration `help:"Default timeout for containerised tests. Can be overridden on a per-rule basis."`
 		ResultsTimeout     cli.Duration `help:"Timeout to wait when trying to retrieve results from inside the container. Default is 20 seconds."`
 		RemoveTimeout      cli.Duration `help:"Timeout to wait when trying to remove a container after running a test. Defaults to 20 seconds."`
-		RunArgs            []string     `help:"Arguments passed to docker run when running a test." example:"-e LANG=en_GB"`
 	} `help:"Please supports running individual tests within Docker containers for isolation. This is useful for tests that mutate some global state (such as an embedded database, or open a server on a particular port). To do so, simply mark a test rule with container = True."`
 	Gc struct {
 		Keep      []BuildLabel `help:"Marks targets that gc should always keep. Can include meta-targets such as //test/... and //docs:all."`
@@ -328,7 +327,7 @@ type Configuration struct {
 		PipFlags           string  `help:"Additional flags to pass to pip invocations in pip_library rules." var:"PIP_FLAGS"`
 		PexTool            string  `help:"The tool that's invoked to build pexes. Defaults to please_pex in the install directory." var:"PEX_TOOL"`
 		DefaultInterpreter string  `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to, say, pypy." var:"DEFAULT_PYTHON_INTERPRETER"`
-		TestRunner         string  `help:"The test runner used to discover & run Python tests; one of unittest or pytest." var:"PYTHON_TEST_RUNNER" options:"unittest,pytest,behave"`
+		TestRunner         string  `help:"The test runner used to discover & run Python tests; one of unittest, pytest or behave." var:"PYTHON_TEST_RUNNER" options:"unittest,pytest,behave"`
 		ModuleDir          string  `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex." var:"PYTHON_MODULE_DIR"`
 		DefaultPipRepo     cli.URL `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library." var:"PYTHON_DEFAULT_PIP_REPO"`
 		WheelRepo          cli.URL `help:"Defines a location for a remote repo that python_wheel rules will download from. See python_wheel for more information." var:"PYTHON_WHEEL_REPO"`
