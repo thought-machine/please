@@ -201,14 +201,14 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 	cmd.Dir = dir
 	cmd.Env = env
 
-	var out bytes.Buffer
-	var outerr safeBuffer
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 	if showOutput {
-		cmd.Stdout = io.MultiWriter(os.Stderr, &out, &outerr)
-		cmd.Stderr = io.MultiWriter(os.Stderr, &outerr)
+		cmd.Stdout = io.MultiWriter(os.Stderr, &stdout)
+		cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
 	} else {
-		cmd.Stdout = io.MultiWriter(&out, &outerr)
-		cmd.Stderr = &outerr
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 	}
 	if target != nil && target.ShowProgress {
 		cmd.Stdout = newProgressWriter(target, cmd.Stdout)
@@ -236,9 +236,9 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 		// Do nothing.
 	case <-time.After(timeout):
 		KillProcess(cmd)
-		err = fmt.Errorf("Timeout exceeded: %s", outerr.String())
+		err = fmt.Errorf("Timeout exceeded: %s", stderr.String())
 	}
-	return out.Bytes(), outerr.Bytes(), err
+	return stdout.Bytes(), stderr.Bytes(), err
 }
 
 // runCommand runs a command and signals on the given channel when it's done.

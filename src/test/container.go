@@ -15,12 +15,14 @@ import (
 	"strings"
 	"sync"
 	"time"
-
 	"docker.io/go-docker"
 	"docker.io/go-docker/api"
 	"docker.io/go-docker/api/types"
 	"docker.io/go-docker/api/types/container"
 	"docker.io/go-docker/api/types/mount"
+	"github.com/docker/docker/pkg/stdcopy"
+	"bytes"
+	"bufio"
 
 	"build"
 	"core"
@@ -29,7 +31,7 @@ import (
 var dockerClient *docker.Client
 var dockerClientOnce sync.Once
 
-func runContainerisedTest(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
+func runContainerisedTest(tid int, state *core.BuildState, target *core.BuildTarget) (stdout []byte, stderr []byte, err error) {
 	const testDir = "/tmp/test"
 	const resultsFile = testDir + "/test.results"
 
@@ -43,9 +45,9 @@ func runContainerisedTest(tid int, state *core.BuildState, target *core.BuildTar
 		}
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	} else if dockerClient == nil {
-		return nil, fmt.Errorf("failed to initialise Docker client")
+		return nil, nil, fmt.Errorf("failed to initialise Docker client")
 	}
 
 	targetTestDir := path.Join(core.RepoRoot, target.TestDir())
@@ -94,20 +96,20 @@ func runContainerisedTest(tid int, state *core.BuildState, target *core.BuildTar
 		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Pulling image...")
 		r, err := dockerClient.ImagePull(context.Background(), config.Image, types.ImagePullOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("Failed to pull image: %s", err)
+			return nil, nil, fmt.Errorf("Failed to pull image: %s", err)
 		}
 		defer r.Close()
 		// I assume we have to exhaust this Reader before continuing. The docs are not super clear on how we know at what point the pull has completed.
 		if _, err := io.Copy(ioutil.Discard, r); err != nil {
-			return nil, fmt.Errorf("Failed to pull image: %s", err)
+			return nil, nil, fmt.Errorf("Failed to pull image: %s", err)
 		}
 		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
 		c, err = dockerClient.ContainerCreate(context.Background(), config, hostConfig, nil, "")
 		if err != nil {
-			return nil, fmt.Errorf("Failed to create container: %s", err)
+			return nil, nil, fmt.Errorf("Failed to create container: %s", err)
 		}
 	} else if err != nil {
-		return nil, fmt.Errorf("Failed to create container: %s", err)
+		return nil, nil, fmt.Errorf("Failed to create container: %s", err)
 	}
 	for _, warning := range c.Warnings {
 		log.Warning("%s creating container: %s", target.Label, warning)
@@ -125,7 +127,7 @@ func runContainerisedTest(tid int, state *core.BuildState, target *core.BuildTar
 		}
 	}()
 	if err := dockerClient.ContainerStart(context.Background(), c.ID, types.ContainerStartOptions{}); err != nil {
-		return nil, fmt.Errorf("Failed to start container: %s", err)
+		return nil, nil, fmt.Errorf("Failed to start container: %s", err)
 	}
 
 	timeout := target.TestTimeout
@@ -140,7 +142,7 @@ func runContainerisedTest(tid int, state *core.BuildState, target *core.BuildTar
 	case body := <-waitChan:
 		status = body.StatusCode
 	case err := <-errChan:
-		return nil, fmt.Errorf("Container failed running: %s", err)
+		return nil, nil, fmt.Errorf("Container failed running: %s", err)
 	}
 	// Now retrieve the results and any other files.
 	if !target.NoTestOutput {
@@ -157,32 +159,36 @@ func runContainerisedTest(tid int, state *core.BuildState, target *core.BuildTar
 		ShowStderr: true,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer r.Close()
-	b, err := ioutil.ReadAll(r)
+	var stdoutBuffer bytes.Buffer
+	var stderrBuffer bytes.Buffer
+	var stdoutWriter = bufio.NewWriter(&stdoutBuffer)
+	var stderrWriter = bufio.NewWriter(&stderrBuffer)
+	_, err = stdcopy.StdCopy(stdoutWriter, stderrWriter, r)
 	if err != nil {
-		return nil, fmt.Errorf("Error retrieving container output: %s", err)
+		return nil, nil, fmt.Errorf("Error retrieving container output: %s", err)
 	} else if status != 0 {
-		return b, fmt.Errorf("Exit code %d", status)
+		return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), fmt.Errorf("Exit code %d", status)
 	}
-	return b, nil
+	return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), nil
 }
 
-func runPossiblyContainerisedTest(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
+func runPossiblyContainerisedTest(tid int, state *core.BuildState, target *core.BuildTarget) (stdout []byte, stderr []byte, err error) {
 	if target.Containerise {
 		if state.Config.Test.DefaultContainer == core.ContainerImplementationNone {
 			log.Warning("Target %s specifies that it should be tested in a container, but test "+
 				"containers are disabled in your .plzconfig.", target.Label)
 			return runTest(state, target)
 		}
-		out, err = runContainerisedTest(tid, state, target)
+		stdout, stderr, err = runContainerisedTest(tid, state, target)
 		if err != nil && state.Config.Docker.AllowLocalFallback {
 			log.Warning("Failed to run %s containerised: %s %s. Falling back to local version.",
-				target.Label, out, err)
+				target.Label, stdout, err)
 			return runTest(state, target)
 		}
-		return out, err
+		return stdout, stderr, err
 	}
 	return runTest(state, target)
 }

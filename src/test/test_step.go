@@ -126,7 +126,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return
 	}
 
-	hostname, err := os.Hostname(); if err != nil {
+	hostname, err := os.Hostname();
+	if err != nil {
 		hostname = "unknown"
 	}
 
@@ -290,16 +291,16 @@ func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget) (string
 	return replacedCmd, env
 }
 
-func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
+func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, []byte, error) {
 	replacedCmd, env := testCommandAndEnv(state, target)
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	_, out, err := core.ExecWithTimeoutShellStdStreams(state, target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd, target.TestSandbox, state.DebugTests)
-	return out, err
+	stdout, stderr, err := core.ExecWithTimeoutShellStdStreams(state, target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd, target.TestSandbox, state.DebugTests)
+	return stdout, stderr, err
 }
 
 func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string) core.TestSuite {
 	startTime := time.Now()
-	out, runError := prepareAndRunTest(tid, state, target)
+	stdout, stderr, runError := prepareAndRunTest(tid, state, target)
 	duration := time.Since(startTime)
 
 	// TODO(agenticarus): Check this works with test workers.
@@ -308,10 +309,10 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFil
 		hostname = "unknown"
 	}
 
-	parsedSuite := parseTestOutput(out, runError, duration, target, outputFile)
+	parsedSuite := parseTestOutput(stdout, stderr, runError, duration, target, outputFile)
 
 	return core.TestSuite{
-		Package:   	strings.Replace(target.Label.PackageName, "/", ".", -1),
+		Package:    strings.Replace(target.Label.PackageName, "/", ".", -1),
 		Name:       target.Label.Name,
 		HostName:   hostname,
 		Duration:   duration,
@@ -322,15 +323,15 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFil
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.
-func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget) (out []byte, err error) {
+func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget) (stdout []byte, stderr []byte, err error) {
 	if err = prepareTestDir(state.Graph, target); err != nil {
 		state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
-		return []byte{}, err
+		return []byte{}, []byte{}, err
 	}
 	return runPossiblyContainerisedTest(tid, state, target)
 }
 
-func parseTestOutput(out []byte, runError error, duration time.Duration, target *core.BuildTarget, outputFile string) core.TestSuite {
+func parseTestOutput(stdout []byte, stderr []byte, runError error, duration time.Duration, target *core.BuildTarget, outputFile string) core.TestSuite {
 	// This is all pretty involved; there are lots of different possibilities of what could happen.
 	// The contract is that the test must return zero on success or non-zero on failure (Unix FTW).
 	// If it's successful, it must produce a parseable file named "test.results" in its temp folder.
@@ -354,7 +355,8 @@ func parseTestOutput(out []byte, runError error, duration time.Duration, target 
 						Executions: []core.TestExecution{
 							{
 								Duration: &duration,
-								Stdout:   string(out),
+								Stdout:   string(stdout),
+								Stderr:   string(stderr),
 							},
 						},
 					},
@@ -369,11 +371,12 @@ func parseTestOutput(out []byte, runError error, duration time.Duration, target 
 						Executions: []core.TestExecution{
 							{
 								Duration: &duration,
+								Stdout:   string(stdout),
+								Stderr:   string(stderr),
 								Error: &core.TestResultFailure{
 									Message: "Test failed to produce output results file",
 									Type:    "MissingResults",
 								},
-								Stdout: string(out),
 							},
 						},
 					},
@@ -388,12 +391,13 @@ func parseTestOutput(out []byte, runError error, duration time.Duration, target 
 					Executions: []core.TestExecution{
 						{
 							Duration: &duration,
+							Stdout:   string(stdout),
+							Stderr:   string(stderr),
 							Error: &core.TestResultFailure{
 								Message:   "Test failed with no results",
 								Type:      "NoResults",
 								Traceback: runError.Error(),
 							},
-							Stdout: string(out),
 						},
 					},
 				},
@@ -411,12 +415,13 @@ func parseTestOutput(out []byte, runError error, duration time.Duration, target 
 						Executions: []core.TestExecution{
 							{
 								Duration: &duration,
+								Stdout:   string(stdout),
+								Stderr:   string(stderr),
 								Error: &core.TestResultFailure{
 									Message:   "Test failed with no results",
 									Type:      "NoResults",
 									Traceback: runError.Error(),
 								},
-								Stdout: string(out),
 							},
 						},
 					},
@@ -431,12 +436,13 @@ func parseTestOutput(out []byte, runError error, duration time.Duration, target 
 					Executions: []core.TestExecution{
 						{
 							Duration: &duration,
+							Stdout:   string(stdout),
+							Stderr:   string(stderr),
 							Error: &core.TestResultFailure{
 								Message:   "Couldn't parse test output file",
 								Type:      "NoResults",
 								Traceback: parseError.Error(),
 							},
-							Stdout: string(out),
 						},
 					},
 				},
@@ -452,12 +458,13 @@ func parseTestOutput(out []byte, runError error, duration time.Duration, target 
 			Executions: []core.TestExecution{
 				{
 					Duration: &duration,
+					Stdout:   string(stdout),
+					Stderr:   string(stderr),
 					Error: &core.TestResultFailure{
 						Type:      "ReturnValue",
 						Message:   "Test returned nonzero but reported no errors",
 						Traceback: runError.Error(),
 					},
-					Stdout: string(out),
 				},
 			},
 		})
@@ -468,11 +475,12 @@ func parseTestOutput(out []byte, runError error, duration time.Duration, target 
 			Executions: []core.TestExecution{
 				{
 					Duration: &duration,
+					Stdout:   string(stdout),
+					Stderr:   string(stderr),
 					Failure: &core.TestResultFailure{
 						Type:    "ReturnValue",
 						Message: "Test returned 0 but still reported failures",
 					},
-					Stdout: string(out),
 				},
 			},
 		})
