@@ -49,7 +49,7 @@ go_get(
     name = "go-flags",
     get = "github.com/jessevdk/go-flags",
     patch = "flags_subcommand.patch",
-    revision = "v1.3.0",
+    revision = "v1.4.0",
 )
 
 go_get(

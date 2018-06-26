@@ -454,6 +454,10 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"follow": func() bool {
+		// go-flags doesn't seem to honour the `required` tag on non-slice positional args.
+		if opts.Follow.Args.URL.String() == "" {
+			log.Fatalf("The required argument of the URL to connect to was not provided")
+		}
 		// This is only temporary, ConnectClient will alter it to match the server.
 		state := core.NewBuildState(1, nil, opts.OutputFlags.Verbosity, config)
 		return follow.ConnectClient(state, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay))
