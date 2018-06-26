@@ -73,6 +73,7 @@ type functionArg struct {
 }
 
 func (env *environment) AddAll(stmts []*asp.Statement) {
+	argsRegex := regexp.MustCompile("\n +Args: *\n")
 	for _, stmt := range stmts {
 		if f := stmt.FuncDef; f != nil && f.Name[0] != '_' && f.Docstring != "" {
 			r := function{
@@ -81,8 +82,8 @@ func (env *environment) AddAll(stmts []*asp.Statement) {
 			if strings.HasSuffix(stmt.Pos.Filename, "_rules.build_defs") {
 				r.Language = strings.TrimSuffix(stmt.Pos.Filename, "_rules.build_defs")
 			}
-			if idx := strings.IndexRune(r.Docstring, '\n'); idx != -1 {
-				r.Comment = r.Docstring[:idx]
+			if indices := argsRegex.FindStringIndex(r.Docstring); indices != nil {
+				r.Comment = strings.TrimSpace(r.Docstring[:indices[0]])
 			}
 			r.Args = make([]functionArg, len(f.Arguments))
 			for i, a := range f.Arguments {

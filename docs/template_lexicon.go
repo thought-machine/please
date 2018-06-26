@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"html/template"
 	"io/ioutil"
 	"os"
 	"strings"
+	"text/template"
 )
 
 type rules struct {
@@ -44,7 +44,12 @@ func must(err error) {
 }
 
 func main() {
-	tmpl, err := template.New("lexicon.html").Funcs(template.FuncMap{"join": strings.Join}).ParseFiles(
+	tmpl, err := template.New("lexicon.html").Funcs(template.FuncMap{
+		"join": strings.Join,
+		"newlines": func(s string) string {
+			return strings.Replace(s, "\n", "<br/>", -1)
+		},
+	}).ParseFiles(
 		"docs/lexicon.html", "docs/lexicon_entry.html")
 	must(err)
 	b, err := ioutil.ReadFile("src/parse/args/rule_args.json")
