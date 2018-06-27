@@ -2,13 +2,13 @@
 # That makes Java a soft dependency at build time - the bootstrap script takes care of which
 # to use.
 
-VER = "13.0.0-beta7"
+VER = "13.0.2"
 
 # This is a prebuilt version of the JUnit runner which makes Java a soft dependency
 # at build time (the bootstrap script takes care of which of these two to use).
 remote_file(
     name = "please",
-    hashes = ["e83b735374e43da0d9429b75065f89bb52b1f360"],
+    hashes = ["d28ce2740042a2d50eeda080d2d10bddff7a9c48"],
     url = "https://get.please.build/linux_amd64/%s/please_%s.tar.gz" % (VER, VER),
 )
 
