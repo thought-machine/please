@@ -267,16 +267,16 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 // to attempt to keep rules from duplicating the names of sub-packages; obviously that is not
 // 100% reliable but we don't have a better solution right now.
 func (target *BuildTarget) TmpDir() string {
-	return path.Join(TmpDir, target.Label.PackageName, target.Label.Name+buildDirSuffix)
+	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+buildDirSuffix)
 }
 
 // OutDir returns the output directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
 	if target.IsBinary {
-		return path.Join(BinDir, target.Label.PackageName)
+		return path.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
 	}
-	return path.Join(GenDir, target.Label.PackageName)
+	return path.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
 }
 
 // TestDir returns the test directory for this target, eg.
@@ -284,7 +284,7 @@ func (target *BuildTarget) OutDir() string {
 // This is different to TmpDir so we run tests in a clean environment
 // and to facilitate containerising tests.
 func (target *BuildTarget) TestDir() string {
-	return path.Join(TmpDir, target.Label.PackageName, target.Label.Name+testDirSuffix)
+	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
 }
 
 // AllSourcePaths returns all the source paths for this target

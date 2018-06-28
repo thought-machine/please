@@ -9,6 +9,40 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestTmpDir(t *testing.T) {
+	target := makeTarget("//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/tmp/mickey/donald/goofy._build", target.TmpDir())
+}
+
+func TestOutDir(t *testing.T) {
+	target := makeTarget("//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/gen/mickey/donald", target.OutDir())
+	target.IsBinary = true
+	assert.Equal(t, "plz-out/bin/mickey/donald", target.OutDir())
+}
+
+func TestTestDir(t *testing.T) {
+	target := makeTarget("//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/tmp/mickey/donald/goofy._test", target.TestDir())
+}
+
+func TestTmpDirSubrepo(t *testing.T) {
+	target := makeTarget("@test_x86//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/tmp/test_x86/mickey/donald/goofy._build", target.TmpDir())
+}
+
+func TestOutDirSubrepo(t *testing.T) {
+	target := makeTarget("@test_x86//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/gen/test_x86/mickey/donald", target.OutDir())
+	target.IsBinary = true
+	assert.Equal(t, "plz-out/bin/test_x86/mickey/donald", target.OutDir())
+}
+
+func TestTestDirSubrepo(t *testing.T) {
+	target := makeTarget("@test_x86//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/tmp/test_x86/mickey/donald/goofy._test", target.TestDir())
+}
+
 func TestCanSee(t *testing.T) {
 	state := NewDefaultBuildState()
 	target1 := makeTarget("//src/build/python:lib1", "")
