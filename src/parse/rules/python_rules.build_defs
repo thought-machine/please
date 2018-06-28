@@ -52,7 +52,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
             # in python3 because zipimport doesn't look in __pycache__. Unfortunately the flag doesn't exist
             # in python2 so we have to guess whether we should apply it or not.
             bytecode_flag = '-b' if 'python3' in interpreter or 'pypy3' in interpreter else ''
-            compile_cmd = '$TOOLS_INT -S -m compileall %s -f $SRCS_SRCS' % bytecode_flag
+            compile_cmd = f'$TOOLS_INT -S -m compileall {bytecode_flag} -f $SRCS_SRCS'
             if strip:
                 cmd = ' && '.join([compile_cmd, 'rm -f $SRCS_SRCS', cmd])
             else:
@@ -65,7 +65,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
                 'SRCS': srcs,
                 'RES': resources,
             },
-            outs=['.%s.pex.zip' % name],
+            outs=[f'.{name}.pex.zip'],
             cmd=cmd,
             building_description='Compressing...',
             requires=['py'],
@@ -138,7 +138,7 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
         name = name,
         tag = 'pex',
         srcs=[main],
-        outs=['.%s_main.pex.zip' % name],  # just call it .zip so everything has the same extension
+        outs=[f'.{name}_main.pex.zip'],  # just call it .zip so everything has the same extension
         cmd=cmd,
         requires=['py', 'pex'],
         pre_build=pre_build,
@@ -222,7 +222,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         name = name,
         tag = 'pex',
         srcs=srcs,
-        outs=['.%s_main.pex.zip' % name],  # just call it .zip so everything has the same extension
+        outs=[f'.{name}_main.pex.zip'],  # just call it .zip so everything has the same extension
         cmd=cmd,
         requires=['py'],
         test_only=True,
@@ -249,9 +249,9 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         )
         deps = [pex_rule, lib_rule]
 
-    test_cmd = '$TEST %s' % flags
+    test_cmd = f'$TEST {flags}'
     if worker:
-        test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
+        test_cmd = f'$(worker {worker}) && {test_cmd} '
         deps += [worker]
 
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
@@ -262,7 +262,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         # N.B. the actual test sources are passed as data files as well. This is needed for pytest but
         #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
         data=data + srcs,
-        outs=['%s.pex' % name],
+        outs=[f'{name}.pex'],
         labels=labels,
         cmd=_PYTHON_BINARY_CMDS,
         test_cmd=test_cmd,
@@ -308,7 +308,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
       pip_flags (str): List of additional flags to pass to pip.
       strip (list): Files to strip after install. Note that these are done at any level.
     """
-    package_name = '%s==%s' % (package_name or name, version)
+    package_name = package_name or name
+    package_name = f'{package_name}=={version}'
     outs = outs or [name]
     post_install_commands = post_install_commands or []
     post_build = None
@@ -320,7 +321,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     repo = repo or CONFIG.PYTHON_DEFAULT_PIP_REPO
     if repo:
         if repo.startswith('//') or repo.startswith(':'):  # Looks like a build label, not a URL.
-            repo_flag = '-f %(location %s)' % repo
+            repo_flag = f'-f %(location {repo})'
             deps.append(repo)
         else:
             repo_flag = '-f ' + repo
@@ -332,14 +333,14 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
-        cmd = '[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; ' + cmd + ' $SYS_FLAG'
+        cmd = f'[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; {cmd} $SYS_FLAG'
     elif CONFIG.OS == 'darwin':
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
         # but that prevents downloading binary wheels. This is more fiddly but seems to work.
         # Unfortunately it does *not* work similarly on the Debian problem :(
         cmd = 'echo "[install]\nprefix=" > .pydistutils.cfg; ' + cmd
-    cmd += ' -b build %s %s %s %s' % (repo_flag, index_flag, pip_flags, package_name)
+    cmd += f' -b build {repo_flag} {index_flag} {pip_flags} {package_name}'
 
     if strip:
         cmd += ' && find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])
@@ -348,17 +349,17 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat'
 
     if install_subdirectory:
-        cmd += ' && touch %s/__init__.py && rm -rf %s/*.egg-info %s/*.dist-info' % (target, target, target)
+        cmd += f' && touch {target}/__init__.py && rm -rf {target}/*.egg-info {target}/*.dist-info'
 
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
         if CONFIG.OS == 'freebsd':
             # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
             # files for hashes to match correctly.
-            cmd += ' && ' + ' && '.join(['patch -p0 < $(location %s)' % patch for patch in patches])
+            cmd += ' && ' + ' && '.join([f'patch -p0 < $(location {patch})' for patch in patches])
             cmd += ' && find . -name "*.orig" | xargs rm'
         else:
-            cmd += ' && ' + ' && '.join(['patch -p0 --no-backup-if-mismatch < $(location %s)' % patch for patch in patches])
+            cmd += ' && ' + ' && '.join([f'patch -p0 --no-backup-if-mismatch < $(location {patch})' for patch in patches])
 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)
@@ -476,7 +477,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                    'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
-        cmd += ['patch -p0 --no-backup-if-mismatch < $(location %s)' % p for p in patches]
+        cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
     if post_install_commands:
         cmd += post_install_commands
     cmd += ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
@@ -502,7 +503,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         # Hacky solution to handle things being in subdirectories in awkward ways.
         before, _, after = outs[0].partition('/')
         if after:
-            cmd = 'rm -rf %s && %s' % (before, cmd)
+            cmd = f'rm -rf {before} && {cmd}'
     return build_rule(
         name = name,
         srcs = [wheel_rule],
@@ -513,7 +514,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         deps = deps,
         visibility = visibility,
         test_only = test_only,
-        labels = ['whl:%s==%s' % (package_name, version)],
+        labels = [f'whl:{package_name}=={version}'],
         provides = {'py': wheel_rule},
     )
 

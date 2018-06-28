@@ -813,11 +813,11 @@ def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False,
     dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=True)
     opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=False)
     cmds = {
-        'dbg': f'$TOOL -o ${OUT} {dbg_flags} {extra_flags}',
-        'opt': f'$TOOL -o ${OUT} {opt_flags} {extra_flags}',
+        'dbg': f'$TOOL -o $OUT {dbg_flags} {extra_flags}',
+        'opt': f'$TOOL -o $OUT {opt_flags} {extra_flags}',
     }
     if CONFIG.CPP_COVERAGE:
-        cmds['cover'] = f'$TOOL -o ${OUT} {dbg_flags} {extra_flags} {_COVERAGE_FLAGS}'
+        cmds['cover'] = f'$TOOL -o $OUT {dbg_flags} {extra_flags} {_COVERAGE_FLAGS}'
     return cmds, [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
                   CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL]
 
