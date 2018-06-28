@@ -395,6 +395,8 @@ func (p *parser) parseValueExpression() *ValueExpression {
 	if tok.Type == String {
 		ve.String = tok.Value
 		p.l.Next()
+	} else if tok.Type == FString {
+		ve.FString = p.parseFString()
 	} else if tok.Type == Int {
 		p.assert(len(tok.Value) < 19, tok, "int literal is too large: %s", tok)
 		p.initField(&ve.Int)
@@ -601,4 +603,21 @@ func (p *parser) parseLambda() *Lambda {
 	p.next(':')
 	p.parseExpressionInPlace(&l.Expr)
 	return l
+}
+
+func (p *parser) parseFString() *FormatString {
+	f := &FormatString{}
+	tok := p.next(FString)
+	s := tok.Value[1 : len(tok.Value)-1] // Strip surrounding quotes
+	for idx := strings.IndexByte(s, '{'); idx != -1; idx = strings.IndexByte(s, '{') {
+		v := &f.Vars[p.newElement(&f.Vars)]
+		v.Prefix = s[:idx]
+		s = s[idx+1:]
+		idx = strings.IndexByte(s, '}')
+		p.assert(idx != -1, tok, "Unterminated brace in fstring")
+		v.Var = s[:idx]
+		s = s[idx+1:]
+	}
+	f.Suffix = s
+	return f
 }

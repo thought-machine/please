@@ -405,3 +405,25 @@ func TestConstantAssignments(t *testing.T) {
 	_, err := newParser().parse("src/parse/asp/test_data/constant_assign.build")
 	assert.Error(t, err)
 }
+
+func TestFStrings(t *testing.T) {
+	stmts, err := newParser().parse("src/parse/asp/test_data/fstring.build")
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(stmts))
+
+	f := stmts[1].Ident.Action.Assign.Val.FString
+	assert.NotNil(t, f)
+	assert.Equal(t, "", f.Suffix)
+	assert.Equal(t, 1, len(f.Vars))
+	assert.Equal(t, "", f.Vars[0].Prefix)
+	assert.Equal(t, "x", f.Vars[0].Var)
+
+	f = stmts[2].Ident.Action.Assign.Val.FString
+	assert.NotNil(t, f)
+	assert.Equal(t, " fin", f.Suffix)
+	assert.Equal(t, 2, len(f.Vars))
+	assert.Equal(t, "x: ", f.Vars[0].Prefix)
+	assert.Equal(t, "x", f.Vars[0].Var)
+	assert.Equal(t, " y: ", f.Vars[1].Prefix)
+	assert.Equal(t, "y", f.Vars[1].Var)
+}

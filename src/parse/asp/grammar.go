@@ -122,11 +122,11 @@ type ValueExpression struct {
 // Note that we only support a very small subset of what Python allows there; essentially only
 // variable substitution, which gives a much simpler AST structure here.
 type FormatString struct {
-	Prefix string
-	Vars   []struct {
+	Vars []struct {
+		Prefix string
 		Var    string
-		Suffix string
 	}
+	Suffix string
 }
 
 // A UnaryOp represents a unary operation - in our case the only ones we support are negation and not.
