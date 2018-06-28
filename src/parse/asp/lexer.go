@@ -13,7 +13,6 @@ const (
 	Ident
 	Int
 	String
-	FString
 	LexOperator
 	EOL
 	Unindent
@@ -324,7 +323,7 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bo
 				}
 				token := Token{Type: String, Value: string(s), Pos: pos}
 				if fString {
-					token.Type = FString
+					token.Value = "f" + token.Value
 				}
 				if l.braces > 0 {
 					return l.handleImplicitStringConcatenation(token)

@@ -492,7 +492,7 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 	return None
 }
 
-func (s *scope) interpretFString(f *FormatString) pyObject {
+func (s *scope) interpretFString(f *FString) pyObject {
 	var b strings.Builder
 	for _, v := range f.Vars {
 		b.WriteString(v.Prefix)

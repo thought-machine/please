@@ -102,8 +102,8 @@ type OpExpression struct {
 
 // A ValueExpression is the value part of an expression, i.e. without surrounding operators.
 type ValueExpression struct {
-	String  string        `( @String`
-	FString *FormatString `| @FString`
+	String  string   `( @String`
+	FString *FString `| @FString`
 	Int     *struct {
 		Int int `@Int`
 	} `| @@` // Should just be *int, but https://github.com/golang/go/issues/23498 :(
@@ -118,10 +118,10 @@ type ValueExpression struct {
 	Call     *Call      `| "(" @@ ")" ) ]`
 }
 
-// A FormatString represents a minimal version of a Python literal format string.
+// A FString represents a minimal version of a Python literal format string.
 // Note that we only support a very small subset of what Python allows there; essentially only
 // variable substitution, which gives a much simpler AST structure here.
-type FormatString struct {
+type FString struct {
 	Vars []struct {
 		Prefix string
 		Var    string
