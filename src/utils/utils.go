@@ -60,3 +60,11 @@ func isABuildFile(name string, config *core.Configuration) bool {
 	}
 	return false
 }
+
+// Max is an incredibly complicated function, which is presumably why it didn't make it into the Go stdlib
+func Max(x, y int) int {
+	if x < y {
+		return y
+	}
+	return x
+}

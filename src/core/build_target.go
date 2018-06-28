@@ -149,8 +149,7 @@ type BuildTarget struct {
 	Tools []BuildInput
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
-	// Flakiness of test, ie. number of times we will rerun it before giving up. 0 is the default and
-	// is interpreted the same way as 1 would be (ie. one run only).
+	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
 	Flakiness int `name:"flaky"`
 	// Timeouts for build/test actions
 	BuildTimeout time.Duration `name:"timeout"`

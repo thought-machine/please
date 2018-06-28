@@ -73,10 +73,18 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 			if flaky == True {
 				target.Flakiness = 3
 				target.AddLabel("flaky") // Automatically label flaky tests
-			} else if i, ok := flaky.(pyInt); ok && i > 0 {
-				target.Flakiness = int(i)
-				target.AddLabel("flaky")
+			} else if flaky == False {
+				target.Flakiness = 1
+			} else if i, ok := flaky.(pyInt); ok {
+				if int(i) <= 1 {
+					target.Flakiness = 1
+				} else {
+					target.Flakiness = int(i)
+					target.AddLabel("flaky")
+				}
 			}
+		} else {
+			target.Flakiness = 1
 		}
 		// Automatically label containerised tests.
 		if target.Containerise {

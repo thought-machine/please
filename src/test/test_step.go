@@ -379,15 +379,9 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 
 // calcNumRuns works out how many total runs we should have for a test, and how many successes
 // are required for it to count as success.
+// numRuns and flakiness default to 1 which mean run once.
 func calcNumRuns(numRuns, flakiness int) (int, int) {
-	if numRuns > 0 && flakiness > 0 { // If flag is passed we run that many times * flakiness.
-		return numRuns * flakiness, numRuns
-	} else if numRuns > 0 {
-		return numRuns, numRuns
-	} else if flakiness > 0 { // Test is flaky, run that many times
-		return flakiness, 1
-	}
-	return 1, 1
+	return numRuns * flakiness, numRuns
 }
 
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
