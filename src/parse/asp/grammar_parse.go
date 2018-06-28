@@ -611,14 +611,17 @@ func (p *parser) parseFString() *FString {
 	f := &FString{}
 	tok := p.next(String)
 	s := tok.Value[2 : len(tok.Value)-1] // Strip preceding f" and trailing "
+	tok.Pos.Column += 1                  // track position in case of error
 	for idx := strings.IndexByte(s, '{'); idx != -1; idx = strings.IndexByte(s, '{') {
 		v := &f.Vars[p.newElement(&f.Vars)]
 		v.Prefix = s[:idx]
 		s = s[idx+1:]
+		tok.Pos.Column += idx + 1
 		idx = strings.IndexByte(s, '}')
 		p.assert(idx != -1, tok, "Unterminated brace in fstring")
 		v.Var = s[:idx]
 		s = s[idx+1:]
+		tok.Pos.Column += idx + 1
 	}
 	f.Suffix = s
 	return f
