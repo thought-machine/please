@@ -418,9 +418,9 @@ def check_config(key:str, section:str='buildconfig', rule:str='', example:str='.
     """
     if not CONFIG.get(key):
         key = key.lower().replace('_', '-')
-        rule_msg = (' to use %s rules' % rule) if rule else ''
-        msg = 'You must set %s.%s in your .plzconfig%s' % (section, key, rule_msg)
-        msg = '%s, e.g.\n[%s]\n%s = %s\n' % (msg, section, key, example)
+        rule_msg = f' to use {rule} rules' if rule else ''
+        msg = f'You must set {section}.{key} in your .plzconfig{rule_msg}'
+        msg = f'{msg}, e.g.\n[{section}]\n{key} = {example}\n'
         raise ConfigError(msg)
 
 

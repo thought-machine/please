@@ -230,7 +230,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
         raise ParseError("Can't pass both main_class and manifest to java_binary")
     if srcs:
         lib_rule = java_library(
-            name = '_%s#lib' % name,
+            name = f'_{name}#lib',
             srcs = srcs,
             deps = deps,
         )
@@ -289,7 +289,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
     # It's a bit sucky doing this in two separate steps, but it is
     # at least easy and reuses the existing code.
     java_library(
-        name='_%s#lib' % name,
+        name=f'_{name}#lib',
         srcs=srcs,
         resources=resources,
         deps=deps,
@@ -300,12 +300,11 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
     cmd, tools = _jarcat_cmd('build.please.main.TestMain')
     tools['junit'] = [CONFIG.JUNIT_RUNNER]
     cmd = 'ln -s $TOOLS_JUNIT . && ' + cmd
-    test_cmd = 'java -Dbuild.please.testpackage=%s %s -jar $(location :%s) %s' % (
-        test_package, jvm_args, name, flags)
+    test_cmd = f'java -Dbuild.please.testpackage={test_package} {jvm_args} -jar $(location :{name}) {flags}'
 
-    deps = [':_%s#lib' % name]
+    deps = [f':_{name}#lib']
     if worker:
-        test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
+        test_cmd = f'$(worker {worker}) && {test_cmd} '
         deps += [worker]
 
     build_rule(
@@ -359,7 +358,7 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
         if id.count(':') != 2:
             raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
     combine = combine or hash
-    source_name = '_%s#src' % name
+    source_name = f'_{name}#src'
     repository = repository or CONFIG.DEFAULT_MAVEN_REPO
     repos = [repository] if isinstance(repository, str) else repository
 
@@ -386,7 +385,7 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
                 # We deliberately don't make this rule visible externally.
             )
             # Have to account for require/provide on final rule if it's a jar
-            final_name = name if deps_only or combine else '_%s#bin' % name
+            final_name = name if deps_only or combine else f'_{name}#bin'
             add_exported_dep(final_name, ':' + artifact)
             if combine:
                 add_exported_dep(source_name, ':' + artifact)
@@ -403,7 +402,7 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
         sandbox=False,
     )
     if combine:
-        download_name = '_%s#download' % name
+        download_name = f'_{name}#download'
         maven_jar(
             name=download_name,
             id=id,
@@ -420,7 +419,7 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
             output_is_complete=True,
             needs_transitive_deps=True,
             building_description="Creating source jar...",
-            deps=[':' + download_name, ':_%s#deps' % name] + deps,
+            deps=[':' + download_name, f':_{name}#deps'] + deps,
             outs=[name + '_src.jar'],
             cmd=cmd + ' -s src.jar -e ""',
             tools=tools,
@@ -431,7 +430,7 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
             output_is_complete=True,
             needs_transitive_deps=True,
             building_description="Creating jar...",
-            deps=[':' + download_name, ':' + source_name, ':_%s#deps' % name] + deps,
+            deps=[':' + download_name, ':' + source_name, f':_{name}#deps'] + deps,
             outs=[name + '.jar'],
             requires=['java'],
             visibility=visibility,
@@ -444,14 +443,14 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
             id=id,
             repository=repos,
             hash=get_hash(id),
-            deps = deps + [':_%s#deps' % name],
+            deps = deps + [f':_{name}#deps'],
             visibility=visibility,
             filename=filename,
         )
     else:
         return build_rule(
             name=name,
-            deps=[':_%s#deps' % name],
+            deps=[f':_{name}#deps'],
             exported_deps=deps,
             cmd='true',  # do nothing!
             visibility=visibility,
@@ -505,9 +504,9 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
         artifact_type = '.exe'  # Maven always describes them this way, even for Linux :(
         out_artifact_type = ''  # But we're not peasants so we won't do the same.
     if native:
-        filename = filename or '%s-%s-%s${XOS}-${XARCH}%s' % (artifact, version, classifier, artifact_type)
+        filename = filename or f'{artifact}-{version}-{classifier}$XOS-$XARCH{artifact_type}'
     else:
-        filename = filename or '%s-%s%s%s' % (artifact, version, classifier, artifact_type)
+        filename = filename or f'{artifact}-{version}{classifier}{artifact_type}'
 
     group = group.replace('.', '/')
     urls = ['/'.join([repo, group, artifact, version, filename]) for repo in repos]
@@ -527,7 +526,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
     if sources:
         if classifier_sources_override:
             classifier = '-' + classifier_sources_override
-        filename = '%s-%s%s-sources.jar' % (artifact, version, classifier)
+        filename = f'{artifact}-{version}{classifier}-sources.jar'
         urls = ['/'.join([repo, group, artifact, version, filename]) for repo in repos]
         src_rule = remote_file(
             name = name,
@@ -590,7 +589,7 @@ def _parse_maven_artifact(id, sources=True, licences=None):
     elif len(parts) == 3:
         group, artifact, version = parts
     else:
-        raise ParseError('Unknown artifact format: %s (should be group:artifact:version)' % id)
+        raise ParseError(f'Unknown artifact format: {id} (should be group:artifact:version)')
     return group, artifact, version, sources, licences
 
 
@@ -598,9 +597,9 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
     """Returns the command we'd use to invoke jarcat, and the tool paths required."""
     cmd = '$TOOLS_JARCAT z -i . -o ${OUTS} -j'
     if main_class:
-        cmd += ' -m "%s"' % main_class
+        cmd += f' -m "{main_class}"'
     if preamble:
-        cmd += " -p '%s'" % preamble
+        cmd += f" -p '{preamble}'"
     if manifest:
         cmd += ' --manifest "$SRCS"'
     return cmd, {'jarcat': [CONFIG.JARCAT_TOOL]}

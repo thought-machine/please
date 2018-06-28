@@ -611,7 +611,7 @@ func (p *parser) parseFString() *FString {
 	f := &FString{}
 	tok := p.next(String)
 	s := tok.Value[2 : len(tok.Value)-1] // Strip preceding f" and trailing "
-	tok.Pos.Column += 1                  // track position in case of error
+	tok.Pos.Column++                     // track position in case of error
 	for idx := strings.IndexByte(s, '{'); idx != -1; idx = strings.IndexByte(s, '{') {
 		v := &f.Vars[p.newElement(&f.Vars)]
 		v.Prefix = s[:idx]
