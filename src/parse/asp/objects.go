@@ -362,7 +362,21 @@ func (d pyDict) Len() int {
 }
 
 func (d pyDict) String() string {
-	return fmt.Sprintf("%s", map[string]pyObject(d))
+	var b strings.Builder
+	b.WriteByte('{')
+	started := false
+	for _, k := range d.Keys() {
+		if started {
+			b.WriteString(", ")
+		}
+		started = true
+		b.WriteByte('"')
+		b.WriteString(k)
+		b.WriteString(`": `)
+		b.WriteString(d[k].String())
+	}
+	b.WriteByte('}')
+	return b.String()
 }
 
 // Copy creates a shallow duplicate of this dictionary.
