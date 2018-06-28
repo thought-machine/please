@@ -123,10 +123,10 @@ type ValueExpression struct {
 // variable substitution, which gives a much simpler AST structure here.
 type FString struct {
 	Vars []struct {
-		Prefix string
-		Var    string
+		Prefix string // Preceding string bit
+		Var    string // Variable name to interpolate
 	}
-	Suffix string
+	Suffix string // Following string bit
 }
 
 // A UnaryOp represents a unary operation - in our case the only ones we support are negation and not.
