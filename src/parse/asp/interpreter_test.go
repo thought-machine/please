@@ -252,3 +252,11 @@ func TestPartition(t *testing.T) {
 	assert.EqualValues(t, "27", s.Lookup("major"))
 	assert.EqualValues(t, "3", s.Lookup("minor"))
 }
+
+func TestFStrings(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/fstring.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, "a", s.Lookup("x"))
+	assert.EqualValues(t, "a", s.Lookup("y"))
+	assert.EqualValues(t, "x: a y: a fin", s.Lookup("z"))
+}
