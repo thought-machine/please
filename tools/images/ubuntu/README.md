@@ -12,7 +12,7 @@ a container.
 Notes
 -----
 
- - The currently recommended version is Artful (17.10). A few things
+ - The currently recommended version is Bionic (18.04). A few things
    work notably better and/or easier in this version, although it's certainly
    possibly to get things working in Xenial as well with a bit more work.
    Most notably you'll need to build a version of unittest++ yourself
