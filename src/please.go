@@ -44,7 +44,7 @@ var log = logging.MustGetLogger("plz")
 var config *core.Configuration
 
 var opts struct {
-	Usage string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
+	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
 		Config     string          `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
 		Arch       cli.Arch        `short:"a" long:"arch" description:"Architecture to compile for."`
@@ -87,11 +87,10 @@ var opts struct {
 	VisibilityParse  bool   `description:"Parse all targets that the original targets are visible to. Used for some query steps." no-flag:"true"`
 
 	Build struct {
-		Prepare    bool `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
-		Shell      bool `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
-		ShowStatus bool `long:"show_status" hidden:"true" description:"Show status of each target in output after build"`
-		Args struct {
-			// Inner nesting is necessary to make positional-args work :(
+		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		Shell      bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
+		ShowStatus bool     `long:"show_status" hidden:"true" description:"Show status of each target in output after build"`
+		Args       struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
@@ -105,7 +104,7 @@ var opts struct {
 	Hash struct {
 		Detailed bool `long:"detailed" description:"Produces a detailed breakdown of the hash"`
 		Update   bool `short:"u" long:"update" description:"Rewrites the hashes in the BUILD file to the new values"`
-		Args struct {
+		Args     struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"hash" description:"Calculates hash for one or more targets"`
@@ -140,24 +139,24 @@ var opts struct {
 		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed              bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Detailed            bool         `long:"detailed" description:"Prints more detailed output after tests."`
-		Args struct {
+		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
 		} `positional-args:"true"`
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
-		Env bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
+		Env      bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
 		Parallel struct {
-			NumTasks int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet    bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
 			Args []string `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
-			Quiet bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -170,16 +169,15 @@ var opts struct {
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Clean struct {
-		NoBackground bool `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
-		Remote       bool `long:"remote" description:"Clean entire remote cache when no targets are given (default is local only)"`
-		Args struct {
-			// Inner nesting is necessary to make positional-args work :(
+		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
+		Remote       bool     `long:"remote" description:"Clean entire remote cache when no targets are given (default is local only)"`
+		Args         struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
 
 	Watch struct {
-		Run bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
+		Run  bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
 		Args struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to watch the sources of for changes"`
 		} `positional-args:"true" required:"true"`
@@ -207,14 +205,14 @@ var opts struct {
 		NoPrompt     bool `short:"y" long:"no_prompt" description:"Remove targets without prompting"`
 		DryRun       bool `short:"n" long:"dry_run" description:"Don't remove any targets or files, just print what would be done"`
 		Git          bool `short:"g" long:"git" description:"Use 'git rm' to remove unused files instead of just 'rm'."`
-		Args struct {
+		Args         struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to limit gc to."`
 		} `positional-args:"true"`
 	} `command:"gc" description:"Analyzes the repo to determine unneeded targets."`
 
 	Export struct {
 		Output string `short:"o" long:"output" required:"true" description:"Directory to export into"`
-		Args struct {
+		Args   struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to export."`
 		} `positional-args:"true"`
 
@@ -249,7 +247,7 @@ var opts struct {
 	Query struct {
 		Deps struct {
 			Unique bool `long:"unique" short:"u" description:"Only output each dependency once"`
-			Args struct {
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"deps" description:"Queries the dependencies of a target."`
@@ -266,18 +264,18 @@ var opts struct {
 		} `command:"somepath" description:"Queries for a path between two targets"`
 		AllTargets struct {
 			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
-			Args struct {
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query"`
 			} `positional-args:"true"`
 		} `command:"alltargets" description:"Lists all targets in the graph"`
 		Print struct {
 			Fields []string `short:"f" long:"field" description:"Individual fields to print of the target"`
-			Args struct {
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to print" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"print" description:"Prints a representation of a single target"`
 		Completions struct {
-			Cmd string `long:"cmd" description:"Command to complete for" default:"build"`
+			Cmd  string `long:"cmd" description:"Command to complete for" default:"build"`
 			Args struct {
 				Fragments cli.StdinStrings `positional-arg-name:"fragment" description:"Initial fragment to attempt to complete"`
 			} `positional-args:"true"`
@@ -285,7 +283,7 @@ var opts struct {
 		AffectedTargets struct {
 			Tests        bool `long:"tests" description:"Shows only affected tests, no other targets."`
 			Intransitive bool `long:"intransitive" description:"Shows only immediately affected targets, not transitive dependencies."`
-			Args struct {
+			Args         struct {
 				Files cli.StdinStrings `positional-arg-name:"files" required:"true" description:"Files to query affected tests for"`
 			} `positional-args:"true"`
 		} `command:"affectedtargets" description:"Prints any targets affected by a set of files."`
@@ -306,7 +304,7 @@ var opts struct {
 		} `command:"graph" description:"Prints a JSON representation of the build graph."`
 		WhatOutputs struct {
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
-			Args struct {
+			Args      struct {
 				Files cli.StdinStrings `positional-arg-name:"files" required:"true" description:"Files to query targets responsible for"`
 			} `positional-args:"true"`
 		} `command:"whatoutputs" description:"Prints out target(s) responsible for outputting provided file(s)"`
@@ -319,7 +317,7 @@ var opts struct {
 			Since           string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
 			CheckoutCommand string `long:"checkout_command" default:"git checkout %s" description:"Command to run to check out the before/after revisions."`
 			CurrentCommand  string `long:"current_revision_command" default:"git rev-parse --abbrev-ref HEAD" description:"Command to run to get the current revision (which will be checked out again at the end)"`
-			Args struct {
+			Args            struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to consider changed"`
 			} `positional-args:"true"`
 		} `command:"changes" description:"Calculates the difference between two different states of the build graph"`
