@@ -375,14 +375,15 @@ func formatTestName(testCase core.TestCase, name string) string {
 func formatTestExecution(execution core.TestExecution) string {
 	if execution.Error != nil {
 		return "${BOLD_CYAN}ERROR${RESET}"
-	} else if execution.Failure != nil {
+	}
+	if execution.Failure != nil {
 		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", maybeToString(execution.Duration))
-	} else if execution.Skip != nil {
+	}
+	if execution.Skip != nil {
 		// Not usually interesting to have a duration when we did no work.
 		return "${BOLD_YELLOW}SKIP${RESET}"
-	} else {
-		return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", maybeToString(execution.Duration))
 	}
+	return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", maybeToString(execution.Duration))
 }
 
 func maybeToString(duration *time.Duration) string {
