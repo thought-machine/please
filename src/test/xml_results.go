@@ -28,7 +28,7 @@ func parseJUnitXMLTestResults(data []byte) (core.TestSuites, error) {
 		case io.EOF:
 			return results, nil
 		default:
-			return nil, err
+			return results, err
 		}
 
 		switch tok := token.(type) {
