@@ -376,21 +376,20 @@ func formatTestExecution(execution core.TestExecution) string {
 	if execution.Error != nil {
 		return "${BOLD_CYAN}ERROR${RESET}"
 	} else if execution.Failure != nil {
-		duration := ""
-		if execution.Duration != nil {
-			duration = fmt.Sprintf(" ${BOLD_WHITE}%s${RESET}", execution.Duration.Round(testDurationGranularity))
-		}
-		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", duration)
+		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", maybeToString(execution.Duration))
 	} else if execution.Skip != nil {
 		// Not usually interesting to have a duration when we did no work.
 		return "${BOLD_YELLOW}SKIP${RESET}"
 	} else {
-		duration := ""
-		if execution.Duration != nil {
-			duration = fmt.Sprintf(" ${BOLD_WHITE}%s${RESET}", execution.Duration.Round(testDurationGranularity))
-		}
-		return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", duration)
+		return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", maybeToString(execution.Duration))
 	}
+}
+
+func maybeToString(duration *time.Duration) string {
+	if duration == nil {
+		return ""
+	}
+	return fmt.Sprintf(" ${BOLD_WHITE}%s${RESET}", duration.Round(testDurationGranularity))
 }
 
 // logProgress continually logs progress messages every 10s explaining where we're up to.

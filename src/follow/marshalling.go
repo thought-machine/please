@@ -33,7 +33,6 @@ func toProto(r *core.BuildResult) *pb.BuildEventResponse {
 			Cached:     t.Cached,
 			TimedOut:   t.TimedOut,
 			Properties: t.Properties,
-			Hostname:   t.HostName,
 			Timestamp:  t.Timestamp,
 		},
 	}
@@ -127,7 +126,6 @@ func fromProto(r *pb.BuildEventResponse) *core.BuildResult {
 			Package:    t.Package,
 			Duration:   time.Duration(t.Duration),
 			Properties: t.Properties,
-			HostName:   t.Hostname,
 			Timestamp:  t.Timestamp,
 			Name:       t.Name,
 			TestCases:  fromProtoTestCases(t.TestCases),

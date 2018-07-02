@@ -126,16 +126,10 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return
 	}
 
-	hostname, err := os.Hostname();
-	if err != nil {
-		hostname = "unknown"
-	}
-
 	// Fresh set of results for this target.
 	target.Results = core.TestSuite{
 		Package:   strings.Replace(target.Label.PackageName, "/", ".", -1),
 		Name:      target.Label.Name,
-		HostName:  hostname,
 		Timestamp: time.Now().Format(time.RFC3339),
 	}
 
@@ -190,7 +184,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			testSuite := doTest(tid, state, target, outputFile)
 
 			flakeResults.TimedOut = flakeResults.TimedOut || testSuite.TimedOut
-			flakeResults.HostName = testSuite.HostName
 			flakeResults.Properties = testSuite.Properties
 			flakeResults.Duration += testSuite.Duration
 			// Each set of executions is treated as a group
@@ -303,18 +296,11 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFil
 	stdout, runError := prepareAndRunTest(tid, state, target)
 	duration := time.Since(startTime)
 
-	// TODO(agenticarus): Check this works with test workers.
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "unknown"
-	}
-
 	parsedSuite := parseTestOutput(stdout, "", runError, duration, target, outputFile)
 
 	return core.TestSuite{
 		Package:    strings.Replace(target.Label.PackageName, "/", ".", -1),
 		Name:       target.Label.Name,
-		HostName:   hostname,
 		Duration:   duration,
 		TimedOut:   runError == context.DeadlineExceeded,
 		Properties: parsedSuite.Properties,

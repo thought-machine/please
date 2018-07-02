@@ -28,15 +28,13 @@ func parseJUnitXMLTestResults(data []byte) (core.TestSuites, error) {
 		case io.EOF:
 			return results, nil
 		default:
-			log.Fatalf("error: %s", err)
+			return nil, err
 		}
 
 		switch tok := token.(type) {
 		case xml.StartElement:
 			switch tok.Name.Local {
-			case "test":
-				fallthrough
-			case "testcase":
+			case "test", "testcase":
 				// One or more bare tests, put each one in a synthetic test suite
 				testSuite := core.TestSuite{}
 				xmlTest := jUnitXMLTest{}
@@ -70,7 +68,6 @@ func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
 	testSuite := core.TestSuite{
 		Package:    xmlTestSuite.Package,
 		Name:       xmlTestSuite.Name,
-		HostName:   xmlTestSuite.HostName,
 		Timestamp:  xmlTestSuite.Timestamp,
 		Duration:   xmlTestSuite.Duration(),
 		Properties: toCoreProperties(xmlTestSuite.Properties),
@@ -378,7 +375,6 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 					xmlTestSuite = jUnitXMLTestSuite{
 						Name:       testSuite.Name,
 						Package:    testSuite.Package,
-						HostName:   testSuite.HostName,
 						Timestamp:  testSuite.Timestamp,
 						Tests:      testSuite.Tests(),
 						Errors:     testSuite.Errors(),

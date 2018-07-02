@@ -22,7 +22,6 @@ type TestSuite struct {
 	TimedOut   bool              // True if the test failed because we timed it out.
 	TestCases  TestCases         // The test cases that ran during execution of this target.
 	Properties map[string]string // The system properties at the time of the test.
-	HostName   string            // The name of the host the test ran on.
 	Timestamp  string            // ISO8601 formatted datetime when the test ran.
 }
 

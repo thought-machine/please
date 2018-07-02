@@ -116,10 +116,8 @@ message TestSuite {
     repeated TestCase test_cases = 6;
     // Any system properties that were set at the time of execution.
     map<string, string> properties = 7;
-    // Host name of the server the tests were run on.
-    string hostname = 8;
     // Timestamp of the start of test execution.
-    string timestamp = 9;
+    string timestamp = 8;
 }
 
 message TestCase {
