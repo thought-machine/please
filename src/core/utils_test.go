@@ -143,40 +143,37 @@ func TestLookPathDoesntExist(t *testing.T) {
 }
 
 func TestExecWithTimeout(t *testing.T) {
-	stdout, stderr, err := ExecWithTimeoutSimple(tenSeconds, "true")
+	out, err := ExecWithTimeoutSimple(tenSeconds, "true")
 	assert.NoError(t, err)
-	assert.Equal(t, 0, len(stdout))
-	assert.Equal(t, 0, len(stderr))
+	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutFailure(t *testing.T) {
-	stdout, stderr, err := ExecWithTimeoutSimple(tenSeconds, "false")
+	out, err := ExecWithTimeoutSimple(tenSeconds, "false")
 	assert.Error(t, err)
-	assert.Equal(t, 0, len(stdout))
-	assert.Equal(t, 0, len(stderr))
+	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutDeadline(t *testing.T) {
-	stdout, stderr, err := ExecWithTimeoutSimple(cli.Duration(1*time.Nanosecond), "sleep", "10")
+	out, err := ExecWithTimeoutSimple(cli.Duration(1*time.Nanosecond), "sleep", "10")
 	assert.Error(t, err)
 	assert.True(t, strings.HasPrefix(err.Error(), "Timeout exceeded"))
-	assert.Equal(t, 0, len(stdout))
-	assert.Equal(t, 0, len(stderr))
+	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutOutput(t *testing.T) {
 	state := NewDefaultBuildState()
-	stdout, stderr, err := ExecWithTimeoutShell(state, nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello", false)
+	out, stderr, err := ExecWithTimeoutShell(state, nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello", false)
 	assert.NoError(t, err)
-	assert.Equal(t, "hello\n", string(stdout))
-	assert.Equal(t, "", string(stderr))
+	assert.Equal(t, "hello\n", string(out))
+	assert.Equal(t, "hello\n", string(stderr))
 }
 
 func TestExecWithTimeoutStderr(t *testing.T) {
 	state := NewDefaultBuildState()
-	stdout, stderr, err := ExecWithTimeoutShell(state, nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello 1>&2", false)
+	out, stderr, err := ExecWithTimeoutShell(state, nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello 1>&2", false)
 	assert.NoError(t, err)
-	assert.Equal(t, "", string(stdout))
+	assert.Equal(t, "", string(out))
 	assert.Equal(t, "hello\n", string(stderr))
 }
 

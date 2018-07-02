@@ -50,13 +50,13 @@ func addAll(map1 map[string]string, map2 map[string]string) map[string]string {
 }
 
 // Tests returns the number of TestCases.
-func (testSuite *TestSuite) Tests() uint {
-	return uint(len(testSuite.TestCases))
+func (testSuite *TestSuite) Tests() int {
+	return len(testSuite.TestCases)
 }
 
 // FlakyPasses returns the number of TestCases which succeeded after some number of executions.
-func (testSuite TestSuite) FlakyPasses() uint {
-	flakyPasses := uint(0)
+func (testSuite TestSuite) FlakyPasses() int {
+	flakyPasses := 0
 
 	for _, result := range testSuite.TestCases {
 		if result.Success() != nil && len(result.Executions) > 1 {
@@ -68,8 +68,8 @@ func (testSuite TestSuite) FlakyPasses() uint {
 }
 
 // Passes returns the number of TestCases which succeeded (not skipped).
-func (testSuite TestSuite) Passes() uint {
-	passes := uint(0)
+func (testSuite TestSuite) Passes() int {
+	passes := 0
 
 	for _, result := range testSuite.TestCases {
 		if len(result.Failures()) == 0 && len(result.Errors()) == 0  && result.Skip() == nil {
@@ -81,8 +81,8 @@ func (testSuite TestSuite) Passes() uint {
 }
 
 // Errors returns the number of TestCases which did not succeed and returned some abnormal error.
-func (testSuite *TestSuite) Errors() uint {
-	errors := uint(0)
+func (testSuite *TestSuite) Errors() int {
+	errors := 0
 
 	for _, result := range testSuite.TestCases {
 		// No success result, not skipped, some errors (don't care about the presence of failures)
@@ -95,8 +95,8 @@ func (testSuite *TestSuite) Errors() uint {
 }
 
 // Failures returns the number of TestCases which did not succeed and returned some failure.
-func (testSuite *TestSuite) Failures() uint {
-	failures := uint(0)
+func (testSuite *TestSuite) Failures() int {
+	failures := 0
 
 	for _, result := range testSuite.TestCases {
 		// No success result, not skipped, no errors, but some failures.
@@ -109,8 +109,8 @@ func (testSuite *TestSuite) Failures() uint {
 }
 
 // Skips returns the number of TestCases that were skipped.
-func (testSuite *TestSuite) Skips() uint {
-	skips := uint(0)
+func (testSuite *TestSuite) Skips() int {
+	skips := 0
 
 	for _, result := range testSuite.TestCases {
 		if result.Skip() != nil {
@@ -124,17 +124,25 @@ func (testSuite *TestSuite) Skips() uint {
 // Add puts test cases together if they have the same name and classname, allowing callers to treat
 // multiple test cases as if they were merely multiple executions of the same test.
 func (testSuite *TestSuite) Add(cases ... TestCase) {
-OUTER:
 	for _, testCase := range cases {
-		for idx := range testSuite.TestCases {
-			originalTestCase := &testSuite.TestCases[idx]
-			if originalTestCase.Name == testCase.Name && originalTestCase.ClassName == testCase.ClassName {
-				originalTestCase.Executions = append(originalTestCase.Executions, testCase.Executions...)
-				continue OUTER
-			}
+		idx := findMatchingTestCase(&testCase, &testSuite.TestCases)
+
+		if idx >= 0 {
+			testSuite.TestCases[idx].Executions = append(testSuite.TestCases[idx].Executions, testCase.Executions...)
+		} else {
+			testSuite.TestCases = append(testSuite.TestCases, testCase)
 		}
-		testSuite.TestCases = append(testSuite.TestCases, testCase)
 	}
+}
+
+func findMatchingTestCase(testCase *TestCase, testCases *TestCases) int {
+	for idx := range *testCases {
+		originalTestCase := (*testCases)[idx]
+		if originalTestCase.Name == testCase.Name && originalTestCase.ClassName == testCase.ClassName {
+			return idx
+		}
+	}
+	return -1
 }
 
 // TestCase describes a set of test results for a test method.
@@ -145,7 +153,7 @@ type TestCase struct {
 }
 
 // Success returns either the successful execution of a test case, or nil if it was never successfully executed.
-func (testCase TestCase) Success() *TestExecution {
+func (testCase *TestCase) Success() *TestExecution {
 	for _, execution := range testCase.Executions {
 		if execution.Failure == nil &&
 			execution.Error == nil &&
@@ -157,7 +165,7 @@ func (testCase TestCase) Success() *TestExecution {
 }
 
 // Skip returns the either the skipped execution of a test case, or nil if it was never skipped.
-func (testCase TestCase) Skip() *TestExecution {
+func (testCase *TestCase) Skip() *TestExecution {
 	for _, execution := range testCase.Executions {
 		if execution.Skip != nil {
 			return &execution
@@ -167,7 +175,7 @@ func (testCase TestCase) Skip() *TestExecution {
 }
 
 // Failures returns all failing executions of a test case.
-func (testCase TestCase) Failures() []TestExecution {
+func (testCase *TestCase) Failures() []TestExecution {
 	failures := make([]TestExecution, 0)
 	for _, execution := range testCase.Executions {
 		if execution.Failure != nil {
@@ -178,7 +186,7 @@ func (testCase TestCase) Failures() []TestExecution {
 }
 
 // Errors returns all abnormal executions of a test case.
-func (testCase TestCase) Errors() []TestExecution {
+func (testCase *TestCase) Errors() []TestExecution {
 	errors := make([]TestExecution, 0)
 	for _, execution := range testCase.Executions {
 		if execution.Error != nil {
@@ -189,11 +197,11 @@ func (testCase TestCase) Errors() []TestExecution {
 }
 
 // Duration calculates how long the test case took to run to success or failure (or nil if skipped or abnormal exit).
-func (testCase TestCase) Duration() *time.Duration {
+func (testCase *TestCase) Duration() *time.Duration {
 	if testCase.Success() != nil {
 		return testCase.Success().Duration
-	} else if len(testCase.Failures()) > 0 {
-		return testCase.Failures()[0].Duration
+	} else if failures := testCase.Failures(); len(failures) > 0 {
+		return failures[0].Duration
 	}
 	// Unable to determine duration of this test case.
 	return nil

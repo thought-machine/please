@@ -15,7 +15,6 @@ go_library(
         "//src/metrics",
         "//src/utils",
         "//third_party/go:docker",
-        "//third_party/go:docker-docker",
         "//third_party/go:logging",
         "//third_party/go:tools",
     ],

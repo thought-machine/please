@@ -246,12 +246,12 @@ type jUnitXMLTestSuites struct {
 
 type jUnitXMLTestSuite struct {
 	Name  string `xml:"name,attr"`
-	Tests uint   `xml:"tests,attr"`
+	Tests int    `xml:"tests,attr"`
 
-	Errors    uint   `xml:"errors,attr,omitempty"`
-	Failures  uint   `xml:"failures,attr,omitempty"`
+	Errors    int    `xml:"errors,attr,omitempty"`
+	Failures  int    `xml:"failures,attr,omitempty"`
 	HostName  string `xml:"hostname,attr,omitempty"`
-	Skipped   uint   `xml:"skipped,attr,omitempty"`
+	Skipped   int    `xml:"skipped,attr,omitempty"`
 	Package   string `xml:"package,attr,omitempty"`
 	Timed            `xml:"time,attr,omitempty"`
 	Timestamp string `xml:"timestamp,attr,omitempty"`

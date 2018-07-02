@@ -201,14 +201,14 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 	cmd.Dir = dir
 	cmd.Env = env
 
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
+	var out bytes.Buffer
+	var outerr safeBuffer
 	if showOutput {
-		cmd.Stdout = io.MultiWriter(os.Stderr, &stdout)
-		cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
+		cmd.Stdout = io.MultiWriter(os.Stderr, &out, &outerr)
+		cmd.Stderr = io.MultiWriter(os.Stderr, &outerr)
 	} else {
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
+		cmd.Stdout = io.MultiWriter(&out, &outerr)
+		cmd.Stderr = &outerr
 	}
 	if target != nil && target.ShowProgress {
 		cmd.Stdout = newProgressWriter(target, cmd.Stdout)
@@ -236,9 +236,9 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 		// Do nothing.
 	case <-time.After(timeout):
 		KillProcess(cmd)
-		err = fmt.Errorf("Timeout exceeded: %s", stderr.String())
+		err = fmt.Errorf("Timeout exceeded: %s", outerr.String())
 	}
-	return stdout.Bytes(), stderr.Bytes(), err
+	return out.Bytes(), outerr.Bytes(), err
 }
 
 // runCommand runs a command and signals on the given channel when it's done.
@@ -269,9 +269,9 @@ func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir 
 
 // ExecWithTimeoutSimple runs an external command with a timeout.
 // It's a simpler version of ExecWithTimeout that gives less control.
-func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, []byte, error) {
-	stdout, stderr, err := ExecWithTimeout(nil, "", nil, time.Duration(timeout), timeout, false, false, cmd)
-	return stdout, stderr, err
+func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, error) {
+	_, out, err := ExecWithTimeout(nil, "", nil, time.Duration(timeout), timeout, false, false, cmd)
+	return out, err
 }
 
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL

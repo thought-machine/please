@@ -2,9 +2,9 @@ package core
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	"time"
 )
 
 var a = []LineCoverage{NotExecutable, Uncovered, Uncovered, Covered, NotExecutable, Unreachable}
@@ -99,11 +99,11 @@ func TestAdd(t *testing.T) {
 	}
 	suite1.Add(suite2.TestCases...)
 
-	assert.Equal(t, uint(2), suite1.Tests())
-	assert.Equal(t, uint(2), suite1.Passes())
-	assert.Equal(t, uint(0), suite1.Failures())
-	assert.Equal(t, uint(0), suite1.Skips())
-	assert.Equal(t, uint(0), suite1.Errors())
+	assert.Equal(t, 2, suite1.Tests())
+	assert.Equal(t, 2, suite1.Passes())
+	assert.Equal(t, 0, suite1.Failures())
+	assert.Equal(t, 0, suite1.Skips())
+	assert.Equal(t, 0, suite1.Errors())
 
 	testCase := suite1.TestCases[0]
 
