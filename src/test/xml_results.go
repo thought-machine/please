@@ -34,7 +34,22 @@ func parseJUnitXMLTestResults(data []byte) (core.TestSuites, error) {
 		switch tok := token.(type) {
 		case xml.StartElement:
 			switch tok.Name.Local {
-			case "test", "testcase":
+			case "test":
+				// UnitTest.cpp Test
+				uxmlTest := unitTestXMLTest{}
+				decoder.DecodeElement(&uxmlTest, &tok)
+				xmlTest := uxmlTest.toJUnitXMLTest()
+				testSuite := core.TestSuite{
+					Name: uxmlTest.Suite,
+				}
+				testCase := core.TestCase{
+					Name: uxmlTest.Name,
+				}
+				appendResult(xmlTest, &testCase)
+				testSuite.TestCases = append(testSuite.TestCases, testCase)
+				testSuite.Duration += xmlTest.Duration()
+				results.TestSuites = append(results.TestSuites, testSuite)
+			case "testcase":
 				// One or more bare tests, put each one in a synthetic test suite
 				testSuite := core.TestSuite{}
 				xmlTest := jUnitXMLTest{}
@@ -347,6 +362,32 @@ func (j jUnitXMLTest) WasSuccessful() bool {
 	return j.Skipped == nil &&
 		j.Error == nil &&
 		j.Failure == nil
+}
+
+type unitTestXMLTest struct {
+	Suite   string `xml:"suite,attr"`
+	Name    string `xml:"name,attr"`
+	Elapsed float64 `xml:"elapsed,attr"`
+
+	Failure *unitTestXMLFailure `xml:failure,omitempty`
+}
+
+func (uxmlTest *unitTestXMLTest) toJUnitXMLTest() jUnitXMLTest {
+	var failure *jUnitXMLFailure
+	if uxmlTest.Failure != nil {
+		failure = &jUnitXMLFailure{
+			Message: failure.Message,
+		}
+	}
+	return jUnitXMLTest{
+		Name:      uxmlTest.Name,
+		ClassName: uxmlTest.Suite,
+		Timed:     Timed{uxmlTest.Elapsed},
+	}
+}
+
+type unitTestXMLFailure struct {
+	Message string `xml:"message,attr"`
 }
 
 // WriteResultsToFileOrDie writes test results out to a file in xUnit format. Dies on any errors.
