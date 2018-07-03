@@ -393,8 +393,12 @@ func (p *parser) parseValueExpression() *ValueExpression {
 	ve := &ValueExpression{}
 	tok := p.l.Peek()
 	if tok.Type == String {
-		ve.String = tok.Value
-		p.l.Next()
+		if tok.Value[0] == 'f' {
+			ve.FString = p.parseFString()
+		} else {
+			ve.String = tok.Value
+			p.l.Next()
+		}
 	} else if tok.Type == Int {
 		p.assert(len(tok.Value) < 19, tok, "int literal is too large: %s", tok)
 		p.initField(&ve.Int)
@@ -601,4 +605,24 @@ func (p *parser) parseLambda() *Lambda {
 	p.next(':')
 	p.parseExpressionInPlace(&l.Expr)
 	return l
+}
+
+func (p *parser) parseFString() *FString {
+	f := &FString{}
+	tok := p.next(String)
+	s := tok.Value[2 : len(tok.Value)-1] // Strip preceding f" and trailing "
+	tok.Pos.Column++                     // track position in case of error
+	for idx := strings.IndexByte(s, '{'); idx != -1; idx = strings.IndexByte(s, '{') {
+		v := &f.Vars[p.newElement(&f.Vars)]
+		v.Prefix = s[:idx]
+		s = s[idx+1:]
+		tok.Pos.Column += idx + 1
+		idx = strings.IndexByte(s, '}')
+		p.assert(idx != -1, tok, "Unterminated brace in fstring")
+		v.Var = s[:idx]
+		s = s[idx+1:]
+		tok.Pos.Column += idx + 1
+	}
+	f.Suffix = s
+	return f
 }

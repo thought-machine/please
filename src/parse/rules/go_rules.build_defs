@@ -39,7 +39,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     private = name.startswith('_')
     if asm_srcs:
         lib_rule = go_library(
-            name = '_%s#lib' % name,
+            name = f'_{name}#lib',
             srcs = srcs,
             deps = deps,
             test_only = test_only,
@@ -158,7 +158,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
             'h': [subdir2 + '_cgo_export.h'],
         },
         cmd = ' && '.join([
-            ('OUT_DIR="$TMP_DIR/%s"' % subdir) if subdir else 'OUT_DIR="$TMP_DIR"',
+            (f'OUT_DIR="$TMP_DIR/{subdir}"') if subdir else 'OUT_DIR="$TMP_DIR"',
             'mkdir -p $OUT_DIR',
             'cd $PKG_DIR/' + subdir,
             '$TOOL tool cgo -objdir $OUT_DIR -importpath ${PKG#*src/} *.go',
@@ -167,7 +167,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
             # cgo leaves absolute paths in these files which we must get rid of :(
             'find $OUT_DIR -type f -maxdepth 1 | xargs sed -i -e "s|$TMP_DIR/||g"',
             'cd $TMP_DIR',
-            'ls %s*.c %s*.go' % (subdir2, subdir2),
+            f'ls {subdir2}*.c {subdir2}*.go',
         ]),
         tools = [CONFIG.GO_TOOL],
         post_build = post_build if file_srcs != srcs else None,
@@ -176,7 +176,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
 
     # Compile the various bits
     c_rule = c_library(
-        name = '_%s#c' % name,
+        name = f'_{name}#c',
         srcs = [cgo_rule + '|c'] + c_srcs,
         hdrs = [cgo_rule + '|h'] + hdrs,
         compiler_flags = compiler_flags + [
@@ -188,7 +188,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
         deps = deps,
     )
     go_rule = go_library(
-        name = '_%s#go' % name,
+        name = f'_{name}#go',
         srcs = [cgo_rule + '|go'] + go_srcs,
         test_only = test_only,
         complete = False,
@@ -197,7 +197,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
     # And finally combine the compiled C code into the Go archive object so go tool link can find it later.
     return _merge_cgo_obj(
         name = name,
-        a_rule = ':_%s#go' % name,
+        a_rule = f':_{name}#go',
         o_rule = c_rule,
         visibility = visibility,
         test_only = test_only,
@@ -265,7 +265,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
     """
     go_library(
-        name='_%s#lib' % name,
+        name=f'_{name}#lib',
         srcs=srcs or [name + '.go'],
         filter_srcs=filter_srcs,
         asm_srcs=asm_srcs,
@@ -275,7 +275,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     cmds, tools = _go_binary_cmds(static=static)
     return build_rule(
         name=name,
-        srcs=[':_%s#lib' % name],
+        srcs=[f':_{name}#lib'],
         deps=deps,
         outs=[out or name],
         cmd=cmds,
@@ -560,7 +560,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
                      labels:list=[]):
     if hashes and not revision:
         log.warning("You shouldn't specify hashes on go_get without specifying revision as well")
-    labels = ['go_get:%s@%s' % (get, revision) if revision else 'go_get:%s' % get]
+    labels = [f'go_get:{get}@{revision}' if revision else f'go_get:{get}']
     getroot = get[:-4] if get.endswith('/...') else get
     subdir = 'src/' + getroot
 
@@ -577,7 +577,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
         get_deps = []
         if repo:
             # we've been told exactly where to get the source from.
-            cmd = ['git clone %s src/%s' % (repo, getroot)]
+            cmd = [f'git clone {repo} src/{getroot}']
         else:
             # Ultimate fallback to go get.
             # This has some more restrictions than the above (e.g. go get won't fetch a directory
@@ -589,13 +589,13 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
             ]
         if revision:
             # Annoyingly -C does not work on git checkout :(
-            cmd.append('(cd %s && git checkout -q %s)' % (subdir, revision))
+            cmd.append(f'(cd {subdir} && git checkout -q {revision})')
         cmd.append('find . -name .git | xargs rm -rf')
         tools = [CONFIG.GO_TOOL]
     if patch:
-        cmd.append('patch -s -d %s -p1 < ${TMP_DIR}/$SRCS_PATCH' % subdir)
+        cmd.append(f'patch -s -d {subdir} -p1 < $TMP_DIR/$SRCS_PATCH')
     if strip:
-        cmd += ['rm -rf %s/%s' % (subdir, s) for s in strip]
+        cmd += [f'rm -rf {subdir}/{s}' for s in strip]
     return build_rule(
         name = name,
         tag = tag,
@@ -628,13 +628,13 @@ def _go_github_repo_cmd(name, get, repo, revision):
     remote_rule = remote_file(
         name = name,
         _tag = 'download',
-        url = 'https://%s/archive/%s.zip' % (repo, revision),
+        url = f'https://{repo}/archive/{revision}.zip',
         out = name + '.zip',
     )
     return [
         'rm -rf src/' + out,
         '$TOOL x $SRCS_GET',
-        'mv %s* src/%s' % (dest, out),
+        f'mv {dest}* src/{out}',
     ], [remote_rule], [CONFIG.JARCAT_TOOL]
 
 
@@ -657,13 +657,13 @@ def _replace_test_package(name, output, static):
                 binary_cmds, _ = _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config)
                 if name_changed:
                     for k, v in binary_cmds.items():
-                        set_command(new_name, k, 'mv -f ${PKG_DIR}/%s.a ${PKG_DIR}/%s.a && %s' % (new_name, pkg_name, v))
+                        set_command(new_name, k, f'mv -f $PKG_DIR/{new_name}.a $PKG_DIR/{pkg_name}.a && {v}')
                 else:
                     for k, v in binary_cmds.items():
                         set_command(new_name, k, v)
             if name_changed:
                 for k, v in _go_library_cmds().items():
-                    set_command(lib, k, 'mv -f ${PKG_DIR}/%s.a ${PKG_DIR}/%s.a && %s' % (new_name, pkg_name, v))
+                    set_command(lib, k, f'mv -f $PKG_DIR/{new_name}.a $PKG_DIR/{pkg_name}.a && {v}')
 
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True):
@@ -677,11 +677,11 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
     prefix += _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
     cmds = {
-        'dbg': '%s; %s%s -N -l $SRCS' % (prefix, filter_cmd, compile_cmd),
-        'opt': '%s; %s%s $SRCS' % (prefix, filter_cmd, compile_cmd),
+        'dbg': f'{prefix}; {filter_cmd}{compile_cmd} -N -l $SRCS',
+        'opt': f'{prefix}; {filter_cmd}{compile_cmd} $SRCS',
     }
     if cover:
-        cmds['cover'] = '%s; %s%s && %s $SRCS' % (prefix, filter_cmd, cover_cmd, compile_cmd)
+        cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd} $SRCS'
     return cmds
 
 
@@ -691,15 +691,15 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config=''):
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     if static:
-        flags = '-linkmode external -extldflags "-static %s %s"' % (ldflags, pkg_config)
+        flags = f'-linkmode external -extldflags "-static {ldflags} {pkg_config}"'
     elif ldflags or pkg_config:
-        flags = '-extldflags "%s %s"' % (ldflags, pkg_config)
+        flags = f'-extldflags "{ldflags} {pkg_config}"'
     else:
         flags = ''
 
     return {
-        'dbg': '%s && %s %s $SRCS' % (prefix, _link_cmd, flags),
-        'opt': '%s && %s %s -s -w $SRCS' % (prefix, _link_cmd, flags),
+        'dbg': f'{prefix} && {_link_cmd} {flags} $SRCS',
+        'opt': f'{prefix} && {_link_cmd} {flags} -s -w $SRCS',
     }, {
         'go': [CONFIG.GO_TOOL],
         'ld': [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL],
@@ -734,4 +734,4 @@ def _get_ldflags_and_pkgconfig(name):
     labels = get_labels(name, 'cc:')
     ldflags = ' '.join([l[3:] for l in labels if l.startswith('ld:')])
     pkg_config = ' '.join([l[3:] for l in labels if l.startswith('pc:')])
-    return (ldflags, '`pkg-config --libs %s`' % pkg_config) if pkg_config else (ldflags, '')
+    return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')

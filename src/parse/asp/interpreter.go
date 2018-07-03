@@ -3,6 +3,7 @@ package asp
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"core"
@@ -459,6 +460,8 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 	} else if expr.String != "" {
 		// Strings are surrounded by quotes to make it easier for the parser; here they come off again.
 		return pyString(stringLiteral(expr.String))
+	} else if expr.FString != nil {
+		return s.interpretFString(expr.FString)
 	} else if expr.Int != nil {
 		return pyInt(expr.Int.Int)
 	} else if expr.Bool != "" {
@@ -487,6 +490,16 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 		})
 	}
 	return None
+}
+
+func (s *scope) interpretFString(f *FString) pyObject {
+	var b strings.Builder
+	for _, v := range f.Vars {
+		b.WriteString(v.Prefix)
+		b.WriteString(s.Lookup(v.Var).String())
+	}
+	b.WriteString(f.Suffix)
+	return pyString(b.String())
 }
 
 func (s *scope) interpretSlice(obj pyObject, sl *Slice) pyObject {

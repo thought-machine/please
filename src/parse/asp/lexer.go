@@ -176,7 +176,8 @@ func (l *lex) nextToken() Token {
 	}
 	b := l.b[l.i]
 	rawString := b == 'r' && (l.b[l.i+1] == '"' || l.b[l.i+1] == '\'')
-	if rawString {
+	fString := b == 'f' && (l.b[l.i+1] == '"' || l.b[l.i+1] == '\'')
+	if rawString || fString {
 		l.i++
 		l.col++
 		b = l.b[l.i]
@@ -227,7 +228,7 @@ func (l *lex) nextToken() Token {
 		return l.consumeInteger(b, pos)
 	case '"', '\'':
 		// String literal, consume to end.
-		return l.consumePossiblyTripleQuotedString(b, pos, rawString)
+		return l.consumePossiblyTripleQuotedString(b, pos, rawString, fString)
 	case '(', '[', '{':
 		l.braces++
 		return Token{Type: rune(b), Value: string(b), Pos: pos}
@@ -280,17 +281,17 @@ func (l *lex) consumeInteger(initial byte, pos Position) Token {
 }
 
 // consumePossiblyTripleQuotedString consumes all characters until the end of a string token.
-func (l *lex) consumePossiblyTripleQuotedString(quote byte, pos Position, raw bool) Token {
+func (l *lex) consumePossiblyTripleQuotedString(quote byte, pos Position, raw, fString bool) Token {
 	if l.b[l.i] == quote && l.b[l.i+1] == quote {
 		l.i += 2 // Jump over initial quote
 		l.col += 2
-		return l.consumeString(quote, pos, true, raw)
+		return l.consumeString(quote, pos, true, raw, fString)
 	}
-	return l.consumeString(quote, pos, false, raw)
+	return l.consumeString(quote, pos, false, raw, fString)
 }
 
 // consumeString consumes all characters until the end of a string literal is reached.
-func (l *lex) consumeString(quote byte, pos Position, multiline, raw bool) Token {
+func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bool) Token {
 	s := make([]byte, 1, 100) // 100 chars is typically enough for a single string literal.
 	s[0] = '"'
 	escaped := false
@@ -321,6 +322,9 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw bool) Token
 					l.col += 2
 				}
 				token := Token{Type: String, Value: string(s), Pos: pos}
+				if fString {
+					token.Value = "f" + token.Value
+				}
 				if l.braces > 0 {
 					return l.handleImplicitStringConcatenation(token)
 				}
@@ -366,8 +370,8 @@ func (l *lex) handleImplicitStringConcatenation(token Token) Token {
 			l.i += i + 1
 			l.col = col + 1
 			l.line = line
-			// Note that we don't handle raw strings here. Anecdotally, that seems relatively rare...
-			tok := l.consumePossiblyTripleQuotedString(b, token.Pos, false)
+			// Note that we don't handle raw or format strings here. Anecdotally, that seems relatively rare...
+			tok := l.consumePossiblyTripleQuotedString(b, token.Pos, false, false)
 			token.Value = token.Value[:len(token.Value)-1] + tok.Value[1:]
 			return token
 		default:

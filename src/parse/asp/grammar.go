@@ -102,8 +102,9 @@ type OpExpression struct {
 
 // A ValueExpression is the value part of an expression, i.e. without surrounding operators.
 type ValueExpression struct {
-	String string `( @String`
-	Int    *struct {
+	String  string   `( @String`
+	FString *FString `| @FString`
+	Int     *struct {
 		Int int `@Int`
 	} `| @@` // Should just be *int, but https://github.com/golang/go/issues/23498 :(
 	Bool     string     `| @( "True" | "False" | "None" )`
@@ -115,6 +116,17 @@ type ValueExpression struct {
 	Slice    *Slice     `[ @@ ]`
 	Property *IdentExpr `[ ( "." @@`
 	Call     *Call      `| "(" @@ ")" ) ]`
+}
+
+// A FString represents a minimal version of a Python literal format string.
+// Note that we only support a very small subset of what Python allows there; essentially only
+// variable substitution, which gives a much simpler AST structure here.
+type FString struct {
+	Vars []struct {
+		Prefix string // Preceding string bit
+		Var    string // Variable name to interpolate
+	}
+	Suffix string // Following string bit
 }
 
 // A UnaryOp represents a unary operation - in our case the only ones we support are negation and not.

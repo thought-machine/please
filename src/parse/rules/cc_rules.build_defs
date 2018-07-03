@@ -97,12 +97,14 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs)
     # TODO(pebers): handle includes and defines in _library_cmds as well.
     pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs) if (deps or includes or defines) else None
+    pkg = package_name()
     if len(srcs) > 1:
         # Compile all the sources separately, this is much faster for large numbers of files
         # than giving them all to gcc in one invocation.
         a_rules = []
         for src in srcs:
-            a_name = '_%s#%s' % (name, src.replace('/', '_').replace('.', '_').replace(':', '_').replace('|', '_'))
+            suffix = src.replace('/', '_').replace('.', '_').replace(':', '_').replace('|', '_')
+            a_name = f'_{name}#{suffix}'
             a_rule = build_rule(
                 name=a_name,
                 srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
@@ -135,7 +137,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tools = [CONFIG.AR_TOOL],
         )
         if alwayslink:
-            labels.append('cc:al:%s/%s.a' % (get_base_path(), name))
+            labels.append(f'cc:al:{pkg}/{name}.a')
 
         # Filegroup to pick that up with extra deps. This is a little annoying but means that
         # things depending on this get the combined rule and not the individual ones, but do get
@@ -169,7 +171,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             needs_transitive_deps=True,
         )
         if alwayslink:
-            labels.append('cc:al:%s/%s.a' % (get_base_path(), name))
+            labels.append(f'cc:al:{pkg}/{name}.a')
         # Need another rule to cover require / provide stuff. This is getting a bit complicated...
         lib_rule = filegroup(
             name = name,
@@ -231,12 +233,13 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
     if isinstance(defines, dict):
         defines = [k if v is None else r'%s=\"%s\"' % (k, v) for k, v in sorted(defines.items())]
 
+    pkg = package_name()
     labels = (['cc:ld:' + flag for flag in linker_flags] +
               ['cc:pc:' + lib for lib in pkg_config_libs] +
-              ['cc:inc:%s/%s' % (get_base_path(), include) for include in includes] +
+              ['cc:inc:{pkg}/{include}' for include in includes] +
               ['cc:def:' + define for define in defines])
     if alwayslink:
-        labels.append('cc:al:%s/%s.a' % (get_base_path(), name))
+        labels.append('cc:al:{pkg}/{name}.a')
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, archive=False)
 
     return build_rule(
@@ -279,7 +282,7 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
     provides = None
     if srcs:
         lib_rule = cc_library(
-            name = '_%s#lib' % name,
+            name = f'_{name}#lib',
             srcs = srcs,
             hdrs = hdrs,
             compiler_flags = compiler_flags,
@@ -289,15 +292,15 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
             pkg_config_libs = pkg_config_libs,
             _c=_c,
         )
-        deps += [lib_rule, ':_%s#lib_hdrs' % name]
+        deps += [lib_rule, f':_{name}#lib_hdrs']
         provides = {
-            'cc_hdrs': ':_%s#lib_hdrs' % name,
+            'cc_hdrs': f':_{name}#lib_hdrs',
             'cc': ':' + name,
         }
     return build_rule(
         name = name,
         deps = deps,
-        outs = ['lib%s.a' % name],
+        outs = [f'lib{name}.a'],
         cmd = (
             'for a in `find . -name "*.a"`; do (cd $(dirname $a) && $TOOL x $(basename $a)); done;' +
             '$TOOL rcs $OUT `find . -name "*.o" | sort`'
@@ -337,7 +340,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
     provides = None
     if srcs:
         lib_rule = cc_library(
-            name = '_%s#lib' % name,
+            name = f'_{name}#lib',
             srcs = srcs,
             hdrs = hdrs,
             compiler_flags = compiler_flags,
@@ -348,9 +351,9 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
             includes = includes,
             _c=_c,
         )
-        deps += [lib_rule, ':_%s#lib_hdrs' % name]
+        deps += [lib_rule, f':_{name}#lib_hdrs']
         provides = {
-            'cc_hdrs': ':_%s#lib_hdrs' % name,
+            'cc_hdrs': f':_{name}#lib_hdrs',
             'cc': ':' + name,
         }
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, shared=True)
@@ -405,7 +408,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
         if static:
             compiler_flags.append('-static -static-libgcc')
         lib_rule = cc_library(
-            name='_%s#lib' % name,
+            name=f'_{name}#lib',
             srcs=srcs,
             hdrs=hdrs,
             private_hdrs=private_hdrs,
@@ -474,9 +477,9 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
     if write_main:
         linker_flags.append('-lUnitTest++')
         main_rule = genrule(
-            name='_%s#main' % name,
-            outs=['_%s_main.cc' % name],
-            cmd='echo \'%s\' > $OUT' % _CC_TEST_MAIN_CONTENTS,
+            name=f'_{name}#main',
+            outs=[f'_{name}_main.cc'],
+            cmd=f'echo \'{_CC_TEST_MAIN_CONTENTS}\' > $OUT',
             test_only=True,
         )
         srcs.append(main_rule)
@@ -484,7 +487,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
 
     if srcs:
         lib_rule = cc_library(
-            name='_%s#lib' % name,
+            name=f'_{name}#lib',
             srcs=srcs,
             hdrs=hdrs,
             deps=deps,
@@ -496,9 +499,9 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         )
         deps.append(lib_rule)
 
-    test_cmd = '$TEST %s' % flags
+    test_cmd = f'$TEST {flags}'
     if worker:
-        test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
+        test_cmd = f'$(worker {worker}) && {test_cmd} '
         deps += [worker]
 
     if CONFIG.CPP_COVERAGE:
@@ -574,9 +577,9 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
         cmd='; '.join([
             # This replacement roughly mimics what ld will do to munge it into a symbol name.
             'export ENCODED_FILENAME="${SRCS//[\\/\\.]/_}"',
-            'export BINARY_NAME="%s"' % name,
-            'export NAMESPACE="%s"' % namespace,
-            'echo "%s" > $OUT' % hdr_contents,
+            f'export BINARY_NAME="{name}"',
+            f'export NAMESPACE="{namespace}"',
+            f'echo "{hdr_contents}" > $OUT',
         ]),
         visibility=visibility,
         building_description='Writing header...',
@@ -591,7 +594,7 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
         # in the end easier than the alternatives.
         cmd = ' && '.join([
             'export ENCODED_FILENAME=${SRCS//[\\/\\.]/_}',
-            'echo "%s" > embedded.asm' % _CC_DARWIN_ASM_CONTENTS,
+            f'echo "{_CC_DARWIN_ASM_CONTENTS}" > embedded.asm',
             '$TOOLS_ASM -fmacho64 embedded.asm -o ${OUTS/.a/.o}',
             '$TOOLS_AR rcs $OUT ${OUTS/.a/.o}',
         ])
@@ -757,29 +760,29 @@ def _build_flags(compiler_flags:list, pkg_config_libs:list, defines=None, c=Fals
     compiler_flags = [_default_cflags(c, dbg), '-fPIC'] + compiler_flags  # N.B. order is important!
     if defines:
         compiler_flags += ['-D' + define for define in defines]
-    pkg_config_cmd = ' '.join(['`pkg-config --cflags %s`' % x for x in pkg_config_libs])
+    pkg_config_cmd = ' '.join([f'`pkg-config --cflags {x}`' for x in pkg_config_libs])
     return ' '.join(compiler_flags) + ' ' + pkg_config_cmd
 
 
 def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, alwayslink='', c=False, dbg=False):
     """Builds flags that we'll pass to the linker invocation."""
-    pkg_config_cmd = ' '.join(['`pkg-config --libs %s`' % x for x in pkg_config_libs])
+    pkg_config_cmd = ' '.join([f'`pkg-config --libs {x}`' for x in pkg_config_libs])
     objs = '`find . -name "*.o" -or -name "*.a" | sort`'
     linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
     if (not shared) and alwayslink:
-        objs = '%s%s %s %s%s %s' % (linker_prefix, _WHOLE_ARCHIVE, alwayslink, linker_prefix, _NO_WHOLE_ARCHIVE, objs)
+        objs = f'{linker_prefix}{_WHOLE_ARCHIVE} {alwayslink} {linker_prefix}{_NO_WHOLE_ARCHIVE} {objs}'
     build_id_flag = ''
     if CONFIG.OS != 'darwin':
         # We don't order libraries in a way that is especially useful for the linker, which is
         # nicely solved by --start-group / --end-group. Unfortunately the OSX linker doesn't
         # support those flags; in many cases it will work without, so try that.
         # Ordering them would be ideal but we lack a convenient way of working that out from here.
-        objs = '%s--start-group %s %s--end-group' % (linker_prefix, objs, linker_prefix)
+        objs = f'{linker_prefix}--start-group {objs} {linker_prefix}--end-group'
         # OSX's ld doesn't have --build-id
         # TODO(pebers): Not sure about other OS's / linkers? This might be GNU specific?
         build_id_flag = linker_prefix + '--build-id=none'
     if shared:
-        objs = '-shared %s%s %s %s%s' % (linker_prefix, _WHOLE_ARCHIVE, objs, linker_prefix, _NO_WHOLE_ARCHIVE)
+        objs = f'-shared {linker_prefix}{_WHOLE_ARCHIVE} {objs} {linker_prefix}{_NO_WHOLE_ARCHIVE}'
     linker_flags = ' '.join([linker_prefix + f for f in linker_flags])
     if not CONFIG.LINK_WITH_LD_TOOL:
         linker_flags += ' ' + _default_cflags(c, dbg)
@@ -810,11 +813,11 @@ def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False,
     dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=True)
     opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=False)
     cmds = {
-        'dbg': '$TOOL -o ${OUT} %s %s' % (dbg_flags, extra_flags),
-        'opt': '$TOOL -o ${OUT} %s %s' % (opt_flags, extra_flags),
+        'dbg': f'$TOOL -o $OUT {dbg_flags} {extra_flags}',
+        'opt': f'$TOOL -o $OUT {opt_flags} {extra_flags}',
     }
     if CONFIG.CPP_COVERAGE:
-        cmds['cover'] = '$TOOL -o ${OUT} %s %s %s' % (dbg_flags, extra_flags, _COVERAGE_FLAGS)
+        cmds['cover'] = f'$TOOL -o $OUT {dbg_flags} {extra_flags} {_COVERAGE_FLAGS}'
     return cmds, [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
                   CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL]
 

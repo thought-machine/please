@@ -42,7 +42,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     # when possible since they obscure what's going on with the build graph.
     file_srcs = [src for src in srcs if src[0] not in [':', '/']]
     need_post_build = file_srcs != srcs
-    provides = {'proto': ':_%s#proto' % name}
+    provides = {'proto': f':_{name}#proto'}
 
     lang_plugins = sorted(languages.items())
     plugins = [plugin for _, plugin in lang_plugins]
@@ -66,7 +66,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     # TODO(pebers): genericise this bit?
     if 'go' in languages:
         base_path = get_base_path()
-        labels += ['proto:go-map: %s/%s=%s/%s' % (base_path, src, base_path, name) for src in srcs
+        labels += [f'proto:go-map: {base_path}/{src}={base_path}/{name}' for src in srcs
                    if not src.startswith(':') and not src.startswith('/')]
 
     # Figure out which languages we need to detect output files for.
@@ -102,10 +102,10 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     )
 
     for language, plugin in lang_plugins:
-        lang_name = '_%s#%s' % (name, language)
+        lang_name = f'_{name}#{language}'
         provides[language] = plugin['func'](
             name = lang_name,
-            srcs = ['%s|%s' % (protoc_rule, language)],
+            srcs = [f'{protoc_rule}|{language}'],
             deps = deps + plugin['deps'],
             test_only = test_only
         ) or (':' + lang_name)
@@ -115,7 +115,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
 
     # This simply collects the sources, it's used for other proto_library rules to depend on.
     filegroup(
-        name = '_%s#proto' % name,
+        name = f'_{name}#proto',
         srcs = srcs,
         visibility = visibility,
         exported_deps = deps,
@@ -127,7 +127,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     # This is the final rule that directs dependencies to the appropriate language.
     filegroup(
         name = name,
-        deps = sorted(provides.values()),
+        deps = provides.values(),
         provides = provides,
         visibility = visibility,
         labels = labels,
@@ -172,7 +172,7 @@ def _go_path_mapping(grpc):
     def _map_go_paths(rule_name):
         mapping = ',M'.join(get_labels(rule_name, 'proto:go-map:'))
         cmd = get_command(rule_name)
-        new_cmd = cmd.replace('--go_out=', '--go_out=%sM%s:' % (grpc_plugin, mapping))
+        new_cmd = cmd.replace('--go_out=', f'--go_out={grpc_plugin}M{mapping}:')
         set_command(rule_name, new_cmd)
     return _map_go_paths
 
@@ -419,8 +419,8 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
     download_rule = remote_file(
         name = name,
         _tag = 'download',
-        url = 'https://github.com/google/protobuf/releases/download/v%s/protoc-%s-${XOS}-${XARCH}.zip' % (version, version),
-        out = 'protoc-%s.zip' % version,
+        url = f'https://github.com/google/protobuf/releases/download/v{version}/protoc-{version}-$XOS-$XARCH.zip',
+        out = f'protoc-{version}.zip',
         hashes = hashes,
         deps = deps,
     )

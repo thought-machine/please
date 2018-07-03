@@ -8,8 +8,8 @@ RUN apt-get update && \
     clang libunittest++-dev ruby ruby-dev rubygems golint && \
     apt-get clean
 
-# Go - we are specifically testing compatibility with 1.9 here.
-RUN curl -fsSL https://dl.google.com/go/go1.9.linux-amd64.tar.gz | tar -xzC /usr/local
+# Go - we are specifically testing compatibility with 1.11 here.
+RUN curl -fsSL https://dl.google.com/go/go1.11beta1.linux-amd64.tar.gz | tar -xzC /usr/local
 RUN ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 
 # Locale
