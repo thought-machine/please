@@ -369,20 +369,22 @@ type unitTestXMLTest struct {
 	Name    string `xml:"name,attr"`
 	Elapsed float64 `xml:"elapsed,attr"`
 
-	Failure *unitTestXMLFailure `xml:failure,omitempty`
+	Failure *unitTestXMLFailure `xml:"failure,omitempty"`
 }
 
 func (uxmlTest *unitTestXMLTest) toJUnitXMLTest() jUnitXMLTest {
 	var failure *jUnitXMLFailure
 	if uxmlTest.Failure != nil {
 		failure = &jUnitXMLFailure{
-			Message: failure.Message,
+			Message: uxmlTest.Failure.Message,
 		}
 	}
 	return jUnitXMLTest{
 		Name:      uxmlTest.Name,
 		ClassName: uxmlTest.Suite,
 		Timed:     Timed{uxmlTest.Elapsed},
+
+		Failure:   failure,
 	}
 }
 
