@@ -6,6 +6,13 @@ import org.w3c.dom.Element;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.Map;
 
 // Strongly based on the Maven Surefire Plugin's XML reporter
@@ -36,6 +43,14 @@ public class XmlTestReporter {
     root.setAttribute("xsi:noNamespaceSchemaLocation", "http://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd");
     root.setAttribute("name", result.getClassName());
     root.setAttribute("time", Double.toString(result.duration / 1000.0));
+    root.setAttribute("timestamp", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format(new Date()));
+    String hostname;
+    try {
+      hostname = InetAddress.getLocalHost().getHostName();
+    } catch (UnknownHostException uhe) {
+      hostname = "unknown";
+    }
+    root.setAttribute("hostname", hostname);
 
     int tests = 0;
     int errors = 0;

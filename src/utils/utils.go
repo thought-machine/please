@@ -61,10 +61,18 @@ func isABuildFile(name string, config *core.Configuration) bool {
 	return false
 }
 
-// Max is an incredibly complicated function, which is presumably why it didn't make it into the Go stdlib
+// Max returns the larger of two ints.
 func Max(x, y int) int {
 	if x < y {
 		return y
 	}
 	return x
+}
+
+// AddAll adds all of one map[string]string to another.
+func AddAll(map1 map[string]string, map2 map[string]string) map[string]string {
+	for k, v := range map2 {
+		map1[k] = v
+	}
+	return map1
 }

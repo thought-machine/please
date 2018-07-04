@@ -209,7 +209,7 @@ java_test(
 plz_e2e_test(
     name = "no_java_test",
     cmd = "plz test -p //test:no_test_run_java wibblewobble",
-    expect_output_contains = "1 failed",
+    expect_output_contains = "1 errored",
     expected_failure = True,
 )
 

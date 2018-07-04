@@ -533,6 +533,11 @@ go_get(
 )
 
 go_get(
+    name = "md2man",
+    get = "github.com/cpuguy83/go-md2man/...",
+)
+
+go_get(
     name = "go-units",
     get = "github.com/docker/go-units",
     revision = "v0.3.2",

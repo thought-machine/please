@@ -16,11 +16,9 @@ jobs:
              - python-linux-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
+           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
        - store_test_results:
-           path: plz-out/results/test_results.xml
-       - store_test_results:
-           path: plz-out/surefire-reports
+           path: plz-out/results
        - run:
            name: Lint
            command: ./tools/misc/ci_lint.py
@@ -60,11 +58,9 @@ jobs:
              - python-linux-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
+           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
        - store_test_results:
-           path: plz-out/results/test_results.xml
-       - store_test_results:
-           path: plz-out/surefire-reports
+           path: plz-out/results
        - store_artifacts:
            path: plz-out/log
        - run:
@@ -97,11 +93,9 @@ jobs:
            command: brew install go unittest-cpp nasm pkg-config && brew upgrade python
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/test_results.xml
+           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
        - store_test_results:
-           path: plz-out/results/test_results.xml
-       - store_test_results:
-           path: plz-out/surefire-reports
+           path: plz-out/results
        - store_artifacts:
            path: plz-out/log
        - run:

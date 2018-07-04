@@ -21,10 +21,11 @@ import (
 var testStart = regexp.MustCompile(`^=== RUN (.*)(?:-6)?$`)
 var testResult = regexp.MustCompile(`^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \(([0-9]+\.[0-9]+)s\)$`)
 
-func parseGoTestResults(data []byte) (core.TestResults, error) {
-	results := core.TestResults{}
+func parseGoTestResults(data []byte) (core.TestSuite, error) {
+	results := core.TestSuite{}
 	lines := bytes.Split(data, []byte{'\n'})
 	testsStarted := map[string]bool{}
+	var suiteDuration time.Duration
 	for i, line := range lines {
 		testStartMatches := testStart.FindSubmatch(line)
 		testResultMatches := testResult.FindSubmatch(line)
@@ -37,35 +38,43 @@ func parseGoTestResults(data []byte) (core.TestResults, error) {
 			}
 			f, _ := strconv.ParseFloat(string(testResultMatches[3]), 64)
 			duration := time.Duration(f * float64(time.Second))
-			results.NumTests++
+			suiteDuration += duration
+			testCase := core.TestCase{
+				Name: testName,
+			}
 			if bytes.Equal(testResultMatches[1], []byte("PASS")) {
-				results.Passed++
-				results.Results = append(results.Results, core.TestResult{
-					Name: testName, Success: true, Duration: duration,
+				testCase.Executions = append(testCase.Executions, core.TestExecution{
+					Duration: &duration,
 				})
 			} else if bytes.Equal(testResultMatches[1], []byte("SKIP")) {
-				results.Skipped++
 				i++ // Following line has the reason for being skipped
-				results.Results = append(results.Results, core.TestResult{
-					Name: testName, Skipped: true, Duration: duration, Type: string(bytes.TrimSpace(lines[i])),
+				testCase.Executions = append(testCase.Executions, core.TestExecution{
+					Skip: &core.TestResultSkip{
+						Message: string(bytes.TrimSpace(lines[i])),
+					},
+					Duration: &duration,
 				})
 			} else {
 				output := ""
 				for j := i + 1; j < len(lines) && !bytes.HasPrefix(lines[j], []byte("===")); j++ {
 					output += string(lines[j]) + "\n"
 				}
-				results.Failed++
-				results.Results = append(results.Results, core.TestResult{
-					Name: testName, Type: "FAILURE", Traceback: output, Stdout: "", Stderr: "", Duration: duration,
+				testCase.Executions = append(testCase.Executions, core.TestExecution{
+					Failure: &core.TestResultFailure{
+						Traceback: output,
+					},
+					Duration: &duration,
 				})
 			}
+			results.TestCases = append(results.TestCases, testCase)
 		} else if bytes.Equal(line, []byte("PASS")) {
 			// Do nothing, all's well.
 		} else if bytes.Equal(line, []byte("FAIL")) {
-			if results.Failed == 0 {
+			if results.Failures() == 0 {
 				return results, fmt.Errorf("Test indicated final failure but no failures found yet")
 			}
 		}
 	}
+	results.Duration = suiteDuration
 	return results, nil
 }

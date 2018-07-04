@@ -13,6 +13,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/metrics",
+        "//src/utils",
         "//third_party/go:docker",
         "//third_party/go:logging",
         "//third_party/go:tools",
@@ -57,6 +58,15 @@ go_test(
         "test_data/istanbul_coverage_2.json",
         "test_data/python-coverage.xml",
     ],
+    deps = [
+        ":test",
+        "//third_party/go:testify",
+    ],
+)
+
+go_test(
+    name = "xml_results_test",
+    srcs = ["xml_results_test.go"],
     deps = [
         ":test",
         "//third_party/go:testify",

@@ -378,7 +378,7 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 }
 
 // LogTestResult logs the result of a target once its tests have completed.
-func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildResultStatus, results *TestResults, coverage *TestCoverage, err error, format string, args ...interface{}) {
+func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
 	state.logResult(&BuildResult{
 		ThreadID:    tid,
 		Time:        time.Now(),
@@ -641,7 +641,7 @@ type BuildResult struct {
 	// Description of what's going on right now.
 	Description string
 	// Test results
-	Tests TestResults
+	Tests TestSuite
 }
 
 // A BuildResultStatus represents the status of a target when we log a build result.

@@ -56,7 +56,7 @@ type buildingTargetData struct {
 	Eta          time.Duration
 }
 
-// MonitorState monitors the build while it's running (essentially until state.Results is closed)
+// MonitorState monitors the build while it's running (essentially until state.TestCases is closed)
 // and prints output while it's happening.
 func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest, shouldRun, showStatus, detailedTests bool, traceFile string) bool {
 	failedTargetMap := map[core.BuildLabel]error{}
@@ -74,7 +74,6 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	} else {
 		go display(state, &buildingTargets, stop, displayDone)
 	}
-	aggregatedResults := core.TestResults{}
 	failedTargets := []core.BuildLabel{}
 	failedNonTests := []core.BuildLabel{}
 	for result := range state.Results {
@@ -88,7 +87,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 				displayDone <- struct{}{}
 			}()
 		}
-		processResult(state, result, buildingTargets, &aggregatedResults, plainOutput, keepGoing, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
+		processResult(state, result, buildingTargets, plainOutput, keepGoing, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
 	}
 	stop <- struct{}{}
 	<-displayDone
@@ -120,7 +119,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	}
 	if state.Verbosity > 0 && shouldBuild {
 		if shouldTest { // Got to the test phase, report their results.
-			printTestResults(state, aggregatedResults, failedTargets, duration, detailedTests)
+			printTestResults(state, failedTargets, duration, detailedTests)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
 		} else if state.PrepareOnly {
@@ -173,7 +172,7 @@ func yesNo(b bool) string {
 	return "no"
 }
 
-func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, aggregatedResults *core.TestResults, plainOutput bool,
+func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, plainOutput bool,
 	keepGoing bool, failedTargets, failedNonTests *[]core.BuildLabel, failedTargetMap map[core.BuildLabel]error, shouldTrace bool) {
 	label := result.Label
 	active := result.Status == core.PackageParsing || result.Status == core.TargetBuilding || result.Status == core.TargetTesting
@@ -184,14 +183,6 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	// Parse events can overlap in weird ways that mess up the display.
 	if shouldTrace && !parse {
 		addTrace(result, buildingTargets[result.ThreadID].Label, active)
-	}
-	if failed && result.Tests.NumTests == 0 && result.Tests.Failed == 0 {
-		result.Tests.NumTests = 1
-		result.Tests.Failed = 1 // Ensure there's one test failure when there're no results to parse.
-	}
-	// Only aggregate test results the first time it finishes.
-	if buildingTargets[result.ThreadID].Active && !active {
-		aggregatedResults.Aggregate(&result.Tests)
 	}
 	target := state.Graph.Target(label)
 	if !parse { // Parse tasks happen on a different set of threads.
@@ -219,81 +210,187 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		failedTargetMap[result.Label] = nil
 	} else if plainOutput && state.ShowTestOutput && result.Status == core.TargetTested && target != nil {
 		// If using interactive output we'll print it afterwards.
-		printf("Finished test %s:\n%s\n", label, target.Results.Output)
+		for _, testCase := range target.Results.TestCases {
+			printf("Finished test %s:\n", testCase.Name)
+			for _, testExecution := range testCase.Executions {
+				printf("StdOut:\n%s\nStdErr:\n%s\n", testExecution.Stdout, testExecution.Stderr)
+			}
+		}
 	}
 }
 
-func printTestResults(state *core.BuildState, aggregatedResults core.TestResults, failedTargets []core.BuildLabel, duration time.Duration, detailed bool) {
+func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, duration time.Duration, detailed bool) {
 	if len(failedTargets) > 0 {
 		for _, failed := range failedTargets {
 			target := state.Graph.TargetOrDie(failed)
-			if target.Results.Failed == 0 {
+			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
 				if target.Results.TimedOut {
-					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
 				} else {
 					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
+					target.Results.TestCases = append(target.Results.TestCases, core.TestCase{
+						Executions: []core.TestExecution{
+							{
+								Error: &core.TestResultFailure{
+									Type: "FailedToRun",
+									Message: "Failed to run test",
+								},
+							},
+						},
+					})
 				}
 			} else {
-				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_WHITE}Took %s${RESET}\n",
-					target.Label, target.Results.Passed, target.Results.Skipped, target.Results.Failed, target.Results.Duration.Round(durationGranularity))
-				for _, failure := range target.Results.Results {
-					if failure.Success {
+				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_CYAN}%3d errored${RESET} Took ${BOLD_WHITE}%s${RESET}\n",
+					target.Label, target.Results.Passes(), target.Results.Skips(), target.Results.Failures(), target.Results.Errors(), target.Results.Duration.Round(durationGranularity))
+				for _, failingTestCase := range target.Results.TestCases {
+					if failingTestCase.Success() != nil {
 						continue
 					}
-					printf("${BOLD_RED}Failure: %s in %s${RESET}\n", failure.Type, failure.Name)
-					printf("%s\n", failure.Traceback)
-					if len(failure.Stdout) > 0 {
-						printf("${BOLD_RED}Standard output:${RESET}\n%s\n", failure.Stdout)
+					var execution core.TestExecution
+					var failure *core.TestResultFailure
+					if len(failingTestCase.Failures()) > 0 {
+						execution = failingTestCase.Failures()[0]
+						failure = execution.Failure
+						printf("${BOLD_RED}Failure${RESET}: ${RED}%s${RESET} in %s\n", failure.Type, failingTestCase.Name)
+					} else if len(failingTestCase.Errors()) > 0 {
+						execution = failingTestCase.Errors()[0]
+						failure = execution.Error
+						printf("${BOLD_CYAN}Error${RESET}: ${CYAN}%s${RESET} in %s\n", failure.Type, failingTestCase.Name)
 					}
-					if len(failure.Stderr) > 0 {
-						printf("${BOLD_RED}Standard error:${RESET}\n%s\n", failure.Stderr)
+					if failure != nil {
+						printf("%s\n", failure.Traceback)
+						if len(execution.Stdout) > 0 {
+							printf("${BOLD_RED}Standard output${RESET}:\n%s\n", execution.Stdout)
+						}
+						if len(execution.Stderr) > 0 {
+							printf("${BOLD_RED}Standard error${RESET}:\n%s\n", execution.Stderr)
+						}
 					}
 				}
-			}
-			if len(target.Results.Output) > 0 {
-				printf("${BOLD_RED}Full output:${RESET}\n%s\n", target.Results.Output)
-			}
-			if target.Results.Flakes > 0 {
-				printf("${BOLD_MAGENTA}Flaky target; made %s before giving up${RESET}\n", pluralise(target.Results.Flakes, "attempt", "attempts"))
 			}
 		}
 	}
 	// Print individual test results
-	i := 0
+	targets := 0
+	aggregate := core.TestSuite{}
 	for _, target := range state.Graph.AllTargets() {
-		if target.IsTest && target.Results.NumTests > 0 {
-			if target.Results.Failed > 0 {
-				printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, failedTargets))
-			} else {
-				printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, failedTargets))
-			}
-			if detailed {
-				// Determine max width of test name so we align them
-				width := 0
-				for _, result := range target.Results.Results {
-					if len(result.Name) > width {
-						width = len(result.Name)
+		if target.IsTest {
+			aggregate.TestCases = append(aggregate.TestCases, target.Results.TestCases...)
+			if len(target.Results.TestCases) > 0 {
+				if target.Results.Errors() > 0 {
+					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+				} else if target.Results.Failures() > 0 {
+					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+				} else {
+					// Succeeded or skipped
+					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+				}
+				if state.ShowTestOutput || detailed {
+					// Determine max width of test name so we align them
+					width := 0
+					for _, result := range target.Results.TestCases {
+						if len(result.Name) > width {
+							width = len(result.Name)
+						}
+					}
+					format := fmt.Sprintf("%%-%ds", width+1)
+					for _, result := range target.Results.TestCases {
+						printf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name)))
+						if len(result.Executions) > 1 {
+							for run, execution := range result.Executions {
+								printf("        RUN %d: %s\n", run+1, formatTestExecution(execution))
+								if state.ShowTestOutput {
+									showExecutionOutput(execution)
+								}
+							}
+						} else {
+							if state.ShowTestOutput {
+								showExecutionOutput(result.Executions[0])
+							}
+						}
 					}
 				}
-				for _, result := range target.Results.Results {
-					if result.Success {
-						printf(fmt.Sprintf("    ${GREEN}%%-%ds${RESET} ${BOLD_GREEN}PASS${RESET} %%s\n", width+1), result.Name, result.Duration)
-					} else if result.Skipped {
-						printf(fmt.Sprintf("    ${YELLOW}%%-%ds${RESET} ${BOLD_YELLOW}SKIP${RESET} %%s\n", width+1), result.Name, result.Duration)
-					} else {
-						printf(fmt.Sprintf("    ${RED}%%-%ds${RESET} ${BOLD_RED}FAIL${RESET} %%s\n", width+1), result.Name, result.Duration)
-					}
-				}
+				targets++
+			} else if target.Results.TimedOut {
+				printf("${RED}%s${RESET} ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
+				targets++
 			}
-			if state.ShowTestOutput && target.Results.Output != "" {
-				printf("Test output:\n%s\n", target.Results.Output)
-			}
-			i++
 		}
 	}
-	aggregatedResults.Duration = -100 * time.Millisecond // Exclude this from being displayed later.
 	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}. Total time %s.${RESET}\n",
-		pluralise(i, "test target", "test targets"), testResultMessage(aggregatedResults, failedTargets), duration))
+		pluralise(targets, "test target", "test targets"), testResultMessage(aggregate), duration))
+}
+
+func showExecutionOutput(execution core.TestExecution) {
+	if execution.Stdout != "" {
+		printf("        STDOUT:\n")
+		for _, line := range strings.Split(execution.Stdout, "\n") {
+			printf("        %s\n", line)
+		}
+	}
+	if execution.Stderr != "" {
+		printf("        STDERR:\n")
+		for _, line := range strings.Split(execution.Stderr, "\n") {
+			printf("        %s\n", line)
+		}
+	}
+}
+
+func formatTestCase(result core.TestCase, name string) string {
+	if len(result.Executions) == 0 {
+		return fmt.Sprintf("%s (No results)", formatTestName(result, name))
+	}
+	var outcome core.TestExecution
+	if len(result.Executions) > 1 && result.Success() != nil {
+		return fmt.Sprintf("%s ${BOLD_MAGENTA}%s${RESET}", formatTestName(result, name), "FLAKY PASS")
+	}
+
+	if result.Success() != nil {
+		outcome = *result.Success()
+	} else if result.Skip() != nil {
+		outcome = *result.Skip()
+	} else if len(result.Errors()) > 0 {
+		outcome = result.Errors()[0]
+	} else if len(result.Failures()) > 0 {
+		outcome = result.Failures()[0]
+	}
+	return fmt.Sprintf("%s %s", formatTestName(result, name), formatTestExecution(outcome))
+}
+
+func formatTestName(testCase core.TestCase, name string) string {
+	if testCase.Success() != nil {
+		return fmt.Sprintf("${GREEN}%s${RESET}", name)
+	}
+	if testCase.Skip() != nil {
+		return fmt.Sprintf("${YELLOW}%s${RESET}", name)
+	}
+	if len(testCase.Errors()) > 0 {
+		return fmt.Sprintf("${CYAN}%s${RESET}", name)
+	}
+	if len(testCase.Failures()) > 0 {
+		return fmt.Sprintf("${RED}%s${RESET}", name)
+	}
+	return testCase.Name
+}
+
+func formatTestExecution(execution core.TestExecution) string {
+	if execution.Error != nil {
+		return "${BOLD_CYAN}ERROR${RESET}"
+	}
+	if execution.Failure != nil {
+		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", maybeToString(execution.Duration))
+	}
+	if execution.Skip != nil {
+		// Not usually interesting to have a duration when we did no work.
+		return "${BOLD_YELLOW}SKIP${RESET}"
+	}
+	return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", maybeToString(execution.Duration))
+}
+
+func maybeToString(duration *time.Duration) string {
+	if duration == nil {
+		return ""
+	}
+	return fmt.Sprintf(" ${BOLD_WHITE}%s${RESET}", duration.Round(testDurationGranularity))
 }
 
 // logProgress continually logs progress messages every 10s explaining where we're up to.
@@ -318,26 +415,26 @@ func logProgress(state *core.BuildState, buildingTargets *[]buildingTarget, stop
 }
 
 // Produces a string describing the results of one test (or a single aggregation).
-func testResultMessage(results core.TestResults, failedTargets []core.BuildLabel) string {
-	if results.NumTests == 0 {
-		if len(failedTargets) > 0 {
-			return "Tests failed"
-		}
-		return "No tests found"
-	}
-	msg := fmt.Sprintf("%s run", pluralise(results.NumTests, "test", "tests"))
+func testResultMessage(results core.TestSuite) string {
+	msg := fmt.Sprintf("%s run", pluralise(int(results.Tests()), "test", "tests"))
 	if results.Duration >= 0.0 {
-		msg += fmt.Sprintf(" in %s", results.Duration.Round(testDurationGranularity))
+		msg += fmt.Sprintf(" in ${BOLD_WHITE}%s${RESET}", results.Duration.Round(testDurationGranularity))
 	}
-	msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passed)
-	if results.Failed > 0 {
-		msg += fmt.Sprintf(", ${BOLD_RED}%d failed${RESET}", results.Failed)
+	msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passes())
+	if results.Errors() > 0 {
+		msg += fmt.Sprintf(", ${BOLD_CYAN}%d errored${RESET}", results.Errors())
 	}
-	if results.Skipped > 0 {
-		msg += fmt.Sprintf(", ${BOLD_YELLOW}%d skipped${RESET}", results.Skipped)
+	if results.Failures() > 0 {
+		msg += fmt.Sprintf(", ${BOLD_RED}%d failed${RESET}", results.Failures())
 	}
-	if results.Flakes > 0 {
-		msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.Flakes, "flake", "flakes"))
+	if results.Skips() > 0 {
+		msg += fmt.Sprintf(", ${BOLD_YELLOW}%d skipped${RESET}", results.Skips())
+	}
+	if results.FlakyPasses() > 0 {
+		msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(int(results.FlakyPasses()), "flake", "flakes"))
+	}
+	if results.TimedOut {
+		msg += ", ${RED_ON_WHITE}TIMED OUT${RESET}"
 	}
 	if results.Cached {
 		msg += " ${GREEN}[cached]${RESET}"

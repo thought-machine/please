@@ -25,18 +25,15 @@ func toProto(r *core.BuildResult) *pb.BuildEventResponse {
 		Status:      pb.BuildResultStatus(r.Status),
 		Error:       toProtoError(r.Err),
 		Description: r.Description,
-		TestResults: &pb.TestResults{
-			NumTests:         int32(t.NumTests),
-			Passed:           int32(t.Passed),
-			Failed:           int32(t.Failed),
-			ExpectedFailures: int32(t.ExpectedFailures),
-			Skipped:          int32(t.Skipped),
-			Flakes:           int32(t.Flakes),
-			Results:          toProtoTestResults(t.Results),
-			Output:           t.Output,
-			Duration:         int64(t.Duration),
-			Cached:           t.Cached,
-			TimedOut:         t.TimedOut,
+		TestResults: &pb.TestSuite{
+			Package:    t.Package,
+			Name:       t.Name,
+			TestCases:  toProtoTestCases(t.TestCases),
+			Duration:   int64(t.Duration),
+			Cached:     t.Cached,
+			TimedOut:   t.TimedOut,
+			Properties: t.Properties,
+			Timestamp:  t.Timestamp,
 		},
 	}
 }
@@ -55,22 +52,51 @@ func toProtos(results []*core.BuildResult, active, done int) []*pb.BuildEventRes
 	return ret
 }
 
-// toProtoTestResults converts a slice of test failures to the proto equivalent.
-func toProtoTestResults(results []core.TestResult) []*pb.TestResult {
-	ret := make([]*pb.TestResult, len(results))
+// toProtoTestCases converts a slice of test failures to the proto equivalent.
+func toProtoTestCases(results []core.TestCase) []*pb.TestCase {
+	ret := make([]*pb.TestCase, len(results))
 	for i, r := range results {
-		ret[i] = &pb.TestResult{
-			Name:      r.Name,
-			Type:      r.Type,
-			Traceback: r.Traceback,
-			Stdout:    r.Stdout,
-			Stderr:    r.Stderr,
-			Duration:  int64(r.Duration),
-			Success:   r.Success,
-			Skipped:   r.Skipped,
+		ret[i] = &pb.TestCase{
+			ClassName:      r.ClassName,
+			Name:           r.Name,
+			TestExecutions: toProtoTestExecutions(r.Executions),
 		}
 	}
 	return ret
+}
+
+func toProtoTestExecutions(executions []core.TestExecution) []*pb.TestExecution {
+	ret := make([]*pb.TestExecution, len(executions))
+	for i, r := range executions {
+		ret[i] = &pb.TestExecution{
+			Failure: toTestFailure(r.Failure),
+			Error:   toTestFailure(r.Error),
+			Skip:    toTestSkip(r.Skip),
+			Stdout:  r.Stdout,
+			Stderr:  r.Stderr,
+		}
+	}
+	return ret
+}
+
+func toTestFailure(f *core.TestResultFailure) *pb.TestFailure {
+	if f == nil {
+		return nil
+	}
+	return &pb.TestFailure{
+		Type:      f.Type,
+		Message:   f.Message,
+		Traceback: f.Traceback,
+	}
+}
+
+func toTestSkip(s *core.TestResultSkip) *pb.TestSkip {
+	if s == nil {
+		return nil
+	}
+	return &pb.TestSkip{
+		Message: s.Message,
+	}
 }
 
 // toProtoBuildLabel converts the internal build label type to a proto equivalent.
@@ -96,39 +122,68 @@ func fromProto(r *pb.BuildEventResponse) *core.BuildResult {
 		Status:      core.BuildResultStatus(r.Status),
 		Err:         fromProtoError(r.Error),
 		Description: r.Description,
-		Tests: core.TestResults{
-			NumTests:         int(t.NumTests),
-			Passed:           int(t.Passed),
-			Failed:           int(t.Failed),
-			ExpectedFailures: int(t.ExpectedFailures),
-			Skipped:          int(t.Skipped),
-			Flakes:           int(t.Flakes),
-			Results:          fromProtoTestResults(t.Results),
-			Output:           t.Output,
-			Duration:         time.Duration(t.Duration),
-			Cached:           t.Cached,
-			TimedOut:         t.TimedOut,
+		Tests: core.TestSuite{
+			Package:    t.Package,
+			Duration:   time.Duration(t.Duration),
+			Properties: t.Properties,
+			Timestamp:  t.Timestamp,
+			Name:       t.Name,
+			TestCases:  fromProtoTestCases(t.TestCases),
+			Cached:     t.Cached,
+			TimedOut:   t.TimedOut,
 		},
 	}
 }
 
 // fromProtoTestResults converts a slice of proto test failures to the internal equivalent.
-func fromProtoTestResults(results []*pb.TestResult) []core.TestResult {
-	ret := make([]core.TestResult, len(results))
+func fromProtoTestCases(results []*pb.TestCase) []core.TestCase {
+	ret := make([]core.TestCase, len(results))
 	for i, r := range results {
-		ret[i] = core.TestResult{
-			Name:      r.Name,
-			Type:      r.Type,
-			Traceback: r.Traceback,
-			Stdout:    r.Stdout,
-			Stderr:    r.Stderr,
-			Duration:  time.Duration(r.Duration),
-			Success:   r.Success,
-			Skipped:   r.Skipped,
+		ret[i] = core.TestCase{
+			ClassName:  r.ClassName,
+			Name:       r.Name,
+			Executions: fromProtoTestExecutions(r.TestExecutions),
 		}
 	}
 	return ret
 }
+
+func fromProtoTestExecutions(executions []*pb.TestExecution) []core.TestExecution {
+	ret := make([]core.TestExecution, len(executions))
+	for i, r := range executions {
+		duration := time.Duration(r.Duration)
+		ret[i] = core.TestExecution{
+			Failure:  fromProtoTestFailure(r.Failure),
+			Error:    fromProtoTestFailure(r.Error),
+			Skip:     fromProtoTestSkip(r.Skip),
+			Stdout:   r.Stdout,
+			Stderr:   r.Stderr,
+			Duration: &duration,
+		}
+	}
+	return ret
+}
+
+func fromProtoTestFailure(f *pb.TestFailure) *core.TestResultFailure {
+	if f == nil {
+		return nil
+	}
+	return &core.TestResultFailure{
+		Type:      f.Type,
+		Message:   f.Message,
+		Traceback: f.Traceback,
+	}
+}
+
+func fromProtoTestSkip(s *pb.TestSkip) *core.TestResultSkip {
+	if s == nil {
+		return nil
+	}
+	return &core.TestResultSkip{
+		Message: s.Message,
+	}
+}
+
 
 // fromProtoBuildLabel converts a proto build label to the internal version.
 func fromProtoBuildLabel(label *pb.BuildLabel) core.BuildLabel {
