@@ -12,6 +12,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
+	"cli"
 	"core"
 	"fs"
 )
@@ -80,6 +81,15 @@ func checkSubrepo(tid int, state *core.BuildState, label core.BuildLabel) (*core
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
 func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor core.BuildLabel, noDeps, forSubinclude bool, include, exclude []string) error {
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
+		// This might be for cross-compiling in which case it doesn't have to be explicitly
+		// specified. Maybe we should insist on that, but it's nicer not to have to.
+		if label.PackageName == "" && label.Name == dependor.Subrepo {
+			var arch cli.Arch
+			if err := arch.UnmarshalFlag(label.Name); err == nil {
+				state.Graph.MaybeAddSubrepo(core.SubrepoForArch(state, arch))
+				return nil
+			}
+		}
 		msg := fmt.Sprintf("Parsed build file %s but it doesn't contain target %s", pkg.Filename, label.Name)
 		if dependor != core.OriginalTarget {
 			msg += fmt.Sprintf(" (depended on by %s)", dependor)
