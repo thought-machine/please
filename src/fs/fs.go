@@ -47,6 +47,12 @@ func FileExists(filename string) bool {
 	return err == nil && !info.IsDir()
 }
 
+// IsSymlink returns true if the given path exists and is a symlink.
+func IsSymlink(filename string) bool {
+	info, err := os.Lstat(filename)
+	return err == nil && (info.Mode()&os.ModeSymlink) != 0
+}
+
 // IsSameFile returns true if two filenames describe the same underlying file (i.e. inode)
 func IsSameFile(a, b string) bool {
 	i1, err1 := getInode(a)

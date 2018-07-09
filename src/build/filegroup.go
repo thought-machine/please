@@ -70,9 +70,6 @@ func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) e
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return err
 	}
-	if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
-		return err
-	}
 	outDir := target.OutDir()
 	localSources := target.AllLocalSourcePaths(state.Graph)
 	for i, source := range target.AllFullSourcePaths(state.Graph) {

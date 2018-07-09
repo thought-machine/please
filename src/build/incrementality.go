@@ -37,12 +37,8 @@ const hashLength = sha1.Size
 // by the attr utility, but that is not done for us here.
 const xattrName = "user.plz_build"
 
-// Length of the hash file we write
-const hashFileLength = 5 * hashLength
-
-// Length of old hash files that don't include secrets.
-// Because that's basically everything we're going to keep compatibility for a while.
-const oldHashFileLength = 4 * hashLength
+// Length of the full hash we write, which has multiple parts.
+const fullHashLength = 5 * hashLength
 
 // noSecrets is the thing we write when a rule doesn't have any secrets defined.
 var noSecrets = []byte{45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45}
@@ -302,11 +298,8 @@ func hashOptionalBool(writer hash.Hash, b bool) {
 func readRuleHash(target *core.BuildTarget, postBuild bool) ([]byte, []byte, []byte, []byte) {
 	var h []byte
 	for _, output := range target.FullOutputs() {
-		b, err := xattr.LGet(output, xattrName)
-		if err != nil {
-			if !os.IsNotExist(err.(*xattr.Error).Err) {
-				log.Warning("Failed to read rule hash for %s: %#v", target.Label, err)
-			}
+		b := readRuleHashOnFile(target, output)
+		if b == nil {
 			return nil, nil, nil, nil
 		} else if h != nil && !bytes.Equal(h, b) {
 			// Not an error; we could warn but it's possible to get here legitimately so
@@ -315,10 +308,35 @@ func readRuleHash(target *core.BuildTarget, postBuild bool) ([]byte, []byte, []b
 		}
 		h = b
 	}
-	if postBuild {
-		return h[hashLength : 2*hashLength], h[2*hashLength : 3*hashLength], h[3*hashLength : 4*hashLength], h[4*hashLength : hashFileLength]
+	if h == nil {
+		// Try the fallback file; target might not have had any outputs, for example.
+		h = readRuleHashOnFile(target, fallbackRuleHashFileName(target))
+		if h == nil {
+			return nil, nil, nil, nil
+		}
 	}
-	return h[0:hashLength], h[2*hashLength : 3*hashLength], h[3*hashLength : 4*hashLength], h[4*hashLength : hashFileLength]
+	if postBuild {
+		return h[hashLength : 2*hashLength], h[2*hashLength : 3*hashLength], h[3*hashLength : 4*hashLength], h[4*hashLength : fullHashLength]
+	}
+	return h[0:hashLength], h[2*hashLength : 3*hashLength], h[3*hashLength : 4*hashLength], h[4*hashLength : fullHashLength]
+}
+
+// readRuleHashOnFile reads a rule hash from a single file. It returns an empty slice if it can't be read.
+func readRuleHashOnFile(target *core.BuildTarget, output string) []byte {
+	b, err := xattr.LGet(output, xattrName)
+	if err != nil {
+		if fs.IsSymlink(output) {
+			// Symlinks can't take xattrs on Linux. We stash it on the fallback hash file instead.
+			return readRuleHashOnFile(target, fallbackRuleHashFileName(target))
+		} else if !os.IsNotExist(err.(*xattr.Error).Err) {
+			log.Warning("Failed to read rule hash for %s: %#v", target.Label, err)
+		}
+		return nil
+	} else if len(b) != fullHashLength {
+		// We could warn here but that would be annoying if we ever did change it.
+		return nil
+	}
+	return b
 }
 
 // writeRuleHash attaches the rule hash to the file to its outputs using xattrs.
@@ -332,17 +350,46 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 		return err
 	}
 	hash = append(hash, secretHash...)
-	for _, output := range target.FullOutputs() {
-		log.Warning("here %s %v", output, fs.PathExists(output))
-		if err := xattr.Set(output, xattrName, hash); err != nil {
+	outputs := target.FullOutputs()
+	if len(outputs) == 0 {
+		// Target has no outputs, have to use the fallback file.
+		return writeFallbackRuleHashFile(target, hash)
+	}
+	for _, output := range outputs {
+		if err := writeRuleHashOnFile(target, output, hash); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// Returns the filename we'll store the hashes for this file in.
-func ruleHashFileName(target *core.BuildTarget) string {
+// writeRuleHashOnFile sets a rule hash on a single file.
+func writeRuleHashOnFile(target *core.BuildTarget, output string, hash []byte) error {
+	if err := xattr.LSet(output, xattrName, hash); err != nil {
+		if fs.IsSymlink(output) {
+			// As mentioned above, we have to put hashes for symlinks on the alternative hash file.
+			return writeFallbackRuleHashFile(target, hash)
+		}
+		return err
+	}
+	return nil
+}
+
+// writeFallbackRuleHashFile writes a rule hash to the fallback file.
+func writeFallbackRuleHashFile(target *core.BuildTarget, hash []byte) error {
+	fallbackFilename := fallbackRuleHashFileName(target)
+	f, err := os.Create(fallbackFilename)
+	if err != nil {
+		return err
+	}
+	f.Close()
+	return writeRuleHashOnFile(target, fallbackFilename, hash)
+
+}
+
+// fallbackRuleHashFile returns the filename we'll store the hashes for this file on if we have
+// no alternative (for example, if it doesn't have any outputs we have to put them *somewhere*)
+func fallbackRuleHashFileName(target *core.BuildTarget) string {
 	return path.Join(target.OutDir(), ".rule_hash_"+target.Label.Name)
 }
 
