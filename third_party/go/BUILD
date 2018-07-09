@@ -38,6 +38,13 @@ go_get(
 )
 
 go_get(
+    name = "xattr",
+    get = "github.com/pkg/xattr",
+    revision = "d15dbc2bb0b5da267362b5e066e2c44c1fcff6c7",
+    deps = [":unix"],
+)
+
+go_get(
     name = "go-bindata",
     binary = True,
     get = "github.com/kevinburke/go-bindata/...",
