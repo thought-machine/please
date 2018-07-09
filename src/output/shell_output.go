@@ -213,7 +213,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		for _, testCase := range target.Results.TestCases {
 			printf("Finished test %s:\n", testCase.Name)
 			for _, testExecution := range testCase.Executions {
-				printf("StdOut:\n%s\nStdErr:\n%s\n", testExecution.Stdout, testExecution.Stderr)
+				showExecutionOutput(testExecution)
 			}
 		}
 	}
@@ -321,17 +321,12 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 }
 
 func showExecutionOutput(execution core.TestExecution) {
-	if execution.Stdout != "" {
-		printf("        STDOUT:\n")
-		for _, line := range strings.Split(execution.Stdout, "\n") {
-			printf("        %s\n", line)
-		}
-	}
-	if execution.Stderr != "" {
-		printf("        STDERR:\n")
-		for _, line := range strings.Split(execution.Stderr, "\n") {
-			printf("        %s\n", line)
-		}
+	if execution.Stdout != "" && execution.Stderr != "" {
+		printf("StdOut:\n%s\nStdErr:\n%s\n", execution.Stdout, execution.Stderr)
+	} else if execution.Stdout != "" {
+		print(execution.Stdout)
+	} else if execution.Stderr != "" {
+		print(execution.Stderr)
 	}
 }
 

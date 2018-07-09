@@ -372,7 +372,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
     )
     cmds, tools = _go_binary_cmds(static=static)
 
-    test_cmd = '$TEST %s | tee $RESULTS_FILE' % flags
+    test_cmd = '$TEST %s 2>&1 | tee $RESULTS_FILE' % flags
     if worker:
         test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
         deps += [worker]
