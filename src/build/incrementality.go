@@ -27,12 +27,15 @@ import (
 	"github.com/pkg/xattr"
 
 	"core"
+	"fs"
 )
 
 const hashLength = sha1.Size
 
 // Tag that we attach for xattrs to store hashes against files.
-const xattrName = "plz_build"
+// Note that we are required to provide the user namespace; that seems to be set implicitly
+// by the attr utility, but that is not done for us here.
+const xattrName = "user.plz_build"
 
 // Length of the hash file we write
 const hashFileLength = 5 * hashLength
@@ -298,12 +301,11 @@ func hashOptionalBool(writer hash.Hash, b bool) {
 // If postBuild is true then the rule hash will be the post-build one if present.
 func readRuleHash(target *core.BuildTarget, postBuild bool) ([]byte, []byte, []byte, []byte) {
 	var h []byte
-	outDir := target.OutDir()
-	for _, output := range target.Outputs() {
-		b, err := xattr.LGet(path.Join(outDir, output), xattrName)
+	for _, output := range target.FullOutputs() {
+		b, err := xattr.LGet(output, xattrName)
 		if err != nil {
-			if !os.IsNotExist(err) {
-				log.Warning("Failed to read rule hash for %s: %s", target.Label, err)
+			if !os.IsNotExist(err.(*xattr.Error).Err) {
+				log.Warning("Failed to read rule hash for %s: %#v", target.Label, err)
 			}
 			return nil, nil, nil, nil
 		} else if h != nil && !bytes.Equal(h, b) {
@@ -329,10 +331,10 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 	if err != nil {
 		return err
 	}
-	outDir := target.OutDir()
 	hash = append(hash, secretHash...)
-	for _, output := range target.Outputs() {
-		if err := xattr.LSet(path.Join(outDir, output), xattrName, hash); err != nil {
+	for _, output := range target.FullOutputs() {
+		log.Warning("here %s %v", output, fs.PathExists(output))
+		if err := xattr.Set(output, xattrName, hash); err != nil {
 			return err
 		}
 	}

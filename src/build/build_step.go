@@ -457,11 +457,10 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 // OutputHash calculates the hash of a target's outputs.
 func OutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
-	for _, output := range target.Outputs() {
+	for _, filename := range target.FullOutputs() {
 		// NB. Always force a recalculation of the output hashes here. Memoisation is not
 		//     useful because by definition we are rebuilding a target, and can actively hurt
 		//     in cases where we compare the retrieved cache artifacts with what was there before.
-		filename := path.Join(target.OutDir(), output)
 		h2, err := state.PathHasher.Hash(filename, true)
 		if err != nil {
 			return nil, err

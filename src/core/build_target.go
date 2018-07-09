@@ -437,6 +437,16 @@ func (target *BuildTarget) Outputs() []string {
 	return ret
 }
 
+// FullOutputs returns a slice of all the outputs of this rule with the target's output directory prepended.
+func (target *BuildTarget) FullOutputs() []string {
+	outs := target.Outputs()
+	outDir := target.OutDir()
+	for i, out := range outs {
+		outs[i] = path.Join(outDir, out)
+	}
+	return outs
+}
+
 // NamedOutputs returns a slice of all the outputs of this rule with a given name.
 // If the name is not declared by this rule it panics.
 func (target *BuildTarget) NamedOutputs(name string) []string {
