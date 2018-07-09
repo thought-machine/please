@@ -1,3 +1,10 @@
+Version 13.1.0
+--------------
+
+    * Test flakes now have more distinct treatment for multiple runs (#350)
+    * Support for limited PEP-498 style f-strings in the BUILD grammar.
+
+
 Version 13.0.1
 --------------
 
