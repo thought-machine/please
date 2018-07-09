@@ -448,7 +448,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 			log.Warning("%s", err)
 		}
 	}
-	if err := writeRuleHashFile(state, target); err != nil {
+	if err := writeRuleHash(state, target); err != nil {
 		return nil, fmt.Errorf("Attempting to create hash file: %s", err)
 	}
 	return hash, nil

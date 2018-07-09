@@ -24,10 +24,15 @@ import (
 	"path"
 	"sort"
 
+	"github.com/pkg/xattr"
+
 	"core"
 )
 
 const hashLength = sha1.Size
+
+// Tag that we attach for xattrs to store hashes against files.
+const xattrName = "plz_build"
 
 // Length of the hash file we write
 const hashFileLength = 5 * hashLength
@@ -59,7 +64,7 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 			}
 		}
 	}
-	oldRuleHash, oldConfigHash, oldSourceHash, oldSecretHash := readRuleHashFile(ruleHashFileName(target), postBuild)
+	oldRuleHash, oldConfigHash, oldSourceHash, oldSecretHash := readRuleHash(target, postBuild)
 	if !bytes.Equal(oldConfigHash, state.Hashes.Config) {
 		if len(oldConfigHash) == 0 {
 			// Small nicety to make it a bit clearer what's going on.
@@ -289,37 +294,33 @@ func hashOptionalBool(writer hash.Hash, b bool) {
 	}
 }
 
-// readRuleHashFile reads the contents of a rule hash file into separate byte arrays
-// Arrays will be empty if there's an error reading the file.
+// readRuleHash reads the hash of a file using xattrs.
 // If postBuild is true then the rule hash will be the post-build one if present.
-func readRuleHashFile(filename string, postBuild bool) ([]byte, []byte, []byte, []byte) {
-	contents := make([]byte, hashFileLength)
-	file, err := os.Open(filename)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			log.Warning("Failed to read rule hash file %s: %s", filename, err)
+func readRuleHash(target *core.BuildTarget, postBuild bool) ([]byte, []byte, []byte, []byte) {
+	var h []byte
+	outDir := target.OutDir()
+	for _, output := range target.Outputs() {
+		b, err := xattr.LGet(path.Join(outDir, output), xattrName)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				log.Warning("Failed to read rule hash for %s: %s", target.Label, err)
+			}
+			return nil, nil, nil, nil
+		} else if h != nil && !bytes.Equal(h, b) {
+			// Not an error; we could warn but it's possible to get here legitimately so
+			// just return nothing.
+			return nil, nil, nil, nil
 		}
-		return nil, nil, nil, nil
-	}
-	defer file.Close()
-	if n, err := file.Read(contents); err != nil {
-		log.Warning("Error reading rule hash file %s: %s", filename, err)
-		return nil, nil, nil, nil
-	} else if n == oldHashFileLength {
-		// Handle older hash files that don't have secrets in them.
-		copy(contents[4*hashLength:hashFileLength], noSecrets)
-	} else if n != hashFileLength {
-		log.Warning("Unexpected rule hash file length: expected %d bytes, was %d", hashFileLength, n)
-		return nil, nil, nil, nil
+		h = b
 	}
 	if postBuild {
-		return contents[hashLength : 2*hashLength], contents[2*hashLength : 3*hashLength], contents[3*hashLength : 4*hashLength], contents[4*hashLength : hashFileLength]
+		return h[hashLength : 2*hashLength], h[2*hashLength : 3*hashLength], h[3*hashLength : 4*hashLength], h[4*hashLength : hashFileLength]
 	}
-	return contents[0:hashLength], contents[2*hashLength : 3*hashLength], contents[3*hashLength : 4*hashLength], contents[4*hashLength : hashFileLength]
+	return h[0:hashLength], h[2*hashLength : 3*hashLength], h[3*hashLength : 4*hashLength], h[4*hashLength : hashFileLength]
 }
 
-// Writes the contents of the rule hash file
-func writeRuleHashFile(state *core.BuildState, target *core.BuildTarget) error {
+// writeRuleHash attaches the rule hash to the file to its outputs using xattrs.
+func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 	hash, err := targetHash(state, target)
 	if err != nil {
 		return err
@@ -328,16 +329,12 @@ func writeRuleHashFile(state *core.BuildState, target *core.BuildTarget) error {
 	if err != nil {
 		return err
 	}
-	file, err := os.Create(ruleHashFileName(target))
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	n, err := file.Write(append(hash, secretHash...))
-	if err != nil {
-		return err
-	} else if n != hashFileLength {
-		return fmt.Errorf("Wrote %d bytes to rule hash file; should be %d", n, hashFileLength)
+	outDir := target.OutDir()
+	hash = append(hash, secretHash...)
+	for _, output := range target.Outputs() {
+		if err := xattr.LSet(path.Join(outDir, output), xattrName, hash); err != nil {
+			return err
+		}
 	}
 	return nil
 }

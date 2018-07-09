@@ -50,10 +50,10 @@ func TestBuildTargetWhichNeedsRebuilding(t *testing.T) {
 }
 
 func TestBuildTargetWhichDoesntNeedRebuilding(t *testing.T) {
-	// We write a rule hash file for this target before building it, so we don't need to build again.
+	// We write a rule hash for this target before building it, so we don't need to build again.
 	state, target := newState("//package1:target3")
 	target.AddOutput("file3")
-	assert.NoError(t, writeRuleHashFile(state, target))
+	assert.NoError(t, writeRuleHash(state, target))
 	err := buildTarget(1, state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Reused, target.State())
@@ -64,7 +64,7 @@ func TestModifiedBuildTargetStillNeedsRebuilding(t *testing.T) {
 	// it should get rebuilt.
 	state, target := newState("//package1:target4")
 	target.AddOutput("file4")
-	assert.NoError(t, writeRuleHashFile(state, target))
+	assert.NoError(t, writeRuleHash(state, target))
 	target.Command = "echo 'wibble wibble wibble' > $OUT"
 	target.RuleHash = nil // Have to force a reset of this
 	err := buildTarget(1, state, target)
