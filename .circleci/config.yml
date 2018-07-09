@@ -80,7 +80,7 @@ jobs:
       macos:
         xcode: "9.0"
       environment:
-        PLZ_ARGS: "-p --profile ci --exclude pip"
+        PLZ_ARGS: "-p --profile ci"
       steps:
        - checkout
        - restore_cache:
