@@ -323,11 +323,6 @@ func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
 }
 
 func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bool, error) {
-	// Before we write any outputs, we must remove the old hash file to avoid it being
-	// left in an inconsistent state.
-	if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
-		return nil, true, err
-	}
 	changed := false
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
@@ -410,14 +405,11 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 
 // RemoveOutputs removes all generated outputs for a rule.
 func RemoveOutputs(target *core.BuildTarget) error {
-	if err := os.Remove(ruleHashFileName(target)); err != nil && !os.IsNotExist(err) {
-		if checkForStaleOutput(ruleHashFileName(target), err) {
-			return RemoveOutputs(target) // try again
-		}
-		return err
-	}
 	for _, output := range target.Outputs() {
-		if err := os.RemoveAll(path.Join(target.OutDir(), output)); err != nil {
+		out := path.Join(target.OutDir(), output)
+		if err := os.RemoveAll(out); err != nil {
+			return err
+		} else if err := fs.EnsureDir(out); err != nil {
 			return err
 		}
 	}
@@ -603,8 +595,6 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return err
 	} else if err := prepareDirectory(target.TmpDir(), false); err != nil {
-		return err
-	} else if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
 		return err
 	}
 	httpClient.Timeout = time.Duration(state.Config.Build.Timeout) // Can't set this when we init the client because config isn't loaded then.

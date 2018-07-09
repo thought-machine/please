@@ -19,3 +19,10 @@ func TestIsSameFile(t *testing.T) {
 	assert.False(t, IsSameFile("issamefile1.txt", "issamefile2.txt"))
 	assert.False(t, IsSameFile("issamefile1.txt", "doesntexist.txt"))
 }
+
+func TestEnsureDir(t *testing.T) {
+	err := ioutil.WriteFile("ensure_dir", []byte("hello"), 0644)
+	assert.NoError(t, err)
+	err = EnsureDir("ensure_dir/filename")
+	assert.NoError(t, err)
+}
