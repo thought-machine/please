@@ -26,6 +26,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	lines := bytes.Split(data, []byte{'\n'})
 	testsStarted := map[string]bool{}
 	var suiteDuration time.Duration
+	testOutput := make([]string, 0)
 	for i, line := range lines {
 		testStartMatches := testStart.FindSubmatch(line)
 		testResultMatches := testResult.FindSubmatch(line)
@@ -45,6 +46,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 			if bytes.Equal(testResultMatches[1], []byte("PASS")) {
 				testCase.Executions = append(testCase.Executions, core.TestExecution{
 					Duration: &duration,
+					Stderr:   strings.Join(testOutput, ""),
 				})
 			} else if bytes.Equal(testResultMatches[1], []byte("SKIP")) {
 				i++ // Following line has the reason for being skipped
@@ -52,6 +54,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 					Skip: &core.TestResultSkip{
 						Message: string(bytes.TrimSpace(lines[i])),
 					},
+					Stderr:   strings.Join(testOutput, ""),
 					Duration: &duration,
 				})
 			} else {
@@ -63,16 +66,20 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 					Failure: &core.TestResultFailure{
 						Traceback: output,
 					},
+					Stderr:   strings.Join(testOutput, ""),
 					Duration: &duration,
 				})
 			}
 			results.TestCases = append(results.TestCases, testCase)
+			testOutput = make([]string, 0)
 		} else if bytes.Equal(line, []byte("PASS")) {
 			// Do nothing, all's well.
 		} else if bytes.Equal(line, []byte("FAIL")) {
 			if results.Failures() == 0 {
 				return results, fmt.Errorf("Test indicated final failure but no failures found yet")
 			}
+		} else {
+			testOutput = append(testOutput, string(line), "\n")
 		}
 	}
 	results.Duration = suiteDuration
