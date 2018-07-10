@@ -328,7 +328,7 @@ func readRuleHashOnFile(target *core.BuildTarget, output string) []byte {
 		if fs.IsSymlink(output) {
 			// Symlinks can't take xattrs on Linux. We stash it on the fallback hash file instead.
 			return readRuleHashOnFile(target, fallbackRuleHashFileName(target))
-		} else if !os.IsNotExist(err.(*xattr.Error).Err) {
+		} else if e2 := err.(*xattr.Error).Err; !os.IsNotExist(e2) && e2 != xattr.ENOATTR {
 			log.Warning("Failed to read rule hash for %s: %s", target.Label, err)
 		}
 		return nil
