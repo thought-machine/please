@@ -329,7 +329,7 @@ func readRuleHashOnFile(target *core.BuildTarget, output string) []byte {
 			// Symlinks can't take xattrs on Linux. We stash it on the fallback hash file instead.
 			return readRuleHashOnFile(target, fallbackRuleHashFileName(target))
 		} else if !os.IsNotExist(err.(*xattr.Error).Err) {
-			log.Warning("Failed to read rule hash for %s: %#v", target.Label, err)
+			log.Warning("Failed to read rule hash for %s: %s", target.Label, err)
 		}
 		return nil
 	} else if len(b) != fullHashLength {
@@ -369,6 +369,11 @@ func writeRuleHashOnFile(target *core.BuildTarget, output string, hash []byte) e
 		if fs.IsSymlink(output) {
 			// As mentioned above, we have to put hashes for symlinks on the alternative hash file.
 			return writeFallbackRuleHashFile(target, hash)
+		} else if os.IsPermission(err.(*xattr.Error).Err) {
+			// Can't set xattrs without write permission... attempt to chmod it first.
+			if err := os.Chmod(output, target.OutMode()); err == nil {
+				return xattr.LSet(output, xattrName, hash)
+			}
 		}
 		return err
 	}

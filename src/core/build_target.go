@@ -1088,9 +1088,9 @@ func (target *BuildTarget) SetContainerSetting(name, value string) error {
 // OutMode returns the mode to set outputs of a target to.
 func (target *BuildTarget) OutMode() os.FileMode {
 	if target.IsBinary {
-		return 0555
+		return 0755
 	}
-	return 0444
+	return 0644
 }
 
 // PostBuildOutputFileName returns the post-build output file for this target.
