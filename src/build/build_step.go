@@ -395,11 +395,6 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 			return true, err
 		}
 	}
-	if target.IsBinary {
-		if err := os.Chmod(realOutput, target.OutMode()); err != nil {
-			return true, err
-		}
-	}
 	return true, nil
 }
 
@@ -450,6 +445,14 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	}
 	if err := writeRuleHash(state, target); err != nil {
 		return nil, fmt.Errorf("Attempting to record rule hash: %s", err)
+	}
+	// Set appropriate permissions on outputs
+	if target.IsBinary {
+		for _, output := range target.FullOutputs() {
+			if err := os.Chmod(output, target.OutMode()); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return hash, nil
 }

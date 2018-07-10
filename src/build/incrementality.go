@@ -371,7 +371,7 @@ func writeRuleHashOnFile(target *core.BuildTarget, output string, hash []byte) e
 			return writeFallbackRuleHashFile(target, hash)
 		} else if os.IsPermission(err.(*xattr.Error).Err) {
 			// Can't set xattrs without write permission... attempt to chmod it first.
-			if err := os.Chmod(output, target.OutMode()); err == nil {
+			if err := os.Chmod(output, target.OutMode()|0200); err == nil {
 				return xattr.LSet(output, xattrName, hash)
 			}
 		}
