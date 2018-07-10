@@ -114,7 +114,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if target.IsHashFilegroup {
 		updateHashFilegroupPaths(state, target)
 	}
-	if !needsBuilding(state, target, false) {
+	// We don't record rule hashes for filegroups since we know the implementation and the check
+	// is just "are these the same file" which we do anyway, and it means we don't have to worry
+	// about two rules outputting the same file.
+	if !target.IsFilegroup && !needsBuilding(state, target, false) {
 		log.Debug("Not rebuilding %s, nothing's changed", target.Label)
 		if postBuildOutput, err = runPostBuildFunctionIfNeeded(tid, state, target, ""); err != nil {
 			log.Warning("Missing post-build output for %s; will rebuild.", target.Label)
@@ -443,8 +446,10 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 			log.Warning("%s", err)
 		}
 	}
-	if err := writeRuleHash(state, target); err != nil {
-		return nil, fmt.Errorf("Attempting to record rule hash: %s", err)
+	if !target.IsFilegroup {
+		if err := writeRuleHash(state, target); err != nil {
+			return nil, fmt.Errorf("Attempting to record rule hash: %s", err)
+		}
 	}
 	// Set appropriate permissions on outputs
 	if target.IsBinary {
