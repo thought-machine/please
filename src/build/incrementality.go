@@ -32,11 +32,6 @@ import (
 
 const hashLength = sha1.Size
 
-// Tag that we attach for xattrs to store hashes against files.
-// Note that we are required to provide the user namespace; that seems to be set implicitly
-// by the attr utility, but that is not done for us here.
-const xattrName = "user.plz_build"
-
 // Length of the full hash we write, which has multiple parts.
 const fullHashLength = 5 * hashLength
 
@@ -323,12 +318,12 @@ func readRuleHash(target *core.BuildTarget, postBuild bool) ([]byte, []byte, []b
 
 // readRuleHashOnFile reads a rule hash from a single file. It returns an empty slice if it can't be read.
 func readRuleHashOnFile(target *core.BuildTarget, output string) []byte {
-	b, err := xattr.LGet(output, xattrName)
+	b, err := xattr.LGet(output, xattrName(target))
 	if err != nil {
 		if fs.IsSymlink(output) {
 			// Symlinks can't take xattrs on Linux. We stash it on the fallback hash file instead.
 			return readRuleHashOnFile(target, fallbackRuleHashFileName(target))
-		} else if !os.IsNotExist(err.(*xattr.Error).Err) {
+		} else if xe := err.(*xattr.Error).Err; !os.IsNotExist(xe) && xe != xattr.ENOATTR {
 			log.Warning("Failed to read rule hash for %s: %s", target.Label, err)
 		}
 		return nil
@@ -365,14 +360,16 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 
 // writeRuleHashOnFile sets a rule hash on a single file.
 func writeRuleHashOnFile(target *core.BuildTarget, output string, hash []byte) error {
-	if err := xattr.LSet(output, xattrName, hash); err != nil {
+	if err := xattr.LSet(output, xattrName(target), hash); err != nil {
 		if fs.IsSymlink(output) {
 			// As mentioned above, we have to put hashes for symlinks on the alternative hash file.
 			return writeFallbackRuleHashFile(target, hash)
 		} else if os.IsPermission(err.(*xattr.Error).Err) {
 			// Can't set xattrs without write permission... attempt to chmod it first.
-			if err := os.Chmod(output, target.OutMode()|0200); err == nil {
-				return xattr.LSet(output, xattrName, hash)
+			if info, err := os.Lstat(output); err == nil {
+				if err := os.Chmod(output, info.Mode()|0200); err == nil {
+					return xattr.LSet(output, xattrName(target), hash)
+				}
 			}
 		}
 		return err
@@ -389,7 +386,14 @@ func writeFallbackRuleHashFile(target *core.BuildTarget, hash []byte) error {
 	}
 	f.Close()
 	return writeRuleHashOnFile(target, fallbackFilename, hash)
+}
 
+// xattrName returns the name we'll use for xattrs on files.
+// It is currently per-rule to handle filegroups (which permit multiple per target).
+// Note that we are required to provide the user namespace; that seems to be set implicitly
+// by the attr utility, but that is not done for us here.
+func xattrName(target *core.BuildTarget) string {
+	return "user.plz_build:" + target.Label.Name
 }
 
 // fallbackRuleHashFile returns the filename we'll store the hashes for this file on if we have
