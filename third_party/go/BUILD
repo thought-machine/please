@@ -433,7 +433,7 @@ go_get(
 go_get(
     name = "unix",
     get = "golang.org/x/sys/unix",
-    revision = "ebfc5b4631820b793c9010c87fd8fef0f39eb082",
+    revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2",
 )
 
 go_get(
