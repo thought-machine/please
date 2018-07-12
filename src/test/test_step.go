@@ -287,8 +287,8 @@ func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget) (string
 func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	replacedCmd, env := testCommandAndEnv(state, target)
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
-	stdout, _, err := core.ExecWithTimeoutShellStdStreams(state, target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd, target.TestSandbox, state.DebugTests)
-	return stdout, err
+	_, stderr, err := core.ExecWithTimeoutShellStdStreams(state, target, target.TestDir(), env, target.TestTimeout, state.Config.Test.Timeout, state.ShowAllOutput, replacedCmd, target.TestSandbox, state.DebugTests)
+	return stderr, err
 }
 
 func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string) core.TestSuite {
