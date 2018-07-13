@@ -23,3 +23,8 @@ python_test(
     srcs = ["test_runner.py"],
     deps = [":inc"],
 )
+
+python_test(
+    name = "test_pytest_unicode",
+    srcs = ["test_pytest_unicode.py"],
+)
