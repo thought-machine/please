@@ -55,7 +55,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		return err
 	} else if err := fs.EnsureDir(to); err != nil {
 		return err
-	} else if err := core.RecursiveCopyFile(from, to, target.OutMode(), true, false); err != nil {
+	} else if err := fs.RecursiveLink(from, to, target.OutMode()); err != nil {
 		return err
 	}
 	builder.built[to] = true

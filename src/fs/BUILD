@@ -1,6 +1,7 @@
 go_library(
     name = "fs",
     srcs = [
+        "copy.go",
         "fs.go",
         "glob.go",
         "hash.go",

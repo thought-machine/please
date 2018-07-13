@@ -396,7 +396,7 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 			return true, err
 		}
 	} else {
-		if err := core.RecursiveCopyFile(tmpOutput, realOutput, target.OutMode(), false, false); err != nil {
+		if err := fs.RecursiveCopy(tmpOutput, realOutput, target.OutMode()); err != nil {
 			return true, err
 		}
 	}

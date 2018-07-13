@@ -11,6 +11,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
+	"fs"
 	"gc"
 )
 
@@ -30,7 +31,7 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	}
 	for pkg := range packages {
 		dest := path.Join(dir, pkg.Filename)
-		if err := core.RecursiveCopyFile(pkg.Filename, dest, 0, false, false); err != nil {
+		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
 			log.Fatalf("Failed to copy BUILD file: %s\n", pkg.Filename)
 		}
 		// Now rewrite the unused targets out of it
@@ -55,7 +56,7 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 		if src.Label() == nil { // We'll handle these dependencies later
 			for _, p := range src.FullPaths(graph) {
 				if !strings.HasPrefix(p, "/") { // Don't copy system file deps.
-					if err := core.RecursiveCopyFile(p, path.Join(dir, p), 0, false, false); err != nil {
+					if err := fs.RecursiveCopy(p, path.Join(dir, p), 0); err != nil {
 						log.Fatalf("Error copying file: %s\n", err)
 					}
 				}
@@ -85,7 +86,7 @@ func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 			if err := os.MkdirAll(outDir, core.DirPermissions); err != nil {
 				log.Fatalf("Failed to create export dir %s: %s", outDir, err)
 			}
-			if err := core.RecursiveCopyFile(path.Join(target.OutDir(), out), fullPath, target.OutMode(), false, false); err != nil {
+			if err := fs.RecursiveCopy(path.Join(target.OutDir(), out), fullPath, target.OutMode()|0200); err != nil {
 				log.Fatalf("Failed to copy export file: %s", err)
 			}
 		}

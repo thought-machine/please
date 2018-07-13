@@ -172,12 +172,12 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 		log.Warning("Failed to setup cache directory: %s", err)
 		return 0
 	}
-	if err := core.RecursiveCopyFile(outFile, cachedFile, fileMode(target), true, true); err != nil {
+	if err := fs.RecursiveLink(outFile, cachedFile, target.OutMode()); err != nil {
 		// Cannot hardlink files into the cache, must copy them for reals.
 		log.Warning("Failed to store cache file %s: %s", cachedFile, err)
 	}
 	// TODO(peterebden): This is a little inefficient, it would be better to track the size in
-	//                   RecursiveCopyFile rather than walking again.
+	//                   RecursiveCopy rather than walking again.
 	size, _ := findSize(cachedFile)
 	return size
 }
@@ -219,7 +219,7 @@ func (cache *dirCache) retrieveFiles2(target *core.BuildTarget, cacheDir string,
 		}
 		cachedOut := path.Join(cacheDir, out)
 		log.Debug("Retrieving %s: %s from dir cache...", target.Label, cachedOut)
-		if err := core.RecursiveCopyFile(cachedOut, realOut, fileMode(target), true, true); err != nil {
+		if err := fs.RecursiveLink(cachedOut, realOut, target.OutMode()); err != nil {
 			return false, err
 		}
 	}
@@ -366,13 +366,6 @@ func newDirCache(config *core.Configuration) *dirCache {
 		go cache.clean(uint64(config.Cache.DirCacheHighWaterMark), uint64(config.Cache.DirCacheLowWaterMark))
 	}
 	return cache
-}
-
-func fileMode(target *core.BuildTarget) os.FileMode {
-	if target.IsBinary {
-		return 0555
-	}
-	return 0444
 }
 
 // Period of time in seconds between which two artifacts are considered to have the same atime.

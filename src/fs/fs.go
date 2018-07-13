@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"runtime"
 	"syscall"
 )
 
@@ -91,27 +90,4 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 	}
 	// And move it to its final destination.
 	return os.Rename(tempFile.Name(), to)
-}
-
-// CopyOrLinkFile either copies or hardlinks a file based on the link argument.
-// Falls back to a copy if link fails and fallback is true.
-func CopyOrLinkFile(from, to string, mode os.FileMode, link, fallback bool) error {
-	if link {
-		if err := os.Link(from, to); err == nil || !fallback {
-			return err
-		} else if runtime.GOOS == "darwin" && os.IsNotExist(err) {
-			// There is an awkward issue on OSX where links to symlinks actually try to link
-			// to the target rather than the link itself. In that case we try to recreate
-			// a similar symlink at the destination to work around.
-			if info, err := os.Lstat(from); err == nil && (info.Mode()&os.ModeSymlink) != 0 {
-				dest, err := os.Readlink(from)
-				if err != nil {
-					return err
-				}
-				return os.Symlink(dest, to)
-			}
-			return err
-		}
-	}
-	return CopyFile(from, to, mode)
 }

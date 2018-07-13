@@ -132,7 +132,7 @@ func (cache *httpCache) writeFile(target *core.BuildTarget, file string, r io.Re
 		log.Errorf("Failed to create directory: %s", err)
 		return false
 	}
-	f, err := os.OpenFile(outFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, fileMode(target))
+	f, err := os.OpenFile(outFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, target.OutMode())
 	if err != nil {
 		log.Errorf("Failed to open file: %s", err)
 		return false

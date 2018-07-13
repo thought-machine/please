@@ -117,22 +117,6 @@ func StartedAtRepoRoot() bool {
 	return RepoRoot == initialWorkingDir
 }
 
-// RecursiveCopyFile copies either a single file or a directory.
-// If 'link' is true then we'll hardlink files instead of copying them.
-// If 'fallback' is true then we'll fall back to a copy if linking fails.
-func RecursiveCopyFile(from string, to string, mode os.FileMode, link, fallback bool) error {
-	if info, err := os.Stat(from); err == nil && info.IsDir() {
-		return fs.WalkMode(from, func(name string, isDir bool, fileMode os.FileMode) error {
-			dest := path.Join(to, name[len(from):])
-			if isDir {
-				return os.MkdirAll(dest, DirPermissions)
-			}
-			return fs.CopyOrLinkFile(name, dest, mode, link, fallback)
-		})
-	}
-	return fs.CopyOrLinkFile(from, to, mode, link, fallback)
-}
-
 // safeBuffer is an io.Writer that ensures that only one thread writes to it at a time.
 // This is important because we potentially have both stdout and stderr writing to the same
 // buffer, and os.exec only guarantees goroutine-safety if both are the same writer, which in
@@ -533,7 +517,7 @@ func PrepareSource(sourcePath string, tmpPath string) error {
 	if !PathExists(sourcePath) {
 		return fmt.Errorf("Source file %s doesn't exist", sourcePath)
 	}
-	return RecursiveCopyFile(sourcePath, tmpPath, 0, true, true)
+	return fs.RecursiveLink(sourcePath, tmpPath, 0)
 }
 
 // PrepareSourcePair prepares a source file for a build.

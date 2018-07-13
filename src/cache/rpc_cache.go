@@ -235,7 +235,7 @@ func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []b
 			log.Warning("RPC cache failed to create symlink %s", err)
 			return false
 		}
-	} else if err := fs.WriteFile(bytes.NewReader(body), out, fileMode(target)); err != nil {
+	} else if err := fs.WriteFile(bytes.NewReader(body), out, target.OutMode()); err != nil {
 		log.Warning("RPC cache failed to write file %s", err)
 		return false
 	}
