@@ -7,7 +7,6 @@ import sys
 TEST_NAMES = '__TEST_NAMES__'.split(',')
 
 
-
 def initialise_coverage():
     """Imports & initialises the coverage module."""
     import coverage
