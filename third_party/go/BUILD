@@ -38,6 +38,13 @@ go_get(
 )
 
 go_get(
+    name = "xattr",
+    get = "github.com/pkg/xattr",
+    revision = "d15dbc2bb0b5da267362b5e066e2c44c1fcff6c7",
+    deps = [":unix"],
+)
+
+go_get(
     name = "go-bindata",
     binary = True,
     get = "github.com/kevinburke/go-bindata/...",
@@ -426,7 +433,7 @@ go_get(
 go_get(
     name = "unix",
     get = "golang.org/x/sys/unix",
-    revision = "ebfc5b4631820b793c9010c87fd8fef0f39eb082",
+    revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2",
 )
 
 go_get(

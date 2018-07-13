@@ -10,6 +10,8 @@ import (
 	"path"
 	"strings"
 	"syscall"
+
+	"github.com/pkg/xattr"
 )
 
 const lockFilePath = "plz-out/.lock"
@@ -47,6 +49,12 @@ func AcquireRepoLock() {
 		if n, err := lockFile.Write([]byte(strings.Join(os.Args[1:], " ") + "\n")); err == nil {
 			lockFile.Truncate(int64(n))
 		}
+	}
+
+	// Quick test of xattrs; everything will fail later if we can't write them, so make
+	// sure plz-out supports them now and give a clear error if not.
+	if err := xattr.Set(lockFilePath, "user.plz_build", []byte("lock")); err != nil {
+		log.Fatalf("Failed to set xattrs:%s\nMaybe plz-out is on a filesystem that doesn't support them?", err)
 	}
 }
 

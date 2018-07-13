@@ -114,7 +114,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if target.IsHashFilegroup {
 		updateHashFilegroupPaths(state, target)
 	}
-	if !needsBuilding(state, target, false) {
+	// We don't record rule hashes for filegroups since we know the implementation and the check
+	// is just "are these the same file" which we do anyway, and it means we don't have to worry
+	// about two rules outputting the same file.
+	if !target.IsFilegroup && !needsBuilding(state, target, false) {
 		log.Debug("Not rebuilding %s, nothing's changed", target.Label)
 		if postBuildOutput, err = runPostBuildFunctionIfNeeded(tid, state, target, ""); err != nil {
 			log.Warning("Missing post-build output for %s; will rebuild.", target.Label)
@@ -323,11 +326,6 @@ func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
 }
 
 func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bool, error) {
-	// Before we write any outputs, we must remove the old hash file to avoid it being
-	// left in an inconsistent state.
-	if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
-		return nil, true, err
-	}
 	changed := false
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
@@ -400,24 +398,16 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 			return true, err
 		}
 	}
-	if target.IsBinary {
-		if err := os.Chmod(realOutput, target.OutMode()); err != nil {
-			return true, err
-		}
-	}
 	return true, nil
 }
 
 // RemoveOutputs removes all generated outputs for a rule.
 func RemoveOutputs(target *core.BuildTarget) error {
-	if err := os.Remove(ruleHashFileName(target)); err != nil && !os.IsNotExist(err) {
-		if checkForStaleOutput(ruleHashFileName(target), err) {
-			return RemoveOutputs(target) // try again
-		}
-		return err
-	}
 	for _, output := range target.Outputs() {
-		if err := os.RemoveAll(path.Join(target.OutDir(), output)); err != nil {
+		out := path.Join(target.OutDir(), output)
+		if err := os.RemoveAll(out); err != nil {
+			return err
+		} else if err := fs.EnsureDir(out); err != nil {
 			return err
 		}
 	}
@@ -456,8 +446,18 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 			log.Warning("%s", err)
 		}
 	}
-	if err := writeRuleHashFile(state, target); err != nil {
-		return nil, fmt.Errorf("Attempting to create hash file: %s", err)
+	if !target.IsFilegroup {
+		if err := writeRuleHash(state, target); err != nil {
+			return nil, fmt.Errorf("Attempting to record rule hash: %s", err)
+		}
+	}
+	// Set appropriate permissions on outputs
+	if target.IsBinary {
+		for _, output := range target.FullOutputs() {
+			if err := os.Chmod(output, target.OutMode()); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return hash, nil
 }
@@ -465,11 +465,10 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 // OutputHash calculates the hash of a target's outputs.
 func OutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
-	for _, output := range target.Outputs() {
+	for _, filename := range target.FullOutputs() {
 		// NB. Always force a recalculation of the output hashes here. Memoisation is not
 		//     useful because by definition we are rebuilding a target, and can actively hurt
 		//     in cases where we compare the retrieved cache artifacts with what was there before.
-		filename := path.Join(target.OutDir(), output)
 		h2, err := state.PathHasher.Hash(filename, true)
 		if err != nil {
 			return nil, err
@@ -603,8 +602,6 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return err
 	} else if err := prepareDirectory(target.TmpDir(), false); err != nil {
-		return err
-	} else if err := os.RemoveAll(ruleHashFileName(target)); err != nil {
 		return err
 	}
 	httpClient.Timeout = time.Duration(state.Config.Build.Timeout) // Can't set this when we init the client because config isn't loaded then.

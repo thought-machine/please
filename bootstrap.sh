@@ -38,6 +38,7 @@ go_get github.com/djherbis/atime
 go_get github.com/karrick/godirwalk
 go_get github.com/hashicorp/go-multierror
 go_get github.com/google/shlex
+go_get github.com/pkg/xattr
 notice ""
 
 # Detect javac presence and swap to compiling locally if we find it.

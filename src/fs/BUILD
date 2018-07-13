@@ -8,7 +8,10 @@ go_library(
         "home.go",
     ],
     visibility = ["PUBLIC"],
-    deps = ["//third_party/go:godirwalk"],
+    deps = [
+        "//third_party/go:godirwalk",
+        "//third_party/go:logging",
+    ],
 )
 
 go_test(

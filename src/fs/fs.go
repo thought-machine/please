@@ -8,14 +8,30 @@ import (
 	"os"
 	"path"
 	"syscall"
+
+	"gopkg.in/op/go-logging.v1"
 )
+
+var log = logging.MustGetLogger("fs")
 
 // DirPermissions are the default permission bits we apply to directories.
 const DirPermissions = os.ModeDir | 0775
 
 // EnsureDir ensures that the directory of the given file has been created.
 func EnsureDir(filename string) error {
-	return os.MkdirAll(path.Dir(filename), DirPermissions)
+	dir := path.Dir(filename)
+	err := os.MkdirAll(dir, DirPermissions)
+	if err != nil && FileExists(dir) {
+		// It looks like this is a file and not a directory. Attempt to remove it; this can
+		// happen in some cases if you change a rule from outputting a file to a directory.
+		log.Warning("Attempting to remove file %s; a subdirectory is required", dir)
+		if err2 := os.Remove(dir); err2 == nil {
+			err = os.MkdirAll(dir, DirPermissions)
+		} else {
+			log.Error("%s", err2)
+		}
+	}
+	return err
 }
 
 // PathExists returns true if the given path exists, as a file or a directory.
@@ -28,6 +44,12 @@ func PathExists(filename string) bool {
 func FileExists(filename string) bool {
 	info, err := os.Lstat(filename)
 	return err == nil && !info.IsDir()
+}
+
+// IsSymlink returns true if the given path exists and is a symlink.
+func IsSymlink(filename string) bool {
+	info, err := os.Lstat(filename)
+	return err == nil && (info.Mode()&os.ModeSymlink) != 0
 }
 
 // IsSameFile returns true if two filenames describe the same underlying file (i.e. inode)

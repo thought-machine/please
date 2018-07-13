@@ -192,6 +192,13 @@ func TestOutputs(t *testing.T) {
 	assert.Equal(t, []string{"file1.go", "file2.go", "file3.go", "file4.go"}, target3.Outputs())
 }
 
+func TestFullOutputs(t *testing.T) {
+	target := makeTarget("//src/core:target1", "PUBLIC")
+	target.AddOutput("file1.go")
+	target.AddOutput("file2.go")
+	assert.Equal(t, []string{"plz-out/gen/src/core/file1.go", "plz-out/gen/src/core/file2.go"}, target.FullOutputs())
+}
+
 func TestProvideFor(t *testing.T) {
 	// target1 is provided directly since they have a simple dependency
 	target1 := makeTarget("//src/core:target1", "PUBLIC")
