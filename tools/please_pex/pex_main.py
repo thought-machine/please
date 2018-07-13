@@ -1,6 +1,5 @@
 """Zipfile entry point which supports auto-extracting itself based on zip-safety."""
 
-# import imp
 from importlib import import_module
 import os
 import runpy
