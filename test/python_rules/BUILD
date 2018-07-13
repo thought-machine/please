@@ -104,6 +104,11 @@ python_test(
 )
 
 python_test(
+    name = "unittest_unicode_test",
+    srcs = ["unittest_unicode_test.py"],
+)
+
+python_test(
     name = "numpy_test",
     srcs = ["numpy_test.py"],
     labels = [
