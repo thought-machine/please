@@ -1,11 +1,18 @@
 """Zipfile entry point which supports auto-extracting itself based on zip-safety."""
 
-import imp
-import importlib
+# import imp
+from importlib import import_module
 import os
 import runpy
 import site
 import sys
+
+PY_VERSION = int(sys.version[0])
+
+if PY_VERSION >= 3:
+    from importlib import machinery
+else:
+    import imp
 
 # Put this pex on the path before anything else.
 PEX = os.path.abspath(sys.argv[0])
@@ -24,8 +31,12 @@ class SoImport(object):
 
     def __init__(self):
         import zipfile
+        
+        if PY_VERSION < 3:
+            self.suffixes = {x[0]: x for x in imp.get_suffixes() if x[2] == imp.C_EXTENSION}
+        else:
+            self.suffixes = machinery.EXTENSION_SUFFIXES
 
-        self.suffixes = {x[0]: x for x in imp.get_suffixes() if x[2] == imp.C_EXTENSION}
         self.suffixes_by_length = sorted(self.suffixes, key=lambda x: -len(x))
         # Identify all the possible modules we could handle.
         self.modules = {}
@@ -58,7 +69,10 @@ class SoImport(object):
         with tempfile.NamedTemporaryFile(suffix=ext, prefix=os.path.basename(prefix)) as f:
             f.write(self.zf.read(filename))
             f.flush()
-            mod = imp.load_module(fullname, None, f.name, suffix)
+            if PY_VERSION < 3:
+                mod = imp.load_module(fullname, None, f.name, suffix)
+            else:
+                mod = machinery.SourceFileLoader(fullname, f.name).load_module()
         # Make it look like module came from the original location for nicer tracebacks.
         mod.__file__ = filename
         return mod
@@ -89,7 +103,7 @@ class ModuleDirImport(object):
 
     def load_module(self, fullname):
         """Actually load a module that we said we'd handle in find_module."""
-        module = importlib.import_module(fullname[len(self.prefix):])
+        module = import_module(fullname[len(self.prefix):])
         sys.modules[fullname] = module
         return module
 
