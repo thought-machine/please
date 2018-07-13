@@ -34,7 +34,7 @@ class SoImport(object):
         if PY_VERSION < 3:
             self.suffixes = {x[0]: x for x in imp.get_suffixes() if x[2] == imp.C_EXTENSION}
         else:
-            self.suffixes = machinery.EXTENSION_SUFFIXES
+            self.suffixes = machinery.EXTENSION_SUFFIXES  # list, as importlib will not be using the file description
 
         self.suffixes_by_length = sorted(self.suffixes, key=lambda x: -len(x))
         # Identify all the possible modules we could handle.
@@ -64,14 +64,14 @@ class SoImport(object):
 
         filename = self.modules[fullname]
         prefix, ext = self.splitext(filename)
-        suffix = self.suffixes[ext]
         with tempfile.NamedTemporaryFile(suffix=ext, prefix=os.path.basename(prefix)) as f:
             f.write(self.zf.read(filename))
             f.flush()
             if PY_VERSION < 3:
+                suffix = self.suffixes[ext]
                 mod = imp.load_module(fullname, None, f.name, suffix)
             else:
-                mod = machinery.SourceFileLoader(fullname, f.name).load_module()
+                mod = machinery.ExtensionFileLoader(fullname, f.name).load_module()
         # Make it look like module came from the original location for nicer tracebacks.
         mod.__file__ = filename
         return mod
