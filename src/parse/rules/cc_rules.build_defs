@@ -69,7 +69,6 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
               ['cc:inc:' + join_path(pkg_name, include) for include in includes] +
               ['cc:def:' + define for define in defines])
 
-
     if not srcs:
         # Header-only library, no compilation needed.
         return filegroup(
