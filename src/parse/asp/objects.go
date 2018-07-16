@@ -29,6 +29,12 @@ type pyObject interface {
 	Len() int
 }
 
+// A freezable represents an object that can be frozen into a readonly state.
+// Not all pyObjects implement this.
+type freezable interface {
+	Freeze() pyObject
+}
+
 type pyBool int // Don't ask.
 
 // True, False and None are the singletons representing those values in Python.
@@ -299,7 +305,7 @@ func (l pyList) String() string {
 // Freeze freezes this list for further updates.
 // Note that this is a "soft" freeze; callers holding the original unfrozen
 // reference can still modify it.
-func (l pyList) Freeze() pyFrozenList {
+func (l pyList) Freeze() pyObject {
 	return pyFrozenList{pyList: l}
 }
 
@@ -391,7 +397,7 @@ func (d pyDict) Copy() pyDict {
 // Freeze freezes this dict for further updates.
 // Note that this is a "soft" freeze; callers holding the original unfrozen
 // reference can still modify it.
-func (d pyDict) Freeze() pyFrozenDict {
+func (d pyDict) Freeze() pyObject {
 	return pyFrozenDict{pyDict: d}
 }
 
@@ -726,7 +732,7 @@ func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 }
 
 // Freeze returns a copy of this config that is frozen for further updates.
-func (c *pyConfig) Freeze() *pyFrozenConfig {
+func (c *pyConfig) Freeze() pyObject {
 	return &pyFrozenConfig{pyConfig: *c}
 }
 
@@ -783,10 +789,10 @@ func (c *pyFrozenConfig) IndexAssign(index, value pyObject) {
 	panic("Config object is not assignable in this scope")
 }
 
-// Property only allows .get() since it's immutable.
+// Property disallows setdefault() since it's immutable.
 func (c *pyFrozenConfig) Property(name string) pyObject {
-	if name == "get" {
-		return c.pyConfig.Property(name)
+	if name == "setdefault" {
+		panic("Config object is not assignable in this scope")
 	}
-	panic("Config object is not assignable in this scope")
+	return c.pyConfig.Property(name)
 }

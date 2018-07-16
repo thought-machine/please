@@ -278,12 +278,8 @@ func (s *scope) SetAll(d pyDict, publicOnly bool) {
 // It returns the newly frozen set of locals.
 func (s *scope) Freeze() pyDict {
 	for k, v := range s.locals {
-		if d, ok := v.(pyDict); ok {
-			s.locals[k] = d.Freeze()
-		} else if l, ok := v.(pyList); ok {
-			s.locals[k] = l.Freeze()
-		} else if c, ok := v.(pyConfig); ok {
-			s.locals[k] = c.Freeze()
+		if f, ok := v.(freezable); ok {
+			s.locals[k] = f.Freeze()
 		}
 	}
 	return s.locals
