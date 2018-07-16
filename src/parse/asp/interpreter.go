@@ -125,9 +125,14 @@ func (i *interpreter) Subinclude(path string) pyDict {
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
 	// Scope needs a local version of CONFIG
+	c := i.scope.LookupConfig().Copy()
+	s.Set("CONFIG", c)
 	i.optimiseExpressions(reflect.ValueOf(stmts))
 	s.interpretStatements(stmts)
 	locals := s.Freeze()
+	if c.overlay == nil {
+		delete(locals, "CONFIG") // Config doesn't have any local modifications
+	}
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
 	i.subincludes[path] = locals
@@ -259,6 +264,14 @@ func (s *scope) LocalLookup(name string) pyObject {
 	return s.locals[name]
 }
 
+// LookupConfig returns the currently live config object in this scope.
+func (s *scope) LookupConfig() *pyConfig {
+	c, ok := s.LocalLookup("CONFIG").(*pyConfig)
+	// Ideally we would disallow this kind of thing at parse time.
+	s.Assert(ok, "CONFIG is no longer a config object!")
+	return c
+}
+
 // Set sets the given variable in this scope.
 func (s *scope) Set(name string, value pyObject) {
 	s.locals[name] = value
@@ -268,7 +281,12 @@ func (s *scope) Set(name string, value pyObject) {
 // Optionally it can filter to just public objects (i.e. those not prefixed with an underscore)
 func (s *scope) SetAll(d pyDict, publicOnly bool) {
 	for k, v := range d {
-		if !publicOnly || k[0] != '_' {
+		if k == "CONFIG" {
+			// Special case; need to merge config entries rather than overwriting the entire object.
+			c, ok := v.(*pyFrozenConfig)
+			s.Assert(ok, "incoming CONFIG isn't a config object")
+			s.LookupConfig().Merge(c)
+		} else if !publicOnly || k[0] != '_' {
 			s.locals[k] = v
 		}
 	}

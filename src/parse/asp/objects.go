@@ -736,6 +736,17 @@ func (c *pyConfig) Freeze() pyObject {
 	return &pyFrozenConfig{pyConfig: *c}
 }
 
+// Merge merges the contents of the given config object into this one.
+func (c *pyConfig) Merge(other *pyFrozenConfig) {
+	if c.overlay == nil {
+		// N.B. We cannot directly copy since this might get mutated again later on.
+		c.overlay = make(pyDict, len(other.overlay))
+	}
+	for k, v := range other.overlay {
+		c.overlay[k] = v
+	}
+}
+
 // newConfig creates a new pyConfig object from the configuration.
 // This is typically only created once at global scope, other scopes copy it with .Copy()
 func newConfig(config *core.Configuration) *pyConfig {
