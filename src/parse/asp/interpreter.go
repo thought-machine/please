@@ -124,6 +124,7 @@ func (i *interpreter) Subinclude(path string) pyDict {
 	}
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
+	// Scope needs a local version of CONFIG
 	i.optimiseExpressions(reflect.ValueOf(stmts))
 	s.interpretStatements(stmts)
 	locals := s.Freeze()
@@ -281,6 +282,8 @@ func (s *scope) Freeze() pyDict {
 			s.locals[k] = d.Freeze()
 		} else if l, ok := v.(pyList); ok {
 			s.locals[k] = l.Freeze()
+		} else if c, ok := v.(pyConfig); ok {
+			s.locals[k] = c.Freeze()
 		}
 	}
 	return s.locals

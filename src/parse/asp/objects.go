@@ -725,6 +725,11 @@ func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 	return fallback
 }
 
+// Freeze returns a copy of this config that is frozen for further updates.
+func (c *pyConfig) Freeze() *pyFrozenConfig {
+	return &pyFrozenConfig{pyConfig: *c}
+}
+
 // newConfig creates a new pyConfig object from the configuration.
 // This is typically only created once at global scope, other scopes copy it with .Copy()
 func newConfig(config *core.Configuration) *pyConfig {
@@ -768,4 +773,20 @@ func newConfig(config *core.Configuration) *pyConfig {
 	c["OS"] = pyString(config.Build.Arch.OS)
 	c["ARCH"] = pyString(config.Build.Arch.Arch)
 	return &pyConfig{base: c}
+}
+
+// A pyFrozenConfig is a config object that disallows further updates.
+type pyFrozenConfig struct{ pyConfig }
+
+// IndexAssign always fails, assignments to a pyFrozenConfig aren't allowed.
+func (c *pyFrozenConfig) IndexAssign(index, value pyObject) {
+	panic("Config object is not assignable in this scope")
+}
+
+// Property only allows .get() since it's immutable.
+func (c *pyFrozenConfig) Property(name string) pyObject {
+	if name == "get" {
+		return c.pyConfig.Property(name)
+	}
+	panic("Config object is not assignable in this scope")
 }
