@@ -1,0 +1,1 @@
+CONFIG.setdefault("test", "test test")

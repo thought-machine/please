@@ -29,6 +29,12 @@ type pyObject interface {
 	Len() int
 }
 
+// A freezable represents an object that can be frozen into a readonly state.
+// Not all pyObjects implement this.
+type freezable interface {
+	Freeze() pyObject
+}
+
 type pyBool int // Don't ask.
 
 // True, False and None are the singletons representing those values in Python.
@@ -299,7 +305,7 @@ func (l pyList) String() string {
 // Freeze freezes this list for further updates.
 // Note that this is a "soft" freeze; callers holding the original unfrozen
 // reference can still modify it.
-func (l pyList) Freeze() pyFrozenList {
+func (l pyList) Freeze() pyObject {
 	return pyFrozenList{pyList: l}
 }
 
@@ -391,7 +397,7 @@ func (d pyDict) Copy() pyDict {
 // Freeze freezes this dict for further updates.
 // Note that this is a "soft" freeze; callers holding the original unfrozen
 // reference can still modify it.
-func (d pyDict) Freeze() pyFrozenDict {
+func (d pyDict) Freeze() pyObject {
 	return pyFrozenDict{pyDict: d}
 }
 
@@ -725,6 +731,22 @@ func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 	return fallback
 }
 
+// Freeze returns a copy of this config that is frozen for further updates.
+func (c *pyConfig) Freeze() pyObject {
+	return &pyFrozenConfig{pyConfig: *c}
+}
+
+// Merge merges the contents of the given config object into this one.
+func (c *pyConfig) Merge(other *pyFrozenConfig) {
+	if c.overlay == nil {
+		// N.B. We cannot directly copy since this might get mutated again later on.
+		c.overlay = make(pyDict, len(other.overlay))
+	}
+	for k, v := range other.overlay {
+		c.overlay[k] = v
+	}
+}
+
 // newConfig creates a new pyConfig object from the configuration.
 // This is typically only created once at global scope, other scopes copy it with .Copy()
 func newConfig(config *core.Configuration) *pyConfig {
@@ -768,4 +790,20 @@ func newConfig(config *core.Configuration) *pyConfig {
 	c["OS"] = pyString(config.Build.Arch.OS)
 	c["ARCH"] = pyString(config.Build.Arch.Arch)
 	return &pyConfig{base: c}
+}
+
+// A pyFrozenConfig is a config object that disallows further updates.
+type pyFrozenConfig struct{ pyConfig }
+
+// IndexAssign always fails, assignments to a pyFrozenConfig aren't allowed.
+func (c *pyFrozenConfig) IndexAssign(index, value pyObject) {
+	panic("Config object is not assignable in this scope")
+}
+
+// Property disallows setdefault() since it's immutable.
+func (c *pyFrozenConfig) Property(name string) pyObject {
+	if name == "setdefault" {
+		panic("Config object is not assignable in this scope")
+	}
+	return c.pyConfig.Property(name)
 }
