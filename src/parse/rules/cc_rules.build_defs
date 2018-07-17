@@ -17,7 +17,7 @@ _NO_WHOLE_ARCHIVE = '-noall_load' if CONFIG.OS == 'darwin' else '--no-whole-arch
 
 def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
-               linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], includes:list=[],
+               linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
                defines:list|dict=[], alwayslink:bool=False, linkstatic:bool=False, _c=False, textual_hdrs:list=[]):
     """Generate a C++ library target.
 
@@ -34,7 +34,9 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker; these will not be used here but will be
                            picked up by a cc_binary or cc_test rule.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
+      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`. Again, the ldflags
+                              will be picked up by cc_binary or cc_test rules.
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
       includes (list): List of include directories to be added to the compiler's path.
       defines (list | dict): List of tokens to define in the preprocessor.
@@ -66,6 +68,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     pkg_name = package_name()
     labels = (['cc:ld:' + flag for flag in linker_flags] +
               ['cc:pc:' + lib for lib in pkg_config_libs] +
+              ['cc:pcc:' + cflag for cflag in pkg_config_cflags] +
               ['cc:inc:' + join_path(pkg_name, include) for include in includes] +
               ['cc:def:' + define for define in defines])
 
@@ -93,9 +96,10 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         output_is_complete=False,
     )
 
-    cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs)
+    cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, pkg_config_cflags)
     # TODO(pebers): handle includes and defines in _library_cmds as well.
-    pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs) if (deps or includes or defines) else None
+    pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags) if (deps or includes or defines) else None
+
     pkg = package_name()
     if len(srcs) > 1:
         # Compile all the sources separately, this is much faster for large numbers of files
@@ -197,8 +201,8 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
 
 
 def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None, test_only:bool&testonly=False,
-              compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], includes:list=[],
-              defines:list|dict=[], alwayslink:bool=False, _c=False, visibility:list=None, deps:list=[]):
+              compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[],
+              includes:list=[], defines:list|dict=[], alwayslink:bool=False, _c=False, visibility:list=None, deps:list=[]):
     """Generate a C or C++ object file from a single source.
 
     N.B. This is fairly low-level; for most use cases cc_library should be preferred.
@@ -218,7 +222,9 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker; these will not be used here but will be
                            picked up by a cc_binary or cc_test rule.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
+      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`. Again, the ldflags
+                              will be picked up by cc_binary or cc_test rules.
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
       includes (list): List of include directories to be added to the compiler's path.
       defines (list | dict): List of tokens to define in the preprocessor.
@@ -235,11 +241,12 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
     pkg = package_name()
     labels = (['cc:ld:' + flag for flag in linker_flags] +
               ['cc:pc:' + lib for lib in pkg_config_libs] +
+              ['cc:pcc:' + cflag for cflag in pkg_config_cflags] +
               ['cc:inc:{pkg}/{include}' for include in includes] +
               ['cc:def:' + define for define in defines])
     if alwayslink:
         labels.append('cc:al:{pkg}/{name}.a')
-    cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, archive=False)
+    cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, pkg_config_cflags, archive=False)
 
     return build_rule(
         name=name,
@@ -253,14 +260,15 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
         test_only=test_only,
         labels=labels,
         tools=tools,
-        pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs, archive=False)
+        pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags, archive=False)
                   if (deps or includes or defines) else None,
         needs_transitive_deps=True,
     )
 
 
-def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-                      deps:list=[], visibility:list=None, test_only:bool&testonly=False, pkg_config_libs:list=[], _c=False):
+def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[],
+                      linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None,
+                      test_only:bool&testonly=False, pkg_config_libs:list=[], pkg_config_cflags:list=[],_c=False):
     """Generates a C++ static library (.a).
 
     This is essentially just a collection of other cc_library rules into a single archive.
@@ -276,7 +284,8 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
       test_only (bool): If True, is only available to other test rules.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
     """
     provides = None
     if srcs:
@@ -289,6 +298,7 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
             deps = deps,
             test_only = test_only,
             pkg_config_libs = pkg_config_libs,
+            pkg_config_cflags = pkg_config_cflags,
             _c=_c,
         )
         deps += [lib_rule, f':_{name}#lib_hdrs']
@@ -317,7 +327,7 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
 
 def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_flags:list&cflags&copts=[],
                      linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, test_only:bool&testonly=False,
-                     pkg_config_libs:list=[], includes:list=[], _c=False):
+                     pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[], _c=False):
     """Generates a C++ shared object (.so) with its dependencies linked in.
 
     Args:
@@ -331,7 +341,8 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
       test_only (bool): If True, is only available to other test rules.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       includes (list): Include directories to be added to the compiler's lookup path.
     """
     if CONFIG.DEFAULT_LDFLAGS:
@@ -347,6 +358,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
             deps = deps,
             test_only = test_only,
             pkg_config_libs = pkg_config_libs,
+            pkg_config_cflags = pkg_config_cflags,
             includes = includes,
             _c=_c,
         )
@@ -355,7 +367,9 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
             'cc_hdrs': f':_{name}#lib_hdrs',
             'cc': ':' + name,
         }
-    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, shared=True)
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, pkg_config_cflags, shared=True)
+
+    log.warning(cmds['opt'])
     return build_rule(
         name=name,
         srcs={'srcs': srcs, 'hdrs': hdrs},
@@ -371,13 +385,14 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
         tools=tools,
         test_only=test_only,
         requires=['cc', 'cc_hdrs'],
-        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, shared=True) if deps else None,
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, pkg_config_cflags, shared=True)
+                  if deps else None,
     )
 
 
 def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compiler_flags:list&cflags&copts=[],
               linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, pkg_config_libs:list=[],
-              test_only:bool&testonly=False, static:bool=False, _c=False, linkstatic:bool=False):
+              pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False, linkstatic:bool=False):
     """Builds a binary from a collection of C++ rules.
 
     Args:
@@ -390,7 +405,8 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
       linker_flags (list): Flags to pass to the linker.
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       test_only (bool): If True, this rule can only be used by tests.
       static (bool): If True, the binary will be linked statically.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
@@ -402,7 +418,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     if static:
         linker_flags.append('-static')
-    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, pkg_config_cflags)
     if srcs:
         if static:
             compiler_flags.append('-static -static-libgcc')
@@ -413,6 +429,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
             private_hdrs=private_hdrs,
             deps=deps,
             pkg_config_libs=pkg_config_libs,
+            pkg_config_cflags=pkg_config_cflags,
             compiler_flags=compiler_flags,
             test_only=test_only,
             _c=_c,
@@ -430,14 +447,14 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
         output_is_complete=True,
         requires=['cc'],
         tools=tools,
-        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs),
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, pkg_config_cflags),
         test_only=test_only,
     )
 
 
 def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-            pkg_config_libs:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=[], flags:str='',
-            labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=[], size:str=None, timeout:int=0,
+            pkg_config_libs:list=[], pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=[],
+            flags:str='', labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=[], size:str=None, timeout:int=0,
             container:bool|dict=False, sandbox:bool=None, write_main:bool=not CONFIG.BAZEL_COMPATIBILITY,
             linkstatic:bool=False, _c=False):
     """Defines a C++ test using UnitTest++.
@@ -451,7 +468,8 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
       hdrs (list): Header files.
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       deps (list): Dependent rules.
       worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
       data (list): Runtime data files for this test.
@@ -482,7 +500,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             test_only=True,
         )
         srcs.append(main_rule)
-    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, pkg_config_cflags)
 
     if srcs:
         lib_rule = cc_library(
@@ -491,6 +509,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             hdrs=hdrs,
             deps=deps,
             pkg_config_libs=pkg_config_libs,
+            pkg_config_cflags=pkg_config_cflags,
             compiler_flags=compiler_flags,
             test_only=True,
             alwayslink=True,
@@ -526,7 +545,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         requires=['cc', 'cc_hdrs'],
         labels=labels,
         tools=tools,
-        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs),
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, pkg_config_cflags),
         flaky=flaky,
         test_outputs=test_outputs,
         test_timeout=timeout,
@@ -754,18 +773,28 @@ def _default_cflags(c, dbg):
         return CONFIG.DEFAULT_DBG_CPPFLAGS if dbg else CONFIG.DEFAULT_OPT_CPPFLAGS
 
 
-def _build_flags(compiler_flags:list, pkg_config_libs:list, defines=None, c=False, dbg=False):
+def _build_flags(compiler_flags:list, pkg_config_libs:list, pkg_config_cflags:list, defines=None, c=False, dbg=False):
     """Builds flags that we'll pass to the compiler invocation."""
     compiler_flags = [_default_cflags(c, dbg), '-fPIC'] + compiler_flags  # N.B. order is important!
     if defines:
         compiler_flags += ['-D' + define for define in defines]
-    pkg_config_cmd = ' '.join([f'`pkg-config --cflags {x}`' for x in pkg_config_libs])
+
+    pkg_config_list = pkg_config_libs or pkg_config_cflags or []
+    pkg_config_cmd = ' '.join([f'`pkg-config --cflags {x}`' for x in pkg_config_list])
+
     return ' '.join(compiler_flags) + ' ' + pkg_config_cmd
 
 
-def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, alwayslink='', c=False, dbg=False):
+def _binary_build_flags(linker_flags:list, pkg_config_libs:list, pkg_config_cflags:list, shared=False, alwayslink='', c=False, dbg=False):
     """Builds flags that we'll pass to the linker invocation."""
-    pkg_config_cmd = ' '.join([f'`pkg-config --libs {x}`' for x in pkg_config_libs])
+
+    if pkg_config_cflags:
+        pkg_config_cmd = ' '.join([f'`pkg-config --cflags {x}`' for x in pkg_config_cflags])
+    elif pkg_config_libs:
+        pkg_config_cmd = ' '.join([f'`pkg-config --libs {x}`' for x in pkg_config_libs])
+    else:
+        pkg_config_cmd = ' '
+
     objs = '`find . -name "*.o" -or -name "*.a" | sort`'
     linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
     if (not shared) and alwayslink:
@@ -788,10 +817,10 @@ def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, a
     return ' '.join([objs, build_id_flag, linker_flags, pkg_config_cmd])
 
 
-def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags='', archive=True):
+def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_flags='', archive=True):
     """Returns the commands needed for a cc_library rule."""
-    dbg_flags = _build_flags(compiler_flags, pkg_config_libs, c=c, dbg=True)
-    opt_flags = _build_flags(compiler_flags, pkg_config_libs, c=c)
+    dbg_flags = _build_flags(compiler_flags, pkg_config_libs, pkg_config_cflags, c=c, dbg=True)
+    opt_flags = _build_flags(compiler_flags, pkg_config_libs, pkg_config_cflags, c=c)
     cmd_template = '$TOOLS_CC -c -I . ${SRCS_SRCS} %s %s'
     if archive:
         cmd_template += ' && $TOOLS_AR rcs $OUT *.o'
@@ -807,10 +836,12 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, extra_flags='', archive=Tr
     }
 
 
-def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False, alwayslink=''):
+def _binary_cmds(c, linker_flags, pkg_config_libs=[], pkg_config_cflags=[], extra_flags='', shared=False, alwayslink=''):
     """Returns the commands needed for a cc_binary, cc_test or cc_shared_object rule."""
-    dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=True)
-    opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=False)
+    dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, pkg_config_cflags,
+                                    shared, alwayslink, c=c, dbg=True)
+    opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, pkg_config_cflags,
+                                    shared, alwayslink, c=c, dbg=False)
     cmds = {
         'dbg': f'$TOOL -o $OUT {dbg_flags} {extra_flags}',
         'opt': f'$TOOL -o $OUT {opt_flags} {extra_flags}',
@@ -821,34 +852,43 @@ def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False,
                   CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL]
 
 
-def _library_transitive_labels(c, compiler_flags, pkg_config_libs, archive=True):
+def _library_transitive_labels(c, compiler_flags, pkg_config_libs, pkg_config_cflags, archive=True):
     """Applies commands from transitive labels to a cc_library rule."""
     def apply_transitive_labels(name):
         labels = get_labels(name, 'cc:')
         flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
         flags.extend(['-D' + l[4:] for l in labels if l.startswith('def:')])
-        pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs])
+
+        if pkg_config_libs:
+            pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs])
+        elif pkg_config_cflags:
+            pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pcc:') and l[4:] not in pkg_config_cflags])
+
         if flags:  # Don't update if there aren't any relevant labels
-            cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, ' '.join(flags), archive=archive)
+            cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, ' '.join(flags), archive=archive)
             for k, v in cmds.items():
                 set_command(name, k, v)
     return apply_transitive_labels
 
 
-def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
+def _binary_transitive_labels(c, linker_flags, pkg_config_libs=[], pkg_config_cflags=[], shared=False):
     """Applies commands from transitive labels to a cc_binary, cc_test or cc_shared_object rule."""
     def apply_transitive_labels(name):
         labels = get_labels(name, 'cc:')
         linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
         flags = [linker_prefix + l[3:] for l in labels if l.startswith('ld:')]
-        flags.extend(['`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:')])
+        if pkg_config_cflags:
+            flags.extend(['`pkg-config --cflags %s`' % l[4:] for l in labels if l.startswith('pcc:')])
+        elif pkg_config_libs:
+            flags.extend(['`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:')])
+
         # ./ here because some weak linkers don't realise ./lib.a is the same file as lib.a
         # and report duplicate symbol errors as a result.
         alwayslink = ' '.join(['./' + l[3:] for l in labels if l.startswith('al:')])
         # Probably a little optimistic to check this (most binaries are likely to have *some*
         # kind of linker flags to apply), but we might as well.
         if flags or alwayslink:
-            cmds, _ = _binary_cmds(c, linker_flags, pkg_config_libs, ' '.join(flags), shared, alwayslink)
+            cmds, _ = _binary_cmds(c, linker_flags, pkg_config_libs, pkg_config_cflags, ' '.join(flags), shared, alwayslink)
             for k, v in cmds.items():
                 set_command(name, k, v)
     return apply_transitive_labels
