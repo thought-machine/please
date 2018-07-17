@@ -367,7 +367,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
             'cc_hdrs': f':_{name}#lib_hdrs',
             'cc': ':' + name,
         }
-    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, pkg_config_cflags, shared=True)
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, shared=True)
     return build_rule(
         name=name,
         srcs={'srcs': srcs, 'hdrs': hdrs},
@@ -383,8 +383,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
         tools=tools,
         test_only=test_only,
         requires=['cc', 'cc_hdrs'],
-        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, pkg_config_cflags, shared=True)
-                  if deps else None,
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, shared=True) if deps else None,
     )
 
 
@@ -416,7 +415,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
     if static:
         linker_flags.append('-static')
-    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, pkg_config_cflags)
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
     if srcs:
         if static:
             compiler_flags.append('-static -static-libgcc')
@@ -445,7 +444,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
         output_is_complete=True,
         requires=['cc'],
         tools=tools,
-        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, pkg_config_cflags),
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs),
         test_only=test_only,
     )
 
@@ -498,7 +497,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             test_only=True,
         )
         srcs.append(main_rule)
-    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, pkg_config_cflags)
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
 
     if srcs:
         lib_rule = cc_library(
@@ -543,7 +542,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         requires=['cc', 'cc_hdrs'],
         labels=labels,
         tools=tools,
-        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, pkg_config_cflags),
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs),
         flaky=flaky,
         test_outputs=test_outputs,
         test_timeout=timeout,
@@ -777,21 +776,14 @@ def _build_flags(compiler_flags:list, pkg_config_libs:list, pkg_config_cflags:li
     if defines:
         compiler_flags += ['-D' + define for define in defines]
 
-    pkg_config_list = pkg_config_libs or pkg_config_cflags or []
-    pkg_config_cmd = ' '.join([f'`pkg-config --cflags {x}`' for x in pkg_config_list])
+    pkg_config_cmd = ' '.join([f'`pkg-config --cflags {x}`' for x in pkg_config_cflags + pkg_config_libs])
 
     return ' '.join(compiler_flags) + ' ' + pkg_config_cmd
 
 
-def _binary_build_flags(linker_flags:list, pkg_config_libs:list, pkg_config_cflags:list, shared=False, alwayslink='', c=False, dbg=False):
+def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, alwayslink='', c=False, dbg=False):
     """Builds flags that we'll pass to the linker invocation."""
-
-    if pkg_config_cflags:
-        pkg_config_cmd = ' '.join([f'`pkg-config --cflags {x}`' for x in pkg_config_cflags])
-    elif pkg_config_libs:
-        pkg_config_cmd = ' '.join([f'`pkg-config --libs {x}`' for x in pkg_config_libs])
-    else:
-        pkg_config_cmd = ' '
+    pkg_config_cmd = ' '.join([f'`pkg-config --libs {x}`' for x in pkg_config_libs])
 
     objs = '`find . -name "*.o" -or -name "*.a" | sort`'
     linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
@@ -834,12 +826,10 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_f
     }
 
 
-def _binary_cmds(c, linker_flags, pkg_config_libs=[], pkg_config_cflags=[], extra_flags='', shared=False, alwayslink=''):
+def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False, alwayslink=''):
     """Returns the commands needed for a cc_binary, cc_test or cc_shared_object rule."""
-    dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, pkg_config_cflags,
-                                    shared, alwayslink, c=c, dbg=True)
-    opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, pkg_config_cflags,
-                                    shared, alwayslink, c=c, dbg=False)
+    dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=True)
+    opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=False)
     cmds = {
         'dbg': f'$TOOL -o $OUT {dbg_flags} {extra_flags}',
         'opt': f'$TOOL -o $OUT {opt_flags} {extra_flags}',
@@ -857,10 +847,8 @@ def _library_transitive_labels(c, compiler_flags, pkg_config_libs, pkg_config_cf
         flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
         flags.extend(['-D' + l[4:] for l in labels if l.startswith('def:')])
 
-        if pkg_config_libs:
-            pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs])
-        elif pkg_config_cflags:
-            pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pcc:') and l[4:] not in pkg_config_cflags])
+        pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs])
+        pkg_config_cflags.extend([l[4:] for l in labels if l.startswith('pcc:') and l[4:] not in pkg_config_cflags])
 
         if flags:  # Don't update if there aren't any relevant labels
             cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, ' '.join(flags), archive=archive)
@@ -869,16 +857,14 @@ def _library_transitive_labels(c, compiler_flags, pkg_config_libs, pkg_config_cf
     return apply_transitive_labels
 
 
-def _binary_transitive_labels(c, linker_flags, pkg_config_libs=[], pkg_config_cflags=[], shared=False):
+def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
     """Applies commands from transitive labels to a cc_binary, cc_test or cc_shared_object rule."""
     def apply_transitive_labels(name):
         labels = get_labels(name, 'cc:')
         linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
         flags = [linker_prefix + l[3:] for l in labels if l.startswith('ld:')]
-        if pkg_config_cflags:
-            flags.extend(['`pkg-config --cflags %s`' % l[4:] for l in labels if l.startswith('pcc:')])
-        elif pkg_config_libs:
-            flags.extend(['`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:')])
+
+        flags.extend(['`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:')])
 
         # ./ here because some weak linkers don't realise ./lib.a is the same file as lib.a
         # and report duplicate symbol errors as a result.
@@ -886,7 +872,7 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs=[], pkg_config_cf
         # Probably a little optimistic to check this (most binaries are likely to have *some*
         # kind of linker flags to apply), but we might as well.
         if flags or alwayslink:
-            cmds, _ = _binary_cmds(c, linker_flags, pkg_config_libs, pkg_config_cflags, ' '.join(flags), shared, alwayslink)
+            cmds, _ = _binary_cmds(c, linker_flags, pkg_config_libs, ' '.join(flags), shared, alwayslink)
             for k, v in cmds.items():
                 set_command(name, k, v)
     return apply_transitive_labels
