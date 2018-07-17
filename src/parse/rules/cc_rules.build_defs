@@ -368,8 +368,6 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
             'cc': ':' + name,
         }
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, pkg_config_cflags, shared=True)
-
-    log.warning(cmds['opt'])
     return build_rule(
         name=name,
         srcs={'srcs': srcs, 'hdrs': hdrs},
