@@ -249,7 +249,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
     labels = (['cc:ld:' + flag for flag in linker_flags] +
               ['cc:pc:' + lib for lib in pkg_config_libs] +
               ['cc:pcc:' + cflag for cflag in pkg_config_cflags] +
-              ['cc:inc:{pkg}/{include}' for include in includes] +
+              [f'cc:inc:{pkg}/{include}' for include in includes] +
               ['cc:def:' + define for define in defines])
     if alwayslink:
         labels.append('cc:al:{pkg}/{name}.a')
