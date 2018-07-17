@@ -12,7 +12,7 @@ that on every single cc_binary / cc_test that transitively depends on that libra
 _COVERAGE_FLAGS = ' -ftest-coverage -fprofile-arcs -fprofile-dir=.'
 # OSX's ld uses --all_load / --noall_load instead of --whole-archive.
 _WHOLE_ARCHIVE = '-all_load' if CONFIG.OS == 'darwin' else '--whole-archive'
-_NO_WHOLE_ARCHIVE = '-noall_load' if CONFIG.OS == 'darwin' else '--no-whole-archive'
+_NO_WHOLE_ARCHIVE = '-force_load' if CONFIG.OS == 'darwin' else '--no-whole-archive'
 
 
 def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:list=[],
