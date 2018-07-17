@@ -48,9 +48,6 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect.
       textual_hdrs (list): Also provided for Bazel compatibility. Effectively works the same as hdrs for now.
     """
-    # Make sure it is compatible with Mac systems, append additional linker_flags to the list
-    _append_mac_compatible_linker_flag(linker_flags, pkg_config_libs + pkg_config_cflags)
-
     # Bazel suggests passing nonexported header files in 'srcs'. We however treat
     # srcs as things to actually compile and must mark a distinction.
     if CONFIG.BAZEL_COMPATIBILITY:
@@ -238,9 +235,6 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
                          even if they don't directly reference them. This is useful for e.g. having
                          static members that register themselves at construction time.
     """
-    # Make sure it is compatible with Mac systems, append additional linker_flags to the list
-    _append_mac_compatible_linker_flag(linker_flags, pkg_config_libs + pkg_config_cflags)
-
     # Handle defines being passed as a dict, as a nicety for the user.
     if isinstance(defines, dict):
         defines = [k if v is None else r'%s=\"%s\"' % (k, v) for k, v in sorted(defines.items())]
@@ -294,9 +288,6 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
       pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
     """
-    # Make sure it is compatible with Mac systems, append additional linker_flags to the list
-    _append_mac_compatible_linker_flag(linker_flags, pkg_config_libs + pkg_config_cflags)
-
     provides = None
     if srcs:
         lib_rule = cc_library(
@@ -355,9 +346,6 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       includes (list): Include directories to be added to the compiler's lookup path.
     """
-    # Make sure it is compatible with Mac systems, append additional linker_flags to the list
-    _append_mac_compatible_linker_flag(linker_flags, pkg_config_libs + pkg_config_cflags)
-
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
 
@@ -423,9 +411,6 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
                          link roughly equivalently to their "mostly-static" mode.
     """
-    # Make sure it is compatible with Mac systems, append additional linker_flags to the list
-    _append_mac_compatible_linker_flag(linker_flags, pkg_config_libs + pkg_config_cflags)
-
     if CONFIG.BAZEL_COMPATIBILITY:
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
     if CONFIG.DEFAULT_LDFLAGS:
@@ -500,8 +485,6 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
                          link roughly equivalently to their "mostly-static" mode.
     """
-    # Make sure it is compatible with Mac systems, append additional linker_flags to the list
-    _append_mac_compatible_linker_flag(linker_flags, pkg_config_libs + pkg_config_cflags)
 
     if CONFIG.BAZEL_COMPATIBILITY:
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
@@ -896,18 +879,6 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
             for k, v in cmds.items():
                 set_command(name, k, v)
     return apply_transitive_labels
-
-
-def _append_mac_compatible_linker_flag(linker_flags:list, libs:list):
-    """
-    append '-undefined dynamic_lookup' to linker flag list if OS is mac and python is in pkg_config list
-
-    :param linker_flags: linker flag list
-    :param libs: pkg_config_libs or/and pkg_config_cflags
-    """
-    # Mac Compatible
-    if CONFIG.OS == 'darwin' and any([i for i in libs if 'python' in i]):
-        linker_flags.append("-bundle -undefined dynamic_lookup")
 
 
 if CONFIG.BAZEL_COMPATIBILITY:
