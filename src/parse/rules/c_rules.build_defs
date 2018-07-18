@@ -27,10 +27,9 @@ def c_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:l
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker; these will not be used here but will be
                            picked up by a c_binary or c_test rule.
-      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`. Again, the ldflags
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
-      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`. Again, the ldflags
-                              will be picked up by cc_binary or cc_test rules.
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`.
       includes (list): List of include directories to be added to the compiler's path.
       defines (list | dict): List of tokens to define in the preprocessor.
                              Alternatively can be a dict of name -> value to define, in which case

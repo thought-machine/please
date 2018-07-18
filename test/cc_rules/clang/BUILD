@@ -53,6 +53,7 @@ cc_shared_object(
     name = "so_test",
     srcs = ["so_test.cc"],
     pkg_config_cflags = ["python3"],
+    linker_flags = ["-bundle -undefined dynamic_lookup"] if CONFIG.OS == 'darwin' else [],
     deps = [
         ":embedded_files",
     ],
