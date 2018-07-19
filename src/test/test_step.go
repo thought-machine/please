@@ -49,6 +49,17 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	cachedCoverageFile := path.Join(target.OutDir(), coverageFileName)
 	needCoverage := state.NeedCoverage && !target.NoTestOutput
 
+	// If the user passed --shell then just prepare the directory.
+	if state.PrepareShell {
+		if err := prepareTestDir(state.Graph, target); err != nil {
+			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to prepare test directory")
+		} else {
+			target.SetState(core.Stopped)
+			state.LogBuildResult(tid, label, core.TargetTestStopped, "Test stopped")
+		}
+		return
+	}
+
 	cachedTestResults := func() core.TestSuite {
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)

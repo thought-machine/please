@@ -658,6 +658,7 @@ const (
 	TargetCached
 	TargetBuildFailed
 	TargetTesting
+	TargetTestStopped
 	TargetTested
 	TargetTestFailed
 )
@@ -669,7 +670,7 @@ func (s BuildResultStatus) Category() string {
 		return "Parse"
 	case TargetBuilding, TargetBuildStopped, TargetBuilt, TargetBuildFailed:
 		return "Build"
-	case TargetTesting, TargetTested, TargetTestFailed:
+	case TargetTesting, TargetTestStopped, TargetTested, TargetTestFailed:
 		return "Test"
 	default:
 		return "Other"

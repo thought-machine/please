@@ -118,6 +118,7 @@ var opts struct {
 		Debug           bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed          bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Detailed        bool         `long:"detailed" description:"Prints more detailed output after tests."`
+		Shell           bool         `long:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -139,6 +140,7 @@ var opts struct {
 		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed              bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Detailed            bool         `long:"detailed" description:"Prints more detailed output after tests."`
+		Shell               bool         `long:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -705,7 +707,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedTests = shouldTest
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell
-	state.PrepareShell = opts.Build.Shell
+	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
