@@ -108,7 +108,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	for _, label := range state.ExpandOriginalTargets() {
 		if target := state.Graph.Target(label); target == nil {
 			log.Fatalf("Target %s doesn't exist in build graph", label)
-		} else if (state.NeedHashesOnly || state.PrepareOnly) && target.State() == core.Stopped {
+		} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
 			// Do nothing, we will output about this shortly.
 		} else if shouldBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
 			// N.B. Currently targets that are added post-build are excluded here, because in some legit cases this
@@ -118,12 +118,12 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 		}
 	}
 	if state.Verbosity > 0 && shouldBuild {
-		if shouldTest { // Got to the test phase, report their results.
+		if state.PrepareOnly || state.PrepareShell {
+			printTempDirs(state, duration)
+		} else if shouldTest { // Got to the test phase, report their results.
 			printTestResults(state, failedTargets, duration, detailedTests)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
-		} else if state.PrepareOnly {
-			printTempDirs(state, duration)
 		} else if !shouldRun { // Must be plz build or similar, report build outputs.
 			printBuildResults(state, duration, showStatus)
 		}
@@ -231,7 +231,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 						Executions: []core.TestExecution{
 							{
 								Error: &core.TestResultFailure{
-									Type: "FailedToRun",
+									Type:    "FailedToRun",
 									Message: "Failed to run test",
 								},
 							},
@@ -483,9 +483,16 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 	fmt.Printf("Temp directories prepared, total time %s:\n", duration)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
-		cmd := build.ReplaceSequences(state, target, target.GetCommand(state))
+		cmd := target.GetCommand(state)
+		dir := target.TmpDir()
 		env := core.BuildEnvironment(state, target)
-		fmt.Printf("  %s: %s\n", label, target.TmpDir())
+		if state.NeedTests {
+			cmd = target.GetTestCommand(state)
+			dir = path.Join(core.RepoRoot, target.TestDir())
+			env = core.TestEnvironment(state, target, dir)
+		}
+		cmd = build.ReplaceSequences(state, target, cmd)
+		fmt.Printf("  %s: %s\n", label, dir)
 		fmt.Printf("    Command: %s\n", cmd)
 		if !state.PrepareShell {
 			// This isn't very useful if we're opening a shell (since then the vars will be set anyway)
@@ -493,7 +500,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 		} else {
 			fmt.Printf("\n")
 			cmd := exec.Command("bash", "--noprofile", "--norc", "-o", "pipefail") // plz requires bash, some commands contain bashisms.
-			cmd.Dir = target.TmpDir()
+			cmd.Dir = dir
 			cmd.Env = env
 			cmd.Stdin = os.Stdin
 			cmd.Stdout = os.Stdout
