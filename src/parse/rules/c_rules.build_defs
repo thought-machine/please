@@ -10,7 +10,7 @@ you must pay attention to interoperability when needed (e.g. 'extern "C"' and so
 
 def c_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:list=[],
               visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
-              linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[],
+              linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[],
               includes:list=[], defines:list|dict=[], alwayslink:bool=False):
     """Generate a C library target.
 
@@ -28,7 +28,8 @@ def c_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:l
       linker_flags (list): Flags to pass to the linker; these will not be used here but will be
                            picked up by a c_binary or c_test rule.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
-                              will be picked up by c_binary or c_test rules.
+                              will be picked up by cc_binary or cc_test rules.
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`.
       includes (list): List of include directories to be added to the compiler's path.
       defines (list | dict): List of tokens to define in the preprocessor.
                              Alternatively can be a dict of name -> value to define, in which case
@@ -48,6 +49,7 @@ def c_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:l
         compiler_flags = compiler_flags,
         linker_flags = linker_flags,
         pkg_config_libs = pkg_config_libs,
+        pkg_config_cflags=pkg_config_cflags,
         includes = includes,
         defines = defines,
         alwayslink = alwayslink,
@@ -56,8 +58,9 @@ def c_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:l
 
 
 def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None, test_only:bool&testonly=False,
-             compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], includes:list=[],
-             defines:list|dict=[], alwayslink:bool=False, visibility:list=None, deps:list=[]):
+             compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
+             pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[], defines:list|dict=[],
+             alwayslink:bool=False, visibility:list=None, deps:list=[]):
     """Generate a C object file from a single source.
 
     N.B. This is fairly low-level; for most use cases c_library should be preferred.
@@ -78,7 +81,9 @@ def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None
       linker_flags (list): Flags to pass to the linker; these will not be used here but will be
                            picked up by a c_binary or c_test rule.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
-                              will be picked up by c_binary or c_test rules.
+                              will be picked up by cc_binary or cc_test rules.
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`. Again, the ldflags
+                              will be picked up by cc_binary or cc_test rules.
       includes (list): List of include directories to be added to the compiler's path.
       defines (list | dict): List of tokens to define in the preprocessor.
                              Alternatively can be a dict of name -> value to define, in which case
@@ -99,6 +104,7 @@ def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None
         compiler_flags = compiler_flags,
         linker_flags = linker_flags,
         pkg_config_libs = pkg_config_libs,
+        pkg_config_cflags=pkg_config_cflags,
         includes = includes,
         defines = defines,
         alwayslink = alwayslink,
@@ -107,7 +113,7 @@ def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None
 
 
 def c_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-                     deps:list=[], visibility:list=None, test_only:bool&testonly=False, pkg_config_libs:list=[]):
+                     deps:list=[], visibility:list=None, test_only:bool&testonly=False, pkg_config_libs:list=[], pkg_config_cflags:list=[]):
     """Generates a C static library (.a).
 
     This is essentially just a collection of other c_library rules into a single archive.
@@ -123,7 +129,9 @@ def c_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&c
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
       test_only (bool): If True, is only available to other test rules.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
+
     """
     return cc_static_library(
         name = name,
@@ -135,13 +143,14 @@ def c_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&c
         compiler_flags = compiler_flags,
         linker_flags = linker_flags,
         pkg_config_libs = pkg_config_libs,
+        pkg_config_cflags = pkg_config_cflags,
         _c = True,
     )
 
 
 def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_flags:list&cflags&copts=[],
                     linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, test_only:bool&testonly=False,
-                    pkg_config_libs:list=[], includes:list=[]):
+                    pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[]):
     """Generates a C shared object (.so) with its dependencies linked in.
 
     Args:
@@ -155,7 +164,8 @@ def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_f
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
       test_only (bool): If True, is only available to other test rules.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       includes (list): Include directories to be added to the compiler's lookup path.
     """
     return cc_shared_object(
@@ -169,6 +179,7 @@ def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_f
         compiler_flags = compiler_flags,
         linker_flags = linker_flags,
         pkg_config_libs = pkg_config_libs,
+        pkg_config_cflags = pkg_config_cflags,
         includes = includes,
         _c = True,
     )
@@ -176,7 +187,7 @@ def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_f
 
 def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compiler_flags:list&cflags&copts=[],
              linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, pkg_config_libs:list=[],
-             test_only:bool&testonly=False, static:bool=False):
+             pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False):
     """Builds a binary from a collection of C rules.
 
     Args:
@@ -189,7 +200,8 @@ def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compile
       linker_flags (list): Flags to pass to the linker.
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       test_only (bool): If True, this rule can only be used by tests.
       static (bool): If True, the binary will be linked statically.
     """
@@ -204,13 +216,14 @@ def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compile
         compiler_flags = compiler_flags,
         linker_flags = linker_flags,
         pkg_config_libs = pkg_config_libs,
+        pkg_config_cflags = pkg_config_cflags,
         static = static,
         _c = True,
     )
 
 
 def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-           pkg_config_libs:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=None, flags:str='',
+           pkg_config_libs:list=[], pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=None, flags:str='',
            labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=None, size:str=None, timeout:int=0,
            container:bool|dict=False, sandbox:bool=None):
     """Defines a C test target.
@@ -224,7 +237,8 @@ def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copt
       hdrs (list): Header files.
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker.
-      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config.
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       deps (list): Dependent rules.
       data (list): Runtime data files for this test.
       visibility (list): Visibility declaration for this rule.
@@ -247,6 +261,7 @@ def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copt
         compiler_flags = compiler_flags,
         linker_flags = linker_flags,
         pkg_config_libs = pkg_config_libs,
+        pkg_config_cflags = pkg_config_cflags,
         data = data,
         flags = flags,
         labels = labels,
