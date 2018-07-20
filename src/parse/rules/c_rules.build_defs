@@ -80,7 +80,7 @@ def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker; these will not be used here but will be
                            picked up by a c_binary or c_test rule.
-      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`. Again, the ldflags
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
@@ -129,7 +129,7 @@ def c_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&c
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
       test_only (bool): If True, is only available to other test rules.
-      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
 
     """
@@ -164,7 +164,7 @@ def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_f
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
       test_only (bool): If True, is only available to other test rules.
-      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       includes (list): Include directories to be added to the compiler's lookup path.
     """
@@ -200,7 +200,7 @@ def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compile
       linker_flags (list): Flags to pass to the linker.
       deps (list): Dependent rules.
       visibility (list): Visibility declaration for this rule.
-      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       test_only (bool): If True, this rule can only be used by tests.
       static (bool): If True, the binary will be linked statically.
@@ -237,7 +237,7 @@ def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copt
       hdrs (list): Header files.
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker.
-      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
+      pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       deps (list): Dependent rules.
       data (list): Runtime data files for this test.
