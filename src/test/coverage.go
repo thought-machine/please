@@ -135,10 +135,13 @@ func countLines(path string) int {
 // WriteCoverageToFileOrDie writes the collected coverage data to a file in JSON format. Dies on failure.
 func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string) {
 	out := jsonCoverage{Tests: map[string]map[string]string{}}
+	allowedFiles := coverage.OrderedFiles()
+
 	for label, coverage := range coverage.Tests {
-		out.Tests[label.String()] = convertCoverage(coverage)
+		out.Tests[label.String()] = convertCoverage(coverage, allowedFiles)
 	}
-	out.Files = convertCoverage(coverage.Files)
+
+	out.Files = convertCoverage(coverage.Files, allowedFiles)
 	out.Stats = getStats(coverage)
 	if b, err := json.MarshalIndent(out, "", "    "); err != nil {
 		log.Fatalf("Failed to encode json: %s", err)
@@ -189,9 +192,12 @@ func getStats(coverage core.TestCoverage) stats {
 	return stats
 }
 
-func convertCoverage(in map[string][]core.LineCoverage) map[string]string {
+func convertCoverage(in map[string][]core.LineCoverage, allowedFiles []string) map[string]string {
 	ret := map[string]string{}
 	for k, v := range in {
+		if !shouldInclude(k, allowedFiles) {
+			continue
+		}
 		ret[k] = core.TestCoverageString(v)
 	}
 	return ret

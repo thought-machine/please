@@ -48,6 +48,7 @@ func parseXMLLines(lines []xmlCoverageLine) []core.LineCoverage {
 func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) []byte {
 	linesValid := 0
 	linesCovered := 0
+	validFiles := coverage.OrderedFiles()
 
 	// get the string representative of sources
 	var sourcesAsStr []string
@@ -64,6 +65,10 @@ func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 		var classes []Class
 		classLineRateTotal := float32(0)
 		for className, lineCover := range coverage {
+			// Do not include files in coverage report if its not valid
+			if !shouldInclude(className, validFiles) {
+				continue
+			}
 
 			lines, covered, total := GetLineCoverageInfo(lineCover)
 			classLineRate := float32(covered) / float32(total)
@@ -79,8 +84,10 @@ func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 
 		pkgLineRate := float32(classLineRateTotal) / float32(len(classes))
 
-		pkg := Package{Name:packageName, Classes:classes, LineRate:formatFloatPrecision(pkgLineRate, 4)}
-		packages = append(packages, pkg)
+		if len(classes) != 0 {
+			pkg := Package{Name:packageName, Classes:classes, LineRate:formatFloatPrecision(pkgLineRate, 4)}
+			packages = append(packages, pkg)
+		}
 	}
 
 	topLevelLineRate := float32(linesCovered) / float32(linesValid)
@@ -98,6 +105,16 @@ func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 	}
 	covReport := []byte(xml.Header + string(xmlBytes))
 	return covReport
+}
+
+func shouldInclude(filename string, ValidFile []string) bool {
+	for _, f := range ValidFile {
+		if filename == f {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Get the line coverage info, returns: list of lines covered, num of covered lines, and total valid lines
