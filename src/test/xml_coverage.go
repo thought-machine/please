@@ -190,7 +190,7 @@ type Coverage struct {
 	Complexity      float32   `xml:"complexity,attr"`
 	Version         string    `xml:"version,attr"`
 	Timestamp       int64     `xml:"timestamp,attr"`
-	Sources         []string   `xml:"sources>source"`
+	Sources         []string  `xml:"sources>source"`
 	Packages        []Package `xml:"packages>package"`
 }
 
