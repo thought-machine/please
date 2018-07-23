@@ -155,8 +155,8 @@ func appendFailure(test jUnitXMLTest, results *core.TestCase, failure jUnitXMLFa
 			Traceback: failure.Traceback,
 		},
 		Duration: &d,
-		Stdout: test.Stdout,
-		Stderr: test.Stderr,
+		Stdout:   test.Stdout,
+		Stderr:   test.Stderr,
 	})
 }
 
@@ -169,8 +169,8 @@ func appendFlakyFailure(test jUnitXMLTest, results *core.TestCase, flake jUnitXM
 			Traceback: flake.Traceback,
 		},
 		Duration: &d,
-		Stdout: test.Stdout,
-		Stderr: test.Stderr,
+		Stdout:   test.Stdout,
+		Stderr:   test.Stderr,
 	})
 }
 
@@ -195,8 +195,8 @@ func appendRerunFailure(test jUnitXMLTest, results *core.TestCase, flake jUnitXM
 			Traceback: flake.Traceback,
 		},
 		Duration: &d,
-		Stdout: test.Stdout,
-		Stderr: test.Stderr,
+		Stdout:   test.Stdout,
+		Stderr:   test.Stderr,
 	})
 }
 
@@ -249,7 +249,7 @@ type jUnitXMLTestSuites struct {
 	Name     string `xml:"name,attr,omitempty"`
 	Skipped  uint   `xml:"skipped,attr,omitempty"`
 	Tests    uint   `xml:"tests,attr,omitempty"`
-	Timed           `xml:"time,attr,omitempty"`
+	Timed    `xml:"time,attr,omitempty"`
 
 	TestSuites []jUnitXMLTestSuite `xml:"testsuite,omitempty"`
 
@@ -265,7 +265,7 @@ type jUnitXMLTestSuite struct {
 	HostName  string `xml:"hostname,attr,omitempty"`
 	Skipped   int    `xml:"skipped,attr,omitempty"`
 	Package   string `xml:"package,attr,omitempty"`
-	Timed            `xml:"time,attr,omitempty"`
+	Timed     `xml:"time,attr,omitempty"`
 	Timestamp string `xml:"timestamp,attr,omitempty"`
 
 	Properties jUnitXMLProperties `xml:"properties,omitempty"`
@@ -282,7 +282,7 @@ type jUnitXMLTest struct {
 	Assertions uint   `xml:"assertions,attr,omitempty"`
 	ClassName  string `xml:"classname,attr,omitempty"`
 	Status     string `xml:"status,attr,omitempty"`
-	Timed             `xml:"time,attr,omitempty"`
+	Timed      `xml:"time,attr,omitempty"`
 
 	Error        *jUnitXMLError         `xml:"error,omitempty"`
 	FlakyError   []jUnitXMLFlaky        `xml:"flakyError,omitempty"`
@@ -338,7 +338,7 @@ type jUnitXMLRerunError struct {
 
 type jUnitXMLRerunFailure struct {
 	Message string `xml:"message,attr,omitempty"`
-	Timed          `xml:"time,attr"`
+	Timed   `xml:"time,attr"`
 	Type    string `xml:"type,attr"`
 
 	Traceback string `xml:",chardata"`
@@ -365,8 +365,8 @@ func (j jUnitXMLTest) WasSuccessful() bool {
 }
 
 type unitTestXMLTest struct {
-	Suite   string `xml:"suite,attr"`
-	Name    string `xml:"name,attr"`
+	Suite   string  `xml:"suite,attr"`
+	Name    string  `xml:"name,attr"`
 	Elapsed float64 `xml:"elapsed,attr"`
 
 	Failure *unitTestXMLFailure `xml:"failure,omitempty"`
@@ -383,7 +383,6 @@ func (uxmlTest *unitTestXMLTest) toJUnitXMLTest() jUnitXMLTest {
 		Name:      uxmlTest.Name,
 		ClassName: uxmlTest.Suite,
 		Timed:     Timed{uxmlTest.Elapsed},
-
 		Failure:   failure,
 	}
 }
@@ -545,7 +544,7 @@ func toXmlTestCase(result core.TestCase) jUnitXMLTest {
 						Type:      execution.Failure.Type,
 					})
 				}
-				if !setDuration {
+				if !setDuration && execution.Duration != nil {
 					testcase.Time = execution.Duration.Seconds()
 					setDuration = true
 				}
