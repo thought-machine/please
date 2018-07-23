@@ -43,7 +43,7 @@ func parseXMLLines(lines []xmlCoverageLine) []core.LineCoverage {
 }
 
 // Covert the Coverage result to XML bytes, ready to be write to file
-func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) []byte {
+func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) []byte {
 	linesValid := 0
 	linesCovered := 0
 	validFiles := coverage.OrderedFiles()
@@ -55,12 +55,12 @@ func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 	}
 
 	// Get the list of packages for <package> tag in the coverage xml file
-	var packages []Package
+	var packages []pkg
 	for label, coverage := range coverage.Tests {
 		packageName := strings.Replace(label.String(), ":", "/", -1)
 
 		// Get the list of classes for <class> tag in the coverage xml file
-		var classes []Class
+		var classes []class
 		classLineRateTotal := 0.0
 		for className, lineCover := range coverage {
 			// Do not include files in coverage report if its not valid
@@ -68,10 +68,10 @@ func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 				continue
 			}
 
-			lines, covered, total := GetLineCoverageInfo(lineCover)
+			lines, covered, total := getLineCoverageInfo(lineCover)
 			classLineRate := float64(covered) / float64(total)
 
-			cls := Class{Name: className, Filename: className,
+			cls := class{Name: className, Filename: className,
 				Lines: lines, LineRate: formatFloatPrecision(classLineRate, 4)}
 
 			classes = append(classes, cls)
@@ -83,7 +83,7 @@ func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 		pkgLineRate := float64(classLineRateTotal) / float64(len(classes))
 
 		if len(classes) != 0 {
-			pkg := Package{Name: packageName, Classes: classes, LineRate: formatFloatPrecision(pkgLineRate, 4)}
+			pkg := pkg{Name: packageName, Classes: classes, LineRate: formatFloatPrecision(pkgLineRate, 4)}
 			packages = append(packages, pkg)
 		}
 	}
@@ -91,12 +91,12 @@ func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 	topLevelLineRate := float64(linesCovered) / float64(linesValid)
 
 	// Create the coverage object based on the data collected
-	coverageObj := Coverage{Packages: packages, LineRate: formatFloatPrecision(topLevelLineRate, 4),
+	coverageObj := coverageType{Packages: packages, LineRate: formatFloatPrecision(topLevelLineRate, 4),
 		LinesCovered: int(linesCovered), LinesValid: int(linesValid),
 		Timestamp: int(time.Now().UnixNano()) / int(time.Millisecond),
 		Sources:   sourcesAsStr}
 
-	// Parse struct to xml bytes
+	// Serialise struct to xml bytes
 	xmlBytes, err := xml.MarshalIndent(coverageObj, "", "	")
 	if err != nil {
 		log.Fatalf("Failed to parse to xml: %s", err)
@@ -107,19 +107,19 @@ func CoverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 
 
 // Get the line coverage info, returns: list of lines covered, num of covered lines, and total valid lines
-func GetLineCoverageInfo(lineCover []core.LineCoverage) ([]Line, int, int) {
-	var lines []Line
+func getLineCoverageInfo(lineCover []core.LineCoverage) ([]line, int, int) {
+	var lines []line
 	covered := 0
 	total := 0
 
 	for index, status := range lineCover {
 		if status == core.Covered {
-			line := Line{Hits: 1, Number: index}
+			line := line{Hits: 1, Number: index}
 			lines = append(lines, line)
 			covered += 1
 			total += 1
 		} else if status == core.Uncovered {
-			line := Line{Hits: 0, Number: index}
+			line := line{Hits: 0, Number: index}
 			lines = append(lines, line)
 			total += 1
 		}
@@ -161,7 +161,7 @@ type xmlCoverageLine struct {
 }
 
 // Coverage struct for writing to xml file
-type Coverage struct {
+type coverageType struct {
 	XMLName         xml.Name  `xml:"coverage"`
 	LineRate        float64   `xml:"line-rate,attr"`
 	BranchRate      float64   `xml:"branch-rate,attr"`
@@ -173,41 +173,41 @@ type Coverage struct {
 	Version         string    `xml:"version,attr"`
 	Timestamp       int       `xml:"timestamp,attr"`
 	Sources         []string  `xml:"sources>source"`
-	Packages        []Package `xml:"packages>package"`
+	Packages        []pkg `xml:"packages>package"`
 }
 
-type Package struct {
+type pkg struct {
 	Name       string  `xml:"name,attr"`
 	LineRate   float64 `xml:"line-rate,attr"`
 	BranchRate float64 `xml:"branch-rate,attr"`
 	Complexity float64 `xml:"complexity,attr"`
-	Classes    []Class `xml:"classes>class"`
+	Classes    []class `xml:"classes>class"`
 	LineCount  int     `xml:"line-count,attr"`
 	LineHits   int     `xml:"line-hits,attr"`
 }
 
-type Class struct {
+type class struct {
 	Name       string   `xml:"name,attr"`
 	Filename   string   `xml:"filename,attr"`
 	LineRate   float64  `xml:"line-rate,attr"`
 	BranchRate float64  `xml:"branch-rate,attr"`
 	Complexity float64  `xml:"complexity,attr"`
-	Methods    []Method `xml:"methods>method"`
-	Lines      []Line   `xml:"lines>line"`
+	Methods    []method `xml:"methods>method"`
+	Lines      []line   `xml:"lines>line"`
 }
 
-type Method struct {
+type method struct {
 	Name       string  `xml:"name,attr"`
 	Signature  string  `xml:"signature,attr"`
 	LineRate   float64 `xml:"line-rate,attr"`
 	BranchRate float64 `xml:"branch-rate,attr"`
 	Complexity float64 `xml:"complexity,attr"`
-	Lines      []Line  `xml:"lines>line"`
+	Lines      []line  `xml:"lines>line"`
 	LineCount  int     `xml:"line-count,attr"`
 	LineHits   int     `xml:"line-hits,attr"`
 }
 
-type Line struct {
+type line struct {
 	Number int   `xml:"number,attr"`
 	Hits   int   `xml:"hits,attr"`
 }

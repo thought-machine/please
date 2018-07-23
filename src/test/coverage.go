@@ -153,7 +153,7 @@ func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string) {
 
 // WriteXMLCoverageToFileOrDie writes the collected coverage data to a file in XML format. Dies on failure.
 func WriteXMLCoverageToFileOrDie(sources []core.BuildLabel, coverage core.TestCoverage, filename string) {
-	data := CoverageResultToXML(sources, coverage)
+	data := coverageResultToXML(sources, coverage)
 
 	if err := ioutil.WriteFile(filename, data, 0644); err != nil {
 		log.Fatalf("Failed to write coverage results to %s: %s", filename, err)
