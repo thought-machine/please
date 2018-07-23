@@ -338,7 +338,7 @@ type jUnitXMLRerunError struct {
 
 type jUnitXMLRerunFailure struct {
 	Message string `xml:"message,attr,omitempty"`
-	Timed   string `xml:"time,attr"`
+	Timed   `xml:"time,attr"`
 	Type    string `xml:"type,attr"`
 
 	Traceback string `xml:",chardata"`
