@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//src/build",
         "//src/core",
+        "//src/cli",
         "//src/fs",
         "//src/metrics",
         "//src/utils",

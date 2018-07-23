@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"core"
+	"cli"
 )
 
 // Parses test coverage for a single target from its output file.
@@ -195,10 +196,9 @@ func getStats(coverage core.TestCoverage) stats {
 func convertCoverage(in map[string][]core.LineCoverage, allowedFiles []string) map[string]string {
 	ret := map[string]string{}
 	for k, v := range in {
-		if !shouldInclude(k, allowedFiles) {
-			continue
+		if cli.ContainsString(k, allowedFiles) {
+			ret[k] = core.TestCoverageString(v)
 		}
-		ret[k] = core.TestCoverageString(v)
 	}
 	return ret
 }
