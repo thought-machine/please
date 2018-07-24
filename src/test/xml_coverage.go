@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	"math"
+	"fmt"
 )
 
 func parseXMLCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte) error {
@@ -51,7 +52,7 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 	// get the string representative of sources
 	var sourcesAsStr []string
 	for _, source := range sources {
-		sourcesAsStr = append(sourcesAsStr, source.PackageName+":"+source.Name)
+		sourcesAsStr = append(sourcesAsStr, source.String())
 	}
 
 	// Get the list of packages for <package> tag in the coverage xml file
