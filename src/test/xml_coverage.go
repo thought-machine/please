@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 	"math"
-	"fmt"
 )
 
 func parseXMLCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte) error {
