@@ -2,10 +2,10 @@ package core
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
-	"fmt"
 )
 
 // TestSuites describes a collection of test results for a set of targets.
@@ -71,7 +71,7 @@ func (testSuite TestSuite) Passes() int {
 	passes := 0
 
 	for _, result := range testSuite.TestCases {
-		if len(result.Failures()) == 0 && len(result.Errors()) == 0  && result.Skip() == nil {
+		if len(result.Failures()) == 0 && len(result.Errors()) == 0 && result.Skip() == nil {
 			passes++
 		}
 	}
@@ -122,7 +122,7 @@ func (testSuite *TestSuite) Skips() int {
 
 // Add puts test cases together if they have the same name and classname, allowing callers to treat
 // multiple test cases as if they were merely multiple executions of the same test.
-func (testSuite *TestSuite) Add(cases ... TestCase) {
+func (testSuite *TestSuite) Add(cases ...TestCase) {
 	for _, testCase := range cases {
 		idx := findMatchingTestCase(&testCase, &testSuite.TestCases)
 
