@@ -570,3 +570,23 @@ func (config *Configuration) Completions(prefix string) []flags.Completion {
 	}
 	return ret
 }
+
+// UpdateArgsWithAliases applies the aliases in this config to the given set of arguments.
+func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
+	for idx, arg := range args[1:] {
+		// Please should not touch anything that comes after `--`
+		if arg == "--" {
+			break
+		}
+		for k, v := range config.Aliases {
+			if arg == k {
+				// We could insert every token in v into os.Args at this point and then we could have
+				// aliases defined in terms of other aliases but that seems rather like overkill so just
+				// stick the replacement in wholesale instead.
+				// Do not ask about the inner append and the empty slice.
+				return append(append(append([]string{}, args[:idx+1]...), strings.Fields(v)...), args[idx+2:]...)
+			}
+		}
+	}
+	return args
+}

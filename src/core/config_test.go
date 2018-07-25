@@ -262,3 +262,21 @@ func xos() string {
 	}
 	return runtime.GOOS
 }
+
+func TestUpdateArgsWithAliases(t *testing.T) {
+	c := DefaultConfiguration()
+	c.Aliases["deploy"] = "run //deploy:deployer --"
+	c.Aliases["mytool"] = "run //mytool:tool --"
+
+	args := c.UpdateArgsWithAliases([]string{"plz", "run", "//src/tools:tool"})
+	assert.EqualValues(t, []string{"plz", "run", "//src/tools:tool"}, args)
+
+	args = c.UpdateArgsWithAliases([]string{"plz", "deploy", "something"})
+	assert.EqualValues(t, []string{"plz", "run", "//deploy:deployer", "--", "something"}, args)
+
+	args = c.UpdateArgsWithAliases([]string{"plz", "mytool"})
+	assert.EqualValues(t, []string{"plz", "run", "//mytool:tool", "--"}, args)
+
+	args = c.UpdateArgsWithAliases([]string{"plz", "mytool", "deploy", "something"})
+	assert.EqualValues(t, []string{"plz", "run", "//mytool:tool", "--", "deploy", "something"}, args)
+}

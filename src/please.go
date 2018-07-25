@@ -136,7 +136,7 @@ var opts struct {
 		TestResultsFile     cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		SurefireDir         cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
 		CoverageResultsFile cli.Filepath `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
-		CoverageXMLReport	cli.Filepath `long:"coverage_xml_report" default:"plz-out/log/coverage.xml" description:"XML File to write combined coverage results to."`
+		CoverageXMLReport   cli.Filepath `long:"coverage_xml_report" default:"plz-out/log/coverage.xml" description:"XML File to write combined coverage results to."`
 		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed              bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
@@ -952,22 +952,8 @@ func main() {
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
 	if flagsErr != nil || len(extraArgs) > 0 {
-		for idx, arg := range os.Args[1:] {
-			// Please should not touch anything that comes after `--`
-			if arg == "--" {
-				break
-			}
-			for k, v := range config.Aliases {
-				if arg == k {
-					// We could insert every token in v into os.Args at this point and then we could have
-					// aliases defined in terms of other aliases but that seems rather like overkill so just
-					// stick the replacement in wholesale instead.
-					os.Args[idx+1] = v
-				}
-			}
-		}
-		argv := strings.Join(os.Args[1:], " ")
-		command = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, strings.Fields(os.Args[0]+" "+argv))
+		args := config.UpdateArgsWithAliases(os.Args)
+		command = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, args)
 	}
 
 	if opts.ProfilePort != 0 {
