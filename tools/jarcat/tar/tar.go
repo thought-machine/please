@@ -67,6 +67,8 @@ func write(w io.Writer, output string, srcs []string, prefix string) error {
 			// Strip user/group ids.
 			hdr.Uid = 0
 			hdr.Gid = 0
+			hdr.Uname = "nobody"
+			hdr.Gname = "nobody"
 			// Setting the user/group write bits helps consistency of output.
 			hdr.Mode |= 0220
 			if err := tw.WriteHeader(hdr); err != nil {
