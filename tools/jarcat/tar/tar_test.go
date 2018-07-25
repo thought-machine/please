@@ -35,8 +35,10 @@ func TestNoCompression(t *testing.T) {
 		// We don't really care as long as they're always the same.
 		assert.EqualValues(t, zeroTime, h.AccessTime)
 		assert.EqualValues(t, zeroTime, h.ChangeTime)
-		assert.EqualValues(t, 0, h.Uid)
-		assert.EqualValues(t, 0, h.Gid)
+		assert.EqualValues(t, nobody, h.Uid)
+		assert.EqualValues(t, nobody, h.Gid)
+		assert.EqualValues(t, "nobody", h.Uname)
+		assert.EqualValues(t, "nobody", h.Gname)
 	}
 }
 
