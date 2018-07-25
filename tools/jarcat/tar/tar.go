@@ -18,6 +18,9 @@ import (
 // mtime is the time we attach for the modification time of all files.
 var mtime = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 
+// nobody is the usual uid / gid of the 'nobody' user.
+const nobody = 65534
+
 // Write writes a tarball to output with all the files found in inputDir.
 // If prefix is given the files are all placed into a single directory with that name.
 // If compress is true the output will be gzip-compressed.
@@ -65,8 +68,8 @@ func write(w io.Writer, output string, srcs []string, prefix string) error {
 			hdr.AccessTime = mtime
 			hdr.ChangeTime = mtime
 			// Strip user/group ids.
-			hdr.Uid = 0
-			hdr.Gid = 0
+			hdr.Uid = nobody
+			hdr.Gid = nobody
 			hdr.Uname = "nobody"
 			hdr.Gname = "nobody"
 			// Setting the user/group write bits helps consistency of output.
