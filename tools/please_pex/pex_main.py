@@ -3,7 +3,6 @@
 from importlib import import_module
 import os
 import runpy
-import site
 import sys
 
 PY_VERSION = int(sys.version[0])
@@ -12,6 +11,37 @@ if PY_VERSION >= 3:
     from importlib import machinery
 else:
     import imp
+
+try:
+    from site import getsitepackages
+except:
+    def getsitepackages(prefixes=[sys.prefix, sys.exec_prefix]):
+        """Returns a list containing all global site-packages directories.
+
+        For each directory present in ``prefixes`` (or the global ``PREFIXES``),
+        this function will find its `site-packages` subdirectory depending on the
+        system environment, and will return a list of full paths.
+        """
+        sitepackages = []
+        seen = set()
+
+        if prefixes is None:
+            prefixes = PREFIXES
+
+        for prefix in prefixes:
+            if not prefix or prefix in seen:
+                continue
+            seen.add(prefix)
+
+            if os.sep == '/':
+                sitepackages.append(os.path.join(prefix, "lib",
+                                            "python%d.%d" % sys.version_info[:2],
+                                            "site-packages"))
+            else:
+                sitepackages.append(prefix)
+                sitepackages.append(os.path.join(prefix, "lib", "site-packages"))
+
+        return sitepackages
 
 # Put this pex on the path before anything else.
 PEX = os.path.abspath(sys.argv[0])
@@ -115,7 +145,7 @@ def clean_sys_path():
     This would be cleaner if we could suppress loading site in the first place, but that isn't
     as easy as all that to build into a pex, unfortunately.
     """
-    site_packages = site.getsitepackages()
+    site_packages = getsitepackages()
     sys.path = [x for x in sys.path if not any(x.startswith(pkg) for pkg in site_packages)]
 
 
