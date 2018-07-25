@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
+	"syscall"
 )
 
 func main() {
@@ -15,10 +13,8 @@ func main() {
 			args[i+1] = "BuiltWithPleaseBuild/BuiltWithPleaseBuild"
 		}
 	}
-	cmd := exec.Command(args[1], args[2:]...)
-	stdout, err := cmd.Output()
+	err := syscall.Exec(args[1], args[1:], os.Environ())
 	if err != nil {
-		fmt.Errorf("It has all gone wrong - %s", err)
+		panic(fmt.Errorf("It has all gone wrong - %s", err))
 	}
-	io.Copy(os.Stdout, bytes.NewReader(stdout))
 }
