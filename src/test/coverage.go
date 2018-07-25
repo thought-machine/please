@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"core"
+	"cli"
 )
 
 // Parses test coverage for a single target from its output file.
@@ -135,14 +136,26 @@ func countLines(path string) int {
 // WriteCoverageToFileOrDie writes the collected coverage data to a file in JSON format. Dies on failure.
 func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string) {
 	out := jsonCoverage{Tests: map[string]map[string]string{}}
+	allowedFiles := coverage.OrderedFiles()
+
 	for label, coverage := range coverage.Tests {
-		out.Tests[label.String()] = convertCoverage(coverage)
+		out.Tests[label.String()] = convertCoverage(coverage, allowedFiles)
 	}
-	out.Files = convertCoverage(coverage.Files)
+
+	out.Files = convertCoverage(coverage.Files, allowedFiles)
 	out.Stats = getStats(coverage)
 	if b, err := json.MarshalIndent(out, "", "    "); err != nil {
 		log.Fatalf("Failed to encode json: %s", err)
 	} else if err := ioutil.WriteFile(filename, b, 0644); err != nil {
+		log.Fatalf("Failed to write coverage results to %s: %s", filename, err)
+	}
+}
+
+// WriteXMLCoverageToFileOrDie writes the collected coverage data to a file in XML format. Dies on failure.
+func WriteXMLCoverageToFileOrDie(sources []core.BuildLabel, coverage core.TestCoverage, filename string) {
+	data := coverageResultToXML(sources, coverage)
+
+	if err := ioutil.WriteFile(filename, data, 0644); err != nil {
 		log.Fatalf("Failed to write coverage results to %s: %s", filename, err)
 	}
 }
@@ -180,10 +193,12 @@ func getStats(coverage core.TestCoverage) stats {
 	return stats
 }
 
-func convertCoverage(in map[string][]core.LineCoverage) map[string]string {
+func convertCoverage(in map[string][]core.LineCoverage, allowedFiles []string) map[string]string {
 	ret := map[string]string{}
 	for k, v := range in {
-		ret[k] = core.TestCoverageString(v)
+		if cli.ContainsString(k, allowedFiles) {
+			ret[k] = core.TestCoverageString(v)
+		}
 	}
 	return ret
 }
