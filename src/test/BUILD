@@ -10,8 +10,8 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/build",
-        "//src/core",
         "//src/cli",
+        "//src/core",
         "//src/fs",
         "//src/metrics",
         "//src/utils",
