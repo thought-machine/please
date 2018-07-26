@@ -22,16 +22,21 @@ type progressReader struct {
 // NewProgressReader returns a new progress bar reader.
 func NewProgressReader(reader io.ReadCloser, total string) io.ReadCloser {
 	i, _ := strconv.Atoi(total)
-	_, cols, err := WindowSize()
-	if err != nil {
-		log.Error("%s", err)
-	}
-	return &progressReader{
+	r := &progressReader{
 		max:         i, // If we failed above this is zero, that's handled later.
 		reader:      reader,
-		width:       cols,
-		interactive: err == nil && StdErrIsATerminal,
+		width:       80,
+		interactive: StdErrIsATerminal,
 	}
+	if StdErrIsATerminal {
+		_, cols, err := WindowSize()
+		if err != nil {
+			log.Error("%s", err)
+			r.interactive = false
+		}
+		r.width = cols
+	}
+	return r
 }
 
 // Read implements the io.Reader interface

@@ -18,11 +18,11 @@ type winsize struct {
 
 // WindowSize finds and returns the size of the console window as (rows, columns)
 func WindowSize() (int, int, error) {
-	ws := new(winsize)
+	ws := winsize{}
 	if ret, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(syscall.Stderr),
 		uintptr(tiocgwinsz()),
-		uintptr(unsafe.Pointer(ws)),
+		uintptr(unsafe.Pointer(&ws)),
 	); int(ret) == -1 {
 		return 25, 80, fmt.Errorf("error %d getting window size", int(errno))
 	}
