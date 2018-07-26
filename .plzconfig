@@ -25,6 +25,7 @@ keep = //package:all
 keep = //tools
 
 [go]
+buildidtool = //tools/go_buildid_replacer
 filtertool = //tools/please_go_filter
 testtool = //tools/please_go_test
 
