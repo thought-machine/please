@@ -280,7 +280,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
 				} else if target.Results.Failures() > 0 {
 					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
-				} else {
+				} else if detailed || len(failedTargets) == 0 {
 					// Succeeded or skipped
 					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
 				}
