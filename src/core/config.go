@@ -585,7 +585,7 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		if arg == "--" {
 			break
 		}
-		for k, v := range config.Aliases {
+		for k, v := range config.AllAliases() {
 			if arg == k {
 				// We could insert every token in v into os.Args at this point and then we could have
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
@@ -596,4 +596,16 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		}
 	}
 	return args
+}
+
+// AllAliases returns all the aliases defined in this config
+func (config *Configuration) AllAliases() map[string]string {
+	ret := map[string]string{}
+	for k, v := range config.Aliases {
+		ret[k] = v
+	}
+	for k, v := range config.Alias {
+		ret[k] = v.Cmd
+	}
+	return ret
 }
