@@ -890,10 +890,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 		cli.InitLogging(0)                // Ensure this is quiet
 		opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
 		config := readConfigAndSetRoot(false)
-		if len(config.Aliases) > 0 {
-			for k, v := range config.Aliases {
-				parser.AddCommand(k, v, v, &struct{}{})
-			}
+		if config.AttachAliasFlags(parser) {
 			// Run again without this registered as a completion handler
 			parser.CompletionHandler = nil
 			parser.ParseArgs(os.Args[1:])
