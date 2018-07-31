@@ -1,0 +1,7 @@
+[alias "auth"]
+cmd = run //infra:auth --
+subcommand = gcp
+subcommand = aws k8s
+subcommand = aws ecr
+flag = --host
+flag = --repo
