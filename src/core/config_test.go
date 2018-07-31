@@ -289,7 +289,7 @@ func TestParseNewFormatAliases(t *testing.T) {
 	a := c.Alias["auth"]
 	assert.Equal(t, "run //infra:auth --", a.Cmd)
 	assert.EqualValues(t, []string{"gcp", "aws k8s", "aws ecr"}, a.Subcommand)
-	// assert.EqualValues(t, []string{"--host", "--repo"}, a.Flag)
+	assert.EqualValues(t, []string{"--host", "--repo"}, a.Flag)
 }
 
 func TestAttachAliasFlags(t *testing.T) {
@@ -318,4 +318,8 @@ func TestAttachAliasFlags(t *testing.T) {
 	_, err = p.ParseArgs([]string{"plz", "auth", "aws", "e"})
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"ecr"}, completions)
+
+	_, err = p.ParseArgs([]string{"plz", "auth", "aws", "--h"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, []string{"--host"}, completions)
 }

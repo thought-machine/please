@@ -402,9 +402,7 @@ type Alias struct {
 	Cmd        string   `help:"Command to run for this alias."`
 	Desc       string   `help:"Description of this alias"`
 	Subcommand []string `help:"Known subcommands of this command"`
-	// TODO(peterebden): Looks like we can't dynamically add these right now. Can probably
-	//                   figure out some kind of patch to do it later.
-	// Flag       []string `help:"Known flags of this command"`
+	Flag       []string `help:"Known flags of this command"`
 }
 
 type storedBuildEnv struct {
@@ -614,27 +612,4 @@ func (config *Configuration) AllAliases() map[string]*Alias {
 		ret[k] = v
 	}
 	return ret
-}
-
-// AttachAliasFlags attaches the alias flags to the given flag parser.
-// It returns true if any modifications were made.
-func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
-	for name, alias := range config.AllAliases() {
-		cmd, _ := parser.AddCommand(name, alias.Desc, alias.Desc, &struct{}{})
-		for _, subcommand := range alias.Subcommand {
-			addSubcommands(cmd, strings.Fields(subcommand))
-		}
-	}
-	return len(config.Aliases) > 0 || len(config.Alias) > 0
-}
-
-// addSubcommands attaches a series of subcommands to the given command.
-func addSubcommands(cmd *flags.Command, subcommand []string) {
-	if len(subcommand) > 0 && cmd != nil {
-		cmd2 := cmd.Find(subcommand[0])
-		if cmd2 == nil {
-			cmd2, _ = cmd.AddCommand(subcommand[0], "", "", &struct{}{})
-		}
-		addSubcommands(cmd2, subcommand[1:])
-	}
 }
