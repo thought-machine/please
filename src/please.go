@@ -884,17 +884,15 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 // handleCompletions handles shell completion. Typically it just prints to stdout but
 // may do a little more if we think we need to handle aliases.
 func handleCompletions(parser *flags.Parser, items []flags.Completion) {
-	if len(items) > 0 {
-		cli.PrintCompletions(items)
+	cli.InitLogging(0)                // Ensure this is quiet
+	opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
+	config := readConfigAndSetRoot(false)
+	if config.AttachAliasFlags(parser) {
+		// Run again without this registered as a completion handler
+		parser.CompletionHandler = nil
+		parser.ParseArgs(os.Args[1:])
 	} else {
-		cli.InitLogging(0)                // Ensure this is quiet
-		opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
-		config := readConfigAndSetRoot(false)
-		if config.AttachAliasFlags(parser) {
-			// Run again without this registered as a completion handler
-			parser.CompletionHandler = nil
-			parser.ParseArgs(os.Args[1:])
-		}
+		cli.PrintCompletions(items)
 	}
 	// Regardless of what happened, always exit with 0 at this point.
 	os.Exit(0)
