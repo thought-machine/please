@@ -631,6 +631,24 @@
       Due to the limitations of parsing our config format, you can only have one
       level of subcommand of aliases.</p>
 
+    <h3>[Alias]</h3>
+
+    <p>This is (unsurprisingly) very similar to the <code>[Aliases]</code> section, but
+      allows more information to be defined against each one. For example:</p>
+
+    <pre><code>
+	[alias "deploy"]
+    cmd = run //deployment:deployer --
+    subcommand = dev
+    subcommand = prod
+    subcommand = real prod
+    flag = --force
+    flag = -f
+    </code></pre>
+
+    <p>This will tab-complete, taking into account the various sub-commands and flags etc.</p>
+
+
     <h3>[Bazel]</h3>
 
     <p>This section defines some settings to help with limited Bazel compatibility.<br/>
