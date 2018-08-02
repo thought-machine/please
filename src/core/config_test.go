@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"os"
 	"runtime"
 	"testing"
@@ -333,4 +334,16 @@ func TestAttachAliasFlags(t *testing.T) {
 	_, err = p.ParseArgs([]string{"plz", "query", "ow"})
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"owners"}, completions)
+}
+
+func TestPrintAliases(t *testing.T) {
+	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, "")
+	assert.NoError(t, err)
+	var buf bytes.Buffer
+	c.PrintAliases(&buf)
+	assert.Equal(t, `
+Available commands for this repository:
+  auth          Authenticates you.
+  query owners  Queries owners of a thing.
+`, buf.String())
 }

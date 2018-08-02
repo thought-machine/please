@@ -906,13 +906,13 @@ func main() {
 		os.Exit(0) // Ignore other flags if --version was passed.
 	} else if opts.HelpFlags.Help {
 		// Attempt to read config files to produce help for aliases.
-		cli.InitLogging(opts.OutputFlags.Verbosity)
+		cli.InitLogging(0)
+		parser.WriteHelp(os.Stderr)
 		if core.FindRepoRoot() {
 			if config, err := core.ReadDefaultConfigFiles(""); err == nil {
-				config.AttachAliasFlags(parser)
+				config.PrintAliases(os.Stderr)
 			}
 		}
-		parser.WriteHelp(os.Stderr)
 		os.Exit(0)
 	}
 	if opts.OutputFlags.Colour {

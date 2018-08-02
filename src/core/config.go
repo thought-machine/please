@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"encoding/gob"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"reflect"
@@ -119,6 +120,10 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 
 	if (config.Cache.RPCPrivateKey == "") != (config.Cache.RPCPublicKey == "") {
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
+	}
+
+	if len(config.Aliases) > 0 {
+		log.Warning("The [aliases] section of .plzconfig is deprecated in favour of [alias]. See https://please.build/config.html for more information.")
 	}
 
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
@@ -630,4 +635,23 @@ func (config *Configuration) AllAliases() map[string]*Alias {
 		ret[k] = v
 	}
 	return ret
+}
+
+// PrintAliases prints the set of aliases defined in the config.
+func (config *Configuration) PrintAliases(w io.Writer) {
+	aliases := config.AllAliases()
+	names := make([]string, 0, len(aliases))
+	maxlen := 0
+	for alias := range aliases {
+		names = append(names, alias)
+		if len(alias) > maxlen {
+			maxlen = len(alias)
+		}
+	}
+	sort.Strings(names)
+	w.Write([]byte("\nAvailable commands for this repository:\n"))
+	tmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
+	for _, name := range names {
+		fmt.Fprintf(w, tmpl, name, aliases[name].Desc)
+	}
 }

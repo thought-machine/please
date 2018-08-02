@@ -1,5 +1,6 @@
 [alias "auth"]
 cmd = run //infra:auth --
+desc = Authenticates you.
 subcommand = gcp
 subcommand = aws k8s
 subcommand = aws ecr
@@ -8,3 +9,4 @@ flag = --repo
 
 [alias "query owners"]
 cmd = run //query:owners --
+desc = Queries owners of a thing.
