@@ -40,6 +40,7 @@ go_test(
     deps = [
         ":core",
         "//src/cli",
+        "//third_party/go:go-flags",
         "//third_party/go:testify",
     ],
 )

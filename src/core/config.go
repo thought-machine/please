@@ -61,6 +61,19 @@ func readConfigFile(config *Configuration, filename string) error {
 	return nil
 }
 
+// ReadDefaultConfigFiles reads all the config files from the default locations and
+// merges them into a config object.
+// The repo root must have already have been set before calling this.
+func ReadDefaultConfigFiles(profile string) (*Configuration, error) {
+	return ReadConfigFiles([]string{
+		MachineConfigFileName,
+		ExpandHomePath(UserConfigFileName),
+		path.Join(RepoRoot, ConfigFileName),
+		path.Join(RepoRoot, ArchConfigFileName),
+		path.Join(RepoRoot, LocalConfigFileName),
+	}, profile)
+}
+
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
 func ReadConfigFiles(filenames []string, profile string) (*Configuration, error) {
@@ -388,12 +401,21 @@ type Configuration struct {
 		Reject []string `help:"Licences that are explicitly rejected in this repository.\nAn astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
 	} `help:"Please has some limited support for declaring acceptable licences and detecting them from some libraries. You should not rely on this for complete licence compliance, but it can be a useful check to try to ensure that unacceptable licences do not slip in."`
 	Aliases map[string]string `help:"It is possible to define aliases for new commands in your .plzconfig file. These are essentially string-string replacements of the command line, for example 'deploy = run //tools:deployer --' makes 'plz deploy' run a particular tool."`
+	Alias   map[string]*Alias `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
 	Bazel   struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
 
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
+}
+
+// An Alias represents aliases in the config.
+type Alias struct {
+	Cmd        string   `help:"Command to run for this alias."`
+	Desc       string   `help:"Description of this alias"`
+	Subcommand []string `help:"Known subcommands of this command"`
+	Flag       []string `help:"Known flags of this command"`
 }
 
 type storedBuildEnv struct {
@@ -580,15 +602,27 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		if arg == "--" {
 			break
 		}
-		for k, v := range config.Aliases {
+		for k, v := range config.AllAliases() {
 			if arg == k {
 				// We could insert every token in v into os.Args at this point and then we could have
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
 				// stick the replacement in wholesale instead.
 				// Do not ask about the inner append and the empty slice.
-				return append(append(append([]string{}, args[:idx+1]...), strings.Fields(v)...), args[idx+2:]...)
+				return append(append(append([]string{}, args[:idx+1]...), strings.Fields(v.Cmd)...), args[idx+2:]...)
 			}
 		}
 	}
 	return args
+}
+
+// AllAliases returns all the aliases defined in this config
+func (config *Configuration) AllAliases() map[string]*Alias {
+	ret := map[string]*Alias{}
+	for k, v := range config.Aliases {
+		ret[k] = &Alias{Cmd: v}
+	}
+	for k, v := range config.Alias {
+		ret[k] = v
+	}
+	return ret
 }

@@ -24,3 +24,19 @@ index fd2fd5f..3af2af9 100644
  	if (p.Options & PassAfterNonOption) != None {
  		// If PassAfterNonOption is set then all remaining arguments
  		// are considered positional
+diff --git a/group.go b/group.go
+index 9341d23..7f269b2 100644
+--- a/group.go
++++ b/group.go
+@@ -128,6 +128,11 @@ func (g *Group) FindOptionByShortName(shortName rune) *Option {
+ 	})
+ }
+ 
++// AddOption adds a new option to this group.
++func (g *Group) AddOption(option *Option) {
++	g.options = append(g.options, option)
++}
++
+ func newGroup(shortDescription string, longDescription string, data interface{}) *Group {
+ 	return &Group{
+ 		ShortDescription: shortDescription,
