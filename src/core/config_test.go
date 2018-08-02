@@ -282,6 +282,13 @@ func TestUpdateArgsWithAliases(t *testing.T) {
 	assert.EqualValues(t, []string{"plz", "run", "//mytool:tool", "--", "deploy", "something"}, args)
 }
 
+func TestUpdateArgsWithQuotedAliases(t *testing.T) {
+	c := DefaultConfiguration()
+	c.Aliases["release"] = "build -o 'buildconfig.gpg_userid:Please Releases <releases@please.build>' //package:tarballs"
+	args := c.UpdateArgsWithAliases([]string{"plz", "release"})
+	assert.EqualValues(t, []string{"plz", "build", "-o", "buildconfig.gpg_userid:Please Releases <releases@please.build>", "//package:tarballs"}, args)
+}
+
 func TestParseNewFormatAliases(t *testing.T) {
 	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, "")
 	assert.NoError(t, err)

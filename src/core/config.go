@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/shlex"
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/gcfg.v1"
 
@@ -608,7 +609,11 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
 				// stick the replacement in wholesale instead.
 				// Do not ask about the inner append and the empty slice.
-				return append(append(append([]string{}, args[:idx+1]...), strings.Fields(v.Cmd)...), args[idx+2:]...)
+				cmd, err := shlex.Split(v.Cmd)
+				if err != nil {
+					log.Fatalf("Invalid alias replacement for %s: %s", k, err)
+				}
+				return append(append(append([]string{}, args[:idx+1]...), cmd...), args[idx+2:]...)
 			}
 		}
 	}

@@ -89,6 +89,26 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "signed_tarballs",
+    srcs = [
+        ":please_tarball_signed",
+        ":servers_tarball_signed",
+    ],
+    labels = ["manual"],
+)
+
+filegroup(
+    name = "signed_debs",
+    srcs = [
+        ":please",
+        ":please_sandbox",
+        ":plz_http_cache_server",
+        ":plz_rpc_cache_server",
+    ],
+    labels = ["manual"],
+)
+
 # This generates a stamped version of the various inputs which will have a unique name.
 # We don't really use it here, it's for testing purposes really.
 hash_filegroup(
