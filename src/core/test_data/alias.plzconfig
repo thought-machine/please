@@ -5,3 +5,6 @@ subcommand = aws k8s
 subcommand = aws ecr
 flag = --host
 flag = --repo
+
+[alias "query owners"]
+cmd = run //query:owners --
