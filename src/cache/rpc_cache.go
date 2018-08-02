@@ -25,10 +25,10 @@ import (
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
+	"gopkg.in/op/go-logging.v1"
 
 	pb "cache/proto/rpc_cache"
 	"cache/tools"
-	"cli"
 	"fs"
 )
 
@@ -430,7 +430,7 @@ func (g *grpcLogMabob) Errorln(args ...interface{})                 { log.Error(
 func (g *grpcLogMabob) Fatal(args ...interface{})                   { log.Fatal(args...) }
 func (g *grpcLogMabob) Fatalf(format string, args ...interface{})   { log.Fatalf(format, args...) }
 func (g *grpcLogMabob) Fatalln(args ...interface{})                 { log.Fatal(args...) }
-func (g *grpcLogMabob) V(l int) bool                                { return l >= int(cli.LogLevel) }
+func (g *grpcLogMabob) V(l int) bool                                { return log.IsEnabledFor(logging.Level(l)) }
 
 // loadAuth loads authentication credentials from a given pair of public / private key files.
 func loadAuth(caCert, publicKey, privateKey string) (grpc.DialOption, error) {

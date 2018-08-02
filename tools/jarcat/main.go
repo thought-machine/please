@@ -51,7 +51,7 @@ func mustReadPreamble(path string) string {
 
 var opts = struct {
 	Usage     string
-	Verbosity int `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
+	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
 
 	Zip struct {
 		In                    cli.StdinStrings  `short:"i" long:"input" description:"Input directory" required:"true"`

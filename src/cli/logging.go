@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -28,12 +29,66 @@ var StdOutIsATerminal = terminal.IsTerminal(int(os.Stdout.Fd()))
 // StripAnsi is a regex to find & replace ANSI console escape sequences.
 var StripAnsi = regexp.MustCompile("\x1b[^m]+m")
 
-// LogLevel is the current verbosity level that is set.
-// N.B. Setting this does *not* alter it. Use InitLogging for that.
-var LogLevel = logging.WARNING
+// logLevel is the current verbosity level that is set.
+var logLevel = logging.WARNING
 
 var fileLogLevel = logging.WARNING
 var fileBackend *logging.LogBackend
+
+// A Verbosity is used as a flag to define logging verbosity.
+type Verbosity logging.Level
+
+// MaxVerbosity is the maximum verbosity we support.
+const MaxVerbosity Verbosity = Verbosity(logging.DEBUG)
+
+// MinVerbosity is the maximum verbosity we support.
+const MinVerbosity Verbosity = Verbosity(logging.ERROR)
+
+// UnmarshalFlag implements flag parsing.
+// It accepts input in three forms:
+// As an integer level, -v 4 (where -v 1 == warning & error only)
+// As a named level, -v debug
+// As a series of flags, -vvv (note that bare -v does *not* work)
+func (v *Verbosity) UnmarshalFlag(in string) error {
+	in = strings.ToLower(in)
+	switch strings.ToLower(in) {
+	case "critical", "fatal":
+		*v = Verbosity(logging.CRITICAL)
+		return nil
+	case "0", "error":
+		*v = Verbosity(logging.ERROR)
+		return nil
+	case "1", "warning", "warn":
+		*v = Verbosity(logging.WARNING)
+		return nil
+	case "2", "notice", "v":
+		*v = Verbosity(logging.NOTICE)
+		return nil
+	case "3", "info", "vv":
+		*v = Verbosity(logging.INFO)
+		return nil
+	case "4", "debug", "vvv":
+		*v = Verbosity(logging.DEBUG)
+		return nil
+	}
+	if i, err := strconv.Atoi(in); err == nil {
+		return v.fromInt(i)
+	} else if c := strings.Count(in, "v"); len(in) == c {
+		return v.fromInt(c)
+	}
+	return fmt.Errorf("Invalid log level %s", in)
+}
+
+func (v *Verbosity) fromInt(i int) error {
+	if i < 0 {
+		log.Warning("Invalid log level %d; minimum is 0. Displaying critical errors only.")
+		*v = Verbosity(logging.CRITICAL)
+		return nil
+	}
+	log.Warning("Invalid log level %d; maximum is 4. Displaying all messages.")
+	*v = Verbosity(logging.DEBUG)
+	return nil
+}
 
 type logFileWriter struct {
 	file io.Writer
@@ -43,31 +98,16 @@ func (writer logFileWriter) Write(p []byte) (n int, err error) {
 	return writer.file.Write(StripAnsi.ReplaceAllLiteral(p, []byte{}))
 }
 
-// translateLogLevel translates our verbosity flags to logging levels.
-func translateLogLevel(verbosity int) logging.Level {
-	if verbosity <= 0 {
-		return logging.ERROR
-	} else if verbosity == 1 {
-		return logging.WARNING
-	} else if verbosity == 2 {
-		return logging.NOTICE
-	} else if verbosity == 3 {
-		return logging.INFO
-	} else {
-		return logging.DEBUG
-	}
-}
-
 // InitLogging initialises logging backends.
-func InitLogging(verbosity int) {
-	LogLevel = translateLogLevel(verbosity)
+func InitLogging(verbosity Verbosity) {
+	logLevel = logging.Level(verbosity)
 	logging.SetFormatter(logFormatter())
 	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
 }
 
 // InitFileLogging initialises an optional logging backend to a file.
-func InitFileLogging(logFile string, logFileLevel int) {
-	fileLogLevel = translateLogLevel(logFileLevel)
+func InitFileLogging(logFile string, logFileLevel Verbosity) {
+	fileLogLevel = logging.Level(logFileLevel)
 	if err := os.MkdirAll(path.Dir(logFile), os.ModeDir|0775); err != nil {
 		log.Fatalf("Error creating log file directory: %s", err)
 	}
@@ -89,7 +129,7 @@ func logFormatter() logging.Formatter {
 
 func setLogBackend(backend logging.Backend) {
 	backendLeveled := logging.AddModuleLevel(backend)
-	backendLeveled.SetLevel(LogLevel, "")
+	backendLeveled.SetLevel(logLevel, "")
 	if fileBackend == nil {
 		logging.SetBackend(backendLeveled)
 	} else {

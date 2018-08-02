@@ -16,8 +16,8 @@ var log = logging.MustGetLogger("asp")
 
 var opts = struct {
 	Usage     string
-	Verbosity int    `short:"v" long:"verbose" default:"2" description:"Verbosity of output (higher number = more output)"`
-	OutputDir string `short:"o" long:"output_dir" required:"true" description:"Output directory"`
+	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"notice" description:"Verbosity of output (higher number = more output)"`
+	OutputDir string        `short:"o" long:"output_dir" required:"true" description:"Output directory"`
 	Args      struct {
 		BuildFiles []string `positional-arg-name:"files" required:"true" description:"BUILD files to parse"`
 	} `positional-args:"true"`

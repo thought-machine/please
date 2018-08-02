@@ -27,12 +27,12 @@ var log = logging.MustGetLogger("parser")
 
 var opts = struct {
 	Usage        string
-	Verbosity    int    `short:"v" long:"verbose" default:"2" description:"Verbosity of output (higher number = more output)"`
-	NumThreads   int    `short:"n" long:"num_threads" default:"10" description:"Number of concurrent parse threads to run"`
-	ParseOnly    bool   `short:"p" long:"parse_only" description:"Only parse input files, do not interpret them."`
-	DumpAst      bool   `short:"d" long:"dump_ast" description:"Prints AST to stdout. Implies --parse_only."`
-	NoConfig     bool   `long:"no_config" description:"Don't look for or load a .plzconfig file"`
-	BuildDefsDir string `short:"b" long:"build_defs_dir" description:"Load build_defs files from this directory. This assumes that they are all produced by trivial build rules with obvious names. They will need to be built first."`
+	Verbosity    cli.Verbosity `short:"v" long:"verbosity" default:"notice" description:"Verbosity of output (higher number = more output)"`
+	NumThreads   int           `short:"n" long:"num_threads" default:"10" description:"Number of concurrent parse threads to run"`
+	ParseOnly    bool          `short:"p" long:"parse_only" description:"Only parse input files, do not interpret them."`
+	DumpAst      bool          `short:"d" long:"dump_ast" description:"Prints AST to stdout. Implies --parse_only."`
+	NoConfig     bool          `long:"no_config" description:"Don't look for or load a .plzconfig file"`
+	BuildDefsDir string        `short:"b" long:"build_defs_dir" description:"Load build_defs files from this directory. This assumes that they are all produced by trivial build rules with obvious names. They will need to be built first."`
 	Args         struct {
 		BuildFiles []string `positional-arg-name:"files" required:"true" description:"BUILD files to parse"`
 	} `positional-args:"true"`

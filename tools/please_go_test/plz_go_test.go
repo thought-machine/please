@@ -16,12 +16,12 @@ import (
 var log = logging.MustGetLogger("plz_go_test")
 
 var opts struct {
-	Usage     string   `usage:"please_go_test is a code templater for Go tests.\n\nIt writes out the test main file required for each test, similar to what 'go test' does but as a separate tool that Please can invoke."`
-	Dir       string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
-	Verbosity int      `short:"v" long:"verbose" default:"1" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)"`
-	Exclude   []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
-	Output    string   `short:"o" long:"output" description:"Output filename" required:"true"`
-	Package   string   `short:"p" long:"package" description:"Package containing this test" env:"PKG"`
+	Usage     string        `usage:"please_go_test is a code templater for Go tests.\n\nIt writes out the test main file required for each test, similar to what 'go test' does but as a separate tool that Please can invoke."`
+	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
+	Dir       string        `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
+	Exclude   []string      `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
+	Output    string        `short:"o" long:"output" description:"Output filename" required:"true"`
+	Package   string        `short:"p" long:"package" description:"Package containing this test" env:"PKG"`
 	Args      struct {
 		Go      string   `positional-arg-name:"go" description:"Location of go command" required:"true"`
 		Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`

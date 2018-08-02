@@ -58,16 +58,16 @@ var opts struct {
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
-		Verbosity         int          `short:"v" long:"verbosity" description:"Verbosity of output (higher number = more output, default 1 -> warnings and errors only)" default:"1"`
-		LogFile           cli.Filepath `long:"log_file" description:"File to echo full logging output to" default:"plz-out/log/build.log"`
-		LogFileLevel      int          `long:"log_file_level" description:"Log level for file output" default:"4"`
-		InteractiveOutput bool         `long:"interactive_output" description:"Show interactive output ina  terminal"`
-		PlainOutput       bool         `short:"p" long:"plain_output" description:"Don't show interactive output."`
-		Colour            bool         `long:"colour" description:"Forces coloured output from logging & other shell output."`
-		NoColour          bool         `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
-		TraceFile         cli.Filepath `long:"trace_file" description:"File to write Chrome tracing output into"`
-		ShowAllOutput     bool         `long:"show_all_output" description:"Show all output live from all commands. Implies --plain_output."`
-		CompletionScript  bool         `long:"completion_script" description:"Prints the bash / zsh completion script to stdout"`
+		Verbosity         cli.Verbosity `short:"v" long:"verbosity" description:"Verbosity of output (error, warning, notice, info, debug)" default:"warning"`
+		LogFile           cli.Filepath  `long:"log_file" description:"File to echo full logging output to" default:"plz-out/log/build.log"`
+		LogFileLevel      cli.Verbosity `long:"log_file_level" description:"Log level for file output" default:"debug"`
+		InteractiveOutput bool          `long:"interactive_output" description:"Show interactive output ina  terminal"`
+		PlainOutput       bool          `short:"p" long:"plain_output" description:"Don't show interactive output."`
+		Colour            bool          `long:"colour" description:"Forces coloured output from logging & other shell output."`
+		NoColour          bool          `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
+		TraceFile         cli.Filepath  `long:"trace_file" description:"File to write Chrome tracing output into"`
+		ShowAllOutput     bool          `long:"show_all_output" description:"Show all output live from all commands. Implies --plain_output."`
+		CompletionScript  bool          `long:"completion_script" description:"Prints the bash / zsh completion script to stdout"`
 	} `group:"Options controlling output & logging"`
 
 	FeatureFlags struct {
@@ -468,7 +468,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"follow": func() bool {
 		// This is only temporary, ConnectClient will alter it to match the server.
-		state := core.NewBuildState(1, nil, opts.OutputFlags.Verbosity, config)
+		state := core.NewBuildState(1, nil, int(opts.OutputFlags.Verbosity), config)
 		return follow.ConnectClient(state, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay))
 	},
 	"outputs": func() bool {
@@ -676,7 +676,7 @@ func parseForVisibleTargets(state *core.BuildState, label core.BuildLabel) {
 }
 
 // prettyOutputs determines from input flags whether we should show 'pretty' output (ie. interactive).
-func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity int) bool {
+func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbosity) bool {
 	if interactiveOutput && plainOutput {
 		log.Fatal("Can't pass both --interactive_output and --plain_output")
 	}
@@ -705,7 +705,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 		config.Build.Config = "dbg"
 	}
 	c := newCache(config)
-	state := core.NewBuildState(config.Please.NumThreads, c, opts.OutputFlags.Verbosity, config)
+	state := core.NewBuildState(config.Please.NumThreads, c, int(opts.OutputFlags.Verbosity), config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)  // Only one of these can be passed
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
@@ -882,7 +882,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 // handleCompletions handles shell completion. Typically it just prints to stdout but
 // may do a little more if we think we need to handle aliases.
 func handleCompletions(parser *flags.Parser, items []flags.Completion) {
-	cli.InitLogging(0)                // Ensure this is quiet
+	cli.InitLogging(cli.MinVerbosity) // Ensure this is quiet
 	opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
 	if len(items) > 0 && strings.HasPrefix(items[0].Item, "//") {
 		// Don't muck around with the config if we're predicting build labels.
@@ -906,7 +906,7 @@ func main() {
 		os.Exit(0) // Ignore other flags if --version was passed.
 	} else if opts.HelpFlags.Help {
 		// Attempt to read config files to produce help for aliases.
-		cli.InitLogging(0)
+		cli.InitLogging(cli.MinVerbosity)
 		parser.WriteHelp(os.Stderr)
 		if core.FindRepoRoot() {
 			if config, err := core.ReadDefaultConfigFiles(""); err == nil {

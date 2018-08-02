@@ -25,7 +25,7 @@ const retries = 3
 const delay = 10 * time.Millisecond
 
 func init() {
-	cli.InitLogging(4)
+	cli.InitLogging(cli.MaxVerbosity)
 	// The usual 1 second is pretty annoying in this test.
 	disconnectTimeout = 1 * time.Millisecond
 	// As is half a second wait for this.
