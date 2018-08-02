@@ -80,7 +80,7 @@ var opts struct {
 
 	HelpFlags struct {
 		Help    bool `short:"h" long:"help" description:"Show this help message"`
-		Version bool `long:"version" description:"Print the version of the tool"`
+		Version bool `long:"version" description:"Print the version of Please"`
 	} `group:"Help Options"`
 
 	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
@@ -884,8 +884,10 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	cli.InitLogging(0)                // Ensure this is quiet
 	opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
-	config := readConfigAndSetRoot(false)
-	if config.AttachAliasFlags(parser) {
+	if len(items) > 0 && strings.HasPrefix(items[0].Item, "//") {
+		// Don't muck around with the config if we're predicting build labels.
+		cli.PrintCompletions(items)
+	} else if config := readConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
 		// Run again without this registered as a completion handler
 		parser.CompletionHandler = nil
 		parser.ParseArgs(os.Args[1:])
