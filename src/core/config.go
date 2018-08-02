@@ -61,6 +61,19 @@ func readConfigFile(config *Configuration, filename string) error {
 	return nil
 }
 
+// ReadDefaultConfigFiles reads all the config files from the default locations and
+// merges them into a config object.
+// The repo root must have already have been set before calling this.
+func ReadDefaultConfigFiles(profile string) (*Configuration, error) {
+	return ReadConfigFiles([]string{
+		MachineConfigFileName,
+		ExpandHomePath(UserConfigFileName),
+		path.Join(RepoRoot, ConfigFileName),
+		path.Join(RepoRoot, ArchConfigFileName),
+		path.Join(RepoRoot, LocalConfigFileName),
+	}, profile)
+}
+
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
 func ReadConfigFiles(filenames []string, profile string) (*Configuration, error) {

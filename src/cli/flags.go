@@ -25,8 +25,8 @@ type CompletionHandler func(parser *flags.Parser, items []flags.Completion)
 
 // ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
 // It may exit if certain options are encountered (eg. --help).
-func ParseFlags(appname string, data interface{}, args []string, completionHandler CompletionHandler) (*flags.Parser, []string, error) {
-	parser := flags.NewNamedParser(path.Base(args[0]), flags.HelpFlag|flags.PassDoubleDash)
+func ParseFlags(appname string, data interface{}, args []string, opts flags.Options, completionHandler CompletionHandler) (*flags.Parser, []string, error) {
+	parser := flags.NewNamedParser(path.Base(args[0]), opts)
 	if completionHandler != nil {
 		parser.CompletionHandler = func(items []flags.Completion) { completionHandler(parser, items) }
 	}
@@ -58,7 +58,7 @@ func ParseFlagsOrDie(appname, version string, data interface{}) string {
 // flags passed.
 // It returns the active command if there is one.
 func ParseFlagsFromArgsOrDie(appname, version string, data interface{}, args []string) string {
-	parser, extraArgs, err := ParseFlags(appname, data, args, nil)
+	parser, extraArgs, err := ParseFlags(appname, data, args, flags.HelpFlag|flags.PassDoubleDash, nil)
 	if err != nil && err.(*flags.Error).Type == flags.ErrUnknownFlag && strings.Contains(err.(*flags.Error).Message, "`version'") {
 		fmt.Printf("%s version %s\n", appname, version)
 		os.Exit(0) // Ignore other errors if --version was passed.

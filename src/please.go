@@ -68,7 +68,6 @@ var opts struct {
 		TraceFile         cli.Filepath `long:"trace_file" description:"File to write Chrome tracing output into"`
 		ShowAllOutput     bool         `long:"show_all_output" description:"Show all output live from all commands. Implies --plain_output."`
 		CompletionScript  bool         `long:"completion_script" description:"Prints the bash / zsh completion script to stdout"`
-		Version           bool         `long:"version" description:"Print the version of the tool"`
 	} `group:"Options controlling output & logging"`
 
 	FeatureFlags struct {
@@ -78,6 +77,11 @@ var opts struct {
 		NoLock             bool `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 	} `group:"Options that enable / disable certain features"`
+
+	HelpFlags struct {
+		Help    bool `short:"h" long:"help" description:"Show this help message"`
+		Version bool `long:"version" description:"Print the version of the tool"`
+	} `group:"Help Options"`
 
 	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
 	MemProfile       string `long:"mem_profile_file" hidden:"true" description:"Write a memory profile to this file"`
@@ -826,13 +830,7 @@ func readConfig(forceUpdate bool) *core.Configuration {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
 	}
 
-	config, err := core.ReadConfigFiles([]string{
-		core.MachineConfigFileName,
-		core.ExpandHomePath(core.UserConfigFileName),
-		path.Join(core.RepoRoot, core.ConfigFileName),
-		path.Join(core.RepoRoot, core.ArchConfigFileName),
-		path.Join(core.RepoRoot, core.LocalConfigFileName),
-	}, opts.BuildFlags.Profile)
+	config, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
@@ -899,11 +897,21 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 }
 
 func main() {
-	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args, handleCompletions)
+	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args, flags.PassDoubleDash, handleCompletions)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
-	if opts.OutputFlags.Version {
+	if opts.HelpFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other flags if --version was passed.
+	} else if opts.HelpFlags.Help {
+		// Attempt to read config files to produce help for aliases.
+		cli.InitLogging(opts.OutputFlags.Verbosity)
+		if core.FindRepoRoot() {
+			if config, err := core.ReadDefaultConfigFiles(""); err == nil {
+				config.AttachAliasFlags(parser)
+			}
+		}
+		parser.WriteHelp(os.Stderr)
+		os.Exit(0)
 	}
 	if opts.OutputFlags.Colour {
 		output.SetColouredOutput(true)
