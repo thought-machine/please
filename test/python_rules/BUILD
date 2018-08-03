@@ -137,3 +137,13 @@ python_test(
     ],
     deps = ["//third_party/python:pandas"],
 )
+
+python_test(
+    name = "scipy_test",
+    srcs = ["scipy_test.py"],
+    labels = [
+        "py3",
+        "pip",
+    ],
+    deps = ["//third_party/python:scipy"],
+)
