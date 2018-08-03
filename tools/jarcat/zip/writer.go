@@ -295,8 +295,17 @@ func (f *File) shouldInclude(name string) bool {
 // AddInitPyFiles adds an __init__.py file to every directory in the zip file that doesn't already have one.
 func (f *File) AddInitPyFiles() error {
 	s := make([]string, 0, len(f.files))
+	sos := map[string]struct{}{}
 	for p := range f.files {
 		s = append(s, p)
+		// We use this to check that we don't shadow files that look importable.
+		if strings.HasSuffix(p, ".so") {
+			p = strings.TrimSuffix(p, ".so")
+			if idx := strings.LastIndex(p, ".cpython-"); idx != -1 {
+				p = p[:idx]
+			}
+			sos[p] = struct{}{}
+		}
 	}
 	sort.Strings(s)
 	for _, p := range s {
@@ -312,6 +321,10 @@ func (f *File) AddInitPyFiles() error {
 				// If we already have a pyc / pyo we don't need the __init__.py as well.
 				break
 			} else if _, present := f.files[initPyPath+"o"]; present {
+				break
+			} else if _, present := f.files[d + ".py"]; present {
+				break
+			} else if _, present := sos[d]; present {
 				break
 			}
 			log.Debug("Adding %s", initPyPath)
