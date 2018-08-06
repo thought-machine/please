@@ -210,3 +210,11 @@ pip_library(
         ":six",
     ],
 )
+
+pip_library(
+    name = "scipy",
+    test_only = True,
+    version = "1.1.0",
+    zip_safe = False,
+    deps = [":numpy"],
+)
