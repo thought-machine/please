@@ -142,7 +142,12 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
 		return nil, err
 	}
+	addPackage(state, pkg)
+	return pkg, nil
+}
 
+// addPackage adds the given package to the graph, with appropriate dependencies and whatnot.
+func addPackage(state *core.BuildState, pkg *core.Package) {
 	allTargets := pkg.AllTargets()
 	for _, target := range allTargets {
 		state.Graph.AddTarget(target)
@@ -175,7 +180,6 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	// since it only issues warnings sometimes.
 	go pkg.VerifyOutputs()
 	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
-	return pkg, nil
 }
 
 func buildFileName(state *core.BuildState, pkgName, subrepo string) string {
