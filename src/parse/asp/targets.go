@@ -200,6 +200,7 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 			if li != None {
 				out, ok := li.(pyString)
 				s.Assert(ok, "outs must be strings")
+				checkSubDir(s, out.String())
 				anon(string(out))
 				if !optional || !strings.HasPrefix(string(out), "*") {
 					s.pkg.MustRegisterOutput(string(out), t)
@@ -215,6 +216,7 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 				if li != None {
 					out, ok := li.(pyString)
 					s.Assert(ok, "outs must be strings")
+					checkSubDir(s, out.String())
 					named(k, string(out))
 					if !optional || !strings.HasPrefix(string(out), "*") {
 						s.pkg.MustRegisterOutput(string(out), t)
@@ -322,14 +324,10 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	}
 	s.Assert(src != "", "Empty source path")
 	s.Assert(!strings.Contains(src, "../"), "%s is an invalid path; build target paths can't contain ../", src)
+	checkSubDir(s, src)
 	if src[0] == '/' || src[0] == '~' {
 		s.Assert(systemAllowed, "%s is an absolute path; that's not allowed", src)
 		return core.SystemFileLabel{Path: src}
-	} else if strings.Contains(src, "/") {
-		// Target is in a subdirectory, check nobody else owns that.
-		for dir := path.Dir(path.Join(s.pkg.Name, src)); dir != s.pkg.Name && dir != "."; dir = path.Dir(dir) {
-			s.Assert(!fs.IsPackage(s.state.Config.Parse.BuildFileName, dir), "Trying to use file %s, but that belongs to another package (%s)", src, dir)
-		}
 	} else if tool {
 		// "go" as a source is interpreted as a file, as a tool it's interpreted as something on the PATH.
 		return core.SystemPathLabel{Name: src, Path: s.state.Config.Build.Path}
@@ -423,4 +421,16 @@ func asDict(obj pyObject) (pyDict, bool) {
 		return d.pyDict, true
 	}
 	return nil, false
+}
+
+
+
+// Target is in a subdirectory, check nobody else owns that.
+func checkSubDir(s *scope, src string) {
+	if strings.Contains(src, "/") {
+		// Target is in a subdirectory, check nobody else owns that.
+		for dir := path.Dir(path.Join(s.pkg.Name, src)); dir != s.pkg.Name && dir != "."; dir = path.Dir(dir) {
+			s.Assert(!fs.IsPackage(s.state.Config.Parse.BuildFileName, dir), "Trying to use file %s, but that belongs to another package (%s)", src, dir)
+		}
+	}
 }
