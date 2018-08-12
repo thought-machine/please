@@ -712,7 +712,11 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	dep := string(args[1].(pyString))
 	if dep == "" {
 		// This is deliberately different to facilitate binding subrepos within the same VCS repo.
-		s.state.Graph.AddSubrepo(&core.Subrepo{Name: name, Root: root(name)})
+		s.state.Graph.AddSubrepo(&core.Subrepo{
+			Name:  name,
+			Root:  root(name),
+			State: s.state},
+		)
 		return None
 	}
 	// N.B. The target must be already registered on this package.
@@ -721,6 +725,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		Name:   name,
 		Root:   root(path.Join(t.OutDir(), name)),
 		Target: t,
+		State:  s.state,
 	})
 	log.Debug("Registered subrepo %s", name)
 	return None
