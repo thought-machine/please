@@ -521,7 +521,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependor BuildLabel) *BuildTarget
 			return t
 		}
 	}
-	dependor.PackageName = "all" // Every target in this package depends on this one.
+	dependor.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
 	state.progress.pendingTargetMutex.Lock()
 	if ch, present := state.progress.pendingTargets[l]; present {
