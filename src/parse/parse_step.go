@@ -143,18 +143,20 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	if subrepo != nil {
 		pkg.SubrepoName = subrepo.Name
 	}
-	if pkg.Filename = buildFileName(state, label.PackageName, subrepo); pkg.Filename == "" {
+	filename, dir := buildFileName(state, label.PackageName, subrepo)
+	if filename == "" {
 		exists := core.PathExists(packageName)
 		// Handle quite a few cases to provide more obvious error messages.
 		if dependor != core.OriginalTarget && exists {
-			return nil, fmt.Errorf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, packageName)
+			return nil, fmt.Errorf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, dir)
 		} else if dependor != core.OriginalTarget {
-			return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist", dependor, label, packageName)
+			return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist", dependor, label, dir)
 		} else if exists {
-			return nil, fmt.Errorf("Can't build %s; there's no BUILD file in %s/", label, packageName)
+			return nil, fmt.Errorf("Can't build %s; there's no BUILD file in %s/", label, dir)
 		}
-		return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, packageName)
+		return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
 	}
+	pkg.Filename = filename
 	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
 		return nil, err
 	}
@@ -198,7 +200,9 @@ func addPackage(state *core.BuildState, pkg *core.Package) {
 	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
 }
 
-func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo) string {
+// buildFileName returns the name of the BUILD file for a package, or the empty string if one
+// doesn't exist. It also returns the directory that it looked in.
+func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo) (string, string) {
 	config := state.Config
 	if subrepo != nil {
 		pkgName = subrepo.Dir(pkgName)
@@ -208,14 +212,14 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 	// We will fake this by treating that as an actual package file...
 	// TODO(peterebden): They may be moving away from their "external" nomenclature?
 	if state.Config.Bazel.Compatibility && pkgName == "external" || pkgName == "workspace" {
-		return "WORKSPACE"
+		return "WORKSPACE", ""
 	}
 	for _, buildFileName := range config.Parse.BuildFileName {
 		if filename := path.Join(pkgName, buildFileName); fs.FileExists(filename) {
-			return filename
+			return filename, pkgName
 		}
 	}
-	return ""
+	return "", pkgName
 }
 
 // Adds a single target to the build queue.
