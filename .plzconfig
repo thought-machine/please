@@ -17,6 +17,9 @@ blacklistdirs = google.golang.org
 blacklistdirs = gopkg.in
 ; Make this generally available
 preloadbuilddefs = build_defs/go_bindata.build_defs
+; Temp, for testing.
+builtinpleasings = false
+
 
 [gc]
 keep = //test/...
