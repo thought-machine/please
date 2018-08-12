@@ -4,11 +4,6 @@ filegroup(
     visibility = ["PUBLIC"],
 )
 
-new_local_repository(
-    name = "pleasings",
-    path = "../pleasings",
-)
-
 new_http_archive(
     name = "gtest",
     build_file = "gtest.build",
