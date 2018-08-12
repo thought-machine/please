@@ -40,7 +40,7 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 func (label BuildLabel) String() string {
 	s := "//" + label.PackageName
 	if label.Subrepo != "" {
-		s = "@" + label.Subrepo
+		s = "@" + label.Subrepo + s
 	}
 	if label.IsAllSubpackages() {
 		return s + "/..."
