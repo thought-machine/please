@@ -231,9 +231,9 @@ func subinclude(s *scope, args []pyObject) pyObject {
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	if s.pkg == nil {
 		// Really we should not get here, but it's hard to prove that's not the case. Make the best of it.
-		return s.state.WaitForBuiltTarget(l, l.PackageName)
+		return s.state.WaitForBuiltTarget(l, l)
 	}
-	t := s.state.WaitForBuiltTarget(l, s.pkg.Name)
+	t := s.state.WaitForBuiltTarget(l, s.pkg.Label())
 	s.pkg.RegisterSubinclude(l)
 	return t
 }

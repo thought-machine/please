@@ -38,19 +38,14 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
-	s := label.PackageString()
+	s := "//" + label.PackageName
+	if label.Subrepo != "" {
+		s = "@" + label.Subrepo
+	}
 	if label.IsAllSubpackages() {
 		return s + "/..."
 	}
 	return s + ":" + label.Name
-}
-
-// PackageString returns a string representation of this build label, minus the target name.
-func (label BuildLabel) PackageString() string {
-	if label.Subrepo != "" {
-		return "@" + label.Subrepo + "//" + label.PackageName
-	}
-	return "//" + label.PackageName
 }
 
 // NewBuildLabel constructs a new build label from the given components. Panics on failure.
