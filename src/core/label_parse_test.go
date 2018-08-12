@@ -2,7 +2,11 @@
 
 package core
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func assertLabel(t *testing.T, in, pkg, name string) BuildLabel {
 	defer func() {
@@ -143,4 +147,12 @@ func TestSubrepos(t *testing.T) {
 	assertSubrepoLabel(t, "@subrepo//pkg:target", "pkg", "target", "subrepo")
 	assertSubrepoLabel(t, "@com_google_googletest//:gtest_main", "", "gtest_main", "com_google_googletest")
 	assertSubrepoLabel(t, "@test_x86:target", "current_package", "target", "test_x86")
+}
+
+func TestAbsoluteEmptySubrepo(t *testing.T) {
+	// Test that when parsing a label with an empty subrepo, that it stays empty.
+	pkg := NewPackage("current_package")
+	pkg.Subrepo = &Subrepo{Name: "subrepo"}
+	label := ParseBuildLabelContext("@//tools/jarcat", pkg)
+	assert.Equal(t, "", label.Subrepo)
 }
