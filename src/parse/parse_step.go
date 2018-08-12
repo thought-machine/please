@@ -46,7 +46,7 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 	// If we get here then it falls to us to parse this package.
 	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
 
-	subrepo, err := checkSubrepo(tid, state, label)
+	subrepo, err := checkSubrepo(tid, state, label, dependor)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
-func checkSubrepo(tid int, state *core.BuildState, label core.BuildLabel) (*core.Subrepo, error) {
+func checkSubrepo(tid int, state *core.BuildState, label, dependor core.BuildLabel) (*core.Subrepo, error) {
 	if label.Subrepo == "" {
 		return nil, nil
 	}
@@ -69,11 +69,27 @@ func checkSubrepo(tid int, state *core.BuildState, label core.BuildLabel) (*core
 		state.WaitForBuiltTarget(subrepo.Target.Label, label)
 	} else if subrepo == nil {
 		// We don't have the definition of it at all. Need to parse that first.
-		if err := parse(tid, state, label.SubrepoLabel(), label, false, nil, nil, true); err != nil {
+		sl := label.SubrepoLabel()
+		if state.Graph.Package(sl.PackageName, "") != nil {
+			// Package has already been parsed and this subrepo doesn't exist.
+			if dependor.Subrepo == "" {
+				return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
+			}
+			// It might be defined in a subrepo itself.
+			// This seems mildly dodgy in that it seems to depend a bit much
+			// on ordering events but it seems useful to let the top-level repo
+			// define the subrepos, since they exist in a global namespace.
+			log.Debug("Looking for subrepo %s in subrepo %s", label.Subrepo, dependor.Subrepo)
+			sl.Subrepo = dependor.Subrepo
+			if state.Graph.Package(sl.PackageName, sl.Subrepo) != nil {
+				return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
+			}
+		}
+		if err := parse(tid, state, sl, label, false, nil, nil, true); err != nil {
 			return nil, err
 		}
 		// Now it's parsed, but might need to wait for it to be built
-		return checkSubrepo(tid, state, label)
+		return checkSubrepo(tid, state, label, dependor)
 	}
 	return subrepo, nil
 }
