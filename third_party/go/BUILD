@@ -159,7 +159,8 @@ go_get(
 go_get(
     name = "protobuf",
     get = "github.com/golang/protobuf/...",
-    revision = "130e6b02ab059e7b717a096f397c5b60111cae74",
+    revision = "89a0c16f4dc2a70c0ed864d8ef64878f24fdaa51",
+    strip = ["conformance"],
 )
 
 go_get(
@@ -249,7 +250,7 @@ go_get(
 go_get(
     name = "prometheus",
     get = "github.com/prometheus/client_golang/prometheus/...",
-    revision = "c5b7fccd204277076155f10851dad72b76a49317",
+    revision = "v0.8.0",
     deps = [
         ":grpc",
         ":pbutil",
@@ -269,7 +270,7 @@ go_get(
         "model",
         "internal/bitbucket.org/ww/goautoneg",
     ],
-    revision = "89604d197083d4781071d3c65855d24ecfb0a563",
+    revision = "c7de2306084e37d54b8be01f3541a8464345e9a5",
     deps = [
         ":pbutil",
         ":prometheus_client_model",
@@ -280,7 +281,7 @@ go_get(
 go_get(
     name = "prometheus_client_model",
     get = "github.com/prometheus/client_model/go",
-    revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c",
+    revision = "5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f",
     deps = [
         ":protobuf",
     ],
@@ -288,8 +289,8 @@ go_get(
 
 go_get(
     name = "procfs",
-    get = "github.com/prometheus/procfs",
-    revision = "abf152e5f3e97f2fafac028d2cc06c1feb87ffa5",
+    get = "github.com/prometheus/procfs/...",
+    revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92",
     strip = ["fixtures"],  # Test fixture has a symlink to /usr/bin/vim which might not exist
 )
 
