@@ -14,7 +14,8 @@ type Subrepo struct {
 	Root string
 	// If this repo is output by a target, this is the target that creates it. Can be nil.
 	Target *BuildTarget
-	// If this repo has a different configuration (e.g. it's for a different architecture), it's stored here
+	// The build state instance that tracks this subrepo (it's different from the host one if
+	// this subrepo is for a different architecture)
 	State *BuildState
 	// True if this subrepo was created for a different architecture
 	IsCrossCompile bool

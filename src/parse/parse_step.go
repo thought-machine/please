@@ -186,9 +186,7 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 	config := state.Config
 	if subrepo != nil {
 		pkgName = subrepo.Dir(pkgName)
-		if subrepo.State != nil {
-			config = subrepo.State.Config
-		}
+		config = subrepo.State.Config
 	}
 	// Bazel defines targets in its "external" package from its WORKSPACE file.
 	// We will fake this by treating that as an actual package file...
