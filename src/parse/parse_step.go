@@ -66,7 +66,7 @@ func checkSubrepo(tid int, state *core.BuildState, label core.BuildLabel) (*core
 	subrepo := state.Graph.Subrepo(label.Subrepo)
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
-		state.WaitForBuiltTarget(subrepo.Target.Label, label.PackageName)
+		state.WaitForBuiltTarget(subrepo.Target.Label, label)
 	} else if subrepo == nil {
 		// We don't have the definition of it at all. Need to parse that first.
 		if err := parse(tid, state, label.SubrepoLabel(), label, false, nil, nil, true); err != nil {
