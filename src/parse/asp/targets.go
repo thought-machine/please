@@ -423,8 +423,6 @@ func asDict(obj pyObject) (pyDict, bool) {
 	return nil, false
 }
 
-
-
 // Target is in a subdirectory, check nobody else owns that.
 func checkSubDir(s *scope, src string) {
 	if strings.Contains(src, "/") {
