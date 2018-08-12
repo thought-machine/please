@@ -127,7 +127,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	if subrepo != nil {
 		pkg.SubrepoName = subrepo.Name
 	}
-	if pkg.Filename = buildFileName(state, label.PackageName, label.Subrepo); pkg.Filename == "" {
+	if pkg.Filename = buildFileName(state, label.PackageName, subrepo); pkg.Filename == "" {
 		exists := core.PathExists(packageName)
 		// Handle quite a few cases to provide more obvious error messages.
 		if dependor != core.OriginalTarget && exists {
@@ -182,25 +182,24 @@ func addPackage(state *core.BuildState, pkg *core.Package) {
 	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
 }
 
-func buildFileName(state *core.BuildState, pkgName, subrepo string) string {
+func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo) string {
+	config := state.Config
+	if subrepo != nil {
+		pkgName = subrepo.Dir(pkgName)
+		if subrepo.State != nil {
+			config = subrepo.State.Config
+		}
+	}
 	// Bazel defines targets in its "external" package from its WORKSPACE file.
 	// We will fake this by treating that as an actual package file...
 	// TODO(peterebden): They may be moving away from their "external" nomenclature?
 	if state.Config.Bazel.Compatibility && pkgName == "external" || pkgName == "workspace" {
 		return "WORKSPACE"
 	}
-	for _, buildFileName := range state.Config.Parse.BuildFileName {
+	for _, buildFileName := range config.Parse.BuildFileName {
 		if filename := path.Join(pkgName, buildFileName); fs.FileExists(filename) {
 			return filename
 		}
-	}
-	// Could be a subrepo...
-	if subrepo != "" {
-		s := state.Graph.Subrepo(subrepo)
-		if s == nil {
-			log.Fatalf("%s", subrepo)
-		}
-		return buildFileName(state, s.Dir(pkgName), "")
 	}
 	return ""
 }
