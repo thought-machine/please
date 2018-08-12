@@ -16,6 +16,7 @@ cc_library(
     deps = [
         ":lib1",
     ],
+    visibility = ["//test/cc_rules/..."],
 )
 
 cc_test(

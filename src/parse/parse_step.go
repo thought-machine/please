@@ -145,7 +145,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	}
 	filename, dir := buildFileName(state, label.PackageName, subrepo)
 	if filename == "" {
-		exists := core.PathExists(packageName)
+		exists := core.PathExists(dir)
 		// Handle quite a few cases to provide more obvious error messages.
 		if dependor != core.OriginalTarget && exists {
 			return nil, fmt.Errorf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, dir)
