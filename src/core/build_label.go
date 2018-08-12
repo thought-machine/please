@@ -121,7 +121,7 @@ func TryParseBuildLabel(target, currentPath string) (BuildLabel, error) {
 // It panics on error.
 func ParseBuildLabelContext(target string, pkg *Package) BuildLabel {
 	if p, name, subrepo := parseBuildLabelParts(target, pkg.Name, pkg.Subrepo); name != "" {
-		if subrepo == "" && pkg.Subrepo != nil {
+		if subrepo == "" && pkg.Subrepo != nil && target[0] != '@' {
 			subrepo = pkg.Subrepo.Name
 		}
 		return BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}

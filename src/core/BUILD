@@ -51,6 +51,7 @@ go_test(
     srcs = ["label_parse_test.go"],
     deps = [
         ":core",
+        "//third_party/go:testify",
     ],
 )
 
