@@ -576,11 +576,14 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 // buildLinks builds links from the given target if it's labelled appropriately.
 // For example, Go targets may link themselves into plz-out/go/src etc.
 func buildLinks(state *core.BuildState, target *core.BuildTarget) {
-	for _, dest := range target.PrefixedLabels("link:") {
-		destDir := path.Join(core.RepoRoot, dest, target.Label.PackageName)
-		srcDir := path.Join(core.RepoRoot, target.OutDir())
-		for _, out := range target.Outputs() {
-			symlinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out))
+	if labels := target.PrefixedLabels("link:"); len(labels) > 0 {
+		env := core.BuildEnvironment(state, target)
+		for _, dest := range labels {
+			destDir := path.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
+			srcDir := path.Join(core.RepoRoot, target.OutDir())
+			for _, out := range target.Outputs() {
+				symlinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out))
+			}
 		}
 	}
 }
