@@ -529,7 +529,11 @@ func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap ma
 	for _, label := range failedTargets {
 		err := failedTargetMap[label]
 		if err != nil {
-			printf("    ${BOLD_RED}%s\n${RESET}%s${RESET}\n", label, colouriseError(err))
+			if cli.StdErrIsATerminal {
+				printf("    ${BOLD_RED}%s\n${RESET}%s${RESET}\n", label, colouriseError(err))
+			} else {
+				printf("    %s\n%s\n", label, err)
+			}
 		} else {
 			printf("    ${BOLD_RED}%s${RESET}\n", label)
 		}
