@@ -36,7 +36,9 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
                     code that you never want to be instrumented.
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
     """
-    private = name.startswith('_')
+    out = out or name + '.a'
+    private = out.startswith('_')
+    labels = [] if private else ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)]
     if asm_srcs:
         lib_rule = go_library(
             name = f'_{name}#lib',
@@ -67,13 +69,13 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
                 'lib': [lib_rule],
                 'asm': [asm_rule],
             },
-            outs=[out or name + '.a'],
+            outs=[out],
             tools=[CONFIG.GO_TOOL],
             cmd = 'cp $SRCS_LIB $OUT && chmod +w $OUT && $TOOL tool pack r $OUT $SRCS_ASM',
             visibility = visibility,
             building_description = 'Packing...',
             requires = ['go'],
-            labels = [] if private else ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
+            labels = labels,
             provides = {'go': ':' + name, 'go_src': lib_rule},
             test_only = test_only,
         )
@@ -98,13 +100,13 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         name=name,
         srcs=srcs,
         deps=deps + [src_rule],
-        outs=[out or name + '.a'],
+        outs=[out],
         cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs),
         visibility=visibility,
         building_description="Compiling...",
         requires=['go', 'go_src'] if _all_srcs else ['go'],
         provides={'go': ':' + name, 'go_src': src_rule},
-        labels = [] if private else ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
+        labels = labels,
         test_only=test_only,
         tools=tools,
         needs_transitive_deps=_needs_transitive_deps,
