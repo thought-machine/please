@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"cli"
+	"strings"
 )
 
 func TestPlzConfigWorking(t *testing.T) {
@@ -252,10 +253,17 @@ func TestPassEnv(t *testing.T) {
 		"GOARCH=" + runtime.GOARCH,
 		"GOOS=" + runtime.GOOS,
 		"OS=" + runtime.GOOS,
+		"PATH=" + os.Getenv("PATH"),
 		"XARCH=x86_64",
 		"XOS=" + xos(),
 	}
 	assert.Equal(t, expected, config.GetBuildEnv())
+}
+
+func TestBuildPathWithPathEnv(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, "")
+	assert.NoError(t, err)
+	assert.Equal(t, config.Build.Path, strings.Split(os.Getenv("PATH"), ":"))
 }
 
 func xos() string {
