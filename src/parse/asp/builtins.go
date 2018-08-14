@@ -704,16 +704,16 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
 	name := string(args[0].(pyString))
 	dep := string(args[1].(pyString))
-	log.Debug("Registering subrepo %s in package %s", name, s.pkg.Name)
 	var target *core.BuildTarget
 	root := name
 	if dep != "" {
 		// N.B. The target must be already registered on this package.
-		target := s.pkg.TargetOrDie(core.ParseBuildLabelContext(dep, s.pkg).Name)
+		target = s.pkg.TargetOrDie(core.ParseBuildLabelContext(dep, s.pkg).Name)
 		root = path.Join(target.OutDir(), name)
 	} else if args[2] != None {
 		root = string(args[2].(pyString))
 	}
+	log.Debug("Registering subrepo %s in package %s", name, s.pkg.Name)
 	s.state.Graph.AddSubrepo(&core.Subrepo{
 		Name:   name,
 		Root:   root,
