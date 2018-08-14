@@ -70,21 +70,14 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependor core.BuildLab
 	} else if subrepo == nil {
 		// We don't have the definition of it at all. Need to parse that first.
 		sl := label.SubrepoLabel()
-		if state.Graph.Package(sl.PackageName, "") != nil {
-			// Package has already been parsed and this subrepo doesn't exist.
-			if dependor.Subrepo == "" {
-				return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
+		pkg, subrepoName := checkSubrepoPackage(state, sl.PackageName, dependor.Subrepo)
+		if pkg != nil {
+			if subrepo := checkArchSubrepo(state, label.Subrepo); subrepo != nil {
+				return subrepo, nil
 			}
-			// It might be defined in a subrepo itself.
-			// This seems mildly dodgy in that it seems to depend a bit much
-			// on ordering events but it seems useful to let the top-level repo
-			// define the subrepos, since they exist in a global namespace.
-			log.Debug("Looking for subrepo %s in subrepo %s", label.Subrepo, dependor.Subrepo)
-			sl.Subrepo = dependor.Subrepo
-			if state.Graph.Package(sl.PackageName, sl.Subrepo) != nil {
-				return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
-			}
+			return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
 		}
+		sl.Subrepo = subrepoName
 		if err := parse(tid, state, sl, label, false, nil, nil, true); err != nil {
 			return nil, err
 		}
@@ -94,15 +87,32 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependor core.BuildLab
 	return subrepo, nil
 }
 
+// checkSubrepoPackage looks for a package, possibly defined in a subrepo.
+// This seems mildly dodgy in that it seems to depend a bit much
+// on ordering events but it seems useful to let the top-level repo
+// define the subrepos, since they exist in a global namespace.
+func checkSubrepoPackage(state *core.BuildState, pkg, subrepo string) (*core.Package, string) {
+	if pkg := state.Graph.Package(pkg, ""); pkg != nil || subrepo == "" {
+		return pkg, ""
+	}
+	return state.Graph.Package(pkg, subrepo), subrepo
+}
+
+// checkArchSubrepo checks if a target refers to a cross-compiling subrepo.
+// Those don't have to be explicitly defined - maybe we should insist on that, but it's nicer not to have to.
+func checkArchSubrepo(state *core.BuildState, name string) *core.Subrepo {
+	var arch cli.Arch
+	if err := arch.UnmarshalFlag(name); err == nil {
+		return state.Graph.MaybeAddSubrepo(core.SubrepoForArch(state, arch))
+	}
+	return nil
+}
+
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
 func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor core.BuildLabel, noDeps, forSubinclude bool, include, exclude []string) error {
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
-		// This might be for cross-compiling in which case it doesn't have to be explicitly
-		// specified. Maybe we should insist on that, but it's nicer not to have to.
 		if label.PackageName == "" && label.Name == dependor.Subrepo {
-			var arch cli.Arch
-			if err := arch.UnmarshalFlag(label.Name); err == nil {
-				state.Graph.MaybeAddSubrepo(core.SubrepoForArch(state, arch))
+			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {
 				return nil
 			}
 		}
