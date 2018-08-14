@@ -506,7 +506,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"alltargets": func() bool {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
-			query.AllTargets(state, state.ExpandOriginalTargets(), opts.Query.AllTargets.Hidden)
+			query.AllTargets(state.Graph, state.ExpandOriginalTargets(), opts.Query.AllTargets.Hidden)
 		})
 	},
 	"print": func() bool {
