@@ -73,6 +73,7 @@ func (c *asyncCache) Shutdown() {
 	log.Info("Shutting down cache workers...")
 	close(c.requests)
 	c.wg.Wait()
+	log.Debug("Shut down all cache workers")
 }
 
 // run implements the actual async logic.
@@ -84,6 +85,5 @@ func (c *asyncCache) run() {
 			c.realCache.Store(r.target, r.key, r.files...)
 		}
 	}
-	log.Debug("Cache worker finished")
 	c.wg.Done()
 }

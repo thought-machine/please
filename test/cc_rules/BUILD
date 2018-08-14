@@ -13,10 +13,10 @@ cc_library(
     name = "lib2",
     srcs = ["lib2.cc"],
     hdrs = ["lib2.h"],
+    visibility = ["//test/cc_rules/..."],
     deps = [
         ":lib1",
     ],
-    visibility = ["//test/cc_rules/..."],
 )
 
 cc_test(

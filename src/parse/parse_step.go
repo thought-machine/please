@@ -92,7 +92,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependor core.BuildLab
 // on ordering events but it seems useful to let the top-level repo
 // define the subrepos, since they exist in a global namespace.
 func checkSubrepoPackage(state *core.BuildState, pkg, subrepo string) (*core.Package, string) {
-	if pkg := state.Graph.Package(pkg, ""); pkg != nil || subrepo == "" {
+	if pkg := state.Graph.Package(pkg, ""); pkg == nil || subrepo == "" {
 		return pkg, ""
 	}
 	return state.Graph.Package(pkg, subrepo), subrepo
@@ -246,11 +246,8 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 	if target == nil {
 		log.Fatalf("Target %s (referenced by %s) doesn't exist\n", label, dependor)
 	}
-	if target.State() >= core.Active && !rescan {
-		if !forceBuild {
-			return // Target is already tagged to be built and likely on the queue.
-		}
-		log.Debug("Forcing build of %s", label)
+	if target.State() >= core.Active && !rescan && !forceBuild {
+		return // Target is already tagged to be built and likely on the queue.
 	}
 	// Only do this bit if we actually need to build the target
 	if !target.SyncUpdateState(core.Inactive, core.Semiactive) && !rescan && !forceBuild {
@@ -283,9 +280,6 @@ func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, for
 				}
 				continue
 			}
-		}
-		if forceBuild {
-			log.Debug("Forcing build of dep %s -> %s", label, dep)
 		}
 		addDep(state, dep, label, false, forceBuild)
 	}

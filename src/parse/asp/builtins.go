@@ -701,15 +701,16 @@ func selectTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 
 // subrepo implements the subrepo() builtin that adds a new repository.
 func subrepo(s *scope, args []pyObject) pyObject {
+	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
 	root := func(def string) string {
 		if args[2] != None {
 			return string(args[2].(pyString))
 		}
 		return def
 	}
-
 	name := string(args[0].(pyString))
 	dep := string(args[1].(pyString))
+	log.Debug("Registering subrepo %s in package %s", name, s.pkg.Name)
 	if dep == "" {
 		// This is deliberately different to facilitate binding subrepos within the same VCS repo.
 		s.state.Graph.AddSubrepo(&core.Subrepo{
@@ -727,6 +728,5 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		Target: t,
 		State:  s.state,
 	})
-	log.Debug("Registered subrepo %s", name)
 	return None
 }
