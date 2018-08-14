@@ -184,11 +184,11 @@ func TestRecursiveInitPyCreation(t *testing.T) {
 
 func TestCreatePlzOutGo(t *testing.T) {
 	state, target := newState("//gopkg:target")
-	target.AddLabel("link:plz-out/go/src")
+	target.AddLabel("link:plz-out/go/${PKG}/src")
 	target.AddOutput("file1.go")
 	assert.False(t, fs.PathExists("plz-out/go"))
 	assert.NoError(t, buildTarget(1, state, target))
-	assert.True(t, fs.PathExists("plz-out/go/src/gopkg/file1.go"))
+	assert.True(t, fs.PathExists("plz-out/go/gopkg/src/file1.go"))
 }
 
 func TestLicenceEnforcement(t *testing.T) {
