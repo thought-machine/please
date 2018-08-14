@@ -140,8 +140,9 @@ func parseBuildLabelParts(target, currentPath string, subrepo *Subrepo) (string,
 		// @subrepo//pkg:target or @subrepo:target syntax
 		idx := strings.Index(target, "//")
 		if idx == -1 {
+			// if subrepo and target are the same name, then @subrepo syntax will also suffice
 			if idx = strings.IndexRune(target, ':'); idx == -1 {
-				return "", "", ""
+				return "", target[1:], target[1:]
 			}
 		}
 		pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, subrepo)

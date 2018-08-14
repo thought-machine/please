@@ -94,6 +94,16 @@ func TestSubrepoLabel(t *testing.T) {
 	assert.EqualValues(t, BuildLabel{PackageName: "", Name: ""}, label.SubrepoLabel())
 }
 
+func TestParseBuildLabelParts(t *testing.T) {
+	target1 := "@unittest_cpp//:unittest_cpp"
+	targetNewSyntax := "@unittest_cpp"
+	pkg, name, subrepo := parseBuildLabelParts(target1, "/", nil)
+	pkg2, name2, subrepo2 := parseBuildLabelParts(targetNewSyntax, "/", nil)
+	assert.Equal(t, pkg, pkg2)
+	assert.Equal(t, name, name2)
+	assert.Equal(t, subrepo, subrepo2)
+}
+
 func TestMain(m *testing.M) {
 	// Used to support TestComplete, the function it's testing re-execs
 	// itself thinking that it's actually plz.
