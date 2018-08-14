@@ -111,7 +111,7 @@ func checkArchSubrepo(state *core.BuildState, name string) *core.Subrepo {
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
 func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor core.BuildLabel, noDeps, forSubinclude bool, include, exclude []string) error {
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
-		if label.PackageName == "" && label.Name == dependor.Subrepo {
+		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependor.Subrepo {
 			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {
 				return nil
 			}
