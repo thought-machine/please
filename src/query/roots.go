@@ -27,11 +27,11 @@ func Roots(graph *core.BuildGraph, labels core.BuildLabels) {
 		uniqueReverseDependencies(graph, target, targets)
 		// We need to remove the current target from the returned list as it is a false positive at this point.
 		delete(targets, target)
-		for parent, _ := range targets {
+		for parent := range targets {
 			allSeenTargets[parent] = struct{}{}
 		}
 	}
-	for parent, _ := range allSeenTargets {
+	for parent := range allSeenTargets {
 		// See if any of the reverse deps were passed in
 		i := indexOf(labels, parent.Label)
 		if i != -1 {
