@@ -70,32 +70,29 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependor core.BuildLab
 	} else if subrepo == nil {
 		// We don't have the definition of it at all. Need to parse that first.
 		sl := label.SubrepoLabel()
-		pkg, subrepoName := checkSubrepoPackage(state, sl.PackageName, dependor.Subrepo)
-		if pkg != nil {
-			if subrepo := checkArchSubrepo(state, label.Subrepo); subrepo != nil {
-				return subrepo, nil
-			}
-			return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
-		}
-		sl.Subrepo = subrepoName
-		if err := parse(tid, state, sl, label, false, nil, nil, true); err != nil {
+		if err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
+			return nil, err
+		} else if err := parseSubrepoPackage(tid, state, sl.PackageName, dependor.Subrepo, label); err != nil {
 			return nil, err
 		}
-		// Now it's parsed, but might need to wait for it to be built
-		return checkSubrepo(tid, state, label, dependor)
+		if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
+			return subrepo, nil
+		} else if subrepo := checkArchSubrepo(state, label.Subrepo); subrepo != nil {
+			return subrepo, nil
+		}
+		return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
 	}
 	return subrepo, nil
 }
 
-// checkSubrepoPackage looks for a package, possibly defined in a subrepo.
-// This seems mildly dodgy in that it seems to depend a bit much
-// on ordering events but it seems useful to let the top-level repo
-// define the subrepos, since they exist in a global namespace.
-func checkSubrepoPackage(state *core.BuildState, pkg, subrepo string) (*core.Package, string) {
-	if pkg := state.Graph.Package(pkg, ""); pkg == nil || subrepo == "" {
-		return pkg, ""
+// parseSubrepoPackage parses a package to make sure subrepos are available.
+func parseSubrepoPackage(tid int, state *core.BuildState, pkg, subrepo string, dependor core.BuildLabel) error {
+	if state.Graph.Package(pkg, subrepo) == nil {
+		// Don't have it already, must parse.
+		label := core.BuildLabel{Subrepo: subrepo, PackageName: pkg, Name: "all"}
+		return parse(tid, state, label, dependor, false, nil, nil, true)
 	}
-	return state.Graph.Package(pkg, subrepo), subrepo
+	return nil
 }
 
 // checkArchSubrepo checks if a target refers to a cross-compiling subrepo.
