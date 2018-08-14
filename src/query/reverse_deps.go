@@ -13,7 +13,6 @@ func ReverseDeps(state *core.BuildState, labels []core.BuildLabel) {
 
 	graph := state.Graph
 	for _, label := range labels {
-		//labelTarget := graph.TargetOrDie(label)
 		for _, child := range graph.PackageOrDie(label).AllChildren(graph.TargetOrDie(label)) {
 			for _, target := range graph.ReverseDependencies(child) {
 				if parent := target.Parent(graph); parent != nil {
