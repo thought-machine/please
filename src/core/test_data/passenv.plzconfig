@@ -1,3 +1,4 @@
 [Build]
 PassEnv = FOO
 PassEnv = BAR
+PassEnv = PATH

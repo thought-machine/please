@@ -97,7 +97,7 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 	} else {
 		setDefault(&config.Parse.BuildFileName, []string{"BUILD"})
 	}
-	setDefault(&config.Build.Path, []string{"/usr/local/bin", "/usr/bin", "/bin"})
+	setBuildPath(&config.Build.Path, config.Build.PassEnv)
 	setDefault(&config.Build.PassEnv, []string{})
 	setDefault(&config.Cover.FileExtension, []string{".go", ".py", ".java", ".js", ".cc", ".h", ".c"})
 	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc"})
@@ -138,6 +138,18 @@ func setDefault(conf *[]string, def []string) {
 	if len(*conf) == 0 {
 		*conf = def
 	}
+}
+
+// setDefault checks if "PATH" is in passEnv, if it is set config.build.Path to use the environment variable.
+func setBuildPath(conf *[]string, passEnv []string) {
+	pathVal := []string{"/usr/local/bin", "/usr/bin", "/bin"}
+	for _, i := range passEnv {
+		if i == "PATH" {
+			pathVal = strings.Split(os.Getenv("PATH"), ":")
+		}
+	}
+
+	setDefault(conf, pathVal)
 }
 
 // defaultPath sets a variable to a location in a directory if it's not already set.
