@@ -99,8 +99,11 @@ func TestParseBuildLabelParts(t *testing.T) {
 	targetNewSyntax := "@unittest_cpp"
 	pkg, name, subrepo := parseBuildLabelParts(target1, "/", nil)
 	pkg2, name2, subrepo2 := parseBuildLabelParts(targetNewSyntax, "/", nil)
+	assert.Equal(t, pkg, "")
 	assert.Equal(t, pkg, pkg2)
+	assert.Equal(t, name, "unittest_cpp")
 	assert.Equal(t, name, name2)
+	assert.Equal(t, subrepo, "unittest_cpp")
 	assert.Equal(t, subrepo, subrepo2)
 }
 
