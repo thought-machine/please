@@ -51,3 +51,16 @@ cc_test(
 <p>Subrepos also underpin <a href="cross_compiling.html">cross-compiling</a> and share the same
   syntax; you can use that to reference architectures as well. There is currently some ambiguity
   here and so it is best not to define subrepo names that match cross-compile architectures.</p>
+
+<p>If the subrepo and the package names are the same, for example, <code>@unittest_cpp//:unittest_cpp</code>,
+    the build label reference to the target can be abbreviated, like so:</p>
+
+<pre><code>
+cc_test(
+    name = "my_test",
+    ...
+    deps = [
+        "@unittest_cpp",
+    ],
+)
+</code></pre>
