@@ -493,7 +493,7 @@ var buildFunctions = map[string]func() bool{
 	"reverseDeps": func() bool {
 		opts.VisibilityParse = true
 		return runQuery(false, opts.Query.ReverseDeps.Args.Targets, func(state *core.BuildState) {
-			query.ReverseDeps(state.Graph, state.ExpandOriginalTargets())
+			query.ReverseDeps(state, state.ExpandOriginalTargets())
 		})
 	},
 	"somepath": func() bool {

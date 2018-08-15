@@ -1,24 +1,24 @@
 package query
 
 import (
+	"core"
 	"fmt"
 	"sort"
-
-	"core"
 )
 
 // ReverseDeps For each input label, finds all targets which depend upon it.
-func ReverseDeps(graph *core.BuildGraph, labels []core.BuildLabel) {
+func ReverseDeps(state *core.BuildState, labels []core.BuildLabel) {
 
-	uniqueTargets := make(map[core.BuildLabel]struct{})
+	uniqueTargets := make(map[*core.BuildTarget]struct{})
 
+	graph := state.Graph
 	for _, label := range labels {
 		for _, child := range graph.PackageOrDie(label).AllChildren(graph.TargetOrDie(label)) {
 			for _, target := range graph.ReverseDependencies(child) {
 				if parent := target.Parent(graph); parent != nil {
-					uniqueTargets[parent.Label] = struct{}{}
+					uniqueTargets[parent] = struct{}{}
 				} else {
-					uniqueTargets[target.Label] = struct{}{}
+					uniqueTargets[target] = struct{}{}
 				}
 			}
 		}
@@ -27,17 +27,21 @@ func ReverseDeps(graph *core.BuildGraph, labels []core.BuildLabel) {
 	for _, pkg := range graph.PackageMap() {
 		for _, label := range labels {
 			if pkg.HasSubinclude(label) {
-				uniqueTargets[core.BuildLabel{PackageName: pkg.Name, Name: "all"}] = struct{}{}
+				for _, target := range pkg.AllTargets() {
+					uniqueTargets[target] = struct{}{}
+				}
 			}
 		}
 	}
 
 	targets := make(core.BuildLabels, 0, len(uniqueTargets))
 	for _, label := range labels {
-		delete(uniqueTargets, label)
+		delete(uniqueTargets, graph.TargetOrDie(label))
 	}
 	for target := range uniqueTargets {
-		targets = append(targets, target)
+		if state.ShouldInclude(target) {
+			targets = append(targets, target.Label)
+		}
 	}
 	sort.Sort(targets)
 	for _, target := range targets {
