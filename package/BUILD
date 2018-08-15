@@ -101,10 +101,10 @@ filegroup(
 filegroup(
     name = "signed_debs",
     srcs = [
-        ":please",
-        ":please_sandbox",
-        ":plz_http_cache_server",
-        ":plz_rpc_cache_server",
+        ":please_sandbox_signed",
+        ":please_signed",
+        ":plz_http_cache_server_signed",
+        ":plz_rpc_cache_server_signed",
     ],
     labels = ["manual"],
 )
