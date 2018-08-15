@@ -328,6 +328,11 @@ var opts struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to consider changed"`
 			} `positional-args:"true"`
 		} `command:"changes" description:"Calculates the difference between two different states of the build graph"`
+		Roots struct {
+			Args struct {
+				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
+			} `positional-args:"true"`
+		} `command:"roots" description:"Show build labels with no dependents in the given list, from the list."`
 	} `command:"query" description:"Queries information about the build graph"`
 }
 
@@ -603,6 +608,11 @@ var buildFunctions = map[string]func() bool{
 			fmt.Printf("%s\n", target)
 		}
 		return true
+	},
+	"roots": func() bool {
+		return runQuery(true, opts.Query.Roots.Args.Targets, func(state *core.BuildState) {
+			query.Roots(state.Graph, opts.Query.Roots.Args.Targets)
+		})
 	},
 }
 
