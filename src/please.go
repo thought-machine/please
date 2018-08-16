@@ -718,6 +718,7 @@ func newCache(config *core.Configuration) core.Cache {
 	return cache.NewCache(config)
 }
 
+// TODO: Should seperate InitState() OUT, (God, I did it earlier and changed my mind...I'm a peasant..:( )
 // Please starts & runs the main build process through to its completion.
 func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool, cleanUp bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
