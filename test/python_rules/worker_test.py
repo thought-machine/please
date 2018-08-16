@@ -6,5 +6,5 @@ Testing the integration with a worker script
 
 
 class WorkerTest(unittest.TestCase):
-    def dummy_test(self):
-        self.assertEqual(1, 1)
+    def test_dummy(self):
+        self.assertEqual(3, 3)
