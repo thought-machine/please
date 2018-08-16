@@ -434,8 +434,7 @@ var buildFunctions = map[string]func() bool{
 		fmt.Println("OutputFlags", opts.OutputFlags)
 		fmt.Println("TARGET", opts.Watch.Args.Targets)
 		if success {
-			//commandArgs := watch.Command()
-			watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run, initBuild)
+			watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run)
 		}
 
 		// sucess, state := runWatch(opts.Watch.Args.Targets)
@@ -620,6 +619,19 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 }
+
+//func runWatch() bool {
+//	success, state := runBuild(opts.Watch.Args.Targets, true, true, false)
+//	fmt.Println("OutputFlags", opts.OutputFlags)
+//	fmt.Println("TARGET", opts.Watch.Args.Targets)
+//	if success {
+//		//commandArgs := watch.Command()
+//		watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run, initBuild)
+//	}
+//
+//	// sucess, state := runWatch(opts.Watch.Args.Targets)
+//	return success
+//}
 
 // ConfigOverrides are used to implement completion on the -o flag.
 type ConfigOverrides map[string]string
@@ -917,10 +929,11 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	os.Exit(0)
 }
 
-func initBuild(args []string) string {
+func initBuild(args []string) {
+	fmt.Println("PARSE ARGS", args)
+
 	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
-	fmt.Println("PARSE ARGS", os.Args)
 	if opts.HelpFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other flags if --version was passed.
@@ -947,7 +960,6 @@ func initBuild(args []string) string {
 	cli.InitLogging(opts.OutputFlags.Verbosity)
 
 	command := cli.ActiveCommand(parser.Command)
-
 	if opts.Complete != "" {
 		// Completion via PLZ_COMPLETE env var sidesteps other commands
 		opts.Query.Completions.Cmd = command
@@ -1006,6 +1018,18 @@ func initBuild(args []string) string {
 		defer pprof.WriteHeapProfile(f)
 	}
 
+	fmt.Println("HELLO", command)
+	//var callBuild func() bool
+	//if command == "watch" {
+	//	callBuild = runWatch
+	//} else {
+	//	callBuild = buildFunctions[command]
+	//}
+	//
+	//if !callBuild() {
+	//	os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
+	//}
+
 	if !buildFunctions[command]() {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
 	}
@@ -1014,97 +1038,96 @@ func initBuild(args []string) string {
 
 
 func main() {
-	//parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args, flags.PassDoubleDash, handleCompletions)
-	//// Note that we must leave flagsErr for later, because it may be affected by aliases.
-	//fmt.Println("PARSE ARGS", os.Args)
-	//if opts.HelpFlags.Version {
-	//	fmt.Printf("Please version %s\n", core.PleaseVersion)
-	//	os.Exit(0) // Ignore other flags if --version was passed.
-	//} else if opts.HelpFlags.Help {
-	//	// Attempt to read config files to produce help for aliases.
-	//	cli.InitLogging(cli.MinVerbosity)
-	//	parser.WriteHelp(os.Stderr)
-	//	if core.FindRepoRoot() {
-	//		if config, err := core.ReadDefaultConfigFiles(""); err == nil {
-	//			config.PrintAliases(os.Stderr)
-	//		}
-	//	}
-	//	os.Exit(0)
-	//}
-	//if opts.OutputFlags.Colour {
-	//	output.SetColouredOutput(true)
-	//} else if opts.OutputFlags.NoColour {
-	//	output.SetColouredOutput(false)
-	//}
-	//if opts.OutputFlags.ShowAllOutput {
-	//	opts.OutputFlags.PlainOutput = true
-	//}
-	//// Init logging, but don't do file output until we've chdir'd.
-	//cli.InitLogging(opts.OutputFlags.Verbosity)
-	//
-	//command := cli.ActiveCommand(parser.Command)
-	//if opts.Complete != "" {
-	//	// Completion via PLZ_COMPLETE env var sidesteps other commands
-	//	opts.Query.Completions.Cmd = command
-	//	opts.Query.Completions.Args.Fragments = []string{opts.Complete}
-	//	command = "completions"
-	//} else if command == "help" || command == "follow" || command == "init" {
-	//	// These commands don't use a config file, allowing them to be run outside a repo.
-	//	if flagsErr != nil { // This error otherwise doesn't get checked until later.
-	//		cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, os.Args)
-	//	}
-	//	config = core.DefaultConfiguration()
-	//	if !buildFunctions[command]() {
-	//		os.Exit(1)
-	//	}
-	//	os.Exit(0)
-	//} else if opts.OutputFlags.CompletionScript {
-	//	utils.PrintCompletionScript()
-	//	os.Exit(0)
-	//}
-	//// Read the config now
-	//config = readConfigAndSetRoot(command == "update")
-	//if parser.Command.Active != nil && parser.Command.Active.Name == "query" {
-	//	// Query commands don't need either of these set.
-	//	opts.OutputFlags.PlainOutput = true
-	//	config.Cache.DirClean = false
-	//}
-	//
-	//// Now we've read the config file, we may need to re-run the parser; the aliases in the config
-	//// can affect how we parse otherwise illegal flag combinations.
-	//if flagsErr != nil || len(extraArgs) > 0 {
-	//	args := config.UpdateArgsWithAliases(os.Args)
-	//	command = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, args)
-	//}
-	//
-	//if opts.ProfilePort != 0 {
-	//	go func() {
-	//		log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
-	//	}()
-	//}
-	//if opts.Profile != "" {
-	//	f, err := os.Create(opts.Profile)
-	//	if err != nil {
-	//		log.Fatalf("Failed to open profile file: %s", err)
-	//	}
-	//	if err := pprof.StartCPUProfile(f); err != nil {
-	//		log.Fatalf("could not start profiler: %s", err)
-	//	}
-	//	defer pprof.StopCPUProfile()
-	//}
-	//if opts.MemProfile != "" {
-	//	f, err := os.Create(opts.MemProfile)
-	//	if err != nil {
-	//		log.Fatalf("Failed to open memory profile file: %s", err)
-	//	}
-	//	defer f.Close()
-	//	defer pprof.WriteHeapProfile(f)
-	//}
-	//
-	//
-	//if !buildFunctions[command]() {
-	//	os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
-	//}
+	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args, flags.PassDoubleDash, handleCompletions)
+	// Note that we must leave flagsErr for later, because it may be affected by aliases.
+	if opts.HelpFlags.Version {
+		fmt.Printf("Please version %s\n", core.PleaseVersion)
+		os.Exit(0) // Ignore other flags if --version was passed.
+	} else if opts.HelpFlags.Help {
+		// Attempt to read config files to produce help for aliases.
+		cli.InitLogging(cli.MinVerbosity)
+		parser.WriteHelp(os.Stderr)
+		if core.FindRepoRoot() {
+			if config, err := core.ReadDefaultConfigFiles(""); err == nil {
+				config.PrintAliases(os.Stderr)
+			}
+		}
+		os.Exit(0)
+	}
+	if opts.OutputFlags.Colour {
+		output.SetColouredOutput(true)
+	} else if opts.OutputFlags.NoColour {
+		output.SetColouredOutput(false)
+	}
+	if opts.OutputFlags.ShowAllOutput {
+		opts.OutputFlags.PlainOutput = true
+	}
+	// Init logging, but don't do file output until we've chdir'd.
+	cli.InitLogging(opts.OutputFlags.Verbosity)
 
-	initBuild(os.Args)
+	command := cli.ActiveCommand(parser.Command)
+	if opts.Complete != "" {
+		// Completion via PLZ_COMPLETE env var sidesteps other commands
+		opts.Query.Completions.Cmd = command
+		opts.Query.Completions.Args.Fragments = []string{opts.Complete}
+		command = "completions"
+	} else if command == "help" || command == "follow" || command == "init" {
+		// These commands don't use a config file, allowing them to be run outside a repo.
+		if flagsErr != nil { // This error otherwise doesn't get checked until later.
+			cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, os.Args)
+		}
+		config = core.DefaultConfiguration()
+		if !buildFunctions[command]() {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	} else if opts.OutputFlags.CompletionScript {
+		utils.PrintCompletionScript()
+		os.Exit(0)
+	}
+	// Read the config now
+	config = readConfigAndSetRoot(command == "update")
+	if parser.Command.Active != nil && parser.Command.Active.Name == "query" {
+		// Query commands don't need either of these set.
+		opts.OutputFlags.PlainOutput = true
+		config.Cache.DirClean = false
+	}
+
+	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
+	// can affect how we parse otherwise illegal flag combinations.
+	if flagsErr != nil || len(extraArgs) > 0 {
+		args := config.UpdateArgsWithAliases(os.Args)
+		command = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, args)
+	}
+
+	if opts.ProfilePort != 0 {
+		go func() {
+			log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
+		}()
+	}
+	if opts.Profile != "" {
+		f, err := os.Create(opts.Profile)
+		if err != nil {
+			log.Fatalf("Failed to open profile file: %s", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatalf("could not start profiler: %s", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+	if opts.MemProfile != "" {
+		f, err := os.Create(opts.MemProfile)
+		if err != nil {
+			log.Fatalf("Failed to open memory profile file: %s", err)
+		}
+		defer f.Close()
+		defer pprof.WriteHeapProfile(f)
+	}
+
+	fmt.Println("HELLO", command)
+
+	if !buildFunctions[command]() {
+		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
+	}
+	//initBuild(os.Args)
 }

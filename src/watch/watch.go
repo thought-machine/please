@@ -27,7 +27,8 @@ const debounceInterval = 50 * time.Millisecond
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild func(arg []string)) {
+func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
+	//runWorkerScriptIfNecessary(state, labels)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("Error setting up watcher: %s", err)
@@ -37,7 +38,6 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild
 	go startWatching(watcher, state, labels, files)
 	cmds := commands(state, labels, run)
 	fmt.Println("command", runBuild(state, cmds, labels).Args)
-	fmt.Println(state.ShowAllOutput)
 	var cmd *exec.Cmd
 
 	for {
@@ -70,6 +70,33 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild
 			log.Error("Error watching files:", err)
 		}
 	}
+
+
+	//cmd := getCommandArgs(state, cmds, labels)
+	//
+	//for {
+	//	select {
+	//	case event := <-watcher.Events:
+	//		log.Info("Event: %s", event)
+	//		if !files.Has(event.Name) {
+	//			log.Notice("Skipping notification for %s", event.Name)
+	//			continue
+	//		}
+	//
+	//		// Quick debounce; poll and discard all events for the next brief period.
+	//	outer:
+	//		for {
+	//			select {
+	//			case <-watcher.Events:
+	//			case <-time.After(debounceInterval):
+	//				break outer
+	//			}
+	//		}
+	//		initBuild(cmd)
+	//	case err := <-watcher.Errors:
+	//		log.Error("Error watching files:", err)
+	//	}
+	//}
 }
 
 func runWorkerScriptIfNecessary(state *core.BuildState, labels []core.BuildLabel) {
@@ -84,6 +111,23 @@ func runWorkerScriptIfNecessary(state *core.BuildState, labels []core.BuildLabel
 
 }
 
+func getCommandArgs(state *core.BuildState, commands []string, labels []core.BuildLabel) []string {
+	binary, err := os.Executable()
+	if err != nil {
+		log.Warning("Can't determine current executable, will assume 'plz'")
+		binary = "plz"
+	}
+
+	cmd := []string {binary}
+	cmd = append(cmd, commands...)
+	cmd = append(cmd, "-c", state.Config.Build.Config)
+	for _, label := range labels {
+		cmd = append(cmd, label.String())
+	}
+	cmd = append(cmd, "--show_all_output")
+
+	return cmd
+}
 
 func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabel) *exec.Cmd {
 	binary, err := os.Executable()
@@ -96,7 +140,7 @@ func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabe
 	for _, label := range labels {
 		cmd.Args = append(cmd.Args, label.String())
 	}
-	cmd.Args = append(cmd.Args, "--show_all_output", "--nocache")
+	cmd.Args = append(cmd.Args, "--show_all_output")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	log.Notice("Running %s %s...", binary, strings.Join(commands, " "))
@@ -109,14 +153,6 @@ func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabe
 	}
 	return cmd
 }
-//
-//func populateFlags(state *core.BuildState, args []string) []string {
-//	if state.ShowAllOutput {
-//		args = append(args, "--show_all_output")
-//	}
-//
-//
-//}
 
 func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel, files cmap.ConcurrentMap) {
 	// Deduplicate seen targets & sources.
