@@ -27,8 +27,8 @@ const debounceInterval = 50 * time.Millisecond
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
-	//runWorkerScriptIfNecessary(state, labels)
+func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild func(args []string)) {
+	runWorkerScriptIfNecessary(state, labels)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("Error setting up watcher: %s", err)
@@ -37,42 +37,7 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
 	cmds := commands(state, labels, run)
-	fmt.Println("command", runBuild(state, cmds, labels).Args)
-	var cmd *exec.Cmd
-
-	for {
-		select {
-		case event := <-watcher.Events:
-			log.Info("Event: %s", event)
-			if !files.Has(event.Name) {
-				log.Notice("Skipping notification for %s", event.Name)
-				continue
-			}
-			if cmd != nil {
-				log.Info("Killing old process %d", cmd.Process.Pid)
-				core.KillProcess(cmd)
-				cmd = nil
-			}
-			// Quick debounce; poll and discard all events for the next brief period.
-		outer:
-			for {
-				select {
-				case <-watcher.Events:
-				case <-time.After(debounceInterval):
-					break outer
-				}
-			}
-			cmd = runBuild(state, cmds, labels)
-			if !run {
-				cmd.Wait()
-			}
-		case err := <-watcher.Errors:
-			log.Error("Error watching files:", err)
-		}
-	}
-
-
-	//cmd := getCommandArgs(state, cmds, labels)
+	//var cmd *exec.Cmd
 	//
 	//for {
 	//	select {
@@ -82,7 +47,11 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 	//			log.Notice("Skipping notification for %s", event.Name)
 	//			continue
 	//		}
-	//
+	//		if cmd != nil {
+	//			log.Info("Killing old process %d", cmd.Process.Pid)
+	//			core.KillProcess(cmd)
+	//			cmd = nil
+	//		}
 	//		// Quick debounce; poll and discard all events for the next brief period.
 	//	outer:
 	//		for {
@@ -92,11 +61,41 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool) {
 	//				break outer
 	//			}
 	//		}
-	//		initBuild(cmd)
+	//		cmd = runBuild(state, cmds, labels)
+	//		if !run {
+	//			cmd.Wait()
+	//		}
 	//	case err := <-watcher.Errors:
 	//		log.Error("Error watching files:", err)
 	//	}
 	//}
+
+
+	cmd := getCommandArgs(state, cmds, labels)
+
+	for {
+		select {
+		case event := <-watcher.Events:
+			log.Info("Event: %s", event)
+			if !files.Has(event.Name) {
+				log.Notice("Skipping notification for %s", event.Name)
+				continue
+			}
+
+			// Quick debounce; poll and discard all events for the next brief period.
+		outer:
+			for {
+				select {
+				case <-watcher.Events:
+				case <-time.After(debounceInterval):
+					break outer
+				}
+			}
+			initBuild(cmd)
+		case err := <-watcher.Errors:
+			log.Error("Error watching files:", err)
+		}
+	}
 }
 
 func runWorkerScriptIfNecessary(state *core.BuildState, labels []core.BuildLabel) {
