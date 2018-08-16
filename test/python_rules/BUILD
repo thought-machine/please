@@ -147,3 +147,11 @@ python_test(
     ],
     deps = ["//third_party/python:scipy"],
 )
+
+
+python_test(
+    name = "worker_test",
+    srcs = ["worker_test.py"],
+    worker = "//test/workers:worker",
+
+)

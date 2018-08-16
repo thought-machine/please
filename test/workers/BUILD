@@ -5,6 +5,9 @@ go_binary(
         "//third_party/go:logging",
         "//third_party/go:protobuf",
     ],
+    visibility = [
+        "//test/python_rules/...",
+    ],
 )
 
 go_binary(

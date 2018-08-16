@@ -340,7 +340,7 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() bool{
 	"build": func() bool {
-		success, _ := runBuild(opts.Build.Args.Targets, true, false)
+		success, _ := runBuild(opts.Build.Args.Targets, true, false, true)
 		return success
 	},
 	"rebuild": func() bool {
@@ -348,11 +348,11 @@ var buildFunctions = map[string]func() bool{
 		// you use 'plz rebuild', you don't want the cache coming in and mucking things up.
 		// 'plz clean' followed by 'plz build' would still work in those cases, anyway.
 		opts.FeatureFlags.NoCache = true
-		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false)
+		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false, true)
 		return success
 	},
 	"hash": func() bool {
-		success, state := runBuild(opts.Hash.Args.Targets, true, false)
+		success, state := runBuild(opts.Hash.Args.Targets, true, false, true)
 		if opts.Hash.Detailed {
 			for _, target := range state.ExpandOriginalTargets() {
 				build.PrintHashes(state, state.Graph.TargetOrDie(target))
@@ -391,19 +391,19 @@ var buildFunctions = map[string]func() bool{
 		return success || opts.Cover.FailingTestsOk
 	},
 	"run": func() bool {
-		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false); success {
+		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, true); success {
 			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args, opts.Run.Env)
 		}
 		return false // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"parallel": func() bool {
-		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
+		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false, true); success {
 			os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
 		}
 		return false
 	},
 	"sequential": func() bool {
-		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
+		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false, true); success {
 			os.Exit(run.Sequential(state, state.ExpandOriginalTargets(), opts.Run.Sequential.Args, opts.Run.Sequential.Quiet, opts.Run.Env))
 		}
 		return false
@@ -423,17 +423,22 @@ var buildFunctions = map[string]func() bool{
 			}
 			opts.Clean.Args.Targets = core.WholeGraph
 		}
-		if success, state := runBuild(opts.Clean.Args.Targets, false, false); success {
+		if success, state := runBuild(opts.Clean.Args.Targets, false, false, true); success {
 			clean.Targets(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache)
 			return true
 		}
 		return false
 	},
 	"watch": func() bool {
-		success, state := runBuild(opts.Watch.Args.Targets, false, false)
+		success, state := runBuild(opts.Watch.Args.Targets, true, true, false)
+		fmt.Println("OutputFlags", opts.OutputFlags)
+		fmt.Println("TARGET", opts.Watch.Args.Targets)
 		if success {
-			watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run)
+			//commandArgs := watch.Command()
+			watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run, initBuild)
 		}
+
+		// sucess, state := runWatch(opts.Watch.Args.Targets)
 		return success
 	},
 	"update": func() bool {
@@ -452,7 +457,7 @@ var buildFunctions = map[string]func() bool{
 		return false
 	},
 	"gc": func() bool {
-		success, state := runBuild(core.WholeGraph, false, false)
+		success, state := runBuild(core.WholeGraph, false, false, true)
 		if success {
 			state.OriginalTargets = state.Config.Gc.Keep
 			gc.GarbageCollect(state, opts.Gc.Args.Targets, state.ExpandOriginalTargets(), state.Config.Gc.Keep, state.Config.Gc.KeepLabel,
@@ -465,7 +470,7 @@ var buildFunctions = map[string]func() bool{
 		return true
 	},
 	"export": func() bool {
-		success, state := runBuild(opts.Export.Args.Targets, false, false)
+		success, state := runBuild(opts.Export.Args.Targets, false, false, true)
 		if success {
 			export.ToDir(state, opts.Export.Output, state.ExpandOriginalTargets())
 		}
@@ -477,7 +482,7 @@ var buildFunctions = map[string]func() bool{
 		return follow.ConnectClient(state, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay))
 	},
 	"outputs": func() bool {
-		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false)
+		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false, true)
 		if success {
 			export.Outputs(state, opts.Export.Output, state.ExpandOriginalTargets())
 		}
@@ -557,7 +562,7 @@ var buildFunctions = map[string]func() bool{
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
 		}
 		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
-		if success, state := Please(parseLabels, config, false, false, false); success {
+		if success, state := Please(parseLabels, config, false, false, false, true); success {
 			binary := opts.Query.Completions.Cmd == "run"
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
 			query.Completions(state.Graph, labels, binary, test, hidden)
@@ -580,7 +585,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"rules": func() bool {
 		targets := opts.Query.Rules.Args.Targets
-		success, state := Please(opts.Query.Rules.Args.Targets, config, true, true, false)
+		success, state := Please(opts.Query.Rules.Args.Targets, config, true, true, false, true)
 		if !success {
 			return false
 		}
@@ -595,12 +600,12 @@ var buildFunctions = map[string]func() bool{
 		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
 		files := opts.Query.Changes.Args.Files.Get()
 		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
-		_, before := runBuild(core.WholeGraph, false, false)
+		_, before := runBuild(core.WholeGraph, false, false, true)
 		opts.BuildFlags.KeepGoing = keepGoing
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		query.MustCheckout(original, opts.Query.Changes.CheckoutCommand)
-		success, after := runBuild(core.WholeGraph, false, false)
+		success, after := runBuild(core.WholeGraph, false, false, true)
 		if !success {
 			return false
 		}
@@ -632,7 +637,7 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 	if len(labels) == 0 {
 		labels = core.WholeGraph
 	}
-	if success, state := runBuild(labels, false, false); success {
+	if success, state := runBuild(labels, false, false, true); success {
 		onSuccess(state)
 		return true
 	}
@@ -670,7 +675,7 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	os.RemoveAll(string(surefireDir))
 	os.RemoveAll(string(resultsFile))
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
-	success, state := runBuild(targets, true, true)
+	success, state := runBuild(targets, true, true, true)
 	test.CopySurefireXmlFilesToDir(state.Graph, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
 	return success, state
@@ -702,7 +707,7 @@ func newCache(config *core.Configuration) core.Cache {
 }
 
 // Please starts & runs the main build process through to its completion.
-func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool, cleanUp bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 	} else if config.Please.NumThreads <= 0 {
@@ -769,11 +774,15 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	// Draw stuff to the screen while there are still results coming through.
 	shouldRun := !opts.Run.Args.Target.IsEmpty()
 	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
-	metrics.Stop()
-	build.StopWorkers()
-	if c != nil {
-		c.Shutdown()
+
+	if cleanUp {
+		metrics.Stop()
+		build.StopWorkers()
+		if c != nil {
+			c.Shutdown()
+		}
 	}
+
 	return success, state
 }
 
@@ -858,12 +867,12 @@ func readConfig(forceUpdate bool) *core.Configuration {
 
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
-func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool, cleanUp bool) (bool, *core.BuildState) {
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
-	return Please(targets, config, pretty, shouldBuild, shouldTest)
+	return Please(targets, config, pretty, shouldBuild, shouldTest, cleanUp)
 }
 
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
@@ -908,9 +917,10 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	os.Exit(0)
 }
 
-func main() {
-	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args, flags.PassDoubleDash, handleCompletions)
+func initBuild(args []string) string {
+	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
+	fmt.Println("PARSE ARGS", os.Args)
 	if opts.HelpFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other flags if --version was passed.
@@ -937,6 +947,7 @@ func main() {
 	cli.InitLogging(opts.OutputFlags.Verbosity)
 
 	command := cli.ActiveCommand(parser.Command)
+
 	if opts.Complete != "" {
 		// Completion via PLZ_COMPLETE env var sidesteps other commands
 		opts.Query.Completions.Cmd = command
@@ -998,4 +1009,102 @@ func main() {
 	if !buildFunctions[command]() {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
 	}
+}
+
+
+
+func main() {
+	//parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args, flags.PassDoubleDash, handleCompletions)
+	//// Note that we must leave flagsErr for later, because it may be affected by aliases.
+	//fmt.Println("PARSE ARGS", os.Args)
+	//if opts.HelpFlags.Version {
+	//	fmt.Printf("Please version %s\n", core.PleaseVersion)
+	//	os.Exit(0) // Ignore other flags if --version was passed.
+	//} else if opts.HelpFlags.Help {
+	//	// Attempt to read config files to produce help for aliases.
+	//	cli.InitLogging(cli.MinVerbosity)
+	//	parser.WriteHelp(os.Stderr)
+	//	if core.FindRepoRoot() {
+	//		if config, err := core.ReadDefaultConfigFiles(""); err == nil {
+	//			config.PrintAliases(os.Stderr)
+	//		}
+	//	}
+	//	os.Exit(0)
+	//}
+	//if opts.OutputFlags.Colour {
+	//	output.SetColouredOutput(true)
+	//} else if opts.OutputFlags.NoColour {
+	//	output.SetColouredOutput(false)
+	//}
+	//if opts.OutputFlags.ShowAllOutput {
+	//	opts.OutputFlags.PlainOutput = true
+	//}
+	//// Init logging, but don't do file output until we've chdir'd.
+	//cli.InitLogging(opts.OutputFlags.Verbosity)
+	//
+	//command := cli.ActiveCommand(parser.Command)
+	//if opts.Complete != "" {
+	//	// Completion via PLZ_COMPLETE env var sidesteps other commands
+	//	opts.Query.Completions.Cmd = command
+	//	opts.Query.Completions.Args.Fragments = []string{opts.Complete}
+	//	command = "completions"
+	//} else if command == "help" || command == "follow" || command == "init" {
+	//	// These commands don't use a config file, allowing them to be run outside a repo.
+	//	if flagsErr != nil { // This error otherwise doesn't get checked until later.
+	//		cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, os.Args)
+	//	}
+	//	config = core.DefaultConfiguration()
+	//	if !buildFunctions[command]() {
+	//		os.Exit(1)
+	//	}
+	//	os.Exit(0)
+	//} else if opts.OutputFlags.CompletionScript {
+	//	utils.PrintCompletionScript()
+	//	os.Exit(0)
+	//}
+	//// Read the config now
+	//config = readConfigAndSetRoot(command == "update")
+	//if parser.Command.Active != nil && parser.Command.Active.Name == "query" {
+	//	// Query commands don't need either of these set.
+	//	opts.OutputFlags.PlainOutput = true
+	//	config.Cache.DirClean = false
+	//}
+	//
+	//// Now we've read the config file, we may need to re-run the parser; the aliases in the config
+	//// can affect how we parse otherwise illegal flag combinations.
+	//if flagsErr != nil || len(extraArgs) > 0 {
+	//	args := config.UpdateArgsWithAliases(os.Args)
+	//	command = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, args)
+	//}
+	//
+	//if opts.ProfilePort != 0 {
+	//	go func() {
+	//		log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
+	//	}()
+	//}
+	//if opts.Profile != "" {
+	//	f, err := os.Create(opts.Profile)
+	//	if err != nil {
+	//		log.Fatalf("Failed to open profile file: %s", err)
+	//	}
+	//	if err := pprof.StartCPUProfile(f); err != nil {
+	//		log.Fatalf("could not start profiler: %s", err)
+	//	}
+	//	defer pprof.StopCPUProfile()
+	//}
+	//if opts.MemProfile != "" {
+	//	f, err := os.Create(opts.MemProfile)
+	//	if err != nil {
+	//		log.Fatalf("Failed to open memory profile file: %s", err)
+	//	}
+	//	defer f.Close()
+	//	defer pprof.WriteHeapProfile(f)
+	//}
+	//
+	//
+	//if !buildFunctions[command]() {
+	//	os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
+	//}
+
+	initBuild(os.Args)
 }
