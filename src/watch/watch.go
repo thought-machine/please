@@ -24,7 +24,7 @@ const debounceInterval = 50 * time.Millisecond
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, runWatchededBuild func(args []string)) {
+func Watch(state *core.BuildState, labels core.BuildLabels, run bool, runWatchededBuild func(args []string)) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("Error setting up watcher: %s", err)

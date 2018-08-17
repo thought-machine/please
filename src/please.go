@@ -37,7 +37,7 @@ import (
 	"update"
 	"utils"
 	"watch"
-	)
+)
 
 var log = logging.MustGetLogger("plz")
 
