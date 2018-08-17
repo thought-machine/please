@@ -6,9 +6,7 @@ package watch
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -27,7 +25,7 @@ const debounceInterval = 50 * time.Millisecond
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild func(state *core.BuildState, args []string)) {
+func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, runWatchededBuild func(args []string)) {
 	runWorkerScriptIfNecessary(state, labels)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -37,39 +35,6 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
 	cmds := commands(state, labels, run)
-	//var cmd *exec.Cmd
-	//
-	//for {
-	//	select {
-	//	case event := <-watcher.Events:
-	//		log.Info("Event: %s", event)
-	//		if !files.Has(event.Name) {
-	//			log.Notice("Skipping notification for %s", event.Name)
-	//			continue
-	//		}
-	//		if cmd != nil {
-	//			log.Info("Killing old process %d", cmd.Process.Pid)
-	//			core.KillProcess(cmd)
-	//			cmd = nil
-	//		}
-	//		// Quick debounce; poll and discard all events for the next brief period.
-	//	outer:
-	//		for {
-	//			select {
-	//			case <-watcher.Events:
-	//			case <-time.After(debounceInterval):
-	//				break outer
-	//			}
-	//		}
-	//		cmd = runBuild(state, cmds, labels)
-	//		if !run {
-	//			cmd.Wait()
-	//		}
-	//	case err := <-watcher.Errors:
-	//		log.Error("Error watching files:", err)
-	//	}
-	//}
-
 
 	cmd := getCommandArgs(state, cmds, labels)
 
@@ -91,7 +56,7 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild
 					break outer
 				}
 			}
-			initBuild(state, cmd)
+			runWatchededBuild(cmd)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
@@ -123,35 +88,15 @@ func getCommandArgs(state *core.BuildState, commands []string, labels []core.Bui
 	for _, label := range labels {
 		cmd = append(cmd, label.String())
 	}
-	cmd = append(cmd, "--show_all_output")
+
+	//TODO(luna): Maybe i can find a way to get all that output flags
+	if state.ShowAllOutput {
+		cmd = append(cmd, "--show_all_output")
+	}
 
 	return cmd
 }
 
-func runBuild(state *core.BuildState, commands []string, labels []core.BuildLabel) *exec.Cmd {
-	binary, err := os.Executable()
-	if err != nil {
-		log.Warning("Can't determine current executable, will assume 'plz'")
-		binary = "plz"
-	}
-	cmd := core.ExecCommand(binary, commands...)
-	cmd.Args = append(cmd.Args, "-c", state.Config.Build.Config)
-	for _, label := range labels {
-		cmd.Args = append(cmd.Args, label.String())
-	}
-	cmd.Args = append(cmd.Args, "--show_all_output")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	log.Notice("Running %s %s...", binary, strings.Join(commands, " "))
-	if err := cmd.Start(); err != nil {
-		// Only log the error if it's not a straightforward non-zero exit; the user will presumably
-		// already have been pestered about that.
-		if _, ok := err.(*exec.ExitError); !ok {
-			log.Error("Failed to run %s: %s", binary, err)
-		}
-	}
-	return cmd
-}
 
 func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel, files cmap.ConcurrentMap) {
 	// Deduplicate seen targets & sources.
