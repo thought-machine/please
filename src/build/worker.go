@@ -97,7 +97,6 @@ func EnsureWorkerStarted(state *core.BuildState, worker string, label core.Build
 	if err == nil && !resp.Success {
 		return fmt.Errorf(strings.Join(resp.Messages, "\n"))
 	}
-
 	return err
 }
 

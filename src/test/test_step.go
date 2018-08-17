@@ -559,7 +559,6 @@ func calcNumRuns(numRuns, flakiness int) (int, int) {
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
 func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
 	worker, _, _ := build.TestWorkerCommand(state, target)
-	//fmt.Println(build.TestWorkerCommand(state, target))
 	if worker == "" {
 		return "", nil
 	}
