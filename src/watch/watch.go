@@ -14,7 +14,6 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
-	"build"
 	"fs"
 )
 
@@ -26,7 +25,6 @@ const debounceInterval = 50 * time.Millisecond
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
 func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, runWatchededBuild func(args []string)) {
-	runWorkerScriptIfNecessary(state, labels)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("Error setting up watcher: %s", err)
@@ -63,17 +61,6 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, runWatche
 	}
 }
 
-func runWorkerScriptIfNecessary(state *core.BuildState, labels []core.BuildLabel) {
-	// Check if the build label is a test
-	for _, label := range labels {
-		target := state.Graph.TargetOrDie(label)
-		if worker, _, _ := build.TestWorkerCommand(state, target); target.IsTest && worker != "" {
-			build.EnsureWorkerStarted(state, worker, target.Label)
-		}
-	}
-	// Get the worker script, run first
-
-}
 
 func getCommandArgs(state *core.BuildState, commands []string, labels []core.BuildLabel) []string {
 	binary, err := os.Executable()

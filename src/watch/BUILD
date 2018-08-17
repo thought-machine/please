@@ -5,7 +5,6 @@ go_library(
     deps = [
         "//src/core",
         "//src/fs",
-        "//src/build",
         "//third_party/go:concurrent-map",
         "//third_party/go:fsnotify",
         "//third_party/go:logging",
