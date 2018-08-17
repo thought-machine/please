@@ -37,7 +37,7 @@ import (
 	"update"
 	"utils"
 	"watch"
-)
+	)
 
 var log = logging.MustGetLogger("plz")
 
@@ -338,21 +338,21 @@ var opts struct {
 
 // Definitions of what we do for each command.
 // Functions are called after args are parsed and return true for success.
-var buildFunctions = map[string]func() bool{
-	"build": func() bool {
-		success, _ := runBuild(opts.Build.Args.Targets, true, false, true)
+var buildFunctions = map[string]func(state *core.BuildState) bool{
+	"build": func(state *core.BuildState) bool {
+		success, _ := runBuild(state, opts.Build.Args.Targets)
 		return success
 	},
-	"rebuild": func() bool {
+	"rebuild": func(state *core.BuildState) bool {
 		// It would be more pure to require --nocache for this, but in basically any context that
 		// you use 'plz rebuild', you don't want the cache coming in and mucking things up.
 		// 'plz clean' followed by 'plz build' would still work in those cases, anyway.
 		opts.FeatureFlags.NoCache = true
-		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false, true)
+		success, _ := runBuild(state, opts.Rebuild.Args.Targets)
 		return success
 	},
-	"hash": func() bool {
-		success, state := runBuild(opts.Hash.Args.Targets, true, false, true)
+	"hash": func(state *core.BuildState) bool {
+		success, state := runBuild(state, opts.Hash.Args.Targets)
 		if opts.Hash.Detailed {
 			for _, target := range state.ExpandOriginalTargets() {
 				build.PrintHashes(state, state.Graph.TargetOrDie(target))
@@ -363,12 +363,12 @@ var buildFunctions = map[string]func() bool{
 		}
 		return success
 	},
-	"test": func() bool {
+	"test": func(state *core.BuildState) bool {
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
-		success, _ := doTest(targets, opts.Test.SurefireDir, opts.Test.TestResultsFile)
+		success, _ := doTest(state, targets, opts.Test.SurefireDir, opts.Test.TestResultsFile)
 		return success || opts.Test.FailingTestsOk
 	},
-	"cover": func() bool {
+	"cover": func(state *core.BuildState) bool {
 		if opts.BuildFlags.Config != "" {
 			log.Warning("Build config overridden; coverage may not be available for some languages")
 		} else {
@@ -376,7 +376,7 @@ var buildFunctions = map[string]func() bool{
 		}
 		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
-		success, state := doTest(targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
+		success, state := doTest(state, targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 
@@ -390,25 +390,25 @@ var buildFunctions = map[string]func() bool{
 		}
 		return success || opts.Cover.FailingTestsOk
 	},
-	"run": func() bool {
-		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, true); success {
+	"run": func(state *core.BuildState) bool {
+		if success, state := runBuild(state, []core.BuildLabel{opts.Run.Args.Target}); success {
 			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args, opts.Run.Env)
 		}
 		return false // We should never return from run.Run so if we make it here something's wrong.
 	},
-	"parallel": func() bool {
-		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false, true); success {
+	"parallel": func(state *core.BuildState) bool {
+		if success, state := runBuild(state, opts.Run.Parallel.PositionalArgs.Targets); success {
 			os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
 		}
 		return false
 	},
-	"sequential": func() bool {
-		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false, true); success {
+	"sequential": func(state *core.BuildState) bool {
+		if success, state := runBuild(state, opts.Run.Sequential.PositionalArgs.Targets); success {
 			os.Exit(run.Sequential(state, state.ExpandOriginalTargets(), opts.Run.Sequential.Args, opts.Run.Sequential.Quiet, opts.Run.Env))
 		}
 		return false
 	},
-	"clean": func() bool {
+	"clean": func(state *core.BuildState) bool {
 		config.Cache.DirClean = false
 		if len(opts.Clean.Args.Targets) == 0 {
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
@@ -423,7 +423,7 @@ var buildFunctions = map[string]func() bool{
 			}
 			opts.Clean.Args.Targets = core.WholeGraph
 		}
-		if success, state := runBuild(opts.Clean.Args.Targets, false, false, true); success {
+		if success, state := runBuild(state, opts.Clean.Args.Targets); success {
 			clean.Targets(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache)
 			return true
 		}
@@ -440,11 +440,11 @@ var buildFunctions = map[string]func() bool{
 	//	// sucess, state := runWatch(opts.Watch.Args.Targets)
 	//	return success
 	//},
-	"update": func() bool {
+	"update": func(state *core.BuildState) bool {
 		fmt.Printf("Up to date (version %s).\n", core.PleaseVersion)
 		return true // We'd have died already if something was wrong.
 	},
-	"op": func() bool {
+	"op": func(state *core.BuildState) bool {
 		cmd := core.ReadLastOperationOrDie()
 		log.Notice("OP PLZ: %s", strings.Join(cmd, " "))
 		// Annoyingly we don't seem to have any access to execvp() which would be rather useful here...
@@ -455,8 +455,8 @@ var buildFunctions = map[string]func() bool{
 		log.Fatalf("SORRY OP: %s", err) // On success Exec never returns.
 		return false
 	},
-	"gc": func() bool {
-		success, state := runBuild(core.WholeGraph, false, false, true)
+	"gc": func(state *core.BuildState) bool {
+		success, state := runBuild(state, core.WholeGraph)
 		if success {
 			state.OriginalTargets = state.Config.Gc.Keep
 			gc.GarbageCollect(state, opts.Gc.Args.Targets, state.ExpandOriginalTargets(), state.Config.Gc.Keep, state.Config.Gc.KeepLabel,
@@ -464,87 +464,87 @@ var buildFunctions = map[string]func() bool{
 		}
 		return success
 	},
-	"init": func() bool {
+	"init": func(state *core.BuildState) bool {
 		utils.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
 		return true
 	},
-	"export": func() bool {
-		success, state := runBuild(opts.Export.Args.Targets, false, false, true)
+	"export": func(state *core.BuildState) bool {
+		success, state := runBuild(state, opts.Export.Args.Targets)
 		if success {
 			export.ToDir(state, opts.Export.Output, state.ExpandOriginalTargets())
 		}
 		return success
 	},
-	"follow": func() bool {
+	"follow": func(state *core.BuildState) bool {
 		// This is only temporary, ConnectClient will alter it to match the server.
-		state := core.NewBuildState(1, nil, int(opts.OutputFlags.Verbosity), config)
-		return follow.ConnectClient(state, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay))
+		s := core.NewBuildState(1, nil, int(opts.OutputFlags.Verbosity), config)
+		return follow.ConnectClient(s, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay))
 	},
-	"outputs": func() bool {
-		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false, true)
+	"outputs": func(state *core.BuildState) bool {
+		success, state := runBuild(state, opts.Export.Outputs.Args.Targets)
 		if success {
 			export.Outputs(state, opts.Export.Output, state.ExpandOriginalTargets())
 		}
 		return success
 	},
-	"help": func() bool {
+	"help": func(state *core.BuildState) bool {
 		return help.Help(string(opts.Help.Args.Topic))
 	},
-	"tool": func() bool {
+	"tool": func(state *core.BuildState) bool {
 		tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args)
 		return false // If the function returns (which it shouldn't), something went wrong.
 	},
-	"deps": func() bool {
-		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
+	"deps": func(state *core.BuildState) bool {
+		return runQuery(state, true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
 			query.Deps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Unique)
 		})
 	},
-	"reverseDeps": func() bool {
+	"reverseDeps": func(state *core.BuildState) bool {
 		opts.VisibilityParse = true
-		return runQuery(false, opts.Query.ReverseDeps.Args.Targets, func(state *core.BuildState) {
+		return runQuery(state,false, opts.Query.ReverseDeps.Args.Targets, func(state *core.BuildState) {
 			query.ReverseDeps(state, state.ExpandOriginalTargets())
 		})
 	},
-	"somepath": func() bool {
-		return runQuery(true,
+	"somepath": func(state *core.BuildState) bool {
+		return runQuery(state,true,
 			[]core.BuildLabel{opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2},
 			func(state *core.BuildState) {
 				query.SomePath(state.Graph, opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2)
 			},
 		)
 	},
-	"alltargets": func() bool {
-		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
+	"alltargets": func(state *core.BuildState) bool {
+		return runQuery(state, true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
 			query.AllTargets(state.Graph, state.ExpandOriginalTargets(), opts.Query.AllTargets.Hidden)
 		})
 	},
-	"print": func() bool {
-		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
+	"print": func(state *core.BuildState) bool {
+		return runQuery(state, false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
 			query.Print(state.Graph, state.ExpandOriginalTargets(), opts.Query.Print.Fields)
 		})
 	},
-	"affectedtargets": func() bool {
+	"affectedtargets": func(state *core.BuildState) bool {
 		files := opts.Query.AffectedTargets.Args.Files
 		targets := core.WholeGraph
 		if opts.Query.AffectedTargets.Intransitive {
 			state := core.NewBuildState(1, nil, 1, config)
 			targets = core.FindOwningPackages(state, files)
 		}
-		return runQuery(true, targets, func(state *core.BuildState) {
+		return runQuery(state, true, targets, func(state *core.BuildState) {
 			query.AffectedTargets(state, files.Get(), opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
 		})
 	},
-	"input": func() bool {
-		return runQuery(true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
+	"input": func(state *core.BuildState) bool {
+		return runQuery(state,true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
 			query.TargetInputs(state.Graph, state.ExpandOriginalTargets())
 		})
 	},
-	"output": func() bool {
-		return runQuery(true, opts.Query.Output.Args.Targets, func(state *core.BuildState) {
+	"output": func(state *core.BuildState) bool {
+		return runQuery(state, true, opts.Query.Output.Args.Targets, func(state *core.BuildState) {
 			query.TargetOutputs(state.Graph, state.ExpandOriginalTargets())
 		})
 	},
-	"completions": func() bool {
+	"completions": func(state *core.BuildState) bool {
 		// Somewhat fiddly because the inputs are not necessarily well-formed at this point.
 		opts.ParsePackageOnly = true
 		fragments := opts.Query.Completions.Args.Fragments.Get()
@@ -561,7 +561,7 @@ var buildFunctions = map[string]func() bool{
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
 		}
 		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
-		if success, state := Please(parseLabels, config, false, false, false, true); success {
+		if success, state := Please(state, parseLabels, config, false); success {
 			binary := opts.Query.Completions.Cmd == "run"
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
 			query.Completions(state.Graph, labels, binary, test, hidden)
@@ -569,22 +569,22 @@ var buildFunctions = map[string]func() bool{
 		}
 		return false
 	},
-	"graph": func() bool {
-		return runQuery(true, opts.Query.Graph.Args.Targets, func(state *core.BuildState) {
+	"graph": func(state *core.BuildState) bool {
+		return runQuery(state,true, opts.Query.Graph.Args.Targets, func(state *core.BuildState) {
 			if len(opts.Query.Graph.Args.Targets) == 0 {
 				state.OriginalTargets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
 			}
 			query.Graph(state, state.ExpandOriginalTargets())
 		})
 	},
-	"whatoutputs": func() bool {
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+	"whatoutputs": func(state *core.BuildState) bool {
+		return runQuery(state, true, core.WholeGraph, func(state *core.BuildState) {
 			query.WhatOutputs(state.Graph, opts.Query.WhatOutputs.Args.Files.Get(), opts.Query.WhatOutputs.EchoFiles)
 		})
 	},
-	"rules": func() bool {
+	"rules": func(state *core.BuildState) bool {
 		targets := opts.Query.Rules.Args.Targets
-		success, state := Please(opts.Query.Rules.Args.Targets, config, true, true, false, true)
+		success, state := Please(state, opts.Query.Rules.Args.Targets, config, true)
 		if !success {
 			return false
 		}
@@ -592,19 +592,19 @@ var buildFunctions = map[string]func() bool{
 		parse.PrintRuleArgs(state, targets)
 		return true
 	},
-	"changes": func() bool {
+	"changes": func(state *core.BuildState) bool {
 		// Temporarily set this flag on to avoid fatal errors from the first parse.
 		keepGoing := opts.BuildFlags.KeepGoing
 		opts.BuildFlags.KeepGoing = true
 		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
 		files := opts.Query.Changes.Args.Files.Get()
 		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
-		_, before := runBuild(core.WholeGraph, false, false, true)
+		_, before := runBuild(state, core.WholeGraph)
 		opts.BuildFlags.KeepGoing = keepGoing
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		query.MustCheckout(original, opts.Query.Changes.CheckoutCommand)
-		success, after := runBuild(core.WholeGraph, false, false, true)
+		success, after := runBuild(state, core.WholeGraph)
 		if !success {
 			return false
 		}
@@ -613,24 +613,34 @@ var buildFunctions = map[string]func() bool{
 		}
 		return true
 	},
-	"roots": func() bool {
-		return runQuery(true, opts.Query.Roots.Args.Targets, func(state *core.BuildState) {
+	"roots": func(state *core.BuildState) bool {
+		return runQuery(state, true, opts.Query.Roots.Args.Targets, func(state *core.BuildState) {
 			query.Roots(state.Graph, opts.Query.Roots.Args.Targets)
 		})
 	},
 }
 
-func runWatch() bool {
-	success, state := runBuild(opts.Watch.Args.Targets, true, true, false)
+func runWatch(state *core.BuildState) bool {
+	success, state := runBuild(state, opts.Watch.Args.Targets)
 	fmt.Println("OutputFlags", opts.OutputFlags)
 	fmt.Println("TARGET", opts.Watch.Args.Targets)
 	if success {
-		//commandArgs := watch.Command()
-		watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run, initBuild)
+		watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run, runWatchedProcess)
 	}
 
-	// sucess, state := runWatch(opts.Watch.Args.Targets)
 	return success
+}
+
+
+func runWatchedProcess(s *core.BuildState, args []string) {
+	command := initBuild(args)
+	shouldBuild := true
+	shouldTest := true
+	state := initState(&shouldBuild, &shouldTest)
+	if !buildFunctions[command](state) {
+		os.Exit(7)
+	}
+
 }
 
 // ConfigOverrides are used to implement completion on the -o flag.
@@ -642,14 +652,14 @@ func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 }
 
 // Used above as a convenience wrapper for query functions.
-func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state *core.BuildState)) bool {
+func runQuery(state *core.BuildState, needFullParse bool, labels []core.BuildLabel, onSuccess func(state *core.BuildState)) bool {
 	if !needFullParse {
 		opts.ParsePackageOnly = true
 	}
 	if len(labels) == 0 {
 		labels = core.WholeGraph
 	}
-	if success, state := runBuild(labels, false, false, true); success {
+	if success, state := runBuild(state, labels); success {
 		onSuccess(state)
 		return true
 	}
@@ -683,11 +693,11 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 	}
 }
 
-func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
+func doTest(state *core.BuildState, targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
 	os.RemoveAll(string(surefireDir))
 	os.RemoveAll(string(resultsFile))
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
-	success, state := runBuild(targets, true, true, true)
+	success, state := runBuild(state, targets)
 	test.CopySurefireXmlFilesToDir(state.Graph, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
 	return success, state
@@ -718,40 +728,9 @@ func newCache(config *core.Configuration) core.Cache {
 	return cache.NewCache(config)
 }
 
-// TODO: Should seperate InitState() OUT, (God, I did it earlier and changed my mind...I'm a peasant..:( )
 // Please starts & runs the main build process through to its completion.
-func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool, cleanUp bool) (bool, *core.BuildState) {
-	if opts.BuildFlags.NumThreads > 0 {
-		config.Please.NumThreads = opts.BuildFlags.NumThreads
-	} else if config.Please.NumThreads <= 0 {
-		config.Please.NumThreads = runtime.NumCPU() + 2
-	}
-	debugTests := opts.Test.Debug || opts.Cover.Debug
-	if opts.BuildFlags.Config != "" {
-		config.Build.Config = opts.BuildFlags.Config
-	} else if debugTests {
-		config.Build.Config = "dbg"
-	}
-	c := newCache(config)
-	state := core.NewBuildState(config.Please.NumThreads, c, int(opts.OutputFlags.Verbosity), config)
-	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)  // Only one of these can be passed
-	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
-	state.NeedCoverage = !opts.Cover.Args.Target.IsEmpty()
-	state.NeedBuild = shouldBuild
-	state.NeedTests = shouldTest
-	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
-	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell
-	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
-	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
-	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
-	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
-	state.DebugTests = debugTests
-	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
-	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
-	parse.InitParser(state)
-	build.Init(state)
-	if config.Events.Port != 0 && shouldBuild {
+func Please(state *core.BuildState, targets []core.BuildLabel, config *core.Configuration, prettyOutput bool) (bool, *core.BuildState) {
+	if config.Events.Port != 0 && state.NeedBuild {
 		shutdown := follow.InitialiseServer(state, config.Events.Port)
 		defer shutdown()
 	}
@@ -760,14 +739,14 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	}
 	metrics.InitFromConfig(config)
 	// Acquire the lock before we start building
-	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
+	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
 	}
 	if state.DebugTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
-	detailedTests := shouldTest && (opts.Test.Detailed || opts.Cover.Detailed || (len(targets) == 1 && !targets[0].IsAllTargets() && !targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
+	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed || (len(targets) == 1 && !targets[0].IsAllTargets() && !targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, targets)
 	// Start up all the build workers
@@ -786,17 +765,87 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	}()
 	// Draw stuff to the screen while there are still results coming through.
 	shouldRun := !opts.Run.Args.Target.IsEmpty()
-	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
+	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, state.NeedBuild, state.NeedTests, shouldRun, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
 
-	if cleanUp {
-		metrics.Stop()
-		build.StopWorkers()
-		if c != nil {
-			c.Shutdown()
-		}
+	if state.Cache != nil {
+		state.Cache.Shutdown()
 	}
 
 	return success, state
+}
+
+
+// Initialize the build state
+func initState(shouldBuild, shouldTest *bool) *core.BuildState {
+	if shouldBuild == nil && shouldTest == nil {
+		return nil
+	}
+	if opts.BuildFlags.NumThreads > 0 {
+		config.Please.NumThreads = opts.BuildFlags.NumThreads
+	} else if config.Please.NumThreads <= 0 {
+		config.Please.NumThreads = runtime.NumCPU() + 2
+	}
+	debugTests := opts.Test.Debug || opts.Cover.Debug
+	if opts.BuildFlags.Config != "" {
+		config.Build.Config = opts.BuildFlags.Config
+	} else if debugTests {
+		config.Build.Config = "dbg"
+	}
+	c := newCache(config)
+	state := core.NewBuildState(config.Please.NumThreads, c, int(opts.OutputFlags.Verbosity), config)
+	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
+	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)  // Only one of these can be passed
+	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
+	state.NeedCoverage = !opts.Cover.Args.Target.IsEmpty()
+	state.NeedBuild = *shouldBuild
+	state.NeedTests = *shouldTest
+	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
+	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell
+	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
+	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
+	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
+	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
+	state.DebugTests = debugTests
+	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
+	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+	parse.InitParser(state)
+	build.Init(state)
+
+	return state
+}
+
+func getInitStateParams(command string) (*bool, *bool){
+	noBuildAndTest := []string {"clean", "gc", "export", "deps", "reverseDeps", "somepath",
+								"alltargets", "print", "affectedtargets", "input", "output",
+								"completions", "graph", "whatoutputs", "changes", "roots"}
+	BuildNoTest := []string {"build", "rebuild", "hash", "run", "parallel", "sequential",
+							 "outputs", "rules"}
+
+	for _, i := range noBuildAndTest {
+		if i == command {
+			shouldBuild := false
+			shouldTest := false
+			return &shouldBuild, &shouldTest
+		}
+	}
+
+	for _, i := range BuildNoTest {
+		if i == command {
+			shouldBuild := true
+			shouldTest := false
+			return &shouldBuild, &shouldTest
+		}
+	}
+
+	for _, i := range []string{"test", "cover", "watch"} {
+		if i == command {
+			shouldBuild := true
+			shouldTest := true
+			return &shouldBuild, &shouldTest
+		}
+	}
+
+	return nil, nil
 }
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
@@ -880,12 +929,12 @@ func readConfig(forceUpdate bool) *core.Configuration {
 
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
-func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool, cleanUp bool) (bool, *core.BuildState) {
+func runBuild(state *core.BuildState,targets []core.BuildLabel) (bool, *core.BuildState) {
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
-	return Please(targets, config, pretty, shouldBuild, shouldTest, cleanUp)
+	return Please(state, targets, config, pretty)
 }
 
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
@@ -930,7 +979,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	os.Exit(0)
 }
 
-func initBuild(args []string) {
+func initBuild(args []string) string {
 	fmt.Println("PARSE ARGS", args)
 
 	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions)
@@ -961,6 +1010,7 @@ func initBuild(args []string) {
 	cli.InitLogging(opts.OutputFlags.Verbosity)
 
 	command := cli.ActiveCommand(parser.Command)
+	fmt.Println("COMMAND", command)
 	if opts.Complete != "" {
 		// Completion via PLZ_COMPLETE env var sidesteps other commands
 		opts.Query.Completions.Cmd = command
@@ -972,7 +1022,8 @@ func initBuild(args []string) {
 			cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, os.Args)
 		}
 		config = core.DefaultConfiguration()
-		if !buildFunctions[command]() {
+		fmt.Println("hello")
+		if !buildFunctions[command](nil) {
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -1019,116 +1070,30 @@ func initBuild(args []string) {
 		defer pprof.WriteHeapProfile(f)
 	}
 
-	fmt.Println("HELLO", command)
-	var callBuild func() bool
-	if command == "watch" {
-		callBuild = runWatch
-	} else {
-		callBuild = buildFunctions[command]
-	}
-
-	if !callBuild() {
-		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
-	}
-
-	//if !buildFunctions[command]() {
-	//	os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
-	//}
+	return command
 }
 
 
 
 func main() {
-	//parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args, flags.PassDoubleDash, handleCompletions)
-	//// Note that we must leave flagsErr for later, because it may be affected by aliases.
-	//if opts.HelpFlags.Version {
-	//	fmt.Printf("Please version %s\n", core.PleaseVersion)
-	//	os.Exit(0) // Ignore other flags if --version was passed.
-	//} else if opts.HelpFlags.Help {
-	//	// Attempt to read config files to produce help for aliases.
-	//	cli.InitLogging(cli.MinVerbosity)
-	//	parser.WriteHelp(os.Stderr)
-	//	if core.FindRepoRoot() {
-	//		if config, err := core.ReadDefaultConfigFiles(""); err == nil {
-	//			config.PrintAliases(os.Stderr)
-	//		}
-	//	}
-	//	os.Exit(0)
-	//}
-	//if opts.OutputFlags.Colour {
-	//	output.SetColouredOutput(true)
-	//} else if opts.OutputFlags.NoColour {
-	//	output.SetColouredOutput(false)
-	//}
-	//if opts.OutputFlags.ShowAllOutput {
-	//	opts.OutputFlags.PlainOutput = true
-	//}
-	//// Init logging, but don't do file output until we've chdir'd.
-	//cli.InitLogging(opts.OutputFlags.Verbosity)
-	//
-	//command := cli.ActiveCommand(parser.Command)
-	//if opts.Complete != "" {
-	//	// Completion via PLZ_COMPLETE env var sidesteps other commands
-	//	opts.Query.Completions.Cmd = command
-	//	opts.Query.Completions.Args.Fragments = []string{opts.Complete}
-	//	command = "completions"
-	//} else if command == "help" || command == "follow" || command == "init" {
-	//	// These commands don't use a config file, allowing them to be run outside a repo.
-	//	if flagsErr != nil { // This error otherwise doesn't get checked until later.
-	//		cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, os.Args)
-	//	}
-	//	config = core.DefaultConfiguration()
-	//	if !buildFunctions[command]() {
-	//		os.Exit(1)
-	//	}
-	//	os.Exit(0)
-	//} else if opts.OutputFlags.CompletionScript {
-	//	utils.PrintCompletionScript()
-	//	os.Exit(0)
-	//}
-	//// Read the config now
-	//config = readConfigAndSetRoot(command == "update")
-	//if parser.Command.Active != nil && parser.Command.Active.Name == "query" {
-	//	// Query commands don't need either of these set.
-	//	opts.OutputFlags.PlainOutput = true
-	//	config.Cache.DirClean = false
-	//}
-	//
-	//// Now we've read the config file, we may need to re-run the parser; the aliases in the config
-	//// can affect how we parse otherwise illegal flag combinations.
-	//if flagsErr != nil || len(extraArgs) > 0 {
-	//	args := config.UpdateArgsWithAliases(os.Args)
-	//	command = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, args)
-	//}
-	//
-	//if opts.ProfilePort != 0 {
-	//	go func() {
-	//		log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
-	//	}()
-	//}
-	//if opts.Profile != "" {
-	//	f, err := os.Create(opts.Profile)
-	//	if err != nil {
-	//		log.Fatalf("Failed to open profile file: %s", err)
-	//	}
-	//	if err := pprof.StartCPUProfile(f); err != nil {
-	//		log.Fatalf("could not start profiler: %s", err)
-	//	}
-	//	defer pprof.StopCPUProfile()
-	//}
-	//if opts.MemProfile != "" {
-	//	f, err := os.Create(opts.MemProfile)
-	//	if err != nil {
-	//		log.Fatalf("Failed to open memory profile file: %s", err)
-	//	}
-	//	defer f.Close()
-	//	defer pprof.WriteHeapProfile(f)
-	//}
-	//
-	//fmt.Println("HELLO", command)
-	//
-	//if !buildFunctions[command]() {
-	//	os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
-	//}
-	initBuild(os.Args)
+	command := initBuild(os.Args)
+
+	var callBuild func(*core.BuildState) bool
+	if command == "watch" {
+		callBuild = runWatch
+	} else {
+		callBuild = buildFunctions[command]
+	}
+	//callBuild = buildFunctions[command]
+
+	shouldBuild, shouldTest := getInitStateParams(command)
+	state := initState(shouldBuild, shouldTest)
+
+	//fmt.Println(state.NeedBuild, state.NeedTests, command)
+	if !callBuild(state) {
+		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
+	}
+
+	metrics.Stop()
+	build.StopWorkers()
 }

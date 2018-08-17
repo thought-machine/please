@@ -27,7 +27,7 @@ const debounceInterval = 50 * time.Millisecond
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild func(args []string)) {
+func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild func(state *core.BuildState, args []string)) {
 	runWorkerScriptIfNecessary(state, labels)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -91,7 +91,7 @@ func Watch(state *core.BuildState, labels []core.BuildLabel, run bool, initBuild
 					break outer
 				}
 			}
-			initBuild(cmd)
+			initBuild(state, cmd)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
