@@ -64,7 +64,7 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 	// Get the list of packages for <package> tag in the coverage xml file
 	var packages []pkg
 	for label, coverage := range coverage.Tests {
-		packageName := label.Name
+		packageName := label.String()
 
 		// Get the list of classes for <class> tag in the coverage xml file
 		var classes []class
