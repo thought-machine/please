@@ -1011,11 +1011,12 @@ func main() {
 		command := initBuild(args)
 		buildFunctions[command]()
 	}
+	success := buildFunctions[command]()
 
 	metrics.Stop()
 	build.StopWorkers()
 
-	if !buildFunctions[command]() {
+	if !success {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
 	}
 }
