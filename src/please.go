@@ -608,24 +608,16 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"watch": func() bool {
-		return true  // Real implementations at runWatch()
+		success, state := runBuild(opts.Watch.Args.Targets, true, true)
+		if success {
+			watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run, runWatchedBuild)
+		}
+
+		return success
 	},
 }
 
-// Run "plz watch.."
-// This function is the real implementation of buildFunctions["watch"]
-func runWatch() bool {
-	success, state := runBuild(opts.Watch.Args.Targets, true, true)
-	if success {
-		watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run, func(args []string) {
-			command := initBuild(args)
-			buildFunctions[command]()
-		})
-	}
-
-	return success
-}
-
+var runWatchedBuild func(args []string)
 
 // ConfigOverrides are used to implement completion on the -o flag.
 type ConfigOverrides map[string]string
@@ -1015,7 +1007,10 @@ func initBuild(args []string) string {
 func main() {
 	command := initBuild(os.Args)
 
-	buildFunctions["watch"] = runWatch
+	runWatchedBuild = func(args []string) {
+		command := initBuild(args)
+		buildFunctions[command]()
+	}
 
 	if !buildFunctions[command]() {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
