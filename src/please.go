@@ -607,10 +607,13 @@ var buildFunctions = map[string]func() bool{
 			query.Roots(state.Graph, opts.Query.Roots.Args.Targets)
 		})
 	},
+	"watch": func() bool {
+		return true  // Real implementations at runWatch()
+	},
 }
 
 // Run "plz watch.."
-// This guy is a bit different than the rest as it gets the function from the other commands to run as well
+// This function is the real implementation of buildFunctions["watch"]
 func runWatch() bool {
 	success, state := runBuild(opts.Watch.Args.Targets, true, true)
 	if success {
@@ -1012,14 +1015,9 @@ func initBuild(args []string) string {
 func main() {
 	command := initBuild(os.Args)
 
-	var callBuild func() bool
-	if command == "watch" {
-		callBuild = runWatch
-	} else {
-		callBuild = buildFunctions[command]
-	}
+	buildFunctions["watch"] = runWatch
 
-	if !callBuild() {
+	if !buildFunctions[command]() {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
 	}
 
