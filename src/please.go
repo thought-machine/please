@@ -334,8 +334,6 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"roots" description:"Show build labels with no dependents in the given list, from the list."`
 		Filter struct {
-			IncludeLabels    []string `long:"in" description:"Include any targets with matching labels"`
-			ExcludeLabels    []string `long:"ex" description:"Exclude any targets with matching labels"`
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
@@ -622,8 +620,8 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"filter": func() bool {
-		return runQuery(true, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
-			query.Filter(state.Graph, state.ExpandOriginalTargets(), opts.Query.Filter.IncludeLabels, opts.Query.Filter.ExcludeLabels)
+		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
+			query.Filter(state, state.ExpandOriginalTargets())
 		})
 	},
 }
