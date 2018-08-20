@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	"math"
+		"os"
 )
 
 func parseXMLCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte) error {
@@ -48,16 +49,22 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 	linesCovered := 0
 	validFiles := coverage.OrderedFiles()
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Invalid directory")
+	}
+
 	// get the string representative of sources
 	var sourcesAsStr []string
 	for _, source := range sources {
-		sourcesAsStr = append(sourcesAsStr, source.String())
+		source_out := cwd  + "/" + source.PackageName
+		sourcesAsStr = append(sourcesAsStr, source_out)
 	}
 
 	// Get the list of packages for <package> tag in the coverage xml file
 	var packages []pkg
 	for label, coverage := range coverage.Tests {
-		packageName := strings.Replace(label.String(), ":", "/", -1)
+		packageName := label.Name
 
 		// Get the list of classes for <class> tag in the coverage xml file
 		var classes []class
@@ -68,10 +75,12 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 				continue
 			}
 
+			name := strings.Replace(className, label.PackageName + "/", "", -1)
+
 			lines, covered, total := getLineCoverageInfo(lineCover)
 			classLineRate := float64(covered) / float64(total)
 
-			cls := class{Name: className, Filename: className,
+			cls := class{Name: name, Filename: name,
 				Lines: lines, LineRate: formatFloatPrecision(classLineRate, 4)}
 
 			classes = append(classes, cls)
