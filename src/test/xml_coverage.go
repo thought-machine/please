@@ -3,13 +3,13 @@
 package test
 
 import (
-	"core"
 	"cli"
+	"core"
 	"encoding/xml"
+	"math"
 	"strings"
 	"time"
-	"math"
-			)
+)
 
 func parseXMLCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte) error {
 	xcoverage := xmlCoverage{}
@@ -51,7 +51,7 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 	// get the string representative of sources
 	var sourcesAsStr []string
 	for _, source := range sources {
-		sourcesAsStr = append(sourcesAsStr, core.RepoRoot  + "/" + source.PackageName)
+		sourcesAsStr = append(sourcesAsStr, core.RepoRoot+"/"+source.PackageName)
 	}
 
 	// Get the list of packages for <package> tag in the coverage xml file
@@ -68,7 +68,7 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 				continue
 			}
 
-			name := strings.Replace(className, label.PackageName + "/", "", -1)
+			name := strings.Replace(className, label.PackageName+"/", "", -1)
 
 			lines, covered, total := getLineCoverageInfo(lineCover)
 			classLineRate := float64(covered) / float64(total)
@@ -107,7 +107,6 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 	return covReport
 }
 
-
 // Get the line coverage info, returns: list of lines covered, num of covered lines, and total valid lines
 func getLineCoverageInfo(lineCover []core.LineCoverage) ([]line, int, int) {
 	var lines []line
@@ -133,7 +132,7 @@ func getLineCoverageInfo(lineCover []core.LineCoverage) ([]line, int, int) {
 // format the float64 numbers to a specific precision
 func formatFloatPrecision(val float64, precision int) float64 {
 	unit := math.Pow10(precision)
-	newFloat := math.Round(val * unit) / unit
+	newFloat := math.Round(val*unit) / unit
 
 	return float64(newFloat)
 }
@@ -164,18 +163,18 @@ type xmlCoverageLine struct {
 
 // Coverage struct for writing to xml file
 type coverageType struct {
-	XMLName         xml.Name  `xml:"coverage"`
-	LineRate        float64   `xml:"line-rate,attr"`
-	BranchRate      float64   `xml:"branch-rate,attr"`
-	LinesCovered    int       `xml:"lines-covered,attr"`
-	LinesValid      int       `xml:"lines-valid,attr"`
-	BranchesCovered int       `xml:"branches-covered,attr"`
-	BranchesValid   int       `xml:"branches-valid,attr"`
-	Complexity      float64   `xml:"complexity,attr"`
-	Version         string    `xml:"version,attr"`
-	Timestamp       int       `xml:"timestamp,attr"`
-	Sources         []string  `xml:"sources>source"`
-	Packages        []pkg `xml:"packages>package"`
+	XMLName         xml.Name `xml:"coverage"`
+	LineRate        float64  `xml:"line-rate,attr"`
+	BranchRate      float64  `xml:"branch-rate,attr"`
+	LinesCovered    int      `xml:"lines-covered,attr"`
+	LinesValid      int      `xml:"lines-valid,attr"`
+	BranchesCovered int      `xml:"branches-covered,attr"`
+	BranchesValid   int      `xml:"branches-valid,attr"`
+	Complexity      float64  `xml:"complexity,attr"`
+	Version         string   `xml:"version,attr"`
+	Timestamp       int      `xml:"timestamp,attr"`
+	Sources         []string `xml:"sources>source"`
+	Packages        []pkg    `xml:"packages>package"`
 }
 
 type pkg struct {
@@ -210,6 +209,6 @@ type method struct {
 }
 
 type line struct {
-	Number int   `xml:"number,attr"`
-	Hits   int   `xml:"hits,attr"`
+	Number int `xml:"number,attr"`
+	Hits   int `xml:"hits,attr"`
 }
