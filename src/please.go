@@ -966,7 +966,7 @@ func main() {
 
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
-	if flagsErr != nil || len(extraArgs) > 0 {
+	if (flagsErr != nil || len(extraArgs) > 0) && command != "completions" {
 		args := config.UpdateArgsWithAliases(os.Args)
 		command = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, args)
 	}
