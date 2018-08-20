@@ -75,12 +75,7 @@ func getCommandArgs(state *core.BuildState, commands []string, labels []core.Bui
 	for _, label := range labels {
 		cmd = append(cmd, label.String())
 	}
-
-	//TODO(luna): Maybe i can find a way to get all that output flags
-	if state.ShowAllOutput {
-		cmd = append(cmd, "--show_all_output")
-	}
-
+	
 	return cmd
 }
 

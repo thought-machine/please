@@ -90,6 +90,7 @@ func buildRemotely(state *core.BuildState, worker string, req *pb.BuildRequest) 
 
 // EnsureWorkerStarted ensures that a worker server is started and has responded saying it's ready.
 func EnsureWorkerStarted(state *core.BuildState, worker string, label core.BuildLabel) error {
+	fmt.Println(workerMap[worker])
 	resp, err := buildRemotely(state, worker, &pb.BuildRequest{
 		Rule: label.String(),
 		Test: true,
