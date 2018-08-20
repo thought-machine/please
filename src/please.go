@@ -1012,10 +1012,10 @@ func main() {
 		buildFunctions[command]()
 	}
 
+	metrics.Stop()
+	build.StopWorkers()
+
 	if !buildFunctions[command]() {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
 	}
-
-	metrics.Stop()
-	build.StopWorkers()
 }
