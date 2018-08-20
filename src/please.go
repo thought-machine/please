@@ -705,7 +705,7 @@ func newCache(config *core.Configuration) core.Cache {
 }
 
 // Please starts & runs the main build process through to its completion.
-func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput bool, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 	} else if config.Please.NumThreads <= 0 {
