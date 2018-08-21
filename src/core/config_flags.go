@@ -13,8 +13,8 @@ import (
 func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 	for name, alias := range config.AllAliases() {
 		cmd := parser.Command
-		for _, namePart := range strings.Fields(name) {
-			cmd = addSubcommand(cmd, namePart, alias.Desc, alias.PositionalLabels && len(alias.Subcommand) == 0)
+		for i, namePart := range strings.Fields(name) {
+			cmd = addSubcommand(cmd, namePart, alias.Desc, alias.PositionalLabels && len(alias.Subcommand) == 0 && i > 0)
 			for _, subcommand := range alias.Subcommand {
 				addSubcommands(cmd, strings.Fields(subcommand), alias.PositionalLabels)
 			}
