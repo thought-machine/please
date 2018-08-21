@@ -700,7 +700,7 @@ func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
 			opts.Test.Args.Args = append(opts.Test.Args.Args, label.String())
 		}
 
-		if i == len(labels) - 1 {
+		if i == len(labels) - 1 && opts.Test.Args.Target.Name != "" {
 			return "test"
 		}
 	}
