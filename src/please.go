@@ -682,7 +682,7 @@ func setWatchedTarget(state *core.BuildState, labels []core.BuildLabel) string {
 
 	for i, label := range labels {
 		if state.Graph.TargetOrDie(label).IsTest {
-			if i == 1 {
+			if i == 0 {
 				opts.Test.Args.Target = label
 			}
 			opts.Test.Args.Args = append(opts.Test.Args.Args, label.String())
