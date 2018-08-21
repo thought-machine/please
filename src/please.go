@@ -610,7 +610,7 @@ var buildFunctions = map[string]func() bool{
 	"watch": func() bool {
 		success, state := runBuild(opts.Watch.Args.Targets, true, true)
 		if success {
-			watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run, runWatchedBuild)
+			watch.Watch(state, state.ExpandOriginalTargets(), runWatchedBuild)
 		}
 
 		return success
