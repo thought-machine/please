@@ -5,8 +5,7 @@ package watch
 
 import (
 	"fmt"
-	"os"
-	"path"
+		"path"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -24,7 +23,7 @@ const debounceInterval = 50 * time.Millisecond
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels core.BuildLabels, run bool, runWatchedBuild func(args []string)) {
+func Watch(state *core.BuildState, labels core.BuildLabels, run bool, runWatchedBuild func(state *core.BuildState, labels []core.BuildLabel)) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("Error setting up watcher: %s", err)
@@ -32,9 +31,6 @@ func Watch(state *core.BuildState, labels core.BuildLabels, run bool, runWatched
 	// This sets up the actual watches. It must be done in a separate goroutine.
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
-	cmds := commands(state, labels, run)
-
-	cmd := getCommandArgs(state, cmds, labels)
 
 	for {
 		select {
@@ -54,29 +50,11 @@ func Watch(state *core.BuildState, labels core.BuildLabels, run bool, runWatched
 					break outer
 				}
 			}
-			runWatchedBuild(cmd)
+			runWatchedBuild(state, labels)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
 	}
-}
-
-
-func getCommandArgs(state *core.BuildState, commands []string, labels []core.BuildLabel) []string {
-	binary, err := os.Executable()
-	if err != nil {
-		log.Warning("Can't determine current executable, will assume 'plz'")
-		binary = "plz"
-	}
-
-	cmd := []string {binary}
-	cmd = append(cmd, commands...)
-	cmd = append(cmd, "-c", state.Config.Build.Config)
-	for _, label := range labels {
-		cmd = append(cmd, label.String())
-	}
-	
-	return cmd
 }
 
 
@@ -139,20 +117,4 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 			}
 		}
 	}
-}
-
-// commands returns the plz commands that should be used for the given labels.
-func commands(state *core.BuildState, labels []core.BuildLabel, run bool) []string {
-	if run {
-		if len(labels) > 1 {
-			return []string{"run", "parallel"}
-		}
-		return []string{"run"}
-	}
-	for _, label := range labels {
-		if state.Graph.TargetOrDie(label).IsTest {
-			return []string{"test"}
-		}
-	}
-	return []string{"build"}
 }

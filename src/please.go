@@ -617,7 +617,7 @@ var buildFunctions = map[string]func() bool{
 	},
 }
 
-var runWatchedBuild func(args []string)
+var runWatchedBuild func(state *core.BuildState, labels []core.BuildLabel)
 
 // ConfigOverrides are used to implement completion on the -o flag.
 type ConfigOverrides map[string]string
@@ -668,6 +668,41 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 		}
 	}
 }
+
+// commands returns the plz commands to be passed to initBuild() on watch
+func getWatchCommand(state *core.BuildState, labels []core.BuildLabel) []string {
+	var plzFunc []string
+
+	if opts.Watch.Run {
+		if len(labels) > 1 {
+			plzFunc =  []string{"run", "parallel"}
+		}
+		plzFunc =  []string{"run"}
+	}
+	for _, label := range labels {
+		if state.Graph.TargetOrDie(label).IsTest {
+			plzFunc = []string{"test"}
+		}
+	}
+	if len(plzFunc) == 0 {
+		plzFunc = []string{"build"}
+	}
+
+	binary, err := os.Executable()
+	if err != nil {
+		log.Warning("Can't determine current executable, will assume 'plz'")
+		binary = "plz"
+	}
+
+	cmd := []string {binary}
+	cmd = append(cmd, plzFunc...)
+	for _, label := range labels {
+		cmd = append(cmd, label.String())
+	}
+
+	return cmd
+}
+
 
 func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
 	os.RemoveAll(string(surefireDir))
@@ -1007,7 +1042,8 @@ func initBuild(args []string) string {
 func main() {
 	command := initBuild(os.Args)
 
-	runWatchedBuild = func(args []string) {
+	runWatchedBuild = func(state *core.BuildState, labels []core.BuildLabel) {
+		args := getWatchCommand(state, labels)
 		command := initBuild(args)
 		buildFunctions[command]()
 	}
