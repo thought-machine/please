@@ -614,8 +614,9 @@ var buildFunctions = map[string]func() bool{
 	},
 	"watch": func() bool {
 		success, state := runBuild(opts.Watch.Args.Targets, true, true)
+		watchedProcessName := setWatchedTarget(state, state.ExpandOriginalTargets())
 		if success {
-			watch.Watch(state, state.ExpandOriginalTargets(), runWatchedBuild)
+			watch.Watch(state, state.ExpandOriginalTargets(), watchedProcessName, runWatchedBuild)
 		}
 
 		return success
@@ -627,7 +628,7 @@ var buildFunctions = map[string]func() bool{
 	},
 }
 
-var runWatchedBuild func(state *core.BuildState, labels []core.BuildLabel)
+var runWatchedBuild func(watchedProcessName string)
 
 // ConfigOverrides are used to implement completion on the -o flag.
 type ConfigOverrides map[string]string
@@ -680,13 +681,14 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 }
 
 // set the watch
-func setWatchedTarget(state *core.BuildState, labels []core.BuildLabel) string {
+func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
 	if opts.Watch.Run {
 		if len(labels) > 1 {
-			opts.Run.Parallel.PositionalArgs.Targets = opts.Watch.Args.Targets
-		} else {
-			opts.Run.Args.Target = opts.Watch.Args.Targets[0]
+			opts.Run.Parallel.PositionalArgs.Targets = labels
+			return "parallel"
 		}
+
+		opts.Run.Args.Target = labels[0]
 		return "run"
 	}
 
@@ -702,7 +704,7 @@ func setWatchedTarget(state *core.BuildState, labels []core.BuildLabel) string {
 			return "test"
 		}
 	}
-	opts.Build.Args.Targets = opts.Watch.Args.Targets
+	opts.Build.Args.Targets = labels
 
 	return "build"
 }
@@ -1046,9 +1048,8 @@ func initBuild(args []string) string {
 func main() {
 	command := initBuild(os.Args)
 
-	runWatchedBuild = func(state *core.BuildState, labels []core.BuildLabel) {
-		funcType := setWatchedTarget(state, labels)
-		buildFunctions[funcType]()
+	runWatchedBuild = func(watchedProcessName string) {
+		buildFunctions[watchedProcessName]()
 	}
 	success := buildFunctions[command]()
 
