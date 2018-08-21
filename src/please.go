@@ -669,38 +669,32 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 	}
 }
 
-// commands returns the plz commands to be passed to initBuild() on watch
-func getWatchCommand(state *core.BuildState, labels []core.BuildLabel) []string {
-	var plzFunc []string
-
+// set the watch
+func setWatchedTarget(state *core.BuildState, labels []core.BuildLabel) string {
 	if opts.Watch.Run {
 		if len(labels) > 1 {
-			plzFunc =  []string{"run", "parallel"}
+			opts.Run.Parallel.PositionalArgs.Targets = opts.Watch.Args.Targets
+		} else {
+			opts.Run.Args.Target = opts.Watch.Args.Targets[0]
 		}
-		plzFunc =  []string{"run"}
+
+		return "run"
 	}
-	for _, label := range labels {
+
+	targetInd := 0
+	for i, label := range labels {
 		if state.Graph.TargetOrDie(label).IsTest {
-			plzFunc = []string{"test"}
+			opts.Test.Args.Target = opts.Watch.Args.Targets[targetInd]
+			targetInd += 1
+		}
+
+		if i == len(labels) - 1 {
+			return "test"
 		}
 	}
-	if len(plzFunc) == 0 {
-		plzFunc = []string{"build"}
-	}
+	opts.Build.Args.Targets = opts.Watch.Args.Targets
 
-	binary, err := os.Executable()
-	if err != nil {
-		log.Warning("Can't determine current executable, will assume 'plz'")
-		binary = "plz"
-	}
-
-	cmd := []string {binary}
-	cmd = append(cmd, plzFunc...)
-	for _, label := range labels {
-		cmd = append(cmd, label.String())
-	}
-
-	return cmd
+	return "build"
 }
 
 
@@ -1043,9 +1037,8 @@ func main() {
 	command := initBuild(os.Args)
 
 	runWatchedBuild = func(state *core.BuildState, labels []core.BuildLabel) {
-		args := getWatchCommand(state, labels)
-		command := initBuild(args)
-		buildFunctions[command]()
+		funcType := setWatchedTarget(state, labels)
+		buildFunctions[funcType]()
 	}
 	success := buildFunctions[command]()
 
