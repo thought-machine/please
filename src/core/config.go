@@ -430,10 +430,11 @@ type Configuration struct {
 
 // An Alias represents aliases in the config.
 type Alias struct {
-	Cmd        string   `help:"Command to run for this alias."`
-	Desc       string   `help:"Description of this alias"`
-	Subcommand []string `help:"Known subcommands of this command"`
-	Flag       []string `help:"Known flags of this command"`
+	Cmd              string   `help:"Command to run for this alias."`
+	Desc             string   `help:"Description of this alias"`
+	Subcommand       []string `help:"Known subcommands of this command"`
+	Flag             []string `help:"Known flags of this command"`
+	PositionalLabels bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
 }
 
 type storedBuildEnv struct {

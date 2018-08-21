@@ -134,7 +134,8 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
 
 
 def sh_cmd(name:str, cmd:str|dict, srcs:list|dict=None, out:list=None, shell:str='/bin/sh',
-           labels:list&features&tags=None, deps:list=None, visibility:list=None):
+           labels:list&features&tags=None, deps:list=None, visibility:list=None,
+           test_only:bool=False):
     """Generates a runnable shell script from a command.
 
     This is doable with a genrule with a little effort but it's awkward enough to be nice
@@ -153,6 +154,7 @@ def sh_cmd(name:str, cmd:str|dict, srcs:list|dict=None, out:list=None, shell:str
       labels (list): Labels to apply to this rule.
       deps (list): Any dependencies for this rule.
       visibility (list): Visibility declaration of the rule.
+      test_only (bool): If True, this rule can only be depended on by tests.
     """
     if isinstance(cmd, str):
         cmds = f'cat > $OUT << EOF\n#!{shell}\n{cmd}\nEOF'
@@ -167,4 +169,5 @@ def sh_cmd(name:str, cmd:str|dict, srcs:list|dict=None, out:list=None, shell:str
         deps = deps,
         visibility = visibility,
         binary = True,
+        test_only = test_only,
     )

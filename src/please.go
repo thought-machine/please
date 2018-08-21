@@ -333,6 +333,11 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true"`
 		} `command:"roots" description:"Show build labels with no dependents in the given list, from the list."`
+		Filter struct {
+			Args struct {
+				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
+			} `positional-args:"true"`
+		} `command:"filter" description:"Filter the given set of targets according to some rules"`
 	} `command:"query" description:"Queries information about the build graph"`
 }
 
@@ -614,6 +619,11 @@ var buildFunctions = map[string]func() bool{
 		}
 
 		return success
+	},
+	"filter": func() bool {
+		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
+			query.Filter(state, state.ExpandOriginalTargets())
+		})
 	},
 }
 
@@ -999,7 +1009,7 @@ func initBuild(args []string) string {
 
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
-	if flagsErr != nil || len(extraArgs) > 0 {
+	if (flagsErr != nil || len(extraArgs) > 0) && command != "completions" {
 		args := config.UpdateArgsWithAliases(os.Args)
 		command = cli.ParseFlagsFromArgsOrDie("Please", core.PleaseVersion.String(), &opts, args)
 	}

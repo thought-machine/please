@@ -13,10 +13,10 @@ import (
 func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 	for name, alias := range config.AllAliases() {
 		cmd := parser.Command
-		for _, namePart := range strings.Fields(name) {
-			cmd = addSubcommand(cmd, namePart, alias.Desc)
+		for i, namePart := range strings.Fields(name) {
+			cmd = addSubcommand(cmd, namePart, alias.Desc, alias.PositionalLabels && len(alias.Subcommand) == 0 && i > 0)
 			for _, subcommand := range alias.Subcommand {
-				addSubcommands(cmd, strings.Fields(subcommand))
+				addSubcommands(cmd, strings.Fields(subcommand), alias.PositionalLabels)
 			}
 			for _, flag := range alias.Flag {
 				// This is unavailable during bootstrap due to being a local modification.
@@ -28,19 +28,27 @@ func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 }
 
 // addSubcommands attaches a series of subcommands to the given command.
-func addSubcommands(cmd *flags.Command, subcommands []string) {
+func addSubcommands(cmd *flags.Command, subcommands []string, positionalLabels bool) {
 	if len(subcommands) > 0 && cmd != nil {
-		addSubcommands(addSubcommand(cmd, subcommands[0], ""), subcommands[1:])
+		addSubcommands(addSubcommand(cmd, subcommands[0], "", positionalLabels), subcommands[1:], positionalLabels)
 	}
 }
 
 // addSubcommand adds a single subcommand to the given command.
 // If one by that name already exists, it is returned.
-func addSubcommand(cmd *flags.Command, subcommand, desc string) *flags.Command {
+func addSubcommand(cmd *flags.Command, subcommand, desc string, positionalLabels bool) *flags.Command {
 	if existing := cmd.Find(subcommand); existing != nil {
 		return existing
 	}
-	newCmd, _ := cmd.AddCommand(subcommand, desc, desc, &struct{}{})
+	var data interface{} = &struct{}{}
+	if positionalLabels {
+		data = &struct {
+			Args struct {
+				Target []BuildLabel `positional-arg-name:"target" description:"Build targets"`
+			} `positional-args:"true"`
+		}{}
+	}
+	newCmd, _ := cmd.AddCommand(subcommand, desc, desc, data)
 	return newCmd
 }
 

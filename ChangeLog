@@ -3,6 +3,9 @@ Version 13.1.0
 
     * Test flakes now have more distinct treatment for multiple runs (#350)
     * Support for limited PEP-498 style f-strings in the BUILD grammar.
+    * Added `plz query roots` which returns roots of a dependency graph expressed
+      as a set of labels (i.e. the ones in the list that have no dependencies).
+    * Some improvements to structure of plz-out/go and some fixes for protos.
 
 
 Version 13.0.1

@@ -416,12 +416,14 @@ def check_config(key:str, section:str='buildconfig', rule:str='', example:str='.
       rule (str): Kind of rule that will be using this, e.g. "Android". Affects the output message.
       example (str): Example that they might consider setting.
     """
-    if not CONFIG.get(key):
+    val = CONFIG.get(key)
+    if not val:
         key = key.lower().replace('_', '-')
         rule_msg = f' to use {rule} rules' if rule else ''
         msg = f'You must set {section}.{key} in your .plzconfig{rule_msg}'
         msg = f'{msg}, e.g.\n[{section}]\n{key} = {example}\n'
         raise ConfigError(msg)
+    return val
 
 
 def _test_size_and_timeout(size, timeout, labels):
