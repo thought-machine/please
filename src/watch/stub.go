@@ -7,4 +7,4 @@ package watch
 import "core"
 
 // Watch is a stub implementation of the real function in watch.go, this one does nothing.
-func Watch(state *core.BuildState, labels core.BuildLabels, runWatchedBuild func(state *core.BuildState, labels []core.BuildLabel)) {}
+func Watch(state *core.BuildState, labels core.BuildLabels, runWatchedBuild func(watchedProcessName string)) {}
