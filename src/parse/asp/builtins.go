@@ -713,7 +713,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	} else if args[2] != None {
 		root = string(args[2].(pyString))
 	}
-	log.Debug("Registering subrepo %s in package %s", name, s.pkg.Name)
+	log.Debug("Registering subrepo %s in package %s", name, s.pkg.Label())
 	s.state.Graph.AddSubrepo(&core.Subrepo{
 		Name:   name,
 		Root:   root,
