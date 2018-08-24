@@ -407,6 +407,13 @@ var buildFunctions = map[string]func() bool{
 		}
 		return false
 	},
+	"watch_run": func() bool {
+		success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false);
+		if success {
+			run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env)
+		}
+		return success
+	},
 	"sequential": func() bool {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
 			os.Exit(run.Sequential(state, state.ExpandOriginalTargets(), opts.Run.Sequential.Args, opts.Run.Sequential.Quiet, opts.Run.Env))
@@ -683,13 +690,8 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 // set the watch
 func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
 	if opts.Watch.Run {
-		if len(labels) > 1 {
-			opts.Run.Parallel.PositionalArgs.Targets = labels
-			return "parallel"
-		}
-
-		opts.Run.Args.Target = labels[0]
-		return "run"
+		opts.Run.Parallel.PositionalArgs.Targets = labels
+		return "watch_run"
 	}
 
 	for i, label := range labels {
@@ -1047,14 +1049,21 @@ func initBuild(args []string) string {
 
 func main() {
 	command := initBuild(os.Args)
+	var success bool
 
-	runWatchedBuild = func(watchedProcessName string) {
-		buildFunctions[watchedProcessName]()
+	if command != "watch" {
+		metrics.Stop()
+		build.StopWorkers()
+		success = buildFunctions[command]()
+	} else {
+		runWatchedBuild = func(watchedProcessName string) {
+			buildFunctions[watchedProcessName]()
+		}
+		success = buildFunctions[command]()
+
+		metrics.Stop()
+		build.StopWorkers()
 	}
-	success := buildFunctions[command]()
-
-	metrics.Stop()
-	build.StopWorkers()
 
 	if !success {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
