@@ -50,6 +50,9 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 	subrepo, err := checkSubrepo(tid, state, label, dependor)
 	if err != nil {
 		return err
+	} else if subrepo != nil && subrepo.Target != nil {
+		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
+		state.WaitForBuiltTarget(subrepo.Target.Label, label)
 	}
 	pkg, err = parsePackage(state, label, dependor, subrepo)
 	if err != nil {
@@ -63,27 +66,22 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 func checkSubrepo(tid int, state *core.BuildState, label, dependor core.BuildLabel) (*core.Subrepo, error) {
 	if label.Subrepo == "" {
 		return nil, nil
+	} else if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
+		return subrepo, nil
 	}
-	subrepo := state.Graph.Subrepo(label.Subrepo)
-	if subrepo != nil && subrepo.Target != nil {
-		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
-		state.WaitForBuiltTarget(subrepo.Target.Label, label)
-	} else if subrepo == nil {
-		// We don't have the definition of it at all. Need to parse that first.
-		sl := label.SubrepoLabel()
-		if err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
-			return nil, err
-		} else if err := parseSubrepoPackage(tid, state, sl.PackageName, dependor.Subrepo, label); err != nil {
-			return nil, err
-		}
-		if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
-			return subrepo, nil
-		} else if subrepo := checkArchSubrepo(state, label.Subrepo); subrepo != nil {
-			return subrepo, nil
-		}
-		return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
+	// We don't have the definition of it at all. Need to parse that first.
+	sl := label.SubrepoLabel()
+	if err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
+		return nil, err
+	} else if err := parseSubrepoPackage(tid, state, sl.PackageName, dependor.Subrepo, label); err != nil {
+		return nil, err
 	}
-	return subrepo, nil
+	if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
+		return subrepo, nil
+	} else if subrepo := checkArchSubrepo(state, label.Subrepo); subrepo != nil {
+		return subrepo, nil
+	}
+	return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
@@ -168,7 +166,8 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
 		return nil, err
 	}
-	if packageName == "" && state.Config.Parse.BuiltinPleasings && pkg.Target("pleasings") == nil {
+	// If the config setting is on, we "magically" register a default repo called @pleasings.
+	if packageName == "" && subrepo == nil && state.Config.Parse.BuiltinPleasings && pkg.Target("pleasings") == nil {
 		if _, err := state.Parser.(*aspParser).asp.ParseReader(pkg, strings.NewReader(pleasings)); err != nil {
 			log.Fatalf("Failed to load pleasings: %s", err) // This shouldn't happen, of course.
 		}
