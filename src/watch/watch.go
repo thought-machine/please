@@ -5,7 +5,7 @@ package watch
 
 import (
 	"fmt"
-		"path"
+	"path"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -56,7 +56,6 @@ func Watch(state *core.BuildState, labels core.BuildLabels, watchedProcessName s
 		}
 	}
 }
-
 
 func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel, files cmap.ConcurrentMap) {
 	// Deduplicate seen targets & sources.

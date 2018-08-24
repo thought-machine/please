@@ -408,7 +408,7 @@ var buildFunctions = map[string]func() bool{
 		return false
 	},
 	"watch_run": func() bool {
-		success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false);
+		success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false)
 		if success {
 			run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env)
 		}
@@ -702,7 +702,7 @@ func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
 			opts.Test.Args.Args = append(opts.Test.Args.Args, label.String())
 		}
 
-		if i == len(labels) - 1 && opts.Test.Args.Target.Name != "" {
+		if i == len(labels)-1 && opts.Test.Args.Target.Name != "" {
 			return "test"
 		}
 	}
@@ -710,7 +710,6 @@ func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
 
 	return "build"
 }
-
 
 func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
 	os.RemoveAll(string(surefireDir))
@@ -1044,8 +1043,6 @@ func initBuild(args []string) string {
 
 	return command
 }
-
-
 
 func main() {
 	command := initBuild(os.Args)
