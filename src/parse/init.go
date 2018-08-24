@@ -10,30 +10,9 @@ import (
 	"parse/rules"
 )
 
-// This is the builtin subrepo for pleasings.
-// TODO(peterebden): Should really provide a github_archive builtin that knows how to construct
-//                   the URL and strip_prefix etc.
-const pleasings = `
-http_archive(
-    name = "pleasings",
-    strip_prefix = "pleasings-master",
-    urls = ["https://github.com/thought-machine/pleasings/archive/master.zip"],
-)
-`
-
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) {
-	parser := &aspParser{asp: newAspParser(state)}
-	state.Parser = parser
-	if state.Config.Parse.BuiltinPleasings {
-		// Set up plreasings subrepo as a builtin. This is non-trivial enough to be worth
-		// running it through the existing builtins.
-		pkg := core.NewPackage("_builtins")
-		if _, err := parser.asp.ParseReader(pkg, strings.NewReader(pleasings)); err != nil {
-			log.Fatalf("Failed to load pleasings: %s", err) // This shouldn't happen, of course.
-		}
-		addPackage(state, pkg)
-	}
+	state.Parser = &aspParser{asp: newAspParser(state)}
 }
 
 // An aspParser implements the core.Parser interface around our asp package.
