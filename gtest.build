@@ -24,7 +24,7 @@ cc_library(
         "googlemock/include/gmock/**/*.h",
     ]),
     private_hdrs = glob(["googletest/src/*.h"]),
-    cflags = ["-pthread"],
+    cflags = ["-pthread", "-Wno-missing-field-initializers"],
     includes = [
         "googlemock",
         "googlemock/include",
