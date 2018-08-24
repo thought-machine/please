@@ -403,16 +403,13 @@ var buildFunctions = map[string]func() bool{
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
+			if opts.Watch.Run {
+				run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env)
+			} else {
+				os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
+			}
 		}
 		return false
-	},
-	"watch_run": func() bool {
-		success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false)
-		if success {
-			run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env)
-		}
-		return success
 	},
 	"sequential": func() bool {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
@@ -691,7 +688,7 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
 	if opts.Watch.Run {
 		opts.Run.Parallel.PositionalArgs.Targets = labels
-		return "watch_run"
+		return "parallel"
 	}
 
 	for i, label := range labels {
