@@ -9,6 +9,7 @@ package parse
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -167,6 +168,11 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
 		return nil, err
 	}
+	if packageName == "" && state.Config.Parse.BuiltinPleasings && pkg.Target("pleasings") == nil {
+		if _, err := state.Parser.(*aspParser).asp.ParseReader(pkg, strings.NewReader(pleasings)); err != nil {
+			log.Fatalf("Failed to load pleasings: %s", err) // This shouldn't happen, of course.
+		}
+	}
 	addPackage(state, pkg)
 	return pkg, nil
 }
@@ -295,3 +301,14 @@ func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) 
 		}
 	}
 }
+
+// This is the builtin subrepo for pleasings.
+// TODO(peterebden): Should really provide a github_archive builtin that knows how to construct
+//                   the URL and strip_prefix etc.
+const pleasings = `
+http_archive(
+    name = "pleasings",
+    strip_prefix = "pleasings-master",
+    urls = ["https://github.com/thought-machine/pleasings/archive/master.zip"],
+)
+`
