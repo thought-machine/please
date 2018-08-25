@@ -33,6 +33,7 @@ go_test(
     data = [":test_data"],
     deps = [
         ":server",
+        "//third_party/go:testify",
     ],
 )
 

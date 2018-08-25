@@ -8,6 +8,7 @@ import (
 	"fs"
 )
 
+// CopySurefireXmlFilesToDir copies all the XML test results files into the given directory.
 func CopySurefireXmlFilesToDir(graph *core.BuildGraph, surefireDir string) {
 	outputDirs := make(map[string]struct{})
 	for _, target := range graph.AllTargets() {

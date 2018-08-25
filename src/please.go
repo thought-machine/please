@@ -581,14 +581,11 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"rules": func() bool {
-		targets := opts.Query.Rules.Args.Targets
 		success, state := Please(opts.Query.Rules.Args.Targets, config, true, true, false)
-		if !success {
-			return false
+		if success {
+			parse.PrintRuleArgs(state, state.ExpandOriginalTargets())
 		}
-		targets = state.ExpandOriginalTargets()
-		parse.PrintRuleArgs(state, targets)
-		return true
+		return success
 	},
 	"changes": func() bool {
 		// Temporarily set this flag on to avoid fatal errors from the first parse.
