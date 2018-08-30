@@ -470,7 +470,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
       pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       deps (list): Dependent rules.
-      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
+      worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
       data (list): Runtime data files for this test.
       visibility (list): Visibility declaration for this rule.
       flags (str): Flags to apply to the test invocation.

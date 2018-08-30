@@ -310,7 +310,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
       srcs (list): Go source files to compile.
       data (list): Runtime data files for the test.
       deps (list): Dependencies
-      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
+      worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
       visibility (list): Visibility specification
       flags (str): Flags to apply to the test invocation.
       container (bool | dict): True to run this test in a container.

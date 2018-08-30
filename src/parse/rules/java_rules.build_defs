@@ -272,7 +272,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
       resources (list): Resources to include in the .jar file
       data (list): Runtime data files for this rule.
       deps (list): Dependencies of this rule.
-      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
+      worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
       labels (list): Labels to attach to this test.
       visibility (list): Visibility declaration of this rule.
       flags (str): Flags to pass to the test invocation.
