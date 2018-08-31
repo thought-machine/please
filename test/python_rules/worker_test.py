@@ -1,8 +1,7 @@
-import unittest
-
 """
 Testing the integration with a worker script
 """
+import unittest
 
 
 class WorkerTest(unittest.TestCase):
