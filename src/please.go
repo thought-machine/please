@@ -403,7 +403,11 @@ var buildFunctions = map[string]func() bool{
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
+			if opts.Watch.Run {
+				run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env)
+			} else {
+				os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
+			}
 		}
 		return false
 	},
@@ -433,13 +437,6 @@ var buildFunctions = map[string]func() bool{
 			return true
 		}
 		return false
-	},
-	"watch": func() bool {
-		success, state := runBuild(opts.Watch.Args.Targets, false, false)
-		if success {
-			watch.Watch(state, state.ExpandOriginalTargets(), opts.Watch.Run)
-		}
-		return success
 	},
 	"update": func() bool {
 		fmt.Printf("Up to date (version %s).\n", core.PleaseVersion)
@@ -619,12 +616,23 @@ var buildFunctions = map[string]func() bool{
 			query.Roots(state.Graph, opts.Query.Roots.Args.Targets)
 		})
 	},
+	"watch": func() bool {
+		success, state := runBuild(opts.Watch.Args.Targets, true, true)
+		watchedProcessName := setWatchedTarget(state, state.ExpandOriginalTargets())
+		if success {
+			watch.Watch(state, state.ExpandOriginalTargets(), watchedProcessName, runWatchedBuild)
+		}
+
+		return success
+	},
 	"filter": func() bool {
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
 			query.Filter(state, state.ExpandOriginalTargets())
 		})
 	},
 }
+
+var runWatchedBuild func(watchedProcessName string)
 
 // ConfigOverrides are used to implement completion on the -o flag.
 type ConfigOverrides map[string]string
@@ -674,6 +682,30 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 			state.TaskDone(true)
 		}
 	}
+}
+
+// set the watch
+func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
+	if opts.Watch.Run {
+		opts.Run.Parallel.PositionalArgs.Targets = labels
+		return "parallel"
+	}
+
+	for i, label := range labels {
+		if state.Graph.TargetOrDie(label).IsTest {
+			if i == 0 {
+				opts.Test.Args.Target = label
+			}
+			opts.Test.Args.Args = append(opts.Test.Args.Args, label.String())
+		}
+
+		if i == len(labels)-1 && opts.Test.Args.Target.Name != "" {
+			return "test"
+		}
+	}
+	opts.Build.Args.Targets = labels
+
+	return "build"
 }
 
 func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
@@ -743,7 +775,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	parse.InitParser(state)
 	build.Init(state)
-	if config.Events.Port != 0 && shouldBuild {
+
+	if config.Events.Port != 0 && state.NeedBuild {
 		shutdown := follow.InitialiseServer(state, config.Events.Port)
 		defer shutdown()
 	}
@@ -752,14 +785,14 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	}
 	metrics.InitFromConfig(config)
 	// Acquire the lock before we start building
-	if (shouldBuild || shouldTest) && !opts.FeatureFlags.NoLock {
+	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
 	}
 	if state.DebugTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
-	detailedTests := shouldTest && (opts.Test.Detailed || opts.Cover.Detailed || (len(targets) == 1 && !targets[0].IsAllTargets() && !targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
+	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed || (len(targets) == 1 && !targets[0].IsAllTargets() && !targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, targets)
 	// Start up all the build workers
@@ -778,12 +811,12 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	}()
 	// Draw stuff to the screen while there are still results coming through.
 	shouldRun := !opts.Run.Args.Target.IsEmpty()
-	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, shouldBuild, shouldTest, shouldRun, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
-	metrics.Stop()
-	build.StopWorkers()
-	if c != nil {
-		c.Shutdown()
+	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, state.NeedBuild, state.NeedTests, shouldRun, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
+
+	if state.Cache != nil {
+		state.Cache.Shutdown()
 	}
+
 	return success, state
 }
 
@@ -918,8 +951,8 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	os.Exit(0)
 }
 
-func main() {
-	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, os.Args, flags.PassDoubleDash, handleCompletions)
+func initBuild(args []string) string {
+	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.HelpFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
@@ -1005,7 +1038,28 @@ func main() {
 		defer pprof.WriteHeapProfile(f)
 	}
 
-	if !buildFunctions[command]() {
+	return command
+}
+
+func main() {
+	command := initBuild(os.Args)
+	var success bool
+
+	if command != "watch" {
+		metrics.Stop()
+		build.StopWorkers()
+		success = buildFunctions[command]()
+	} else {
+		runWatchedBuild = func(watchedProcessName string) {
+			buildFunctions[watchedProcessName]()
+		}
+		success = buildFunctions[command]()
+
+		metrics.Stop()
+		build.StopWorkers()
+	}
+
+	if !success {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.
 	}
 }
