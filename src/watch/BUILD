@@ -10,13 +10,3 @@ go_library(
         "//third_party/go:logging",
     ],
 )
-
-go_test(
-    name = "watch_test",
-    srcs = ["watch_test.go"],
-    deps = [
-        ":watch",
-        "//src/core",
-        "//third_party/go:testify",
-    ],
-)
