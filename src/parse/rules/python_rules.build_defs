@@ -467,7 +467,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
 
     file_rule = remote_file(
         name = name,
-        tag = 'download',
+        _tag = 'download',
         url = urls,
         licences = licences if licences else None,
     )
