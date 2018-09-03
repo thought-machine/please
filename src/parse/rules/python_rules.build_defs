@@ -476,7 +476,9 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
 
     if strip:
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
-
+    if not licences:
+        cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
+                   'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
         cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
