@@ -466,10 +466,11 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                                                                      version=version))
 
     file_rule = remote_file(
-            name = f'_{package_name}',
-            url = urls,
-            licences = licences if licences else None,
-        )
+        name = name,
+        tag = 'download',
+        url = urls,
+        licences = licences if licences else None,
+    )
 
     cmd = ['$TOOL x $SRC']
 
