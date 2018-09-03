@@ -159,7 +159,11 @@ go_get(
 go_get(
     name = "protobuf",
     get = "github.com/golang/protobuf/...",
-    revision = "130e6b02ab059e7b717a096f397c5b60111cae74",
+    revision = "v1.1.0",
+    strip = [
+        "proto/proto3_proto",
+        "conformance",
+    ],
 )
 
 go_get(
