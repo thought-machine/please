@@ -194,7 +194,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
                         vs. srcs is important here; srcs are passed to unittest for it to run
                         and it may or may not be happy if given non-Python files.
       deps (list): Dependencies of this rule.
-      worker(str): Reference to worker script, A persistent worker process that is used to set up the test.
+      worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
       labels (list): Labels for this rule.
       size (str): Test size (enormous, large, medium or small).
       flags (str): Flags to apply to the test command.
@@ -465,11 +465,15 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                                                                      package_name=package_name,
                                                                      version=version))
 
-    curl_commands = ' || '.join(['curl -fsSO {url}'.format(url=url) for url in urls])
-    cmd = [
-        curl_commands,
-        '$TOOL x *.whl',
-    ]
+    file_rule = remote_file(
+        name = name,
+        _tag = 'download',
+        url = urls,
+        licences = licences if licences else None,
+    )
+
+    cmd = ['$TOOL x $SRC']
+
     if strip:
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
     if not licences:
@@ -480,6 +484,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
     if post_install_commands:
         cmd += post_install_commands
+
     cmd += ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
 
     wheel_rule = build_rule(
@@ -487,7 +492,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         tag = 'wheel',
         cmd = ' && '.join(cmd),
         outs = [name + '.whl'],
-        srcs = patches if patch else None,
+        srcs = patches + [file_rule] if patch else [file_rule],
         building_description = 'Downloading...',
         requires = ['py'],
         deps = deps,

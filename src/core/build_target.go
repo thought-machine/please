@@ -64,9 +64,9 @@ type BuildTarget struct {
 	// Optional labels applied to this rule. Used for including/excluding rules.
 	Labels []string
 	// Shell command to run.
-	Command string `name:"cmd"`
+	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
-	Commands map[string]string `name:"cmd"`
+	Commands map[string]string `name:"cmd" hide:"filegroup"`
 	// Shell command to run for test targets.
 	TestCommand string `name:"test_cmd"`
 	// Per-configuration test commands to run.

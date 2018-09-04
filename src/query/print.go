@@ -176,6 +176,8 @@ func (p *printer) printField(f reflect.StructField, v reflect.Value) {
 func (p *printer) shouldPrintField(f reflect.StructField, v reflect.Value) (string, bool) {
 	if f.Tag.Get("print") == "false" { // Indicates not to print the field.
 		return "", false
+	} else if p.target.IsFilegroup && f.Tag.Get("hide") == "filegroup" {
+		return "", false
 	}
 	name := p.fieldName(f)
 	if p.doneFields[name] {
