@@ -789,7 +789,7 @@ def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False,
         'opt': f'$TOOL -o $OUT {opt_flags} {extra_flags}',
     }
     if CONFIG.CPP_COVERAGE:
-        cmds['cover'] = f'$TOOL -o $OUT {dbg_flags} {extra_flags} {_COVERAGE_FLAGS}'
+        cmds['cover'] = f'$TOOL -o $OUT {dbg_flags} {extra_flags} {_COVERAGE_FLAGS} -lgcov'
     return cmds, [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
                   CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL]
 
