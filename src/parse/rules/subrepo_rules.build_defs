@@ -112,3 +112,28 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         name = name,
         dep = extract_rule,
     )
+
+
+def new_local_repository(name:str, path:str):
+    """Defines a new subrepo corresponding to a directory on the local disk.
+
+    It's up to the user to make sure this repo is where this rule says it is. Typically this
+    would be managed by e.g. a CI system that checks out side-by-side git repos.
+
+    Right now this does not support specifying BUILD files as the others do. The BUILD file
+    must exist in the target directory.
+
+    Args:
+      name: The name of the subrepo to use.
+      path: The path (absolute or relative to this repo's root) to the local repository.
+    """
+    # Bit of a hack; subrepo() doesn't generate a rule, but the subrepo code internally
+    # expects there to be one by this name. Maybe we should use something like system_library
+    # to pull it in as a dependency, but that seems pretty heavyweight.
+    subrepo(
+        name = name,
+        path = path,
+        dep = filegroup(
+            name = name,
+        ),
+    )

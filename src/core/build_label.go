@@ -38,10 +38,14 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
+	s := "//" + label.PackageName
 	if label.Subrepo != "" {
-		return "@" + label.Subrepo + "//" + label.PackageName + ":" + label.Name
+		s = "@" + label.Subrepo + s
 	}
-	return "//" + label.PackageName + ":" + label.Name
+	if label.IsAllSubpackages() {
+		return s + "/..."
+	}
+	return s + ":" + label.Name
 }
 
 // NewBuildLabel constructs a new build label from the given components. Panics on failure.
@@ -117,7 +121,7 @@ func TryParseBuildLabel(target, currentPath string) (BuildLabel, error) {
 // It panics on error.
 func ParseBuildLabelContext(target string, pkg *Package) BuildLabel {
 	if p, name, subrepo := parseBuildLabelParts(target, pkg.Name, pkg.Subrepo); name != "" {
-		if subrepo == "" && pkg.Subrepo != nil {
+		if subrepo == "" && pkg.Subrepo != nil && target[0] != '@' {
 			subrepo = pkg.Subrepo.Name
 		}
 		return BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}

@@ -4,10 +4,9 @@ filegroup(
     visibility = ["PUBLIC"],
 )
 
-# This illustrates how to define a subrepo, which is used in test rules.
-http_archive(
-    name = "pleasings",
-    hashes = ["388baebf9381c619f13507915f16d0165a5dc13e"],
-    strip_prefix = "pleasings-f0c549b375067802400699247106e4907de917c2",
-    urls = ["https://github.com/thought-machine/pleasings/archive/f0c549b375067802400699247106e4907de917c2.zip"],
+new_http_archive(
+    name = "gtest",
+    build_file = "gtest.build",
+    strip_prefix = "googletest-b4d4438df9479675a632b2f11125e57133822ece",
+    urls = ["https://github.com/google/googletest/archive/b4d4438df9479675a632b2f11125e57133822ece.zip"],
 )

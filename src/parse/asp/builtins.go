@@ -231,9 +231,9 @@ func subinclude(s *scope, args []pyObject) pyObject {
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	if s.pkg == nil {
 		// Really we should not get here, but it's hard to prove that's not the case. Make the best of it.
-		return s.state.WaitForBuiltTarget(l, l.PackageName)
+		return s.state.WaitForBuiltTarget(l, l)
 	}
-	t := s.state.WaitForBuiltTarget(l, s.pkg.Name)
+	t := s.state.WaitForBuiltTarget(l, s.pkg.Label())
 	s.pkg.RegisterSubinclude(l)
 	return t
 }
@@ -701,27 +701,24 @@ func selectTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 
 // subrepo implements the subrepo() builtin that adds a new repository.
 func subrepo(s *scope, args []pyObject) pyObject {
-	root := func(def string) string {
-		if args[2] != None {
-			return string(args[2].(pyString))
-		}
-		return def
-	}
-
+	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
 	name := string(args[0].(pyString))
 	dep := string(args[1].(pyString))
-	if dep == "" {
-		// This is deliberately different to facilitate binding subrepos within the same VCS repo.
-		s.state.Graph.AddSubrepo(&core.Subrepo{Name: name, Root: root(name)})
-		return None
+	var target *core.BuildTarget
+	root := name
+	if dep != "" {
+		// N.B. The target must be already registered on this package.
+		target = s.pkg.TargetOrDie(core.ParseBuildLabelContext(dep, s.pkg).Name)
+		root = path.Join(target.OutDir(), name)
+	} else if args[2] != None {
+		root = string(args[2].(pyString))
 	}
-	// N.B. The target must be already registered on this package.
-	t := s.pkg.TargetOrDie(core.ParseBuildLabel(dep, s.pkg.Name).Name)
+	log.Debug("Registering subrepo %s in package %s", name, s.pkg.Label())
 	s.state.Graph.AddSubrepo(&core.Subrepo{
 		Name:   name,
-		Root:   root(path.Join(t.OutDir(), name)),
-		Target: t,
+		Root:   root,
+		Target: target,
+		State:  s.state,
 	})
-	log.Debug("Registered subrepo %s", name)
 	return None
 }

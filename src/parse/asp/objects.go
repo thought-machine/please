@@ -768,6 +768,10 @@ func newConfig(config *core.Configuration) *pyConfig {
 							l[i] = pyString(subfield.Index(i).String())
 						}
 						c[tag] = l
+					case reflect.Struct:
+						c[tag] = pyString(subfield.Interface().(fmt.Stringer).String())
+					default:
+						log.Fatalf("Unknown config field type for %s", tag)
 					}
 				}
 			}

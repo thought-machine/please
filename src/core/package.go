@@ -193,6 +193,11 @@ func (pkg *Package) MarkTargetModified(target *BuildTarget) {
 	}
 }
 
+// Label returns a build label uniquely identifying this package.
+func (pkg *Package) Label() BuildLabel {
+	return BuildLabel{Subrepo: pkg.SubrepoName, PackageName: pkg.Name, Name: "all"}
+}
+
 // VerifyOutputs checks all files output from this package and verifies that they're all OK;
 // notably it checks that if targets that output into a subdirectory, that subdirectory isn't
 // created by another target. That kind of thing can lead to subtle and annoying bugs.

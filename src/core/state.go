@@ -515,32 +515,33 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 }
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
-func (state *BuildState) WaitForBuiltTarget(l BuildLabel, dependingPackage string) *BuildTarget {
+func (state *BuildState) WaitForBuiltTarget(l, dependor BuildLabel) *BuildTarget {
 	if t := state.Graph.Target(l); t != nil {
 		if state := t.State(); state >= Built && state != Failed {
 			return t
 		}
 	}
+	dependor.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
 	state.progress.pendingTargetMutex.Lock()
 	if ch, present := state.progress.pendingTargets[l]; present {
 		// Something's already registered for this, get on the train
 		state.progress.pendingTargetMutex.Unlock()
-		log.Debug("Pausing parse of //%s to wait for %s", dependingPackage, l)
+		log.Debug("Pausing parse of %s to wait for %s", dependor, l)
 		state.ParsePool.AddWorker()
 		<-ch
 		state.ParsePool.StopWorker()
-		log.Debug("Resuming parse of //%s now %s is ready", dependingPackage, l)
+		log.Debug("Resuming parse of %s now %s is ready", dependor, l)
 		return state.Graph.Target(l)
 	}
 	// Nothing's registered this, set it up.
 	state.progress.pendingTargets[l] = make(chan struct{})
 	state.progress.pendingTargetMutex.Unlock()
-	state.AddPendingParse(l, BuildLabel{PackageName: dependingPackage, Name: "all"}, true)
+	state.AddPendingParse(l, dependor, true)
 	// Do this all over; the re-checking that happens here is actually fairly important to resolve
 	// a potential race condition if the target was built between us checking earlier and registering
 	// the channel just now.
-	return state.WaitForBuiltTarget(l, dependingPackage)
+	return state.WaitForBuiltTarget(l, dependor)
 }
 
 // ForTarget returns the state associated with a given target.

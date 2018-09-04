@@ -90,7 +90,6 @@ func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 }
 
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.
-// This is provided as a helper for fuzzing and isn't generally useful otherwise.
 // The first return value is true if parsing succeeds - if the error is still non-nil
 // that indicates that interpretation failed.
 func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker) (bool, error) {

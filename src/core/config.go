@@ -178,6 +178,7 @@ func DefaultConfiguration() *Configuration {
 	config.Please.Autoclean = true
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
+	config.Parse.BuiltinPleasings = true
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
 	config.Build.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Build.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
@@ -275,6 +276,7 @@ type Configuration struct {
 		BuildFileName    []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
 		BlacklistDirs    []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
 		PreloadBuildDefs []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths." example:"build_defs/go_bindata.build_defs"`
+		BuiltinPleasings bool     `help:"Adds github.com/thought-machine/pleasings as a default subrepo named pleasings. This makes some builtin extensions available, but is not fully deterministic (it always uses the latest version). You may prefer to disable this and define your own subrepo for it (or not use it at all, of course)."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
 	Display struct {
 		UpdateTitle bool `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
