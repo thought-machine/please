@@ -454,7 +454,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
 def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
             pkg_config_libs:list=[], pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=[],
             flags:str='', labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=[], size:str=None, timeout:int=0,
-            container:bool|dict=False, sandbox:bool=None, write_main:bool=False,
+            container:bool|dict=False, sandbox:bool=None, write_main:bool=not CONFIG.BAZEL_COMPATIBILITY,
             linkstatic:bool=False, _c=False):
     """Defines a C++ test using UnitTest++.
 
@@ -481,8 +481,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
       container (bool | dict): If true the test is run in a container (eg. Docker).
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
-      write_main (bool): Deprecated, has no effect. See `plz help testmain` for more information
-                         about how to define a default dependency for the test main.
+      write_main (bool): Whether or not to write a main() for these tests.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
                          link roughly equivalently to their "mostly-static" mode.
     """
@@ -492,8 +491,15 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
-    if CONFIG.CC_TEST_MAIN:
-        deps += [CONFIG.CC_TEST_MAIN]
+    if write_main:
+        linker_flags.append('-lUnitTest++')
+        main_rule = genrule(
+            name=f'_{name}#main',
+            outs=[f'_{name}_main.cc'],
+            cmd=f'echo \'{_CC_TEST_MAIN_CONTENTS}\' > $OUT',
+            test_only=True,
+        )
+        srcs.append(main_rule)
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
 
     if srcs:
@@ -713,6 +719,49 @@ _binary_${ENCODED_FILENAME}_end:
 __binary_${ENCODED_FILENAME}_end:
 _binary_${ENCODED_FILENAME}_size:     dd \\$-_binary_${ENCODED_FILENAME}_start
 __binary_${ENCODED_FILENAME}_size:    dd \\$-_binary_${ENCODED_FILENAME}_start
+"""
+
+
+# This is a lightweight way of building the test main, but it's awkward not
+# having command line output as well as XML output.
+_CC_TEST_MAIN_CONTENTS = """
+#include <algorithm>
+#include <fstream>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <vector>
+#include "UnitTest++/UnitTest++.h"
+#include "UnitTest++/XmlTestReporter.h"
+int main(int argc, const char** argv) {
+    if (getenv("DEBUG")) {
+        unsetenv("DEBUG");
+        std::vector<char*> v({strdup("gdb"), strdup("-ex"), strdup("run"), strdup("--args")});
+        v.insert(v.end(), const_cast<char**>(argv), const_cast<char**>(argv) + argc);
+        execvp("gdb", const_cast<char**>(&v[0]));
+    }
+    auto run_named = [argc, argv](UnitTest::Test* test) {
+        return argc <= 1 || std::any_of(argv + 1, argv + argc, [test](const char* name) {
+            return strcmp(test->m_details.testName, name) == 0;
+        });
+    };
+
+    std::ofstream f("test.results");
+    if (!f.good()) {
+      fprintf(stderr, "Failed to open results file\\n");
+      return -1;
+    }
+    if (getenv("COVERAGE")) {
+      std::ofstream c("test.coverage");
+      c << "gcov";
+    }
+    UnitTest::XmlTestReporter reporter(f);
+    UnitTest::TestRunner runner(reporter);
+    return runner.RunTestsIf(UnitTest::Test::GetTestList(),
+                             NULL,
+                             run_named,
+                             0);
+}
 """
 
 
