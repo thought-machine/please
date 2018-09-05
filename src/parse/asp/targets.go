@@ -236,7 +236,7 @@ func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarg
 			// *sigh*... Bazel seems to allow an implicit : on the start of dependencies
 			str = ":" + str
 		}
-		target.AddMaybeExportedDependency(core.ParseBuildLabelContext(str, s.pkg), exported, false)
+		target.AddMaybeExportedDependency(checkLabel(s, core.ParseBuildLabelContext(str, s.pkg)), exported, false)
 	})
 }
 
@@ -263,7 +263,7 @@ func addProvides(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 		for k, v := range d {
 			str, ok := v.(pyString)
 			s.Assert(ok, "%s values must be strings", name)
-			t.AddProvide(k, core.ParseBuildLabelContext(string(str), s.pkg))
+			t.AddProvide(k, checkLabel(s, core.ParseBuildLabelContext(string(str), s.pkg)))
 		}
 	}
 }
@@ -318,9 +318,13 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 			// TODO(peterebden): this should really use something involving named output labels;
 			//                   right now we don't have a package handy to call that but we
 			//                   don't use them for tools anywhere either...
-			return core.ParseBuildLabel(src, s.pkg.Name)
+			return checkLabel(s, core.ParseBuildLabel(src, s.pkg.Name))
 		}
-		return core.MustParseNamedOutputLabel(src, s.pkg)
+		label := core.MustParseNamedOutputLabel(src, s.pkg)
+		if l := label.Label(); l != nil {
+			checkLabel(s, *l)
+		}
+		return label
 	}
 	s.Assert(src != "", "Empty source path")
 	s.Assert(!strings.Contains(src, "../"), "%s is an invalid path; build target paths can't contain ../", src)
@@ -344,6 +348,14 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 		}
 	}
 	return core.FileLabel{File: src, Package: s.pkg.Name}
+}
+
+// checkLabel checks that the given build label is not a pseudo-label.
+// These are disallowed in (nearly) all contexts.
+func checkLabel(s *scope, label core.BuildLabel) core.BuildLabel {
+	s.NAssert(label.IsAllTargets(), ":all labels are not permitted here")
+	s.NAssert(label.IsAllSubpackages(), "... labels are not permitted here")
+	return label
 }
 
 // callbackFunction extracts a pre- or post-build function for a target.
