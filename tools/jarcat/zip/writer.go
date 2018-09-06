@@ -322,7 +322,7 @@ func (f *File) AddInitPyFiles() error {
 				break
 			} else if _, present := f.files[initPyPath+"o"]; present {
 				break
-			} else if _, present := f.files[d + ".py"]; present {
+			} else if _, present := f.files[d+".py"]; present {
 				break
 			} else if _, present := sos[d]; present {
 				break
@@ -354,7 +354,6 @@ func (f *File) AddManifest(mainClass string, classPath string) error {
 
 	return f.WriteFile("META-INF/MANIFEST.MF", []byte(manifest), 0644)
 }
-
 
 // HasExistingFile returns true if the writer has already written the given file.
 func (f *File) HasExistingFile(name string) bool {

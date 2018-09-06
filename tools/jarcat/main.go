@@ -66,7 +66,7 @@ var opts = struct {
 		PreambleFrom          string            `long:"preamble_from" description:"Read the first line of this file and use as --preamble."`
 		PreambleFile          string            `long:"preamble_file" description:"Concatenate zip file onto the end of this file"`
 		MainClass             string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
-		ClassPath			  string			`long:"class_path" description:"Write a Java manifest file containing the given class-path."`
+		ClassPath             string            `long:"class_path" description:"Write a Java manifest file containing the given class-path."`
 		Manifest              string            `long:"manifest" description:"Use the given file as a Java manifest"`
 		Align                 int               `short:"a" long:"align" description:"Align zip members to a multiple of this number of bytes."`
 		Strict                bool              `long:"strict" description:"Disallow duplicate files"`
