@@ -66,6 +66,7 @@ var opts = struct {
 		PreambleFrom          string            `long:"preamble_from" description:"Read the first line of this file and use as --preamble."`
 		PreambleFile          string            `long:"preamble_file" description:"Concatenate zip file onto the end of this file"`
 		MainClass             string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
+		ClassPath			  string			`long:"class_path" description:"Write a Java manifest file containing the given class-path."`
 		Manifest              string            `long:"manifest" description:"Use the given file as a Java manifest"`
 		Align                 int               `short:"a" long:"align" description:"Align zip members to a multiple of this number of bytes."`
 		Strict                bool              `long:"strict" description:"Disallow duplicate files"`
@@ -161,6 +162,8 @@ func main() {
 	f.Align = opts.Zip.Align
 	f.Prefix = opts.Zip.Prefix
 
+	must(f.AddManifest(opts.Zip.MainClass, opts.Zip.ClassPath))
+
 	if opts.Zip.PreambleFrom != "" {
 		opts.Zip.Preamble = mustReadPreamble(opts.Zip.PreambleFrom)
 	}
@@ -171,9 +174,6 @@ func main() {
 		b, err := ioutil.ReadFile(opts.Zip.PreambleFile)
 		must(err)
 		must(f.WritePreamble(b))
-	}
-	if opts.Zip.MainClass != "" {
-		must(f.AddManifest(opts.Zip.MainClass))
 	}
 	if opts.Zip.Manifest != "" {
 		b, err := ioutil.ReadFile(opts.Zip.Manifest)
