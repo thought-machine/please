@@ -162,7 +162,6 @@ func main() {
 	f.Align = opts.Zip.Align
 	f.Prefix = opts.Zip.Prefix
 
-	must(f.AddManifest(opts.Zip.MainClass, opts.Zip.ClassPath))
 
 	if opts.Zip.PreambleFrom != "" {
 		opts.Zip.Preamble = mustReadPreamble(opts.Zip.PreambleFrom)
@@ -180,6 +179,8 @@ func main() {
 		must(err)
 		must(f.WriteFile("META-INF/MANIFEST.MF", b, 0644))
 	}
+	must(f.AddManifest(opts.Zip.MainClass, opts.Zip.ClassPath))
+
 	for _, filename := range opts.Zip.In.Get() {
 		must(f.AddFiles(filename))
 	}
