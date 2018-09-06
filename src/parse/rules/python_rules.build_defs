@@ -472,7 +472,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         licences = licences if licences else None,
     )
 
-    cmd = ['$TOOL x $SRC']
+    cmd = ['$TOOL x $SRCS']
 
     if strip:
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
