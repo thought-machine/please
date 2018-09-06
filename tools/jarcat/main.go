@@ -162,7 +162,6 @@ func main() {
 	f.Align = opts.Zip.Align
 	f.Prefix = opts.Zip.Prefix
 
-
 	if opts.Zip.PreambleFrom != "" {
 		opts.Zip.Preamble = mustReadPreamble(opts.Zip.PreambleFrom)
 	}
