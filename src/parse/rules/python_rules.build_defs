@@ -473,9 +473,8 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     )
 
     if patch:
-        cmd = ['$TOOL x $SRCS']
         patches = [patch] if isinstance(patch, str) else patch
-        cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
+        cmd = ['$TOOL x $SRCS'] + [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
     else:
         cmd = ['$TOOL x $SRC']
 
@@ -484,7 +483,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     if not licences:
         cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
                    'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
-  
+
     if post_install_commands:
         cmd += post_install_commands
 
