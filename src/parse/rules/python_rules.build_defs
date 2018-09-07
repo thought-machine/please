@@ -472,18 +472,16 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         licences = licences if licences else None,
     )
 
-    if patch:
-        patches = [patch] if isinstance(patch, str) else patch
-        cmd = ['$TOOL x $SRCS'] + [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
-    else:
-        cmd = ['$TOOL x $SRC']
+    cmd = ['$TOOL x $SRCS_SRC']
 
     if strip:
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
     if not licences:
         cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
                    'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
-
+    if patch:
+        patches = [patch] if isinstance(patch, str) else patch
+        cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
     if post_install_commands:
         cmd += post_install_commands
 
@@ -494,10 +492,13 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         tag = 'wheel',
         cmd = ' && '.join(cmd),
         outs = [name + '.whl'],
-        srcs = patches + [file_rule] if patch else [file_rule],
+        srcs = {
+            "SRC": [file_rule],
+            'RES': patches if patch else [],
+        },
         building_description = 'Downloading...',
         requires = ['py'],
-        deps = deps,
+        deps = deps + [file_rule],
         test_only = test_only,
         licences = licences,
         tools = [CONFIG.JARCAT_TOOL],

@@ -218,10 +218,3 @@ pip_library(
     zip_safe = False,
     deps = [":numpy"],
 )
-
-python_wheel(
-    name = "stripe",
-    hashes = ["sha1: 409e9b6d161d2c89214ae6e3650da44fadf62280"],
-    patch = ["stripe_certs.patch"],
-    version = "1.53.0",
-)
