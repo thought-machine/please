@@ -5,8 +5,8 @@ import (
 	"path"
 	"strings"
 
-	"fs"
 	"fmt"
+	"fs"
 )
 
 // ExpandHomePath is an alias to the function in fs for compatibility.
@@ -15,8 +15,7 @@ var ExpandHomePath func(string) string = fs.ExpandHomePath
 // A BuildEnv is a representation of the build environment that also knows how to log itself.
 type BuildEnv []string
 
-// Temporary formatting for outputs, this is used to avoid name conflicts
-// when the package name and output are the same
+// Temporary formatting for outputs, this is used to avoid name conflicts when packageName and output are the same
 var TmpOutputFormat = "%s.out"
 
 // GeneralBuildEnvironment creates the shell env vars used for a command, not based
@@ -116,7 +115,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 
 // Get the outputs for the environment variable
 // Check if each output has the same name as the package, this avoids the name conflict issue with go link tool
-func getOutPuts(target *BuildTarget, outputsFromTarget []string) []string{
+func getOutPuts(target *BuildTarget, outputsFromTarget []string) []string {
 	var newOuts []string
 	for _, out := range outputsFromTarget {
 		if out == target.Label.PackageName {
