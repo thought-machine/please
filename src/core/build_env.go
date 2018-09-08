@@ -57,15 +57,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	env := buildEnvironment(state, target)
 	sources := target.AllSourcePaths(state.Graph)
 	tmpDir := path.Join(RepoRoot, target.TmpDir())
-
-	var outEnv []string
-	for _, out := range target.Outputs() {
-		if out == target.Label.PackageName {
-			outEnv = append(outEnv, fmt.Sprintf("%s.out", out))
-		} else {
-			outEnv = append(outEnv, out)
-		}
-	}
+	outEnv := getOutPuts(target, target.Outputs())
 
 	env = append(env,
 		"TMP_DIR="+tmpDir,
@@ -96,15 +88,8 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	}
 	// Named output groups similarly.
 	for name, outs := range target.DeclaredNamedOutputs() {
-		var newOuts []string
-		for _, out := range outs {
-			if out == target.Label.PackageName {
-				newOuts = append(outEnv, fmt.Sprintf("%s.out", out))
-			} else {
-				newOuts = append(outEnv, out)
-			}
-		}
-		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(newOuts, " "))
+		outs = getOutPuts(target, outs)
+		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
 	}
 	// Named tools as well.
 	for name, tools := range target.namedTools {
@@ -123,6 +108,20 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 		env = append(env, "BINDIR="+path.Join(RepoRoot, BinDir))
 	}
 	return env
+}
+
+// Get the outputs for the environment variable
+// Check if each output has the same name as the package, this avoids the name conflict issue with go link tool
+func getOutPuts(target *BuildTarget, outputsFromTarget []string) []string{
+	var newOuts []string
+	for _, out := range outputsFromTarget {
+		if out == target.Label.PackageName {
+			newOuts = append(newOuts, fmt.Sprintf("%s.out", out))
+		} else {
+			newOuts = append(newOuts, out)
+		}
+	}
+	return newOuts
 }
 
 // TestEnvironment creates the environment variables for a test.
