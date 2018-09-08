@@ -330,12 +330,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
 	for _, output := range target.Outputs() {
-		var tmpOutput string
-		if output == target.Label.PackageName {
-			tmpOutput = path.Join(tmpDir, fmt.Sprintf("%s.out", output))
-		} else {
-			tmpOutput = path.Join(tmpDir, output)
-		}
+		tmpOutput := path.Join(tmpDir, output)
 		realOutput := path.Join(outDir, output)
 		if !core.PathExists(tmpOutput) {
 			return nil, true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
