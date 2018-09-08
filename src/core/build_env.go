@@ -96,7 +96,15 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	}
 	// Named output groups similarly.
 	for name, outs := range target.DeclaredNamedOutputs() {
-		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
+		var newOuts []string
+		for _, out := range outs {
+			if out == target.Label.PackageName {
+				newOuts = append(outEnv, fmt.Sprintf("%s.out", out))
+			} else {
+				newOuts = append(outEnv, out)
+			}
+		}
+		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(newOuts, " "))
 	}
 	// Named tools as well.
 	for name, tools := range target.namedTools {
