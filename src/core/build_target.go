@@ -1006,7 +1006,11 @@ func (target *BuildTarget) toolPath() string {
 
 // AddOutput adds a new output to the target if it's not already there.
 func (target *BuildTarget) AddOutput(output string) {
-	target.outputs = target.insert(target.outputs, output)
+	if output == target.Label.PackageName {
+		target.outputs = target.insert(target.outputs, fmt.Sprintf("%s.out", output))
+	} else {
+		target.outputs = target.insert(target.outputs, output)
+	}
 }
 
 // AddOptionalOutput adds a new optional output to the target if it's not already there.
