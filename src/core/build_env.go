@@ -15,7 +15,8 @@ var ExpandHomePath func(string) string = fs.ExpandHomePath
 // A BuildEnv is a representation of the build environment that also knows how to log itself.
 type BuildEnv []string
 
-// Temporary formatting for outputs, this is used to avoid name conflicts when packageName and output are the same
+// TmpOutputFormat is a Temporary formatting for outputs, this is used to avoid name conflicts
+// when package directory name and output are the same
 var TmpOutputFormat = "%s.out"
 
 // GeneralBuildEnvironment creates the shell env vars used for a command, not based
