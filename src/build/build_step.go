@@ -332,7 +332,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	for _, output := range target.Outputs() {
 		var tmpOutput string
 		if output == target.Label.PackageName {
-			tmpOutput = path.Join(tmpDir, fmt.Sprintf("%s.out", output))
+			tmpOutput = path.Join(tmpDir, fmt.Sprintf(core.TmpOutputFormat, output))
 		} else {
 			tmpOutput = path.Join(tmpDir, output)
 		}

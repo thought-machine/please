@@ -15,6 +15,10 @@ var ExpandHomePath func(string) string = fs.ExpandHomePath
 // A BuildEnv is a representation of the build environment that also knows how to log itself.
 type BuildEnv []string
 
+// Temporary formatting for outputs, this is used to avoid name conflicts
+// when the package name and output are the same
+var TmpOutputFormat = "%s.out"
+
 // GeneralBuildEnvironment creates the shell env vars used for a command, not based
 // on any specific target etc.
 func GeneralBuildEnvironment(config *Configuration) BuildEnv {
@@ -116,7 +120,7 @@ func getOutPuts(target *BuildTarget, outputsFromTarget []string) []string{
 	var newOuts []string
 	for _, out := range outputsFromTarget {
 		if out == target.Label.PackageName {
-			newOuts = append(newOuts, fmt.Sprintf("%s.out", out))
+			newOuts = append(newOuts, fmt.Sprintf(TmpOutputFormat, out))
 		} else {
 			newOuts = append(newOuts, out)
 		}
