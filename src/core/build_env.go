@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"fs"
+	"fmt"
 )
 
 // ExpandHomePath is an alias to the function in fs for compatibility.
@@ -56,19 +57,29 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	env := buildEnvironment(state, target)
 	sources := target.AllSourcePaths(state.Graph)
 	tmpDir := path.Join(RepoRoot, target.TmpDir())
+
+	var outEnv []string
+	for _, out := range target.Outputs() {
+		if out == target.Label.PackageName {
+			outEnv = append(outEnv, fmt.Sprintf("%s.out", out))
+		} else {
+			outEnv = append(outEnv, out)
+		}
+	}
+
 	env = append(env,
 		"TMP_DIR="+tmpDir,
 		"TMPDIR="+tmpDir,
 		"SRCS="+strings.Join(sources, " "),
-		"OUTS="+strings.Join(target.Outputs(), " "),
+		"OUTS="+strings.Join(outEnv, " "),
 		"HOME="+tmpDir,
 		"TOOLS="+strings.Join(toolPaths(state, target.Tools), " "),
 		// Set a consistent hash seed for Python. Important for build determinism.
 		"PYTHONHASHSEED=42",
 	)
 	// The OUT variable is only available on rules that have a single output.
-	if len(target.Outputs()) == 1 {
-		env = append(env, "OUT="+path.Join(RepoRoot, target.TmpDir(), target.Outputs()[0]))
+	if len(outEnv) == 1 {
+		env = append(env, "OUT="+path.Join(RepoRoot, target.TmpDir(), outEnv[0]))
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
