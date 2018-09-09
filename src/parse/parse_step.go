@@ -16,6 +16,7 @@ import (
 	"cli"
 	"core"
 	"fs"
+	"worker"
 )
 
 var log = logging.MustGetLogger("parse")
@@ -151,7 +152,9 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	}
 	filename, dir := buildFileName(state, label.PackageName, subrepo)
 	if filename == "" {
-		if !providePackage(state, pkg) {
+		if success, err := providePackage(state, pkg); err != nil {
+			return nil, err
+		} else if !success {
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependor != core.OriginalTarget && exists {
@@ -318,12 +321,29 @@ http_archive(
 // providePackage looks through all the configured BUILD file providers to see if any of them
 // can handle the given package. It returns true if any of them did.
 // N.B. More than one is allowed to handle a single directory.
-func providePackage(state *core.BuildState, pkg *core.Package) bool {
+func providePackage(state *core.BuildState, pkg *core.Package) (bool, error) {
 	if len(state.Config.Provider) == 0 {
-		return false
+		return false, nil
 	}
-	providers := make([]string, len(state.Config.Provider))
+	success := false
+	// TODO(peterebden): Parallelise this.
 	for _, p := range state.Config.Provider {
-		t := state.WaitForBuiltTarget(p.Label, pkg.Name)
+		t := state.WaitForBuiltTarget(p.Target, pkg.Label())
+		outs := t.Outputs()
+		if !t.IsBinary && len(outs) != 1 {
+			log.Error("Cannot use %s as a build provider, it must be a binary with exactly 1 output.", p.Target)
+			continue
+		}
+		resp, err := worker.ProvideParse(state, outs[0], pkg.SourceRoot())
+		if err != nil {
+			log.Error("Failed to start build provider %s: %s", p.Target, err)
+		} else if resp != "" {
+			log.Debug("Using %s to provide BUILD file info for %s", p.Target, pkg.SourceRoot())
+			if err := state.Parser.ParseReader(state, pkg, strings.NewReader(resp)); err != nil {
+				return false, err
+			}
+			success = true
+		}
 	}
+	return success, nil
 }

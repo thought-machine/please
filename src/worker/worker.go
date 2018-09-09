@@ -18,8 +18,8 @@ var log = logging.MustGetLogger("worker")
 
 // A workerServer is the structure we use to maintain information about a remote work server.
 type workerServer struct {
-	requests      chan *BuildRequest
-	responses     map[string]chan *BuildResponse
+	requests      chan *Request
+	responses     map[string]chan *Response
 	responseMutex sync.Mutex
 	process       *exec.Cmd
 	stderr        *stderrLogger
@@ -31,13 +31,13 @@ var workerMap = map[string]*workerServer{}
 var workerMutex sync.Mutex
 
 // BuildRemotely runs a single build request and returns its response.
-func BuildRemotely(state *core.BuildState, worker string, req *BuildRequest) (*BuildResponse, error) {
+func BuildRemotely(state *core.BuildState, worker string, req *Request) (*Response, error) {
 	w, err := getOrStartWorker(state, worker)
 	if err != nil {
 		return nil, err
 	}
 	w.requests <- req
-	ch := make(chan *BuildResponse, 1)
+	ch := make(chan *Response, 1)
 	w.responseMutex.Lock()
 	w.responses[req.Rule] = ch
 	w.responseMutex.Unlock()
@@ -45,9 +45,28 @@ func BuildRemotely(state *core.BuildState, worker string, req *BuildRequest) (*B
 	return response, nil
 }
 
+// ProvideParse sends a request to a subprocess to derive pseudo-contents of a BUILD file from
+// a directory (e.g. they may infer it from file contents).
+// If the provider cannot infer anything, they will return an empty string.
+func ProvideParse(state *core.BuildState, worker string, dir string) (string, error) {
+	w, err := getOrStartWorker(state, worker)
+	if err != nil {
+		return "", err
+	}
+	w.requests <- &Request{
+		Rule: dir,
+	}
+	ch := make(chan *Response, 1)
+	w.responseMutex.Lock()
+	w.responses[dir] = ch
+	w.responseMutex.Unlock()
+	response := <-ch
+	return response.BuildFile, nil
+}
+
 // EnsureWorkerStarted ensures that a worker server is started and has responded saying it's ready.
 func EnsureWorkerStarted(state *core.BuildState, worker string, label core.BuildLabel) error {
-	resp, err := BuildRemotely(state, worker, &BuildRequest{
+	resp, err := BuildRemotely(state, worker, &Request{
 		Rule: label.String(),
 		Test: true,
 	})
@@ -81,8 +100,8 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 		return nil, err
 	}
 	w := &workerServer{
-		requests:  make(chan *BuildRequest),
-		responses: map[string]chan *BuildResponse{},
+		requests:  make(chan *Request),
+		responses: map[string]chan *Response{},
 		process:   cmd,
 		stderr:    stderr,
 	}
@@ -100,7 +119,7 @@ func (w *workerServer) sendRequests(stdin io.Writer) {
 	for request := range w.requests {
 		if err := e.Encode(request); err != nil {
 			log.Error("Failed to write request: %s", err)
-			w.dispatchResponse(&BuildResponse{
+			w.dispatchResponse(&Response{
 				Rule:     request.Rule,
 				Success:  false,
 				Messages: []string{err.Error()},
@@ -115,7 +134,7 @@ func (w *workerServer) sendRequests(stdin io.Writer) {
 func (w *workerServer) readResponses(stdout io.Reader) {
 	decoder := json.NewDecoder(stdout)
 	for {
-		response := BuildResponse{}
+		response := Response{}
 		if err := decoder.Decode(&response); err != nil {
 			w.Error("Failed to read response: %s", err)
 			break
@@ -125,7 +144,7 @@ func (w *workerServer) readResponses(stdout io.Reader) {
 }
 
 // dispatchResponse sends a single response on the appropriate channel.
-func (w *workerServer) dispatchResponse(response *BuildResponse) {
+func (w *workerServer) dispatchResponse(response *Response) {
 	w.responseMutex.Lock()
 	ch, present := w.responses[response.Rule]
 	delete(w.responses, response.Rule)
@@ -145,7 +164,7 @@ func (w *workerServer) wait() {
 		w.responseMutex.Lock()
 		defer w.responseMutex.Unlock()
 		for label, ch := range w.responses {
-			ch <- &BuildResponse{
+			ch <- &Response{
 				Rule:     label,
 				Messages: []string{fmt.Sprintf("Worker failed: %s\n%s", err, string(w.stderr.History))},
 			}
