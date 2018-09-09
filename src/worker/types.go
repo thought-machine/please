@@ -26,3 +26,19 @@ type BuildResponse struct {
 	// Any messages reported. On failure these should indicate what's gone wrong.
 	Messages []string `json:"messages"`
 }
+
+// A ParseRequest is a request to provide a parse for a single directory that lacks a BUILD file.
+// Providers can infer targets from the files that are present.
+type ParseRequest struct {
+	// The directory the package is based in.
+	Dir string `json:"dir"`
+}
+
+type ParseResponse struct {
+	// The directory of the original parse request. Must match what was sent in the request.
+	Dir string `json:"dir"`
+	// True if this provider wants to handle the directory. False if it doesn't consider it valid.
+	Handled bool `json:"handled"`
+	// The contents of the BUILD file that should be assumed for this directory.
+	BuildFile string `json:"build_file"`
+}
