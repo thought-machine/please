@@ -37,6 +37,7 @@ import (
 	"update"
 	"utils"
 	"watch"
+	"worker"
 )
 
 var log = logging.MustGetLogger("plz")
@@ -1044,7 +1045,7 @@ func main() {
 
 	if command != "watch" {
 		metrics.Stop()
-		build.StopWorkers()
+		worker.StopAll()
 		success = buildFunctions[command]()
 	} else {
 		runWatchedBuild = func(watchedProcessName string) {
@@ -1053,7 +1054,7 @@ func main() {
 		success = buildFunctions[command]()
 
 		metrics.Stop()
-		build.StopWorkers()
+		worker.StopAll()
 	}
 
 	if !success {
