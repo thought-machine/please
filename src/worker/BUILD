@@ -4,7 +4,7 @@ go_library(
         "types.go",
         "worker.go",
     ],
-    visibility = ["PUBLIC"],
+    visibility = ["//src/..."],
     deps = [
         "//src/core",
         "//third_party/go:logging",

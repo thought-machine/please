@@ -327,18 +327,19 @@ func providePackage(state *core.BuildState, pkg *core.Package) (bool, error) {
 	}
 	success := false
 	// TODO(peterebden): Parallelise this.
-	for _, p := range state.Config.Provider {
+	for name, p := range state.Config.Provider {
 		t := state.WaitForBuiltTarget(p.Target, pkg.Label())
 		outs := t.Outputs()
 		if !t.IsBinary && len(outs) != 1 {
-			log.Error("Cannot use %s as a build provider, it must be a binary with exactly 1 output.", p.Target)
+			log.Error("Cannot use %s as build provider %s, it must be a binary with exactly 1 output.", p.Target, name)
 			continue
 		}
-		resp, err := worker.ProvideParse(state, outs[0], pkg.SourceRoot())
+		dir := pkg.SourceRoot()
+		resp, err := worker.ProvideParse(state, path.Join(t.OutDir(), outs[0]), dir)
 		if err != nil {
-			log.Error("Failed to start build provider %s: %s", p.Target, err)
+			return false, fmt.Errorf("Failed to start build provider %s: %s", name, err)
 		} else if resp != "" {
-			log.Debug("Using %s to provide BUILD file info for %s", p.Target, pkg.SourceRoot())
+			log.Debug("Received BUILD file from %s provider for %s: %s", name, dir, resp)
 			if err := state.Parser.ParseReader(state, pkg, strings.NewReader(resp)); err != nil {
 				return false, err
 			}
