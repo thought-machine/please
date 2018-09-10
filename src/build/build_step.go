@@ -329,7 +329,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	changed := false
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
-	for tmp, output := range target.GetOutPutsMapping(target.Outputs()) {
+	for tmp, output := range target.GetOutputsMapping(target.Outputs()) {
 		tmpOutput := path.Join(tmpDir, tmp)
 		realOutput := path.Join(outDir, output)
 		if !core.PathExists(tmpOutput) {
