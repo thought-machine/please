@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-		"fs"
+	"fs"
 )
 
 // ExpandHomePath is an alias to the function in fs for compatibility.
@@ -108,20 +108,6 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	}
 	return env
 }
-
-//// Get the outputs for the environment variable
-//// Check if each output has the same name as the package, this avoids the name conflict issue with go link tool
-//func getOutPuts(target *BuildTarget, outputsFromTarget []string) []string {
-//	var newOuts []string
-//	for _, out := range outputsFromTarget {
-//		if out == target.Label.PackageName {
-//			newOuts = append(newOuts, fmt.Sprintf(TmpOutputFormat, out))
-//		} else {
-//			newOuts = append(newOuts, out)
-//		}
-//	}
-//	return newOuts
-//}
 
 // TestEnvironment creates the environment variables for a test.
 func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) BuildEnv {
