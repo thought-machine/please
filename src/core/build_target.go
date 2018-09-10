@@ -31,6 +31,10 @@ const DefaultBuildingDescription = "Building..."
 const buildDirSuffix = "._build"
 const testDirSuffix = "._test"
 
+// TmpOutputFormat is a Temporary formatting for outputs, this is used to avoid name conflicts
+// when package directory name and output are the same
+const tmpOutputFormat = "%s.out"
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -457,6 +461,37 @@ func (target *BuildTarget) NamedOutputs(name string) []string {
 		return outs
 	}
 	return nil
+}
+
+// Get a mapping of temporary output(plz-out/tmp/) to real output(plz-out/bin/)
+// Check if each output has the same name as the package, this avoids the name conflict issue
+func (target *BuildTarget) GetOutPutsMapping(parseOutputs []string) map[string]string {
+	var outputMapping = make(map[string]string, len(parseOutputs))
+	var tmpOutput []string
+
+	for _, out := range parseOutputs {
+		if out == target.Label.PackageName {
+			outputMapping[fmt.Sprintf(tmpOutputFormat, out)] = out
+			tmpOutput = append(tmpOutput, fmt.Sprintf(tmpOutputFormat, out))
+		} else {
+			outputMapping[out] = out
+			tmpOutput = append(tmpOutput, out)
+		}
+	}
+
+	return outputMapping
+}
+
+// Get the temporary output only, this is used in setting up environment for outputs, e.g: OUTS, OUT
+func (target *BuildTarget) GetTmpOutput(parseOutputs []string) []string {
+	outputMap := target.GetOutPutsMapping(parseOutputs)
+	var tmpOutput []string
+
+	for tmp := range outputMap {
+		tmpOutput = append(tmpOutput, tmp)
+	}
+
+	return tmpOutput
 }
 
 // SourcePaths returns the source paths for a given set of sources.

@@ -329,13 +329,8 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	changed := false
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
-	for _, output := range target.Outputs() {
-		var tmpOutput string
-		if output == target.Label.PackageName {
-			tmpOutput = path.Join(tmpDir, fmt.Sprintf(core.TmpOutputFormat, output))
-		} else {
-			tmpOutput = path.Join(tmpDir, output)
-		}
+	for tmp, output := range target.GetOutPutsMapping(target.Outputs()) {
+		tmpOutput := path.Join(tmpDir, tmp)
 		realOutput := path.Join(outDir, output)
 		if !core.PathExists(tmpOutput) {
 			return nil, true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
