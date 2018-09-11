@@ -339,10 +339,6 @@ func (f *File) AddInitPyFiles() error {
 
 // AddManifest adds a manifest to the given zip writer with a Main-Class entry (and a couple of others)
 func (f *File) AddManifest(mainClass string, classPath string) error {
-	if mainClass == "" && classPath == "" {
-		return nil
-	}
-
 	manifest := "Manifest-Version: 1.0\n"
 	if mainClass != "" {
 		manifest += fmt.Sprintf("Main-Class: %s\n", mainClass)

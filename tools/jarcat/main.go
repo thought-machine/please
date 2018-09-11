@@ -178,7 +178,9 @@ func main() {
 		must(err)
 		must(f.WriteFile("META-INF/MANIFEST.MF", b, 0644))
 	}
-	must(f.AddManifest(opts.Zip.MainClass, opts.Zip.ClassPath))
+	if opts.Zip.MainClass != "" || opts.Zip.ClassPath != "" {
+		must(f.AddManifest(opts.Zip.MainClass, opts.Zip.ClassPath))
+	}
 
 	for _, filename := range opts.Zip.In.Get() {
 		must(f.AddFiles(filename))
