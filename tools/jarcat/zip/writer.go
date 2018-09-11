@@ -322,7 +322,7 @@ func (f *File) AddInitPyFiles() error {
 				break
 			} else if _, present := f.files[initPyPath+"o"]; present {
 				break
-			} else if _, present := f.files[d + ".py"]; present {
+			} else if _, present := f.files[d+".py"]; present {
 				break
 			} else if _, present := sos[d]; present {
 				break
@@ -338,8 +338,14 @@ func (f *File) AddInitPyFiles() error {
 }
 
 // AddManifest adds a manifest to the given zip writer with a Main-Class entry (and a couple of others)
-func (f *File) AddManifest(mainClass string) error {
-	manifest := fmt.Sprintf("Manifest-Version: 1.0\nMain-Class: %s\n", mainClass)
+func (f *File) AddManifest(mainClass string, classPath string) error {
+	manifest := "Manifest-Version: 1.0\n"
+	if mainClass != "" {
+		manifest += fmt.Sprintf("Main-Class: %s\n", mainClass)
+	}
+	if classPath != "" {
+		manifest += fmt.Sprintf("Class-Path: %s\n", classPath)
+	}
 	return f.WriteFile("META-INF/MANIFEST.MF", []byte(manifest), 0644)
 }
 
