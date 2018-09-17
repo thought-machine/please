@@ -56,7 +56,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	env := buildEnvironment(state, target)
 	sources := target.AllSourcePaths(state.Graph)
 	tmpDir := path.Join(RepoRoot, target.TmpDir())
-	outEnv := target.GetTmpOutput(target.Outputs())
+	outEnv := target.GetTmpOutputAll(target.Outputs())
 
 	env = append(env,
 		"TMP_DIR="+tmpDir,
@@ -87,7 +87,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	}
 	// Named output groups similarly.
 	for name, outs := range target.DeclaredNamedOutputs() {
-		outs = target.GetTmpOutput(outs)
+		outs = target.GetTmpOutputAll(outs)
 		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
 	}
 	// Named tools as well.

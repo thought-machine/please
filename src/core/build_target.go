@@ -475,17 +475,26 @@ func (target *BuildTarget) GetOutputsMapping(parseOutputs []string) map[string]s
 	return outputMapping
 }
 
-// GetTmpOutput returns a slice of temporary output only, this is used in setting up environment for outputs,
-// e.g: OUTS, OUT
-func (target *BuildTarget) GetTmpOutput(parseOutputs []string) []string {
-	outputMap := target.GetOutputsMapping(parseOutputs)
-	var tmpOutput []string
 
-	for tmp := range outputMap {
-		tmpOutput = append(tmpOutput, tmp)
+// GetTmpOutput takes the original output filename as an argument, and returns a temporary output
+// filename(plz-out/tmp/) if output has the same name as the package, this avoids the name conflict issue
+func (target *BuildTarget) GetTmpOutput(parseOutput string) string {
+	if parseOutput == target.Label.PackageName {
+		return fmt.Sprintf("%s.out", parseOutput)
+	}
+	return parseOutput
+}
+
+// GetTmpOutputAll returns a slice of all the temporary outputs this is used in setting up environment for outputs,
+// e.g: OUTS, OUT
+func (target *BuildTarget) GetTmpOutputAll(parseOutputs []string) []string {
+	var tmpOutputs []string
+
+	for _, out := range parseOutputs {
+		tmpOutputs = append(tmpOutputs, target.GetTmpOutput(out))
 	}
 
-	return tmpOutput
+	return tmpOutputs
 }
 
 // SourcePaths returns the source paths for a given set of sources.
