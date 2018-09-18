@@ -97,7 +97,7 @@ func TestStore(t *testing.T) {
 	fileContent := "This is a newly created file."
 	reader := strings.NewReader(fileContent)
 	key, err := ioutil.ReadAll(reader)
-
+	assert.NoError(t, err)
 	err = cache.StoreArtifact("/darwin_amd64/somepack/somelabel/somehash/somelabel.ext", key, "")
 	if err != nil {
 		t.Error(err)

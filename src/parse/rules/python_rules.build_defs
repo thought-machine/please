@@ -472,7 +472,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         licences = licences if licences else None,
     )
 
-    cmd = ['$TOOL x $SRC']
+    cmd = ['$TOOL x $SRCS_SRC']
 
     if strip:
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
@@ -492,10 +492,13 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         tag = 'wheel',
         cmd = ' && '.join(cmd),
         outs = [name + '.whl'],
-        srcs = patches + [file_rule] if patch else [file_rule],
+        srcs = {
+            "SRC": [file_rule],
+            'RES': patches if patch else [],
+        },
         building_description = 'Downloading...',
         requires = ['py'],
-        deps = deps,
+        deps = deps + [file_rule],
         test_only = test_only,
         licences = licences,
         tools = [CONFIG.JARCAT_TOOL],

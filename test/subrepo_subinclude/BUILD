@@ -10,7 +10,7 @@ go_bindata(
 go_test(
     name = "subrepo_subinclude_test",
     srcs = [
-        "test.go",
+        "subrepo_test.go",
         ":embed",
     ],
     deps = ["//third_party/go:testify"],

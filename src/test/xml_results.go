@@ -75,8 +75,6 @@ func parseJUnitXMLTestResults(data []byte) (core.TestSuites, error) {
 			}
 		}
 	}
-
-	return results, nil
 }
 
 func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
@@ -249,7 +247,7 @@ type jUnitXMLTestSuites struct {
 	Name     string `xml:"name,attr,omitempty"`
 	Skipped  uint   `xml:"skipped,attr,omitempty"`
 	Tests    uint   `xml:"tests,attr,omitempty"`
-	Timed    `xml:"time,attr,omitempty"`
+	timed    `xml:"time,attr,omitempty"`
 
 	TestSuites []jUnitXMLTestSuite `xml:"testsuite,omitempty"`
 
@@ -265,7 +263,7 @@ type jUnitXMLTestSuite struct {
 	HostName  string `xml:"hostname,attr,omitempty"`
 	Skipped   int    `xml:"skipped,attr,omitempty"`
 	Package   string `xml:"package,attr,omitempty"`
-	Timed     `xml:"time,attr,omitempty"`
+	timed     `xml:"time,attr,omitempty"`
 	Timestamp string `xml:"timestamp,attr,omitempty"`
 
 	Properties jUnitXMLProperties `xml:"properties,omitempty"`
@@ -282,7 +280,7 @@ type jUnitXMLTest struct {
 	Assertions uint   `xml:"assertions,attr,omitempty"`
 	ClassName  string `xml:"classname,attr,omitempty"`
 	Status     string `xml:"status,attr,omitempty"`
-	Timed      `xml:"time,attr,omitempty"`
+	timed      `xml:"time,attr,omitempty"`
 
 	Error        *jUnitXMLError         `xml:"error,omitempty"`
 	FlakyError   []jUnitXMLFlaky        `xml:"flakyError,omitempty"`
@@ -338,7 +336,7 @@ type jUnitXMLRerunError struct {
 
 type jUnitXMLRerunFailure struct {
 	Message string `xml:"message,attr,omitempty"`
-	Timed   `xml:"time,attr"`
+	timed   `xml:"time,attr"`
 	Type    string `xml:"type,attr"`
 
 	Traceback string `xml:",chardata"`
@@ -350,12 +348,12 @@ type jUnitXMLSkipped struct {
 	Message string `xml:"message,attr,omitempty"`
 }
 
-type Timed struct {
+type timed struct {
 	Time float64 `xml:"time,attr"`
 }
 
-func (j Timed) Duration() time.Duration {
-	return time.Duration(j.Time * float64(time.Second))
+func (t timed) Duration() time.Duration {
+	return time.Duration(t.Time * float64(time.Second))
 }
 
 func (j jUnitXMLTest) WasSuccessful() bool {
@@ -382,7 +380,7 @@ func (uxmlTest *unitTestXMLTest) toJUnitXMLTest() jUnitXMLTest {
 	return jUnitXMLTest{
 		Name:      uxmlTest.Name,
 		ClassName: uxmlTest.Suite,
-		Timed:     Timed{uxmlTest.Elapsed},
+		timed:     timed{uxmlTest.Elapsed},
 		Failure:   failure,
 	}
 }
@@ -412,7 +410,7 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 					xmlTestSuite.Errors += testSuite.Errors()
 					xmlTestSuite.Failures += testSuite.Failures()
 					xmlTestSuite.Skipped += testSuite.Skips()
-					xmlTestSuite.Timed.Time += testSuite.Duration.Seconds()
+					xmlTestSuite.timed.Time += testSuite.Duration.Seconds()
 				} else {
 					xmlTestSuite = jUnitXMLTestSuite{
 						Name:       testSuite.Name,
@@ -422,7 +420,7 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 						Errors:     testSuite.Errors(),
 						Failures:   testSuite.Failures(),
 						Skipped:    testSuite.Skips(),
-						Timed:      Timed{testSuite.Duration.Seconds()},
+						timed:      timed{testSuite.Duration.Seconds()},
 						Properties: toXmlProperties(testSuite.Properties),
 					}
 				}
@@ -539,7 +537,7 @@ func toXmlTestCase(result core.TestCase) jUnitXMLTest {
 						Message:   execution.Failure.Message,
 						Stderr:    execution.Stderr,
 						Stdout:    execution.Stdout,
-						Timed:     Timed{execution.Duration.Seconds()},
+						timed:     timed{execution.Duration.Seconds()},
 						Traceback: execution.Failure.Traceback,
 						Type:      execution.Failure.Type,
 					})
