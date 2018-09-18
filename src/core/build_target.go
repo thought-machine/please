@@ -459,23 +459,6 @@ func (target *BuildTarget) NamedOutputs(name string) []string {
 	return nil
 }
 
-// GetOutputsMapping returns a mapping of temporary output(plz-out/tmp/) to real output(plz-out/bin/)
-// Check if each output has the same name as the package, this avoids the name conflict issue
-func (target *BuildTarget) GetOutputsMapping(parseOutputs []string) map[string]string {
-	var outputMapping = make(map[string]string, len(parseOutputs))
-
-	for _, out := range parseOutputs {
-		if out == target.Label.PackageName {
-			outputMapping[fmt.Sprintf("%s.out", out)] = out
-		} else {
-			outputMapping[out] = out
-		}
-	}
-
-	return outputMapping
-}
-
-
 // GetTmpOutput takes the original output filename as an argument, and returns a temporary output
 // filename(plz-out/tmp/) if output has the same name as the package, this avoids the name conflict issue
 func (target *BuildTarget) GetTmpOutput(parseOutput string) string {
