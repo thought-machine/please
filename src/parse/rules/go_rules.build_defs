@@ -272,7 +272,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
                      (including net/http DNS lookup code potentially).
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
     """
-    go_library(
+    lib = go_library(
         name=f'_{name}#lib',
         srcs=srcs or [name + '.go'],
         filter_srcs=filter_srcs,
@@ -283,7 +283,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     cmds, tools = _go_binary_cmds(static=static)
     return build_rule(
         name=name,
-        srcs=[f':_{name}#lib'],
+        srcs=[lib],
         deps=deps,
         outs=[out or name],
         cmd=cmds,
