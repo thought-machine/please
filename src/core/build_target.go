@@ -463,7 +463,7 @@ func (target *BuildTarget) NamedOutputs(name string) []string {
 // filename(plz-out/tmp/) if output has the same name as the package, this avoids the name conflict issue
 func (target *BuildTarget) GetTmpOutput(parseOutput string) string {
 	if parseOutput == target.Label.PackageName {
-		return fmt.Sprintf("%s.out", parseOutput)
+		return parseOutput + ".out"
 	}
 	return parseOutput
 }
