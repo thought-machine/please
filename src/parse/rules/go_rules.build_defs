@@ -15,7 +15,8 @@ _LINK_PKGS_CMD = ' '.join([
 
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
-               _needs_transitive_deps=False, _all_srcs=False, cover:bool=True, filter_srcs:bool=True):
+               _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
+               filter_srcs:bool=True, _test:bool=False):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -41,7 +42,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     labels = [] if private else ['link:plz-out/go/pkg/${OS}_${ARCH}/${PKG}']
     src_labels = [] if private else ['link:plz-out/go/src/${PKG}']
     libname = out[:-2] if len(out) > 2 else out
-    if libname != basename(package_name()) and not private:
+    if libname != basename(package_name()) and not private and not _test:
         # Libraries that are in a directory not of their own name will need the sources in
         # a subdirectory for go to be able to transparently import them.
         src_labels += [f'link:plz-out/go/src/$PKG/{libname}']
@@ -339,6 +340,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         deps = deps,
         test_only = True,
         _all_srcs = not external,
+        _test = True,
         complete = False,
     )
     if cgo:
@@ -351,7 +353,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
             test_only = True,
             deps = deps,
         )
-    build_rule(
+    main_rule = build_rule(
         name='_%s#main' % name,
         srcs=srcs,
         outs=[name + '_main.go'],
@@ -371,9 +373,9 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         post_build=lambda name, output: _replace_test_package(name, output, static),
     )
     deps.append(lib_rule)
-    go_library(
+    lib_rule = go_library(
         name='_%s#main_lib' % name,
-        srcs=[':_%s#main' % name],
+        srcs=[main_rule],
         deps=deps,
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
@@ -385,9 +387,9 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         test_cmd = '$(worker %s) && %s ' % (worker, test_cmd)
         deps += [worker]
 
-    build_rule(
+    return build_rule(
         name=name,
-        srcs=[':_%s#main_lib' % name],
+        srcs=[lib_rule],
         data=data,
         deps=deps,
         outs=[name],
@@ -440,7 +442,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
                      It may not be easy to make cgo tests work when linked statically; depending
                      on your toolchain it may not be possible or may fail.
     """
-    go_test(
+    return go_test(
         name = name,
         srcs = srcs,
         data = data,
