@@ -1,7 +1,6 @@
 package lsp
 
-
-var EOL = []string {"\n", "\r\n", "\r"}
+var EOL = []string{"\n", "\r\n", "\r"}
 
 type DocumentURI string
 
@@ -17,7 +16,6 @@ type Position struct {
 	Character int `json:"character"`
 }
 
-
 type Range struct {
 	/**
 	 * The range's start position.
@@ -29,7 +27,6 @@ type Range struct {
 	 */
 	End Position `json:"end"`
 }
-
 
 type Location struct {
 	URI   DocumentURI `json:"uri"`
@@ -63,17 +60,22 @@ type Diagnostic struct {
 	 * The diagnostic's message.
 	 */
 	Message string `json:"message"`
-}
 
+	/**
+	 * An array of related diagnostic information, e.g. when symbol-names within
+	 * a scope collide all definitions can be marked via this property.
+	 */
+	RelatedInformation []DiagnosticRelatedInformation `json:"relatedInformation"`
+}
 
 //type DiagnosticSeverity map[string]int
 type DiagnosticSeverity int
 
 const (
-	Error        DiagnosticSeverity = 1
-	Warning      DiagnosticSeverity = 2
-	Information  DiagnosticSeverity = 3
-	Hint         DiagnosticSeverity = 4
+	Error       DiagnosticSeverity = 1
+	Warning     DiagnosticSeverity = 2
+	Information DiagnosticSeverity = 3
+	Hint        DiagnosticSeverity = 4
 )
 
 /**
@@ -90,7 +92,7 @@ type DiagnosticRelatedInformation struct {
 	/**
 	 * The message of this related diagnostic information.
 	 */
-	Message string	`json:"message"`
+	Message string `json:"message"`
 }
 
 type Command struct {
@@ -111,106 +113,7 @@ type Command struct {
 	Arguments []interface{} `json:"arguments"`
 }
 
-type TextDocumentIdentifier struct {
-	/**
-	 * The text document's URI.
-	 */
-	URL DocumentURI
-}
 
-type VersionedTextDocumentIdentifier struct {
-	/**
-	 * Extending TextDocumentIdentifier
-	 */
-	*TextDocumentIdentifier
-
-	/**
-	 * The version number of this document. If a versioned text document identifier
-	 * is sent from the server to the client and the file is not open in the editor
-	 * (the server has not received an open notification before) the server can send
-	 * `null` to indicate that the version is known and the content on disk is the
-	 * truth (as speced with document content ownership).
-	 *
-	 * The version number of a document will increase after each change, including
-	 * undo/redo. The number doesn't need to be consecutive.
-	 */
-
-	 Version int `json:"version"`
-}
-
-type TextEdit struct {
-	/**
-	 * The range of the text document to be manipulated. To insert
-	 * text into a document create a range where start === end.
-	 */
-	Range Range `json:"range"`
-
-	/**
-	 * The string to be inserted. For delete operations use an
-	 * empty string.
-	 */
-	NewText string `json:"newText"`
-}
-
-type TextDocumentEdit struct {
-	/**
-	 * The text document to change.
-	 */
-	TextDocument VersionedTextDocumentIdentifier `json:"textDocument"`
-
-	Edits []TextEdit
-}
-
-type WorkspaceEdit struct {
-	/**
-	 * Holds changes to existing resources.
-	 */
-	Changes map[DocumentURI][]TextEdit `json:"changes"`
-	/**
-	 * An array of `TextDocumentEdit`s to express changes to n different text documents
-	 * where each text document edit addresses a specific version of a text document.
-	 * Whether a client supports versioned document edits is expressed via
-	 * `WorkspaceClientCapabilities.workspaceEdit.documentChanges`.
-	 */
-	DocumentChanges []TextDocumentEdit `json:"documentChanges"`
-}
-
-type TextDocumentItem struct {
-	/**
-	 * The text document's URI.
-	 */
-	URI DocumentURI `json:"uri"`
-
-	/**
-	 * The text document's language identifier.
-	 */
-	LanguageID string `json:"languageId"`
-
-	/**
-	 * The version number of this document (it will strictly increase after each
-	 * change, including undo/redo).
-	 */
-	Version int `json:"version"`
-
-	/**
-	 * The content of the opened text document.
-	 */
-	Text string `json:"text"`
-}
-
-type TextDocumentPositionParams struct {
-	/**
-	 * The text document.
-	 */
-	TextDocument TextDocumentIdentifier `json:"textDocument"`
-
-	/**
-	 * The position inside the text document.
-	 */
-	Position Position `json:"position"`
-}
-
-// TODO: not sure this is useful...
+// TODO: not sure this is useful...As I think this has to do with specific languages on the list
 type DocumentFilter struct {
-
 }

@@ -3,7 +3,7 @@ LSP
 
 It should work the same way as any of our other tools, such as `jarcat`.
 
-command: plz lsp
+command: plz init-lsp
 .. or it should just work on installation/bootstrap of plz
 
 
@@ -18,6 +18,22 @@ langserver
 this directory should contain everything about the language server
 
 - jsonRPC
+- Responses:
+    - result of requests sent by *client*
+    - ResponseMessage: id, result, error
+    - success: result should be nil
+
+functionalities:
+    - completion.go
+        - handled completion
+    - Analyzer.go
+        - analyzes project build_defs
+    - Handler.go
+        - handles requests
+        - should be the same structure as please.go
+            - a map for different requests
+
+
 
 
 
@@ -26,6 +42,11 @@ lsp
 
 specs.go
 - This file will have all the specification structs
+- TODO: Decide if I need to add createFile options
 
+
+init.go
+- initialize request structs
+- handles initialization of the request
 
 
