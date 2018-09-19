@@ -16,7 +16,7 @@ _LINK_PKGS_CMD = ' '.join([
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
-               filter_srcs:bool=True, _test:bool=False):
+               filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -38,14 +38,18 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
     """
     out = out or name + '.a'
+    labels = []
+    src_labels = []
     private = out.startswith('_')
-    labels = [] if private else ['link:plz-out/go/pkg/${OS}_${ARCH}/${PKG}']
-    src_labels = [] if private else ['link:plz-out/go/src/${PKG}']
-    libname = out[:-2] if len(out) > 2 else out
-    if libname != basename(package_name()) and not private and not _test:
-        # Libraries that are in a directory not of their own name will need the sources in
-        # a subdirectory for go to be able to transparently import them.
-        src_labels += [f'link:plz-out/go/src/$PKG/{libname}']
+    if _link_private or not private:
+        src_labels = ['link:plz-out/go/src/${PKG}']
+        if not private:
+            labels = ['link:plz-out/go/pkg/${OS}_${ARCH}/${PKG}']
+        libname = out[:-2] if len(out) > 2 else out
+        if libname != basename(package_name()) and _link_extra:
+            # Libraries that are in a directory not of their own name will need the sources in
+            # a subdirectory for go to be able to transparently import them.
+            src_labels += [f'link:plz-out/go/src/$PKG/{libname}']
     if asm_srcs:
         lib_rule = go_library(
             name = f'_{name}#lib',
@@ -280,6 +284,8 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         asm_srcs=asm_srcs,
         deps=deps,
         test_only=test_only,
+        _link_private = True,
+        _link_extra = False,
     )
     cmds, tools = _go_binary_cmds(static=static)
     return build_rule(
@@ -340,7 +346,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         deps = deps,
         test_only = True,
         _all_srcs = not external,
-        _test = True,
+        _link_extra = False,
         complete = False,
     )
     if cgo:
