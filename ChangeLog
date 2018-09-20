@@ -1,3 +1,9 @@
+Version 13.1.5
+--------------
+
+    * More robust property expansions in `plz tool maven`.
+
+
 Version 13.1.4
 --------------
 

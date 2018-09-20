@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -214,17 +215,20 @@ func (pom *PomXML) AddProperty(property pomProperty) {
 
 // replaceVariables a Maven variable in the given string.
 func (pom *PomXML) replaceVariables(s string) string {
-	if strings.HasPrefix(s, "${") {
-		if prop, present := pom.PropertiesMap[s[2:len(s)-1]]; !present {
-			log.Fatalf("Failed property lookup %s: %s\n", s, pom.PropertiesMap)
-		} else if strings.HasPrefix(prop, "${") && prop != s {
-			// Some property values can themselves be more properties...
-			return pom.replaceVariables(prop)
-		} else {
-			return prop
-		}
+	if strings.ContainsRune(s, '$') {
+		return os.Expand(s, pom.expandProperties)
 	}
 	return s
+}
+
+// expandProperties is a substitution function suitable for passing into os.Expand.
+func (pom *PomXML) expandProperties(prop string) string {
+	val, present := pom.PropertiesMap[prop]
+	if !present {
+		log.Fatalf("Failed property lookup %s: %s", prop, pom.PropertiesMap)
+	}
+	// Some property values can themselves be more properties...
+	return pom.replaceVariables(val)
 }
 
 // Unmarshal parses a downloaded pom.xml. This is of course less trivial than you would hope.
