@@ -425,10 +425,9 @@ python_test(
 )
 
 go_binary(
-    name='test',
-    srcs=['name_conflict.go'],
+    name = "test",
+    srcs = ["name_conflict.go"],
 )
-
 
 # Test that it's not possible to glob the BUILD file at parse time.
 if 'BUILD' in glob(['*']):
