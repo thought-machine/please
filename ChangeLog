@@ -1,3 +1,9 @@
+Version 13.1.4
+--------------
+
+    * Fixed python_wheel which in some subtle cases was not honouring `patch` correctly.
+
+
 Version 13.1.3
 --------------
 
