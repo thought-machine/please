@@ -4,14 +4,14 @@ subinclude("//build_defs:signing")
 
 genrule(
     name = "worker",
-    srcs = ["//tools/javac_worker"],
+    srcs = ["//tools/javac_worker:maven_jar"],
     outs = [f"javac-worker-{VERSION}.jar"],
     cmd = 'cp $SRCS $OUT',
 )
 
 detached_signature(
     name = "worker_signed",
-    src = "//tools/javac_worker",
+    src = "//tools/javac_worker:maven_jar",
     out = f"javac-worker-{VERSION}.jar.asc",
 )
 

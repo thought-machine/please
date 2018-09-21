@@ -17,4 +17,11 @@ genrule(
     },
     outs = ["pom.xml"],
     cmd = "sed s/__VERSION__/`cat $SRCS_VER`/g $SRCS > $OUT",
+    visibility = ["//package/..."],
+)
+
+filegroup(
+    name = "maven_jar",
+    srcs = ["//tools/javac_worker/src/build/please/compile"],
+    visibility = ["//package/..."],
 )
