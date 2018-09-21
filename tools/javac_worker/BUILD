@@ -6,3 +6,15 @@ java_binary(
     visibility = ["PUBLIC"],
     deps = ["//tools/javac_worker/src/build/please/compile"],
 )
+
+# N.B. The artifact we upload is //tools/javac_worker/src/build/please/compile,
+#      because the binary above contains its dependencies too.
+genrule(
+    name = "pom",
+    srcs = {
+        "pom": ["pom.xml"],
+        "ver": ["//:version"],
+    },
+    outs = ["pom.xml"],
+    cmd = "sed s/__VERSION__/`cat $SRCS_VER`/g $SRCS > $OUT",
+)
