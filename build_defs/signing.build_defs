@@ -23,7 +23,7 @@ def signed_fpm_deb(name, version, package_name=None, files=None, dirs=None, link
         visibility = visibility,
     )
     return detached_signature(
-        name = name,
+        name = name + '_signed',
         src = deb_rule,
         out = '%s_%s_%s.deb.asc' % (package_name, version, CONFIG.ARCH),
         visibility = visibility,
@@ -47,7 +47,7 @@ def signed_tarball(name, srcs, out, subdir, visibility=None):
         visibility = visibility,
     )
     return detached_signature(
-        name = name,
+        name = name + '_signed',
         src = tar_rule,
         out = out + '.asc',
         visibility = visibility,
@@ -72,7 +72,7 @@ def detached_signature(name, src, out, labels=None, deps=None, visibility=None):
       visibility (list): Visibility of the rule.
     """
     return genrule(
-        name = name + '_signed',
+        name = name,
         srcs = [src],
         outs = [out],
         tools = ['//tools/release_signer'],
