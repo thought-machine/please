@@ -46,25 +46,21 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
         else:
             javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
 
-        javac_flags = '-encoding utf8 %s' % javac_flags
+        javac_flags = '-encoding utf8 ' + javac_flags
 
         if CONFIG.JAVA_RELEASE_LEVEL:
-            javac_flags = '--release %s %s' % (CONFIG.JAVA_RELEASE_LEVEL, javac_flags)
+            javac_flags = f'--release {CONFIG.JAVA_RELEASE_LEVEL} ' + javac_flags
         else:
-            javac_flags = '-encoding utf8 -source %s -target %s -g %s' % (
-                CONFIG.JAVA_SOURCE_LEVEL,
-                CONFIG.JAVA_TARGET_LEVEL,
-                javac_flags,
-            )
+            javac_flags = f'-encoding utf8 -source {CONFIG.JAVA_SOURCE_LEVEL} -target {CONFIG.JAVA_TARGET_LEVEL} -g ' + javac_flags
 
         if not CONFIG.JAVAC_TOOL:
-            javac_cmd = '$(worker %s) %s %s %s' % (CONFIG.JAVAC_WORKER, javac_flags, '--modular' if modular else '', '--src_dir' if src_dir else '')
+            mflag = '--modular' if modular else ''
+            srcflag = '--src_dir' if src_dir else ''
+            javac_cmd = f'$(worker {CONFIG.JAVAC_WORKER}) {javac_flags} {mflag} {srcflag}'
         else:
-            javac_cmd = 'mkdir -p _tmp/META-INF && $TOOLS_JAVAC %s -classpath .:%s -d _tmp %s' % (
-                javac_flags,
-                r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
-                '$SRCS' if srcs else '`find $SRCS -name "*.java"`',
-            )
+            find = r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`'
+            srcflag = '$SRCS' if srcs else '`find $SRCS -name "*.java"`'
+            javac_cmd = f'mkdir -p _tmp/META-INF && $TOOLS_JAVAC {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
 
         cmd = ' && '.join([
             javac_cmd,
@@ -145,16 +141,18 @@ def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None,
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
     """
-    return java_library(name=name,
-                        srcs=srcs,
-                        src_dir=src_dir,
-                        resources=resources,
-                        resources_root=resources_root,
-                        deps=deps,
-                        visibility=visibility,
-                        test_only=test_only,
-                        javac_flags=javac_flags,
-                        modular=True)
+    return java_library(
+        name = name,
+        srcs = srcs,
+        src_dir = src_dir,
+        resources = resources,
+        resources_root = resources_root,
+        deps = deps,
+        visibility = visibility,
+        test_only = test_only,
+        javac_flags = javac_flags,
+        modular = True,
+    )
 
 
 def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, out:str=None,
@@ -180,19 +178,11 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
     if not modules:
         raise Exception('You cannot assemble a java runtime image without specifying any modules.')
     out = out or name
-    cmd = ("$TOOL --module-path {deps}:{java_home}/jmods " +
-           "--add-modules {modules} --launcher {name}={main_module}/{main_class} " +
-           "--output {out_dir} {jlink_args}").format(
-               deps=r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`',
-               java_home=CONFIG.JAVA_HOME,
-               modules=','.join(modules),
-               name=name,
-               main_module=main_module,
-               main_class=main_class,
-               out_dir=out,
-               jlink_args=jlink_args)
+    depflags = r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`'
+    modules = ','.join(modules)
+    cmd = f"$TOOL --module-path {depflags}:{CONFIG.JAVA_HOME}/jmods --add-modules {modules} --launcher {name}={main_module}/{main_class} --output {out} {jlink_args}"
 
-    build_rule(
+    return build_rule(
         name=name,
         deps=deps,
         data=data,
@@ -288,7 +278,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # It's a bit sucky doing this in two separate steps, but it is
     # at least easy and reuses the existing code.
-    java_library(
+    lib_rule = java_library(
         name=f'_{name}#lib',
         srcs=srcs,
         resources=resources,
@@ -302,7 +292,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
     cmd = 'ln -s $TOOLS_JUNIT . && ' + cmd
     test_cmd = f'java -Dbuild.please.testpackage={test_package} {jvm_args} -jar $(location :{name}) {flags}'
 
-    deps = [f':_{name}#lib']
+    deps = [lib_rule]
     if worker:
         test_cmd = f'$(worker {worker}) && {test_cmd} '
         deps += [worker]
