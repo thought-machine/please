@@ -11,6 +11,8 @@ command: plz init-lsp
 main.go
 -------
 - parse arguments
+    - mode: stdio/tcp
+    - address: listen to tcp address ':4389'
 
 
 langserver
@@ -32,6 +34,13 @@ functionalities:
         - handles requests
         - should be the same structure as please.go
             - a map for different requests
+
+
+Ideas
+-----
+- there should be a binary called build-langserver
+    - ~/.please/build-langserver
+- integration with IDE
 
 
 

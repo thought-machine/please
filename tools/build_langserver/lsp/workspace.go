@@ -15,6 +15,20 @@ type WorkspaceEdit struct {
 	DocumentChanges []TextDocumentEdit `json:"documentChanges"`
 }
 
+
+type WorkspaceFolder struct {
+	/**
+	 * The associated URI for this workspace folder.
+	 */
+	URI string `json:"uri"`
+
+	/**
+	 * The name of the workspace folder. Defaults to the
+	 * uri's basename.
+	 */
+	Name string `json:"name"`
+}
+
 /**
  * Workspace specific client capabilities.
  */
