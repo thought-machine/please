@@ -1,27 +1,24 @@
+subinclude("//build_defs:maven_library")
+
+subinclude("//build_defs:version")
+
+# The rest of the repo uses this tool as a compiler worker, but it obviously
+# can't compile itself.
+package(javac_tool = "javac")
+
+maven_library(
+    name = "javac-worker",
+    srcs = glob(["src/**/*.java"]),
+    pom = "pom.xml",
+    version = VERSION,
+    deps = ["//third_party/java:gson"],
+)
+
 java_binary(
     name = "javac_worker",
     out = "javac_worker",
     main_class = "build.please.compile.JavaCompiler",
     self_executable = True,
     visibility = ["PUBLIC"],
-    deps = ["//tools/javac_worker/src/build/please/compile"],
-)
-
-# N.B. The artifact we upload is //tools/javac_worker/src/build/please/compile,
-#      because the binary above contains its dependencies too.
-genrule(
-    name = "pom",
-    srcs = {
-        "pom": ["pom.xml"],
-        "ver": ["//:version"],
-    },
-    outs = ["pom.xml"],
-    cmd = "sed s/__VERSION__/`cat $SRCS_VER`/g $SRCS > $OUT",
-    visibility = ["//package/..."],
-)
-
-filegroup(
-    name = "maven_jar",
-    srcs = ["//tools/javac_worker/src/build/please/compile"],
-    visibility = ["//package/..."],
+    deps = [":javac-worker"],
 )
