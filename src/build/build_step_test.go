@@ -9,6 +9,7 @@ package build
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -277,6 +278,10 @@ type fakeParser struct {
 }
 
 func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+	return nil
+}
+
+func (fake *fakeParser) ParseReader(state *core.BuildState, pkg *core.Package, r io.ReadSeeker) error {
 	return nil
 }
 
