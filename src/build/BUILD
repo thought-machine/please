@@ -6,11 +6,11 @@ go_library(
     ),
     visibility = ["PUBLIC"],
     deps = [
-        "//src/build/proto:worker",
         "//src/cache",
         "//src/core",
         "//src/fs",
         "//src/metrics",
+        "//src/worker",
         "//third_party/go:go-multierror",
         "//third_party/go:logging",
         "//third_party/go:protobuf",

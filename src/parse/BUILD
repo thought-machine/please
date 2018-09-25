@@ -14,6 +14,7 @@ go_library(
         "//src/parse/asp",
         "//src/parse/rules",
         "//src/utils",
+        "//src/worker",
         "//third_party/go:logging",
     ],
 )

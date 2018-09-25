@@ -16,6 +16,7 @@ import (
 	"cli"
 	"core"
 	"fs"
+	"worker"
 )
 
 var log = logging.MustGetLogger("parse")
@@ -151,20 +152,25 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	}
 	filename, dir := buildFileName(state, label.PackageName, subrepo)
 	if filename == "" {
-		exists := core.PathExists(dir)
-		// Handle quite a few cases to provide more obvious error messages.
-		if dependor != core.OriginalTarget && exists {
-			return nil, fmt.Errorf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, dir)
-		} else if dependor != core.OriginalTarget {
-			return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist", dependor, label, dir)
-		} else if exists {
-			return nil, fmt.Errorf("Can't build %s; there's no BUILD file in %s/", label, dir)
+		if success, err := providePackage(state, pkg); err != nil {
+			return nil, err
+		} else if !success {
+			exists := core.PathExists(dir)
+			// Handle quite a few cases to provide more obvious error messages.
+			if dependor != core.OriginalTarget && exists {
+				return nil, fmt.Errorf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, dir)
+			} else if dependor != core.OriginalTarget {
+				return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist", dependor, label, dir)
+			} else if exists {
+				return nil, fmt.Errorf("Can't build %s; there's no BUILD file in %s/", label, dir)
+			}
+			return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
 		}
-		return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
-	}
-	pkg.Filename = filename
-	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
-		return nil, err
+	} else {
+		pkg.Filename = filename
+		if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
+			return nil, err
+		}
 	}
 	// If the config setting is on, we "magically" register a default repo called @pleasings.
 	if packageName == "" && subrepo == nil && state.Config.Parse.BuiltinPleasings && pkg.Target("pleasings") == nil {
@@ -311,3 +317,34 @@ http_archive(
     urls = ["https://github.com/thought-machine/pleasings/archive/master.zip"],
 )
 `
+
+// providePackage looks through all the configured BUILD file providers to see if any of them
+// can handle the given package. It returns true if any of them did.
+// N.B. More than one is allowed to handle a single directory.
+func providePackage(state *core.BuildState, pkg *core.Package) (bool, error) {
+	if len(state.Config.Provider) == 0 {
+		return false, nil
+	}
+	success := false
+	// TODO(peterebden): Parallelise this.
+	for name, p := range state.Config.Provider {
+		t := state.WaitForBuiltTarget(p.Target, pkg.Label())
+		outs := t.Outputs()
+		if !t.IsBinary && len(outs) != 1 {
+			log.Error("Cannot use %s as build provider %s, it must be a binary with exactly 1 output.", p.Target, name)
+			continue
+		}
+		dir := pkg.SourceRoot()
+		resp, err := worker.ProvideParse(state, path.Join(t.OutDir(), outs[0]), dir)
+		if err != nil {
+			return false, fmt.Errorf("Failed to start build provider %s: %s", name, err)
+		} else if resp != "" {
+			log.Debug("Received BUILD file from %s provider for %s: %s", name, dir, resp)
+			if err := state.Parser.ParseReader(state, pkg, strings.NewReader(resp)); err != nil {
+				return false, err
+			}
+			success = true
+		}
+	}
+	return success, nil
+}
