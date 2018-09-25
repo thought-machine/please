@@ -456,7 +456,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             flags:str='', labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=[], size:str=None, timeout:int=0,
             container:bool|dict=False, sandbox:bool=None, write_main:bool=False,
             linkstatic:bool=False, _c=False):
-    """Defines a C++ test using UnitTest++.
+    """Defines a C++ test.
 
     We template in a main file so you don't have to supply your own.
     (Later we might allow that to be configured to help support other unit test frameworks).
