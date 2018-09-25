@@ -80,4 +80,5 @@ def maven_library(name:str, srcs:list, pom:str, version:str, package_name:str=No
         cmd = 'cd $PKG_DIR && $TOOL z -d --include_other -i . -n',
         tools = [CONFIG.JARCAT_TOOL],
         visibility = visibility,
+        provides = {'java': java_rule},
     )
