@@ -492,7 +492,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
-    if CONFIG.CC_TEST_MAIN:
+    if CONFIG.CC_TEST_MAIN and not _c:
         deps += [CONFIG.CC_TEST_MAIN]
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
 
