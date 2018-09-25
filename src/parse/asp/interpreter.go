@@ -513,7 +513,11 @@ func (s *scope) interpretFString(f *FString) pyObject {
 	var b strings.Builder
 	for _, v := range f.Vars {
 		b.WriteString(v.Prefix)
-		b.WriteString(s.Lookup(v.Var).String())
+		if v.Config != "" {
+			b.WriteString(s.config.MustGet(v.Config).String())
+		} else {
+			b.WriteString(s.Lookup(v.Var).String())
+		}
 	}
 	b.WriteString(f.Suffix)
 	return pyString(b.String())

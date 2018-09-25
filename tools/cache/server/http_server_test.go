@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"core"
 )
 
@@ -39,6 +41,7 @@ func TestOutputFolderExists(t *testing.T) {
 
 func TestGetHandler(t *testing.T) {
 	request, err := http.NewRequest("GET", realURL, reader)
+	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(request)
 
 	if err != nil {
@@ -61,6 +64,7 @@ func TestPostHandler(t *testing.T) {
 	fileContent := "This is a newly created file."
 	reader = strings.NewReader(fileContent)
 	request, err := http.NewRequest("POST", fakeURL, reader)
+	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(request)
 
 	if err != nil {

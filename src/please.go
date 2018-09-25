@@ -37,6 +37,7 @@ import (
 	"update"
 	"utils"
 	"watch"
+	"worker"
 )
 
 var log = logging.MustGetLogger("plz")
@@ -581,14 +582,11 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"rules": func() bool {
-		targets := opts.Query.Rules.Args.Targets
 		success, state := Please(opts.Query.Rules.Args.Targets, config, true, true, false)
-		if !success {
-			return false
+		if success {
+			parse.PrintRuleArgs(state, state.ExpandOriginalTargets())
 		}
-		targets = state.ExpandOriginalTargets()
-		parse.PrintRuleArgs(state, targets)
-		return true
+		return success
 	},
 	"changes": func() bool {
 		// Temporarily set this flag on to avoid fatal errors from the first parse.
@@ -1047,7 +1045,7 @@ func main() {
 
 	if command != "watch" {
 		metrics.Stop()
-		build.StopWorkers()
+		worker.StopAll()
 		success = buildFunctions[command]()
 	} else {
 		runWatchedBuild = func(watchedProcessName string) {
@@ -1056,7 +1054,7 @@ func main() {
 		success = buildFunctions[command]()
 
 		metrics.Stop()
-		build.StopWorkers()
+		worker.StopAll()
 	}
 
 	if !success {

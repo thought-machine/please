@@ -172,8 +172,7 @@ def _go_path_mapping(grpc):
     def _map_go_paths(rule_name):
         mapping = ',M'.join(get_labels(rule_name, 'proto:go-map:'))
         cmd = get_command(rule_name)
-        new_cmd = cmd.replace('--go_out=paths=source_relative:',
-                              f'--go_out=paths=source_relative,{grpc_plugin}M{mapping}:')
+        new_cmd = cmd.replace('--go_out=', f'--go_out={grpc_plugin}M{mapping}:')
         set_command(rule_name, new_cmd)
     return _map_go_paths
 
@@ -298,8 +297,7 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:$TMP_DIR',
-                            '--plugin=protoc-gen-go=$TOOLS_GO'],
+            protoc_flags = ['--go_out=$TMP_DIR', '--plugin=protoc-gen-go=$TOOLS_GO'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
             pre_build = _go_path_mapping(False),
@@ -382,8 +380,7 @@ def grpc_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:$TMP_DIR',
-                            '--plugin=protoc-gen-go=$TOOLS_GO'],
+            protoc_flags = ['--go_out=$TMP_DIR', '--plugin=protoc-gen-go=$TOOLS_GO'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
             pre_build = _go_path_mapping(True),

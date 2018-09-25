@@ -24,6 +24,7 @@ go_binary(
         "//src/update",
         "//src/utils",
         "//src/watch",
+        "//src/worker",
         "//third_party/go:go-flags",
         "//third_party/go:logging",
     ],

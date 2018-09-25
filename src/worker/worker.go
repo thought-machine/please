@@ -1,32 +1,25 @@
-// +build !bootstrap
-
-// Contains functions related to dispatching work to remote processes.
-// Right now those processes must be on the same box because they use
-// the local temporary directories, but in the future this might form
-// a foundation for doing real distributed work.
-
-package build
+// Package worker implements functions for communicating with subordinate worker processes.
+package worker
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
-	"path"
 	"strings"
 	"sync"
 
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/google/shlex"
+	"gopkg.in/op/go-logging.v1"
 
-	pb "build/proto/worker"
 	"core"
 )
 
+var log = logging.MustGetLogger("worker")
+
 // A workerServer is the structure we use to maintain information about a remote work server.
 type workerServer struct {
-	requests      chan *pb.BuildRequest
-	responses     map[string]chan *pb.BuildResponse
+	requests      chan *Request
+	responses     map[string]chan *Response
 	responseMutex sync.Mutex
 	process       *exec.Cmd
 	stderr        *stderrLogger
@@ -37,50 +30,14 @@ type workerServer struct {
 var workerMap = map[string]*workerServer{}
 var workerMutex sync.Mutex
 
-// buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
-// or locally if not.
-func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
-	worker, workerArgs, localCmd := workerCommandAndArgs(state, target)
-	if worker == "" {
-		return runBuildCommand(state, target, localCmd, inputHash)
-	}
-	// The scheme here is pretty minimal; remote workers currently have quite a bit less info than
-	// local ones get. Over time we'll probably evolve it to add more information.
-	opts, err := shlex.Split(workerArgs)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("Sending remote build request for %s to %s; opts %s", target.Label, worker, workerArgs)
-	resp, err := buildRemotely(state, worker, &pb.BuildRequest{
-		Rule:    target.Label.String(),
-		Labels:  target.Labels,
-		TempDir: path.Join(core.RepoRoot, target.TmpDir()),
-		Srcs:    target.AllSourcePaths(state.Graph),
-		Opts:    opts,
-	})
-	if err != nil {
-		return nil, err
-	}
-	out := strings.Join(resp.Messages, "\n")
-	if !resp.Success {
-		return nil, fmt.Errorf("Error building target %s: %s", target.Label, out)
-	}
-	// Okay, now we might need to do something locally too...
-	if localCmd != "" {
-		out2, err := runBuildCommand(state, target, localCmd, inputHash)
-		return append([]byte(out+"\n"), out2...), err
-	}
-	return []byte(out), nil
-}
-
-// buildRemotely runs a single build request and returns its response.
-func buildRemotely(state *core.BuildState, worker string, req *pb.BuildRequest) (*pb.BuildResponse, error) {
+// BuildRemotely runs a single build request and returns its response.
+func BuildRemotely(state *core.BuildState, worker string, req *Request) (*Response, error) {
 	w, err := getOrStartWorker(state, worker)
 	if err != nil {
 		return nil, err
 	}
 	w.requests <- req
-	ch := make(chan *pb.BuildResponse, 1)
+	ch := make(chan *Response, 1)
 	w.responseMutex.Lock()
 	w.responses[req.Rule] = ch
 	w.responseMutex.Unlock()
@@ -88,9 +45,28 @@ func buildRemotely(state *core.BuildState, worker string, req *pb.BuildRequest) 
 	return response, nil
 }
 
+// ProvideParse sends a request to a subprocess to derive pseudo-contents of a BUILD file from
+// a directory (e.g. they may infer it from file contents).
+// If the provider cannot infer anything, they will return an empty string.
+func ProvideParse(state *core.BuildState, worker string, dir string) (string, error) {
+	w, err := getOrStartWorker(state, worker)
+	if err != nil {
+		return "", err
+	}
+	w.requests <- &Request{
+		Rule: dir,
+	}
+	ch := make(chan *Response, 1)
+	w.responseMutex.Lock()
+	w.responses[dir] = ch
+	w.responseMutex.Unlock()
+	response := <-ch
+	return response.BuildFile, nil
+}
+
 // EnsureWorkerStarted ensures that a worker server is started and has responded saying it's ready.
 func EnsureWorkerStarted(state *core.BuildState, worker string, label core.BuildLabel) error {
-	resp, err := buildRemotely(state, worker, &pb.BuildRequest{
+	resp, err := BuildRemotely(state, worker, &Request{
 		Rule: label.String(),
 		Test: true,
 	})
@@ -124,8 +100,8 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 		return nil, err
 	}
 	w := &workerServer{
-		requests:  make(chan *pb.BuildRequest),
-		responses: map[string]chan *pb.BuildResponse{},
+		requests:  make(chan *Request),
+		responses: map[string]chan *Response{},
 		process:   cmd,
 		stderr:    stderr,
 	}
@@ -139,11 +115,11 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 
 // sendRequests sends requests to a running worker server.
 func (w *workerServer) sendRequests(stdin io.Writer) {
-	m := &jsonpb.Marshaler{OrigName: true}
+	e := json.NewEncoder(stdin)
 	for request := range w.requests {
-		if err := m.Marshal(stdin, request); err != nil {
+		if err := e.Encode(request); err != nil {
 			log.Error("Failed to write request: %s", err)
-			w.dispatchResponse(&pb.BuildResponse{
+			w.dispatchResponse(&Response{
 				Rule:     request.Rule,
 				Success:  false,
 				Messages: []string{err.Error()},
@@ -157,10 +133,9 @@ func (w *workerServer) sendRequests(stdin io.Writer) {
 // readResponses reads the responses from a running worker server and dispatches them appropriately.
 func (w *workerServer) readResponses(stdout io.Reader) {
 	decoder := json.NewDecoder(stdout)
-	u := &jsonpb.Unmarshaler{AllowUnknownFields: true}
 	for {
-		response := pb.BuildResponse{}
-		if err := u.UnmarshalNext(decoder, &response); err != nil {
+		response := Response{}
+		if err := decoder.Decode(&response); err != nil {
 			w.Error("Failed to read response: %s", err)
 			break
 		}
@@ -169,7 +144,7 @@ func (w *workerServer) readResponses(stdout io.Reader) {
 }
 
 // dispatchResponse sends a single response on the appropriate channel.
-func (w *workerServer) dispatchResponse(response *pb.BuildResponse) {
+func (w *workerServer) dispatchResponse(response *Response) {
 	w.responseMutex.Lock()
 	ch, present := w.responses[response.Rule]
 	delete(w.responses, response.Rule)
@@ -189,7 +164,7 @@ func (w *workerServer) wait() {
 		w.responseMutex.Lock()
 		defer w.responseMutex.Unlock()
 		for label, ch := range w.responses {
-			ch <- &pb.BuildResponse{
+			ch <- &Response{
 				Rule:     label,
 				Messages: []string{fmt.Sprintf("Worker failed: %s\n%s", err, string(w.stderr.History))},
 			}
@@ -224,8 +199,9 @@ func (l *stderrLogger) Write(msg []byte) (int, error) {
 	return len(msg), nil
 }
 
-// StopWorkers stops any running worker processes.
-func StopWorkers() {
+// StopAll stops any running worker processes.
+// This should be called before the process terminates to ensure they are all correctly cleaned up.
+func StopAll() {
 	for name, worker := range workerMap {
 		log.Debug("Terminating build worker %s", name)
 		worker.closing = true         // suppress any error messages from worker

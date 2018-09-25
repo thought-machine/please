@@ -56,19 +56,21 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	env := buildEnvironment(state, target)
 	sources := target.AllSourcePaths(state.Graph)
 	tmpDir := path.Join(RepoRoot, target.TmpDir())
+	outEnv := target.GetTmpOutputAll(target.Outputs())
+
 	env = append(env,
 		"TMP_DIR="+tmpDir,
 		"TMPDIR="+tmpDir,
 		"SRCS="+strings.Join(sources, " "),
-		"OUTS="+strings.Join(target.Outputs(), " "),
+		"OUTS="+strings.Join(outEnv, " "),
 		"HOME="+tmpDir,
 		"TOOLS="+strings.Join(toolPaths(state, target.Tools), " "),
 		// Set a consistent hash seed for Python. Important for build determinism.
 		"PYTHONHASHSEED=42",
 	)
 	// The OUT variable is only available on rules that have a single output.
-	if len(target.Outputs()) == 1 {
-		env = append(env, "OUT="+path.Join(RepoRoot, target.TmpDir(), target.Outputs()[0]))
+	if len(outEnv) == 1 {
+		env = append(env, "OUT="+path.Join(RepoRoot, target.TmpDir(), outEnv[0]))
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
@@ -85,6 +87,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	}
 	// Named output groups similarly.
 	for name, outs := range target.DeclaredNamedOutputs() {
+		outs = target.GetTmpOutputAll(outs)
 		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
 	}
 	// Named tools as well.

@@ -16,6 +16,7 @@ import (
 	"core"
 	"metrics"
 	"utils"
+	"worker"
 )
 
 var log = logging.MustGetLogger("test")
@@ -558,14 +559,14 @@ func calcNumRuns(numRuns, flakiness int) (int, int) {
 
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
 func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
-	worker, _, _ := build.TestWorkerCommand(state, target)
-	if worker == "" {
+	workerCmd, _, _ := build.TestWorkerCommand(state, target)
+	if workerCmd == "" {
 		return "", nil
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Starting test worker...")
-	err := build.EnsureWorkerStarted(state, worker, target.Label)
+	err := worker.EnsureWorkerStarted(state, workerCmd, target.Label)
 	if err == nil {
 		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
 	}
-	return worker, err
+	return workerCmd, err
 }

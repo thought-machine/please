@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 
@@ -43,6 +44,11 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 
 func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
 	return p.asp.ParseFile(pkg, filename)
+}
+
+func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
+	_, err := p.asp.ParseReader(pkg, reader)
+	return err
 }
 
 func (p *aspParser) UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {

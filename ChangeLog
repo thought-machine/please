@@ -1,3 +1,29 @@
+Version 13.1.5
+--------------
+
+    * More robust property expansions in `plz tool maven`.
+
+
+Version 13.1.4
+--------------
+
+    * Fixed python_wheel which in some subtle cases was not honouring `patch` correctly.
+
+
+Version 13.1.3
+--------------
+
+    * :all and ... labels are explicitly banned in various contexts.
+      This never actually worked, but the error messages are more useful now.
+    * Various subrepo fixes.
+
+
+Version 13.1.1
+--------------
+
+    * Some fixes to coverage output
+
+
 Version 13.1.0
 --------------
 

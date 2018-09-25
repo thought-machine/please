@@ -468,11 +468,12 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     file_rule = remote_file(
         name = name,
         _tag = 'download',
+        out = name + '.whl',
         url = urls,
         licences = licences if licences else None,
     )
 
-    cmd = ['$TOOL x $SRC']
+    cmd = ['$TOOL x $SRCS_SRC']
 
     if strip:
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
@@ -491,8 +492,11 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         name = name,
         tag = 'wheel',
         cmd = ' && '.join(cmd),
-        outs = [name + '.whl'],
-        srcs = patches + [file_rule] if patch else [file_rule],
+        outs = [name + '.pex.zip'],
+        srcs = {
+            "SRC": [file_rule],
+            'RES': patches if patch else [],
+        },
         building_description = 'Downloading...',
         requires = ['py'],
         deps = deps,
