@@ -805,6 +805,8 @@ func unbuiltTargetsMessage(graph *core.BuildGraph) string {
 func shortError(err error) string {
 	if se, ok := err.(shortenableError); ok {
 		return se.ShortError()
+	} else if err == nil {
+		return "unknown error" // This shouldn't really happen...
 	}
 	return err.Error()
 }
