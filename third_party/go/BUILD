@@ -482,7 +482,7 @@ go_get(
 go_get(
     name = "godirwalk",
     get = "github.com/karrick/godirwalk",
-    revision = "17c244300a0e2101858b851a8df1ae8e796a0bca",
+    revision = "v1.7.0",
     strip = [
         "examples",
         "testdata",

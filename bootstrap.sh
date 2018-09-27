@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -eu
 
@@ -129,7 +129,7 @@ if [ ! -d "/usr/include/google/protobuf" ]; then
     warn "google/protobuf not found, excluding relevant tests"
     EXCLUDES="${EXCLUDES} --exclude=proto"
 fi
-GCCVER="`gcc -dumpversion`"
+GCCVER="`cc -dumpversion`"
 if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ]; then
     warn "32-bit gcc libraries not found, excluding cross-compile tests"
     EXCLUDES="${EXCLUDES} --exclude=x86"
