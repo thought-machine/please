@@ -88,5 +88,36 @@ type TextDocumentPositionParams struct {
 
 // TODO: work out if this is being dynamically filled in
 type TextDocumentClientCapabilities struct {
-
+	Completion Completion `json:"completion, omitempty"`
 }
+
+
+type Completion struct {
+	/**
+	 * Whether completion supports dynamic registration.
+	 */
+	DynamicRegistration bool `json:"dynamicRegistration,omitempty"`
+
+	/**
+	 * The client supports the following `CompletionItem` specific
+	 * capabilities.
+	 */
+	CompletionItem struct {
+		SnippetSupport bool `json:"snippetSupport,omitempty"`
+	}  `json:"completionItem,omitempty"`
+
+	/**
+	 * The completion item kind values the client supports. When this
+	 * property exists the client also guarantees that it will
+	 * handle values outside its set gracefully and falls back
+	 * to a default value when unknown.
+	 *
+	 * If this property is not present the client only supports
+	 * the completion items kinds from `Text` to `Reference` as defined in
+	 * the initial version of the protocol.
+	 */
+	CompletionItemKind struct {
+		ValueSet []CompletionItemKind	`json:"valueSet,omitempty"`
+	} `json:"completionItem,omitempty"`
+}
+

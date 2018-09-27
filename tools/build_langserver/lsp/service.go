@@ -1,5 +1,7 @@
 package lsp
 
+import "github.com/sourcegraph/jsonrpc2"
+
 type ServerCapabilities struct {
 	/**
 	 * Defines how text documents are synced. Is either a detailed structure defining each notification or
@@ -9,33 +11,27 @@ type ServerCapabilities struct {
 
 
 	HoverProvider 			   bool 						 `json:"hoverProvider"`
-	CompletionProvider  	   *CompletionOptions         `json:"completionProvider"`
-	SignatureHelpProvider 	   *SignatureHelpOptions `json:"signatureHelpOptions"`
-	DefinitionProvider         bool 		`json:"definitionProvider"`
-	TypeDefinitionProvider     bool        `json:"typeDefinitionProvider,omitempty"`
-	ImplementationProvider     bool 		 `json:"implementationProvider,omitempty"`
-	ReferenceProvider		   bool 		 `json:"referenceProvider,omitempty"`
-	DocumentSymbolProvider 	   bool			 `json:"documentSymbolProvider,omitempty"`
-	DocumentHighlightProvider  bool 		 `json:"documentHighlightProvider"`
-	DocumentFormattingProvider bool
+	CompletionProvider  	   *CompletionOptions        	 `json:"completionProvider"`
+	SignatureHelpProvider 	   *SignatureHelpOptions 		 `json:"signatureHelpOptions"`
+	DefinitionProvider         bool 						 `json:"definitionProvider"`
+	TypeDefinitionProvider     bool        					 `json:"typeDefinitionProvider,omitempty"`
+	ImplementationProvider     bool 		 				 `json:"implementationProvider,omitempty"`
+	ReferenceProvider		   bool 		 				 `json:"referenceProvider,omitempty"`
+	DocumentSymbolProvider 	   bool			 				 `json:"documentSymbolProvider,omitempty"`
+	DocumentHighlightProvider  bool 		 				 `json:"documentHighlightProvider,omitempty"`
+	DocumentFormattingProvider bool							 `json:"documentFormattingProvider,omitempty"`
 
 }
 
+// TODO(bnm): this might not be needed
 type TextDocumentSyncOptions struct {
-	OpenClose 			bool 		 `json:"openClose"`
-	Change 	  			TextDocumentSyncKind  		 `json:"change"`
-	WillSave  			bool 		 `json:"willSave,omitempty"`
-	WillSaveWaitUtil	bool 		 `json:"willSaveWaitUntil"`
-	Save 				*SaveOptions `json:"save"`
+	OpenClose 			bool 		 				 `json:"openClose"`
+	Change 	  			*TextDocumentSyncKind  		 `json:"change"`
+	WillSave  			bool 		 				 `json:"willSave,omitempty"`
+	WillSaveWaitUtil	bool 		 		   		 `json:"willSaveWaitUntil"`
+	Save 				*SaveOptions 				 `json:"save"`
 }
 
-type TextDocumentSyncKind int
-
-const (
-	SyncNone        TextDocumentSyncKind = 0
-	SyncFull        TextDocumentSyncKind = 1
-	SyncIncremental TextDocumentSyncKind = 2
-)
 
 type SaveOptions struct {
 	IncludeText bool `json:"includeText"`
@@ -48,4 +44,8 @@ type CompletionOptions struct {
 
 type SignatureHelpOptions struct {
 	TriggerCharacters []string `json:"triggerCharacters,omitempty"`
+}
+
+type CancelParams struct {
+	ID jsonrpc2.ID `json:"id"`
 }

@@ -44,6 +44,17 @@ Ideas
 
 
 
+BINARY
+------
+Add to package/BUILD
+
+
+cli
+----
+--mode: tcp or stdio, default stdio
+--host: 127.0.0.20
+--port: 4387
+
 
 
 lsp

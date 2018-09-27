@@ -1,8 +1,13 @@
 package lsp
 
 import (
+	"errors"
+	"gopkg.in/op/go-logging.v1"
 	"strings"
 )
+
+
+var log = logging.MustGetLogger("lsp")
 
 /**
  * Initialze.go defines all structs to do with initialize method
@@ -11,7 +16,6 @@ import (
  * params: InitializeParams
  *
  */
-
 type InitializeParams struct {
 	/**
 	 * The process Id of the parent process that started
@@ -38,7 +42,7 @@ type InitializeParams struct {
 	 */
 	InitializationOptions interface{} `json:"initializationOptions,omitempty"`
 
-	/** TODO: Add the capabilities in capabilities.go
+	/**
 	 * The capabilities provided by the client (editor or tool)
 	 */
 	Capabilities ClientCapabilities `json:"capabilities"`
@@ -60,7 +64,29 @@ func (p *InitializeParams) Root() DocumentURI {
 	if strings.HasPrefix(p.RootPath, "file://") {
 		return DocumentURI(p.RootPath)
 	}
+
 	return DocumentURI("file://" + p.RootPath)
+}
+
+// SetRoot sets the RootURI of the Intialization if not Set
+func (p *InitializeParams) EnsureRoot() error {
+	if p.RootPath == "" && p.RootURI == "" {
+		return errors.New("rootPath and rootURI cannot be both empty")
+	}
+
+	// When RootPath is not empty, remote the URI part for RootPath
+	if strings.HasPrefix(p.RootPath, "file://") {
+			log.Info("Passing an initialize rootPath URI (%q) is deprecated. Use rootUri instead.", p.RootPath)
+			p.RootPath = strings.TrimPrefix(p.RootPath, "file://")
+	} else {
+		// at this point rootURL should not be empty
+		p.RootPath = strings.TrimPrefix(string(p.RootURI), "file://")
+	}
+
+	// Ensure RootURL is in URL format with prefix `file://`
+	p.RootURI = p.Root()
+
+	return nil
 }
 
 type InitializeResult struct {
@@ -87,7 +113,7 @@ type ClientCapabilities struct {
 	/**
 	 * Workspace specific client capabilities.
 	 */
-	Workspace    WorkspaceClientCapabilities    `json:"workspace,omitempty"`
+	Workspace WorkspaceClientCapabilities `json:"workspace,omitempty"`
 
 	/**
 	 * Text document specific client capabilities.
@@ -97,5 +123,5 @@ type ClientCapabilities struct {
 	/**
 	 * Experimental client capabilities.
 	 */
-	Experimental interface{}                    `json:"experimental,omitempty"`
+	Experimental interface{} `json:"experimental,omitempty"`
 }

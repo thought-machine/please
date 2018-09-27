@@ -29,7 +29,7 @@ type WorkspaceFolder struct {
 	Name string `json:"name"`
 }
 
-/**
+/** TODO(bnm): Not sure if this is needed, have it empty until I think of something
  * Workspace specific client capabilities.
  */
 type WorkspaceClientCapabilities struct {
