@@ -925,9 +925,9 @@ func (target *BuildTarget) AllLocalSources() []string {
 	return ret
 }
 
-// HasSource returns true if this target has the given file as a source (named or not).
+// HasSource returns true if this target has the given file as a source (named or not, or data).
 func (target *BuildTarget) HasSource(source string) bool {
-	for _, src := range target.AllSources() {
+	for _, src := range append(target.AllSources(), target.Data...) {
 		if src.String() == source { // Comparison is a bit dodgy tbh
 			return true
 		}
@@ -935,7 +935,7 @@ func (target *BuildTarget) HasSource(source string) bool {
 	return false
 }
 
-// HasAbsoluteSource returns true if this target has the given file as a source.
+// HasAbsoluteSource returns true if this target has the given file as a source (or data).
 // The input source includes the target's package name.
 func (target *BuildTarget) HasAbsoluteSource(source string) bool {
 	return target.HasSource(strings.TrimPrefix(source, target.Label.PackageName+"/"))

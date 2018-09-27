@@ -1,3 +1,9 @@
+Version 13.1.7
+--------------
+
+    * Correctly check `data` attributes of rules during `plz query changes`.
+
+
 Version 13.1.6
 --------------
 
