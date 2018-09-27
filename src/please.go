@@ -92,10 +92,11 @@ var opts struct {
 	VisibilityParse  bool   `description:"Parse all targets that the original targets are visible to. Used for some query steps." no-flag:"true"`
 
 	Build struct {
-		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
-		Shell      bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
-		ShowStatus bool     `long:"show_status" hidden:"true" description:"Show status of each target in output after build"`
-		Args       struct { // Inner nesting is necessary to make positional-args work :(
+		Prepare    bool `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		Shell      bool `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
+		ShowStatus bool `long:"show_status" hidden:"true" description:"Show status of each target in output after build"`
+		Args       struct {
+			// Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
@@ -177,9 +178,10 @@ var opts struct {
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Clean struct {
-		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
-		Remote       bool     `long:"remote" description:"Clean entire remote cache when no targets are given (default is local only)"`
-		Args         struct { // Inner nesting is necessary to make positional-args work :(
+		NoBackground bool `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
+		Remote       bool `long:"remote" description:"Clean entire remote cache when no targets are given (default is local only)"`
+		Args         struct {
+			// Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
@@ -339,6 +341,11 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
+		Changed struct {
+			Since            string `long:"since" description:"Calculate changes since this tree-ish/scm ref (defaults to current HEAD/tip)."`
+			DiffSpec         string `long:"diffspec" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc)."`
+			IncludeDependees string `long:"include-dependees" default:"none" description:"Include direct or transitive dependees of changed targets."`
+		} `command:"changed" description:"Show changed targets since some diffspec."`
 	} `command:"query" description:"Queries information about the build graph"`
 }
 
@@ -587,6 +594,12 @@ var buildFunctions = map[string]func() bool{
 			parse.PrintRuleArgs(state, state.ExpandOriginalTargets())
 		}
 		return success
+	},
+	"changed": func() bool {
+		for _, target := range query.ChangedTargetAddresses(query.ChangedRequest{opts.Query.Changed.Since, opts.Query.Changed.DiffSpec, opts.Query.Changed.IncludeDependees}) {
+			fmt.Printf("%s\n", target)
+		}
+		return true;
 	},
 	"changes": func() bool {
 		// Temporarily set this flag on to avoid fatal errors from the first parse.

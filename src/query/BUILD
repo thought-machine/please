@@ -9,6 +9,7 @@ go_library(
         "//src/build",
         "//src/cli",
         "//src/core",
+        "//src/scm",
         "//src/utils",
         "//third_party/go:logging",
         "//third_party/go:shlex",
