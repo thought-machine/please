@@ -193,7 +193,7 @@ func (cache *dirCache) RetrieveExtra(target *core.BuildTarget, key []byte, out s
 // retrieveFiles retrieves the given set of files from the cache.
 func (cache *dirCache) retrieveFiles(target *core.BuildTarget, key []byte, suffix string, outs []string) bool {
 	found, err := cache.retrieveFiles2(target, cache.getPath(target, key, suffix), outs)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to retrieve %s from dir cache: %s", target.Label, err)
 		return false
 	} else if found {
