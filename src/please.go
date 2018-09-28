@@ -92,11 +92,10 @@ var opts struct {
 	VisibilityParse  bool   `description:"Parse all targets that the original targets are visible to. Used for some query steps." no-flag:"true"`
 
 	Build struct {
-		Prepare    bool `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
-		Shell      bool `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
-		ShowStatus bool `long:"show_status" hidden:"true" description:"Show status of each target in output after build"`
-		Args       struct {
-			// Inner nesting is necessary to make positional-args work :(
+		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		Shell      bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
+		ShowStatus bool     `long:"show_status" hidden:"true" description:"Show status of each target in output after build"`
+		Args       struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
@@ -603,8 +602,8 @@ var buildFunctions = map[string]func() bool{
 		for _, label := range query.ChangedLabels(
 			state,
 			query.ChangedRequest{
-				Since: opts.Query.Changed.Since,
-				DiffSpec: opts.Query.Changed.DiffSpec,
+				Since:            opts.Query.Changed.Since,
+				DiffSpec:         opts.Query.Changed.DiffSpec,
 				IncludeDependees: opts.Query.Changed.IncludeDependees,
 			}) {
 			fmt.Printf("%s\n", label)

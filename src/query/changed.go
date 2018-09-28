@@ -6,8 +6,8 @@ import (
 )
 
 type ChangedRequest struct {
-	Since string
-	DiffSpec string
+	Since            string
+	DiffSpec         string
 	IncludeDependees string
 }
 

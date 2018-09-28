@@ -24,7 +24,7 @@ func ChangesIn(diffSpec string, relativeTo string) []string {
 		relativeTo = core.RepoRoot
 	}
 	files := make([]string, 0)
-	command := []string{"diff-tree", "--no-commit-id", "--name-only", "-r", diffSpec }
+	command := []string{"diff-tree", "--no-commit-id", "--name-only", "-r", diffSpec}
 	out, err := exec.Command("git", command...).CombinedOutput()
 	if err != nil {
 		log.Fatalf("unable to determine changes: %s", err)
@@ -52,7 +52,7 @@ func ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) [
 	if fromCommit != "" {
 		// Grab the diff from the merge-base to HEAD using ... syntax.  This ensures we have just
 		// the changes that have occurred on the current branch.
-		command = []string{"diff", "--name-only", fromCommit+"...HEAD"}
+		command = []string{"diff", "--name-only", fromCommit + "...HEAD"}
 		out, err = exec.Command("git", append(command, relSuffix...)...).CombinedOutput()
 		if err != nil {
 			log.Fatalf("unable to check current branch: %s", err)
