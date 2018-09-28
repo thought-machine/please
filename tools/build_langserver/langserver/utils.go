@@ -2,10 +2,10 @@ package langserver
 
 import (
 	"core"
-	"path/filepath"
-	"fmt"
 	"errors"
+	"fmt"
 	"fs"
+	"path/filepath"
 	"strings"
 	"tools/build_langserver/lsp"
 )
@@ -14,7 +14,6 @@ import (
 func IsURL(uri lsp.DocumentURI) bool {
 	return strings.HasPrefix(string(uri), "file://")
 }
-
 
 // EnsureURL ensures that the documentURI is a valid path in the filesystem and a valid 'file://' URI
 func EnsureURL(uri lsp.DocumentURI, pathType string) (url lsp.DocumentURI, err error) {
@@ -25,7 +24,6 @@ func EnsureURL(uri lsp.DocumentURI, pathType string) (url lsp.DocumentURI, err e
 
 	return lsp.DocumentURI("file://" + documentPath), nil
 }
-
 
 // GetPathFromURL returns the absolute path of the file which documenURI relates to
 // it also checks if the file path is valid
@@ -55,7 +53,7 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 				return absPath, nil
 			}
 		default:
-			return "", errors.New(fmt.Sprintf("invalid pathType %s, " +
+			return "", errors.New(fmt.Sprintf("invalid pathType %s, "+
 				"can only be 'file' or 'path'", pathType))
 		}
 	}

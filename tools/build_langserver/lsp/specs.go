@@ -37,37 +37,36 @@ type Diagnostic struct {
 	/**
 	 * The range at which the message applies.
 	 */
-	Range 				Range  				`json:"range"`
+	Range Range `json:"range"`
 
 	/**
 	 * The diagnostic's severity. Can be omitted. If omitted it is up to the
 	 * client to interpret diagnostics as error, warning, info or hint.
 	 */
-	Severity    		DiagnosticSeverity  `json:"severity,omitempty"`
+	Severity DiagnosticSeverity `json:"severity,omitempty"`
 
 	/**
 	 * The diagnostic's code. Can be omitted.
 	 */
-	Code 				string 				`json:"code,omitempty"`
+	Code string `json:"code,omitempty"`
 
 	/**
 	 * A human-readable string describing the source of this
 	 * diagnostic, e.g. 'typescript' or 'super lint'.
 	 */
-	Source 				string 				`json:"source,omitempty"`
+	Source string `json:"source,omitempty"`
 
 	/**
 	 * The diagnostic's message.
 	 */
-	Message 			string 				`json:"message"`
+	Message string `json:"message"`
 
 	/**
 	 * An array of related diagnostic information, e.g. when symbol-names within
 	 * a scope collide all definitions can be marked via this property.
 	 */
-	RelatedInformation  []DiagnosticRelatedInformation `json:"relatedInformation"`
+	RelatedInformation []DiagnosticRelatedInformation `json:"relatedInformation"`
 }
-
 
 /**
  * Represents a related message and source code location for a diagnostic. This should be

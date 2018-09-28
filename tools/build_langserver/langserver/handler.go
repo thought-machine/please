@@ -2,14 +2,14 @@ package langserver
 
 import (
 	"context"
+	"core"
 	"encoding/json"
 	"errors"
 	"sync"
-	"core"
 
 	"github.com/sourcegraph/jsonrpc2"
-	"tools/build_langserver/lsp"
 	"gopkg.in/op/go-logging.v1"
+	"tools/build_langserver/lsp"
 )
 
 var log = logging.MustGetLogger("lsp")
@@ -18,7 +18,7 @@ var log = logging.MustGetLogger("lsp")
 func NewHandler() jsonrpc2.Handler {
 	// TODO: need to rethink this
 	return handler{jsonrpc2.HandlerWithError((&LsHandler{
-		IsServerDown:false,
+		IsServerDown: false,
 	}).Handle)}
 }
 
@@ -27,28 +27,27 @@ type handler struct {
 	jsonrpc2.Handler
 }
 
-
 type LsHandler struct {
-	init *lsp.InitializeParams
-	mu sync.Mutex
-	conn *jsonrpc2.Conn
+	init     *lsp.InitializeParams
+	mu       sync.Mutex
+	conn     *jsonrpc2.Conn
 	RepoRoot string
 
-	IsServerDown bool
+	IsServerDown         bool
 	SupportedCompletions []lsp.CompletionItemKind
 }
 
-func (h *LsHandler) Handle (ctx context.Context, conn *jsonrpc2.Conn, request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *jsonrpc2.Request) (result interface{}, err error) {
 	if request.Method != "initialize" && h.init == nil {
 		return nil, errors.New("server must be initialized")
 	}
 	h.conn = conn
 
 	methods := map[string]func(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error){
-		"initialize": h.handleInit,
-		"initialzed": h.handleInitialized,
-		"shutdown": h.handleShutDown,
-		"exit": h.handleExit,
+		"initialize":      h.handleInit,
+		"initialzed":      h.handleInitialized,
+		"shutdown":        h.handleShutDown,
+		"exit":            h.handleExit,
 		"$/cancelRequest": h.handleCancel,
 	}
 
@@ -80,32 +79,31 @@ func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (
 
 	h.mu.Unlock()
 
-
 	// Fill in the response results
 	TDsync := lsp.SyncIncremental
 	completeOps := &lsp.CompletionOptions{
-		ResolveProvider:true,
-		TriggerCharacters:[]string{"."},
+		ResolveProvider:   true,
+		TriggerCharacters: []string{"."},
 	}
 
 	sigHelpOps := &lsp.SignatureHelpOptions{
-		TriggerCharacters:[]string{"{", ","},
+		TriggerCharacters: []string{"{", ","},
 	}
 
 	log.Info("Initialize plz build file language server...")
 	return lsp.InitializeResult{
 		Capabilities: lsp.ServerCapabilities{
-			TextDocumentSync:&TDsync,
-			HoverProvider:true,
-			CompletionProvider: completeOps,
-			SignatureHelpProvider:sigHelpOps,
-			DefinitionProvider:true,
-			TypeDefinitionProvider:true,
-			ImplementationProvider:true,
-			ReferenceProvider:true,
-			DocumentFormattingProvider:true,
-			DocumentHighlightProvider:true,
-			DocumentSymbolProvider:true,
+			TextDocumentSync:           &TDsync,
+			HoverProvider:              true,
+			CompletionProvider:         completeOps,
+			SignatureHelpProvider:      sigHelpOps,
+			DefinitionProvider:         true,
+			TypeDefinitionProvider:     true,
+			ImplementationProvider:     true,
+			ReferenceProvider:          true,
+			DocumentFormattingProvider: true,
+			DocumentHighlightProvider:  true,
+			DocumentSymbolProvider:     true,
 		},
 	}, nil
 }
@@ -117,7 +115,6 @@ func (h *LsHandler) handleInitialized(ctx context.Context, request *jsonrpc2.Req
 	// TODO(bnmetrics): Rethink!
 	return nil, nil
 }
-
 
 func (h *LsHandler) handleShutDown(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
 	h.mu.Lock()

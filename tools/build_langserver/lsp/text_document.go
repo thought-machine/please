@@ -1,6 +1,5 @@
 package lsp
 
-
 type TextDocumentIdentifier struct {
 	/**
 	 * The text document's URI.
@@ -91,7 +90,6 @@ type TextDocumentClientCapabilities struct {
 	Completion Completion `json:"completion, omitempty"`
 }
 
-
 type Completion struct {
 	/**
 	 * Whether completion supports dynamic registration.
@@ -104,7 +102,7 @@ type Completion struct {
 	 */
 	CompletionItem struct {
 		SnippetSupport bool `json:"snippetSupport,omitempty"`
-	}  `json:"completionItem,omitempty"`
+	} `json:"completionItem,omitempty"`
 
 	/**
 	 * The completion item kind values the client supports. When this
@@ -117,7 +115,6 @@ type Completion struct {
 	 * the initial version of the protocol.
 	 */
 	CompletionItemKind struct {
-		ValueSet []CompletionItemKind	`json:"valueSet,omitempty"`
+		ValueSet []CompletionItemKind `json:"valueSet,omitempty"`
 	} `json:"completionItem,omitempty"`
 }
-

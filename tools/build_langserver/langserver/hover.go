@@ -35,12 +35,11 @@ func (h *LsHandler) handleHover(ctx context.Context, request *jsonrpc2.Request) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &lsp.Hover{
 		Contents: content,
 	}, nil
 }
-
 
 func getHoverContent(uri lsp.DocumentURI, position lsp.Position) (content []lsp.MarkedString, err error) {
 	// Read file,

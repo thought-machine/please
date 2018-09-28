@@ -1,11 +1,11 @@
 package langserver
 
 import (
-	"testing"
-	"path"
-	"github.com/stretchr/testify/assert"
-	"tools/build_langserver/lsp"
 	"core"
+	"github.com/stretchr/testify/assert"
+	"path"
+	"testing"
+	"tools/build_langserver/lsp"
 )
 
 func TestIsURL(t *testing.T) {
@@ -24,7 +24,7 @@ func TestGetPathFromURL(t *testing.T) {
 	documentUri := lsp.DocumentURI("file://" + currentFile)
 
 	// Test GetPathFromURL when documentURI passed in is a URI
-	p, err :=  GetPathFromURL(documentUri, "file")
+	p, err := GetPathFromURL(documentUri, "file")
 	assert.Equal(t, err, nil)
 	assert.Equal(t, p, string(currentFile))
 
@@ -57,14 +57,13 @@ func TestGetPathFromURLFail(t *testing.T) {
 	assert.Error(t, err)
 }
 
-
 func TestEnsureURL(t *testing.T) {
 	currentFile, err := getFileinCwd("utils_test.go")
 	assert.Equal(t, err, nil)
 
 	uri, err := EnsureURL(currentFile, "file")
 	assert.Equal(t, err, nil)
-	assert.Equal(t, uri, lsp.DocumentURI("file://" + string(currentFile)))
+	assert.Equal(t, uri, lsp.DocumentURI("file://"+string(currentFile)))
 }
 
 /*
@@ -72,7 +71,7 @@ func TestEnsureURL(t *testing.T) {
  */
 func getFileinCwd(name string) (lsp.DocumentURI, error) {
 	core.FindRepoRoot()
-	filePath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/" + name)
+	filePath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/"+name)
 
 	return lsp.DocumentURI(filePath), nil
 }

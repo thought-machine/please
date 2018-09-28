@@ -1,6 +1,5 @@
 package lsp
 
-
 type WorkspaceEdit struct {
 	/**
 	 * Holds changes to existing resources.
@@ -14,7 +13,6 @@ type WorkspaceEdit struct {
 	 */
 	DocumentChanges []TextDocumentEdit `json:"documentChanges"`
 }
-
 
 type WorkspaceFolder struct {
 	/**
@@ -33,6 +31,4 @@ type WorkspaceFolder struct {
  * Workspace specific client capabilities.
  */
 type WorkspaceClientCapabilities struct {
-
-
 }

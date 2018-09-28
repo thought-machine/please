@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-
 var log = logging.MustGetLogger("lsp")
 
 /**
@@ -76,8 +75,8 @@ func (p *InitializeParams) EnsureRoot() error {
 
 	// When RootPath is not empty, remote the URI part for RootPath
 	if strings.HasPrefix(p.RootPath, "file://") {
-			log.Info("Passing an initialize rootPath URI (%q) is deprecated. Use rootUri instead.", p.RootPath)
-			p.RootPath = strings.TrimPrefix(p.RootPath, "file://")
+		log.Info("Passing an initialize rootPath URI (%q) is deprecated. Use rootUri instead.", p.RootPath)
+		p.RootPath = strings.TrimPrefix(p.RootPath, "file://")
 	} else {
 		// at this point rootURL should not be empty
 		p.RootPath = strings.TrimPrefix(string(p.RootURI), "file://")
