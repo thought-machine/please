@@ -15,6 +15,8 @@ var log = logging.MustGetLogger("lsp")
  * params: InitializeParams
  *
  */
+
+ // InitializeParams are params passed into `initialize` method request
 type InitializeParams struct {
 	/**
 	 * The process Id of the parent process that started
@@ -67,7 +69,7 @@ func (p *InitializeParams) Root() DocumentURI {
 	return DocumentURI("file://" + p.RootPath)
 }
 
-// SetRoot sets the RootURI of the Intialization if not Set
+// EnsureRoot sets the RootURI of the Intialization if not Set
 func (p *InitializeParams) EnsureRoot() error {
 	if p.RootPath == "" && p.RootURI == "" {
 		return errors.New("rootPath and rootURI cannot be both empty")
@@ -95,9 +97,7 @@ type InitializeResult struct {
 	Capabilities ServerCapabilities `json:"capabilities"`
 }
 
-/**
- * Known error codes for an `InitializeError`;
- */
+//InitializeError are known error code
 type InitializeError struct {
 	/**
 	 * Indicates whether the client execute the following retry logic:
@@ -108,6 +108,7 @@ type InitializeError struct {
 	Retry bool `json:"retry"`
 }
 
+// ClientCapabilities represents the capability of a client editor
 type ClientCapabilities struct {
 	/**
 	 * Workspace specific client capabilities.

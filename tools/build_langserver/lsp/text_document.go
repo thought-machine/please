@@ -1,5 +1,6 @@
 package lsp
 
+// TextDocumentIdentifier contains the URL of the text document
 type TextDocumentIdentifier struct {
 	/**
 	 * The text document's URI.
@@ -7,6 +8,7 @@ type TextDocumentIdentifier struct {
 	URL DocumentURI
 }
 
+// VersionedTextDocumentIdentifier allow clients to check the text document version before an edit is applied
 type VersionedTextDocumentIdentifier struct {
 	/**
 	 * Extending TextDocumentIdentifier
@@ -27,6 +29,8 @@ type VersionedTextDocumentIdentifier struct {
 	Version int `json:"version"`
 }
 
+// TextEdit represents complex text manipulations are described with an array of TextEdit’s,
+// representing a single change to the document.
 type TextEdit struct {
 	/**
 	 * The range of the text document to be manipulated. To insert
@@ -41,6 +45,7 @@ type TextEdit struct {
 	NewText string `json:"newText"`
 }
 
+// TextDocumentEdit describes all changes on a version Si and after they are applied move the document to version Si+1
 type TextDocumentEdit struct {
 	/**
 	 * The text document to change.
@@ -50,6 +55,7 @@ type TextDocumentEdit struct {
 	Edits []TextEdit
 }
 
+// TextDocumentItem is an item to transfer a text document from the client to the server
 type TextDocumentItem struct {
 	/**
 	 * The text document's URI.
@@ -90,6 +96,7 @@ type TextDocumentClientCapabilities struct {
 	Completion Completion `json:"completion, omitempty"`
 }
 
+// Completion
 type Completion struct {
 	/**
 	 * Whether completion supports dynamic registration.

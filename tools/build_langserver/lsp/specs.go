@@ -2,8 +2,10 @@ package lsp
 
 var EOL = []string{"\n", "\r\n", "\r"}
 
+// DocumentURI is the uri representation of the filepath, usually prefixed with "files://"
 type DocumentURI string
 
+// Position is the position in a text document expressed as zero-based line and zero-based character offset
 type Position struct {
 	/**
 	 * Line position in a document (zero-based).
@@ -16,6 +18,8 @@ type Position struct {
 	Character int `json:"character"`
 }
 
+// Range is A range in a text document expressed as (zero-based) start and end positions.
+// A range is comparable to a selection in an editor
 type Range struct {
 	/**
 	 * The range's start position.
@@ -28,11 +32,14 @@ type Range struct {
 	End Position `json:"end"`
 }
 
+// Location represents a location inside a resource, such as a line inside a text file.
 type Location struct {
 	URI   DocumentURI `json:"uri"`
 	Range Range       `json:"range"`
 }
 
+// Diagnostic represents a diagnostic, such as a compiler error or warning.
+// Diagnostic objects are only valid in the scope of a resource.
 type Diagnostic struct {
 	/**
 	 * The range at which the message applies.
@@ -68,11 +75,9 @@ type Diagnostic struct {
 	RelatedInformation []DiagnosticRelatedInformation `json:"relatedInformation"`
 }
 
-/**
- * Represents a related message and source code location for a diagnostic. This should be
- * used to point to code locations that cause or related to a diagnostics, e.g when duplicating
- * a symbol in a scope.
- */
+// DiagnosticRelatedInformation represents a related message and source code location for a diagnostic. This should be
+// used to point to code locations that cause or related to a diagnostics, e.g when duplicating
+// a symbol in a scope.
 type DiagnosticRelatedInformation struct {
 	/**
 	 * The location of this related diagnostic information.
@@ -85,6 +90,10 @@ type DiagnosticRelatedInformation struct {
 	Message string `json:"message"`
 }
 
+
+// Command Represents a reference to a command.
+// Provides a title which will be used to represent a command in the UI.
+// Commands are identified by a string identifier.
 type Command struct {
 	/**
 	 * Title of the command, like `save`.
@@ -103,11 +112,13 @@ type Command struct {
 	Arguments []interface{} `json:"arguments"`
 }
 
+// MarkedString can be used to render human readable text.
 type MarkedString struct {
 	Language string `json:"language"`
 	Value    string `json:"value"`
 }
 
 // TODO: not sure this is useful...As I think this has to do with specific languages on the list
+// DocumentFilter denotes a document through properties like language, scheme or pattern.
 type DocumentFilter struct {
 }

@@ -28,6 +28,7 @@ type handler struct {
 	jsonrpc2.Handler
 }
 
+// LsHandler is the main handler struct of the language server handler
 type LsHandler struct {
 	init     *lsp.InitializeParams
 	mu       sync.Mutex
@@ -38,6 +39,7 @@ type LsHandler struct {
 	SupportedCompletions []lsp.CompletionItemKind
 }
 
+// Handle function takes care of all the incoming from the client, and returns the correct response
 func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *jsonrpc2.Request) (result interface{}, err error) {
 	if request.Method != "initialize" && h.init == nil {
 		return nil, fmt.Errorf("server must be initialized")
