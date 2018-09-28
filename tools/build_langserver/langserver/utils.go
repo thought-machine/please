@@ -1,12 +1,15 @@
 package langserver
 
 import (
+	"bufio"
+	"context"
 	"core"
-	"errors"
 	"fmt"
 	"fs"
+	"os"
 	"path/filepath"
 	"strings"
+
 	"tools/build_langserver/lsp"
 )
 
@@ -53,10 +56,39 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 				return absPath, nil
 			}
 		default:
-			return "", errors.New(fmt.Sprintf("invalid pathType %s, "+
+			return "", fmt.Errorf(fmt.Sprintf("invalid pathType %s, "+
 				"can only be 'file' or 'path'", pathType))
 		}
 	}
 
-	return "", errors.New(fmt.Sprintf("invalid path %s, path must be in repo root", absPath))
+	return "", fmt.Errorf(fmt.Sprintf("invalid path %s, path must be in repo root", absPath))
+}
+
+// ReadFile takes a DocumentURI and reads the file into a slice of string
+func ReadFile(ctx context.Context, uri lsp.DocumentURI) ([]string, error) {
+	path, err := GetPathFromURL(uri, "file")
+	if err != nil {
+		return nil, err
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			log.Info("process cancelled.")
+			return nil, nil
+		default:
+			lines = append(lines, scanner.Text())
+		}
+	}
+
+	return lines, scanner.Err()
 }

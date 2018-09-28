@@ -10,6 +10,7 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
 	"tools/build_langserver/lsp"
+	"fmt"
 )
 
 var log = logging.MustGetLogger("lsp")
@@ -39,7 +40,7 @@ type LsHandler struct {
 
 func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *jsonrpc2.Request) (result interface{}, err error) {
 	if request.Method != "initialize" && h.init == nil {
-		return nil, errors.New("server must be initialized")
+		return nil, fmt.Errorf("server must be initialized")
 	}
 	h.conn = conn
 
