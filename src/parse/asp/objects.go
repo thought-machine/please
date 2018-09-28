@@ -521,7 +521,8 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 		return f.callNative(s, c)
 	}
 	s2 := f.scope.NewPackagedScope(s.pkg)
-	s2.Set("CONFIG", s.Lookup("CONFIG")) // This needs to be copied across too :(
+	s2.config = s.config
+	s2.Set("CONFIG", s.config) // This needs to be copied across too :(
 	s2.Callback = s.Callback
 	// Handle implicit 'self' parameter for bound functions.
 	args := c.Arguments

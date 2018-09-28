@@ -136,12 +136,11 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	// because most rules pass them through anyway.
 	// TODO(peterebden): when we get rid of the old parser, put these defaults on all the build rules and
 	//                   get rid of this.
-	config := s.Lookup("CONFIG").(*pyConfig)
-	args[11] = defaultFromConfig(config, args[11], "DEFAULT_VISIBILITY")
-	args[15] = defaultFromConfig(config, args[15], "DEFAULT_TESTONLY")
-	args[30] = defaultFromConfig(config, args[30], "DEFAULT_LICENCES")
-	args[20] = defaultFromConfig(config, args[20], "BUILD_SANDBOX")
-	args[21] = defaultFromConfig(config, args[21], "TEST_SANDBOX")
+	args[11] = defaultFromConfig(s.config, args[11], "DEFAULT_VISIBILITY")
+	args[15] = defaultFromConfig(s.config, args[15], "DEFAULT_TESTONLY")
+	args[30] = defaultFromConfig(s.config, args[30], "DEFAULT_LICENCES")
+	args[20] = defaultFromConfig(s.config, args[20], "BUILD_SANDBOX")
+	args[21] = defaultFromConfig(s.config, args[21], "TEST_SANDBOX")
 	target := createTarget(s, args)
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
 	s.pkg.AddTarget(target)
@@ -179,12 +178,10 @@ func defaultFromConfig(config *pyConfig, arg pyObject, name string) pyObject {
 // pkg implements the package() builtin function.
 func pkg(s *scope, args []pyObject) pyObject {
 	s.Assert(s.pkg.NumTargets() == 0, "package() must be called before any build targets are defined")
-	c, ok := s.Lookup("CONFIG").(*pyConfig)
-	s.Assert(ok, "CONFIG object has been altered")
 	for k, v := range s.locals {
 		k = strings.ToUpper(k)
-		s.Assert(c.Get(k, nil) != nil, "error calling package(): %s is not a known config value", k)
-		c.IndexAssign(pyString(k), v)
+		s.Assert(s.config.Get(k, nil) != nil, "error calling package(): %s is not a known config value", k)
+		s.config.IndexAssign(pyString(k), v)
 	}
 	return None
 }
