@@ -5,12 +5,14 @@ import (
 	"scm"
 )
 
+// ChangedRequest is a simple parameter object
 type ChangedRequest struct {
 	Since            string
 	DiffSpec         string
 	IncludeDependees string
 }
 
+// ChangedLabels returns all BuildLabels that have changed according to the given request.
 func ChangedLabels(state *core.BuildState, request ChangedRequest) []core.BuildLabel {
 	workspaceChangedFiles := changedFiles(request.Since, request.DiffSpec)
 	if len(workspaceChangedFiles) == 0 {
@@ -18,7 +20,7 @@ func ChangedLabels(state *core.BuildState, request ChangedRequest) []core.BuildL
 	}
 
 	labels := make([]core.BuildLabel, 0)
-	targets := TargetsForChangedFiles(state.Graph, workspaceChangedFiles, request.IncludeDependees)
+	targets := targetsForChangedFiles(state.Graph, workspaceChangedFiles, request.IncludeDependees)
 	for _, t := range targets {
 		if state.ShouldInclude(t) {
 			labels = append(labels, t.Label)
@@ -40,7 +42,7 @@ func changedFiles(since string, diffSpec string) []string {
 	return scm.ChangedFiles(since, true, "")
 }
 
-func TargetsForChangedFiles(graph *core.BuildGraph, files []string, includeDependees string) []*core.BuildTarget {
+func targetsForChangedFiles(graph *core.BuildGraph, files []string, includeDependees string) []*core.BuildTarget {
 	addresses := make([]*core.BuildTarget, 0)
 	for _, target := range graph.AllTargets() {
 		for _, source := range target.Sources {
