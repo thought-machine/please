@@ -342,7 +342,7 @@ var opts struct {
 		Changed struct {
 			Since            string `long:"since" description:"Calculate changes since this tree-ish/scm ref (defaults to current HEAD/tip)."`
 			DiffSpec         string `long:"diffspec" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc)."`
-			IncludeDependees string `long:"include-dependees" default:"none" description:"Include direct or transitive dependees of changed targets."`
+			IncludeDependees string `long:"include-dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Include direct or transitive dependees of changed targets."`
 		} `command:"changed" description:"Show changed targets since some diffspec."`
 	} `command:"query" description:"Queries information about the build graph"`
 }

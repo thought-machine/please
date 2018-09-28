@@ -19,7 +19,7 @@ func ChangedLabels(state *core.BuildState, request ChangedRequest) []core.BuildL
 		return []core.BuildLabel{}
 	}
 
-	labels := make([]core.BuildLabel, 0)
+	var labels []core.BuildLabel
 	targets := targetsForChangedFiles(state.Graph, workspaceChangedFiles, request.IncludeDependees)
 	for _, t := range targets {
 		if state.ShouldInclude(t) {
@@ -43,27 +43,29 @@ func changedFiles(since string, diffSpec string) []string {
 }
 
 func targetsForChangedFiles(graph *core.BuildGraph, files []string, includeDependees string) []*core.BuildTarget {
-	addresses := make([]*core.BuildTarget, 0)
+	addresses := make(map[*core.BuildTarget]struct{})
 	for _, target := range graph.AllTargets() {
-		for _, source := range target.Sources {
-			if source.Label() == nil {
-				for _, path := range source.Paths(graph) {
-					for _, file := range files {
-						if path == file {
-							addresses = append(addresses, target)
-						}
-					}
-				}
+		for _, file := range files {
+			if target.HasAbsoluteSource(file) {
+				addresses[target] = struct{}{}
 			}
 		}
 	}
 	if includeDependees != "direct" && includeDependees != "transitive" {
-		return addresses
+		keys := make([]*core.BuildTarget, len(addresses))
+
+		i := 0
+		for k := range addresses {
+			keys[i] = k
+			i++
+		}
+
+		return keys
 	}
 
 	dependents := make(map[*core.BuildTarget]struct{})
 	if includeDependees == "direct" {
-		for _, target := range addresses {
+		for target := range addresses {
 			dependents[target] = struct{}{}
 
 			for _, dep := range graph.ReverseDependencies(target) {
@@ -71,7 +73,7 @@ func targetsForChangedFiles(graph *core.BuildGraph, files []string, includeDepen
 			}
 		}
 	} else {
-		for _, target := range addresses {
+		for target := range addresses {
 			visit(dependents, target, graph.ReverseDependencies)
 		}
 	}
@@ -88,7 +90,9 @@ func targetsForChangedFiles(graph *core.BuildGraph, files []string, includeDepen
 
 func visit(dependents map[*core.BuildTarget]struct{}, target *core.BuildTarget, f func(*core.BuildTarget) []*core.BuildTarget) {
 	for _, dep := range f(target) {
-		dependents[dep] = struct{}{}
-		visit(dependents, dep, f)
+		if _, exists := dependents[dep]; !exists {
+			dependents[dep] = struct{}{}
+			visit(dependents, dep, f)
+		}
 	}
 }
