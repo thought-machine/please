@@ -15,7 +15,7 @@ import (
 var log = logging.MustGetLogger("build_langserver")
 
 var opts = struct {
-	Usage string
+	Usage     string
 	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
 
 	Mode string `short:"m" long:"mode" default:"stdio" description:"Mode of the language server communication (stdio|tcp)"`
@@ -30,7 +30,6 @@ Currently, it supports autocompletion, goto definition for build_defs, and signa
 `,
 }
 
-
 func main() {
 	cli.ParseFlagsOrDie("build_langserver", "1.0.0", &opts)
 	cli.InitLogging(opts.Verbosity)
@@ -40,13 +39,11 @@ func main() {
 	serve(handler)
 }
 
-
 func serve(handler jsonrpc2.Handler) {
 	switch opts.Mode {
 	case "stdio":
-		// TODO
+		// TODO(bnmetrics): complete this
 	case "tcp":
-		// TODO(bnmetrics): make this work!!
 		log.Info("build_langserver: reading on stdin, writing on stdout")
 
 		<-jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),

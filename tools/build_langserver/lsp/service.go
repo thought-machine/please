@@ -7,7 +7,7 @@ type ServerCapabilities struct {
 	 * Defines how text documents are synced. Is either a detailed structure defining each notification or
 	 * for backwards compatibility the TextDocumentSyncKind number. If omitted it defaults to `TextDocumentSyncKind.None`.
 	 */
-	TextDocumentSync   		  *TextDocumentSyncKind   `json:"textDocumentSync,omitempty"`
+	TextDocumentSync   		  *TextDocumentSyncKind          `json:"textDocumentSync,omitempty"`
 
 
 	HoverProvider 			   bool 						 `json:"hoverProvider"`
@@ -23,7 +23,7 @@ type ServerCapabilities struct {
 
 }
 
-// TODO(bnm): this might not be needed
+// TODO(bnmetrics): this might not be needed
 type TextDocumentSyncOptions struct {
 	OpenClose 			bool 		 				 `json:"openClose"`
 	Change 	  			*TextDocumentSyncKind  		 `json:"change"`
@@ -48,4 +48,12 @@ type SignatureHelpOptions struct {
 
 type CancelParams struct {
 	ID jsonrpc2.ID `json:"id"`
+}
+
+/**
+ * The result of a hover request.
+ */
+type Hover struct {
+	Contents []MarkedString `json:"contents"`
+	Range    *Range         `json:"range,omitempty"`
 }

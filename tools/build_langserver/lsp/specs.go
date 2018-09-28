@@ -104,6 +104,10 @@ type Command struct {
 	Arguments []interface{} `json:"arguments"`
 }
 
+type MarkedString struct {
+	Language string `json:"language"`
+	Value    string `json:"value"`
+}
 
 // TODO: not sure this is useful...As I think this has to do with specific languages on the list
 type DocumentFilter struct {

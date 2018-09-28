@@ -1,28 +1,38 @@
-package langerver
+package langserver
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"sync"
+	"core"
 
 	"github.com/sourcegraph/jsonrpc2"
 	"tools/build_langserver/lsp"
+	"gopkg.in/op/go-logging.v1"
 )
 
+var log = logging.MustGetLogger("lsp")
 
+// NewHandler creates a BUILD file language server handler
 func NewHandler() jsonrpc2.Handler {
 	// TODO: need to rethink this
-	return jsonrpc2.HandlerWithError(LsHandler{
+	return handler{jsonrpc2.HandlerWithError((&LsHandler{
 		IsServerDown:false,
-	}.Handle)
+	}).Handle)}
 }
+
+// handler wraps around LsHandler to correctly handler requests in the correct order
+type handler struct {
+	jsonrpc2.Handler
+}
+
 
 type LsHandler struct {
 	init *lsp.InitializeParams
 	mu sync.Mutex
 	conn *jsonrpc2.Conn
-
+	RepoRoot string
 
 	IsServerDown bool
 	SupportedCompletions []lsp.CompletionItemKind
@@ -34,22 +44,19 @@ func (h *LsHandler) Handle (ctx context.Context, conn *jsonrpc2.Conn, request *j
 	}
 	h.conn = conn
 
-	// TODO: Select different methods based on request.Method
-
-	methods := map[string]func(request *jsonrpc2.Request) (result interface{}, err error){
+	methods := map[string]func(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error){
 		"initialize": h.handleInit,
 		"initialzed": h.handleInitialized,
 		"shutdown": h.handleShutDown,
 		"exit": h.handleExit,
-
+		"$/cancelRequest": h.handleCancel,
 	}
 
-	methods[request.Method](request)
-
+	return methods[request.Method](ctx, request)
 
 }
 
-func (h *LsHandler) handleInit(request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
 	if h.init != nil {
 		return nil, errors.New("language server is already initialized")
 	}
@@ -64,6 +71,9 @@ func (h *LsHandler) handleInit(request *jsonrpc2.Request) (result interface{}, e
 
 	// Set the Init state of the handler
 	h.mu.Lock()
+	core.FindRepoRoot()
+
+	h.RepoRoot = core.RepoRoot
 	h.SupportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
 	params.EnsureRoot()
 	h.init = &params
@@ -100,14 +110,16 @@ func (h *LsHandler) handleInit(request *jsonrpc2.Request) (result interface{}, e
 	}, nil
 }
 
-func (h *LsHandler) handleInitialized(request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleInitialized(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
 	if h.init != nil {
 		return nil, nil
 	}
+	// TODO(bnmetrics): Rethink!
+	return nil, nil
 }
 
 
-func (h *LsHandler) handleShutDown(request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleShutDown(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
 	h.mu.Lock()
 	if h.IsServerDown {
 		log.Warning("Server is already down!")
@@ -117,15 +129,24 @@ func (h *LsHandler) handleShutDown(request *jsonrpc2.Request) (result interface{
 	return nil, nil
 }
 
-func (h *LsHandler) handleExit(request *jsonrpc2.Request) (result interface{}, err error) {
-	h.handleShutDown(request)
+func (h *LsHandler) handleExit(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
+	h.handleShutDown(ctx, request)
 	h.conn.Close()
 	return nil, nil
 }
 
-func (h *LsHandler) handleCancel(request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleCancel(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
+	// TODO(bnmetrics): rethink this, I'm probably doing this wrong lol
 	if request.Params == nil {
 		return nil, nil
 	}
 
+	var params lsp.CancelParams
+	if err := json.Unmarshal(*request.Params, &params); err != nil {
+		return nil, nil
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	return nil, nil
 }
