@@ -177,10 +177,9 @@ var opts struct {
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Clean struct {
-		NoBackground bool `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
-		Remote       bool `long:"remote" description:"Clean entire remote cache when no targets are given (default is local only)"`
-		Args         struct {
-			// Inner nesting is necessary to make positional-args work :(
+		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
+		Remote       bool     `long:"remote" description:"Clean entire remote cache when no targets are given (default is local only)"`
+		Args         struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
@@ -595,7 +594,7 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"changed": func() bool {
-		success, state := runBuild(opts.Watch.Args.Targets, false, false)
+		success, state := runBuild(core.WholeGraph, false, false)
 		if !success {
 			return false
 		}
