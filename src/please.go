@@ -596,10 +596,20 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"changed": func() bool {
-		for _, target := range query.ChangedTargetAddresses(query.ChangedRequest{opts.Query.Changed.Since, opts.Query.Changed.DiffSpec, opts.Query.Changed.IncludeDependees}) {
-			fmt.Printf("%s\n", target)
+		success, state := runBuild(opts.Watch.Args.Targets, false, false)
+		if !success {
+			return false
 		}
-		return true;
+		for _, label := range query.ChangedLabels(
+			state,
+			query.ChangedRequest{
+				Since: opts.Query.Changed.Since,
+				DiffSpec: opts.Query.Changed.DiffSpec,
+				IncludeDependees: opts.Query.Changed.IncludeDependees,
+			}) {
+			fmt.Printf("%s\n", label)
+		}
+		return true
 	},
 	"changes": func() bool {
 		// Temporarily set this flag on to avoid fatal errors from the first parse.

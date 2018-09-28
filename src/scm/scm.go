@@ -4,6 +4,7 @@
 package scm
 
 import (
+	"core"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -13,7 +14,6 @@ import (
 )
 
 var log = logging.MustGetLogger("scm")
-var worktree = ""
 
 func CurrentRevIdentifier() string {
 	return "HEAD"
@@ -21,7 +21,7 @@ func CurrentRevIdentifier() string {
 
 func ChangesIn(diffSpec string, relativeTo string) []string {
 	if relativeTo == "" {
-		relativeTo = worktree
+		relativeTo = core.RepoRoot
 	}
 	files := make([]string, 0)
 	command := []string{"diff-tree", "--no-commit-id", "--name-only", "-r", diffSpec }
@@ -38,7 +38,7 @@ func ChangesIn(diffSpec string, relativeTo string) []string {
 
 func ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) []string {
 	if relativeTo == "" {
-		relativeTo = worktree
+		relativeTo = core.RepoRoot
 	}
 	relSuffix := []string{"--", relativeTo}
 	command := []string{"diff", "--name-only", "HEAD"}
@@ -69,7 +69,7 @@ func ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) [
 		untracked := strings.Split(string(out), "\n")
 		files = append(files, untracked...)
 	}
-	// git will report changed files relative to the worktree: re-relativize to relative_to
+	// git will report changed files relative to the worktree: re-relativize to relativeTo
 	normalized := make([]string, 0)
 	for _, f := range files {
 		normalized = append(normalized, FixGitRelativePath(strings.TrimSpace(f), relativeTo))
@@ -78,9 +78,9 @@ func ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) [
 }
 
 func FixGitRelativePath(worktreePath, relativeTo string) string {
-	p, err := filepath.Rel(relativeTo, path.Join(worktree, worktreePath))
+	p, err := filepath.Rel(relativeTo, path.Join(core.RepoRoot, worktreePath))
 	if err != nil {
-		log.Fatalf("unable to determine relative path for %s and %s", worktree, relativeTo)
+		log.Fatalf("unable to determine relative path for %s and %s", core.RepoRoot, relativeTo)
 	}
 	return p
 }
