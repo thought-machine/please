@@ -18,6 +18,7 @@ go_test(
     name = "langserver_test",
     srcs = ["handler_test.go"],
     deps = [
+        ":langserver",
         "//third_party/go:testify",
     ],
 )
