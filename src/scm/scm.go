@@ -1,6 +1,5 @@
 // Package scm abstracts operations on various tools like git
 // Currently, only git
-
 package scm
 
 import (
@@ -15,10 +14,12 @@ import (
 
 var log = logging.MustGetLogger("scm")
 
+// CurrentRevIdentifier returns the string that specifies what the current revision is.
 func CurrentRevIdentifier() string {
 	return "HEAD"
 }
 
+// ChangesIn returns a list of modified files in the given diffSpec.
 func ChangesIn(diffSpec string, relativeTo string) []string {
 	if relativeTo == "" {
 		relativeTo = core.RepoRoot
@@ -31,11 +32,12 @@ func ChangesIn(diffSpec string, relativeTo string) []string {
 	}
 	output := strings.Split(string(out), "\n")
 	for _, o := range output {
-		files = append(files, FixGitRelativePath(strings.TrimSpace(o), relativeTo))
+		files = append(files, fixGitRelativePath(strings.TrimSpace(o), relativeTo))
 	}
 	return files
 }
 
+// ChangedFiles returns a list of modified files since the given commit, optionally including untracked files.
 func ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) []string {
 	if relativeTo == "" {
 		relativeTo = core.RepoRoot
@@ -72,12 +74,12 @@ func ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) [
 	// git will report changed files relative to the worktree: re-relativize to relativeTo
 	normalized := make([]string, 0)
 	for _, f := range files {
-		normalized = append(normalized, FixGitRelativePath(strings.TrimSpace(f), relativeTo))
+		normalized = append(normalized, fixGitRelativePath(strings.TrimSpace(f), relativeTo))
 	}
 	return normalized
 }
 
-func FixGitRelativePath(worktreePath, relativeTo string) string {
+func fixGitRelativePath(worktreePath, relativeTo string) string {
 	p, err := filepath.Rel(relativeTo, path.Join(core.RepoRoot, worktreePath))
 	if err != nil {
 		log.Fatalf("unable to determine relative path for %s and %s", core.RepoRoot, relativeTo)
