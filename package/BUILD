@@ -93,6 +93,7 @@ filegroup(
     name = "tarballs",
     srcs = [
         ":please_tarball",
+        ":please_tarball_xz",
         ":servers_tarball",
     ],
 )

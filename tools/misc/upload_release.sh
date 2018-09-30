@@ -14,7 +14,7 @@ BUCKET="s3://get.please.build"
 VERSION="$(cat VERSION)"
 eval $(go env)
 echo -e "${GREEN}Identifying outputs...${RESET}"
-TARGETS="//package:please_tarball //package:servers_tarball"
+TARGETS="//package:please_tarball //package:please_tarball_xz //package:servers_tarball"
 
 
 if [ "$GOOS" == "linux" ]; then
