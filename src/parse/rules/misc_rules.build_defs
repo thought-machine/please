@@ -366,22 +366,39 @@ def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, 
       visibility (list): Visibility specification.
       labels (list): Labels associated with this rule.
     """
-    out = out or (name + ('.tar.xz' if xzip else '.tar.gz' if gzip else '.tar'))
+    tar_out = out or (name + ('.tar.gz' if gzip else '.tar'))
     cmd = '$TOOL tar '
+    tar_name = name
     if xzip:
-        cmd += ' -x'
+        tar_out = name + '.tar'
+        tar_name = f'_name#tar'
     elif gzip:
         cmd += ' -z'
     if subdir:
         cmd += ' --prefix ' + subdir
 
-    return build_rule(
-        name = name,
+    tar_rule = build_rule(
+        name = tar_name,
         cmd = cmd,
         srcs = srcs,
         tools = [CONFIG.JARCAT_TOOL],
-        outs = [out],
+        outs = [tar_out],
         deps = deps,
+        visibility = visibility,
+        labels = labels + ['tar'],
+        output_is_complete = True,
+        test_only = test_only,
+    )
+    if not xzip:
+        return tar_rule
+    # The golang xzip package produces significantly (20%) larger output than filtering
+    # through xz. At some point we will ditch that when they become closer, but for now
+    # that's a bit hard to swallow so we'll use the command-line version.
+    return build_rule(
+        name = name,
+        srcs = [tar_rule],
+        outs = [out or (name + '.tar.xz')],
+        cmd = 'xz -zc $SRCS > $OUT',
         visibility = visibility,
         labels = labels + ['tar'],
         output_is_complete = True,
