@@ -66,6 +66,7 @@ python_test(
         "cc",
         "clang",
         "gold",
+        "py3_pkg_config",
     ],
     zip_safe = False,
     deps = [

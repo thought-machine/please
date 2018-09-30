@@ -47,19 +47,20 @@ cc_shared_object(
     ],
 )
 
-# Used by Python build code as a convenient way of testing itself.
 python_library(
     name = "so_test_py",
     srcs = ["__init__.py"],
     resources = [":so_test"],
-    visibility = ["//test/python_rules/..."],
     zip_safe = False,
 )
 
 python_test(
     name = "shared_object_test",
     srcs = ["shared_object_test.py"],
-    labels = ["cc"],
+    labels = [
+        "cc",
+        "py3_pkg_config",
+    ],
     zip_safe = False,
     deps = [
         ":so_test",

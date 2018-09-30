@@ -60,7 +60,7 @@ class SoImport(object):
 
     def __init__(self):
         import zipfile
-        
+
         if PY_VERSION < 3:
             self.suffixes = {x[0]: x for x in imp.get_suffixes() if x[2] == imp.C_EXTENSION}
         else:
@@ -168,7 +168,8 @@ def explode_zip():
         # Strip the pex paths so nothing accidentally imports from there.
         sys.path = [PEX_PATH] + [x for x in sys.path if x != PEX]
         yield
-        shutil.rmtree(PEX_PATH)
+        if not os.environ.get('PEX_SAVE_TEMP_DIR'):
+            shutil.rmtree(PEX_PATH)
 
     return _explode_zip
 

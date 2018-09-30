@@ -211,6 +211,7 @@ plz_e2e_test(
     cmd = "plz test -p //test:no_test_run_java wibblewobble",
     expect_output_contains = "1 errored",
     expected_failure = True,
+    labels = ["java"],
 )
 
 # Test re-runs.
@@ -429,6 +430,8 @@ go_binary(
     srcs = ["name_conflict.go"],
 )
 
-# Test that it's not possible to glob the BUILD file at parse time.
-if 'BUILD' in glob(['*']):
-    raise ParseError('should not be able to glob the BUILD file')
+sh_test(
+    name = "glob_build_test",
+    src = "glob_build_test.sh",
+    data = glob(["*"]),
+)

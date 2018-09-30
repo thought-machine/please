@@ -57,7 +57,10 @@ sh_test(
 python_test(
     name = "zip_unsafe_test",
     srcs = ["zip_unsafe_test.py"],
-    labels = ["cc"],  # Depends on cc rules to build
+    labels = [
+        "cc",  # Depends on cc rules to build
+        "py3_pkg_config",  # and pkg-config python3
+    ],
     deps = [
         "//test/cc_rules/gcc:so_test_py",
     ],

@@ -112,6 +112,10 @@ if ! hash python3 2>/dev/null ; then
     warn "python3 not found, excluding python3 tests"
     EXCLUDES="${EXCLUDES} --exclude=py3 --exclude python3"
 fi
+if ! pkg-config python3 2>/dev/null ; then
+    warn "python3 includes not found, excluding py3 API tests"
+    EXCLUDES="${EXCLUDES} --exclude=py3_pkg_config"
+fi
 if ! hash clang++ 2>/dev/null ; then
     warn "Clang not found, excluding Clang tests"
     EXCLUDES="${EXCLUDES} --exclude=clang"
