@@ -12,5 +12,6 @@ go_test(
     deps = [
         ":tar",
         "//third_party/go:testify",
+        "//third_party/go:xz",
     ],
 )

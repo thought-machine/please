@@ -12,16 +12,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ulikunitz/xz"
 )
 
 var testInputs = []string{"tools/jarcat/tar/test_data/dir1", "tools/jarcat/tar/test_data/dir2"}
 
 func TestNoCompression(t *testing.T) {
 	filename := "test_no_compression.tar"
-	err := Write(filename, testInputs, "", false)
+	err := Write(filename, testInputs, "", false, false)
 	require.NoError(t, err)
 
-	m := ReadTar(t, filename, false)
+	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
 		"dir1/file1.txt": "test file 1",
 		"dir2/file2.txt": "test file 2",
@@ -44,10 +45,22 @@ func TestNoCompression(t *testing.T) {
 
 func TestCompression(t *testing.T) {
 	filename := "test_compression.tar.gz"
-	err := Write(filename, testInputs, "", true)
+	err := Write(filename, testInputs, "", true, false)
 	require.NoError(t, err)
 
-	m := ReadTar(t, filename, true)
+	m := ReadTar(t, filename, true, false)
+	assert.EqualValues(t, map[string]string{
+		"dir1/file1.txt": "test file 1",
+		"dir2/file2.txt": "test file 2",
+	}, toFilenameMap(m))
+}
+
+func TestXzipCompression(t *testing.T) {
+	filename := "test_compression.tar.xz"
+	err := Write(filename, testInputs, "", false, true)
+	require.NoError(t, err)
+
+	m := ReadTar(t, filename, false, true)
 	assert.EqualValues(t, map[string]string{
 		"dir1/file1.txt": "test file 1",
 		"dir2/file2.txt": "test file 2",
@@ -56,10 +69,10 @@ func TestCompression(t *testing.T) {
 
 func TestWithPrefix(t *testing.T) {
 	filename := "test_prefix.tar"
-	err := Write(filename, testInputs, "/", false)
+	err := Write(filename, testInputs, "/", false, false)
 	require.NoError(t, err)
 
-	m := ReadTar(t, filename, false)
+	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
 		"/dir1/file1.txt": "test file 1",
 		"/dir2/file2.txt": "test file 2",
@@ -68,10 +81,14 @@ func TestWithPrefix(t *testing.T) {
 
 // ReadTar is a test utility that reads all the files from a tarball and returns a map of
 // their headers -> their contents.
-func ReadTar(t *testing.T, filename string, compress bool) map[*tar.Header]string {
+func ReadTar(t *testing.T, filename string, gzcompress, xzcompress bool) map[*tar.Header]string {
 	f, err := os.Open(filename)
 	require.NoError(t, err)
-	if compress {
+	if xzcompress {
+		r, err := xz.NewReader(f)
+		require.NoError(t, err)
+		return readTar(t, r)
+	} else if gzcompress {
 		r, err := gzip.NewReader(f)
 		require.NoError(t, err)
 		return readTar(t, r)
