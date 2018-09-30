@@ -79,7 +79,8 @@ var opts = struct {
 	} `command:"zip" alias:"z" description:"Writes an output zipfile"`
 
 	Tar struct {
-		Gzip   bool     `short:"z" long:"gzip" description:"Apply gzip compression to the tar file. Only has an effect if --tar is passed."`
+		Gzip   bool     `short:"z" long:"gzip" description:"Apply gzip compression to the tar file."`
+		Xzip   bool     `short:"x" long:"xzip" description:"Apply gzip compression to the tar file."`
 		Out    string   `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
 		Srcs   []string `long:"srcs" env:"SRCS" env-delim:" " description:"Source files for the tarball."`
 		Prefix string   `long:"prefix" description:"Prefix all entries with this directory name."`
@@ -124,7 +125,10 @@ func main() {
 	cli.InitLogging(opts.Verbosity)
 
 	if command == "tar" {
-		if err := tar.Write(opts.Tar.Out, opts.Tar.Srcs, opts.Tar.Prefix, opts.Tar.Gzip); err != nil {
+		if opts.Tar.Xzip && opts.Tar.Gzip {
+			log.Fatalf("Can't pass --xzip and --gzip simultaneously")
+		}
+		if err := tar.Write(opts.Tar.Out, opts.Tar.Srcs, opts.Tar.Prefix, opts.Tar.Gzip, opts.Tar.Xzip); err != nil {
 			log.Fatalf("Error writing tarball: %s\n", err)
 		}
 		os.Exit(0)

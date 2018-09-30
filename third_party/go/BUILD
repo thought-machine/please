@@ -593,3 +593,14 @@ go_get(
     get = "github.com/sourcegraph/jsonrpc2",
     revision = "549eb959f029d014d623104d40ab966d159a92de",
 )
+
+go_get(
+    name = "xz",
+    get = "github.com/ulikunitz/xz",
+    install = [
+        "",
+        "lzma",
+        "internal/...",
+    ],
+    revision = "v0.5.4",
+)

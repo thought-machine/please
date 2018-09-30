@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/ulikunitz/xz"
 )
 
 // mtime is the time we attach for the modification time of all files.
@@ -24,13 +26,20 @@ const nobody = 65534
 // Write writes a tarball to output with all the files found in inputDir.
 // If prefix is given the files are all placed into a single directory with that name.
 // If compress is true the output will be gzip-compressed.
-func Write(output string, srcs []string, prefix string, compress bool) error {
+func Write(output string, srcs []string, prefix string, gzcompress, xzcompress bool) error {
 	f, err := os.Create(output)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	if compress {
+	if xzcompress {
+		w, err := xz.NewWriter(f)
+		if err != nil {
+			return err
+		}
+		defer w.Close()
+		return write(w, output, srcs, prefix)
+	} else if gzcompress {
 		w := gzip.NewWriter(f)
 		defer w.Close()
 		return write(w, output, srcs, prefix)
