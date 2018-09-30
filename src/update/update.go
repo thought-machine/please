@@ -365,7 +365,8 @@ func filterArgs(forceUpdate bool, args []string) []string {
 // shouldUseXZ returns true if attempting to download the given version should use xzip compression.
 func shouldUseXZ(version cli.Version) bool {
 	return !version.LessThan(semver.Version{
-		Major: 13,
-		Minor: 2,
+		Major:      13,
+		Minor:      2,
+		PreRelease: "0", // Less than any valid prerelease string, e.g. alpha1
 	})
 }
