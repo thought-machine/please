@@ -47,6 +47,7 @@ cc_shared_object(
     ],
 )
 
+# Used by Python build code as a convenient way of testing itself.
 python_library(
     name = "so_test_py",
     srcs = ["__init__.py"],
