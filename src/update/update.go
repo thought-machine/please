@@ -12,6 +12,7 @@ package update
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -167,7 +168,7 @@ func downloadPlease(config *core.Configuration, verify bool) {
 	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.%s", url, runtime.GOOS, runtime.GOARCH, config.Please.Version.VersionString(), config.Please.Version.VersionString(), ext)
 	rc := mustDownload(url, true)
 	defer mustClose(rc)
-	var r io.Reader = rc
+	var r io.Reader = bufio.NewReader(rc)
 
 	if verify && config.Please.Version.LessThan(minSignedVersion) {
 		log.Warning("Won't verify signature of download, version is too old to be signed.")
