@@ -4,6 +4,7 @@ go_library(
         ["*.go"],
         exclude = ["*_test.go"],
     ),
+    visibility = ["//tools/build_langserver/..."],
     deps = [
         "//src/core",
         "//src/fs",
@@ -12,7 +13,6 @@ go_library(
         "//third_party/go:logging",
         "//tools/build_langserver/lsp",
     ],
-    visibility = ["//tools/build_langserver/..."],
 )
 
 go_test(
