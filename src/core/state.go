@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -49,6 +50,8 @@ func (t pendingTask) Compare(that queue.Item) int {
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
 	ParseFile(state *BuildState, pkg *Package, filename string) error
+	// ParseReader parses a single BUILD file into the given package.
+	ParseReader(state *BuildState, pkg *Package, reader io.ReadSeeker) error
 	// RunPreBuildFunction runs a pre-build function for a target.
 	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.

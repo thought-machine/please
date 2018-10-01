@@ -5,7 +5,8 @@ genrule(
         "//src/parse/args",
     ],
     outs = ["rule_defs.json"],
-    cmd = "python $SRCS > $OUT",
+    cmd = "$TOOL $SRCS > $OUT",
+    tools = [CONFIG.DEFAULT_PYTHON_INTERPRETER],
 )
 
 # We embed machine-readable information about the rules into the binary.

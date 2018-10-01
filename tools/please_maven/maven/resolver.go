@@ -67,6 +67,9 @@ func (r *Resolver) Pom(a *Artifact) *PomXML {
 // CreatePom returns a pom for an artifact. If a suitable match doesn't exist, a new one
 // will be created. The second return value is true if a new one was created.
 func (r *Resolver) CreatePom(a *Artifact) (*PomXML, bool) {
+	if a.Type == "" {
+		a.Type = "jar"
+	}
 	r.Lock()
 	defer r.Unlock()
 	if pom := r.pom(a); pom != nil {

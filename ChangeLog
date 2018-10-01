@@ -1,3 +1,33 @@
+Version 13.1.8
+--------------
+
+    * Corrected some cases where package() was not honoured correctly.
+
+
+Version 13.1.7
+--------------
+
+    * Correctly check `data` attributes of rules during `plz query changes`.
+
+
+Version 13.1.6
+--------------
+
+    * Fixed some spurious cache warnings.
+
+
+Version 13.1.5
+--------------
+
+    * More robust property expansions in `plz tool maven`.
+
+
+Version 13.1.4
+--------------
+
+    * Fixed python_wheel which in some subtle cases was not honouring `patch` correctly.
+
+
 Version 13.1.3
 --------------
 

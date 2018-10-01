@@ -265,5 +265,5 @@ func TestSubincludeConfig(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
 	s.SetAll(s.interpreter.Subinclude("src/parse/asp/test_data/interpreter/subinclude_config.build"), false)
-	assert.EqualValues(t, "test test", s.LookupConfig().Get("test", None))
+	assert.EqualValues(t, "test test", s.config.Get("test", None))
 }

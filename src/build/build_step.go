@@ -15,12 +15,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/shlex"
 	"github.com/hashicorp/go-multierror"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
 	"fs"
 	"metrics"
+	"worker"
 )
 
 var log = logging.MustGetLogger("build")
@@ -674,4 +676,40 @@ func removeIfSymlink(name string) {
 	if fi, err := os.Lstat(name); err == nil && fi.Mode()&os.ModeSymlink != 0 {
 		os.Remove(name)
 	}
+}
+
+// buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
+// or locally if not.
+func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
+	workerCmd, workerArgs, localCmd := workerCommandAndArgs(state, target)
+	if workerCmd == "" {
+		return runBuildCommand(state, target, localCmd, inputHash)
+	}
+	// The scheme here is pretty minimal; remote workers currently have quite a bit less info than
+	// local ones get. Over time we'll probably evolve it to add more information.
+	opts, err := shlex.Split(workerArgs)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("Sending remote build request for %s to %s; opts %s", target.Label, workerCmd, workerArgs)
+	resp, err := worker.BuildRemotely(state, workerCmd, &worker.Request{
+		Rule:    target.Label.String(),
+		Labels:  target.Labels,
+		TempDir: path.Join(core.RepoRoot, target.TmpDir()),
+		Sources: target.AllSourcePaths(state.Graph),
+		Options: opts,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := strings.Join(resp.Messages, "\n")
+	if !resp.Success {
+		return nil, fmt.Errorf("Error building target %s: %s", target.Label, out)
+	}
+	// Okay, now we might need to do something locally too...
+	if localCmd != "" {
+		out2, err := runBuildCommand(state, target, localCmd, inputHash)
+		return append([]byte(out+"\n"), out2...), err
+	}
+	return []byte(out), nil
 }

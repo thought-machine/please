@@ -63,7 +63,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
 
     # Handle defines being passed as a dict, as a nicety for the user.
     if isinstance(defines, dict):
-        defines = [k if v is None else r'%s=\"%s\"' % (k, v) for k, v in sorted(defines.items())]
+        defines = [k if v is None else f'{k}=\\"{v}\\"' for k, v in sorted(defines.items())]
 
     pkg_name = package_name()
     labels = (['cc:ld:' + flag for flag in linker_flags] +
@@ -237,7 +237,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
     """
     # Handle defines being passed as a dict, as a nicety for the user.
     if isinstance(defines, dict):
-        defines = [k if v is None else r'%s=\"%s\"' % (k, v) for k, v in sorted(defines.items())]
+        defines = [k if v is None else f'{k}=\\"{v}\\"' for k, v in sorted(defines.items())]
 
     pkg = package_name()
     labels = (['cc:ld:' + flag for flag in linker_flags] +
@@ -312,7 +312,7 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
         deps = deps,
         outs = [f'lib{name}.a'],
         cmd = (
-            'for a in `find . -name "*.a"`; do (cd $(dirname $a) && $TOOL x $(basename $a)); done;' +
+            'for a in `find . -name "*.a"`; do (cd $(dirname $a) && $TOOL x $(basename $a)); done;'
             '$TOOL rcs $OUT `find . -name "*.o" | sort`'
         ),
         needs_transitive_deps = True,

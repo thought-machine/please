@@ -125,6 +125,7 @@ type FString struct {
 	Vars []struct {
 		Prefix string // Preceding string bit
 		Var    string // Variable name to interpolate
+		Config string // Config variable to look up
 	}
 	Suffix string // Following string bit
 }

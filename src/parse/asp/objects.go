@@ -521,7 +521,8 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 		return f.callNative(s, c)
 	}
 	s2 := f.scope.NewPackagedScope(s.pkg)
-	s2.Set("CONFIG", s.Lookup("CONFIG")) // This needs to be copied across too :(
+	s2.config = s.config
+	s2.Set("CONFIG", s.config) // This needs to be copied across too :(
 	s2.Callback = s.Callback
 	// Handle implicit 'self' parameter for bound functions.
 	args := c.Arguments
@@ -684,17 +685,14 @@ func (c *pyConfig) Operator(operator Operator, operand pyObject) pyObject {
 	if !ok {
 		panic("config keys must be strings")
 	}
-	v := c.Get(string(s), nil)
 	if operator == In || operator == NotIn {
+		v := c.Get(string(s), nil)
 		if (v != nil) == (operator == In) {
 			return True
 		}
 		return False
 	} else if operator == Index {
-		if v == nil {
-			panic("unknown config key " + s)
-		}
-		return v
+		return c.MustGet(string(s))
 	}
 	panic("Cannot operate on config object")
 }
@@ -729,6 +727,15 @@ func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 		return obj
 	}
 	return fallback
+}
+
+// MustGet implements getting items from the config. If the requested item is not present, it panics.
+func (c *pyConfig) MustGet(key string) pyObject {
+	v := c.Get(key, nil)
+	if v == nil {
+		panic("unknown config key " + key)
+	}
+	return v
 }
 
 // Freeze returns a copy of this config that is frozen for further updates.

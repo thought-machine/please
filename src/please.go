@@ -37,6 +37,7 @@ import (
 	"update"
 	"utils"
 	"watch"
+	"worker"
 )
 
 var log = logging.MustGetLogger("plz")
@@ -338,6 +339,11 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
+		Changed struct {
+			Since            string `long:"since" description:"Calculate changes since this tree-ish/scm ref (defaults to current HEAD/tip)."`
+			DiffSpec         string `long:"diffspec" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc)."`
+			IncludeDependees string `long:"include-dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Include direct or transitive dependees of changed targets."`
+		} `command:"changed" description:"Show changed targets since some diffspec."`
 	} `command:"query" description:"Queries information about the build graph"`
 }
 
@@ -586,6 +592,22 @@ var buildFunctions = map[string]func() bool{
 			parse.PrintRuleArgs(state, state.ExpandOriginalTargets())
 		}
 		return success
+	},
+	"changed": func() bool {
+		success, state := runBuild(core.WholeGraph, false, false)
+		if !success {
+			return false
+		}
+		for _, label := range query.ChangedLabels(
+			state,
+			query.ChangedRequest{
+				Since:            opts.Query.Changed.Since,
+				DiffSpec:         opts.Query.Changed.DiffSpec,
+				IncludeDependees: opts.Query.Changed.IncludeDependees,
+			}) {
+			fmt.Printf("%s\n", label)
+		}
+		return true
 	},
 	"changes": func() bool {
 		// Temporarily set this flag on to avoid fatal errors from the first parse.
@@ -1044,7 +1066,7 @@ func main() {
 
 	if command != "watch" {
 		metrics.Stop()
-		build.StopWorkers()
+		worker.StopAll()
 		success = buildFunctions[command]()
 	} else {
 		runWatchedBuild = func(watchedProcessName string) {
@@ -1053,7 +1075,7 @@ func main() {
 		success = buildFunctions[command]()
 
 		metrics.Stop()
-		build.StopWorkers()
+		worker.StopAll()
 	}
 
 	if !success {

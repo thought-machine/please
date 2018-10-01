@@ -58,12 +58,15 @@ allowlocalfallback = false
 [alias "release"]
 ; You will need to set PLZ_OVERRIDES="buildenv.gpg_password:$PASSWORD" in order for these to work
 ; (and obviously have the gpg key available on the build machine).
-cmd = run //src:please -- -o 'buildconfig.gpg_userid:Please Releases <releases@please.build>' -o 'buildconfig.build_java:true' build //package:signed_tarballs
+cmd = run //src:please -- -o 'buildconfig.gpg_userid:Please Releases <releases@please.build>' -o 'buildconfig.build_java:true' build //package:signed_tarballs //tools/javac_worker:javac-worker
 desc = Builds the tarballs for a new release of Please.
 
 [alias "releasedebs"]
 cmd = run //src:please -- -o 'buildconfig.gpg_userid:Please Releases <releases@please.build>' -o 'buildconfig.build_java:true' build //package:signed_debs
 desc = Builds the .deb packages for a new release of Please.
+
+[provider "go"]
+target = //test/go_provider
 
 [licences]
 accept = MIT

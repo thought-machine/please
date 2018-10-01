@@ -125,12 +125,12 @@ func (i *interpreter) Subinclude(path string) pyDict {
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
 	// Scope needs a local version of CONFIG
-	c := i.scope.LookupConfig().Copy()
-	s.Set("CONFIG", c)
+	s.config = i.scope.config.Copy()
+	s.Set("CONFIG", s.config)
 	i.optimiseExpressions(reflect.ValueOf(stmts))
 	s.interpretStatements(stmts)
 	locals := s.Freeze()
-	if c.overlay == nil {
+	if s.config.overlay == nil {
 		delete(locals, "CONFIG") // Config doesn't have any local modifications
 	}
 	i.mutex.Lock()
@@ -264,14 +264,6 @@ func (s *scope) LocalLookup(name string) pyObject {
 	return s.locals[name]
 }
 
-// LookupConfig returns the currently live config object in this scope.
-func (s *scope) LookupConfig() *pyConfig {
-	c, ok := s.LocalLookup("CONFIG").(*pyConfig)
-	// Ideally we would disallow this kind of thing at parse time.
-	s.Assert(ok, "CONFIG is no longer a config object!")
-	return c
-}
-
 // Set sets the given variable in this scope.
 func (s *scope) Set(name string, value pyObject) {
 	s.locals[name] = value
@@ -285,7 +277,7 @@ func (s *scope) SetAll(d pyDict, publicOnly bool) {
 			// Special case; need to merge config entries rather than overwriting the entire object.
 			c, ok := v.(*pyFrozenConfig)
 			s.Assert(ok, "incoming CONFIG isn't a config object")
-			s.LookupConfig().Merge(c)
+			s.config.Merge(c)
 		} else if !publicOnly || k[0] != '_' {
 			s.locals[k] = v
 		}
@@ -513,7 +505,11 @@ func (s *scope) interpretFString(f *FString) pyObject {
 	var b strings.Builder
 	for _, v := range f.Vars {
 		b.WriteString(v.Prefix)
-		b.WriteString(s.Lookup(v.Var).String())
+		if v.Config != "" {
+			b.WriteString(s.config.MustGet(v.Config).String())
+		} else {
+			b.WriteString(s.Lookup(v.Var).String())
+		}
 	}
 	b.WriteString(f.Suffix)
 	return pyString(b.String())

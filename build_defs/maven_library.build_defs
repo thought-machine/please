@@ -1,0 +1,84 @@
+subinclude('//build_defs:signing')
+
+
+def maven_library(name:str, srcs:list, pom:str, version:str, package_name:str=None,
+                  resources:list=None, deps:list=None, visibility:list=None):
+    """Builds a set of .jar files for uploading to Maven.
+
+    This includes the actual artifact, sources and javadoc .jars, and detached
+    OpenPGP signatures for them. The final output is a .jar bundle that can be uploaded to Maven.
+
+    Args:
+      name: Name of the rule.
+      srcs: Source .java files to compile.
+      pom: pom.xml file describing this library.
+      version: Version of this package
+      package_name: Name of the package (i.e. Maven artifact id)
+      resources: Resources to include in the .jar file.
+      deps: Dependencies
+      visibility: Visibility declaration
+    """
+    package_name = package_name or name
+    full_name = f'{package_name}-{version}'
+    src_rule = build_rule(
+        name = name,
+        tag = 'srcs',
+        srcs = srcs,
+        tools = [CONFIG.JARCAT_TOOL],
+        outs = [full_name + '-sources.jar'],
+        # This is really pushing the limits of things in Bash; probably should have a more real
+        # tool for this.
+        cmd = 'for SRC in $SRCS; do PKG="`grep -o \'package .*;\' $SRC | cut -c 8- | tr -d \';\'`";'
+              'DIR="${PKG//.//}"; mkdir -p $DIR && mv $SRC $DIR; done; $TOOL z -d -n -i .',
+    )
+    src_sig = detached_signature(
+        name = f'_name#src_sig',
+        src = src_rule,
+        out = full_name + '-sources.jar.asc',
+    )
+    java_rule = java_library(
+        name = full_name,
+        srcs = srcs,
+        resources = resources,
+        deps = deps,
+    )
+    java_sig = detached_signature(
+        name = f'_name#jar_sig',
+        src = java_rule,
+        out = full_name + '.jar.asc',
+    )
+    pom_rule = build_rule(
+        name = name,
+        tag = 'pom',
+        srcs = [pom],
+        outs = [full_name + '.pom'],
+        cmd = f'sed -e "s|<version>.*</version>|<version>{version}</version>|g" $SRC > $OUT',
+    )
+    pom_sig = detached_signature(
+        name = f'_name#pom_sig',
+        src = pom_rule,
+        out = full_name + '.pom.asc',
+    )
+    javadoc_rule = build_rule(
+        name = name,
+        tag = 'javadoc',
+        srcs = srcs,
+        outs = [full_name + '-javadoc.jar'],
+        cmd = r'javadoc -d _tmp -classpath .:`find $TMP_DIR -name "*.jar" | tr \\\\n :` $SRCS && cd _tmp && $TOOL z -d -n -i .',
+        tools = [CONFIG.JARCAT_TOOL],
+        deps = deps,
+    )
+    javadoc_sig = detached_signature(
+        name = f'_name#javadoc_sig',
+        src = javadoc_rule,
+        out = full_name + '-javadoc.jar.asc',
+    )
+    return build_rule(
+        name = name,
+        srcs = [src_rule, java_rule, pom_rule, src_sig, java_sig, pom_sig, javadoc_rule, javadoc_sig],
+        outs = [name + '.jar'],
+        cmd = 'cd $PKG_DIR && $TOOL z -d --include_other -i . -n',
+        tools = [CONFIG.JARCAT_TOOL],
+        visibility = visibility,
+        provides = {'java': java_rule},
+    )

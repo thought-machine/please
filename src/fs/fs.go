@@ -69,7 +69,7 @@ func getInode(filename string) (uint64, error) {
 	if !ok {
 		return 0, fmt.Errorf("Not a syscall.Stat_t")
 	}
-	return s.Ino, nil
+	return uint64(s.Ino), nil
 }
 
 // CopyFile copies a file from 'from' to 'to', with an attempt to perform a copy & rename

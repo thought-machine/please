@@ -403,7 +403,7 @@ def decompose(label:str):
         package, _, name = label.partition(':')
         return package.lstrip('/'), name
     else:
-        raise ValueError("%s doesn't look like a build label" % label)
+        raise ValueError(f"{label} doesn't look like a build label")
 
 
 def check_config(key:str, section:str='buildconfig', rule:str='', example:str='...'):
