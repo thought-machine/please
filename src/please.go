@@ -1038,57 +1038,47 @@ func initBuild(args []string) string {
 			log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
 		}()
 	}
-
 	return command
+}
+
+func execute(command string) bool {
+	if opts.Profile != "" {
+		f, err := os.Create(opts.Profile)
+		if err != nil {
+			log.Fatalf("Failed to open profile file: %s", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatalf("could not start profiler: %s", err)
+		}
+		defer f.Close()
+		defer pprof.StopCPUProfile()
+	}
+	if opts.MemProfile != "" {
+		f, err := os.Create(opts.MemProfile)
+		if err != nil {
+			log.Fatalf("Failed to open memory profile file: %s", err)
+		}
+		defer f.Close()
+		defer pprof.WriteHeapProfile(f)
+	}
+
+	if command == "watch" {
+		runWatchedBuild = func(watchedProcessName string) {
+			buildFunctions[watchedProcessName]()
+		}
+	}
+
+	success := buildFunctions[command]()
+
+	metrics.Stop()
+	worker.StopAll()
+
+	return success
 }
 
 func main() {
 	command := initBuild(os.Args)
-
-	var cpuFile *os.File
-	var err error
-
-	if opts.Profile != "" {
-		cpuFile, err = os.Create(opts.Profile)
-		if err != nil {
-			log.Fatalf("Failed to open profile file: %s", err)
-		}
-		if err := pprof.StartCPUProfile(cpuFile); err != nil {
-			log.Fatalf("could not start profiler: %s", err)
-		}
-	}
-
-	var memFile *os.File
-	if opts.MemProfile != "" {
-		memFile, err = os.Create(opts.MemProfile)
-		if err != nil {
-			log.Fatalf("Failed to open memory profile file: %s", err)
-		}
-	}
-	var success bool
-
-	if command != "watch" {
-		metrics.Stop()
-		worker.StopAll()
-		success = buildFunctions[command]()
-	} else {
-		runWatchedBuild = func(watchedProcessName string) {
-			buildFunctions[watchedProcessName]()
-		}
-		success = buildFunctions[command]()
-
-		metrics.Stop()
-		worker.StopAll()
-	}
-
-	if opts.Profile != "" {
-		pprof.StopCPUProfile()
-		cpuFile.Close()
-	}
-	if opts.MemProfile != "" {
-		pprof.WriteHeapProfile(memFile)
-		memFile.Close()
-	}
+	success := execute(command)
 
 	if !success {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.

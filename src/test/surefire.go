@@ -11,7 +11,8 @@ import (
 // CopySurefireXmlFilesToDir copies all the XML test results files into the given directory.
 func CopySurefireXmlFilesToDir(state *core.BuildState, surefireDir string) {
 	outputDirs := make(map[string]struct{})
-	for _, target := range state.Graph.AllTargets() {
+	for _, label := range state.ExpandOriginalLabels() {
+		target := state.Graph.TargetOrDie(label)
 		if state.ShouldInclude(target) && target.IsTest && !target.NoTestOutput {
 			outputDir := target.OutDir()
 			if !core.PathExists(outputDir) {
