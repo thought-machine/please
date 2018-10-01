@@ -23,7 +23,7 @@ type InitializeParams struct {
 	 * the server. Is null if the process has not been started by another process.
 	 * If the parent process is not alive then the server should exit (see exit notification) its process.
 	 */
-	ProcessId int `json:"processId,omitempty"`
+	ProcessID int `json:"processId,omitempty"`
 
 	/**
 	 * @deprecated in favour of rootUri.
@@ -48,7 +48,7 @@ type InitializeParams struct {
 	 */
 	Capabilities ClientCapabilities `json:"capabilities"`
 
-	/** TODO: this probably need to go somewhere in workspace requests methods
+	/**
 	 * The workspace folders configured in the client when the server starts.
 	 * This property is only available if the client supports workspace folders.
 	 * It can be `null` if the client supports workspace folders but none are
@@ -90,6 +90,7 @@ func (p *InitializeParams) EnsureRoot() error {
 	return nil
 }
 
+// InitializeResult is the response server sends to the client from "initialize" method
 type InitializeResult struct {
 	/**
 	 * The capabilities the language server provides.

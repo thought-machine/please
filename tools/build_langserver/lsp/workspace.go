@@ -1,5 +1,6 @@
 package lsp
 
+// WorkspaceEdit epresents changes to many resources managed in the workspace.
 type WorkspaceEdit struct {
 	/**
 	 * Holds changes to existing resources.
@@ -14,6 +15,7 @@ type WorkspaceEdit struct {
 	DocumentChanges []TextDocumentEdit `json:"documentChanges"`
 }
 
+// WorkspaceFolder represents The workspace folders configured in the client when the server starts.
 type WorkspaceFolder struct {
 	/**
 	 * The associated URI for this workspace folder.
@@ -27,8 +29,7 @@ type WorkspaceFolder struct {
 	Name string `json:"name"`
 }
 
-/** TODO(bnm): Not sure if this is needed, have it empty until I think of something
- * Workspace specific client capabilities.
- */
+// WorkspaceClientCapabilities define capabilities the editor / tool provides on the workspace
+//TODO(bnm): Not sure if this is needed, have it empty until I think of something
 type WorkspaceClientCapabilities struct {
 }

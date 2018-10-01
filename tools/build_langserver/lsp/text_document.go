@@ -79,6 +79,8 @@ type TextDocumentItem struct {
 	Text string `json:"text"`
 }
 
+// TextDocumentPositionParams is a parameter literal used in requests to pass a text document
+// and a position inside that document
 type TextDocumentPositionParams struct {
 	/**
 	 * The text document.
@@ -91,12 +93,13 @@ type TextDocumentPositionParams struct {
 	Position Position `json:"position"`
 }
 
+// TextDocumentClientCapabilities define capabilities the editor / tool provides on text documents.
 // TODO: work out if this is being dynamically filled in
 type TextDocumentClientCapabilities struct {
 	Completion Completion `json:"completion, omitempty"`
 }
 
-// Completion
+// Completion is Capabilities specific to the `textDocument/completion`, referenced in TextDocumentClientCapabilities
 type Completion struct {
 	/**
 	 * Whether completion supports dynamic registration.

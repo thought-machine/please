@@ -14,17 +14,17 @@ func TestIsURL(t *testing.T) {
 
 	assert.False(t, IsURL(currentFile))
 
-	documentUri := "file://" + currentFile
-	assert.True(t, IsURL(documentUri))
+	documentURI := "file://" + currentFile
+	assert.True(t, IsURL(documentURI))
 }
 
 func TestGetPathFromURL(t *testing.T) {
 	currentFile, err := getFileinCwd("utils_test.go")
 	assert.Equal(t, err, nil)
-	documentUri := lsp.DocumentURI("file://" + currentFile)
+	documentURI := lsp.DocumentURI("file://" + currentFile)
 
 	// Test GetPathFromURL when documentURI passed in is a URI
-	p, err := GetPathFromURL(documentUri, "file")
+	p, err := GetPathFromURL(documentURI, "file")
 	assert.Equal(t, err, nil)
 	assert.Equal(t, p, string(currentFile))
 

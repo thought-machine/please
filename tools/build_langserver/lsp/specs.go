@@ -1,5 +1,6 @@
 package lsp
 
+// EOL is a list of options for end of line characters
 var EOL = []string{"\n", "\r\n", "\r"}
 
 // DocumentURI is the uri representation of the filepath, usually prefixed with "files://"
@@ -118,7 +119,7 @@ type MarkedString struct {
 	Value    string `json:"value"`
 }
 
-// TODO: not sure this is useful...As I think this has to do with specific languages on the list
 // DocumentFilter denotes a document through properties like language, scheme or pattern.
+// TODO: not sure this is useful...As I think this has to do with specific languages on the list
 type DocumentFilter struct {
 }

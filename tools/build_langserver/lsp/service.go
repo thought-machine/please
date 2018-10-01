@@ -23,8 +23,8 @@ type ServerCapabilities struct {
 	DocumentFormattingProvider bool                  `json:"documentFormattingProvider,omitempty"`
 }
 
-// TODO(bnmetrics): this might not be needed
 // TextDocumentSyncOptions defines the open and close notifications are sent to the server.
+// TODO(bnmetrics): this might not be needed
 type TextDocumentSyncOptions struct {
 	OpenClose        bool                  `json:"openClose"`
 	Change           *TextDocumentSyncKind `json:"change"`
@@ -41,6 +41,7 @@ type SaveOptions struct {
 	IncludeText bool `json:"includeText"`
 }
 
+// CompletionOptions is a list of options server provides for completion support
 type CompletionOptions struct {
 	ResolveProvider   bool     `json:"resolveProvider,omitempty"`
 	TriggerCharacters []string `json:"triggerCharacters,omitempty"`
