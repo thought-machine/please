@@ -6,11 +6,11 @@ go_library(
     ),
     deps = [
         "//src/core",
-        "//src/parse",
         "//src/fs",
-        "//tools/build_langserver/lsp",
+        "//src/parse",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
+        "//tools/build_langserver/lsp",
     ],
 )
 
@@ -29,5 +29,5 @@ go_test(
     deps = [
         ":langserver",
         "//third_party/go:testify",
-    ]
+    ],
 )

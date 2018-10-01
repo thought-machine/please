@@ -32,10 +32,10 @@ type LsHandler struct {
 	init     *lsp.InitializeParams
 	mu       sync.Mutex
 	conn     *jsonrpc2.Conn
-	RepoRoot string
+	repoRoot string
 
 	IsServerDown         bool
-	SupportedCompletions []lsp.CompletionItemKind
+	supportedCompletions []lsp.CompletionItemKind
 }
 
 // Handle function takes care of all the incoming from the client, and returns the correct response
@@ -74,8 +74,8 @@ func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (
 	h.mu.Lock()
 	core.FindRepoRoot()
 
-	h.RepoRoot = core.RepoRoot
-	h.SupportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
+	h.repoRoot = core.RepoRoot
+	h.supportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
 	params.EnsureRoot()
 	h.init = &params
 
