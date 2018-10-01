@@ -1,11 +1,12 @@
 go_binary(
     name = "build_langserver",
-    srcs = ["build_langserver.go"],
+    srcs = ["langserver_main.go"],
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
         "//third_party/go:logging",
         "//tools/build_langserver/langserver",
         "//tools/build_langserver/lsp",
+        "//third_party/go:jsonrpc2",
     ],
 )

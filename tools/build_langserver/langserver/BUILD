@@ -12,6 +12,7 @@ go_library(
         "//third_party/go:logging",
         "//tools/build_langserver/lsp",
     ],
+    visibility = ["//tools/build_langserver/..."],
 )
 
 go_test(
