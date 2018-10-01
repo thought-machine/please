@@ -29,10 +29,12 @@ type handler struct {
 
 // LsHandler is the main handler struct of the language server handler
 type LsHandler struct {
-	init     *lsp.InitializeParams
-	mu       sync.Mutex
-	conn     *jsonrpc2.Conn
-	repoRoot string
+	init     			*lsp.InitializeParams
+	mu       			sync.Mutex
+	conn     			*jsonrpc2.Conn
+
+	repoRoot 			string
+	requestStore 		*requestStore
 
 	IsServerDown         bool
 	supportedCompletions []lsp.CompletionItemKind
@@ -79,7 +81,11 @@ func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (
 	params.EnsureRoot()
 	h.init = &params
 
+	ctx = h.requestStore.Store(ctx, request)
+
 	h.mu.Unlock()
+
+	defer h.requestStore.Cancel(request.ID)
 
 	// Fill in the response results
 	TDsync := lsp.SyncIncremental
