@@ -74,6 +74,8 @@ func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (
 
 	// Set the Init state of the handler
 	h.mu.Lock()
+	// TODO(bnmetrics): Ideas, this could essentially  be a bit fragile.
+	// maybe we can defer until user send a request with first file URL
 	core.FindRepoRoot()
 
 	h.repoRoot = core.RepoRoot

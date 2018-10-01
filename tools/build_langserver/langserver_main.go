@@ -18,7 +18,7 @@ var opts = struct {
 	Usage     string
 	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
 
-	Mode string `short:"m" long:"mode" default:"stdio" description:"Mode of the language server communication (stdio|tcp)"`
+	Mode string `short:"m" long:"mode" default:"stdio" choice:"stdio" choice:"tcp" description:"Mode of the language server communication"`
 	Host string `short:"h" long:"host" default:"127.0.0.20" description:"TCP host to communicate with"`
 	Port string `short:"p" long:"port" default:"4387" description:"TCP port to communicate with"`
 }{
