@@ -135,7 +135,15 @@ func (h *LsHandler) handleExit(ctx context.Context, request *jsonrpc2.Request) (
 }
 
 func (h *LsHandler) handleCancel(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
-	// TODO(bnmetrics): rethink this, I'm probably doing this wrong lol
+	// TODO(bnmetrics): rethink this, Try and do something with the request id
+	/*
+		**comments from Pebers**:
+				Yeah it looks like it will need more complexity -
+				like the server will need to keep a map of request id -> context cancel function,
+				and this function would cancel the appropriate one.
+
+				Tbh sounds like a classic thing we can put off for later :)
+	 */
 	if request.Params == nil {
 		return nil, nil
 	}
