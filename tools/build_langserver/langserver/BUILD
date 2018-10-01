@@ -4,6 +4,7 @@ go_library(
         ["*.go"],
         exclude = ["*_test.go"],
     ),
+    visibility = ["//tools/build_langserver/..."],
     deps = [
         "//src/core",
         "//src/fs",
