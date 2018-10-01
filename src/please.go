@@ -732,7 +732,7 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	os.RemoveAll(string(resultsFile))
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
 	success, state := runBuild(targets, true, true)
-	test.CopySurefireXmlFilesToDir(state.Graph, string(surefireDir))
+	test.CopySurefireXmlFilesToDir(state, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
 	return success, state
 }
@@ -1038,6 +1038,10 @@ func initBuild(args []string) string {
 			log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
 		}()
 	}
+	return command
+}
+
+func execute(command string) bool {
 	if opts.Profile != "" {
 		f, err := os.Create(opts.Profile)
 		if err != nil {
@@ -1046,6 +1050,7 @@ func initBuild(args []string) string {
 		if err := pprof.StartCPUProfile(f); err != nil {
 			log.Fatalf("could not start profiler: %s", err)
 		}
+		defer f.Close()
 		defer pprof.StopCPUProfile()
 	}
 	if opts.MemProfile != "" {
@@ -1057,26 +1062,23 @@ func initBuild(args []string) string {
 		defer pprof.WriteHeapProfile(f)
 	}
 
-	return command
+	if command == "watch" {
+		runWatchedBuild = func(watchedProcessName string) {
+			buildFunctions[watchedProcessName]()
+		}
+	}
+
+	success := buildFunctions[command]()
+
+	metrics.Stop()
+	worker.StopAll()
+
+	return success
 }
 
 func main() {
 	command := initBuild(os.Args)
-	var success bool
-
-	if command != "watch" {
-		metrics.Stop()
-		worker.StopAll()
-		success = buildFunctions[command]()
-	} else {
-		runWatchedBuild = func(watchedProcessName string) {
-			buildFunctions[watchedProcessName]()
-		}
-		success = buildFunctions[command]()
-
-		metrics.Stop()
-		worker.StopAll()
-	}
+	success := execute(command)
 
 	if !success {
 		os.Exit(7) // Something distinctive, is sometimes useful to identify this externally.

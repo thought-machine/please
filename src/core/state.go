@@ -444,7 +444,14 @@ func (state *BuildState) SetTaskNumbers(active, done int64) {
 
 // ExpandOriginalTargets expands any pseudo-targets (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original targets.
+// Deprecated: Callers should use ExpandOriginalLabels instead.
 func (state *BuildState) ExpandOriginalTargets() BuildLabels {
+	return state.ExpandOriginalLabels()
+}
+
+// ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
+// from the set of original labels.
+func (state *BuildState) ExpandOriginalLabels() BuildLabels {
 	ret := BuildLabels{}
 	for _, label := range state.OriginalTargets {
 		if label.IsAllTargets() || label.IsAllSubpackages() {
