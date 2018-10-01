@@ -43,7 +43,6 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 		return "", err
 	}
 
-	core.FindRepoRoot()
 	if strings.HasPrefix(absPath, core.RepoRoot) {
 		pathType = strings.ToLower(pathType)
 		switch pathType {

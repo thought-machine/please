@@ -55,6 +55,7 @@ func TestGetPathFromURLFail(t *testing.T) {
 	p3, err := GetPathFromURL(currentFile, "dir")
 	assert.Equal(t, p3, "")
 	assert.Error(t, err)
+	t.Log(core.RepoRoot)
 }
 
 func TestEnsureURL(t *testing.T) {

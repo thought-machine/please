@@ -3,7 +3,7 @@ LSP
 
 It should work the same way as any of our other tools, such as `jarcat`.
 
-command: plz init-lsp
+command: plz tool lsp
 .. or it should just work on installation/bootstrap of plz
 
 

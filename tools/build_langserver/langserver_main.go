@@ -40,21 +40,16 @@ func main() {
 }
 
 func serve(handler jsonrpc2.Handler) {
-	switch opts.Mode {
-	case "stdio":
-		// TODO(bnmetrics): complete this
-	case "tcp":
+	if opts.Mode == "tcp" {
+		// TODO: tcp stuff
+	} else {
 		log.Info("build_langserver: reading on stdin, writing on stdout")
 
 		<-jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),
 			handler, []jsonrpc2.ConnOpt{}...).DisconnectNotify()
 
 		log.Info("connection closed")
-	default:
-		log.Fatalf("Invalid mode %s, must be either 'tcp' or 'stdio'", opts.Mode)
-		os.Exit(1)
 	}
-
 }
 
 type stdrwc struct{}

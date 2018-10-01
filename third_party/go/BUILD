@@ -588,7 +588,6 @@ go_get(
     revision = "0.11.1",
 )
 
-
 go_get(
     name = "jsonrpc2",
     get = "github.com/sourcegraph/jsonrpc2",

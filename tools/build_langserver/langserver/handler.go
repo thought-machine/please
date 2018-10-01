@@ -17,7 +17,6 @@ var log = logging.MustGetLogger("lsp")
 
 // NewHandler creates a BUILD file language server handler
 func NewHandler() jsonrpc2.Handler {
-	// TODO: need to rethink this
 	return handler{jsonrpc2.HandlerWithError((&LsHandler{
 		IsServerDown: false,
 	}).Handle)}
@@ -125,7 +124,7 @@ func (h *LsHandler) handleShutDown(ctx context.Context, request *jsonrpc2.Reques
 		log.Warning("Server is already down!")
 	}
 	h.IsServerDown = true
-	h.mu.Lock()
+	defer h.mu.Unlock()
 	return nil, nil
 }
 
