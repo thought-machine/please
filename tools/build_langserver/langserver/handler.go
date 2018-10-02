@@ -86,10 +86,8 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	h.init = &params
 
 	// Reset the requestStore, and get sub-context based on request ID
-	reqStore := requestStore{
-		requests: make(map[jsonrpc2.ID]request),
-	}
-	h.requestStore = &reqStore
+	reqStore := NewRequestStore()
+	h.requestStore = reqStore
 	ctx = h.requestStore.Store(ctx, req)
 
 	h.mu.Unlock()
@@ -147,7 +145,7 @@ func (h *LsHandler) handleExit(ctx context.Context, request *jsonrpc2.Request) (
 
 func (h *LsHandler) handleCancel(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
 	// Is there is no param with Id, or if there is no requests stored currently, return nothing
-	if request.Params == nil || len(h.requestStore.requests) == 0 {
+	if request.Params == nil || h.requestStore.IsEmpty() {
 		return nil, nil
 	}
 

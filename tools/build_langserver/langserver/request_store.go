@@ -19,6 +19,21 @@ type request struct {
 	cancel func()
 }
 
+// NewRequestsStore constructs a new requestStore with an empty requests map
+func NewRequestStore() *requestStore {
+	return &requestStore{
+		requests:make(map[jsonrpc2.ID]request),
+	}
+}
+
+// IsEmpty checks if requestStore.requests is empty
+func (rs *requestStore) IsEmpty() bool {
+	if len(rs.requests) == 0  {
+		return true
+	}
+	return false
+}
+
 func (rs *requestStore) Store(ctx context.Context, req *jsonrpc2.Request) context.Context {
 	ctx, cancel := context.WithCancel(ctx)
 
