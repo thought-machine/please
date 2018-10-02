@@ -6,6 +6,10 @@ var EOL = []string{"\n", "\r\n", "\r"}
 // DocumentURI is the uri representation of the filepath, usually prefixed with "files://"
 type DocumentURI string
 
+// RequestCancelled is an error code specific to language server protocol
+// it is been used when the requests returns an error response on cancellation
+const RequestCancelled	int64 = -32800
+
 // Position is the position in a text document expressed as zero-based line and zero-based character offset
 type Position struct {
 	/**

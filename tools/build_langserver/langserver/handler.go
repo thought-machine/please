@@ -5,12 +5,13 @@ import (
 	"core"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
+
 	"tools/build_langserver/lsp"
-	"fmt"
 )
 
 var log = logging.MustGetLogger("lsp")
@@ -29,10 +30,12 @@ type handler struct {
 
 // LsHandler is the main handler struct of the language server handler
 type LsHandler struct {
-	init     *lsp.InitializeParams
-	mu       sync.Mutex
-	conn     *jsonrpc2.Conn
-	repoRoot string
+	init *lsp.InitializeParams
+	mu   sync.Mutex
+	conn *jsonrpc2.Conn
+
+	repoRoot     string
+	requestStore *requestStore
 
 	IsServerDown         bool
 	supportedCompletions []lsp.CompletionItemKind
@@ -57,31 +60,39 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *js
 
 }
 
-func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
 	if h.init != nil {
 		return nil, errors.New("language server is already initialized")
 	}
-	if request.Params == nil {
+	if req.Params == nil {
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 	}
 
 	var params lsp.InitializeParams
-	if err := json.Unmarshal(*request.Params, &params); err != nil {
+	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
 
 	// Set the Init state of the handler
 	h.mu.Lock()
-	// TODO(bnmetrics): Ideas, this could essentially  be a bit fragile.
+	// TODO(bnmetrics): Ideas: this could essentially  be a bit fragile.
 	// maybe we can defer until user send a request with first file URL
 	core.FindRepoRoot()
 
 	h.repoRoot = core.RepoRoot
 	h.supportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
+
 	params.EnsureRoot()
 	h.init = &params
 
+	// Reset the requestStore, and get sub-context based on request ID
+	reqStore := newRequestStore()
+	h.requestStore = reqStore
+	ctx = h.requestStore.Store(ctx, req)
+
 	h.mu.Unlock()
+
+	defer h.requestStore.Cancel(req.ID)
 
 	// Fill in the response results
 	TDsync := lsp.SyncIncremental
@@ -112,15 +123,11 @@ func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (
 	}, nil
 }
 
-func (h *LsHandler) handleInitialized(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
-	if h.init != nil {
-		return nil, nil
-	}
-	// TODO(bnmetrics): Rethink!
+func (h *LsHandler) handleInitialized(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
 	return nil, nil
 }
 
-func (h *LsHandler) handleShutDown(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleShutDown(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
 	h.mu.Lock()
 	if h.IsServerDown {
 		log.Warning("Server is already down!")
@@ -130,32 +137,27 @@ func (h *LsHandler) handleShutDown(ctx context.Context, request *jsonrpc2.Reques
 	return nil, nil
 }
 
-func (h *LsHandler) handleExit(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
-	h.handleShutDown(ctx, request)
+func (h *LsHandler) handleExit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
+	h.handleShutDown(ctx, req)
 	h.conn.Close()
 	return nil, nil
 }
 
-func (h *LsHandler) handleCancel(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
-	// TODO(bnmetrics): rethink this, Try and do something with the request id
-	/*
-		**comments from Pebers**:
-				Yeah it looks like it will need more complexity -
-				like the server will need to keep a map of request id -> context cancel function,
-				and this function would cancel the appropriate one.
-
-				Tbh sounds like a classic thing we can put off for later :)
-	 */
-	if request.Params == nil {
+func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
+	// Is there is no param with Id, or if there is no requests stored currently, return nothing
+	if req.Params == nil || h.requestStore.IsEmpty() {
 		return nil, nil
 	}
 
 	var params lsp.CancelParams
-	if err := json.Unmarshal(*request.Params, &params); err != nil {
-		return nil, nil
+	if err := json.Unmarshal(*req.Params, &params); err != nil {
+		return nil, &jsonrpc2.Error{
+			Code:    lsp.RequestCancelled,
+			Message: fmt.Sprintf("Cancellation of request(id: %s) failed", req.ID),
+		}
 	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+
+	h.requestStore.Cancel(params.ID)
 
 	return nil, nil
 }
