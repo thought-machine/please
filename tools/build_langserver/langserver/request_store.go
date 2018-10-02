@@ -19,8 +19,8 @@ type request struct {
 	cancel func()
 }
 
-// NewRequestsStore constructs a new requestStore with an empty requests map
-func NewRequestStore() *requestStore {
+// newRequestStore constructs a new requestStore with an empty requests map
+func newRequestStore() *requestStore {
 	return &requestStore{
 		requests:make(map[jsonrpc2.ID]request),
 	}
@@ -34,6 +34,8 @@ func (rs *requestStore) IsEmpty() bool {
 	return false
 }
 
+// Store method takes a context and request object and stores the request.ID and cancellation function
+// into requestStore.requests
 func (rs *requestStore) Store(ctx context.Context, req *jsonrpc2.Request) context.Context {
 	ctx, cancel := context.WithCancel(ctx)
 
