@@ -7,10 +7,10 @@ import (
 	"errors"
 	"sync"
 
+	"fmt"
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
 	"tools/build_langserver/lsp"
-	"fmt"
 )
 
 var log = logging.MustGetLogger("lsp")
@@ -29,12 +29,12 @@ type handler struct {
 
 // LsHandler is the main handler struct of the language server handler
 type LsHandler struct {
-	init     			*lsp.InitializeParams
-	mu       			sync.Mutex
-	conn     			*jsonrpc2.Conn
+	init *lsp.InitializeParams
+	mu   sync.Mutex
+	conn *jsonrpc2.Conn
 
-	repoRoot 			string
-	requestStore 		*requestStore
+	repoRoot     string
+	requestStore *requestStore
 
 	IsServerDown         bool
 	supportedCompletions []lsp.CompletionItemKind
@@ -153,7 +153,7 @@ func (h *LsHandler) handleCancel(ctx context.Context, request *jsonrpc2.Request)
 	var params lsp.CancelParams
 	if err := json.Unmarshal(*request.Params, &params); err != nil {
 		return nil, &jsonrpc2.Error{
-			Code: lsp.RequestCancelled,
+			Code:    lsp.RequestCancelled,
 			Message: fmt.Sprintf("Cancellation of request(id: %s) failed", request.ID),
 		}
 	}
