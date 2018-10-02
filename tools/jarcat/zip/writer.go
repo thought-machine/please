@@ -322,7 +322,7 @@ func (f *File) AddInitPyFiles() error {
 				break
 			} else if _, present := f.files[initPyPath+"o"]; present {
 				break
-			} else if _, present := f.files[d + ".py"]; present {
+			} else if _, present := f.files[d+".py"]; present {
 				break
 			} else if _, present := sos[d]; present {
 				break

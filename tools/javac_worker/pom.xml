@@ -9,6 +9,17 @@
   <description>Persistent worker process for Please running a Java compiler.</description>
   <url>https://please.build</url>
 
+  <developers>
+    <developer>
+      <id>peterebden</id>
+      <name>Peter Ebden</name>
+      <email>peter.ebden@gmail.com</email>
+      <organization>Thought Machine</organization>
+      <organizationUrl>https://www.thoughtmachine.net</organizationUrl>
+      <timezone>Europe/London</timezone>
+    </developer>
+  </developers>
+
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>

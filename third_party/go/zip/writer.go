@@ -205,7 +205,9 @@ func (w *Writer) CreateHeader(fh *FileHeader) (io.Writer, error) {
 	if comp == nil {
 		return nil, ErrAlgorithm
 	}
-	fh.Flags |= dataDescriptorFlag // we will write a data descriptor
+	if fh.Method != Store {
+		fh.Flags |= dataDescriptorFlag // we will write a data descriptor
+	}
 	return w.CreateHeaderWithCompressor(fh, comp, crc32.NewIEEE())
 }
 
