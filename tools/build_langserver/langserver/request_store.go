@@ -2,23 +2,25 @@ package langserver
 
 import (
 	"context"
-	"github.com/sourcegraph/jsonrpc2"
 	"sync"
+
+	"github.com/sourcegraph/jsonrpc2"
 )
 
 type requestStore struct {
-	mu sync.Mutex
+	mu       sync.Mutex
 	requests map[jsonrpc2.ID]request
 }
 
 // Perhaps later we can store more things in the request we might want to use
 type request struct {
-	id 	   string
+	id     string
 	cancel func()
 }
 
 func (rs *requestStore) Store(ctx context.Context, req *jsonrpc2.Request) context.Context {
 	ctx, cancel := context.WithCancel(ctx)
+
 	rs.mu.Lock()
 	if rs.requests == nil {
 		rs.requests = make(map[jsonrpc2.ID]request)
@@ -26,10 +28,9 @@ func (rs *requestStore) Store(ctx context.Context, req *jsonrpc2.Request) contex
 	rs.mu.Unlock()
 
 	rs.mu.Lock()
-
 	// Cancellation function definition,
 	// calling both cancel and delete id from the requests map
-	cancelFunc := func () {
+	cancelFunc := func() {
 		rs.mu.Lock()
 		cancel()
 		delete(rs.requests, req.ID)
@@ -37,7 +38,7 @@ func (rs *requestStore) Store(ctx context.Context, req *jsonrpc2.Request) contex
 	}
 
 	rs.requests[req.ID] = request{
-		id: req.ID.String(),
+		id:     req.ID.String(),
 		cancel: cancelFunc,
 	}
 
@@ -47,12 +48,10 @@ func (rs *requestStore) Store(ctx context.Context, req *jsonrpc2.Request) contex
 	return ctx
 }
 
-
+// Cancel method removes the id from the requests map and calls cancel function of the request
 func (rs *requestStore) Cancel(id jsonrpc2.ID) {
-	rs.mu.Lock()
 	if rs.requests != nil {
 		req := rs.requests[id]
 		req.cancel()
 	}
-	rs.mu.Unlock()
 }

@@ -74,15 +74,17 @@ func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (
 
 	// Set the Init state of the handler
 	h.mu.Lock()
-	// TODO(bnmetrics): Ideas, this could essentially  be a bit fragile.
+	// TODO(bnmetrics): Ideas: this could essentially  be a bit fragile.
 	// maybe we can defer until user send a request with first file URL
 	core.FindRepoRoot()
 
 	h.repoRoot = core.RepoRoot
 	h.supportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
+
 	params.EnsureRoot()
 	h.init = &params
 
+	// Get sub-context based on request ID
 	ctx = h.requestStore.Store(ctx, request)
 
 	h.mu.Unlock()
@@ -119,10 +121,6 @@ func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (
 }
 
 func (h *LsHandler) handleInitialized(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
-	if h.init != nil {
-		return nil, nil
-	}
-	// TODO(bnmetrics): Rethink!
 	return nil, nil
 }
 
@@ -143,25 +141,24 @@ func (h *LsHandler) handleExit(ctx context.Context, request *jsonrpc2.Request) (
 }
 
 func (h *LsHandler) handleCancel(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
-	// TODO(bnmetrics): rethink this, Try and do something with the request id
-	/*
-		**comments from Pebers**:
-				Yeah it looks like it will need more complexity -
-				like the server will need to keep a map of request id -> context cancel function,
-				and this function would cancel the appropriate one.
-
-				Tbh sounds like a classic thing we can put off for later :)
-	 */
-	if request.Params == nil {
+	// Is there is no param with Id, or if there is no requests stored currently, return nothing
+	if request.Params == nil || h.requestStore.requests == nil {
 		return nil, nil
 	}
 
 	var params lsp.CancelParams
 	if err := json.Unmarshal(*request.Params, &params); err != nil {
-		return nil, nil
+		return nil, &jsonrpc2.Error{
+			Code: lsp.RequestCancelled,
+			Message: fmt.Sprintf("Cancellation of request(id: %s) failed", request.ID.String()),
+		}
 	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+
+	defer h.requestStore.Cancel(jsonrpc2.ID{
+		Num: params.ID.Num,
+		Str: params.ID.Str,
+		IsString: params.ID.IsString,
+	})
 
 	return nil, nil
 }
