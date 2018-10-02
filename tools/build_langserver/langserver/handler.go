@@ -5,11 +5,12 @@ import (
 	"core"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 
-	"fmt"
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
+
 	"tools/build_langserver/lsp"
 )
 
