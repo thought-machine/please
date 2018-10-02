@@ -147,7 +147,7 @@ func (h *LsHandler) handleExit(ctx context.Context, request *jsonrpc2.Request) (
 
 func (h *LsHandler) handleCancel(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
 	// Is there is no param with Id, or if there is no requests stored currently, return nothing
-	if request.Params == nil || h.requestStore.requests == nil {
+	if request.Params == nil || len(h.requestStore.requests) == 0 {
 		return nil, nil
 	}
 
