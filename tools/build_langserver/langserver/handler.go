@@ -84,7 +84,9 @@ func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (
 	params.EnsureRoot()
 	h.init = &params
 
-	// Get sub-context based on request ID
+	// Reset the requestStore, and get sub-context based on request ID
+	var reqStore requestStore
+	h.requestStore = &reqStore
 	ctx = h.requestStore.Store(ctx, request)
 
 	h.mu.Unlock()
