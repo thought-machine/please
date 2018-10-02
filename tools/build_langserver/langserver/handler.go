@@ -59,16 +59,16 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *js
 
 }
 
-func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
 	if h.init != nil {
 		return nil, errors.New("language server is already initialized")
 	}
-	if request.Params == nil {
+	if req.Params == nil {
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 	}
 
 	var params lsp.InitializeParams
-	if err := json.Unmarshal(*request.Params, &params); err != nil {
+	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
 
@@ -85,13 +85,15 @@ func (h *LsHandler) handleInit(ctx context.Context, request *jsonrpc2.Request) (
 	h.init = &params
 
 	// Reset the requestStore, and get sub-context based on request ID
-	var reqStore requestStore
+	reqStore := requestStore{
+		requests: make(map[jsonrpc2.ID]request),
+	}
 	h.requestStore = &reqStore
-	ctx = h.requestStore.Store(ctx, request)
+	ctx = h.requestStore.Store(ctx, req)
 
 	h.mu.Unlock()
 
-	defer h.requestStore.Cancel(request.ID)
+	defer h.requestStore.Cancel(req.ID)
 
 	// Fill in the response results
 	TDsync := lsp.SyncIncremental
@@ -152,15 +154,11 @@ func (h *LsHandler) handleCancel(ctx context.Context, request *jsonrpc2.Request)
 	if err := json.Unmarshal(*request.Params, &params); err != nil {
 		return nil, &jsonrpc2.Error{
 			Code: lsp.RequestCancelled,
-			Message: fmt.Sprintf("Cancellation of request(id: %s) failed", request.ID.String()),
+			Message: fmt.Sprintf("Cancellation of request(id: %s) failed", request.ID),
 		}
 	}
 
-	defer h.requestStore.Cancel(jsonrpc2.ID{
-		Num: params.ID.Num,
-		Str: params.ID.Str,
-		IsString: params.ID.IsString,
-	})
+	h.requestStore.Cancel(params.ID)
 
 	return nil, nil
 }
