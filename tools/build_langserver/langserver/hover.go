@@ -10,13 +10,13 @@ import (
 
 const hoverMethod = "textDocument/hover"
 
-func (h *LsHandler) handleHover(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
-	if request.Params == nil {
+func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
+	if req.Params == nil {
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 	}
 
 	var params lsp.TextDocumentPositionParams
-	if err := json.Unmarshal(*request.Params, &params); err != nil {
+	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
 	documentURI, err := EnsureURL(params.TextDocument.URL, "file")

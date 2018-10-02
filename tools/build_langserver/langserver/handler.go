@@ -123,11 +123,11 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	}, nil
 }
 
-func (h *LsHandler) handleInitialized(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleInitialized(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
 	return nil, nil
 }
 
-func (h *LsHandler) handleShutDown(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleShutDown(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
 	h.mu.Lock()
 	if h.IsServerDown {
 		log.Warning("Server is already down!")
@@ -137,23 +137,23 @@ func (h *LsHandler) handleShutDown(ctx context.Context, request *jsonrpc2.Reques
 	return nil, nil
 }
 
-func (h *LsHandler) handleExit(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
-	h.handleShutDown(ctx, request)
+func (h *LsHandler) handleExit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
+	h.handleShutDown(ctx, req)
 	h.conn.Close()
 	return nil, nil
 }
 
-func (h *LsHandler) handleCancel(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
 	// Is there is no param with Id, or if there is no requests stored currently, return nothing
-	if request.Params == nil || h.requestStore.IsEmpty() {
+	if req.Params == nil || h.requestStore.IsEmpty() {
 		return nil, nil
 	}
 
 	var params lsp.CancelParams
-	if err := json.Unmarshal(*request.Params, &params); err != nil {
+	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, &jsonrpc2.Error{
 			Code:    lsp.RequestCancelled,
-			Message: fmt.Sprintf("Cancellation of request(id: %s) failed", request.ID),
+			Message: fmt.Sprintf("Cancellation of request(id: %s) failed", req.ID),
 		}
 	}
 
