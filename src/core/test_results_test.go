@@ -123,3 +123,17 @@ func TestAdd(t *testing.T) {
 
 	assert.Equal(t, &duration20, success.Duration)
 }
+
+func TestOrderedFiles(t *testing.T) {
+	cov := NewTestCoverage()
+	cov.Files["common/python/async_unblock.py"] = nil
+	cov.Files["common/python/aws/ses.py"] = nil
+	cov.Files["common/python/aws/s3.py"] = nil
+	cov.Files["common/python/boto.py"] = nil
+	assert.Equal(t, []string{
+		"common/python/async_unblock.py",
+		"common/python/boto.py",
+		"common/python/aws/s3.py",
+		"common/python/aws/ses.py",
+	}, cov.OrderedFiles())
+}

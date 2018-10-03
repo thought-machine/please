@@ -96,7 +96,7 @@ func main() {
 		}
 	}
 
-	state := core.NewBuildState(opts.NumThreads, nil, opts.Verbosity, config)
+	state := core.NewBuildState(opts.NumThreads, nil, int(opts.Verbosity), config)
 	if opts.BuildDefsDir != "" {
 		mustLoadBuildDefsDir(state, opts.BuildDefsDir)
 	}

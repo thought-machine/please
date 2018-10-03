@@ -299,6 +299,7 @@ func MergeCoverageLines(existing, coverage []LineCoverage) []LineCoverage {
 }
 
 // OrderedFiles returns an ordered slice of all the files we have coverage information for.
+// Note that files are ordered non-trivially such that each directory remains together.
 func (coverage *TestCoverage) OrderedFiles() []string {
 	var files []string
 	for file := range coverage.Files {
@@ -307,7 +308,16 @@ func (coverage *TestCoverage) OrderedFiles() []string {
 		}
 		files = append(files, file)
 	}
-	sort.Strings(files)
+	sort.Slice(files, func(i, j int) bool {
+		ci := strings.Count(files[i], "/")
+		cj := strings.Count(files[j], "/")
+		if ci < cj {
+			return true
+		} else if ci > cj {
+			return false
+		}
+		return files[i] < files[j]
+	})
 	return files
 }
 
