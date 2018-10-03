@@ -52,7 +52,7 @@ def maven_library(name:str, srcs:list, pom:str, version:str, package_name:str=No
         tag = 'pom',
         srcs = [pom],
         outs = [full_name + '.pom'],
-        cmd = f'sed -e "s|<version>.*</version>|<version>{version}</version>|g" $SRC > $OUT',
+        cmd = f'sed -e "s|<version>__VERSION__</version>|<version>{version}</version>|g" $SRC > $OUT',
     )
     pom_sig = detached_signature(
         name = f'_name#pom_sig',
