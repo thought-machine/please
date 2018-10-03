@@ -10,7 +10,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"cli"
@@ -28,6 +31,7 @@ var opts = struct {
 	BuildRules   bool          `short:"b" long:"build_rules" description:"Print individual maven_jar build rules for each artifact"`
 	NumThreads   int           `short:"n" long:"num_threads" default:"10" description:"Number of concurrent fetches to perform"`
 	LicenceOnly  bool          `short:"l" long:"licence_only" description:"Fetch only the licence of the given package from Maven"`
+	Graph        string        `short:"g" long:"graph" description:"Graph file, as exported from plz query graph. If given then existing dependencies in it will be integrated when using --build_rules."`
 	Args         struct {
 		Artifacts []maven.Artifact `positional-arg-name:"ids" required:"yes" description:"Maven IDs to fetch (e.g. io.grpc:grpc-all:1.4.0)"`
 	} `positional-args:"yes" required:"yes"`
@@ -52,6 +56,28 @@ rule to make adding dependencies easier.
 `,
 }
 
+func loadGraph(filename string) *maven.Graph {
+	if filename == "" {
+		return &maven.Graph{}
+	} else if filename == "-" {
+		return decodeGraph(os.Stdin) // Read from stdin.
+	}
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	return decodeGraph(f)
+}
+
+func decodeGraph(r io.Reader) *maven.Graph {
+	g := &maven.Graph{}
+	if err := json.NewDecoder(r).Decode(g); err != nil {
+		panic(err)
+	}
+	return g
+}
+
 func main() {
 	cli.ParseFlagsOrDie("please_maven", "9.0.3", &opts)
 	cli.InitLogging(opts.Verbosity)
@@ -66,6 +92,6 @@ func main() {
 			}
 		}
 	} else {
-		fmt.Println(strings.Join(maven.AllDependencies(f, opts.Args.Artifacts, opts.NumThreads, opts.Indent, opts.BuildRules), "\n"))
+		fmt.Println(strings.Join(maven.AllDependencies(f, opts.Args.Artifacts, opts.NumThreads, opts.Indent, opts.BuildRules, loadGraph(opts.Graph)), "\n"))
 	}
 }

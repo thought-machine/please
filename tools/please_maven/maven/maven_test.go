@@ -63,7 +63,7 @@ func TestAllDependenciesGRPC(t *testing.T) {
 		"com.google.protobuf.nano:protobuf-javanano:3.0.0-alpha-5:src:New BSD license",
 		"io.grpc:grpc-stub:1.1.2:src:BSD 3-Clause",
 	}
-	actual := AllDependencies(f, grpc, concurrency, false, false)
+	actual := AllDependencies(f, grpc, concurrency, false, false, &Graph{})
 	assert.Equal(t, expected, actual)
 }
 
@@ -102,7 +102,7 @@ func TestAllDependenciesGRPCWithIndent(t *testing.T) {
 		"  com.google.protobuf.nano:protobuf-javanano:3.0.0-alpha-5:src:New BSD license",
 		"io.grpc:grpc-stub:1.1.2:src:BSD 3-Clause",
 	}
-	actual := AllDependencies(f, grpc, concurrency, true, false)
+	actual := AllDependencies(f, grpc, concurrency, true, false, &Graph{})
 	assert.Equal(t, expected, actual)
 }
 
@@ -124,7 +124,7 @@ func TestAllDependenciesErrorProne(t *testing.T) {
 		"com.google.auto:auto-common:0.7:src:Apache 2.0",
 		"com.google.code.findbugs:jFormatString:3.0.0:src:GNU Lesser Public License",
 	}
-	actual := AllDependencies(f, errorProne, concurrency, false, false)
+	actual := AllDependencies(f, errorProne, concurrency, false, false, &Graph{})
 	assert.Equal(t, expected, actual)
 }
 
@@ -146,7 +146,7 @@ func TestAllDependenciesErrorProneWithIndent(t *testing.T) {
 		"com.google.auto:auto-common:0.7:src:Apache 2.0",
 		"com.google.code.findbugs:jFormatString:3.0.0:src:GNU Lesser Public License",
 	}
-	actual := AllDependencies(f, errorProne, concurrency, true, false)
+	actual := AllDependencies(f, errorProne, concurrency, true, false, &Graph{})
 	assert.Equal(t, expected, actual)
 }
 
@@ -197,7 +197,7 @@ func TestAllDependenciesTogether(t *testing.T) {
 		"io.grpc:grpc-stub:1.1.2:src:BSD 3-Clause",
 	}
 	both := append(errorProne, grpc...)
-	actual := AllDependencies(f, both, concurrency, false, false)
+	actual := AllDependencies(f, both, concurrency, false, false, &Graph{})
 	assert.Equal(t, expected, actual)
 }
 
@@ -324,7 +324,7 @@ maven_jar(
     ],
 )`
 	f := NewFetch([]string{server.URL}, nil, nil)
-	actual := AllDependencies(f, errorProne, concurrency, false, true)
+	actual := AllDependencies(f, errorProne, concurrency, false, true, &Graph{})
 	// The rules come out in a different order to the original tool; this doesn't
 	// really matter since order of rules in a BUILD file is unimportant.
 	expectedSlice := strings.Split(expected, "\n\n")
@@ -636,7 +636,133 @@ maven_jar(
     ],
 )`
 	f := NewFetch([]string{server.URL}, excludes, nil)
-	actual := AllDependencies(f, grpc, concurrency, false, true)
+	actual := AllDependencies(f, grpc, concurrency, false, true, &Graph{})
+	// The rules come out in a different order to the original tool; this doesn't
+	// really matter since order of rules in a BUILD file is unimportant.
+	expectedSlice := strings.Split(expected, "\n\n")
+	sort.Strings(actual)
+	sort.Strings(expectedSlice)
+	assert.Equal(t, expectedSlice, actual)
+}
+
+func TestBuildRulesErrorProneWithGraph(t *testing.T) {
+	const expected = `maven_jar(
+    name = 'error_prone_annotations',
+    id = 'com.google.errorprone:error_prone_annotations:2.0.14',
+    hash = '',
+)
+
+maven_jar(
+    name = 'javacutil',
+    id = 'org.checkerframework:javacutil:1.8.10',
+    hash = '',
+)
+
+maven_jar(
+    name = 'dataflow',
+    id = 'org.checkerframework:dataflow:1.8.10',
+    hash = '',
+    deps = [
+        ':javacutil',
+    ],
+)
+
+maven_jar(
+    name = 'javac',
+    id = 'com.google.errorprone:javac:1.9.0-dev-r2973-2',
+    hash = '',
+)
+
+maven_jar(
+    name = 'diffutils',
+    id = 'com.googlecode.java-diff-utils:diffutils:1.3.0',
+    hash = '',
+)
+
+maven_jar(
+    name = 'error_prone_check_api',
+    id = 'com.google.errorprone:error_prone_check_api:2.0.14',
+    hash = '',
+    deps = [
+        '//third_party/java:error_prone_annotation',
+        '//third_party/java:jsr305',
+        ':dataflow',
+        ':javac',
+        ':diffutils',
+        '//third_party/java:auto-value',
+        ':error_prone_annotations',
+    ],
+)
+
+maven_jar(
+    name = 'jcip-annotations',
+    id = 'com.github.stephenc.jcip:jcip-annotations:1.0-1',
+    hash = '',
+)
+
+maven_jar(
+    name = 'pcollections',
+    id = 'org.pcollections:pcollections:2.1.2',
+    hash = '',
+)
+
+maven_jar(
+    name = 'auto-common',
+    id = 'com.google.auto:auto-common:0.7',
+    hash = '',
+    deps = [
+        '//third_party/java:guava',
+    ],
+)
+
+maven_jar(
+    name = 'jFormatString',
+    id = 'com.google.code.findbugs:jFormatString:3.0.0',
+    hash = '',
+)
+
+maven_jar(
+    name = 'error_prone_core',
+    id = 'com.google.errorprone:error_prone_core:2.0.14',
+    hash = '',
+    deps = [
+        '//third_party/java:error_prone_annotation',
+        ':error_prone_check_api',
+        ':jcip-annotations',
+        ':pcollections',
+        '//third_party/java:guava',
+        ':auto-common',
+        ':jFormatString',
+        '//third_party/java:jsr305',
+        ':dataflow',
+        ':javac',
+        '//third_party/java:auto-value',
+        ':error_prone_annotations',
+    ],
+)`
+	g := &Graph{
+		Packages: map[string]pkg{
+			"third_party/java": pkg{
+				Targets: map[string]target{
+					"guava": target{
+						Labels: []string{"mvn:com.google.guava:guava:19.0"},
+					},
+					"error_prone_annotation": target{
+						Labels: []string{"mvn:com.google.errorprone:error_prone_annotation:2.0.14"},
+					},
+					"jsr305": target{
+						Labels: []string{"mvn:com.google.code.findbugs:jsr305:3.0.0"},
+					},
+					"auto-value": target{
+						Labels: []string{"mvn:com.google.auto.value:auto-value:1.1"},
+					},
+				},
+			},
+		},
+	}
+
+	f := NewFetch([]string{server.URL}, nil, nil)
+	actual := AllDependencies(f, errorProne, concurrency, false, true, g)
 	// The rules come out in a different order to the original tool; this doesn't
 	// really matter since order of rules in a BUILD file is unimportant.
 	expectedSlice := strings.Split(expected, "\n\n")
@@ -646,7 +772,7 @@ maven_jar(
 }
 
 func TestMain(m *testing.M) {
-	cli.InitLogging(1) // Suppress informational messages which there can be an awful lot of
+	cli.InitLogging(4) // Suppress informational messages which there can be an awful lot of
 	errorProne = []Artifact{{}}
 	grpc = []Artifact{{}}
 	errorProne[0].FromID("com.google.errorprone:error_prone_core:2.0.14")

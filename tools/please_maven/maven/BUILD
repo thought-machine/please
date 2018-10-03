@@ -2,6 +2,7 @@ go_library(
     name = "maven",
     srcs = [
         "fetch.go",
+        "graph.go",
         "pom.go",
         "print.go",
         "resolver.go",
