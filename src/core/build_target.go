@@ -286,6 +286,16 @@ func (target *BuildTarget) TestDir() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
 }
 
+// TestResultsFile returns the output results file for tests for this target.
+func (target *BuildTarget) TestResultsFile() string {
+	return path.Join(target.OutDir(), ".test_results_"+target.Label.Name)
+}
+
+// CoverageFile returns the output coverage file for tests for this target.
+func (target *BuildTarget) CoverageFile() string {
+	return path.Join(target.OutDir(), ".test_coverage_"+target.Label.Name)
+}
+
 // AllSourcePaths returns all the source paths for this target
 func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
 	return target.allSourcePaths(graph, BuildInput.Paths)

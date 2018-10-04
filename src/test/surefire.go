@@ -10,22 +10,10 @@ import (
 
 // CopySurefireXmlFilesToDir copies all the XML test results files into the given directory.
 func CopySurefireXmlFilesToDir(state *core.BuildState, surefireDir string) {
-	outputDirs := make(map[string]struct{})
 	for _, label := range state.ExpandOriginalLabels() {
 		target := state.Graph.TargetOrDie(label)
 		if state.ShouldInclude(target) && target.IsTest && !target.NoTestOutput {
-			outputDir := target.OutDir()
-			if !core.PathExists(outputDir) {
-				// Unable to find tests
-				continue
-			}
-			outputDirs[outputDir] = struct{}{}
-		}
-	}
-
-	for outputDir := range outputDirs {
-		fs.Walk(outputDir, func(path string, isDir bool) error {
-			if !isDir {
+			if path := target.TestResultsFile(); fs.PathExists(path) {
 				bytes, _ := ioutil.ReadFile(path)
 				if looksLikeJUnitXMLTestResults(bytes) {
 					surefireResult := filepath.Join(surefireDir, filepath.Base(path))
@@ -34,7 +22,6 @@ func CopySurefireXmlFilesToDir(state *core.BuildState, surefireDir string) {
 					}
 				}
 			}
-			return nil
-		})
+		}
 	}
 }
