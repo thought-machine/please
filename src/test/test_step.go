@@ -114,11 +114,14 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if target.State() == core.Unchanged && core.PathExists(cachedOutputFile) {
 			// Output file exists already and appears to be valid. We might still need to rerun though
 			// if the coverage files aren't available.
-			if needCoverage && !core.PathExists(cachedCoverageFile) {
-				log.Debug("Rerunning %s, coverage file doesn't exist", target.Label)
+			if needCoverage && !verifyHash(cachedCoverageFile, hash) {
+				log.Debug("Rerunning %s, coverage file doesn't exist or has wrong hash", target.Label)
+				return true
+			} else if !verifyHash(cachedOutputFile, hash) {
+				log.Debug("Rerunning %s, results file has incorrect hash", target.Label)
 				return true
 			}
-			return verifyHash(cachedOutputFile, hash) && (!needCoverage || verifyHash(cachedCoverageFile, hash))
+			return false
 		}
 		log.Debug("Output file %s does not exist for %s", cachedOutputFile, target.Label)
 		// Check the cache for these artifacts.
