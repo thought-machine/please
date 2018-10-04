@@ -37,11 +37,11 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 	}
 
 	return &lsp.Hover{
-		Contents: content,
+		Contents: *content,
 	}, nil
 }
 
-func getHoverContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Position) (content []lsp.MarkedString, err error) {
+func getHoverContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Position) (content *lsp.MarkupContent, err error) {
 	// Read file,
 	fileContent, err := ReadFile(ctx, uri)
 	if err != nil {
@@ -50,8 +50,9 @@ func getHoverContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Posi
 			Message: fmt.Sprintf("fail to read file %s", uri),
 		}
 	}
-	// get the character from the line
+	// get the character from the line, and get the complete word from line
 	fmt.Println(fileContent)
+	//token := getToken(fileContent, position)
 	// look up the character from build_defs, and pull out the documentation
 	return nil, nil
 }

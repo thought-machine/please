@@ -23,6 +23,11 @@ type aspParser struct {
 
 // newAspParser creates and returns a new asp.Parser.
 func newAspParser(state *core.BuildState) *asp.Parser {
+	p := GetParserWithBuiltins(state)
+	return p
+}
+
+func GetParserWithBuiltins(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
 	dir, _ := rules.AssetDir("")
@@ -34,10 +39,12 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 			p.MustLoadBuiltins("src/parse/rules/"+srcFile, src, rules.MustAsset(filename))
 		}
 	}
+
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {
 		log.Debug("Preloading build defs from %s...", preload)
 		p.MustLoadBuiltins(preload, nil, nil)
 	}
+
 	log.Debug("Parser initialised")
 	return p
 }

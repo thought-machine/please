@@ -1,10 +1,15 @@
 package langserver
 
 import (
+	"context"
 	"core"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"path"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	"tools/build_langserver/lsp"
 )
 
@@ -65,6 +70,54 @@ func TestEnsureURL(t *testing.T) {
 	uri, err := EnsureURL(currentFile, "file")
 	assert.Equal(t, err, nil)
 	assert.Equal(t, uri, lsp.DocumentURI("file://"+string(currentFile)))
+}
+
+func TestReadFile(t *testing.T) {
+	ctx := context.Background()
+	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
+	uri := lsp.DocumentURI("file://" + filepath)
+
+	// Test ReadFile() with filepath as uri
+	content, err := ReadFile(ctx, lsp.DocumentURI(filepath))
+	// Type checking
+	assert.Equal(t, fmt.Sprintf("%T", content), "[]string")
+	assert.Equal(t, err, nil)
+	// Content check
+	assert.Equal(t, content[0], "go_library(")
+	assert.Equal(t, strings.TrimSpace(content[1]), "name = \"langserver\",")
+
+	// Test ReadFile() with uri as uri
+	content1, err := ReadFile(ctx, uri)
+	// Type checking
+	assert.Equal(t, fmt.Sprintf("%T", content), "[]string")
+	assert.Equal(t, err, nil)
+	// Content check
+	assert.Equal(t, content1[0], "go_library(")
+	assert.Equal(t, strings.TrimSpace(content1[1]), "name = \"langserver\",")
+
+}
+
+func TestReadFileCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
+
+	cancel()
+	content, err := ReadFile(ctx, lsp.DocumentURI(filepath))
+	assert.Equal(t, content, []string(nil))
+	assert.Equal(t, err, nil)
+}
+
+func TestGetLineContent(t *testing.T) {
+	ctx := context.Background()
+	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
+	pos := lsp.Position{
+		Line: 17,
+		Character: 0,
+	}
+
+	line, err := GetLineContent(ctx, lsp.DocumentURI(filepath), pos)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, strings.TrimSpace(line[0]), "go_test(")
 }
 
 /*

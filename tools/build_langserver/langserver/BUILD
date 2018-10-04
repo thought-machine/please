@@ -9,6 +9,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/parse",
+        "//src/parse/asp",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
         "//tools/build_langserver/lsp",
@@ -17,7 +18,8 @@ go_library(
 
 go_test(
     name = "langserver_test",
-    srcs = ["handler_test.go"],
+    srcs = ["handler_test.go",
+            "analyzer_test.go"],
     deps = [
         ":langserver",
         "//third_party/go:testify",

@@ -32,6 +32,8 @@ type Parser struct {
 	interpreter *interpreter
 	// Stashed set of source code for builtin rules.
 	builtins map[string][]byte
+
+	statements []*Statement
 }
 
 // NewParser creates a new parser instance. One is normally sufficient for a process lifetime.
@@ -63,6 +65,9 @@ func (p *Parser) LoadBuiltins(filename string, contents, encoded []byte) error {
 	if err := p.interpreter.LoadBuiltins(filename, contents, statements); err != nil {
 		return p.annotate(err, nil)
 	}
+	//fmt.Println(string(contents))
+	// Add statements to the list
+	p.statements = append(p.statements, statements...)
 	return nil
 }
 
@@ -72,6 +77,17 @@ func (p *Parser) MustLoadBuiltins(filename string, contents, encoded []byte) {
 		log.Fatalf("Error loading builtin rules: %s", err)
 	}
 }
+
+// GetBuiltinsAll returns all the builtin rules.
+// *Assuming Parser.LoadBuiltins or Parser.MustLoadBuiltins* has been called
+func (p *Parser) GetAllBuiltins() map[string][]byte {
+	return p.builtins
+}
+
+func (p *Parser) GetAllBuiltinStatements() []*Statement {
+	return p.statements
+}
+
 
 // ParseFile parses the contents of a single file in the BUILD language.
 // It returns true if the call was deferred at some point awaiting  target to build,

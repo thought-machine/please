@@ -44,6 +44,14 @@ Ideas
 
 
 
+Completion
+----------
+- build labels
+- build_def functions,
+- arg suggestions
+-
+
+
 BINARY
 ------
 Add to package/BUILD
