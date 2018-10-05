@@ -37,6 +37,7 @@ func (tok Token) String() string {
 }
 
 // A Position describes a position in a source file.
+// All properties in Position are zero indexed
 type Position struct {
 	Filename string
 	Offset   int

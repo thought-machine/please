@@ -279,6 +279,8 @@ func isType(obj pyObject, name string) bool {
 		return name == "list"
 	case pyDict:
 		return name == "dict"
+	case *pyConfig:
+		return name == "CONFIG"
 	}
 	return false
 }

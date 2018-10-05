@@ -94,6 +94,20 @@ type OptimisedExpression struct {
 	Config string
 }
 
+func (oe OptimisedExpression) String() string {
+	if oe.Constant != nil && oe.Constant.String() != "" {
+		return oe.Constant.String()
+	}
+	if oe.Local != "" {
+		return oe.Local
+	}
+	if oe.Config != "" {
+		return "CONFIG." + oe.Config
+	}
+
+	return "''"
+}
+
 // An OpExpression is a operator combined with its following expression.
 type OpExpression struct {
 	Op   Operator    `@("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" | "in" | "not" "in" | "==" | "!=" | ">=" | "<=")`

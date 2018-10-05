@@ -31,6 +31,7 @@ type handler struct {
 // LsHandler is the main handler struct of the language server handler
 type LsHandler struct {
 	init *lsp.InitializeParams
+	analyzer *Analyzer
 	mu   sync.Mutex
 	conn *jsonrpc2.Conn
 
@@ -49,11 +50,12 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *js
 	h.conn = conn
 
 	methods := map[string]func(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error){
-		"initialize":      h.handleInit,
-		"initialzed":      h.handleInitialized,
-		"shutdown":        h.handleShutDown,
-		"exit":            h.handleExit,
-		"$/cancelRequest": h.handleCancel,
+		"initialize":      		h.handleInit,
+		"initialzed":      		h.handleInitialized,
+		"shutdown":        		h.handleShutDown,
+		"exit":            		h.handleExit,
+		"$/cancelRequest": 		h.handleCancel,
+		"textDocument/hover": 	h.handleHover,
 	}
 
 	return methods[request.Method](ctx, request)
@@ -84,6 +86,8 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 
 	params.EnsureRoot()
 	h.init = &params
+
+	h.analyzer = newAnalyzer()
 
 	// Reset the requestStore, and get sub-context based on request ID
 	reqStore := newRequestStore()

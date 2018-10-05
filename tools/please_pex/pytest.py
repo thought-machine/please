@@ -1,5 +1,6 @@
 import os
-
+import sys
+sys.stdin.read()
 
 def run_tests(args):
     """Runs tests using pytest, returns the number of failures."""

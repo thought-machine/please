@@ -241,7 +241,7 @@ func (p *parser) parseArgument() Argument {
 	if tok.Type == ':' {
 		// Type annotations
 		for {
-			tok = p.oneofval("bool", "str", "int", "list", "dict", "function")
+			tok = p.oneofval("bool", "str", "int", "list", "dict", "function", "CONFIG")
 			a.Type = append(a.Type, tok.Value)
 			if !p.optional('|') {
 				break
