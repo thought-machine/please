@@ -1,8 +1,8 @@
 package test
 
 import (
+	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/xattr"
 	"gopkg.in/op/go-logging.v1"
 
 	"build"
@@ -23,6 +24,11 @@ var log = logging.MustGetLogger("test")
 
 const dummyOutput = "=== RUN DummyTest\n--- PASS: DummyTest (0.00s)\nPASS\n"
 const dummyCoverage = "<?xml version=\"1.0\" ?><coverage></coverage>"
+
+// Tag that we attach for xattrs to store hashes against files.
+// Note that we are required to provide the user namespace; that seems to be set implicitly
+// by the attr utility, but that is not done for us here.
+const xattrName = "user.plz_test"
 
 // Test runs the tests for a single target.
 func Test(tid int, state *core.BuildState, label core.BuildLabel) {
@@ -41,14 +47,13 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	}
 	// Check the cached output files if the target wasn't rebuilt.
 	hash = core.CollapseHash(hash)
-	hashStr := base64.RawURLEncoding.EncodeToString(hash)
-	resultsFileName := fmt.Sprintf(".test_results_%s_%s", label.Name, hashStr)
-	coverageFileName := fmt.Sprintf(".test_coverage_%s_%s", label.Name, hashStr)
+	cachedOutputFile := target.TestResultsFile()
+	cachedCoverageFile := target.CoverageFile()
+	resultsFileName := path.Base(cachedOutputFile)
+	coverageFileName := path.Base(cachedCoverageFile)
 	outputFile := path.Join(target.TestDir(), "test.results")
 	coverageFile := path.Join(target.TestDir(), "test.coverage")
-	cachedOutputFile := path.Join(target.OutDir(), resultsFileName)
-	cachedCoverageFile := path.Join(target.OutDir(), coverageFileName)
-	needCoverage := state.NeedCoverage && !target.NoTestOutput
+	needCoverage := state.NeedCoverage && !target.NoTestOutput && (!target.HasLabel("cc") || state.Config.Cpp.Coverage)
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareShell {
@@ -109,11 +114,16 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if target.State() == core.Unchanged && core.PathExists(cachedOutputFile) {
 			// Output file exists already and appears to be valid. We might still need to rerun though
 			// if the coverage files aren't available.
-			if needCoverage && !core.PathExists(cachedCoverageFile) {
+			if needCoverage && !verifyHash(cachedCoverageFile, hash) {
+				log.Debug("Rerunning %s, coverage file doesn't exist or has wrong hash", target.Label)
+				return true
+			} else if !verifyHash(cachedOutputFile, hash) {
+				log.Debug("Rerunning %s, results file has incorrect hash", target.Label)
 				return true
 			}
 			return false
 		}
+		log.Debug("Output file %s does not exist for %s", cachedOutputFile, target.Label)
 		// Check the cache for these artifacts.
 		if state.Cache == nil {
 			return true
@@ -498,35 +508,14 @@ func parseCoverageFile(target *core.BuildTarget, coverageFile string) core.TestC
 
 // RemoveCachedTestFiles removes any cached test or coverage result files for a target.
 func RemoveCachedTestFiles(target *core.BuildTarget) error {
-	if err := removeAnyFilesWithPrefix(target.OutDir(), ".test_results_"+target.Label.Name); err != nil {
+	if err := os.RemoveAll(target.TestResultsFile()); err != nil {
 		return err
-	}
-	if err := removeAnyFilesWithPrefix(target.OutDir(), ".test_coverage_"+target.Label.Name); err != nil {
+	} else if err := os.RemoveAll(target.CoverageFile()); err != nil {
 		return err
 	}
 	for _, output := range target.TestOutputs {
 		if err := os.RemoveAll(path.Join(target.OutDir(), output)); err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-// removeAnyFilesWithPrefix deletes any files in a directory matching a given prefix.
-func removeAnyFilesWithPrefix(dir, prefix string) error {
-	infos, err := ioutil.ReadDir(dir)
-	if err != nil {
-		// Not an error if the directory just isn't there.
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	for _, info := range infos {
-		if strings.HasPrefix(info.Name(), prefix) {
-			if err := os.RemoveAll(path.Join(dir, info.Name())); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
@@ -547,7 +536,8 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 	if state.Cache != nil {
 		state.Cache.StoreExtra(target, hash, filename)
 	}
-	return nil
+	// Set the hash on the new destination file
+	return xattr.LSet(to, xattrName, hash)
 }
 
 // calcNumRuns works out how many total runs we should have for a test, and how many successes
@@ -569,4 +559,10 @@ func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.Build
 		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
 	}
 	return workerCmd, err
+}
+
+// verifyHash verifies that the hash on a test file matches the one for the current test.
+func verifyHash(filename string, hash []byte) bool {
+	attr, err := xattr.LGet(filename, xattrName)
+	return err == nil && bytes.Equal(attr, hash)
 }
