@@ -75,6 +75,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 	}
 
 	// check if the hovered line is an argument to the Identifier
+	// TODO: THE FOLLOWING NEEDS TO BE REVAMPED, I CHANGED MY MIND
 	if strings.Contains(lineContent, "=") && ident.Action.Call != nil {
 		EqualIndex := strings.Index(lineContent, "=")
 		if position.Character < EqualIndex {
