@@ -94,6 +94,7 @@ type OptimisedExpression struct {
 	Config string
 }
 
+// String is a string representation of OptimisedExpression
 func (oe OptimisedExpression) String() string {
 	if oe.Constant != nil && oe.Constant.String() != "" {
 		return oe.Constant.String()
