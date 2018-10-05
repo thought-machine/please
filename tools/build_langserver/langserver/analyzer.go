@@ -13,6 +13,8 @@ import (
 
 // TODO(bnmetrics): This file should contain functions to retrieve builtin and custom definitions of build defs
 
+// Analyzer is a wrapper around asp.Analyzer
+// This is being loaded into a handler on initialization
 type Analyzer struct {
 	parser *asp.Parser
 	BuiltIns map[string]*RuleDef

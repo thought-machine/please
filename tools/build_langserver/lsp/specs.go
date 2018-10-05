@@ -130,7 +130,7 @@ type MarkupContent struct {
 	Value 	string 		`json:"value"`
 }
 
-// Describes the content type that a client supports in various result literals
+// MarkupKind Describes the content type that a client supports in various result literals
 // like `Hover`, `ParameterInfo` or `CompletionItem`.
 // `MarkupKinds` must not start with a `$`
 type MarkupKind string
