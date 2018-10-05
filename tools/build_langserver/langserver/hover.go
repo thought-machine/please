@@ -75,7 +75,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 	}
 
 	// check if the hovered line is an argument to the Identifier
-	// TODO: THE FOLLOWING NEEDS TO BE REVAMPED, I CHANGED MY MIND
+	// TODO(bnmetrics): THE FOLLOWING NEEDS TO BE REVAMPED, I CHANGED MY MIND
 	if strings.Contains(lineContent, "=") && ident.Action.Call != nil {
 		EqualIndex := strings.Index(lineContent, "=")
 		if position.Character < EqualIndex {
@@ -88,7 +88,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 				if IdenArg.Name == arg {
 					contentString = analyzer.BuiltIns[ident.Name].ArgMap[arg].definition
 				} else {
-					//TODO: get the content from nested called, do something with the ident.Call.Arguments
+					//TODO(bnmetrics): get the content from nested called, do something with the ident.Call.Arguments
 				}
 			}
 		} else {
@@ -98,6 +98,6 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 
 	return &lsp.MarkupContent{
 		Value: contentString,
-		Kind:lsp.MarkDown, // TODO: this might be reconsidered
+		Kind:lsp.MarkDown, // TODO(bnmetrics): this might be reconsidered
 	}, nil
 }
