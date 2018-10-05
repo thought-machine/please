@@ -111,13 +111,13 @@ func TestGetLineContent(t *testing.T) {
 	ctx := context.Background()
 	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
 	pos := lsp.Position{
-		Line: 17,
+		Line: 0,
 		Character: 0,
 	}
 
 	line, err := GetLineContent(ctx, lsp.DocumentURI(filepath), pos)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, strings.TrimSpace(line[0]), "go_test(")
+	assert.Equal(t, strings.TrimSpace(line[0]), "go_library(")
 }
 
 /*
