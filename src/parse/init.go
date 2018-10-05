@@ -27,6 +27,7 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
+// GetParserWithBuiltins returns a asp.Parser object with all the builtins loaded 
 func GetParserWithBuiltins(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
