@@ -18,19 +18,26 @@ type Analyzer struct {
 	BuiltIns map[string]*RuleDef
 }
 
+// RuleDef is a wrapper around asp.FuncDef,
+// it also includes a Header(function definition)
+// And Argument map stores the name and the information of the arguments this rule has
 type RuleDef struct {
 	*asp.FuncDef
 	Header string
 	ArgMap map[string]*Argument
 }
 
+// Argument is a wrapper around asp.Argument,
+// this is used to store the argument information for specific rules,
+// and it also tells you if the argument is required
 type Argument struct {
 	*asp.Argument
 	definition string
 	required bool
 }
 
-// Identifier represents
+// Identifier is a wrapper around asp.Identifier
+// Including the starting line and the ending line number
 type Identifier struct {
 	*asp.IdentStatement
 	StartLine int
@@ -49,6 +56,7 @@ func newAnalyzer() *Analyzer {
 	return a
 }
 
+// BuiltInsRules gets all the builtin functions and rules as a map, and store it in Analyzer.BuiltIns
 func (a *Analyzer) BuiltInsRules() {
 	statementMap := make(map[string]*RuleDef)
 
@@ -61,6 +69,7 @@ func (a *Analyzer) BuiltInsRules() {
 	a.BuiltIns = statementMap
 }
 
+// IdentFromPos gets the Identifier given a lsp.Position
 func (a *Analyzer) IdentFromPos(uri lsp.DocumentURI, position lsp.Position, filecontent []string) (*Identifier, error) {
 	idents, err := a.IdentFromFile(uri, filecontent)
 	if err != nil {
@@ -77,8 +86,8 @@ func (a *Analyzer) IdentFromPos(uri lsp.DocumentURI, position lsp.Position, file
 }
 
 
-
-// reads complete files only
+// IdentFromFile gets all the Identifiers from a given BUILD file
+// *reads complete files only*
 func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI, filecontent []string) ([]*Identifier,  error) {
 	filepath, err := GetPathFromURL(uri, "file")
 	if err != nil {

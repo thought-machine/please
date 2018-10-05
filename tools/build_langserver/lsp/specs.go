@@ -124,13 +124,18 @@ type MarkedString struct {
 	Value    string `json:"value"`
 }
 
+// MarkupContent represents a string value which content can be represented in different formats.
 type MarkupContent struct {
 	Kind 	MarkupKind  `json:"kind"`
 	Value 	string 		`json:"value"`
 }
 
+// Describes the content type that a client supports in various result literals
+// like `Hover`, `ParameterInfo` or `CompletionItem`.
+// `MarkupKinds` must not start with a `$`
 type MarkupKind string
 
+// Two types of MarkupKind
 const (
 	PlainText MarkupKind = "plaintext"
 	MarkDown  MarkupKind = "markdown"
