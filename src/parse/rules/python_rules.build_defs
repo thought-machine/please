@@ -413,9 +413,9 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     support on different platforms, this rule is a simple wrapper around curl and unzip.
     Unless otherwise specified, the wheels are expected to adhere to common naming schemes,
     such as:
-      <package_name>-<version>[-<os>-<arch>].whl
-      <package_name>-<version>[-<os>_<arch>].whl
-      <package_name>-<version>.whl
+      &lt;package_name&gt;-&lt;version&gt;[-&lt;os&gt;-&lt;arch&gt;].whl
+      &lt;package_name&gt;-&lt;version&gt;[-&lt;os&gt;_&lt;arch&gt;].whl
+      &lt;package_name&gt;-&lt;version&gt;.whl
 
     Args:
       name (str): Name of the rule. Also doubles as the name of the package if package_name
