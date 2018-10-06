@@ -41,14 +41,14 @@ plz_e2e_test(
 plz_e2e_test(
     name = "dep_required_test",
     cmd = "plz build //test:failed_dep",
-    expect_output_contains = "//test:failed_dep can't use //src/core; doesn't depend on target //src/core",
+    expect_output_contains = " Target //src/core:config_test isn't visible to //test:failed_dep",
     expected_failure = True,
 )
 
 build_rule(
     name = "failed_dep",
-    cmd = "echo $(location //src/core)",
     labels = ["manual"],
+    deps = ["//src/core:config_test"],
 )
 
 # Test that we count test output correctly. Also indirectly tests access to test data files.

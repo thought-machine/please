@@ -161,6 +161,14 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	}
 
 	retrieveArtifacts := func() bool {
+		// If there aren't any outputs, we don't have to do anything right now.
+		// Checks later will handle the case of something with a post-build function that
+		// later tries to add more outputs.
+		if len(target.DeclaredOutputs()) == 0 && len(target.DeclaredNamedOutputs()) == 0 {
+			target.SetState(core.Unchanged)
+			state.LogBuildResult(tid, target.Label, core.TargetCached, "Nothing to do")
+			return true
+		}
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 		if _, retrieved := retrieveFromCache(state, target); retrieved {
 			log.Debug("Retrieved artifacts for %s from cache", target.Label)

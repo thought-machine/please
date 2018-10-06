@@ -5,9 +5,10 @@
 # This script assumes the initial bootstrap has already run.
 
 N="${1:-10}"
+export PLZ_NO_GO_BOOTSTRAP=1
 
 for i in `seq 1 $N`; do
-    echo "Round $i"
+    echo "Round $i / $N"
     ./bootstrap.sh --plain_output || { echo "Bootstrap failed"; exit 1; }
     BUILDING="$(grep "Building target" plz-out/log/*.log)"
     if [ -n "$BUILDING" ]; then
