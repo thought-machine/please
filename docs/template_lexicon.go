@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	htmltemplate "html/template"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -47,7 +48,7 @@ func main() {
 	tmpl, err := template.New("lexicon.html").Funcs(template.FuncMap{
 		"join": strings.Join,
 		"newlines": func(s string) string {
-			return strings.Replace(s, "\n", "<br/>", -1)
+			return strings.Replace(htmltemplate.HTMLEscapeString(s), "\n", "<br/>", -1)
 		},
 	}).ParseFiles(
 		"docs/lexicon.html", "docs/lexicon_entry.html")
