@@ -71,6 +71,12 @@ if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
 fi
 
+# Smoke test that the repo is in an OK state.
+# This also has a nice side-effect of ensuring we've fetched all the subrepos which
+# avoids some potential races later on.
+notice "Verifying repo..."
+plz-out/bin/src/please query alltargets > /dev/null
+
 # Run the tests to make sure they still work
 notice "Running tests..."
 
