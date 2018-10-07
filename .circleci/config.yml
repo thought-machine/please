@@ -10,10 +10,11 @@ jobs:
      steps:
        - checkout
        - restore_cache:
-           keys:
-             - bootstrap-linux-{{ checksum "bootstrap.sh" }}
-             - go-linux-{{ checksum "third_party/go/BUILD" }}
-             - python-linux-{{ checksum "third_party/python/BUILD" }}
+           key: bootstrap-linux-{{ checksum "bootstrap.sh" }}
+       - restore_cache:
+           key: go-linux-{{ checksum "third_party/go/BUILD" }}
+       - restore_cache:
+           key: python-linux-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
@@ -33,7 +34,7 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: bootstrap-linux-{{ checksum "bootstrap.sh" }}
+           key: bootstrap-linux-{{ chhomebrewecksum "bootstrap.sh" }}
            paths: [ ".bootstrap" ]
        - save_cache:
            key: go-linux-{{ checksum "third_party/go/BUILD" }}
@@ -52,10 +53,11 @@ jobs:
      steps:
        - checkout
        - restore_cache:
-           keys:
-             - bootstrap-linux-{{ checksum "bootstrap.sh" }}
-             - go-linux-{{ checksum "third_party/go/BUILD" }}
-             - python-linux-{{ checksum "third_party/python/BUILD" }}
+           key: bootstrap-linux-{{ checksum "bootstrap.sh" }}
+       - restore_cache:
+           key: go-linux-{{ checksum "third_party/go/BUILD" }}
+       - restore_cache:
+           key: python-linux-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
@@ -84,10 +86,13 @@ jobs:
       steps:
        - checkout
        - restore_cache:
-           keys:
-             - bootstrap-darwin-{{ checksum "bootstrap.sh" }}
-             - go-darwin-{{ checksum "third_party/go/BUILD" }}
-             - python-darwin-{{ checksum "third_party/python/BUILD" }}
+           key: bootstrap-darwin-{{ checksum "bootstrap.sh" }}
+       - restore_cache:
+           key: go-darwin-{{ checksum "third_party/go/BUILD" }}
+       - restore_cache:
+           key: python-darwin-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: homebrew-v1
        - run:
            name: Install deps
            command: brew install go unittest-cpp nasm pkg-config && brew upgrade python
@@ -106,6 +111,9 @@ jobs:
              mv plz-out/gen/package/*.tar.gz /tmp/artifacts
        - store_artifacts:
            path: /tmp/artifacts
+       - save_cache:
+           key: homebrew-v1
+           paths: [ "/usr/local/Homebrew" ]
        - save_cache:
            key: bootstrap-darwin-{{ checksum "bootstrap.sh" }}
            paths: [ ".bootstrap" ]
