@@ -51,6 +51,7 @@ python_library(
     name = "so_test_py",
     srcs = ["__init__.py"],
     resources = [":so_test"],
+    visibility = ["//test/python_rules:zip_unsafe_test"],
     zip_safe = False,
 )
 
