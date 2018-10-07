@@ -26,7 +26,7 @@ jobs:
        - run:
            name: Package
            command: |
-             ./plz-out/bin/src/please build //package:all --exclude asc &&
+             ./plz-out/bin/src/please build //package:all --exclude asc -p &&
              mkdir /tmp/artifacts &&
              mv plz-out/gen/package/*.deb plz-out/gen/package/*.tar.gz /tmp/artifacts
        - store_artifacts:
@@ -86,16 +86,16 @@ jobs:
       steps:
        - checkout
        - restore_cache:
-           key: bootstrap-darwin-{{ checksum "bootstrap.sh" }}
+           key: bootstrap-darwin-go110-{{ checksum "bootstrap.sh" }}
        - restore_cache:
-           key: go-darwin-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go110-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
-           key: python-darwin-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
            key: homebrew-v1
        - run:
            name: Install deps
-           command: brew install go unittest-cpp nasm pkg-config && brew upgrade python
+           command: brew install go@1.10 unittest-cpp nasm pkg-config && brew upgrade python
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
@@ -106,7 +106,7 @@ jobs:
        - run:
            name: Package
            command: |
-             ./plz-out/bin/src/please build //package:all --exclude asc --exclude deb &&
+             ./plz-out/bin/src/please build //package:all --exclude asc --exclude deb -p &&
              mkdir /tmp/artifacts &&
              mv plz-out/gen/package/*.tar.gz /tmp/artifacts
        - store_artifacts:
@@ -115,13 +115,13 @@ jobs:
            key: homebrew-v1
            paths: [ "/usr/local/Homebrew" ]
        - save_cache:
-           key: bootstrap-darwin-{{ checksum "bootstrap.sh" }}
+           key: bootstrap-darwin-go110-{{ checksum "bootstrap.sh" }}
            paths: [ ".bootstrap" ]
        - save_cache:
-           key: go-darwin-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go110-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
-           key: python-darwin-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
 workflows:
