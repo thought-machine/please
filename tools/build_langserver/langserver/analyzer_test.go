@@ -72,7 +72,7 @@ func TestNewRuleDef(t *testing.T) {
 
 	// Test header for a config function, setdefault()
 	setDefault := a.parser.GetAllBuiltinStatements()[37].FuncDef
-	expected = "CONFIG.setdefault(key:str, default=None)"
+	expected = "config.setdefault(key:str, default=None)"
 	ruledef = newRuleDef(setDefault)
 	assert.Equal(t, expected, ruledef.Header)
 	assert.Equal(t, 2, len(ruledef.ArgMap))

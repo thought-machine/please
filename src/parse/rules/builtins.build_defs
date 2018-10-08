@@ -110,12 +110,12 @@ def sorted(seq:list):
 
 def get(self:dict, key:str, default=None):
     pass
-def setdefault(self:CONFIG, key:str, default=None):
+def setdefault(self:config, key:str, default=None):
     if key in self:
         return self[key]
     self[key] = default
     return default
-def config_get(self:CONFIG, key:str, default=None):
+def config_get(self:config, key:str, default=None):
     pass
 
 
