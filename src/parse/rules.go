@@ -25,7 +25,7 @@ func PrintRuleArgs(state *core.BuildState, labels []core.BuildLabel) {
 
 // getRuleArgs retrieves the arguments of builtin rules. It's split from PrintRuleArgs for testing.
 func getRuleArgs(state *core.BuildState, labels []core.BuildLabel) environment {
-	p := newAspParser(state)
+	p := NewAspParser(state)
 	env := environment{Functions: map[string]function{}}
 	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)

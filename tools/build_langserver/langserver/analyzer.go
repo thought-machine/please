@@ -13,7 +13,9 @@ import (
 
 // TODO(bnmetrics): This file should contain functions to retrieve builtin and custom definitions of build defs
 
-// Analyzer is a wrapper around asp.Analyzer
+const lineLength  = 86
+
+// Analyzer is a wrapper around asp.parser
 // This is being loaded into a handler on initialization
 type Analyzer struct {
 	parser *asp.Parser
@@ -48,18 +50,18 @@ type Identifier struct {
 
 func newAnalyzer() *Analyzer {
 	state := core.NewDefaultBuildState()
-	parser := parse.GetParserWithBuiltins(state)
+	parser := parse.NewAspParser(state)
 
 	a := &Analyzer{
 		parser:parser,
 	}
-	a.BuiltInsRules()
+	a.builtInsRules()
 
 	return a
 }
 
 // BuiltInsRules gets all the builtin functions and rules as a map, and store it in Analyzer.BuiltIns
-func (a *Analyzer) BuiltInsRules() {
+func (a *Analyzer) builtInsRules() {
 	statementMap := make(map[string]*RuleDef)
 
 	for _, statement := range a.parser.GetAllBuiltinStatements() {
@@ -101,10 +103,6 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI, filecontent []string) ([]*
 	}
 
 	stmt, err := a.parser.ParseData(bytecontent, filepath)
-	if err != nil {
-		return nil, err
-	}
-
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +161,7 @@ func newRuleDef(funcDef *asp.FuncDef) *RuleDef {
 				}
 
 				// Add string to Header
-				if len(line) < 86 {
+				if len(line) < lineLength {
 					line += argString + ", "
 				} else {
 					headerSlice = append(headerSlice, line)

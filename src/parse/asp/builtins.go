@@ -280,7 +280,7 @@ func isType(obj pyObject, name string) bool {
 	case pyDict:
 		return name == "dict"
 	case *pyConfig:
-		return name == "CONFIG"
+		return name == "config"
 	}
 	return false
 }

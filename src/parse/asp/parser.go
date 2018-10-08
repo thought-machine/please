@@ -65,7 +65,7 @@ func (p *Parser) LoadBuiltins(filename string, contents, encoded []byte) error {
 	if err := p.interpreter.LoadBuiltins(filename, contents, statements); err != nil {
 		return p.annotate(err, nil)
 	}
-	//fmt.Println(string(contents))
+
 	// Add statements to the list
 	p.statements = append(p.statements, statements...)
 	return nil

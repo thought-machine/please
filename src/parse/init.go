@@ -13,7 +13,7 @@ import (
 
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) {
-	state.Parser = &aspParser{asp: newAspParser(state)}
+	state.Parser = &aspParser{asp: NewAspParser(state)}
 }
 
 // An aspParser implements the core.Parser interface around our asp package.
@@ -21,14 +21,8 @@ type aspParser struct {
 	asp *asp.Parser
 }
 
-// newAspParser creates and returns a new asp.Parser.
-func newAspParser(state *core.BuildState) *asp.Parser {
-	p := GetParserWithBuiltins(state)
-	return p
-}
-
 // GetParserWithBuiltins returns a asp.Parser object with all the builtins loaded
-func GetParserWithBuiltins(state *core.BuildState) *asp.Parser {
+func NewAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
 	dir, _ := rules.AssetDir("")

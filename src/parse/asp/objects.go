@@ -664,7 +664,7 @@ func (c *pyConfig) String() string {
 }
 
 func (c *pyConfig) Type() string {
-	return "CONFIG"
+	return "config"
 }
 
 func (c *pyConfig) IsTruthy() bool {
