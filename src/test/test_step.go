@@ -76,7 +76,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to parse cached test file %s", cachedOutputFile)
 		} else if results.Failures() > 0 {
-			panic("Test results with failures shouldn't be cached.")
+			panic(fmt.Sprintf("Test results (for %s) with failures shouldn't be cached.", label))
 		} else {
 			logTestSuccess(state, tid, label, &results, &coverage)
 		}
