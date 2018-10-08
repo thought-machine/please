@@ -349,7 +349,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
 
 def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, gzip:bool=True,
-            test_only:bool=False, visibility:list=None, labels:list&features&tags=[]):
+            xzip:bool=False, test_only:bool=False, visibility:list=None, labels:list&features&tags=[]):
     """Defines a rule to create a tarball containing outputs of other rules.
 
     File mode and ownership are preserved. However, the atime and mtime of all
@@ -361,24 +361,44 @@ def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, 
       out (str): Name of output tarball (defaults to `name`.tar.gz, but see below re compression)
       subdir (str): Subdirectory to create in. All files will be flattened into this directory.
       gzip (bool): If True, the output will be gzipped. If False, it will just be a tarball.
+      xzip (bool): If True, the output will be xzipped. Overrides gzip if passed.
       deps (list): Dependencies
       visibility (list): Visibility specification.
       labels (list): Labels associated with this rule.
     """
-    out = out or (name + ('.tar.gz' if gzip else '.tar'))
+    tar_out = out or (name + ('.tar.gz' if gzip else '.tar'))
     cmd = '$TOOL tar '
-    if gzip:
+    tar_name = name
+    if xzip:
+        tar_out = name + '.tar'
+        tar_name = f'_name#tar'
+    elif gzip:
         cmd += ' -z'
     if subdir:
         cmd += ' --prefix ' + subdir
 
-    return build_rule(
-        name = name,
+    tar_rule = build_rule(
+        name = tar_name,
         cmd = cmd,
         srcs = srcs,
         tools = [CONFIG.JARCAT_TOOL],
-        outs = [out],
+        outs = [tar_out],
         deps = deps,
+        visibility = visibility,
+        labels = labels + ['tar'],
+        output_is_complete = True,
+        test_only = test_only,
+    )
+    if not xzip:
+        return tar_rule
+    # The golang xzip package produces significantly (20%) larger output than filtering
+    # through xz. At some point we will ditch that when they become closer, but for now
+    # that's a bit hard to swallow so we'll use the command-line version.
+    return build_rule(
+        name = name,
+        srcs = [tar_rule],
+        outs = [out or (name + '.tar.xz')],
+        cmd = 'xz -zc $SRCS > $OUT',
         visibility = visibility,
         labels = labels + ['tar'],
         output_is_complete = True,

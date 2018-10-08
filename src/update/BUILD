@@ -14,6 +14,7 @@ go_library(
         "//third_party/go:openpgp",
         "//third_party/go:prompter",
         "//third_party/go:semver",
+        "//third_party/go:xz",
     ],
 )
 
@@ -27,6 +28,7 @@ go_test(
     srcs = ["update_test.go"],
     data = [
         ":test_tarball",
+        ":test_tarball_xz",
         "//src:please",
     ],
     deps = [
@@ -54,4 +56,14 @@ tarball(
     ],
     out = "please_test.tar.gz",
     subdir = "please",
+)
+
+tarball(
+    name = "test_tarball_xz",
+    srcs = [
+        "//src:please",
+    ],
+    out = "please_test.tar.xz",
+    subdir = "please",
+    xzip = True,
 )

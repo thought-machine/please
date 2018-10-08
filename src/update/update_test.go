@@ -146,13 +146,21 @@ func TestFilterArgs(t *testing.T) {
 	assert.Equal(t, []string{"plz", "update"}, filterArgs(true, []string{"plz", "update", "--force"}))
 }
 
+func TestXZVersions(t *testing.T) {
+	var v cli.Version
+	v.UnmarshalFlag("13.1.9")
+	assert.False(t, shouldUseXZ(v))
+	v.UnmarshalFlag("13.2.0")
+	assert.True(t, shouldUseXZ(v))
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
-	vCurrent := fmt.Sprintf("/%s_%s/%s/please_%s.tar.gz", runtime.GOOS, runtime.GOARCH, core.PleaseVersion, core.PleaseVersion)
-	v42 := fmt.Sprintf("/%s_%s/42.0.0/please_42.0.0.tar.gz", runtime.GOOS, runtime.GOARCH)
+	vCurrent := fmt.Sprintf("/%s_%s/%s/please_%s.tar.xz", runtime.GOOS, runtime.GOARCH, core.PleaseVersion, core.PleaseVersion)
+	v42 := fmt.Sprintf("/%s_%s/42.0.0/please_42.0.0.tar.xz", runtime.GOOS, runtime.GOARCH)
 	if r.URL.Path == "/latest_version" {
 		w.Write([]byte("42.0.0"))
 	} else if r.URL.Path == vCurrent || r.URL.Path == v42 {
-		b, err := ioutil.ReadFile("src/update/please_test.tar.gz")
+		b, err := ioutil.ReadFile("src/update/please_test.tar.xz")
 		if err != nil {
 			panic(err)
 		}

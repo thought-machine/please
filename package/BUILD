@@ -72,6 +72,14 @@ signed_tarball(
 )
 
 signed_tarball(
+    name = "please_tarball_xz",
+    srcs = [":installed_files"],
+    out = "please_%s.tar.xz" % VERSION,
+    subdir = "please",
+    xzip = True,
+)
+
+signed_tarball(
     name = "servers_tarball",
     srcs = [
         "//tools/cache:http_cache_server",
@@ -85,6 +93,7 @@ filegroup(
     name = "tarballs",
     srcs = [
         ":please_tarball",
+        ":please_tarball_xz",
         ":servers_tarball",
     ],
 )
@@ -93,6 +102,7 @@ filegroup(
     name = "signed_tarballs",
     srcs = [
         ":please_tarball_signed",
+        ":please_tarball_xz_signed",
         ":servers_tarball_signed",
     ],
     labels = ["manual"],

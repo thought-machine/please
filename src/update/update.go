@@ -12,6 +12,7 @@ package update
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ import (
 	"syscall"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/ulikunitz/xz"
 	"gopkg.in/op/go-logging.v1"
 
 	"cli"
@@ -159,10 +161,14 @@ func downloadPlease(config *core.Configuration, verify bool) {
 	}
 
 	url := strings.TrimSuffix(config.Please.DownloadLocation.String(), "/")
-	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.gz", url, runtime.GOOS, runtime.GOARCH, config.Please.Version.VersionString(), config.Please.Version.VersionString())
+	ext := "gz"
+	if shouldUseXZ(config.Please.Version) {
+		ext = "xz"
+	}
+	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.%s", url, runtime.GOOS, runtime.GOARCH, config.Please.Version.VersionString(), config.Please.Version.VersionString(), ext)
 	rc := mustDownload(url, true)
 	defer mustClose(rc)
-	var r io.Reader = rc
+	var r io.Reader = bufio.NewReader(rc)
 
 	if verify && config.Please.Version.LessThan(minSignedVersion) {
 		log.Warning("Won't verify signature of download, version is too old to be signed.")
@@ -172,13 +178,24 @@ func downloadPlease(config *core.Configuration, verify bool) {
 		log.Warning("Signature verification disabled for %s", url)
 	}
 
-	gzreader, err := gzip.NewReader(r)
-	if err != nil {
-		panic(fmt.Sprintf("%s isn't a valid gzip file: %s", url, err))
+	if shouldUseXZ(config.Please.Version) {
+		xzr, err := xz.NewReader(r)
+		if err != nil {
+			panic(fmt.Sprintf("%s isn't a valid xzip file: %s", url, err))
+		}
+		copyTarFile(xzr, newDir, url)
+	} else {
+		gzreader, err := gzip.NewReader(r)
+		if err != nil {
+			panic(fmt.Sprintf("%s isn't a valid gzip file: %s", url, err))
+		}
+		defer mustClose(gzreader)
+		copyTarFile(gzreader, newDir, url)
 	}
-	defer mustClose(gzreader)
+}
 
-	tarball := tar.NewReader(gzreader)
+func copyTarFile(zr io.Reader, newDir, url string) {
+	tarball := tar.NewReader(zr)
 	for {
 		hdr, err := tarball.Next()
 		if err == io.EOF {
@@ -308,6 +325,7 @@ func verifyNewPlease(newPlease, version string) bool {
 // writeTarFile writes a file from a tarball to the filesystem in the corresponding location.
 func writeTarFile(hdr *tar.Header, r io.Reader, destination string) error {
 	// Strip the first directory component in the tarball
+
 	stripped := hdr.Name[strings.IndexRune(hdr.Name, os.PathSeparator)+1:]
 	dest := path.Join(destination, stripped)
 	if err := os.MkdirAll(path.Dir(dest), core.DirPermissions); err != nil {
@@ -342,4 +360,13 @@ func filterArgs(forceUpdate bool, args []string) []string {
 		}
 	}
 	return ret
+}
+
+// shouldUseXZ returns true if attempting to download the given version should use xzip compression.
+func shouldUseXZ(version cli.Version) bool {
+	return !version.LessThan(semver.Version{
+		Major:      13,
+		Minor:      2,
+		PreRelease: "0", // Less than any valid prerelease string, e.g. alpha1
+	})
 }

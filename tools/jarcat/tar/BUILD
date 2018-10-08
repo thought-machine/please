@@ -2,6 +2,7 @@ go_library(
     name = "tar",
     srcs = ["tar.go"],
     visibility = ["//tools/jarcat/..."],
+    deps = ["//third_party/go:xz"],
 )
 
 go_test(
@@ -11,5 +12,6 @@ go_test(
     deps = [
         ":tar",
         "//third_party/go:testify",
+        "//third_party/go:xz",
     ],
 )

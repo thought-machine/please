@@ -31,7 +31,7 @@ def signed_fpm_deb(name, version, package_name=None, files=None, dirs=None, link
     )
 
 
-def signed_tarball(name, srcs, out, subdir, visibility=None):
+def signed_tarball(name:str, srcs:list, out:str, subdir:str, xzip:bool=False, visibility=None):
     """Creates a signed tarball.
 
     All arguments are passed through to tarball.
@@ -44,6 +44,7 @@ def signed_tarball(name, srcs, out, subdir, visibility=None):
         srcs = srcs,
         out = out,
         subdir = subdir,
+        xzip = xzip,
         visibility = visibility,
     )
     return detached_signature(
