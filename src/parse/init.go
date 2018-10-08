@@ -21,7 +21,7 @@ type aspParser struct {
 	asp *asp.Parser
 }
 
-// GetParserWithBuiltins returns a asp.Parser object with all the builtins loaded
+// NewAspParser returns a asp.Parser object with all the builtins loaded
 func NewAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
