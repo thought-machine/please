@@ -154,6 +154,9 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 	if filename == "" {
 		if success, err := providePackage(state, pkg); err != nil {
 			return nil, err
+		} else if !success && packageName == "" && dependor.Subrepo == "pleasings" && subrepo == nil && state.Config.Parse.BuiltinPleasings {
+			// Deliberate fallthrough, for the case where someone depended on the default
+			// @pleasings subrepo, and there is no BUILD file at their root.
 		} else if !success {
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
