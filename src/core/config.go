@@ -239,6 +239,13 @@ func DefaultConfiguration() *Configuration {
 	config.Cpp.DefaultOptCppflags = "--std=c++11 -O3 -pipe -DNDEBUG -Wall -Werror"
 	config.Cpp.DefaultDbgCppflags = "--std=c++11 -g3 -pipe -DDEBUG -Wall -Werror"
 	config.Cpp.Coverage = true
+	// At some point in the future it might make sense to remove UnitTest++ as the default
+	// test runner - but for now it's still the default for compatibility.
+	config.Cpp.TestMain = BuildLabel{
+		Subrepo:     "pleasings",
+		PackageName: "cc",
+		Name:        "unittest_main",
+	}
 	config.Proto.ProtocTool = "protoc"
 	// We're using the most common names for these; typically gRPC installs the builtin plugins
 	// as grpc_python_plugin etc.
@@ -386,20 +393,21 @@ type Configuration struct {
 		DefaultMavenRepo   []cli.URL `help:"Default location to load artifacts from in maven_jar rules. Can be overridden on a per-rule basis." var:"DEFAULT_MAVEN_REPO"`
 	} `help:"Please has built-in support for compiling Java.\nIt builds uber-jars for binary and test rules which contain all dependencies and can be easily deployed, and with the help of some of Please's additional tools they are deterministic as well.\n\nWe've only tested support for Java 7 and 8, although it's likely newer versions will work with little or no change."`
 	Cpp struct {
-		CCTool             string `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example." var:"CC_TOOL"`
-		CppTool            string `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example." var:"CPP_TOOL"`
-		LdTool             string `help:"The tool invoked to link object files. Defaults to ld but you could also set it to gold, for example." var:"LD_TOOL"`
-		ArTool             string `help:"The tool invoked to archive static libraries. Defaults to ar." var:"AR_TOOL"`
-		AsmTool            string `help:"The tool invoked as an assembler. Currently only used on OSX for cc_embed_binary rules and so defaults to nasm." var:"ASM_TOOL"`
-		LinkWithLdTool     bool   `help:"If true, instructs Please to use the tool set earlier in ldtool to link binaries instead of cctool.\nThis is an esoteric setting that most people don't want; a vanilla ld will not perform all steps necessary here (you'll get lots of missing symbol messages from having no libc etc). Generally best to leave this disabled unless you have very specific requirements." var:"LINK_WITH_LD_TOOL"`
-		DefaultOptCflags   string `help:"Compiler flags passed to all C rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c99 -O3 -DNDEBUG -Wall -Wextra -Werror" var:"DEFAULT_OPT_CFLAGS"`
-		DefaultDbgCflags   string `help:"Compiler rules passed to all C rules during dbg builds.\nDefaults to --std=c99 -g3 -DDEBUG -Wall -Wextra -Werror." var:"DEFAULT_DBG_CFLAGS"`
-		DefaultOptCppflags string `help:"Compiler flags passed to all C++ rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c++11 -O3 -DNDEBUG -Wall -Wextra -Werror" var:"DEFAULT_OPT_CPPFLAGS"`
-		DefaultDbgCppflags string `help:"Compiler rules passed to all C++ rules during dbg builds.\nDefaults to --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror." var:"DEFAULT_DBG_CPPFLAGS"`
-		DefaultLdflags     string `help:"Linker flags passed to all C++ rules.\nBy default this is empty." var:"DEFAULT_LDFLAGS"`
-		DefaultNamespace   string `help:"Namespace passed to all cc_embed_binary rules when not overridden by the namespace argument to that rule.\nNot set by default, if you want to use those rules you'll need to set it or pass it explicitly to each one." var:"DEFAULT_NAMESPACE"`
-		PkgConfigPath      string `help:"Custom PKG_CONFIG_PATH for pkg-config.\nBy default this is empty." var:"PKG_CONFIG_PATH"`
-		Coverage           bool   `help:"If true (the default), coverage will be available for C and C++ build rules.\nThis is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.\nIt's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation." var:"CPP_COVERAGE"`
+		CCTool             string     `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example." var:"CC_TOOL"`
+		CppTool            string     `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example." var:"CPP_TOOL"`
+		LdTool             string     `help:"The tool invoked to link object files. Defaults to ld but you could also set it to gold, for example." var:"LD_TOOL"`
+		ArTool             string     `help:"The tool invoked to archive static libraries. Defaults to ar." var:"AR_TOOL"`
+		AsmTool            string     `help:"The tool invoked as an assembler. Currently only used on OSX for cc_embed_binary rules and so defaults to nasm." var:"ASM_TOOL"`
+		LinkWithLdTool     bool       `help:"If true, instructs Please to use the tool set earlier in ldtool to link binaries instead of cctool.\nThis is an esoteric setting that most people don't want; a vanilla ld will not perform all steps necessary here (you'll get lots of missing symbol messages from having no libc etc). Generally best to leave this disabled unless you have very specific requirements." var:"LINK_WITH_LD_TOOL"`
+		DefaultOptCflags   string     `help:"Compiler flags passed to all C rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c99 -O3 -DNDEBUG -Wall -Wextra -Werror" var:"DEFAULT_OPT_CFLAGS"`
+		DefaultDbgCflags   string     `help:"Compiler rules passed to all C rules during dbg builds.\nDefaults to --std=c99 -g3 -DDEBUG -Wall -Wextra -Werror." var:"DEFAULT_DBG_CFLAGS"`
+		DefaultOptCppflags string     `help:"Compiler flags passed to all C++ rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c++11 -O3 -DNDEBUG -Wall -Wextra -Werror" var:"DEFAULT_OPT_CPPFLAGS"`
+		DefaultDbgCppflags string     `help:"Compiler rules passed to all C++ rules during dbg builds.\nDefaults to --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror." var:"DEFAULT_DBG_CPPFLAGS"`
+		DefaultLdflags     string     `help:"Linker flags passed to all C++ rules.\nBy default this is empty." var:"DEFAULT_LDFLAGS"`
+		DefaultNamespace   string     `help:"Namespace passed to all cc_embed_binary rules when not overridden by the namespace argument to that rule.\nNot set by default, if you want to use those rules you'll need to set it or pass it explicitly to each one." var:"DEFAULT_NAMESPACE"`
+		PkgConfigPath      string     `help:"Custom PKG_CONFIG_PATH for pkg-config.\nBy default this is empty." var:"PKG_CONFIG_PATH"`
+		Coverage           bool       `help:"If true (the default), coverage will be available for C and C++ build rules.\nThis is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.\nIt's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation." var:"CPP_COVERAGE"`
+		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"@pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
 	} `help:"Please has built-in support for compiling C and C++ code. We don't support every possible nuance of compilation for these languages, but aim to provide something fairly straightforward.\nTypically there is little problem compiling & linking against system libraries although Please has no insight into those libraries and when they change, so cannot rebuild targets appropriately.\n\nThe C and C++ rules are very similar and simply take a different set of tools and flags to facilitate side-by-side usage."`
 	Proto struct {
 		ProtocTool       string   `help:"The binary invoked to compile .proto files. Defaults to protoc." var:"PROTOC_TOOL"`
