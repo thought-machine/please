@@ -66,7 +66,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return
 	}
 
-	cachedTestResults := func() core.TestSuite {
+	cachedTestResults := func() *core.TestSuite {
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)
 		results, err := parseTestResults(cachedOutputFile)
@@ -76,17 +76,24 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to parse cached test file %s", cachedOutputFile)
 		} else if results.Failures() > 0 {
-			panic(fmt.Sprintf("Test results (for %s) with failures shouldn't be cached.", label))
+			log.Warning("Test results (for %s) with failures shouldn't be cached - ignoring.", label)
+			RemoveCachedTestFiles(target)
+			return nil
 		} else {
 			logTestSuccess(state, tid, label, &results, &coverage)
 		}
-		return results
+		return &results
 	}
 
 	moveAndCacheOutputFiles := func(results *core.TestSuite, coverage *core.TestCoverage) bool {
 		// Never cache test results when given arguments; the results may be incomplete.
 		if len(state.TestArgs) > 0 {
 			log.Debug("Not caching results for %s, we passed it arguments", label)
+			return true
+		}
+		// Never cache test results if there were failures (usually flaky tests).
+		if results.Failures() > 0 {
+			log.Debug("Not caching results for %s, test had failures", label)
 			return true
 		}
 		if err := moveAndCacheOutputFile(state, target, hash, outputFile, cachedOutputFile, resultsFileName, dummyOutput); err != nil {
@@ -144,8 +151,11 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
 	if state.NumTestRuns == 1 && !needToRun() {
-		target.Results = cachedTestResults()
-		return
+		cachedResults := cachedTestResults()
+		if cachedResults != nil {
+			target.Results = *cachedResults
+			return
+		}
 	}
 
 	// Fresh set of results for this target.
