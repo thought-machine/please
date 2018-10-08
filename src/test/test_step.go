@@ -77,7 +77,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to parse cached test file %s", cachedOutputFile)
 		} else if results.Failures() > 0 {
 			log.Warning("Test results (for %s) with failures shouldn't be cached - ignoring.", label)
-			RemoveCachedTestFiles(target)
+			state.Cache.Clean(target)
 			return nil
 		} else {
 			logTestSuccess(state, tid, label, &results, &coverage)
@@ -166,8 +166,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	}
 
 	// Remove any cached test result file.
-	if err := RemoveCachedTestFiles(target); err != nil {
-		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove cached test files")
+	if err := RemoveTestOutputs(target); err != nil {
+		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove test output files")
 		return
 	}
 	if worker, err := startTestWorkerIfNeeded(tid, state, target); err != nil {
@@ -516,8 +516,8 @@ func parseCoverageFile(target *core.BuildTarget, coverageFile string) core.TestC
 	return coverage
 }
 
-// RemoveCachedTestFiles removes any cached test or coverage result files for a target.
-func RemoveCachedTestFiles(target *core.BuildTarget) error {
+// RemoveTestOutputs removes any cached test or coverage result files for a target.
+func RemoveTestOutputs(target *core.BuildTarget) error {
 	if err := os.RemoveAll(target.TestResultsFile()); err != nil {
 		return err
 	} else if err := os.RemoveAll(target.CoverageFile()); err != nil {
