@@ -140,9 +140,9 @@ func (sb *safeBuffer) String() string {
 	return sb.buf.String()
 }
 
-// logProgress logs a message once a minute until the given context has expired.
+// LogProgress logs a message once a minute until the given context has expired.
 // Used to provide some notion of progress while waiting for external commands.
-func logProgress(ctx context.Context, target *BuildTarget) {
+func LogProgress(ctx context.Context, target *BuildTarget, msg string) {
 	t := time.NewTicker(1 * time.Minute)
 	defer t.Stop()
 	for i := 1; i < 1000000; i++ {
@@ -151,9 +151,9 @@ func logProgress(ctx context.Context, target *BuildTarget) {
 			return
 		case <-t.C:
 			if i == 1 {
-				log.Notice("%s still running after 1 minute %s", target.Label, progressMessage(target))
+				log.Notice("%s still %s after 1 minute %s", target.Label, msg, progressMessage(target))
 			} else {
-				log.Notice("%s still running after %d minutes %s", target.Label, i, progressMessage(target))
+				log.Notice("%s still %s after %d minutes %s", target.Label, msg, i, progressMessage(target))
 			}
 		}
 	}
@@ -171,7 +171,7 @@ func progressMessage(target *BuildTarget) string {
 // If the command times out the returned error will be a context.DeadlineExceeded error.
 // If showOutput is true then output will be printed to stderr as well as returned.
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
-func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput, attachStdStreams bool, argv []string) ([]byte, []byte, error) {
+func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput, attachStdStreams bool, argv []string, msg string) ([]byte, []byte, error) {
 	if timeout == 0 {
 		if defaultTimeout == 0 {
 			timeout = 10 * time.Minute
@@ -204,7 +204,7 @@ func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time
 		cmd.Stderr = os.Stderr
 	}
 	if target != nil {
-		go logProgress(ctx, target)
+		go LogProgress(ctx, target, msg)
 	}
 	// Start the command, wait for the timeout & then kill it.
 	// We deliberately don't use CommandContext because it will only send SIGKILL which
@@ -234,11 +234,11 @@ func runCommand(cmd *exec.Cmd, ch chan error) {
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
 func ExecWithTimeoutShell(state *BuildState, target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
-	return ExecWithTimeoutShellStdStreams(state, target, dir, env, timeout, defaultTimeout, showOutput, cmd, sandbox, false)
+	return ExecWithTimeoutShellStdStreams(state, target, dir, env, timeout, defaultTimeout, showOutput, cmd, sandbox, false, "building")
 }
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
-func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
+func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool, msg string) ([]byte, []byte, error) {
 	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
 	// Runtime check is a little ugly, but we know this only works on Linux right now.
 	if sandbox && runtime.GOOS == "linux" {
@@ -248,13 +248,13 @@ func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir 
 		}
 		c = append([]string{tool}, c...)
 	}
-	return ExecWithTimeout(target, dir, env, timeout, defaultTimeout, showOutput, attachStdStreams, c)
+	return ExecWithTimeout(target, dir, env, timeout, defaultTimeout, showOutput, attachStdStreams, c, msg)
 }
 
 // ExecWithTimeoutSimple runs an external command with a timeout.
 // It's a simpler version of ExecWithTimeout that gives less control.
 func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, error) {
-	_, out, err := ExecWithTimeout(nil, "", nil, time.Duration(timeout), timeout, false, false, cmd)
+	_, out, err := ExecWithTimeout(nil, "", nil, time.Duration(timeout), timeout, false, false, cmd, "")
 	return out, err
 }
 

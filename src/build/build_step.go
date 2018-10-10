@@ -700,7 +700,7 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 		return nil, err
 	}
 	log.Debug("Sending remote build request for %s to %s; opts %s", target.Label, workerCmd, workerArgs)
-	resp, err := worker.BuildRemotely(state, workerCmd, &worker.Request{
+	resp, err := worker.BuildRemotely(state, target, workerCmd, &worker.Request{
 		Rule:    target.Label.String(),
 		Labels:  target.Labels,
 		TempDir: path.Join(core.RepoRoot, target.TmpDir()),

@@ -2,6 +2,7 @@
 package worker
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,16 +32,23 @@ var workerMap = map[string]*workerServer{}
 var workerMutex sync.Mutex
 
 // BuildRemotely runs a single build request and returns its response.
-func BuildRemotely(state *core.BuildState, worker string, req *Request) (*Response, error) {
+func BuildRemotely(state *core.BuildState, target *core.BuildTarget, worker string, req *Request) (*Response, error) {
 	w, err := getOrStartWorker(state, worker)
 	if err != nil {
 		return nil, err
 	}
-	w.requests <- req
 	ch := make(chan *Response, 1)
 	w.responseMutex.Lock()
 	w.responses[req.Rule] = ch
 	w.responseMutex.Unlock()
+
+	if target != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go core.LogProgress(ctx, target, "building (using "+worker+")")
+	}
+
+	w.requests <- req
 	response := <-ch
 	return response, nil
 }
@@ -66,7 +74,7 @@ func ProvideParse(state *core.BuildState, worker string, dir string) (string, er
 
 // EnsureWorkerStarted ensures that a worker server is started and has responded saying it's ready.
 func EnsureWorkerStarted(state *core.BuildState, worker string, label core.BuildLabel) error {
-	resp, err := BuildRemotely(state, worker, &Request{
+	resp, err := BuildRemotely(state, nil, worker, &Request{
 		Rule: label.String(),
 		Test: true,
 	})
