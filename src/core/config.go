@@ -51,6 +51,12 @@ const (
 	ContainerImplementationDocker = "docker"
 )
 
+// GithubDownloadLocation is plz's Github repo, which will become the default download location in future.
+const GithubDownloadLocation = "https://github.com/thought-machine/please"
+
+// GithubAPILocation is as above, but for the API endpoints.
+const GithubAPILocation = "https://api.github.com/repos/thought-machine/please"
+
 func readConfigFile(config *Configuration, filename string) error {
 	log.Debug("Reading config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
