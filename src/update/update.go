@@ -167,8 +167,8 @@ func downloadPlease(config *core.Configuration, verify bool) {
 		ext = "xz"
 	}
 	v := config.Please.Version.VersionString()
-	if config.Please.DownloadLocation == core.GithubDownloadLocation && shouldUseXZ(config.Please.Version) {
-		url = fmt.Sprintf("%s/releases/download/v%s/please_%s_%s_%s.tar.xz", url, v, v, runtime.GOOS, runtime.GOARCH)
+	if config.Please.DownloadLocation == core.GithubDownloadLocation {
+		url = fmt.Sprintf("%s/releases/download/v%s/please_%s_%s_%s.tar.%s", url, v, v, runtime.GOOS, runtime.GOARCH, ext)
 	} else {
 		url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.%s", url, runtime.GOOS, runtime.GOARCH, v, v, ext)
 	}
@@ -284,29 +284,25 @@ func findLatestVersion(downloadLocation string) *cli.Version {
 	}
 	url := strings.TrimRight(downloadLocation, "/") + "/latest_version"
 	response := mustDownload(url, false)
-	defer response.Body.Close()
-	data, err := ioutil.ReadAll(response.Body)
+	defer response.Close()
+	data, err := ioutil.ReadAll(response)
 	if err != nil {
 		log.Fatalf("Failed to find latest plz version: %s", err)
 	}
-	v := &cli.Version{}
-	if err := v.UnmarshalFlag(strings.TrimSpace(string(data))); err != nil {
-		log.Fatalf("Failed to parse version: %s", string(data))
-	}
-	return v
+	return cli.MustNewVersion(strings.TrimSpace(string(data)))
 }
 
 // findLatestGithubRelease returns the version corresponding to the latest release on Github.
 func findLatestGithubRelease() *cli.Version {
 	response := mustDownload(core.GithubAPILocation+"/releases/latest", false)
-	defer response.Body.Close()
+	defer response.Close()
 	var data struct {
 		TagName string `json:"tag_name"`
 	}
-	if err := json.NewDecoder(response.Body).Decode(&data); err != nil {
+	if err := json.NewDecoder(response).Decode(&data); err != nil {
 		log.Fatalf("Failed to decode response: %s", err)
 	}
-	return semver.New(strings.TrimPrefix(data.TagName, "v"))
+	return cli.MustNewVersion(strings.TrimPrefix(data.TagName, "v"))
 }
 
 // describe returns a word describing the process we're about to do ("update", "downgrading", etc)

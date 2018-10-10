@@ -186,6 +186,21 @@ type Version struct {
 	IsSet bool
 }
 
+// NewVersion creates a new version from the given string.
+func NewVersion(in string) (*Version, error) {
+	v := &Version{}
+	return v, v.UnmarshalFlag(in)
+}
+
+// MustNewVersion creates a new version and dies if it is not parseable.
+func MustNewVersion(in string) *Version {
+	v, err := NewVersion(in)
+	if err != nil {
+		log.Fatalf("Failed to parse version: %s", in)
+	}
+	return v
+}
+
 // UnmarshalText implements the encoding.TextUnmarshaler interface
 func (v *Version) UnmarshalText(text []byte) error {
 	return v.UnmarshalFlag(string(text))
