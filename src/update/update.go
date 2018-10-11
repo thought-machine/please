@@ -14,6 +14,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -165,7 +166,12 @@ func downloadPlease(config *core.Configuration, verify bool) {
 	if shouldUseXZ(config.Please.Version) {
 		ext = "xz"
 	}
-	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.%s", url, runtime.GOOS, runtime.GOARCH, config.Please.Version.VersionString(), config.Please.Version.VersionString(), ext)
+	v := config.Please.Version.VersionString()
+	if config.Please.DownloadLocation == core.GithubDownloadLocation {
+		url = fmt.Sprintf("%s/releases/download/v%s/please_%s_%s_%s.tar.%s", url, v, v, runtime.GOOS, runtime.GOARCH, ext)
+	} else {
+		url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.%s", url, runtime.GOOS, runtime.GOARCH, v, v, ext)
+	}
 	rc := mustDownload(url, true)
 	defer mustClose(rc)
 	var r io.Reader = bufio.NewReader(rc)
@@ -273,24 +279,30 @@ func handleSignals(newDir string) {
 
 // findLatestVersion attempts to find the latest available version of plz.
 func findLatestVersion(downloadLocation string) *cli.Version {
+	if downloadLocation == core.GithubDownloadLocation {
+		return findLatestGithubRelease()
+	}
 	url := strings.TrimRight(downloadLocation, "/") + "/latest_version"
-	log.Info("Downloading %s", url)
-	response, err := http.Get(url)
-	if err != nil {
-		log.Fatalf("Failed to find latest plz version: %s", err)
-	} else if response.StatusCode < 200 || response.StatusCode > 299 {
-		log.Fatalf("Failed to find latest plz version: %s", response.Status)
-	}
-	defer response.Body.Close()
-	data, err := ioutil.ReadAll(response.Body)
+	response := mustDownload(url, false)
+	defer response.Close()
+	data, err := ioutil.ReadAll(response)
 	if err != nil {
 		log.Fatalf("Failed to find latest plz version: %s", err)
 	}
-	v := &cli.Version{}
-	if err := v.UnmarshalFlag(strings.TrimSpace(string(data))); err != nil {
-		log.Fatalf("Failed to parse version: %s", string(data))
+	return cli.MustNewVersion(strings.TrimSpace(string(data)))
+}
+
+// findLatestGithubRelease returns the version corresponding to the latest release on Github.
+func findLatestGithubRelease() *cli.Version {
+	response := mustDownload(core.GithubAPILocation+"/releases/latest", false)
+	defer response.Close()
+	var data struct {
+		TagName string `json:"tag_name"`
 	}
-	return v
+	if err := json.NewDecoder(response).Decode(&data); err != nil {
+		log.Fatalf("Failed to decode response: %s", err)
+	}
+	return cli.MustNewVersion(strings.TrimPrefix(data.TagName, "v"))
 }
 
 // describe returns a word describing the process we're about to do ("update", "downgrading", etc)
