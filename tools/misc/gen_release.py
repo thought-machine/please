@@ -9,12 +9,12 @@ import sys
 
 from third_party.python import colorlog, requests
 from third_party.python.absl import app, flags
+from tools.misc import version
 
 logging.root.handlers[0].setFormatter(colorlog.ColoredFormatter('%(log_color)s%(levelname)s: %(message)s'))
 
 
 flags.DEFINE_string('github_token', None, 'Github API token')
-flags.DEFINE_string('version', None, 'Version to release for')
 flags.DEFINE_bool('dry_run', False, "Don't actually do the release, just print it.")
 flags.mark_flag_as_required('github_token')
 FLAGS = flags.FLAGS
@@ -27,7 +27,7 @@ This is a prerelease version of Please. Bugs and partially-finished features may
 
 class ReleaseGen:
 
-    def __init__(self, version:str , github_token:str):
+    def __init__(self, github_token:str):
         self.url = 'https://api.github.com'
         self.releases_url = self.url + '/repos/thought-machine/please/releases'
         self.session = requests.Session()
@@ -36,7 +36,7 @@ class ReleaseGen:
             'Accept': 'application/vnd.github.v3+json',
             'Authorization': 'token ' + github_token,
         })
-        self.version = version or self.get_current_version()
+        self.version = version.VERSION
         self.version_name = 'Version ' + self.version
         self.is_prerelease = 'a' in self.version or 'b' in self.version
         self.known_content_types = {
@@ -44,11 +44,6 @@ class ReleaseGen:
             '.xz': 'application/x-xz',
             '.asc': 'text/plain',
         }
-
-    def get_current_version(self):
-        """Loads the current version from the repo."""
-        with open('VERSION') as f:
-            return f.read().strip()
 
     def get_latest_release_version(self):
         """Gets the latest released version from Github."""
@@ -129,7 +124,7 @@ class ReleaseGen:
 
 
 def main(argv):
-    r = ReleaseGen(FLAGS.version, FLAGS.github_token)
+    r = ReleaseGen(FLAGS.github_token)
     if not r.needs_release():
         logging.info('Current version is latest release, nothing to be done!')
         return
