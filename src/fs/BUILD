@@ -6,6 +6,7 @@ go_library(
         "glob.go",
         "hash.go",
         "home.go",
+        "sort.go",
     ],
     visibility = ["PUBLIC"],
     deps = [
@@ -37,6 +38,15 @@ go_test(
 go_test(
     name = "home_test",
     srcs = ["home_test.go"],
+    deps = [
+        ":fs",
+        "//third_party/go:testify",
+    ],
+)
+
+go_test(
+    name = "sort_test",
+    srcs = ["sort_test.go"],
     deps = [
         ":fs",
         "//third_party/go:testify",

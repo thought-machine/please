@@ -1,0 +1,54 @@
+package fs
+
+import (
+	"math/rand"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestSortPathsBasic(t *testing.T) {
+	assert.Equal(t, []string{
+		"src/fs",
+		"src/fs/hash.go",
+		"src/fs/sort.go",
+		"src/fs/test_data/data.txt",
+	}, SortPaths([]string{
+		"src/fs/sort.go",
+		"src/fs/hash.go",
+		"src/fs",
+		"src/fs/test_data/data.txt",
+	}))
+}
+
+func TestSortPaths2(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		assert.Equal(t, []string{
+			"common/js/Analytics/AppAnalytics.web.js",
+			"common/protos/categories.py",
+			"common/protos/categories_proto.js",
+			"common/python/resources.py",
+			"common/python/so_import.py",
+			"enterprise_platform/proto/users_model_pb_light.js",
+			"infrastructure/dependency_visualiser/JsonFormatter.js",
+		}, SortPaths(shuffle([]string{
+			"common/python/so_import.py",
+			"common/protos/categories.py",
+			"common/protos/categories_proto.js",
+			"common/python/resources.py",
+			"infrastructure/dependency_visualiser/JsonFormatter.js",
+			"enterprise_platform/proto/users_model_pb_light.js",
+			"common/js/Analytics/AppAnalytics.web.js",
+		})))
+	}
+}
+
+func shuffle(s []string) []string {
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	for i := len(s); i > 0; i-- {
+		j := r.Intn(i)
+		s[i-1], s[j] = s[j], s[i-1]
+	}
+	return s
+}

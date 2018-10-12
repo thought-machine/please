@@ -3,9 +3,10 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
+
+	"fs"
 )
 
 // TestSuites describes a collection of test results for a set of targets.
@@ -308,16 +309,7 @@ func (coverage *TestCoverage) OrderedFiles() []string {
 		}
 		files = append(files, file)
 	}
-	sort.Slice(files, func(i, j int) bool {
-		ci := strings.Count(files[i], "/")
-		cj := strings.Count(files[j], "/")
-		if ci < cj {
-			return true
-		} else if ci > cj {
-			return false
-		}
-		return files[i] < files[j]
-	})
+	fs.SortPaths(files)
 	return files
 }
 
