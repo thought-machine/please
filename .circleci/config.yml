@@ -124,7 +124,7 @@ jobs:
            key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
-  release:
+   release:
      docker:
        - image: thoughtmachine/please_ubuntu:latest
      steps:
