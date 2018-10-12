@@ -27,10 +27,10 @@ jobs:
            name: Package
            command: ./plz-out/bin/src/please build //package:all //tools/misc:gen_release --exclude asc -p
        - persist_to_workspace:
-           root: workspace/plz_linux
+           root: plz-out/pkg
            paths:
-             - plz-out/gen/package/please_*.tar.*
-             - plz-out/bin/tools/misc/gen_release.pex
+             - linux_amd64/please_*.tar.*
+             - gen_release.pex
        - store_artifacts:
            path: plz-out/log
        - save_cache:
@@ -106,9 +106,9 @@ jobs:
            name: Package
            command: ./plz-out/bin/src/please build //package:all --exclude asc --exclude deb -p
        - persist_to_workspace:
-           root: workspace/plz_darwin
+           root: plz-out/pkg
            paths:
-             - plz-out/gen/package/please_*.tar.*
+             - darwin_amd64/please_*.tar.*
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
@@ -131,9 +131,9 @@ jobs:
        - attach_workspace:
            at: /tmp/workspace
        - run: |
-           /tmp/workspace/plz-out/bin/tools/misc/gen_release.pex
-               /tmp/workspace/plz_linux/plz-out/gen/package/*
-               /tmp/workspace/plz_darwin/plz-out/gen/package/*
+           /tmp/workspace/gen_release.pex
+               /tmp/workspace/linux_amd64/*
+               /tmp/workspace/darwin_amd64/*
                --github_token $GITHUB_TOKEN
 
 workflows:
