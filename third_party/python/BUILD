@@ -33,8 +33,13 @@ python_wheel(
     hashes = [
         "sha1: e43b552c4a6063d32b8c9bf742fb3e9ce579c4d8",
     ],
-    test_only = True,
     version = "2.5.0",
+)
+
+python_wheel(
+    name = "colorlog",
+    hashes = ["sha1: 73eef4e430c84b2235ec6be2212aad42fc0a83c7"],
+    version = "3.1.4",
 )
 
 python_wheel(
@@ -174,6 +179,14 @@ python_wheel(
     name = "colorama",
     hashes = ["sha1: ee2bb9f67cd75e82dacab3ffcd92dd3e4d032a24"],
     version = "0.3.9",
+)
+
+python_wheel(
+    name = "absl",
+    package_name = "absl_py",
+    hashes = ["sha1: eb015a38bdc765b54626ca47af80bab9e3099ac2"],
+    version = "0.5.0",
+    deps = [":six"],
 )
 
 pip_library(

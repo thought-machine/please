@@ -25,12 +25,12 @@ jobs:
            command: ./tools/misc/ci_lint.py
        - run:
            name: Package
-           command: |
-             ./plz-out/bin/src/please build //package:all --exclude asc -p &&
-             mkdir /tmp/artifacts &&
-             mv plz-out/gen/package/*.deb plz-out/gen/package/*.tar.gz /tmp/artifacts
-       - store_artifacts:
-           path: /tmp/artifacts
+           command: ./plz-out/bin/src/please build //package:all //tools/misc:gen_release --exclude asc -p
+       - persist_to_workspace:
+           root: workspace/plz_linux
+           paths:
+             - plz-out/gen/package/please_*.tar.*
+             - plz-out/bin/tools/misc/gen_release.pex
        - store_artifacts:
            path: plz-out/log
        - save_cache:
@@ -42,7 +42,6 @@ jobs:
        - save_cache:
            key: python-linux-main-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
-
 
    build-linux-alt:
      working_directory: ~/please
@@ -105,10 +104,11 @@ jobs:
            path: plz-out/log
        - run:
            name: Package
-           command: |
-             ./plz-out/bin/src/please build //package:all --exclude asc --exclude deb -p &&
-             mkdir /tmp/artifacts &&
-             mv plz-out/gen/package/*.tar.gz /tmp/artifacts
+           command: ./plz-out/bin/src/please build //package:all --exclude asc --exclude deb -p
+       - persist_to_workspace:
+           root: workspace/plz_darwin
+           paths:
+             - plz-out/gen/package/please_*.tar.*
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
@@ -124,6 +124,18 @@ jobs:
            key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
+  release:
+     docker:
+       - image: thoughtmachine/please_ubuntu:latest
+     steps:
+       - attach_workspace:
+           at: /tmp/workspace
+       - run: |
+           /tmp/workspace/plz-out/bin/tools/misc/gen_release.pex
+               /tmp/workspace/plz_linux/plz-out/gen/package/*
+               /tmp/workspace/plz_darwin/plz-out/gen/package/*
+               --github_token $GITHUB_TOKEN
+
 workflows:
   version: 2
   build-all:
@@ -131,3 +143,10 @@ workflows:
       - build-linux
       - build-linux-alt
       - build-darwin
+      - release:
+          requires:
+            - build-linux
+            - build-linux-alt
+            - build-darwin
+          branches:
+            only: master
