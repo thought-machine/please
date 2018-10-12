@@ -3,7 +3,6 @@ package fs
 import (
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -11,14 +10,28 @@ import (
 func TestSortPathsBasic(t *testing.T) {
 	assert.Equal(t, []string{
 		"src/fs",
+		"src/fs/test_data/data.txt",
 		"src/fs/hash.go",
 		"src/fs/sort.go",
-		"src/fs/test_data/data.txt",
 	}, SortPaths([]string{
 		"src/fs/sort.go",
 		"src/fs/hash.go",
 		"src/fs",
 		"src/fs/test_data/data.txt",
+	}))
+}
+
+func TestSortPathsBasic2(t *testing.T) {
+	assert.Equal(t, []string{
+		"common/python/aws/s3.py",
+		"common/python/aws/ses.py",
+		"common/python/async_unblock.py",
+		"common/python/boto.py",
+	}, SortPaths([]string{
+		"common/python/aws/ses.py",
+		"common/python/aws/s3.py",
+		"common/python/async_unblock.py",
+		"common/python/boto.py",
 	}))
 }
 
@@ -45,9 +58,8 @@ func TestSortPaths2(t *testing.T) {
 }
 
 func shuffle(s []string) []string {
-	r := rand.New(rand.NewSource(time.Now().Unix()))
 	for i := len(s); i > 0; i-- {
-		j := r.Intn(i)
+		j := rand.Intn(i)
 		s[i-1], s[j] = s[j], s[i-1]
 	}
 	return s

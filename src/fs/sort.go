@@ -13,7 +13,7 @@ func SortPaths(files []string) []string {
 		if len(si) == 1 && len(sj) > 1 {
 			return false // si is a leaf and sj is not
 		} else if len(sj) == 1 && len(si) > 1 {
-			return false // sj is a leaf and si is not
+			return true // sj is a leaf and si is not
 		} else if len(si) == 0 || len(sj) == 0 {
 			return len(si) < len(sj) // one or the other is empty.
 		}

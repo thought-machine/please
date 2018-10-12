@@ -131,9 +131,9 @@ func TestOrderedFiles(t *testing.T) {
 	cov.Files["common/python/aws/s3.py"] = nil
 	cov.Files["common/python/boto.py"] = nil
 	assert.Equal(t, []string{
-		"common/python/async_unblock.py",
-		"common/python/boto.py",
 		"common/python/aws/s3.py",
 		"common/python/aws/ses.py",
+		"common/python/async_unblock.py",
+		"common/python/boto.py",
 	}, cov.OrderedFiles())
 }
