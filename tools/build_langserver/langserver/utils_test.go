@@ -60,7 +60,6 @@ func TestGetPathFromURLFail(t *testing.T) {
 	p3, err := GetPathFromURL(currentFile, "dir")
 	assert.Equal(t, p3, "")
 	assert.Error(t, err)
-	t.Log(core.RepoRoot)
 }
 
 func TestEnsureURL(t *testing.T) {
@@ -74,7 +73,7 @@ func TestEnsureURL(t *testing.T) {
 
 func TestReadFile(t *testing.T) {
 	ctx := context.Background()
-	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
+	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
 	uri := lsp.DocumentURI("file://" + filepath)
 
 	// Test ReadFile() with filepath as uri
@@ -99,7 +98,7 @@ func TestReadFile(t *testing.T) {
 
 func TestReadFileCanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
+	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
 
 	cancel()
 	content, err := ReadFile(ctx, lsp.DocumentURI(filepath))
@@ -109,7 +108,7 @@ func TestReadFileCanceledContext(t *testing.T) {
 
 func TestGetLineContent(t *testing.T) {
 	ctx := context.Background()
-	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
+	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
 	pos := lsp.Position{
 		Line: 0,
 		Character: 0,

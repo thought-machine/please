@@ -55,7 +55,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 	}
 
 	// Get Hover Identifier
-	ident, err := analyzer.IdentFromPos(uri, position, fileContent)
+	ident, err := analyzer.IdentFromPos(uri, position)
 	if err != nil {
 		return nil, &jsonrpc2.Error{
 			Code: jsonrpc2.CodeParseError,

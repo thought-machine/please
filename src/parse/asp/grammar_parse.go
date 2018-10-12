@@ -144,28 +144,30 @@ func (p *parser) parseStatement() *Statement {
 	s := &Statement{}
 	tok := p.l.Peek()
 	s.Pos = tok.Pos
+
+	var endPos Position
 	switch tok.Value {
 	case "pass":
 		s.Pass = true
-		p.l.Next()
+		endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	case "continue":
 		s.Continue = true
-		p.l.Next()
+		endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	case "def":
-		s.FuncDef = p.parseFuncDef()
+		s.FuncDef, endPos = p.parseFuncDef()
 	case "for":
-		s.For = p.parseFor()
+		s.For, endPos = p.parseFor()
 	case "if":
-		s.If = p.parseIf()
+		s.If, endPos = p.parseIf()
 	case "return":
 		p.l.Next()
-		s.Return = p.parseReturn()
+		s.Return, endPos = p.parseReturn()
 	case "raise":
 		p.l.Next()
 		s.Raise = p.parseExpression()
-		p.next(EOL)
+		endPos = p.next(EOL).Pos
 	case "assert":
 		p.initField(&s.Assert)
 		p.l.Next()
@@ -173,15 +175,20 @@ func (p *parser) parseStatement() *Statement {
 		if p.optional(',') {
 			s.Assert.Message = p.next(String).Value
 		}
-		p.next(EOL)
+		endPos = p.next(EOL).Pos
 	default:
 		if tok.Type == Ident {
-			s.Ident = p.parseIdentStatement()
+			s.Ident, endPos = p.parseIdentStatement()
 		} else {
 			s.Literal = p.parseExpression()
+			endPos = s.Literal.EndPos
 		}
-		p.next(EOL)
+		nextTok := p.next(EOL)
+		if endPos.Column == 0 {
+			endPos = nextTok.Pos
+		}
 	}
+	s.EndPos = endPos
 	return s
 }
 
@@ -194,7 +201,7 @@ func (p *parser) parseStatements() []*Statement {
 	return stmts
 }
 
-func (p *parser) parseReturn() *ReturnStatement {
+func (p *parser) parseReturn() (*ReturnStatement, Position) {
 	r := &ReturnStatement{}
 	for p.anythingBut(EOL) {
 		r.Values = append(r.Values, p.parseExpression())
@@ -202,11 +209,16 @@ func (p *parser) parseReturn() *ReturnStatement {
 			break
 		}
 	}
-	p.next(EOL)
-	return r
+	endPos := p.next(EOL).EndPos()
+
+	//TODO(bnm): This is a bit hacky, but I'm not sure if there is a better way :(
+	if endPos.Column == 1 {
+		endPos = r.Values[len(r.Values) - 1].Pos
+	}
+	return r, endPos
 }
 
-func (p *parser) parseFuncDef() *FuncDef {
+func (p *parser) parseFuncDef() (*FuncDef, Position) {
 	p.nextv("def")
 	fd := &FuncDef{
 		Name: p.next(Ident).Value,
@@ -219,15 +231,24 @@ func (p *parser) parseFuncDef() *FuncDef {
 		}
 	}
 	p.next(')')
-	p.next(':')
+	// Get the position for the end of function defition header
+	fd.EoDef = p.next(':').Pos
+
 	p.next(EOL)
+	var endPos Position
 	if tok := p.l.Peek(); tok.Type == String {
 		fd.Docstring = tok.Value
-		p.l.Next()
+		// endPos being set here, this is for when function only contains docstring
+		endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	}
+
 	fd.Statements = p.parseStatements()
-	return fd
+
+	if len(fd.Statements) > 0 {
+		endPos = fd.Statements[len(fd.Statements) - 1].EndPos
+	}
+	return fd, endPos
 }
 
 func (p *parser) parseArgument() Argument {
@@ -271,26 +292,32 @@ func (p *parser) parseArgument() Argument {
 	return a
 }
 
-func (p *parser) parseIf() *IfStatement {
+func (p *parser) parseIf() (*IfStatement, Position) {
 	p.nextv("if")
 	i := &IfStatement{}
 	p.parseExpressionInPlace(&i.Condition)
 	p.next(':')
 	p.next(EOL)
 	i.Statements = p.parseStatements()
+
+	allStatements := i.Statements
 	for p.optionalv("elif") {
 		elif := &i.Elif[p.newElement(&i.Elif)]
 		p.parseExpressionInPlace(&elif.Condition)
 		p.next(':')
 		p.next(EOL)
 		elif.Statements = p.parseStatements()
+		allStatements = append(allStatements, elif.Statements...)
 	}
 	if p.optionalv("else") {
 		p.next(':')
 		p.next(EOL)
 		i.ElseStatements = p.parseStatements()
+		allStatements = append(allStatements, i.ElseStatements...)
 	}
-	return i
+
+	endPos := allStatements[len(allStatements)-1].EndPos
+	return i, endPos
 }
 
 // newElement is a nasty little hack to allow extending slices of types that we can't readily name.
@@ -307,7 +334,7 @@ func (p *parser) initField(x interface{}) {
 	v.Set(reflect.New(v.Type().Elem()))
 }
 
-func (p *parser) parseFor() *ForStatement {
+func (p *parser) parseFor() (*ForStatement, Position) {
 	f := &ForStatement{}
 	p.nextv("for")
 	f.Names = p.parseIdentList()
@@ -316,9 +343,12 @@ func (p *parser) parseFor() *ForStatement {
 	p.next(':')
 	p.next(EOL)
 	f.Statements = p.parseStatements()
-	return f
+
+	endPos := f.Statements[len(f.Statements) - 1].EndPos
+	return f, endPos
 }
 
+// TODO: could ret last token here
 func (p *parser) parseIdentList() []string {
 	ret := []string{p.next(Ident).Value} // First one is compulsory
 	for tok := p.l.Peek(); tok.Type == ','; tok = p.l.Peek() {
@@ -345,6 +375,7 @@ func (p *parser) parseInlineIf(e *Expression) {
 		e.If = &InlineIf{Condition: p.parseExpression()}
 		p.nextv("else")
 		e.If.Else = p.parseExpression()
+		e.EndPos = e.If.Else.EndPos
 	}
 }
 
@@ -355,14 +386,17 @@ func (p *parser) parseUnconditionalExpression() *Expression {
 }
 
 func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
+	var endPos Position
 	if tok := p.l.Peek(); tok.Type == '-' || tok.Value == "not" {
 		p.l.Next()
+		var valueExp *ValueExpression
+		valueExp, endPos = p.parseValueExpression()
 		e.UnaryOp = &UnaryOp{
 			Op:   tok.Value,
-			Expr: *p.parseValueExpression(),
+			Expr: *valueExp,
 		}
 	} else {
-		e.Val = p.parseValueExpression()
+		e.Val, endPos = p.parseValueExpression()
 	}
 	tok := p.l.Peek()
 	if tok.Value == "not" {
@@ -371,9 +405,10 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 		tok = p.l.Peek()
 		p.assert(tok.Value == "in", tok, "expected 'in', not %s", tok.Value)
 		tok.Value = "not in"
+		endPos = tok.EndPos()
 	}
 	if op, present := operators[tok.Value]; present {
-		p.l.Next()
+		tok = p.l.Next()
 		o := &e.Op[p.newElement(&e.Op)]
 		o.Op = op
 		o.Expr = p.parseUnconditionalExpression()
@@ -385,19 +420,23 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 				o.Expr.Op = nil
 			}
 		}
-		tok = p.l.Peek()
+		p.l.Peek()
+		endPos = o.Expr.EndPos
 	}
+	e.EndPos = endPos
 }
 
-func (p *parser) parseValueExpression() *ValueExpression {
+func (p *parser) parseValueExpression() (*ValueExpression, Position) {
 	ve := &ValueExpression{}
 	tok := p.l.Peek()
+
+	var endPos Position
 	if tok.Type == String {
 		if tok.Value[0] == 'f' {
 			ve.FString = p.parseFString()
 		} else {
 			ve.String = tok.Value
-			p.l.Next()
+			endPos = p.l.Next().EndPos()
 		}
 	} else if tok.Type == Int {
 		p.assert(len(tok.Value) < 19, tok, "int literal is too large: %s", tok)
@@ -405,37 +444,44 @@ func (p *parser) parseValueExpression() *ValueExpression {
 		i, err := strconv.Atoi(tok.Value)
 		p.assert(err == nil, tok, "invalid int value %s", tok) // Theoretically the lexer shouldn't have fed us this...
 		ve.Int.Int = i
-		p.l.Next()
+		endPos = p.l.Next().EndPos()
 	} else if tok.Value == "False" || tok.Value == "True" || tok.Value == "None" {
 		ve.Bool = tok.Value
-		p.l.Next()
+		endPos = p.l.Next().EndPos()
 	} else if tok.Type == '[' {
-		ve.List = p.parseList('[', ']')
+		ve.List, endPos = p.parseList('[', ']')
 	} else if tok.Type == '(' {
-		ve.Tuple = p.parseList('(', ')')
+		ve.Tuple, endPos = p.parseList('(', ')')
 	} else if tok.Type == '{' {
-		ve.Dict = p.parseDict()
+		ve.Dict, endPos = p.parseDict()
 	} else if tok.Value == "lambda" {
 		ve.Lambda = p.parseLambda()
 	} else if tok.Type == Ident {
-		ve.Ident = p.parseIdentExpr()
+		ve.Ident, endPos = p.parseIdentExpr()
+
+		// In case the Ident is a variable name, we assign the endPos to the end of current token.
+		// see test_data/unary_op.build
+		if endPos.Column == 0 {
+			endPos = tok.EndPos()
+		}
 	} else {
 		p.fail(tok, "Unexpected token %s", tok)
 	}
+
 	tok = p.l.Peek()
 	if tok.Type == '[' {
-		ve.Slice = p.parseSlice()
+		ve.Slice, endPos = p.parseSlice()
 		tok = p.l.Peek()
 	}
 	if p.optional('.') {
-		ve.Property = p.parseIdentExpr()
+		ve.Property, endPos = p.parseIdentExpr()
 	} else if p.optional('(') {
-		ve.Call = p.parseCall()
+		ve.Call, endPos = p.parseCall()
 	}
-	return ve
+	return ve, endPos
 }
 
-func (p *parser) parseIdentStatement() *IdentStatement {
+func (p *parser) parseIdentStatement() (*IdentStatement, Position) {
 	tok := p.l.Peek()
 	i := &IdentStatement{
 		Name: p.next(Ident).Value,
@@ -443,53 +489,60 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 	_, reserved := keywords[i.Name]
 	p.assert(!reserved, tok, "Cannot operate on keyword or constant %s", i.Name)
 	tok = p.l.Next()
+	var endPos Position
 	switch tok.Type {
 	case ',':
 		p.initField(&i.Unpack)
 		i.Unpack.Names = p.parseIdentList()
 		p.next('=')
 		i.Unpack.Expr = p.parseExpression()
+		endPos = i.Unpack.Expr.EndPos
 	case '[':
 		p.initField(&i.Index)
 		i.Index.Expr = p.parseExpression()
-		p.next(']')
+		endPos = p.next(']').EndPos()
 		if tok := p.oneofval("=", "+="); tok.Type == '=' {
 			i.Index.Assign = p.parseExpression()
+			endPos = i.Index.Assign.EndPos
 		} else {
 			i.Index.AugAssign = p.parseExpression()
+			endPos = i.Index.AugAssign.EndPos
 		}
 	case '.':
 		p.initField(&i.Action)
-		i.Action.Property = p.parseIdentExpr()
+		i.Action.Property, endPos = p.parseIdentExpr()
 	case '(':
 		p.initField(&i.Action)
-		i.Action.Call = p.parseCall()
+		i.Action.Call, endPos = p.parseCall()
 	case '=':
 		p.initField(&i.Action)
 		i.Action.Assign = p.parseExpression()
+		endPos = i.Action.Assign.EndPos
 	default:
 		p.assert(tok.Value == "+=", tok, "Unexpected token %s, expected one of , [ . ( = +=", tok)
 		p.initField(&i.Action)
 		i.Action.AugAssign = p.parseExpression()
+		endPos = i.Action.AugAssign.EndPos
 	}
-	return i
+	return i, endPos
 }
 
-func (p *parser) parseIdentExpr() *IdentExpr {
+func (p *parser) parseIdentExpr() (*IdentExpr, Position) {
+	var endPos Position
 	ie := &IdentExpr{Name: p.next(Ident).Value}
 	for tok := p.l.Peek(); tok.Type == '.' || tok.Type == '('; tok = p.l.Peek() {
 		p.l.Next()
 		action := &ie.Action[p.newElement(&ie.Action)]
 		if tok.Type == '.' {
-			action.Property = p.parseIdentExpr()
+			action.Property, endPos = p.parseIdentExpr()
 		} else {
-			action.Call = p.parseCall()
+			action.Call, endPos = p.parseCall()
 		}
 	}
-	return ie
+	return ie, endPos
 }
 
-func (p *parser) parseCall() *Call {
+func (p *parser) parseCall() (*Call, Position) {
 	// The leading ( has already been consumed (because that fits better at the various call sites)
 	c := &Call{}
 	names := map[string]bool{}
@@ -509,11 +562,11 @@ func (p *parser) parseCall() *Call {
 			break
 		}
 	}
-	p.next(')')
-	return c
+	endPos := p.next(')').EndPos()
+	return c, endPos
 }
 
-func (p *parser) parseList(opening, closing rune) *List {
+func (p *parser) parseList(opening, closing rune) (*List, Position) {
 	l := &List{}
 	p.next(opening)
 	for tok := p.l.Peek(); tok.Type != closing; tok = p.l.Peek() {
@@ -526,11 +579,11 @@ func (p *parser) parseList(opening, closing rune) *List {
 		p.assert(len(l.Values) == 1, tok, "Must have exactly 1 item in a list comprehension")
 		l.Comprehension = p.parseComprehension()
 	}
-	p.next(closing)
-	return l
+	endPos := p.next(closing).EndPos()
+	return l, endPos
 }
 
-func (p *parser) parseDict() *Dict {
+func (p *parser) parseDict() (*Dict, Position) {
 	d := &Dict{}
 	p.next('{')
 	for tok := p.l.Peek(); tok.Type != '}'; tok = p.l.Peek() {
@@ -547,11 +600,11 @@ func (p *parser) parseDict() *Dict {
 		p.assert(len(d.Items) == 1, tok, "Must have exactly 1 key:value pair in a dict comprehension")
 		d.Comprehension = p.parseComprehension()
 	}
-	p.next('}')
-	return d
+	endPos := p.next('}').EndPos()
+	return d, endPos
 }
 
-func (p *parser) parseSlice() *Slice {
+func (p *parser) parseSlice() (*Slice, Position) {
 	s := &Slice{}
 	p.next('[')
 	if p.optional(':') {
@@ -562,12 +615,13 @@ func (p *parser) parseSlice() *Slice {
 			s.Colon = ":"
 		}
 	}
-	if p.optional(']') {
-		return s
+	if nextType := p.l.Peek().Type; nextType == ']' {
+		endPos := p.l.Next().EndPos()
+		return s, endPos
 	}
 	s.End = p.parseExpression()
-	p.next(']')
-	return s
+	endPos := p.next(']').EndPos()
+	return s, endPos
 }
 
 func (p *parser) parseComprehension() *Comprehension {

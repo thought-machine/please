@@ -32,8 +32,6 @@ type Parser struct {
 	interpreter *interpreter
 	// Stashed set of source code for builtin rules.
 	builtins map[string][]byte
-
-	statements []*Statement
 }
 
 // NewParser creates a new parser instance. One is normally sufficient for a process lifetime.
@@ -66,8 +64,6 @@ func (p *Parser) LoadBuiltins(filename string, contents, encoded []byte) error {
 		return p.annotate(err, nil)
 	}
 
-	// Add statements to the list
-	p.statements = append(p.statements, statements...)
 	return nil
 }
 
@@ -82,11 +78,6 @@ func (p *Parser) MustLoadBuiltins(filename string, contents, encoded []byte) {
 // *Assuming Parser.LoadBuiltins or Parser.MustLoadBuiltins* has been called
 func (p *Parser) GetAllBuiltins() map[string][]byte {
 	return p.builtins
-}
-
-// GetAllBuiltinStatements returns all the builtin rules as a slice of asp.Statements
-func (p *Parser) GetAllBuiltinStatements() []*Statement {
-	return p.statements
 }
 
 

@@ -11,6 +11,7 @@ type FileInput struct {
 // following tokens, it doesn't then make another choice :( )
 type Statement struct {
 	Pos     Position
+	EndPos  Position
 	FuncDef *FuncDef         `| @@`
 	For     *ForStatement    `| @@`
 	If      *IfStatement     `| @@`
@@ -37,6 +38,7 @@ type FuncDef struct {
 	Arguments  []Argument   `"(" [ @@ { "," @@ } ] ")" Colon EOL`
 	Docstring  string       `[ @String EOL ]`
 	Statements []*Statement `{ @@ } Unindent`
+	EoDef	   Position
 	// Not part of the grammar. Used to indicate internal targets that can only
 	// be called using keyword arguments.
 	KeywordsOnly bool
@@ -75,6 +77,7 @@ type Argument struct {
 // expression is allowed (including the extra parts like inline if-then-else, operators, etc).
 type Expression struct {
 	Pos     Position
+	EndPos  Position
 	UnaryOp *UnaryOp         `( @@`
 	Val     *ValueExpression `| @@ )`
 	Op      []OpExpression   `{ @@ }`
@@ -92,21 +95,6 @@ type OptimisedExpression struct {
 	Local string
 	// And similarly applied to optimise lookups into configuration.
 	Config string
-}
-
-// String is a string representation of OptimisedExpression
-func (oe OptimisedExpression) String() string {
-	if oe.Constant != nil && oe.Constant.String() != "" {
-		return oe.Constant.String()
-	}
-	if oe.Local != "" {
-		return oe.Local
-	}
-	if oe.Config != "" {
-		return "CONFIG." + oe.Config
-	}
-
-	return "''"
 }
 
 // An OpExpression is a operator combined with its following expression.

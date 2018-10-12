@@ -36,6 +36,14 @@ func (tok Token) String() string {
 	return reverseSymbol(tok.Type)
 }
 
+func (tok Token) EndPos() Position {
+	end := tok.Pos
+	end.Offset += len(tok.Value)
+	end.Column += len(tok.Value)
+
+	return end
+}
+
 // A Position describes a position in a source file.
 // All properties in Position are one(1) indexed
 type Position struct {

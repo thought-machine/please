@@ -3,17 +3,18 @@ package langserver
 import (
 	"core"
 	"parse"
+	"parse/rules"
+	"sort"
+	"strconv"
 	"strings"
 
+	"fmt"
+	"io/ioutil"
 	"parse/asp"
 	"tools/build_langserver/lsp"
-	"io/ioutil"
-	"fmt"
 )
 
 // TODO(bnmetrics): This file should contain functions to retrieve builtin and custom definitions of build defs
-
-const lineLength  = 86
 
 // Analyzer is a wrapper around asp.parser
 // This is being loaded into a handler on initialization
@@ -61,21 +62,38 @@ func newAnalyzer() *Analyzer {
 }
 
 // BuiltInsRules gets all the builtin functions and rules as a map, and store it in Analyzer.BuiltIns
-func (a *Analyzer) builtInsRules() {
+// This is typically called when instantiate a new Analyzer
+func (a *Analyzer) builtInsRules() error {
 	statementMap := make(map[string]*RuleDef)
 
-	for _, statement := range a.parser.GetAllBuiltinStatements() {
-		// Saves FuncDefs into the statementMap if it's a None private rule
-		if statement.FuncDef != nil && !strings.HasPrefix(statement.FuncDef.Name, "_") {
-			statementMap[statement.FuncDef.Name] = newRuleDef(statement.FuncDef)
+	dir, _ := rules.AssetDir("")
+	sort.Strings(dir)
+	// Iterate through the directory and get the builtin statements
+	for _, filename := range dir {
+		if !strings.HasSuffix(filename, ".gob") {
+			asset := rules.MustAsset(filename)
+			stmts, err := a.parser.ParseData(asset, filename)
+			if err != nil {
+				log.Fatalf("%s", err)
+			}
+			// Iterate through the statement we got and add to statementMap
+			for _, statement := range stmts {
+				if statement.FuncDef != nil && !strings.HasPrefix(statement.FuncDef.Name, "_") {
+					content := string(asset)
+					statementMap[statement.FuncDef.Name] = newRuleDef(content, statement)
+				}
+			}
 		}
 	}
+
 	a.BuiltIns = statementMap
+	return nil
 }
 
+
 // IdentFromPos gets the Identifier given a lsp.Position
-func (a *Analyzer) IdentFromPos(uri lsp.DocumentURI, position lsp.Position, filecontent []string) (*Identifier, error) {
-	idents, err := a.IdentFromFile(uri, filecontent)
+func (a *Analyzer) IdentFromPos(uri lsp.DocumentURI, position lsp.Position) (*Identifier, error) {
+	idents, err := a.IdentFromFile(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +109,9 @@ func (a *Analyzer) IdentFromPos(uri lsp.DocumentURI, position lsp.Position, file
 
 
 // IdentFromFile gets all the Identifiers from a given BUILD file
+// filecontent: string slice from a file, typically from ReadFile in utils.go
 // *reads complete files only*
-func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI, filecontent []string) ([]*Identifier,  error) {
+func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier,  error) {
 	filepath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return nil, err
@@ -102,96 +121,77 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI, filecontent []string) ([]*
 		return nil, err
 	}
 
-	stmt, err := a.parser.ParseData(bytecontent, filepath)
+	stmts, err := a.parser.ParseData(bytecontent, filepath)
 	if err != nil {
 		return nil, err
 	}
 
 	var idents []*Identifier
-	for i, val := range stmt {
-		//fmt.Println(val.Ident.Action.Call)
-		if val.Ident != nil {
+	for _, stmt := range stmts {
+		if stmt.Ident != nil {
+			//fmt.Println(stmt.EndPos.Column)
+			//fmt.Println("Line", stmt.EndPos.Line)
 			ident := &Identifier{
-				IdentStatement: val.Ident,
+				IdentStatement: stmt.Ident,
 				// -1 from asp.Statement.Pos.Line, as lsp position requires zero index
-				StartLine: val.Pos.Line - 1,
+				StartLine: stmt.Pos.Line - 1,
+				EndLine: stmt.EndPos.Line -1,
 			}
 			idents = append(idents, ident)
-
-			// fillin End for the previous iterated identifier
-			if i > 0 {
-				fmt.Println(ident)
-				idents[i - 1].EndLine = ident.StartLine - 1
-			}
 		}
 	}
-
-	// Finally, we fill in the last of the endline
-	idents[len(idents) - 1].EndLine = len(filecontent)
 
 	return idents, nil
 }
 
-func newRuleDef(funcDef *asp.FuncDef) *RuleDef {
+func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 	ruleDef := &RuleDef{
-		FuncDef:funcDef,
+		FuncDef:stmt.FuncDef,
 		ArgMap: make(map[string]*Argument),
 	}
 
-	var headerSlice []string
-	header := "def " + funcDef.Name + "("
-	line := header
-	argLen := len(funcDef.Arguments)
-	if argLen > 0 {
-		for i, arg := range funcDef.Arguments {
+	// Fill in the header property of ruleDef
+	contentStrSlice := strings.Split(content, "\n")
+	if stmt.FuncDef.Name == "cgo_library" {
+		fmt.Println(stmt.EndPos.Line)
+		fmt.Println(stmt.FuncDef.Statements[6].EndPos)
+		fmt.Println(stmt.EndPos.Column)
+	}
+
+	headerSlice := contentStrSlice[stmt.Pos.Line - 1:stmt.FuncDef.EoDef.Line]
+
+	if len(stmt.FuncDef.Arguments) > 0 {
+		for i, arg := range stmt.FuncDef.Arguments {
 			// Check if it a builtin type method, and reconstruct header if it is
 			if i == 0 && arg.Name == "self" {
-				line = arg.Type[0] + "." +funcDef.Name + "("
+				originalDef := fmt.Sprintf("def %s(self:%s, ", stmt.FuncDef.Name, arg.Type[0])
+				newDef := fmt.Sprintf("%s.%s(", arg.Type[0], stmt.FuncDef.Name)
+				headerSlice[0] = strings.Replace(headerSlice[0], originalDef, newDef, 1)
 			} else {
 				// Fill in the ArgMap
-				argString := getArgument(arg)
-				required := true
-				if strings.Contains(argString, "=") {
-					required = false
-				}
+				argString := getArgString(arg)
 				ruleDef.ArgMap[arg.Name] = &Argument{
 					Argument: &arg,
 					definition: argString,
-					required:required,
+					required:arg.Value == nil,
 				}
-
-				// Add string to Header
-				if len(line) < lineLength {
-					line += argString + ", "
-				} else {
-					headerSlice = append(headerSlice, line)
-					line = strings.Repeat(" ", len(header)) + argString + ", "
-				}
-			}
-
-			// finally, When we get to the end of the slice, append line
-			if i == argLen - 1 {
-				headerSlice = append(headerSlice, line)
 			}
 		}
 	}
-	joinedHeader := strings.Join(headerSlice, "\n")
-	ruleDef.Header = strings.TrimSuffix(joinedHeader, ", ") + ")"
+
+	ruleDef.Header = strings.TrimSuffix(strings.Join(headerSlice, "\n"), ":")
 
 	return ruleDef
 }
 
-func getArgument(argument asp.Argument) string {
+// src type:list, required:false
+func getArgString(argument asp.Argument) string {
 	argType := strings.Join(argument.Type, "|")
+	required := strconv.FormatBool(argument.Value == nil)
 
-	// Get the default value for optional arguments
-	defaultVal := ""
-	if argument.Value != nil && argument.Value.Optimised != nil {
-		defaultVal = "=" + argument.Value.Optimised.String()
-	}
-
+	argString := argument.Name + " required:" + required
 	if argType != "" {
-		return argument.Name + ":" + argType + defaultVal
+		argString += ", type:" + argType
 	}
-	return argument.Name + argType + defaultVal
+	return argString
 }
