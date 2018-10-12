@@ -12,7 +12,7 @@ filegroup(
 
 python_binary(
     name = "gen_release",
-    labels = ["link:plz-out/pkg"],
+    labels = ["hlink:plz-out/pkg"],
     main = "gen_release.py",
     deps = [
         "//third_party/python:absl",

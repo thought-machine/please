@@ -586,24 +586,31 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 // buildLinks builds links from the given target if it's labelled appropriately.
 // For example, Go targets may link themselves into plz-out/go/src etc.
 func buildLinks(state *core.BuildState, target *core.BuildTarget) {
-	if labels := target.PrefixedLabels("link:"); len(labels) > 0 {
+	buildLinksOfType(state, target, "link:", os.Symlink)
+	buildLinksOfType(state, target, "hlink:", os.Link)
+}
+
+type linkFunc func(string, string) error
+
+func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix string, f linkFunc) {
+	if labels := target.PrefixedLabels(prefix); len(labels) > 0 {
 		env := core.BuildEnvironment(state, target)
 		for _, dest := range labels {
 			destDir := path.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
 			srcDir := path.Join(core.RepoRoot, target.OutDir())
 			for _, out := range target.Outputs() {
-				symlinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out))
+				linkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
 			}
 		}
 	}
 }
 
-// symlinkIfNotExists creates dest as a link to src if it doesn't already exist.
-func symlinkIfNotExists(src, dest string) {
+// linkIfNotExists creates dest as a link to src if it doesn't already exist.
+func linkIfNotExists(src, dest string, f linkFunc) {
 	if !fs.PathExists(dest) {
 		if err := fs.EnsureDir(dest); err != nil {
 			log.Warning("Failed to create directory for %s: %s", dest, err)
-		} else if err := os.Symlink(src, dest); err != nil && !os.IsExist(err) {
+		} else if err := f(src, dest); err != nil && !os.IsExist(err) {
 			log.Warning("Failed to create %s: %s", dest, err)
 		}
 	}

@@ -96,7 +96,7 @@ filegroup(
         ":please_tarball_xz",
         ":servers_tarball",
     ],
-    labels = ["link:plz-out/pkg/${OS}_${ARCH}"],
+    labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )
 
 filegroup(
