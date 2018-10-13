@@ -70,12 +70,14 @@ class ReleaseGen:
             'draft': not self.is_prerelease,
         }
         if FLAGS.dry_run:
-            logging.info('Would post the following to Github: %s' % json.dumps(data, indent=4))
+            logging.info('Would post the following to Github: %s', json.dumps(data, indent=4))
             return
+        logging.info('Creating release: %s',  json.dumps(data, indent=4))
         response = self.session.post(self.releases_url, json=data)
         response.raise_for_status()
         data = response.json()
         self.assets_url = data['assets_url']
+        logging.info('Release id %s created', data['id'])
 
     def upload(self, artifact:str):
         """Uploads the given artifact to the new release."""
@@ -84,8 +86,9 @@ class ReleaseGen:
         content_type = self.known_content_types[ext]
         url = self.assets_url + '?name=' + filename
         if FLAGS.dry_run:
-            logging.info('Would upload %s to %s as %s' % (filename, url, content_type))
+            logging.info('Would upload %s to %s as %s', filename, url, content_type)
             return
+        logging.info('Uploading %s to %s as %s', filename, url, content_type)
         with open(artifact, 'rb') as f:
             response = self.session.post(url, data=f, headers={'Content-Type': content_type})
             response.raise_for_status()
