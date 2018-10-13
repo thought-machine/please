@@ -32,6 +32,7 @@ class ReleaseGen:
     def __init__(self, github_token:str):
         self.url = 'https://api.github.com'
         self.releases_url = self.url + '/repos/thought-machine/please/releases'
+        self.assets_url = self.releases_url + '/<id>/assets'
         self.session = requests.Session()
         self.session.verify = '/etc/ssl/certs/ca-certificates.crt'
         if not FLAGS.dry_run:
@@ -74,19 +75,19 @@ class ReleaseGen:
         response = self.session.post(self.releases_url, json=data)
         response.raise_for_status()
         data = response.json()
-        self.release_id = data['id']
+        self.assets_url = data['assets_url']
 
     def upload(self, artifact:str):
         """Uploads the given artifact to the new release."""
         filename = os.path.basename(artifact)
         _, ext = os.path.splitext(filename)
         content_type = self.known_content_types[ext]
-        url = '%s/%s/assets?name=%s' % (self.releases_url, self.release_id, filename)
+        url = self.assets_url + '?name=' + filename
+        if FLAGS.dry_run:
+            logging.info('Would upload %s to %s as %s' % (filename, url, content_type))
+            return
         with open(artifact, 'rb') as f:
-            if FLAGS.dry_run:
-                logging.info('Would upload %s to %s as %s' % (filename, url, content_type))
-                return
-            response = self.session.post(url, files={filename: (filename, f, content_type)})
+            response = self.session.post(url, data=f, headers={'Content-Type': content_type})
             response.raise_for_status()
         print('%s uploaded' % filename)
 
