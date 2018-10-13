@@ -90,7 +90,8 @@ class ReleaseGen:
             return
         logging.info('Uploading %s to %s as %s', filename, url, content_type)
         with open(artifact, 'rb') as f:
-            response = self.session.post(url, data=f, headers={'Content-Type': content_type})
+            self.session.headers.update({'Content-Type': content_type})
+            response = self.session.post(url, data=f)
             response.raise_for_status()
         print('%s uploaded' % filename)
 
