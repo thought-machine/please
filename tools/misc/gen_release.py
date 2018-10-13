@@ -49,15 +49,10 @@ class ReleaseGen:
             '.asc': 'text/plain',
         }
 
-    def get_latest_release_version(self):
-        """Gets the latest released version from Github."""
-        response = self.session.get(self.releases_url + '/latest')
-        response.raise_for_status()
-        return json.loads(response.text).get('tag_name').lstrip('v')
-
     def needs_release(self):
         """Returns true if the current version is not yet released to Github."""
-        return self.get_latest_release_version() != self.version
+        response = self.session.get(self.releases_url + '/tags/' + self.version)
+        return response.status_code == 404
 
     def release(self):
         """Submits a new release to Github."""
