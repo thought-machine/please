@@ -51,7 +51,9 @@ class ReleaseGen:
 
     def needs_release(self):
         """Returns true if the current version is not yet released to Github."""
-        response = self.session.get(self.releases_url + '/tags/' + self.version)
+        url = self.releases_url + '/tags/v' + self.version
+        logging.info('Checking %s for release...', url)
+        response = self.session.get(url)
         return response.status_code == 404
 
     def release(self):
@@ -123,7 +125,7 @@ class ReleaseGen:
 def main(argv):
     r = ReleaseGen(FLAGS.github_token)
     if not r.needs_release():
-        logging.info('Current version is latest release, nothing to be done!')
+        logging.info('Current version has already been released, nothing to be done!')
         return
     r.release()
     for artifact in argv[1:]:
