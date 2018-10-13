@@ -4,6 +4,12 @@ filegroup(
     visibility = ["PUBLIC"],
 )
 
+filegroup(
+    name = "changelog",
+    srcs = ["ChangeLog"],
+    visibility = ["PUBLIC"],
+)
+
 new_http_archive(
     name = "gtest",
     build_file = "gtest.build",

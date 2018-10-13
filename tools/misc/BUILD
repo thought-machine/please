@@ -10,19 +10,13 @@ filegroup(
     visibility = ["PUBLIC"],
 )
 
-genrule(
-    name = "version",
-    srcs = ["//build_defs:version"],
-    outs = ["version.py"],
-    cmd = "mv $SRCS $OUT",
-)
-
 python_binary(
     name = "gen_release",
     labels = ["hlink:plz-out/pkg"],
     main = "gen_release.py",
     deps = [
-        ":version",
+        "//:changelog",
+        "//:version",
         "//third_party/python:absl",
         "//third_party/python:colorlog",
         "//third_party/python:requests",

@@ -31,6 +31,7 @@ jobs:
            paths:
              - linux_amd64/please_*.tar.*
              - gen_release.pex
+	     - ChangeLog
        - store_artifacts:
            path: plz-out/log
        - save_cache:
