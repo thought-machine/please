@@ -32,7 +32,7 @@ class ReleaseGen:
     def __init__(self, github_token:str):
         self.url = 'https://api.github.com'
         self.releases_url = self.url + '/repos/thought-machine/please/releases'
-        self.assets_url = self.releases_url + '/<id>/assets'
+        self.upload_url = self.releases_url.replace('api.', 'uploads.') + '/<id>/assets?name='
         self.session = requests.Session()
         self.session.verify = '/etc/ssl/certs/ca-certificates.crt'
         if not FLAGS.dry_run:
@@ -76,15 +76,17 @@ class ReleaseGen:
         response = self.session.post(self.releases_url, json=data)
         response.raise_for_status()
         data = response.json()
-        self.assets_url = data['assets_url']
+        self.upload_url = data['upload_url'].replace('{?name,label}', '?name=')
         logging.info('Release id %s created', data['id'])
 
     def upload(self, artifact:str):
         """Uploads the given artifact to the new release."""
-        filename = os.path.basename(artifact)
+        # Artifact names aren't unique between OSs; make them so.
+        arch = 'darwin_amd64' if 'darwin' in artifact else 'linux_amd64'
+        filename = os.path.basename(artifact).replace(self.version, self.version + '_' + arch_ver)
         _, ext = os.path.splitext(filename)
         content_type = self.known_content_types[ext]
-        url = self.assets_url + '?name=' + filename
+        url = self.upload_url + filename
         if FLAGS.dry_run:
             logging.info('Would upload %s to %s as %s', filename, url, content_type)
             return
