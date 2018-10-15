@@ -15,9 +15,9 @@ func TestNewAnalyzer(t *testing.T) {
 	a := newAnalyzer()
 	assert.NotEqual(t, nil, a.BuiltIns)
 
-	go_library := a.BuiltIns["go_library"]
-	assert.Equal(t, 15, len(go_library.ArgMap))
-	assert.Equal(t, true, go_library.ArgMap["name"].required)
+	goLibrary := a.BuiltIns["go_library"]
+	assert.Equal(t, 15, len(goLibrary.ArgMap))
+	assert.Equal(t, true, goLibrary.ArgMap["name"].required)
 }
 
 func TestIdentFromPos(t *testing.T) {
