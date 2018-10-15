@@ -471,8 +471,7 @@ func TestMultilineStringQuotes(t *testing.T) {
 "`
 	assert.Equal(t, expected, statements[0].Ident.Action.Assign.Val.String)
 
-	t.Log(statements[0].EndPos)
-	//TODO(BNM): Test for Endpos
+	//TODO(BNM): It would be nice if we can get the actual EndPos for the multiline
 	//assert.Equal(t, 4, statements[0].EndPos.Column)
 	//assert.Equal(t, 3, statements[0].EndPos.Line)
 }

@@ -11,33 +11,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//func TestNewAnalyzer(t *testing.T) {
-//	a := newAnalyzer()
-//	assert.NotEqual(t, nil, a.BuiltIns)
-//	//
-//	//builtin := a.parser.GetAllBuiltins()
-//	//for k, _ := range builtin {
-//	//	t.Log(k)
-//	//}
-//	//astr := string(builtin["src/parse/rules/cc_rules.build_defs"])
-//	//t.Log(strings.Split(astr, "\n"))
-//}
+func TestNewAnalyzer(t *testing.T) {
+	a := newAnalyzer()
+	assert.NotEqual(t, nil, a.BuiltIns)
 
-//func TestGetStatementsFromFile(t *testing.T) {
-//	a := newAnalyzer()
-//	core.FindRepoRoot()
-//	ctx := context.Background()
-//	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
-//	uri := lsp.DocumentURI("file://" + filepath)
-//	fileContent, err := ReadFile(ctx, uri)
-//
-//	stmt, err := a.IdentFromFile(uri, fileContent)
-//	fmt.Println(err)
-//	fmt.Println("Luna", stmt[0].Action.Call.Arguments[0].Value.Val)
-//	fmt.Println(stmt)
-//
-//}
-//
+	go_library := a.BuiltIns["go_library"]
+	assert.Equal(t, 15, len(go_library.ArgMap))
+	assert.Equal(t, true, go_library.ArgMap["name"].required)
+}
+
+func TestIdentFromPos(t *testing.T) {
+	a := newAnalyzer()
+	core.FindRepoRoot()
+
+	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
+	uri := lsp.DocumentURI("file://" + filepath)
+
+	ident, _ := a.IdentFromPos(uri, lsp.Position{Line:8, Character:5})
+	assert.NotEqual(t, nil, ident)
+	assert.Equal(t, "go_library", ident.Name)
+
+	ident, _ = a.IdentFromPos(uri, lsp.Position{Line:18, Character:0})
+	assert.True(t, nil == ident)
+}
+
 func TestIdentFromFile(t *testing.T) {
 	a := newAnalyzer()
 	core.FindRepoRoot()
@@ -48,10 +45,12 @@ func TestIdentFromFile(t *testing.T) {
 	idents, err := a.IdentFromFile(uri)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, idents[0].Name, "go_library")
-	//assert.Equal(t, idents[0].StartLine, 0)
-	//assert.Equal(t, idents[0].EndLine, 18)
+	assert.Equal(t, idents[0].StartLine, 0)
+	assert.Equal(t, idents[0].EndLine, 17)
 
-
+	assert.Equal(t, idents[1].Name, "go_test")
+	assert.Equal(t, idents[1].StartLine, 19)
+	assert.Equal(t, idents[1].EndLine, 31)
 }
 
 func TestNewRuleDef(t *testing.T) {
