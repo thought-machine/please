@@ -49,6 +49,8 @@ targetlevel = 7
 [proto]
 protoctool = //third_party/proto:protoc
 protocgoplugin = //third_party/go:protoc-gen-go
+language = go
+language = py
 
 [docker]
 defaultimage = thoughtmachine/please_test:v2
