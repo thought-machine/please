@@ -4,7 +4,7 @@
 maven_jar(
     name = "javac_worker",
     hashes = ["no"],
-    id = "build.please:javac-worker:13.2.0",
+    id = "build.please:javac-worker:13.1.10",
     sources = False,
     visibility = ["PUBLIC"],
 )
