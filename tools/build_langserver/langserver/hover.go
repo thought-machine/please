@@ -64,9 +64,33 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 	}
 
 	lineContent := fileContent[position.Line]
-	fmt.Println(ident.Action)
+
 	var contentString string
-	// check if the hovered line is an build target indentifier definition
+
+	switch ident.Type {
+	case "call":
+		contentString = getCallContent(lineContent, ident, analyzer, position)
+	case "property":
+		//TODO
+	case "assign":
+		//TODO
+	case "augAssign":
+		//TODO
+	default:
+		//TODO(bnmetrics): handle cases when ident.Action is nil
+	}
+
+	return &lsp.MarkupContent{
+		Value: contentString,
+		Kind:lsp.MarkDown, // TODO(bnmetrics): this might be reconsidered
+	}, nil
+}
+
+
+func getCallContent(lineContent string, ident *Identifier, analyzer *Analyzer, position lsp.Position) string {
+	var contentString string
+
+	// check if the hovered line is the first line of the function call
 	if strings.Contains(lineContent, ident.Name) {
 		header := analyzer.BuiltIns[ident.Name].Header
 		docString := analyzer.BuiltIns[ident.Name].Docstring
@@ -96,8 +120,5 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 		}
 	}
 
-	return &lsp.MarkupContent{
-		Value: contentString,
-		Kind:lsp.MarkDown, // TODO(bnmetrics): this might be reconsidered
-	}, nil
+	return contentString
 }
