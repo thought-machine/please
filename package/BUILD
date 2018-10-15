@@ -126,3 +126,9 @@ hash_filegroup(
     name = "hash_files",
     srcs = [":installed_files"],
 )
+
+filegroup(
+    name = "signer",
+    srcs = ["//tools/release_signer"],
+    labels = ["hlink:plz-out/pkg"],
+)

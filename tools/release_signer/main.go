@@ -15,7 +15,7 @@ var opts = struct {
 	Usage    string
 	Out      string `short:"o" long:"output" env:"OUT" description:"Output filename (signature)" required:"true"`
 	In       string `short:"i" long:"input" description:"Input file to sign" required:"true"`
-	Key      string `short:"k" long:"key" description:"Private ASCII-armoured key file to sign with" required:"true"`
+	Key      string `short:"k" long:"key" env:"PLZ_GPG_KEY" description:"Private ASCII-armoured key file to sign with" required:"true"`
 	User     string `short:"u" long:"user" default:"releases@please.build" description:"User to sign for"`
 	Password string `short:"p" long:"password" env:"GPG_PASSWORD" required:"true" description:"Password to unlock keyring"`
 }{

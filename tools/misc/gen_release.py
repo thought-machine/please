@@ -15,6 +15,7 @@ logging.root.handlers[0].setFormatter(colorlog.ColoredFormatter('%(log_color)s%(
 
 
 flags.DEFINE_string('github_token', None, 'Github API token')
+flags.DEFINE_string('signer', None, 'Release signer binary')
 flags.DEFINE_bool('dry_run', False, "Don't actually do the release, just print it.")
 flags.mark_flag_as_required('github_token')
 FLAGS = flags.FLAGS
@@ -60,7 +61,7 @@ class ReleaseGen:
         """Submits a new release to Github."""
         data = {
             'tag_name': 'v' + self.version,
-            'target_commitish': os.environ['CIRCLE_SHA1'],
+            'target_commitish': os.environ.get('CIRCLE_SHA1'),
             'name': 'Please v' + self.version,
             'body': ''.join(self.get_release_notes()),
             'prerelease': self.is_prerelease,
@@ -93,6 +94,16 @@ class ReleaseGen:
             response = self.session.post(url, data=f)
             response.raise_for_status()
         print('%s uploaded' % filename)
+
+    def sign(self, artifact:str) -> str:
+        """Creates a detached ASCII-armored signature for an artifact."""
+        # We expect the PLZ_GPG_KEY and GPG_PASSWORD env vars to be set.
+        out = artifact + '.asc'
+        if FLAGS.dry_run:
+            logging.info('Would sign %s into %s', artifact, out)
+        else:
+            subprocess.check_call([FLAGS.signer, '-o', out, '-i', artifact])
+        return out
 
     def get_release_notes(self):
         """Yields the changelog notes for a given version."""
@@ -127,9 +138,12 @@ def main(argv):
     if not r.needs_release():
         logging.info('Current version has already been released, nothing to be done!')
         return
+    # Check we can sign the artifacts before trying to create a release.
+    signatures = [r.sign(artifact) for artifact in argv[1:]]
     r.release()
-    for artifact in argv[1:]:
+    for artifact, signature in zip(argv[1:], signatures):
         r.upload(artifact)
+        r.upload(signature)
 
 
 if __name__ == '__main__':
