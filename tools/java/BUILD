@@ -30,5 +30,7 @@ java_binary(
     deps = [
         ":jacoco_shaded",
         ":junit-runner",
+        "//third_party/java:hamcrest",
+        "//third_party/java:junit",
     ],
 )
