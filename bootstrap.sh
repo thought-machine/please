@@ -45,13 +45,6 @@ else
     warn "Skipping Go bootstrap"
 fi
 
-# Detect javac presence and swap to compiling locally if we find it.
-if hash javac 2>/dev/null ; then
-    PLZ_ARGS="$PLZ_ARGS -o buildconfig.build_java:true"
-else
-    warn "javac not found, using prebuilt Java plugins"
-fi
-
 # Clean out old artifacts.
 rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go
 # Compile the builtin rules
@@ -80,9 +73,8 @@ plz-out/bin/src/please query alltargets > /dev/null
 # Run the tests to make sure they still work
 notice "Running tests..."
 
-# Run the set of tests that will work on this machine.
-# We assume the user has Java installed or the build will have already failed,
-# but some other parts are optional until one actually tries to use the rule.
+# Run the set of tests that will work on this machine. There are a bunch of tests in this
+# repo that are optional and exercise specific rules, and require extra dependencies.
 EXCLUDES=""
 
 HAVE_UNITTEST=false
