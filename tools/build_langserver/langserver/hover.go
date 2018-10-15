@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
-	"github.com/sourcegraph/jsonrpc2"
-
 	"strings"
-	"tools/build_langserver/lsp"
 
 	"parse/asp"
+	"tools/build_langserver/lsp"
+
+	"github.com/sourcegraph/jsonrpc2"
 )
 
 const hoverMethod = "textDocument/hover"
@@ -98,7 +97,7 @@ func getCallContent(lineContent string, ident *Identifier, analyzer *Analyzer, p
 
 	identArgs := ident.Action.Call.Arguments
 	for _, identArg := range identArgs {
-		if content := ContentFromNestedCall(analyzer, identArg, lineContent, position); content != ""{
+		if content := ContentFromNestedCall(analyzer, identArg, lineContent, position); content != "" {
 			return content
 		}
 
@@ -148,14 +147,14 @@ func getCallContent(lineContent string, ident *Identifier, analyzer *Analyzer, p
 
 func ContentFromNestedCall(analyzer *Analyzer, identArg asp.CallArgument, lineContent string, position lsp.Position) string {
 	nestedIdent := identArg.Value.Val.Ident
-	withInRange := bool(position.Line >= identArg.Value.Pos.Line - 1 &&
-						position.Line <= identArg.Value.EndPos.Line - 1)
+	withInRange := bool(position.Line >= identArg.Value.Pos.Line-1 &&
+		position.Line <= identArg.Value.EndPos.Line-1)
 
 	if nestedIdent != nil && withInRange && nestedIdent.Action != nil {
 		for _, action := range nestedIdent.Action {
 			if action.Call != nil {
 				for _, arg := range action.Call.Arguments {
-					if content := getArgContent(analyzer, arg, nestedIdent.Name, lineContent, position); content != ""{
+					if content := getArgContent(analyzer, arg, nestedIdent.Name, lineContent, position); content != "" {
 						return content
 					}
 				}
