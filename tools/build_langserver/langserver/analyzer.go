@@ -19,7 +19,7 @@ import (
 // Analyzer is a wrapper around asp.parser
 // This is being loaded into a handler on initialization
 type Analyzer struct {
-	parser *asp.Parser
+	parser   *asp.Parser
 	BuiltIns map[string]*RuleDef
 }
 
@@ -38,16 +38,16 @@ type RuleDef struct {
 type Argument struct {
 	*asp.Argument
 	definition string
-	required bool
+	required   bool
 }
 
 // Identifier is a wrapper around asp.Identifier
 // Including the starting line and the ending line number
 type Identifier struct {
 	*asp.IdentStatement
-	Type string
+	Type      string
 	StartLine int
-	EndLine int
+	EndLine   int
 }
 
 func newAnalyzer() *Analyzer {
@@ -55,7 +55,7 @@ func newAnalyzer() *Analyzer {
 	parser := parse.NewAspParser(state)
 
 	a := &Analyzer{
-		parser:parser,
+		parser: parser,
 	}
 	a.builtInsRules()
 
@@ -91,7 +91,6 @@ func (a *Analyzer) builtInsRules() error {
 	return nil
 }
 
-
 // IdentFromPos gets the Identifier given a lsp.Position
 func (a *Analyzer) IdentFromPos(uri lsp.DocumentURI, position lsp.Position) (*Identifier, error) {
 	idents, err := a.IdentFromFile(uri)
@@ -108,11 +107,10 @@ func (a *Analyzer) IdentFromPos(uri lsp.DocumentURI, position lsp.Position) (*Id
 	return nil, nil
 }
 
-
 // IdentFromFile gets all the Identifiers from a given BUILD file
 // filecontent: string slice from a file, typically from ReadFile in utils.go
 // *reads complete files only*
-func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier,  error) {
+func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier, error) {
 	filepath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return nil, err
@@ -146,10 +144,10 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier,  error) {
 
 			ident := &Identifier{
 				IdentStatement: stmt.Ident,
-				Type:identType,
+				Type:           identType,
 				// -1 from asp.Statement.Pos.Line, as lsp position requires zero index
 				StartLine: stmt.Pos.Line - 1,
-				EndLine: stmt.EndPos.Line -1,
+				EndLine:   stmt.EndPos.Line - 1,
 			}
 			idents = append(idents, ident)
 		}
@@ -160,13 +158,13 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier,  error) {
 
 func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 	ruleDef := &RuleDef{
-		FuncDef:stmt.FuncDef,
-		ArgMap: make(map[string]*Argument),
+		FuncDef: stmt.FuncDef,
+		ArgMap:  make(map[string]*Argument),
 	}
 
 	// Fill in the header property of ruleDef
 	contentStrSlice := strings.Split(content, "\n")
-	headerSlice := contentStrSlice[stmt.Pos.Line - 1:stmt.FuncDef.EoDef.Line]
+	headerSlice := contentStrSlice[stmt.Pos.Line-1 : stmt.FuncDef.EoDef.Line]
 
 	if len(stmt.FuncDef.Arguments) > 0 {
 		for i, arg := range stmt.FuncDef.Arguments {
@@ -179,9 +177,9 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 				// Fill in the ArgMap
 				argString := getArgString(arg)
 				ruleDef.ArgMap[arg.Name] = &Argument{
-					Argument: &arg,
+					Argument:   &arg,
 					definition: argString,
-					required:arg.Value == nil,
+					required:   arg.Value == nil,
 				}
 			}
 		}

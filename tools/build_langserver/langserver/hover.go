@@ -7,8 +7,10 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
-	"tools/build_langserver/lsp"
 	"strings"
+	"tools/build_langserver/lsp"
+
+	"parse/asp"
 )
 
 const hoverMethod = "textDocument/hover"
@@ -49,7 +51,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 	fileContent, err := ReadFile(ctx, uri)
 	if err != nil {
 		return nil, &jsonrpc2.Error{
-			Code: jsonrpc2.CodeParseError,
+			Code:    jsonrpc2.CodeParseError,
 			Message: fmt.Sprintf("fail to read file %s", uri),
 		}
 	}
@@ -58,7 +60,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 	ident, err := analyzer.IdentFromPos(uri, position)
 	if err != nil {
 		return nil, &jsonrpc2.Error{
-			Code: jsonrpc2.CodeParseError,
+			Code:    jsonrpc2.CodeParseError,
 			Message: fmt.Sprintf("fail to parse Build file %s", uri),
 		}
 	}
@@ -82,43 +84,100 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 
 	return &lsp.MarkupContent{
 		Value: contentString,
-		Kind:lsp.MarkDown, // TODO(bnmetrics): this might be reconsidered
+		Kind:  lsp.MarkDown, // TODO(bnmetrics): this might be reconsidered
 	}, nil
 }
-
 
 func getCallContent(lineContent string, ident *Identifier, analyzer *Analyzer, position lsp.Position) string {
 	var contentString string
 
 	// check if the hovered line is the first line of the function call
 	if strings.Contains(lineContent, ident.Name) {
-		header := analyzer.BuiltIns[ident.Name].Header
-		docString := analyzer.BuiltIns[ident.Name].Docstring
-
-		contentString = header + "\n\n" + docString
+		return getRuleDefContent(analyzer, ident.Name)
 	}
 
-	// check if the hovered line is an argument to the Identifier
-	// TODO(bnmetrics): THE FOLLOWING NEEDS TO BE REVAMPED, I CHANGED MY MIND
-	if strings.Contains(lineContent, "=") && ident.Action.Call != nil {
+	identArgs := ident.Action.Call.Arguments
+	for _, identArg := range identArgs {
+		if content := ContentFromNestedCall(analyzer, identArg, position); content != ""{
+			return content
+		}
+
+		if content := getArgContent(analyzer, identArg, ident.Name, lineContent, position); content != "" {
+			return content
+		}
+
+	}
+
+	//// check if the hovered line is an argument to the Identifier
+	//// TODO(bnmetrics): revamp!!
+	//if strings.Contains(lineContent, "=") {
+	//	EqualIndex := strings.Index(lineContent, "=")
+	//	// Check if the hover column is the argument definition
+	//	if position.Character < EqualIndex {
+	//
+	//		arg := strings.TrimSpace(lineContent[:EqualIndex])
+	//		identArgs := ident.Action.Call.Arguments
+	//
+	//		for _, identArg := range identArgs {
+	//			// Ensure we are not getting the arguments from nested calls
+	//			if identArg.Name == arg {
+	//				contentString = analyzer.BuiltIns[ident.Name].ArgMap[arg].definition
+	//				break
+	//			} else {
+	//				//TODO(bnmetrics): get the content from nested called, do something with the ident.Call.Arguments
+	//				contentString = ContentFromNestedCall(analyzer, identArg, position)
+	//
+	//				//nestedIdent := identArg.Value.Val.Ident
+	//				//withInRange := bool(position.Line >= identArg.Value.Pos.Line - 1 && position.Line <= (identArg.Value.EndPos.Line - 1))
+	//				//if nestedIdent != nil {
+	//				//	fmt.Println(lineContent, nestedIdent.Name, position.Line, identArg.Value.EndPos.Line - 1)
+	//				//}
+	//				//if nestedIdent != nil && withInRange && nestedIdent.Action != nil {
+	//				//	contentstring := analyzer.BuiltIns[nestedIdent.Name].ArgMap
+	//				//	fmt.Println(contentstring)
+	//				//}
+	//			}
+	//		}
+	//	} else {
+	//
+	//	}
+	//}
+
+	return contentString
+}
+
+func ContentFromNestedCall(analyzer *Analyzer, identArg asp.CallArgument, position lsp.Position) string {
+	nestedIdent := identArg.Value.Val.Ident
+	withInRange := bool(position.Line >= identArg.Value.Pos.Line - 1 &&
+						position.Line <= identArg.Value.EndPos.Line - 1)
+
+	if nestedIdent != nil && withInRange && nestedIdent.Action != nil {
+		//contentstring := analyzer.BuiltIns[nestedIdent.Name].ArgMap
+		contentstring := getRuleDefContent(analyzer, nestedIdent.Name)
+		return contentstring
+	}
+
+	return ""
+}
+
+func getRuleDefContent(analyzer *Analyzer, name string) string {
+	header := analyzer.BuiltIns[name].Header
+	docString := analyzer.BuiltIns[name].Docstring
+
+	return header + "\n\n" + docString
+}
+
+func getArgContent(analyzer *Analyzer, identArg asp.CallArgument, name string, lineContent string, position lsp.Position) string {
+	if strings.Contains(lineContent, "=") {
 		EqualIndex := strings.Index(lineContent, "=")
 		if position.Character < EqualIndex {
 			arg := strings.TrimSpace(lineContent[:EqualIndex])
 
-			IdentArgs := ident.Action.Call.Arguments
-
-			for _, IdenArg := range IdentArgs {
-				// Ensure we are not getting the arguments from nested calls
-				if IdenArg.Name == arg {
-					contentString = analyzer.BuiltIns[ident.Name].ArgMap[arg].definition
-				} else {
-					//TODO(bnmetrics): get the content from nested called, do something with the ident.Call.Arguments
-				}
+			if identArg.Name == arg {
+				return analyzer.BuiltIns[name].ArgMap[arg].definition
 			}
-		} else {
-
 		}
 	}
 
-	return contentString
+	return ""
 }

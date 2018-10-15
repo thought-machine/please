@@ -77,6 +77,7 @@ type Argument struct {
 // expression is allowed (including the extra parts like inline if-then-else, operators, etc).
 type Expression struct {
 	Pos     Position
+	EndPos  Position
 	UnaryOp *UnaryOp         `( @@`
 	Val     *ValueExpression `| @@ )`
 	Op      []OpExpression   `{ @@ }`

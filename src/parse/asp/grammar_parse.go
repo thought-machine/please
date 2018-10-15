@@ -47,7 +47,7 @@ var keywords = map[string]struct{}{
 }
 
 type parser struct {
-	l *lex
+	l      *lex
 	endPos Position
 }
 
@@ -180,7 +180,7 @@ func (p *parser) parseStatement() *Statement {
 		p.next(EOL)
 	default:
 		if tok.Type == Ident {
-			s.Ident= p.parseIdentStatement()
+			s.Ident = p.parseIdentStatement()
 		} else {
 			s.Literal = p.parseExpression()
 		}
@@ -238,7 +238,7 @@ func (p *parser) parseFuncDef() *FuncDef {
 	fd.Statements = p.parseStatements()
 
 	if len(fd.Statements) > 0 {
-		p.endPos = fd.Statements[len(fd.Statements) - 1].EndPos
+		p.endPos = fd.Statements[len(fd.Statements)-1].EndPos
 	}
 	return fd
 }
@@ -336,7 +336,7 @@ func (p *parser) parseFor() *ForStatement {
 	p.next(EOL)
 	f.Statements = p.parseStatements()
 
-	p.endPos = f.Statements[len(f.Statements) - 1].EndPos
+	p.endPos = f.Statements[len(f.Statements)-1].EndPos
 	return f
 }
 
@@ -353,6 +353,7 @@ func (p *parser) parseIdentList() []string {
 func (p *parser) parseExpression() *Expression {
 	e := p.parseUnconditionalExpression()
 	p.parseInlineIf(e)
+	e.EndPos = p.endPos
 	return e
 }
 
@@ -360,6 +361,7 @@ func (p *parser) parseExpressionInPlace(e *Expression) {
 	e.Pos = p.l.Peek().Pos
 	p.parseUnconditionalExpressionInPlace(e)
 	p.parseInlineIf(e)
+	e.EndPos = p.endPos
 }
 
 func (p *parser) parseInlineIf(e *Expression) {
@@ -648,7 +650,7 @@ func (p *parser) parseFString() *FString {
 	tok := p.next(String)
 	s := tok.Value[2 : len(tok.Value)-1] // Strip preceding f" and trailing "
 	p.endPos = tok.EndPos()
-	tok.Pos.Column++                     // track position in case of error
+	tok.Pos.Column++ // track position in case of error
 	for idx := strings.IndexByte(s, '{'); idx != -1; idx = strings.IndexByte(s, '{') {
 		v := &f.Vars[p.newElement(&f.Vars)]
 		v.Prefix = s[:idx]

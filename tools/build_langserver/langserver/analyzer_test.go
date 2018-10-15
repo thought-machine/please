@@ -27,11 +27,11 @@ func TestIdentFromPos(t *testing.T) {
 	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
 	uri := lsp.DocumentURI("file://" + filepath)
 
-	ident, _ := a.IdentFromPos(uri, lsp.Position{Line:8, Character:5})
+	ident, _ := a.IdentFromPos(uri, lsp.Position{Line: 8, Character: 5})
 	assert.NotEqual(t, nil, ident)
 	assert.Equal(t, "go_library", ident.Name)
 
-	ident, _ = a.IdentFromPos(uri, lsp.Position{Line:18, Character:0})
+	ident, _ = a.IdentFromPos(uri, lsp.Position{Line: 18, Character: 0})
 	assert.True(t, nil == ident)
 }
 
@@ -77,7 +77,6 @@ func TestNewRuleDef(t *testing.T) {
 	assert.Equal(t, ruleDef.ArgMap["visibility"].definition,
 		"visibility required:false, type:list")
 
-
 	// Test header for len()
 	ruleContent = rules.MustAsset("builtins.build_defs")
 
@@ -99,7 +98,6 @@ func TestNewRuleDef(t *testing.T) {
 	assert.Equal(t, ruleDef.Header, "str.startswith(s:str)")
 	assert.Equal(t, len(ruleDef.ArgMap), 1)
 	assert.Equal(t, true, ruleDef.ArgMap["s"].required)
-
 
 	// Test header for a config function, setdefault()
 	stmt = getStatementByName(statements, "setdefault")
