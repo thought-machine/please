@@ -367,7 +367,6 @@ func (p *parser) parseInlineIf(e *Expression) {
 		e.If = &InlineIf{Condition: p.parseExpression()}
 		p.nextv("else")
 		e.If.Else = p.parseExpression()
-		e.EndPos = e.If.Else.EndPos
 	}
 }
 

@@ -64,7 +64,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer, uri lsp.DocumentUR
 	}
 
 	lineContent := fileContent[position.Line]
-
+	fmt.Println(ident.Action)
 	var contentString string
 	// check if the hovered line is an build target indentifier definition
 	if strings.Contains(lineContent, ident.Name) {

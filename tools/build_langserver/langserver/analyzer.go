@@ -45,6 +45,7 @@ type Argument struct {
 // Including the starting line and the ending line number
 type Identifier struct {
 	*asp.IdentStatement
+	Type string
 	StartLine int
 	EndLine int
 }
@@ -129,8 +130,23 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier,  error) {
 	var idents []*Identifier
 	for _, stmt := range stmts {
 		if stmt.Ident != nil {
+			// get the identifier type
+			var identType string
+			if stmt.Ident.Action != nil {
+				if stmt.Ident.Action.Property != nil {
+					identType = "property"
+				} else if stmt.Ident.Action.Call != nil {
+					identType = "call"
+				} else if stmt.Ident.Action.Assign != nil {
+					identType = "assign"
+				} else if stmt.Ident.Action.AugAssign != nil {
+					identType = "augAssign"
+				}
+			}
+
 			ident := &Identifier{
 				IdentStatement: stmt.Ident,
+				Type:identType,
 				// -1 from asp.Statement.Pos.Line, as lsp position requires zero index
 				StartLine: stmt.Pos.Line - 1,
 				EndLine: stmt.EndPos.Line -1,
