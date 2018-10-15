@@ -152,9 +152,6 @@ func ContentFromNestedCall(analyzer *Analyzer, identArg asp.CallArgument, lineCo
 						position.Line <= identArg.Value.EndPos.Line - 1)
 
 	if nestedIdent != nil && withInRange && nestedIdent.Action != nil {
-		if content := getArgContent(analyzer, identArg, nestedIdent.Name, lineContent, position); content != ""{
-			return content
-		}
 		for _, action := range nestedIdent.Action {
 			if action.Call != nil {
 				for _, arg := range action.Call.Arguments {
