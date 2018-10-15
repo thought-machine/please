@@ -8,7 +8,6 @@ import (
 	"tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
-	"fmt"
 )
 
 func TestGetHoverContent(t *testing.T) {
@@ -52,9 +51,15 @@ func TestGetHoverContent(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "deps required:false, type:list", content.Value)
 
-	// Test hovering over arguments
-	content2, err := getHoverContent(ctx, analyzer, uri, lsp.Position{Line:5, Character:10})
+	// Test hovering over nexted call
+	content, err = getHoverContent(ctx, analyzer, uri, lsp.Position{Line:5, Character:10})
 	assert.Equal(t, nil, err)
-	fmt.Println(content2.Value)
-	//assert.Equal(t, "deps required:false, type:list", content.Value)
+	assert.Equal(t, "def glob(include:list, exclude:list&excludes=[], hidden:bool=False)\n\n",
+		content.Value)
+
+	// Test hovering over argument of nexted call
+	content, err = getHoverContent(ctx, analyzer, uri, lsp.Position{Line:4, Character:15})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "exclude required:false, type:list",
+		content.Value)
 }
