@@ -129,8 +129,6 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier,  error) {
 	var idents []*Identifier
 	for _, stmt := range stmts {
 		if stmt.Ident != nil {
-			//fmt.Println(stmt.EndPos.Column)
-			//fmt.Println("Line", stmt.EndPos.Line)
 			ident := &Identifier{
 				IdentStatement: stmt.Ident,
 				// -1 from asp.Statement.Pos.Line, as lsp position requires zero index
@@ -152,12 +150,6 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 
 	// Fill in the header property of ruleDef
 	contentStrSlice := strings.Split(content, "\n")
-	if stmt.FuncDef.Name == "cgo_library" {
-		fmt.Println(stmt.EndPos.Line)
-		fmt.Println(stmt.FuncDef.Statements[6].EndPos)
-		fmt.Println(stmt.EndPos.Column)
-	}
-
 	headerSlice := contentStrSlice[stmt.Pos.Line - 1:stmt.FuncDef.EoDef.Line]
 
 	if len(stmt.FuncDef.Arguments) > 0 {
