@@ -36,6 +36,7 @@ func (tok Token) String() string {
 	return reverseSymbol(tok.Type)
 }
 
+// EndPos returns the end position of a token
 func (tok Token) EndPos() Position {
 	end := tok.Pos
 	end.Offset += len(tok.Value)
