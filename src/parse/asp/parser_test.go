@@ -364,6 +364,18 @@ func TestAugmentedAssignment(t *testing.T) {
 	assert.Equal(t, 17, statements[0].EndPos.Column)
 }
 
+func TestRaise(t *testing.T) {
+	statements, err := newParser().parse("src/parse/asp/test_data/raise.build")
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(statements))
+
+	// Test for Endpos
+	assert.Equal(t, 1, statements[0].EndPos.Line)
+	assert.Equal(t, 27, statements[0].EndPos.Column)
+	assert.Equal(t, 4, statements[1].EndPos.Line)
+	assert.Equal(t, 31, statements[1].EndPos.Column)
+}
+
 func TestElseStatement(t *testing.T) {
 	statements, err := newParser().parse("src/parse/asp/test_data/else.build")
 	assert.NoError(t, err)
@@ -418,20 +430,23 @@ func TestMultipleActions(t *testing.T) {
 func TestAssert(t *testing.T) {
 	statements, err := newParser().parse("src/parse/asp/test_data/assert.build")
 	assert.NoError(t, err)
-	assert.Equal(t, 1, len(statements))
+	assert.Equal(t, 2, len(statements))
 
 	// Test for Endpos
 	assert.Equal(t, 1, statements[0].EndPos.Line)
 	assert.Equal(t, 74, statements[0].EndPos.Column)
+
+	assert.Equal(t, 4, statements[1].EndPos.Line)
+	assert.Equal(t, 18, statements[1].EndPos.Column)
 }
 
 func TestOptimise(t *testing.T) {
 	p := newParser()
 	statements, err := p.parse("src/parse/asp/test_data/optimise.build")
 	assert.NoError(t, err)
-	assert.Equal(t, 4, len(statements))
+	assert.Equal(t, 5, len(statements))
 	statements = p.optimise(statements)
-	assert.Equal(t, 3, len(statements))
+	assert.Equal(t, 4, len(statements))
 
 	assert.NotNil(t, statements[0].FuncDef)
 	assert.Equal(t, 0, len(statements[0].FuncDef.Statements))
@@ -457,6 +472,10 @@ func TestOptimise(t *testing.T) {
 	assert.Equal(t, "l", ident.Name)
 	assert.NotNil(t, ident.Action.AugAssign)
 	assert.NotNil(t, ident.Action.AugAssign.Val.List)
+
+	// Test for Endpos
+	assert.Equal(t, 11, statements[3].EndPos.Column)
+	assert.Equal(t, 13, statements[3].EndPos.Line)
 }
 
 func TestMultilineStringQuotes(t *testing.T) {
@@ -499,7 +518,7 @@ func TestExample1(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test for Endpos
-	assert.Equal(t, 12, stmts[0].EndPos.Column)
+	assert.Equal(t, 13, stmts[0].EndPos.Column)
 	assert.Equal(t, 6, stmts[0].EndPos.Line)
 }
 
@@ -585,7 +604,7 @@ func TestConstantAssignments(t *testing.T) {
 func TestFStrings(t *testing.T) {
 	stmts, err := newParser().parse("src/parse/asp/test_data/fstring.build")
 	assert.NoError(t, err)
-	assert.Equal(t, 3, len(stmts))
+	assert.Equal(t, 4, len(stmts))
 
 	f := stmts[1].Ident.Action.Assign.Val.FString
 	assert.NotNil(t, f)
@@ -610,4 +629,6 @@ func TestFStrings(t *testing.T) {
 	assert.Equal(t, 11, stmts[1].EndPos.Column)
 	assert.Equal(t, 3, stmts[2].EndPos.Line)
 	assert.Equal(t, 25, stmts[2].EndPos.Column)
+	assert.Equal(t, 6, stmts[3].EndPos.Line)
+	assert.Equal(t, 15, stmts[3].EndPos.Column)
 }

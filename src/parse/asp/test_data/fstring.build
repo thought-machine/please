@@ -1,3 +1,6 @@
 x = 'a'
 y = f'{x}'
 z = f'x: {x} y: {y} fin'
+
+def fstring():
+    y = f'{x}'

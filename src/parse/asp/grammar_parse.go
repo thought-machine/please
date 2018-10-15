@@ -48,6 +48,7 @@ var keywords = map[string]struct{}{
 
 type parser struct {
 	l *lex
+	endPos Position
 }
 
 // parseFileInput is the only external entry point to this class, it parses a file into a FileInput structure.
@@ -145,50 +146,47 @@ func (p *parser) parseStatement() *Statement {
 	tok := p.l.Peek()
 	s.Pos = tok.Pos
 
-	var endPos Position
 	switch tok.Value {
 	case "pass":
 		s.Pass = true
-		endPos = p.l.Next().EndPos()
+		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	case "continue":
 		s.Continue = true
-		endPos = p.l.Next().EndPos()
+		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	case "def":
-		s.FuncDef, endPos = p.parseFuncDef()
+		s.FuncDef = p.parseFuncDef()
 	case "for":
-		s.For, endPos = p.parseFor()
+		s.For = p.parseFor()
 	case "if":
-		s.If, endPos = p.parseIf()
+		s.If = p.parseIf()
 	case "return":
-		p.l.Next()
-		s.Return, endPos = p.parseReturn()
+		p.endPos = p.l.Next().EndPos()
+		s.Return = p.parseReturn()
 	case "raise":
 		p.l.Next()
 		s.Raise = p.parseExpression()
-		endPos = p.next(EOL).Pos
+		p.next(EOL)
 	case "assert":
 		p.initField(&s.Assert)
 		p.l.Next()
 		s.Assert.Expr = p.parseExpression()
 		if p.optional(',') {
-			s.Assert.Message = p.next(String).Value
+			tok := p.next(String)
+			s.Assert.Message = tok.Value
+			p.endPos = tok.EndPos()
 		}
-		endPos = p.next(EOL).Pos
+		p.next(EOL)
 	default:
 		if tok.Type == Ident {
-			s.Ident, endPos = p.parseIdentStatement()
+			s.Ident= p.parseIdentStatement()
 		} else {
 			s.Literal = p.parseExpression()
-			endPos = s.Literal.EndPos
 		}
-		nextTok := p.next(EOL)
-		if endPos.Column == 0 {
-			endPos = nextTok.Pos
-		}
+		p.next(EOL)
 	}
-	s.EndPos = endPos
+	s.EndPos = p.endPos
 	return s
 }
 
@@ -201,7 +199,7 @@ func (p *parser) parseStatements() []*Statement {
 	return stmts
 }
 
-func (p *parser) parseReturn() (*ReturnStatement, Position) {
+func (p *parser) parseReturn() *ReturnStatement {
 	r := &ReturnStatement{}
 	for p.anythingBut(EOL) {
 		r.Values = append(r.Values, p.parseExpression())
@@ -209,16 +207,11 @@ func (p *parser) parseReturn() (*ReturnStatement, Position) {
 			break
 		}
 	}
-	endPos := p.next(EOL).EndPos()
-
-	//TODO(bnm): This is a bit hacky, but I'm not sure if there is a better way :(
-	if endPos.Column == 1 {
-		endPos = r.Values[len(r.Values) - 1].Pos
-	}
-	return r, endPos
+	p.next(EOL)
+	return r
 }
 
-func (p *parser) parseFuncDef() (*FuncDef, Position) {
+func (p *parser) parseFuncDef() *FuncDef {
 	p.nextv("def")
 	fd := &FuncDef{
 		Name: p.next(Ident).Value,
@@ -235,20 +228,19 @@ func (p *parser) parseFuncDef() (*FuncDef, Position) {
 	fd.EoDef = p.next(':').Pos
 
 	p.next(EOL)
-	var endPos Position
 	if tok := p.l.Peek(); tok.Type == String {
 		fd.Docstring = tok.Value
 		// endPos being set here, this is for when function only contains docstring
-		endPos = p.l.Next().EndPos()
+		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	}
 
 	fd.Statements = p.parseStatements()
 
 	if len(fd.Statements) > 0 {
-		endPos = fd.Statements[len(fd.Statements) - 1].EndPos
+		p.endPos = fd.Statements[len(fd.Statements) - 1].EndPos
 	}
-	return fd, endPos
+	return fd
 }
 
 func (p *parser) parseArgument() Argument {
@@ -292,7 +284,7 @@ func (p *parser) parseArgument() Argument {
 	return a
 }
 
-func (p *parser) parseIf() (*IfStatement, Position) {
+func (p *parser) parseIf() *IfStatement {
 	p.nextv("if")
 	i := &IfStatement{}
 	p.parseExpressionInPlace(&i.Condition)
@@ -316,8 +308,8 @@ func (p *parser) parseIf() (*IfStatement, Position) {
 		allStatements = append(allStatements, i.ElseStatements...)
 	}
 
-	endPos := allStatements[len(allStatements)-1].EndPos
-	return i, endPos
+	p.endPos = allStatements[len(allStatements)-1].EndPos
+	return i
 }
 
 // newElement is a nasty little hack to allow extending slices of types that we can't readily name.
@@ -334,7 +326,7 @@ func (p *parser) initField(x interface{}) {
 	v.Set(reflect.New(v.Type().Elem()))
 }
 
-func (p *parser) parseFor() (*ForStatement, Position) {
+func (p *parser) parseFor() *ForStatement {
 	f := &ForStatement{}
 	p.nextv("for")
 	f.Names = p.parseIdentList()
@@ -344,8 +336,8 @@ func (p *parser) parseFor() (*ForStatement, Position) {
 	p.next(EOL)
 	f.Statements = p.parseStatements()
 
-	endPos := f.Statements[len(f.Statements) - 1].EndPos
-	return f, endPos
+	p.endPos = f.Statements[len(f.Statements) - 1].EndPos
+	return f
 }
 
 // TODO: could ret last token here
@@ -386,17 +378,16 @@ func (p *parser) parseUnconditionalExpression() *Expression {
 }
 
 func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
-	var endPos Position
 	if tok := p.l.Peek(); tok.Type == '-' || tok.Value == "not" {
 		p.l.Next()
 		var valueExp *ValueExpression
-		valueExp, endPos = p.parseValueExpression()
+		valueExp = p.parseValueExpression()
 		e.UnaryOp = &UnaryOp{
 			Op:   tok.Value,
 			Expr: *valueExp,
 		}
 	} else {
-		e.Val, endPos = p.parseValueExpression()
+		e.Val = p.parseValueExpression()
 	}
 	tok := p.l.Peek()
 	if tok.Value == "not" {
@@ -405,7 +396,7 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 		tok = p.l.Peek()
 		p.assert(tok.Value == "in", tok, "expected 'in', not %s", tok.Value)
 		tok.Value = "not in"
-		endPos = tok.EndPos()
+		p.endPos = tok.EndPos()
 	}
 	if op, present := operators[tok.Value]; present {
 		tok = p.l.Next()
@@ -421,22 +412,19 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 			}
 		}
 		p.l.Peek()
-		endPos = o.Expr.EndPos
 	}
-	e.EndPos = endPos
 }
 
-func (p *parser) parseValueExpression() (*ValueExpression, Position) {
+func (p *parser) parseValueExpression() *ValueExpression {
 	ve := &ValueExpression{}
 	tok := p.l.Peek()
 
-	var endPos Position
 	if tok.Type == String {
 		if tok.Value[0] == 'f' {
 			ve.FString = p.parseFString()
 		} else {
 			ve.String = tok.Value
-			endPos = p.l.Next().EndPos()
+			p.endPos = p.l.Next().EndPos()
 		}
 	} else if tok.Type == Int {
 		p.assert(len(tok.Value) < 19, tok, "int literal is too large: %s", tok)
@@ -444,25 +432,25 @@ func (p *parser) parseValueExpression() (*ValueExpression, Position) {
 		i, err := strconv.Atoi(tok.Value)
 		p.assert(err == nil, tok, "invalid int value %s", tok) // Theoretically the lexer shouldn't have fed us this...
 		ve.Int.Int = i
-		endPos = p.l.Next().EndPos()
+		p.endPos = p.l.Next().EndPos()
 	} else if tok.Value == "False" || tok.Value == "True" || tok.Value == "None" {
 		ve.Bool = tok.Value
-		endPos = p.l.Next().EndPos()
+		p.endPos = p.l.Next().EndPos()
 	} else if tok.Type == '[' {
-		ve.List, endPos = p.parseList('[', ']')
+		ve.List, p.endPos = p.parseList('[', ']')
 	} else if tok.Type == '(' {
-		ve.Tuple, endPos = p.parseList('(', ')')
+		ve.Tuple, p.endPos = p.parseList('(', ')')
 	} else if tok.Type == '{' {
-		ve.Dict, endPos = p.parseDict()
+		ve.Dict, p.endPos = p.parseDict()
 	} else if tok.Value == "lambda" {
 		ve.Lambda = p.parseLambda()
 	} else if tok.Type == Ident {
-		ve.Ident, endPos = p.parseIdentExpr()
+		ve.Ident, p.endPos = p.parseIdentExpr()
 
 		// In case the Ident is a variable name, we assign the endPos to the end of current token.
 		// see test_data/unary_op.build
-		if endPos.Column == 0 {
-			endPos = tok.EndPos()
+		if p.endPos.Column == 0 {
+			p.endPos = tok.EndPos()
 		}
 	} else {
 		p.fail(tok, "Unexpected token %s", tok)
@@ -470,18 +458,18 @@ func (p *parser) parseValueExpression() (*ValueExpression, Position) {
 
 	tok = p.l.Peek()
 	if tok.Type == '[' {
-		ve.Slice, endPos = p.parseSlice()
+		ve.Slice, p.endPos = p.parseSlice()
 		tok = p.l.Peek()
 	}
 	if p.optional('.') {
-		ve.Property, endPos = p.parseIdentExpr()
+		ve.Property, p.endPos = p.parseIdentExpr()
 	} else if p.optional('(') {
-		ve.Call, endPos = p.parseCall()
+		ve.Call = p.parseCall()
 	}
-	return ve, endPos
+	return ve
 }
 
-func (p *parser) parseIdentStatement() (*IdentStatement, Position) {
+func (p *parser) parseIdentStatement() *IdentStatement {
 	tok := p.l.Peek()
 	i := &IdentStatement{
 		Name: p.next(Ident).Value,
@@ -489,60 +477,55 @@ func (p *parser) parseIdentStatement() (*IdentStatement, Position) {
 	_, reserved := keywords[i.Name]
 	p.assert(!reserved, tok, "Cannot operate on keyword or constant %s", i.Name)
 	tok = p.l.Next()
-	var endPos Position
 	switch tok.Type {
 	case ',':
 		p.initField(&i.Unpack)
 		i.Unpack.Names = p.parseIdentList()
 		p.next('=')
 		i.Unpack.Expr = p.parseExpression()
-		endPos = i.Unpack.Expr.EndPos
 	case '[':
 		p.initField(&i.Index)
 		i.Index.Expr = p.parseExpression()
-		endPos = p.next(']').EndPos()
+		p.endPos = p.next(']').EndPos()
 		if tok := p.oneofval("=", "+="); tok.Type == '=' {
 			i.Index.Assign = p.parseExpression()
-			endPos = i.Index.Assign.EndPos
 		} else {
 			i.Index.AugAssign = p.parseExpression()
-			endPos = i.Index.AugAssign.EndPos
 		}
 	case '.':
 		p.initField(&i.Action)
-		i.Action.Property, endPos = p.parseIdentExpr()
+		i.Action.Property, p.endPos = p.parseIdentExpr()
 	case '(':
 		p.initField(&i.Action)
-		i.Action.Call, endPos = p.parseCall()
+		i.Action.Call = p.parseCall()
 	case '=':
 		p.initField(&i.Action)
 		i.Action.Assign = p.parseExpression()
-		endPos = i.Action.Assign.EndPos
 	default:
 		p.assert(tok.Value == "+=", tok, "Unexpected token %s, expected one of , [ . ( = +=", tok)
 		p.initField(&i.Action)
 		i.Action.AugAssign = p.parseExpression()
-		endPos = i.Action.AugAssign.EndPos
 	}
-	return i, endPos
+	return i
 }
 
 func (p *parser) parseIdentExpr() (*IdentExpr, Position) {
 	var endPos Position
 	ie := &IdentExpr{Name: p.next(Ident).Value}
 	for tok := p.l.Peek(); tok.Type == '.' || tok.Type == '('; tok = p.l.Peek() {
-		p.l.Next()
+		tok := p.l.Next()
 		action := &ie.Action[p.newElement(&ie.Action)]
 		if tok.Type == '.' {
 			action.Property, endPos = p.parseIdentExpr()
 		} else {
-			action.Call, endPos = p.parseCall()
+			action.Call = p.parseCall()
+			endPos = p.endPos
 		}
 	}
 	return ie, endPos
 }
 
-func (p *parser) parseCall() (*Call, Position) {
+func (p *parser) parseCall() *Call {
 	// The leading ( has already been consumed (because that fits better at the various call sites)
 	c := &Call{}
 	names := map[string]bool{}
@@ -562,8 +545,8 @@ func (p *parser) parseCall() (*Call, Position) {
 			break
 		}
 	}
-	endPos := p.next(')').EndPos()
-	return c, endPos
+	p.endPos = p.next(')').EndPos()
+	return c
 }
 
 func (p *parser) parseList(opening, closing rune) (*List, Position) {
@@ -665,6 +648,7 @@ func (p *parser) parseFString() *FString {
 	f := &FString{}
 	tok := p.next(String)
 	s := tok.Value[2 : len(tok.Value)-1] // Strip preceding f" and trailing "
+	p.endPos = tok.EndPos()
 	tok.Pos.Column++                     // track position in case of error
 	for idx := strings.IndexByte(s, '{'); idx != -1; idx = strings.IndexByte(s, '{') {
 		v := &f.Vars[p.newElement(&f.Vars)]
@@ -682,5 +666,6 @@ func (p *parser) parseFString() *FString {
 		tok.Pos.Column += idx + 1
 	}
 	f.Suffix = s
+
 	return f
 }
