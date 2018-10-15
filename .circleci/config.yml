@@ -131,7 +131,7 @@ jobs:
      steps:
        - attach_workspace:
            at: /tmp/workspace
-       - run: /tmp/workspace/gen_release.pex --github_token $GITHUB_TOKEN /tmp/workspace/linux_amd64/* /tmp/workspace/darwin_amd64/*
+       - run: /tmp/workspace/gen_release.pex --github_token $GITHUB_TOKEN --signer /tmp/workspace/release_signer /tmp/workspace/linux_amd64/* /tmp/workspace/darwin_amd64/*
 
 workflows:
   version: 2
