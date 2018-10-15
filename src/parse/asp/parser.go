@@ -74,12 +74,6 @@ func (p *Parser) MustLoadBuiltins(filename string, contents, encoded []byte) {
 	}
 }
 
-// GetAllBuiltins returns all the builtin rules.
-// *Assuming Parser.LoadBuiltins or Parser.MustLoadBuiltins* has been called
-func (p *Parser) GetAllBuiltins() map[string][]byte {
-	return p.builtins
-}
-
 
 // ParseFile parses the contents of a single file in the BUILD language.
 // It returns true if the call was deferred at some point awaiting  target to build,
