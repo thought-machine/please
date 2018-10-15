@@ -3,7 +3,7 @@
 # The versions tend to lag a little bit behind this repo as a result.
 maven_jar(
     name = "javac_worker",
-    hashes = ["no"],
+    hashes = ["8de5165b87b77b242adffb01c7d683a008d90244"],
     id = "build.please:javac-worker:13.1.10",
     sources = False,
     visibility = ["PUBLIC"],
@@ -11,14 +11,14 @@ maven_jar(
 
 maven_jar(
     name = "junit-runner",
-    hashes = ["no"],
+    hashes = ["c93b0246878dbf58a789190cefe57c47431fdad2"],
     id = "build.please:junit-runner:13.2.0",
     sources = False,
 )
 
 maven_jar(
     name = "jacoco_shaded",
-    hashes = ["no"],
+    hashes = ["9424429513230b26fb3767fe66d324be8a1fa2c9"],
     id = "build.please:jacoco-shaded:0.8.1",
     sources = False,
 )
