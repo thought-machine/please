@@ -147,8 +147,7 @@ func getCallContent(lineContent string, ident *Identifier, analyzer *Analyzer, p
 
 func contentFromNestedCall(analyzer *Analyzer, identArg asp.CallArgument, lineContent string, position lsp.Position) string {
 	nestedIdent := identArg.Value.Val.Ident
-	withInRange := position.Line >= identArg.Value.Pos.Line-1 &&
-		position.Line <= identArg.Value.EndPos.Line-1
+	withInRange := position.Line >= identArg.Value.Pos.Line-1 && position.Line <= identArg.Value.EndPos.Line-1
 
 	if nestedIdent != nil && withInRange && nestedIdent.Action != nil {
 		for _, action := range nestedIdent.Action {
@@ -167,6 +166,7 @@ func contentFromNestedCall(analyzer *Analyzer, identArg asp.CallArgument, lineCo
 	return ""
 }
 
+// getRuleDefContent returns a string contains the header and the docstring of a build rule
 func getRuleDefContent(analyzer *Analyzer, name string) string {
 	header := analyzer.BuiltIns[name].Header
 	docString := analyzer.BuiltIns[name].Docstring
