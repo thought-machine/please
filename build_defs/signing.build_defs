@@ -1,34 +1,4 @@
 """Build rules for signing releases using GPG."""
-subinclude('//build_defs:fpm')
-
-
-def signed_fpm_deb(name, version, package_name=None, files=None, dirs=None, links=None,
-                   post_cmds=None, visibility=None):
-    """Creates a signed deb using FPM.
-
-    All arguments are passed through to fpm_deb.
-
-    This will create two rules, one with the expected name that is the deb, and one with
-    a _signed suffix that contains the detached .asc file.
-    """
-    package_name = package_name or name
-    deb_rule = fpm_deb(
-        name = name,
-        package_name = package_name,
-        version = version,
-        files = files,
-        dirs = dirs,
-        links = links,
-        post_cmds = post_cmds,
-        visibility = visibility,
-    )
-    return detached_signature(
-        name = name + '_signed',
-        src = deb_rule,
-        out = '%s_%s_%s.deb.asc' % (package_name, version, CONFIG.ARCH),
-        visibility = visibility,
-        labels = ['deb_asc', 'manual'],
-    )
 
 
 def signed_tarball(name:str, srcs:list, out:str, subdir:str, xzip:bool=False, visibility=None):
