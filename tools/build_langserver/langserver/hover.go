@@ -97,7 +97,7 @@ func getCallContent(lineContent string, ident *Identifier, analyzer *Analyzer, p
 
 	identArgs := ident.Action.Call.Arguments
 	for _, identArg := range identArgs {
-		if content := ContentFromNestedCall(analyzer, identArg, lineContent, position); content != "" {
+		if content := contentFromNestedCall(analyzer, identArg, lineContent, position); content != "" {
 			return content
 		}
 
@@ -145,7 +145,7 @@ func getCallContent(lineContent string, ident *Identifier, analyzer *Analyzer, p
 	return contentString
 }
 
-func ContentFromNestedCall(analyzer *Analyzer, identArg asp.CallArgument, lineContent string, position lsp.Position) string {
+func contentFromNestedCall(analyzer *Analyzer, identArg asp.CallArgument, lineContent string, position lsp.Position) string {
 	nestedIdent := identArg.Value.Val.Ident
 	withInRange := bool(position.Line >= identArg.Value.Pos.Line-1 &&
 		position.Line <= identArg.Value.EndPos.Line-1)
