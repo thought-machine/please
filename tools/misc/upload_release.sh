@@ -16,12 +16,6 @@ eval $(go env)
 echo -e "${GREEN}Identifying outputs...${RESET}"
 TARGETS="//package:please_tarball //package:please_tarball_xz //package:servers_tarball"
 
-
-if [ "$GOOS" == "linux" ]; then
-    # For Linux we upload debs as well.
-    TARGETS="$TARGETS //package:please //package:plz_rpc_cache_server //package:plz_http_cache_server"
-fi
-
 FILES="$(plz-out/bin/src/please query outputs $TARGETS ${TARGETS// /_signed }_signed)"
 UPLOADED=''
 for FILE in $FILES; do
