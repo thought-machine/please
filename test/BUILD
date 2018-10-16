@@ -21,13 +21,13 @@ subinclude("@pleasings//go:go_bindata")
 # found is not necessarily unique or stable.
 plz_e2e_test(
     name = "query_somepath_test",
-    cmd = "plz query somepath //tools/junit_runner //tools/junit_runner/src/build/please/common/test:test",
+    cmd = "plz query somepath //tools/java:junit_runner //third_party/java:junit",
     expected_output = "query_somepath_test.txt",
 )
 
 plz_e2e_test(
     name = "query_somepath_reverse_test",
-    cmd = "plz query somepath //tools/junit_runner/src/build/please/common/test:test //tools/junit_runner",
+    cmd = "plz query somepath //third_party/java:junit //tools/java:junit_runner",
     expected_output = "query_somepath_test.txt",
 )
 

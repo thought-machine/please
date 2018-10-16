@@ -2,49 +2,45 @@ package(default_visibility = ["PUBLIC"])
 
 maven_jar(
     name = "junit",
-    hash = "sha1: a791201ac8a3d2a251045a52e264de01343ad2df",
+    hash = "a791201ac8a3d2a251045a52e264de01343ad2df",
     id = "junit:junit:4.12",
 )
 
 maven_jar(
     name = "hamcrest",
-    hash = "sha1: 6e72502584462b2d35a7a6a18fc5541c412f08cc",
+    hash = "6e72502584462b2d35a7a6a18fc5541c412f08cc",
     id = "org.hamcrest:hamcrest-all:1.3",
 )
 
 maven_jar(
-    name = "logback-classic",
-    hash = "sha1: 245ace75b7a18931f103a79e74d53c66f1f90a9e",
-    id = "ch.qos.logback:logback-classic:1.1.3",
-    test_only = True,  # Only used in one test.
+    name = "gson",
+    hash = "19b10af44e08894efb629d90115b0c391eaaf55a",
+    id = "com.google.code.gson:gson:2.8.4",
+)
+
+# These are shipped as components of Please, but for easier management the code lives in
+# https://github.com/thought-machine/please-java
+# The versions tend to lag a little bit behind this repo as a result.
+maven_jar(
+    name = "junit_runner",
+    hashes = ["b9b4683a0218730a42ba35ada158d331926b40b1"],
+    id = "build.please:junit-runner:13.2.0",
     deps = [
-        ":logback-core",
-        ":slf4j-api",
+        ":hamcrest",
+        ":jacoco_shaded",
+        ":junit",
     ],
 )
 
 maven_jar(
-    name = "logback-core",
-    hash = "sha1: 53732a6ab1f058ad76808646519801e30cc4a780",
-    id = "ch.qos.logback:logback-core:1.1.3",
-    test_only = True,
+    name = "jacoco_shaded",
+    hashes = ["1bf517865fcb9740159d6b4de4f6fb7b69f24aa9"],
+    id = "build.please:jacoco-shaded:0.8.1",
 )
 
 maven_jar(
-    name = "slf4j-api",
-    hash = "sha1: 0ff5ea6b9f644c97ef1de83eb75e7cc304103549",
-    id = "org.slf4j:slf4j-api:1.7.10",
-    test_only = True,
-)
-
-maven_jar(
-    name = "protobuf",
-    hash = "sha1: ea1115a7983c2c23b7d90ccef4a83675f4e3df9c",
-    id = "com.google.protobuf:protobuf-java:3.4.0",
-)
-
-maven_jar(
-    name = "gson",
-    hash = "sha1: 19b10af44e08894efb629d90115b0c391eaaf55a",
-    id = "com.google.code.gson:gson:2.8.4",
+    name = "javac_worker",
+    hashes = ["46b9672f0adb195e610fc86a656fd70ef3359d07"],
+    id = "build.please:javac-worker:13.1.10",
+    deps = [":gson"],
 )

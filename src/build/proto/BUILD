@@ -4,9 +4,5 @@ package(javac_tool = "javac")
 proto_library(
     name = "worker",
     srcs = ["worker.proto"],
-    languages = [
-        "go",
-        "java",
-    ],
     visibility = ["PUBLIC"],
 )
