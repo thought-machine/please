@@ -430,11 +430,11 @@ func (p *parser) parseValueExpression() *ValueExpression {
 		ve.Bool = tok.Value
 		p.endPos = p.l.Next().EndPos()
 	} else if tok.Type == '[' {
-		ve.List, p.endPos = p.parseList('[', ']')
+		ve.List = p.parseList('[', ']')
 	} else if tok.Type == '(' {
-		ve.Tuple, p.endPos = p.parseList('(', ')')
+		ve.Tuple = p.parseList('(', ')')
 	} else if tok.Type == '{' {
-		ve.Dict, p.endPos = p.parseDict()
+		ve.Dict = p.parseDict()
 	} else if tok.Value == "lambda" {
 		ve.Lambda = p.parseLambda()
 	} else if tok.Type == Ident {
@@ -451,7 +451,7 @@ func (p *parser) parseValueExpression() *ValueExpression {
 
 	tok = p.l.Peek()
 	if tok.Type == '[' {
-		ve.Slice, p.endPos = p.parseSlice()
+		ve.Slice = p.parseSlice()
 		tok = p.l.Peek()
 	}
 	if p.optional('.') {
@@ -542,7 +542,7 @@ func (p *parser) parseCall() *Call {
 	return c
 }
 
-func (p *parser) parseList(opening, closing rune) (*List, Position) {
+func (p *parser) parseList(opening, closing rune) *List {
 	l := &List{}
 	p.next(opening)
 	for tok := p.l.Peek(); tok.Type != closing; tok = p.l.Peek() {
@@ -555,11 +555,11 @@ func (p *parser) parseList(opening, closing rune) (*List, Position) {
 		p.assert(len(l.Values) == 1, tok, "Must have exactly 1 item in a list comprehension")
 		l.Comprehension = p.parseComprehension()
 	}
-	endPos := p.next(closing).EndPos()
-	return l, endPos
+	p.endPos = p.next(closing).EndPos()
+	return l
 }
 
-func (p *parser) parseDict() (*Dict, Position) {
+func (p *parser) parseDict() *Dict {
 	d := &Dict{}
 	p.next('{')
 	for tok := p.l.Peek(); tok.Type != '}'; tok = p.l.Peek() {
@@ -576,11 +576,11 @@ func (p *parser) parseDict() (*Dict, Position) {
 		p.assert(len(d.Items) == 1, tok, "Must have exactly 1 key:value pair in a dict comprehension")
 		d.Comprehension = p.parseComprehension()
 	}
-	endPos := p.next('}').EndPos()
-	return d, endPos
+	p.endPos = p.next('}').EndPos()
+	return d
 }
 
-func (p *parser) parseSlice() (*Slice, Position) {
+func (p *parser) parseSlice() *Slice {
 	s := &Slice{}
 	p.next('[')
 	if p.optional(':') {
@@ -592,12 +592,12 @@ func (p *parser) parseSlice() (*Slice, Position) {
 		}
 	}
 	if nextType := p.l.Peek().Type; nextType == ']' {
-		endPos := p.l.Next().EndPos()
-		return s, endPos
+		p.endPos = p.l.Next().EndPos()
+		return s
 	}
 	s.End = p.parseExpression()
-	endPos := p.next(']').EndPos()
-	return s, endPos
+	p.endPos = p.next(']').EndPos()
+	return s
 }
 
 func (p *parser) parseComprehension() *Comprehension {
