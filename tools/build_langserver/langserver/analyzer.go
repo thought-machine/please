@@ -2,7 +2,6 @@ package langserver
 
 import (
 	"core"
-	"parse"
 	"parse/rules"
 	"sort"
 	"strconv"
@@ -52,7 +51,7 @@ type Identifier struct {
 
 func newAnalyzer() *Analyzer {
 	state := core.NewDefaultBuildState()
-	parser := parse.NewAspParser(state)
+	parser := asp.NewParser(state)
 
 	a := &Analyzer{
 		parser: parser,
