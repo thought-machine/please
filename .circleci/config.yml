@@ -139,7 +139,9 @@ workflows:
     jobs:
       - build-linux
       - build-linux-alt
-      - build-darwin
+      - build-darwin:
+          requires:
+            - build-linux-alt
       - release:
           requires:
             - build-linux
