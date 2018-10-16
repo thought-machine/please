@@ -138,6 +138,7 @@ workflows:
       - build-linux-alt
       - build-darwin:
           requires:
+            - build-linux
             - build-linux-alt
       - release:
           requires:
