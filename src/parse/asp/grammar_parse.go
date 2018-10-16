@@ -237,9 +237,6 @@ func (p *parser) parseFuncDef() *FuncDef {
 
 	fd.Statements = p.parseStatements()
 
-	if len(fd.Statements) > 0 {
-		p.endPos = fd.Statements[len(fd.Statements)-1].EndPos
-	}
 	return fd
 }
 
@@ -292,23 +289,19 @@ func (p *parser) parseIf() *IfStatement {
 	p.next(EOL)
 	i.Statements = p.parseStatements()
 
-	allStatements := i.Statements
 	for p.optionalv("elif") {
 		elif := &i.Elif[p.newElement(&i.Elif)]
 		p.parseExpressionInPlace(&elif.Condition)
 		p.next(':')
 		p.next(EOL)
 		elif.Statements = p.parseStatements()
-		allStatements = append(allStatements, elif.Statements...)
 	}
 	if p.optionalv("else") {
 		p.next(':')
 		p.next(EOL)
 		i.ElseStatements = p.parseStatements()
-		allStatements = append(allStatements, i.ElseStatements...)
 	}
 
-	p.endPos = allStatements[len(allStatements)-1].EndPos
 	return i
 }
 
@@ -336,7 +329,6 @@ func (p *parser) parseFor() *ForStatement {
 	p.next(EOL)
 	f.Statements = p.parseStatements()
 
-	p.endPos = f.Statements[len(f.Statements)-1].EndPos
 	return f
 }
 
