@@ -59,6 +59,6 @@ type CancelParams struct {
 
 // Hover is the result of a hover request.
 type Hover struct {
-	Contents []MarkedString `json:"contents"`
+	Contents MarkupContent  `json:"contents"`
 	Range    *Range         `json:"range,omitempty"`
 }

@@ -47,7 +47,8 @@ var keywords = map[string]struct{}{
 }
 
 type parser struct {
-	l *lex
+	l      *lex
+	endPos Position
 }
 
 // parseFileInput is the only external entry point to this class, it parses a file into a FileInput structure.
@@ -144,14 +145,15 @@ func (p *parser) parseStatement() *Statement {
 	s := &Statement{}
 	tok := p.l.Peek()
 	s.Pos = tok.Pos
+
 	switch tok.Value {
 	case "pass":
 		s.Pass = true
-		p.l.Next()
+		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	case "continue":
 		s.Continue = true
-		p.l.Next()
+		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	case "def":
 		s.FuncDef = p.parseFuncDef()
@@ -160,7 +162,7 @@ func (p *parser) parseStatement() *Statement {
 	case "if":
 		s.If = p.parseIf()
 	case "return":
-		p.l.Next()
+		p.endPos = p.l.Next().EndPos()
 		s.Return = p.parseReturn()
 	case "raise":
 		p.l.Next()
@@ -171,7 +173,9 @@ func (p *parser) parseStatement() *Statement {
 		p.l.Next()
 		s.Assert.Expr = p.parseExpression()
 		if p.optional(',') {
-			s.Assert.Message = p.next(String).Value
+			tok := p.next(String)
+			s.Assert.Message = tok.Value
+			p.endPos = tok.EndPos()
 		}
 		p.next(EOL)
 	default:
@@ -182,6 +186,7 @@ func (p *parser) parseStatement() *Statement {
 		}
 		p.next(EOL)
 	}
+	s.EndPos = p.endPos
 	return s
 }
 
@@ -219,14 +224,19 @@ func (p *parser) parseFuncDef() *FuncDef {
 		}
 	}
 	p.next(')')
-	p.next(':')
+	// Get the position for the end of function defition header
+	fd.EoDef = p.next(':').Pos
+
 	p.next(EOL)
 	if tok := p.l.Peek(); tok.Type == String {
 		fd.Docstring = tok.Value
-		p.l.Next()
+		// endPos being set here, this is for when function only contains docstring
+		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	}
+
 	fd.Statements = p.parseStatements()
+
 	return fd
 }
 
@@ -241,7 +251,7 @@ func (p *parser) parseArgument() Argument {
 	if tok.Type == ':' {
 		// Type annotations
 		for {
-			tok = p.oneofval("bool", "str", "int", "list", "dict", "function")
+			tok = p.oneofval("bool", "str", "int", "list", "dict", "function", "config")
 			a.Type = append(a.Type, tok.Value)
 			if !p.optional('|') {
 				break
@@ -278,6 +288,7 @@ func (p *parser) parseIf() *IfStatement {
 	p.next(':')
 	p.next(EOL)
 	i.Statements = p.parseStatements()
+
 	for p.optionalv("elif") {
 		elif := &i.Elif[p.newElement(&i.Elif)]
 		p.parseExpressionInPlace(&elif.Condition)
@@ -290,6 +301,7 @@ func (p *parser) parseIf() *IfStatement {
 		p.next(EOL)
 		i.ElseStatements = p.parseStatements()
 	}
+
 	return i
 }
 
@@ -316,9 +328,11 @@ func (p *parser) parseFor() *ForStatement {
 	p.next(':')
 	p.next(EOL)
 	f.Statements = p.parseStatements()
+
 	return f
 }
 
+// TODO: could ret last token here
 func (p *parser) parseIdentList() []string {
 	ret := []string{p.next(Ident).Value} // First one is compulsory
 	for tok := p.l.Peek(); tok.Type == ','; tok = p.l.Peek() {
@@ -331,6 +345,7 @@ func (p *parser) parseIdentList() []string {
 func (p *parser) parseExpression() *Expression {
 	e := p.parseUnconditionalExpression()
 	p.parseInlineIf(e)
+	e.EndPos = p.endPos
 	return e
 }
 
@@ -338,6 +353,7 @@ func (p *parser) parseExpressionInPlace(e *Expression) {
 	e.Pos = p.l.Peek().Pos
 	p.parseUnconditionalExpressionInPlace(e)
 	p.parseInlineIf(e)
+	e.EndPos = p.endPos
 }
 
 func (p *parser) parseInlineIf(e *Expression) {
@@ -357,9 +373,11 @@ func (p *parser) parseUnconditionalExpression() *Expression {
 func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 	if tok := p.l.Peek(); tok.Type == '-' || tok.Value == "not" {
 		p.l.Next()
+		var valueExp *ValueExpression
+		valueExp = p.parseValueExpression()
 		e.UnaryOp = &UnaryOp{
 			Op:   tok.Value,
-			Expr: *p.parseValueExpression(),
+			Expr: *valueExp,
 		}
 	} else {
 		e.Val = p.parseValueExpression()
@@ -371,9 +389,10 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 		tok = p.l.Peek()
 		p.assert(tok.Value == "in", tok, "expected 'in', not %s", tok.Value)
 		tok.Value = "not in"
+		p.endPos = tok.EndPos()
 	}
 	if op, present := operators[tok.Value]; present {
-		p.l.Next()
+		tok = p.l.Next()
 		o := &e.Op[p.newElement(&e.Op)]
 		o.Op = op
 		o.Expr = p.parseUnconditionalExpression()
@@ -385,19 +404,20 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 				o.Expr.Op = nil
 			}
 		}
-		tok = p.l.Peek()
+		p.l.Peek()
 	}
 }
 
 func (p *parser) parseValueExpression() *ValueExpression {
 	ve := &ValueExpression{}
 	tok := p.l.Peek()
+
 	if tok.Type == String {
 		if tok.Value[0] == 'f' {
 			ve.FString = p.parseFString()
 		} else {
 			ve.String = tok.Value
-			p.l.Next()
+			p.endPos = p.l.Next().EndPos()
 		}
 	} else if tok.Type == Int {
 		p.assert(len(tok.Value) < 19, tok, "int literal is too large: %s", tok)
@@ -405,10 +425,10 @@ func (p *parser) parseValueExpression() *ValueExpression {
 		i, err := strconv.Atoi(tok.Value)
 		p.assert(err == nil, tok, "invalid int value %s", tok) // Theoretically the lexer shouldn't have fed us this...
 		ve.Int.Int = i
-		p.l.Next()
+		p.endPos = p.l.Next().EndPos()
 	} else if tok.Value == "False" || tok.Value == "True" || tok.Value == "None" {
 		ve.Bool = tok.Value
-		p.l.Next()
+		p.endPos = p.l.Next().EndPos()
 	} else if tok.Type == '[' {
 		ve.List = p.parseList('[', ']')
 	} else if tok.Type == '(' {
@@ -418,17 +438,24 @@ func (p *parser) parseValueExpression() *ValueExpression {
 	} else if tok.Value == "lambda" {
 		ve.Lambda = p.parseLambda()
 	} else if tok.Type == Ident {
-		ve.Ident = p.parseIdentExpr()
+		ve.Ident, p.endPos = p.parseIdentExpr()
+
+		// In case the Ident is a variable name, we assign the endPos to the end of current token.
+		// see test_data/unary_op.build
+		if p.endPos.Column == 0 {
+			p.endPos = tok.EndPos()
+		}
 	} else {
 		p.fail(tok, "Unexpected token %s", tok)
 	}
+
 	tok = p.l.Peek()
 	if tok.Type == '[' {
 		ve.Slice = p.parseSlice()
 		tok = p.l.Peek()
 	}
 	if p.optional('.') {
-		ve.Property = p.parseIdentExpr()
+		ve.Property, p.endPos = p.parseIdentExpr()
 	} else if p.optional('(') {
 		ve.Call = p.parseCall()
 	}
@@ -452,7 +479,7 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 	case '[':
 		p.initField(&i.Index)
 		i.Index.Expr = p.parseExpression()
-		p.next(']')
+		p.endPos = p.next(']').EndPos()
 		if tok := p.oneofval("=", "+="); tok.Type == '=' {
 			i.Index.Assign = p.parseExpression()
 		} else {
@@ -460,7 +487,7 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 		}
 	case '.':
 		p.initField(&i.Action)
-		i.Action.Property = p.parseIdentExpr()
+		i.Action.Property, p.endPos = p.parseIdentExpr()
 	case '(':
 		p.initField(&i.Action)
 		i.Action.Call = p.parseCall()
@@ -475,18 +502,20 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 	return i
 }
 
-func (p *parser) parseIdentExpr() *IdentExpr {
+func (p *parser) parseIdentExpr() (*IdentExpr, Position) {
+	var endPos Position
 	ie := &IdentExpr{Name: p.next(Ident).Value}
 	for tok := p.l.Peek(); tok.Type == '.' || tok.Type == '('; tok = p.l.Peek() {
-		p.l.Next()
+		tok := p.l.Next()
 		action := &ie.Action[p.newElement(&ie.Action)]
 		if tok.Type == '.' {
-			action.Property = p.parseIdentExpr()
+			action.Property, endPos = p.parseIdentExpr()
 		} else {
 			action.Call = p.parseCall()
+			endPos = p.endPos
 		}
 	}
-	return ie
+	return ie, endPos
 }
 
 func (p *parser) parseCall() *Call {
@@ -509,7 +538,7 @@ func (p *parser) parseCall() *Call {
 			break
 		}
 	}
-	p.next(')')
+	p.endPos = p.next(')').EndPos()
 	return c
 }
 
@@ -526,7 +555,7 @@ func (p *parser) parseList(opening, closing rune) *List {
 		p.assert(len(l.Values) == 1, tok, "Must have exactly 1 item in a list comprehension")
 		l.Comprehension = p.parseComprehension()
 	}
-	p.next(closing)
+	p.endPos = p.next(closing).EndPos()
 	return l
 }
 
@@ -547,7 +576,7 @@ func (p *parser) parseDict() *Dict {
 		p.assert(len(d.Items) == 1, tok, "Must have exactly 1 key:value pair in a dict comprehension")
 		d.Comprehension = p.parseComprehension()
 	}
-	p.next('}')
+	p.endPos = p.next('}').EndPos()
 	return d
 }
 
@@ -562,11 +591,12 @@ func (p *parser) parseSlice() *Slice {
 			s.Colon = ":"
 		}
 	}
-	if p.optional(']') {
+	if nextType := p.l.Peek().Type; nextType == ']' {
+		p.endPos = p.l.Next().EndPos()
 		return s
 	}
 	s.End = p.parseExpression()
-	p.next(']')
+	p.endPos = p.next(']').EndPos()
 	return s
 }
 
@@ -611,7 +641,8 @@ func (p *parser) parseFString() *FString {
 	f := &FString{}
 	tok := p.next(String)
 	s := tok.Value[2 : len(tok.Value)-1] // Strip preceding f" and trailing "
-	tok.Pos.Column++                     // track position in case of error
+	p.endPos = tok.EndPos()
+	tok.Pos.Column++ // track position in case of error
 	for idx := strings.IndexByte(s, '{'); idx != -1; idx = strings.IndexByte(s, '{') {
 		v := &f.Vars[p.newElement(&f.Vars)]
 		v.Prefix = s[:idx]
@@ -628,5 +659,6 @@ func (p *parser) parseFString() *FString {
 		tok.Pos.Column += idx + 1
 	}
 	f.Suffix = s
+
 	return f
 }

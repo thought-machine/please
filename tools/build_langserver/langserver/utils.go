@@ -65,6 +65,52 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 
 // ReadFile takes a DocumentURI and reads the file into a slice of string
 func ReadFile(ctx context.Context, uri lsp.DocumentURI) ([]string, error) {
+	getLines := func(scanner *bufio.Scanner) ([]string, error) {
+		var lines []string
+
+		for scanner.Scan() {
+			select {
+			case <-ctx.Done():
+				log.Info("process cancelled.")
+				return nil, nil
+			default:
+				lines = append(lines, scanner.Text())
+			}
+		}
+
+		return lines, scanner.Err()
+	}
+
+	return doIOScan(uri, getLines)
+
+}
+
+// GetLineContent returns a []string contraining a single string value respective to position.Line
+func GetLineContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Position) ([]string, error) {
+	getLine := func(scanner *bufio.Scanner) ([]string, error) {
+		lineCount := 0
+
+		for scanner.Scan() {
+			select {
+			case <-ctx.Done():
+				log.Info("process cancelled.")
+				return nil, nil
+			default:
+				if lineCount == position.Line {
+					return []string{scanner.Text()}, nil
+				}
+				lineCount ++
+			}
+		}
+
+		return nil, scanner.Err()
+	}
+
+	return doIOScan(uri, getLine)
+}
+
+
+func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]string, error)) ([]string, error) {
 	path, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return nil, err
@@ -74,20 +120,10 @@ func ReadFile(ctx context.Context, uri lsp.DocumentURI) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer file.Close()
 
-	var lines []string
 	scanner := bufio.NewScanner(file)
 
-	for scanner.Scan() {
-		select {
-		case <-ctx.Done():
-			log.Info("process cancelled.")
-			return nil, nil
-		default:
-			lines = append(lines, scanner.Text())
-		}
-	}
-
-	return lines, scanner.Err()
+	return callback(scanner)
 }

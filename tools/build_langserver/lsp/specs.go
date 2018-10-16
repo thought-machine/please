@@ -118,10 +118,28 @@ type Command struct {
 }
 
 // MarkedString can be used to render human readable text.
+// TODO(bnmetrics): this might not be needed anymore
 type MarkedString struct {
 	Language string `json:"language"`
 	Value    string `json:"value"`
 }
+
+// MarkupContent represents a string value which content can be represented in different formats.
+type MarkupContent struct {
+	Kind 	MarkupKind  `json:"kind"`
+	Value 	string 		`json:"value"`
+}
+
+// MarkupKind Describes the content type that a client supports in various result literals
+// like `Hover`, `ParameterInfo` or `CompletionItem`.
+// `MarkupKinds` must not start with a `$`
+type MarkupKind string
+
+// Two types of MarkupKind
+const (
+	PlainText MarkupKind = "plaintext"
+	MarkDown  MarkupKind = "markdown"
+)
 
 // DocumentFilter denotes a document through properties like language, scheme or pattern.
 // TODO: not sure this is useful...As I think this has to do with specific languages on the list

@@ -22,37 +22,37 @@ def enumerate(seq:list):
 def zip(args):
     pass
 
-def join(self, seq:list):
+def join(self:str, seq:list):
     pass
-def split(self, on:str=' '):
+def split(self:str, on:str=' '):
     pass
-def replace(self, old:str, new:str):
+def replace(self:str, old:str, new:str):
     pass
-def partition(self, sep:str):
+def partition(self:str, sep:str):
     pass
-def rpartition(self, sep:str):
+def rpartition(self:str, sep:str):
     pass
-def startswith(self, s:str):
+def startswith(self:str, s:str):
     pass
-def endswith(self, s:str):
+def endswith(self:str, s:str):
     pass
-def format(self):
+def format(self:str):
     pass
-def lstrip(self, cutset:str=' \n'):
+def lstrip(self:str, cutset:str=' \n'):
     pass
-def rstrip(self, cutset:str=' \n'):
+def rstrip(self:str, cutset:str=' \n'):
     pass
-def strip(self, cutset:str=' \n'):
+def strip(self:str, cutset:str=' \n'):
     pass
-def find(self, needle:str):
+def find(self:str, needle:str):
     pass
-def rfind(self, needle:str):
+def rfind(self:str, needle:str):
     pass
-def count(self, needle:str):
+def count(self:str, needle:str):
     pass
-def upper(self):
+def upper(self:str):
     pass
-def lower(self):
+def lower(self:str):
     pass
 
 def fail(msg:str):
@@ -108,14 +108,14 @@ def sorted(seq:list):
     pass
 
 
-def get(self, key:str, default=None):
+def get(self:dict, key:str, default=None):
     pass
-def setdefault(self, key:str, default=None):
+def setdefault(self:config, key:str, default=None):
     if key in self:
         return self[key]
     self[key] = default
     return default
-def config_get(self, key:str, default=None):
+def config_get(self:config, key:str, default=None):
     pass
 
 
@@ -135,13 +135,13 @@ def canonicalise(label:str):
     pass
 
 
-def keys(self):
+def keys(self:dict):
     pass
-def values(self):
+def values(self:dict):
     pass
-def items(self):
+def items(self:dict):
     pass
-def copy(self):
+def copy(self:dict):
     pass
 
 

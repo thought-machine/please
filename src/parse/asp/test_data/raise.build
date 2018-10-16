@@ -1,0 +1,4 @@
+raise Exception("message")
+
+def mytest():
+    raise Exception("message")

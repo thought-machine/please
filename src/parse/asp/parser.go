@@ -63,6 +63,7 @@ func (p *Parser) LoadBuiltins(filename string, contents, encoded []byte) error {
 	if err := p.interpreter.LoadBuiltins(filename, contents, statements); err != nil {
 		return p.annotate(err, nil)
 	}
+
 	return nil
 }
 
@@ -72,6 +73,7 @@ func (p *Parser) MustLoadBuiltins(filename string, contents, encoded []byte) {
 		log.Fatalf("Error loading builtin rules: %s", err)
 	}
 }
+
 
 // ParseFile parses the contents of a single file in the BUILD language.
 // It returns true if the call was deferred at some point awaiting  target to build,
