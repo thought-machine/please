@@ -17,7 +17,7 @@ func TestJavaModule(t *testing.T)  {
 
 	j := &JavaModule{
 		Module: Module{
-			url: "file://$MODULE_DIR$/../../../../../../../src/app1/com/mycompany/app1",
+			contentUrl:   "file://$MODULE_DIR$/../../../../../../../src/app1/com/mycompany/app1",
 			isTestSource: false,
 		},
 		packagePrefix: &prefix,

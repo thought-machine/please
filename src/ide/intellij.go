@@ -1,7 +1,6 @@
 package ide
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -33,8 +32,8 @@ func ExportIntellijStructure(targets core.BuildTargets) {
 	<module type="JAVA_MODULE" version="4">
 	  <component name="NewModuleRootManager" inherit-compiler-output="true">
 		<exclude-output />
-		<content url="file://$MODULE_DIR$/../../../foo3">
-		  <sourceFolder url="file://$MODULE_DIR$/../../../foo3" isTestSource="false" packagePrefix="foo3" />
+		<content contentUrl="file://$MODULE_DIR$/../../../foo3">
+		  <sourceFolder contentUrl="file://$MODULE_DIR$/../../../foo3" isTestSource="false" packagePrefix="foo3" />
 		</content>
 		<orderEntry type="inheritedJdk" />
 		<orderEntry type="sourceFolder" forTests="false" />
@@ -48,7 +47,7 @@ func ExportIntellijStructure(targets core.BuildTargets) {
    <module type="WEB_MODULE" version="4">
 	 <component name="Go" enabled="true" />
 	 <component name="NewModuleRootManager">
-	   <content url="file://$USER_HOME$/code/github.com/agenticarus/please" />
+	   <content contentUrl="file://$USER_HOME$/code/github.com/agenticarus/please" />
 	   <orderEntry type="inheritedJdk" />
 	   <orderEntry type="sourceFolder" forTests="false" />
 	 </component>
@@ -77,7 +76,7 @@ func ExportIntellijStructure(targets core.BuildTargets) {
 
 	//common/scala/phabricator:BUILD contains one scala_library
 	should map to one module with source folder set to:
-		 <sourceFolder url="file://$USER_HOME$/code/git.corp.tmachine.io/CORE/common/scala/phabricator" isTestSource="false" packagePrefix="common.scala.phabricator" />
+		 <sourceFolder contentUrl="file://$USER_HOME$/code/git.corp.tmachine.io/CORE/common/scala/phabricator" isTestSource="false" packagePrefix="common.scala.phabricator" />
 	and library set to:
 		<orderEntry type="library" name="finagle-base-http" level="project" />
 
@@ -86,11 +85,11 @@ func ExportIntellijStructure(targets core.BuildTargets) {
    <component name="libraryTable">
 	 <library name="finagle-base-http">
 	   <CLASSES>
-		 <root url="jar://$USER_HOME$/code/git.corp.tmachine.io/CORE/plz-out/gen/third_party/java/com/twitter/finagle-base-http.jar!/" />
+		 <root contentUrl="jar://$USER_HOME$/code/git.corp.tmachine.io/CORE/plz-out/gen/third_party/java/com/twitter/finagle-base-http.jar!/" />
 	   </CLASSES>
 	   <JAVADOC />
 	   <SOURCES>
-		 <root url="jar://$USER_HOME$/code/git.corp.tmachine.io/CORE/plz-out/gen/third_party/java/com/twitter/finagle-base-http_src.jar!/" />
+		 <root contentUrl="jar://$USER_HOME$/code/git.corp.tmachine.io/CORE/plz-out/gen/third_party/java/com/twitter/finagle-base-http_src.jar!/" />
 	   </SOURCES>
 	  </library>
    </component>%
@@ -114,7 +113,7 @@ func toModule(buildTarget *core.BuildTarget) IModule {
 			if path != nil {
 				return &JavaModule{
 					Module: Module{
-						url:          "file://$MODULE_DIR$/" + *path,
+						contentUrl:   "file://$MODULE_DIR$/" + *path,
 						isTestSource: false,
 					},
 					packagePrefix: packagePrefixFromLabels(buildTarget.PrefixedLabels("package_prefix:")),
@@ -125,7 +124,7 @@ func toModule(buildTarget *core.BuildTarget) IModule {
 			path := relativisedPathToPlzOutLocation(commonDirectoryFromInputs(buildTarget.Sources))
 			return &JavaModule{
 				Module: Module{
-					url:          "file://$MODULE_DIR$/" + *path,
+					contentUrl:   "file://$MODULE_DIR$/" + *path,
 					isTestSource: true,
 				},
 				packagePrefix: nil, // or from label
@@ -135,7 +134,7 @@ func toModule(buildTarget *core.BuildTarget) IModule {
 			path := relativisedPathToPlzOutLocation(commonDirectoryFromInputs(buildTarget.Sources))
 			return &GoModule{
 				Module: Module{
-					url:          "file://$MODULE_DIR$/" + *path,
+					contentUrl:   "file://$MODULE_DIR$/" + *path,
 					isTestSource: false,
 				},
 			}
@@ -149,7 +148,6 @@ func commonDirectoryFromInputs(inputs []core.BuildInput) *string {
 	for _, input := range inputs {
 		// Ignore systemfile things for now - they're the only ones that need a graph.
 		for _, path := range input.Paths(nil) {
-			fmt.Println(path)
 			directory := filepath.Dir(path)
 			if commonPath == nil {
 				commonPath = &directory
@@ -182,11 +180,11 @@ func relativisedPathToPlzOutLocation(commonPath *string) *string {
 	}
 
 	rel, err := filepath.Rel("plz-out/intellij/"+*commonPath, *commonPath)
-	if err == nil {
-		return &rel
+	if err != nil {
+		return nil
 	}
 
-	return nil
+	return &rel
 }
 
 func packagePrefixFromLabels(labels []string) *string {
@@ -196,21 +194,26 @@ func packagePrefixFromLabels(labels []string) *string {
 	return &labels[0]
 }
 
-type Project struct {
+type IProject interface {}
+
+type project struct {
+	version int
 	modules []IModule
 }
 
+func NewProject() IProject {
+	return &project{
+		version: 4,
+		modules: make([]IModule, 0),
+	}
+}
+
 type IModule interface {
-	contentUrl() string
 }
 
 type Module struct {
-	url          string
+	contentUrl   string
 	isTestSource bool
-}
-
-func (module *Module) contentUrl() string {
-	return module.url
 }
 
 type GoModule struct {
