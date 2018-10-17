@@ -105,6 +105,9 @@ int mount_tmp() {
 // contain separates the process into new namespaces to sandbox it.
 int contain(char* argv[]) {
     if (unshare(CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) != 0) {
+        perror("unshare");
+        fputs("Your user doesn't seem to have enough permissions to call unshare(2).\n", stderr);
+        fputs("plz_sandbox normally needs to be installed setuid root in order to work.\n", stderr);
         return 1;
     }
     if (mount_tmp() != 0) {
