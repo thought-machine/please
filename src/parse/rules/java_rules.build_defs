@@ -78,7 +78,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             cmd=cmd,
             building_description="Compiling...",
             requires=['java'],
-            labels = labels,
+            labels = labels + ['rule:java_test_library' if test_only else 'rule:java_library'],
             test_only=test_only,
             tools={
                 'javac': [CONFIG.JAVAC_TOOL or CONFIG.JAVAC_WORKER],
