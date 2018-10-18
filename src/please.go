@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"ide"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -221,7 +222,7 @@ var opts struct {
 	Export struct {
 		Output string `short:"o" long:"output" required:"true" description:"Directory to export into"`
 		Args   struct {
-			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to export."`
+			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Labels to export."`
 		} `positional-args:"true"`
 
 		Outputs struct {
@@ -345,6 +346,14 @@ var opts struct {
 			IncludeDependees string `long:"include-dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Include direct or transitive dependees of changed targets."`
 		} `command:"changed" description:"Show changed targets since some diffspec."`
 	} `command:"query" description:"Queries information about the build graph"`
+
+	Ide struct {
+		IntelliJ struct {
+			Args struct {
+				Labels []core.BuildLabel `positional-arg-name:"labels" description:"Targets to include."`
+			} `positional-args:"true"`
+		} `command:"intellij" description:"Export intellij structure for the given targets and their dependencies."`
+	} `command:"ide" description:"IDE Support and generation."`
 }
 
 // Definitions of what we do for each command.
@@ -648,6 +657,14 @@ var buildFunctions = map[string]func() bool{
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
 			query.Filter(state, state.ExpandOriginalTargets())
 		})
+	},
+	"intellij": func() bool {
+		success, state := runBuild(opts.Ide.IntelliJ.Args.Labels, false, false)
+		if success {
+			fmt.Printf("Found %d targets\n", len(state.Graph.AllTargets()))
+			ide.ExportIntellijStructure(state.Graph, state.Graph.AllTargets())
+		}
+		return success
 	},
 }
 

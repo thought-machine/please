@@ -1,6 +1,9 @@
 package ide
 
 import (
+	"encoding/xml"
+	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 
@@ -9,7 +12,7 @@ import (
 
 // ExportIntellijStructure creates a set of modules and libraries that makes it nicer to work with Please projects
 // in IntelliJ.
-func ExportIntellijStructure(targets core.BuildTargets) {
+func ExportIntellijStructure(graph *core.BuildGraph, targets core.BuildTargets) {
 
 	// Structure is as follows:
 	/*
@@ -99,17 +102,20 @@ func ExportIntellijStructure(targets core.BuildTargets) {
 	modules := make([]IModule, 0)
 
 	for _, buildTarget := range targets {
-		m := toModule(buildTarget)
-		if m != nil {
+		m := toModule(graph, buildTarget)
+		//if m != nil {
+			for _, library := range findLibraries(graph, buildTarget) {
+				m.addLibrary(library)
+			}
 			modules = append(modules, m)
-		}
+		//}
 	}
 }
 
-func toModule(buildTarget *core.BuildTarget) IModule {
+func toModule(graph *core.BuildGraph, buildTarget *core.BuildTarget) IModule {
 	for _, label := range buildTarget.PrefixedLabels("rule:") {
 		if label == "java_library" {
-			path := relativisedPathToPlzOutLocation(commonDirectoryFromInputs(buildTarget.Sources))
+			path := relativisedPathToPlzOutLocation(commonDirectoryFromInputs(graph, buildTarget.Sources))
 			if path != nil {
 				return &JavaModule{
 					Module: Module{
@@ -121,7 +127,7 @@ func toModule(buildTarget *core.BuildTarget) IModule {
 			}
 		}
 		if label == "java_test_library" {
-			path := relativisedPathToPlzOutLocation(commonDirectoryFromInputs(buildTarget.Sources))
+			path := relativisedPathToPlzOutLocation(commonDirectoryFromInputs(graph, buildTarget.Sources))
 			return &JavaModule{
 				Module: Module{
 					contentUrl:   "file://$MODULE_DIR$/" + *path,
@@ -130,24 +136,21 @@ func toModule(buildTarget *core.BuildTarget) IModule {
 				packagePrefix: nil, // or from label
 			}
 		}
-		if label == "go_library" {
-			path := relativisedPathToPlzOutLocation(commonDirectoryFromInputs(buildTarget.Sources))
-			return &GoModule{
-				Module: Module{
-					contentUrl:   "file://$MODULE_DIR$/" + *path,
-					isTestSource: false,
-				},
-			}
-		}
 	}
 	return nil
 }
 
-func commonDirectoryFromInputs(inputs []core.BuildInput) *string {
+func findLibraries(graph *core.BuildGraph, target *core.BuildTarget) []Library {
+	libraries := make([]Library, 0)
+
+	fmt.Printf("Found %d dependencies for %s\n", len(target.Dependencies()), target.Label)
+	return libraries
+}
+
+func commonDirectoryFromInputs(graph *core.BuildGraph, inputs []core.BuildInput) *string {
 	var commonPath *string = nil
 	for _, input := range inputs {
-		// Ignore systemfile things for now - they're the only ones that need a graph.
-		for _, path := range input.Paths(nil) {
+		for _, path := range input.Paths(graph) {
 			directory := filepath.Dir(path)
 			if commonPath == nil {
 				commonPath = &directory
@@ -194,7 +197,7 @@ func packagePrefixFromLabels(labels []string) *string {
 	return &labels[0]
 }
 
-type IProject interface {}
+type IProject interface{}
 
 type project struct {
 	version int
@@ -209,18 +212,50 @@ func NewProject() IProject {
 }
 
 type IModule interface {
+	addLibrary(library Library)
 }
 
 type Module struct {
 	contentUrl   string
 	isTestSource bool
+	libraries    []Library
 }
 
-type GoModule struct {
-	Module
+func (module *Module) addLibrary(library Library) {
+	module.libraries = append(module.libraries, library)
 }
 
 type JavaModule struct {
 	Module
 	packagePrefix *string
+}
+
+type libraryComponent struct {
+	XMLName xml.Name `xml:"component"`
+	Name string `xml:"name,attr"`
+	Library Library `xml:"library"`
+}
+
+type Content struct {
+	XMLName    xml.Name `xml:"root"`
+	ContentUrl string   `xml:"contentUrl,attr"`
+}
+
+type Library struct {
+	XMLName      xml.Name  `xml:"library"`
+	Name         string    `xml:"name,attr"`
+	ClassPaths   []Content `xml:"CLASSES>root"`
+	JavadocPaths []Content `xml:"JAVADOC>root"`
+	SourcePaths  []Content `xml:"SOURCES>root"`
+}
+
+func (library *Library) toXml(writer io.Writer) {
+	encoder := xml.NewEncoder(writer)
+	encoder.EncodeToken(xml.ProcInst{Target:"xml", Inst: []byte("version=\"1.0\" encoding=\"UTF-8\"")})
+
+	table := &libraryComponent{
+		Name: "libraryTable",
+		Library: *library,
+	}
+	encoder.Encode(table)
 }

@@ -664,7 +664,7 @@ func (target *BuildTarget) SetState(state BuildTargetState) {
 	atomic.StoreInt32(&target.state, int32(state))
 }
 
-// SyncUpdateState oves the target's state from before to after via a lock.
+// SyncUpdateState moves the target's state from before to after via a lock.
 // Returns true if successful, false if not (which implies something else changed the state first).
 // The nature of our build graph ensures that most transitions are only attempted by
 // one thread simultaneously, but this one can be attempted by several at once
@@ -1144,6 +1144,28 @@ func (target *BuildTarget) HasParent() bool {
 	return target.Label.HasParent()
 }
 
+func (target *BuildTarget) AllTransitiveDependencies(graph *BuildGraph) BuildTargets {
+	var inner func(seenLabels map[BuildLabel]struct{}, target *BuildTarget)
+	inner = func(seenLabels map[BuildLabel]struct{}, target *BuildTarget) {
+		if _, ok := seenLabels[target.Label]; !ok {
+			seenLabels[target.Label] = struct{}{}
+			for _, dep := range target.Dependencies() {
+				inner(seenLabels, dep)
+			}
+		}
+	}
+
+	targets := make(map[BuildLabel]struct{})
+	inner(targets, target)
+
+	out := make(BuildTargets, 0, len(targets))
+	for seenLabel, _ := range targets {
+		out = append(out, graph.Target(seenLabel))
+	}
+	sort.Sort(out)
+	return out
+}
+
 // BuildTargets makes a slice of build targets sortable by their labels.
 type BuildTargets []*BuildTarget
 
@@ -1155,4 +1177,13 @@ func (slice BuildTargets) Less(i, j int) bool {
 }
 func (slice BuildTargets) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
+}
+
+func (slice BuildTargets) Contains(target BuildTarget) bool {
+	for _, t := range slice {
+		if target.Label == t.Label {
+			return true
+		}
+	}
+	return false
 }
