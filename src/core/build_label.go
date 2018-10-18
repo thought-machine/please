@@ -372,6 +372,10 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	return ret
 }
 
+func (label BuildLabel) IsPrivate() bool {
+	return strings.HasPrefix(label.Name, "_")
+}
+
 // A packageKey is a cut-down version of BuildLabel that only contains the package part.
 // It's used to key maps and so forth that don't care about the target name.
 type packageKey struct {

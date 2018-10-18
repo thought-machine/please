@@ -1144,28 +1144,6 @@ func (target *BuildTarget) HasParent() bool {
 	return target.Label.HasParent()
 }
 
-func (target *BuildTarget) AllTransitiveDependencies(graph *BuildGraph) BuildTargets {
-	var inner func(seenLabels map[BuildLabel]struct{}, target *BuildTarget)
-	inner = func(seenLabels map[BuildLabel]struct{}, target *BuildTarget) {
-		if _, ok := seenLabels[target.Label]; !ok {
-			seenLabels[target.Label] = struct{}{}
-			for _, dep := range target.Dependencies() {
-				inner(seenLabels, dep)
-			}
-		}
-	}
-
-	targets := make(map[BuildLabel]struct{})
-	inner(targets, target)
-
-	out := make(BuildTargets, 0, len(targets))
-	for seenLabel, _ := range targets {
-		out = append(out, graph.Target(seenLabel))
-	}
-	sort.Sort(out)
-	return out
-}
-
 // BuildTargets makes a slice of build targets sortable by their labels.
 type BuildTargets []*BuildTarget
 

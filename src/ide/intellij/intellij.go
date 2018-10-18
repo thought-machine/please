@@ -100,14 +100,39 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 	  </library>
    </component>%
 
+	<component name="libraryTable">
+		<library name="third_party_java_gson">
+			<CLASSES>
+				<root contentUrl="jar://$PROJECT_DIR$/../../plz-out/gen/third_party/java/gson.jar!/"></root>
+			</CLASSES>
+			<JAVADOC></JAVADOC>
+			<SOURCES>
+				<root contentUrl="jar://$PROJECT_DIR$/../../plz-out/gen/third_party/java/gson_src.jar!/"></root>
+			</SOURCES>
+		</library>
+	</component>
+
+	<component name="libraryTable">
+  		<library name="third_party_java_gson">
+    		<CLASSES>
+      			<root url="jar://$PROJECT_DIR$/../gen/third_party/java/gson.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../gen/third_party/java/gson_src.jar!/" />
+    </SOURCES>
+  </library>
+</component>
+
 	 */
+
+ 	os.RemoveAll(projectLocation())
 
 	if _, err := os.Stat(projectLocation()); os.IsNotExist(err) {
 		os.MkdirAll(projectLocation(), core.DirPermissions)
 	}
 
 	// Write misc.xml
-
 	javaSourceLevel, err := strconv.Atoi(config.Java.SourceLevel)
 	if err != nil {
 		log.Fatal("Unable to determine java source level - ", err)
@@ -122,35 +147,33 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 
 	// For each target:
 	for _, buildTarget := range targets {
-		m, l := toModuleAndLibrary(graph, buildTarget)
+		if !buildTarget.Label.IsPrivate() {
+			m, l := toModuleAndLibrary(graph, buildTarget)
 
-		if _, err := os.Stat(filepath.Dir(moduleFileLocation(buildTarget))); os.IsNotExist(err) {
-			os.MkdirAll(filepath.Dir(moduleFileLocation(buildTarget)), core.DirPermissions)
-		}
-		f, err := os.Create(moduleFileLocation(buildTarget))
-		if err != nil {
-			log.Fatal("Unable to write module file for ", buildTarget.Label, " - ", err)
-		}
-		// Write .iml
-		m.toXml(f)
-		// Possibly write libraries .xml
-		if l != nil {
-			if _, err := os.Stat(libraryDirLocation()); os.IsNotExist(err) {
-				os.MkdirAll(libraryDirLocation(), core.DirPermissions)
+			if _, err := os.Stat(filepath.Dir(moduleFileLocation(buildTarget))); os.IsNotExist(err) {
+				os.MkdirAll(filepath.Dir(moduleFileLocation(buildTarget)), core.DirPermissions)
 			}
 			f, err := os.Create(moduleFileLocation(buildTarget))
 			if err != nil {
-				log.Fatal("Unable to write library file for", buildTarget.Label, "-", err)
+				log.Fatal("Unable to write module file for ", buildTarget.Label, " - ", err)
 			}
-			l.toXml(f)
+			// Write .iml
+			m.toXml(f)
+			// Possibly write libraries .xml
+			if l != nil {
+				if _, err := os.Stat(libraryDirLocation()); os.IsNotExist(err) {
+					os.MkdirAll(libraryDirLocation(), core.DirPermissions)
+				}
+				f, err := os.Create(libraryFileLocation(buildTarget))
+				if err != nil {
+					log.Fatal("Unable to write library file for", buildTarget.Label, "-", err)
+				}
+				l.toXml(f)
+			}
 		}
 	}
 
 	// Write modules.xml
-	//originalTargets := []*core.BuildTarget{}
-	//for _, label := range originalLabels {
-	//	originalTargets = append(originalTargets, graph.TargetOrDie(label))
-	//}
 	modules := NewModules(targets)
 	if _, err := os.Stat(filepath.Dir(modulesFileLocation())); os.IsNotExist(err) {
 		os.MkdirAll(filepath.Dir(modulesFileLocation()), core.DirPermissions)
@@ -159,43 +182,7 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 	if err != nil {
 		log.Fatal("Unable to write modules file", err)
 	}
-	// Write .iml
 	modules.toXml(f)
-}
-
-func commonDirectoryFromInputs(graph *core.BuildGraph, inputs []core.BuildInput) *string {
-	var commonPath *string = nil
-	for _, input := range inputs {
-		for _, path := range input.Paths(graph) {
-			if f, err := os.Stat(path); err == nil {
-				directory := filepath.Dir(path)
-				if f.Mode().IsDir() {
-					directory = path
-				}
-				if commonPath == nil {
-					commonPath = &directory
-				} else {
-					for {
-						// resolve against the current common path
-						rel, err := filepath.Rel(*commonPath, directory);
-						if err != nil {
-							return nil
-						}
-
-						if strings.HasPrefix(rel, "..") {
-							parent := filepath.Dir(*commonPath)
-							commonPath = &parent
-							continue
-						}
-
-						break
-					}
-				}
-			}
-		}
-	}
-
-	return commonPath
 }
 
 func outputLocation() string {

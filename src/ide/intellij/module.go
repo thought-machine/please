@@ -37,10 +37,10 @@ import (
 */
 
 type Module struct {
-	XMLName      xml.Name `xml:"module"`
-	ModuleType   string   `xml:"type,attr"`
-	Version      int      `xml:"version,attr"`
-	Component    []ModuleComponent `xml:"component"`
+	XMLName    xml.Name          `xml:"module"`
+	ModuleType string            `xml:"type,attr"`
+	Version    int               `xml:"version,attr"`
+	Component  []ModuleComponent `xml:"component"`
 }
 
 func NewJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
@@ -48,24 +48,67 @@ func NewJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 	component.addOrderEntry(NewInheritedJdkEntry())
 	component.addOrderEntry(NewSourceFolderEntry(false))
 
-	for _, dep := range target.Dependencies() {
-		component.addOrderEntry(NewModuleEntry(moduleName(dep)))
+	for _, label := range target.DeclaredDependenciesStrict() {
+		dep := graph.TargetOrDie(label)
+		fmt.Println("Found dependency", dep.Label)
+		if shouldMakeJavaModule(dep) {
+			fmt.Println("Yes!", dep.Label)
+			component.addOrderEntry(NewModuleEntry(moduleName(dep)))
+		}
 	}
 
-	return Module{
-		ModuleType:   "JAVA_MODULE",
-		Version:      4,
-		Component:    []ModuleComponent{
+	if shouldMakeLibrary(target) {
+		component.addOrderEntry(NewLibraryEntry(libraryName(target), "project"))
+	}
+
+	module := Module{
+		ModuleType: "JAVA_MODULE",
+		Version:    4,
+		Component: []ModuleComponent{
 			component,
 		},
 	}
+	return module
+}
+
+func shouldMakeJavaModule(target *core.BuildTarget) bool {
+	for _, label := range target.PrefixedLabels("rule:") {
+		if label == "java_library" {
+			return true
+		} else if label == "java_test_library" {
+			return true
+		} else if label == "maven_jar" {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldHaveContent(target *core.BuildTarget) bool {
+	for _, label := range target.PrefixedLabels("rule:") {
+		if label == "java_library" {
+			return true
+		} else if label == "java_test_library" {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldMakeLibrary(target *core.BuildTarget) bool {
+	for _, label := range target.PrefixedLabels("rule:") {
+		if label == "maven_jar" {
+			return true
+		}
+	}
+	return false
 }
 
 func NewWebModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 	return Module{
-		ModuleType:   "WEB_MODULE",
-		Version:      4,
-		Component:    []ModuleComponent{
+		ModuleType: "WEB_MODULE",
+		Version:    4,
+		Component: []ModuleComponent{
 			NewModuleComponent(graph, target),
 		},
 	}
@@ -73,17 +116,17 @@ func NewWebModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 
 func (module *Module) toXml(writer io.Writer) {
 	encoder := xml.NewEncoder(writer)
-	encoder.EncodeToken(xml.ProcInst{Target:"xml", Inst: []byte("version=\"1.0\" encoding=\"UTF-8\"")})
+	encoder.EncodeToken(xml.ProcInst{Target: "xml", Inst: []byte("version=\"1.0\" encoding=\"UTF-8\"")})
 
 	encoder.Encode(module)
 }
 
 type ModuleComponent struct {
-	XMLName               xml.Name      `xml:"component"`
-	Name                  string        `xml:"name,attr"`
-	InheritCompilerOutput bool          `xml:"inherit-compiler-output,attr"`
+	XMLName               xml.Name       `xml:"component"`
+	Name                  string         `xml:"name,attr"`
+	InheritCompilerOutput bool           `xml:"inherit-compiler-output,attr"`
 	Content               *ModuleContent `xml:"content,omitEmpty"`
-	OrderEntries          []OrderEntry  `xml:"orderEntry"`
+	OrderEntries          []OrderEntry   `xml:"orderEntry"`
 }
 
 func NewModuleComponent(graph *core.BuildGraph, target *core.BuildTarget) ModuleComponent {
@@ -108,29 +151,32 @@ type ModuleContent struct {
 }
 
 func NewModuleContent(graph *core.BuildGraph, target *core.BuildTarget) *ModuleContent {
-	commonDir := commonDirectoryFromInputs(graph, target.Sources)
-
-	if commonDir == nil {
+	if !shouldHaveContent(target) {
 		return nil
 	}
+	commonDir := target.Label.PackageDir()
 
-	joined := filepath.Join(core.RepoRoot, *commonDir)
+	joined := filepath.Join(core.RepoRoot, commonDir)
 	path := relativisedPathTo(moduleDirLocation(target), &joined)
 
 	sourceFolders := []SourceFolder{
 		{
-			Url: fmt.Sprintf("file://$MODULE_DIR$/%s", *path),
-			ForTests: false,
+			Url:           fmt.Sprintf("file://$MODULE_DIR$/%s", *path),
+			ForTests:      false,
 			PackagePrefix: packagePrefixFromLabels(target.PrefixedLabels("package_prefix:")),
 		},
 	}
 
-	packageDir := target.Label.PackageDir()
+	packageDir := commonDir
+	maybeSrcDir := target.PrefixedLabels("src_dir:")
+	if len(maybeSrcDir) == 1 {
+		packageDir = filepath.Join(packageDir, maybeSrcDir[0])
+	}
 	joined = filepath.Join(core.RepoRoot, packageDir)
 	contentDir := relativisedPathTo(moduleDirLocation(target), &joined)
 
 	return &ModuleContent{
-		Url: fmt.Sprintf("file://$MODULE_DIR$/%s", *contentDir),
+		Url:          fmt.Sprintf("file://$MODULE_DIR$/%s", *contentDir),
 		SourceFolder: sourceFolders,
 	}
 }
@@ -139,7 +185,7 @@ type SourceFolder struct {
 	XMLName       xml.Name `xml:"sourceFolder"`
 	Url           string   `xml:"url,attr"`
 	ForTests      bool     `xml:"forTests,attr"`
-	PackagePrefix *string   `xml:"packagePrefix,attr,omitEmpty"`
+	PackagePrefix *string  `xml:"packagePrefix,attr,omitEmpty"`
 }
 
 type OrderEntry struct {
@@ -148,6 +194,7 @@ type OrderEntry struct {
 
 	ForTests *bool `xml:"forTests,attr,omitEmpty"`
 
+	LibraryExported *string `xml:"exported,attr,omitEmpty"`
 	LibraryName  *string `xml:"name,attr,omitEmpty"`
 	LibraryLevel *string `xml:"level,attr,omitEmpty"`
 
@@ -155,10 +202,12 @@ type OrderEntry struct {
 }
 
 func NewLibraryEntry(name, level string) OrderEntry {
+	exported := ""
 	return OrderEntry{
 		Type:         "library",
 		LibraryName:  &name,
 		LibraryLevel: &level,
+		LibraryExported: &exported,
 	}
 }
 
@@ -177,7 +226,7 @@ func NewInheritedJdkEntry() OrderEntry {
 
 func NewSourceFolderEntry(forTests bool) OrderEntry {
 	return OrderEntry{
-		Type: "sourceFolder",
+		Type:     "sourceFolder",
 		ForTests: &forTests,
 	}
 }
@@ -190,16 +239,22 @@ func NewSourceFolder(url string, forTests bool, packagePrefix string) SourceFold
 	}
 }
 
-func toModuleAndLibrary(graph *core.BuildGraph, buildTarget *core.BuildTarget) (Module,*Library) {
-	for _, label := range buildTarget.PrefixedLabels("rule:") {
-		if label == "java_library" {
-			return NewJavaModule(graph, buildTarget), nil
-		}
-		if label == "java_test_library" {
-			return NewJavaModule(graph, buildTarget), nil
-		}
+func toModuleAndLibrary(graph *core.BuildGraph, buildTarget *core.BuildTarget) (Module, *Library) {
+
+	module := NewWebModule(graph, buildTarget)
+	var library *Library = nil
+
+	if shouldMakeJavaModule(buildTarget) {
+		fmt.Println("Converting", buildTarget.Label, "to java module")
+		module = NewJavaModule(graph, buildTarget)
 	}
-	return NewWebModule(graph, buildTarget), nil
+	if shouldMakeLibrary(buildTarget) {
+		fmt.Println("Converting", buildTarget.Label, "to library")
+		madeLibrary := NewLibrary(graph, buildTarget)
+		library = &madeLibrary
+	}
+
+	return module, library
 }
 
 func relativisedPathTo(location string, commonPath *string) *string {

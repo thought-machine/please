@@ -631,26 +631,6 @@ func TestShouldIncludeManual(t *testing.T) {
 	assert.False(t, target.ShouldInclude([]string{"a"}, nil))
 }
 
-func TestBuildTarget_AllTransitiveDependencies(t *testing.T) {
-	subTarget1 := makeTarget("//src/core:subtarget1", "PUBLIC")
-	subTarget2 := makeTarget("//src/core:subtarget2", "PUBLIC", subTarget1)
-	subTarget3 := makeTarget("//src/core:subtarget3", "PUBLIC")
-	topTarget := makeTarget("//src/core:target1", "PUBLIC", subTarget1, subTarget2, subTarget3)
-
-	state := NewDefaultBuildState()
-	state.Graph.AddTarget(topTarget)
-	state.Graph.AddTarget(subTarget1)
-	state.Graph.AddTarget(subTarget2)
-	state.Graph.AddTarget(subTarget3)
-
-	deps := topTarget.AllTransitiveDependencies(state.Graph)
-	assert.Equal(t, 4, len(deps))
-	assert.True(t, deps.Contains(*subTarget1))
-	assert.True(t, deps.Contains(*subTarget2))
-	assert.True(t, deps.Contains(*subTarget3))
-	assert.True(t, deps.Contains(*topTarget))
-}
-
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {

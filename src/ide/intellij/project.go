@@ -116,7 +116,9 @@ func NewModulesComponent(targets core.BuildTargets) ModulesComponent {
 	}
 
 	for _, t := range targets {
-		component.Modules = append(component.Modules, NewModulesModule(t))
+		if !t.Label.IsPrivate() {
+			component.Modules = append(component.Modules, NewModulesModule(t))
+		}
 	}
 
 	return component
