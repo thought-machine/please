@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"ide"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -27,6 +26,7 @@ import (
 	"gc"
 	"hashes"
 	"help"
+	"ide/intellij"
 	"metrics"
 	"output"
 	"parse"
@@ -662,7 +662,7 @@ var buildFunctions = map[string]func() bool{
 		success, state := runBuild(opts.Ide.IntelliJ.Args.Labels, false, false)
 		if success {
 			fmt.Printf("Found %d targets\n", len(state.Graph.AllTargets()))
-			ide.ExportIntellijStructure(state.Graph, state.Graph.AllTargets())
+			intellij.ExportIntellijStructure(state.Config, state.Graph, state.Graph.AllTargets(), state.OriginalTargets)
 		}
 		return success
 	},
