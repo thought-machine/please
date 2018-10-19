@@ -65,9 +65,6 @@ jobs:
            path: plz-out/results
        - store_artifacts:
            path: plz-out/log
-       - run:
-           name: Lint
-           command: ./tools/misc/ci_lint.py
        - save_cache:
            key: bootstrap-linux-alt-{{ checksum "bootstrap.sh" }}
            paths: [ ".bootstrap" ]
