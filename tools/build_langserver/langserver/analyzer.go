@@ -52,6 +52,8 @@ type Identifier struct {
 	EndLine   int
 }
 
+// BuildLabel is a wrapper around asp.BuildLabel
+// Including the path of the buildFile
 type BuildLabel struct {
 	*core.BuildLabel
 	Path            string
@@ -165,6 +167,7 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier, error) {
 	return idents, nil
 }
 
+// BuildLabelFromString returns a BuildLabel object,
 func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 	uri lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
 	filepath, err := GetPathFromURL(uri, "file")
