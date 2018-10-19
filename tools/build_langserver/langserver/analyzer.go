@@ -250,11 +250,8 @@ func (a *Analyzer) getBuildDef(name string, path string) (*Identifier, error) {
 	for _, stmt := range stmts {
 		if stmt.Type == "call" {
 			for _, arg := range stmt.Action.Call.Arguments {
-				if arg.Name == "name" {
-					trimmed := TrimQoutes(arg.Value.Val.String)
-					if trimmed == name {
-						return stmt, nil
-					}
+				if arg.Name == "name" && TrimQoutes(arg.Value.Val.String) == name{
+					return stmt, nil
 				}
 			}
 		}
