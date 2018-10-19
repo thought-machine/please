@@ -3,16 +3,16 @@ package langserver
 import (
 	"context"
 	"core"
-	"parse/rules"
 	"path"
 	"sort"
-	"src/fs"
 	"strconv"
 	"strings"
-
 	"fmt"
 	"io/ioutil"
+
+	"src/fs"
 	"parse/asp"
+	"parse/rules"
 	"tools/build_langserver/lsp"
 )
 
