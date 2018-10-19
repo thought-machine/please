@@ -48,9 +48,8 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 
 func getHoverContent(ctx context.Context, analyzer *Analyzer,
 	uri lsp.DocumentURI, position lsp.Position) (content *lsp.MarkupContent, err error) {
-	// Read file, and get a list of strings from the file
-	// TODO: Try using GetLineContent instead
-	fileContent, err := ReadFile(ctx, uri)
+	// Get the content of the line from the position
+	lineContent, err := GetLineContent(ctx, uri, position)
 	if err != nil {
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
@@ -67,15 +66,13 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 		}
 	}
 
-	lineContent := fileContent[position.Line]
-
 	var contentString string
 
 	switch ident.Type {
 	case "call":
 		identArgs := ident.Action.Call.Arguments
 		contentString = getCallContent(ctx, analyzer, identArgs, ident.Name,
-			lineContent, position, uri)
+			lineContent[0], position, uri)
 	case "property":
 		//TODO(bnmetrics)
 	case "assign":
