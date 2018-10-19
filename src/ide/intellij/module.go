@@ -50,7 +50,7 @@ func NewJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 
 	for _, label := range target.DeclaredDependencies() {
 		dep := graph.TargetOrDie(label)
-		if shouldMakeJavaModule(dep) {
+		if shouldMakeModule(dep) {
 			component.addOrderEntry(NewModuleEntry(moduleName(dep)))
 		}
 	}
@@ -69,6 +69,14 @@ func NewJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 	return module
 }
 
+func NewScalaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
+	module := NewJavaModule(graph, target)
+
+	module.Component[0].addOrderEntry(NewLibraryEntry("scala-sdk", "application"))
+
+	return module
+}
+
 func shouldMakeJavaModule(target *core.BuildTarget) bool {
 	for _, label := range target.PrefixedLabels("rule:") {
 		if label == "java_library" {
@@ -82,11 +90,27 @@ func shouldMakeJavaModule(target *core.BuildTarget) bool {
 	return false
 }
 
+func shouldMakeScalaModule(target *core.BuildTarget) bool {
+	for _, label := range target.PrefixedLabels("rule:") {
+		if label == "scala_library" {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldMakeModule(target *core.BuildTarget) bool {
+	return shouldMakeJavaModule(target) ||
+		shouldMakeScalaModule(target)
+}
+
 func shouldHaveContent(target *core.BuildTarget) bool {
 	for _, label := range target.PrefixedLabels("rule:") {
 		if label == "java_library" {
 			return true
-		} else if label == "java_test_library" {
+		} else if label == "java_test" {
+			return true
+		} else if label == "scala_library" {
 			return true
 		}
 	}
@@ -251,6 +275,11 @@ func toModule(graph *core.BuildGraph, buildTarget *core.BuildTarget) *Module {
 
 	if shouldMakeJavaModule(buildTarget) {
 		madeModule := NewJavaModule(graph, buildTarget)
+		module = &madeModule
+	}
+
+	if shouldMakeScalaModule(buildTarget) {
+		madeModule := NewScalaModule(graph, buildTarget)
 		module = &madeModule
 	}
 

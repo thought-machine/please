@@ -225,8 +225,10 @@ func libraryDirLocation() string {
 }
 
 func libraryName(target *core.BuildTarget) string {
-	// This is currently the same as moduleName but there is no requirement for that, and indeed we may want to use the version here too.
-	return strings.Replace(target.Label.PackageName + "_" + target.Label.Name, "/", "_", -1)
+	label := target.Label.PackageName + "_" + target.Label.Name
+	label = strings.Replace(label, "/", "_", -1)
+	label = strings.Replace(label, ".", "_", -1)
+	return label
 }
 
 func libraryFileLocation(target *core.BuildTarget) string {
