@@ -166,6 +166,8 @@ type IdentStatementAction struct {
 // An IdentExpr implements parts of an expression that begin with an identifier (i.e. anything
 // that might be a variable name).
 type IdentExpr struct {
+	Pos Position
+	EndPos Position
 	Name   string `@Ident`
 	Action []struct {
 		Property *IdentExpr `  "." @@`

@@ -4,7 +4,7 @@ go_library(
         ["*.go"],
         exclude = ["*_test.go"],
     ),
-    visibility = ["//tools/build_langserver/..."],
+    visibility = ["//tools/build_langserver/...", "//src/core"],
     deps = [
         "//src/core",
         "//src/fs",
@@ -32,10 +32,12 @@ go_test(
 )
 
 go_test(
-    name = "utils_test",
+    name ="{time}-{message}".format(time='today', message='msg'),
     srcs = ["utils_test.go"],
     deps = [
         ":langserver",
         "//third_party/go:testify",
     ],
 )
+
+mystr = "{time}-{message}".format(time='today', message='msg')

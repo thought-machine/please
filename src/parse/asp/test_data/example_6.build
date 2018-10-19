@@ -1,1 +1,5 @@
 options = ' '.join(['-o ' + option for option in optional]) if optional else ''
+
+Myfunc(
+    name = "{time}-{message}".format(time='today', message='msg')
+)

@@ -49,7 +49,7 @@ Completion
 - build labels
 - build_def functions,
 - arg suggestions
--
+- ******plz query completion******
 
 
 BINARY

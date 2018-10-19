@@ -8,6 +8,7 @@ import (
 	"fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"tools/build_langserver/lsp"
@@ -126,4 +127,19 @@ func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]stri
 	scanner := bufio.NewScanner(file)
 
 	return callback(scanner)
+}
+
+// TrimQoutes is used to trim the qouted string
+// this will also work for string with any extra characters outside of qoutes
+// like so: "//src/core",
+func TrimQoutes(str string) string {
+	// Regex match the string starts with qoute("),
+	// this is so that strings like this(visibility = ["//tools/build_langserver/...", "//src/core"]) won't be matched
+	re := regexp.MustCompile(`(^("|')([^"]|"")*("|'))`)
+	matched := re.FindString(strings.TrimSpace(str))
+	if matched != "" {
+		return matched[1:len(matched)-1]
+	}
+
+	return ""
 }
