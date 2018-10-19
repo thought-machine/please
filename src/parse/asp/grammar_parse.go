@@ -441,8 +441,8 @@ func (p *parser) parseValueExpression() *ValueExpression {
 		ve.Ident = p.parseIdentExpr()
 		p.endPos = ve.Ident.EndPos
 
-		//In case the Ident is a variable name, we assign the endPos to the end of current token.
-		//see test_data/unary_op.build
+		// In case the Ident is a variable name, we assign the endPos to the end of current token.
+		// see test_data/unary_op.build
 		if p.endPos.Column == 0 {
 			p.endPos = tok.EndPos()
 			ve.Ident.EndPos = p.endPos
