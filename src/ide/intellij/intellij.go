@@ -2,11 +2,12 @@ package intellij
 
 import (
 	"fmt"
-	"gopkg.in/op/go-logging.v1"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"gopkg.in/op/go-logging.v1"
 
 	"core"
 )
@@ -15,7 +16,7 @@ var log = logging.MustGetLogger("intellij")
 
 // ExportIntellijStructure creates a set of modules and libraries that makes it nicer to work with Please projects
 // in IntelliJ.
-func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph, targets core.BuildTargets, originalLabels core.BuildLabels) {
+func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph, originalLabels core.BuildLabels) {
 
 	// Structure is as follows:
 	/*
@@ -148,9 +149,15 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 
 	// moduleTargets exist only for the modules we actually built, to keep the size down.
 	moduleTargets := []*core.BuildTarget{}
+	targetsToVisit := []*core.BuildTarget{}
 
 	// For each target:
-	for _, buildTarget := range targets {
+	for _, buildLabel := range originalLabels {
+		targetsToVisit = append(targetsToVisit, graph.TargetOrDie(buildLabel))
+	}
+
+	visitTargetsAndDependenciesOnce(targetsToVisit, func(buildTarget *core.BuildTarget) {
+		fmt.Println("Visiting", buildTarget.Label)
 		m := toModule(graph, buildTarget)
 
 		// Possibly write .iml
@@ -182,7 +189,7 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 			library.toXml(f)
 			f.Close()
 		}
-	}
+	})
 
 	// Write modules.xml
 	modules := NewModules(moduleTargets)
@@ -195,6 +202,24 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 	}
 	modules.toXml(f)
 	f.Close()
+}
+
+func visitTargetsAndDependenciesOnce(original []*core.BuildTarget, visitor func(target *core.BuildTarget)) {
+	targetsVisited := map[core.BuildLabel]core.BuildTarget{}
+	for len(original) > 0 {
+		var buildTarget *core.BuildTarget
+		buildTarget, original = original[0], original[1:]
+
+		if _, ok := targetsVisited[buildTarget.Label]; ok {
+			continue
+		}
+
+		targetsVisited[buildTarget.Label] = *buildTarget
+
+		visitor(buildTarget)
+
+		original = append(original, buildTarget.Dependencies()...)
+	}
 }
 
 func outputLocation() string {

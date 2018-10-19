@@ -661,7 +661,7 @@ var buildFunctions = map[string]func() bool{
 	"intellij": func() bool {
 		success, state := runBuild(opts.Ide.IntelliJ.Args.Labels, false, false)
 		if success {
-			intellij.ExportIntellijStructure(state.Config, state.Graph, state.Graph.AllTargets(), state.OriginalTargets)
+			intellij.ExportIntellijStructure(state.Config, state.Graph, state.ExpandOriginalLabels())
 		}
 		return success
 	},
