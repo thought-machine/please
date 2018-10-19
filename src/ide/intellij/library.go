@@ -1,10 +1,10 @@
 package intellij
 
 import (
-	"core"
 	"encoding/xml"
-	"fmt"
 	"io"
+
+	"core"
 )
 
 type libraryComponent struct {
@@ -33,7 +33,6 @@ func NewLibrary(graph *core.BuildGraph, target *core.BuildTarget) Library {
 	for _, dep  := range target.Sources {
 		label := dep.Label()
 		if label != nil {
-			fmt.Println("Checking declared dependency", label)
 			depTarget := graph.TargetOrDie(*label)
 
 			if depTarget.HasLabel("maven-sources") {
@@ -73,12 +72,12 @@ func NewLibrary(graph *core.BuildGraph, target *core.BuildTarget) Library {
 }
 
 func (library *Library) toXml(writer io.Writer) {
-	encoder := xml.NewEncoder(writer)
-	//encoder.EncodeToken(xml.ProcInst{Target:"xml", Inst: []byte("version=\"1.0\" encoding=\"UTF-8\"")})
-
-	table := &libraryComponent{
+	table := libraryComponent{
 		Name: "libraryTable",
 		Library: *library,
 	}
-	encoder.Encode(table)
+	contents, err := xml.MarshalIndent(table, "", "  ")
+	if err == nil {
+		writer.Write(contents)
+	}
 }

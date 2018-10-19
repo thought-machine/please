@@ -281,6 +281,8 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
       jvm_args (str): Arguments to pass to the JVM in the run script.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
+    if not labels:
+        labels = []
     # It's a bit sucky doing this in two separate steps, but it is
     # at least easy and reuses the existing code.
     lib_rule = java_library(
@@ -289,6 +291,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
         resources=resources,
         deps=deps,
         test_only=True,
+        labels=labels + ["rule:java_test"],
         # Deliberately not visible outside this package.
     )
     # As above, would be nicer if we could make the jars self-executing again.

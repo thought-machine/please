@@ -7,4 +7,5 @@ java_library(
   labels = [
     "package_prefix:build.please.intellij",
   ],
+  visibility=["PUBLIC"],
 )

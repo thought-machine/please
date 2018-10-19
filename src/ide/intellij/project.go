@@ -29,9 +29,12 @@ func NewMisc(javaSourceLevel int) Misc {
 }
 
 func (misc *Misc) toXml(w io.Writer) {
-	encoder := xml.NewEncoder(w)
-	encoder.EncodeToken(xml.ProcInst{Target: "xml", Inst: []byte("version=\"1.0\" encoding=\"UTF-8\"")})
-	encoder.Encode(misc)
+	w.Write([]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"))
+	content, err := xml.MarshalIndent(misc, "", "   ")
+
+	if err  == nil {
+		w.Write(content)
+	}
 }
 
 type MiscComponent struct {
@@ -99,9 +102,12 @@ func NewModules(targets core.BuildTargets) Modules {
 }
 
 func (modules *Modules) toXml(w io.Writer) {
-	encoder := xml.NewEncoder(w)
-	encoder.EncodeToken(xml.ProcInst{Target: "xml", Inst: []byte("version=\"1.0\" encoding=\"UTF-8\"")})
-	encoder.Encode(modules)
+	w.Write([]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"))
+	content, err := xml.MarshalIndent(modules, "", "   ")
+
+	if err  == nil {
+		w.Write(content)
+	}
 }
 
 type ModulesComponent struct {
@@ -116,9 +122,7 @@ func NewModulesComponent(targets core.BuildTargets) ModulesComponent {
 	}
 
 	for _, t := range targets {
-		if !t.Label.IsPrivate() {
-			component.Modules = append(component.Modules, NewModulesModule(t))
-		}
+		component.Modules = append(component.Modules, NewModulesModule(t))
 	}
 
 	return component

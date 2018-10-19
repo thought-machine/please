@@ -661,7 +661,6 @@ var buildFunctions = map[string]func() bool{
 	"intellij": func() bool {
 		success, state := runBuild(opts.Ide.IntelliJ.Args.Labels, false, false)
 		if success {
-			fmt.Printf("Found %d targets\n", len(state.Graph.AllTargets()))
 			intellij.ExportIntellijStructure(state.Config, state.Graph, state.Graph.AllTargets(), state.OriginalTargets)
 		}
 		return success

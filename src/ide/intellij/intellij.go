@@ -144,37 +144,48 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 		log.Fatal("Unable to create misc.xml - ", err)
 	}
 	misc.toXml(f)
+	f.Close()
+
+	// moduleTargets exist only for the modules we actually built, to keep the size down.
+	moduleTargets := []*core.BuildTarget{}
 
 	// For each target:
 	for _, buildTarget := range targets {
-		if !buildTarget.Label.IsPrivate() {
-			m, l := toModuleAndLibrary(graph, buildTarget)
+		m := toModule(graph, buildTarget)
 
+		// Possibly write .iml
+		if m != nil {
 			if _, err := os.Stat(filepath.Dir(moduleFileLocation(buildTarget))); os.IsNotExist(err) {
 				os.MkdirAll(filepath.Dir(moduleFileLocation(buildTarget)), core.DirPermissions)
 			}
 			f, err := os.Create(moduleFileLocation(buildTarget))
 			if err != nil {
-				log.Fatal("Unable to write module file for ", buildTarget.Label, " - ", err)
+				log.Fatal("Unable to write module file for", buildTarget.Label, "-", err)
 			}
-			// Write .iml
 			m.toXml(f)
-			// Possibly write libraries .xml
-			if l != nil {
-				if _, err := os.Stat(libraryDirLocation()); os.IsNotExist(err) {
-					os.MkdirAll(libraryDirLocation(), core.DirPermissions)
-				}
-				f, err := os.Create(libraryFileLocation(buildTarget))
-				if err != nil {
-					log.Fatal("Unable to write library file for", buildTarget.Label, "-", err)
-				}
-				l.toXml(f)
+			f.Close()
+
+			moduleTargets = append(moduleTargets, buildTarget)
+		}
+
+		// Possibly write library .xml
+		if shouldMakeLibrary(buildTarget) {
+			if _, err := os.Stat(libraryDirLocation()); os.IsNotExist(err) {
+				os.MkdirAll(libraryDirLocation(), core.DirPermissions)
 			}
+			f, err := os.Create(libraryFileLocation(buildTarget))
+			if err != nil {
+				log.Fatal("Unable to write library file for", buildTarget.Label, "-", err)
+			}
+
+			library := NewLibrary(graph, buildTarget)
+			library.toXml(f)
+			f.Close()
 		}
 	}
 
 	// Write modules.xml
-	modules := NewModules(targets)
+	modules := NewModules(moduleTargets)
 	if _, err := os.Stat(filepath.Dir(modulesFileLocation())); os.IsNotExist(err) {
 		os.MkdirAll(filepath.Dir(modulesFileLocation()), core.DirPermissions)
 	}
@@ -183,6 +194,7 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 		log.Fatal("Unable to write modules file", err)
 	}
 	modules.toXml(f)
+	f.Close()
 }
 
 func outputLocation() string {
@@ -194,7 +206,10 @@ func projectLocation() string {
 }
 
 func moduleName(target *core.BuildTarget) string {
-	return strings.Replace(target.Label.PackageName + "_" + target.Label.Name, "/", "_", -1)
+	label := target.Label.PackageName + "_" + target.Label.Name
+	label = strings.Replace(label, "/", "_", -1)
+	label = strings.Replace(label, "#", "_", -1)
+	return label
 }
 
 func moduleDirLocation(target *core.BuildTarget) string {
