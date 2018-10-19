@@ -511,7 +511,7 @@ func (p *parser) parseIdentExpr() *IdentExpr {
 	identTok := p.next(Ident)
 	ie := &IdentExpr{
 		Name: identTok.Value,
-		Pos: identTok.Pos,
+		Pos:  identTok.Pos,
 	}
 	for tok := p.l.Peek(); tok.Type == '.' || tok.Type == '('; tok = p.l.Peek() {
 		tok := p.l.Next()

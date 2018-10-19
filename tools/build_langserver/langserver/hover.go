@@ -5,8 +5,9 @@ import (
 	"core"
 	"encoding/json"
 	"fmt"
-	"parse/asp"
 	"strings"
+
+	"parse/asp"
 	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
@@ -46,7 +47,7 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 }
 
 func getHoverContent(ctx context.Context, analyzer *Analyzer,
-					 uri lsp.DocumentURI, position lsp.Position) (content *lsp.MarkupContent, err error) {
+	uri lsp.DocumentURI, position lsp.Position) (content *lsp.MarkupContent, err error) {
 	// Read file, and get a list of strings from the file
 	// TODO: Try using GetLineContent instead
 	fileContent, err := ReadFile(ctx, uri)
@@ -79,7 +80,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 		//TODO(bnmetrics)
 	case "assign":
 		//TODO(bnmetrics)
-		//identAssign := ident.Action.Assign
+		// identAssign := ident.Action.Assign
 		fmt.Println(ident.IdentStatement.Action.Assign)
 	case "augAssign":
 		//TODO(bnmetrics)
@@ -94,7 +95,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 }
 
 func getCallContent(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
-					identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) string {
+	identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) string {
 
 	// Return empty string if the hovered content is blank
 	if isEmpty(lineContent, pos) {
@@ -106,8 +107,7 @@ func getCallContent(ctx context.Context, analyzer *Analyzer, args []asp.CallArgu
 	}
 
 	// Return the content for the BuildLabel if the line content is a buildLabel
-	if content, err := contentFromBuildLabel(ctx, analyzer, lineContent, uri);
-		err == nil && content != "" {
+	if content, err := contentFromBuildLabel(ctx, analyzer, lineContent, uri); err == nil && content != "" {
 		return content
 	}
 
@@ -120,7 +120,8 @@ func getCallContent(ctx context.Context, analyzer *Analyzer, args []asp.CallArgu
 }
 
 func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
-					 identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
+	identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
+
 	builtinRule := analyzer.BuiltIns[identName]
 	for i, identArg := range args {
 
@@ -139,11 +140,11 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 				if identArg.Value.Val.Property != nil {
 					if content := contentFromProperty(ctx, analyzer, identArg.Value.Val.Property,
 						lineContent, pos, uri); content != "" {
-						return content,nil
+						return content, nil
 					}
 				}
 				if identArg.Value.Val.String != "" {
-					return contentFromBuildLabel(ctx, analyzer,lineContent, uri)
+					return contentFromBuildLabel(ctx, analyzer, lineContent, uri)
 				}
 				if identArg.Value.Val.List != nil {
 					return contentFromList(ctx, analyzer, identArg.Value.Val.List, lineContent, pos, uri)
@@ -153,7 +154,7 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 				}
 
 			}
-		// Return definition if the hoverred content is a positional argument
+			// Return definition if the hoverred content is a positional argument
 		} else if identArg.Name == "" {
 			return builtinRule.ArgMap[builtinRule.Arguments[i].Name].definition, nil
 		}
@@ -163,7 +164,7 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 		if identArg.Value.Val.Ident != nil {
 			if content := contentFromIdent(ctx, analyzer, identArg.Value.Val.Ident,
 				lineContent, pos, uri); content != "" {
-				return content,nil
+				return content, nil
 			}
 		}
 
@@ -175,12 +176,12 @@ func contentFromIdent(ctx context.Context, analyzer *Analyzer, IdentValExpr *asp
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) string {
 
 	// Check if each identStatement argument are assigned to a call
-	withInRange := pos.Line >= IdentValExpr.Pos.Line - 1 &&
-				   pos.Line <= IdentValExpr.EndPos.Line - 1
+	withInRange := pos.Line >= IdentValExpr.Pos.Line-1 &&
+		pos.Line <= IdentValExpr.EndPos.Line-1
 
 	if withInRange {
 		return contentFromIdentExpr(ctx, analyzer, IdentValExpr,
-									lineContent, pos, uri)
+			lineContent, pos, uri)
 	}
 	return ""
 }
@@ -188,17 +189,16 @@ func contentFromIdent(ctx context.Context, analyzer *Analyzer, IdentValExpr *asp
 func contentFromProperty(ctx context.Context, analyzer *Analyzer, propertyVal *asp.IdentExpr,
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) string {
 
-	withInRange := pos.Character >= propertyVal.Pos.Column - 1 &&
-				   pos.Character <= propertyVal.EndPos.Column - 1
+	withInRange := pos.Character >= propertyVal.Pos.Column-1 &&
+		pos.Character <= propertyVal.EndPos.Column-1
 
 	if withInRange {
 		return contentFromIdentExpr(ctx, analyzer, propertyVal,
-									lineContent, pos, uri)
+			lineContent, pos, uri)
 	}
 
 	return ""
 }
-
 
 func contentFromIdentExpr(ctx context.Context, analyzer *Analyzer, identExpr *asp.IdentExpr,
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) string {
@@ -218,12 +218,12 @@ func contentFromIdentExpr(ctx context.Context, analyzer *Analyzer, identExpr *as
 	return ""
 }
 
-
 func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
-					 lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
+	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
+
 	for _, expr := range listVal.Values {
-		withInRange := pos.Character >= expr.Pos.Column - 1 &&
-					   pos.Character <= expr.EndPos.Column - 1
+		withInRange := pos.Character >= expr.Pos.Column-1 &&
+			pos.Character <= expr.EndPos.Column-1
 
 		if withInRange && expr.Val.String != "" {
 			return contentFromBuildLabel(ctx, analyzer, expr.Val.String, uri)
@@ -241,11 +241,12 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 }
 
 func isEmpty(lineContent string, pos lsp.Position) bool {
-	return len(lineContent) < pos.Character + 1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
+	return len(lineContent) < pos.Character+1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
 }
 
 func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
-	  					   lineContent string, uri lsp.DocumentURI) (string, error) {
+	lineContent string, uri lsp.DocumentURI) (string, error) {
+
 	trimed := TrimQoutes(lineContent)
 	if core.LooksLikeABuildLabel(trimed) {
 		buildLabel, err := analyzer.BuildLabelFromString(ctx, core.RepoRoot, uri, trimed)
@@ -260,6 +261,7 @@ func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
 
 // contentFromRuleDef returns a string contains the header and the docstring of a build rule
 func contentFromRuleDef(analyzer *Analyzer, name string) string {
+
 	header := analyzer.BuiltIns[name].Header
 	docString := analyzer.BuiltIns[name].Docstring
 

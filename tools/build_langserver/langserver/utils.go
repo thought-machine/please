@@ -100,7 +100,7 @@ func GetLineContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Posit
 				if lineCount == position.Line {
 					return []string{scanner.Text()}, nil
 				}
-				lineCount ++
+				lineCount++
 			}
 		}
 
@@ -109,7 +109,6 @@ func GetLineContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Posit
 
 	return doIOScan(uri, getLine)
 }
-
 
 func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]string, error)) ([]string, error) {
 	path, err := GetPathFromURL(uri, "file")
@@ -138,7 +137,7 @@ func TrimQoutes(str string) string {
 	re := regexp.MustCompile(`(^("|')([^"]|"")*("|'))`)
 	matched := re.FindString(strings.TrimSpace(str))
 	if matched != "" {
-		return matched[1:len(matched)-1]
+		return matched[1 : len(matched)-1]
 	}
 
 	return ""

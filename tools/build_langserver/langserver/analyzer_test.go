@@ -144,17 +144,17 @@ func TestBuildLabelPath(t *testing.T) {
 	// Test case for regular and complete BuildLabel path
 	label, err := a.BuildLabelFromString(ctx, core.RepoRoot, uri, "//third_party/go:jsonrpc2")
 	expectedContent := "go_get(\n" +
-					"    name = \"jsonrpc2\",\n"+
-					"    get = \"github.com/sourcegraph/jsonrpc2\",\n" +
-					"    revision = \"549eb959f029d014d623104d40ab966d159a92de\",\n" +
-					")"
+		"    name = \"jsonrpc2\",\n" +
+		"    get = \"github.com/sourcegraph/jsonrpc2\",\n" +
+		"    revision = \"549eb959f029d014d623104d40ab966d159a92de\",\n" +
+		")"
 	assert.Equal(t, err, nil)
 	assert.Equal(t, path.Join(core.RepoRoot, "third_party/go/BUILD"), label.Path)
 	assert.Equal(t, "jsonrpc2", label.Name)
 	assert.Equal(t, expectedContent, label.BuildDefContent)
 
 	// Test case for relative BuildLabel path
-	label, err = a.BuildLabelFromString(ctx, core.RepoRoot, uri,":langserver")
+	label, err = a.BuildLabelFromString(ctx, core.RepoRoot, uri, ":langserver")
 	expectedContent = "go_library(\n" +
 		"    name = \"langserver\",\n" +
 		"    srcs = glob(\n" +
@@ -178,39 +178,36 @@ func TestBuildLabelPath(t *testing.T) {
 	assert.Equal(t, "langserver", label.Name)
 	assert.Equal(t, expectedContent, label.BuildDefContent)
 
-
 	// Test case for Allsubpackage BuildLabels: "//src/parse/..."
 	label, err = a.BuildLabelFromString(ctx, core.RepoRoot,
-		uri,"//src/parse/...")
+		uri, "//src/parse/...")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "BuildLabel includes all subpackages in path: " + path.Join(core.RepoRoot, "src/parse"),
+	assert.Equal(t, "BuildLabel includes all subpackages in path: "+path.Join(core.RepoRoot, "src/parse"),
 		label.BuildDefContent)
 
 	// Test case for All targets in a BUILD file: "//src/parse:all"
 	label, err = a.BuildLabelFromString(ctx, core.RepoRoot,
-		uri,"//src/parse:all")
+		uri, "//src/parse:all")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "BuildLabel includes all BuildTargets in BUILD file: " + path.Join(core.RepoRoot, "src/parse/BUILD"),
+	assert.Equal(t, "BuildLabel includes all BuildTargets in BUILD file: "+path.Join(core.RepoRoot, "src/parse/BUILD"),
 		label.BuildDefContent)
-
 
 	// Test case for shortended BuildLabel
 	label, err = a.BuildLabelFromString(ctx, core.RepoRoot,
-		uri,"//src/core")
+		uri, "//src/core")
 	assert.Equal(t, err, nil)
 
 	label2, err := a.BuildLabelFromString(ctx, core.RepoRoot,
-		uri,"//src/core:core")
+		uri, "//src/core:core")
 	assert.Equal(t, err, nil)
 
 	assert.Equal(t, label.BuildDefContent, label2.BuildDefContent)
 
-
 	// Test case for subrepo
 	label, err = a.BuildLabelFromString(ctx, core.RepoRoot,
-		uri,"@mysubrepo//spam/eggs:ham")
+		uri, "@mysubrepo//spam/eggs:ham")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
 	assert.Equal(t, "Subrepo label: @mysubrepo//spam/eggs:ham", label.BuildDefContent)

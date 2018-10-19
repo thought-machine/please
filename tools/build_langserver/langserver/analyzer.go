@@ -3,10 +3,10 @@ package langserver
 import (
 	"context"
 	"core"
-	"src/fs"
 	"parse/rules"
 	"path"
 	"sort"
+	"src/fs"
 	"strconv"
 	"strings"
 
@@ -54,8 +54,8 @@ type Identifier struct {
 
 type BuildLabel struct {
 	*core.BuildLabel
-	Path string
-	BuildDef *Identifier
+	Path            string
+	BuildDef        *Identifier
 	BuildDefContent string
 }
 
@@ -166,7 +166,7 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier, error) {
 }
 
 func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
-										uri lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
+	uri lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
 	filepath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return nil, err
@@ -185,10 +185,10 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 	// Handling subrepo
 	if label.Subrepo != "" {
 		return &BuildLabel{
-			BuildLabel: &label,
-			Path:label.PackageDir(),
-			BuildDef: nil,
-			BuildDefContent:"Subrepo label: " + labelStr,
+			BuildLabel:      &label,
+			Path:            label.PackageDir(),
+			BuildDef:        nil,
+			BuildDefContent: "Subrepo label: " + labelStr,
 		}, nil
 	}
 
@@ -208,9 +208,9 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 	// Check for cases such as "//tools/build_langserver/..."
 	if label.IsAllSubpackages() {
 		buildDefContent = "BuildLabel includes all subpackages in path: " +
-						  path.Join(rootPath,label.PackageDir())
+			path.Join(rootPath, label.PackageDir())
 
-	// Check for cases such as "//tools/build_langserver/all"
+		// Check for cases such as "//tools/build_langserver/all"
 	} else if label.IsAllTargets() {
 		buildDefContent = "BuildLabel includes all BuildTargets in BUILD file: " + labelPath
 	} else {
@@ -225,15 +225,15 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 		if err != nil {
 			return nil, err
 		}
-		buildDefContent = strings.Join(labelfileContent[buildDef.StartLine:buildDef.EndLine + 1],
+		buildDefContent = strings.Join(labelfileContent[buildDef.StartLine:buildDef.EndLine+1],
 			"\n")
 	}
 
 	return &BuildLabel{
-		BuildLabel: &label,
-		Path:labelPath,
-		BuildDef: buildDef,
-		BuildDefContent:buildDefContent,
+		BuildLabel:      &label,
+		Path:            labelPath,
+		BuildDef:        buildDef,
+		BuildDefContent: buildDefContent,
 	}, nil
 }
 
