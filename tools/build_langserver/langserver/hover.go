@@ -119,6 +119,10 @@ func getCallContent(ctx context.Context, analyzer *Analyzer, args []asp.CallArgu
 	return ""
 }
 
+//func getAssignContent() string {
+//
+//}
+
 func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
 	identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
