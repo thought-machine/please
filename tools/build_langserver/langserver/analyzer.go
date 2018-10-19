@@ -253,7 +253,7 @@ func (a *Analyzer) getBuildDef(name string, path string) (*Identifier, error) {
 		}
 
 		for _, arg := range stmt.Action.Call.Arguments {
-			if arg.Name == "name" && TrimQoutes(arg.Value.Val.String) == name{
+			if arg.Name == "name" && TrimQoutes(arg.Value.Val.String) == name {
 				return stmt, nil
 			}
 		}
