@@ -185,7 +185,8 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 	builtinRule := analyzer.BuiltIns[identName]
 	for i, identArg := range args {
 
-		// check if the lineContent contains "=", as it could be a keyword argument
+		// check if the lineContent contains "=", if the hover is over the argument name,
+		// return the definition of the argument instead of the value
 		if strings.Contains(lineContent, "=") {
 
 			EqualIndex := strings.Index(lineContent, "=")
@@ -196,26 +197,20 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 				if pos.Character <= EqualIndex {
 					return analyzer.BuiltIns[identName].ArgMap[hoveredArgName].definition, nil
 				}
-
-				return contentFromValueExpression(ctx, analyzer, identArg.Value.Val,
-												  lineContent, pos, uri)
 			}
 		// Return definition if the hovered content is a positional argument
 		} else if identArg.Name == "" {
 			return builtinRule.ArgMap[builtinRule.Arguments[i].Name].definition, nil
 		}
 
-		// Check if each identStatement argument are assigned to a call,
-		// this applies to both keyword and positional arguments
-		if identArg.Value.Val.Ident != nil {
-			content, err := contentFromIdent(ctx, analyzer, identArg.Value.Val.Ident,
-				lineContent, pos, uri)
-			if err != nil {
-				return "", err
-			}
-			if content != "" {
-				return content, nil
-			}
+		// Get content from the argument value
+		content, err := contentFromValueExpression(ctx, analyzer, identArg.Value.Val,
+			lineContent, pos, uri)
+		if err != nil {
+			return "", err
+		}
+		if content != "" {
+			return content, nil
 		}
 
 	}
