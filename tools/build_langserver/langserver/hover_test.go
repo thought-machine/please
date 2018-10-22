@@ -19,14 +19,13 @@ func TestMain(m *testing.M) {
 }
 
 var ctx = context.Background()
-var filePath = path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
+var filePath = path.Join("tools/build_langserver/langserver/test_data/example.build")
 var exampleBuildURI = lsp.DocumentURI("file://" + filePath)
 var analyzer = newAnalyzer()
 
-
-/*
-
- */
+/***************************************
+ *Tests for Build Definitions
+ ***************************************/
 func TestGetHoverContentOnBuildDefName(t *testing.T) {
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 0, Character: 3})
 	expected := analyzer.BuiltIns["go_library"].Header + "\n\n" + analyzer.BuiltIns["go_library"].Docstring
@@ -135,7 +134,9 @@ func TestGetHoverContentOnArgumentWithProperty(t *testing.T) {
 	assert.Equal(t, "str.format()", content.Value)
 }
 
-// TODO(bnm): make this work, and this should go in the assign part of Ident.Type, line 81
+/***************************************
+ *Tests for Variable assignments
+ ***************************************/
 func TestGetHoverContentOnPropertyAssignment(t *testing.T) {
 	//Hover on assignment with properties
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 42, Character: 30})
@@ -150,32 +151,53 @@ func TestGetHoverContentOnPropertyAssignment(t *testing.T) {
 	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 48, Character: 18})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "def subinclude(target:str, hash:str=None)", content.Value)
+}
 
+func TestGetHoverContentOnUnaryAssignment(t *testing.T) {
 	// Hover on assignment with unary op
-	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 46, Character: 18})
+	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 46, Character: 18})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "def len(obj)", content.Value)
+}
 
-	// Hover on assignment with list
-	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 52, Character: 11})
-	expectedContent := []string{"go_library(", "    name = \"core\",", "    srcs = glob("}
+func TestGetHoverContentOnListAssignment(t *testing.T) {
+	coreContent := []string{"go_library(", "    name = \"core\",", "    srcs = glob("}
+	fsContent := []string{"go_library(", "    name = \"fs\",", "    srcs = ["}
+
+	// Hover on assignment with Multiline list
+	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 52, Character: 11})
 	assert.Equal(t, nil, err)
 	splited := strings.Split(content.Value, "\n")
-	assert.Equal(t, expectedContent, splited[:3])
+	assert.Equal(t, coreContent, splited[:3])
 
+	// Hover on assignment with single line list
+	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 61, Character: 26})
+	assert.Equal(t, nil, err)
+	splited = strings.Split(content.Value, "\n")
+	assert.Equal(t, fsContent, splited[:3])
 	t.Log(content.Value)
+
+	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 61, Character: 39})
+	assert.Equal(t, nil, err)
+	splited = strings.Split(content.Value, "\n")
+	assert.Equal(t, coreContent, splited[:3])
 
 	// Hover on empty space assignment
 	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 52, Character: 52})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", content.Value)
 
-	// Hover on if statement assignment
-	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 61, Character: 33})
+
+}
+
+func TestGetHoverContentOnIfAssignment(t *testing.T) {
+	// Hover on if statement assignment empty
+	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 63, Character: 33})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", content.Value)
 
-	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 61, Character: 40})
+	// Hover on else statement assignment
+	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 63, Character: 40})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "def subinclude(target:str, hash:str=None)",
 		content.Value)

@@ -3,19 +3,19 @@ package langserver
 import (
 	"context"
 	"core"
+	"fmt"
+	"io/ioutil"
 	"path"
 	"sort"
 	"strconv"
 	"strings"
-	"fmt"
-	"io/ioutil"
 
-	"src/fs"
 	"parse/asp"
 	"parse/rules"
+	"src/fs"
+
 	"tools/build_langserver/lsp"
 )
-
 
 // Analyzer is a wrapper around asp.parser
 // This is being loaded into a handler on initialization
@@ -55,8 +55,12 @@ type Identifier struct {
 // Including the path of the buildFile
 type BuildLabel struct {
 	*core.BuildLabel
+	// Path of the build file
 	Path            string
+	// IdentStatement for the build definition,
+	// usually the call to the specific buildrule, such as "go_library()"
 	BuildDef        *Identifier
+	// The content of the build definition
 	BuildDefContent string
 }
 
@@ -212,7 +216,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 		buildDefContent = "BuildLabel includes all subpackages in path: " +
 			path.Join(rootPath, label.PackageDir())
 
-	// Check for cases such as "//tools/build_langserver/all"
+		// Check for cases such as "//tools/build_langserver/all"
 	} else if label.IsAllTargets() {
 		buildDefContent = "BuildLabel includes all BuildTargets in BUILD file: " + labelPath
 	} else {
@@ -227,7 +231,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 		if err != nil {
 			return nil, err
 		}
-		buildDefContent = strings.Join(labelfileContent[buildDef.StartLine:buildDef.EndLine+1],"\n")
+		buildDefContent = strings.Join(labelfileContent[buildDef.StartLine:buildDef.EndLine+1], "\n")
 	}
 
 	return &BuildLabel{

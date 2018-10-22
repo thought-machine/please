@@ -80,12 +80,12 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 	case "call":
 		identArgs := ident.Action.Call.Arguments
 		contentString, contentErr = getCallContent(ctx, analyzer, identArgs, ident.Name,
-								lineContent[0], position, uri)
+			lineContent[0], position, uri)
 	case "property":
 		//TODO(bnmetrics)
 	case "assign":
 		contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.Assign,
-													      lineContent[0], position, uri)
+			lineContent[0], position, uri)
 	case "augAssign":
 		//TODO(bnmetrics)
 	default:

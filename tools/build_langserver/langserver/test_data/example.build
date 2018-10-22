@@ -48,7 +48,7 @@ unary = not len(replace_str)
 
 call_assign = subinclude("//build_defs:fpm")
 
-label_list = [
+label_list_multi = [
      "//src/fs",
      "//src/core",
      "//src/parse",
@@ -58,5 +58,7 @@ label_list = [
      "//third_party/go:logging",
      "//tools/build_langserver/lsp",
  ]
+
+label_list_single = ["//src/fs", "//src/core"]
 
 if_assign = "hello" if len("") else subinclude("//build_defs:fpm")

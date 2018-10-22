@@ -183,7 +183,7 @@ func TestBuildLabelPath(t *testing.T) {
 		uri, "//src/parse/...")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "BuildLabel includes all subpackages in path: "+path.Join(core.RepoRoot, "src/parse"),
+	assert.Equal(t, "BuildLabel includes all subpackages in path: "+ path.Join(core.RepoRoot, "src/parse"),
 		label.BuildDefContent)
 
 	// Test case for All targets in a BUILD file: "//src/parse:all"
@@ -191,7 +191,7 @@ func TestBuildLabelPath(t *testing.T) {
 		uri, "//src/parse:all")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "BuildLabel includes all BuildTargets in BUILD file: "+path.Join(core.RepoRoot, "src/parse/BUILD"),
+	assert.Equal(t, "BuildLabel includes all BuildTargets in BUILD file: "+ path.Join(core.RepoRoot, "src/parse/BUILD"),
 		label.BuildDefContent)
 
 	// Test case for shortended BuildLabel
