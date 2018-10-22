@@ -16,7 +16,6 @@ import (
 	"tools/build_langserver/lsp"
 )
 
-// TODO(bnmetrics): This file should contain functions to retrieve builtin and custom definitions of build defs
 
 // Analyzer is a wrapper around asp.parser
 // This is being loaded into a handler on initialization
@@ -194,12 +193,12 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 			BuildDefContent: "Subrepo label: " + labelStr,
 		}, nil
 	}
-
 	if label.PackageName == filepath {
 		labelPath = filepath
 	} else {
 		labelPath = path.Join(rootPath, label.PackageDir(), "BUILD")
 	}
+
 	if !fs.PathExists(labelPath) {
 		return nil, fmt.Errorf("cannot find the path for build label %s", labelStr)
 	}
@@ -213,7 +212,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 		buildDefContent = "BuildLabel includes all subpackages in path: " +
 			path.Join(rootPath, label.PackageDir())
 
-		// Check for cases such as "//tools/build_langserver/all"
+	// Check for cases such as "//tools/build_langserver/all"
 	} else if label.IsAllTargets() {
 		buildDefContent = "BuildLabel includes all BuildTargets in BUILD file: " + labelPath
 	} else {

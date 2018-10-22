@@ -211,6 +211,9 @@ func TestBuildLabelPath(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
 	assert.Equal(t, "Subrepo label: @mysubrepo//spam/eggs:ham", label.BuildDefContent)
+
+	myuri := lsp.DocumentURI(path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD"))
+	label, err = a.BuildLabelFromString(ctx, core.RepoRoot, myuri, ":langserver")
 }
 
 /************************
