@@ -183,7 +183,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 		return nil, err
 	}
 	if label.IsEmpty() {
-		return nil, fmt.Errorf("invalid build label %s", labelStr)
+		return nil, fmt.Errorf("empty build label %s", labelStr)
 	}
 
 	// Get the BUILD file path for the build label
