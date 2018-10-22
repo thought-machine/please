@@ -10,6 +10,7 @@ import (
 	"tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
+	"path/filepath"
 )
 
 func TestNewAnalyzer(t *testing.T) {
@@ -23,10 +24,9 @@ func TestNewAnalyzer(t *testing.T) {
 
 func TestIdentFromPos(t *testing.T) {
 	a := newAnalyzer()
-	core.FindRepoRoot()
 
-	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
-	uri := lsp.DocumentURI("file://" + filepath)
+	filePath := "tools/build_langserver/langserver/test_data/example.build"
+	uri := lsp.DocumentURI("file://" + filePath)
 
 	ident, _ := a.IdentFromPos(uri, lsp.Position{Line: 8, Character: 5})
 	assert.NotEqual(t, nil, ident)
@@ -38,10 +38,9 @@ func TestIdentFromPos(t *testing.T) {
 
 func TestIdentFromFile(t *testing.T) {
 	a := newAnalyzer()
-	core.FindRepoRoot()
 
-	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
-	uri := lsp.DocumentURI("file://" + filepath)
+	filePath := "tools/build_langserver/langserver/test_data/example.build"
+	uri := lsp.DocumentURI("file://" + filePath)
 
 	idents, err := a.IdentFromFile(uri)
 	assert.Equal(t, err, nil)
@@ -138,8 +137,8 @@ func TestGetArgString(t *testing.T) {
 func TestBuildLabelPath(t *testing.T) {
 	a := newAnalyzer()
 	ctx := context.Background()
-	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
-	uri := lsp.DocumentURI("file://" + filepath)
+	filePath := "tools/build_langserver/langserver/test_data/example.build"
+	uri := lsp.DocumentURI("file://" + filePath)
 
 	// Test case for regular and complete BuildLabel path
 	label, err := a.BuildLabelFromString(ctx, core.RepoRoot, uri, "//third_party/go:jsonrpc2")
@@ -173,8 +172,9 @@ func TestBuildLabelPath(t *testing.T) {
 		"        \"//tools/build_langserver/lsp\",\n" +
 		"    ],\n" +
 		")"
+	absPath, err := filepath.Abs(filePath)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, filepath, label.Path)
+	assert.Equal(t, absPath, label.Path)
 	assert.Equal(t, "langserver", label.Name)
 	assert.Equal(t, expectedContent, label.BuildDefContent)
 
