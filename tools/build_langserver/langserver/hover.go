@@ -66,23 +66,37 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 		}
 	}
 
-	var contentString string
+	// Return empty string if the hovered content is blank
+	if isEmpty(lineContent[0], position) {
+		return &lsp.MarkupContent{
+			Value:"",
+			Kind:  lsp.MarkDown,
+		}, nil
+	}
 
+	var contentString string
+	var contentErr error
 	switch ident.Type {
 	case "call":
 		identArgs := ident.Action.Call.Arguments
-		contentString = getCallContent(ctx, analyzer, identArgs, ident.Name,
-			lineContent[0], position, uri)
+		contentString, contentErr = getCallContent(ctx, analyzer, identArgs, ident.Name,
+								lineContent[0], position, uri)
 	case "property":
 		//TODO(bnmetrics)
 	case "assign":
-		//TODO(bnmetrics)
-		// identAssign := ident.Action.Assign
-		fmt.Println(ident.IdentStatement.Action.Assign)
+		contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.Assign,
+													      lineContent[0], position, uri)
 	case "augAssign":
 		//TODO(bnmetrics)
 	default:
 		//TODO(bnmetrics): handle cases when ident.Action is nil
+	}
+
+	if contentErr != nil {
+		return nil, &jsonrpc2.Error{
+			Code:    jsonrpc2.CodeParseError,
+			Message: fmt.Sprintf("fail to get content from Build file %s", uri),
+		}
 	}
 
 	return &lsp.MarkupContent{
@@ -92,33 +106,78 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 }
 
 func getCallContent(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
-	identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) string {
+	identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
-	// Return empty string if the hovered content is blank
-	if isEmpty(lineContent, pos) {
-		return ""
-	}
 	// check if the hovered line is the first line of the function call
 	if strings.Contains(lineContent, identName) {
-		return contentFromRuleDef(analyzer, identName)
+		return contentFromRuleDef(analyzer, identName), nil
 	}
 
 	// Return the content for the BuildLabel if the line content is a buildLabel
-	if content, err := contentFromBuildLabel(ctx, analyzer, lineContent, uri); err == nil && content != "" {
-		return content
+	content, err := contentFromBuildLabel(ctx, analyzer, lineContent, uri)
+	if err != nil {
+		return "", err
+	}
+	if content != "" {
+		return content, nil
 	}
 
-	if content, err := contentFromIdentArgs(ctx, analyzer, args, identName,
-		lineContent, pos, uri); err == nil && content != "" {
-		return content
-	}
-
-	return ""
+	// Check arguments of the IdentStatement, and return the appropriate content if any
+	return contentFromIdentArgs(ctx, analyzer, args, identName,
+		 								lineContent, pos, uri)
 }
 
-//func getAssignContent() string {
-//
-//}
+func contentFromExpression(ctx context.Context, analyzer *Analyzer, expr *asp.Expression,
+	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
+
+	withInLineRange := pos.Line >= expr.Pos.Line-1 &&
+					   pos.Line <= expr.EndPos.Line-1
+
+	withInColRange := pos.Character >= expr.Pos.Column-1 &&
+					   pos.Character <= expr.EndPos.Column-1
+
+	onTheSameLine := pos.Line == expr.EndPos.Line - 1 &&
+		              pos.Line == expr.Pos.Line - 1
+
+	if !withInLineRange || (onTheSameLine && !withInColRange) {
+		return "", nil
+	}
+
+	// content from Expression.If
+	if expr.If != nil {
+		if expr.If.Condition != nil {
+			content, err := contentFromExpression(ctx, analyzer, expr.If.Condition, lineContent, pos, uri)
+			if err != nil {
+				return "", err
+			}
+			if content != "" {
+				return content, nil
+			}
+		}
+		if expr.If.Else != nil {
+			content, err := contentFromExpression(ctx, analyzer, expr.If.Else, lineContent, pos, uri)
+			if err != nil {
+				return "", err
+			}
+			if content != "" {
+				return content, nil
+			}
+		}
+	}
+
+	// content from Expression.Val
+	if expr.Val != nil {
+		return  contentFromValueExpression(ctx, analyzer, expr.Val, lineContent, pos, uri)
+	}
+
+	// content from Expression.UnaryOp
+	if expr.UnaryOp != nil && &expr.UnaryOp.Expr != nil {
+		return contentFromValueExpression(ctx, analyzer, &expr.UnaryOp.Expr,
+										  lineContent, pos, uri)
+	}
+
+	return "", nil
+}
 
 func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
 	identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
@@ -138,24 +197,10 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 					return analyzer.BuiltIns[identName].ArgMap[hoveredArgName].definition, nil
 				}
 
-				if identArg.Value.Val.Property != nil {
-					if content := contentFromProperty(ctx, analyzer, identArg.Value.Val.Property,
-						lineContent, pos, uri); content != "" {
-						return content, nil
-					}
-				}
-				if identArg.Value.Val.String != "" {
-					return contentFromBuildLabel(ctx, analyzer, lineContent, uri)
-				}
-				if identArg.Value.Val.List != nil {
-					return contentFromList(ctx, analyzer, identArg.Value.Val.List, lineContent, pos, uri)
-				}
-				if identArg.Value.Val.Tuple != nil {
-					return contentFromList(ctx, analyzer, identArg.Value.Val.Tuple, lineContent, pos, uri)
-				}
-
+				return contentFromValueExpression(ctx, analyzer, identArg.Value.Val,
+												  lineContent, pos, uri)
 			}
-			// Return definition if the hoverred content is a positional argument
+		// Return definition if the hovered content is a positional argument
 		} else if identArg.Name == "" {
 			return builtinRule.ArgMap[builtinRule.Arguments[i].Name].definition, nil
 		}
@@ -163,8 +208,12 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 		// Check if each identStatement argument are assigned to a call,
 		// this applies to both keyword and positional arguments
 		if identArg.Value.Val.Ident != nil {
-			if content := contentFromIdent(ctx, analyzer, identArg.Value.Val.Ident,
-				lineContent, pos, uri); content != "" {
+			content, err := contentFromIdent(ctx, analyzer, identArg.Value.Val.Ident,
+				lineContent, pos, uri)
+			if err != nil {
+				return "", err
+			}
+			if content != "" {
 				return content, nil
 			}
 		}
@@ -173,8 +222,39 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 	return "", nil
 }
 
+func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
+	valExpr *asp.ValueExpression, lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
+	if valExpr.Property != nil {
+		content, err := contentFromProperty(ctx, analyzer, valExpr.Property,
+			lineContent, pos, uri)
+		if err != nil {
+			return "", err
+		}
+		if content != "" {
+			return content, nil
+		}
+
+	}
+	if valExpr.String != "" && strings.Contains(lineContent, valExpr.String) {
+		return contentFromBuildLabel(ctx, analyzer, lineContent, uri)
+	}
+	if valExpr.List != nil {
+		return contentFromList(ctx, analyzer, valExpr.List, lineContent, pos, uri)
+	}
+	if valExpr.Tuple != nil {
+		return contentFromList(ctx, analyzer, valExpr.Tuple, lineContent, pos, uri)
+	}
+	if valExpr.Ident != nil {
+		return contentFromIdent(ctx, analyzer, valExpr.Ident,
+								lineContent, pos, uri)
+	}
+
+	return "", nil
+}
+
+// contentFromIdent returns hover content from ValueExpression.Ident
 func contentFromIdent(ctx context.Context, analyzer *Analyzer, IdentValExpr *asp.IdentExpr,
-	lineContent string, pos lsp.Position, uri lsp.DocumentURI) string {
+	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
 	// Check if each identStatement argument are assigned to a call
 	withInRange := pos.Line >= IdentValExpr.Pos.Line-1 &&
@@ -184,11 +264,12 @@ func contentFromIdent(ctx context.Context, analyzer *Analyzer, IdentValExpr *asp
 		return contentFromIdentExpr(ctx, analyzer, IdentValExpr,
 			lineContent, pos, uri)
 	}
-	return ""
+	return "", nil
 }
 
+// contentFromProperty returns hover content from ValueExpression.Property
 func contentFromProperty(ctx context.Context, analyzer *Analyzer, propertyVal *asp.IdentExpr,
-	lineContent string, pos lsp.Position, uri lsp.DocumentURI) string {
+	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error)  {
 
 	withInRange := pos.Character >= propertyVal.Pos.Column-1 &&
 		pos.Character <= propertyVal.EndPos.Column-1
@@ -198,25 +279,26 @@ func contentFromProperty(ctx context.Context, analyzer *Analyzer, propertyVal *a
 			lineContent, pos, uri)
 	}
 
-	return ""
+	return "", nil
 }
 
 func contentFromIdentExpr(ctx context.Context, analyzer *Analyzer, identExpr *asp.IdentExpr,
-	lineContent string, pos lsp.Position, uri lsp.DocumentURI) string {
+	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
 	if identExpr.Action != nil {
 		for _, action := range identExpr.Action {
 			if action.Call != nil {
-				content := getCallContent(ctx, analyzer, action.Call.Arguments,
+				return getCallContent(ctx, analyzer, action.Call.Arguments,
 					identExpr.Name, lineContent, pos, uri)
-				if content != "" {
-					return content
-				}
+			}
+			if action.Property != nil {
+				return contentFromProperty(ctx, analyzer, action.Property,
+					lineContent, pos, uri)
 			}
 		}
 	}
 
-	return ""
+	return "", nil
 }
 
 func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
@@ -224,17 +306,22 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 
 	for _, expr := range listVal.Values {
 		withInRange := pos.Character >= expr.Pos.Column-1 &&
-			pos.Character <= expr.EndPos.Column-1
+					   pos.Character <= expr.EndPos.Column-1
 
-		if withInRange && expr.Val.String != "" {
+		onTheSameLine := pos.Line == expr.EndPos.Line - 1 &&
+						 pos.Line == expr.Pos.Line - 1
+
+		if onTheSameLine && withInRange && expr.Val.String != "" {
 			return contentFromBuildLabel(ctx, analyzer, expr.Val.String, uri)
 		}
 
-		if expr.Val.List != nil {
-			return contentFromList(ctx, analyzer, expr.Val.List, lineContent, pos, uri)
+		content, err := contentFromValueExpression(ctx, analyzer, expr.Val,
+												   lineContent, pos, uri)
+		if err != nil {
+			return "", err
 		}
-		if expr.Val.Tuple != nil {
-			return contentFromList(ctx, analyzer, expr.Val.Tuple, lineContent, pos, uri)
+		if content != "" {
+			return content, nil
 		}
 	}
 
@@ -242,7 +329,7 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 }
 
 func isEmpty(lineContent string, pos lsp.Position) bool {
-	return len(lineContent) < pos.Character+1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
+	return len(lineContent) < pos.Character + 1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
 }
 
 func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,

@@ -41,3 +41,22 @@ go_test(
 )
 
 mystr = "{time}-{message}".format(time='today', message='msg')
+
+replace_str = x.replace('-', '_')
+
+unary = not len(replace_str)
+
+call_assign = subinclude("//build_defs:fpm")
+
+label_list = [
+     "//src/fs",
+     "//src/core",
+     "//src/parse",
+     "//src/parse/asp",
+     "//src/parse/rules",
+     "//third_party/go:jsonrpc2",
+     "//third_party/go:logging",
+     "//tools/build_langserver/lsp",
+ ]
+
+if_assign = "hello" if len("") else subinclude("//build_defs:fpm")
