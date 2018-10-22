@@ -18,7 +18,6 @@ func TestMain(m *testing.M) {
 	os.Exit(retCode)
 }
 
-var ctx = context.Background()
 var filePath = path.Join("tools/build_langserver/langserver/test_data/example.build")
 var exampleBuildURI = lsp.DocumentURI("file://" + filePath)
 var analyzer = newAnalyzer()
@@ -27,6 +26,8 @@ var analyzer = newAnalyzer()
  *Tests for Build Definitions
  ***************************************/
 func TestGetHoverContentOnBuildDefName(t *testing.T) {
+	var ctx = context.Background()
+
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 0, Character: 3})
 	expected := analyzer.BuiltIns["go_library"].Header + "\n\n" + analyzer.BuiltIns["go_library"].Docstring
 
@@ -35,6 +36,8 @@ func TestGetHoverContentOnBuildDefName(t *testing.T) {
 }
 
 func TestGetHoverContentOnArgument(t *testing.T) {
+	var ctx = context.Background()
+
 	// Test hovering over argument name
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 7, Character: 7})
 	assert.Equal(t, nil, err)
@@ -65,6 +68,8 @@ func TestGetHoverContentOnArgument(t *testing.T) {
 }
 
 func TestGetHoverContentOnNestedCall(t *testing.T) {
+	var ctx = context.Background()
+
 	// Test hovering over nested call on definition, e.g. glob(
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 2, Character: 15})
 	assert.Equal(t, nil, err)
@@ -90,6 +95,8 @@ func TestGetHoverContentOnNestedCall(t *testing.T) {
 }
 
 func TestGetHoverContentOnEmptyContent(t *testing.T) {
+	var ctx = context.Background()
+
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 1, Character: 3})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", content.Value)
@@ -100,6 +107,8 @@ func TestGetHoverContentOnEmptyContent(t *testing.T) {
 }
 
 func TestGetHoverContentOnBuildLabels(t *testing.T) {
+	var ctx = context.Background()
+
 	// Test hovering over buildlabels
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 13, Character: 15})
 	expected := "go_get(\n" +
@@ -112,12 +121,16 @@ func TestGetHoverContentOnBuildLabels(t *testing.T) {
 }
 
 func TestGetHoverContentOnNoneBuildLabelString(t *testing.T) {
+	var ctx = context.Background()
+
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 20, Character: 18})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", content.Value)
 }
 
 func TestGetHoverContentOnArgumentWithProperty(t *testing.T) {
+	var ctx = context.Background()
+
 	// Hover on argument name
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 34, Character: 6})
 	assert.Equal(t, nil, err)
@@ -138,6 +151,8 @@ func TestGetHoverContentOnArgumentWithProperty(t *testing.T) {
  *Tests for Variable assignments
  ***************************************/
 func TestGetHoverContentOnPropertyAssignment(t *testing.T) {
+	var ctx = context.Background()
+
 	//Hover on assignment with properties
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 42, Character: 30})
 	assert.Equal(t, nil, err)
@@ -154,6 +169,8 @@ func TestGetHoverContentOnPropertyAssignment(t *testing.T) {
 }
 
 func TestGetHoverContentOnUnaryAssignment(t *testing.T) {
+	var ctx = context.Background()
+
 	// Hover on assignment with unary op
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 46, Character: 18})
 	assert.Equal(t, nil, err)
@@ -161,6 +178,8 @@ func TestGetHoverContentOnUnaryAssignment(t *testing.T) {
 }
 
 func TestGetHoverContentOnListAssignment(t *testing.T) {
+	var ctx = context.Background()
+
 	coreContent := []string{"go_library(", "    name = \"core\",", "    srcs = glob("}
 	fsContent := []string{"go_library(", "    name = \"fs\",", "    srcs = ["}
 
@@ -191,6 +210,8 @@ func TestGetHoverContentOnListAssignment(t *testing.T) {
 }
 
 func TestGetHoverContentOnIfAssignment(t *testing.T) {
+	var ctx = context.Background()
+
 	// Hover on if statement assignment empty
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 63, Character: 33})
 	assert.Equal(t, nil, err)
