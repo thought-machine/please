@@ -120,19 +120,19 @@ func TestGetLineContent(t *testing.T) {
 }
 
 func TestTrimQoutes(t *testing.T) {
-	trimed := TrimQoutes("\"blah\"")
+	trimed := TrimQuotes("\"blah\"")
 	assert.Equal(t, trimed, "blah")
 
-	trimed= TrimQoutes("\"//src/core\",")
+	trimed= TrimQuotes("\"//src/core\",")
 	assert.Equal(t, "//src/core", trimed)
 
-	trimed= TrimQoutes("'blah")
+	trimed= TrimQuotes("'blah")
 	assert.Equal(t, "", trimed)
 
 
 	// this is to make sure our regex works,
 	// so it doesn't just match anything with a build label
-	trimed= TrimQoutes("visibility = [\"//tools/build_langserver/...\", \"//src/core\"]")
+	trimed= TrimQuotes("visibility = [\"//tools/build_langserver/...\", \"//src/core\"]")
 	assert.Equal(t, "", trimed)
 }
 
