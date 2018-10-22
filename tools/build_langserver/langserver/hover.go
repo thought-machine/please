@@ -233,7 +233,6 @@ func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
 		if content != "" {
 			return content, nil
 		}
-
 	}
 	if valExpr.String != "" && strings.Contains(lineContent, valExpr.String) {
 		return contentFromBuildLabel(ctx, analyzer, lineContent, uri)
@@ -256,11 +255,9 @@ func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
 func contentFromIdent(ctx context.Context, analyzer *Analyzer, IdentValExpr *asp.IdentExpr,
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
-	// Check if each identStatement argument are assigned to a call
-	withInRange := pos.Line >= IdentValExpr.Pos.Line-1 &&
-		pos.Line <= IdentValExpr.EndPos.Line-1
+	if pos.Line >= IdentValExpr.Pos.Line-1 &&
+		pos.Line <= IdentValExpr.EndPos.Line-1 {
 
-	if withInRange {
 		return contentFromIdentExpr(ctx, analyzer, IdentValExpr,
 			lineContent, pos, uri)
 	}
@@ -271,10 +268,9 @@ func contentFromIdent(ctx context.Context, analyzer *Analyzer, IdentValExpr *asp
 func contentFromProperty(ctx context.Context, analyzer *Analyzer, propertyVal *asp.IdentExpr,
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error)  {
 
-	withInRange := pos.Character >= propertyVal.Pos.Column-1 &&
-		pos.Character <= propertyVal.EndPos.Column-1
+	if pos.Character >= propertyVal.Pos.Column-1 &&
+		pos.Character <= propertyVal.EndPos.Column-1 {
 
-	if withInRange {
 		return contentFromIdentExpr(ctx, analyzer, propertyVal,
 			lineContent, pos, uri)
 	}
@@ -335,7 +331,7 @@ func isEmpty(lineContent string, pos lsp.Position) bool {
 func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
 	lineContent string, uri lsp.DocumentURI) (string, error) {
 
-	trimed := TrimQoutes(lineContent)
+	trimed := TrimQuotes(lineContent)
 	if core.LooksLikeABuildLabel(trimed) {
 		buildLabel, err := analyzer.BuildLabelFromString(ctx, core.RepoRoot, uri, trimed)
 		if err != nil {

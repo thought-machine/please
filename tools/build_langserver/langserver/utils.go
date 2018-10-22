@@ -129,9 +129,10 @@ func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]stri
 }
 
 // TrimQoutes is used to trim the qouted string
+// This is usually used to trim the quoted string in BUILD files
 // this will also work for string with any extra characters outside of qoutes
 // like so: "//src/core",
-func TrimQoutes(str string) string {
+func TrimQuotes(str string) string {
 	// Regex match the string starts with qoute("),
 	// this is so that strings like this(visibility = ["//tools/build_langserver/...", "//src/core"]) won't be matched
 	re := regexp.MustCompile(`(^("|')([^"]|"")*("|'))`)

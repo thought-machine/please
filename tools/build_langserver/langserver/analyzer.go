@@ -52,7 +52,7 @@ type Identifier struct {
 	EndLine   int
 }
 
-// BuildLabel is a wrapper around asp.BuildLabel
+// BuildLabel is a wrapper around core.BuildLabel
 // Including the path of the buildFile
 type BuildLabel struct {
 	*core.BuildLabel
@@ -228,8 +228,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 		if err != nil {
 			return nil, err
 		}
-		buildDefContent = strings.Join(labelfileContent[buildDef.StartLine:buildDef.EndLine+1],
-			"\n")
+		buildDefContent = strings.Join(labelfileContent[buildDef.StartLine:buildDef.EndLine+1],"\n")
 	}
 
 	return &BuildLabel{
@@ -253,7 +252,7 @@ func (a *Analyzer) getBuildDef(name string, path string) (*Identifier, error) {
 		}
 
 		for _, arg := range stmt.Action.Call.Arguments {
-			if arg.Name == "name" && TrimQoutes(arg.Value.Val.String) == name {
+			if arg.Name == "name" && TrimQuotes(arg.Value.Val.String) == name {
 				return stmt, nil
 			}
 		}
