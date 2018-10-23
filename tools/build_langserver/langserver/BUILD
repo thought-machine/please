@@ -19,9 +19,10 @@ go_library(
 
 go_test(
     name = "langserver_test",
-    srcs = ["handler_test.go",
-            "analyzer_test.go",
-            "hover_test.go",
+    srcs = [
+        "analyzer_test.go",
+        "handler_test.go",
+        "hover_test.go",
     ],
     data = ["test_data"],
     deps = [

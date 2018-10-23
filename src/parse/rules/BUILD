@@ -18,6 +18,6 @@ go_library(
     srcs = [":builtin_data"],
     visibility = [
         "//src/parse/...",
-        "//tools/build_langserver/..."
+        "//tools/build_langserver/...",
     ],
 )

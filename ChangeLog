@@ -1,3 +1,22 @@
+Version 13.2.0
+--------------
+
+    * Test result files no longer have hashes in their names.
+    * UnitTest++ main has been moved out of core to pleasings.
+      This should be transparent at first but does involve downloading a subrepo -
+      it is part of a longer-term plan to make cc_test more generic.
+    * Some changes to how plz is released:
+      * Tarballs are released as xz as well as gz, which is considerably smaller
+      * Supports downloading releases from Github if downloadlocation is set correctly.
+      * Not releasing .deb artifacts for now
+      * Releases are now built on CircleCI and released automatically.
+      * Java components now live in github.com/thought-machine/please-java. They are
+        still released as part of Please in the same way as before, but there's no
+        javac requirement to build it now.
+    * please tool maven has a --graph flag that allows some integration
+      with existing BUILD files.
+
+
 Version 13.1.8
 --------------
 

@@ -5,12 +5,6 @@ filegroup(
 )
 
 filegroup(
-    name = "fpm",
-    srcs = ["fpm.build_defs"],
-    visibility = ["//package:all"],
-)
-
-filegroup(
     name = "signing",
     srcs = ["signing.build_defs"],
     visibility = ["//package:all"],
