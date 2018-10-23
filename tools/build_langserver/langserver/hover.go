@@ -124,22 +124,13 @@ func getCallContent(ctx context.Context, analyzer *Analyzer, args []asp.CallArgu
 
 	// Check arguments of the IdentStatement, and return the appropriate content if any
 	return contentFromIdentArgs(ctx, analyzer, args, identName,
-		 								lineContent, pos, uri)
+		lineContent, pos, uri)
 }
 
 func contentFromExpression(ctx context.Context, analyzer *Analyzer, expr *asp.Expression,
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
-	withInLineRange := pos.Line >= expr.Pos.Line-1 &&
-					   pos.Line <= expr.EndPos.Line-1
-
-	withInColRange := pos.Character >= expr.Pos.Column-1 &&
-					   pos.Character <= expr.EndPos.Column-1
-
-	onTheSameLine := pos.Line == expr.EndPos.Line - 1 &&
-		              pos.Line == expr.Pos.Line - 1
-
-	if !withInLineRange || (onTheSameLine && !withInColRange) {
+	if !withInRange(expr.Pos, expr.EndPos, pos) {
 		return "", nil
 	}
 
@@ -247,15 +238,15 @@ func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
 }
 
 // contentFromIdent returns hover content from ValueExpression.Ident
-func contentFromIdent(ctx context.Context, analyzer *Analyzer, IdentValExpr *asp.IdentExpr,
+func contentFromIdent(ctx context.Context, analyzer *Analyzer, identValExpr *asp.IdentExpr,
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
-	if pos.Line >= IdentValExpr.Pos.Line-1 &&
-		pos.Line <= IdentValExpr.EndPos.Line-1 {
+	if withInRange(identValExpr.Pos, identValExpr.EndPos, pos) {
 
-		return contentFromIdentExpr(ctx, analyzer, IdentValExpr,
+		return contentFromIdentExpr(ctx, analyzer, identValExpr,
 			lineContent, pos, uri)
 	}
+
 	return "", nil
 }
 
@@ -263,8 +254,7 @@ func contentFromIdent(ctx context.Context, analyzer *Analyzer, IdentValExpr *asp
 func contentFromProperty(ctx context.Context, analyzer *Analyzer, propertyVal *asp.IdentExpr,
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error)  {
 
-	if pos.Character >= propertyVal.Pos.Column-1 &&
-		pos.Character <= propertyVal.EndPos.Column-1 {
+	if withInRange(propertyVal.Pos, propertyVal.EndPos, pos) {
 
 		return contentFromIdentExpr(ctx, analyzer, propertyVal,
 			lineContent, pos, uri)
@@ -296,13 +286,7 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
 	for _, expr := range listVal.Values {
-		withInRange := pos.Character >= expr.Pos.Column-1 &&
-					   pos.Character <= expr.EndPos.Column-1
-
-		onTheSameLine := pos.Line == expr.EndPos.Line - 1 &&
-						 pos.Line == expr.Pos.Line - 1
-
-		if onTheSameLine && withInRange && expr.Val.String != "" {
+		if withInRange(expr.Pos, expr.EndPos, pos) && expr.Val.String != "" {
 			return contentFromBuildLabel(ctx, analyzer, expr.Val.String, uri)
 		}
 
@@ -319,14 +303,11 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 	return "", nil
 }
 
-func isEmpty(lineContent string, pos lsp.Position) bool {
-	return len(lineContent) < pos.Character + 1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
-}
-
 func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
 	lineContent string, uri lsp.DocumentURI) (string, error) {
 
 	trimed := TrimQuotes(lineContent)
+
 	if core.LooksLikeABuildLabel(trimed) {
 		buildLabel, err := analyzer.BuildLabelFromString(ctx, core.RepoRoot, uri, trimed)
 		if err != nil {
@@ -348,4 +329,27 @@ func contentFromRuleDef(analyzer *Analyzer, name string) string {
 		return header + "\n\n" + docString
 	}
 	return header
+}
+
+// isEmpty checks if the hovered line is empty
+func isEmpty(lineContent string, pos lsp.Position) bool {
+	return len(lineContent) < pos.Character + 1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
+}
+
+// withInRange checks if the input position from lsp is within the range of the Expression
+func withInRange(exprPos asp.Position, exprEndPos asp.Position, pos lsp.Position) bool {
+	withInLineRange := pos.Line >= exprPos.Line-1 &&
+		pos.Line <= exprEndPos.Line-1
+
+	withInColRange := pos.Character >= exprPos.Column-1 &&
+		pos.Character <= exprEndPos.Column-1
+
+	onTheSameLine := pos.Line == exprEndPos.Line - 1 &&
+		pos.Line == exprPos.Line - 1
+
+	if !withInLineRange || (onTheSameLine && !withInColRange) {
+		return false
+	}
+
+	return true
 }

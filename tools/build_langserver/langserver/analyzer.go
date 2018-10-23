@@ -173,15 +173,17 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier, error) {
 // BuildLabelFromString returns a BuildLabel object,
 func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 	uri lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
+
 	filepath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return nil, err
 	}
 
-	label, err := core.TryParseBuildLabel(labelStr, filepath)
+	label, err := core.TryParseBuildLabel(labelStr, path.Dir(filepath))
 	if err != nil {
 		return nil, err
 	}
+
 	if label.IsEmpty() {
 		return nil, fmt.Errorf("empty build label %s", labelStr)
 	}
@@ -197,8 +199,11 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 			BuildDefContent: "Subrepo label: " + labelStr,
 		}, nil
 	}
-	if label.PackageName == filepath {
+
+	if label.PackageName == path.Dir(filepath) {
 		labelPath = filepath
+	} else if strings.HasPrefix(label.PackageDir(), rootPath) {
+		labelPath = path.Join(label.PackageDir(), "BUILD")
 	} else {
 		labelPath = path.Join(rootPath, label.PackageDir(), "BUILD")
 	}

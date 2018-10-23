@@ -6,11 +6,11 @@ import (
 	"parse/asp"
 	"parse/rules"
 	"path"
+	"path/filepath"
 	"testing"
 	"tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
-	"path/filepath"
 )
 
 func TestNewAnalyzer(t *testing.T) {
@@ -69,7 +69,7 @@ func TestNewRuleDef(t *testing.T) {
 
 	stmt := getStatementByName(statements, "go_library")
 	ruleDef := newRuleDef(string(ruleContent), stmt)
-	//t.Log(getStatementByName(statements, "cgo_library").EndPos)
+
 	assert.Equal(t, ruleDef.Header, expected)
 	assert.Equal(t, len(ruleDef.Arguments), len(ruleDef.ArgMap))
 	assert.Equal(t, false, ruleDef.ArgMap["_link_private"].required)
@@ -211,9 +211,6 @@ func TestBuildLabelPath(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
 	assert.Equal(t, "Subrepo label: @mysubrepo//spam/eggs:ham", label.BuildDefContent)
-
-	myuri := lsp.DocumentURI(path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD"))
-	label, err = a.BuildLabelFromString(ctx, core.RepoRoot, myuri, ":langserver")
 }
 
 /************************

@@ -194,7 +194,6 @@ func TestGetHoverContentOnListAssignment(t *testing.T) {
 	assert.Equal(t, nil, err)
 	splited = strings.Split(content.Value, "\n")
 	assert.Equal(t, fsContent, splited[:3])
-	//t.Log(content.Value)
 
 	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 61, Character: 39})
 	assert.Equal(t, nil, err)
