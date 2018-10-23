@@ -79,7 +79,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 	switch ident.Type {
 	case "call":
 		identArgs := ident.Action.Call.Arguments
-		contentString, contentErr = getCallContent(ctx, analyzer, identArgs, ident.Name,
+		contentString, contentErr = contentFromCall(ctx, analyzer, identArgs, ident.Name,
 			lineContent[0], position, uri)
 	case "property":
 		//TODO(bnmetrics)
@@ -105,7 +105,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 	}, nil
 }
 
-func getCallContent(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
+func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
 	identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
 	// check if the hovered content is on the name of the ident
@@ -265,7 +265,7 @@ func contentFromIdentExpr(ctx context.Context, analyzer *Analyzer, identExpr *as
 	if identExpr.Action != nil {
 		for _, action := range identExpr.Action {
 			if action.Call != nil {
-				return getCallContent(ctx, analyzer, action.Call.Arguments,
+				return contentFromCall(ctx, analyzer, action.Call.Arguments,
 					identExpr.Name, lineContent, pos, uri)
 			}
 			if action.Property != nil {
