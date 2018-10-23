@@ -128,7 +128,7 @@ func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]stri
 	return callback(scanner)
 }
 
-// TrimQoutes is used to trim the qouted string
+// TrimQuotes is used to trim the qouted string
 // This is usually used to trim the quoted string in BUILD files, such as a BuildLabel
 // this will also work for string with any extra characters outside of qoutes
 // like so: "//src/core",
