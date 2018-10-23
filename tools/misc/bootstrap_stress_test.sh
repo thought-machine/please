@@ -7,10 +7,6 @@
 N="${1:-10}"
 export PLZ_NO_GO_BOOTSTRAP=1
 
-# Need to build this; currently it's indeterminate whether we need to build config_setting
-# rules or not. Either way works but it upsets this test.
-plz-out/bin/src/please build //test/config_rules/config:all
-
 for i in `seq 1 $N`; do
     echo "Round $i / $N"
     ./bootstrap.sh --plain_output || { echo "Bootstrap failed"; exit 1; }

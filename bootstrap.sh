@@ -64,12 +64,6 @@ if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
 fi
 
-# Smoke test that the repo is in an OK state.
-# This also has a nice side-effect of ensuring we've fetched all the subrepos which
-# avoids some potential races later on.
-notice "Verifying repo..."
-plz-out/bin/src/please query alltargets > /dev/null
-
 # Run the tests to make sure they still work
 notice "Running tests..."
 
@@ -141,7 +135,12 @@ if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ]; then
     EXCLUDES="${EXCLUDES} --exclude=x86"
 fi
 
-plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
+plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
+
+# We run the end-to-end tests separately to ensure things don't fight with one another; they are
+# finicky about some things due to running plz recursively and disabling the lock.
+notice "Running end-to-end tests..."
+plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
 
 # Lint needs python3.
 if hash python3 2>/dev/null ; then
