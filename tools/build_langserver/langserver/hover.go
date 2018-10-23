@@ -108,18 +108,14 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 func getCallContent(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
 	identName string, lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
-	// check if the hovered line is the first line of the function call
+	// check if the hovered content is on the name of the ident
 	if strings.Contains(lineContent, identName) {
-		return contentFromRuleDef(analyzer, identName), nil
-	}
+		identNameIndex := strings.Index(lineContent, identName + "(")
 
-	// Return the content for the BuildLabel if the line content is a buildLabel
-	content, err := contentFromBuildLabel(ctx, analyzer, lineContent, uri)
-	if err != nil {
-		return "", err
-	}
-	if content != "" {
-		return content, nil
+		if pos.Character >= identNameIndex &&
+			pos.Character <= identNameIndex + len(identName) - 1 {
+			return contentFromRuleDef(analyzer, identName), nil
+		}
 	}
 
 	// Check arguments of the IdentStatement, and return the appropriate content if any
@@ -175,23 +171,24 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 
 	builtinRule := analyzer.BuiltIns[identName]
 	for i, identArg := range args {
-
-		// check if the lineContent contains "=", if the hover is over the argument name,
-		// return the definition of the argument instead of the value
-		if strings.Contains(lineContent, "=") {
-
-			EqualIndex := strings.Index(lineContent, "=")
-			hoveredArgName := strings.TrimSpace(lineContent[:EqualIndex])
-
-			if identArg.Name == hoveredArgName {
-				// Return the definition of the argument if the hovering is on the argument name
-				if pos.Character <= EqualIndex {
-					return analyzer.BuiltIns[identName].ArgMap[hoveredArgName].definition, nil
-				}
+		argNameEndPos := asp.Position{
+			Line:identArg.Pos.Line,
+			Column:identArg.Pos.Column + len(identArg.Name),
+		}
+		if withInRange(identArg.Pos, argNameEndPos, pos) {
+			// This is to prevent cases like str.format(),
+			// When the positional args are not exactly stored in ArgMap
+			arg, okay := analyzer.BuiltIns[identName].ArgMap[identArg.Name]
+			if okay {
+				return arg.definition, nil
 			}
 		// Return definition if the hovered content is a positional argument
-		} else if identArg.Name == "" {
-			return builtinRule.ArgMap[builtinRule.Arguments[i].Name].definition, nil
+		} else if identArg.Name == "" && withInRange(identArg.Value.Pos, identArg.Value.EndPos, pos) {
+			argInd := i
+			if builtinRule.Arguments[0].Name == "self" {
+				argInd += 1
+			}
+			return builtinRule.ArgMap[builtinRule.Arguments[argInd].Name].definition, nil
 		}
 
 		// Get content from the argument value
@@ -242,7 +239,6 @@ func contentFromIdent(ctx context.Context, analyzer *Analyzer, identValExpr *asp
 	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
 	if withInRange(identValExpr.Pos, identValExpr.EndPos, pos) {
-
 		return contentFromIdentExpr(ctx, analyzer, identValExpr,
 			lineContent, pos, uri)
 	}

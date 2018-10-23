@@ -535,6 +535,7 @@ func (p *parser) parseCall() *Call {
 		arg := CallArgument{}
 		if tok.Type == Ident && p.l.AssignFollows() {
 			// Named argument.
+			arg.Pos = tok.Pos
 			arg.Name = tok.Value
 			p.next(Ident)
 			p.next('=')

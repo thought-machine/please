@@ -71,7 +71,7 @@ func TestGetHoverContentOnNestedCall(t *testing.T) {
 	var ctx = context.Background()
 
 	// Test hovering over nested call on definition, e.g. glob(
-	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 2, Character: 15})
+	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 2, Character: 14})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "def glob(include:list, exclude:list&excludes=[], hidden:bool=False)",
 		content.Value)
@@ -91,7 +91,6 @@ func TestGetHoverContentOnNestedCall(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "include required:true, type:list",
 		content.Value)
-	t.Log(content.Value)
 }
 
 func TestGetHoverContentOnEmptyContent(t *testing.T) {
@@ -147,6 +146,15 @@ func TestGetHoverContentOnArgumentWithProperty(t *testing.T) {
 	assert.Equal(t, "str.format()", content.Value)
 }
 
+
+func TestGetHoverContentArgOnTheSameLine(t *testing.T) {
+	var ctx = context.Background()
+
+	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 65, Character: 17})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "name required:true, type:str", content.Value)
+}
+
 /***************************************
  *Tests for Variable assignments
  ***************************************/
@@ -162,6 +170,19 @@ func TestGetHoverContentOnPropertyAssignment(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "str.replace(old:str, new:str)", content.Value)
 
+	//Hover on argument of assignment property
+	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 42, Character: 36})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", content.Value)
+
+	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 44, Character: 25})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "old required:true, type:str", content.Value)
+
+	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 44, Character: 29})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "new required:true, type:str", content.Value)
+
 	// Hover on assignment with function call
 	content, err = getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 48, Character: 18})
 	assert.Equal(t, nil, err)
@@ -172,7 +193,7 @@ func TestGetHoverContentOnUnaryAssignment(t *testing.T) {
 	var ctx = context.Background()
 
 	// Hover on assignment with unary op
-	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 46, Character: 18})
+	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 46, Character: 13})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "def len(obj)", content.Value)
 }

@@ -182,6 +182,7 @@ type Call struct {
 
 // A CallArgument represents a single argument at a call site of a function.
 type CallArgument struct {
+	Pos Position
 	Name  string     `[ @@ "=" ]`
 	Value Expression `@@`
 }

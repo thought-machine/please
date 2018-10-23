@@ -62,3 +62,5 @@ label_list_multi = [
 label_list_single = ["//src/fs", "//src/core"]
 
 if_assign = "hello" if len("") else subinclude("//build_defs:fpm")
+
+python_library(name = "test", srcs = ["utils_test.go"])
