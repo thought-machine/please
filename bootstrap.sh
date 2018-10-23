@@ -71,24 +71,13 @@ notice "Running tests..."
 # repo that are optional and exercise specific rules, and require extra dependencies.
 EXCLUDES=""
 
-HAVE_UNITTEST=false
-for path in `echo -e | cpp -xc++ -Wp,-v 2>&1 | grep "^ "`; do
-    if [ -f "${path}/UnitTest++/UnitTest++.h" ]; then
-        HAVE_UNITTEST=true
-    fi
-done
-if ! $HAVE_UNITTEST ; then
-    warn "UnitTest++.h not found, excluding C++ tests"
-    EXCLUDES="${EXCLUDES} --exclude=cc"
-else
-    if [ "`uname`" = "Darwin" ]; then
-        if ! hash nasm 2>/dev/null ; then
-            # OSX comes with an ancient version of nasm that can't target
-            # 64-bit Mach-O binaries (?!!). Ensure we've got the Brew one.
-            if [ -n "`nasm -v | grep 'version 2'`" ]; then
-                warn "nasm 2.x not found, excluding C++ tests"
-                EXCLUDES="${EXCLUDES} --exclude=cc"
-            fi
+if [ "`uname`" = "Darwin" ]; then
+    if ! hash nasm 2>/dev/null ; then
+        # OSX comes with an ancient version of nasm that can't target
+        # 64-bit Mach-O binaries (?!!). Ensure we've got the Brew one.
+        if [ -n "`nasm -v | grep 'version 2'`" ]; then
+            warn "nasm 2.x not found, excluding C++ tests"
+            EXCLUDES="${EXCLUDES} --exclude=cc"
         fi
     fi
 fi
