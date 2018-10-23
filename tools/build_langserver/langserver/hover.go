@@ -87,7 +87,8 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 		contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.Assign,
 			lineContent[0], position, uri)
 	case "augAssign":
-		//TODO(bnmetrics)
+		contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.AugAssign,
+			lineContent[0], position, uri)
 	default:
 		//TODO(bnmetrics): handle cases when ident.Action is nil
 	}
