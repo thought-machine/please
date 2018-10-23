@@ -9,3 +9,5 @@ a = x[2:]
 b = x[:2]
 
 c = x[y]
+
+b = x[0].startswith('hello')

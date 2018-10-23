@@ -119,8 +119,25 @@ func TestGetLineContent(t *testing.T) {
 	assert.Equal(t, strings.TrimSpace(line[0]), "go_library(")
 }
 
+func TestTrimQoutes(t *testing.T) {
+	trimed := TrimQuotes("\"blah\"")
+	assert.Equal(t, trimed, "blah")
+
+	trimed= TrimQuotes("\"//src/core\",")
+	assert.Equal(t, "//src/core", trimed)
+
+	trimed= TrimQuotes("'blah")
+	assert.Equal(t, "", trimed)
+
+
+	// this is to make sure our regex works,
+	// so it doesn't just match anything with a build label
+	trimed= TrimQuotes("visibility = [\"//tools/build_langserver/...\", \"//src/core\"]")
+	assert.Equal(t, "", trimed)
+}
+
 /*
- * Utilities for tests in this file
+ * Utilities function for tests in this file
  */
 func getFileinCwd(name string) (lsp.DocumentURI, error) {
 	core.FindRepoRoot()

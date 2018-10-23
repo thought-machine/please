@@ -8,6 +8,7 @@ import (
 	"fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"tools/build_langserver/lsp"
@@ -99,7 +100,7 @@ func GetLineContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Posit
 				if lineCount == position.Line {
 					return []string{scanner.Text()}, nil
 				}
-				lineCount ++
+				lineCount++
 			}
 		}
 
@@ -108,7 +109,6 @@ func GetLineContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Posit
 
 	return doIOScan(uri, getLine)
 }
-
 
 func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]string, error)) ([]string, error) {
 	path, err := GetPathFromURL(uri, "file")
@@ -126,4 +126,20 @@ func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]stri
 	scanner := bufio.NewScanner(file)
 
 	return callback(scanner)
+}
+
+// TrimQuotes is used to trim the qouted string
+// This is usually used to trim the quoted string in BUILD files, such as a BuildLabel
+// this will also work for string with any extra characters outside of qoutes
+// like so: "//src/core",
+func TrimQuotes(str string) string {
+	// Regex match the string starts with qoute("),
+	// this is so that strings like this(visibility = ["//tools/build_langserver/...", "//src/core"]) won't be matched
+	re := regexp.MustCompile(`(^("|')([^"]|"")*("|'))`)
+	matched := re.FindString(strings.TrimSpace(str))
+	if matched != "" {
+		return matched[1 : len(matched)-1]
+	}
+
+	return ""
 }

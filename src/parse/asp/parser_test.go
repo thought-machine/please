@@ -169,7 +169,7 @@ func TestOperators(t *testing.T) {
 func TestIndexing(t *testing.T) {
 	statements, err := newParser().parse("src/parse/asp/test_data/indexing.build")
 	assert.NoError(t, err)
-	assert.Equal(t, 6, len(statements))
+	assert.Equal(t, 7, len(statements))
 
 	assert.Equal(t, "x", statements[0].Ident.Name)
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
@@ -540,6 +540,13 @@ func TestExample3(t *testing.T) {
 	// Test for Endpos
 	assert.Equal(t, 2, stmts[0].EndPos.Column)
 	assert.Equal(t, 4, stmts[0].EndPos.Line)
+
+	// Test for IdentExpr.Endpos
+	property := stmts[0].Ident.Action.Assign.Val.Ident.Action[0].Property
+	assert.Equal(t, 1, property.Pos.Line)
+	assert.Equal(t, 16, property.Pos.Column)
+	assert.Equal(t, 4, property.EndPos.Line)
+	assert.Equal(t, 2, property.EndPos.Column)
 }
 
 func TestExample4(t *testing.T) {
@@ -568,6 +575,19 @@ func TestExample6(t *testing.T) {
 	// Test for Endpos
 	assert.Equal(t, 1, stmts[0].EndPos.Line)
 	assert.Equal(t, 80, stmts[0].EndPos.Column)
+
+	// Test for IdentExpr.Endpos
+	property := stmts[0].Ident.Action.Assign.Val.Property
+	assert.Equal(t, 1, property.Pos.Line)
+	assert.Equal(t, 15, property.Pos.Column)
+	assert.Equal(t, 1, property.EndPos.Line)
+	assert.Equal(t, 60, property.EndPos.Column)
+
+	property = stmts[1].Ident.Action.Call.Arguments[0].Value.Val.Property
+	assert.Equal(t, 4, property.Pos.Line)
+	assert.Equal(t, 31, property.Pos.Column)
+	assert.Equal(t, 4, property.EndPos.Line)
+	assert.Equal(t, 66, property.EndPos.Column)
 }
 
 func TestPrecedence(t *testing.T) {

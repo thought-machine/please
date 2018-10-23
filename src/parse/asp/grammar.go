@@ -166,6 +166,8 @@ type IdentStatementAction struct {
 // An IdentExpr implements parts of an expression that begin with an identifier (i.e. anything
 // that might be a variable name).
 type IdentExpr struct {
+	Pos Position
+	EndPos Position
 	Name   string `@Ident`
 	Action []struct {
 		Property *IdentExpr `  "." @@`
@@ -180,6 +182,7 @@ type Call struct {
 
 // A CallArgument represents a single argument at a call site of a function.
 type CallArgument struct {
+	Pos Position
 	Name  string     `[ @@ "=" ]`
 	Value Expression `@@`
 }

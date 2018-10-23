@@ -438,12 +438,14 @@ func (p *parser) parseValueExpression() *ValueExpression {
 	} else if tok.Value == "lambda" {
 		ve.Lambda = p.parseLambda()
 	} else if tok.Type == Ident {
-		ve.Ident, p.endPos = p.parseIdentExpr()
+		ve.Ident = p.parseIdentExpr()
+		p.endPos = ve.Ident.EndPos
 
 		// In case the Ident is a variable name, we assign the endPos to the end of current token.
 		// see test_data/unary_op.build
 		if p.endPos.Column == 0 {
 			p.endPos = tok.EndPos()
+			ve.Ident.EndPos = p.endPos
 		}
 	} else {
 		p.fail(tok, "Unexpected token %s", tok)
@@ -455,7 +457,8 @@ func (p *parser) parseValueExpression() *ValueExpression {
 		tok = p.l.Peek()
 	}
 	if p.optional('.') {
-		ve.Property, p.endPos = p.parseIdentExpr()
+		ve.Property = p.parseIdentExpr()
+		p.endPos = ve.Property.EndPos
 	} else if p.optional('(') {
 		ve.Call = p.parseCall()
 	}
@@ -487,7 +490,8 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 		}
 	case '.':
 		p.initField(&i.Action)
-		i.Action.Property, p.endPos = p.parseIdentExpr()
+		i.Action.Property = p.parseIdentExpr()
+		p.endPos = i.Action.Property.EndPos
 	case '(':
 		p.initField(&i.Action)
 		i.Action.Call = p.parseCall()
@@ -502,20 +506,25 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 	return i
 }
 
-func (p *parser) parseIdentExpr() (*IdentExpr, Position) {
-	var endPos Position
-	ie := &IdentExpr{Name: p.next(Ident).Value}
+func (p *parser) parseIdentExpr() *IdentExpr {
+	//var endPos Position
+	identTok := p.next(Ident)
+	ie := &IdentExpr{
+		Name: identTok.Value,
+		Pos:  identTok.Pos,
+	}
 	for tok := p.l.Peek(); tok.Type == '.' || tok.Type == '('; tok = p.l.Peek() {
 		tok := p.l.Next()
 		action := &ie.Action[p.newElement(&ie.Action)]
 		if tok.Type == '.' {
-			action.Property, endPos = p.parseIdentExpr()
+			action.Property = p.parseIdentExpr()
+			ie.EndPos = action.Property.EndPos
 		} else {
 			action.Call = p.parseCall()
-			endPos = p.endPos
+			ie.EndPos = p.endPos
 		}
 	}
-	return ie, endPos
+	return ie
 }
 
 func (p *parser) parseCall() *Call {
@@ -526,6 +535,7 @@ func (p *parser) parseCall() *Call {
 		arg := CallArgument{}
 		if tok.Type == Ident && p.l.AssignFollows() {
 			// Named argument.
+			arg.Pos = tok.Pos
 			arg.Name = tok.Value
 			p.next(Ident)
 			p.next('=')
