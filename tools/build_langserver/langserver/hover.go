@@ -69,7 +69,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 	// Return empty string if the hovered content is blank
 	if isEmpty(lineContent[0], position) {
 		return &lsp.MarkupContent{
-			Value:"",
+			Value: "",
 			Kind:  lsp.MarkDown,
 		}, nil
 	}
@@ -111,10 +111,10 @@ func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArg
 
 	// check if the hovered content is on the name of the ident
 	if strings.Contains(lineContent, identName) {
-		identNameIndex := strings.Index(lineContent, identName + "(")
+		identNameIndex := strings.Index(lineContent, identName+"(")
 
 		if pos.Character >= identNameIndex &&
-			pos.Character <= identNameIndex + len(identName) - 1 {
+			pos.Character <= identNameIndex+len(identName)-1 {
 			return contentFromRuleDef(analyzer, identName), nil
 		}
 	}
@@ -155,13 +155,13 @@ func contentFromExpression(ctx context.Context, analyzer *Analyzer, expr *asp.Ex
 
 	// content from Expression.Val
 	if expr.Val != nil {
-		return  contentFromValueExpression(ctx, analyzer, expr.Val, lineContent, pos, uri)
+		return contentFromValueExpression(ctx, analyzer, expr.Val, lineContent, pos, uri)
 	}
 
 	// content from Expression.UnaryOp
 	if expr.UnaryOp != nil && &expr.UnaryOp.Expr != nil {
 		return contentFromValueExpression(ctx, analyzer, &expr.UnaryOp.Expr,
-										  lineContent, pos, uri)
+			lineContent, pos, uri)
 	}
 
 	return "", nil
@@ -173,8 +173,8 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 	builtinRule := analyzer.BuiltIns[identName]
 	for i, identArg := range args {
 		argNameEndPos := asp.Position{
-			Line:identArg.Pos.Line,
-			Column:identArg.Pos.Column + len(identArg.Name),
+			Line:   identArg.Pos.Line,
+			Column: identArg.Pos.Column + len(identArg.Name),
 		}
 		if withInRange(identArg.Pos, argNameEndPos, pos) {
 			// This is to prevent cases like str.format(),
@@ -183,11 +183,11 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 			if okay {
 				return arg.definition, nil
 			}
-		// Return definition if the hovered content is a positional argument
+			// Return definition if the hovered content is a positional argument
 		} else if identArg.Name == "" && withInRange(identArg.Value.Pos, identArg.Value.EndPos, pos) {
 			argInd := i
 			if builtinRule.Arguments[0].Name == "self" {
-				argInd += 1
+				argInd++
 			}
 			return builtinRule.ArgMap[builtinRule.Arguments[argInd].Name].definition, nil
 		}
@@ -229,7 +229,7 @@ func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
 	}
 	if valExpr.Ident != nil {
 		return contentFromIdent(ctx, analyzer, valExpr.Ident,
-								lineContent, pos, uri)
+			lineContent, pos, uri)
 	}
 
 	return "", nil
@@ -249,7 +249,7 @@ func contentFromIdent(ctx context.Context, analyzer *Analyzer, identValExpr *asp
 
 // contentFromProperty returns hover content from ValueExpression.Property
 func contentFromProperty(ctx context.Context, analyzer *Analyzer, propertyVal *asp.IdentExpr,
-	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error)  {
+	lineContent string, pos lsp.Position, uri lsp.DocumentURI) (string, error) {
 
 	if withInRange(propertyVal.Pos, propertyVal.EndPos, pos) {
 
@@ -288,7 +288,7 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 		}
 
 		content, err := contentFromValueExpression(ctx, analyzer, expr.Val,
-												   lineContent, pos, uri)
+			lineContent, pos, uri)
 		if err != nil {
 			return "", err
 		}
@@ -330,7 +330,7 @@ func contentFromRuleDef(analyzer *Analyzer, name string) string {
 
 // isEmpty checks if the hovered line is empty
 func isEmpty(lineContent string, pos lsp.Position) bool {
-	return len(lineContent) < pos.Character + 1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
+	return len(lineContent) < pos.Character+1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
 }
 
 // withInRange checks if the input position from lsp is within the range of the Expression
@@ -341,8 +341,8 @@ func withInRange(exprPos asp.Position, exprEndPos asp.Position, pos lsp.Position
 	withInColRange := pos.Character >= exprPos.Column-1 &&
 		pos.Character <= exprEndPos.Column-1
 
-	onTheSameLine := pos.Line == exprEndPos.Line - 1 &&
-		pos.Line == exprPos.Line - 1
+	onTheSameLine := pos.Line == exprEndPos.Line-1 &&
+		pos.Line == exprPos.Line-1
 
 	if !withInLineRange || (onTheSameLine && !withInColRange) {
 		return false
