@@ -53,6 +53,8 @@ type Identifier struct {
 	EndPos lsp.Position
 }
 
+// Statement is a simplified version of asp.Statement
+// Here we only care about Idents and Expressions
 type Statement struct {
 	Ident      *Identifier
 	Expression *asp.Expression
