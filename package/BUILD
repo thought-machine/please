@@ -1,7 +1,5 @@
 subinclude("//build_defs:version")
 
-subinclude("//build_defs:fpm")
-
 subinclude("//build_defs:signing")
 
 # This is the master list of files that get installed.
@@ -18,50 +16,6 @@ filegroup(
         "//tools/please_maven",
         "//tools/please_pex",
     ],
-)
-
-signed_fpm_deb(
-    name = "please",
-    dirs = {"/opt/please": [":installed_files"]},
-    links = {
-        "/usr/bin/plz": "/opt/please/please",
-    },
-    version = VERSION,
-)
-
-signed_fpm_deb(
-    name = "plz_rpc_cache_server",
-    package_name = "plz-rpc-cache-server",
-    files = {
-        "/usr/bin/plz_rpc_cache_server": "//tools/cache:rpc_cache_server",
-    },
-    version = VERSION,
-)
-
-signed_fpm_deb(
-    name = "plz_http_cache_server",
-    package_name = "plz-http-cache-server",
-    files = {
-        "/usr/bin/plz_http_cache_server": "//tools/cache:http_cache_server",
-    },
-    version = VERSION,
-)
-
-signed_fpm_deb(
-    name = "please_sandbox",
-    files = {
-        "/usr/bin/please_sandbox": "//tools/sandbox:please_sandbox",
-    },
-    # fpm builds us the deb, but we need to apply the suid bit separately.
-    post_cmds = [
-        "ar x $OUT",
-        "rm $OUT",
-        "tar -xzf data.tar.gz",
-        "rm data.tar.gz",
-        "tar -czf data.tar.gz --mode=\"u+s\" --owner root --group root usr/bin/please_sandbox",
-        "ar -rc $OUT debian-binary control.tar.gz data.tar.gz",
-    ],
-    version = VERSION,
 )
 
 signed_tarball(
@@ -105,17 +59,6 @@ filegroup(
         ":please_tarball_signed",
         ":please_tarball_xz_signed",
         ":servers_tarball_signed",
-    ],
-    labels = ["manual"],
-)
-
-filegroup(
-    name = "signed_debs",
-    srcs = [
-        ":please_sandbox_signed",
-        ":please_signed",
-        ":plz_http_cache_server_signed",
-        ":plz_rpc_cache_server_signed",
     ],
     labels = ["manual"],
 )

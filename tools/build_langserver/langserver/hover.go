@@ -194,7 +194,7 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 		} else if identArg.Name == "" && withInRange(identArg.Value.Pos, identArg.Value.EndPos, pos) {
 			argInd := i
 			if builtinRule.Arguments[0].Name == "self" {
-				argInd += 1
+				argInd++
 			}
 			return builtinRule.ArgMap[builtinRule.Arguments[argInd].Name].definition, nil
 		}
