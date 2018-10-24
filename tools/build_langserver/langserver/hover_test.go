@@ -27,6 +27,9 @@ var assignBuildURI = lsp.DocumentURI("file://" + assignPath)
 var propPath = path.Join("tools/build_langserver/langserver/test_data/property.build")
 var propURI = lsp.DocumentURI("file://" + propPath)
 
+var miscPath = path.Join("tools/build_langserver/langserver/test_data/misc.build")
+var miscURI = lsp.DocumentURI("file://" + miscPath)
+
 var analyzer = newAnalyzer()
 
 /***************************************
@@ -282,20 +285,46 @@ func TestGetHoverContentProperty(t *testing.T) {
 }
 
 /***************************************
- *Tests for if/for statements
+ *Tests for ast expression statements
  ***************************************/
-func TestGetHoverContentfor(t *testing.T) {
+func TestGetHoverContentAst(t *testing.T) {
 	var ctx = context.Background()
 
-	content, err := getHoverContent(ctx, analyzer, propURI, lsp.Position{Line: 6, Character: 11})
+	// Test for statement
+	content, err := getHoverContent(ctx, analyzer, miscURI, lsp.Position{Line: 0, Character: 11})
 	assert.Equal(t, nil, err)
-	t.Log(content.Value)
+	assert.Equal(t, "def len(obj)", content.Value)
 
-	content, err = getHoverContent(ctx, analyzer, propURI, lsp.Position{Line: 5, Character: 11})
+	// Test inner For statement
+	content, err = getHoverContent(ctx, analyzer, miscURI, lsp.Position{Line: 1, Character: 11})
 	assert.Equal(t, nil, err)
-	t.Log(content.Value)
+	assert.Equal(t, "str.replace(old:str, new:str)", content.Value)
 
-	content, err = getHoverContent(ctx, analyzer, propURI, lsp.Position{Line: 7, Character: 17})
+	// Test Assert For statement
+	content, err = getHoverContent(ctx, analyzer, miscURI, lsp.Position{Line: 2, Character: 17})
 	assert.Equal(t, nil, err)
-	t.Log(content.Value)
+	assert.Equal(t, "def subinclude(target:str, hash:str=None)", content.Value)
+}
+
+func TestGetHoverContentAst2(t *testing.T) {
+	var ctx = context.Background()
+
+	// Test if statement
+	content, err := getHoverContent(ctx, analyzer, miscURI, lsp.Position{Line: 4, Character: 7})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "str.find(needle:str)", content.Value)
+
+	// Test elif statement
+	content, err = getHoverContent(ctx, analyzer, miscURI, lsp.Position{Line: 6, Character: 8})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "str.count(needle:str)", content.Value)
+
+	// Test return statement
+	content, err = getHoverContent(ctx, analyzer, miscURI, lsp.Position{Line: 5, Character: 17})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "def subinclude(target:str, hash:str=None)", content.Value)
+
+	content, err = getHoverContent(ctx, analyzer, miscURI, lsp.Position{Line: 9, Character: 17})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "str.lower()", content.Value)
 }

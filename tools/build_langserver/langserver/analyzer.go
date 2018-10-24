@@ -48,9 +48,9 @@ type Argument struct {
 // Including the starting line and the ending line number
 type Identifier struct {
 	*asp.IdentStatement
-	Type      string
-	StartLine int
-	EndLine   int
+	Type   string
+	Pos    lsp.Position
+	EndPos lsp.Position
 }
 
 type Statement struct {
@@ -113,26 +113,9 @@ func (a *Analyzer) builtInsRules() error {
 	return nil
 }
 
-// IdentFromPos gets the Identifier given a lsp.Position
-func (a *Analyzer) IdentFromPos(uri lsp.DocumentURI, position lsp.Position) (*Identifier, error) {
-	idents, err := a.IdentFromFile(uri)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ident := range idents {
-		if position.Line >= ident.StartLine && position.Line <= ident.EndLine {
-			return ident, nil
-		}
-	}
-
-	return nil, nil
-}
-
-// IdentFromFile gets all the Identifiers from a given BUILD file
-// filecontent: string slice from a file, typically from ReadFile in utils.go
+// AspStatementFromFile gets all the Asp.Statement from a given BUILD file
 // *reads complete files only*
-func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier, error) {
+func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, error) {
 	filepath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return nil, err
@@ -147,27 +130,13 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier, error) {
 		return nil, err
 	}
 
-	var idents []*Identifier
-	for _, stmt := range stmts {
-		if stmt.Ident != nil {
-			idents = append(idents, a.identFromStatement(stmt))
-		}
-	}
-
-	return idents, nil
+	return stmts, nil
 }
 
-func (a *Analyzer) StatementsFromPos(uri lsp.DocumentURI, position lsp.Position) (*Statement, error) {
-	filepath, err := GetPathFromURL(uri, "file")
-	if err != nil {
-		return nil, err
-	}
-	bytecontent, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	stmts, err := a.parser.ParseData(bytecontent, filepath)
+// StatementFromPos returns a Statement struct with
+func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) (*Statement, error) {
+	// Get all the statements from the build file
+	stmts, err := a.AspStatementFromFile(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -184,22 +153,16 @@ func (a *Analyzer) getStatementByPos(stmts []*asp.Statement, position lsp.Positi
 					Ident: a.identFromStatement(stmt),
 				}, nil
 			}
-
-			//if stmt.For != nil {
-			//	fmt.Println(stmt.For.Expr)
-			//}
-			// get expressions for other type of statement
-			reflected := reflect.ValueOf(stmt)
-			return a.statementFromReflect(reflected, position)
-
+			return a.statementFromAst(reflect.ValueOf(stmt), position)
 		}
 	}
 
 	return nil, nil
 }
 
-func (a *Analyzer) statementFromReflect(v reflect.Value, position lsp.Position) (*Statement, error) {
-
+// statementFromAsp recursively finds asp.IdentStatement and asp.Expression in the ast
+// and returns a valid Statement pointer if within range
+func (a *Analyzer) statementFromAst(v reflect.Value, position lsp.Position) (*Statement, error) {
 	if v.Type() == reflect.TypeOf(asp.Expression{}) {
 		expr := v.Interface().(asp.Expression)
 		if withInRange(expr.Pos, expr.EndPos, position) {
@@ -208,13 +171,23 @@ func (a *Analyzer) statementFromReflect(v reflect.Value, position lsp.Position) 
 			}, nil
 		}
 	} else if v.Type() == reflect.TypeOf([]*asp.Statement{}) && v.Len() != 0 {
-		stmt := v.Interface().([]*asp.Statement)
-		return a.getStatementByPos(stmt, position)
+		stmts := v.Interface().([]*asp.Statement)
+		return a.getStatementByPos(stmts, position)
 	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
-		return a.statementFromReflect(v.Elem(), position)
+		return a.statementFromAst(v.Elem(), position)
+	} else if v.Kind() == reflect.Slice {
+		for i := 0; i < v.Len(); i++ {
+			stmt, err := a.statementFromAst(v.Index(i), position)
+			if err != nil {
+				return nil, err
+			}
+			if stmt != nil {
+				return stmt, nil
+			}
+		}
 	} else if v.Kind() == reflect.Struct {
 		for i := 0; i < v.NumField(); i++ {
-			stmt, err := a.statementFromReflect(v.Field(i), position)
+			stmt, err := a.statementFromAst(v.Field(i), position)
 			if err != nil {
 				return nil, err
 			}
@@ -245,8 +218,8 @@ func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {
 		IdentStatement: stmt.Ident,
 		Type:           identType,
 		// -1 from asp.Statement.Pos.Line, as lsp position requires zero index
-		StartLine: stmt.Pos.Line - 1,
-		EndLine:   stmt.EndPos.Line - 1,
+		Pos:    lsp.Position{Line: stmt.Pos.Line - 1, Character: stmt.Pos.Column - 1},
+		EndPos: lsp.Position{Line: stmt.EndPos.Line - 1, Character: stmt.EndPos.Column - 1},
 	}
 
 	return ident
@@ -318,7 +291,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 		if err != nil {
 			return nil, err
 		}
-		buildDefContent = strings.Join(labelfileContent[buildDef.StartLine:buildDef.EndLine+1], "\n")
+		buildDefContent = strings.Join(labelfileContent[buildDef.Pos.Line:buildDef.EndPos.Line+1], "\n")
 	}
 
 	return &BuildLabel{
@@ -331,19 +304,20 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 
 func (a *Analyzer) getBuildDef(name string, path string) (*Identifier, error) {
 	// Get all the statements from the build file
-	stmts, err := a.IdentFromFile(lsp.DocumentURI(path))
+	stmts, err := a.AspStatementFromFile(lsp.DocumentURI(path))
 	if err != nil {
 		return nil, err
 	}
 
 	for _, stmt := range stmts {
-		if stmt.Type != "call" {
+		ident := a.identFromStatement(stmt)
+		if ident.Type != "call" {
 			continue
 		}
 
-		for _, arg := range stmt.Action.Call.Arguments {
+		for _, arg := range ident.Action.Call.Arguments {
 			if arg.Name == "name" && TrimQuotes(arg.Value.Val.String) == name {
-				return stmt, nil
+				return ident, nil
 			}
 		}
 	}

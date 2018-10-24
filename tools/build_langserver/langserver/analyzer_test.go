@@ -22,32 +22,40 @@ func TestNewAnalyzer(t *testing.T) {
 	assert.Equal(t, true, goLibrary.ArgMap["name"].required)
 }
 
-//
-//func TestIdentFromPos(t *testing.T) {
-//	a := newAnalyzer()
-//
-//	filePath := "tools/build_langserver/langserver/test_data/example.build"
-//	uri := lsp.DocumentURI("file://" + filePath)
-//
-//	ident, _ := a.IdentFromPos(uri, lsp.Position{Line: 8, Character: 5})
-//	assert.NotEqual(t, nil, ident)
-//	assert.Equal(t, "go_library", ident.Name)
-//
-//	ident, _ = a.IdentFromPos(uri, lsp.Position{Line: 18, Character: 0})
-//	assert.True(t, nil == ident)
-//}
-
-func TestIdentFromFile(t *testing.T) {
+func TestAspStatementFromFile(t *testing.T) {
 	a := newAnalyzer()
 
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
 	uri := lsp.DocumentURI("file://" + filePath)
 
-	idents, err := a.IdentFromFile(uri)
+	stmts, err := a.AspStatementFromFile(uri)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, idents[0].Name, "go_library")
+	assert.Equal(t, stmts[0].Ident.Name, "go_library")
 
-	assert.Equal(t, idents[1].Name, "go_test")
+	assert.Equal(t, stmts[1].Ident.Name, "go_test")
+}
+
+func TestStatementFromPos(t *testing.T) {
+	a := newAnalyzer()
+
+	filePath := "tools/build_langserver/langserver/test_data/example.build"
+	uri := lsp.DocumentURI("file://" + filePath)
+
+	stmt, err := a.StatementFromPos(uri, lsp.Position{Line: 2, Character: 13})
+	assert.Equal(t, err, nil)
+	assert.Equal(t, "call", stmt.Ident.Type)
+	assert.Equal(t, "go_library", stmt.Ident.Name)
+	assert.Equal(t, "name", stmt.Ident.Action.Call.Arguments[0].Name)
+
+	// Test on blank Area
+	stmt, err = a.StatementFromPos(uri, lsp.Position{Line: 18, Character: 50})
+	assert.Equal(t, err, nil)
+	assert.True(t, nil == stmt)
+
+	// Test out of range
+	stmt, err = a.StatementFromPos(uri, lsp.Position{Line: 100, Character: 50})
+	assert.Equal(t, err, nil)
+	assert.True(t, nil == stmt)
 }
 
 func TestNewRuleDef(t *testing.T) {
@@ -131,7 +139,7 @@ func TestGetArgString(t *testing.T) {
 	assert.Equal(t, getArgString(argWithoutVal), "name required:true, type:string")
 }
 
-func TestBuildLabelPath(t *testing.T) {
+func TestBuildLabelFromString(t *testing.T) {
 	a := newAnalyzer()
 	ctx := context.Background()
 	filePath := "tools/build_langserver/langserver/test_data/example.build"

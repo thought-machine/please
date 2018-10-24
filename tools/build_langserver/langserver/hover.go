@@ -58,7 +58,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 	}
 
 	// Get Hover Identifier
-	stmt, err := analyzer.StatementsFromPos(uri, position)
+	stmt, err := analyzer.StatementFromPos(uri, position)
 	if err != nil {
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
@@ -66,13 +66,15 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 		}
 	}
 
+	emptyContent := &lsp.MarkupContent{
+		Value: "",
+		Kind:  lsp.MarkDown,
+	}
 	// Return empty string if the hovered content is blank
 	if isEmpty(lineContent[0], position) || stmt == nil {
-		return &lsp.MarkupContent{
-			Value: "",
-			Kind:  lsp.MarkDown,
-		}, nil
+		return emptyContent, nil
 	}
+
 	var contentString string
 	var contentErr error
 	if stmt.Ident != nil {
@@ -92,18 +94,18 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 			contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.AugAssign,
 				lineContent[0], position, uri)
 		default:
-			//TODO(bnmetrics): handle cases when ident.Action is nil
-		}
-
-		if contentErr != nil {
-			return nil, &jsonrpc2.Error{
-				Code:    jsonrpc2.CodeParseError,
-				Message: fmt.Sprintf("fail to get content from Build file %s", uri),
-			}
+			return emptyContent, nil
 		}
 	} else if stmt.Expression != nil {
 		contentString, contentErr = contentFromExpression(ctx, analyzer, stmt.Expression,
 			lineContent[0], position, uri)
+	}
+
+	if contentErr != nil {
+		return nil, &jsonrpc2.Error{
+			Code:    jsonrpc2.CodeParseError,
+			Message: fmt.Sprintf("fail to get content from Build file %s", uri),
+		}
 	}
 	return &lsp.MarkupContent{
 		Value: contentString,
