@@ -22,19 +22,20 @@ func TestNewAnalyzer(t *testing.T) {
 	assert.Equal(t, true, goLibrary.ArgMap["name"].required)
 }
 
-func TestIdentFromPos(t *testing.T) {
-	a := newAnalyzer()
-
-	filePath := "tools/build_langserver/langserver/test_data/example.build"
-	uri := lsp.DocumentURI("file://" + filePath)
-
-	ident, _ := a.IdentFromPos(uri, lsp.Position{Line: 8, Character: 5})
-	assert.NotEqual(t, nil, ident)
-	assert.Equal(t, "go_library", ident.Name)
-
-	ident, _ = a.IdentFromPos(uri, lsp.Position{Line: 18, Character: 0})
-	assert.True(t, nil == ident)
-}
+//
+//func TestIdentFromPos(t *testing.T) {
+//	a := newAnalyzer()
+//
+//	filePath := "tools/build_langserver/langserver/test_data/example.build"
+//	uri := lsp.DocumentURI("file://" + filePath)
+//
+//	ident, _ := a.IdentFromPos(uri, lsp.Position{Line: 8, Character: 5})
+//	assert.NotEqual(t, nil, ident)
+//	assert.Equal(t, "go_library", ident.Name)
+//
+//	ident, _ = a.IdentFromPos(uri, lsp.Position{Line: 18, Character: 0})
+//	assert.True(t, nil == ident)
+//}
 
 func TestIdentFromFile(t *testing.T) {
 	a := newAnalyzer()
@@ -45,12 +46,8 @@ func TestIdentFromFile(t *testing.T) {
 	idents, err := a.IdentFromFile(uri)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, idents[0].Name, "go_library")
-	assert.Equal(t, idents[0].StartLine, 0)
-	assert.Equal(t, idents[0].EndLine, 17)
 
 	assert.Equal(t, idents[1].Name, "go_test")
-	assert.Equal(t, idents[1].StartLine, 19)
-	assert.Equal(t, idents[1].EndLine, 31)
 }
 
 func TestNewRuleDef(t *testing.T) {
@@ -183,7 +180,7 @@ func TestBuildLabelPath(t *testing.T) {
 		uri, "//src/parse/...")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "BuildLabel includes all subpackages in path: "+ path.Join(core.RepoRoot, "src/parse"),
+	assert.Equal(t, "BuildLabel includes all subpackages in path: "+path.Join(core.RepoRoot, "src/parse"),
 		label.BuildDefContent)
 
 	// Test case for All targets in a BUILD file: "//src/parse:all"
@@ -191,7 +188,7 @@ func TestBuildLabelPath(t *testing.T) {
 		uri, "//src/parse:all")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "BuildLabel includes all BuildTargets in BUILD file: "+ path.Join(core.RepoRoot, "src/parse/BUILD"),
+	assert.Equal(t, "BuildLabel includes all BuildTargets in BUILD file: "+path.Join(core.RepoRoot, "src/parse/BUILD"),
 		label.BuildDefContent)
 
 	// Test case for shortended BuildLabel

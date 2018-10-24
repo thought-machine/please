@@ -667,6 +667,19 @@ func (c *pyConfig) Type() string {
 	return "config"
 }
 
+// Dict returns a map representation of pyConfig object
+func (c *pyConfig) Dict() map[string]string {
+
+	asDict := make(map[string]string)
+	for k, v := range c.base {
+		asDict[k] = v.String()
+	}
+	for k, v := range c.overlay {
+		asDict[k] = v.String()
+	}
+	return asDict
+}
+
 func (c *pyConfig) IsTruthy() bool {
 	return true // sure, why not
 }

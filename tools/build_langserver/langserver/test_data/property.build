@@ -1,0 +1,8 @@
+CONFIG.JARCAT_TOOL
+
+x.replace('-', '_')
+
+
+for i in len(x):
+    i.replace('-', '_')
+    assert i.replace('-', '_')

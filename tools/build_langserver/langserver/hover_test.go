@@ -21,8 +21,11 @@ func TestMain(m *testing.M) {
 var filePath = path.Join("tools/build_langserver/langserver/test_data/example.build")
 var exampleBuildURI = lsp.DocumentURI("file://" + filePath)
 
-var filePath2 = path.Join("tools/build_langserver/langserver/test_data/assignment.build")
-var assignBuildURI = lsp.DocumentURI("file://" + filePath2)
+var assignPath = path.Join("tools/build_langserver/langserver/test_data/assignment.build")
+var assignBuildURI = lsp.DocumentURI("file://" + assignPath)
+
+var propPath = path.Join("tools/build_langserver/langserver/test_data/property.build")
+var propURI = lsp.DocumentURI("file://" + propPath)
 
 var analyzer = newAnalyzer()
 
@@ -150,7 +153,6 @@ func TestGetHoverContentOnArgumentWithProperty(t *testing.T) {
 	assert.Equal(t, "str.format()", content.Value)
 }
 
-
 func TestGetHoverContentArgOnTheSameLine(t *testing.T) {
 	var ctx = context.Background()
 
@@ -246,15 +248,54 @@ func TestGetHoverContentOnIfAssignment(t *testing.T) {
 		content.Value)
 }
 
-
 /***************************************
  *Tests for Variable augAssign
  ***************************************/
-
 func TestGetHoverContentAugAssign(t *testing.T) {
 	var ctx = context.Background()
 
+	// Hover on assignment with call
 	content, err := getHoverContent(ctx, analyzer, assignBuildURI, lsp.Position{Line: 23, Character: 14})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "def len(obj)", content.Value)
+
+	// Hover on empty space
+	content, err = getHoverContent(ctx, analyzer, assignBuildURI, lsp.Position{Line: 23, Character: 56})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", content.Value)
+}
+
+/***************************************
+ *Tests for property
+ ***************************************/
+func TestGetHoverContentProperty(t *testing.T) {
+	var ctx = context.Background()
+
+	// Hover on CONFIG property
+	content, err := getHoverContent(ctx, analyzer, propURI, lsp.Position{Line: 0, Character: 4})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", content.Value)
+
+	content, err = getHoverContent(ctx, analyzer, propURI, lsp.Position{Line: 2, Character: 4})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "str.replace(old:str, new:str)", content.Value)
+}
+
+/***************************************
+ *Tests for if/for statements
+ ***************************************/
+func TestGetHoverContentfor(t *testing.T) {
+	var ctx = context.Background()
+
+	content, err := getHoverContent(ctx, analyzer, propURI, lsp.Position{Line: 6, Character: 11})
+	assert.Equal(t, nil, err)
+	t.Log(content.Value)
+
+	content, err = getHoverContent(ctx, analyzer, propURI, lsp.Position{Line: 5, Character: 11})
+	assert.Equal(t, nil, err)
+	t.Log(content.Value)
+
+	content, err = getHoverContent(ctx, analyzer, propURI, lsp.Position{Line: 7, Character: 17})
+	assert.Equal(t, nil, err)
+	t.Log(content.Value)
 }

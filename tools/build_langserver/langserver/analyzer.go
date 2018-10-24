@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ import (
 // This is being loaded into a handler on initialization
 type Analyzer struct {
 	parser   *asp.Parser
+	state    *core.BuildState
 	BuiltIns map[string]*RuleDef
 }
 
@@ -51,15 +53,20 @@ type Identifier struct {
 	EndLine   int
 }
 
+type Statement struct {
+	Ident      *Identifier
+	Expression *asp.Expression
+}
+
 // BuildLabel is a wrapper around core.BuildLabel
 // Including the path of the buildFile
 type BuildLabel struct {
 	*core.BuildLabel
 	// Path of the build file
-	Path            string
+	Path string
 	// IdentStatement for the build definition,
 	// usually the call to the specific buildrule, such as "go_library()"
-	BuildDef        *Identifier
+	BuildDef *Identifier
 	// The content of the build definition
 	BuildDefContent string
 }
@@ -70,6 +77,7 @@ func newAnalyzer() *Analyzer {
 
 	a := &Analyzer{
 		parser: parser,
+		state:  state,
 	}
 	a.builtInsRules()
 
@@ -142,32 +150,113 @@ func (a *Analyzer) IdentFromFile(uri lsp.DocumentURI) ([]*Identifier, error) {
 	var idents []*Identifier
 	for _, stmt := range stmts {
 		if stmt.Ident != nil {
-			// get the identifier type
-			var identType string
-			if stmt.Ident.Action != nil {
-				if stmt.Ident.Action.Property != nil {
-					identType = "property"
-				} else if stmt.Ident.Action.Call != nil {
-					identType = "call"
-				} else if stmt.Ident.Action.Assign != nil {
-					identType = "assign"
-				} else if stmt.Ident.Action.AugAssign != nil {
-					identType = "augAssign"
-				}
-			}
-
-			ident := &Identifier{
-				IdentStatement: stmt.Ident,
-				Type:           identType,
-				// -1 from asp.Statement.Pos.Line, as lsp position requires zero index
-				StartLine: stmt.Pos.Line - 1,
-				EndLine:   stmt.EndPos.Line - 1,
-			}
-			idents = append(idents, ident)
+			idents = append(idents, a.identFromStatement(stmt))
 		}
 	}
 
 	return idents, nil
+}
+
+func (a *Analyzer) StatementsFromPos(uri lsp.DocumentURI, position lsp.Position) (*Statement, error) {
+	filepath, err := GetPathFromURL(uri, "file")
+	if err != nil {
+		return nil, err
+	}
+	bytecontent, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	stmts, err := a.parser.ParseData(bytecontent, filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.getStatementByPos(stmts, position)
+}
+
+func (a *Analyzer) getStatementByPos(stmts []*asp.Statement, position lsp.Position) (*Statement, error) {
+	for _, stmt := range stmts {
+		if withInRange(stmt.Pos, stmt.EndPos, position) {
+			// get function call, assignment, and property access
+			if stmt.Ident != nil {
+				return &Statement{
+					Ident: a.identFromStatement(stmt),
+				}, nil
+			}
+
+			//if stmt.For != nil {
+			//	fmt.Println(stmt.For.Expr)
+			//}
+			// get expressions for other type of statement
+			reflected := reflect.ValueOf(stmt)
+			return a.statementFromReflect(reflected, position)
+
+		}
+	}
+
+	return nil, nil
+}
+
+func (a *Analyzer) statementFromReflect(v reflect.Value, position lsp.Position) (*Statement, error) {
+	var expr *asp.Expression
+
+	if v.Type() == reflect.TypeOf(&asp.Expression{}) && !v.IsNil() {
+		expr = v.Interface().(*asp.Expression)
+	} else if v.Type() == reflect.TypeOf(asp.Expression{}) {
+		exprLit := v.Interface().(asp.Expression)
+		expr = &exprLit
+	}
+
+	if expr != nil && withInRange(expr.Pos, expr.EndPos, position) {
+		return &Statement{
+			Expression: expr,
+		}, nil
+	}
+
+	if v.Type() == reflect.TypeOf([]*asp.Statement{}) && v.Len() != 0 {
+		stmt := v.Interface().([]*asp.Statement)
+		return a.getStatementByPos(stmt, position)
+	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
+		return a.statementFromReflect(v.Elem(), position)
+	} else if v.Kind() == reflect.Struct {
+		for i := 0; i < v.NumField(); i++ {
+			stmt, err := a.statementFromReflect(v.Field(i), position)
+			if err != nil {
+				return nil, err
+			}
+			if stmt != nil {
+				return stmt, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {
+	// get the identifier type
+	var identType string
+	if stmt.Ident.Action != nil {
+		if stmt.Ident.Action.Property != nil {
+			identType = "property"
+		} else if stmt.Ident.Action.Call != nil {
+			identType = "call"
+		} else if stmt.Ident.Action.Assign != nil {
+			identType = "assign"
+		} else if stmt.Ident.Action.AugAssign != nil {
+			identType = "augAssign"
+		}
+	}
+
+	ident := &Identifier{
+		IdentStatement: stmt.Ident,
+		Type:           identType,
+		// -1 from asp.Statement.Pos.Line, as lsp position requires zero index
+		StartLine: stmt.Pos.Line - 1,
+		EndLine:   stmt.EndPos.Line - 1,
+	}
+
+	return ident
 }
 
 // BuildLabelFromString returns a BuildLabel object,

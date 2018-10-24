@@ -527,6 +527,23 @@ func (config *Configuration) GetBuildEnv() []string {
 	return config.buildEnvStored.Env
 }
 
+// GetTags returns a list of string represent the properties of CONFIG object
+func (config *Configuration) GetTags() []string {
+	var tags []string
+	v := reflect.ValueOf(config).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		if field := v.Field(i); field.Kind() == reflect.Struct {
+			for j := 0; j < field.NumField(); j++ {
+				if tag := field.Type().Field(j).Tag.Get("var"); tag != "" {
+					tags = append(tags, tag)
+					fmt.Println(field.Field(j), tag)
+				}
+			}
+		}
+	}
+	return tags
+}
+
 // ApplyOverrides applies a set of overrides to the config.
 // The keys of the given map are dot notation for the config setting.
 func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
