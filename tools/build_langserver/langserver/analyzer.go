@@ -199,22 +199,15 @@ func (a *Analyzer) getStatementByPos(stmts []*asp.Statement, position lsp.Positi
 }
 
 func (a *Analyzer) statementFromReflect(v reflect.Value, position lsp.Position) (*Statement, error) {
-	var expr *asp.Expression
 
-	if v.Type() == reflect.TypeOf(&asp.Expression{}) && !v.IsNil() {
-		expr = v.Interface().(*asp.Expression)
-	} else if v.Type() == reflect.TypeOf(asp.Expression{}) {
-		exprLit := v.Interface().(asp.Expression)
-		expr = &exprLit
-	}
-
-	if expr != nil && withInRange(expr.Pos, expr.EndPos, position) {
-		return &Statement{
-			Expression: expr,
-		}, nil
-	}
-
-	if v.Type() == reflect.TypeOf([]*asp.Statement{}) && v.Len() != 0 {
+	if v.Type() == reflect.TypeOf(asp.Expression{}) {
+		expr := v.Interface().(asp.Expression)
+		if withInRange(expr.Pos, expr.EndPos, position) {
+			return &Statement{
+				Expression: &expr,
+			}, nil
+		}
+	} else if v.Type() == reflect.TypeOf([]*asp.Statement{}) && v.Len() != 0 {
 		stmt := v.Interface().([]*asp.Statement)
 		return a.getStatementByPos(stmt, position)
 	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
