@@ -74,6 +74,8 @@ type BuildLabel struct {
 }
 
 func newAnalyzer() *Analyzer {
+	// Saving the state to Analyzer,
+	// so we will be able to get the CONFIG properties by calling state.config.GetTags()
 	state := core.NewDefaultBuildState()
 	parser := asp.NewParser(state)
 
@@ -115,6 +117,42 @@ func (a *Analyzer) builtInsRules() error {
 	return nil
 }
 
+func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
+	ruleDef := &RuleDef{
+		FuncDef: stmt.FuncDef,
+		ArgMap:  make(map[string]*Argument),
+	}
+
+	// Fill in the header property of ruleDef
+	contentStrSlice := strings.Split(content, "\n")
+	headerSlice := contentStrSlice[stmt.Pos.Line-1 : stmt.FuncDef.EoDef.Line]
+
+	if len(stmt.FuncDef.Arguments) > 0 {
+		for i, arg := range stmt.FuncDef.Arguments {
+			// Check if it a builtin type method, and reconstruct header if it is
+			if i == 0 && arg.Name == "self" {
+				originalDef := fmt.Sprintf("def %s(self:%s", stmt.FuncDef.Name, arg.Type[0])
+				if len(stmt.FuncDef.Arguments) > 1 {
+					originalDef += ", "
+				}
+				newDef := fmt.Sprintf("%s.%s(", arg.Type[0], stmt.FuncDef.Name)
+				headerSlice[0] = strings.Replace(headerSlice[0], originalDef, newDef, 1)
+			} else {
+				// Fill in the ArgMap
+				argString := getArgString(arg)
+				ruleDef.ArgMap[arg.Name] = &Argument{
+					Argument:   &arg,
+					definition: argString,
+					required:   arg.Value == nil,
+				}
+			}
+		}
+	}
+
+	ruleDef.Header = strings.TrimSuffix(strings.Join(headerSlice, "\n"), ":")
+	return ruleDef
+}
+
 // AspStatementFromFile gets all the Asp.Statement from a given BUILD file
 // *reads complete files only*
 func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, error) {
@@ -135,7 +173,7 @@ func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, 
 	return stmts, nil
 }
 
-// StatementFromPos returns a Statement struct with
+// StatementFromPos returns a Statement struct with either an Identifier or asp.Expression
 func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) (*Statement, error) {
 	// Get all the statements from the build file
 	stmts, err := a.AspStatementFromFile(uri)
@@ -257,6 +295,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 		}, nil
 	}
 
+	// TODO(bnmetrics): might need to reconsider how to fetch the BUILD files, as the name can be set in the config
 	if label.PackageName == path.Dir(filepath) {
 		labelPath = filepath
 	} else if strings.HasPrefix(label.PackageDir(), rootPath) {
@@ -283,7 +322,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 		buildDefContent = "BuildLabel includes all BuildTargets in BUILD file: " + labelPath
 	} else {
 		// Get the BuildDef IdentStatement from the build file
-		buildDef, err = a.getBuildDef(label.Name, labelPath)
+		buildDef, err = a.getBuildDefByName(label.Name, labelPath)
 		if err != nil {
 			return nil, err
 		}
@@ -304,7 +343,8 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 	}, nil
 }
 
-func (a *Analyzer) getBuildDef(name string, path string) (*Identifier, error) {
+// getBuildDefByName returns an Identifier object of a BuildDef(call of a Build rule) based the name
+func (a *Analyzer) getBuildDefByName(name string, path string) (*Identifier, error) {
 	// Get all the statements from the build file
 	stmts, err := a.AspStatementFromFile(lsp.DocumentURI(path))
 	if err != nil {
@@ -327,43 +367,7 @@ func (a *Analyzer) getBuildDef(name string, path string) (*Identifier, error) {
 	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
 }
 
-func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
-	ruleDef := &RuleDef{
-		FuncDef: stmt.FuncDef,
-		ArgMap:  make(map[string]*Argument),
-	}
-
-	// Fill in the header property of ruleDef
-	contentStrSlice := strings.Split(content, "\n")
-	headerSlice := contentStrSlice[stmt.Pos.Line-1 : stmt.FuncDef.EoDef.Line]
-
-	if len(stmt.FuncDef.Arguments) > 0 {
-		for i, arg := range stmt.FuncDef.Arguments {
-			// Check if it a builtin type method, and reconstruct header if it is
-			if i == 0 && arg.Name == "self" {
-				originalDef := fmt.Sprintf("def %s(self:%s", stmt.FuncDef.Name, arg.Type[0])
-				if len(stmt.FuncDef.Arguments) > 1 {
-					originalDef += ", "
-				}
-				newDef := fmt.Sprintf("%s.%s(", arg.Type[0], stmt.FuncDef.Name)
-				headerSlice[0] = strings.Replace(headerSlice[0], originalDef, newDef, 1)
-			} else {
-				// Fill in the ArgMap
-				argString := getArgString(arg)
-				ruleDef.ArgMap[arg.Name] = &Argument{
-					Argument:   &arg,
-					definition: argString,
-					required:   arg.Value == nil,
-				}
-			}
-		}
-	}
-
-	ruleDef.Header = strings.TrimSuffix(strings.Join(headerSlice, "\n"), ":")
-	return ruleDef
-}
-
-// src type:list, required:false
+// e.g. src type:list, required:false
 func getArgString(argument asp.Argument) string {
 	argType := strings.Join(argument.Type, "|")
 	required := strconv.FormatBool(argument.Value == nil)
