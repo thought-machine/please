@@ -43,6 +43,7 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 
 	return &lsp.Hover{
 		Contents: *content,
+		// TODO(bnmetrics): we can add range here later
 	}, nil
 }
 
