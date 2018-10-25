@@ -9,33 +9,7 @@ import (
 	"core"
 )
 
-/*
-<?xml version="1.0" encoding="UTF-8"?>
-<module type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" inherit-compiler-output="true">
-    <exclude-output />
-    <orderEntry type="inheritedJdk" />
-    <orderEntry type="sourceFolder" forTests="false" />
-  </component>
-</module>
-
-<?xml version="1.0" encoding="UTF-8"?>
-<module type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" inherit-compiler-output="true">
-    <exclude-output />
-    <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
-    </content>
-    <orderEntry type="inheritedJdk" />
-    <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="foo2" />
-  </component>
-</module>
-
-	<orderEntry type="library" name="finagle-base-http" level="project" />
-
-*/
-
+// Module represents the IntelliJ concept of a module
 type Module struct {
 	XMLName    xml.Name          `xml:"module"`
 	ModuleType string            `xml:"type,attr"`
@@ -43,20 +17,20 @@ type Module struct {
 	Component  []ModuleComponent `xml:"component"`
 }
 
-func NewJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
-	component := NewModuleComponent(graph, target)
-	component.addOrderEntry(NewInheritedJdkEntry())
-	component.addOrderEntry(NewSourceFolderEntry(false))
+func newJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
+	component := newModuleComponent(target)
+	component.addOrderEntry(newInheritedJdkEntry())
+	component.addOrderEntry(newSourceFolderEntry(false))
 
 	for _, label := range target.DeclaredDependencies() {
 		dep := graph.TargetOrDie(label)
 		if shouldMakeModule(dep) {
-			component.addOrderEntry(NewModuleEntry(moduleName(dep)))
+			component.addOrderEntry(newModuleEntry(moduleName(dep)))
 		}
 	}
 
 	if shouldMakeLibrary(target) {
-		component.addOrderEntry(NewLibraryEntry(libraryName(target), "project"))
+		component.addOrderEntry(newLibraryEntry(libraryName(target), "project"))
 	}
 
 	module := Module{
@@ -69,10 +43,10 @@ func NewJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 	return module
 }
 
-func NewScalaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
-	module := NewJavaModule(graph, target)
+func newScalaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
+	module := newJavaModule(graph, target)
 
-	module.Component[0].addOrderEntry(NewLibraryEntry("scala-sdk", "application"))
+	module.Component[0].addOrderEntry(newLibraryEntry("scala-sdk", "application"))
 
 	return module
 }
@@ -138,17 +112,7 @@ func isTestModule(target *core.BuildTarget) bool {
 	return false
 }
 
-func NewWebModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
-	return Module{
-		ModuleType: "WEB_MODULE",
-		Version:    4,
-		Component: []ModuleComponent{
-			NewModuleComponent(graph, target),
-		},
-	}
-}
-
-func (module *Module) toXml(writer io.Writer) {
+func (module *Module) toXML(writer io.Writer) {
 	writer.Write([]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"))
 
 	content, err := xml.MarshalIndent(module, "", "  ")
@@ -157,6 +121,7 @@ func (module *Module) toXml(writer io.Writer) {
 	}
 }
 
+// ModuleComponent represents the top level module wrapper.
 type ModuleComponent struct {
 	XMLName               xml.Name       `xml:"component"`
 	Name                  string         `xml:"name,attr"`
@@ -165,13 +130,13 @@ type ModuleComponent struct {
 	OrderEntries          []OrderEntry   `xml:"orderEntry"`
 }
 
-func NewModuleComponent(graph *core.BuildGraph, target *core.BuildTarget) ModuleComponent {
+func newModuleComponent(target *core.BuildTarget) ModuleComponent {
 	orderEntries := []OrderEntry{}
 
 	return ModuleComponent{
 		Name: "NewModuleRootManager",
 		InheritCompilerOutput: true,
-		Content:               NewModuleContent(graph, target),
+		Content:               newModuleContent(target),
 		OrderEntries:          orderEntries,
 	}
 }
@@ -180,13 +145,14 @@ func (moduleComponent *ModuleComponent) addOrderEntry(entry OrderEntry) {
 	moduleComponent.OrderEntries = append(moduleComponent.OrderEntries, entry)
 }
 
+// ModuleContent is a wrapper that is generally only used once in a given module.
 type ModuleContent struct {
 	XMLName      xml.Name       `xml:"content"`
-	Url          string         `xml:"url,attr"`
+	URL          string         `xml:"url,attr"`
 	SourceFolder []SourceFolder `xml:"sourceFolder"`
 }
 
-func NewModuleContent(graph *core.BuildGraph, target *core.BuildTarget) *ModuleContent {
+func newModuleContent(target *core.BuildTarget) *ModuleContent {
 	if !shouldHaveContent(target) {
 		return nil
 	}
@@ -198,7 +164,7 @@ func NewModuleContent(graph *core.BuildGraph, target *core.BuildTarget) *ModuleC
 	location := relativisedPathTo(moduleDirLocation(target), &joined)
 
 	sourceFolders = append(sourceFolders, SourceFolder{
-		Url:           fmt.Sprintf("file://$MODULE_DIR$/%s", *location),
+		URL:           fmt.Sprintf("file://$MODULE_DIR$/%s", *location),
 		IsTestSource:  isTestModule(target),
 		PackagePrefix: packagePrefixFromLabels(target.PrefixedLabels("package_prefix:")),
 	})
@@ -212,18 +178,20 @@ func NewModuleContent(graph *core.BuildGraph, target *core.BuildTarget) *ModuleC
 	contentDir := relativisedPathTo(moduleDirLocation(target), &joined)
 
 	return &ModuleContent{
-		Url:          fmt.Sprintf("file://$MODULE_DIR$/%s", *contentDir),
+		URL:          fmt.Sprintf("file://$MODULE_DIR$/%s", *contentDir),
 		SourceFolder: sourceFolders,
 	}
 }
 
+// SourceFolder is a location on disk that contains files of interest to this package.
 type SourceFolder struct {
 	XMLName       xml.Name `xml:"sourceFolder"`
-	Url           string   `xml:"url,attr"`
+	URL           string   `xml:"url,attr"`
 	IsTestSource  bool     `xml:"isTestSource,attr"`
 	PackagePrefix *string  `xml:"packagePrefix,attr,omitEmpty"`
 }
 
+// OrderEntry represents a dependency on (e.g.) another module, or a library or an SDK.
 type OrderEntry struct {
 	XMLName xml.Name `xml:"orderEntry"`
 	Type    string   `xml:"type,attr"`
@@ -238,7 +206,7 @@ type OrderEntry struct {
 	ModuleName *string `xml:"module-name,attr,omitEmpty"`
 }
 
-func NewLibraryEntry(name, level string) OrderEntry {
+func newLibraryEntry(name, level string) OrderEntry {
 	exported := ""
 	return OrderEntry{
 		Type:         "library",
@@ -248,7 +216,7 @@ func NewLibraryEntry(name, level string) OrderEntry {
 	}
 }
 
-func NewModuleEntry(name string) OrderEntry {
+func newModuleEntry(name string) OrderEntry {
 	exported := ""
 	return OrderEntry{
 		Type:       "module",
@@ -257,13 +225,13 @@ func NewModuleEntry(name string) OrderEntry {
 	}
 }
 
-func NewInheritedJdkEntry() OrderEntry {
+func newInheritedJdkEntry() OrderEntry {
 	return OrderEntry{
 		Type: "inheritedJdk",
 	}
 }
 
-func NewSourceFolderEntry(forTests bool) OrderEntry {
+func newSourceFolderEntry(forTests bool) OrderEntry {
 	return OrderEntry{
 		Type:     "sourceFolder",
 		ForTests: &forTests,
@@ -271,15 +239,15 @@ func NewSourceFolderEntry(forTests bool) OrderEntry {
 }
 
 func toModule(graph *core.BuildGraph, buildTarget *core.BuildTarget) *Module {
-	var module *Module = nil
+	var module *Module
 
 	if shouldMakeJavaModule(buildTarget) {
-		madeModule := NewJavaModule(graph, buildTarget)
+		madeModule := newJavaModule(graph, buildTarget)
 		module = &madeModule
 	}
 
 	if shouldMakeScalaModule(buildTarget) {
-		madeModule := NewScalaModule(graph, buildTarget)
+		madeModule := newScalaModule(graph, buildTarget)
 		module = &madeModule
 	}
 

@@ -17,118 +17,6 @@ var log = logging.MustGetLogger("intellij")
 // ExportIntellijStructure creates a set of modules and libraries that makes it nicer to work with Please projects
 // in IntelliJ.
 func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph, originalLabels core.BuildLabels) {
-
-	// Structure is as follows:
-	/*
-	Top level: .idea/modules.xml
-	<?xml version="1.0" encoding="UTF-8"?>
-	<project version="4">
-	  <component name="ProjectModuleManager">
-		<modules>
-		  <module fileurl="file://$PROJECT_DIR$/foo/foo.iml" filepath="$PROJECT_DIR$/foo/foo.iml" />
-		  <module fileurl="file://$PROJECT_DIR$/foo2/foo2.iml" filepath="$PROJECT_DIR$/foo2/foo2.iml" />
-		  <module fileurl="file://$PROJECT_DIR$/plz-out/gen/intellij/foo3.iml" filepath="$PROJECT_DIR$/plz-out/gen/intellij/foo3.iml" />
-		</modules>
-	  </component>
-	</project>
-	*/
-	/*
-	Java:
-	Module file: ./plz-out/gen/intellij/foo3.iml
-	<?xml version="1.0" encoding="UTF-8"?>
-	<module type="JAVA_MODULE" version="4">
-	  <component name="NewModuleRootManager" inherit-compiler-output="true">
-		<exclude-output />
-		<content contentUrl="file://$MODULE_DIR$/../../../foo3">
-		  <sourceFolder contentUrl="file://$MODULE_DIR$/../../../foo3" isTestSource="false" packagePrefix="foo3" />
-		</content>
-		<orderEntry type="inheritedJdk" />
-		<orderEntry type="sourceFolder" forTests="false" />
-	  </component>
-	</module>
- 	*/
-	/*
-	Go:
-	Module file:
-	<?xml version="1.0" encoding="UTF-8"?>
-   <module type="WEB_MODULE" version="4">
-	 <component name="Go" enabled="true" />
-	 <component name="NewModuleRootManager">
-	   <content contentUrl="file://$USER_HOME$/code/github.com/agenticarus/please" />
-	   <orderEntry type="inheritedJdk" />
-	   <orderEntry type="sourceFolder" forTests="false" />
-	 </component>
-   </module>
-
-	Workspace: workspace.xml
-   <?xml version="1.0" encoding="UTF-8"?>
-   <project version="4">
-	...
-   <component name="GOROOT" path="/opt/tm/tools/go/1.10.2/usr/go" />
-	<component name="GoLibraries">
-		<option name="urls">
-		 <list>
-		   <option value="file://$USER_HOME$/code/github.com/agenticarus/please/src" />
-		   <option value="file://$USER_HOME$/code/github.com/agenticarus/please/plz-out/go" />
-		 </list>
-	   </option>
-	 </component>
-	...
-	</project>
-	*/
-
-	/*
-	Scala:
-	need <orderEntry type="library" name="scala-sdk-2.12.7" level="application" /> in modules.xml
-
-	//common/scala/phabricator:BUILD contains one scala_library
-	should map to one module with source folder set to:
-		 <sourceFolder contentUrl="file://$USER_HOME$/code/git.corp.tmachine.io/CORE/common/scala/phabricator" isTestSource="false" packagePrefix="common.scala.phabricator" />
-	and library set to:
-		<orderEntry type="library" name="finagle-base-http" level="project" />
-
-	the library looks  like this:
-	.idea/libraries/finagle_base_http.xml
-   <component name="libraryTable">
-	 <library name="finagle-base-http">
-	   <CLASSES>
-		 <root contentUrl="jar://$USER_HOME$/code/git.corp.tmachine.io/CORE/plz-out/gen/third_party/java/com/twitter/finagle-base-http.jar!/" />
-	   </CLASSES>
-	   <JAVADOC />
-	   <SOURCES>
-		 <root contentUrl="jar://$USER_HOME$/code/git.corp.tmachine.io/CORE/plz-out/gen/third_party/java/com/twitter/finagle-base-http_src.jar!/" />
-	   </SOURCES>
-	  </library>
-   </component>%
-
-	<component name="libraryTable">
-		<library name="third_party_java_gson">
-			<CLASSES>
-				<root contentUrl="jar://$PROJECT_DIR$/../../plz-out/gen/third_party/java/gson.jar!/"></root>
-			</CLASSES>
-			<JAVADOC></JAVADOC>
-			<SOURCES>
-				<root contentUrl="jar://$PROJECT_DIR$/../../plz-out/gen/third_party/java/gson_src.jar!/"></root>
-			</SOURCES>
-		</library>
-	</component>
-
-	<component name="libraryTable">
-  		<library name="third_party_java_gson">
-    		<CLASSES>
-      			<root url="jar://$PROJECT_DIR$/../gen/third_party/java/gson.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES>
-      <root url="jar://$PROJECT_DIR$/../gen/third_party/java/gson_src.jar!/" />
-    </SOURCES>
-  </library>
-</component>
-
-	 */
-
- 	os.RemoveAll(projectLocation())
-
 	if _, err := os.Stat(projectLocation()); os.IsNotExist(err) {
 		os.MkdirAll(projectLocation(), core.DirPermissions)
 	}
@@ -138,13 +26,13 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 	if err != nil {
 		log.Fatal("Unable to determine java source level - ", err)
 	}
-	misc := NewMisc(javaSourceLevel)
+	misc := newMisc(javaSourceLevel)
 
 	f, err := os.Create(miscFileLocation())
 	if err != nil {
 		log.Fatal("Unable to create misc.xml - ", err)
 	}
-	misc.toXml(f)
+	misc.toXML(f)
 	f.Close()
 
 	// moduleTargets exist only for the modules we actually built, to keep the size down.
@@ -157,7 +45,6 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 	}
 
 	visitTargetsAndDependenciesOnce(targetsToVisit, func(buildTarget *core.BuildTarget) {
-		fmt.Println("Visiting", buildTarget.Label)
 		m := toModule(graph, buildTarget)
 
 		// Possibly write .iml
@@ -169,7 +56,7 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 			if err != nil {
 				log.Fatal("Unable to write module file for", buildTarget.Label, "-", err)
 			}
-			m.toXml(f)
+			m.toXML(f)
 			f.Close()
 
 			moduleTargets = append(moduleTargets, buildTarget)
@@ -185,14 +72,14 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 				log.Fatal("Unable to write library file for", buildTarget.Label, "-", err)
 			}
 
-			library := NewLibrary(graph, buildTarget)
-			library.toXml(f)
+			library := newLibrary(graph, buildTarget)
+			library.toXML(f)
 			f.Close()
 		}
 	})
 
 	// Write modules.xml
-	modules := NewModules(moduleTargets)
+	modules := newModules(moduleTargets)
 	if _, err := os.Stat(filepath.Dir(modulesFileLocation())); os.IsNotExist(err) {
 		os.MkdirAll(filepath.Dir(modulesFileLocation()), core.DirPermissions)
 	}
@@ -200,7 +87,7 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 	if err != nil {
 		log.Fatal("Unable to write modules file", err)
 	}
-	modules.toXml(f)
+	modules.toXML(f)
 	f.Close()
 }
 

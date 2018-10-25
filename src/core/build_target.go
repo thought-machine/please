@@ -664,7 +664,7 @@ func (target *BuildTarget) SetState(state BuildTargetState) {
 	atomic.StoreInt32(&target.state, int32(state))
 }
 
-// SyncUpdateState moves the target's state from before to after via a lock.
+// SyncUpdateState oves the target's state from before to after via a lock.
 // Returns true if successful, false if not (which implies something else changed the state first).
 // The nature of our build graph ensures that most transitions are only attempted by
 // one thread simultaneously, but this one can be attempted by several at once
@@ -1155,13 +1155,4 @@ func (slice BuildTargets) Less(i, j int) bool {
 }
 func (slice BuildTargets) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
-}
-
-func (slice BuildTargets) Contains(target BuildTarget) bool {
-	for _, t := range slice {
-		if target.Label == t.Label {
-			return true
-		}
-	}
-	return false
 }

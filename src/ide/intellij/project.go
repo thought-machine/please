@@ -7,28 +7,21 @@ import (
 	"io"
 )
 
-/*
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_10" default="true" project-jdk-name="10" project-jdk-type="JavaSDK">
-    <output url="file://$PROJECT_DIR$/out" />
-  </component>
-</project>%
- */
+// Misc is an ancillary structure that handles things like Java source level.
 type Misc struct {
 	XMLName   xml.Name      `xml:"project"`
 	Version   int           `xml:"version,attr"`
 	Component MiscComponent `xml:"component"`
 }
 
-func NewMisc(javaSourceLevel int) Misc {
+func newMisc(javaSourceLevel int) Misc {
 	return Misc{
 		Version:   4,
-		Component: NewMiscComponent(javaSourceLevel),
+		Component: newMiscComponent(javaSourceLevel),
 	}
 }
 
-func (misc *Misc) toXml(w io.Writer) {
+func (misc *Misc) toXML(w io.Writer) {
 	w.Write([]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"))
 	content, err := xml.MarshalIndent(misc, "", "   ")
 
@@ -37,6 +30,7 @@ func (misc *Misc) toXml(w io.Writer) {
 	}
 }
 
+// MiscComponent is the main Misc wrapper type.
 type MiscComponent struct {
 	XMLName        xml.Name   `xml:"component"`
 	Name           string     `xml:"name,attr"`
@@ -48,60 +42,49 @@ type MiscComponent struct {
 	Output         MiscOutput `xml:"output"`
 }
 
-func NewMiscComponent(javaSourceLevel int) MiscComponent {
+func newMiscComponent(javaSourceLevel int) MiscComponent {
 	format := "JDK_%d"
 	if javaSourceLevel < 10 {
 		format = "JDK_1_%d"
 	}
 	return MiscComponent{
-		Name:    "ProjectRootManager",
-		Version: 2,
-		Default: false,
-		LanguageLevel: fmt.Sprintf(format, javaSourceLevel),
+		Name:           "ProjectRootManager",
+		Version:        2,
+		Default:        false,
+		LanguageLevel:  fmt.Sprintf(format, javaSourceLevel),
 		ProjectJdkName: fmt.Sprintf("%d", javaSourceLevel),
 		ProjectJdkType: "JavaSDK",
-		Output:  NewMiscOutput(),
+		Output:         newMiscOutput(),
 	}
 }
 
+// MiscOutput determines where intellij puts the code it has compiled itself.
 type MiscOutput struct {
 	XMLName xml.Name `xml:"output"`
-	Url     string   `xml:"url,attr"`
+	URL     string   `xml:"url,attr"`
 }
 
-func NewMiscOutput() MiscOutput {
+func newMiscOutput() MiscOutput {
 	return MiscOutput{
-		Url: "file://$PROJECT_DIR$/out",
+		URL: "file://$PROJECT_DIR$/out",
 	}
 }
 
-/*
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="ProjectModuleManager">
-    <modules>
-      <module fileurl="file://$PROJECT_DIR$/foo/foo.iml" filepath="$PROJECT_DIR$/foo/foo.iml" />
-      <module fileurl="file://$PROJECT_DIR$/foo2/foo2.iml" filepath="$PROJECT_DIR$/foo2/foo2.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plz-out/gen/intellij/foo3.iml" filepath="$PROJECT_DIR$/plz-out/gen/intellij/foo3.iml" />
-    </modules>
-  </component>
-</project>
- */
-
+// Modules are the main structure that tells IntelliJ where to find all the modules it knows about.
 type Modules struct {
 	XMLName xml.Name `xml:"project"`
 	Version int `xml:"version,attr"`
 	Component ModulesComponent `xml:"component"`
 }
 
-func NewModules(targets core.BuildTargets) Modules {
+func newModules(targets core.BuildTargets) Modules {
 	return Modules{
-		Version: 4,
-		Component: NewModulesComponent(targets),
+		Version:   4,
+		Component: newModulesComponent(targets),
 	}
 }
 
-func (modules *Modules) toXml(w io.Writer) {
+func (modules *Modules) toXML(w io.Writer) {
 	w.Write([]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"))
 	content, err := xml.MarshalIndent(modules, "", "   ")
 
@@ -110,34 +93,36 @@ func (modules *Modules) toXml(w io.Writer) {
 	}
 }
 
+// ModulesComponent represents all modules in the workspace.
 type ModulesComponent struct {
 	XMLName xml.Name  `xml:"component"`
 	Name string `xml:"name,attr"`
 	Modules []ModulesModule `xml:"modules>module"`
 }
 
-func NewModulesComponent(targets core.BuildTargets) ModulesComponent {
+func newModulesComponent(targets core.BuildTargets) ModulesComponent {
 	component := ModulesComponent{
 		Name: "ProjectModuleManager",
 	}
 
 	for _, t := range targets {
-		component.Modules = append(component.Modules, NewModulesModule(t))
+		component.Modules = append(component.Modules, newModulesModule(t))
 	}
 
 	return component
 }
 
+// ModulesModule represents one module in the workspace, and where to find its definition.
 type ModulesModule struct {
-	XMLName xml.Name `xml:"module"`
-	FileUrl string `xml:"fileurl,attr"`
-	FilePath string `xml:"filepath,attr"`
+	XMLName  xml.Name `xml:"module"`
+	FileURL  string   `xml:"fileurl,attr"`
+	FilePath string   `xml:"filepath,attr"`
 }
 
-func NewModulesModule(target *core.BuildTarget) ModulesModule {
+func newModulesModule(target *core.BuildTarget) ModulesModule {
 	filePath := "$PROJECT_DIR$/" + target.Label.PackageDir() + "/" + fmt.Sprintf("%s.iml", moduleName(target))
 	return ModulesModule{
-		FileUrl: "file://"+filePath,
+		FileURL:  "file://"+filePath,
 		FilePath: filePath,
 	}
 }
