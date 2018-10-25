@@ -143,3 +143,15 @@ func TrimQuotes(str string) string {
 
 	return ""
 }
+
+func LooksLikeString(str string) bool {
+	if TrimQuotes(str) != "" {
+		return true
+	}
+	return false
+}
+
+// isEmpty checks if the hovered line is empty
+func isEmpty(lineContent string, pos lsp.Position) bool {
+	return len(lineContent) < pos.Character+1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
+}

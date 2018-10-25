@@ -20,6 +20,10 @@ func TestNewAnalyzer(t *testing.T) {
 	goLibrary := a.BuiltIns["go_library"]
 	assert.Equal(t, 15, len(goLibrary.ArgMap))
 	assert.Equal(t, true, goLibrary.ArgMap["name"].required)
+
+	// Check for methods map
+	_, ok := a.Attributes["str"]
+	assert.True(t, ok)
 }
 
 func TestAspStatementFromFile(t *testing.T) {
@@ -110,6 +114,7 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, "str.format()")
 	assert.Equal(t, len(ruleDef.ArgMap), 0)
+	assert.Equal(t, ruleDef.Object, "str")
 
 	// Test header for a config function, setdefault()
 	stmt = getStatementByName(statements, "setdefault")

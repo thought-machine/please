@@ -23,6 +23,7 @@ go_test(
         "analyzer_test.go",
         "handler_test.go",
         "hover_test.go",
+        "completion_test.go"
     ],
     data = ["test_data"],
     deps = [

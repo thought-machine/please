@@ -20,9 +20,11 @@ import (
 // Analyzer is a wrapper around asp.parser
 // This is being loaded into a handler on initialization
 type Analyzer struct {
-	parser   *asp.Parser
-	state    *core.BuildState
-	BuiltIns map[string]*RuleDef
+	parser *asp.Parser
+	state  *core.BuildState
+
+	BuiltIns   map[string]*RuleDef
+	Attributes map[string][]*RuleDef
 }
 
 // RuleDef is a wrapper around asp.FuncDef,
@@ -32,6 +34,9 @@ type RuleDef struct {
 	*asp.FuncDef
 	Header string
 	ArgMap map[string]*Argument
+
+	// This applies when the FuncDef is a method
+	Object string
 }
 
 // Argument is a wrapper around asp.Argument,
@@ -91,6 +96,7 @@ func newAnalyzer() *Analyzer {
 // This is typically called when instantiate a new Analyzer
 func (a *Analyzer) builtInsRules() error {
 	statementMap := make(map[string]*RuleDef)
+	attrMap := make(map[string][]*RuleDef)
 
 	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)
@@ -106,13 +112,25 @@ func (a *Analyzer) builtInsRules() error {
 			for _, statement := range stmts {
 				if statement.FuncDef != nil && !strings.HasPrefix(statement.FuncDef.Name, "_") {
 					content := string(asset)
-					statementMap[statement.FuncDef.Name] = newRuleDef(content, statement)
+
+					ruleDef := newRuleDef(content, statement)
+					statementMap[statement.FuncDef.Name] = ruleDef
+
+					// Fill in attribute map if certain ruleDef is a attribute
+					if ruleDef.Object != "" {
+						if _, ok := attrMap[ruleDef.Object]; ok {
+							attrMap[ruleDef.Object] = append(attrMap[ruleDef.Object], ruleDef)
+						} else {
+							attrMap[ruleDef.Object] = []*RuleDef{ruleDef}
+						}
+					}
 				}
 			}
 		}
 	}
 
 	a.BuiltIns = statementMap
+	a.Attributes = attrMap
 	return nil
 }
 
@@ -136,6 +154,7 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 				}
 				newDef := fmt.Sprintf("%s.%s(", arg.Type[0], stmt.FuncDef.Name)
 				headerSlice[0] = strings.Replace(headerSlice[0], originalDef, newDef, 1)
+				ruleDef.Object = arg.Type[0]
 			} else {
 				// Fill in the ArgMap
 				argString := getArgString(arg)
@@ -180,7 +199,6 @@ func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) 
 		return nil, err
 	}
 
-	//return a.statementFromAst(reflect.ValueOf(stmts), position)
 	statement, expr := asp.StatementOrExpressionFromAst(stmts,
 		asp.Position{Line: position.Line + 1, Column: position.Character + 1})
 
