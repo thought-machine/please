@@ -59,7 +59,7 @@ func FindArgument(statement *Statement, args ...string) *CallArgument {
 	return nil
 }
 
-// StatementFromAst recursively finds asp.IdentStatement and asp.Expression in the ast
+// StatementOrExpressionFromAst recursively finds asp.IdentStatement and asp.Expression in the ast
 // and returns a valid statement pointer if within range
 func StatementOrExpressionFromAst(stmts []*Statement, position Position) (statement *Statement, expression *Expression) {
 	return getStatementOrExpressionFromAst(reflect.ValueOf(stmts), position)
