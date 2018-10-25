@@ -527,16 +527,15 @@ func (config *Configuration) GetBuildEnv() []string {
 	return config.buildEnvStored.Env
 }
 
-// GetTags returns a list of string represent the properties of CONFIG object
-func (config *Configuration) GetTags() []string {
-	var tags []string
+// TagsToFields returns a map of string represent the properties of CONFIG object to the config Structfield
+func (config *Configuration) TagsToFields() map[string]reflect.StructField {
+	tags := make(map[string]reflect.StructField)
 	v := reflect.ValueOf(config).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		if field := v.Field(i); field.Kind() == reflect.Struct {
 			for j := 0; j < field.NumField(); j++ {
 				if tag := field.Type().Field(j).Tag.Get("var"); tag != "" {
-					tags = append(tags, tag)
-					fmt.Println(field.Field(j), tag)
+					tags[tag] = field.Type().Field(j)
 				}
 			}
 		}
