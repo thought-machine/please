@@ -1,6 +1,9 @@
 package asp
 
-import "strings"
+import (
+	"reflect"
+	"strings"
+)
 
 // FindTarget returns the top-level call in a BUILD file that corresponds to a target
 // of the given name (or nil if one does not exist).
@@ -54,4 +57,79 @@ func FindArgument(statement *Statement, args ...string) *CallArgument {
 		}
 	}
 	return nil
+}
+
+// Statement is a simplified version of asp.Statement
+// Here we only care about statement with Idents and Expressions
+// In the future we can also add more fields in this struct
+type statement struct {
+	Statement  *Statement
+	Expression *Expression
+}
+
+// StatementFromAst recursively finds asp.IdentStatement and asp.Expression in the ast
+// and returns a valid statement pointer if within range
+func StatementFromAst(v reflect.Value, position Position) (*statement, error) {
+	if v.Type() == reflect.TypeOf(Expression{}) {
+		expr := v.Interface().(Expression)
+		if withInRange(expr.Pos, expr.EndPos, position) {
+			return &statement{
+				Expression: &expr,
+			}, nil
+		}
+	} else if v.Type() == reflect.TypeOf([]*Statement{}) && v.Len() != 0 {
+		stmts := v.Interface().([]*Statement)
+		for _, stmt := range stmts {
+			if withInRange(stmt.Pos, stmt.EndPos, position) {
+				// get function call, assignment, and property access
+				if stmt.Ident != nil {
+					return &statement{
+						Statement: stmt,
+					}, nil
+				}
+				return StatementFromAst(reflect.ValueOf(stmt), position)
+			}
+		}
+	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
+		return StatementFromAst(v.Elem(), position)
+	} else if v.Kind() == reflect.Slice {
+		for i := 0; i < v.Len(); i++ {
+			stmt, err := StatementFromAst(v.Index(i), position)
+			if err != nil {
+				return nil, err
+			}
+			if stmt != nil {
+				return stmt, nil
+			}
+		}
+	} else if v.Kind() == reflect.Struct {
+		for i := 0; i < v.NumField(); i++ {
+			stmt, err := StatementFromAst(v.Field(i), position)
+			if err != nil {
+				return nil, err
+			}
+			if stmt != nil {
+				return stmt, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+// withInRange checks if the input position is within the range of the Expression
+func withInRange(exprPos Position, exprEndPos Position, pos Position) bool {
+	withInLineRange := pos.Line >= exprPos.Line &&
+		pos.Line <= exprEndPos.Line
+
+	withInColRange := pos.Column >= exprPos.Column &&
+		pos.Column <= exprEndPos.Column
+
+	onTheSameLine := pos.Line == exprEndPos.Line &&
+		pos.Line == exprPos.Line
+
+	if !withInLineRange || (onTheSameLine && !withInColRange) {
+		return false
+	}
+
+	return true
 }

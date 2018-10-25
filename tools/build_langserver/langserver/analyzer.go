@@ -181,59 +181,21 @@ func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) 
 		return nil, err
 	}
 
-	return a.getStatementByPos(stmts, position)
-}
-
-func (a *Analyzer) getStatementByPos(stmts []*asp.Statement, position lsp.Position) (*Statement, error) {
-	for _, stmt := range stmts {
-		if withInRange(stmt.Pos, stmt.EndPos, position) {
-			// get function call, assignment, and property access
-			if stmt.Ident != nil {
-				return &Statement{
-					Ident: a.identFromStatement(stmt),
-				}, nil
-			}
-			return a.statementFromAst(reflect.ValueOf(stmt), position)
-		}
+	//return a.statementFromAst(reflect.ValueOf(stmts), position)
+	statement, err := asp.StatementFromAst(reflect.ValueOf(stmts),
+		asp.Position{Line: position.Line + 1, Column: position.Character + 1})
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, nil
-}
-
-// statementFromAsp recursively finds asp.IdentStatement and asp.Expression in the ast
-// and returns a valid Statement pointer if within range
-func (a *Analyzer) statementFromAst(v reflect.Value, position lsp.Position) (*Statement, error) {
-	if v.Type() == reflect.TypeOf(asp.Expression{}) {
-		expr := v.Interface().(asp.Expression)
-		if withInRange(expr.Pos, expr.EndPos, position) {
+	if statement != nil {
+		if statement.Statement != nil {
 			return &Statement{
-				Expression: &expr,
+				Ident: a.identFromStatement(statement.Statement),
 			}, nil
-		}
-	} else if v.Type() == reflect.TypeOf([]*asp.Statement{}) && v.Len() != 0 {
-		stmts := v.Interface().([]*asp.Statement)
-		return a.getStatementByPos(stmts, position)
-	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
-		return a.statementFromAst(v.Elem(), position)
-	} else if v.Kind() == reflect.Slice {
-		for i := 0; i < v.Len(); i++ {
-			stmt, err := a.statementFromAst(v.Index(i), position)
-			if err != nil {
-				return nil, err
-			}
-			if stmt != nil {
-				return stmt, nil
-			}
-		}
-	} else if v.Kind() == reflect.Struct {
-		for i := 0; i < v.NumField(); i++ {
-			stmt, err := a.statementFromAst(v.Field(i), position)
-			if err != nil {
-				return nil, err
-			}
-			if stmt != nil {
-				return stmt, nil
-			}
+		} else if statement.Expression != nil {
+			return &Statement{
+				Expression: statement.Expression,
+			}, nil
 		}
 	}
 	return nil, nil
