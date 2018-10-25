@@ -527,6 +527,22 @@ func (config *Configuration) GetBuildEnv() []string {
 	return config.buildEnvStored.Env
 }
 
+// TagsToFields returns a map of string represent the properties of CONFIG object to the config Structfield
+func (config *Configuration) TagsToFields() map[string]reflect.StructField {
+	tags := make(map[string]reflect.StructField)
+	v := reflect.ValueOf(config).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		if field := v.Field(i); field.Kind() == reflect.Struct {
+			for j := 0; j < field.NumField(); j++ {
+				if tag := field.Type().Field(j).Tag.Get("var"); tag != "" {
+					tags[tag] = field.Type().Field(j)
+				}
+			}
+		}
+	}
+	return tags
+}
+
 // ApplyOverrides applies a set of overrides to the config.
 // The keys of the given map are dot notation for the config setting.
 func (config *Configuration) ApplyOverrides(overrides map[string]string) error {

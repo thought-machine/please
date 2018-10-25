@@ -43,6 +43,7 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 
 	return &lsp.Hover{
 		Contents: *content,
+		// TODO(bnmetrics): we can add range here later
 	}, nil
 }
 
@@ -58,7 +59,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 	}
 
 	// Get Hover Identifier
-	ident, err := analyzer.IdentFromPos(uri, position)
+	stmt, err := analyzer.StatementFromPos(uri, position)
 	if err != nil {
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
@@ -66,31 +67,39 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 		}
 	}
 
+	emptyContent := &lsp.MarkupContent{
+		Value: "",
+		Kind:  lsp.MarkDown,
+	}
 	// Return empty string if the hovered content is blank
-	if isEmpty(lineContent[0], position) {
-		return &lsp.MarkupContent{
-			Value: "",
-			Kind:  lsp.MarkDown,
-		}, nil
+	if isEmpty(lineContent[0], position) || stmt == nil {
+		return emptyContent, nil
 	}
 
 	var contentString string
 	var contentErr error
-	switch ident.Type {
-	case "call":
-		identArgs := ident.Action.Call.Arguments
-		contentString, contentErr = contentFromCall(ctx, analyzer, identArgs, ident.Name,
+	if stmt.Ident != nil {
+		ident := stmt.Ident
+		switch ident.Type {
+		case "call":
+			identArgs := ident.Action.Call.Arguments
+			contentString, contentErr = contentFromCall(ctx, analyzer, identArgs, ident.Name,
+				lineContent[0], position, uri)
+		case "property":
+			contentString, contentErr = contentFromProperty(ctx, analyzer, ident.Action.Property,
+				lineContent[0], position, uri)
+		case "assign":
+			contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.Assign,
+				lineContent[0], position, uri)
+		case "augAssign":
+			contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.AugAssign,
+				lineContent[0], position, uri)
+		default:
+			return emptyContent, nil
+		}
+	} else if stmt.Expression != nil {
+		contentString, contentErr = contentFromExpression(ctx, analyzer, stmt.Expression,
 			lineContent[0], position, uri)
-	case "property":
-		//TODO(bnmetrics)
-	case "assign":
-		contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.Assign,
-			lineContent[0], position, uri)
-	case "augAssign":
-		contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.AugAssign,
-			lineContent[0], position, uri)
-	default:
-		//TODO(bnmetrics): handle cases when ident.Action is nil
 	}
 
 	if contentErr != nil {
@@ -99,7 +108,6 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 			Message: fmt.Sprintf("fail to get content from Build file %s", uri),
 		}
 	}
-
 	return &lsp.MarkupContent{
 		Value: contentString,
 		Kind:  lsp.MarkDown, // TODO(bnmetrics): this might be reconsidered

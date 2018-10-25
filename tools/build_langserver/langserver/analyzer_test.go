@@ -22,35 +22,40 @@ func TestNewAnalyzer(t *testing.T) {
 	assert.Equal(t, true, goLibrary.ArgMap["name"].required)
 }
 
-func TestIdentFromPos(t *testing.T) {
+func TestAspStatementFromFile(t *testing.T) {
 	a := newAnalyzer()
 
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
 	uri := lsp.DocumentURI("file://" + filePath)
 
-	ident, _ := a.IdentFromPos(uri, lsp.Position{Line: 8, Character: 5})
-	assert.NotEqual(t, nil, ident)
-	assert.Equal(t, "go_library", ident.Name)
+	stmts, err := a.AspStatementFromFile(uri)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, stmts[0].Ident.Name, "go_library")
 
-	ident, _ = a.IdentFromPos(uri, lsp.Position{Line: 18, Character: 0})
-	assert.True(t, nil == ident)
+	assert.Equal(t, stmts[1].Ident.Name, "go_test")
 }
 
-func TestIdentFromFile(t *testing.T) {
+func TestStatementFromPos(t *testing.T) {
 	a := newAnalyzer()
 
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
 	uri := lsp.DocumentURI("file://" + filePath)
 
-	idents, err := a.IdentFromFile(uri)
+	stmt, err := a.StatementFromPos(uri, lsp.Position{Line: 2, Character: 13})
 	assert.Equal(t, err, nil)
-	assert.Equal(t, idents[0].Name, "go_library")
-	assert.Equal(t, idents[0].StartLine, 0)
-	assert.Equal(t, idents[0].EndLine, 17)
+	assert.Equal(t, "call", stmt.Ident.Type)
+	assert.Equal(t, "go_library", stmt.Ident.Name)
+	assert.Equal(t, "name", stmt.Ident.Action.Call.Arguments[0].Name)
 
-	assert.Equal(t, idents[1].Name, "go_test")
-	assert.Equal(t, idents[1].StartLine, 19)
-	assert.Equal(t, idents[1].EndLine, 31)
+	// Test on blank Area
+	stmt, err = a.StatementFromPos(uri, lsp.Position{Line: 18, Character: 50})
+	assert.Equal(t, err, nil)
+	assert.True(t, nil == stmt)
+
+	// Test out of range
+	stmt, err = a.StatementFromPos(uri, lsp.Position{Line: 100, Character: 50})
+	assert.Equal(t, err, nil)
+	assert.True(t, nil == stmt)
 }
 
 func TestNewRuleDef(t *testing.T) {
@@ -134,7 +139,7 @@ func TestGetArgString(t *testing.T) {
 	assert.Equal(t, getArgString(argWithoutVal), "name required:true, type:string")
 }
 
-func TestBuildLabelPath(t *testing.T) {
+func TestBuildLabelFromString(t *testing.T) {
 	a := newAnalyzer()
 	ctx := context.Background()
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
@@ -183,7 +188,7 @@ func TestBuildLabelPath(t *testing.T) {
 		uri, "//src/parse/...")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "BuildLabel includes all subpackages in path: "+ path.Join(core.RepoRoot, "src/parse"),
+	assert.Equal(t, "BuildLabel includes all subpackages in path: "+path.Join(core.RepoRoot, "src/parse"),
 		label.BuildDefContent)
 
 	// Test case for All targets in a BUILD file: "//src/parse:all"
@@ -191,7 +196,7 @@ func TestBuildLabelPath(t *testing.T) {
 		uri, "//src/parse:all")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "BuildLabel includes all BuildTargets in BUILD file: "+ path.Join(core.RepoRoot, "src/parse/BUILD"),
+	assert.Equal(t, "BuildLabel includes all BuildTargets in BUILD file: "+path.Join(core.RepoRoot, "src/parse/BUILD"),
 		label.BuildDefContent)
 
 	// Test case for shortended BuildLabel

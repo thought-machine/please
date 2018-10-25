@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"cli"
+	"reflect"
 	"strings"
 )
 
@@ -354,4 +355,12 @@ Available commands for this repository:
   auth          Authenticates you.
   query owners  Queries owners of a thing.
 `, buf.String())
+}
+
+func TestGetTags(t *testing.T) {
+	config := DefaultConfiguration()
+	tags := config.TagsToFields()
+
+	assert.Equal(t, "Version", tags["PLZ_VERSION"].Name)
+	assert.True(t, tags["PLZ_VERSION"].Type == reflect.TypeOf(cli.Version{}))
 }

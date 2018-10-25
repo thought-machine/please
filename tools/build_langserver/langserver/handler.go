@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"sync"
 
+	"tools/build_langserver/lsp"
+
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
-
-	"tools/build_langserver/lsp"
 )
 
 var log = logging.MustGetLogger("lsp")
