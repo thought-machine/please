@@ -59,21 +59,21 @@ func FindArgument(statement *Statement, args ...string) *CallArgument {
 	return nil
 }
 
-// Statement is a simplified version of asp.Statement
+// StatementLite is a simplified version of asp.Statement
 // Here we only care about statement with Idents and Expressions
 // In the future we can also add more fields in this struct
-type statement struct {
+type StatementLite struct {
 	Statement  *Statement
 	Expression *Expression
 }
 
 // StatementFromAst recursively finds asp.IdentStatement and asp.Expression in the ast
 // and returns a valid statement pointer if within range
-func StatementFromAst(v reflect.Value, position Position) (*statement, error) {
+func StatementFromAst(v reflect.Value, position Position) (*StatementLite, error) {
 	if v.Type() == reflect.TypeOf(Expression{}) {
 		expr := v.Interface().(Expression)
 		if withInRange(expr.Pos, expr.EndPos, position) {
-			return &statement{
+			return &StatementLite{
 				Expression: &expr,
 			}, nil
 		}
@@ -83,7 +83,7 @@ func StatementFromAst(v reflect.Value, position Position) (*statement, error) {
 			if withInRange(stmt.Pos, stmt.EndPos, position) {
 				// get function call, assignment, and property access
 				if stmt.Ident != nil {
-					return &statement{
+					return &StatementLite{
 						Statement: stmt,
 					}, nil
 				}
