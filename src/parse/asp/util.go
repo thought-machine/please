@@ -59,23 +59,17 @@ func FindArgument(statement *Statement, args ...string) *CallArgument {
 	return nil
 }
 
-// StatementLite is a simplified version of asp.Statement
-// Here we only care about statement with Idents and Expressions
-// In the future we can also add more fields in this struct
-type StatementLite struct {
-	Statement  *Statement
-	Expression *Expression
-}
-
 // StatementFromAst recursively finds asp.IdentStatement and asp.Expression in the ast
 // and returns a valid statement pointer if within range
-func StatementFromAst(v reflect.Value, position Position) (*StatementLite, error) {
+func StatementOrExpressionFromAst(stmts []*Statement, position Position) (statement *Statement, expression *Expression) {
+	return getStatementOrExpressionFromAst(reflect.ValueOf(stmts), position)
+}
+
+func getStatementOrExpressionFromAst(v reflect.Value, position Position) (statement *Statement, expression *Expression) {
 	if v.Type() == reflect.TypeOf(Expression{}) {
 		expr := v.Interface().(Expression)
 		if withInRange(expr.Pos, expr.EndPos, position) {
-			return &StatementLite{
-				Expression: &expr,
-			}, nil
+			return nil, &expr
 		}
 	} else if v.Type() == reflect.TypeOf([]*Statement{}) && v.Len() != 0 {
 		stmts := v.Interface().([]*Statement)
@@ -83,33 +77,25 @@ func StatementFromAst(v reflect.Value, position Position) (*StatementLite, error
 			if withInRange(stmt.Pos, stmt.EndPos, position) {
 				// get function call, assignment, and property access
 				if stmt.Ident != nil {
-					return &StatementLite{
-						Statement: stmt,
-					}, nil
+					return stmt, nil
 				}
-				return StatementFromAst(reflect.ValueOf(stmt), position)
+				return getStatementOrExpressionFromAst(reflect.ValueOf(stmt), position)
 			}
 		}
 	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
-		return StatementFromAst(v.Elem(), position)
+		return getStatementOrExpressionFromAst(v.Elem(), position)
 	} else if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
-			stmt, err := StatementFromAst(v.Index(i), position)
-			if err != nil {
-				return nil, err
-			}
-			if stmt != nil {
-				return stmt, nil
+			stmt, expr := getStatementOrExpressionFromAst(v.Index(i), position)
+			if expr != nil || stmt != nil {
+				return stmt, expr
 			}
 		}
 	} else if v.Kind() == reflect.Struct {
 		for i := 0; i < v.NumField(); i++ {
-			stmt, err := StatementFromAst(v.Field(i), position)
-			if err != nil {
-				return nil, err
-			}
-			if stmt != nil {
-				return stmt, nil
+			stmt, expr := getStatementOrExpressionFromAst(v.Field(i), position)
+			if expr != nil || stmt != nil {
+				return stmt, expr
 			}
 		}
 	}

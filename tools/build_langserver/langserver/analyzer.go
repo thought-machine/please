@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -182,21 +181,17 @@ func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) 
 	}
 
 	//return a.statementFromAst(reflect.ValueOf(stmts), position)
-	statement, err := asp.StatementFromAst(reflect.ValueOf(stmts),
+	statement, expr := asp.StatementOrExpressionFromAst(stmts,
 		asp.Position{Line: position.Line + 1, Column: position.Character + 1})
-	if err != nil {
-		return nil, err
-	}
+
 	if statement != nil {
-		if statement.Statement != nil {
-			return &Statement{
-				Ident: a.identFromStatement(statement.Statement),
-			}, nil
-		} else if statement.Expression != nil {
-			return &Statement{
-				Expression: statement.Expression,
-			}, nil
-		}
+		return &Statement{
+			Ident: a.identFromStatement(statement),
+		}, nil
+	} else if expr != nil {
+		return &Statement{
+			Expression: expr,
+		}, nil
 	}
 	return nil, nil
 }
