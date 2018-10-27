@@ -340,13 +340,21 @@ go_get(
 go_get(
     name = "memberlist",
     get = "github.com/hashicorp/memberlist",
-    revision = "7ad712f5f34ec40aebe6ca47756d07898486a8d2",
+    revision = "2072f3a3ff4b7b3d830be77678d5d4b978362bc4",
     deps = [
         ":dns",
         ":go-metrics",
         ":go-msgpack",
         ":go-multierror",
+        ":go-sockaddr",
+        ":seed",
     ],
+)
+
+go_get(
+    name = "seed",
+    get = "github.com/sean-/seed",
+    revision = "e2103e2c35297fb7e17febb81e49b312087a2372",
 )
 
 go_get(
@@ -373,6 +381,12 @@ go_get(
         ":go-immutable-radix",
         ":verify",
     ],
+)
+
+go_get(
+    name = "go-sockaddr",
+    get = "github.com/hashicorp/go-sockaddr",
+    revision = "6d291a969b86c4b633730bfc6b8b9d64c3aafed9",
 )
 
 go_get(

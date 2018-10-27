@@ -26,16 +26,22 @@ func TestBringUpCluster(t *testing.T) {
 	c2.Join([]string{"127.0.0.1:5995"})
 	log.Notice("c2 joined cluster")
 
+	// We want to get the address of the nodes; on a typical machine there are multiple
+	// available interfaces and memberlist will intelligently choose one. We don't want to
+	// try to second-guess their logic here so we sneakily grab whatever it thinks the
+	// local node's address is.
+	addr := c1.list.LocalNode().Addr.String()
+
 	expected := []*pb.Node{
 		{
 			Name:      "c1",
-			Address:   "127.0.0.1:6995",
+			Address:   addr + ":6995",
 			HashBegin: tools.HashPoint(0, 3),
 			HashEnd:   tools.HashPoint(1, 3),
 		},
 		{
 			Name:      "c2",
-			Address:   "127.0.0.1:6996",
+			Address:   addr + ":6996",
 			HashBegin: tools.HashPoint(1, 3),
 			HashEnd:   tools.HashPoint(2, 3),
 		},
@@ -52,19 +58,19 @@ func TestBringUpCluster(t *testing.T) {
 	expected = []*pb.Node{
 		{
 			Name:      "c1",
-			Address:   "127.0.0.1:6995",
+			Address:   addr + ":6995",
 			HashBegin: tools.HashPoint(0, 3),
 			HashEnd:   tools.HashPoint(1, 3),
 		},
 		{
 			Name:      "c2",
-			Address:   "127.0.0.1:6996",
+			Address:   addr + ":6996",
 			HashBegin: tools.HashPoint(1, 3),
 			HashEnd:   tools.HashPoint(2, 3),
 		},
 		{
 			Name:      "c3",
-			Address:   "127.0.0.1:6997",
+			Address:   addr + ":6997",
 			HashBegin: tools.HashPoint(2, 3),
 			HashEnd:   tools.HashPoint(3, 3),
 		},
