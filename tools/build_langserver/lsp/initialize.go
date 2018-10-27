@@ -16,7 +16,7 @@ var log = logging.MustGetLogger("lsp")
  *
  */
 
- // InitializeParams are params passed into `initialize` method request
+// InitializeParams are params passed into `initialize` method request
 type InitializeParams struct {
 	/**
 	 * The process Id of the parent process that started

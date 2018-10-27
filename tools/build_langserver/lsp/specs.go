@@ -8,7 +8,7 @@ type DocumentURI string
 
 // RequestCancelled is an error code specific to language server protocol
 // it is been used when the requests returns an error response on cancellation
-const RequestCancelled	int64 = -32800
+const RequestCancelled int64 = -32800
 
 // Position is the position in a text document expressed as zero-based line and zero-based character offset
 type Position struct {
@@ -94,7 +94,6 @@ type DiagnosticRelatedInformation struct {
 	 */
 	Message string `json:"message"`
 }
-
 
 // Command Represents a reference to a command.
 // Provides a title which will be used to represent a command in the UI.

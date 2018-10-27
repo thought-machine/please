@@ -22,13 +22,13 @@ type request struct {
 // newRequestStore constructs a new requestStore with an empty requests map
 func newRequestStore() *requestStore {
 	return &requestStore{
-		requests:make(map[jsonrpc2.ID]request),
+		requests: make(map[jsonrpc2.ID]request),
 	}
 }
 
 // IsEmpty checks if requestStore.requests is empty
 func (rs *requestStore) IsEmpty() bool {
-	if len(rs.requests) == 0  {
+	if len(rs.requests) == 0 {
 		return true
 	}
 	return false

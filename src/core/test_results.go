@@ -302,7 +302,7 @@ func MergeCoverageLines(existing, coverage []LineCoverage) []LineCoverage {
 // OrderedFiles returns an ordered slice of all the files we have coverage information for.
 // Note that files are ordered non-trivially such that each directory remains together.
 func (coverage *TestCoverage) OrderedFiles() []string {
-	var files []string
+	files := make([]string, 0, len(coverage.Files))
 	for file := range coverage.Files {
 		if strings.HasPrefix(file, RepoRoot) {
 			file = strings.TrimLeft(file[len(RepoRoot):], "/")

@@ -34,15 +34,6 @@ go_test(
 )
 
 go_test(
-    name = "test_step_test",
-    srcs = ["test_step_test.go"],
-    deps = [
-        ":test",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
     name = "container_test",
     srcs = ["container_test.go"],
     container = True,

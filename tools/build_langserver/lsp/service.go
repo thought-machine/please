@@ -2,7 +2,6 @@ package lsp
 
 import "github.com/sourcegraph/jsonrpc2"
 
-
 // ServerCapabilities Defines how text documents are synced.
 type ServerCapabilities struct {
 	/**

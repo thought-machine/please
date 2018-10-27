@@ -66,7 +66,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 // buildFilegroup runs the manual build steps for a filegroup rule.
 // We don't force this to be done in bash to avoid errors with maximum command lengths,
 // and it's actually quite fiddly to get just so there.
-func buildFilegroup(tid int, state *core.BuildState, target *core.BuildTarget) error {
+func buildFilegroup(state *core.BuildState, target *core.BuildTarget) error {
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return err
 	}

@@ -94,7 +94,7 @@ func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 // The first return value is true if parsing succeeds - if the error is still non-nil
 // that indicates that interpretation failed.
 func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker) (bool, error) {
-	stmts, err := p.parseAndHandleErrors(r, "")
+	stmts, err := p.parseAndHandleErrors(r)
 	if err != nil {
 		return false, err
 	}
@@ -137,7 +137,7 @@ func (p *Parser) parse(filename string) ([]*Statement, error) {
 	if err != nil {
 		return nil, err
 	}
-	stmts, err := p.parseAndHandleErrors(f, filename)
+	stmts, err := p.parseAndHandleErrors(f)
 	if err == nil {
 		// This appears a bit weird, but the error will still use the file if it's open
 		// to print additional information about it.
@@ -150,11 +150,11 @@ func (p *Parser) parse(filename string) ([]*Statement, error) {
 // The 'filename' argument is only used in case of errors so doesn't necessarily have to correspond to a real file.
 func (p *Parser) ParseData(data []byte, filename string) ([]*Statement, error) {
 	r := &namedReader{r: bytes.NewReader(data), name: filename}
-	return p.parseAndHandleErrors(r, filename)
+	return p.parseAndHandleErrors(r)
 }
 
 // parseAndHandleErrors handles errors nicely if the given input fails to parse.
-func (p *Parser) parseAndHandleErrors(r io.ReadSeeker, filename string) ([]*Statement, error) {
+func (p *Parser) parseAndHandleErrors(r io.ReadSeeker) ([]*Statement, error) {
 	input, err := parseFileInput(r)
 	if err == nil {
 		return input.Statements, nil

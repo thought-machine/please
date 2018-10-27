@@ -481,12 +481,10 @@ func (target *BuildTarget) GetTmpOutput(parseOutput string) string {
 // GetTmpOutputAll returns a slice of all the temporary outputs this is used in setting up environment for outputs,
 // e.g: OUTS, OUT
 func (target *BuildTarget) GetTmpOutputAll(parseOutputs []string) []string {
-	var tmpOutputs []string
-
-	for _, out := range parseOutputs {
-		tmpOutputs = append(tmpOutputs, target.GetTmpOutput(out))
+	tmpOutputs := make([]string, len(parseOutputs))
+	for i, out := range parseOutputs {
+		tmpOutputs[i] = target.GetTmpOutput(out)
 	}
-
 	return tmpOutputs
 }
 

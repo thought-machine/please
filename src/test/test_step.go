@@ -550,13 +550,6 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 	return xattr.LSet(to, xattrName, hash)
 }
 
-// calcNumRuns works out how many total runs we should have for a test, and how many successes
-// are required for it to count as success.
-// numRuns and flakiness default to 1 which mean run once.
-func calcNumRuns(numRuns, flakiness int) (int, int) {
-	return numRuns * flakiness, numRuns
-}
-
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
 func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
 	workerCmd, _, _ := build.TestWorkerCommand(state, target)
