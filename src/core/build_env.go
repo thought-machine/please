@@ -127,7 +127,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	if !target.Containerise {
 		env = append(env, "HOME="+testDir)
 	}
-	if state.NeedCoverage {
+	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
 		env = append(env, "COVERAGE=true", "COVERAGE_FILE="+path.Join(testDir, "test.coverage"))
 	}
 	if len(target.Outputs()) > 0 {
