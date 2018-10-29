@@ -132,6 +132,11 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 		log.Warning("The [aliases] section of .plzconfig is deprecated in favour of [alias]. See https://please.build/config.html for more information.")
 	}
 
+	// In a few versions we will deprecate Cpp.Coverage completely in favour of this more generic scheme.
+	if !config.Cpp.Coverage {
+		config.Test.DisableCoverage = append(config.Test.DisableCoverage, "cc")
+	}
+
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"test.defaultcontainer": config.Test.DefaultContainer,
@@ -343,6 +348,7 @@ type Configuration struct {
 		Timeout          cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
 		DefaultContainer string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only available option is 'docker', we expect to add support for more engines in future." options:"none,docker"`
 		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them using namespaces. Somewhat experimental, only works on Linux and requires please_sandbox to be installed separately." var:"TEST_SANDBOX"`
+		DisableCoverage  []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 	}
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`

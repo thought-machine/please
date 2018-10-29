@@ -53,7 +53,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	coverageFileName := path.Base(cachedCoverageFile)
 	outputFile := path.Join(target.TestDir(), "test.results")
 	coverageFile := path.Join(target.TestDir(), "test.coverage")
-	needCoverage := state.NeedCoverage && !target.NoTestOutput && (!target.HasLabel("cc") || state.Config.Cpp.Coverage)
+	needCoverage := state.NeedCoverage && !target.NoTestOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareShell {
