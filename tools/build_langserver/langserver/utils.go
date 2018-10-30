@@ -64,7 +64,9 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 	return "", fmt.Errorf(fmt.Sprintf("invalid path %s, path must be in repo root", absPath))
 }
 
+// PackageLabelFromURI returns a build label of a package
 func PackageLabelFromURI(uri lsp.DocumentURI) (string, error) {
+	// TODO(bnm): need to check if the build file matches the build file name set in config
 	filePath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return "", err
@@ -154,6 +156,7 @@ func TrimQuotes(str string) string {
 	return ""
 }
 
+// LooksLikeString returns true if the input string looks like a string
 func LooksLikeString(str string) bool {
 	if TrimQuotes(str) != "" {
 		return true
@@ -161,18 +164,22 @@ func LooksLikeString(str string) bool {
 	return false
 }
 
+// LooksLikeAttribute returns true if the input string looks like an attribute: "hello".
 func LooksLikeAttribute(str string) bool {
 	return mustMatch(`(\.[\w]*)$`, str)
 }
 
+// LooksLikeCONFIGAttr returns true if the input string looks like an attribute of CONFIG object: CONFIG.PLZ_VERSION
 func LooksLikeCONFIGAttr(str string) bool {
 	return mustMatch(`(CONFIG\.[\w]*)$`, str)
 }
 
+// LooksLikeStringAttr returns true if the input string looks like an attribute of string: "hello".format()
 func LooksLikeStringAttr(str string) bool {
 	return mustMatch(`((".*"|'.*')\.\w*)$`, str)
 }
 
+// LooksLikeDictAttr returns true if the input string looks like an attribute of dict
 // e.g. {"foo": 1, "bar": "baz"}.keys()
 func LooksLikeDictAttr(str string) bool {
 	return mustMatch(`({.*}\.\w*)$`, str)

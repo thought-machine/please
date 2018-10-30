@@ -74,10 +74,8 @@ type CompletionContext struct {
 	TriggerCharacter string                `json:"triggerCharacter,omitempty"`
 }
 
-/**
- * CompletionList Represents a collection of [completion items](#CompletionItem) to be presented
- * in the editor.
- */
+// CompletionList Represents a collection of [completion items](#CompletionItem) to be presented
+// in the editor.
 type CompletionList struct {
 	IsIncomplete bool              `json:"isIncomplete"`
 	Items        []*CompletionItem `json:"items"`

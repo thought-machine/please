@@ -46,35 +46,25 @@ const (
 type CompletionTriggerKind int
 
 const (
-	/**
-	 * Invoked means Completion was triggered by typing an identifier (24x7 code
-	 * complete), manual invocation (e.g Ctrl+Space) or via API.
-	 */
+	// Invoked means Completion was triggered by typing an identifier (24x7 code
+	// complete), manual invocation (e.g Ctrl+Space) or via API.
 	Invoked CompletionItemKind = 1
 
-	/**
-	 * TriggerCharacter means Completion was triggered by a trigger character specified by
-	 * the `triggerCharacters` properties of the `CompletionRegistrationOptions`.
-	 */
+	// TriggerCharacter means Completion was triggered by a trigger character specified by
+	//the `triggerCharacters` properties of the `CompletionRegistrationOptions`.
 	TriggerCharacter CompletionItemKind = 2
 
-	/**
-	 * TriggerForIncompleteCompletions Completion was re-triggered as the current
-	 * completion list is incomplete.
-	 */
+	// TriggerForIncompleteCompletions was re-triggered as the current
+	// completion list is incomplete.
 	TriggerForIncompleteCompletions CompletionItemKind = 3
 )
 
-/**
- * InsertTextFormat defines whether the insert text in a completion item should be interpreted as
- * plain text or a snippet.
- */
+// InsertTextFormat defines whether the insert text in a completion item should be interpreted as
+// plain text or a snippet.
 type InsertTextFormat int
 
 const (
-	/**
-	 * ITFPlainText The primary text to be inserted is treated as a plain string.
-	 */
+	// ITFPlainText The primary text to be inserted is treated as a plain string.
 	ITFPlainText InsertTextFormat = 1
 	// ITFSnippet is the primary text to be inserted is treated as a snippet.
 	ITFSnippet InsertTextFormat = 2

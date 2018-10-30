@@ -94,7 +94,7 @@ func itemsFromBuildLabel(lineContent string, analyzer *Analyzer,
 	var labels []string
 	if strings.HasPrefix(lineContent, ":") {
 		// Get relative labels in the current file
-		buildDefs, err := analyzer.BuildDefFromUri(uri)
+		buildDefs, err := analyzer.BuildDefsFromURI(uri)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +103,7 @@ func itemsFromBuildLabel(lineContent string, analyzer *Analyzer,
 		}
 	} else if strings.HasSuffix(lineContent, ":") && strings.HasPrefix(lineContent, "//") {
 		targetURI := analyzer.BuildFileURIFromPackage(lineContent[2 : len(lineContent)-1])
-		buildDefs, err := analyzer.BuildDefFromUri(targetURI)
+		buildDefs, err := analyzer.BuildDefsFromURI(targetURI)
 		if err != nil {
 			return nil, err
 		}

@@ -57,6 +57,8 @@ type Identifier struct {
 	EndPos lsp.Position
 }
 
+// BuildDef is the definition for a build target.
+// often a function call using a specific build rule
 type BuildDef struct {
 	*Identifier
 	BuildDefName string
@@ -326,7 +328,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 
 // getBuildDefByName returns an Identifier object of a BuildDef(call of a Build rule) based the name
 func (a *Analyzer) getBuildDefByName(name string, path string) (*BuildDef, error) {
-	buildDefs, err := a.BuildDefFromUri(lsp.DocumentURI(path))
+	buildDefs, err := a.BuildDefsFromURI(lsp.DocumentURI(path))
 	if err != nil {
 		return nil, err
 	}
@@ -338,8 +340,8 @@ func (a *Analyzer) getBuildDefByName(name string, path string) (*BuildDef, error
 	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
 }
 
-// BuildDefFromUri returns a map of buildDefname : *BuildDef
-func (a *Analyzer) BuildDefFromUri(uri lsp.DocumentURI) (map[string]*BuildDef, error) {
+// BuildDefsFromURI returns a map of buildDefname : *BuildDef
+func (a *Analyzer) BuildDefsFromURI(uri lsp.DocumentURI) (map[string]*BuildDef, error) {
 	// Get all the statements from the build file
 	stmts, err := a.AspStatementFromFile(uri)
 	if err != nil {
@@ -395,11 +397,15 @@ func (a *Analyzer) BuildDefFromUri(uri lsp.DocumentURI) (map[string]*BuildDef, e
 	return buildDefs, nil
 }
 
+// BuildFileURIFromPackage takes a relative(to the reporoot) package directory, and returns a build file path
 func (a *Analyzer) BuildFileURIFromPackage(packageDir string) lsp.DocumentURI {
 	for _, i := range a.State.Config.Parse.BuildFileName {
-		BuildFilePath := path.Join(core.RepoRoot, packageDir, i)
-		if fs.FileExists(BuildFilePath) {
-			return lsp.DocumentURI(BuildFilePath)
+		buildFilePath := path.Join(packageDir, i)
+		if !strings.HasPrefix(packageDir, core.RepoRoot) {
+			buildFilePath = path.Join(core.RepoRoot, buildFilePath)
+		}
+		if fs.FileExists(buildFilePath) {
+			return lsp.DocumentURI(buildFilePath)
 		}
 	}
 	return lsp.DocumentURI("")
