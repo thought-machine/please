@@ -37,7 +37,7 @@ func BuildRemotely(state *core.BuildState, target *core.BuildTarget, worker stri
 	if err != nil {
 		return nil, err
 	}
-	ch := make(chan *Response, 1)
+	ch := make(chan *Response, 2)
 	w.responseMutex.Lock()
 	w.responses[req.Rule] = ch
 	w.responseMutex.Unlock()
@@ -48,9 +48,16 @@ func BuildRemotely(state *core.BuildState, target *core.BuildTarget, worker stri
 		go core.LogProgress(ctx, target, "building (using "+worker+")")
 	}
 
+	// Time out this request appropriately
+	ctx, cancel := context.WithTimeout(context.Background(), core.TargetTimeoutOrDefault(target, state))
+	defer cancel()
 	w.requests <- req
-	response := <-ch
-	return response, nil
+	select {
+	case response := <-ch:
+		return response, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 // ProvideParse sends a request to a subprocess to derive pseudo-contents of a BUILD file from
@@ -167,8 +174,12 @@ func (w *workerServer) dispatchResponse(response *Response) {
 
 // wait waits for the process to terminate. If it dies unexpectedly this handles various failures.
 func (w *workerServer) wait() {
-	if err := w.process.Wait(); err != nil && !w.closing {
-		log.Error("Worker process died unexpectedly: %s", err)
+	if err := w.process.Wait(); !w.closing {
+		if err != nil {
+			log.Error("Worker process died unexpectedly: %s", err)
+		} else {
+			log.Error("Worker process terminated unexpectedly")
+		}
 		w.responseMutex.Lock()
 		defer w.responseMutex.Unlock()
 		for label, ch := range w.responses {
