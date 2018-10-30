@@ -7,11 +7,11 @@ go_library(
     visibility = ["//tools/build_langserver/..."],
     deps = [
         "//src/core",
-        "//src/query",
         "//src/fs",
         "//src/parse",
         "//src/parse/asp",
         "//src/parse/rules",
+        "//src/query",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
         "//tools/build_langserver/lsp",
@@ -20,12 +20,10 @@ go_library(
 
 go_test(
     name = "langserver_test",
-    srcs = [
-        "analyzer_test.go",
-        "handler_test.go",
-        "hover_test.go",
-        "completion_test.go"
-    ],
+    srcs = glob(
+        ["*_test.go"],
+        exclude = ["utils_test.go"],
+    ),
     data = ["test_data"],
     deps = [
         ":langserver",
