@@ -1,13 +1,14 @@
+package(default_visibility = ["PUBLIC"])
+
 go_library(
     name = "langserver",
     srcs = glob(
         ["*.go"],
         exclude = ["*_test.go"],
     ),
-    visibility = ["//tools/build_langserver/..."],
+    visibility = ["//tools/build_langserver/...", "//src/core"],
     deps = [
         "//src/core",
-        "//src/query",
         "//src/fs",
         "//src/parse",
         "//src/parse/asp",
@@ -20,25 +21,14 @@ go_library(
 
 go_test(
     name = "langserver_test",
-    srcs = [
-        "analyzer_test.go",
-        "handler_test.go",
-        "hover_test.go",
-        "completion_test.go"
+    srcs = ["handler_test.go",
+            "analyzer_test.go",
+            "hover_test.go",
     ],
     data = ["test_data"],
     deps = [
         ":langserver",
         "//src/parse/rules",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "utils_test",
-    srcs = ["utils_test.go"],
-    deps = [
-        ":langserver",
         "//third_party/go:testify",
     ],
 )

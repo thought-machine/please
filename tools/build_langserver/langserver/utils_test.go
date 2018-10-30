@@ -62,6 +62,15 @@ func TestGetPathFromURLFail(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestPackageLabelFromURI(t *testing.T) {
+	filePath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
+	uri := lsp.DocumentURI("file://" + filePath)
+	label, err := PackageLabelFromURI(uri)
+
+	assert.Equal(t, err, nil)
+	assert.Equal(t, "//tools/build_langserver/langserver", label)
+}
+
 func TestEnsureURL(t *testing.T) {
 	currentFile, err := getFileinCwd("utils_test.go")
 	assert.Equal(t, err, nil)
@@ -110,7 +119,7 @@ func TestGetLineContent(t *testing.T) {
 	ctx := context.Background()
 	filepath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/test_data/example.build")
 	pos := lsp.Position{
-		Line: 0,
+		Line:      0,
 		Character: 0,
 	}
 
@@ -123,17 +132,61 @@ func TestTrimQoutes(t *testing.T) {
 	trimed := TrimQuotes("\"blah\"")
 	assert.Equal(t, trimed, "blah")
 
-	trimed= TrimQuotes("\"//src/core\",")
+	trimed = TrimQuotes("\"//src/core\",")
 	assert.Equal(t, "//src/core", trimed)
 
-	trimed= TrimQuotes("'blah")
+	trimed = TrimQuotes("'blah")
 	assert.Equal(t, "", trimed)
-
 
 	// this is to make sure our regex works,
 	// so it doesn't just match anything with a build label
-	trimed= TrimQuotes("visibility = [\"//tools/build_langserver/...\", \"//src/core\"]")
+	trimed = TrimQuotes("visibility = [\"//tools/build_langserver/...\", \"//src/core\"]")
 	assert.Equal(t, "", trimed)
+}
+
+func TestLooksLikeAttribute(t *testing.T) {
+	assert.True(t, LooksLikeAttribute("CONFIG."))
+	assert.True(t, LooksLikeAttribute("CONFIG.J"))
+	assert.True(t, LooksLikeAttribute("		CONFIG.J"))
+	assert.True(t, LooksLikeAttribute("		\"blah\".for"))
+	assert.True(t, LooksLikeAttribute("		\"blah\"."))
+	assert.True(t, LooksLikeAttribute("	mystr = \"{time}-{message}\".fo"))
+
+	assert.False(t, LooksLikeAttribute("		func(ca"))
+	assert.False(t, LooksLikeAttribute("call_assign = subinclude(\"//build_defs:fpm\")"))
+	assert.False(t, LooksLikeAttribute("     \"//tools/build_langserver/lsp\","))
+	assert.False(t, LooksLikeAttribute("    augassign += len(replace_str)"))
+}
+
+func TestLooksLikeCONFIGAttr(t *testing.T) {
+	assert.True(t, LooksLikeCONFIGAttr("CONFIG."))
+	assert.True(t, LooksLikeCONFIGAttr("CONFIG.J"))
+	assert.True(t, LooksLikeCONFIGAttr("		CONFIG.J"))
+	assert.True(t, LooksLikeCONFIGAttr("		CONFIG.9"))
+
+	assert.False(t, LooksLikeCONFIGAttr("CONFIG = BLAH."))
+	assert.False(t, LooksLikeCONFIGAttr("CONFIG.BLAH = \"hello\""))
+	assert.False(t, LooksLikeCONFIGAttr("func(ca"))
+}
+
+func TestLooksLikeStringAttr(t *testing.T) {
+	assert.True(t, LooksLikeStringAttr("\"{time}-{message}\"."))
+	assert.True(t, LooksLikeStringAttr("'{time}-{message}'."))
+	assert.True(t, LooksLikeStringAttr("	'message'."))
+	assert.True(t, LooksLikeStringAttr("blah = 'message'."))
+
+	// Test fail when quotes style don't match
+	assert.False(t, LooksLikeStringAttr("\"foo'."))
+}
+
+func TestLooksLikeDictAttr(t *testing.T) {
+	assert.True(t, LooksLikeDictAttr("{\"foo\":2, \"bar\":\"baz\"}."))
+	assert.True(t, LooksLikeDictAttr("{\"foo\":2}."))
+	assert.True(t, LooksLikeDictAttr("{\"foo\":2}.k"))
+	assert.True(t, LooksLikeDictAttr("{\"foo\":2}.keys"))
+
+	// Ensure completed call does not get triggered
+	assert.False(t, LooksLikeDictAttr("{\"foo\":2}.keys()"))
 }
 
 /*

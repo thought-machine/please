@@ -4,7 +4,6 @@ import (
 	"context"
 	"core"
 	"os"
-	"path"
 	"strings"
 	"testing"
 	"tools/build_langserver/lsp"
@@ -18,17 +17,10 @@ func TestMain(m *testing.M) {
 	os.Exit(retCode)
 }
 
-var filePath = path.Join("tools/build_langserver/langserver/test_data/example.build")
-var exampleBuildURI = lsp.DocumentURI("file://" + filePath)
-
-var assignPath = path.Join("tools/build_langserver/langserver/test_data/assignment.build")
-var assignBuildURI = lsp.DocumentURI("file://" + assignPath)
-
-var propPath = path.Join("tools/build_langserver/langserver/test_data/property.build")
-var propURI = lsp.DocumentURI("file://" + propPath)
-
-var miscPath = path.Join("tools/build_langserver/langserver/test_data/misc.build")
-var miscURI = lsp.DocumentURI("file://" + miscPath)
+var exampleBuildURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example.build")
+var assignBuildURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/assignment.build")
+var propURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/property.build")
+var miscURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/misc.build")
 
 var analyzer = newAnalyzer()
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -43,7 +44,6 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 	if err != nil {
 		return "", err
 	}
-
 	if strings.HasPrefix(absPath, core.RepoRoot) {
 		pathType = strings.ToLower(pathType)
 		switch pathType {
@@ -62,6 +62,16 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 	}
 
 	return "", fmt.Errorf(fmt.Sprintf("invalid path %s, path must be in repo root", absPath))
+}
+
+func PackageLabelFromURI(uri lsp.DocumentURI) (string, error) {
+	filePath, err := GetPathFromURL(uri, "file")
+	if err != nil {
+		return "", err
+	}
+	pathDir := path.Dir(strings.TrimPrefix(filePath, core.RepoRoot))
+
+	return "/" + pathDir, nil
 }
 
 // ReadFile takes a DocumentURI and reads the file into a slice of string
@@ -146,6 +156,32 @@ func TrimQuotes(str string) string {
 
 func LooksLikeString(str string) bool {
 	if TrimQuotes(str) != "" {
+		return true
+	}
+	return false
+}
+
+func LooksLikeAttribute(str string) bool {
+	return mustMatch(`(\.[\w]*)$`, str)
+}
+
+func LooksLikeCONFIGAttr(str string) bool {
+	return mustMatch(`(CONFIG\.[\w]*)$`, str)
+}
+
+func LooksLikeStringAttr(str string) bool {
+	return mustMatch(`((".*"|'.*')\.\w*)$`, str)
+}
+
+// e.g. {"foo": 1, "bar": "baz"}.keys()
+func LooksLikeDictAttr(str string) bool {
+	return mustMatch(`({.*}\.\w*)$`, str)
+}
+
+func mustMatch(pattern string, str string) bool {
+	re := regexp.MustCompile(pattern)
+	matched := re.FindString(str)
+	if matched != "" {
 		return true
 	}
 	return false

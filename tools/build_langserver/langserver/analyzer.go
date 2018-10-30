@@ -21,7 +21,7 @@ import (
 // This is being loaded into a handler on initialization
 type Analyzer struct {
 	parser *asp.Parser
-	state  *core.BuildState
+	State  *core.BuildState
 
 	BuiltIns   map[string]*RuleDef
 	Attributes map[string][]*RuleDef
@@ -35,7 +35,7 @@ type RuleDef struct {
 	Header string
 	ArgMap map[string]*Argument
 
-	// This applies when the FuncDef is a method
+	// This applies when the FuncDef is a attribute of an object
 	Object string
 }
 
@@ -57,6 +57,12 @@ type Identifier struct {
 	EndPos lsp.Position
 }
 
+type BuildDef struct {
+	*Identifier
+	BuildDefName string
+	Visibility   []string
+}
+
 // Statement is a simplified version of asp.Statement
 // Here we only care about Idents and Expressions
 type Statement struct {
@@ -72,7 +78,7 @@ type BuildLabel struct {
 	Path string
 	// IdentStatement for the build definition,
 	// usually the call to the specific buildrule, such as "go_library()"
-	BuildDef *Identifier
+	BuildDef *BuildDef
 	// The content of the build definition
 	BuildDefContent string
 }
@@ -85,7 +91,7 @@ func newAnalyzer() *Analyzer {
 
 	a := &Analyzer{
 		parser: parser,
-		state:  state,
+		State:  state,
 	}
 	a.builtInsRules()
 
@@ -284,7 +290,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 	}
 
 	// Get the BuildDef and BuildDefContent for the BuildLabel
-	var buildDef *Identifier
+	var buildDef *BuildDef
 	var buildDefContent string
 
 	// Check for cases such as "//tools/build_langserver/..."
@@ -319,27 +325,84 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 }
 
 // getBuildDefByName returns an Identifier object of a BuildDef(call of a Build rule) based the name
-func (a *Analyzer) getBuildDefByName(name string, path string) (*Identifier, error) {
-	// Get all the statements from the build file
-	stmts, err := a.AspStatementFromFile(lsp.DocumentURI(path))
+func (a *Analyzer) getBuildDefByName(name string, path string) (*BuildDef, error) {
+	buildDefs, err := a.BuildDefFromUri(lsp.DocumentURI(path))
 	if err != nil {
 		return nil, err
 	}
 
+	if buildDef, ok := buildDefs[name]; ok {
+		return buildDef, nil
+	}
+
+	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
+}
+
+// BuildDefFromUri returns a map of buildDefname : *BuildDef
+func (a *Analyzer) BuildDefFromUri(uri lsp.DocumentURI) (map[string]*BuildDef, error) {
+	// Get all the statements from the build file
+	stmts, err := a.AspStatementFromFile(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	buildDefs := make(map[string]*BuildDef)
+	var defaultVisibility []string
 	for _, stmt := range stmts {
+		if stmt.Ident == nil {
+			continue
+		}
 		ident := a.identFromStatement(stmt)
 		if ident.Type != "call" {
 			continue
 		}
 
+		// Filling in buildDef struct based on arg
+		var buildDef *BuildDef
 		for _, arg := range ident.Action.Call.Arguments {
-			if arg.Name == "name" && TrimQuotes(arg.Value.Val.String) == name {
-				return ident, nil
+			switch arg.Name {
+			case "default_visibility":
+				defaultVisibility = aspListToStrSlice(arg.Value.Val.List)
+			case "name":
+				buildDef = &BuildDef{
+					Identifier:   ident,
+					BuildDefName: TrimQuotes(arg.Value.Val.String),
+				}
+			case "visibility":
+				if buildDefs != nil {
+					buildDef.Visibility = aspListToStrSlice(arg.Value.Val.List)
+				}
 			}
 		}
-	}
 
-	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
+		// Set visibility
+		if buildDef != nil {
+			if buildDef.Visibility == nil {
+				if len(defaultVisibility) > 0 {
+					buildDef.Visibility = defaultVisibility
+				} else {
+					currentPkg, err := PackageLabelFromURI(uri)
+					if err != nil {
+						return nil, err
+					}
+					buildDef.Visibility = []string{currentPkg}
+				}
+			}
+			buildDefs[buildDef.BuildDefName] = buildDef
+		}
+
+	}
+	return buildDefs, nil
+}
+
+func (a *Analyzer) BuildFileURIFromPackage(packageDir string) lsp.DocumentURI {
+	for _, i := range a.State.Config.Parse.BuildFileName {
+		BuildFilePath := path.Join(core.RepoRoot, packageDir, i)
+		if fs.FileExists(BuildFilePath) {
+			return lsp.DocumentURI(BuildFilePath)
+		}
+	}
+	return lsp.DocumentURI("")
 }
 
 // e.g. src type:list, required:false
@@ -352,4 +415,15 @@ func getArgString(argument asp.Argument) string {
 		argString += ", type:" + argType
 	}
 	return argString
+}
+
+func aspListToStrSlice(listVal *asp.List) []string {
+	var retSlice []string
+
+	for _, i := range listVal.Values {
+		if i.Val.String != "" {
+			retSlice = append(retSlice, TrimQuotes(i.Val.String))
+		}
+	}
+	return retSlice
 }

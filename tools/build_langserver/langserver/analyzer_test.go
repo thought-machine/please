@@ -223,6 +223,19 @@ func TestBuildLabelFromString(t *testing.T) {
 	assert.Equal(t, "Subrepo label: @mysubrepo//spam/eggs:ham", label.BuildDefContent)
 }
 
+func TestAnalyzer_BuildDefFromUri(t *testing.T) {
+	buildDefs, err := analyzer.BuildDefFromUri(exampleBuildURI)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, 4, len(buildDefs))
+	assert.Equal(t, []string{"//tools/build_langserver/...", "//src/core"}, buildDefs["langserver"].Visibility)
+	t.Log(buildDefs["langserver_test"].Visibility)
+
+	exampleBuildURI2 := lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example2.build")
+	buildDefs, err = analyzer.BuildDefFromUri(exampleBuildURI2)
+	assert.Equal(t, 2, len(buildDefs))
+	assert.Equal(t, []string{"PUBLIC"}, buildDefs["langserver_test"].Visibility)
+}
+
 /************************
  * Helper functions
  ************************/

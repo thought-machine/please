@@ -1,1 +1,4 @@
-CONFIG.
+name = "langserver_test"
+
+go_test(
+    name = name.replace('_', '-')
