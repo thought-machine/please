@@ -33,6 +33,10 @@ var workerMutex sync.Mutex
 
 // BuildRemotely runs a single build request and returns its response.
 func BuildRemotely(state *core.BuildState, target *core.BuildTarget, worker string, req *Request) (*Response, error) {
+	return buildRemotely(state, target, worker, "building (using "+worker+")", req)
+}
+
+func buildRemotely(state *core.BuildState, target *core.BuildTarget, worker, msg string, req *Request) (*Response, error) {
 	w, err := getOrStartWorker(state, worker)
 	if err != nil {
 		return nil, err
@@ -45,7 +49,7 @@ func BuildRemotely(state *core.BuildState, target *core.BuildTarget, worker stri
 	if target != nil {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		go core.LogProgress(ctx, target, "building (using "+worker+")")
+		go core.LogProgress(ctx, target, msg)
 	}
 
 	// Time out this request appropriately
@@ -80,9 +84,9 @@ func ProvideParse(state *core.BuildState, worker string, dir string) (string, er
 }
 
 // EnsureWorkerStarted ensures that a worker server is started and has responded saying it's ready.
-func EnsureWorkerStarted(state *core.BuildState, worker string, label core.BuildLabel) error {
-	resp, err := BuildRemotely(state, nil, worker, &Request{
-		Rule: label.String(),
+func EnsureWorkerStarted(state *core.BuildState, worker string, target *core.BuildTarget) error {
+	resp, err := buildRemotely(state, target, worker, "waiting for "+worker+" to start", &Request{
+		Rule: target.Label.String(),
 		Test: true,
 	})
 	if err == nil && !resp.Success {
@@ -210,7 +214,11 @@ func (l *stderrLogger) Write(msg []byte) (int, error) {
 	l.buffer = append(l.buffer, msg...)
 	if len(l.buffer) > 0 && l.buffer[len(l.buffer)-1] == '\n' {
 		if !l.Suppress {
-			log.Error("Error from remote worker: %s", strings.TrimSpace(string(l.buffer)))
+			if msg := strings.TrimSpace(string(l.buffer)); strings.HasPrefix(msg, "WARNING") {
+				log.Warning("Warning from remote worker: %s", msg)
+			} else {
+				log.Error("Error from remote worker: %s")
+			}
 		}
 		l.History = append(l.History, l.buffer...)
 		l.buffer = nil
