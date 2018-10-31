@@ -34,6 +34,13 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 			Message: fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, completionMethod),
 		}
 	}
+	if !h.analyzer.IsBuildFile(documentURI) {
+		return nil, &jsonrpc2.Error{
+			Code:    jsonrpc2.CodeInvalidParams,
+			Message: fmt.Sprintf("documentURI '%s' is not supported because it's not a buildfile", documentURI),
+		}
+	}
+
 	supportSnippet := h.init.Capabilities.TextDocument.Completion.CompletionItem.SnippetSupport
 
 	h.mu.Lock()
@@ -70,7 +77,7 @@ func getCompletionItemsList(ctx context.Context, analyzer *Analyzer, supportSnip
 	if LooksLikeAttribute(lineContent[0]) {
 		completionList = itemsFromAttributes(lineContent[0], analyzer, supportSnippet, pos)
 	} else if core.LooksLikeABuildLabel(TrimQuotes(lineContent[0])) {
-		completionList, completionErr = itemsFromBuildLabel(lineContent[0], analyzer, uri, pos)
+		completionList, completionErr = itemsFromBuildLabel(ctx, lineContent[0], analyzer, uri, pos)
 	} else {
 		// TODO(bnm): iterate through analyzer.Builtins, could use context to cancel request
 	}
@@ -85,16 +92,15 @@ func getCompletionItemsList(ctx context.Context, analyzer *Analyzer, supportSnip
 	return completionList, nil
 }
 
-func itemsFromBuildLabel(lineContent string, analyzer *Analyzer,
+func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Analyzer,
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
 
 	lineContent = TrimQuotes(lineContent)
 
-	// TODO(bnm): need to consider visibility as well
 	var labels []string
 	if strings.HasPrefix(lineContent, ":") {
 		// Get relative labels in the current file
-		buildDefs, err := analyzer.BuildDefsFromURI(uri)
+		buildDefs, err := analyzer.BuildDefsFromURI(ctx, uri)
 		if err != nil {
 			return nil, err
 		}
@@ -102,8 +108,9 @@ func itemsFromBuildLabel(lineContent string, analyzer *Analyzer,
 			labels = append(labels, ":"+buildDef)
 		}
 	} else if strings.HasSuffix(lineContent, ":") && strings.HasPrefix(lineContent, "//") {
+		// Get none relative labels
 		targetURI := analyzer.BuildFileURIFromPackage(lineContent[2 : len(lineContent)-1])
-		buildDefs, err := analyzer.BuildDefsFromURI(targetURI)
+		buildDefs, err := analyzer.BuildDefsFromURI(ctx, targetURI)
 		if err != nil {
 			return nil, err
 		}
@@ -154,7 +161,7 @@ func itemsFromAttributes(lineContent string, analyzer *Analyzer, supportSnippet 
 		return itemsFromMethods(analyzer.Attributes["dict"],
 			supportSnippet, pos, partial)
 	} else if LooksLikeCONFIGAttr(lineContent) {
-		// Perhaps this can be extracted to itemsFromProperty
+		// TODO(bnm): Perhaps this can be extracted to itemsFromProperty
 		var completionList []*lsp.CompletionItem
 		for tag, field := range analyzer.State.Config.TagsToFields() {
 			if !strings.Contains(tag, strings.ToUpper(partial)) {

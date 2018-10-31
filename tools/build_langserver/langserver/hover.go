@@ -31,6 +31,13 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 			Message: fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, hoverMethod),
 		}
 	}
+	if !h.analyzer.IsBuildFile(documentURI) {
+		return nil, &jsonrpc2.Error{
+			Code:    jsonrpc2.CodeInvalidParams,
+			Message: fmt.Sprintf("documentURI '%s' is not supported because it's not a buildfile", documentURI),
+		}
+	}
+
 	position := params.Position
 
 	h.mu.Lock()
@@ -314,11 +321,11 @@ func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
 	trimed := TrimQuotes(lineContent)
 
 	if core.LooksLikeABuildLabel(trimed) {
-		buildLabel, err := analyzer.BuildLabelFromString(ctx, core.RepoRoot, uri, trimed)
+		buildLabel, err := analyzer.BuildLabelFromString(ctx, uri, trimed)
 		if err != nil {
 			return "", err
 		}
-		return buildLabel.BuildDefContent, nil
+		return buildLabel.Definition, nil
 	}
 
 	return "", nil

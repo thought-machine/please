@@ -3,15 +3,14 @@ package langserver
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
-	"path"
 	"strings"
 	"testing"
 
 	"tools/build_langserver/lsp"
 )
 
-var completionPropPath = path.Join("tools/build_langserver/langserver/test_data/completion_props.build")
-var completionPropURI = lsp.DocumentURI("file://" + completionPropPath)
+var completionPropURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_props.build")
+var completionLabelURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_buildlabels.build")
 
 func TestCompletionWithCONFIG(t *testing.T) {
 	ctx := context.Background()
@@ -135,11 +134,11 @@ func TestCompletionWithDictMethods(t *testing.T) {
 	assert.Equal(t, "get(key)", items[0].InsertText)
 }
 
-func TestCompletionWithBuildLabel(t *testing.T) {
+func TestCompletionWithBuildLabels(t *testing.T) {
 	ctx := context.Background()
 
 	items, err := getCompletionItemsList(ctx, analyzer, true,
-		completionPropURI, lsp.Position{Line: 15, Character: 4})
+		completionLabelURI, lsp.Position{Line: 0, Character: 4})
 	assert.Equal(t, nil, err)
 	assert.True(t, itemInList(items, "//src/cache"))
 	for _, i := range items {
@@ -147,7 +146,7 @@ func TestCompletionWithBuildLabel(t *testing.T) {
 	}
 
 	items, err = getCompletionItemsList(ctx, analyzer, true,
-		completionPropURI, lsp.Position{Line: 16, Character: 12})
+		completionLabelURI, lsp.Position{Line: 1, Character: 12})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 1, len(items))
 	assert.Equal(t, "//src/query:query", items[0].Label)

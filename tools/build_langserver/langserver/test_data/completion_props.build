@@ -12,8 +12,3 @@ name = "{name}".for
 {"foo": "bar", "blah":1}.
 {"foo": "bar"}.k
 {"foo": "bar"}.get
-
-"//src"
-"//src/query:"
-
-

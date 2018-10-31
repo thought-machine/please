@@ -30,7 +30,7 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 				return filepath.SkipDir // Don't walk output or hidden directories
 			} else if isDir && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
 				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
-			} else if isABuildFile(basename, config) && !isDir {
+			} else if config.IsABuildFile(basename) && !isDir {
 				dir, _ := path.Split(name)
 				ch <- strings.TrimRight(dir, "/")
 			} else if cli.ContainsString(name, config.Parse.ExperimentalDir) {
@@ -49,16 +49,6 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 		close(ch)
 	}()
 	return ch
-}
-
-// isABuildFile returns true if given filename is a build file name.
-func isABuildFile(name string, config *core.Configuration) bool {
-	for _, buildFileName := range config.Parse.BuildFileName {
-		if name == buildFileName {
-			return true
-		}
-	}
-	return false
 }
 
 // Max returns the larger of two ints.

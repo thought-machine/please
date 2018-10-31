@@ -29,6 +29,8 @@ var analyzer = newAnalyzer()
  ***************************************/
 func TestGetHoverContentOnBuildDefName(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"example.build")
 
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 0, Character: 3})
 	expected := analyzer.BuiltIns["go_library"].Header + "\n\n" + analyzer.BuiltIns["go_library"].Docstring
@@ -39,6 +41,8 @@ func TestGetHoverContentOnBuildDefName(t *testing.T) {
 
 func TestGetHoverContentOnArgument(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"example.build")
 
 	// Test hovering over argument name
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 7, Character: 7})
@@ -71,6 +75,8 @@ func TestGetHoverContentOnArgument(t *testing.T) {
 
 func TestGetHoverContentOnNestedCall(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"example.build")
 
 	// Test hovering over nested call on definition, e.g. glob(
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 2, Character: 14})
@@ -97,6 +103,8 @@ func TestGetHoverContentOnNestedCall(t *testing.T) {
 
 func TestGetHoverContentOnEmptyContent(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"example.build")
 
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 1, Character: 3})
 	assert.Equal(t, nil, err)
@@ -109,6 +117,8 @@ func TestGetHoverContentOnEmptyContent(t *testing.T) {
 
 func TestGetHoverContentOnBuildLabels(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"example.build")
 
 	// Test hovering over buildlabels
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 13, Character: 15})
@@ -123,6 +133,8 @@ func TestGetHoverContentOnBuildLabels(t *testing.T) {
 
 func TestGetHoverContentOnNoneBuildLabelString(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"example.build")
 
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 20, Character: 18})
 	assert.Equal(t, nil, err)
@@ -131,6 +143,8 @@ func TestGetHoverContentOnNoneBuildLabelString(t *testing.T) {
 
 func TestGetHoverContentOnArgumentWithProperty(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"example.build")
 
 	// Hover on argument name
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 34, Character: 6})
@@ -150,6 +164,8 @@ func TestGetHoverContentOnArgumentWithProperty(t *testing.T) {
 
 func TestGetHoverContentArgOnTheSameLine(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"example.build")
 
 	content, err := getHoverContent(ctx, analyzer, exampleBuildURI, lsp.Position{Line: 42, Character: 17})
 	assert.Equal(t, nil, err)
@@ -161,6 +177,8 @@ func TestGetHoverContentArgOnTheSameLine(t *testing.T) {
  ***************************************/
 func TestGetHoverContentOnPropertyAssignment(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"assignment.build")
 
 	//Hover on assignment with properties
 	content, err := getHoverContent(ctx, analyzer, assignBuildURI, lsp.Position{Line: 0, Character: 30})
@@ -192,6 +210,8 @@ func TestGetHoverContentOnPropertyAssignment(t *testing.T) {
 
 func TestGetHoverContentOnUnaryAssignment(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"assignment.build")
 
 	// Hover on assignment with unary op
 	content, err := getHoverContent(ctx, analyzer, assignBuildURI, lsp.Position{Line: 4, Character: 13})
@@ -201,6 +221,8 @@ func TestGetHoverContentOnUnaryAssignment(t *testing.T) {
 
 func TestGetHoverContentOnListAssignment(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"assignment.build")
 
 	coreContent := []string{"go_library(", "    name = \"core\",", "    srcs = glob("}
 	fsContent := []string{"go_library(", "    name = \"fs\",", "    srcs = ["}
@@ -230,6 +252,8 @@ func TestGetHoverContentOnListAssignment(t *testing.T) {
 
 func TestGetHoverContentOnIfAssignment(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"assignment.build")
 
 	// Hover on if statement assignment empty
 	content, err := getHoverContent(ctx, analyzer, assignBuildURI, lsp.Position{Line: 21, Character: 33})
@@ -248,6 +272,8 @@ func TestGetHoverContentOnIfAssignment(t *testing.T) {
  ***************************************/
 func TestGetHoverContentAugAssign(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"assignment.build")
 
 	// Hover on assignment with call
 	content, err := getHoverContent(ctx, analyzer, assignBuildURI, lsp.Position{Line: 23, Character: 14})
@@ -265,6 +291,8 @@ func TestGetHoverContentAugAssign(t *testing.T) {
  ***************************************/
 func TestGetHoverContentProperty(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"property.build")
 
 	// Hover on CONFIG property
 	content, err := getHoverContent(ctx, analyzer, propURI, lsp.Position{Line: 0, Character: 4})
@@ -281,6 +309,8 @@ func TestGetHoverContentProperty(t *testing.T) {
  ***************************************/
 func TestGetHoverContentAst(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"misc.build")
 
 	// Test for statement
 	content, err := getHoverContent(ctx, analyzer, miscURI, lsp.Position{Line: 0, Character: 11})
@@ -300,6 +330,8 @@ func TestGetHoverContentAst(t *testing.T) {
 
 func TestGetHoverContentAst2(t *testing.T) {
 	var ctx = context.Background()
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		"misc.build")
 
 	// Test if statement
 	content, err := getHoverContent(ctx, analyzer, miscURI, lsp.Position{Line: 4, Character: 7})
