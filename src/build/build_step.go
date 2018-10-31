@@ -142,7 +142,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	oldOutputHash, outputHashErr := OutputHash(state, target)
 	if target.IsFilegroup {
 		log.Debug("Building %s...", target.Label)
-		if err := buildFilegroup(tid, state, target); err != nil {
+		if err := buildFilegroup(state, target); err != nil {
 			return err
 		} else if newOutputHash, err := calculateAndCheckRuleHash(state, target); err != nil {
 			return err
@@ -225,7 +225,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		if err := runPostBuildFunction(tid, state, target, string(out), postBuildOutput); err != nil {
 			return err
 		}
-		storePostBuildOutput(state, target, out)
+		storePostBuildOutput(target, out)
 	}
 	checkLicences(state, target)
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
@@ -535,7 +535,7 @@ func retrieveFromCache(state *core.BuildState, target *core.BuildTarget) ([]byte
 // Runs the post-build function for a target if it's got one.
 func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget, prevOutput string) (string, error) {
 	if target.PostBuildFunction != nil {
-		out, err := loadPostBuildOutput(state, target)
+		out, err := loadPostBuildOutput(target)
 		if err != nil {
 			return "", err
 		}

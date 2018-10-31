@@ -167,9 +167,9 @@ func TestInitPyCreation(t *testing.T) {
 	state, _ := newState("//pypkg:wevs")
 	target1 := newPyFilegroup(state, "//pypkg:target1", "file1.py")
 	target2 := newPyFilegroup(state, "//pypkg:target2", "__init__.py")
-	assert.NoError(t, buildFilegroup(0, state, target1))
+	assert.NoError(t, buildFilegroup(state, target1))
 	assert.True(t, fs.FileExists("plz-out/gen/pypkg/__init__.py"))
-	assert.NoError(t, buildFilegroup(0, state, target2))
+	assert.NoError(t, buildFilegroup(state, target2))
 	d, err := ioutil.ReadFile("plz-out/gen/pypkg/__init__.py")
 	assert.NoError(t, err)
 	assert.Equal(t, `"""output from //pypkg:target2"""`, strings.TrimSpace(string(d)))
@@ -178,7 +178,7 @@ func TestInitPyCreation(t *testing.T) {
 func TestRecursiveInitPyCreation(t *testing.T) {
 	state, _ := newState("//package1/package2:wevs")
 	target1 := newPyFilegroup(state, "//package1/package2:target1", "file1.py")
-	assert.NoError(t, buildFilegroup(0, state, target1))
+	assert.NoError(t, buildFilegroup(state, target1))
 	assert.True(t, fs.FileExists("plz-out/gen/package1/package2/__init__.py"))
 	assert.True(t, fs.FileExists("plz-out/gen/package1/__init__.py"))
 }

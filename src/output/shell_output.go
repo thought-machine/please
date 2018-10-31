@@ -411,7 +411,7 @@ func logProgress(state *core.BuildState, buildingTargets *[]buildingTarget, stop
 
 // Produces a string describing the results of one test (or a single aggregation).
 func testResultMessage(results core.TestSuite) string {
-	msg := fmt.Sprintf("%s run", pluralise(int(results.Tests()), "test", "tests"))
+	msg := fmt.Sprintf("%s run", pluralise(results.Tests(), "test", "tests"))
 	if results.Duration >= 0.0 {
 		msg += fmt.Sprintf(" in ${BOLD_WHITE}%s${RESET}", results.Duration.Round(testDurationGranularity))
 	}
@@ -426,7 +426,7 @@ func testResultMessage(results core.TestSuite) string {
 		msg += fmt.Sprintf(", ${BOLD_YELLOW}%d skipped${RESET}", results.Skips())
 	}
 	if results.FlakyPasses() > 0 {
-		msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(int(results.FlakyPasses()), "flake", "flakes"))
+		msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.FlakyPasses(), "flake", "flakes"))
 	}
 	if results.TimedOut {
 		msg += ", ${RED_ON_WHITE}TIMED OUT${RESET}"

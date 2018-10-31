@@ -404,7 +404,7 @@ func postBuildOutputFileName(target *core.BuildTarget) string {
 
 // For targets that have post-build functions, we have to store and retrieve the target's
 // output to feed to it
-func loadPostBuildOutput(state *core.BuildState, target *core.BuildTarget) (string, error) {
+func loadPostBuildOutput(target *core.BuildTarget) (string, error) {
 	// Normally filegroups don't have post-build functions, but we use this sometimes for testing.
 	if target.IsFilegroup {
 		return "", nil
@@ -416,7 +416,7 @@ func loadPostBuildOutput(state *core.BuildState, target *core.BuildTarget) (stri
 	return string(out), nil
 }
 
-func storePostBuildOutput(state *core.BuildState, target *core.BuildTarget, out []byte) {
+func storePostBuildOutput(target *core.BuildTarget, out []byte) {
 	filename := postBuildOutputFileName(target)
 	if err := os.RemoveAll(filename); err != nil {
 		panic(err)

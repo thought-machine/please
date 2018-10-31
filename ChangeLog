@@ -15,6 +15,7 @@ Version 13.2.0
         javac requirement to build it now.
     * please tool maven has a --graph flag that allows some integration
       with existing BUILD files.
+	* Coverage can be disabled for all tests that have a particular label.
 
 
 Version 13.1.8

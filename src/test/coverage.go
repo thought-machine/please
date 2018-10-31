@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"core"
 	"cli"
+	"core"
 )
 
 // Parses test coverage for a single target from its output file.

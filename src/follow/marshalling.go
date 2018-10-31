@@ -184,7 +184,6 @@ func fromProtoTestSkip(s *pb.TestSkip) *core.TestResultSkip {
 	}
 }
 
-
 // fromProtoBuildLabel converts a proto build label to the internal version.
 func fromProtoBuildLabel(label *pb.BuildLabel) core.BuildLabel {
 	return core.BuildLabel{PackageName: label.PackageName, Name: label.Name}

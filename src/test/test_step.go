@@ -53,7 +53,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	coverageFileName := path.Base(cachedCoverageFile)
 	outputFile := path.Join(target.TestDir(), "test.results")
 	coverageFile := path.Join(target.TestDir(), "test.coverage")
-	needCoverage := state.NeedCoverage && !target.NoTestOutput && (!target.HasLabel("cc") || state.Config.Cpp.Coverage)
+	needCoverage := state.NeedCoverage && !target.NoTestOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareShell {
@@ -550,13 +550,6 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 	return xattr.LSet(to, xattrName, hash)
 }
 
-// calcNumRuns works out how many total runs we should have for a test, and how many successes
-// are required for it to count as success.
-// numRuns and flakiness default to 1 which mean run once.
-func calcNumRuns(numRuns, flakiness int) (int, int) {
-	return numRuns * flakiness, numRuns
-}
-
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
 func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
 	workerCmd, _, _ := build.TestWorkerCommand(state, target)
@@ -564,7 +557,7 @@ func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.Build
 		return "", nil
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Starting test worker...")
-	err := worker.EnsureWorkerStarted(state, workerCmd, target.Label)
+	err := worker.EnsureWorkerStarted(state, workerCmd, target)
 	if err == nil {
 		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
 	}

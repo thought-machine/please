@@ -17,6 +17,7 @@ var log = logging.MustGetLogger("build_langserver")
 var opts = struct {
 	Usage     string
 	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
+	LogFile   cli.Filepath  `long:"log_file" description:"File to echo full logging output to"`
 
 	Mode string `short:"m" long:"mode" default:"stdio" choice:"stdio" choice:"tcp" description:"Mode of the language server communication"`
 	Host string `short:"h" long:"host" default:"127.0.0.20" description:"TCP host to communicate with"`
@@ -33,6 +34,9 @@ Currently, it supports autocompletion, goto definition for build_defs, and signa
 func main() {
 	cli.ParseFlagsOrDie("build_langserver", "1.0.0", &opts)
 	cli.InitLogging(opts.Verbosity)
+	if opts.LogFile != "" {
+		cli.InitFileLogging(string(opts.LogFile), 4)
+	}
 
 	handler := langserver.NewHandler()
 

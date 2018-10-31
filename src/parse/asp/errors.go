@@ -75,7 +75,7 @@ func (stack *errorStack) Error() string {
 	return stack.errorMessage()
 }
 
-// ShortError returns an abbreviated message with jsut what immediately went wrong.
+// ShortError returns an abbreviated message with just what immediately went wrong.
 func (stack *errorStack) ShortError() string {
 	return stack.err.Error()
 }

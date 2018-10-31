@@ -6,6 +6,7 @@ package tool
 
 import (
 	"os"
+	"path"
 	"strings"
 	"syscall"
 
@@ -57,6 +58,7 @@ func matchingTools(config *core.Configuration, prefix string) map[string]string 
 		"jarcat":      config.Java.JarCatTool,
 		"javacworker": config.Java.JavacWorker,
 		"junitrunner": config.Java.JUnitRunner,
+		"langserver":  path.Join(config.Please.Location, "build_langserver"),
 		"maven":       config.Java.PleaseMavenTool,
 		"pex":         config.Python.PexTool,
 	}

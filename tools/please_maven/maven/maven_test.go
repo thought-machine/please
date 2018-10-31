@@ -742,18 +742,18 @@ maven_jar(
 )`
 	g := &Graph{
 		Packages: map[string]pkg{
-			"third_party/java": pkg{
+			"third_party/java": {
 				Targets: map[string]target{
-					"guava": target{
+					"guava": {
 						Labels: []string{"mvn:com.google.guava:guava:19.0"},
 					},
-					"error_prone_annotation": target{
+					"error_prone_annotation": {
 						Labels: []string{"mvn:com.google.errorprone:error_prone_annotation:2.0.14"},
 					},
-					"jsr305": target{
+					"jsr305": {
 						Labels: []string{"mvn:com.google.code.findbugs:jsr305:3.0.0"},
 					},
-					"auto-value": target{
+					"auto-value": {
 						Labels: []string{"mvn:com.google.auto.value:auto-value:1.1"},
 					},
 				},

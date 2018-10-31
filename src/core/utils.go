@@ -167,18 +167,30 @@ func progressMessage(target *BuildTarget) string {
 	return ""
 }
 
+// TimeoutOrDefault uses the given timeout, or the default if it is not set.
+func TimeoutOrDefault(timeout time.Duration, defaultTimeout cli.Duration) time.Duration {
+	if timeout != 0 {
+		return timeout
+	} else if defaultTimeout != 0 {
+		return time.Duration(defaultTimeout)
+	}
+	return 10 * time.Minute // fallback
+}
+
+// TargetTimeoutOrDefault is like TimeoutOrDefault but uses the given target, which can be nil.
+func TargetTimeoutOrDefault(target *BuildTarget, state *BuildState) time.Duration {
+	if target != nil {
+		return TimeoutOrDefault(target.BuildTimeout, state.Config.Build.Timeout)
+	}
+	return TimeoutOrDefault(0, state.Config.Build.Timeout)
+}
+
 // ExecWithTimeout runs an external command with a timeout.
 // If the command times out the returned error will be a context.DeadlineExceeded error.
 // If showOutput is true then output will be printed to stderr as well as returned.
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
 func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput, attachStdStreams bool, argv []string, msg string) ([]byte, []byte, error) {
-	if timeout == 0 {
-		if defaultTimeout == 0 {
-			timeout = 10 * time.Minute
-		} else {
-			timeout = time.Duration(defaultTimeout)
-		}
-	}
+	timeout = TimeoutOrDefault(timeout, defaultTimeout)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	cmd := ExecCommand(argv[0], argv[1:]...)
