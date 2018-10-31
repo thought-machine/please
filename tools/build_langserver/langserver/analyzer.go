@@ -252,9 +252,9 @@ func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {
 
 // BuildLabelFromString returns a BuildLabel object,
 func (a *Analyzer) BuildLabelFromString(ctx context.Context,
-	currentUri lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
+	currentURI lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
 
-	filepath, err := GetPathFromURL(currentUri, "file")
+	filepath, err := GetPathFromURL(currentURI, "file")
 	if err != nil {
 		return nil, err
 	}
