@@ -197,9 +197,9 @@ func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, 
 		return nil, err
 	}
 
-	stmts, err := a.parser.ParseData(bytecontent, filepath)
+	stmts, _ := a.parser.ParseData(bytecontent, filepath)
 	if err != nil {
-		return nil, err
+		log.Warning(fmt.Sprintf("parsing failure: %s ", err))
 	}
 
 	return stmts, nil

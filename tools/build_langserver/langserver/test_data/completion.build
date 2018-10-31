@@ -1,4 +1,12 @@
 name = "langserver_test"
 
 go_test(
-    name = name.replace('_', '-')
+    name = name.replace,
+    src
+
+go_test(
+    name = "",
+    srcs =[],
+    srcs = [
+    "//src/"
+)

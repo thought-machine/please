@@ -160,7 +160,7 @@ func (p *Parser) parseAndHandleErrors(r io.ReadSeeker, filename string) ([]*Stat
 		return input.Statements, nil
 	}
 	// If we get here, something went wrong. Try to give some nice feedback about it.
-	return nil, p.annotate(err, r)
+	return input.Statements, p.annotate(err, r)
 }
 
 // annotate annotates the given error with whatever source information we have.

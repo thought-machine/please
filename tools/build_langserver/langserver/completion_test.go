@@ -9,6 +9,7 @@ import (
 	"tools/build_langserver/lsp"
 )
 
+var completionURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion.build")
 var completionPropURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_props.build")
 var completionLabelURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_buildlabels.build")
 
@@ -150,6 +151,13 @@ func TestCompletionWithBuildLabels(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 1, len(items))
 	assert.Equal(t, "//src/query:query", items[0].Label)
+}
+
+func TestCompletionIncompleteFile(t *testing.T) {
+	//TODO(BNM)
+	stmt, err := analyzer.AspStatementFromFile(completionURI)
+	t.Log(stmt)
+	t.Log(err)
 }
 
 /***************************************
