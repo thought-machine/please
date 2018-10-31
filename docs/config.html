@@ -309,6 +309,13 @@
     <p>Properties that affect how the various Go build rules work.</p>
 
     <ul>
+      <li><b>ImportPath</b><br/>
+        String name of the canonical path of this repository.<br/>
+	This path is used as the prefix of the package name relative to this <code>please</code> build directory.
+	<code>importpath</code> is commonly used to prepend <code>github.com/myorg/myrepo</code> to a project's
+        path.
+      </li>
+
       <li><b>GoVersion</b><br/>
         String identifying the version of the Go compiler.<br/>
 	This is only now really important for anyone targeting versions of Go earlier than 1.5 since
