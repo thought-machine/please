@@ -153,15 +153,20 @@ func TrimQuotes(str string) string {
 		return matched[1 : len(matched)-1]
 	}
 
-	return ""
+	// Match cases when only one quote presented
+	if len(str) > 0 && (str[0] == '"' || str[0] == '\'') {
+		str = str[1:]
+	}
+	if len(str) > 0 && str[len(str)-1] == '"' {
+		str = str[:len(str)-1]
+	}
+
+	return str
 }
 
 // LooksLikeString returns true if the input string looks like a string
 func LooksLikeString(str string) bool {
-	if TrimQuotes(str) != "" {
-		return true
-	}
-	return false
+	return mustMatch(`(^("|')([^"]|"")*("|'))`, str)
 }
 
 // LooksLikeAttribute returns true if the input string looks like an attribute: "hello".

@@ -22,7 +22,7 @@ var assignBuildURI = lsp.DocumentURI("file://tools/build_langserver/langserver/t
 var propURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/property.build")
 var miscURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/misc.build")
 
-var analyzer = newAnalyzer()
+var analyzer, _ = newAnalyzer()
 
 /***************************************
  *Tests for Build Definitions

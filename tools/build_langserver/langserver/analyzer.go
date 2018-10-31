@@ -87,10 +87,14 @@ type BuildLabel struct {
 	Definition string
 }
 
-func newAnalyzer() *Analyzer {
+func newAnalyzer() (*Analyzer, error) {
 	// Saving the state to Analyzer,
 	// so we will be able to get the CONFIG properties by calling state.config.GetTags()
-	state := core.NewDefaultBuildState()
+	config, err := core.ReadDefaultConfigFiles("")
+	if err != nil {
+		return nil, err
+	}
+	state := core.NewBuildState(1, nil, 4, config)
 	parser := asp.NewParser(state)
 
 	a := &Analyzer{
@@ -99,7 +103,7 @@ func newAnalyzer() *Analyzer {
 	}
 	a.builtInsRules()
 
-	return a
+	return a, nil
 }
 
 // BuiltInsRules gets all the builtin functions and rules as a map, and store it in Analyzer.BuiltIns

@@ -14,7 +14,9 @@ import (
 )
 
 func TestNewAnalyzer(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
 	assert.NotEqual(t, nil, a.BuiltIns)
 
 	goLibrary := a.BuiltIns["go_library"]
@@ -27,7 +29,8 @@ func TestNewAnalyzer(t *testing.T) {
 }
 
 func TestAspStatementFromFile(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
 
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
 	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
@@ -41,7 +44,8 @@ func TestAspStatementFromFile(t *testing.T) {
 }
 
 func TestStatementFromPos(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
 
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
 	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
@@ -65,7 +69,8 @@ func TestStatementFromPos(t *testing.T) {
 }
 
 func TestNewRuleDef(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
 
 	// Test header the definition for build_rule
 	expected := "def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],\n" +
@@ -147,7 +152,9 @@ func TestGetArgString(t *testing.T) {
 }
 
 func TestBuildLabelFromString(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
 	ctx := context.Background()
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
 	uri := lsp.DocumentURI("file://" + filePath)
@@ -240,7 +247,9 @@ func TestAnalyzer_BuildDefFromUri(t *testing.T) {
 }
 
 func TestAnalyzer_IsBuildFile(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
 	uri := lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example.build")
 
 	assert.False(t, a.IsBuildFile(uri))

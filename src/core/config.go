@@ -185,7 +185,6 @@ func DefaultConfiguration() *Configuration {
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
 	config.Parse.BuiltinPleasings = true
-	config.Parse.BuildFileName = []string{"BUILD"}
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
 	config.Build.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Build.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.

@@ -91,7 +91,13 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	params.EnsureRoot()
 	h.init = &params
 
-	h.analyzer = newAnalyzer()
+	h.analyzer, err = newAnalyzer()
+	if err != nil {
+		return nil, &jsonrpc2.Error{
+			Code:    jsonrpc2.CodeParseError,
+			Message: fmt.Sprintf("error in parsing .plzconfig file: %s", err),
+		}
+	}
 
 	// Reset the requestStore, and get sub-context based on request ID
 	reqStore := newRequestStore()

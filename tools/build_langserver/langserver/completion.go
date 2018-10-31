@@ -136,8 +136,7 @@ func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Anal
 	for _, label := range labels {
 		partial := strings.Replace(label, lineContent, "", 1)
 		TERange := getTERange(pos, partial)
-		detail := "BUILD Label: label"
-		label := label
+		detail := fmt.Sprintf("BUILD Label: %s", label)
 
 		item := getCompletionItem(lsp.Text, label, detail,
 			nil, false, TERange)
@@ -246,6 +245,7 @@ func getCompletionItem(kind lsp.CompletionItemKind, name string,
 	}
 }
 
+// Get the range for TextEdit
 func getTERange(pos lsp.Position, partial string) lsp.Range {
 	return lsp.Range{
 		Start: lsp.Position{Line: pos.Line, Character: pos.Character - len(partial)},
@@ -255,7 +255,13 @@ func getTERange(pos lsp.Position, partial string) lsp.Range {
 
 func isVisible(buildDef *BuildDef, currentPkg string) bool {
 	for _, i := range buildDef.Visibility {
-		if i == "PUBLIC" || strings.HasPrefix(i, currentPkg) {
+		if i == "PUBLIC" {
+			return true
+		}
+
+		label := core.ParseBuildLabel(i, currentPkg)
+		currentPkgLabel := core.ParseBuildLabel(currentPkg, currentPkg)
+		if label.Includes(currentPkgLabel) {
 			return true
 		}
 	}
