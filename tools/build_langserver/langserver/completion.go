@@ -216,6 +216,7 @@ func getCompletionItem(kind lsp.CompletionItemKind, name string,
 	var text string
 	if kind == lsp.Function && supportSnippet && ruleDef != nil {
 		// Get the snippet for completion
+		// TODO(bnm): extract this to a different function and make this better
 		snippet := name + "("
 		if len(ruleDef.ArgMap) > 0 {
 			for _, arg := range ruleDef.Arguments {
