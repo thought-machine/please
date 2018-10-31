@@ -7,6 +7,7 @@ filegroup(
     name = "installed_files",
     srcs = [
         "//src:please",
+        "//tools/build_langserver",
         "//tools/go_buildid_replacer",
         "//tools/jarcat",
         "//tools/java:javac_worker",
