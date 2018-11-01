@@ -41,7 +41,7 @@ func TestHandle(t *testing.T) {
 	var result2 lsp.Hover
 	if err := conn.Call(ctx, "textDocument/hover", lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
-			URL: lsp.DocumentURI(path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")),
+			URI: lsp.DocumentURI(path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")),
 		},
 		Position: lsp.Position{Line: 0, Character: 3},
 	}, &result2); err != nil {
