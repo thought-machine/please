@@ -16,6 +16,8 @@ Version 13.2.0
     * please tool maven has a --graph flag that allows some integration
       with existing BUILD files.
 	* Coverage can be disabled for all tests that have a particular label.
+    * Includes a language server which is still incomplete but under active development.
+      In future this will be the solution for IDE integration with BUILD files.
 
 
 Version 13.1.8
