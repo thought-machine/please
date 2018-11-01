@@ -45,13 +45,14 @@ type LsHandler struct {
 }
 
 // Handle function takes care of all the incoming from the client, and returns the correct response
-func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *jsonrpc2.Request) (result interface{}, err error) {
-	if request.Method != "initialize" && h.init == nil {
+func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+	if req.Method != "initialize" && h.init == nil {
 		return nil, fmt.Errorf("server must be initialized")
 	}
 	h.conn = conn
 
-	methods := map[string]func(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error){
+	log.Info(fmt.Sprintf("handling method %s ...", req.Method))
+	methods := map[string]func(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error){
 		"initialize":              h.handleInit,
 		"initialzed":              h.handleInitialized,
 		"shutdown":                h.handleShutDown,
@@ -61,13 +62,14 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *js
 		"textDocument/completion": h.handleCompletion,
 	}
 
-	if request.Method != "initialize" {
-		ctx = h.requestStore.Store(ctx, request)
-		defer h.requestStore.Cancel(request.ID)
+	if req.Method != "initialize" && req.Method != "exit" &&
+		req.Method != "initialzed" && req.Method != "shutdown" {
+		ctx = h.requestStore.Store(ctx, req)
+		defer h.requestStore.Cancel(req.ID)
 	}
 
 	//defer h.requestStore.Cancel(request.ID)
-	return methods[request.Method](ctx, request)
+	return methods[req.Method](ctx, req)
 }
 
 func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
@@ -174,7 +176,7 @@ func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (re
 		}
 	}
 
-	h.requestStore.Cancel(params.ID)
+	defer h.requestStore.Cancel(params.ID)
 
 	return nil, nil
 }
