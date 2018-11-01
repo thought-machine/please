@@ -1,13 +1,15 @@
 package main
 
 import (
-	"context"
-	"gopkg.in/op/go-logging.v1"
-	"os"
-
 	"cli"
-	"github.com/sourcegraph/jsonrpc2"
+	"context"
+	"fmt"
+	"net"
+	"os"
 	"tools/build_langserver/langserver"
+
+	"github.com/sourcegraph/jsonrpc2"
+	"gopkg.in/op/go-logging.v1"
 )
 
 // TODO(bnmetrics): also think about how we can implement this with .build_defs as well
@@ -20,8 +22,8 @@ var opts = struct {
 	LogFile   cli.Filepath  `long:"log_file" description:"File to echo full logging output to"`
 
 	Mode string `short:"m" long:"mode" default:"stdio" choice:"stdio" choice:"tcp" description:"Mode of the language server communication"`
-	Host string `short:"h" long:"host" default:"127.0.0.20" description:"TCP host to communicate with"`
-	Port string `short:"p" long:"port" default:"4387" description:"TCP port to communicate with"`
+	Host string `short:"h" long:"host" default:"127.0.0.1" description:"TCP host to communicate with"`
+	Port string `short:"p" long:"port" default:"4040" description:"TCP port to communicate with"`
 }{
 	Usage: `
 build_langserver is a binary shipped with Please that you can use as a language server for build files.
@@ -40,20 +42,38 @@ func main() {
 
 	handler := langserver.NewHandler()
 
-	serve(handler)
+	if err := serve(handler); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
-func serve(handler jsonrpc2.Handler) {
+func serve(handler jsonrpc2.Handler) error {
 	if opts.Mode == "tcp" {
-		// TODO: tcp stuff
+		lis, err := net.Listen("tcp", opts.Host+":"+opts.Port)
+		if err != nil {
+			return err
+		}
+		defer lis.Close()
+
+		log.Info("langserver-go: listening on", opts.Host+":"+opts.Port)
+		for {
+			conn, err := lis.Accept()
+			if err != nil {
+				return err
+			}
+			jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(conn, jsonrpc2.VSCodeObjectCodec{}), handler)
+		}
 	} else {
 		log.Info("build_langserver: reading on stdin, writing on stdout")
 
 		<-jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),
-			handler, []jsonrpc2.ConnOpt{}...).DisconnectNotify()
+			handler).DisconnectNotify()
 
 		log.Info("connection closed")
 	}
+
+	return nil
 }
 
 type stdrwc struct{}

@@ -18,13 +18,15 @@ var log = logging.MustGetLogger("lsp")
 
 // NewHandler creates a BUILD file language server handler
 func NewHandler() jsonrpc2.Handler {
-	return handler{jsonrpc2.HandlerWithError((&LsHandler{
+	h := &LsHandler{
 		IsServerDown: false,
-	}).Handle)}
+	}
+	return langHandler{
+		jsonrpc2.HandlerWithError(h.Handle)}
 }
 
 // handler wraps around LsHandler to correctly handler requests in the correct order
-type handler struct {
+type langHandler struct {
 	jsonrpc2.Handler
 }
 
@@ -50,19 +52,21 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *js
 	h.conn = conn
 
 	methods := map[string]func(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error){
-		"initialize":         h.handleInit,
-		"initialzed":         h.handleInitialized,
-		"shutdown":           h.handleShutDown,
-		"exit":               h.handleExit,
-		"$/cancelRequest":    h.handleCancel,
-		"textDocument/hover": h.handleHover,
+		"initialize":              h.handleInit,
+		"initialzed":              h.handleInitialized,
+		"shutdown":                h.handleShutDown,
+		"exit":                    h.handleExit,
+		"$/cancelRequest":         h.handleCancel,
+		"textDocument/hover":      h.handleHover,
+		"textDocument/completion": h.handleCompletion,
 	}
 
 	if request.Method != "initialize" {
 		ctx = h.requestStore.Store(ctx, request)
+		defer h.requestStore.Cancel(request.ID)
 	}
-	defer h.requestStore.Cancel(request.ID)
 
+	//defer h.requestStore.Cancel(request.ID)
 	return methods[request.Method](ctx, request)
 }
 
@@ -105,6 +109,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	ctx = h.requestStore.Store(ctx, req)
 
 	h.mu.Unlock()
+	defer h.requestStore.Cancel(req.ID)
 
 	// Fill in the response results
 	TDsync := lsp.SyncIncremental
@@ -117,7 +122,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 		TriggerCharacters: []string{"{", ","},
 	}
 
-	log.Info("Initialize plz build file language server...")
+	defer log.Info("Plz build file language server initialized")
 	return lsp.InitializeResult{
 		Capabilities: lsp.ServerCapabilities{
 			TextDocumentSync:           &TDsync,
