@@ -68,8 +68,13 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 		defer h.requestStore.Cancel(req.ID)
 	}
 
-	//defer h.requestStore.Cancel(request.ID)
-	return methods[req.Method](ctx, req)
+	if method, ok := methods[req.Method]; ok {
+		return method(ctx, req)
+	} else {
+		// TODO(bnm): call fs request handlers like, textDocument/didOpen
+	}
+
+	return nil, nil
 }
 
 func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
