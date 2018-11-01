@@ -1,0 +1,14 @@
+CONFIG.
+CONFIG.J
+CONFIG.JAVA
+tool = CONFIG.JAVA
+CONFIG = BLAH.
+
+"{time}-{message}".
+"{time}-{message}".f
+"{time}-{message}".for
+name = "{name}".for
+
+{"foo": "bar", "blah":1}.
+{"foo": "bar"}.k
+{"foo": "bar"}.get

@@ -58,6 +58,39 @@ type CancelParams struct {
 
 // Hover is the result of a hover request.
 type Hover struct {
-	Contents MarkupContent  `json:"contents"`
-	Range    *Range         `json:"range,omitempty"`
+	Contents MarkupContent `json:"contents"`
+	Range    *Range        `json:"range,omitempty"`
+}
+
+// CompletionParams is the struct for parameters send to "textDocument/completion" request
+type CompletionParams struct {
+	TextDocumentPositionParams
+	Context CompletionContext `json:"context,omitempty"`
+}
+
+// CompletionContext Contains additional information about the context in which a completion request is triggered.
+type CompletionContext struct {
+	TriggerKind      CompletionTriggerKind `json:"triggerKind"`
+	TriggerCharacter string                `json:"triggerCharacter,omitempty"`
+}
+
+// CompletionList Represents a collection of [completion items](#CompletionItem) to be presented
+// in the editor.
+type CompletionList struct {
+	IsIncomplete bool              `json:"isIncomplete"`
+	Items        []*CompletionItem `json:"items"`
+}
+
+// CompletionItem represents The completion items.
+type CompletionItem struct {
+	Label            string             `json:"label"`
+	Kind             CompletionItemKind `json:"kind,omitempty"`
+	Detail           string             `json:"detail,omitempty"`
+	Documentation    string             `json:"documentation,omitempty"`
+	SortText         string             `json:"sortText,omitempty"`
+	FilterText       string             `json:"filterText,omitempty"`
+	InsertText       string             `json:"insertText,omitempty"`
+	InsertTextFormat InsertTextFormat   `json:"insertTextFormat,omitempty"`
+	TextEdit         *TextEdit          `json:"textEdit,omitempty"`
+	Data             interface{}        `json:"data,omitempty"`
 }

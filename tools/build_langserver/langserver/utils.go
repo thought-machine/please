@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -43,7 +44,6 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 	if err != nil {
 		return "", err
 	}
-
 	if strings.HasPrefix(absPath, core.RepoRoot) {
 		pathType = strings.ToLower(pathType)
 		switch pathType {
@@ -62,6 +62,18 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 	}
 
 	return "", fmt.Errorf(fmt.Sprintf("invalid path %s, path must be in repo root", absPath))
+}
+
+// PackageLabelFromURI returns a build label of a package
+func PackageLabelFromURI(uri lsp.DocumentURI) (string, error) {
+	// TODO(bnm): need to check if the build file matches the build file name set in config
+	filePath, err := GetPathFromURL(uri, "file")
+	if err != nil {
+		return "", err
+	}
+	pathDir := path.Dir(strings.TrimPrefix(filePath, core.RepoRoot))
+
+	return "/" + pathDir, nil
 }
 
 // ReadFile takes a DocumentURI and reads the file into a slice of string
@@ -141,5 +153,53 @@ func TrimQuotes(str string) string {
 		return matched[1 : len(matched)-1]
 	}
 
-	return ""
+	// Match cases when only one quote presented
+	if len(str) > 0 && (str[0] == '"' || str[0] == '\'') {
+		str = str[1:]
+	}
+	if len(str) > 0 && str[len(str)-1] == '"' {
+		str = str[:len(str)-1]
+	}
+
+	return str
+}
+
+// LooksLikeString returns true if the input string looks like a string
+func LooksLikeString(str string) bool {
+	return mustMatch(`(^("|')([^"]|"")*("|'))`, str)
+}
+
+// LooksLikeAttribute returns true if the input string looks like an attribute: "hello".
+func LooksLikeAttribute(str string) bool {
+	return mustMatch(`(\.[\w]*)$`, str)
+}
+
+// LooksLikeCONFIGAttr returns true if the input string looks like an attribute of CONFIG object: CONFIG.PLZ_VERSION
+func LooksLikeCONFIGAttr(str string) bool {
+	return mustMatch(`(CONFIG\.[\w]*)$`, str)
+}
+
+// LooksLikeStringAttr returns true if the input string looks like an attribute of string: "hello".format()
+func LooksLikeStringAttr(str string) bool {
+	return mustMatch(`((".*"|'.*')\.\w*)$`, str)
+}
+
+// LooksLikeDictAttr returns true if the input string looks like an attribute of dict
+// e.g. {"foo": 1, "bar": "baz"}.keys()
+func LooksLikeDictAttr(str string) bool {
+	return mustMatch(`({.*}\.\w*)$`, str)
+}
+
+func mustMatch(pattern string, str string) bool {
+	re := regexp.MustCompile(pattern)
+	matched := re.FindString(str)
+	if matched != "" {
+		return true
+	}
+	return false
+}
+
+// isEmpty checks if the hovered line is empty
+func isEmpty(lineContent string, pos lsp.Position) bool {
+	return len(lineContent) < pos.Character+1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
 }

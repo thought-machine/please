@@ -709,3 +709,13 @@ func (config *Configuration) PrintAliases(w io.Writer) {
 		fmt.Fprintf(w, tmpl, name, aliases[name].Desc)
 	}
 }
+
+// IsABuildFile returns true if given filename is a build file name.
+func (config *Configuration) IsABuildFile(name string) bool {
+	for _, buildFileName := range config.Parse.BuildFileName {
+		if name == buildFileName {
+			return true
+		}
+	}
+	return false
+}

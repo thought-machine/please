@@ -18,22 +18,24 @@ var log = logging.MustGetLogger("lsp")
 
 // NewHandler creates a BUILD file language server handler
 func NewHandler() jsonrpc2.Handler {
-	return handler{jsonrpc2.HandlerWithError((&LsHandler{
+	h := &LsHandler{
 		IsServerDown: false,
-	}).Handle)}
+	}
+	return langHandler{
+		jsonrpc2.HandlerWithError(h.Handle)}
 }
 
 // handler wraps around LsHandler to correctly handler requests in the correct order
-type handler struct {
+type langHandler struct {
 	jsonrpc2.Handler
 }
 
 // LsHandler is the main handler struct of the language server handler
 type LsHandler struct {
-	init *lsp.InitializeParams
+	init     *lsp.InitializeParams
 	analyzer *Analyzer
-	mu   sync.Mutex
-	conn *jsonrpc2.Conn
+	mu       sync.Mutex
+	conn     *jsonrpc2.Conn
 
 	repoRoot     string
 	requestStore *requestStore
@@ -43,23 +45,35 @@ type LsHandler struct {
 }
 
 // Handle function takes care of all the incoming from the client, and returns the correct response
-func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, request *jsonrpc2.Request) (result interface{}, err error) {
-	if request.Method != "initialize" && h.init == nil {
+func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+	if req.Method != "initialize" && h.init == nil {
 		return nil, fmt.Errorf("server must be initialized")
 	}
 	h.conn = conn
 
-	methods := map[string]func(ctx context.Context, request *jsonrpc2.Request) (result interface{}, err error){
-		"initialize":      		h.handleInit,
-		"initialzed":      		h.handleInitialized,
-		"shutdown":        		h.handleShutDown,
-		"exit":            		h.handleExit,
-		"$/cancelRequest": 		h.handleCancel,
-		"textDocument/hover": 	h.handleHover,
+	log.Info(fmt.Sprintf("handling method %s ...", req.Method))
+	methods := map[string]func(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error){
+		"initialize":              h.handleInit,
+		"initialzed":              h.handleInitialized,
+		"shutdown":                h.handleShutDown,
+		"exit":                    h.handleExit,
+		"$/cancelRequest":         h.handleCancel,
+		"textDocument/hover":      h.handleHover,
+		"textDocument/completion": h.handleCompletion,
 	}
 
-	return methods[request.Method](ctx, request)
+	if req.Method != "initialize" && req.Method != "exit" &&
+		req.Method != "initialzed" && req.Method != "shutdown" {
+		ctx = h.requestStore.Store(ctx, req)
+		defer h.requestStore.Cancel(req.ID)
+	}
 
+	if method, ok := methods[req.Method]; ok {
+		return method(ctx, req)
+	}
+	// TODO(bnm): call fs request handlers like, textDocument/didOpen
+
+	return nil, nil
 }
 
 func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
@@ -87,7 +101,13 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	params.EnsureRoot()
 	h.init = &params
 
-	h.analyzer = newAnalyzer()
+	h.analyzer, err = newAnalyzer()
+	if err != nil {
+		return nil, &jsonrpc2.Error{
+			Code:    jsonrpc2.CodeParseError,
+			Message: fmt.Sprintf("error in parsing .plzconfig file: %s", err),
+		}
+	}
 
 	// Reset the requestStore, and get sub-context based on request ID
 	reqStore := newRequestStore()
@@ -95,7 +115,6 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	ctx = h.requestStore.Store(ctx, req)
 
 	h.mu.Unlock()
-
 	defer h.requestStore.Cancel(req.ID)
 
 	// Fill in the response results
@@ -109,7 +128,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 		TriggerCharacters: []string{"{", ","},
 	}
 
-	log.Info("Initialize plz build file language server...")
+	defer log.Info("Plz build file language server initialized")
 	return lsp.InitializeResult{
 		Capabilities: lsp.ServerCapabilities{
 			TextDocumentSync:           &TDsync,
@@ -161,7 +180,7 @@ func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (re
 		}
 	}
 
-	h.requestStore.Cancel(params.ID)
+	defer h.requestStore.Cancel(params.ID)
 
 	return nil, nil
 }

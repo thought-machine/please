@@ -14,18 +14,26 @@ import (
 )
 
 func TestNewAnalyzer(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
 	assert.NotEqual(t, nil, a.BuiltIns)
 
 	goLibrary := a.BuiltIns["go_library"]
 	assert.Equal(t, 15, len(goLibrary.ArgMap))
 	assert.Equal(t, true, goLibrary.ArgMap["name"].required)
+
+	// Check for methods map
+	_, ok := a.Attributes["str"]
+	assert.True(t, ok)
 }
 
 func TestAspStatementFromFile(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
 
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
+	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
 	uri := lsp.DocumentURI("file://" + filePath)
 
 	stmts, err := a.AspStatementFromFile(uri)
@@ -36,9 +44,11 @@ func TestAspStatementFromFile(t *testing.T) {
 }
 
 func TestStatementFromPos(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
 
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
+	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
 	uri := lsp.DocumentURI("file://" + filePath)
 
 	stmt, err := a.StatementFromPos(uri, lsp.Position{Line: 2, Character: 13})
@@ -59,7 +69,8 @@ func TestStatementFromPos(t *testing.T) {
 }
 
 func TestNewRuleDef(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
 
 	// Test header the definition for build_rule
 	expected := "def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],\n" +
@@ -110,6 +121,7 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, "str.format()")
 	assert.Equal(t, len(ruleDef.ArgMap), 0)
+	assert.Equal(t, ruleDef.Object, "str")
 
 	// Test header for a config function, setdefault()
 	stmt = getStatementByName(statements, "setdefault")
@@ -140,13 +152,17 @@ func TestGetArgString(t *testing.T) {
 }
 
 func TestBuildLabelFromString(t *testing.T) {
-	a := newAnalyzer()
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
 	ctx := context.Background()
 	filePath := "tools/build_langserver/langserver/test_data/example.build"
 	uri := lsp.DocumentURI("file://" + filePath)
 
+	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
+
 	// Test case for regular and complete BuildLabel path
-	label, err := a.BuildLabelFromString(ctx, core.RepoRoot, uri, "//third_party/go:jsonrpc2")
+	label, err := a.BuildLabelFromString(ctx, uri, "//third_party/go:jsonrpc2")
 	expectedContent := "go_get(\n" +
 		"    name = \"jsonrpc2\",\n" +
 		"    get = \"github.com/sourcegraph/jsonrpc2\",\n" +
@@ -155,10 +171,10 @@ func TestBuildLabelFromString(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, path.Join(core.RepoRoot, "third_party/go/BUILD"), label.Path)
 	assert.Equal(t, "jsonrpc2", label.Name)
-	assert.Equal(t, expectedContent, label.BuildDefContent)
+	assert.Equal(t, expectedContent, label.Definition)
 
 	// Test case for relative BuildLabel path
-	label, err = a.BuildLabelFromString(ctx, core.RepoRoot, uri, ":langserver")
+	label, err = a.BuildLabelFromString(ctx, uri, ":langserver")
 	expectedContent = "go_library(\n" +
 		"    name = \"langserver\",\n" +
 		"    srcs = glob(\n" +
@@ -181,41 +197,65 @@ func TestBuildLabelFromString(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, absPath, label.Path)
 	assert.Equal(t, "langserver", label.Name)
-	assert.Equal(t, expectedContent, label.BuildDefContent)
+	assert.Equal(t, expectedContent, label.Definition)
 
 	// Test case for Allsubpackage BuildLabels: "//src/parse/..."
-	label, err = a.BuildLabelFromString(ctx, core.RepoRoot,
+	label, err = a.BuildLabelFromString(ctx,
 		uri, "//src/parse/...")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
 	assert.Equal(t, "BuildLabel includes all subpackages in path: "+path.Join(core.RepoRoot, "src/parse"),
-		label.BuildDefContent)
+		label.Definition)
 
 	// Test case for All targets in a BUILD file: "//src/parse:all"
-	label, err = a.BuildLabelFromString(ctx, core.RepoRoot,
+	label, err = a.BuildLabelFromString(ctx,
 		uri, "//src/parse:all")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
 	assert.Equal(t, "BuildLabel includes all BuildTargets in BUILD file: "+path.Join(core.RepoRoot, "src/parse/BUILD"),
-		label.BuildDefContent)
+		label.Definition)
 
 	// Test case for shortended BuildLabel
-	label, err = a.BuildLabelFromString(ctx, core.RepoRoot,
-		uri, "//src/core")
+	label, err = a.BuildLabelFromString(ctx, uri, "//src/core")
 	assert.Equal(t, err, nil)
 
-	label2, err := a.BuildLabelFromString(ctx, core.RepoRoot,
-		uri, "//src/core:core")
+	label2, err := a.BuildLabelFromString(ctx, uri, "//src/core:core")
 	assert.Equal(t, err, nil)
 
-	assert.Equal(t, label.BuildDefContent, label2.BuildDefContent)
+	assert.Equal(t, label.Definition, label2.Definition)
 
 	// Test case for subrepo
-	label, err = a.BuildLabelFromString(ctx, core.RepoRoot,
-		uri, "@mysubrepo//spam/eggs:ham")
+	label, err = a.BuildLabelFromString(ctx, uri, "@mysubrepo//spam/eggs:ham")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "Subrepo label: @mysubrepo//spam/eggs:ham", label.BuildDefContent)
+	assert.Equal(t, "Subrepo label: @mysubrepo//spam/eggs:ham", label.Definition)
+}
+
+func TestAnalyzer_BuildDefFromUri(t *testing.T) {
+	ctx := context.Background()
+
+	buildDefs, err := analyzer.BuildDefsFromURI(ctx, exampleBuildURI)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, 4, len(buildDefs))
+	assert.Equal(t, []string{"//tools/build_langserver/...", "//src/core"}, buildDefs["langserver"].Visibility)
+	t.Log(buildDefs["langserver_test"].Visibility)
+
+	exampleBuildURI2 := lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example2.build")
+	buildDefs, err = analyzer.BuildDefsFromURI(ctx, exampleBuildURI2)
+	assert.Equal(t, 2, len(buildDefs))
+	assert.Equal(t, []string{"PUBLIC"}, buildDefs["langserver_test"].Visibility)
+}
+
+func TestAnalyzer_IsBuildFile(t *testing.T) {
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
+	uri := lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example.build")
+
+	assert.False(t, a.IsBuildFile(uri))
+
+	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
+	assert.True(t, a.IsBuildFile(uri))
 }
 
 /************************

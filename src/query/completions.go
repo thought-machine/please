@@ -32,7 +32,6 @@ func CompletionLabels(config *core.Configuration, args []string, repoRoot string
 	// Bash completion sometimes produces \: instead of just : (see issue #18).
 	// We silently fix that here since we've not yet worked out how to fix Bash itself :(
 	args[0] = strings.Replace(args[0], "\\:", ":", -1)
-
 	if strings.HasSuffix(args[0], ":") {
 		// Have to special-case this because it won't be a valid label.
 		labels := core.ParseBuildLabels([]string{args[0] + "all"})
@@ -43,17 +42,7 @@ func CompletionLabels(config *core.Configuration, args []string, repoRoot string
 }
 
 func queryCompletionPackages(config *core.Configuration, query, repoRoot string) {
-	root := path.Join(repoRoot, query)
-	origRoot := root
-	if !core.PathExists(root) {
-		root = path.Dir(root)
-	}
-	packages := []string{}
-	for pkg := range utils.FindAllSubpackages(config, root, origRoot) {
-		if strings.HasPrefix(pkg, origRoot) {
-			packages = append(packages, pkg[len(repoRoot):])
-		}
-	}
+	packages := GetAllPackages(config, query, repoRoot)
 	// If there's only one package, we know it has to be that, but we don't present
 	// only one option otherwise bash completion will assume it's that.
 	if len(packages) == 1 {
@@ -65,6 +54,23 @@ func queryCompletionPackages(config *core.Configuration, query, repoRoot string)
 		}
 	}
 	os.Exit(0) // Don't need to run a full-blown parse, get out now.
+}
+
+// GetAllPackages returns a string slice of all the package labels, such as "//src/core/query"
+func GetAllPackages(config *core.Configuration, query, repoRoot string) []string {
+	root := path.Join(repoRoot, query)
+	origRoot := root
+	if !core.PathExists(root) {
+		root = path.Dir(root)
+	}
+	packages := []string{}
+	for pkg := range utils.FindAllSubpackages(config, root, origRoot) {
+		if strings.HasPrefix(pkg, origRoot) {
+			packages = append(packages, pkg[len(repoRoot):])
+		}
+	}
+
+	return packages
 }
 
 // Completions queries a set of possible completions for some build labels.

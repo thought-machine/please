@@ -20,9 +20,11 @@ import (
 // Analyzer is a wrapper around asp.parser
 // This is being loaded into a handler on initialization
 type Analyzer struct {
-	parser   *asp.Parser
-	state    *core.BuildState
-	BuiltIns map[string]*RuleDef
+	parser *asp.Parser
+	State  *core.BuildState
+
+	BuiltIns   map[string]*RuleDef
+	Attributes map[string][]*RuleDef
 }
 
 // RuleDef is a wrapper around asp.FuncDef,
@@ -32,6 +34,9 @@ type RuleDef struct {
 	*asp.FuncDef
 	Header string
 	ArgMap map[string]*Argument
+
+	// This applies when the FuncDef is a attribute of an object
+	Object string
 }
 
 // Argument is a wrapper around asp.Argument,
@@ -52,6 +57,16 @@ type Identifier struct {
 	EndPos lsp.Position
 }
 
+// BuildDef is the definition for a build target.
+// often a function call using a specific build rule
+type BuildDef struct {
+	*Identifier
+	BuildDefName string
+	Visibility   []string
+	// The content of the build definition
+	Content string
+}
+
 // Statement is a simplified version of asp.Statement
 // Here we only care about Idents and Expressions
 type Statement struct {
@@ -67,30 +82,35 @@ type BuildLabel struct {
 	Path string
 	// IdentStatement for the build definition,
 	// usually the call to the specific buildrule, such as "go_library()"
-	BuildDef *Identifier
+	BuildDef *BuildDef
 	// The content of the build definition
-	BuildDefContent string
+	Definition string
 }
 
-func newAnalyzer() *Analyzer {
+func newAnalyzer() (*Analyzer, error) {
 	// Saving the state to Analyzer,
 	// so we will be able to get the CONFIG properties by calling state.config.GetTags()
-	state := core.NewDefaultBuildState()
+	config, err := core.ReadDefaultConfigFiles("")
+	if err != nil {
+		return nil, err
+	}
+	state := core.NewBuildState(1, nil, 4, config)
 	parser := asp.NewParser(state)
 
 	a := &Analyzer{
 		parser: parser,
-		state:  state,
+		State:  state,
 	}
 	a.builtInsRules()
 
-	return a
+	return a, nil
 }
 
 // BuiltInsRules gets all the builtin functions and rules as a map, and store it in Analyzer.BuiltIns
 // This is typically called when instantiate a new Analyzer
 func (a *Analyzer) builtInsRules() error {
 	statementMap := make(map[string]*RuleDef)
+	attrMap := make(map[string][]*RuleDef)
 
 	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)
@@ -106,13 +126,25 @@ func (a *Analyzer) builtInsRules() error {
 			for _, statement := range stmts {
 				if statement.FuncDef != nil && !strings.HasPrefix(statement.FuncDef.Name, "_") {
 					content := string(asset)
-					statementMap[statement.FuncDef.Name] = newRuleDef(content, statement)
+
+					ruleDef := newRuleDef(content, statement)
+					statementMap[statement.FuncDef.Name] = ruleDef
+
+					// Fill in attribute map if certain ruleDef is a attribute
+					if ruleDef.Object != "" {
+						if _, ok := attrMap[ruleDef.Object]; ok {
+							attrMap[ruleDef.Object] = append(attrMap[ruleDef.Object], ruleDef)
+						} else {
+							attrMap[ruleDef.Object] = []*RuleDef{ruleDef}
+						}
+					}
 				}
 			}
 		}
 	}
 
 	a.BuiltIns = statementMap
+	a.Attributes = attrMap
 	return nil
 }
 
@@ -136,6 +168,7 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 				}
 				newDef := fmt.Sprintf("%s.%s(", arg.Type[0], stmt.FuncDef.Name)
 				headerSlice[0] = strings.Replace(headerSlice[0], originalDef, newDef, 1)
+				ruleDef.Object = arg.Type[0]
 			} else {
 				// Fill in the ArgMap
 				argString := getArgString(arg)
@@ -164,9 +197,9 @@ func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, 
 		return nil, err
 	}
 
-	stmts, err := a.parser.ParseData(bytecontent, filepath)
+	stmts, _ := a.parser.ParseData(bytecontent, filepath)
 	if err != nil {
-		return nil, err
+		log.Warning(fmt.Sprintf("parsing failure: %s ", err))
 	}
 
 	return stmts, nil
@@ -180,7 +213,6 @@ func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) 
 		return nil, err
 	}
 
-	//return a.statementFromAst(reflect.ValueOf(stmts), position)
 	statement, expr := asp.StatementOrExpressionFromAst(stmts,
 		asp.Position{Line: position.Line + 1, Column: position.Character + 1})
 
@@ -223,10 +255,10 @@ func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {
 }
 
 // BuildLabelFromString returns a BuildLabel object,
-func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
-	uri lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
+func (a *Analyzer) BuildLabelFromString(ctx context.Context,
+	currentURI lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
 
-	filepath, err := GetPathFromURL(uri, "file")
+	filepath, err := GetPathFromURL(currentURI, "file")
 	if err != nil {
 		return nil, err
 	}
@@ -241,87 +273,171 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context, rootPath string,
 	}
 
 	// Get the BUILD file path for the build label
-	var labelPath string
 	// Handling subrepo
 	if label.Subrepo != "" {
 		return &BuildLabel{
-			BuildLabel:      &label,
-			Path:            label.PackageDir(),
-			BuildDef:        nil,
-			BuildDefContent: "Subrepo label: " + labelStr,
+			BuildLabel: &label,
+			Path:       label.PackageDir(),
+			BuildDef:   nil,
+			Definition: "Subrepo label: " + labelStr,
 		}, nil
 	}
 
-	// TODO(bnmetrics): might need to reconsider how to fetch the BUILD files, as the name can be set in the config
-	if label.PackageName == path.Dir(filepath) {
-		labelPath = filepath
-	} else if strings.HasPrefix(label.PackageDir(), rootPath) {
-		labelPath = path.Join(label.PackageDir(), "BUILD")
-	} else {
-		labelPath = path.Join(rootPath, label.PackageDir(), "BUILD")
-	}
-
+	labelPath := string(a.BuildFileURIFromPackage(label.PackageDir()))
 	if !fs.PathExists(labelPath) {
 		return nil, fmt.Errorf("cannot find the path for build label %s", labelStr)
 	}
 
 	// Get the BuildDef and BuildDefContent for the BuildLabel
-	var buildDef *Identifier
-	var buildDefContent string
+	var buildDef *BuildDef
+	var definition string
 
-	// Check for cases such as "//tools/build_langserver/..."
 	if label.IsAllSubpackages() {
-		buildDefContent = "BuildLabel includes all subpackages in path: " +
-			path.Join(rootPath, label.PackageDir())
-
-		// Check for cases such as "//tools/build_langserver/all"
+		// Check for cases such as "//tools/build_langserver/..."
+		definition = "BuildLabel includes all subpackages in path: " + path.Join(path.Dir(labelPath))
 	} else if label.IsAllTargets() {
-		buildDefContent = "BuildLabel includes all BuildTargets in BUILD file: " + labelPath
+		// Check for cases such as "//tools/build_langserver/all"
+		definition = "BuildLabel includes all BuildTargets in BUILD file: " + labelPath
 	} else {
-		// Get the BuildDef IdentStatement from the build file
-		buildDef, err = a.getBuildDefByName(label.Name, labelPath)
+		buildDef, err = a.BuildDefFromLabel(ctx, &label, labelPath)
 		if err != nil {
 			return nil, err
 		}
-
-		// Get the content for the BuildDef
-		labelfileContent, err := ReadFile(ctx, lsp.DocumentURI(labelPath))
-		if err != nil {
-			return nil, err
-		}
-		buildDefContent = strings.Join(labelfileContent[buildDef.Pos.Line:buildDef.EndPos.Line+1], "\n")
+		definition = buildDef.Content
 	}
 
 	return &BuildLabel{
-		BuildLabel:      &label,
-		Path:            labelPath,
-		BuildDef:        buildDef,
-		BuildDefContent: buildDefContent,
+		BuildLabel: &label,
+		Path:       labelPath,
+		BuildDef:   buildDef,
+		Definition: definition,
 	}, nil
 }
 
-// getBuildDefByName returns an Identifier object of a BuildDef(call of a Build rule) based the name
-func (a *Analyzer) getBuildDefByName(name string, path string) (*Identifier, error) {
-	// Get all the statements from the build file
-	stmts, err := a.AspStatementFromFile(lsp.DocumentURI(path))
+// BuildDefFromLabel returns a BuildDef struct given an *core.BuildLabel and the path of the label
+func (a *Analyzer) BuildDefFromLabel(ctx context.Context, label *core.BuildLabel, path string) (*BuildDef, error) {
+	if label.IsAllSubpackages() || label.IsAllTargets() {
+		return nil, nil
+	}
+
+	// Get the BuildDef IdentStatement from the build file
+	buildDef, err := a.getBuildDefByName(ctx, label.Name, path)
 	if err != nil {
 		return nil, err
 	}
 
+	// Get the content for the BuildDef
+	labelfileContent, err := ReadFile(ctx, lsp.DocumentURI(path))
+	if err != nil {
+		return nil, err
+	}
+	buildDef.Content = strings.Join(labelfileContent[buildDef.Pos.Line:buildDef.EndPos.Line+1], "\n")
+
+	return buildDef, nil
+}
+
+// getBuildDefByName returns an Identifier object of a BuildDef(call of a Build rule)
+// based on the name and the buildfile path
+func (a *Analyzer) getBuildDefByName(ctx context.Context, name string, path string) (*BuildDef, error) {
+	buildDefs, err := a.BuildDefsFromURI(ctx, lsp.DocumentURI(path))
+	if err != nil {
+		return nil, err
+	}
+
+	if buildDef, ok := buildDefs[name]; ok {
+		return buildDef, nil
+	}
+
+	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
+}
+
+// BuildDefsFromURI returns a map of buildDefname : *BuildDef
+func (a *Analyzer) BuildDefsFromURI(ctx context.Context, uri lsp.DocumentURI) (map[string]*BuildDef, error) {
+	// Get all the statements from the build file
+	stmts, err := a.AspStatementFromFile(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	buildDefs := make(map[string]*BuildDef)
+
+	var defaultVisibility []string
 	for _, stmt := range stmts {
+		if stmt.Ident == nil {
+			continue
+		}
 		ident := a.identFromStatement(stmt)
 		if ident.Type != "call" {
 			continue
 		}
 
+		// Filling in buildDef struct based on arg
+		var buildDef *BuildDef
 		for _, arg := range ident.Action.Call.Arguments {
-			if arg.Name == "name" && TrimQuotes(arg.Value.Val.String) == name {
-				return ident, nil
+			switch arg.Name {
+			case "default_visibility":
+				defaultVisibility = aspListToStrSlice(arg.Value.Val.List)
+			case "name":
+				buildDef = &BuildDef{
+					Identifier:   ident,
+					BuildDefName: TrimQuotes(arg.Value.Val.String),
+				}
+			case "visibility":
+				if buildDefs != nil {
+					buildDef.Visibility = aspListToStrSlice(arg.Value.Val.List)
+				}
 			}
 		}
+
+		// Set visibility
+		if buildDef != nil {
+			if buildDef.Visibility == nil {
+				if len(defaultVisibility) > 0 {
+					buildDef.Visibility = defaultVisibility
+				} else {
+					currentPkg, err := PackageLabelFromURI(uri)
+					if err != nil {
+						return nil, err
+					}
+					buildDef.Visibility = []string{currentPkg}
+				}
+			}
+			// Get the content for the BuildDef
+			labelfileContent, err := ReadFile(ctx, uri)
+			if err != nil {
+				return nil, err
+			}
+			buildDef.Content = strings.Join(labelfileContent[buildDef.Pos.Line:buildDef.EndPos.Line+1], "\n")
+
+			buildDefs[buildDef.BuildDefName] = buildDef
+		}
+	}
+	return buildDefs, nil
+}
+
+// BuildFileURIFromPackage takes a relative(to the reporoot) package directory, and returns a build file path
+func (a *Analyzer) BuildFileURIFromPackage(packageDir string) lsp.DocumentURI {
+	for _, i := range a.State.Config.Parse.BuildFileName {
+		buildFilePath := path.Join(packageDir, i)
+		if !strings.HasPrefix(packageDir, core.RepoRoot) {
+			buildFilePath = path.Join(core.RepoRoot, buildFilePath)
+		}
+		if fs.FileExists(buildFilePath) {
+			return lsp.DocumentURI(buildFilePath)
+		}
+	}
+	return lsp.DocumentURI("")
+}
+
+// IsBuildFile takes a uri path and check if it's a valid build file
+func (a *Analyzer) IsBuildFile(uri lsp.DocumentURI) bool {
+	filepath, err := GetPathFromURL(uri, "file")
+	if err != nil {
+		return false
 	}
 
-	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
+	base := path.Base(filepath)
+	return a.State.Config.IsABuildFile(base)
 }
 
 // e.g. src type:list, required:false
@@ -334,4 +450,15 @@ func getArgString(argument asp.Argument) string {
 		argString += ", type:" + argType
 	}
 	return argString
+}
+
+func aspListToStrSlice(listVal *asp.List) []string {
+	var retSlice []string
+
+	for _, i := range listVal.Values {
+		if i.Val.String != "" {
+			retSlice = append(retSlice, TrimQuotes(i.Val.String))
+		}
+	}
+	return retSlice
 }
