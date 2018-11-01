@@ -56,7 +56,7 @@ func queryCompletionPackages(config *core.Configuration, query, repoRoot string)
 	os.Exit(0) // Don't need to run a full-blown parse, get out now.
 }
 
-// GetAllPackages returns a string slice
+// GetAllPackages returns a string slice of all the package labels, such as "//src/core/query"
 func GetAllPackages(config *core.Configuration, query, repoRoot string) []string {
 	root := path.Join(repoRoot, query)
 	origRoot := root

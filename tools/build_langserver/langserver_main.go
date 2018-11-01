@@ -3,7 +3,6 @@ package main
 import (
 	"cli"
 	"context"
-	"fmt"
 	"net"
 	"os"
 	"tools/build_langserver/langserver"
@@ -43,7 +42,7 @@ func main() {
 	handler := langserver.NewHandler()
 
 	if err := serve(handler); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		log.Fatalf("fail to start server: %s", err)
 		os.Exit(1)
 	}
 }
