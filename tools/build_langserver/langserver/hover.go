@@ -24,7 +24,7 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
-	documentURI, err := EnsureURL(params.TextDocument.URL, "file")
+	documentURI, err := EnsureURL(params.TextDocument.URI, "file")
 	if err != nil {
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeInvalidParams,

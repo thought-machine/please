@@ -5,7 +5,7 @@ type TextDocumentIdentifier struct {
 	/**
 	 * The text document's URI.
 	 */
-	URL DocumentURI
+	URI DocumentURI
 }
 
 // VersionedTextDocumentIdentifier allow clients to check the text document version before an edit is applied

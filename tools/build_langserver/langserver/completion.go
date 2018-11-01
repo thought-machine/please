@@ -26,8 +26,8 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
-
-	documentURI, err := EnsureURL(params.TextDocument.URL, "file")
+	log.Info("completion with param %s", req.Params)
+	documentURI, err := EnsureURL(params.TextDocument.URI, "file")
 	if err != nil {
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeInvalidParams,
@@ -47,6 +47,7 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 	itemList, err := getCompletionItemsList(ctx, h.analyzer, supportSnippet, documentURI, params.Position)
 	h.mu.Unlock()
 
+	log.Info("completion item list %s", itemList)
 	return &lsp.CompletionList{
 		IsIncomplete: false,
 		Items:        itemList,

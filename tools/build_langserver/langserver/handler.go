@@ -70,9 +70,8 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 
 	if method, ok := methods[req.Method]; ok {
 		return method(ctx, req)
-	} else {
-		// TODO(bnm): call fs request handlers like, textDocument/didOpen
 	}
+	// TODO(bnm): call fs request handlers like, textDocument/didOpen
 
 	return nil, nil
 }
