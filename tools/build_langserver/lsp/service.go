@@ -75,15 +75,18 @@ type TextDocumentContentChangeEvent struct {
 	Text        string `json:"text"`
 }
 
+// DidCloseTextDocumentParams is sent from the client to the server when the document got closed in the client.
 type DidCloseTextDocumentParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 }
 
+// DidSaveTextDocumentParams is sent from the client to the server when the document was saved in the client.
 type DidSaveTextDocumentParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 	Text         string                 `json:"text,omitempty"`
 }
 
+// WillSaveTextDocumentParams is sent from the client to the server before the document is actually saved.
 type WillSaveTextDocumentParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 	Reason       TextDocumentSaveReason `json:"reason,omitempty"`
