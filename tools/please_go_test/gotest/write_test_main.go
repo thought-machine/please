@@ -3,6 +3,7 @@ package gotest
 import (
 	"fmt"
 	"go/ast"
+	"go/doc"
 	"go/parser"
 	"go/token"
 	"os"
@@ -20,6 +21,7 @@ type testDescr struct {
 	Package   string
 	Main      string
 	Functions []string
+	Examples  []*doc.Example
 	CoverVars []CoverVar
 	Imports   []string
 	Version18 bool
@@ -34,7 +36,7 @@ func WriteTestMain(pkgDir string, version18 bool, sources []string, output strin
 	}
 	testDescr.CoverVars = coverVars
 	testDescr.Version18 = version18
-	if len(testDescr.Functions) > 0 {
+	if len(testDescr.Functions) > 0 || len(testDescr.Examples) > 0 {
 		// Can't set this if there are no test functions, it'll be an unused import.
 		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, coverVars)
 	}
@@ -87,7 +89,7 @@ func extraImportPaths(pkg, pkgDir string, coverVars []CoverVar) []string {
 func parseTestSources(sources []string) (testDescr, error) {
 	descr := testDescr{}
 	for _, source := range sources {
-		f, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
+		f, err := parser.ParseFile(token.NewFileSet(), source, nil, parser.ParseComments)
 		if err != nil {
 			log.Errorf("Error parsing %s: %s", source, err)
 			return descr, err
@@ -102,11 +104,13 @@ func parseTestSources(sources []string) (testDescr, error) {
 				name := fd.Name.String()
 				if isTestMain(fd) {
 					descr.Main = name
-				} else if isTest(name, "Test") {
+				} else if isTest(fd, 1, name, "Test") {
 					descr.Functions = append(descr.Functions, name)
 				}
 			}
 		}
+		// Get doc to find the examples for us :)
+		descr.Examples = append(descr.Examples, doc.Examples(f)...)
 	}
 	return descr, nil
 }
@@ -139,11 +143,10 @@ func isTestMain(fn *ast.FuncDecl) bool {
 
 // isTest returns true if the given function looks like a test.
 // Copied from Go sources.
-func isTest(name, prefix string) bool {
-	if !strings.HasPrefix(name, prefix) {
+func isTest(fd *ast.FuncDecl, argLen int, name, prefix string) bool {
+	if !strings.HasPrefix(name, prefix) || fd.Recv != nil || len(fd.Type.Params.List) != argLen {
 		return false
-	}
-	if len(name) == len(prefix) { // "Test" is ok
+	} else if len(name) == len(prefix) { // "Test" is ok
 		return true
 	}
 	rune, _ := utf8.DecodeRuneInString(name[len(prefix):])
@@ -170,6 +173,11 @@ import (
 var tests = []testing.InternalTest{
 {{range .Functions}}
 	{"{{.}}", {{$.Package}}.{{.}}},
+{{end}}
+}
+var examples = []testing.InternalExample{
+{{range .Examples}}
+	{"{{.Name}}", {{$.Package}}.Example{{.Name}}, {{.Output | printf "%q"}}, {{.Unordered}}},
 {{end}}
 }
 
@@ -236,9 +244,7 @@ func main() {
         args = append(args, "-test.run", testVar)
     }
     os.Args = append(args, os.Args[1:]...)
-	benchmarks := []testing.InternalBenchmark{}
-	var examples = []testing.InternalExample{}
-	m := testing.MainStart(testDeps, tests, benchmarks, examples)
+	m := testing.MainStart(testDeps, tests, nil, examples)
 {{if .Main}}
 	{{.Package}}.{{.Main}}(m)
 {{else}}
