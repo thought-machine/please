@@ -145,7 +145,7 @@ func TestCompletionWithDictMethods(t *testing.T) {
 
 func TestCompletionWithBuildLabels(t *testing.T) {
 	ctx := context.Background()
-	err := storeFile(ctx, completionPropURI)
+	err := storeFile(ctx, completionLabelURI)
 	assert.Equal(t, nil, err)
 
 	items, err := handler.getCompletionItemsList(ctx, completionLabelURI, lsp.Position{Line: 0, Character: 6})
