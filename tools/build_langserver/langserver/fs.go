@@ -29,29 +29,19 @@ func (h *LsHandler) handleFSRequests(ctx context.Context, req *jsonrpc2.Request)
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
 			return nil, err
 		}
-
-		err := h.workspace.TrackEdit(params.TextDocument.URI, params.ContentChanges)
-		if err != nil {
-			return nil, err
-		}
-		return nil, nil
+		return nil, h.workspace.TrackEdit(params.TextDocument.URI, params.ContentChanges)
 	case "textDocument/didSave":
 		var params lsp.DidSaveTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
 			return nil, err
 		}
-		err := h.workspace.Update(params.TextDocument.URI, params.Text)
-		if err != nil {
-			return nil, err
-		}
-		return nil, nil
+		return nil, h.workspace.Update(params.TextDocument.URI, params.Text)
 	case "textDocument/didClose":
 		var params lsp.DidCloseTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
 			return nil, err
 		}
-		delete(h.workspace.documents, params.TextDocument.URI)
-		return nil, nil
+		return nil, h.workspace.Close(params.TextDocument.URI)
 	case "textDocument/willSave":
 		var params lsp.WillSaveTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {

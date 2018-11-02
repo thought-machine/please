@@ -31,25 +31,25 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 	documentURI, err := EnsureURL(params.TextDocument.URI, "file")
 	if err != nil {
 		message := fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, completionMethod)
-		log.Fatal(message)
+		log.Error(message)
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeInvalidParams,
 			Message: fmt.Sprintf(message),
 		}
 	}
-	if !h.analyzer.IsBuildFile(documentURI) {
+	// Check if the input file is a build file or a build_defs file
+	if !h.analyzer.IsBuildFile(documentURI) || h.analyzer.IsBuildDefFile(documentURI) {
 		message := fmt.Sprintf("documentURI '%s' is not supported because it's not a buildfile", documentURI)
-		log.Fatal(message)
+		log.Error(message)
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeInvalidParams,
 			Message: fmt.Sprintf(message),
 		}
 	}
-
-	supportSnippet := h.init.Capabilities.TextDocument.Completion.CompletionItem.SnippetSupport
 
 	h.mu.Lock()
-	itemList, err := getCompletionItemsList(ctx, h.analyzer, supportSnippet, documentURI, params.Position)
+	itemList, err := h.getCompletionItemsList(ctx, documentURI, params.Position)
+
 	if err != nil {
 		return nil, err
 	}
@@ -62,42 +62,37 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 	}, nil
 }
 
-func getCompletionItemsList(ctx context.Context, analyzer *Analyzer, supportSnippet bool,
+func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
-	// Get the content of the line from the position
-	lineContent, err := GetLineContent(ctx, uri, pos)
 
-	log.Info("lineContent: %s", lineContent)
-	if err != nil {
-		message := fmt.Sprintf("fail to read file %s", uri)
-		log.Fatal(message)
-		return nil, &jsonrpc2.Error{
-			Code:    jsonrpc2.CodeParseError,
-			Message: fmt.Sprintf(message),
-		}
-	}
+	supportSnippet := h.init.Capabilities.TextDocument.Completion.CompletionItem.SnippetSupport
+	lineContent := h.workspace.documents[uri].text[pos.Line]
+	log.Info("Completion lineContent: %s", lineContent)
 
 	var completionList []*lsp.CompletionItem
 	var completionErr error
 
-	if isEmpty(lineContent[0], pos) {
+	if isEmpty(lineContent, pos) {
 		return completionList, nil
 	}
+
+	lineContent = lineContent[:pos.Character+1]
 
 	//stmt, err := analyzer.StatementFromPos(uri, pos)
 	//fmt.Println(err, stmt)
 
-	if LooksLikeAttribute(lineContent[0]) {
-		completionList = itemsFromAttributes(lineContent[0], analyzer, supportSnippet, pos)
-	} else if core.LooksLikeABuildLabel(TrimQuotes(lineContent[0])) {
-		completionList, completionErr = itemsFromBuildLabel(ctx, lineContent[0], analyzer, uri, pos)
+	if LooksLikeAttribute(lineContent) {
+		completionList = itemsFromAttributes(lineContent, h.analyzer, supportSnippet, pos)
+	} else if core.LooksLikeABuildLabel(TrimQuotes(lineContent)) {
+		// TODO(bnm): need to trim the linecontent so we only pass in buildlabel to the following function
+		completionList, completionErr = itemsFromBuildLabel(ctx, lineContent, h.analyzer, uri, pos)
 	} else {
 		// TODO(bnm): iterate through analyzer.Builtins, could use context to cancel request
 	}
 
 	if completionErr != nil {
 		message := fmt.Sprintf("fail to get content for completion, file path: %s", uri)
-		log.Fatal(message)
+		log.Error(message)
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
 			Message: fmt.Sprintf("fail to get content for completion, file path: %s", uri),
@@ -112,44 +107,58 @@ func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Anal
 
 	lineContent = TrimQuotes(lineContent)
 
-	var labels []string
-	if strings.HasPrefix(lineContent, ":") {
-		// Get relative labels in the current file
-		buildDefs, err := analyzer.BuildDefsFromURI(ctx, uri)
-		if err != nil {
-			return nil, err
-		}
-		for buildDef := range buildDefs {
-			labels = append(labels, ":"+buildDef)
-		}
-	} else if strings.HasSuffix(lineContent, ":") && strings.HasPrefix(lineContent, "//") {
-		// Get none relative labels
-		targetURI := analyzer.BuildFileURIFromPackage(lineContent[2 : len(lineContent)-1])
-		buildDefs, err := analyzer.BuildDefsFromURI(ctx, targetURI)
-		if err != nil {
-			return nil, err
-		}
+	// labels consist of label:partial
+	labels := make(map[string]string)
+	if strings.ContainsRune(lineContent, ':') {
+		labelParts := strings.Split(lineContent, ":")
 
-		currentPkg, err := PackageLabelFromURI(uri)
-		if err != nil {
-			return nil, err
-		}
-		for name, buildDef := range buildDefs {
-			if isVisible(buildDef, currentPkg) {
-				labels = append(labels, lineContent+name)
+		if strings.HasPrefix(lineContent, ":") {
+			// Get relative labels in the current file
+			buildDefs, err := analyzer.BuildDefsFromURI(ctx, uri)
+			if err != nil {
+				return nil, err
+			}
+			for buildDef := range buildDefs {
+				partial := strings.TrimPrefix(buildDef, labelParts[1])
+				if labelParts[1] == "" {
+					partial = ""
+				}
+				labels[buildDef] = partial
+			}
+		} else if strings.HasPrefix(lineContent, "//") {
+			// Get none relative labels
+			targetURI := analyzer.BuildFileURIFromPackage(labelParts[0])
+
+			buildDefs, err := analyzer.BuildDefsFromURI(ctx, targetURI)
+			if err != nil {
+				return nil, err
+			}
+
+			currentPkg, err := PackageLabelFromURI(uri)
+			if err != nil {
+				return nil, err
+			}
+			for name, buildDef := range buildDefs {
+				if isVisible(buildDef, currentPkg) {
+					partial := strings.TrimPrefix(name, labelParts[1])
+					if labelParts[1] == "" {
+						partial = ""
+					}
+					labels[name] = partial
+				}
 			}
 		}
 	} else {
 		pkgs := query.GetAllPackages(analyzer.State.Config, lineContent[2:], core.RepoRoot)
 		for _, pkg := range pkgs {
-			labels = append(labels, "/"+pkg)
+			partial := strings.TrimPrefix("/"+pkg, lineContent)
+			labels["/"+pkg] = partial
 		}
 	}
 
 	// Map the labels to a lsp.CompletionItem slice
 	var completionList []*lsp.CompletionItem
-	for _, label := range labels {
-		partial := strings.Replace(label, lineContent, "", 1)
+	for label, partial := range labels {
 		TERange := getTERange(pos, partial)
 		detail := fmt.Sprintf("BUILD Label: %s", label)
 

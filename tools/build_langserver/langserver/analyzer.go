@@ -440,6 +440,16 @@ func (a *Analyzer) IsBuildFile(uri lsp.DocumentURI) bool {
 	return a.State.Config.IsABuildFile(base)
 }
 
+func (a *Analyzer) IsBuildDefFile(uri lsp.DocumentURI) bool {
+	filepath, err := GetPathFromURL(uri, "file")
+	if err != nil {
+		return false
+	}
+
+	base := path.Base(filepath)
+	return strings.HasSuffix(base, ".build_defs")
+}
+
 // e.g. src type:list, required:false
 func getArgString(argument asp.Argument) string {
 	argType := strings.Join(argument.Type, "|")

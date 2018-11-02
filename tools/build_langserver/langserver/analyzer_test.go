@@ -258,6 +258,14 @@ func TestAnalyzer_IsBuildFile(t *testing.T) {
 	assert.True(t, a.IsBuildFile(uri))
 }
 
+func TestAnalyzer_IsBuildDefFile(t *testing.T) {
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
+	uri := lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example.build_defs")
+	assert.True(t, a.IsBuildDefFile(uri))
+}
+
 /************************
  * Helper functions
  ************************/

@@ -123,12 +123,12 @@ func GetLineContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Posit
 }
 
 func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]string, error)) ([]string, error) {
-	path, err := GetPathFromURL(uri, "file")
+	filePath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return nil, err
 	}
 
-	file, err := os.Open(path)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}

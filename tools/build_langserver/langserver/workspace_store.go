@@ -3,18 +3,22 @@ package langserver
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"tools/build_langserver/lsp"
 )
 
 type workspaceStore struct {
 	rootURI lsp.DocumentURI
+	mu      sync.Mutex
 
 	documents map[lsp.DocumentURI]*document
 }
 
 type document struct {
-	text       []string
+	// text content of the document from the last time when saved
+	text []string
+	// test content of the document while in editing(not been saved)
 	textInEdit []string
 }
 
@@ -35,7 +39,7 @@ func (ws *workspaceStore) Store(uri lsp.DocumentURI, content string) {
 	}
 }
 
-// Update method correspond to "textDocument/didSave".
+// Update method corresponds to "textDocument/didSave".
 // This updates the existing uri document in the store
 func (ws *workspaceStore) Update(uri lsp.DocumentURI, content string) error {
 	text := SplitLines(content, true)
@@ -48,6 +52,20 @@ func (ws *workspaceStore) Update(uri lsp.DocumentURI, content string) error {
 	return nil
 }
 
+// Close method corresponds to "textDocument/didClose"
+// This removes the document stored in workspaceStore
+func (ws *workspaceStore) Close(uri lsp.DocumentURI) error {
+	if _, ok := ws.documents[uri]; !ok {
+		return fmt.Errorf("document %s did not open", uri)
+	}
+
+	ws.mu.Lock()
+	delete(ws.documents, uri)
+	ws.mu.Unlock()
+
+	return nil
+}
+
 // TrackEdit tracks the changes of the content for the targeting uri, and update the corresponding
 func (ws *workspaceStore) TrackEdit(uri lsp.DocumentURI, contentChanges []lsp.TextDocumentContentChangeEvent) error {
 	doc, ok := ws.documents[uri]
@@ -56,6 +74,7 @@ func (ws *workspaceStore) TrackEdit(uri lsp.DocumentURI, contentChanges []lsp.Te
 		return nil
 	}
 
+	ws.mu.Lock()
 	for _, change := range contentChanges {
 		newText, err := ws.applyChange(doc.textInEdit, change)
 		if err != nil {
@@ -63,6 +82,7 @@ func (ws *workspaceStore) TrackEdit(uri lsp.DocumentURI, contentChanges []lsp.Te
 		}
 		doc.textInEdit = newText
 	}
+	ws.mu.Unlock()
 
 	return nil
 }
