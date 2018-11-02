@@ -34,7 +34,8 @@ var handler = LsHandler{
 func TestCompletionWithCONFIG(t *testing.T) {
 	ctx := context.Background()
 
-	storeFile(t, ctx, completionPropURI)
+	err := storeFile(ctx, completionPropURI)
+	assert.Equal(t, nil, err)
 
 	// Test completion on CONFIG with no starting character
 	items, err := handler.getCompletionItemsList(ctx, completionPropURI, lsp.Position{Line: 0, Character: 7})
@@ -144,7 +145,8 @@ func TestCompletionWithDictMethods(t *testing.T) {
 
 func TestCompletionWithBuildLabels(t *testing.T) {
 	ctx := context.Background()
-	storeFile(t, ctx, completionLabelURI)
+	err := storeFile(ctx, completionPropURI)
+	assert.Equal(t, nil, err)
 
 	items, err := handler.getCompletionItemsList(ctx, completionLabelURI, lsp.Position{Line: 0, Character: 6})
 	assert.Equal(t, nil, err)
@@ -187,10 +189,13 @@ func itemInList(itemList []*lsp.CompletionItem, targetLabel string) bool {
 	return false
 }
 
-func storeFile(t testing.TB, ctx context.Context, uri lsp.DocumentURI) {
+func storeFile(ctx context.Context, uri lsp.DocumentURI) error {
 	content, err := ReadFile(ctx, uri)
-	assert.Equal(t, nil, err)
+	if err != nil {
+		return err
+	}
 	text := strings.Join(content, "\n") + "\n"
 
 	handler.workspace.Store(uri, text)
+	return nil
 }
