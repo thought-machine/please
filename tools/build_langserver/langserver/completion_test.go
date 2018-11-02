@@ -151,6 +151,13 @@ func TestCompletionWithBuildLabels(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 1, len(items))
 	assert.Equal(t, "//src/query:query", items[0].Label)
+
+	//items, err = getCompletionItemsList(ctx, analyzer, true,
+	//	completionLabelURI, lsp.Position{Line: 2, Character: 12})
+	//assert.Equal(t, nil, err)
+	//assert.Equal(t, 1, len(items))
+	//assert.Equal(t, "//src/query:query", items[0].Label)
+	//t.Log(items[0].Label)
 }
 
 func TestCompletionIncompleteFile(t *testing.T) {

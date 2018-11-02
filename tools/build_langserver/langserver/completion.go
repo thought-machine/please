@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"query"
+	"strings"
+
 	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
-	"strings"
 )
 
 const completionMethod = "textDocument/completion"
@@ -29,15 +30,19 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 	log.Info("completion with param %s", req.Params)
 	documentURI, err := EnsureURL(params.TextDocument.URI, "file")
 	if err != nil {
+		message := fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, completionMethod)
+		log.Fatal(message)
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeInvalidParams,
-			Message: fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, completionMethod),
+			Message: fmt.Sprintf(message),
 		}
 	}
 	if !h.analyzer.IsBuildFile(documentURI) {
+		message := fmt.Sprintf("documentURI '%s' is not supported because it's not a buildfile", documentURI)
+		log.Fatal(message)
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeInvalidParams,
-			Message: fmt.Sprintf("documentURI '%s' is not supported because it's not a buildfile", documentURI),
+			Message: fmt.Sprintf(message),
 		}
 	}
 
@@ -45,6 +50,9 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 
 	h.mu.Lock()
 	itemList, err := getCompletionItemsList(ctx, h.analyzer, supportSnippet, documentURI, params.Position)
+	if err != nil {
+		return nil, err
+	}
 	h.mu.Unlock()
 
 	log.Info("completion item list %s", itemList)
@@ -58,10 +66,14 @@ func getCompletionItemsList(ctx context.Context, analyzer *Analyzer, supportSnip
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
 	// Get the content of the line from the position
 	lineContent, err := GetLineContent(ctx, uri, pos)
+
+	log.Info("lineContent: %s", lineContent)
 	if err != nil {
+		message := fmt.Sprintf("fail to read file %s", uri)
+		log.Fatal(message)
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
-			Message: fmt.Sprintf("fail to read file %s", uri),
+			Message: fmt.Sprintf(message),
 		}
 	}
 
@@ -84,6 +96,8 @@ func getCompletionItemsList(ctx context.Context, analyzer *Analyzer, supportSnip
 	}
 
 	if completionErr != nil {
+		message := fmt.Sprintf("fail to get content for completion, file path: %s", uri)
+		log.Fatal(message)
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
 			Message: fmt.Sprintf("fail to get content for completion, file path: %s", uri),

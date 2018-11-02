@@ -24,6 +24,8 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
+
+	log.Info("Hover with param %s", req.Params)
 	documentURI, err := EnsureURL(params.TextDocument.URI, "file")
 	if err != nil {
 		return nil, &jsonrpc2.Error{
@@ -48,6 +50,8 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 		return nil, err
 	}
 
+	log.Info("hover content: %s", content)
+	// TODO(bnm): reconsider the content, because right now everything is on one line.....:(
 	return &lsp.Hover{
 		Contents: *content,
 		// TODO(bnmetrics): we can add range here later

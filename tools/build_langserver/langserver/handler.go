@@ -37,6 +37,8 @@ type LsHandler struct {
 	mu       sync.Mutex
 	conn     *jsonrpc2.Conn
 
+	workspace *workspaceStore
+
 	repoRoot     string
 	requestStore *requestStore
 
@@ -73,7 +75,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	}
 	// TODO(bnm): call fs request handlers like, textDocument/didOpen
 
-	return nil, nil
+	return h.handleFSRequests(ctx, req)
 }
 
 func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
@@ -95,10 +97,12 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	// maybe we can defer until user send a request with first file URL
 	core.FindRepoRoot()
 
-	h.repoRoot = core.RepoRoot
-	h.supportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
-
+	// TODO(bnm): remove stuff with reporoot
 	params.EnsureRoot()
+	h.repoRoot = string(params.RootURI)
+	h.workspace = newWorkspaceStore(params.RootURI)
+
+	h.supportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
 	h.init = &params
 
 	h.analyzer, err = newAnalyzer()
