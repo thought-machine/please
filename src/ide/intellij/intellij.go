@@ -17,6 +17,8 @@ var log = logging.MustGetLogger("intellij")
 // ExportIntellijStructure creates a set of modules and libraries that makes it nicer to work with Please projects
 // in IntelliJ.
 func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph, originalLabels core.BuildLabels) {
+	os.RemoveAll(projectLocation())
+
 	if _, err := os.Stat(projectLocation()); os.IsNotExist(err) {
 		os.MkdirAll(projectLocation(), core.DirPermissions)
 	}
