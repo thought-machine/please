@@ -46,3 +46,8 @@ plz_e2e_test(
     name = "go_test_spec_test",
     cmd = "plz test //test/go_rules:single_test Test2",
 )
+
+go_test(
+    name = "example_test",
+    srcs = ["example_test.go"],
+)
