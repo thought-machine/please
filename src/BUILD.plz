@@ -14,6 +14,7 @@ go_binary(
         "//src/gc",
         "//src/hashes",
         "//src/help",
+        "//src/ide/intellij",
         "//src/metrics",
         "//src/output",
         "//src/parse",
