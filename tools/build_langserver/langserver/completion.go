@@ -76,16 +76,14 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 		return completionList, nil
 	}
 
-	lineContent = lineContent[:pos.Character+1]
-
+	lineContent = lineContent[:pos.Character]
 	//stmt, err := analyzer.StatementFromPos(uri, pos)
 	//fmt.Println(err, stmt)
 
 	if LooksLikeAttribute(lineContent) {
 		completionList = itemsFromAttributes(lineContent, h.analyzer, supportSnippet, pos)
-	} else if core.LooksLikeABuildLabel(TrimQuotes(lineContent)) {
-		// TODO(bnm): need to trim the linecontent so we only pass in buildlabel to the following function
-		completionList, completionErr = itemsFromBuildLabel(ctx, lineContent, h.analyzer, uri, pos)
+	} else if label := ExtractBuildLabel(lineContent); label != "" {
+		completionList, completionErr = itemsFromBuildLabel(ctx, label, h.analyzer, uri, pos)
 	} else {
 		// TODO(bnm): iterate through analyzer.Builtins, could use context to cancel request
 	}
@@ -104,7 +102,7 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 
 func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Analyzer,
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
-
+	// TODO(bnm): need to trim the linecontent so we only pass in buildlabel to the following function
 	lineContent = TrimQuotes(lineContent)
 
 	// labels consist of label:partial

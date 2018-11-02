@@ -192,6 +192,26 @@ func TestLooksLikeDictAttr(t *testing.T) {
 	assert.False(t, LooksLikeDictAttr("{\"foo\":2}.keys()"))
 }
 
+func TestExtractBuildLabel(t *testing.T) {
+	label := ExtractBuildLabel("target = \"//src/cache/blah:hello")
+	assert.Equal(t, "//src/cache/blah:hello", label)
+	t.Log(label)
+
+	label = ExtractBuildLabel("target = \"//src/cache/blah:hello\"")
+	assert.Equal(t, "//src/cache/blah:hello", label)
+
+	label = ExtractBuildLabel("		\"//src/cache:")
+	assert.Equal(t, "//src/cache:", label)
+
+	label = ExtractBuildLabel("		\"//src/cache/blah")
+	assert.Equal(t, "//src/cache/blah", label)
+
+	// no match
+	label = ExtractBuildLabel("blah")
+	assert.Equal(t, "", label)
+
+}
+
 /*
  * Utilities function for tests in this file
  */

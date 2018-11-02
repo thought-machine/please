@@ -33,7 +33,7 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 			Message: fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, hoverMethod),
 		}
 	}
-	if !h.analyzer.IsBuildFile(documentURI) {
+	if !h.analyzer.IsBuildFile(documentURI) || h.analyzer.IsBuildDefFile(documentURI) {
 		return nil, &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeInvalidParams,
 			Message: fmt.Sprintf("documentURI '%s' is not supported because it's not a buildfile", documentURI),

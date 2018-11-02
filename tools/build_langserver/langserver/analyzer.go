@@ -440,6 +440,7 @@ func (a *Analyzer) IsBuildFile(uri lsp.DocumentURI) bool {
 	return a.State.Config.IsABuildFile(base)
 }
 
+// IsBuildFile takes a uri path and check if it's a valid .build_defs file
 func (a *Analyzer) IsBuildDefFile(uri lsp.DocumentURI) bool {
 	filepath, err := GetPathFromURL(uri, "file")
 	if err != nil {

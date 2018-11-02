@@ -190,6 +190,30 @@ func LooksLikeDictAttr(str string) bool {
 	return mustMatch(`({.*}\.\w*)$`, str)
 }
 
+func LooksLikeBuildLabel(str string) bool {
+	return mustMatch(`("(\/\/|:)\w+(\/\w+)*([:]\w*)?"?$)`, str)
+}
+
+// ExtractBuildLabel extracts build label from a string.
+// Beginning of the buildlabel must have a quote
+// end of the string must not be anything other than quotes or characters
+func ExtractBuildLabel(str string) string {
+	re := regexp.MustCompile(`("(\/\/|:)\w+(\/\w+)*([:]\w*)?"?$)`)
+	matched := re.FindString(strings.TrimSpace(str))
+	if matched == "" {
+		return ""
+	}
+
+	if matched[0] == '"' {
+		matched = matched[1:]
+	}
+	if matched[len(matched)-1] == '"' {
+		matched = matched[:len(matched)-1]
+	}
+
+	return matched
+}
+
 func mustMatch(pattern string, str string) bool {
 	re := regexp.MustCompile(pattern)
 	matched := re.FindString(str)
