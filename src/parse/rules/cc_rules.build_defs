@@ -18,7 +18,8 @@ _NO_WHOLE_ARCHIVE = '-noall_load' if CONFIG.OS == 'darwin' else '--no-whole-arch
 def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
                linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
-               defines:list|dict=[], alwayslink:bool=False, linkstatic:bool=False, _c=False, textual_hdrs:list=[]):
+               defines:list|dict=[], alwayslink:bool=False, linkstatic:bool=False, _c=False,
+               textual_hdrs:list=[], _module:bool=False, _interfaces:list=None):
     """Generate a C++ library target.
 
     Args:
@@ -72,36 +73,64 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
               ['cc:inc:' + join_path(pkg_name, include) for include in includes] +
               ['cc:def:' + define for define in defines])
 
-    if not srcs:
+    if not srcs and not _interfaces:
         # Header-only library, no compilation needed.
         return filegroup(
-            name=name,
-            srcs=hdrs,
-            exported_deps=deps,
-            labels=labels,
-            test_only=test_only,
-            visibility=visibility,
-            output_is_complete=False,
+            name = name,
+            srcs = hdrs,
+            exported_deps = deps,
+            labels = labels,
+            test_only = test_only,
+            visibility = visibility,
+            output_is_complete = False,
         )
 
     # Collect the headers for other rules
-    hdrs_rule = filegroup(
-        name = name,
-        tag = 'hdrs',
-        srcs=hdrs,
-        requires=['cc_hdrs'],
-        deps=deps,
-        test_only=test_only,
-        labels=labels,
-        output_is_complete=False,
-    )
+    provides = {}
+    requires = ['cc_hdrs', 'cc_mod'] if _module else ['cc_hdrs']
+    extra_deps = []
+    if hdrs:
+        extra_deps = [filegroup(
+            name = name,
+            tag = 'hdrs',
+            srcs = hdrs,
+            requires = requires,
+            deps = deps,
+            test_only = test_only,
+            labels = labels,
+            output_is_complete = False,
+        )]
+
+    if _module:
+        compiler_flags += ['-fmodules-ts' if CONFIG.CC_MODULES_CLANG else '-fmodules']
+    # TODO(pebers): handle includes and defines in _library_cmds as well.
+    pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags) if (deps or includes or defines or _interfaces) else None
+    pkg = package_name()
+
+    if _interfaces:
+        # Generate the module interface file
+        xflags = ['-fmodules-ts --precompile -x c++-module -o $OUT' if CONFIG.CC_MODULES_CLANG else '-fmodules -fmodule-output=$OUT']
+        cmds, tools = _library_cmds(_c, compiler_flags + xflags, pkg_config_libs, pkg_config_cflags, archive=False)
+        interface_rule = build_rule(
+            name = name,
+            tag = 'interface',
+            srcs = {'srcs': _interfaces, 'hdrs': hdrs, 'priv': private_hdrs},
+            outs = [name + '.pcm'],
+            optional_outs = ['*.gcno'],  # For coverage
+            cmd = cmds,
+            building_description = 'Compiling...',
+            requires = requires,
+            test_only = test_only,
+            labels = labels + [f'cc:mod:{pkg}/{name}.pcm'],
+            tools = tools,
+            needs_transitive_deps = True,
+        )
+        # TODO(peterebden): Do we also need to compile the interfaces to object files? (probably...)
+        interfaces = [interface_rule]
+        deps += [interface_rule]
+        provides['cc_mod'] = interface_rule
 
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, pkg_config_cflags)
-
-    # TODO(pebers): handle includes and defines in _library_cmds as well.
-    pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags) if (deps or includes or defines) else None
-
-    pkg = package_name()
     if len(srcs) > 1:
         # Compile all the sources separately, this is much faster for large numbers of files
         # than giving them all to gcc in one invocation.
@@ -117,7 +146,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
                 deps=deps,
                 cmd=cmds,
                 building_description='Compiling...',
-                requires=['cc_hdrs'],
+                requires=requires,
                 test_only=test_only,
                 labels=labels,
                 tools=tools,
@@ -137,7 +166,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
-            deps = deps + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
+            deps = deps + extra_deps,  # This is a little suboptimal but makes sure they get built when needed.
             tools = [CONFIG.AR_TOOL],
         )
         if alwayslink:
@@ -167,7 +196,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             deps=deps,
             cmd=cmds,
             building_description='Compiling...',
-            requires=['cc_hdrs'],
+            requires=requires,
             test_only=test_only,
             labels=labels,
             tools=tools,
@@ -187,14 +216,12 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             output_is_complete=False,
         )
 
+    provides['cc'] = lib_rule
     return filegroup(
         name=name,
         srcs=[lib_rule],
-        deps=[hdrs_rule],
-        provides={
-            'cc_hdrs': hdrs_rule,
-            'cc': lib_rule,
-        },
+        deps=extra_deps,
+        provides=provides,
         test_only=test_only,
         visibility=visibility,
         output_is_complete=False,
@@ -389,9 +416,71 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
     )
 
 
-def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compiler_flags:list&cflags&copts=[],
-              linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, pkg_config_libs:list=[],
-              pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False, linkstatic:bool=False):
+def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_hdrs:list=[],
+              deps:list=[], visibility:list=None, test_only:bool&testonly=False,
+              compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
+              pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
+              defines:list|dict=[], alwayslink:bool=False):
+    """Generate a C++ module.
+
+    This is still experimental. Currently it has only been tested with clang - you can use
+    `package(cc_modules_clang=False)` to try with gcc (this may be needed since the two support
+    different flag structures at present).
+
+    Args:
+      name (str): Name of the rule
+      srcs (list): C++ source files to compile.
+      hdrs (list): Header files. These will be made available to dependent rules, so the distinction
+                   between srcs and hdrs is important.
+      interfaces (list): Module interface files. Again, these are treated differently to `srcs` in
+                         terms of compilation so the distinction is important.
+      private_hdrs (list): Header files that are available only to this rule and not exported to
+                           dependent rules.
+      deps (list): Dependent rules.
+      visibility (list): Visibility declaration for this rule.
+      test_only (bool): If True, is only available to other test rules.
+      compiler_flags (list): Flags to pass to the compiler.
+      linker_flags (list): Flags to pass to the linker; these will not be used here but will be
+                           picked up by a cc_binary or cc_test rule.
+      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`. Again, the ldflags
+                              will be picked up by cc_binary or cc_test rules.
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`. Again, the ldflags
+                              will be picked up by cc_binary or cc_test rules.
+      includes (list): List of include directories to be added to the compiler's path.
+      defines (list | dict): List of tokens to define in the preprocessor.
+                             Alternatively can be a dict of name -> value to define, in which case
+                             values are surrounded by quotes.
+      alwayslink (bool): If True, any binaries / tests using this library will link in all symbols,
+                         even if they don't directly reference them. This is useful for e.g. having
+                         static members that register themselves at construction time.
+      linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect.
+      textual_hdrs (list): Also provided for Bazel compatibility. Effectively works the same as hdrs for now.
+    """
+    return cc_library(
+        name = name,
+        srcs = srcs,
+        hdrs = hdrs,
+        _interfaces = interfaces,
+        private_hdrs = private_hdrs,
+        deps = deps,
+        visibility = visibility,
+        test_only = test_only,
+        compiler_flags = compiler_flags,
+        linker_flags = linker_flags,
+        pkg_config_libs = pkg_config_libs,
+        pkg_config_cflags = pkg_config_cflags,
+        includes = includes,
+        defines = defines,
+        alwayslink = alwayslink,
+        _module = True,
+    )
+
+
+def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
+              compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
+              deps:list=[], visibility:list=None, pkg_config_libs:list=[],
+              pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False,
+              linkstatic:bool=False, module:bool=False):
     """Builds a binary from a collection of C++ rules.
 
     Args:
@@ -410,6 +499,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
       static (bool): If True, the binary will be linked statically.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
                          link roughly equivalently to their "mostly-static" mode.
+      module (bool): Compile srcs as `cc_module` using Module TS flags (see `cc_module` for more details).
     """
     if CONFIG.BAZEL_COMPATIBILITY:
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
@@ -432,6 +522,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
             compiler_flags=compiler_flags,
             test_only=test_only,
             _c=_c,
+            _module = module,
         )
         deps.append(lib_rule)
     return build_rule(
@@ -803,6 +894,7 @@ def _library_transitive_labels(c, compiler_flags, pkg_config_libs, pkg_config_cf
 
         pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs])
         pkg_config_cflags.extend([l[4:] for l in labels if l.startswith('pcc:') and l[4:] not in pkg_config_cflags])
+        flags += ['-fmodule-file=' + l[4:] for l in labels if l.startswith('mod:')]
 
         if flags:  # Don't update if there aren't any relevant labels
             cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, ' '.join(flags), archive=archive)
