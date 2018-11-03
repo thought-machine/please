@@ -27,7 +27,7 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
-	log.Info("completion with param %s", req.Params)
+
 	documentURI, err := EnsureURL(params.TextDocument.URI, "file")
 	if err != nil {
 		message := fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, completionMethod)
