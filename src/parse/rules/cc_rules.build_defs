@@ -86,20 +86,18 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         )
 
     # Collect the headers for other rules
-    provides = {}
     requires = ['cc_hdrs', 'cc_mod'] if _module else ['cc_hdrs']
-    extra_deps = []
-    if hdrs:
-        extra_deps = [filegroup(
-            name = name,
-            tag = 'hdrs',
-            srcs = hdrs,
-            requires = requires,
-            deps = deps,
-            test_only = test_only,
-            labels = labels,
-            output_is_complete = False,
-        )]
+    hdrs_rule = filegroup(
+        name = name,
+        tag = 'hdrs',
+        srcs = hdrs,
+        requires = requires,
+        deps = None if _module else deps,
+        test_only = test_only,
+        labels = labels,
+        output_is_complete = False,
+    )
+    provides = {'cc_hdrs': hdrs_rule}
 
     if _module:
         compiler_flags += ['-fmodules-ts' if CONFIG.CC_MODULES_CLANG else '-fmodules']
@@ -166,7 +164,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
-            deps = deps + extra_deps,  # This is a little suboptimal but makes sure they get built when needed.
+            deps = deps + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
             tools = [CONFIG.AR_TOOL],
         )
         if alwayslink:
@@ -180,6 +178,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tag = 'lib',
             srcs = [a_rule],
             deps = deps,
+            requires = ['cc_mod'] if _module else None,
             test_only = test_only,
             labels = labels,
             output_is_complete=False,
@@ -211,6 +210,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tag = 'lib',
             srcs = [cc_rule],
             deps = deps,
+            requires = ['cc_mod'] if _module else None,
             test_only = test_only,
             labels = labels,
             output_is_complete=False,
@@ -220,7 +220,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     return filegroup(
         name=name,
         srcs=[lib_rule],
-        deps=extra_deps,
+        deps=[hdrs_rule],
         provides=provides,
         test_only=test_only,
         visibility=visibility,
