@@ -29,7 +29,3 @@ go_binary(
         "//third_party/go:logging",
     ],
 )
-
-"//src/q"JAVA_RELEASE_LEVEL
-
-CONFIG.JAVA_RELEASE_LEVEL
