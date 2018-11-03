@@ -83,6 +83,7 @@ func TestCompletionWithCONFIG(t *testing.T) {
 
 func TestCompletionWithStringMethods(t *testing.T) {
 	ctx := context.Background()
+	context.Background()
 
 	// Tests completion on no letters follows after dot(.)
 	items, err := handler.getCompletionItemsList(ctx, completionPropURI, lsp.Position{Line: 6, Character: 19})
@@ -194,7 +195,7 @@ func storeFile(ctx context.Context, uri lsp.DocumentURI) error {
 	if err != nil {
 		return err
 	}
-	text := strings.Join(content, "\n") + "\n"
+	text := strings.Join(content, "\n")
 
 	handler.workspace.Store(uri, text)
 	return nil

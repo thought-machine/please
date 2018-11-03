@@ -66,7 +66,7 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
 
 	supportSnippet := h.init.Capabilities.TextDocument.Completion.CompletionItem.SnippetSupport
-	lineContent := h.workspace.documents[uri].text[pos.Line]
+	lineContent := h.workspace.documents[uri].textInEdit[pos.Line]
 	log.Info("Completion lineContent: %s", lineContent)
 
 	var completionList []*lsp.CompletionItem

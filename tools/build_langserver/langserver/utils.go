@@ -221,5 +221,5 @@ func mustMatch(pattern string, str string) bool {
 
 // isEmpty checks if the hovered line is empty
 func isEmpty(lineContent string, pos lsp.Position) bool {
-	return len(lineContent) < pos.Character+1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
+	return len(lineContent) < pos.Character || strings.TrimSpace(lineContent[:pos.Character]) == ""
 }

@@ -124,8 +124,8 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	// Fill in the response results
 	TDsync := lsp.SyncIncremental
 	completeOps := &lsp.CompletionOptions{
-		ResolveProvider:   true,
-		TriggerCharacters: []string{"."},
+		ResolveProvider:   false,
+		TriggerCharacters: []string{".", "/", ":"},
 	}
 
 	sigHelpOps := &lsp.SignatureHelpOptions{
