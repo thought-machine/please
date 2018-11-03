@@ -33,9 +33,9 @@ cc_module(
     deps = [":f1"],
 )
 
-cc_binary(
+cc_test(
     name = "interdependent_modules_test",
-    srcs = ["f1q1.cc"],
+    srcs = ["interdependent_modules_test.cc"],
     module = True,
     deps = [
         ":f1",

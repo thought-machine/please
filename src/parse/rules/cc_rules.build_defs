@@ -542,11 +542,13 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
     )
 
 
-def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-            pkg_config_libs:list=[], pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=[],
-            flags:str='', labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=[], size:str=None, timeout:int=0,
-            container:bool|dict=False, sandbox:bool=None, write_main:bool=False,
-            linkstatic:bool=False, _c=False):
+def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[],
+            linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[],
+            pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[],
+            visibility:list=[], flags:str='', labels:list&features&tags=[], flaky:bool|int=0,
+            test_outputs:list=[], size:str=None, timeout:int=0, container:bool|dict=False,
+            sandbox:bool=None, write_main:bool=False, linkstatic:bool=False, module:bool=False,
+            _c=False):
     """Defines a C++ test.
 
     We template in a main file so you don't have to supply your own.
@@ -576,6 +578,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
                          about how to define a default dependency for the test main.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
                          link roughly equivalently to their "mostly-static" mode.
+      module (bool): Compile srcs as `cc_module` using Module TS flags (see `cc_module` for more details).
     """
 
     if CONFIG.BAZEL_COMPATIBILITY:
@@ -598,6 +601,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             compiler_flags=compiler_flags,
             test_only=True,
             alwayslink=True,
+            _module = module,
             _c=_c,
         )
         deps.append(lib_rule)

@@ -247,16 +247,19 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 					}
 					var execution core.TestExecution
 					var failure *core.TestResultFailure
-					if len(failingTestCase.Failures()) > 0 {
-						execution = failingTestCase.Failures()[0]
+					if failures := failingTestCase.Failures(); len(failures) > 0 {
+						execution = failures[0]
 						failure = execution.Failure
 						printf("${BOLD_RED}Failure${RESET}: ${RED}%s${RESET} in %s\n", failure.Type, failingTestCase.Name)
-					} else if len(failingTestCase.Errors()) > 0 {
-						execution = failingTestCase.Errors()[0]
+					} else if errors := failingTestCase.Errors(); len(errors) > 0 {
+						execution = errors[0]
 						failure = execution.Error
 						printf("${BOLD_CYAN}Error${RESET}: ${CYAN}%s${RESET} in %s\n", failure.Type, failingTestCase.Name)
 					}
 					if failure != nil {
+						if failure.Message != "" {
+							printf("%s\n", failure.Message)
+						}
 						printf("%s\n", failure.Traceback)
 						if len(execution.Stdout) > 0 {
 							printf("${BOLD_RED}Standard output${RESET}:\n%s\n", execution.Stdout)
