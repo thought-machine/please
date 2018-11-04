@@ -86,7 +86,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         )
 
     # Collect the headers for other rules
-    requires = ['cc_hdrs', 'cc_mod'] if _module else ['cc_hdrs']
+    requires = ['cc_hdrs', 'cc_mod']
     hdrs_rule = filegroup(
         name = name,
         tag = 'hdrs',
@@ -284,7 +284,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
         deps=deps,
         cmd=cmds,
         building_description='Compiling...',
-        requires=['cc_hdrs'],
+        requires=['cc_hdrs', 'cc_mod'],
         test_only=test_only,
         labels=labels,
         tools=tools,
@@ -480,7 +480,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
               deps:list=[], visibility:list=None, pkg_config_libs:list=[],
               pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False,
-              linkstatic:bool=False, module:bool=False):
+              linkstatic:bool=False):
     """Builds a binary from a collection of C++ rules.
 
     Args:
@@ -499,7 +499,6 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
       static (bool): If True, the binary will be linked statically.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
                          link roughly equivalently to their "mostly-static" mode.
-      module (bool): Compile srcs as `cc_module` using Module TS flags (see `cc_module` for more details).
     """
     if CONFIG.BAZEL_COMPATIBILITY:
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
@@ -522,7 +521,6 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
             compiler_flags=compiler_flags,
             test_only=test_only,
             _c=_c,
-            _module = module,
         )
         deps.append(lib_rule)
     return build_rule(
@@ -547,8 +545,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[],
             visibility:list=[], flags:str='', labels:list&features&tags=[], flaky:bool|int=0,
             test_outputs:list=[], size:str=None, timeout:int=0, container:bool|dict=False,
-            sandbox:bool=None, write_main:bool=False, linkstatic:bool=False, module:bool=False,
-            _c=False):
+            sandbox:bool=None, write_main:bool=False, linkstatic:bool=False, _c=False):
     """Defines a C++ test.
 
     We template in a main file so you don't have to supply your own.
@@ -578,7 +575,6 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
                          about how to define a default dependency for the test main.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
                          link roughly equivalently to their "mostly-static" mode.
-      module (bool): Compile srcs as `cc_module` using Module TS flags (see `cc_module` for more details).
     """
 
     if CONFIG.BAZEL_COMPATIBILITY:
@@ -601,7 +597,6 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             compiler_flags=compiler_flags,
             test_only=True,
             alwayslink=True,
-            _module = module,
             _c=_c,
         )
         deps.append(lib_rule)
@@ -898,8 +893,10 @@ def _library_transitive_labels(c, compiler_flags, pkg_config_libs, pkg_config_cf
 
         pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs])
         pkg_config_cflags.extend([l[4:] for l in labels if l.startswith('pcc:') and l[4:] not in pkg_config_cflags])
-        flags += ['-fmodule-file=' + l[4:] for l in labels if l.startswith('mod:')]
-
+        mods = ['-fmodule-file=' + l[4:] for l in labels if l.startswith('mod:')]
+        flags += mods
+        if mods:
+            flags += ['-fmodules-ts' if CONFIG.CC_MODULES_CLANG else '-fmodules']
         if flags:  # Don't update if there aren't any relevant labels
             cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, ' '.join(flags), archive=archive)
             for k, v in cmds.items():

@@ -15,7 +15,6 @@ cc_module(
 cc_binary(
     name = "modules_test",
     srcs = ["main.cc"],
-    module = True,
     deps = [":hello"],
 )
 
@@ -36,7 +35,6 @@ cc_module(
 cc_test(
     name = "interdependent_modules_test",
     srcs = ["interdependent_modules_test.cc"],
-    module = True,
     deps = [
         ":f1",
         ":q1",
