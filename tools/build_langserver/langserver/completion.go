@@ -242,6 +242,7 @@ func getCompletionItem(kind lsp.CompletionItemKind, name string,
 
 	var format lsp.InsertTextFormat
 	var text string
+	// TODO(bnm): okay this snippet thing is silly, i decided to do signiture call instead, REMOVE
 	if kind == lsp.Function && supportSnippet && ruleDef != nil {
 		// Get the snippet for completion
 		// TODO(bnm): extract this to a different function and make this better
