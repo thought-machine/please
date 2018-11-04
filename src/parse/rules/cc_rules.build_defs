@@ -19,7 +19,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
                visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
                linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
                defines:list|dict=[], alwayslink:bool=False, linkstatic:bool=False, _c=False,
-               textual_hdrs:list=[], _module:bool=False, _interfaces:list=None):
+               textual_hdrs:list=[], _module:bool=False, _interfaces:list=[]):
     """Generate a C++ library target.
 
     Args:
@@ -114,7 +114,6 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tag = 'interface',
             srcs = {'srcs': _interfaces, 'hdrs': hdrs, 'priv': private_hdrs},
             outs = [name + '.pcm'],
-            optional_outs = ['*.gcno'],  # For coverage
             cmd = cmds,
             building_description = 'Compiling...',
             requires = requires,
@@ -123,10 +122,11 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tools = tools,
             needs_transitive_deps = True,
         )
-        # TODO(peterebden): Do we also need to compile the interfaces to object files? (probably...)
-        interfaces = [interface_rule]
-        deps += [interface_rule]
+        srcs += _interfaces
+        all_deps = deps + [interface_rule]
         provides['cc_mod'] = interface_rule
+    else:
+        all_deps = deps
 
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, pkg_config_cflags)
     if len(srcs) > 1:
@@ -141,7 +141,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
                 srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
                 outs=[a_name + '.a'],
                 optional_outs=['*.gcno'],  # For coverage
-                deps=deps,
+                deps=deps if src in _interfaces else all_deps,
                 cmd=cmds,
                 building_description='Compiling...',
                 requires=requires,
@@ -192,7 +192,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             srcs={'srcs': srcs, 'hdrs': hdrs, 'priv': private_hdrs},
             outs=[name + '.a'],
             optional_outs=['*.gcno'],  # For coverage
-            deps=deps,
+            deps=deps if srcs == _interfaces else all_deps,
             cmd=cmds,
             building_description='Compiling...',
             requires=requires,
