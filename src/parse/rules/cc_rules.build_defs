@@ -159,13 +159,13 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tag = 'a',
             srcs = a_rules,
             outs = [name + '.a'],
-            cmd = 'echo $SRCS | xargs -n 1 $TOOL xo && $TOOL rcs $OUT *.o',
+            cmd = '$TOOL ar',
             building_description = 'Archiving...',
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
             deps = deps + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
-            tools = [CONFIG.AR_TOOL],
+            tools = [CONFIG.JARCAT_TOOL],
         )
         if alwayslink:
             labels.append(f'cc:al:{pkg}/{name}.a')

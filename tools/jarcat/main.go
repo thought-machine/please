@@ -15,6 +15,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"cli"
+	"tools/jarcat/ar"
 	"tools/jarcat/tar"
 	"tools/jarcat/unzip"
 	"tools/jarcat/zip"
@@ -95,6 +96,11 @@ var opts = struct {
 		OutDir      string `short:"o" long:"out" description:"Output directory"`
 		Out         string `long:"out_file" hidden:"true" env:"OUT"`
 	} `command:"unzip" alias:"u" alias:"x" description:"Unzips a zipfile"`
+
+	Ar struct {
+		Srcs []string `long:"srcs" env:"SRCS" env-delim:" " description:"Source .ar files to combine"`
+		Out  string   `long:"out" env:"OUT" description:"Output filename"`
+	} `command:"ar" alias:"a" description:"Combines multiple .ar files into one"`
 }{
 	Usage: `
 Jarcat is a binary shipped with Please that helps it operate on .jar and .zip files.
@@ -142,6 +148,11 @@ func main() {
 		}
 		if err := unzip.Extract(opts.Unzip.Args.In, opts.Unzip.OutDir, opts.Unzip.Args.File, opts.Unzip.StripPrefix); err != nil {
 			log.Fatalf("Error extracting zipfile: %s", err)
+		}
+		os.Exit(0)
+	} else if command == "ar" {
+		if err := ar.Combine(opts.Ar.Srcs, opts.Ar.Out); err != nil {
+			log.Fatalf("Error combining archives: %s", err)
 		}
 		os.Exit(0)
 	}
