@@ -91,9 +91,6 @@ func TestCompletionWithStringMethods(t *testing.T) {
 	assert.Equal(t, len(analyzer.Attributes["str"]), len(items))
 	assert.True(t, itemInList(items, "replace"))
 	assert.True(t, itemInList(items, "format"))
-	for _, i := range items {
-		assert.Equal(t, i.Kind, lsp.Function)
-	}
 
 	// Test completion with 1 starting character: f
 	items, err = handler.getCompletionItemsList(ctx, completionPropURI, lsp.Position{Line: 7, Character: 20})
@@ -107,7 +104,7 @@ func TestCompletionWithStringMethods(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 1, len(items))
 	assert.Equal(t, "format", items[0].Label)
-
+	//
 	// Test completion with assignment
 	items, err = handler.getCompletionItemsList(ctx, completionPropURI, lsp.Position{Line: 9, Character: 19})
 	assert.Equal(t, nil, err)
@@ -125,23 +122,18 @@ func TestCompletionWithDictMethods(t *testing.T) {
 	assert.True(t, itemInList(items, "get"))
 	assert.True(t, itemInList(items, "keys"))
 	assert.True(t, itemInList(items, "items"))
-	for _, i := range items {
-		assert.Equal(t, i.Kind, lsp.Function)
-	}
 
 	// Test completion with 1 starting character: k
 	items, err = handler.getCompletionItemsList(ctx, completionPropURI, lsp.Position{Line: 12, Character: 16})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 1, len(items))
 	assert.Equal(t, "keys", items[0].Label)
-	assert.Equal(t, "keys()", items[0].InsertText)
 
 	// Test completion with a three letters: get
 	items, err = handler.getCompletionItemsList(ctx, completionPropURI, lsp.Position{Line: 13, Character: 18})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 1, len(items))
 	assert.Equal(t, "get", items[0].Label)
-	assert.Equal(t, "get(key)", items[0].InsertText)
 }
 
 func TestCompletionWithBuildLabels(t *testing.T) {

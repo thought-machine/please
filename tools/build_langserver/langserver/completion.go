@@ -65,7 +65,6 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
 
-	supportSnippet := h.init.Capabilities.TextDocument.Completion.CompletionItem.SnippetSupport
 	lineContent := h.workspace.documents[uri].textInEdit[pos.Line]
 	log.Info("Completion lineContent: %s", lineContent)
 
@@ -81,7 +80,7 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	//fmt.Println(err, stmt)
 
 	if LooksLikeAttribute(lineContent) {
-		completionList = itemsFromAttributes(lineContent, h.analyzer, supportSnippet, pos)
+		completionList = itemsFromAttributes(lineContent, h.analyzer)
 	} else if label := ExtractBuildLabel(lineContent); label != "" {
 		completionList, completionErr = itemsFromBuildLabel(ctx, label, h.analyzer, uri, pos)
 	} else {
@@ -164,29 +163,25 @@ func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Anal
 	// Map the labels to a lsp.CompletionItem slice
 	var completionList []*lsp.CompletionItem
 	for _, label := range labels {
-		TERange := getTERange(pos, label["partial"])
+		//TERange := getTERange(pos, label["partial"])
 
 		detail := fmt.Sprintf(" BUILD Label: %s", label["buildLabel"])
-		item := getCompletionItem(lsp.Value, label["insert"], detail,
-			nil, false, TERange)
+		item := getCompletionItem(lsp.Value, label["insert"], detail)
 		completionList = append(completionList, item)
 	}
 
 	return completionList, nil
 }
 
-func itemsFromAttributes(lineContent string, analyzer *Analyzer, supportSnippet bool,
-	pos lsp.Position) []*lsp.CompletionItem {
+func itemsFromAttributes(lineContent string, analyzer *Analyzer) []*lsp.CompletionItem {
 
 	contentSlice := strings.Split(lineContent, ".")
 	partial := contentSlice[len(contentSlice)-1]
 
 	if LooksLikeStringAttr(lineContent) {
-		return itemsFromMethods(analyzer.Attributes["str"],
-			supportSnippet, pos, partial)
+		return itemsFromMethods(analyzer.Attributes["str"], partial)
 	} else if LooksLikeDictAttr(lineContent) {
-		return itemsFromMethods(analyzer.Attributes["dict"],
-			supportSnippet, pos, partial)
+		return itemsFromMethods(analyzer.Attributes["dict"], partial)
 	} else if LooksLikeCONFIGAttr(lineContent) {
 		// TODO(bnm): Perhaps this can be extracted to itemsFromProperty
 		var completionList []*lsp.CompletionItem
@@ -194,9 +189,7 @@ func itemsFromAttributes(lineContent string, analyzer *Analyzer, supportSnippet 
 			if !strings.Contains(tag, strings.ToUpper(partial)) {
 				continue
 			}
-			TERange := getTERange(pos, partial)
-			item := getCompletionItem(lsp.Property, tag, field.Tag.Get("help"),
-				nil, supportSnippet, TERange)
+			item := getCompletionItem(lsp.Property, tag, field.Tag.Get("help"))
 
 			completionList = append(completionList, item)
 		}
@@ -206,8 +199,7 @@ func itemsFromAttributes(lineContent string, analyzer *Analyzer, supportSnippet 
 }
 
 // partial: the string partial of the Attribute
-func itemsFromMethods(attributes []*RuleDef, supportSnippet bool,
-	pos lsp.Position, partial string) []*lsp.CompletionItem {
+func itemsFromMethods(attributes []*RuleDef, partial string) []*lsp.CompletionItem {
 
 	var completionList []*lsp.CompletionItem
 	for _, attr := range attributes {
@@ -215,7 +207,7 @@ func itemsFromMethods(attributes []*RuleDef, supportSnippet bool,
 		if !strings.Contains(attr.Name, partial) {
 			continue
 		}
-		item := itemFromRuleDef(attr, supportSnippet, pos, partial)
+		item := itemFromRuleDef(attr)
 		completionList = append(completionList, item)
 	}
 
@@ -223,66 +215,29 @@ func itemsFromMethods(attributes []*RuleDef, supportSnippet bool,
 }
 
 // Gets all completion items from function or method calls
-func itemFromRuleDef(ruleDef *RuleDef, supportSnippet bool,
-	pos lsp.Position, partial string) *lsp.CompletionItem {
+func itemFromRuleDef(ruleDef *RuleDef) *lsp.CompletionItem {
 
 	// Get the first line of docString as lsp.CompletionItem.detail
 	docStringList := strings.Split(ruleDef.Docstring, "\n")
-	var detail string
+	var doc string
 	if len(docStringList) > 0 {
-		detail = docStringList[0]
+		doc = docStringList[0]
 	}
+	detail := ruleDef.Header[strings.Index(ruleDef.Header, ruleDef.Name)+len(ruleDef.Name):]
 
-	TERange := getTERange(pos, partial)
-	return getCompletionItem(lsp.Function, ruleDef.Name, detail, ruleDef, supportSnippet, TERange)
+	item := getCompletionItem(lsp.Function, ruleDef.Name, detail)
+	item.Documentation = doc
+
+	return item
 }
 
-func getCompletionItem(kind lsp.CompletionItemKind, name string,
-	detail string, ruleDef *RuleDef, supportSnippet bool, TERange lsp.Range) *lsp.CompletionItem {
-
-	var format lsp.InsertTextFormat
-	var text string
-	// TODO(bnm): okay this snippet thing is silly, i decided to do signiture call instead, REMOVE
-	if kind == lsp.Function && supportSnippet && ruleDef != nil {
-		// Get the snippet for completion
-		// TODO(bnm): extract this to a different function and make this better
-		snippet := name + "("
-		if len(ruleDef.ArgMap) > 0 {
-			for _, arg := range ruleDef.Arguments {
-				if arg.Name != "self" && ruleDef.ArgMap[arg.Name].required == true {
-					snippet += arg.Name
-				}
-			}
-		}
-		snippet += ")"
-		format, text = lsp.ITFSnippet, snippet
-	} else {
-		format, text = lsp.ITFPlainText, name
-	}
-
+func getCompletionItem(kind lsp.CompletionItemKind, name string, detail string) *lsp.CompletionItem {
 	return &lsp.CompletionItem{
 		Label:            name,
 		Kind:             kind,
 		Detail:           detail,
-		InsertTextFormat: format,
+		InsertTextFormat: lsp.ITFPlainText,
 		SortText:         name,
-
-		// InsertText is deprecated in favour of TextEdit, but added here for legacy client support
-		InsertText: text,
-
-		// TODO(bnm): not sure if this is needed anymore, this seems to be messing things up
-		//TextEdit: &lsp.TextEdit{
-		//	Range:   TERange,
-		//	NewText: text,
-		//},
-	}
-}
-
-// Get the range for TextEdit
-func getTERange(pos lsp.Position, partial string) lsp.Range {
-	return lsp.Range{
-		Start: lsp.Position{Line: pos.Line, Character: pos.Character - len(partial)},
-		End:   pos,
 	}
 }
 
