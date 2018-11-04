@@ -151,9 +151,9 @@ func TestCompletionWithBuildLabels(t *testing.T) {
 
 	items, err := handler.getCompletionItemsList(ctx, completionLabelURI, lsp.Position{Line: 0, Character: 6})
 	assert.Equal(t, nil, err)
-	assert.True(t, itemInList(items, "//src/cache"))
+	assert.True(t, itemInList(items, "src/cache"))
 	for _, i := range items {
-		assert.True(t, strings.HasPrefix(i.Label, "//src"))
+		assert.True(t, strings.HasPrefix(i.Label, "src"))
 	}
 
 	items, err = handler.getCompletionItemsList(ctx, completionLabelURI, lsp.Position{Line: 1, Character: 13})

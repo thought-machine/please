@@ -105,8 +105,7 @@ func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Anal
 	// TODO(bnm): need to trim the linecontent so we only pass in buildlabel to the following function
 	lineContent = TrimQuotes(lineContent)
 
-	// labels consist of label:partial
-	labels := make(map[string]string)
+	var labels []map[string]string
 	if strings.ContainsRune(lineContent, ':') {
 		labelParts := strings.Split(lineContent, ":")
 
@@ -117,11 +116,12 @@ func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Anal
 				return nil, err
 			}
 			for buildDef := range buildDefs {
-				partial := strings.TrimPrefix(buildDef, labelParts[1])
-				if labelParts[1] == "" {
-					partial = ""
+				label := map[string]string{
+					"buildLabel": ":" + buildDef,
+					"insert":     buildDef,
+					"partial":    labelParts[1],
 				}
-				labels[buildDef] = partial
+				labels = append(labels, label)
 			}
 		} else if strings.HasPrefix(lineContent, "//") {
 			// Get none relative labels
@@ -138,31 +138,37 @@ func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Anal
 			}
 			for name, buildDef := range buildDefs {
 				if isVisible(buildDef, currentPkg) {
-					partial := strings.TrimPrefix(name, labelParts[1])
-					if labelParts[1] == "" {
-						partial = ""
+					label := map[string]string{
+						"buildLabel": labelParts[0] + ":" + name,
+						"insert":     name,
+						"partial":    labelParts[1],
 					}
-					labels[name] = partial
+					labels = append(labels, label)
+
 				}
 			}
 		}
 	} else {
 		pkgs := query.GetAllPackages(analyzer.State.Config, lineContent[2:], core.RepoRoot)
+
 		for _, pkg := range pkgs {
-			partial := strings.TrimPrefix("/"+pkg, lineContent)
-			labels["/"+pkg] = partial
+			label := map[string]string{
+				"buildLabel": "/" + pkg,
+				"insert":     strings.TrimPrefix(pkg, "/"),
+				"partial":    lineContent,
+			}
+			labels = append(labels, label)
 		}
 	}
 
 	// Map the labels to a lsp.CompletionItem slice
 	var completionList []*lsp.CompletionItem
-	for label, partial := range labels {
-		TERange := getTERange(pos, partial)
-		detail := fmt.Sprintf("BUILD Label: %s", label)
+	for _, label := range labels {
+		TERange := getTERange(pos, label["partial"])
 
-		item := getCompletionItem(lsp.Text, label, detail,
+		detail := fmt.Sprintf(" BUILD Label: %s", label["buildLabel"])
+		item := getCompletionItem(lsp.Value, label["insert"], detail,
 			nil, false, TERange)
-
 		completionList = append(completionList, item)
 	}
 
@@ -258,13 +264,16 @@ func getCompletionItem(kind lsp.CompletionItemKind, name string,
 		Kind:             kind,
 		Detail:           detail,
 		InsertTextFormat: format,
+		SortText:         name,
 
 		// InsertText is deprecated in favour of TextEdit, but added here for legacy client support
 		InsertText: text,
-		TextEdit: &lsp.TextEdit{
-			Range:   TERange,
-			NewText: text,
-		},
+
+		// TODO(bnm): not sure if this is needed anymore, this seems to be messing things up
+		//TextEdit: &lsp.TextEdit{
+		//	Range:   TERange,
+		//	NewText: text,
+		//},
 	}
 }
 

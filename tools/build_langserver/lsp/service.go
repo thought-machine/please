@@ -94,8 +94,8 @@ type WillSaveTextDocumentParams struct {
 
 // Hover is the result of a hover request.
 type Hover struct {
-	Contents MarkupContent `json:"contents"`
-	Range    *Range        `json:"range,omitempty"`
+	Contents []MarkedString `json:"contents"`
+	Range    *Range         `json:"range,omitempty"`
 }
 
 // CompletionParams is the struct for parameters send to "textDocument/completion" request
