@@ -56,10 +56,46 @@ type CancelParams struct {
 	ID jsonrpc2.ID `json:"id"`
 }
 
+// DidOpenTextDocumentParams is sent from client to the server when the document that was opened.
+type DidOpenTextDocumentParams struct {
+	TextDocument TextDocumentItem `json:"textDocument"`
+}
+
+// DidChangeTextDocumentParams is sent from client to the server to signal changes to a text document
+type DidChangeTextDocumentParams struct {
+	TextDocument   VersionedTextDocumentIdentifier  `json:"textDocument"`
+	ContentChanges []TextDocumentContentChangeEvent `json:"contentChanges"`
+}
+
+// TextDocumentContentChangeEvent an event describing a change to a text document. If range and rangeLength are omitted
+// the new text is considered to be the full content of the document.
+type TextDocumentContentChangeEvent struct {
+	Range       *Range `json:"range,omitEmpty"`
+	RangeLength uint   `json:"rangeLength,omitEmpty"`
+	Text        string `json:"text"`
+}
+
+// DidCloseTextDocumentParams is sent from the client to the server when the document got closed in the client.
+type DidCloseTextDocumentParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+}
+
+// DidSaveTextDocumentParams is sent from the client to the server when the document was saved in the client.
+type DidSaveTextDocumentParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Text         string                 `json:"text,omitempty"`
+}
+
+// WillSaveTextDocumentParams is sent from the client to the server before the document is actually saved.
+type WillSaveTextDocumentParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Reason       TextDocumentSaveReason `json:"reason,omitempty"`
+}
+
 // Hover is the result of a hover request.
 type Hover struct {
-	Contents MarkupContent `json:"contents"`
-	Range    *Range        `json:"range,omitempty"`
+	Contents []MarkedString `json:"contents"`
+	Range    *Range         `json:"range,omitempty"`
 }
 
 // CompletionParams is the struct for parameters send to "textDocument/completion" request

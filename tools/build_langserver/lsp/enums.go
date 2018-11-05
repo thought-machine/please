@@ -69,3 +69,13 @@ const (
 	// ITFSnippet is the primary text to be inserted is treated as a snippet.
 	ITFSnippet InsertTextFormat = 2
 )
+
+// TextDocumentSaveReason Represents reasons why a text document is saved.
+type TextDocumentSaveReason int
+
+// Represents reasons why a text document is saved.
+const (
+	Manual     TextDocumentSaveReason = 1
+	AfterDelay TextDocumentSaveReason = 2
+	FocusOut   TextDocumentSaveReason = 3
+)

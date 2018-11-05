@@ -8,5 +8,5 @@ go_test(
     name = "",
     srcs =[],
     srcs = [
-    "//src/"
+    "//src"
 )

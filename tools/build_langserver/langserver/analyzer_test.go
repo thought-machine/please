@@ -2,12 +2,14 @@ package langserver
 
 import (
 	"context"
-	"core"
-	"parse/asp"
-	"parse/rules"
+
 	"path"
 	"path/filepath"
 	"testing"
+
+	"core"
+	"parse/asp"
+	"parse/rules"
 	"tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"

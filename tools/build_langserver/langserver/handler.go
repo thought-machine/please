@@ -37,6 +37,8 @@ type LsHandler struct {
 	mu       sync.Mutex
 	conn     *jsonrpc2.Conn
 
+	workspace *workspaceStore
+
 	repoRoot     string
 	requestStore *requestStore
 
@@ -51,7 +53,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	}
 	h.conn = conn
 
-	log.Info(fmt.Sprintf("handling method %s ...", req.Method))
+	log.Info(fmt.Sprintf("handling method %s with params: %s", req.Method, req.Params))
 	methods := map[string]func(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error){
 		"initialize":              h.handleInit,
 		"initialzed":              h.handleInitialized,
@@ -73,7 +75,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	}
 	// TODO(bnm): call fs request handlers like, textDocument/didOpen
 
-	return nil, nil
+	return h.handleTDRequests(ctx, req)
 }
 
 func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
@@ -91,14 +93,17 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 
 	// Set the Init state of the handler
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	// TODO(bnmetrics): Ideas: this could essentially be a bit fragile.
 	// maybe we can defer until user send a request with first file URL
 	core.FindRepoRoot()
 
-	h.repoRoot = core.RepoRoot
-	h.supportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
-
+	// TODO(bnm): remove stuff with reporoot
 	params.EnsureRoot()
+	h.repoRoot = string(params.RootURI)
+	h.workspace = newWorkspaceStore(params.RootURI)
+
+	h.supportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
 	h.init = &params
 
 	h.analyzer, err = newAnalyzer()
@@ -114,14 +119,13 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	h.requestStore = reqStore
 	ctx = h.requestStore.Store(ctx, req)
 
-	h.mu.Unlock()
 	defer h.requestStore.Cancel(req.ID)
 
 	// Fill in the response results
 	TDsync := lsp.SyncIncremental
 	completeOps := &lsp.CompletionOptions{
-		ResolveProvider:   true,
-		TriggerCharacters: []string{"."},
+		ResolveProvider:   false,
+		TriggerCharacters: []string{".", "//", ":"},
 	}
 
 	sigHelpOps := &lsp.SignatureHelpOptions{
@@ -183,4 +187,17 @@ func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (re
 	defer h.requestStore.Cancel(params.ID)
 
 	return nil, nil
+}
+
+func getURIAndHandleErrors(uri lsp.DocumentURI, method string) (lsp.DocumentURI, error) {
+	documentURI, err := EnsureURL(uri, "file")
+	if err != nil {
+		message := fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, method)
+		log.Error(message)
+		return "", &jsonrpc2.Error{
+			Code:    jsonrpc2.CodeInvalidParams,
+			Message: message,
+		}
+	}
+	return documentURI, err
 }

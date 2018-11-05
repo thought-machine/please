@@ -123,12 +123,12 @@ func GetLineContent(ctx context.Context, uri lsp.DocumentURI, position lsp.Posit
 }
 
 func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]string, error)) ([]string, error) {
-	path, err := GetPathFromURL(uri, "file")
+	filePath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return nil, err
 	}
 
-	file, err := os.Open(path)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -153,13 +153,8 @@ func TrimQuotes(str string) string {
 		return matched[1 : len(matched)-1]
 	}
 
-	// Match cases when only one quote presented
-	if len(str) > 0 && (str[0] == '"' || str[0] == '\'') {
-		str = str[1:]
-	}
-	if len(str) > 0 && str[len(str)-1] == '"' {
-		str = str[:len(str)-1]
-	}
+	str = strings.Trim(str, `"`)
+	str = strings.Trim(str, `'`)
 
 	return str
 }
@@ -190,6 +185,16 @@ func LooksLikeDictAttr(str string) bool {
 	return mustMatch(`({.*}\.\w*)$`, str)
 }
 
+// ExtractBuildLabel extracts build label from a string.
+// Beginning of the buildlabel must have a quote
+// end of the string must not be anything other than quotes or characters
+func ExtractBuildLabel(str string) string {
+	re := regexp.MustCompile(`("(\/\/|:)(\w+\/?)*(\w+[:]\w*)?"?$)`)
+	matched := re.FindString(strings.TrimSpace(str))
+
+	return strings.Trim(matched, `"`)
+}
+
 func mustMatch(pattern string, str string) bool {
 	re := regexp.MustCompile(pattern)
 	matched := re.FindString(str)
@@ -201,5 +206,5 @@ func mustMatch(pattern string, str string) bool {
 
 // isEmpty checks if the hovered line is empty
 func isEmpty(lineContent string, pos lsp.Position) bool {
-	return len(lineContent) < pos.Character+1 || strings.TrimSpace(lineContent[:pos.Character]) == ""
+	return len(lineContent) < pos.Character || strings.TrimSpace(lineContent[:pos.Character]) == ""
 }

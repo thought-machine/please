@@ -4,8 +4,8 @@ import (
 	"context"
 	"core"
 	"github.com/sourcegraph/jsonrpc2"
+	"github.com/stretchr/testify/assert"
 	"net"
-	"path"
 	"strings"
 	"testing"
 	"tools/build_langserver/lsp"
@@ -39,9 +39,12 @@ func TestHandle(t *testing.T) {
 	t.Log(result)
 
 	var result2 lsp.Hover
+	uri := lsp.DocumentURI(exampleBuildURI)
+	openFile(ctx, t, conn, uri)
+
 	if err := conn.Call(ctx, "textDocument/hover", lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
-			URI: lsp.DocumentURI(path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")),
+			URI: lsp.DocumentURI(exampleBuildURI),
 		},
 		Position: lsp.Position{Line: 0, Character: 3},
 	}, &result2); err != nil {
@@ -91,4 +94,21 @@ func dialServer(t testing.TB, addr string) *jsonrpc2.Conn {
 		jsonrpc2.NewBufferedStream(conn, jsonrpc2.VSCodeObjectCodec{}),
 		handler,
 	)
+}
+
+func openFile(ctx context.Context, t testing.TB, conn *jsonrpc2.Conn, uri lsp.DocumentURI) {
+	content, err := ReadFile(ctx, uri)
+	assert.Equal(t, nil, err)
+	text := strings.Join(content, "\n")
+
+	if err := conn.Call(ctx, "textDocument/didOpen", lsp.DidOpenTextDocumentParams{
+		TextDocument: lsp.TextDocumentItem{
+			URI:        uri,
+			LanguageID: "build",
+			Version:    1,
+			Text:       text,
+		},
+	}, nil); err != nil {
+		t.Fatal("open failure:", err)
+	}
 }

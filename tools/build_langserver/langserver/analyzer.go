@@ -120,7 +120,7 @@ func (a *Analyzer) builtInsRules() error {
 			asset := rules.MustAsset(filename)
 			stmts, err := a.parser.ParseData(asset, filename)
 			if err != nil {
-				log.Fatalf("%s", err)
+				log.Warning("parsing failure: %s ", err)
 			}
 			// Iterate through the statement we got and add to statementMap
 			for _, statement := range stmts {
@@ -197,9 +197,9 @@ func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, 
 		return nil, err
 	}
 
-	stmts, _ := a.parser.ParseData(bytecontent, filepath)
+	stmts, err := a.parser.ParseData(bytecontent, filepath)
 	if err != nil {
-		log.Warning(fmt.Sprintf("parsing failure: %s ", err))
+		log.Warning("parsing failure: %s ", err)
 	}
 
 	return stmts, nil

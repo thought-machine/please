@@ -24,63 +24,62 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
-	documentURI, err := EnsureURL(params.TextDocument.URI, "file")
+
+	log.Info("Hover with param %s", req.Params)
+	documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, hoverMethod)
 	if err != nil {
-		return nil, &jsonrpc2.Error{
-			Code:    jsonrpc2.CodeInvalidParams,
-			Message: fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, hoverMethod),
-		}
-	}
-	if !h.analyzer.IsBuildFile(documentURI) {
-		return nil, &jsonrpc2.Error{
-			Code:    jsonrpc2.CodeInvalidParams,
-			Message: fmt.Sprintf("documentURI '%s' is not supported because it's not a buildfile", documentURI),
-		}
+		return nil, err
 	}
 
 	position := params.Position
 
 	h.mu.Lock()
-	content, err := getHoverContent(ctx, h.analyzer, documentURI, position)
+	content, err := h.getHoverContent(ctx, documentURI, position)
 	h.mu.Unlock()
 
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO(bnm): reconsider the content, because right now everything is on one line.....:(
+
+	markedString := lsp.MarkedString{
+		Language: "build",
+		Value:    content,
+	}
+	markedStrings := []lsp.MarkedString{markedString}
+
+	log.Info("hover content: %s", markedStrings)
+
 	return &lsp.Hover{
-		Contents: *content,
+		Contents: markedStrings,
 		// TODO(bnmetrics): we can add range here later
 	}, nil
 }
 
-func getHoverContent(ctx context.Context, analyzer *Analyzer,
-	uri lsp.DocumentURI, position lsp.Position) (content *lsp.MarkupContent, err error) {
+func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (content string, err error) {
 	// Get the content of the line from the position
-	lineContent, err := GetLineContent(ctx, uri, position)
+	lineContent := h.workspace.documents[uri].textInEdit[pos.Line]
+
 	if err != nil {
-		return nil, &jsonrpc2.Error{
+		return "", &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
-			Message: fmt.Sprintf("fail to read file %s", uri),
+			Message: fmt.Sprintf("fail to read file %s: %s", uri, err),
 		}
 	}
 
 	// Get Hover Identifier
-	stmt, err := analyzer.StatementFromPos(uri, position)
+	stmt, err := h.analyzer.StatementFromPos(uri, pos)
 	if err != nil {
-		return nil, &jsonrpc2.Error{
+		return "", &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
 			Message: fmt.Sprintf("fail to parse Build file %s", uri),
 		}
 	}
 
-	emptyContent := &lsp.MarkupContent{
-		Value: "",
-		Kind:  lsp.MarkDown,
-	}
 	// Return empty string if the hovered content is blank
-	if isEmpty(lineContent[0], position) || stmt == nil {
-		return emptyContent, nil
+	if isEmpty(lineContent, pos) || stmt == nil {
+		return "", nil
 	}
 
 	var contentString string
@@ -90,35 +89,30 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 		switch ident.Type {
 		case "call":
 			identArgs := ident.Action.Call.Arguments
-			contentString, contentErr = contentFromCall(ctx, analyzer, identArgs, ident.Name,
-				lineContent[0], uri, position)
+			contentString, contentErr = contentFromCall(ctx, h.analyzer, identArgs, ident.Name,
+				lineContent, uri, pos)
 		case "property":
-			contentString, contentErr = contentFromProperty(ctx, analyzer, ident.Action.Property,
-				lineContent[0], uri, position)
+			contentString, contentErr = contentFromProperty(ctx, h.analyzer, ident.Action.Property,
+				lineContent, uri, pos)
 		case "assign":
-			contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.Assign,
-				lineContent[0], uri, position)
+			contentString, contentErr = contentFromExpression(ctx, h.analyzer, ident.Action.Assign,
+				lineContent, uri, pos)
 		case "augAssign":
-			contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.AugAssign,
-				lineContent[0], uri, position)
+			contentString, contentErr = contentFromExpression(ctx, h.analyzer, ident.Action.AugAssign,
+				lineContent, uri, pos)
 		default:
-			return emptyContent, nil
+			return "", nil
 		}
 	} else if stmt.Expression != nil {
-		contentString, contentErr = contentFromExpression(ctx, analyzer, stmt.Expression,
-			lineContent[0], uri, position)
+		contentString, contentErr = contentFromExpression(ctx, h.analyzer, stmt.Expression,
+			lineContent, uri, pos)
 	}
 
 	if contentErr != nil {
-		return nil, &jsonrpc2.Error{
-			Code:    jsonrpc2.CodeParseError,
-			Message: fmt.Sprintf("fail to get content from Build file %s", uri),
-		}
+		log.Warning("fail to get content from Build file %s: %s", uri, contentErr)
+		return "", nil
 	}
-	return &lsp.MarkupContent{
-		Value: contentString,
-		Kind:  lsp.MarkDown, // TODO(bnmetrics): this might be reconsidered
-	}, nil
+	return contentString, nil
 }
 
 func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
