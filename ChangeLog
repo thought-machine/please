@@ -1,3 +1,11 @@
+Version 13.2.1
+--------------
+
+    * Fixes to C and C++ rules in some subtle cases where object files could be created with
+      conflicting names.
+    * Language server now implements various textDocument and completion methods.
+
+
 Version 13.2.0
 --------------
 
