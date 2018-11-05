@@ -154,9 +154,10 @@ func TestCompletionWithBuildLabels2(t *testing.T) {
 func TestCompletionIncompleteFile(t *testing.T) {
 	//TODO(BNM)
 	t.Log(core.LooksLikeABuildLabel("//bkag//bh"))
-	stmt, err := analyzer.AspStatementFromFile(completionURI)
-	t.Log(stmt)
-	t.Log(err)
+	//stmt, err := analyzer.AspStatementFromFile(completionURI)
+	//t.Log(stmt)
+	//t.Log(err)
+	t.Log(analyzer.BuildFileURIFromPackage(""))
 }
 
 /***************************************

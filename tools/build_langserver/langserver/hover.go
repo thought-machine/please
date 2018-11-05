@@ -34,8 +34,8 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 	position := params.Position
 
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	content, err := h.getHoverContent(ctx, documentURI, position)
-	h.mu.Unlock()
 
 	if err != nil {
 		return nil, err
@@ -118,6 +118,8 @@ func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArg
 
 	// check if the hovered content is on the name of the ident
 	if strings.Contains(lineContent, identName) {
+		// adding the trailing open paren to the identName ensure it's a call,
+		// prevent inaccuracy for cases like so: replace_str = x.replace('-', '_')
 		identNameIndex := strings.Index(lineContent, identName+"(")
 
 		if pos.Character >= identNameIndex &&
@@ -323,7 +325,8 @@ func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
 	return "", nil
 }
 
-// contentFromRuleDef returns a string contains the header and the docstring of a build rule
+// contentFromRuleDef returns the content from when hovering over the name of a function call
+// return value consist of a string containing the header and the docstring of a build rule
 func contentFromRuleDef(analyzer *Analyzer, name string) string {
 
 	header := analyzer.BuiltIns[name].Header
