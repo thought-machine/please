@@ -294,17 +294,13 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 			continue
 		}
 
-		if expr.Val.String != "" {
-			return contentFromBuildLabel(ctx, analyzer, expr.Val.String, uri)
-		} else {
-			content, err := contentFromValueExpression(ctx, analyzer, expr.Val,
-				lineContent, uri, pos)
-			if err != nil {
-				return "", err
-			}
-			if content != "" {
-				return content, nil
-			}
+		content, err := contentFromValueExpression(ctx, analyzer, expr.Val,
+			lineContent, uri, pos)
+		if err != nil {
+			return "", err
+		}
+		if content != "" {
+			return content, nil
 		}
 	}
 
