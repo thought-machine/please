@@ -3,9 +3,12 @@ package ar
 
 import (
 	"bufio"
+	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,18 +62,47 @@ func Create(srcs []string, out string, combine, rename bool) error {
 						break
 					}
 					return err
-				} else if hdr.Name == "/" || hdr.Name == "__.SYMDEF SORTED" || hdr.Name == "__.SYMDEF" {
+				} else if hdr.Name == "/" {
 					log.Debug("skipping symbol table")
 					continue
 				}
-				log.Debug("copying %s in from %s", hdr.Name, src)
 				// Zero things out
 				hdr.ModTime = mtime
 				hdr.Uid = 0
 				hdr.Gid = 0
-				if err := w.WriteHeader(hdr); err != nil {
+
+				copyFile := func(r io.Reader, name string) error {
+					log.Debug("copying '%s' in from %s", name, src)
+					if err := w.WriteHeader(hdr); err != nil {
+						return err
+					}
+					_, err := io.Copy(w, r)
 					return err
-				} else if _, err := io.Copy(w, r); err != nil {
+				}
+
+				if !strings.HasPrefix(hdr.Name, "#1/") {
+					// Normal copy
+					if err := copyFile(r, hdr.Name); err != nil {
+						return err
+					}
+					continue
+				}
+
+				// BSD ar stores the name as a prefix to the data section.
+				b, err := ioutil.ReadAll(r)
+				if err != nil {
+					return err
+				}
+				l, err := strconv.Atoi(hdr.Name[3:])
+				if err != nil {
+					return err
+				}
+				name := string(bytes.TrimRightFunc(b[:l], func(r rune) bool { return r == 0 }))
+				if name == "__.SYMDEF SORTED" || name == "__.SYMDEF" {
+					log.Debug("skipping BSD symbol table")
+					continue
+				}
+				if err := copyFile(bytes.NewReader(b), name); err != nil {
 					return err
 				}
 			}
