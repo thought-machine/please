@@ -183,6 +183,14 @@ func TestGetHoverContentOnPropertyAssignment(t *testing.T) {
 	assert.Equal(t, "def subinclude(target:str, hash:str=None)", content)
 }
 
+func TestGetHoverAssignmentBuildLabel(t *testing.T) {
+	var ctx = context.Background()
+
+	content, err := handler.getHoverContent(ctx, assignBuildURI, lsp.Position{Line: 25, Character: 13})
+	assert.Equal(t, nil, err)
+	t.Log("LUNA" + content)
+}
+
 func TestGetHoverContentOnUnaryAssignment(t *testing.T) {
 	var ctx = context.Background()
 

@@ -161,7 +161,6 @@ func contentFromExpression(ctx context.Context, analyzer *Analyzer, expr *asp.Ex
 			}
 		}
 	}
-
 	// content from Expression.Val
 	if expr.Val != nil {
 		return contentFromValueExpression(ctx, analyzer, expr.Val, lineContent, uri, pos)
@@ -227,8 +226,9 @@ func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
 			return content, nil
 		}
 	}
+
 	if valExpr.String != "" && strings.Contains(lineContent, valExpr.String) {
-		return contentFromBuildLabel(ctx, analyzer, lineContent, uri)
+		return contentFromBuildLabel(ctx, analyzer, valExpr.String, uri)
 	}
 	if valExpr.List != nil {
 		return contentFromList(ctx, analyzer, valExpr.List, lineContent, uri, pos)
@@ -292,17 +292,21 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 	lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
 
 	for _, expr := range listVal.Values {
-		if withInRange(expr.Pos, expr.EndPos, pos) && expr.Val.String != "" {
-			return contentFromBuildLabel(ctx, analyzer, expr.Val.String, uri)
+		if !withInRange(expr.Pos, expr.EndPos, pos) {
+			continue
 		}
 
-		content, err := contentFromValueExpression(ctx, analyzer, expr.Val,
-			lineContent, uri, pos)
-		if err != nil {
-			return "", err
-		}
-		if content != "" {
-			return content, nil
+		if expr.Val.String != "" {
+			return contentFromBuildLabel(ctx, analyzer, expr.Val.String, uri)
+		} else {
+			content, err := contentFromValueExpression(ctx, analyzer, expr.Val,
+				lineContent, uri, pos)
+			if err != nil {
+				return "", err
+			}
+			if content != "" {
+				return content, nil
+			}
 		}
 	}
 
@@ -312,7 +316,7 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
 	lineContent string, uri lsp.DocumentURI) (string, error) {
 
-	trimed := TrimQuotes(lineContent)
+	trimed := TrimQuotes(strings.TrimSpace(lineContent))
 
 	if core.LooksLikeABuildLabel(trimed) {
 		buildLabel, err := analyzer.BuildLabelFromString(ctx, uri, trimed)

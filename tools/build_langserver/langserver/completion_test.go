@@ -118,6 +118,7 @@ func TestCompletionWithDictMethods(t *testing.T) {
 
 func TestCompletionWithBuildLabels(t *testing.T) {
 	ctx := context.Background()
+
 	err := storeFile(ctx, completionLabelURI)
 	assert.Equal(t, nil, err)
 
@@ -140,6 +141,14 @@ func TestCompletionWithBuildLabels(t *testing.T) {
 	assert.Equal(t, 1, len(items))
 	assert.Equal(t, "query", items[0].Label)
 	t.Log(items[0].Label)
+}
+
+func TestCompletionWithBuildLabels2(t *testing.T) {
+	ctx := context.Background()
+
+	items, err := handler.getCompletionItemsList(ctx, completionLabelURI, lsp.Position{Line: 4, Character: 7})
+	assert.Equal(t, nil, err)
+	t.Log(items)
 }
 
 func TestCompletionIncompleteFile(t *testing.T) {
