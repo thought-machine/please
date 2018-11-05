@@ -188,3 +188,16 @@ func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (re
 
 	return nil, nil
 }
+
+func getURIAndHandleErrors(uri lsp.DocumentURI, method string) (lsp.DocumentURI, error) {
+	documentURI, err := EnsureURL(uri, "file")
+	if err != nil {
+		message := fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, method)
+		log.Error(message)
+		return "", &jsonrpc2.Error{
+			Code:    jsonrpc2.CodeInvalidParams,
+			Message: message,
+		}
+	}
+	return documentURI, err
+}

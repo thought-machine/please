@@ -26,18 +26,15 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 	}
 
 	log.Info("Hover with param %s", req.Params)
-	documentURI, err := EnsureURL(params.TextDocument.URI, "file")
+	documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, hoverMethod)
 	if err != nil {
-		return nil, &jsonrpc2.Error{
-			Code:    jsonrpc2.CodeInvalidParams,
-			Message: fmt.Sprintf("invalid documentURI '%s' for method %s", documentURI, hoverMethod),
-		}
+		return nil, err
 	}
 
 	position := params.Position
 
 	h.mu.Lock()
-	content, err := getHoverContent(ctx, h.analyzer, documentURI, position)
+	content, err := h.getHoverContent(ctx, documentURI, position)
 	h.mu.Unlock()
 
 	if err != nil {
@@ -60,10 +57,10 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 	}, nil
 }
 
-func getHoverContent(ctx context.Context, analyzer *Analyzer,
-	uri lsp.DocumentURI, position lsp.Position) (content string, err error) {
+func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (content string, err error) {
 	// Get the content of the line from the position
-	lineContent, err := GetLineContent(ctx, uri, position)
+	lineContent := h.workspace.documents[uri].textInEdit[pos.Line]
+
 	if err != nil {
 		return "", &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
@@ -72,7 +69,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 	}
 
 	// Get Hover Identifier
-	stmt, err := analyzer.StatementFromPos(uri, position)
+	stmt, err := h.analyzer.StatementFromPos(uri, pos)
 	if err != nil {
 		return "", &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
@@ -81,7 +78,7 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 	}
 
 	// Return empty string if the hovered content is blank
-	if isEmpty(lineContent[0], position) || stmt == nil {
+	if isEmpty(lineContent, pos) || stmt == nil {
 		return "", nil
 	}
 
@@ -92,23 +89,23 @@ func getHoverContent(ctx context.Context, analyzer *Analyzer,
 		switch ident.Type {
 		case "call":
 			identArgs := ident.Action.Call.Arguments
-			contentString, contentErr = contentFromCall(ctx, analyzer, identArgs, ident.Name,
-				lineContent[0], uri, position)
+			contentString, contentErr = contentFromCall(ctx, h.analyzer, identArgs, ident.Name,
+				lineContent, uri, pos)
 		case "property":
-			contentString, contentErr = contentFromProperty(ctx, analyzer, ident.Action.Property,
-				lineContent[0], uri, position)
+			contentString, contentErr = contentFromProperty(ctx, h.analyzer, ident.Action.Property,
+				lineContent, uri, pos)
 		case "assign":
-			contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.Assign,
-				lineContent[0], uri, position)
+			contentString, contentErr = contentFromExpression(ctx, h.analyzer, ident.Action.Assign,
+				lineContent, uri, pos)
 		case "augAssign":
-			contentString, contentErr = contentFromExpression(ctx, analyzer, ident.Action.AugAssign,
-				lineContent[0], uri, position)
+			contentString, contentErr = contentFromExpression(ctx, h.analyzer, ident.Action.AugAssign,
+				lineContent, uri, pos)
 		default:
 			return "", nil
 		}
 	} else if stmt.Expression != nil {
-		contentString, contentErr = contentFromExpression(ctx, analyzer, stmt.Expression,
-			lineContent[0], uri, position)
+		contentString, contentErr = contentFromExpression(ctx, h.analyzer, stmt.Expression,
+			lineContent, uri, pos)
 	}
 
 	if contentErr != nil {

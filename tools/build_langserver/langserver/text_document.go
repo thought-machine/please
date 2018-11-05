@@ -3,7 +3,6 @@ package langserver
 import (
 	"context"
 	"encoding/json"
-
 	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
@@ -22,26 +21,50 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
 			return nil, err
 		}
-		h.workspace.Store(params.TextDocument.URI, params.TextDocument.Text)
+
+		documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, "textDocument/didOpen")
+		if err != nil {
+			return nil, err
+		}
+
+		h.workspace.Store(documentURI, params.TextDocument.Text)
 		return nil, nil
 	case "textDocument/didChange":
 		var params lsp.DidChangeTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
 			return nil, err
 		}
-		return nil, h.workspace.TrackEdit(params.TextDocument.URI, params.ContentChanges)
+
+		documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, "textDocument/didChange")
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, h.workspace.TrackEdit(documentURI, params.ContentChanges)
 	case "textDocument/didSave":
 		var params lsp.DidSaveTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
 			return nil, err
 		}
-		return nil, h.workspace.Update(params.TextDocument.URI, params.Text)
+
+		documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, "textDocument/didSave")
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, h.workspace.Update(documentURI, params.Text)
 	case "textDocument/didClose":
 		var params lsp.DidCloseTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
 			return nil, err
 		}
-		return nil, h.workspace.Close(params.TextDocument.URI)
+
+		documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, "textDocument/didClose")
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, h.workspace.Close(documentURI)
 	case "textDocument/willSave":
 		var params lsp.WillSaveTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
