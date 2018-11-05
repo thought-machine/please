@@ -618,3 +618,10 @@ go_get(
     ],
     revision = "v0.5.4",
 )
+
+go_get(
+    name = "ar",
+    get = "github.com/blakesmith/ar",
+    patch = "ar_octal.diff",
+    revision = "8bd4349a67f2533b078dbc524689d15dba0f4659",
+)

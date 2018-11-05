@@ -5,6 +5,7 @@ go_binary(
     deps = [
         "//src/cli",
         "//third_party/go:logging",
+        "//tools/jarcat/ar",
         "//tools/jarcat/tar",
         "//tools/jarcat/unzip",
         "//tools/jarcat/zip",

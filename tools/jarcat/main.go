@@ -15,6 +15,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"cli"
+	"tools/jarcat/ar"
 	"tools/jarcat/tar"
 	"tools/jarcat/unzip"
 	"tools/jarcat/zip"
@@ -95,6 +96,14 @@ var opts = struct {
 		OutDir      string `short:"o" long:"out" description:"Output directory"`
 		Out         string `long:"out_file" hidden:"true" env:"OUT"`
 	} `command:"unzip" alias:"u" alias:"x" description:"Unzips a zipfile"`
+
+	Ar struct {
+		Srcs    []string `long:"srcs" env:"SRCS_SRCS" env-delim:" " description:"Source .ar files to combine"`
+		Out     string   `long:"out" env:"OUT" description:"Output filename"`
+		Rename  bool     `short:"r" long:"rename" description:"Rename source files as gcc would (i.e. change extension to .o)"`
+		Combine bool     `short:"c" long:"combine" description:"Treat source files as .a files and combines them"`
+		Find    bool     `short:"f" long:"find" description:"Find all .a files under the current directory & combine those (implies --combine)"`
+	} `command:"ar" alias:"a" description:"Creates a new ar archive."`
 }{
 	Usage: `
 Jarcat is a binary shipped with Please that helps it operate on .jar and .zip files.
@@ -142,6 +151,19 @@ func main() {
 		}
 		if err := unzip.Extract(opts.Unzip.Args.In, opts.Unzip.OutDir, opts.Unzip.Args.File, opts.Unzip.StripPrefix); err != nil {
 			log.Fatalf("Error extracting zipfile: %s", err)
+		}
+		os.Exit(0)
+	} else if command == "ar" {
+		if opts.Ar.Find {
+			srcs, err := ar.Find()
+			if err != nil {
+				log.Fatalf("%s", err)
+			}
+			opts.Ar.Srcs = srcs
+			opts.Ar.Combine = true
+		}
+		if err := ar.Create(opts.Ar.Srcs, opts.Ar.Out, opts.Ar.Combine, opts.Ar.Rename); err != nil {
+			log.Fatalf("Error combining archives: %s", err)
 		}
 		os.Exit(0)
 	}

@@ -18,7 +18,8 @@ _NO_WHOLE_ARCHIVE = '-noall_load' if CONFIG.OS == 'darwin' else '--no-whole-arch
 def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
                linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
-               defines:list|dict=[], alwayslink:bool=False, linkstatic:bool=False, _c=False, textual_hdrs:list=[]):
+               defines:list|dict=[], alwayslink:bool=False, linkstatic:bool=False, _c=False,
+               textual_hdrs:list=[], _module:bool=False, _interfaces:list=[]):
     """Generate a C++ library target.
 
     Args:
@@ -72,36 +73,62 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
               ['cc:inc:' + join_path(pkg_name, include) for include in includes] +
               ['cc:def:' + define for define in defines])
 
-    if not srcs:
+    if not srcs and not _interfaces:
         # Header-only library, no compilation needed.
         return filegroup(
-            name=name,
-            srcs=hdrs,
-            exported_deps=deps,
-            labels=labels,
-            test_only=test_only,
-            visibility=visibility,
-            output_is_complete=False,
+            name = name,
+            srcs = hdrs,
+            exported_deps = deps,
+            labels = labels,
+            test_only = test_only,
+            visibility = visibility,
+            output_is_complete = False,
         )
 
     # Collect the headers for other rules
+    requires = ['cc_hdrs', 'cc_mod']
     hdrs_rule = filegroup(
         name = name,
         tag = 'hdrs',
-        srcs=hdrs,
-        requires=['cc_hdrs'],
-        deps=deps,
-        test_only=test_only,
-        labels=labels,
-        output_is_complete=False,
+        srcs = hdrs,
+        requires = requires,
+        deps = None if _module else deps,
+        test_only = test_only,
+        labels = labels,
+        output_is_complete = False,
     )
+    provides = {'cc_hdrs': hdrs_rule}
+
+    if _module:
+        compiler_flags += ['-fmodules-ts' if CONFIG.CC_MODULES_CLANG else '-fmodules']
+    # TODO(pebers): handle includes and defines in _library_cmds as well.
+    pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags) if (deps or includes or defines or _interfaces) else None
+    pkg = package_name()
+
+    if _interfaces:
+        # Generate the module interface file
+        xflags = ['-fmodules-ts --precompile -x c++-module -o $OUT' if CONFIG.CC_MODULES_CLANG else '-fmodules -fmodule-output=$OUT']
+        cmds, tools = _library_cmds(_c, compiler_flags + xflags, pkg_config_libs, pkg_config_cflags, archive=False)
+        interface_rule = build_rule(
+            name = name,
+            tag = 'interface',
+            srcs = {'srcs': _interfaces, 'hdrs': hdrs, 'priv': private_hdrs},
+            outs = [name + '.pcm'],
+            cmd = cmds,
+            building_description = 'Compiling...',
+            requires = requires,
+            test_only = test_only,
+            labels = labels + [f'cc:mod:{pkg}/{name}.pcm'],
+            tools = tools,
+            needs_transitive_deps = True,
+        )
+        srcs += _interfaces
+        all_deps = deps + [interface_rule]
+        provides['cc_mod'] = interface_rule
+    else:
+        all_deps = deps
 
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, pkg_config_cflags)
-
-    # TODO(pebers): handle includes and defines in _library_cmds as well.
-    pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags) if (deps or includes or defines) else None
-
-    pkg = package_name()
     if len(srcs) > 1:
         # Compile all the sources separately, this is much faster for large numbers of files
         # than giving them all to gcc in one invocation.
@@ -114,10 +141,10 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
                 srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
                 outs=[a_name + '.a'],
                 optional_outs=['*.gcno'],  # For coverage
-                deps=deps,
+                deps=deps if src in _interfaces else all_deps,
                 cmd=cmds,
                 building_description='Compiling...',
-                requires=['cc_hdrs'],
+                requires=requires,
                 test_only=test_only,
                 labels=labels,
                 tools=tools,
@@ -130,15 +157,17 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         a_rule = build_rule(
             name = name,
             tag = 'a',
-            srcs = a_rules,
+            srcs = {'srcs': a_rules},
             outs = [name + '.a'],
-            cmd = 'echo $SRCS | xargs -n 1 $TOOL xo && $TOOL rcs $OUT *.o',
+            cmd = '$TOOLS_JARCAT ar --combine && ar s $OUT',
             building_description = 'Archiving...',
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
-            deps = deps + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
-            tools = [CONFIG.AR_TOOL],
+            tools = {
+                'jarcat': [CONFIG.JARCAT_TOOL],
+                'ar': [CONFIG.AR_TOOL],
+            },
         )
         if alwayslink:
             labels.append(f'cc:al:{pkg}/{name}.a')
@@ -151,6 +180,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tag = 'lib',
             srcs = [a_rule],
             deps = deps,
+            requires = ['cc_mod'] if _module else None,
             test_only = test_only,
             labels = labels,
             output_is_complete=False,
@@ -164,10 +194,10 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             srcs={'srcs': srcs, 'hdrs': hdrs, 'priv': private_hdrs},
             outs=[name + '.a'],
             optional_outs=['*.gcno'],  # For coverage
-            deps=deps,
+            deps=deps if srcs == _interfaces else all_deps,
             cmd=cmds,
             building_description='Compiling...',
-            requires=['cc_hdrs'],
+            requires=requires,
             test_only=test_only,
             labels=labels,
             tools=tools,
@@ -182,19 +212,18 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tag = 'lib',
             srcs = [cc_rule],
             deps = deps,
+            requires = ['cc_mod'] if _module else None,
             test_only = test_only,
             labels = labels,
             output_is_complete=False,
         )
 
+    provides['cc'] = lib_rule
     return filegroup(
         name=name,
         srcs=[lib_rule],
         deps=[hdrs_rule],
-        provides={
-            'cc_hdrs': hdrs_rule,
-            'cc': lib_rule,
-        },
+        provides=provides,
         test_only=test_only,
         visibility=visibility,
         output_is_complete=False,
@@ -257,7 +286,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
         deps=deps,
         cmd=cmds,
         building_description='Compiling...',
-        requires=['cc_hdrs'],
+        requires=['cc_hdrs', 'cc_mod'],
         test_only=test_only,
         labels=labels,
         tools=tools,
@@ -311,10 +340,7 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
         name = name,
         deps = deps,
         outs = [f'lib{name}.a'],
-        cmd = (
-            'for a in `find . -name "*.a"`; do (cd $(dirname $a) && $TOOL x $(basename $a)); done;'
-            '$TOOL rcs $OUT `find . -name "*.o" | sort`'
-        ),
+        cmd = '$TOOL ar --find',
         needs_transitive_deps = True,
         output_is_complete = True,
         visibility = visibility,
@@ -322,7 +348,7 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
         building_description = 'Archiving...',
         provides = provides,
         requires = ['cc'],
-        tools = [CONFIG.AR_TOOL],
+        tools = [CONFIG.JARCAT_TOOL],
     )
 
 
@@ -389,9 +415,71 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
     )
 
 
-def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compiler_flags:list&cflags&copts=[],
-              linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, pkg_config_libs:list=[],
-              pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False, linkstatic:bool=False):
+def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_hdrs:list=[],
+              deps:list=[], visibility:list=None, test_only:bool&testonly=False,
+              compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
+              pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
+              defines:list|dict=[], alwayslink:bool=False):
+    """Generate a C++ module.
+
+    This is still experimental. Currently it has only been tested with clang - you can use
+    `package(cc_modules_clang=False)` to try with gcc (this may be needed since the two support
+    different flag structures at present).
+
+    Args:
+      name (str): Name of the rule
+      srcs (list): C++ source files to compile.
+      hdrs (list): Header files. These will be made available to dependent rules, so the distinction
+                   between srcs and hdrs is important.
+      interfaces (list): Module interface files. Again, these are treated differently to `srcs` in
+                         terms of compilation so the distinction is important.
+      private_hdrs (list): Header files that are available only to this rule and not exported to
+                           dependent rules.
+      deps (list): Dependent rules.
+      visibility (list): Visibility declaration for this rule.
+      test_only (bool): If True, is only available to other test rules.
+      compiler_flags (list): Flags to pass to the compiler.
+      linker_flags (list): Flags to pass to the linker; these will not be used here but will be
+                           picked up by a cc_binary or cc_test rule.
+      pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`. Again, the ldflags
+                              will be picked up by cc_binary or cc_test rules.
+      pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`. Again, the ldflags
+                              will be picked up by cc_binary or cc_test rules.
+      includes (list): List of include directories to be added to the compiler's path.
+      defines (list | dict): List of tokens to define in the preprocessor.
+                             Alternatively can be a dict of name -> value to define, in which case
+                             values are surrounded by quotes.
+      alwayslink (bool): If True, any binaries / tests using this library will link in all symbols,
+                         even if they don't directly reference them. This is useful for e.g. having
+                         static members that register themselves at construction time.
+      linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect.
+      textual_hdrs (list): Also provided for Bazel compatibility. Effectively works the same as hdrs for now.
+    """
+    return cc_library(
+        name = name,
+        srcs = srcs,
+        hdrs = hdrs,
+        _interfaces = interfaces,
+        private_hdrs = private_hdrs,
+        deps = deps,
+        visibility = visibility,
+        test_only = test_only,
+        compiler_flags = compiler_flags,
+        linker_flags = linker_flags,
+        pkg_config_libs = pkg_config_libs,
+        pkg_config_cflags = pkg_config_cflags,
+        includes = includes,
+        defines = defines,
+        alwayslink = alwayslink,
+        _module = True,
+    )
+
+
+def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
+              compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
+              deps:list=[], visibility:list=None, pkg_config_libs:list=[],
+              pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False,
+              linkstatic:bool=False):
     """Builds a binary from a collection of C++ rules.
 
     Args:
@@ -451,11 +539,12 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compil
     )
 
 
-def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-            pkg_config_libs:list=[], pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=[],
-            flags:str='', labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=[], size:str=None, timeout:int=0,
-            container:bool|dict=False, sandbox:bool=None, write_main:bool=False,
-            linkstatic:bool=False, _c=False):
+def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[],
+            linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[],
+            pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[],
+            visibility:list=[], flags:str='', labels:list&features&tags=[], flaky:bool|int=0,
+            test_outputs:list=[], size:str=None, timeout:int=0, container:bool|dict=False,
+            sandbox:bool=None, write_main:bool=False, linkstatic:bool=False, _c=False):
     """Defines a C++ test.
 
     We template in a main file so you don't have to supply your own.
@@ -599,7 +688,7 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
         test_only=test_only,
     )
 
-    tools = {'ar': [CONFIG.AR_TOOL]}
+    tools = {'jarcat': [CONFIG.JARCAT_TOOL], 'ar': [CONFIG.AR_TOOL]}
     if darwin:
         # OSX's ld doesn't support '--format binary', and this is the least fiddly
         # alternative. Requiring an additional tool is a bit suboptimal but probably
@@ -608,11 +697,12 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
             'export ENCODED_FILENAME=${SRCS//[\\/\\.]/_}',
             f'echo "{_CC_DARWIN_ASM_CONTENTS}" > embedded.asm',
             '$TOOLS_ASM -fmacho64 embedded.asm -o ${OUTS/.a/.o}',
-            '$TOOLS_AR rcs $OUT ${OUTS/.a/.o}',
+            '$TOOLS_JARCAT ar --srcs ${OUTS/.a/.o}',
+            '$TOOLS_AR s $OUTS',
         ])
         tools['asm'] = [CONFIG.ASM_TOOL]
     else:
-        cmd = '$TOOLS_LD -r --format binary %s -o ${OUTS/.a/.o} $SRC && $TOOLS_AR rcs $OUT ${OUTS/.a/.o}' % CONFIG.DEFAULT_LDFLAGS
+        cmd = '$TOOLS_LD -r --format binary %s -o ${OUTS/.a/.o} $SRC && $TOOLS_JARCAT ar --srcs ${OUTS/.a/.o} && $TOOLS_AR s $OUTS' % CONFIG.DEFAULT_LDFLAGS
         tools['ld'] = [CONFIG.LD_TOOL]
 
     lib_rule = build_rule(
@@ -767,7 +857,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_f
     opt_flags = _build_flags(compiler_flags, pkg_config_libs, pkg_config_cflags, c=c)
     cmd_template = '$TOOLS_CC -c -I . ${SRCS_SRCS} %s %s'
     if archive:
-        cmd_template += ' && $TOOLS_AR rcs $OUT *.o'
+        cmd_template += ' && $TOOLS_JARCAT ar -r && $TOOLS_AR s $OUT'
     cmds = {
         'dbg': cmd_template % (dbg_flags, extra_flags),
         'opt': cmd_template % (opt_flags, extra_flags),
@@ -776,6 +866,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_f
         cmds['cover'] = cmd_template % (dbg_flags + _COVERAGE_FLAGS, extra_flags)
     return cmds, {
         'cc': [CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL],
+        'jarcat': [CONFIG.JARCAT_TOOL if archive else None],
         'ar': [CONFIG.AR_TOOL if archive else None],
     }
 
@@ -803,7 +894,10 @@ def _library_transitive_labels(c, compiler_flags, pkg_config_libs, pkg_config_cf
 
         pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs])
         pkg_config_cflags.extend([l[4:] for l in labels if l.startswith('pcc:') and l[4:] not in pkg_config_cflags])
-
+        mods = ['-fmodule-file=' + l[4:] for l in labels if l.startswith('mod:')]
+        flags += mods
+        if mods:
+            flags += ['-fmodules-ts' if CONFIG.CC_MODULES_CLANG else '-fmodules']
         if flags:  # Don't update if there aren't any relevant labels
             cmds, _ = _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, ' '.join(flags), archive=archive)
             for k, v in cmds.items():
