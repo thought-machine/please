@@ -29,4 +29,3 @@ go_binary(
         "//third_party/go:logging",
     ],
 )
-target = glob()
