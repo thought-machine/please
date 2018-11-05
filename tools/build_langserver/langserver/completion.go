@@ -85,30 +85,32 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	return completionList, nil
 }
 
-func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Analyzer,
+func itemsFromBuildLabel(ctx context.Context, labelString string, analyzer *Analyzer,
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
 	// TODO(bnm): need to trim the linecontent so we only pass in buildlabel to the following function
-	lineContent = TrimQuotes(lineContent)
+	labelString = TrimQuotes(labelString)
 
 	var labels []map[string]string
-	if strings.ContainsRune(lineContent, ':') {
-		labelParts := strings.Split(lineContent, ":")
+	if strings.ContainsRune(labelString, ':') {
+		labelParts := strings.Split(labelString, ":")
 
-		if strings.HasPrefix(lineContent, ":") {
+		if strings.HasPrefix(labelString, ":") {
 			// Get relative labels in the current file
 			buildDefs, err := analyzer.BuildDefsFromURI(ctx, uri)
 			if err != nil {
 				return nil, err
 			}
 			for buildDef := range buildDefs {
-				label := map[string]string{
-					"buildLabel": ":" + buildDef,
-					"insert":     buildDef,
-					"partial":    labelParts[1],
+				// only append those matches the existing partial
+				if strings.Contains(buildDef, labelParts[1]) {
+					label := map[string]string{
+						"buildLabel": ":" + buildDef,
+						"insert":     buildDef,
+					}
+					labels = append(labels, label)
 				}
-				labels = append(labels, label)
 			}
-		} else if strings.HasPrefix(lineContent, "//") {
+		} else if strings.HasPrefix(labelString, "//") {
 			// Get none relative labels
 			targetURI := analyzer.BuildFileURIFromPackage(labelParts[0])
 
@@ -122,11 +124,10 @@ func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Anal
 				return nil, err
 			}
 			for name, buildDef := range buildDefs {
-				if isVisible(buildDef, currentPkg) {
+				if isVisible(buildDef, currentPkg) && strings.Contains(name, labelParts[1]) {
 					label := map[string]string{
 						"buildLabel": labelParts[0] + ":" + name,
 						"insert":     name,
-						"partial":    labelParts[1],
 					}
 					labels = append(labels, label)
 
@@ -134,13 +135,12 @@ func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Anal
 			}
 		}
 	} else {
-		pkgs := query.GetAllPackages(analyzer.State.Config, lineContent[2:], core.RepoRoot)
-
+		pkgs := query.GetAllPackages(analyzer.State.Config, labelString[2:], core.RepoRoot)
+		// TODO(bnm): consider how to split the labels
 		for _, pkg := range pkgs {
 			label := map[string]string{
 				"buildLabel": "/" + pkg,
 				"insert":     strings.TrimPrefix(pkg, "/"),
-				"partial":    lineContent,
 			}
 			labels = append(labels, label)
 		}
@@ -149,9 +149,8 @@ func itemsFromBuildLabel(ctx context.Context, lineContent string, analyzer *Anal
 	// Map the labels to a lsp.CompletionItem slice
 	var completionList []*lsp.CompletionItem
 	for _, label := range labels {
-		//TERange := getTERange(pos, label["partial"])
-
 		detail := fmt.Sprintf(" BUILD Label: %s", label["buildLabel"])
+
 		item := getCompletionItem(lsp.Value, label["insert"], detail)
 		completionList = append(completionList, item)
 	}
