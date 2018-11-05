@@ -312,9 +312,9 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 }
 
 func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
-	lineContent string, uri lsp.DocumentURI) (string, error) {
+	buildLabelstr string, uri lsp.DocumentURI) (string, error) {
 
-	trimed := TrimQuotes(strings.TrimSpace(lineContent))
+	trimed := TrimQuotes(buildLabelstr)
 
 	if core.LooksLikeABuildLabel(trimed) {
 		buildLabel, err := analyzer.BuildLabelFromString(ctx, uri, trimed)
