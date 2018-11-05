@@ -98,7 +98,7 @@ var opts = struct {
 	} `command:"unzip" alias:"u" alias:"x" description:"Unzips a zipfile"`
 
 	Ar struct {
-		Srcs    []string `long:"srcs" env:"SRCS" env-delim:" " description:"Source .ar files to combine"`
+		Srcs    []string `long:"srcs" env:"SRCS_SRCS" env-delim:" " description:"Source .ar files to combine"`
 		Out     string   `long:"out" env:"OUT" description:"Output filename"`
 		Rename  bool     `short:"r" long:"rename" description:"Rename source files as gcc would (i.e. change extension to .o)"`
 		Combine bool     `short:"c" long:"combine" description:"Treat source files as .a files and combines them"`

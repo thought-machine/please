@@ -157,7 +157,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         a_rule = build_rule(
             name = name,
             tag = 'a',
-            srcs = a_rules,
+            srcs = {'srcs': a_rules},
             outs = [name + '.a'],
             cmd = '$TOOL ar --combine',
             building_description = 'Archiving...',

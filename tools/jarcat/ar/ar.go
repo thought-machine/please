@@ -35,6 +35,7 @@ func Create(srcs []string, out string, combine, rename bool) error {
 	}
 	for _, src := range srcs {
 		if rename {
+			src = path.Base(src)
 			if ext := path.Ext(src); ext != "" {
 				src = src[:len(src)-len(ext)] + ".o"
 			}
