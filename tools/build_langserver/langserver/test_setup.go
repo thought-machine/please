@@ -8,6 +8,7 @@ import (
 	"tools/build_langserver/lsp"
 )
 
+// TestMain runs the setup for the tests for all the tests relating to langserver
 func TestMain(m *testing.M) {
 	core.FindRepoRoot()
 	retCode := m.Run()
