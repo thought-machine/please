@@ -59,8 +59,8 @@ func Create(srcs []string, out string, combine, rename bool) error {
 						break
 					}
 					return err
-				} else if hdr.Name == "/" {
-					log.Debug("skipping ranlib index")
+				} else if hdr.Name == "/" || hdr.Name == "__.SYMDEF SORTED" || hdr.Name == "__.SYMDEF" {
+					log.Debug("skipping symbol table")
 					continue
 				}
 				log.Debug("copying %s in from %s", hdr.Name, src)
