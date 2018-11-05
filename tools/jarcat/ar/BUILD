@@ -5,5 +5,6 @@ go_library(
     deps = [
         "//src/fs",
         "//third_party/go:ar",
+        "//third_party/go:logging",
     ],
 )

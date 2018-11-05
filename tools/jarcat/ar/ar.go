@@ -10,9 +10,12 @@ import (
 	"time"
 
 	"github.com/blakesmith/ar"
+	"gopkg.in/op/go-logging.v1"
 
 	"fs"
 )
+
+var log = logging.MustGetLogger("ar")
 
 // mtime is the time we attach for the modification time of all files.
 var mtime = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
@@ -24,21 +27,26 @@ const nobody = 65534
 // If combine is true they are treated as existing ar files and combined.
 // If rename is true the srcs are renamed as gcc would (i.e. the extension is replaced by .o).
 func Create(srcs []string, out string, combine, rename bool) error {
+	log.Debug("Writing ar to %s", out)
 	f, err := os.Create(out)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	w := ar.NewWriter(bufio.NewWriter(f))
+	bw := bufio.NewWriter(f)
+	defer bw.Flush()
+	w := ar.NewWriter(bw)
 	if err := w.WriteGlobalHeader(); err != nil {
 		return err
 	}
 	for _, src := range srcs {
+		log.Debug("ar source file: %s", src)
 		if rename {
 			src = path.Base(src)
 			if ext := path.Ext(src); ext != "" {
 				src = src[:len(src)-len(ext)] + ".o"
 			}
+			log.Debug("renamed ar source to %s", src)
 		}
 		f, err := os.Open(src)
 		if err != nil {
@@ -55,6 +63,7 @@ func Create(srcs []string, out string, combine, rename bool) error {
 					}
 					return err
 				}
+				log.Debug("copying %s in from %s", hdr.Name, src)
 				// Zero things out
 				hdr.ModTime = mtime
 				hdr.Uid = nobody
