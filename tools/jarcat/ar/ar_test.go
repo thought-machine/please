@@ -11,7 +11,9 @@ import (
 )
 
 func TestCreateAr(t *testing.T) {
-	err := Create([]string{"tools/jarcat/ar/test_data/test.o"}, "test.a", false, false)
+	err := os.Rename("tools/jarcat/ar/test_data/test.o", "test.o")
+	assert.NoError(t, err)
+	err = Create([]string{"test.o"}, "test.a", false, false)
 	assert.NoError(t, err)
 
 	// Now read it and the reference one back and compare them.
@@ -32,16 +34,20 @@ func TestCreateAr(t *testing.T) {
 		} else if err1 == io.EOF {
 			t.Errorf("Additional file in reference that's not in ours: %s", hdr2.Name)
 		} else if err2 == io.EOF {
-			t.Errorf("Additional file ours that's not in the reference: %s", hdr1.Name)
+			t.Errorf("Additional file in ours that's not in the reference: %s", hdr1.Name)
 		}
 		assert.NoError(t, err1)
 		assert.NoError(t, err2)
+		assert.Equal(t, hdr1.Name, hdr2.Name)
 
 		content1, err := ioutil.ReadAll(r1)
 		assert.NoError(t, err)
 		content2, err := ioutil.ReadAll(r2)
 		assert.NoError(t, err)
 
-		assert.Equal(t, content1, content2)
+		assert.Equal(t, len(content1), len(content2))
+		if len(content1) == len(content2) {
+			assert.Equal(t, content1, content2)
+		}
 	}
 }
