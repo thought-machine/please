@@ -20,9 +20,6 @@ var log = logging.MustGetLogger("ar")
 // mtime is the time we attach for the modification time of all files.
 var mtime = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 
-// nobody is the usual uid / gid of the 'nobody' user.
-const nobody = 65534
-
 // Create creates a new ar archive from the given sources.
 // If combine is true they are treated as existing ar files and combined.
 // If rename is true the srcs are renamed as gcc would (i.e. the extension is replaced by .o).
@@ -62,12 +59,15 @@ func Create(srcs []string, out string, combine, rename bool) error {
 						break
 					}
 					return err
+				} else if hdr.Name == "/" {
+					log.Debug("skipping ranlib index")
+					continue
 				}
 				log.Debug("copying %s in from %s", hdr.Name, src)
 				// Zero things out
 				hdr.ModTime = mtime
-				hdr.Uid = nobody
-				hdr.Gid = nobody
+				hdr.Uid = 0
+				hdr.Gid = 0
 				if err := w.WriteHeader(hdr); err != nil {
 					return err
 				} else if _, err := io.Copy(w, r); err != nil {
@@ -83,8 +83,6 @@ func Create(srcs []string, out string, combine, rename bool) error {
 			hdr := &ar.Header{
 				Name:    src,
 				ModTime: mtime,
-				Uid:     nobody,
-				Gid:     nobody,
 				Mode:    int64(info.Mode()),
 				Size:    info.Size(),
 			}

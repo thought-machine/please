@@ -159,13 +159,16 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tag = 'a',
             srcs = {'srcs': a_rules},
             outs = [name + '.a'],
-            cmd = '$TOOL ar --combine',
+            cmd = '$TOOLS_JARCAT ar --combine && ar s $OUT',
             building_description = 'Archiving...',
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
             deps = deps + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
-            tools = [CONFIG.JARCAT_TOOL],
+            tools = {
+                'jarcat': [CONFIG.JARCAT_TOOL],
+                'ar': [CONFIG.AR_TOOL],
+            },
         )
         if alwayslink:
             labels.append(f'cc:al:{pkg}/{name}.a')
@@ -686,7 +689,7 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
         test_only=test_only,
     )
 
-    tools = {'jarcat': [CONFIG.JARCAT_TOOL]}
+    tools = {'jarcat': [CONFIG.JARCAT_TOOL], 'ar': [CONFIG.AR_TOOL]}
     if darwin:
         # OSX's ld doesn't support '--format binary', and this is the least fiddly
         # alternative. Requiring an additional tool is a bit suboptimal but probably
@@ -696,10 +699,11 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
             f'echo "{_CC_DARWIN_ASM_CONTENTS}" > embedded.asm',
             '$TOOLS_ASM -fmacho64 embedded.asm -o ${OUTS/.a/.o}',
             '$TOOLS_JARCAT ar --srcs ${OUTS/.a/.o}',
+            '$TOOLS_AR s $OUTS',
         ])
         tools['asm'] = [CONFIG.ASM_TOOL]
     else:
-        cmd = '$TOOLS_LD -r --format binary %s -o ${OUTS/.a/.o} $SRC && $TOOLS_JARCAT ar --srcs ${OUTS/.a/.o}' % CONFIG.DEFAULT_LDFLAGS
+        cmd = '$TOOLS_LD -r --format binary %s -o ${OUTS/.a/.o} $SRC && $TOOLS_JARCAT ar --srcs ${OUTS/.a/.o} && $TOOLS_AR s $OUTS' % CONFIG.DEFAULT_LDFLAGS
         tools['ld'] = [CONFIG.LD_TOOL]
 
     lib_rule = build_rule(
@@ -854,7 +858,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_f
     opt_flags = _build_flags(compiler_flags, pkg_config_libs, pkg_config_cflags, c=c)
     cmd_template = '$TOOLS_CC -c -I . ${SRCS_SRCS} %s %s'
     if archive:
-        cmd_template += ' && $TOOLS_JARCAT ar -r'
+        cmd_template += ' && $TOOLS_JARCAT ar -r && $TOOLS_AR s $OUT'
     cmds = {
         'dbg': cmd_template % (dbg_flags, extra_flags),
         'opt': cmd_template % (opt_flags, extra_flags),
@@ -864,6 +868,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_f
     return cmds, {
         'cc': [CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL],
         'jarcat': [CONFIG.JARCAT_TOOL if archive else None],
+        'ar': [CONFIG.AR_TOOL if archive else None],
     }
 
 
