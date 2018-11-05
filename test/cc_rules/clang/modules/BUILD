@@ -35,6 +35,7 @@ cc_module(
 cc_test(
     name = "interdependent_modules_test",
     srcs = ["interdependent_modules_test.cc"],
+    labels = ["clang"],
     deps = [
         ":f1",
         ":q1",
