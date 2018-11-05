@@ -189,7 +189,7 @@ func LooksLikeDictAttr(str string) bool {
 // Beginning of the buildlabel must have a quote
 // end of the string must not be anything other than quotes or characters
 func ExtractBuildLabel(str string) string {
-	re := regexp.MustCompile(`("(\/\/|:)\w+(\/\w+)*([:]\w*)?"?$)`)
+	re := regexp.MustCompile(`("(\/\/|:)(\w+\/?)*(\w+[:]\w*)?"?$)`)
 	matched := re.FindString(strings.TrimSpace(str))
 
 	return strings.Trim(matched, `"`)

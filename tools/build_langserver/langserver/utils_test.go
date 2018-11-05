@@ -206,10 +206,18 @@ func TestExtractBuildLabel(t *testing.T) {
 	label = ExtractBuildLabel(`		"//src/cache/blah`)
 	assert.Equal(t, "//src/cache/blah", label)
 
+	label = ExtractBuildLabel(`		"//src/cache/blah/`)
+	assert.Equal(t, "//src/cache/blah/", label)
+
 	// no match
 	label = ExtractBuildLabel("blah")
 	assert.Equal(t, "", label)
 
+	label = ExtractBuildLabel(`"//src/cache/blah//`)
+	assert.Equal(t, "", label)
+
+	label = ExtractBuildLabel(`"//src/cache/blah/:`)
+	assert.Equal(t, "", label)
 }
 
 /*
