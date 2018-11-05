@@ -41,8 +41,6 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 		return nil, err
 	}
 
-	// TODO(bnm): reconsider the content, because right now everything is on one line.....:(
-
 	markedString := lsp.MarkedString{
 		Language: "build",
 		Value:    content,

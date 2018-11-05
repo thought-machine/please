@@ -187,8 +187,10 @@ func TestGetHoverAssignmentBuildLabel(t *testing.T) {
 	var ctx = context.Background()
 
 	content, err := handler.getHoverContent(ctx, assignBuildURI, lsp.Position{Line: 25, Character: 13})
+	expected := []string{"go_library(", "    name = \"fs\",", "    srcs = ["}
+
 	assert.Equal(t, nil, err)
-	t.Log("LUNA" + content)
+	assert.Equal(t, strings.Split(content, "\n")[:3], expected)
 }
 
 func TestGetHoverContentOnUnaryAssignment(t *testing.T) {
