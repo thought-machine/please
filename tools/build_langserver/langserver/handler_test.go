@@ -6,7 +6,6 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 	"github.com/stretchr/testify/assert"
 	"net"
-	"path"
 	"strings"
 	"testing"
 	"tools/build_langserver/lsp"
@@ -40,12 +39,12 @@ func TestHandle(t *testing.T) {
 	t.Log(result)
 
 	var result2 lsp.Hover
-	uri := lsp.DocumentURI(path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD"))
+	uri := lsp.DocumentURI(exampleBuildURI)
 	openFile(ctx, t, conn, uri)
 
 	if err := conn.Call(ctx, "textDocument/hover", lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
-			URI: lsp.DocumentURI(path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")),
+			URI: lsp.DocumentURI(exampleBuildURI),
 		},
 		Position: lsp.Position{Line: 0, Character: 3},
 	}, &result2); err != nil {
