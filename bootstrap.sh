@@ -103,7 +103,7 @@ if ! pkg-config python3 2>/dev/null ; then
 fi
 if ! hash clang++ 2>/dev/null ; then
     warn "Clang not found, excluding Clang tests"
-    EXCLUDES="${EXCLUDES} --exclude=clang"
+    EXCLUDES="${EXCLUDES} --exclude=clang --exclude=clang++"
 fi
 if ! hash gold 2>/dev/null ; then
     warn "Gold not found, excluding Gold tests"

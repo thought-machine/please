@@ -164,7 +164,6 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
-            deps = deps + [hdrs_rule],  # This is a little suboptimal but makes sure they get built when needed.
             tools = {
                 'jarcat': [CONFIG.JARCAT_TOOL],
                 'ar': [CONFIG.AR_TOOL],
