@@ -93,6 +93,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 
 	// Set the Init state of the handler
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	// TODO(bnmetrics): Ideas: this could essentially be a bit fragile.
 	// maybe we can defer until user send a request with first file URL
 	core.FindRepoRoot()
@@ -118,7 +119,6 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	h.requestStore = reqStore
 	ctx = h.requestStore.Store(ctx, req)
 
-	h.mu.Unlock()
 	defer h.requestStore.Cancel(req.ID)
 
 	// Fill in the response results

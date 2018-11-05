@@ -193,17 +193,17 @@ func TestLooksLikeDictAttr(t *testing.T) {
 }
 
 func TestExtractBuildLabel(t *testing.T) {
-	label := ExtractBuildLabel("target = \"//src/cache/blah:hello")
+	label := ExtractBuildLabel(`target = "//src/cache/blah:hello`)
 	assert.Equal(t, "//src/cache/blah:hello", label)
 	t.Log(label)
 
-	label = ExtractBuildLabel("target = \"//src/cache/blah:hello\"")
+	label = ExtractBuildLabel(`target = "//src/cache/blah:hello"`)
 	assert.Equal(t, "//src/cache/blah:hello", label)
 
-	label = ExtractBuildLabel("		\"//src/cache:")
+	label = ExtractBuildLabel(`		"//src/cache:`)
 	assert.Equal(t, "//src/cache:", label)
 
-	label = ExtractBuildLabel("		\"//src/cache/blah")
+	label = ExtractBuildLabel(`		"//src/cache/blah`)
 	assert.Equal(t, "//src/cache/blah", label)
 
 	// no match

@@ -34,8 +34,8 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 	}
 
 	h.mu.Lock()
-	itemList, err := h.getCompletionItemsList(ctx, documentURI, params.Position)
 	defer h.mu.Unlock()
+	itemList, err := h.getCompletionItemsList(ctx, documentURI, params.Position)
 
 	if err != nil {
 		return nil, err

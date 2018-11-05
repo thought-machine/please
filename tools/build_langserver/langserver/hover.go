@@ -64,7 +64,7 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	if err != nil {
 		return "", &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,
-			Message: fmt.Sprintf("fail to read file %s", uri),
+			Message: fmt.Sprintf("fail to read file %s: %s", uri, err),
 		}
 	}
 
@@ -109,10 +109,8 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	}
 
 	if contentErr != nil {
-		return "", &jsonrpc2.Error{
-			Code:    jsonrpc2.CodeParseError,
-			Message: fmt.Sprintf("fail to get content from Build file %s", uri),
-		}
+		log.Warning("fail to get content from Build file %s: %s", uri, contentErr)
+		return "", nil
 	}
 	return contentString, nil
 }

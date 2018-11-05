@@ -153,13 +153,8 @@ func TrimQuotes(str string) string {
 		return matched[1 : len(matched)-1]
 	}
 
-	// Match cases when only one quote presented
-	if len(str) > 0 && (str[0] == '"' || str[0] == '\'') {
-		str = str[1:]
-	}
-	if len(str) > 0 && str[len(str)-1] == '"' {
-		str = str[:len(str)-1]
-	}
+	str = strings.Trim(str, `"`)
+	str = strings.Trim(str, `'`)
 
 	return str
 }
@@ -196,18 +191,8 @@ func LooksLikeDictAttr(str string) bool {
 func ExtractBuildLabel(str string) string {
 	re := regexp.MustCompile(`("(\/\/|:)\w+(\/\w+)*([:]\w*)?"?$)`)
 	matched := re.FindString(strings.TrimSpace(str))
-	if matched == "" {
-		return ""
-	}
 
-	if matched[0] == '"' {
-		matched = matched[1:]
-	}
-	if matched[len(matched)-1] == '"' {
-		matched = matched[:len(matched)-1]
-	}
-
-	return matched
+	return strings.Trim(matched, `"`)
 }
 
 func mustMatch(pattern string, str string) bool {
