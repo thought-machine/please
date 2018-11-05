@@ -61,7 +61,7 @@ func (ws *workspaceStore) Close(uri lsp.DocumentURI) error {
 
 	ws.mu.Lock()
 	delete(ws.documents, uri)
-	ws.mu.Unlock()
+	defer ws.mu.Unlock()
 
 	return nil
 }
@@ -82,7 +82,7 @@ func (ws *workspaceStore) TrackEdit(uri lsp.DocumentURI, contentChanges []lsp.Te
 		}
 		doc.textInEdit = newText
 	}
-	ws.mu.Unlock()
+	defer ws.mu.Unlock()
 
 	return nil
 }

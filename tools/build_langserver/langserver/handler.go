@@ -75,7 +75,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	}
 	// TODO(bnm): call fs request handlers like, textDocument/didOpen
 
-	return h.handleFSRequests(ctx, req)
+	return h.handleTDRequests(ctx, req)
 }
 
 func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {

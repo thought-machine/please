@@ -2,27 +2,14 @@ package langserver
 
 import (
 	"context"
-	"core"
-	"os"
 	"strings"
 	"testing"
+
+	"core"
 	"tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func TestMain(m *testing.M) {
-	core.FindRepoRoot()
-	retCode := m.Run()
-	os.Exit(retCode)
-}
-
-var exampleBuildURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example.build")
-var assignBuildURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/assignment.build")
-var propURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/property.build")
-var miscURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/misc.build")
-
-var analyzer, _ = newAnalyzer()
 
 /***************************************
  *Tests for Build Definitions

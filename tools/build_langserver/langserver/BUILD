@@ -21,7 +21,7 @@ go_library(
 go_test(
     name = "langserver_test",
     srcs = glob(
-        ["*_test.go"],
+        ["*_test.go", "test_setup.go"],
         exclude = ["utils_test.go"],
     ),
     data = ["test_data"],

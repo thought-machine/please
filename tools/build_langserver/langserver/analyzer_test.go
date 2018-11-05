@@ -2,12 +2,14 @@ package langserver
 
 import (
 	"context"
-	"core"
-	"parse/asp"
-	"parse/rules"
+
 	"path"
 	"path/filepath"
 	"testing"
+
+	"core"
+	"parse/asp"
+	"parse/rules"
 	"tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
@@ -256,14 +258,6 @@ func TestAnalyzer_IsBuildFile(t *testing.T) {
 
 	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
 	assert.True(t, a.IsBuildFile(uri))
-}
-
-func TestAnalyzer_IsBuildDefFile(t *testing.T) {
-	a, err := newAnalyzer()
-	assert.Equal(t, err, nil)
-
-	uri := lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example.build_defs")
-	assert.True(t, a.IsBuildDefFile(uri))
 }
 
 /************************

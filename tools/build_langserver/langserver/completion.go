@@ -37,23 +37,14 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 			Message: fmt.Sprintf(message),
 		}
 	}
-	// Check if the input file is a build file or a build_defs file
-	if !h.analyzer.IsBuildFile(documentURI) || h.analyzer.IsBuildDefFile(documentURI) {
-		message := fmt.Sprintf("documentURI '%s' is not supported because it's not a buildfile", documentURI)
-		log.Error(message)
-		return nil, &jsonrpc2.Error{
-			Code:    jsonrpc2.CodeInvalidParams,
-			Message: fmt.Sprintf(message),
-		}
-	}
 
 	h.mu.Lock()
 	itemList, err := h.getCompletionItemsList(ctx, documentURI, params.Position)
+	defer h.mu.Unlock()
 
 	if err != nil {
 		return nil, err
 	}
-	h.mu.Unlock()
 
 	log.Info("completion item list %s", itemList)
 	return &lsp.CompletionList{

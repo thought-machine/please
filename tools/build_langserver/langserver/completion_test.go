@@ -2,34 +2,14 @@ package langserver
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 
 	"core"
-	"strings"
 	"tools/build_langserver/lsp"
+
+	"github.com/stretchr/testify/assert"
 )
-
-var completionURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion.build")
-var completionPropURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_props.build")
-var completionLabelURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_buildlabels.build")
-
-var handler = LsHandler{
-	repoRoot:  core.RepoRoot,
-	workspace: newWorkspaceStore(lsp.DocumentURI(core.RepoRoot)),
-	analyzer:  analyzer,
-	init: &lsp.InitializeParams{
-		RootURI: lsp.DocumentURI(core.RepoRoot),
-		Capabilities: lsp.ClientCapabilities{
-			TextDocument: lsp.TextDocumentClientCapabilities{
-				Completion: lsp.Completion{
-					CompletionItem: struct {
-						SnippetSupport bool `json:"snippetSupport,omitempty"`
-					}{SnippetSupport: true}},
-			},
-		},
-	},
-}
 
 func TestCompletionWithCONFIG(t *testing.T) {
 	ctx := context.Background()

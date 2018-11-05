@@ -9,8 +9,8 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 )
 
-func (h *LsHandler) handleFSRequests(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
-	if !isFileSystemMethod(req) {
+func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
+	if !isTextDocumentMethod(req) {
 		return nil, nil
 	}
 
@@ -55,7 +55,7 @@ func (h *LsHandler) handleFSRequests(ctx context.Context, req *jsonrpc2.Request)
 	}
 }
 
-func isFileSystemMethod(req *jsonrpc2.Request) bool {
+func isTextDocumentMethod(req *jsonrpc2.Request) bool {
 	return req.Method == "textDocument/didOpen" ||
 		req.Method == "textDocument/didChange" ||
 		req.Method == "textDocument/didClose" ||
