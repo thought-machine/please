@@ -699,7 +699,7 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
         ])
         tools['asm'] = [CONFIG.ASM_TOOL]
     else:
-        cmd = f'$TOOLS_LD -r --format binary {CONFIG.DEFAULT_LDFLAGS} -o ${OUTS/.a/.o} $SRC && $TOOLS_JARCAT ar --srcs ${OUTS/.a/.o}'
+        cmd = '$TOOLS_LD -r --format binary %s -o ${OUTS/.a/.o} $SRC && $TOOLS_JARCAT ar --srcs ${OUTS/.a/.o}' % CONFIG.DEFAULT_LDFLAGS
         tools['ld'] = [CONFIG.LD_TOOL]
 
     lib_rule = build_rule(

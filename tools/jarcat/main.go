@@ -162,7 +162,7 @@ func main() {
 			opts.Ar.Srcs = srcs
 			opts.Ar.Combine = true
 		}
-		if err := ar.Combine(opts.Ar.Srcs, opts.Ar.Out, opts.Ar.Combine, opts.Ar.Rename); err != nil {
+		if err := ar.Create(opts.Ar.Srcs, opts.Ar.Out, opts.Ar.Combine, opts.Ar.Rename); err != nil {
 			log.Fatalf("Error combining archives: %s", err)
 		}
 		os.Exit(0)

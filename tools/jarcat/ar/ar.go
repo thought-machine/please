@@ -6,9 +6,12 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/blakesmith/ar"
+
+	"fs"
 )
 
 // mtime is the time we attach for the modification time of all files.
@@ -26,9 +29,7 @@ func Create(srcs []string, out string, combine, rename bool) error {
 		return err
 	}
 	defer f.Close()
-	bw := bufio.NewWriter(f)
-	defer bw.Close()
-	w := ar.NewWriter(bw)
+	w := ar.NewWriter(bufio.NewWriter(f))
 	if err := w.WriteGlobalHeader(); err != nil {
 		return err
 	}
@@ -74,12 +75,12 @@ func Create(srcs []string, out string, combine, rename bool) error {
 				ModTime: mtime,
 				Uid:     nobody,
 				Gid:     nobody,
-				Mode:    info.Mode(),
+				Mode:    int64(info.Mode()),
 				Size:    info.Size(),
 			}
 			if err := w.WriteHeader(hdr); err != nil {
 				return err
-			} else if _, err := io.Copy(w, r); err != nil {
+			} else if _, err := io.Copy(w, f); err != nil {
 				return err
 			}
 		}
