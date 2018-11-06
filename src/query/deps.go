@@ -27,7 +27,7 @@ func printTarget(state *core.BuildState, target *core.BuildTarget, indent string
 		indent = indent + "  "
 	}
 
-	if currentLevel == targetLevel {
+	if targetLevel != -1 && currentLevel == targetLevel {
 		return
 	}
 	currentLevel += 1
