@@ -256,6 +256,7 @@ var opts struct {
 	Query struct {
 		Deps struct {
 			Unique bool `long:"unique" short:"u" description:"Only output each dependency once"`
+			Level  int  `long:"level" default:"-1" description:"levels of the dependencies to retrieve."`
 			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
@@ -509,7 +510,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.Deps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Unique)
+			query.Deps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Unique, opts.Query.Deps.Level)
 		})
 	},
 	"reverseDeps": func() bool {
