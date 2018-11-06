@@ -22,3 +22,5 @@ label_list_single = ["//src/fs", "//src/core"]
 if_assign = "hello" if len("") else subinclude("//build_defs:fpm")
 
 augassign += len(replace_str)
+
+target = "//src/fs"

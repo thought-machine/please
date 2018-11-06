@@ -66,7 +66,6 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 
 // PackageLabelFromURI returns a build label of a package
 func PackageLabelFromURI(uri lsp.DocumentURI) (string, error) {
-	// TODO(bnm): need to check if the build file matches the build file name set in config
 	filePath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return "", err

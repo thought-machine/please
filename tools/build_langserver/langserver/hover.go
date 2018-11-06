@@ -34,14 +34,12 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 	position := params.Position
 
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	content, err := h.getHoverContent(ctx, documentURI, position)
-	h.mu.Unlock()
 
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO(bnm): reconsider the content, because right now everything is on one line.....:(
 
 	markedString := lsp.MarkedString{
 		Language: "build",
@@ -120,6 +118,8 @@ func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArg
 
 	// check if the hovered content is on the name of the ident
 	if strings.Contains(lineContent, identName) {
+		// adding the trailing open paren to the identName ensure it's a call,
+		// prevent inaccuracy for cases like so: replace_str = x.replace('-', '_')
 		identNameIndex := strings.Index(lineContent, identName+"(")
 
 		if pos.Character >= identNameIndex &&
@@ -161,7 +161,6 @@ func contentFromExpression(ctx context.Context, analyzer *Analyzer, expr *asp.Ex
 			}
 		}
 	}
-
 	// content from Expression.Val
 	if expr.Val != nil {
 		return contentFromValueExpression(ctx, analyzer, expr.Val, lineContent, uri, pos)
@@ -227,8 +226,9 @@ func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
 			return content, nil
 		}
 	}
+
 	if valExpr.String != "" && strings.Contains(lineContent, valExpr.String) {
-		return contentFromBuildLabel(ctx, analyzer, lineContent, uri)
+		return contentFromBuildLabel(ctx, analyzer, valExpr.String, uri)
 	}
 	if valExpr.List != nil {
 		return contentFromList(ctx, analyzer, valExpr.List, lineContent, uri, pos)
@@ -292,8 +292,8 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 	lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
 
 	for _, expr := range listVal.Values {
-		if withInRange(expr.Pos, expr.EndPos, pos) && expr.Val.String != "" {
-			return contentFromBuildLabel(ctx, analyzer, expr.Val.String, uri)
+		if !withInRange(expr.Pos, expr.EndPos, pos) {
+			continue
 		}
 
 		content, err := contentFromValueExpression(ctx, analyzer, expr.Val,
@@ -310,9 +310,9 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 }
 
 func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
-	lineContent string, uri lsp.DocumentURI) (string, error) {
+	buildLabelstr string, uri lsp.DocumentURI) (string, error) {
 
-	trimed := TrimQuotes(lineContent)
+	trimed := TrimQuotes(buildLabelstr)
 
 	if core.LooksLikeABuildLabel(trimed) {
 		buildLabel, err := analyzer.BuildLabelFromString(ctx, uri, trimed)
@@ -325,7 +325,8 @@ func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
 	return "", nil
 }
 
-// contentFromRuleDef returns a string contains the header and the docstring of a build rule
+// contentFromRuleDef returns the content from when hovering over the name of a function call
+// return value consist of a string containing the header and the docstring of a build rule
 func contentFromRuleDef(analyzer *Analyzer, name string) string {
 
 	header := analyzer.BuiltIns[name].Header

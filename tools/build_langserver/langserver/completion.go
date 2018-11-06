@@ -62,13 +62,13 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	}
 
 	lineContent = lineContent[:pos.Character]
-	//stmt, err := analyzer.StatementFromPos(uri, pos)
+	//stmt, err := h.analyzer.StatementFromPos(uri, pos)
 	//fmt.Println(err, stmt)
 
 	if LooksLikeAttribute(lineContent) {
 		completionList = itemsFromAttributes(lineContent, h.analyzer)
 	} else if label := ExtractBuildLabel(lineContent); label != "" {
-		completionList, completionErr = itemsFromBuildLabel(ctx, label, h.analyzer, uri, pos)
+		completionList, completionErr = itemsFromBuildLabel(ctx, label, h.analyzer, uri)
 	} else {
 		// TODO(bnm): iterate through analyzer.Builtins, could use context to cancel request
 	}
@@ -86,73 +86,49 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 }
 
 func itemsFromBuildLabel(ctx context.Context, labelString string, analyzer *Analyzer,
-	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
-	// TODO(bnm): need to trim the linecontent so we only pass in buildlabel to the following function
+	uri lsp.DocumentURI) (completionList []*lsp.CompletionItem, err error) {
+
 	labelString = TrimQuotes(labelString)
 
-	var labels []map[string]string
 	if strings.ContainsRune(labelString, ':') {
 		labelParts := strings.Split(labelString, ":")
-
+		// TODO(bnm): ADD TEST CASES FOR RELATIVE LABELS
+		var targetURI lsp.DocumentURI
+		// Get the uri based on weither the labelString is relative
 		if strings.HasPrefix(labelString, ":") {
-			// Get relative labels in the current file
-			buildDefs, err := analyzer.BuildDefsFromURI(ctx, uri)
-			if err != nil {
-				return nil, err
-			}
-			for buildDef := range buildDefs {
-				// only append those matches the existing partial
-				if strings.Contains(buildDef, labelParts[1]) {
-					label := map[string]string{
-						"buildLabel": ":" + buildDef,
-						"insert":     buildDef,
-					}
-					labels = append(labels, label)
-				}
-			}
+			// relative labels to the current file
+			targetURI = uri
 		} else if strings.HasPrefix(labelString, "//") {
-			// Get none relative labels
-			targetURI := analyzer.BuildFileURIFromPackage(labelParts[0])
+			// Get none relative
+			targetURI = analyzer.BuildFileURIFromPackage(labelParts[0])
+		}
 
-			buildDefs, err := analyzer.BuildDefsFromURI(ctx, targetURI)
-			if err != nil {
-				return nil, err
-			}
+		buildDefs, err := analyzer.BuildDefsFromURI(ctx, targetURI)
+		if err != nil {
+			return nil, err
+		}
 
-			currentPkg, err := PackageLabelFromURI(uri)
-			if err != nil {
-				return nil, err
-			}
-			for name, buildDef := range buildDefs {
-				if isVisible(buildDef, currentPkg) && strings.Contains(name, labelParts[1]) {
-					label := map[string]string{
-						"buildLabel": labelParts[0] + ":" + name,
-						"insert":     name,
-					}
-					labels = append(labels, label)
+		currentPkg, err := PackageLabelFromURI(uri)
+		if err != nil {
+			return nil, err
+		}
+		for name, buildDef := range buildDefs {
+			if isVisible(buildDef, currentPkg) && strings.Contains(name, labelParts[1]) {
+				detail := fmt.Sprintf(" BUILD Label: %s", labelParts[0]+":"+name)
 
-				}
+				item := getCompletionItem(lsp.Value, name, detail)
+				completionList = append(completionList, item)
 			}
 		}
 	} else {
 		pkgs := query.GetAllPackages(analyzer.State.Config, labelString[2:], core.RepoRoot)
 		// TODO(bnm): consider how to split the labels
 		for _, pkg := range pkgs {
-			label := map[string]string{
-				"buildLabel": "/" + pkg,
-				"insert":     strings.TrimPrefix(pkg, "/"),
-			}
-			labels = append(labels, label)
+			detail := fmt.Sprintf(" BUILD Label: %s", "/"+pkg)
+
+			item := getCompletionItem(lsp.Value, strings.TrimPrefix(pkg, "/"), detail)
+			completionList = append(completionList, item)
 		}
-	}
-
-	// Map the labels to a lsp.CompletionItem slice
-	var completionList []*lsp.CompletionItem
-	for _, label := range labels {
-		detail := fmt.Sprintf(" BUILD Label: %s", label["buildLabel"])
-
-		item := getCompletionItem(lsp.Value, label["insert"], detail)
-		completionList = append(completionList, item)
 	}
 
 	return completionList, nil

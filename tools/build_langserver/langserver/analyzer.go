@@ -199,7 +199,7 @@ func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, 
 
 	stmts, err := a.parser.ParseData(bytecontent, filepath)
 	if err != nil {
-		log.Warning("parsing failure: %s ", err)
+		log.Warning("reading only partial of the file due to parsing failure: %s ", err)
 	}
 
 	return stmts, nil
