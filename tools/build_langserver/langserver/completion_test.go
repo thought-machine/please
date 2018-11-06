@@ -146,9 +146,14 @@ func TestCompletionWithBuildLabels(t *testing.T) {
 func TestCompletionWithBuildLabels2(t *testing.T) {
 	ctx := context.Background()
 
-	items, err := handler.getCompletionItemsList(ctx, completionLabelURI, lsp.Position{Line: 4, Character: 7})
+	err := storeFile(ctx, completion2URI)
 	assert.Equal(t, nil, err)
-	t.Log(items)
+
+	// Ensure relative label works correctly
+	items, err := handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 15, Character: 11})
+	assert.Equal(t, nil, err)
+	assert.True(t, itemInList(items, "my_binary"))
+	assert.True(t, itemInList(items, "langserver_test"))
 }
 
 func TestCompletionIncompleteFile(t *testing.T) {

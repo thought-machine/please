@@ -20,6 +20,7 @@ var assignBuildURI = lsp.DocumentURI("file://tools/build_langserver/langserver/t
 var propURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/property.build")
 var miscURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/misc.build")
 var completionURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion.build")
+var completion2URI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion2.build")
 var completionPropURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_props.build")
 var completionLabelURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_buildlabels.build")
 

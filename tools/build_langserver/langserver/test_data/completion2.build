@@ -1,0 +1,21 @@
+go_library(
+    name = "my_binary",
+    srcs = glob(
+        ["*.go"],
+    ),
+)
+
+go_test(
+    name = "langserver_test",
+    srcs = ["handler_test.go",
+            "analyzer_test.go",
+            "hover_test.go",
+    ],
+    data = ["test_data"],
+    deps = [
+        ":",
+        "//src/parse/rules",
+        "//third_party/go:testify",
+    ],
+)
+
