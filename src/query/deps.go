@@ -31,7 +31,7 @@ func printTarget(state *core.BuildState, target *core.BuildTarget, indent string
 	if targetLevel != -1 && currentLevel == targetLevel {
 		return
 	}
-	currentLevel += 1
+	currentLevel++
 
 	for _, dep := range target.Dependencies() {
 		printTarget(state, dep, indent, targets, unique, currentLevel, targetLevel)
