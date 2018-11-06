@@ -6,15 +6,15 @@ import (
 )
 
 // Deps prints all transitive dependencies of a set of targets.
-func Deps(state *core.BuildState, labels []core.BuildLabel, unique bool, level int) {
+func Deps(state *core.BuildState, labels []core.BuildLabel, unique bool, targetLevel int) {
 	targets := map[*core.BuildTarget]bool{}
 	for _, label := range labels {
-		printTarget(state, state.Graph.TargetOrDie(label), "", targets, unique, 0, level)
+		printTarget(state, state.Graph.TargetOrDie(label), "", targets, unique, 0, targetLevel)
 	}
 }
 
 func printTarget(state *core.BuildState, target *core.BuildTarget, indent string, targets map[*core.BuildTarget]bool,
-	unique bool, level int, targetLevel int) {
+	unique bool, currentLevel int, targetLevel int) {
 
 	if unique && targets[target] {
 		return
@@ -27,12 +27,12 @@ func printTarget(state *core.BuildState, target *core.BuildTarget, indent string
 		indent = indent + "  "
 	}
 
-	if level == targetLevel {
+	if currentLevel == targetLevel {
 		return
 	}
-	level += 1
+	currentLevel += 1
 
 	for _, dep := range target.Dependencies() {
-		printTarget(state, dep, indent, targets, unique, level, targetLevel)
+		printTarget(state, dep, indent, targets, unique, currentLevel, targetLevel)
 	}
 }
