@@ -291,7 +291,7 @@ func (pom *PomXML) Unmarshal(f *Fetch, response []byte) {
 func (pom *PomXML) stripTestDependencies(f *Fetch, deps []*pomDependency) []*pomDependency {
 	ret := make([]*pomDependency, 0, len(deps))
 	for _, dep := range deps {
-		if dep.Scope == "test" || dep.Scope == "system" {
+		if dep.Scope == "test" || dep.Scope == "system" || dep.Scope == "provided" {
 			log.Info("Not fetching %s:%s (dep of %s) because of scope", dep.GroupID, dep.ArtifactID, pom.Artifact)
 			continue
 		}
