@@ -264,10 +264,6 @@ func TestExtractLiteral(t *testing.T) {
 	assert.Equal(t, ".format", ExtractLiteral(`"blah".format`))
 }
 
-func TestExtractFuncCall(t *testing.T) {
-
-}
-
 /*
  * Utilities function for tests in this file
  */

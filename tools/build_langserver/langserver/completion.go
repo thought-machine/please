@@ -200,6 +200,8 @@ func itemsFromliterals(analyzer *Analyzer, contentVars map[string]Variable, lite
 		}
 	}
 
+	// TODO(bnm): consider doing subincludes as well
+
 	return completionList
 }
 
