@@ -244,6 +244,8 @@ func (a *Analyzer) IdentsFromContent(content string) chan *Identifier {
 	return ch
 }
 
+// FuncCallFromContentAndPos returns a Identifier object represents function call,
+// Only returns the not nil object when the Identifier is within the range specified by the position
 func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *Identifier {
 	idents := a.IdentsFromContent(content)
 
