@@ -319,6 +319,10 @@ func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
 		if err != nil {
 			return "", err
 		}
+
+		if buildLabel.BuildDef != nil && buildLabel.BuildDef.Content != "" {
+			return buildLabel.BuildDef.Content, nil
+		}
 		return buildLabel.Definition, nil
 	}
 

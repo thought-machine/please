@@ -53,7 +53,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	}
 	h.conn = conn
 
-	log.Info(fmt.Sprintf("handling method %s with params: %s", req.Method, req.Params))
+	log.Info("handling method %s with params: %s", req.Method, req.Params)
 	methods := map[string]func(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error){
 		"initialize":              h.handleInit,
 		"initialzed":              h.handleInitialized,
@@ -129,7 +129,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	}
 
 	sigHelpOps := &lsp.SignatureHelpOptions{
-		TriggerCharacters: []string{"{", ","},
+		TriggerCharacters: []string{"(", ")", "/"},
 	}
 
 	defer log.Info("Plz build file language server initialized")

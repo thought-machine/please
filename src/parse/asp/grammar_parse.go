@@ -244,6 +244,10 @@ func (p *parser) parseArgument() Argument {
 	a := Argument{
 		Name: p.next(Ident).Value,
 	}
+	// indicate an argument is private if it is prefixed with "_"
+	if strings.HasPrefix(a.Name, "_") {
+		a.IsPrivate = true
+	}
 	if tok := p.l.Peek(); tok.Type == ',' || tok.Type == ')' {
 		return a
 	}

@@ -76,9 +76,8 @@ func TestNewRuleDef(t *testing.T) {
 
 	// Test header the definition for build_rule
 	expected := "def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],\n" +
-		"               visibility:list=None, test_only:bool&testonly=False, complete:bool=True,\n" +
-		"               _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,\n" +
-		"               filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True)"
+		"               visibility:list=None, test_only:bool&testonly=False, complete:bool=True, cover:bool=True,\n" +
+		"               filter_srcs:bool=True)"
 
 	ruleContent := rules.MustAsset("go_rules.build_defs")
 
@@ -173,7 +172,8 @@ func TestBuildLabelFromString(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, path.Join(core.RepoRoot, "third_party/go/BUILD"), label.Path)
 	assert.Equal(t, "jsonrpc2", label.Name)
-	assert.Equal(t, expectedContent, label.Definition)
+	assert.Equal(t, expectedContent, label.BuildDef.Content)
+	assert.Equal(t, `BUILD Label: //third_party/go:jsonrpc2`, label.Definition)
 
 	// Test case for relative BuildLabel path
 	label, err = a.BuildLabelFromString(ctx, uri, ":langserver")
@@ -199,7 +199,7 @@ func TestBuildLabelFromString(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, absPath, label.Path)
 	assert.Equal(t, "langserver", label.Name)
-	assert.Equal(t, expectedContent, label.Definition)
+	assert.Equal(t, expectedContent, label.BuildDef.Content)
 
 	// Test case for Allsubpackage BuildLabels: "//src/parse/..."
 	label, err = a.BuildLabelFromString(ctx,
@@ -258,6 +258,54 @@ func TestAnalyzer_IsBuildFile(t *testing.T) {
 
 	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
 	assert.True(t, a.IsBuildFile(uri))
+}
+
+func TestAnalyzer_VariableFromContent(t *testing.T) {
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
+	// Tests for string variables
+	vars := a.VariablesFromContent(`my_str = "my str"` + "   \n" +
+		`another_str = ""` + "\n   " + `more_empty = ''`)
+	assert.Equal(t, "my_str", vars["my_str"].Name)
+	assert.Equal(t, "another_str", vars["another_str"].Name)
+	assert.Equal(t, "more_empty", vars["more_empty"].Name)
+	for _, v := range vars {
+		assert.Equal(t, "string", v.Type)
+	}
+
+	vars = a.VariablesFromContent(`fstr = f"blah"`)
+	assert.Equal(t, "string", vars["fstr"].Type)
+
+	// Tests for int variables
+	vars = a.VariablesFromContent(`my_int = 34`)
+	assert.Equal(t, "my_int", vars["my_int"].Name)
+	assert.Equal(t, "int", vars["my_int"].Type)
+
+	// Tests for list variables
+	vars = a.VariablesFromContent(`my_list = []`)
+	assert.Equal(t, "my_list", vars["my_list"].Name)
+	assert.Equal(t, "list", vars["my_list"].Type)
+
+	vars = a.VariablesFromContent(`my_list2 = [1, 2, 3]`)
+	assert.Equal(t, "my_list2", vars["my_list2"].Name)
+	assert.Equal(t, "list", vars["my_list2"].Type)
+
+	// Tests for dict variables
+	vars = a.VariablesFromContent(`my_dict = {'foo': 1, 'bar': 3}`)
+	assert.Equal(t, "my_dict", vars["my_dict"].Name)
+	assert.Equal(t, "dict", vars["my_dict"].Type)
+
+	// Test for calls
+	vars = a.VariablesFromContent(`my_call = go_library()`)
+	assert.Equal(t, "ident", vars["my_call"].Type)
+
+	// Test for reassigning variable
+	vars = a.VariablesFromContent(`foo = "hello"` + "\n" + `foo = 90`)
+	t.Log(vars)
+
+	vars = a.VariablesFromContent(`blah = CONFIG.PLZ_VERSION`)
+	t.Log(vars["blah"].Type)
 }
 
 /************************

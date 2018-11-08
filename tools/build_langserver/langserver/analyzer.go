@@ -14,6 +14,7 @@ import (
 	"parse/rules"
 	"src/fs"
 
+	"reflect"
 	"tools/build_langserver/lsp"
 )
 
@@ -57,14 +58,21 @@ type Identifier struct {
 	EndPos lsp.Position
 }
 
+// Variable is a representation of a variable assignment in
+// ***More fields can be added in later if needed
+type Variable struct {
+	Name string
+	Type string
+}
+
 // BuildDef is the definition for a build target.
 // often a function call using a specific build rule
 type BuildDef struct {
 	*Identifier
 	BuildDefName string
-	Visibility   []string
 	// The content of the build definition
-	Content string
+	Content    string
+	Visibility []string
 }
 
 // Statement is a simplified version of asp.Statement
@@ -83,7 +91,7 @@ type BuildLabel struct {
 	// IdentStatement for the build definition,
 	// usually the call to the specific buildrule, such as "go_library()"
 	BuildDef *BuildDef
-	// The content of the build definition
+	// The definition of the buildlabel, e.g: BUILD Label: //src/core
 	Definition string
 }
 
@@ -181,7 +189,8 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 		}
 	}
 
-	ruleDef.Header = strings.TrimSuffix(strings.Join(headerSlice, "\n"), ":")
+	header := strings.TrimSuffix(strings.Join(headerSlice, "\n"), ":")
+	ruleDef.Header = removePrivateArgFromHeader(header)
 	return ruleDef
 }
 
@@ -203,6 +212,84 @@ func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, 
 	}
 
 	return stmts, nil
+}
+
+// AspStatementFromString returns a slice of asp.Statement given content string(usually workSpaceStore.doc.TextInEdit)
+func (a *Analyzer) AspStatementFromContent(content string) []*asp.Statement {
+	byteContent := []byte(content)
+
+	stmts, err := a.parser.ParseData(byteContent, "")
+	if err != nil {
+		log.Warning("reading only partial of the file due to parsing failure: %s ", err)
+	}
+
+	return stmts
+}
+
+// IdentsFromContent returns a channel of Identifier object
+func (a *Analyzer) IdentsFromContent(content string) chan *Identifier {
+	stmts := a.AspStatementFromContent(content)
+
+	ch := make(chan *Identifier)
+	go func() {
+		for _, stmt := range stmts {
+			if stmt.Ident != nil {
+				ident := a.identFromStatement(stmt)
+				ch <- ident
+			}
+		}
+		close(ch)
+	}()
+
+	return ch
+}
+
+// VariablesFromContent returns a map of variable name to Variable
+func (a *Analyzer) VariablesFromContent(content string) map[string]Variable {
+	idents := a.IdentsFromContent(content)
+
+	vars := make(map[string]Variable)
+	for i := range idents {
+		if i.Type != "assign" && i.Type != "augAssign" {
+			continue
+		}
+
+		var varType string
+		if i.Type == "assign" {
+			varType = getVarType(i.Action.Assign.Val)
+		} else if i.Type == "augAssign" {
+			varType = getVarType(i.Action.AugAssign.Val)
+		}
+
+		if varType != "" {
+			variable := Variable{
+				Name: i.Name,
+				Type: varType,
+			}
+			vars[i.Name] = variable
+		}
+	}
+
+	return vars
+}
+
+func getVarType(valExpr *asp.ValueExpression) string {
+	v := reflect.ValueOf(valExpr).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).Kind() == reflect.String {
+			if v.Field(i).String() != "" {
+				return "string"
+			}
+		} else if !v.Field(i).IsNil() {
+			typeName := v.Type().Field(i).Name
+			if typeName == "FString" {
+				return "string"
+			} else {
+				return strings.ToLower(typeName)
+			}
+		}
+	}
+	return ""
 }
 
 // StatementFromPos returns a Statement struct with either an Identifier or asp.Expression
@@ -303,7 +390,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context,
 		if err != nil {
 			return nil, err
 		}
-		definition = buildDef.Content
+		definition = "BUILD Label: " + label.String()
 	}
 
 	return &BuildLabel{
@@ -383,7 +470,7 @@ func (a *Analyzer) BuildDefsFromURI(ctx context.Context, uri lsp.DocumentURI) (m
 					BuildDefName: TrimQuotes(arg.Value.Val.String),
 				}
 			case "visibility":
-				if buildDefs != nil {
+				if buildDef != nil {
 					buildDef.Visibility = aspListToStrSlice(arg.Value.Val.List)
 				}
 			}
@@ -450,6 +537,23 @@ func getArgString(argument asp.Argument) string {
 		argString += ", type:" + argType
 	}
 	return argString
+}
+
+func removePrivateArgFromHeader(headerstring string) string {
+	newHeader := ""
+	argsSplit := strings.Split(headerstring, ",")
+	for _, arg := range argsSplit {
+		if strings.HasPrefix(strings.TrimSpace(arg), "_") {
+			continue
+		}
+		newHeader += arg + ","
+	}
+
+	newHeader = strings.TrimSuffix(strings.TrimSpace(newHeader), ",")
+	if strings.HasSuffix(newHeader, ")") {
+		return newHeader
+	}
+	return newHeader + ")"
 }
 
 func aspListToStrSlice(listVal *asp.List) []string {

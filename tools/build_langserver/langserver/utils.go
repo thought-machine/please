@@ -194,6 +194,27 @@ func ExtractBuildLabel(str string) string {
 	return strings.Trim(matched, `"`)
 }
 
+// ExtractLiteral extra a literal expression such as function name, variable name from a content line
+func ExtractLiteral(str string) string {
+	trimmed := strings.TrimSpace(str)
+
+	// Ensure the literally we are looking for is not inside of a string
+	singleQuotes := regexp.MustCompile(`'`).FindAllString(trimmed, -1)
+	doubleQuotes := regexp.MustCompile(`"`).FindAllString(trimmed, -1)
+	if len(singleQuotes)%2 != 0 || len(doubleQuotes)%2 != 0 {
+		return ""
+	}
+
+	// Get our literal
+	re := regexp.MustCompile(`(\w*\.?\w*)$`)
+	matched := re.FindString(trimmed)
+	if matched != "" {
+		return matched
+	}
+
+	return ""
+}
+
 func mustMatch(pattern string, str string) bool {
 	re := regexp.MustCompile(pattern)
 	matched := re.FindString(str)

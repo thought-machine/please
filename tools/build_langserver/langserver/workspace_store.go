@@ -152,11 +152,9 @@ func JoinLines(text []string, hasEnds bool) string {
 		return concat
 	}
 
+	newText := make([]string, len(text))
 	for i := range text {
-		if i == len(text)-1 {
-			continue
-		}
-		text[i] = text[i][:len(text[i])-1]
+		newText[i] = strings.TrimSuffix(text[i], "\n")
 	}
-	return strings.Join(text, "\n")
+	return strings.Join(newText, "\n")
 }

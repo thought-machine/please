@@ -41,3 +41,7 @@ go_test(
 )
 
 python_library(name = "test", srcs = ["utils_test.go"])
+blah = "my_str"
+"//sr"
+"//sr"
+blah = {"foo": "bar", "blah":1}
