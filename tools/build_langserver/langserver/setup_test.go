@@ -33,7 +33,6 @@ var completion2URI = lsp.DocumentURI("file://tools/build_langserver/langserver/t
 var completionPropURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_props.build")
 var completionLabelURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_buildlabels.build")
 var completionLiteralURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_literal.build")
-var completionEmptyURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_empty.build")
 var sigURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/signature.build")
 
 var analyzer, _ = newAnalyzer()

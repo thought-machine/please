@@ -63,7 +63,6 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 		return completionList, nil
 	}
 
-	// TODO(bnm): watch out for cases function call args, completion should happen in the keyword
 	lineContent = lineContent[:pos.Character]
 
 	// get all the existing variable assignments in the current File
@@ -74,10 +73,6 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	} else if label := ExtractBuildLabel(lineContent); label != "" {
 		completionList, completionErr = itemsFromBuildLabel(ctx, h.analyzer, label, uri)
 	} else {
-		// Return empty list if the literal is part the function call
-		if h.analyzer.FuncCallFromContentAndPos(fileContentStr, pos) != nil {
-			return completionList, nil
-		}
 		literal := ExtractLiteral(lineContent)
 		completionList = itemsFromliterals(h.analyzer, contentVars, literal)
 	}

@@ -198,7 +198,7 @@ func ExtractBuildLabel(str string) string {
 func ExtractLiteral(str string) string {
 	trimmed := strings.TrimSpace(str)
 
-	// Ensure the literally we are looking for is not inside of a string
+	// Ensure the literal we are looking for is not inside of a string
 	singleQuotes := regexp.MustCompile(`'`).FindAllString(trimmed, -1)
 	doubleQuotes := regexp.MustCompile(`"`).FindAllString(trimmed, -1)
 	if len(singleQuotes)%2 != 0 || len(doubleQuotes)%2 != 0 {
