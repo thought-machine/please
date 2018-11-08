@@ -73,7 +73,6 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	if method, ok := methods[req.Method]; ok {
 		return method(ctx, req)
 	}
-	// TODO(bnm): call fs request handlers like, textDocument/didOpen
 
 	return h.handleTDRequests(ctx, req)
 }
@@ -129,7 +128,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	}
 
 	sigHelpOps := &lsp.SignatureHelpOptions{
-		TriggerCharacters: []string{"(", ")", "/"},
+		TriggerCharacters: []string{"(", ","},
 	}
 
 	defer log.Info("Plz build file language server initialized")

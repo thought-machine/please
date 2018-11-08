@@ -66,6 +66,7 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 		return completionList, nil
 	}
 
+	// TODO(bnm): watch out for cases function call args, completion should happen in the keyword
 	lineContent = lineContent[:pos.Character]
 
 	// get all the existing variable assignments in the current File

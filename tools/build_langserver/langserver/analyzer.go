@@ -214,7 +214,7 @@ func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, 
 	return stmts, nil
 }
 
-// AspStatementFromString returns a slice of asp.Statement given content string(usually workSpaceStore.doc.TextInEdit)
+// AspStatementFromContent returns a slice of asp.Statement given content string(usually workSpaceStore.doc.TextInEdit)
 func (a *Analyzer) AspStatementFromContent(content string) []*asp.Statement {
 	byteContent := []byte(content)
 

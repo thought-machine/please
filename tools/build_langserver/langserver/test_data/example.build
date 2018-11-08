@@ -45,3 +45,5 @@ blah = "my_str"
 "//sr"
 "//sr"
 blah = {"foo": "bar", "blah":1}
+
+go_binary(name="blah", h)
