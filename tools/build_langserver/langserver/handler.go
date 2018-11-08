@@ -62,6 +62,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 		"$/cancelRequest":         h.handleCancel,
 		"textDocument/hover":      h.handleHover,
 		"textDocument/completion": h.handleCompletion,
+		//"textDocument/signatureHelp": h.handleSignature,
 	}
 
 	if req.Method != "initialize" && req.Method != "exit" &&
@@ -186,6 +187,18 @@ func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (re
 	defer h.requestStore.Cancel(params.ID)
 
 	return nil, nil
+}
+
+// ensureLineContent handle cases when the completion pos happens on the last line of the file, without any newline char
+func (h *LsHandler) ensureLineContent(uri lsp.DocumentURI, pos lsp.Position) string {
+	fileContent := h.workspace.documents[uri].textInEdit
+	lineContent := fileContent[pos.Line]
+
+	if len(lineContent)+1 == pos.Character && len(fileContent) == pos.Line+1 {
+		lineContent += "\n"
+	}
+
+	return lineContent
 }
 
 func getURIAndHandleErrors(uri lsp.DocumentURI, method string) (lsp.DocumentURI, error) {

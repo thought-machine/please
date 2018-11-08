@@ -302,10 +302,7 @@ func TestAnalyzer_VariableFromContent(t *testing.T) {
 
 	// Test for reassigning variable
 	vars = a.VariablesFromContent(`foo = "hello"` + "\n" + `foo = 90`)
-	t.Log(vars)
-
-	vars = a.VariablesFromContent(`blah = CONFIG.PLZ_VERSION`)
-	t.Log(vars["blah"].Type)
+	assert.Equal(t, "int", vars["foo"].Type)
 }
 
 /************************

@@ -116,7 +116,7 @@ func (ws *workspaceStore) applyChange(text []string, change lsp.TextDocumentCont
 		if i == endLine {
 			// Apparently, when you delete a whole line, intellij plugin sometimes sends the range like so:
 			// {startline: deletedline_index, startcol: 0}, {endline: nextline, endcol: len_of_deleted_line}...
-			if len(line)-1 < endCol && len(text[i-1])-1 == endCol {
+			if len(line)-1 < endCol && (len(text) != 1 && len(text[i-1])-1 == endCol) {
 				newText += line
 			} else {
 				newText += line[endCol:]

@@ -12,7 +12,7 @@ type ServerCapabilities struct {
 
 	HoverProvider              bool                  `json:"hoverProvider"`
 	CompletionProvider         *CompletionOptions    `json:"completionProvider"`
-	SignatureHelpProvider      *SignatureHelpOptions `json:"signatureHelpOptions"`
+	SignatureHelpProvider      *SignatureHelpOptions `json:"signatureHelpProvider"`
 	DefinitionProvider         bool                  `json:"definitionProvider"`
 	TypeDefinitionProvider     bool                  `json:"typeDefinitionProvider,omitempty"`
 	ImplementationProvider     bool                  `json:"implementationProvider,omitempty"`
@@ -49,6 +49,28 @@ type CompletionOptions struct {
 // SignatureHelpOptions indicate the server provides signature help support
 type SignatureHelpOptions struct {
 	TriggerCharacters []string `json:"triggerCharacters,omitempty"`
+}
+
+// SignatureHelp is the response from "textDocument/signatureHelp"
+// represents the signature of something callable.
+type SignatureHelp struct {
+	Signatures      []SignatureInformation `json:"signatures"`
+	ActiveSignature int                    `json:"activeSignature"`
+	ActiveParameter int                    `json:"activeParameter"`
+}
+
+// SignatureInformation
+type SignatureInformation struct {
+	Label         string                 `json:"label"`
+	Documentation string                 `json:"documentation,omitempty"`
+	Parameters    []ParameterInformation `json:"parameters,omitempty"`
+}
+
+// ParameterInformation represents a parameter of a callable-signature. A parameter can
+// have a label and a doc-comment.
+type ParameterInformation struct {
+	Label         string `json:"label"`
+	Documentation string `json:"documentation,omitempty"`
 }
 
 // CancelParams is the params send to ‘$/cancelRequest’ method

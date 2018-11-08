@@ -53,10 +53,8 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	fileContent := h.workspace.documents[uri].textInEdit
 	lineContent := fileContent[pos.Line]
 
-	// handle cases when the completion pos happens on the last line of the file, without any newline char
-	if len(lineContent)+1 == pos.Character && len(fileContent) == pos.Line+1 {
-		lineContent += "\n"
-	}
+	lineContent = h.ensureLineContent(uri, pos)
+
 	log.Info("Completion lineContent: %s", lineContent)
 
 	var completionList []*lsp.CompletionItem

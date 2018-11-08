@@ -215,6 +215,11 @@ func ExtractLiteral(str string) string {
 	return ""
 }
 
+//
+//func ExtractFuncCall(str string) (string, []string) {
+//
+//}
+
 func mustMatch(pattern string, str string) bool {
 	re := regexp.MustCompile(pattern)
 	matched := re.FindString(str)

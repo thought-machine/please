@@ -118,6 +118,18 @@ func TestWorkspaceStore_applyChangeAddChar(t *testing.T) {
 	}
 	assert.Equal(t, expected, outText)
 
+	// apply changes with empty content
+	change = lsp.TextDocumentContentChangeEvent{
+		Range: &lsp.Range{
+			Start: lsp.Position{Line: 0, Character: 0},
+			End:   lsp.Position{Line: 0, Character: 0},
+		},
+		RangeLength: 0,
+		Text:        "yh",
+	}
+	outText, err = ws.applyChange([]string{""}, change)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "yh", outText[0])
 }
 
 func TestWorkspaceStore_applyChangeDelete(t *testing.T) {
@@ -193,6 +205,21 @@ func TestWorkspaceStore_applyChangeDelete(t *testing.T) {
 		"",
 	}
 	assert.Equal(t, expected, outText)
+
+	// delete single line content
+	change = lsp.TextDocumentContentChangeEvent{
+		Range: &lsp.Range{
+			Start: lsp.Position{Line: 0, Character: 0},
+			End:   lsp.Position{Line: 0, Character: 5},
+		},
+		RangeLength: 0,
+		Text:        "",
+	}
+
+	outText, err = ws.applyChange([]string{"hello"}, change)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 1, len(outText))
+	assert.Equal(t, "", outText[0])
 }
 
 func TestWorkspaceStore_applyChangeDeleteCrossLine(t *testing.T) {
@@ -331,6 +358,10 @@ func TestSplitLines(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, text)
+
+	// Test with empty content
+	content = ""
+	assert.Equal(t, []string{""}, SplitLines(content, true))
 }
 
 func TestJoinLines(t *testing.T) {

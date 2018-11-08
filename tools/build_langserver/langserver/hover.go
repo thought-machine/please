@@ -25,7 +25,6 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 		return nil, err
 	}
 
-	log.Info("Hover with param %s", req.Params)
 	documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, hoverMethod)
 	if err != nil {
 		return nil, err
