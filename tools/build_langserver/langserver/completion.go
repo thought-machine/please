@@ -51,6 +51,7 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
 
 	fileContent := h.workspace.documents[uri].textInEdit
+	fileContentStr := JoinLines(fileContent, true)
 	lineContent := h.ensureLineContent(uri, pos)
 
 	log.Info("Completion lineContent: %s", lineContent)
@@ -66,13 +67,17 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	lineContent = lineContent[:pos.Character]
 
 	// get all the existing variable assignments in the current File
-	contentVars := h.analyzer.VariablesFromContent(JoinLines(fileContent, true))
+	contentVars := h.analyzer.VariablesFromContent(fileContentStr)
 
 	if LooksLikeAttribute(lineContent) {
 		completionList = itemsFromAttributes(h.analyzer, contentVars, lineContent)
 	} else if label := ExtractBuildLabel(lineContent); label != "" {
 		completionList, completionErr = itemsFromBuildLabel(ctx, h.analyzer, label, uri)
 	} else {
+		// Return empty list if the literal is part the function call
+		if h.analyzer.FuncCallFromContentAndPos(fileContentStr, pos) != nil {
+			return completionList, nil
+		}
 		literal := ExtractLiteral(lineContent)
 		completionList = itemsFromliterals(h.analyzer, contentVars, literal)
 	}
@@ -187,7 +192,10 @@ func itemsFromliterals(analyzer *Analyzer, contentVars map[string]Variable, lite
 
 	for key, val := range analyzer.BuiltIns {
 		if strings.Contains(key, literal) {
-			completionList = append(completionList, itemFromRuleDef(val))
+			// ensure it's not part of an object, as it's already been taken care of in itemsFromAttributes
+			if val.Object == "" {
+				completionList = append(completionList, itemFromRuleDef(val))
+			}
 		}
 	}
 

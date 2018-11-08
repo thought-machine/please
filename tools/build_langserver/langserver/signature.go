@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"tools/build_langserver/lsp"
 
+	"fmt"
 	"github.com/sourcegraph/jsonrpc2"
 )
 
@@ -42,6 +43,7 @@ func (h *LsHandler) handleSignature(ctx context.Context, req *jsonrpc2.Request) 
 }
 
 func (h *LsHandler) getSignatures(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) ([]lsp.SignatureInformation, error) {
+	fileContent := h.workspace.documents[uri].textInEdit
 	lineContent := h.ensureLineContent(uri, pos)
 
 	log.Info("Signature help lineContent: %s", lineContent)
@@ -55,5 +57,13 @@ func (h *LsHandler) getSignatures(ctx context.Context, uri lsp.DocumentURI, pos 
 
 	lineContent = lineContent[:pos.Character]
 
+	call := h.analyzer.FuncCallFromContentAndPos(JoinLines(fileContent, true), pos)
+
+	fmt.Println(call, lineContent)
+	fmt.Println(h.analyzer.BuiltIns[call.Name])
 	return sigList, nil
 }
+
+//func signatureFromRuleDef(def *RuleDef) lsp.SignatureInformation {
+//
+//}

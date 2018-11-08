@@ -340,21 +340,3 @@ func contentFromRuleDef(analyzer *Analyzer, name string) string {
 	}
 	return header
 }
-
-// withInRange checks if the input position from lsp is within the range of the Expression
-func withInRange(exprPos asp.Position, exprEndPos asp.Position, pos lsp.Position) bool {
-	withInLineRange := pos.Line >= exprPos.Line-1 &&
-		pos.Line <= exprEndPos.Line-1
-
-	withInColRange := pos.Character >= exprPos.Column-1 &&
-		pos.Character <= exprEndPos.Column-1
-
-	onTheSameLine := pos.Line == exprEndPos.Line-1 &&
-		pos.Line == exprPos.Line-1
-
-	if !withInLineRange || (onTheSameLine && !withInColRange) {
-		return false
-	}
-
-	return true
-}

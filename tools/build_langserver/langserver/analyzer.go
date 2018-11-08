@@ -244,6 +244,22 @@ func (a *Analyzer) IdentsFromContent(content string) chan *Identifier {
 	return ch
 }
 
+func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *Identifier {
+	idents := a.IdentsFromContent(content)
+
+	for i := range idents {
+		if i.Type != "call" {
+			continue
+		}
+
+		if withInRangeLSP(i.Pos, i.EndPos, pos) {
+			return i
+		}
+	}
+
+	return nil
+}
+
 // VariablesFromContent returns a map of variable name to Variable
 func (a *Analyzer) VariablesFromContent(content string) map[string]Variable {
 	idents := a.IdentsFromContent(content)

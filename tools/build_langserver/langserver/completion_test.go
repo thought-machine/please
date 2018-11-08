@@ -231,6 +231,20 @@ func TestCompletionWithVars(t *testing.T) {
 }
 
 /***************************************
+ *Tests No completion inside funccall param
+ ***************************************/
+func TestNoCompletion(t *testing.T) {
+	ctx := context.Background()
+
+	err := storeFile(ctx, completionEmptyURI)
+	assert.Equal(t, nil, err)
+
+	items, err := handler.getCompletionItemsList(ctx, completionEmptyURI, lsp.Position{Line: 13, Character: 12})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 0, len(items))
+}
+
+/***************************************
  * Helpers
  ***************************************/
 func itemInList(itemList []*lsp.CompletionItem, targetLabel string) bool {
