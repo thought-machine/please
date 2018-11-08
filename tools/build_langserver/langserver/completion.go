@@ -212,8 +212,6 @@ func itemsFromAttributes(analyzer *Analyzer, contentVars map[string]Variable, li
 	varName := literalSlice[0]
 	variable, present := contentVars[varName]
 
-	//fmt.Println(variable, present)
-
 	if LooksLikeStringAttr(lineContent) || (present && variable.Type == "string") {
 		return itemsFromMethods(analyzer.Attributes["str"], partial)
 	} else if LooksLikeDictAttr(lineContent) || (present && variable.Type == "dict") {
