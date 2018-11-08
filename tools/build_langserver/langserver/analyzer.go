@@ -284,9 +284,8 @@ func getVarType(valExpr *asp.ValueExpression) string {
 			typeName := v.Type().Field(i).Name
 			if typeName == "FString" {
 				return "string"
-			} else {
-				return strings.ToLower(typeName)
 			}
+			return strings.ToLower(typeName)
 		}
 	}
 	return ""
