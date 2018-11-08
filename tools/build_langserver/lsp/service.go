@@ -59,7 +59,7 @@ type SignatureHelp struct {
 	ActiveParameter int                    `json:"activeParameter"`
 }
 
-// SignatureInformation
+// SignatureInformation represents the signature of something callable.
 type SignatureInformation struct {
 	Label         string                 `json:"label"`
 	Documentation string                 `json:"documentation,omitempty"`
