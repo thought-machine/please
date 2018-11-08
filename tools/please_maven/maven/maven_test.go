@@ -117,7 +117,6 @@ func TestAllDependenciesErrorProne(t *testing.T) {
 		"org.checkerframework:javacutil:1.8.10:src:GNU General Public License, version 2 (GPL2), with the classpath exception|The MIT License",
 		"com.google.errorprone:javac:1.9.0-dev-r2973-2:src:GNU General Public License, version 2, with the Classpath Exception",
 		"com.googlecode.java-diff-utils:diffutils:1.3.0:src:The Apache Software License, Version 2.0",
-		"com.google.auto.value:auto-value:1.1:src:Apache 2.0",
 		"com.google.errorprone:error_prone_annotations:2.0.14:no_src:Apache 2.0",
 		"com.github.stephenc.jcip:jcip-annotations:1.0-1:src:Apache License, Version 2.0",
 		"org.pcollections:pcollections:2.1.2:src:The MIT License",
@@ -139,7 +138,6 @@ func TestAllDependenciesErrorProneWithIndent(t *testing.T) {
 		"    org.checkerframework:javacutil:1.8.10:src:GNU General Public License, version 2 (GPL2), with the classpath exception|The MIT License",
 		"  com.google.errorprone:javac:1.9.0-dev-r2973-2:src:GNU General Public License, version 2, with the Classpath Exception",
 		"  com.googlecode.java-diff-utils:diffutils:1.3.0:src:The Apache Software License, Version 2.0",
-		"  com.google.auto.value:auto-value:1.1:src:Apache 2.0",
 		"  com.google.errorprone:error_prone_annotations:2.0.14:no_src:Apache 2.0",
 		"com.github.stephenc.jcip:jcip-annotations:1.0-1:src:Apache License, Version 2.0",
 		"org.pcollections:pcollections:2.1.2:src:The MIT License",
@@ -161,7 +159,6 @@ func TestAllDependenciesTogether(t *testing.T) {
 		"org.checkerframework:javacutil:1.8.10:src:GNU General Public License, version 2 (GPL2), with the classpath exception|The MIT License",
 		"com.google.errorprone:javac:1.9.0-dev-r2973-2:src:GNU General Public License, version 2, with the Classpath Exception",
 		"com.googlecode.java-diff-utils:diffutils:1.3.0:src:The Apache Software License, Version 2.0",
-		"com.google.auto.value:auto-value:1.1:src:Apache 2.0",
 		"com.google.errorprone:error_prone_annotations:2.0.14:no_src:Apache 2.0",
 		"com.github.stephenc.jcip:jcip-annotations:1.0-1:src:Apache License, Version 2.0",
 		"org.pcollections:pcollections:2.1.2:src:The MIT License",
@@ -257,12 +254,6 @@ maven_jar(
 )
 
 maven_jar(
-    name = 'auto-value',
-    id = 'com.google.auto.value:auto-value:1.1',
-    hash = '',
-)
-
-maven_jar(
     name = 'error_prone_check_api',
     id = 'com.google.errorprone:error_prone_check_api:2.0.14',
     hash = '',
@@ -272,7 +263,6 @@ maven_jar(
         ':dataflow',
         ':javac',
         ':diffutils',
-        ':auto-value',
         ':error_prone_annotations',
     ],
 )
@@ -319,7 +309,6 @@ maven_jar(
         ':jsr305',
         ':dataflow',
         ':javac',
-        ':auto-value',
         ':error_prone_annotations',
     ],
 )`
@@ -689,7 +678,6 @@ maven_jar(
         ':dataflow',
         ':javac',
         ':diffutils',
-        '//third_party/java:auto-value',
         ':error_prone_annotations',
     ],
 )
@@ -736,7 +724,6 @@ maven_jar(
         '//third_party/java:jsr305',
         ':dataflow',
         ':javac',
-        '//third_party/java:auto-value',
         ':error_prone_annotations',
     ],
 )`
@@ -752,9 +739,6 @@ maven_jar(
 					},
 					"jsr305": {
 						Labels: []string{"mvn:com.google.code.findbugs:jsr305:3.0.0"},
-					},
-					"auto-value": {
-						Labels: []string{"mvn:com.google.auto.value:auto-value:1.1"},
 					},
 				},
 			},

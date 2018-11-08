@@ -1,3 +1,9 @@
+Version 13.2.2
+--------------
+
+    * Fix to cc_static_library which wasn't always calculating symbol tables correctly.
+
+
 Version 13.2.1
 --------------
 
