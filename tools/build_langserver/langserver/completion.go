@@ -51,9 +51,7 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
 
 	fileContent := h.workspace.documents[uri].textInEdit
-	lineContent := fileContent[pos.Line]
-
-	lineContent = h.ensureLineContent(uri, pos)
+	lineContent := h.ensureLineContent(uri, pos)
 
 	log.Info("Completion lineContent: %s", lineContent)
 
