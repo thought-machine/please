@@ -51,6 +51,11 @@ type Argument struct {
 	Required bool
 }
 
+type Call struct {
+	Arguments []asp.CallArgument
+	Name      string
+}
+
 // Identifier is a wrapper around asp.Identifier
 // Including the starting line and the ending line number
 type Identifier struct {
@@ -247,12 +252,54 @@ func (a *Analyzer) IdentsFromContent(content string) chan *Identifier {
 
 // FuncCallFromContentAndPos returns a Identifier object represents function call,
 // Only returns the not nil object when the Identifier is within the range specified by the position
-func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *Identifier {
-	idents := a.IdentsFromContent(content)
+func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *Call {
+	stmts := a.AspStatementFromContent(content)
+	stmt := a.getStatementFromPos(stmts, pos)
 
-	for i := range idents {
-		if i.Type == "call" && withInRangeLSP(i.Pos, i.EndPos, pos) {
-			return i
+	if stmt.Ident != nil && stmt.Ident.Type == "call" {
+		callArgs := stmt.Ident.Action.Call.Arguments
+		// Ensure we get the call from the argument if it's within the range
+		for _, arg := range callArgs {
+			if withInRange(arg.Value.Pos, arg.Value.EndPos, pos) {
+				call := a.CallFromValExpression(reflect.ValueOf(arg.Value.Val))
+				if call != nil {
+					return call
+				}
+			}
+		}
+		return &Call{
+			Arguments: stmt.Ident.Action.Call.Arguments,
+			Name:      stmt.Ident.Name,
+		}
+	} else if stmt.Expression != nil {
+		v := reflect.ValueOf(stmt.Expression.Val)
+		return a.CallFromValExpression(v)
+	}
+	return nil
+}
+
+func (a *Analyzer) CallFromValExpression(v reflect.Value) *Call {
+	if v.Type() == reflect.TypeOf(asp.IdentExpr{}) {
+		expr := v.Interface().(asp.IdentExpr)
+		for _, action := range expr.Action {
+			if action.Call != nil {
+				return &Call{
+					Name:      expr.Name,
+					Arguments: action.Call.Arguments,
+				}
+			}
+			if action.Property != nil {
+				return a.CallFromValExpression(reflect.ValueOf(action.Property))
+			}
+		}
+	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
+		return a.CallFromValExpression(v.Elem())
+	} else if v.Kind() == reflect.Struct {
+		for i := 0; i < v.NumField(); i++ {
+			expr := a.CallFromValExpression(v.Field(i))
+			if expr != nil {
+				return expr
+			}
 		}
 	}
 
@@ -313,20 +360,23 @@ func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) 
 	if err != nil {
 		return nil, err
 	}
+	return a.getStatementFromPos(stmts, position), nil
+}
 
+func (a *Analyzer) getStatementFromPos(stmts []*asp.Statement, position lsp.Position) *Statement {
 	statement, expr := asp.StatementOrExpressionFromAst(stmts,
 		asp.Position{Line: position.Line + 1, Column: position.Character + 1})
 
 	if statement != nil {
 		return &Statement{
 			Ident: a.identFromStatement(statement),
-		}, nil
+		}
 	} else if expr != nil {
 		return &Statement{
 			Expression: expr,
-		}, nil
+		}
 	}
-	return nil, nil
+	return nil
 }
 
 func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {

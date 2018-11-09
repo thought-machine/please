@@ -269,11 +269,10 @@ func (p *parser) parseArgument() Argument {
 			return a
 		}
 		tok = p.oneof('&', '=')
-		a.Repr += tok.Value
 	}
 	if tok.Type == '&' {
-		// Argument aliases
 		a.Repr += tok.Value
+		// Argument aliases
 		for {
 			tok = p.next(Ident)
 			a.Aliases = append(a.Aliases, tok.Value)
@@ -281,12 +280,13 @@ func (p *parser) parseArgument() Argument {
 			if !p.optional('&') {
 				break
 			}
-			a.Repr += "&"
 		}
 		if tok := p.l.Peek(); tok.Type == ',' || tok.Type == ')' {
 			return a
 		}
 		tok = p.next('=')
+	}
+	if tok.Value == "=" {
 		a.Repr += tok.Value
 	}
 	// Default value

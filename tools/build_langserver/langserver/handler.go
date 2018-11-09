@@ -56,14 +56,14 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 
 	log.Info("handling method %s with params: %s", req.Method, req.Params)
 	methods := map[string]func(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error){
-		"initialize":              h.handleInit,
-		"initialzed":              h.handleInitialized,
-		"shutdown":                h.handleShutDown,
-		"exit":                    h.handleExit,
-		"$/cancelRequest":         h.handleCancel,
-		"textDocument/hover":      h.handleHover,
-		"textDocument/completion": h.handleCompletion,
-		//"textDocument/signatureHelp": h.handleSignature,
+		"initialize":                 h.handleInit,
+		"initialzed":                 h.handleInitialized,
+		"shutdown":                   h.handleShutDown,
+		"exit":                       h.handleExit,
+		"$/cancelRequest":            h.handleCancel,
+		"textDocument/hover":         h.handleHover,
+		"textDocument/completion":    h.handleCompletion,
+		"textDocument/signatureHelp": h.handleSignature,
 	}
 
 	if req.Method != "initialize" && req.Method != "exit" &&
