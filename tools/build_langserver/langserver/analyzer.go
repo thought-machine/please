@@ -51,6 +51,7 @@ type Argument struct {
 	Required bool
 }
 
+// Call represent a function call
 type Call struct {
 	Arguments []asp.CallArgument
 	Name      string
