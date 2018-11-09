@@ -244,6 +244,7 @@ func (p *parser) parseArgument() Argument {
 	a := Argument{
 		Name: p.next(Ident).Value,
 	}
+	a.Repr = a.Name
 	// indicate an argument is private if it is prefixed with "_"
 	if strings.HasPrefix(a.Name, "_") {
 		a.IsPrivate = true
@@ -254,34 +255,44 @@ func (p *parser) parseArgument() Argument {
 	tok := p.oneof(':', '&', '=')
 	if tok.Type == ':' {
 		// Type annotations
+		a.Repr += tok.Value
 		for {
 			tok = p.oneofval("bool", "str", "int", "list", "dict", "function", "config")
 			a.Type = append(a.Type, tok.Value)
+			a.Repr += tok.Value
 			if !p.optional('|') {
 				break
 			}
+			a.Repr += "|"
 		}
 		if tok := p.l.Peek(); tok.Type == ',' || tok.Type == ')' {
 			return a
 		}
 		tok = p.oneof('&', '=')
+		a.Repr += tok.Value
 	}
 	if tok.Type == '&' {
 		// Argument aliases
+		a.Repr += tok.Value
 		for {
 			tok = p.next(Ident)
 			a.Aliases = append(a.Aliases, tok.Value)
+			a.Repr += tok.Value
 			if !p.optional('&') {
 				break
 			}
+			a.Repr += "&"
 		}
 		if tok := p.l.Peek(); tok.Type == ',' || tok.Type == ')' {
 			return a
 		}
 		tok = p.next('=')
+		a.Repr += tok.Value
 	}
 	// Default value
 	a.Value = p.parseExpression()
+	// set the value of the argument to the Repr
+	a.Repr += string(p.l.b[a.Value.Pos.Offset-1 : a.Value.EndPos.Offset-1])
 	return a
 }
 

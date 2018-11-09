@@ -69,8 +69,10 @@ type Argument struct {
 	Type []string `[ ":" @( { ( "bool" | "str" | "int" | "list" | "dict" | "function" ) [ "|" ] } ) ]`
 	// Aliases are an experimental non-Python concept where function arguments can be aliased to different names.
 	// We use this to support compatibility with Bazel & Buck etc in some cases.
-	Aliases   []string    `[ "&" ( { @Ident [ "&" ] } ) ]`
-	Value     *Expression `[ "=" @@ ]`
+	Aliases []string    `[ "&" ( { @Ident [ "&" ] } ) ]`
+	Value   *Expression `[ "=" @@ ]`
+	// string representation of the original argument definition
+	Repr      string
 	IsPrivate bool
 }
 

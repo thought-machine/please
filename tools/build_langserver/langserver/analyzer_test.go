@@ -23,7 +23,7 @@ func TestNewAnalyzer(t *testing.T) {
 
 	goLibrary := a.BuiltIns["go_library"]
 	assert.Equal(t, 15, len(goLibrary.ArgMap))
-	assert.Equal(t, true, goLibrary.ArgMap["name"].required)
+	assert.Equal(t, true, goLibrary.ArgMap["name"].Required)
 
 	// Check for methods map
 	_, ok := a.Attributes["str"]
@@ -89,9 +89,9 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, expected)
 	assert.Equal(t, len(ruleDef.Arguments), len(ruleDef.ArgMap))
-	assert.Equal(t, false, ruleDef.ArgMap["_link_private"].required)
-	assert.Equal(t, true, ruleDef.ArgMap["name"].required)
-	assert.Equal(t, ruleDef.ArgMap["visibility"].definition,
+	assert.Equal(t, false, ruleDef.ArgMap["_link_private"].Required)
+	assert.Equal(t, true, ruleDef.ArgMap["name"].Required)
+	assert.Equal(t, ruleDef.ArgMap["visibility"].Definition,
 		"visibility required:false, type:list")
 
 	// Test header for len()
@@ -105,8 +105,9 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, "def len(obj)")
 	assert.Equal(t, len(ruleDef.ArgMap), 1)
-	assert.Equal(t, true, ruleDef.ArgMap["obj"].required)
-	assert.Equal(t, ruleDef.ArgMap["obj"].definition, "obj required:true")
+	assert.Equal(t, true, ruleDef.ArgMap["obj"].Required)
+	assert.Equal(t, ruleDef.ArgMap["obj"].Definition, "obj required:true")
+	assert.Equal(t, "obj", ruleDef.ArgMap["obj"].Repr)
 
 	// Test header for a string function, startswith()
 	stmt = getStatementByName(statements, "startswith")
@@ -114,7 +115,8 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, "str.startswith(s:str)")
 	assert.Equal(t, len(ruleDef.ArgMap), 1)
-	assert.Equal(t, true, ruleDef.ArgMap["s"].required)
+	assert.Equal(t, true, ruleDef.ArgMap["s"].Required)
+	assert.Equal(t, "s:str", ruleDef.ArgMap["s"].Repr)
 
 	// Test header for a string function, format()
 	stmt = getStatementByName(statements, "format")
@@ -130,7 +132,7 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, "config.setdefault(key:str, default=None)")
 	assert.Equal(t, 2, len(ruleDef.ArgMap))
-	assert.Equal(t, false, ruleDef.ArgMap["default"].required)
+	assert.Equal(t, false, ruleDef.ArgMap["default"].Required)
 }
 
 func TestGetArgString(t *testing.T) {

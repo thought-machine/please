@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"tools/build_langserver/lsp"
 
-	"fmt"
 	"github.com/sourcegraph/jsonrpc2"
 )
 
@@ -58,12 +57,31 @@ func (h *LsHandler) getSignatures(ctx context.Context, uri lsp.DocumentURI, pos 
 	lineContent = lineContent[:pos.Character]
 
 	call := h.analyzer.FuncCallFromContentAndPos(JoinLines(fileContent, true), pos)
+	builtRule, present := h.analyzer.BuiltIns[call.Name]
+	if !present {
+		return sigList, nil
+	}
 
-	fmt.Println(call, lineContent)
-	fmt.Println(h.analyzer.BuiltIns[call.Name])
-	return sigList, nil
+	sigInfo := lsp.SignatureInformation{
+		Label:         call.Name,
+		Documentation: builtRule.Docstring,
+		Parameters:    paramsFromRuleDef(builtRule),
+	}
+
+	return append(sigList, sigInfo), nil
 }
 
-//func signatureFromRuleDef(def *RuleDef) lsp.SignatureInformation {
-//
-//}
+func paramsFromRuleDef(def *RuleDef) []lsp.ParameterInformation {
+
+	var params []lsp.ParameterInformation
+
+	for _, arg := range def.Arguments {
+		if !arg.IsPrivate && (arg.Name != "self" && def.Object != "") {
+			param := lsp.ParameterInformation{
+				Label: arg.Repr,
+			}
+			params = append(params, param)
+		}
+	}
+	return params
+}

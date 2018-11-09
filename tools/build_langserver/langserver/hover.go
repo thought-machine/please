@@ -188,7 +188,7 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 			// When the positional args are not exactly stored in ArgMap
 			arg, okay := analyzer.BuiltIns[identName].ArgMap[identArg.Name]
 			if okay {
-				return arg.definition, nil
+				return arg.Definition, nil
 			}
 			// Return definition if the hovered content is a positional argument
 		} else if identArg.Name == "" && withInRange(identArg.Value.Pos, identArg.Value.EndPos, pos) {
@@ -196,7 +196,7 @@ func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.Ca
 			if builtinRule.Arguments[0].Name == "self" {
 				argInd++
 			}
-			return builtinRule.ArgMap[builtinRule.Arguments[argInd].Name].definition, nil
+			return builtinRule.ArgMap[builtinRule.Arguments[argInd].Name].Definition, nil
 		}
 
 		// Get content from the argument value

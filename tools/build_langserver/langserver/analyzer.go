@@ -45,8 +45,10 @@ type RuleDef struct {
 // and it also tells you if the argument is required
 type Argument struct {
 	*asp.Argument
-	definition string
-	required   bool
+	// the definition string when hover over the argument, e.g. src type:list, required:false
+	Definition string
+
+	Required bool
 }
 
 // Identifier is a wrapper around asp.Identifier
@@ -179,11 +181,10 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 				ruleDef.Object = arg.Type[0]
 			} else {
 				// Fill in the ArgMap
-				argString := getArgString(arg)
 				ruleDef.ArgMap[arg.Name] = &Argument{
 					Argument:   &arg,
-					definition: argString,
-					required:   arg.Value == nil,
+					Definition: getArgString(arg),
+					Required:   arg.Value == nil,
 				}
 			}
 		}
@@ -250,11 +251,7 @@ func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *
 	idents := a.IdentsFromContent(content)
 
 	for i := range idents {
-		if i.Type != "call" {
-			continue
-		}
-
-		if withInRangeLSP(i.Pos, i.EndPos, pos) {
+		if i.Type == "call" && withInRangeLSP(i.Pos, i.EndPos, pos) {
 			return i
 		}
 	}
