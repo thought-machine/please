@@ -73,36 +73,34 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 			Message: fmt.Sprintf("fail to parse Build file %s", uri),
 		}
 	}
+	fmt.Println(stmt == nil)
 
 	// Return empty string if the hovered content is blank
 	if isEmpty(lineContent, pos) || stmt == nil {
 		return "", nil
 	}
 
+	call := h.analyzer.CallFromStatementAndPos(stmt, pos)
 	var contentString string
 	var contentErr error
-	if stmt.Ident != nil {
-		ident := stmt.Ident
-		switch ident.Type {
-		case "call":
-			identArgs := ident.Action.Call.Arguments
-			contentString, contentErr = contentFromCall(ctx, h.analyzer, identArgs, ident.Name,
-				lineContent, uri, pos)
-		case "property":
-			contentString, contentErr = contentFromProperty(ctx, h.analyzer, ident.Action.Property,
-				lineContent, uri, pos)
-		case "assign":
-			contentString, contentErr = contentFromExpression(ctx, h.analyzer, ident.Action.Assign,
-				lineContent, uri, pos)
-		case "augAssign":
-			contentString, contentErr = contentFromExpression(ctx, h.analyzer, ident.Action.AugAssign,
-				lineContent, uri, pos)
-		default:
-			return "", nil
-		}
+
+	if call != nil {
+		fmt.Println(call.Name)
+		contentString, contentErr = contentFromCall(ctx, h.analyzer, call.Arguments, call.Name,
+			lineContent, uri, pos)
 	} else if stmt.Expression != nil {
 		contentString, contentErr = contentFromExpression(ctx, h.analyzer, stmt.Expression,
 			lineContent, uri, pos)
+	} else if stmt.Ident != nil {
+		if stmt.Ident.Type == "assign" {
+			contentString, contentErr = contentFromExpression(ctx, h.analyzer, stmt.Ident.Action.Assign,
+				lineContent, uri, pos)
+		} else if stmt.Ident.Type == "augAssign" {
+			contentString, contentErr = contentFromExpression(ctx, h.analyzer, stmt.Ident.Action.AugAssign,
+				lineContent, uri, pos)
+		} else {
+			return "", nil
+		}
 	}
 
 	if contentErr != nil {
@@ -130,6 +128,45 @@ func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArg
 	// Check arguments of the IdentStatement, and return the appropriate content if any
 	return contentFromIdentArgs(ctx, analyzer, args, identName,
 		lineContent, uri, pos)
+}
+
+func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
+	identName string, lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
+
+	builtinRule := analyzer.BuiltIns[identName]
+	for i, identArg := range args {
+		argNameEndPos := asp.Position{
+			Line:   identArg.Pos.Line,
+			Column: identArg.Pos.Column + len(identArg.Name),
+		}
+		if withInRange(identArg.Pos, argNameEndPos, pos) {
+			// This is to prevent cases like str.format(),
+			// When the positional args are not exactly stored in ArgMap
+			arg, okay := analyzer.BuiltIns[identName].ArgMap[identArg.Name]
+			if okay {
+				return arg.Definition, nil
+			}
+			// Return definition if the hovered content is a positional argument
+		} else if identArg.Name == "" && withInRange(identArg.Value.Pos, identArg.Value.EndPos, pos) {
+			argInd := i
+			if builtinRule.Arguments[0].Name == "self" {
+				argInd++
+			}
+			return builtinRule.ArgMap[builtinRule.Arguments[argInd].Name].Definition, nil
+		}
+
+		// Get content from the argument value
+		content, err := contentFromValueExpression(ctx, analyzer, identArg.Value.Val,
+			lineContent, uri, pos)
+		if err != nil {
+			return "", err
+		}
+		if content != "" {
+			return content, nil
+		}
+
+	}
+	return "", nil
 }
 
 func contentFromExpression(ctx context.Context, analyzer *Analyzer, expr *asp.Expression,
@@ -174,57 +211,8 @@ func contentFromExpression(ctx context.Context, analyzer *Analyzer, expr *asp.Ex
 	return "", nil
 }
 
-func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
-	identName string, lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
-
-	builtinRule := analyzer.BuiltIns[identName]
-	for i, identArg := range args {
-		argNameEndPos := asp.Position{
-			Line:   identArg.Pos.Line,
-			Column: identArg.Pos.Column + len(identArg.Name),
-		}
-		if withInRange(identArg.Pos, argNameEndPos, pos) {
-			// This is to prevent cases like str.format(),
-			// When the positional args are not exactly stored in ArgMap
-			arg, okay := analyzer.BuiltIns[identName].ArgMap[identArg.Name]
-			if okay {
-				return arg.Definition, nil
-			}
-			// Return definition if the hovered content is a positional argument
-		} else if identArg.Name == "" && withInRange(identArg.Value.Pos, identArg.Value.EndPos, pos) {
-			argInd := i
-			if builtinRule.Arguments[0].Name == "self" {
-				argInd++
-			}
-			return builtinRule.ArgMap[builtinRule.Arguments[argInd].Name].Definition, nil
-		}
-
-		// Get content from the argument value
-		content, err := contentFromValueExpression(ctx, analyzer, identArg.Value.Val,
-			lineContent, uri, pos)
-		if err != nil {
-			return "", err
-		}
-		if content != "" {
-			return content, nil
-		}
-
-	}
-	return "", nil
-}
-
 func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
 	valExpr *asp.ValueExpression, lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
-	if valExpr.Property != nil {
-		content, err := contentFromProperty(ctx, analyzer, valExpr.Property,
-			lineContent, uri, pos)
-		if err != nil {
-			return "", err
-		}
-		if content != "" {
-			return content, nil
-		}
-	}
 
 	if valExpr.String != "" && strings.Contains(lineContent, valExpr.String) {
 		return contentFromBuildLabel(ctx, analyzer, valExpr.String, uri)
@@ -234,54 +222,6 @@ func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
 	}
 	if valExpr.Tuple != nil {
 		return contentFromList(ctx, analyzer, valExpr.Tuple, lineContent, uri, pos)
-	}
-	if valExpr.Ident != nil {
-		return contentFromIdent(ctx, analyzer, valExpr.Ident,
-			lineContent, uri, pos)
-	}
-
-	return "", nil
-}
-
-// contentFromIdent returns hover content from ValueExpression.Ident
-func contentFromIdent(ctx context.Context, analyzer *Analyzer, identValExpr *asp.IdentExpr,
-	lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
-
-	if withInRange(identValExpr.Pos, identValExpr.EndPos, pos) {
-		return contentFromIdentExpr(ctx, analyzer, identValExpr,
-			lineContent, uri, pos)
-	}
-
-	return "", nil
-}
-
-// contentFromProperty returns hover content from ValueExpression.Property
-func contentFromProperty(ctx context.Context, analyzer *Analyzer, propertyVal *asp.IdentExpr,
-	lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
-
-	if withInRange(propertyVal.Pos, propertyVal.EndPos, pos) {
-
-		return contentFromIdentExpr(ctx, analyzer, propertyVal,
-			lineContent, uri, pos)
-	}
-
-	return "", nil
-}
-
-func contentFromIdentExpr(ctx context.Context, analyzer *Analyzer, identExpr *asp.IdentExpr,
-	lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
-
-	if identExpr.Action != nil {
-		for _, action := range identExpr.Action {
-			if action.Call != nil {
-				return contentFromCall(ctx, analyzer, action.Call.Arguments,
-					identExpr.Name, lineContent, uri, pos)
-			}
-			if action.Property != nil {
-				return contentFromProperty(ctx, analyzer, action.Property,
-					lineContent, uri, pos)
-			}
-		}
 	}
 
 	return "", nil

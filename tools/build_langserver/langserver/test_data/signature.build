@@ -11,3 +11,4 @@ go_library(
     srcs=glob(),
 )
 
+blah = glob()

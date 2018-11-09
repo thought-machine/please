@@ -230,6 +230,14 @@ func withInRange(exprPos asp.Position, exprEndPos asp.Position, pos lsp.Position
 		return false
 	}
 
+	if pos.Line == exprPos.Line-1 {
+		return pos.Character >= exprPos.Column-1
+	}
+
+	if pos.Line == exprEndPos.Line-1 {
+		return pos.Character <= exprEndPos.Column-1
+	}
+
 	return true
 }
 

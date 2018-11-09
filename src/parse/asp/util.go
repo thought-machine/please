@@ -117,5 +117,13 @@ func withInRange(exprPos Position, exprEndPos Position, pos Position) bool {
 		return false
 	}
 
+	if pos.Line == exprPos.Line {
+		return pos.Column >= exprPos.Column
+	}
+
+	if pos.Line == exprEndPos.Line {
+		return pos.Column <= exprEndPos.Column
+	}
+
 	return true
 }

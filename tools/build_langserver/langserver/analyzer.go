@@ -256,47 +256,57 @@ func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *
 	stmts := a.AspStatementFromContent(content)
 	stmt := a.getStatementFromPos(stmts, pos)
 
-	if stmt.Ident != nil && stmt.Ident.Type == "call" {
-		callArgs := stmt.Ident.Action.Call.Arguments
-		// Ensure we get the call from the argument if it's within the range
-		for _, arg := range callArgs {
-			if withInRange(arg.Value.Pos, arg.Value.EndPos, pos) {
-				call := a.CallFromValExpression(reflect.ValueOf(arg.Value.Val))
-				if call != nil {
-					return call
-				}
-			}
+	return a.CallFromStatementAndPos(stmt, pos)
+}
+
+func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *Call {
+	if stmt.Ident != nil {
+		call := a.CallFromAST(reflect.ValueOf(stmt.Ident), pos)
+		if call != nil {
+			return call
 		}
-		return &Call{
-			Arguments: stmt.Ident.Action.Call.Arguments,
-			Name:      stmt.Ident.Name,
+		if stmt.Ident.Type == "call" {
+			return &Call{
+				Arguments: stmt.Ident.Action.Call.Arguments,
+				Name:      stmt.Ident.Name,
+			}
 		}
 	} else if stmt.Expression != nil {
 		v := reflect.ValueOf(stmt.Expression.Val)
-		return a.CallFromValExpression(v)
+		return a.CallFromAST(v, pos)
 	}
+
 	return nil
 }
 
-func (a *Analyzer) CallFromValExpression(v reflect.Value) *Call {
+// GetCall returns the Call object from the AST
+func (a *Analyzer) CallFromAST(v reflect.Value, pos lsp.Position) *Call {
 	if v.Type() == reflect.TypeOf(asp.IdentExpr{}) {
 		expr := v.Interface().(asp.IdentExpr)
 		for _, action := range expr.Action {
-			if action.Call != nil {
+			if action.Call != nil &&
+				withInRange(expr.Pos, expr.EndPos, pos) {
 				return &Call{
 					Name:      expr.Name,
 					Arguments: action.Call.Arguments,
 				}
 			}
 			if action.Property != nil {
-				return a.CallFromValExpression(reflect.ValueOf(action.Property))
+				return a.CallFromAST(reflect.ValueOf(action.Property), pos)
 			}
 		}
 	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
-		return a.CallFromValExpression(v.Elem())
+		return a.CallFromAST(v.Elem(), pos)
+	} else if v.Kind() == reflect.Slice {
+		for i := 0; i < v.Len(); i++ {
+			expr := a.CallFromAST(v.Index(i), pos)
+			if expr != nil {
+				return expr
+			}
+		}
 	} else if v.Kind() == reflect.Struct {
 		for i := 0; i < v.NumField(); i++ {
-			expr := a.CallFromValExpression(v.Field(i))
+			expr := a.CallFromAST(v.Field(i), pos)
 			if expr != nil {
 				return expr
 			}

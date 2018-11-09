@@ -63,6 +63,15 @@ func TestGetSignatureWithInCall(t *testing.T) {
 	assert.True(t, paramInList(sig.Signatures[0].Parameters, "exclude:list&excludes=[]"))
 }
 
+func TestGetSignatureWithAssignment(t *testing.T) {
+	ctx := context.Background()
+
+	sig := handler.getSignatures(ctx, sigURI, lsp.Position{Line: 13, Character: 12})
+	assert.Equal(t, 0, sig.ActiveParameter)
+	assert.True(t, paramInList(sig.Signatures[0].Parameters, "include:list"))
+	assert.True(t, paramInList(sig.Signatures[0].Parameters, "exclude:list&excludes=[]"))
+}
+
 /***************************************
  * Helpers
  ***************************************/
