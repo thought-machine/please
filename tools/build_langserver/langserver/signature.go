@@ -3,10 +3,11 @@ package langserver
 import (
 	"context"
 	"encoding/json"
+	"strings"
+
 	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
-	"strings"
 )
 
 const signatureMethod = "textDocument/signatureHelp"
