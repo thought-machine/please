@@ -259,6 +259,7 @@ func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *
 	return a.CallFromStatementAndPos(stmt, pos)
 }
 
+// CallFromStatementAndPos returns a call object within the statement if it's within the range of the position
 func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *Call {
 	if stmt.Ident != nil {
 		call := a.CallFromAST(reflect.ValueOf(stmt.Ident), pos)
@@ -279,7 +280,7 @@ func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *C
 	return nil
 }
 
-// GetCall returns the Call object from the AST
+// CallFromAST returns the Call object from the AST if it's within the range of the position
 func (a *Analyzer) CallFromAST(v reflect.Value, pos lsp.Position) *Call {
 	if v.Type() == reflect.TypeOf(asp.IdentExpr{}) {
 		expr := v.Interface().(asp.IdentExpr)
