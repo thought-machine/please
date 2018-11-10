@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"sync"
 
-	"parse/asp"
 	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
@@ -213,44 +212,4 @@ func getURIAndHandleErrors(uri lsp.DocumentURI, method string) (lsp.DocumentURI,
 		}
 	}
 	return documentURI, err
-}
-
-// withInRange checks if the input asp.Position from lsp is within the range of the Expression
-func withInRange(exprPos asp.Position, exprEndPos asp.Position, pos lsp.Position) bool {
-	withInLineRange := pos.Line >= exprPos.Line-1 &&
-		pos.Line <= exprEndPos.Line-1
-
-	withInColRange := pos.Character >= exprPos.Column-1 &&
-		pos.Character <= exprEndPos.Column-1
-
-	onTheSameLine := pos.Line == exprEndPos.Line-1 &&
-		pos.Line == exprPos.Line-1
-
-	if !withInLineRange || (onTheSameLine && !withInColRange) {
-		return false
-	}
-
-	if pos.Line == exprPos.Line-1 {
-		return pos.Character >= exprPos.Column-1
-	}
-
-	if pos.Line == exprEndPos.Line-1 {
-		return pos.Character <= exprEndPos.Column-1
-	}
-
-	return true
-}
-
-func withInRangeLSP(targetPos lsp.Position, targetEndPos lsp.Position, pos lsp.Position) bool {
-	start := lspPositionToAsp(targetPos)
-	end := lspPositionToAsp(targetEndPos)
-
-	return withInRange(start, end, pos)
-}
-
-func lspPositionToAsp(pos lsp.Position) asp.Position {
-	return asp.Position{
-		Line:   pos.Line + 1,
-		Column: pos.Character + 1,
-	}
 }

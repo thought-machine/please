@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"parse/rules"
 	"src/fs"
 
-	"reflect"
 	"tools/build_langserver/lsp"
 )
 
