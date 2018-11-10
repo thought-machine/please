@@ -73,7 +73,6 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 			Message: fmt.Sprintf("fail to parse Build file %s", uri),
 		}
 	}
-	fmt.Println(stmt == nil)
 
 	// Return empty string if the hovered content is blank
 	if isEmpty(lineContent, pos) || stmt == nil {
@@ -85,7 +84,6 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	var contentErr error
 
 	if call != nil {
-		fmt.Println(call.Name)
 		contentString, contentErr = contentFromCall(ctx, h.analyzer, call.Arguments, call.Name,
 			lineContent, uri, pos)
 	} else if stmt.Expression != nil {
