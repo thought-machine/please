@@ -165,30 +165,25 @@ func (i *interpreter) pkgConfig(pkg *core.Package) *pyConfig {
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
 // and identifying simple local variable lookups.
 func (i *interpreter) optimiseExpressions(v reflect.Value) {
-	if v.Type() == reflect.TypeOf(&Expression{}) && !v.IsNil() {
-		expr := v.Interface().(*Expression)
-		if constant := i.scope.Constant(expr); constant != nil {
-			expr.Optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
-			expr.Val = nil
-		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil {
-			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
-				expr.Optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
-			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
-				expr.Optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
+	callback := func(v reflect.Value) interface{} {
+		if v.Type() == reflect.TypeOf(&Expression{}) && !v.IsNil() {
+			expr := v.Interface().(*Expression)
+			if constant := i.scope.Constant(expr); constant != nil {
+				expr.Optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
 				expr.Val = nil
+			} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil {
+				if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
+					expr.Optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
+				} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
+					expr.Optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
+					expr.Val = nil
+				}
 			}
 		}
-	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
-		i.optimiseExpressions(v.Elem())
-	} else if v.Kind() == reflect.Slice {
-		for j := 0; j < v.Len(); j++ {
-			i.optimiseExpressions(v.Index(j))
-		}
-	} else if v.Kind() == reflect.Struct {
-		for j := 0; j < v.NumField(); j++ {
-			i.optimiseExpressions(v.Field(j))
-		}
+		return nil
 	}
+
+	WalkAST(v, callback)
 }
 
 // A scope contains all the information about a lexical scope.
