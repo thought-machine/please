@@ -283,36 +283,29 @@ func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *C
 
 // CallFromAST returns the Call object from the AST if it's within the range of the position
 func (a *Analyzer) CallFromAST(v reflect.Value, pos lsp.Position) *Call {
-	if v.Type() == reflect.TypeOf(asp.IdentExpr{}) {
-		expr := v.Interface().(asp.IdentExpr)
-		for _, action := range expr.Action {
-			if action.Call != nil &&
-				withInRange(expr.Pos, expr.EndPos, pos) {
-				return &Call{
-					Name:      expr.Name,
-					Arguments: action.Call.Arguments,
+	var callback func(v reflect.Value) interface{}
+
+	callback = func(v reflect.Value) interface{} {
+		if v.Type() == reflect.TypeOf(asp.IdentExpr{}) {
+			expr := v.Interface().(asp.IdentExpr)
+			for _, action := range expr.Action {
+				if action.Call != nil &&
+					withInRange(expr.Pos, expr.EndPos, pos) {
+					return &Call{
+						Name:      expr.Name,
+						Arguments: action.Call.Arguments,
+					}
+				}
+				if action.Property != nil {
+					return asp.WalkAST(reflect.ValueOf(action.Property), callback)
 				}
 			}
-			if action.Property != nil {
-				return a.CallFromAST(reflect.ValueOf(action.Property), pos)
-			}
 		}
-	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
-		return a.CallFromAST(v.Elem(), pos)
-	} else if v.Kind() == reflect.Slice {
-		for i := 0; i < v.Len(); i++ {
-			expr := a.CallFromAST(v.Index(i), pos)
-			if expr != nil {
-				return expr
-			}
-		}
-	} else if v.Kind() == reflect.Struct {
-		for i := 0; i < v.NumField(); i++ {
-			expr := a.CallFromAST(v.Field(i), pos)
-			if expr != nil {
-				return expr
-			}
-		}
+		return nil
+	}
+
+	if item := asp.WalkAST(v, callback); item != nil {
+		return item.(*Call)
 	}
 
 	return nil

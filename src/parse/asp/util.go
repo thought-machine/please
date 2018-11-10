@@ -66,40 +66,64 @@ func StatementOrExpressionFromAst(stmts []*Statement, position Position) (statem
 }
 
 func getStatementOrExpressionFromAst(v reflect.Value, position Position) (statement *Statement, expression *Expression) {
-	if v.Type() == reflect.TypeOf(Expression{}) {
-		expr := v.Interface().(Expression)
-		if withInRange(expr.Pos, expr.EndPos, position) {
-			return nil, &expr
-		}
-	} else if v.Type() == reflect.TypeOf([]*Statement{}) && v.Len() != 0 {
-		stmts := v.Interface().([]*Statement)
-		for _, stmt := range stmts {
+	callback := func(v reflect.Value) interface{} {
+		if v.Type() == reflect.TypeOf(Expression{}) {
+			expr := v.Interface().(Expression)
+			if withInRange(expr.Pos, expr.EndPos, position) {
+				return expr
+			}
+		} else if v.Type() == reflect.TypeOf(Statement{}) {
+			stmt := v.Interface().(Statement)
 			if withInRange(stmt.Pos, stmt.EndPos, position) {
 				// get function call, assignment, and property access
 				if stmt.Ident != nil {
-					return stmt, nil
+					return stmt
 				}
-				return getStatementOrExpressionFromAst(reflect.ValueOf(stmt), position)
 			}
 		}
-	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
-		return getStatementOrExpressionFromAst(v.Elem(), position)
+		return nil
+	}
+
+	item := WalkAST(v, callback)
+	if item != nil {
+		if expr, ok := item.(Expression); ok {
+			return nil, &expr
+		} else if stmt, ok := item.(Statement); ok {
+			return &stmt, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// WalkAST is a generic function that walks through the ast recursively,
+// it accepts a callback for any operations
+func WalkAST(v reflect.Value, callback func(v reflect.Value) interface{}) interface{} {
+
+	item := callback(v)
+	if item != nil {
+		return item
+	}
+
+	if v.Kind() == reflect.Ptr && !v.IsNil() {
+		return WalkAST(v.Elem(), callback)
 	} else if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
-			stmt, expr := getStatementOrExpressionFromAst(v.Index(i), position)
-			if expr != nil || stmt != nil {
-				return stmt, expr
+			item = WalkAST(v.Index(i), callback)
+			if item != nil {
+				return item
 			}
 		}
 	} else if v.Kind() == reflect.Struct {
 		for i := 0; i < v.NumField(); i++ {
-			stmt, expr := getStatementOrExpressionFromAst(v.Field(i), position)
-			if expr != nil || stmt != nil {
-				return stmt, expr
+			item = WalkAST(v.Field(i), callback)
+			if item != nil {
+				return item
 			}
 		}
 	}
-	return nil, nil
+	return nil
+
 }
 
 // withInRange checks if the input position is within the range of the Expression
