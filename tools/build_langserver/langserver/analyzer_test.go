@@ -262,13 +262,14 @@ func TestAnalyzer_IsBuildFile(t *testing.T) {
 	assert.True(t, a.IsBuildFile(uri))
 }
 
-func TestAnalyzer_VariableFromContent(t *testing.T) {
+func TestAnalyzer_VariableFromContentGLOBAL(t *testing.T) {
 	a, err := newAnalyzer()
 	assert.Equal(t, err, nil)
+	pos := lsp.Position{Line: 5, Character: 0}
 
 	// Tests for string variables
-	vars := a.VariablesFromContent(`my_str = "my str"` + "   \n" +
-		`another_str = ""` + "\n   " + `more_empty = ''`)
+	vars := a.VariablesFromContent(`my_str = "my str"`+"   \n"+
+		`another_str = ""`+"\n   "+`more_empty = ''`, pos)
 	assert.Equal(t, "my_str", vars["my_str"].Name)
 	assert.Equal(t, "another_str", vars["another_str"].Name)
 	assert.Equal(t, "more_empty", vars["more_empty"].Name)
@@ -276,34 +277,34 @@ func TestAnalyzer_VariableFromContent(t *testing.T) {
 		assert.Equal(t, "string", v.Type)
 	}
 
-	vars = a.VariablesFromContent(`fstr = f"blah"`)
+	vars = a.VariablesFromContent(`fstr = f"blah"`, pos)
 	assert.Equal(t, "string", vars["fstr"].Type)
 
 	// Tests for int variables
-	vars = a.VariablesFromContent(`my_int = 34`)
+	vars = a.VariablesFromContent(`my_int = 34`, pos)
 	assert.Equal(t, "my_int", vars["my_int"].Name)
 	assert.Equal(t, "int", vars["my_int"].Type)
 
 	// Tests for list variables
-	vars = a.VariablesFromContent(`my_list = []`)
+	vars = a.VariablesFromContent(`my_list = []`, pos)
 	assert.Equal(t, "my_list", vars["my_list"].Name)
 	assert.Equal(t, "list", vars["my_list"].Type)
 
-	vars = a.VariablesFromContent(`my_list2 = [1, 2, 3]`)
+	vars = a.VariablesFromContent(`my_list2 = [1, 2, 3]`, pos)
 	assert.Equal(t, "my_list2", vars["my_list2"].Name)
 	assert.Equal(t, "list", vars["my_list2"].Type)
 
 	// Tests for dict variables
-	vars = a.VariablesFromContent(`my_dict = {'foo': 1, 'bar': 3}`)
+	vars = a.VariablesFromContent(`my_dict = {'foo': 1, 'bar': 3}`, pos)
 	assert.Equal(t, "my_dict", vars["my_dict"].Name)
 	assert.Equal(t, "dict", vars["my_dict"].Type)
 
 	// Test for calls
-	vars = a.VariablesFromContent(`my_call = go_library()`)
+	vars = a.VariablesFromContent(`my_call = go_library()`, pos)
 	assert.Equal(t, "ident", vars["my_call"].Type)
 
 	// Test for reassigning variable
-	vars = a.VariablesFromContent(`foo = "hello"` + "\n" + `foo = 90`)
+	vars = a.VariablesFromContent(`foo = "hello"`+"\n"+`foo = 90`, pos)
 	assert.Equal(t, "int", vars["foo"].Type)
 }
 

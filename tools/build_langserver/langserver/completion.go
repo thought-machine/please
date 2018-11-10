@@ -66,7 +66,7 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	lineContent = lineContent[:pos.Character]
 
 	// get all the existing variable assignments in the current File
-	contentVars := h.analyzer.VariablesFromContent(fileContentStr)
+	contentVars := h.analyzer.VariablesFromContent(fileContentStr, pos)
 
 	if LooksLikeAttribute(lineContent) {
 		completionList = itemsFromAttributes(h.analyzer, contentVars, lineContent)

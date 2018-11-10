@@ -234,16 +234,41 @@ func (a *Analyzer) AspStatementFromContent(content string) []*asp.Statement {
 }
 
 // IdentsFromContent returns a channel of Identifier object
-func (a *Analyzer) IdentsFromContent(content string) chan *Identifier {
+func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Identifier {
 	stmts := a.AspStatementFromContent(content)
 
 	ch := make(chan *Identifier)
 	go func() {
 		for _, stmt := range stmts {
+			// get global level variables
 			if stmt.Ident != nil {
 				ident := a.identFromStatement(stmt)
 				ch <- ident
 			}
+
+			// Get local variables if it's within scope
+			// TODO(bnm): write test cases for this!!!!
+			if !withInRange(stmt.Pos, stmt.EndPos, pos) {
+				continue
+			}
+			v := reflect.ValueOf(stmt)
+			callback := func(v reflect.Value) interface{} {
+				if v.Type() == reflect.TypeOf(asp.Statement{}) {
+					stmt := v.Interface().(asp.Statement)
+
+					if stmt.Ident != nil {
+						ident := a.identFromStatement(&stmt)
+						return ident
+					}
+				}
+				return nil
+			}
+
+			if item := asp.WalkAST(v, callback); item != nil {
+				ident := item.(*Identifier)
+				ch <- ident
+			}
+
 		}
 		close(ch)
 	}()
@@ -312,8 +337,8 @@ func (a *Analyzer) CallFromAST(v reflect.Value, pos lsp.Position) *Call {
 }
 
 // VariablesFromContent returns a map of variable name to Variable
-func (a *Analyzer) VariablesFromContent(content string) map[string]Variable {
-	idents := a.IdentsFromContent(content)
+func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[string]Variable {
+	idents := a.IdentsFromContent(content, pos)
 
 	vars := make(map[string]Variable)
 	for i := range idents {
