@@ -166,9 +166,7 @@ func (i *interpreter) pkgConfig(pkg *core.Package) *pyConfig {
 // and identifying simple local variable lookups.
 func (i *interpreter) optimiseExpressions(v reflect.Value) {
 	callback := func(iface interface{}) interface{} {
-		v := reflect.ValueOf(iface)
-		if v.Type() == reflect.TypeOf(&Expression{}) && !v.IsNil() {
-			expr := v.Interface().(*Expression)
+		if expr, ok := iface.(*Expression); ok && expr != nil {
 			if constant := i.scope.Constant(expr); constant != nil {
 				expr.Optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
 				expr.Val = nil
