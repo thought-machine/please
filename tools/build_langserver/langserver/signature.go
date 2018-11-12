@@ -81,7 +81,7 @@ func paramsFromRuleDef(def *RuleDef) []lsp.ParameterInformation {
 	for _, arg := range def.Arguments {
 		if !arg.IsPrivate && (arg.Name != "self" || def.Object == "") {
 			param := lsp.ParameterInformation{
-				Label: arg.Repr,
+				Label: def.ArgMap[arg.Name].Repr,
 			}
 			params = append(params, param)
 		}

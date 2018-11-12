@@ -71,8 +71,7 @@ type Argument struct {
 	// We use this to support compatibility with Bazel & Buck etc in some cases.
 	Aliases []string    `[ "&" ( { @Ident [ "&" ] } ) ]`
 	Value   *Expression `[ "=" @@ ]`
-	// string representation of the original argument definition
-	Repr      string
+
 	IsPrivate bool
 }
 

@@ -15,6 +15,7 @@ import (
 	"parse/rules"
 	"src/fs"
 
+	"regexp"
 	"tools/build_langserver/lsp"
 )
 
@@ -47,7 +48,8 @@ type Argument struct {
 	*asp.Argument
 	// the definition string when hover over the argument, e.g. src type:list, required:false
 	Definition string
-
+	// string representation of the original argument definition
+	Repr     string
 	Required bool
 }
 
@@ -173,6 +175,7 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 	// Fill in the header property of ruleDef
 	contentStrSlice := strings.Split(content, "\n")
 	headerSlice := contentStrSlice[stmt.Pos.Line-1 : stmt.FuncDef.EoDef.Line]
+	argReprs := getArgReprs(headerSlice)
 
 	if len(stmt.FuncDef.Arguments) > 0 {
 		for i, arg := range stmt.FuncDef.Arguments {
@@ -187,8 +190,14 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 				ruleDef.Object = arg.Type[0]
 			} else {
 				// Fill in the ArgMap
+				//fmt.Println(stmt.FuncDef.Name, argReprs)
+				var repr string
+				if len(argReprs)-1 >= i {
+					repr = strings.TrimSpace(argReprs[i])
+				}
 				ruleDef.ArgMap[arg.Name] = &Argument{
 					Argument:   &arg,
+					Repr:       repr,
 					Definition: getArgString(arg),
 					Required:   arg.Value == nil,
 				}
@@ -631,6 +640,18 @@ func getArgString(argument asp.Argument) string {
 		argString += ", type:" + argType
 	}
 	return argString
+}
+
+func getArgReprs(headerSlice []string) []string {
+	re := regexp.MustCompile(`(\(.*\))`)
+	allArgs := re.FindString(strings.Join(headerSlice, ""))
+
+	var args string
+	if allArgs != "" {
+		args = allArgs[1 : len(allArgs)-1]
+	}
+
+	return strings.Split(args, ",")
 }
 
 func removePrivateArgFromHeader(headerstring string) string {
