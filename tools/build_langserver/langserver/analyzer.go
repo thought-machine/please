@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"path"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"parse/rules"
 	"src/fs"
 
-	"regexp"
 	"tools/build_langserver/lsp"
 )
 
