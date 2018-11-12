@@ -63,7 +63,7 @@ var opts struct {
 		Verbosity         cli.Verbosity `short:"v" long:"verbosity" description:"Verbosity of output (error, warning, notice, info, debug)" default:"warning"`
 		LogFile           cli.Filepath  `long:"log_file" description:"File to echo full logging output to" default:"plz-out/log/build.log"`
 		LogFileLevel      cli.Verbosity `long:"log_file_level" description:"Log level for file output" default:"debug"`
-		InteractiveOutput bool          `long:"interactive_output" description:"Show interactive output ina  terminal"`
+		InteractiveOutput bool          `long:"interactive_output" description:"Show interactive output in a terminal"`
 		PlainOutput       bool          `short:"p" long:"plain_output" description:"Don't show interactive output."`
 		Colour            bool          `long:"colour" description:"Forces coloured output from logging & other shell output."`
 		NoColour          bool          `long:"nocolour" description:"Forces colourless output from logging & other shell output."`
