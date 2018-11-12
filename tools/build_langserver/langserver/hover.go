@@ -67,6 +67,7 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 
 	// Get Hover Identifier
 	stmt, err := h.analyzer.StatementFromPos(uri, pos)
+
 	if err != nil {
 		return "", &jsonrpc2.Error{
 			Code:    jsonrpc2.CodeParseError,

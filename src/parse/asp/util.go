@@ -62,18 +62,12 @@ func FindArgument(statement *Statement, args ...string) *CallArgument {
 // StatementOrExpressionFromAst recursively finds asp.IdentStatement and asp.Expression in the ast
 // and returns a valid statement pointer if within range
 func StatementOrExpressionFromAst(stmts []*Statement, position Position) (statement *Statement, expression *Expression) {
-	return getStatementOrExpressionFromAst(reflect.ValueOf(stmts), position)
-}
-
-func getStatementOrExpressionFromAst(v reflect.Value, position Position) (statement *Statement, expression *Expression) {
-	callback := func(v reflect.Value) interface{} {
-		if v.Type() == reflect.TypeOf(Expression{}) {
-			expr := v.Interface().(Expression)
+	callback := func(iface interface{}) interface{} {
+		if expr, ok := iface.(Expression); ok {
 			if withInRange(expr.Pos, expr.EndPos, position) {
 				return expr
 			}
-		} else if v.Type() == reflect.TypeOf(Statement{}) {
-			stmt := v.Interface().(Statement)
+		} else if stmt, ok := iface.(Statement); ok {
 			if withInRange(stmt.Pos, stmt.EndPos, position) {
 				// get function call, assignment, and property access
 				if stmt.Ident != nil {
@@ -81,10 +75,11 @@ func getStatementOrExpressionFromAst(v reflect.Value, position Position) (statem
 				}
 			}
 		}
+
 		return nil
 	}
 
-	item := WalkAST(v, callback)
+	item := WalkAST(stmts, callback)
 	if item != nil {
 		if expr, ok := item.(Expression); ok {
 			return nil, &expr
@@ -98,25 +93,33 @@ func getStatementOrExpressionFromAst(v reflect.Value, position Position) (statem
 
 // WalkAST is a generic function that walks through the ast recursively,
 // it accepts a callback for any operations
-func WalkAST(v reflect.Value, callback func(v reflect.Value) interface{}) interface{} {
+func WalkAST(iface interface{}, callback func(iface interface{}) interface{}) interface{} {
+	if iface == nil {
+		return nil
+	}
 
-	item := callback(v)
+	item := callback(iface)
 	if item != nil {
 		return item
 	}
 
+	v, ok := iface.(reflect.Value)
+	if !ok {
+		v = reflect.ValueOf(iface)
+	}
+
 	if v.Kind() == reflect.Ptr && !v.IsNil() {
-		return WalkAST(v.Elem(), callback)
+		return WalkAST(v.Elem().Interface(), callback)
 	} else if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
-			item = WalkAST(v.Index(i), callback)
+			item = WalkAST(v.Index(i).Interface(), callback)
 			if item != nil {
 				return item
 			}
 		}
 	} else if v.Kind() == reflect.Struct {
 		for i := 0; i < v.NumField(); i++ {
-			item = WalkAST(v.Field(i), callback)
+			item = WalkAST(v.Field(i).Interface(), callback)
 			if item != nil {
 				return item
 			}

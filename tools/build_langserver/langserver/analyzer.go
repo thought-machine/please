@@ -260,11 +260,9 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 			if !withInRange(stmt.Pos, stmt.EndPos, pos) {
 				continue
 			}
-			v := reflect.ValueOf(stmt)
-			callback := func(v reflect.Value) interface{} {
-				if v.Type() == reflect.TypeOf(asp.Statement{}) {
-					stmt := v.Interface().(asp.Statement)
 
+			callback := func(iface interface{}) interface{} {
+				if stmt, ok := iface.(asp.Statement); ok {
 					if stmt.Ident != nil {
 						ident := a.identFromStatement(&stmt)
 						return ident
@@ -273,7 +271,7 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 				return nil
 			}
 
-			if item := asp.WalkAST(v, callback); item != nil {
+			if item := asp.WalkAST(stmt, callback); item != nil {
 				ident := item.(*Identifier)
 				ch <- ident
 			}
@@ -297,7 +295,7 @@ func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *
 // CallFromStatementAndPos returns a call object within the statement if it's within the range of the position
 func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *Call {
 	if stmt.Ident != nil {
-		call := a.CallFromAST(reflect.ValueOf(stmt.Ident), pos)
+		call := a.CallFromAST(stmt, pos)
 		if call != nil {
 			return call
 		}
@@ -308,20 +306,18 @@ func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *C
 			}
 		}
 	} else if stmt.Expression != nil {
-		v := reflect.ValueOf(stmt.Expression.Val)
-		return a.CallFromAST(v, pos)
+		return a.CallFromAST(stmt.Expression.Val, pos)
 	}
 
 	return nil
 }
 
 // CallFromAST returns the Call object from the AST if it's within the range of the position
-func (a *Analyzer) CallFromAST(v reflect.Value, pos lsp.Position) *Call {
-	var callback func(v reflect.Value) interface{}
+func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
+	var callback func(iface interface{}) interface{}
 
-	callback = func(v reflect.Value) interface{} {
-		if v.Type() == reflect.TypeOf(asp.IdentExpr{}) {
-			expr := v.Interface().(asp.IdentExpr)
+	callback = func(iface interface{}) interface{} {
+		if expr, ok := iface.(asp.IdentExpr); ok {
 			for _, action := range expr.Action {
 				if action.Call != nil &&
 					withInRange(expr.Pos, expr.EndPos, pos) {
@@ -331,14 +327,14 @@ func (a *Analyzer) CallFromAST(v reflect.Value, pos lsp.Position) *Call {
 					}
 				}
 				if action.Property != nil {
-					return asp.WalkAST(reflect.ValueOf(action.Property), callback)
+					return asp.WalkAST(action.Property, callback)
 				}
 			}
 		}
 		return nil
 	}
 
-	if item := asp.WalkAST(v, callback); item != nil {
+	if item := asp.WalkAST(val, callback); item != nil {
 		return item.(*Call)
 	}
 

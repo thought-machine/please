@@ -165,7 +165,8 @@ func (i *interpreter) pkgConfig(pkg *core.Package) *pyConfig {
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
 // and identifying simple local variable lookups.
 func (i *interpreter) optimiseExpressions(v reflect.Value) {
-	callback := func(v reflect.Value) interface{} {
+	callback := func(iface interface{}) interface{} {
+		v := reflect.ValueOf(iface)
 		if v.Type() == reflect.TypeOf(&Expression{}) && !v.IsNil() {
 			expr := v.Interface().(*Expression)
 			if constant := i.scope.Constant(expr); constant != nil {
