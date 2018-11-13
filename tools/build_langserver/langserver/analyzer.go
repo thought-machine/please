@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -44,8 +45,17 @@ type RuleDef struct {
 // and it also tells you if the argument is required
 type Argument struct {
 	*asp.Argument
-	definition string
-	required   bool
+	// the definition string when hover over the argument, e.g. src type:list, required:false
+	Definition string
+	// string representation of the original argument definition
+	Repr     string
+	Required bool
+}
+
+// Call represent a function call
+type Call struct {
+	Arguments []asp.CallArgument
+	Name      string
 }
 
 // Identifier is a wrapper around asp.Identifier
@@ -57,14 +67,21 @@ type Identifier struct {
 	EndPos lsp.Position
 }
 
+// Variable is a representation of a variable assignment in
+// ***More fields can be added in later if needed
+type Variable struct {
+	Name string
+	Type string
+}
+
 // BuildDef is the definition for a build target.
 // often a function call using a specific build rule
 type BuildDef struct {
 	*Identifier
 	BuildDefName string
-	Visibility   []string
 	// The content of the build definition
-	Content string
+	Content    string
+	Visibility []string
 }
 
 // Statement is a simplified version of asp.Statement
@@ -83,7 +100,7 @@ type BuildLabel struct {
 	// IdentStatement for the build definition,
 	// usually the call to the specific buildrule, such as "go_library()"
 	BuildDef *BuildDef
-	// The content of the build definition
+	// The definition of the buildlabel, e.g: BUILD Label: //src/core
 	Definition string
 }
 
@@ -157,6 +174,7 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 	// Fill in the header property of ruleDef
 	contentStrSlice := strings.Split(content, "\n")
 	headerSlice := contentStrSlice[stmt.Pos.Line-1 : stmt.FuncDef.EoDef.Line]
+	argReprs := getArgReprs(headerSlice)
 
 	if len(stmt.FuncDef.Arguments) > 0 {
 		for i, arg := range stmt.FuncDef.Arguments {
@@ -171,17 +189,22 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 				ruleDef.Object = arg.Type[0]
 			} else {
 				// Fill in the ArgMap
-				argString := getArgString(arg)
+				var repr string
+				if len(argReprs)-1 >= i {
+					repr = strings.TrimSpace(argReprs[i])
+				}
 				ruleDef.ArgMap[arg.Name] = &Argument{
 					Argument:   &arg,
-					definition: argString,
-					required:   arg.Value == nil,
+					Repr:       repr,
+					Definition: getArgString(arg),
+					Required:   arg.Value == nil,
 				}
 			}
 		}
 	}
 
-	ruleDef.Header = strings.TrimSuffix(strings.Join(headerSlice, "\n"), ":")
+	header := strings.TrimSuffix(strings.Join(headerSlice, "\n"), ":")
+	ruleDef.Header = removePrivateArgFromHeader(header)
 	return ruleDef
 }
 
@@ -205,12 +228,177 @@ func (a *Analyzer) AspStatementFromFile(uri lsp.DocumentURI) ([]*asp.Statement, 
 	return stmts, nil
 }
 
+// AspStatementFromContent returns a slice of asp.Statement given content string(usually workSpaceStore.doc.TextInEdit)
+func (a *Analyzer) AspStatementFromContent(content string) []*asp.Statement {
+	byteContent := []byte(content)
+
+	stmts, err := a.parser.ParseData(byteContent, "")
+	if err != nil {
+		log.Warning("reading only partial of the file due to parsing failure: %s ", err)
+	}
+
+	return stmts
+}
+
+// IdentsFromContent returns a channel of Identifier object
+func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Identifier {
+	stmts := a.AspStatementFromContent(content)
+
+	ch := make(chan *Identifier)
+	go func() {
+		for _, stmt := range stmts {
+			// get global level variables
+			if stmt.Ident != nil {
+				ident := a.identFromStatement(stmt)
+				ch <- ident
+			}
+			// Get local variables if it's within scope
+			if !withInRange(stmt.Pos, stmt.EndPos, pos) {
+				continue
+			}
+
+			callback := func(astStruct interface{}) interface{} {
+				if stmt, ok := astStruct.(asp.Statement); ok {
+					if stmt.Ident != nil {
+						ident := a.identFromStatement(&stmt)
+						return ident
+					}
+				}
+				return nil
+			}
+
+			if item := asp.WalkAST(stmt, callback); item != nil {
+				ident := item.(*Identifier)
+				ch <- ident
+			}
+
+		}
+		close(ch)
+	}()
+
+	return ch
+}
+
+// FuncCallFromContentAndPos returns a Identifier object represents function call,
+// Only returns the not nil object when the Identifier is within the range specified by the position
+func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *Call {
+	stmts := a.AspStatementFromContent(content)
+	stmt := a.getStatementFromPos(stmts, pos)
+
+	return a.CallFromStatementAndPos(stmt, pos)
+}
+
+// CallFromStatementAndPos returns a call object within the statement if it's within the range of the position
+func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *Call {
+	if stmt == nil {
+		return nil
+	}
+
+	if stmt.Ident != nil {
+		call := a.CallFromAST(stmt, pos)
+		if call != nil {
+			return call
+		}
+		if stmt.Ident.Type == "call" {
+			return &Call{
+				Arguments: stmt.Ident.Action.Call.Arguments,
+				Name:      stmt.Ident.Name,
+			}
+		}
+	} else if stmt.Expression != nil {
+		return a.CallFromAST(stmt.Expression.Val, pos)
+	}
+
+	return nil
+}
+
+// CallFromAST returns the Call object from the AST if it's within the range of the position
+func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
+	var callback func(astStruct interface{}) interface{}
+
+	callback = func(astStruct interface{}) interface{} {
+		if expr, ok := astStruct.(asp.IdentExpr); ok {
+			for _, action := range expr.Action {
+				if action.Call != nil &&
+					withInRange(expr.Pos, expr.EndPos, pos) {
+					return &Call{
+						Name:      expr.Name,
+						Arguments: action.Call.Arguments,
+					}
+				}
+				if action.Property != nil {
+					return asp.WalkAST(action.Property, callback)
+				}
+			}
+		}
+		return nil
+	}
+
+	if item := asp.WalkAST(val, callback); item != nil {
+		return item.(*Call)
+	}
+
+	return nil
+}
+
+// VariablesFromContent returns a map of variable name to Variable
+func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[string]Variable {
+	idents := a.IdentsFromContent(content, pos)
+
+	vars := make(map[string]Variable)
+	for i := range idents {
+		if i.Type != "assign" && i.Type != "augAssign" {
+			continue
+		}
+
+		var varType string
+		if i.Type == "assign" {
+			varType = getVarType(i.Action.Assign.Val)
+		} else if i.Type == "augAssign" {
+			varType = getVarType(i.Action.AugAssign.Val)
+		}
+
+		if varType != "" {
+			variable := Variable{
+				Name: i.Name,
+				Type: varType,
+			}
+			vars[i.Name] = variable
+		}
+	}
+
+	return vars
+}
+
+func getVarType(valExpr *asp.ValueExpression) string {
+	if valExpr.String != "" || valExpr.FString != nil {
+		return "string"
+	} else if valExpr.Int != nil {
+		return "int"
+	} else if valExpr.Bool != "" {
+		return "bool"
+	} else if valExpr.Dict != nil {
+		return "dict"
+	} else if valExpr.List != nil {
+		return "list"
+	}
+
+	return ""
+}
+
 // StatementFromPos returns a Statement struct with either an Identifier or asp.Expression
 func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) (*Statement, error) {
 	// Get all the statements from the build file
 	stmts, err := a.AspStatementFromFile(uri)
 	if err != nil {
 		return nil, err
+	}
+	return a.getStatementFromPos(stmts, position), nil
+}
+
+func (a *Analyzer) getStatementFromPos(stmts []*asp.Statement, position lsp.Position) *Statement {
+	if len(stmts) == 0 {
+		return nil
 	}
 
 	statement, expr := asp.StatementOrExpressionFromAst(stmts,
@@ -219,13 +407,13 @@ func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) 
 	if statement != nil {
 		return &Statement{
 			Ident: a.identFromStatement(statement),
-		}, nil
+		}
 	} else if expr != nil {
 		return &Statement{
 			Expression: expr,
-		}, nil
+		}
 	}
-	return nil, nil
+	return nil
 }
 
 func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {
@@ -303,7 +491,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context,
 		if err != nil {
 			return nil, err
 		}
-		definition = buildDef.Content
+		definition = "BUILD Label: " + label.String()
 	}
 
 	return &BuildLabel{
@@ -383,7 +571,7 @@ func (a *Analyzer) BuildDefsFromURI(ctx context.Context, uri lsp.DocumentURI) (m
 					BuildDefName: TrimQuotes(arg.Value.Val.String),
 				}
 			case "visibility":
-				if buildDefs != nil {
+				if buildDef != nil {
 					buildDef.Visibility = aspListToStrSlice(arg.Value.Val.List)
 				}
 			}
@@ -450,6 +638,35 @@ func getArgString(argument asp.Argument) string {
 		argString += ", type:" + argType
 	}
 	return argString
+}
+
+func getArgReprs(headerSlice []string) []string {
+	re := regexp.MustCompile(`(\(.*\))`)
+	allArgs := re.FindString(strings.Join(headerSlice, ""))
+
+	var args string
+	if allArgs != "" {
+		args = allArgs[1 : len(allArgs)-1]
+	}
+
+	return strings.Split(args, ",")
+}
+
+func removePrivateArgFromHeader(headerstring string) string {
+	newHeader := ""
+	argsSplit := strings.Split(headerstring, ",")
+	for _, arg := range argsSplit {
+		if strings.HasPrefix(strings.TrimSpace(arg), "_") {
+			continue
+		}
+		newHeader += arg + ","
+	}
+
+	newHeader = strings.TrimSuffix(strings.TrimSpace(newHeader), ",")
+	if strings.HasSuffix(newHeader, ")") {
+		return newHeader
+	}
+	return newHeader + ")"
 }
 
 func aspListToStrSlice(listVal *asp.List) []string {

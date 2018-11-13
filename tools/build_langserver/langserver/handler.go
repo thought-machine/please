@@ -53,15 +53,16 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	}
 	h.conn = conn
 
-	log.Info(fmt.Sprintf("handling method %s with params: %s", req.Method, req.Params))
+	log.Info("handling method %s with params: %s", req.Method, req.Params)
 	methods := map[string]func(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error){
-		"initialize":              h.handleInit,
-		"initialzed":              h.handleInitialized,
-		"shutdown":                h.handleShutDown,
-		"exit":                    h.handleExit,
-		"$/cancelRequest":         h.handleCancel,
-		"textDocument/hover":      h.handleHover,
-		"textDocument/completion": h.handleCompletion,
+		"initialize":                 h.handleInit,
+		"initialzed":                 h.handleInitialized,
+		"shutdown":                   h.handleShutDown,
+		"exit":                       h.handleExit,
+		"$/cancelRequest":            h.handleCancel,
+		"textDocument/hover":         h.handleHover,
+		"textDocument/completion":    h.handleCompletion,
+		"textDocument/signatureHelp": h.handleSignature,
 	}
 
 	if req.Method != "initialize" && req.Method != "exit" &&
@@ -73,7 +74,6 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	if method, ok := methods[req.Method]; ok {
 		return method(ctx, req)
 	}
-	// TODO(bnm): call fs request handlers like, textDocument/didOpen
 
 	return h.handleTDRequests(ctx, req)
 }
@@ -129,7 +129,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	}
 
 	sigHelpOps := &lsp.SignatureHelpOptions{
-		TriggerCharacters: []string{"{", ","},
+		TriggerCharacters: []string{"(", ","},
 	}
 
 	defer log.Info("Plz build file language server initialized")
@@ -187,6 +187,23 @@ func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (re
 	defer h.requestStore.Cancel(params.ID)
 
 	return nil, nil
+}
+
+// ensureLineContent handle cases when the completion pos happens on the last line of the file, without any newline char
+func (h *LsHandler) ensureLineContent(uri lsp.DocumentURI, pos lsp.Position) string {
+	fileContent := h.workspace.documents[uri].textInEdit
+	// so we don't run into the problem of 'index out of range'
+	if len(fileContent)-1 < pos.Line {
+		return ""
+	}
+
+	lineContent := fileContent[pos.Line]
+
+	if len(lineContent)+1 == pos.Character && len(fileContent) == pos.Line+1 {
+		lineContent += "\n"
+	}
+
+	return lineContent
 }
 
 func getURIAndHandleErrors(uri lsp.DocumentURI, method string) (lsp.DocumentURI, error) {

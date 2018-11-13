@@ -22,7 +22,6 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 	if req.Params == nil {
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 	}
-
 	var params lsp.CompletionParams
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
@@ -35,8 +34,8 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	itemList, err := h.getCompletionItemsList(ctx, documentURI, params.Position)
 
+	itemList, err := h.getCompletionItemsList(ctx, documentURI, params.Position)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +50,10 @@ func (h *LsHandler) handleCompletion(ctx context.Context, req *jsonrpc2.Request)
 func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	uri lsp.DocumentURI, pos lsp.Position) ([]*lsp.CompletionItem, error) {
 
-	lineContent := h.workspace.documents[uri].textInEdit[pos.Line]
+	fileContent := h.workspace.documents[uri].textInEdit
+	fileContentStr := JoinLines(fileContent, true)
+	lineContent := h.ensureLineContent(uri, pos)
+
 	log.Info("Completion lineContent: %s", lineContent)
 
 	var completionList []*lsp.CompletionItem
@@ -62,15 +64,17 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	}
 
 	lineContent = lineContent[:pos.Character]
-	//stmt, err := h.analyzer.StatementFromPos(uri, pos)
-	//fmt.Println(err, stmt)
+
+	// get all the existing variable assignments in the current File
+	contentVars := h.analyzer.VariablesFromContent(fileContentStr, pos)
 
 	if LooksLikeAttribute(lineContent) {
-		completionList = itemsFromAttributes(lineContent, h.analyzer)
+		completionList = itemsFromAttributes(h.analyzer, contentVars, lineContent)
 	} else if label := ExtractBuildLabel(lineContent); label != "" {
-		completionList, completionErr = itemsFromBuildLabel(ctx, label, h.analyzer, uri)
+		completionList, completionErr = itemsFromBuildLabel(ctx, h.analyzer, label, uri)
 	} else {
-		// TODO(bnm): iterate through analyzer.Builtins, could use context to cancel request
+		literal := ExtractLiteral(lineContent)
+		completionList = itemsFromliterals(h.analyzer, contentVars, literal)
 	}
 
 	if completionErr != nil {
@@ -85,67 +89,138 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	return completionList, nil
 }
 
-func itemsFromBuildLabel(ctx context.Context, labelString string, analyzer *Analyzer,
+func itemsFromBuildLabel(ctx context.Context, analyzer *Analyzer, labelString string,
 	uri lsp.DocumentURI) (completionList []*lsp.CompletionItem, err error) {
 
 	labelString = TrimQuotes(labelString)
 
 	if strings.ContainsRune(labelString, ':') {
 		labelParts := strings.Split(labelString, ":")
-		// TODO(bnm): ADD TEST CASES FOR RELATIVE LABELS
-		var targetURI lsp.DocumentURI
-		// Get the uri based on weither the labelString is relative
+		var pkgLabel string
+
+		// Get the package label based on whether the labelString is relative
 		if strings.HasPrefix(labelString, ":") {
-			// relative labels to the current file
-			targetURI = uri
-		} else if strings.HasPrefix(labelString, "//") {
-			// Get none relative
-			targetURI = analyzer.BuildFileURIFromPackage(labelParts[0])
-		}
-
-		buildDefs, err := analyzer.BuildDefsFromURI(ctx, targetURI)
-		if err != nil {
-			return nil, err
-		}
-
-		currentPkg, err := PackageLabelFromURI(uri)
-		if err != nil {
-			return nil, err
-		}
-		for name, buildDef := range buildDefs {
-			if isVisible(buildDef, currentPkg) && strings.Contains(name, labelParts[1]) {
-				detail := fmt.Sprintf(" BUILD Label: %s", labelParts[0]+":"+name)
-
-				item := getCompletionItem(lsp.Value, name, detail)
-				completionList = append(completionList, item)
+			// relative package label
+			pkgLabel, err = PackageLabelFromURI(uri)
+			if err != nil {
+				return nil, err
 			}
+		} else if strings.HasPrefix(labelString, "//") {
+			// none relative package label
+			pkgLabel = labelParts[0]
 		}
-	} else {
-		pkgs := query.GetAllPackages(analyzer.State.Config, labelString[2:], core.RepoRoot)
-		// TODO(bnm): consider how to split the labels
-		for _, pkg := range pkgs {
-			detail := fmt.Sprintf(" BUILD Label: %s", "/"+pkg)
 
-			item := getCompletionItem(lsp.Value, strings.TrimPrefix(pkg, "/"), detail)
-			completionList = append(completionList, item)
+		return buildLabelItemsFromPackage(ctx, analyzer, pkgLabel, uri, labelParts[1], true)
+	}
+
+	pkgs := query.GetAllPackages(analyzer.State.Config, labelString[2:], core.RepoRoot)
+	for _, pkg := range pkgs {
+		labelItems, err := buildLabelItemsFromPackage(ctx, analyzer, "/"+pkg, uri, "", false)
+		if err != nil {
+			return nil, err
+		}
+
+		completionList = append(completionList, labelItems...)
+	}
+
+	// check if '/' is present, and only gets the next part of the label,
+	// so auto completion doesn't write out the whole label including the existing part
+	// e.g. //src/q -> query, query:query
+	if strings.ContainsRune(labelString[2:], '/') {
+		ind := strings.LastIndex(labelString[2:], "/")
+
+		for i := range completionList {
+			completionList[i].Label = completionList[i].Label[ind+1:]
 		}
 	}
 
 	return completionList, nil
 }
 
-func itemsFromAttributes(lineContent string, analyzer *Analyzer) []*lsp.CompletionItem {
+func buildLabelItemsFromPackage(ctx context.Context, analyzer *Analyzer, pkgLabel string,
+	currentURI lsp.DocumentURI, partials string, nameOnly bool) (completionList []*lsp.CompletionItem, err error) {
+
+	pkgURI := analyzer.BuildFileURIFromPackage(pkgLabel)
+	buildDefs, err := analyzer.BuildDefsFromURI(ctx, pkgURI)
+	if err != nil {
+		return nil, err
+	}
+
+	currentPkg, err := PackageLabelFromURI(currentURI)
+	if err != nil {
+		return nil, err
+	}
+
+	for name, buildDef := range buildDefs {
+		if isVisible(buildDef, currentPkg) && strings.Contains(name, partials) {
+			targetPkg, err := PackageLabelFromURI(pkgURI)
+			if err != nil {
+				return nil, err
+			}
+
+			fullLabel := targetPkg + ":" + name
+			detail := fmt.Sprintf(" BUILD Label: %s", fullLabel)
+
+			completionItemLabel := name
+			if !nameOnly {
+				completionItemLabel = strings.TrimPrefix(fullLabel, "//")
+			}
+
+			item := getCompletionItem(lsp.Value, completionItemLabel, detail)
+			completionList = append(completionList, item)
+		}
+	}
+
+	// also append the package label if there are visible labels in the package
+	if !nameOnly && len(completionList) != 0 {
+		detail := fmt.Sprintf(" BUILD Label: %s", pkgLabel)
+
+		item := getCompletionItem(lsp.Value, strings.TrimPrefix(pkgLabel, "//"), detail)
+		completionList = append(completionList, item)
+	}
+
+	return completionList, err
+}
+
+func itemsFromliterals(analyzer *Analyzer, contentVars map[string]Variable, literal string) []*lsp.CompletionItem {
+	var completionList []*lsp.CompletionItem
+
+	for key, val := range analyzer.BuiltIns {
+		if strings.Contains(key, literal) {
+			// ensure it's not part of an object, as it's already been taken care of in itemsFromAttributes
+			if val.Object == "" {
+				completionList = append(completionList, itemFromRuleDef(val))
+			}
+		}
+	}
+
+	for k, v := range contentVars {
+		if strings.Contains(k, literal) {
+			completionList = append(completionList, getCompletionItem(lsp.Variable, k, " variable type: "+v.Type))
+		}
+	}
+
+	// TODO(bnm): consider doing subincludes as well
+
+	return completionList
+}
+
+func itemsFromAttributes(analyzer *Analyzer, contentVars map[string]Variable, lineContent string) []*lsp.CompletionItem {
 
 	contentSlice := strings.Split(lineContent, ".")
 	partial := contentSlice[len(contentSlice)-1]
 
-	if LooksLikeStringAttr(lineContent) {
+	literalSlice := strings.Split(ExtractLiteral(lineContent), ".")
+	varName := literalSlice[0]
+	variable, present := contentVars[varName]
+
+	if LooksLikeStringAttr(lineContent) || (present && variable.Type == "string") {
 		return itemsFromMethods(analyzer.Attributes["str"], partial)
-	} else if LooksLikeDictAttr(lineContent) {
+	} else if LooksLikeDictAttr(lineContent) || (present && variable.Type == "dict") {
 		return itemsFromMethods(analyzer.Attributes["dict"], partial)
 	} else if LooksLikeCONFIGAttr(lineContent) {
-		// TODO(bnm): Perhaps this can be extracted to itemsFromProperty
 		var completionList []*lsp.CompletionItem
+
 		for tag, field := range analyzer.State.Config.TagsToFields() {
 			if !strings.Contains(tag, strings.ToUpper(partial)) {
 				continue
@@ -184,6 +259,7 @@ func itemFromRuleDef(ruleDef *RuleDef) *lsp.CompletionItem {
 	if len(docStringList) > 0 {
 		doc = docStringList[0]
 	}
+
 	detail := ruleDef.Header[strings.Index(ruleDef.Header, ruleDef.Name)+len(ruleDef.Name):]
 
 	item := getCompletionItem(lsp.Function, ruleDef.Name, detail)
@@ -192,13 +268,13 @@ func itemFromRuleDef(ruleDef *RuleDef) *lsp.CompletionItem {
 	return item
 }
 
-func getCompletionItem(kind lsp.CompletionItemKind, name string, detail string) *lsp.CompletionItem {
+func getCompletionItem(kind lsp.CompletionItemKind, label string, detail string) *lsp.CompletionItem {
 	return &lsp.CompletionItem{
-		Label:            name,
+		Label:            label,
 		Kind:             kind,
 		Detail:           detail,
 		InsertTextFormat: lsp.ITFPlainText,
-		SortText:         name,
+		SortText:         label,
 	}
 }
 

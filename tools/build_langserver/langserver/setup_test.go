@@ -8,9 +8,18 @@ import (
 	"tools/build_langserver/lsp"
 )
 
+// TODO(bnm): cleanup setup
 // TestMain runs the setup for the tests for all the tests relating to langserver
 func TestMain(m *testing.M) {
 	core.FindRepoRoot()
+	dummyBuildFiles := []string{
+		"completion2.build",
+	}
+
+	for _, i := range dummyBuildFiles {
+		analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName, i)
+	}
+
 	retCode := m.Run()
 	os.Exit(retCode)
 }
@@ -20,8 +29,12 @@ var assignBuildURI = lsp.DocumentURI("file://tools/build_langserver/langserver/t
 var propURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/property.build")
 var miscURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/misc.build")
 var completionURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion.build")
+var completion2URI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion2.build")
 var completionPropURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_props.build")
 var completionLabelURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_buildlabels.build")
+var completionLiteralURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_literal.build")
+var completionStmtURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_stmt.build")
+var sigURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/signature.build")
 
 var analyzer, _ = newAnalyzer()
 

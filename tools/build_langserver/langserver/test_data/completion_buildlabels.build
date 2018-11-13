@@ -2,4 +2,7 @@
 "//src/query:"
 "//src/query:q"
 
-"//src/"
+"//src/q"
+
+"//src/q
+"//tools/cache

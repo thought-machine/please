@@ -23,7 +23,7 @@ func TestNewAnalyzer(t *testing.T) {
 
 	goLibrary := a.BuiltIns["go_library"]
 	assert.Equal(t, 15, len(goLibrary.ArgMap))
-	assert.Equal(t, true, goLibrary.ArgMap["name"].required)
+	assert.Equal(t, true, goLibrary.ArgMap["name"].Required)
 
 	// Check for methods map
 	_, ok := a.Attributes["str"]
@@ -76,9 +76,8 @@ func TestNewRuleDef(t *testing.T) {
 
 	// Test header the definition for build_rule
 	expected := "def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],\n" +
-		"               visibility:list=None, test_only:bool&testonly=False, complete:bool=True,\n" +
-		"               _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,\n" +
-		"               filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True)"
+		"               visibility:list=None, test_only:bool&testonly=False, complete:bool=True, cover:bool=True,\n" +
+		"               filter_srcs:bool=True)"
 
 	ruleContent := rules.MustAsset("go_rules.build_defs")
 
@@ -90,9 +89,9 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, expected)
 	assert.Equal(t, len(ruleDef.Arguments), len(ruleDef.ArgMap))
-	assert.Equal(t, false, ruleDef.ArgMap["_link_private"].required)
-	assert.Equal(t, true, ruleDef.ArgMap["name"].required)
-	assert.Equal(t, ruleDef.ArgMap["visibility"].definition,
+	assert.Equal(t, false, ruleDef.ArgMap["_link_private"].Required)
+	assert.Equal(t, true, ruleDef.ArgMap["name"].Required)
+	assert.Equal(t, ruleDef.ArgMap["visibility"].Definition,
 		"visibility required:false, type:list")
 
 	// Test header for len()
@@ -106,8 +105,9 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, "def len(obj)")
 	assert.Equal(t, len(ruleDef.ArgMap), 1)
-	assert.Equal(t, true, ruleDef.ArgMap["obj"].required)
-	assert.Equal(t, ruleDef.ArgMap["obj"].definition, "obj required:true")
+	assert.Equal(t, true, ruleDef.ArgMap["obj"].Required)
+	assert.Equal(t, ruleDef.ArgMap["obj"].Definition, "obj required:true")
+	assert.Equal(t, "obj", ruleDef.ArgMap["obj"].Repr)
 
 	// Test header for a string function, startswith()
 	stmt = getStatementByName(statements, "startswith")
@@ -115,7 +115,8 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, "str.startswith(s:str)")
 	assert.Equal(t, len(ruleDef.ArgMap), 1)
-	assert.Equal(t, true, ruleDef.ArgMap["s"].required)
+	assert.Equal(t, true, ruleDef.ArgMap["s"].Required)
+	assert.Equal(t, "s:str", ruleDef.ArgMap["s"].Repr)
 
 	// Test header for a string function, format()
 	stmt = getStatementByName(statements, "format")
@@ -131,7 +132,7 @@ func TestNewRuleDef(t *testing.T) {
 
 	assert.Equal(t, ruleDef.Header, "config.setdefault(key:str, default=None)")
 	assert.Equal(t, 2, len(ruleDef.ArgMap))
-	assert.Equal(t, false, ruleDef.ArgMap["default"].required)
+	assert.Equal(t, false, ruleDef.ArgMap["default"].Required)
 }
 
 func TestGetArgString(t *testing.T) {
@@ -173,7 +174,8 @@ func TestBuildLabelFromString(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, path.Join(core.RepoRoot, "third_party/go/BUILD"), label.Path)
 	assert.Equal(t, "jsonrpc2", label.Name)
-	assert.Equal(t, expectedContent, label.Definition)
+	assert.Equal(t, expectedContent, label.BuildDef.Content)
+	assert.Equal(t, `BUILD Label: //third_party/go:jsonrpc2`, label.Definition)
 
 	// Test case for relative BuildLabel path
 	label, err = a.BuildLabelFromString(ctx, uri, ":langserver")
@@ -199,7 +201,7 @@ func TestBuildLabelFromString(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, absPath, label.Path)
 	assert.Equal(t, "langserver", label.Name)
-	assert.Equal(t, expectedContent, label.Definition)
+	assert.Equal(t, expectedContent, label.BuildDef.Content)
 
 	// Test case for Allsubpackage BuildLabels: "//src/parse/..."
 	label, err = a.BuildLabelFromString(ctx,
@@ -258,6 +260,52 @@ func TestAnalyzer_IsBuildFile(t *testing.T) {
 
 	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
 	assert.True(t, a.IsBuildFile(uri))
+}
+
+func TestAnalyzer_VariableFromContentGLOBAL(t *testing.T) {
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+	pos := lsp.Position{Line: 5, Character: 0}
+
+	// Tests for string variables
+	vars := a.VariablesFromContent(`my_str = "my str"`+"   \n"+
+		`another_str = ""`+"\n   "+`more_empty = ''`, pos)
+	assert.Equal(t, "my_str", vars["my_str"].Name)
+	assert.Equal(t, "another_str", vars["another_str"].Name)
+	assert.Equal(t, "more_empty", vars["more_empty"].Name)
+	for _, v := range vars {
+		assert.Equal(t, "string", v.Type)
+	}
+
+	vars = a.VariablesFromContent(`fstr = f"blah"`, pos)
+	assert.Equal(t, "string", vars["fstr"].Type)
+
+	// Tests for int variables
+	vars = a.VariablesFromContent(`my_int = 34`, pos)
+	assert.Equal(t, "my_int", vars["my_int"].Name)
+	assert.Equal(t, "int", vars["my_int"].Type)
+
+	// Tests for list variables
+	vars = a.VariablesFromContent(`my_list = []`, pos)
+	assert.Equal(t, "my_list", vars["my_list"].Name)
+	assert.Equal(t, "list", vars["my_list"].Type)
+
+	vars = a.VariablesFromContent(`my_list2 = [1, 2, 3]`, pos)
+	assert.Equal(t, "my_list2", vars["my_list2"].Name)
+	assert.Equal(t, "list", vars["my_list2"].Type)
+
+	// Tests for dict variables
+	vars = a.VariablesFromContent(`my_dict = {'foo': 1, 'bar': 3}`, pos)
+	assert.Equal(t, "my_dict", vars["my_dict"].Name)
+	assert.Equal(t, "dict", vars["my_dict"].Type)
+
+	// Test for calls
+	vars = a.VariablesFromContent(`my_call = go_library()`, pos)
+	assert.Equal(t, "", vars["my_call"].Type)
+
+	// Test for reassigning variable
+	vars = a.VariablesFromContent(`foo = "hello"`+"\n"+`foo = 90`, pos)
+	assert.Equal(t, "int", vars["foo"].Type)
 }
 
 /************************

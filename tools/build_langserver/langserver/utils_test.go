@@ -221,6 +221,47 @@ func TestExtractBuildLabel(t *testing.T) {
 
 	label = ExtractBuildLabel(`"//src/cache/blah/:`)
 	assert.Equal(t, "", label)
+
+	label = ExtractBuildLabel(`"//src/ca`)
+	assert.Equal(t, "//src/ca", label)
+}
+
+func TestExtractLiteral(t *testing.T) {
+	lit := ExtractLiteral(`blah = "go_librar`)
+	assert.Equal(t, "", lit)
+
+	lit = ExtractLiteral(`blah = go_librar`)
+	assert.Equal(t, "go_librar", lit)
+
+	lit = ExtractLiteral(`go_librar`)
+	assert.Equal(t, "go_librar", lit)
+
+	lit = ExtractLiteral(`blah = " = go_librar`)
+	assert.Equal(t, "", lit)
+
+	lit = ExtractLiteral(`blah = "hello", hi = go_lib`)
+	assert.Equal(t, "go_lib", lit)
+
+	lit = ExtractLiteral(`blah = 'hello', hi = go_lib`)
+	assert.Equal(t, "go_lib", lit)
+
+	lit = ExtractLiteral(`"blah = 'hello, hi = go_lib`)
+	assert.Equal(t, "", lit)
+
+	// Tests for extracting attribute literals
+	lit = ExtractLiteral(`blah.form`)
+	assert.Equal(t, "blah.form", lit)
+
+	lit = ExtractLiteral(`hello = blah.form`)
+	assert.Equal(t, "blah.form", lit)
+
+	lit = ExtractLiteral(`hello = "blah.form`)
+	assert.Equal(t, "", lit)
+
+	lit = ExtractLiteral(`blah = 'hello', hi = blah.form`)
+	assert.Equal(t, "blah.form", lit)
+
+	assert.Equal(t, ".format", ExtractLiteral(`"blah".format`))
 }
 
 /*

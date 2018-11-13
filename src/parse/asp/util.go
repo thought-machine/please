@@ -62,44 +62,72 @@ func FindArgument(statement *Statement, args ...string) *CallArgument {
 // StatementOrExpressionFromAst recursively finds asp.IdentStatement and asp.Expression in the ast
 // and returns a valid statement pointer if within range
 func StatementOrExpressionFromAst(stmts []*Statement, position Position) (statement *Statement, expression *Expression) {
-	return getStatementOrExpressionFromAst(reflect.ValueOf(stmts), position)
-}
-
-func getStatementOrExpressionFromAst(v reflect.Value, position Position) (statement *Statement, expression *Expression) {
-	if v.Type() == reflect.TypeOf(Expression{}) {
-		expr := v.Interface().(Expression)
-		if withInRange(expr.Pos, expr.EndPos, position) {
-			return nil, &expr
-		}
-	} else if v.Type() == reflect.TypeOf([]*Statement{}) && v.Len() != 0 {
-		stmts := v.Interface().([]*Statement)
-		for _, stmt := range stmts {
+	callback := func(astStruct interface{}) interface{} {
+		if expr, ok := astStruct.(Expression); ok {
+			if withInRange(expr.Pos, expr.EndPos, position) {
+				return expr
+			}
+		} else if stmt, ok := astStruct.(Statement); ok {
 			if withInRange(stmt.Pos, stmt.EndPos, position) {
 				// get function call, assignment, and property access
 				if stmt.Ident != nil {
-					return stmt, nil
+					return stmt
 				}
-				return getStatementOrExpressionFromAst(reflect.ValueOf(stmt), position)
 			}
 		}
-	} else if v.Kind() == reflect.Ptr && !v.IsNil() {
-		return getStatementOrExpressionFromAst(v.Elem(), position)
+
+		return nil
+	}
+
+	item := WalkAST(stmts, callback)
+	if item != nil {
+		if expr, ok := item.(Expression); ok {
+			return nil, &expr
+		} else if stmt, ok := item.(Statement); ok {
+			return &stmt, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// WalkAST is a generic function that walks through the ast recursively,
+// astStruct can be anything inside of the AST, such as asp.Statement, asp.Expression
+// it accepts a callback for any operations
+func WalkAST(astStruct interface{}, callback func(astStruct interface{}) interface{}) interface{} {
+	if astStruct == nil {
+		return nil
+	}
+
+	item := callback(astStruct)
+	if item != nil {
+		return item
+	}
+
+	v, ok := astStruct.(reflect.Value)
+	if !ok {
+		v = reflect.ValueOf(astStruct)
+	}
+
+	if v.Kind() == reflect.Ptr && !v.IsNil() {
+		return WalkAST(v.Elem().Interface(), callback)
 	} else if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
-			stmt, expr := getStatementOrExpressionFromAst(v.Index(i), position)
-			if expr != nil || stmt != nil {
-				return stmt, expr
+			item = WalkAST(v.Index(i).Interface(), callback)
+			if item != nil {
+				return item
 			}
 		}
 	} else if v.Kind() == reflect.Struct {
 		for i := 0; i < v.NumField(); i++ {
-			stmt, expr := getStatementOrExpressionFromAst(v.Field(i), position)
-			if expr != nil || stmt != nil {
-				return stmt, expr
+			item = WalkAST(v.Field(i).Interface(), callback)
+			if item != nil {
+				return item
 			}
 		}
 	}
-	return nil, nil
+	return nil
+
 }
 
 // withInRange checks if the input position is within the range of the Expression
@@ -115,6 +143,14 @@ func withInRange(exprPos Position, exprEndPos Position, pos Position) bool {
 
 	if !withInLineRange || (onTheSameLine && !withInColRange) {
 		return false
+	}
+
+	if pos.Line == exprPos.Line {
+		return pos.Column >= exprPos.Column
+	}
+
+	if pos.Line == exprEndPos.Line {
+		return pos.Column <= exprEndPos.Column
 	}
 
 	return true
