@@ -99,8 +99,9 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 		if state.Verbosity > 0 {
 			printFailedBuildResults(failedNonTests, failedTargetMap, duration)
 		}
-		if !keepGoing {
+		if !keepGoing && !state.Watch {
 			// Die immediately and unsuccessfully, this avoids awkward interactions with various things later.
+			log.Warning("here")
 			os.Exit(-1)
 		}
 	}

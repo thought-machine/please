@@ -124,6 +124,8 @@ type BuildState struct {
 	PrepareOnly bool
 	// True if we're going to run a shell after builds are prepared.
 	PrepareShell bool
+	// True if this build is triggered by watching for changes
+	Watch bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
 	NumTestRuns int
 	// True to clean working directories after successful builds.

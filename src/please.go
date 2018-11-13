@@ -186,8 +186,9 @@ var opts struct {
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
 
 	Watch struct {
-		Run  bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
-		Args struct {
+		Run      bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
+		Watching bool `no-flag:"true"`
+		Args     struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to watch the sources of for changes"`
 		} `positional-args:"true" required:"true"`
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
@@ -646,6 +647,7 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"watch": func() bool {
+		opts.Watch.Watching = true
 		success, state := runBuild(opts.Watch.Args.Targets, true, true)
 		watchedProcessName := setWatchedTarget(state, state.ExpandOriginalTargets())
 		if success {
@@ -720,7 +722,6 @@ func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exc
 	}
 }
 
-// set the watch
 func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
 	if opts.Watch.Run {
 		opts.Run.Parallel.PositionalArgs.Targets = labels
@@ -740,7 +741,6 @@ func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
 		}
 	}
 	opts.Build.Args.Targets = labels
-
 	return "build"
 }
 
@@ -803,6 +803,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell
 	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
+	state.Watch = opts.Watch.Watching
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
