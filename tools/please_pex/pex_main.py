@@ -1,6 +1,7 @@
 """Zipfile entry point which supports auto-extracting itself based on zip-safety."""
 
 from importlib import import_module
+import zipfile
 import os
 import runpy
 import sys
@@ -59,7 +60,6 @@ class SoImport(object):
     """So import. Much binary. Such dynamic. Wow."""
 
     def __init__(self):
-        import zipfile
 
         if PY_VERSION < 3:
             self.suffixes = {x[0]: x for x in imp.get_suffixes() if x[2] == imp.C_EXTENSION}
@@ -135,6 +135,10 @@ class ModuleDirImport(object):
         module = import_module(fullname[len(self.prefix):])
         sys.modules[fullname] = module
         return module
+
+    def get_code(self, fullname):
+        module = self.load_module(fullname)
+        return module.__loader__.get_code(fullname)
 
 
 def clean_sys_path():
