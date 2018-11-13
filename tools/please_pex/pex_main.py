@@ -137,17 +137,8 @@ class ModuleDirImport(object):
         return module
 
     def get_code(self, fullname):
-        from pkgutil import read_code
-
-        module_path = fullname.replace('.', '/')
-        if zipfile.is_zipfile(sys.argv[0]):
-            zf = zipfile.ZipFile(sys.argv[0])
-            for name in zf.namelist():
-                if name.startswith(module_path):
-                    with open(name, 'rb') as f:
-                        code = read_code(f)
-                        if code is not None:
-                            return code
+        module = self.load_module(fullname)
+        return module.__loader__.get_code(fullname)
 
 
 def clean_sys_path():
