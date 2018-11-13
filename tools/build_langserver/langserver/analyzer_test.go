@@ -301,7 +301,7 @@ func TestAnalyzer_VariableFromContentGLOBAL(t *testing.T) {
 
 	// Test for calls
 	vars = a.VariablesFromContent(`my_call = go_library()`, pos)
-	assert.Equal(t, "ident", vars["my_call"].Type)
+	assert.Equal(t, "", vars["my_call"].Type)
 
 	// Test for reassigning variable
 	vars = a.VariablesFromContent(`foo = "hello"`+"\n"+`foo = 90`, pos)

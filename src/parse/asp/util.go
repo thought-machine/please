@@ -62,12 +62,12 @@ func FindArgument(statement *Statement, args ...string) *CallArgument {
 // StatementOrExpressionFromAst recursively finds asp.IdentStatement and asp.Expression in the ast
 // and returns a valid statement pointer if within range
 func StatementOrExpressionFromAst(stmts []*Statement, position Position) (statement *Statement, expression *Expression) {
-	callback := func(ASTstruct interface{}) interface{} {
-		if expr, ok := ASTstruct.(Expression); ok {
+	callback := func(astStruct interface{}) interface{} {
+		if expr, ok := astStruct.(Expression); ok {
 			if withInRange(expr.Pos, expr.EndPos, position) {
 				return expr
 			}
-		} else if stmt, ok := ASTstruct.(Statement); ok {
+		} else if stmt, ok := astStruct.(Statement); ok {
 			if withInRange(stmt.Pos, stmt.EndPos, position) {
 				// get function call, assignment, and property access
 				if stmt.Ident != nil {
@@ -92,21 +92,21 @@ func StatementOrExpressionFromAst(stmts []*Statement, position Position) (statem
 }
 
 // WalkAST is a generic function that walks through the ast recursively,
-// ASTstruct can be anything inside of the AST, such as asp.Statement, asp.Expression
+// astStruct can be anything inside of the AST, such as asp.Statement, asp.Expression
 // it accepts a callback for any operations
-func WalkAST(ASTstruct interface{}, callback func(ASTstruct interface{}) interface{}) interface{} {
-	if ASTstruct == nil {
+func WalkAST(astStruct interface{}, callback func(astStruct interface{}) interface{}) interface{} {
+	if astStruct == nil {
 		return nil
 	}
 
-	item := callback(ASTstruct)
+	item := callback(astStruct)
 	if item != nil {
 		return item
 	}
 
-	v, ok := ASTstruct.(reflect.Value)
+	v, ok := astStruct.(reflect.Value)
 	if !ok {
-		v = reflect.ValueOf(ASTstruct)
+		v = reflect.ValueOf(astStruct)
 	}
 
 	if v.Kind() == reflect.Ptr && !v.IsNil() {

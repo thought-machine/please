@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
-	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -260,8 +259,8 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 				continue
 			}
 
-			callback := func(ASTstruct interface{}) interface{} {
-				if stmt, ok := ASTstruct.(asp.Statement); ok {
+			callback := func(astStruct interface{}) interface{} {
+				if stmt, ok := astStruct.(asp.Statement); ok {
 					if stmt.Ident != nil {
 						ident := a.identFromStatement(&stmt)
 						return ident
@@ -293,6 +292,10 @@ func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *
 
 // CallFromStatementAndPos returns a call object within the statement if it's within the range of the position
 func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *Call {
+	if stmt == nil {
+		return nil
+	}
+
 	if stmt.Ident != nil {
 		call := a.CallFromAST(stmt, pos)
 		if call != nil {
@@ -313,10 +316,10 @@ func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *C
 
 // CallFromAST returns the Call object from the AST if it's within the range of the position
 func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
-	var callback func(ASTstruct interface{}) interface{}
+	var callback func(astStruct interface{}) interface{}
 
-	callback = func(ASTstruct interface{}) interface{} {
-		if expr, ok := ASTstruct.(asp.IdentExpr); ok {
+	callback = func(astStruct interface{}) interface{} {
+		if expr, ok := astStruct.(asp.IdentExpr); ok {
 			for _, action := range expr.Action {
 				if action.Call != nil &&
 					withInRange(expr.Pos, expr.EndPos, pos) {
@@ -370,20 +373,18 @@ func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[st
 }
 
 func getVarType(valExpr *asp.ValueExpression) string {
-	v := reflect.ValueOf(valExpr).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		if v.Field(i).Kind() == reflect.String {
-			if v.Field(i).String() != "" {
-				return "string"
-			}
-		} else if !v.Field(i).IsNil() {
-			typeName := v.Type().Field(i).Name
-			if typeName == "FString" {
-				return "string"
-			}
-			return strings.ToLower(typeName)
-		}
+	if valExpr.String != "" || valExpr.FString != nil {
+		return "string"
+	} else if valExpr.Int != nil {
+		return "int"
+	} else if valExpr.Bool != "" {
+		return "bool"
+	} else if valExpr.Dict != nil {
+		return "dict"
+	} else if valExpr.List != nil {
+		return "list"
 	}
+
 	return ""
 }
 
@@ -398,6 +399,10 @@ func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) 
 }
 
 func (a *Analyzer) getStatementFromPos(stmts []*asp.Statement, position lsp.Position) *Statement {
+	if len(stmts) == 0 {
+		return nil
+	}
+
 	statement, expr := asp.StatementOrExpressionFromAst(stmts,
 		asp.Position{Line: position.Line + 1, Column: position.Character + 1})
 

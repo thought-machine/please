@@ -231,6 +231,38 @@ func TestCompletionWithVars(t *testing.T) {
 }
 
 /***************************************
+ *Tests for Statements
+ ***************************************/
+func TestCompletionWithIf(t *testing.T) {
+	ctx := context.Background()
+
+	err := storeFile(ctx, completionStmtURI)
+	assert.Equal(t, nil, err)
+
+	// test within if statement
+	items, err := handler.getCompletionItemsList(ctx, completionStmtURI, lsp.Position{Line: 1, Character: 7})
+	assert.Equal(t, nil, err)
+	assert.True(t, itemInList(items, "go_library"))
+
+	items, err = handler.getCompletionItemsList(ctx, completionStmtURI, lsp.Position{Line: 7, Character: 21})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, len(items), 2)
+	assert.True(t, itemInList(items, "query"))
+	assert.True(t, itemInList(items, "query:query"))
+
+	// test at the beginning of if statement
+	items, err = handler.getCompletionItemsList(ctx, completionStmtURI, lsp.Position{Line: 3, Character: 6})
+	assert.Equal(t, nil, err)
+	assert.True(t, itemInList(items, "python_library"))
+
+	// test else statement
+	items, err = handler.getCompletionItemsList(ctx, completionStmtURI, lsp.Position{Line: 9, Character: 23})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, len(analyzer.Attributes["str"]), len(items))
+	assert.True(t, itemInList(items, "count"))
+}
+
+/***************************************
  * Helpers
  ***************************************/
 func itemInList(itemList []*lsp.CompletionItem, targetLabel string) bool {
