@@ -261,8 +261,8 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 				continue
 			}
 
-			callback := func(iface interface{}) interface{} {
-				if stmt, ok := iface.(asp.Statement); ok {
+			callback := func(ASTstruct interface{}) interface{} {
+				if stmt, ok := ASTstruct.(asp.Statement); ok {
 					if stmt.Ident != nil {
 						ident := a.identFromStatement(&stmt)
 						return ident
@@ -314,10 +314,10 @@ func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *C
 
 // CallFromAST returns the Call object from the AST if it's within the range of the position
 func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
-	var callback func(iface interface{}) interface{}
+	var callback func(ASTstruct interface{}) interface{}
 
-	callback = func(iface interface{}) interface{} {
-		if expr, ok := iface.(asp.IdentExpr); ok {
+	callback = func(ASTstruct interface{}) interface{} {
+		if expr, ok := ASTstruct.(asp.IdentExpr); ok {
 			for _, action := range expr.Action {
 				if action.Call != nil &&
 					withInRange(expr.Pos, expr.EndPos, pos) {
