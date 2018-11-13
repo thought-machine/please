@@ -192,6 +192,11 @@ func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (re
 // ensureLineContent handle cases when the completion pos happens on the last line of the file, without any newline char
 func (h *LsHandler) ensureLineContent(uri lsp.DocumentURI, pos lsp.Position) string {
 	fileContent := h.workspace.documents[uri].textInEdit
+	// so we don't run into the problem of 'index out of range'
+	if len(fileContent)-1 < pos.Line {
+		return ""
+	}
+
 	lineContent := fileContent[pos.Line]
 
 	if len(lineContent)+1 == pos.Character && len(fileContent) == pos.Line+1 {

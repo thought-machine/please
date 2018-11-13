@@ -252,9 +252,7 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 				ident := a.identFromStatement(stmt)
 				ch <- ident
 			}
-
 			// Get local variables if it's within scope
-			// TODO(bnm): write test cases for this!!!!
 			if !withInRange(stmt.Pos, stmt.EndPos, pos) {
 				continue
 			}

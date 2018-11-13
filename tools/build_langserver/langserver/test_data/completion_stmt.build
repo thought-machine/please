@@ -1,10 +1,10 @@
 if len("hello"):
+    return "//src/que"
+else:
+    blah = "my string"
+    return blah.f
+
+if len("hello"):
     go_
 
 if pyt
-
-
-if len("hello"):
-    return "//src/que"
-else:
-    return "my string".
