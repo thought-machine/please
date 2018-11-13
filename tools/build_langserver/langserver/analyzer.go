@@ -190,7 +190,6 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 				ruleDef.Object = arg.Type[0]
 			} else {
 				// Fill in the ArgMap
-				//fmt.Println(stmt.FuncDef.Name, argReprs)
 				var repr string
 				if len(argReprs)-1 >= i {
 					repr = strings.TrimSpace(argReprs[i])

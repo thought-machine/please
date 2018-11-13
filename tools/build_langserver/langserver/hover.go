@@ -125,11 +125,11 @@ func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArg
 	}
 
 	// Check arguments of the IdentStatement, and return the appropriate content if any
-	return contentFromIdentArgs(ctx, analyzer, args, identName,
+	return contentFromArgs(ctx, analyzer, args, identName,
 		lineContent, uri, pos)
 }
 
-func contentFromIdentArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
+func contentFromArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
 	identName string, lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
 
 	builtinRule := analyzer.BuiltIns[identName]
@@ -175,27 +175,6 @@ func contentFromExpression(ctx context.Context, analyzer *Analyzer, expr *asp.Ex
 		return "", nil
 	}
 
-	// content from Expression.If
-	if expr.If != nil {
-		if expr.If.Condition != nil {
-			content, err := contentFromExpression(ctx, analyzer, expr.If.Condition, lineContent, uri, pos)
-			if err != nil {
-				return "", err
-			}
-			if content != "" {
-				return content, nil
-			}
-		}
-		if expr.If.Else != nil {
-			content, err := contentFromExpression(ctx, analyzer, expr.If.Else, lineContent, uri, pos)
-			if err != nil {
-				return "", err
-			}
-			if content != "" {
-				return content, nil
-			}
-		}
-	}
 	// content from Expression.Val
 	if expr.Val != nil {
 		return contentFromValueExpression(ctx, analyzer, expr.Val, lineContent, uri, pos)
@@ -234,7 +213,7 @@ func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
 			continue
 		}
 
-		content, err := contentFromValueExpression(ctx, analyzer, expr.Val,
+		content, err := contentFromExpression(ctx, analyzer, expr,
 			lineContent, uri, pos)
 		if err != nil {
 			return "", err
