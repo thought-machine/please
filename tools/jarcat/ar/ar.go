@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blakesmith/ar"
+	"github.com/peterebden/ar"
 	"gopkg.in/op/go-logging.v1"
 
 	"fs"
@@ -27,6 +27,18 @@ var mtime = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 // If combine is true they are treated as existing ar files and combined.
 // If rename is true the srcs are renamed as gcc would (i.e. the extension is replaced by .o).
 func Create(srcs []string, out string, combine, rename bool) error {
+	// Rename the sources as gcc would.
+	if rename {
+		for i, src := range srcs {
+			src = path.Base(src)
+			if ext := path.Ext(src); ext != "" {
+				src = src[:len(src)-len(ext)] + ".o"
+			}
+			srcs[i] = src
+			log.Debug("renamed ar source to %s", src)
+		}
+	}
+
 	log.Debug("Writing ar to %s", out)
 	f, err := os.Create(out)
 	if err != nil {
@@ -36,18 +48,11 @@ func Create(srcs []string, out string, combine, rename bool) error {
 	bw := bufio.NewWriter(f)
 	defer bw.Flush()
 	w := ar.NewWriter(bw)
-	if err := w.WriteGlobalHeader(); err != nil {
+	if err := w.WriteGlobalHeaderForLongFiles(allSourceNames(srcs, combine)); err != nil {
 		return err
 	}
 	for _, src := range srcs {
 		log.Debug("ar source file: %s", src)
-		if rename {
-			src = path.Base(src)
-			if ext := path.Ext(src); ext != "" {
-				src = src[:len(src)-len(ext)] + ".o"
-			}
-			log.Debug("renamed ar source to %s", src)
-		}
 		f, err := os.Open(src)
 		if err != nil {
 			return err
@@ -118,6 +123,7 @@ func Create(srcs []string, out string, combine, rename bool) error {
 				Mode:    int64(info.Mode()),
 				Size:    info.Size(),
 			}
+			log.Debug("creating file %s", hdr.Name)
 			if err := w.WriteHeader(hdr); err != nil {
 				return err
 			} else if _, err := io.Copy(w, f); err != nil {
@@ -138,4 +144,26 @@ func Find() ([]string, error) {
 		}
 		return nil
 	})
+}
+
+// allSourceNames returns the name of all source files that we will add to the archive.
+func allSourceNames(srcs []string, combine bool) []string {
+	if !combine {
+		return srcs
+	}
+	ret := []string{}
+	for _, src := range srcs {
+		f, err := os.Open(src)
+		if err == nil {
+			r := ar.NewReader(f)
+			for {
+				hdr, err := r.Next()
+				if err != nil {
+					break
+				}
+				ret = append(ret, hdr.Name)
+			}
+		}
+	}
+	return ret
 }

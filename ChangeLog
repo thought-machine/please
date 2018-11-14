@@ -1,3 +1,9 @@
+Version 13.2.4
+--------------
+
+    * Better support for long filenames when operating on ar archives.
+
+
 Version 13.2.3
 --------------
 
