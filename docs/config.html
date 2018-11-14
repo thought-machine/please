@@ -324,14 +324,21 @@
         String name of the canonical path of this repository.<br/>
 	This path is used as the prefix of the package name relative to this <code>please</code> build directory.
 	<code>importpath</code> is commonly used to prepend <code>github.com/myorg/myrepo</code> to a project's
-        path.
-      </li>
+        path.</li>
+
+      <li><b>GoPath</b><br/>
+        If set, will set the GOPATH environment variable appropriately during build actions.</li>
+
+      <li><b>GoTool</b><br/>
+        If set, the binary name to use to invoke Go & its subtools with.
+        Defaults to <code>go</code>.</li>
 
       <li><b>GoRoot</b><br/>
         If set, will set the GOROOT environment variable appropriately during build actions.</li>
 
-      <li><b>GoPath</b><br/>
-        If set, will set the GOPATH environment variable appropriately during build actions.</li>
+      <li><b>BuildIDTool</b><br/>
+        Sets the name of the binary to use to replace Go <code>go tool buildid</code>.
+        Defaults to <code>go_buildid_replacer</code>.</li>
 
       <li><b>TestTool</b><br/>
         Sets the location of the <code>please_go_test</code> tool that is used to template the test
