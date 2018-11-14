@@ -121,5 +121,5 @@ func printMessage(msg string) {
 		})
 	}
 	// Replace % to %% when not followed by anything so it doesn't become a replacement.
-	cli.Fprintf(os.Stdout, strings.Replace(msg, "% ", "%% ", -1))
+	cli.Fprintf(os.Stdout, strings.Replace(msg, "% ", "%% ", -1)+"\n")
 }
