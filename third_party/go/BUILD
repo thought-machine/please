@@ -621,7 +621,6 @@ go_get(
 
 go_get(
     name = "ar",
-    get = "github.com/blakesmith/ar",
-    patch = "ar_octal.diff",
-    revision = "8bd4349a67f2533b078dbc524689d15dba0f4659",
+    get = "github.com/peterebden/ar",
+    revision = "413052a5f1f1209a300a9b6b19652079b6eb1550",
 )
