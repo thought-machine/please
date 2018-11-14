@@ -60,12 +60,13 @@
 
       <li><b>DownloadLocation</b><br/>
         Defines the location to download Please from when self-updating. Defaults to the Please
-        web server, but you can point it to some location of your own if you prefer to keep
+        web server (<code>https://get.please.build</code>), but you can point it to some location of your own if you prefer to keep
         traffic within your network or use home-grown versions.</li>
 
       <li><b>Lang</b><br/>
         Sets the language passed to build rules when building. This can be important for some
-        tools (although hopefully not many) - we've mostly observed it with Sass.</li>
+        tools (although hopefully not many) - we've mostly observed it with Sass.
+        Defaults to <code>en_GB.UTF-8</code>.</li>
 
       <li><b>Nonce</b><br/>
         This is an arbitrary string that is added to the hash of every build target. It provides
@@ -75,14 +76,15 @@
 
       <li><b>NumThreads</b> (int)<br/>
         Number of parallel build operations to run.<br/>
-        Is overridden by the equivalent command-line flag, if that's passed.</li>
+        Is overridden by the equivalent command-line flag, if that's passed.
+        Defaults to the number of CPUs plus two.</li>
     </ul>
 
     <h3>[Parse]</h3>
 
     <ul>
       <li><b>BuildFileName</b> (repeated string)<br/>
-        Sets the names that Please uses instead of <code>BUILD</code> for its build files.<br/>
+        Sets the names that Please uses for its build files.  Defaults to <code>BUILD</code>.<br/>
         For clarity the documentation refers to them simply as BUILD files but you could
         reconfigure them here to be something else.<br/>
         One case this can be particularly useful is in cases where you have a subdirectory named
@@ -118,10 +120,11 @@
       <li><b>UpdateTitle</b> (bool)<br/>
 	Whether to update the window title as things are built. This is off by default because while
 	many Linux shells will reset it afterwards, others won't and it's not ideal for us to leave
-	    it messed up.</li>
+	it messed up.</li>
 
       <li><b>SystemStats</b> (bool)<br/>
-	  Whether or not to show basic system resource usage in the interactive display.</li>
+	Whether or not to show basic system resource usage in the interactive display.
+        Defaults to <code>False</code>.</li>
     </ul>
 
     <h3>[Build]</h3>
@@ -153,7 +156,8 @@
 
       <li><b>Sandbox</b> (bool)<br/>
         Activates sandboxing for individual build actions, which isolates them using Linux namespaces.
-        Only works on Linux and requires please_sandbox to be installed separately.</li>
+        Only works on Linux and requires please_sandbox to be installed separately.
+        Defaults to <code>False</code>.</li>
 
     </ul>
 
@@ -168,10 +172,12 @@
 
       <li><b>DirCacheHighWaterMark</b> (size)<br/>
         Starts cleaning the directory cache when it is over this number of bytes.<br/>
-        Can also be given with human-readable suffixes like 10G, 200MB etc.</li>
+        Can also be given with human-readable suffixes like 10G, 200MB etc.
+        Defaults to <code>10GiB</code>.</li>
 
       <li><b>DirCacheLowWaterMark</b> (size)<br/>
-        When cleaning the directory cache, it's reduced to at most this size.</li>
+        When cleaning the directory cache, it's reduced to at most this size.
+        Defaults to <code>8GiB</code>.</li>
 
       <li><b>HttpUrl</b><br/>
         Base URL of the HTTP cache.<br/>
@@ -220,13 +226,16 @@
     <ul>
       <li><b>FileExtension</b> (repeated string)<br/>
         Extensions of files to consider for coverage.<br/>
-        Defaults to a reasonably obvious set for the builtin rules including <code>.go</code>,
-        <code>.py</code>, <code>.java</code>, etc.</li>
+        Defaults to <code>.go</code>, <code>.py</code>, <code>.java</code>,
+        <code>.js</code>, <code>.cc</code>, <code>.h</code>, and <code>.c</code>.</li>
 
       <li><b>ExcludeExtension</b> (repeated string)<br/>
         Extensions of files to exclude from coverage.<br/>
         Typically this is for generated code; the default is to exclude protobuf extensions like
-        <code>.pb.go</code>, <code>_pb2.py</code>, etc.</li>
+        <code>.pb.go</code>, <code>_pb2.py</code>.
+        Defaults to <code>.pb.go</code>, <code>_pb2.py</code>, <code>.pb.cc</code>,
+        <code>.pb.h</code>, <code>_test.py</code>, <code>_test.go<code>,
+        <code>_pb.go</code>, <code>_bindata.go</code>, and <code>_test_main.cc</code>.</li>
     </ul>
 
     <h3>[Metrics]</h3>
@@ -276,10 +285,12 @@
 
     <ul>
       <li><b>DefaultImage</b><br/>
-        The default image used for any test that doesn't specify another.</li>
+        The default image used for any test that doesn't specify another.
+        Defaults to <code>ubuntu:trusty</code>.</li>
 
       <li><b>AllowLocalFallback</b> (bool)<br/>
-        If True, will attempt to run the test locally if containerised running fails.</li>
+        If True, will attempt to run the test locally if containerised running fails.
+        Defaults to <code>False</code>.</li>
 
       <li><b>Timeout</b> (int)<br/>
         Default timeout for Dockerised tests, in seconds. Default is 1200 (twenty minutes).</li>
@@ -316,16 +327,6 @@
         path.
       </li>
 
-      <li><b>GoVersion</b><br/>
-        String identifying the version of the Go compiler.<br/>
-	This is only now really important for anyone targeting versions of Go earlier than 1.5 since
-	some of the tool names have changed (<code>6g</code> and <code>6l</code>
-	became <code>compile</code> and <code>link</code> in Go 1.5).<br/>
-	We're pretty sure that targeting Go 1.4 works; we're not sure about 1.3 (never tried) but
-	1.2 certainly doesn't since some of the flags to <code>go tool pack</code> are different.
-	We assume nobody is terribly bothered about this...
-      </li>
-
       <li><b>GoRoot</b><br/>
         If set, will set the GOROOT environment variable appropriately during build actions.</li>
 
@@ -355,19 +356,19 @@
 
     <ul>
       <li><b>PipTool</b><br/>
-        The tool that is invoked during <code>pip_library</code> rules. Defaults to, well, <code>pip</code>.</li>
+        The tool that is invoked during <code>pip_library</code> rules. Defaults to <code>pip3</code>.</li>
 
       <li><b>PexTool</b><br/>
         The tool that's invoked to build pexes. Defaults to <code>please_pex</code> in the install directory.</li>
 
       <li><b>DefaultInterpreter</b><br/>
         The interpreter used for <code>python_binary</code> and <code>python_test</code> rules when none is
-        specified on the rule itself. Defaults to <code>python</code> but you could of course set it to
+        specified on the rule itself. Defaults to <code>python3</code> but you could of course set it to
         <code>pypy</code>.</li>
 
       <li><b>TestRunner</b><br/>
         The test runner used to discover &amp; run Python tests; one of <code>unittest</code>,
-        <code>pytest</code> or <code>behave</code>.</li>
+        <code>pytest</code> or <code>behave</code>.  Defaults to <code>unittest</code>.</li>
 
       <li><b>ModuleDir</b><br/>
         Defines a directory containing modules from which they can be imported at the top level.<br/>
@@ -383,7 +384,7 @@
         Is overridden by the <code>repo</code> argument to <code>pip_library</code>.</li>
 
       <li><b>UsePyPI</b> (bool)<br/>
-        Whether or not to use PyPI for <code>pip_library</code> rules or not. Defaults to true, if you
+        Whether or not to use PyPI for <code>pip_library</code> rules or not. Defaults to <code>True</code>, if you
         disable this you will presumably want to set DefaultPipRepo to use one of your own.<br/>
         Is overridden by the <code>use_pypi</code> argument to <code>pip_library</code>.</li>
 
@@ -539,7 +540,7 @@
 
       <li><b>GrpcPythonPlugin</b><br/>
         The plugin invoked to compile Python code for <code>grpc_library</code>.<br/>
-        Defaults to <code>protoc-gen-grpc-python</code>.</li>
+        Defaults to <code>grpc_python_plugin</code>.</li>
 
       <li><b>GrpcJavaPlugin</b><br/>
         The plugin invoked to compile Java code for <code>grpc_library</code>.<br/>
@@ -549,37 +550,33 @@
         Sets the default set of languages that proto rules are built for.<br/>
         Chosen from the set of {<code>cc</code>, <code>java</code>, <code>go</code>,
         <code>py</code>}.<br/>
-        Defaults to all of them!</li>
-
-      <li><b>ProtocVersion</b><br/>
-        Identifies the version of the protoc compiler. This is mostly there to force
-        a rebuild when it's changed.<br/>
-        Note that since various incompatibilities can appear with different versions,
-        it's a good idea for this to match the version of the actual compiler at all times.</li>
+        Defaults to multiple <code>Language</code> lines, one line for each of
+        the following values: <code>cc</code>, <code>py</code>, <code>java</code>,
+        <code>go</code>, and <code>js</code>.</li>
 
       <li><b>PythonDep</b><br/>
-        An in-repo dependency that's applied to any Python targets built.</li>
+        An in-repo dependency that's applied to any Python targets built.
+        Defaults to <code>//third_party/python:protobuf</code>.</li>
 
       <li><b>JavaDep</b><br/>
-        An in-repo dependency that's applied to any Java targets built.</li>
+        An in-repo dependency that's applied to any Java targets built.
+        Defaults to <code>//third_party/java:protobuf</code>.</li>
 
       <li><b>GoDep</b><br/>
-        An in-repo dependency that's applied to any Go targets built.</li>
-
-      <li><b>GrpcVersion</b><br/>
-        Identifies the version of the gRPC compiler. This is mostly there to force
-        a rebuild when it's changed.<br/>
-        Note that since various incompatibilities can appear with different versions,
-        it's a good idea for this to match the version of the actual compiler at all times.</li>
+        An in-repo dependency that's applied to any Go targets built.
+        Defaults to <code>//third_party/go:protobuf</code>.</li>
 
       <li><b>PythonGrpcDep</b><br/>
-        An in-repo dependency that's applied to any Python gRPC targets built.</li>
+        An in-repo dependency that's applied to any Python gRPC targets built.
+        Defaults to <code>//third_party/python:grpc</code>.</li>
 
       <li><b>JavaGrpcDep</b><br/>
-        An in-repo dependency that's applied to any Java gRPC targets built.</li>
+        An in-repo dependency that's applied to any Java gRPC targets built.
+        Defaults to <code>/third_party/java:grpc-all</code>.</li>
 
       <li><b>GoGrpcDep</b><br/>
-        An in-repo dependency that's applied to any Go gRPC targets built.</li>
+        An in-repo dependency that's applied to any Go gRPC targets built.
+        Defaults to <code>//third_party/go:grpc</code>.</li>
 
     </ul>
 
