@@ -75,11 +75,6 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	var contentString string
 	var contentErr error
 
-	if call != nil && label != nil {
-		fmt.Println(call)
-		fmt.Println(label)
-	}
-
 	if call != nil {
 		contentString, contentErr = contentFromCall(ctx, h.analyzer, call.Arguments, call.Name,
 			lineContent, uri, pos)
@@ -117,12 +112,10 @@ func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArg
 	}
 
 	// Check arguments of the IdentStatement, and return the appropriate content if any
-	return contentFromArgs(ctx, analyzer, args, identName,
-		lineContent, uri, pos)
+	return contentFromArgs(analyzer, args, identName, pos)
 }
 
-func contentFromArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
-	identName string, lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
+func contentFromArgs(analyzer *Analyzer, args []asp.CallArgument, identName string, pos lsp.Position) (string, error) {
 
 	builtinRule := analyzer.BuiltIns[identName]
 	for i, identArg := range args {

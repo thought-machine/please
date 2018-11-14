@@ -342,6 +342,7 @@ func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
 	return nil
 }
 
+// BuildLabelFromContent returns the BuildLabel object from the AST if it's within the range of the position
 func (a *Analyzer) BuildLabelFromContent(ctx context.Context,
 	content string, uri lsp.DocumentURI, pos lsp.Position) *BuildLabel {
 
