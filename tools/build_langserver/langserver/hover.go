@@ -66,8 +66,8 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	var contentErr error
 
 	if call != nil {
-		contentString, contentErr = contentFromCall(ctx, h.analyzer, call.Arguments, call.Name,
-			lineContent, uri, pos)
+		contentString, contentErr = contentFromCall(h.analyzer, call.Arguments, call.Name,
+			lineContent, pos)
 	}
 
 	if label != nil {
@@ -85,8 +85,8 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	return contentString, nil
 }
 
-func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
-	identName string, lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
+func contentFromCall(analyzer *Analyzer, args []asp.CallArgument, identName string,
+	lineContent string, pos lsp.Position) (string, error) {
 
 	// check if the hovered content is on the name of the ident
 	if strings.Contains(lineContent, identName) {

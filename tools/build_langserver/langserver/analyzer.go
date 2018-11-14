@@ -309,7 +309,7 @@ func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *C
 		return a.CallFromAST(stmt.Expression.Val, pos)
 	}
 
-	return a.CallFromAST(stmt, pos)
+	return nil
 }
 
 // CallFromAST returns the Call object from the AST if it's within the range of the position
