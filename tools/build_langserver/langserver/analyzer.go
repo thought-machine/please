@@ -286,7 +286,6 @@ func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *
 	stmt := a.getStatementFromPos(stmts, pos)
 
 	return a.CallFromStatementAndPos(stmt, pos)
-	//return a.CallFromAST(stmts, pos)
 }
 
 // CallFromStatementAndPos returns a call object within the statement if it's within the range of the position
@@ -310,7 +309,7 @@ func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *C
 		return a.CallFromAST(stmt.Expression.Val, pos)
 	}
 
-	return nil
+	return a.CallFromAST(stmt, pos)
 }
 
 // CallFromAST returns the Call object from the AST if it's within the range of the position
@@ -423,16 +422,6 @@ func getVarType(valExpr *asp.ValueExpression) string {
 	}
 
 	return ""
-}
-
-// StatementFromPos returns a Statement struct with either an Identifier or asp.Expression
-func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) (*Statement, error) {
-	// Get all the statements from the build file
-	stmts, err := a.AspStatementFromFile(uri)
-	if err != nil {
-		return nil, err
-	}
-	return a.getStatementFromPos(stmts, position), nil
 }
 
 func (a *Analyzer) getStatementFromPos(stmts []*asp.Statement, position lsp.Position) *Statement {

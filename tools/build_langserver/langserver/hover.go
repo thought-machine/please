@@ -54,22 +54,12 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 		}
 	}
 
-	// Get Hover Identifier
-	stmt, err := h.analyzer.StatementFromPos(uri, pos)
-
-	if err != nil {
-		return "", &jsonrpc2.Error{
-			Code:    jsonrpc2.CodeParseError,
-			Message: fmt.Sprintf("fail to parse Build file %s", uri),
-		}
-	}
-
 	// Return empty string if the hovered content is blank
-	if isEmpty(lineContent, pos) || stmt == nil {
+	if isEmpty(lineContent, pos) {
 		return "", nil
 	}
 
-	call := h.analyzer.CallFromStatementAndPos(stmt, pos)
+	call := h.analyzer.FuncCallFromContentAndPos(JoinLines(fileContent, true), pos)
 	label := h.analyzer.BuildLabelFromContent(ctx, JoinLines(fileContent, true),
 		uri, pos)
 	var contentString string
@@ -81,7 +71,6 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	}
 
 	if label != nil {
-
 		if label.BuildDef != nil && label.BuildDef.Content != "" {
 			contentString = label.BuildDef.Content
 		} else {
