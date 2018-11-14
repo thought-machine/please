@@ -2,8 +2,6 @@ package langserver
 
 import (
 	"context"
-	"core"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -16,25 +14,15 @@ import (
 const hoverMethod = "textDocument/hover"
 
 func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
-	if req.Params == nil {
-		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
-	}
-
-	var params lsp.TextDocumentPositionParams
-	if err := json.Unmarshal(*req.Params, &params); err != nil {
-		return nil, err
-	}
-
-	documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, hoverMethod)
+	params, err := h.getParamFromTDPositionReq(req, hoverMethod)
 	if err != nil {
 		return nil, err
 	}
-
-	position := params.Position
+	documentURI := params.TextDocument.URI
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	content, err := h.getHoverContent(ctx, documentURI, position)
+	content, err := h.getHoverContent(ctx, documentURI, params.Position)
 
 	if err != nil {
 		return nil, err
@@ -56,7 +44,8 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 
 func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (content string, err error) {
 	// Get the content of the line from the position
-	lineContent := h.workspace.documents[uri].textInEdit[pos.Line]
+	fileContent := h.workspace.documents[uri].textInEdit
+	lineContent := fileContent[pos.Line]
 
 	if err != nil {
 		return "", &jsonrpc2.Error{
@@ -81,24 +70,22 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	}
 
 	call := h.analyzer.CallFromStatementAndPos(stmt, pos)
+	label := h.analyzer.BuildLabelFromContent(ctx, JoinLines(fileContent, true),
+		uri, pos)
 	var contentString string
 	var contentErr error
 
 	if call != nil {
 		contentString, contentErr = contentFromCall(ctx, h.analyzer, call.Arguments, call.Name,
 			lineContent, uri, pos)
-	} else if stmt.Expression != nil {
-		contentString, contentErr = contentFromExpression(ctx, h.analyzer, stmt.Expression,
-			lineContent, uri, pos)
-	} else if stmt.Ident != nil {
-		if stmt.Ident.Type == "assign" {
-			contentString, contentErr = contentFromExpression(ctx, h.analyzer, stmt.Ident.Action.Assign,
-				lineContent, uri, pos)
-		} else if stmt.Ident.Type == "augAssign" {
-			contentString, contentErr = contentFromExpression(ctx, h.analyzer, stmt.Ident.Action.AugAssign,
-				lineContent, uri, pos)
+	}
+
+	if label != nil {
+
+		if label.BuildDef != nil && label.BuildDef.Content != "" {
+			contentString = label.BuildDef.Content
 		} else {
-			return "", nil
+			contentString = label.Definition
 		}
 	}
 
@@ -125,12 +112,10 @@ func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArg
 	}
 
 	// Check arguments of the IdentStatement, and return the appropriate content if any
-	return contentFromArgs(ctx, analyzer, args, identName,
-		lineContent, uri, pos)
+	return contentFromArgs(analyzer, args, identName, pos)
 }
 
-func contentFromArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
-	identName string, lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
+func contentFromArgs(analyzer *Analyzer, args []asp.CallArgument, identName string, pos lsp.Position) (string, error) {
 
 	builtinRule := analyzer.BuiltIns[identName]
 	for i, identArg := range args {
@@ -154,95 +139,7 @@ func contentFromArgs(ctx context.Context, analyzer *Analyzer, args []asp.CallArg
 			return builtinRule.ArgMap[builtinRule.Arguments[argInd].Name].Definition, nil
 		}
 
-		// Get content from the argument value
-		content, err := contentFromValueExpression(ctx, analyzer, identArg.Value.Val,
-			lineContent, uri, pos)
-		if err != nil {
-			return "", err
-		}
-		if content != "" {
-			return content, nil
-		}
-
 	}
-	return "", nil
-}
-
-func contentFromExpression(ctx context.Context, analyzer *Analyzer, expr *asp.Expression,
-	lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
-
-	if !withInRange(expr.Pos, expr.EndPos, pos) {
-		return "", nil
-	}
-
-	// content from Expression.Val
-	if expr.Val != nil {
-		return contentFromValueExpression(ctx, analyzer, expr.Val, lineContent, uri, pos)
-	}
-
-	// content from Expression.UnaryOp
-	if expr.UnaryOp != nil && &expr.UnaryOp.Expr != nil {
-		return contentFromValueExpression(ctx, analyzer, &expr.UnaryOp.Expr,
-			lineContent, uri, pos)
-	}
-
-	return "", nil
-}
-
-func contentFromValueExpression(ctx context.Context, analyzer *Analyzer,
-	valExpr *asp.ValueExpression, lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
-
-	if valExpr.String != "" && strings.Contains(lineContent, valExpr.String) {
-		return contentFromBuildLabel(ctx, analyzer, valExpr.String, uri)
-	}
-	if valExpr.List != nil {
-		return contentFromList(ctx, analyzer, valExpr.List, lineContent, uri, pos)
-	}
-	if valExpr.Tuple != nil {
-		return contentFromList(ctx, analyzer, valExpr.Tuple, lineContent, uri, pos)
-	}
-
-	return "", nil
-}
-
-func contentFromList(ctx context.Context, analyzer *Analyzer, listVal *asp.List,
-	lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
-
-	for _, expr := range listVal.Values {
-		if !withInRange(expr.Pos, expr.EndPos, pos) {
-			continue
-		}
-
-		content, err := contentFromExpression(ctx, analyzer, expr,
-			lineContent, uri, pos)
-		if err != nil {
-			return "", err
-		}
-		if content != "" {
-			return content, nil
-		}
-	}
-
-	return "", nil
-}
-
-func contentFromBuildLabel(ctx context.Context, analyzer *Analyzer,
-	buildLabelstr string, uri lsp.DocumentURI) (string, error) {
-
-	trimed := TrimQuotes(buildLabelstr)
-
-	if core.LooksLikeABuildLabel(trimed) {
-		buildLabel, err := analyzer.BuildLabelFromString(ctx, uri, trimed)
-		if err != nil {
-			return "", err
-		}
-
-		if buildLabel.BuildDef != nil && buildLabel.BuildDef.Content != "" {
-			return buildLabel.BuildDef.Content, nil
-		}
-		return buildLabel.Definition, nil
-	}
-
 	return "", nil
 }
 

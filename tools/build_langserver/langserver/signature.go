@@ -2,7 +2,6 @@ package langserver
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	"tools/build_langserver/lsp"
@@ -13,26 +12,15 @@ import (
 const signatureMethod = "textDocument/signatureHelp"
 
 func (h *LsHandler) handleSignature(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
-	if req.Params == nil {
-		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
-	}
-
-	log.Info("signature with params %s", req.Params)
-	var params lsp.TextDocumentPositionParams
-	if err := json.Unmarshal(*req.Params, &params); err != nil {
-		return nil, err
-	}
-
-	documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, signatureMethod)
+	params, err := h.getParamFromTDPositionReq(req, signatureMethod)
 	if err != nil {
 		return nil, err
 	}
-
-	position := params.Position
+	documentURI := params.TextDocument.URI
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	signatures := h.getSignatures(ctx, documentURI, position)
+	signatures := h.getSignatures(ctx, documentURI, params.Position)
 	log.Info("signatures, %s", signatures)
 
 	return signatures, nil

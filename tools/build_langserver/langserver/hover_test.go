@@ -17,9 +17,6 @@ import (
 func TestGetHoverContentOnBuildDefName(t *testing.T) {
 	var ctx = context.Background()
 
-	err := storeFile(ctx, exampleBuildURI)
-	assert.Equal(t, nil, err)
-
 	content, err := handler.getHoverContent(ctx, exampleBuildURI, lsp.Position{Line: 0, Character: 3})
 	expected := analyzer.BuiltIns["go_library"].Header + "\n\n" + analyzer.BuiltIns["go_library"].Docstring
 
@@ -152,9 +149,6 @@ func TestGetHoverContentArgOnTheSameLine(t *testing.T) {
 func TestGetHoverContentOnPropertyAssignment(t *testing.T) {
 	var ctx = context.Background()
 
-	err := storeFile(ctx, assignBuildURI)
-	assert.Equal(t, nil, err)
-
 	//Hover on assignment with properties
 	content, err := handler.getHoverContent(ctx, assignBuildURI, lsp.Position{Line: 0, Character: 30})
 	assert.Equal(t, nil, err)
@@ -269,9 +263,6 @@ func TestGetHoverContentAugAssign(t *testing.T) {
 func TestGetHoverContentProperty(t *testing.T) {
 	var ctx = context.Background()
 
-	err := storeFile(ctx, propURI)
-	assert.Equal(t, nil, err)
-
 	// Hover on CONFIG property
 	content, err := handler.getHoverContent(ctx, propURI, lsp.Position{Line: 0, Character: 4})
 	assert.Equal(t, nil, err)
@@ -287,9 +278,6 @@ func TestGetHoverContentProperty(t *testing.T) {
 ***************************************/
 func TestGetHoverContentAst(t *testing.T) {
 	var ctx = context.Background()
-
-	err := storeFile(ctx, miscURI)
-	assert.Equal(t, nil, err)
 
 	// Test for statement
 	content, err := handler.getHoverContent(ctx, miscURI, lsp.Position{Line: 0, Character: 11})

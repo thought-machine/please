@@ -1,7 +1,9 @@
 package langserver
 
 import (
+	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"core"
@@ -11,13 +13,15 @@ import (
 // TODO(bnm): cleanup setup
 // TestMain runs the setup for the tests for all the tests relating to langserver
 func TestMain(m *testing.M) {
-	core.FindRepoRoot()
-	dummyBuildFiles := []string{
-		"completion2.build",
-	}
+	ctx := context.Background()
 
-	for _, i := range dummyBuildFiles {
-		analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName, i)
+	core.FindRepoRoot()
+
+	// store files in handler workspace
+	URIs := []lsp.DocumentURI{exampleBuildURI, assignBuildURI, propURI, miscURI, completionURI, completion2URI,
+		completionPropURI, completionLabelURI, completionLiteralURI, completionStmtURI, sigURI}
+	for _, i := range URIs {
+		storeFile(ctx, i)
 	}
 
 	retCode := m.Run()
@@ -53,4 +57,15 @@ var handler = LsHandler{
 			},
 		},
 	},
+}
+
+func storeFile(ctx context.Context, uri lsp.DocumentURI) error {
+	content, err := ReadFile(ctx, uri)
+	if err != nil {
+		return err
+	}
+	text := strings.Join(content, "\n")
+
+	handler.workspace.Store(uri, text)
+	return nil
 }
