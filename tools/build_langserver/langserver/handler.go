@@ -63,6 +63,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 		"textDocument/hover":         h.handleHover,
 		"textDocument/completion":    h.handleCompletion,
 		"textDocument/signatureHelp": h.handleSignature,
+		"textDocument/definition":    h.handleDefinition,
 	}
 
 	if req.Method != "initialize" && req.Method != "exit" &&
@@ -187,6 +188,29 @@ func (h *LsHandler) handleCancel(ctx context.Context, req *jsonrpc2.Request) (re
 	defer h.requestStore.Cancel(params.ID)
 
 	return nil, nil
+}
+
+// getParamFromTDPositionReq gets the lsp.TextDocumentPositionParams struct
+// if the method sends a TextDocumentPositionParams json object, e.g. "textDocument/definition", "textDocument/hover"
+func (h *LsHandler) getParamFromTDPositionReq(req *jsonrpc2.Request, methodName string) (*lsp.TextDocumentPositionParams, error) {
+	if req.Params == nil {
+		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+	}
+
+	log.Info("%s with params %s", methodName, req.Params)
+	var params *lsp.TextDocumentPositionParams
+	if err := json.Unmarshal(*req.Params, &params); err != nil {
+		return nil, err
+	}
+
+	documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, methodName)
+	if err != nil {
+		return nil, err
+	}
+
+	params.TextDocument.URI = documentURI
+
+	return params, nil
 }
 
 // ensureLineContent handle cases when the completion pos happens on the last line of the file, without any newline char

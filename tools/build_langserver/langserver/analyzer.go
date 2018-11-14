@@ -286,6 +286,7 @@ func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *
 	stmt := a.getStatementFromPos(stmts, pos)
 
 	return a.CallFromStatementAndPos(stmt, pos)
+	//return a.CallFromAST(stmts, pos)
 }
 
 // CallFromStatementAndPos returns a call object within the statement if it's within the range of the position
@@ -336,6 +337,43 @@ func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
 
 	if item := asp.WalkAST(val, callback); item != nil {
 		return item.(*Call)
+	}
+
+	return nil
+}
+
+func (a *Analyzer) BuildLabelFromContent(ctx context.Context,
+	content string, uri lsp.DocumentURI, pos lsp.Position) *BuildLabel {
+
+	stmts := a.AspStatementFromContent(content)
+
+	var callback func(astStruct interface{}) interface{}
+
+	callback = func(astStruct interface{}) interface{} {
+		if expr, ok := astStruct.(asp.Expression); ok {
+			if withInRange(expr.Pos, expr.EndPos, pos) && expr.Val != nil {
+				if expr.Val.String != "" {
+
+					trimmed := TrimQuotes(expr.Val.String)
+					if core.LooksLikeABuildLabel(trimmed) {
+						buildLabel, err := a.BuildLabelFromString(ctx, uri, trimmed)
+						if err != nil {
+							log.Info("error occurred trying to get buildlabel: %s", err)
+							return nil
+						}
+						if buildLabel != nil {
+							return buildLabel
+						}
+					}
+				}
+				return asp.WalkAST(expr.Val, callback)
+			}
+		}
+		return nil
+	}
+
+	if item := asp.WalkAST(stmts, callback); item != nil {
+		return item.(*BuildLabel)
 	}
 
 	return nil
@@ -472,7 +510,7 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context,
 	}
 
 	labelPath := string(a.BuildFileURIFromPackage(label.PackageDir()))
-	if !fs.PathExists(labelPath) {
+	if labelPath == "" {
 		return nil, fmt.Errorf("cannot find the path for build label %s", labelStr)
 	}
 

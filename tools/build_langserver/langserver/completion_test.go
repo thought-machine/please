@@ -16,9 +16,6 @@ import (
 func TestCompletionWithCONFIG(t *testing.T) {
 	ctx := context.Background()
 
-	err := storeFile(ctx, completionPropURI)
-	assert.Equal(t, nil, err)
-
 	// Test completion on CONFIG with no starting character
 	items, err := handler.getCompletionItemsList(ctx, completionPropURI, lsp.Position{Line: 4, Character: 7})
 	assert.Equal(t, nil, err)
@@ -139,9 +136,6 @@ func TestCompletionWithDictMethods(t *testing.T) {
 func TestCompletionWithBuildLabels(t *testing.T) {
 	ctx := context.Background()
 
-	err := storeFile(ctx, completionLabelURI)
-	assert.Equal(t, nil, err)
-
 	items, err := handler.getCompletionItemsList(ctx, completionLabelURI, lsp.Position{Line: 0, Character: 6})
 	assert.Equal(t, nil, err)
 	assert.True(t, itemInList(items, "src/cache"))
@@ -172,9 +166,7 @@ func TestCompletionWithBuildLabels(t *testing.T) {
 func TestCompletionWithBuildLabels2(t *testing.T) {
 	ctx := context.Background()
 
-	err := storeFile(ctx, completion2URI)
-	assert.Equal(t, nil, err)
-
+	analyzer.State.Config.Parse.BuildFileName = []string{"completion2.build", "BUILD"}
 	// Ensure relative label working correctly
 	items, err := handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 15, Character: 11})
 	assert.Equal(t, nil, err)
@@ -188,9 +180,6 @@ func TestCompletionWithBuildLabels2(t *testing.T) {
  ***************************************/
 func TestCompletionWithBuiltins(t *testing.T) {
 	ctx := context.Background()
-
-	err := storeFile(ctx, completionLiteralURI)
-	assert.Equal(t, nil, err)
 
 	items, err := handler.getCompletionItemsList(ctx, completionLiteralURI, lsp.Position{Line: 2, Character: 3})
 	assert.Equal(t, nil, err)
@@ -236,9 +225,6 @@ func TestCompletionWithVars(t *testing.T) {
 func TestCompletionWithIf(t *testing.T) {
 	ctx := context.Background()
 
-	err := storeFile(ctx, completionStmtURI)
-	assert.Equal(t, nil, err)
-
 	// test within if statement
 	items, err := handler.getCompletionItemsList(ctx, completionStmtURI, lsp.Position{Line: 7, Character: 7})
 	assert.Equal(t, nil, err)
@@ -272,15 +258,4 @@ func itemInList(itemList []*lsp.CompletionItem, targetLabel string) bool {
 		}
 	}
 	return false
-}
-
-func storeFile(ctx context.Context, uri lsp.DocumentURI) error {
-	content, err := ReadFile(ctx, uri)
-	if err != nil {
-		return err
-	}
-	text := strings.Join(content, "\n")
-
-	handler.workspace.Store(uri, text)
-	return nil
 }

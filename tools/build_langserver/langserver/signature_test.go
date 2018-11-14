@@ -12,9 +12,6 @@ import (
 func TestGetSignaturesEmptyCall(t *testing.T) {
 	ctx := context.Background()
 
-	err := storeFile(ctx, sigURI)
-	assert.Equal(t, nil, err)
-
 	sig := handler.getSignatures(ctx, sigURI, lsp.Position{Line: 0, Character: 10})
 	assert.Equal(t, 0, sig.ActiveParameter)
 	assert.True(t, paramInList(sig.Signatures[0].Parameters, "name:str"))
