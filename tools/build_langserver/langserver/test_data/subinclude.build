@@ -3,3 +3,5 @@ subinclude("//tools/build_langserver/langserver/test_data/dummy_build_defs:plz_e
 plz_e2e_test(
     name = "dummy_test",
 )
+
+plz_

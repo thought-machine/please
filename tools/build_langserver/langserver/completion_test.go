@@ -249,6 +249,19 @@ func TestCompletionWithIf(t *testing.T) {
 }
 
 /***************************************
+ *Tests for Subincludes
+ ***************************************/
+func TestCompletionSubinclude(t *testing.T) {
+	ctx := context.Background()
+
+	// test within if statement
+	items, err := handler.getCompletionItemsList(ctx, subincludeURI, lsp.Position{Line: 6, Character: 4})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, len(items), 1)
+	assert.True(t, itemInList(items, "plz_e2e_test"))
+}
+
+/***************************************
  * Helpers
  ***************************************/
 func itemInList(itemList []*lsp.CompletionItem, targetLabel string) bool {

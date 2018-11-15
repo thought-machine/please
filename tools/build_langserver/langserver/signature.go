@@ -45,9 +45,11 @@ func (h *LsHandler) getSignatures(ctx context.Context, uri lsp.DocumentURI, pos 
 		return nil
 	}
 
-	builtRule, present := h.analyzer.BuiltIns[call.Name]
-	if !present {
-		log.Info("not present, exit")
+	subincludes := h.analyzer.GetSubinclude(ctx, stmts, uri)
+	builtRule := h.analyzer.GetBuildRuleByName(call.Name, subincludes)
+
+	if builtRule == nil {
+		log.Info("rule %s not present, exit", call.Name)
 		return nil
 	}
 	label := builtRule.Header[strings.Index(builtRule.Header, builtRule.Name)+len(builtRule.Name):]
