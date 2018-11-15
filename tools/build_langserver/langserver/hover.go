@@ -66,12 +66,12 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	var contentErr error
 
 	if call != nil {
-		rule, ok := h.analyzer.BuiltIns[call.Name]
-		if !ok {
-			subincludes := h.analyzer.GetSubinclude(ctx, stmts, uri)
-			rule, ok = subincludes.Rules[call.Name]
+		subincludes := h.analyzer.GetSubinclude(ctx, stmts, uri)
+		rule := h.analyzer.GetBuildRuleByName(call.Name, subincludes)
+
+		if rule != nil {
+			contentString, contentErr = contentFromCall(call.Arguments, rule, lineContent, pos)
 		}
-		contentString, contentErr = contentFromCall(call.Arguments, rule, lineContent, pos)
 	}
 
 	if label != nil {

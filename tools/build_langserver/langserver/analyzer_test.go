@@ -304,8 +304,8 @@ func TestAnalyzer_GetSubinclude(t *testing.T) {
 	assert.NoError(t, err)
 
 	subinclude := a.GetSubinclude(ctx, stmts, subincludeURI)
-	assert.Equal(t, len(subinclude.Rules), 1)
-	_, ok := subinclude.Rules["plz_e2e_test"]
+	assert.Equal(t, len(subinclude), 1)
+	_, ok := subinclude["plz_e2e_test"]
 	assert.True(t, ok)
 }
 

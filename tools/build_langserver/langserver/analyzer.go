@@ -40,13 +40,6 @@ type RuleDef struct {
 	Object string
 }
 
-// Subinclude represent a subinclude call in a BUILD file.
-// it would consist of both RuleDefs, and variables
-type Subinclude struct {
-	Rules     map[string]*RuleDef
-	Variables map[string]Variable
-}
-
 // Argument is a wrapper around asp.Argument,
 // this is used to store the argument information for specific rules,
 // and it also tells you if the argument is required
@@ -391,11 +384,9 @@ func (a *Analyzer) BuildLabelFromAST(ctx context.Context,
 }
 
 // GetSubinclude returns a Subinclude object based on the statement and uri passed in.
-func (a *Analyzer) GetSubinclude(ctx context.Context, stmts []*asp.Statement, uri lsp.DocumentURI) *Subinclude {
-	subinclude := &Subinclude{
-		Rules:     make(map[string]*RuleDef),
-		Variables: make(map[string]Variable),
-	}
+func (a *Analyzer) GetSubinclude(ctx context.Context, stmts []*asp.Statement, uri lsp.DocumentURI) map[string]*RuleDef {
+
+	ruleDefs := make(map[string]*RuleDef)
 
 	currentPkg, err := PackageLabelFromURI(uri)
 	if err != nil {
@@ -416,14 +407,26 @@ func (a *Analyzer) GetSubinclude(ctx context.Context, stmts []*asp.Statement, ur
 					label.BuildDef.Name == "filegroup" && isVisible(label.BuildDef, currentPkg) {
 
 					srcs := getSourcesFromBuildDef(label.BuildDef, label.Path)
-					a.loadRuleDefsFromSource(subinclude.Rules, srcs)
+					a.loadRuleDefsFromSource(ruleDefs, srcs)
 
 				}
 			}
 		}
 	}
 
-	return subinclude
+	return ruleDefs
+}
+
+func (a *Analyzer) GetBuildRuleByName(name string, subincludes map[string]*RuleDef) *RuleDef {
+	if rule, ok := a.BuiltIns[name]; ok {
+		return rule
+	}
+
+	if rule, ok := subincludes[name]; ok {
+		return rule
+	}
+
+	return nil
 }
 
 func (a *Analyzer) loadRuleDefsFromSource(rulesMap map[string]*RuleDef, srcs []string) {
