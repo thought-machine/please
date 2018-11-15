@@ -622,5 +622,5 @@ go_get(
 go_get(
     name = "ar",
     get = "github.com/peterebden/ar",
-    revision = "413052a5f1f1209a300a9b6b19652079b6eb1550",
+    revision = "a0ae3a11a518fb9559c95ed151ec07865b31980b",
 )

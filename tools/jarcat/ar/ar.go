@@ -3,12 +3,10 @@ package ar
 
 import (
 	"bufio"
-	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
-	"strconv"
+	"runtime"
 	"strings"
 	"time"
 
@@ -48,8 +46,15 @@ func Create(srcs []string, out string, combine, rename bool) error {
 	bw := bufio.NewWriter(f)
 	defer bw.Flush()
 	w := ar.NewWriter(bw)
-	if err := w.WriteGlobalHeaderForLongFiles(allSourceNames(srcs, combine)); err != nil {
-		return err
+	// Write BSD-style names on OSX, GNU-style ones on Linux
+	if runtime.GOOS == "darwin" {
+		if err := w.WriteGlobalHeader(); err != nil {
+			return err
+		}
+	} else {
+		if err := w.WriteGlobalHeaderForLongFiles(allSourceNames(srcs, combine)); err != nil {
+			return err
+		}
 	}
 	for _, src := range srcs {
 		log.Debug("ar source file: %s", src)
@@ -67,7 +72,7 @@ func Create(srcs []string, out string, combine, rename bool) error {
 						break
 					}
 					return err
-				} else if hdr.Name == "/" {
+				} else if hdr.Name == "/" || hdr.Name == "__.SYMDEF SORTED" || hdr.Name == "__.SYMDEF" {
 					log.Debug("skipping symbol table")
 					continue
 				}
@@ -75,39 +80,10 @@ func Create(srcs []string, out string, combine, rename bool) error {
 				hdr.ModTime = mtime
 				hdr.Uid = 0
 				hdr.Gid = 0
-
-				copyFile := func(r io.Reader, name string) error {
-					log.Debug("copying '%s' in from %s", name, src)
-					if err := w.WriteHeader(hdr); err != nil {
-						return err
-					}
-					_, err := io.Copy(w, r)
+				log.Debug("copying '%s' in from %s", hdr.Name, src)
+				if err := w.WriteHeader(hdr); err != nil {
 					return err
-				}
-
-				if !strings.HasPrefix(hdr.Name, "#1/") {
-					// Normal copy
-					if err := copyFile(r, hdr.Name); err != nil {
-						return err
-					}
-					continue
-				}
-
-				// BSD ar stores the name as a prefix to the data section.
-				b, err := ioutil.ReadAll(r)
-				if err != nil {
-					return err
-				}
-				l, err := strconv.Atoi(hdr.Name[3:])
-				if err != nil {
-					return err
-				}
-				name := string(bytes.TrimRightFunc(b[:l], func(r rune) bool { return r == 0 }))
-				if name == "__.SYMDEF SORTED" || name == "__.SYMDEF" {
-					log.Debug("skipping BSD symbol table")
-					continue
-				}
-				if err := copyFile(bytes.NewReader(b), name); err != nil {
+				} else if _, err = io.Copy(w, r); err != nil {
 					return err
 				}
 			}
