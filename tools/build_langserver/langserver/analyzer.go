@@ -138,15 +138,15 @@ func (a *Analyzer) builtInsRules() error {
 		}
 	}
 
-	for _, i := range a.State.Config.Parse.PreloadBuildDefs {
-		filePath := path.Join(core.RepoRoot, i)
+	for _, buildDef := range a.State.Config.Parse.PreloadBuildDefs {
+		filePath := path.Join(core.RepoRoot, buildDef)
 		bytecontent, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			log.Warning("parsing failure for preload build defs: %s ", err)
 		}
 		stmts, err := a.parser.ParseData(bytecontent, filePath)
 
-		log.Debug("Preloading build defs from %s...", i)
+		log.Debug("Preloading build defs from %s...", buildDef)
 		a.loadBuiltinRules(stmts, string(bytecontent))
 
 	}
@@ -155,7 +155,7 @@ func (a *Analyzer) builtInsRules() error {
 
 func (a *Analyzer) loadBuiltinRules(stmts []*asp.Statement, fileContent string) {
 	for _, statement := range stmts {
-		if statement.FuncDef != nil && !strings.HasPrefix(statement.FuncDef.Name, "_") {
+		if statement.FuncDef != nil && !statement.FuncDef.IsPrivate {
 
 			ruleDef := newRuleDef(fileContent, statement)
 			a.BuiltIns[statement.FuncDef.Name] = ruleDef

@@ -13,6 +13,7 @@ import (
 	"tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
+	"strings"
 )
 
 func TestNewAnalyzer(t *testing.T) {
@@ -30,6 +31,11 @@ func TestNewAnalyzer(t *testing.T) {
 	assert.Equal(t, 10, len(goBinData.ArgMap))
 	assert.Equal(t, true, goBinData.ArgMap["name"].Required)
 	assert.Equal(t, "input_dir=None", goBinData.ArgMap["input_dir"].Repr)
+
+	// Ensure private funcDefs are not loaded
+	for name := range a.BuiltIns {
+		assert.False(t, strings.HasPrefix(name, "_"))
+	}
 
 	// Check for methods map
 	_, ok := a.Attributes["str"]

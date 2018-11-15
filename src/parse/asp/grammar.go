@@ -42,6 +42,7 @@ type FuncDef struct {
 	// Not part of the grammar. Used to indicate internal targets that can only
 	// be called using keyword arguments.
 	KeywordsOnly bool
+	IsPrivate    bool
 }
 
 // A ForStatement implements the 'for' statement.
