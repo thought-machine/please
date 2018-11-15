@@ -279,37 +279,11 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 	return ch
 }
 
-// FuncCallFromContentAndPos returns a Identifier object represents function call,
+// CallFromStatementAndPos returns a Identifier object represents function call,
 // Only returns the not nil object when the Identifier is within the range specified by the position
-func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *Call {
+func (a *Analyzer) CallFromStatementAndPos(content string, pos lsp.Position) *Call {
 	stmts := a.AspStatementFromContent(content)
-	stmt := a.getStatementFromPos(stmts, pos)
-
-	return a.CallFromStatementAndPos(stmt, pos)
-}
-
-// CallFromStatementAndPos returns a call object within the statement if it's within the range of the position
-func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *Call {
-	if stmt == nil {
-		return nil
-	}
-
-	if stmt.Ident != nil {
-		call := a.CallFromAST(stmt, pos)
-		if call != nil {
-			return call
-		}
-		if stmt.Ident.Type == "call" {
-			return &Call{
-				Arguments: stmt.Ident.Action.Call.Arguments,
-				Name:      stmt.Ident.Name,
-			}
-		}
-	} else if stmt.Expression != nil {
-		return a.CallFromAST(stmt.Expression.Val, pos)
-	}
-
-	return nil
+	return a.CallFromAST(stmts, pos)
 }
 
 // CallFromAST returns the Call object from the AST if it's within the range of the position
@@ -330,6 +304,22 @@ func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
 					return asp.WalkAST(action.Property, callback)
 				}
 			}
+		} else if stmt, ok := astStruct.(asp.Statement); ok {
+			if stmt.Ident != nil && withInRange(stmt.Pos, stmt.EndPos, pos) {
+
+				// Walk through the ident first to see any the pos yields to any argument calls
+				if item := asp.WalkAST(stmt.Ident, callback); item != nil {
+					return item
+				}
+
+				if stmt.Ident.Action != nil && stmt.Ident.Action.Call != nil {
+					return &Call{
+						Arguments: stmt.Ident.Action.Call.Arguments,
+						Name:      stmt.Ident.Name,
+					}
+				}
+			}
+
 		}
 		return nil
 	}

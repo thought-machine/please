@@ -59,11 +59,12 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 		return "", nil
 	}
 
-	call := h.analyzer.FuncCallFromContentAndPos(JoinLines(fileContent, true), pos)
+	call := h.analyzer.CallFromStatementAndPos(JoinLines(fileContent, true), pos)
 	label := h.analyzer.BuildLabelFromContent(ctx, JoinLines(fileContent, true),
 		uri, pos)
 	var contentString string
 	var contentErr error
+	fmt.Println("LUNA", lineContent, call)
 
 	if call != nil {
 		contentString, contentErr = contentFromCall(h.analyzer, call.Arguments, call.Name,
