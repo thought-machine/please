@@ -13,7 +13,7 @@ import (
 func TestGetDefinitionLocationOnBuildDefs(t *testing.T) {
 	ctx := context.Background()
 	core.FindRepoRoot()
-	t.Log("LUNA", analyzer.State.Config.Parse.PreloadBuildDefs)
+
 	// GOTO definition on buildDef deps (complete build label)
 	loc := handler.getDefinitionLocation(ctx, exampleBuildURI, lsp.Position{Line: 9, Character: 14})
 
