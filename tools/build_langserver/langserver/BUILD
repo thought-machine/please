@@ -46,11 +46,14 @@ go_test(
 
 go_test(
     name = "analyzer_test",
-    srcs = ["analyzer_test.go", "setup_test.go"],
+    srcs = [
+        "analyzer_test.go",
+        "setup_test.go",
+    ],
     data = ["test_data"],
     deps = [
         ":langserver",
         "//third_party/go:testify",
         "//tools/build_langserver/lsp",
-    ]
+    ],
 )
