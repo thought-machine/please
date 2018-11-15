@@ -322,7 +322,7 @@ func TestGetHoverContentSubinclude(t *testing.T) {
 	var ctx = context.Background()
 
 	// hover on subincluded rule name
-	content, err := handler.getHoverContent(ctx, subincludeURI, lsp.Position{Line: 5, Character: 8})
+	content, err := handler.getHoverContent(ctx, subincludeURI, lsp.Position{Line: 2, Character: 8})
 	assert.Equal(t, nil, err)
 
 	expected := "def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure=False,\n" +
@@ -332,7 +332,7 @@ func TestGetHoverContentSubinclude(t *testing.T) {
 	assert.Equal(t, expected, content)
 
 	// hover on subincluded arg
-	content, err = handler.getHoverContent(ctx, subincludeURI, lsp.Position{Line: 6, Character: 7})
+	content, err = handler.getHoverContent(ctx, subincludeURI, lsp.Position{Line: 3, Character: 7})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "name required:true", content)
 }

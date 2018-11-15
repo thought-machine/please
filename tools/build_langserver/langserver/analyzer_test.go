@@ -307,9 +307,6 @@ func TestAnalyzer_GetSubinclude(t *testing.T) {
 	assert.Equal(t, len(subinclude.Rules), 1)
 	_, ok := subinclude.Rules["plz_e2e_test"]
 	assert.True(t, ok)
-
-	assert.Equal(t, len(subinclude.Variables), 1)
-	assert.Equal(t, subinclude.Variables["randoms"].Type, "list")
 }
 
 /************************

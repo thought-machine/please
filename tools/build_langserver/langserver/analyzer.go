@@ -412,47 +412,18 @@ func (a *Analyzer) GetSubinclude(ctx context.Context, stmts []*asp.Statement, ur
 					log.Warning("error occured when trying to get subinclude %s: %s", includeLabel, err)
 				}
 
-				if label.IsAllTargets() || label.IsAllSubpackages() {
-					labelStmts, err := a.AspStatementFromFile(lsp.DocumentURI(label.Path))
-					if err != nil {
-						log.Warning("fail to parse subinclude build file %s: %s", label.Path, err)
-					}
+				if label.BuildDef != nil &&
+					label.BuildDef.Name == "filegroup" && isVisible(label.BuildDef, currentPkg) {
 
-					// fill in variables into subinclude.Variables
-					for _, labelStmt := range labelStmts {
-						labelIdent := a.identFromStatement(labelStmt)
-						if labelIdent.Type == "assign" || labelIdent.Type == "augAssign" {
-							variable := a.VariableFromIdent(labelIdent)
-							if variable != nil {
-								subinclude.Variables[variable.Name] = *variable
-							}
-						}
-					}
-					// load build rules into subincludes.Rules
-					defs, err := a.BuildDefsFromStatements(ctx, lsp.DocumentURI(label.Path), labelStmts)
-					if err != nil {
-						log.Warning("error occurred when trying to get BuildDefs from %s: %s", label.Path, err)
-					}
-					for _, def := range defs {
-						a.loadRuleDefsFromBuildDef(subinclude.Rules, def, label.Path, currentPkg)
-					}
-				} else if label.BuildDef != nil {
-					a.loadRuleDefsFromBuildDef(subinclude.Rules, label.BuildDef, label.Path, currentPkg)
+					srcs := getSourcesFromBuildDef(label.BuildDef, label.Path)
+					a.loadRuleDefsFromSource(subinclude.Rules, srcs)
+
 				}
 			}
 		}
 	}
 
 	return subinclude
-}
-
-func (a *Analyzer) loadRuleDefsFromBuildDef(rulesMap map[string]*RuleDef, def *BuildDef,
-	buildLabelPath string, currentPkg string) {
-
-	if def.Name == "filegroup" && isVisible(def, currentPkg) {
-		srcs := getSourcesFromBuildDef(def, buildLabelPath)
-		a.loadRuleDefsFromSource(rulesMap, srcs)
-	}
 }
 
 func (a *Analyzer) loadRuleDefsFromSource(rulesMap map[string]*RuleDef, srcs []string) {
