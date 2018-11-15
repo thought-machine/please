@@ -84,13 +84,6 @@ type BuildDef struct {
 	Visibility []string
 }
 
-// Statement is a simplified version of asp.Statement
-// Here we only care about Idents and Expressions
-type Statement struct {
-	Ident      *Identifier
-	Expression *asp.Expression
-}
-
 // BuildLabel is a wrapper around core.BuildLabel
 // Including the path of the buildFile
 type BuildLabel struct {
@@ -412,26 +405,6 @@ func getVarType(valExpr *asp.ValueExpression) string {
 	}
 
 	return ""
-}
-
-func (a *Analyzer) getStatementFromPos(stmts []*asp.Statement, position lsp.Position) *Statement {
-	if len(stmts) == 0 {
-		return nil
-	}
-
-	statement, expr := asp.StatementOrExpressionFromAst(stmts,
-		asp.Position{Line: position.Line + 1, Column: position.Character + 1})
-
-	if statement != nil {
-		return &Statement{
-			Ident: a.identFromStatement(statement),
-		}
-	} else if expr != nil {
-		return &Statement{
-			Expression: expr,
-		}
-	}
-	return nil
 }
 
 func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {
