@@ -388,6 +388,7 @@ func (a *Analyzer) BuildLabelFromAST(ctx context.Context,
 	return nil
 }
 
+// GetSubinclude returns a Subinclude object based on the statement and uri passed in.
 func (a *Analyzer) GetSubinclude(ctx context.Context, stmts []*asp.Statement, uri lsp.DocumentURI) *Subinclude {
 	subinclude := &Subinclude{
 		Rules:     make(map[string]*RuleDef),
@@ -513,6 +514,7 @@ func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[st
 	return vars
 }
 
+// VariableFromIdent returns Variable object passing in an Identifier
 func (a *Analyzer) VariableFromIdent(ident *Identifier) *Variable {
 	var varType string
 	if ident.Type == "assign" {
