@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 
 	// store files in handler workspace
 	URIs := []lsp.DocumentURI{exampleBuildURI, assignBuildURI, propURI, miscURI, completionURI, completion2URI,
-		completionPropURI, completionLabelURI, completionLiteralURI, completionStmtURI, sigURI}
+		completionPropURI, completionLabelURI, completionLiteralURI, completionStmtURI, sigURI, subincludeURI}
 	for _, i := range URIs {
 		storeFile(ctx, i)
 	}
@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 }
 
 var exampleBuildURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example.build")
+var subincludeURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/subinclude.build")
 var assignBuildURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/assignment.build")
 var propURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/property.build")
 var miscURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/misc.build")

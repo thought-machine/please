@@ -38,7 +38,9 @@ func (h *LsHandler) getSignatures(ctx context.Context, uri lsp.DocumentURI, pos 
 
 	lineContent = lineContent[:pos.Character]
 
-	call := h.analyzer.CallFromStatementAndPos(JoinLines(fileContent, true), pos)
+	stmts := h.analyzer.AspStatementFromContent(JoinLines(fileContent, true))
+
+	call := h.analyzer.CallFromAST(stmts, pos)
 	if call == nil {
 		return nil
 	}

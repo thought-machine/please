@@ -34,7 +34,10 @@ func (h *LsHandler) getDefinitionLocation(ctx context.Context, uri lsp.DocumentU
 		return nil
 	}
 
-	buildLabel := h.analyzer.BuildLabelFromContent(ctx, JoinLines(fileContent, true), uri, pos)
+	stmts := h.analyzer.AspStatementFromContent(JoinLines(fileContent, true))
+
+	buildLabel := h.analyzer.BuildLabelFromAST(ctx, stmts, uri, pos)
+
 	if buildLabel != nil {
 		uri, err := EnsureURL(lsp.DocumentURI(buildLabel.Path), "file")
 		if err != nil {
