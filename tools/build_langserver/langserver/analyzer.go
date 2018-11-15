@@ -40,6 +40,8 @@ type RuleDef struct {
 	Object string
 }
 
+// Subinclude represent a subinclude call in a BUILD file.
+// it would consist of both RuleDefs, and variables
 type Subinclude struct {
 	Rules     map[string]*RuleDef
 	Variables map[string]Variable
@@ -291,7 +293,7 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 	return ch
 }
 
-// CallFromStatementAndPos returns a Identifier object represents function call,
+// CallFromContentAndPos returns a Identifier object represents function call,
 // Only returns the not nil object when the Identifier is within the range specified by the position
 func (a *Analyzer) CallFromContentAndPos(content string, pos lsp.Position) *Call {
 	stmts := a.AspStatementFromContent(content)
@@ -343,7 +345,7 @@ func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
 	return nil
 }
 
-// BuildLabelFromContent returns the BuildLabel object from the AST if it's within the range of the position
+// BuildLabelFromContentAndPos returns the BuildLabel object from the AST if it's within the range of the position
 // Given the content
 func (a *Analyzer) BuildLabelFromContentAndPos(ctx context.Context,
 	content string, uri lsp.DocumentURI, pos lsp.Position) *BuildLabel {
