@@ -405,7 +405,7 @@ func (a *Analyzer) GetSubinclude(ctx context.Context, stmts []*asp.Statement, ur
 
 				if label.BuildDef != nil &&
 					label.BuildDef.Name == "filegroup" && isVisible(label.BuildDef, currentPkg) {
-
+					// TODO(bnm): support genrule as well!
 					srcs := getSourcesFromBuildDef(label.BuildDef, label.Path)
 					a.loadRuleDefsFromSource(ruleDefs, srcs)
 
@@ -417,6 +417,7 @@ func (a *Analyzer) GetSubinclude(ctx context.Context, stmts []*asp.Statement, ur
 	return ruleDefs
 }
 
+// GetBuildRuleByName takes the name and subincludes ruleDefs, and return the appropriate ruleDef
 func (a *Analyzer) GetBuildRuleByName(name string, subincludes map[string]*RuleDef) *RuleDef {
 	if rule, ok := a.BuiltIns[name]; ok {
 		return rule
