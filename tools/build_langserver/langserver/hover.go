@@ -64,7 +64,6 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 		uri, pos)
 	var contentString string
 	var contentErr error
-	fmt.Println("LUNA", lineContent, call)
 
 	if call != nil {
 		contentString, contentErr = contentFromCall(h.analyzer, call.Arguments, call.Name,
