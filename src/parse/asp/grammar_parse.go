@@ -216,6 +216,9 @@ func (p *parser) parseFuncDef() *FuncDef {
 	fd := &FuncDef{
 		Name: p.next(Ident).Value,
 	}
+	if strings.HasPrefix(fd.Name, "_") {
+		fd.IsPrivate = true
+	}
 	p.next('(')
 	for p.anythingBut(')') {
 		fd.Arguments = append(fd.Arguments, p.parseArgument())

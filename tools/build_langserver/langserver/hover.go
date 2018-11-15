@@ -54,34 +54,23 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 		}
 	}
 
-	// Get Hover Identifier
-	stmt, err := h.analyzer.StatementFromPos(uri, pos)
-
-	if err != nil {
-		return "", &jsonrpc2.Error{
-			Code:    jsonrpc2.CodeParseError,
-			Message: fmt.Sprintf("fail to parse Build file %s", uri),
-		}
-	}
-
 	// Return empty string if the hovered content is blank
-	if isEmpty(lineContent, pos) || stmt == nil {
+	if isEmpty(lineContent, pos) {
 		return "", nil
 	}
 
-	call := h.analyzer.CallFromStatementAndPos(stmt, pos)
+	call := h.analyzer.CallFromStatementAndPos(JoinLines(fileContent, true), pos)
 	label := h.analyzer.BuildLabelFromContent(ctx, JoinLines(fileContent, true),
 		uri, pos)
 	var contentString string
 	var contentErr error
 
 	if call != nil {
-		contentString, contentErr = contentFromCall(ctx, h.analyzer, call.Arguments, call.Name,
-			lineContent, uri, pos)
+		contentString, contentErr = contentFromCall(h.analyzer, call.Arguments, call.Name,
+			lineContent, pos)
 	}
 
 	if label != nil {
-
 		if label.BuildDef != nil && label.BuildDef.Content != "" {
 			contentString = label.BuildDef.Content
 		} else {
@@ -96,8 +85,8 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	return contentString, nil
 }
 
-func contentFromCall(ctx context.Context, analyzer *Analyzer, args []asp.CallArgument,
-	identName string, lineContent string, uri lsp.DocumentURI, pos lsp.Position) (string, error) {
+func contentFromCall(analyzer *Analyzer, args []asp.CallArgument, identName string,
+	lineContent string, pos lsp.Position) (string, error) {
 
 	// check if the hovered content is on the name of the ident
 	if strings.Contains(lineContent, identName) {

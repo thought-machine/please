@@ -84,13 +84,6 @@ type BuildDef struct {
 	Visibility []string
 }
 
-// Statement is a simplified version of asp.Statement
-// Here we only care about Idents and Expressions
-type Statement struct {
-	Ident      *Identifier
-	Expression *asp.Expression
-}
-
 // BuildLabel is a wrapper around core.BuildLabel
 // Including the path of the buildFile
 type BuildLabel struct {
@@ -126,8 +119,8 @@ func newAnalyzer() (*Analyzer, error) {
 // BuiltInsRules gets all the builtin functions and rules as a map, and store it in Analyzer.BuiltIns
 // This is typically called when instantiate a new Analyzer
 func (a *Analyzer) builtInsRules() error {
-	statementMap := make(map[string]*RuleDef)
-	attrMap := make(map[string][]*RuleDef)
+	a.BuiltIns = make(map[string]*RuleDef)
+	a.Attributes = make(map[string][]*RuleDef)
 
 	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)
@@ -139,30 +132,44 @@ func (a *Analyzer) builtInsRules() error {
 			if err != nil {
 				log.Warning("parsing failure: %s ", err)
 			}
-			// Iterate through the statement we got and add to statementMap
-			for _, statement := range stmts {
-				if statement.FuncDef != nil && !strings.HasPrefix(statement.FuncDef.Name, "_") {
-					content := string(asset)
 
-					ruleDef := newRuleDef(content, statement)
-					statementMap[statement.FuncDef.Name] = ruleDef
+			log.Info("Loading built-in build rules...")
+			a.loadBuiltinRules(stmts, string(asset))
+		}
+	}
 
-					// Fill in attribute map if certain ruleDef is a attribute
-					if ruleDef.Object != "" {
-						if _, ok := attrMap[ruleDef.Object]; ok {
-							attrMap[ruleDef.Object] = append(attrMap[ruleDef.Object], ruleDef)
-						} else {
-							attrMap[ruleDef.Object] = []*RuleDef{ruleDef}
-						}
-					}
+	for _, buildDef := range a.State.Config.Parse.PreloadBuildDefs {
+		filePath := path.Join(core.RepoRoot, buildDef)
+		bytecontent, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			log.Warning("parsing failure for preload build defs: %s ", err)
+		}
+		stmts, err := a.parser.ParseData(bytecontent, filePath)
+
+		log.Debug("Preloading build defs from %s...", buildDef)
+		a.loadBuiltinRules(stmts, string(bytecontent))
+
+	}
+	return nil
+}
+
+func (a *Analyzer) loadBuiltinRules(stmts []*asp.Statement, fileContent string) {
+	for _, statement := range stmts {
+		if statement.FuncDef != nil && !statement.FuncDef.IsPrivate {
+
+			ruleDef := newRuleDef(fileContent, statement)
+			a.BuiltIns[statement.FuncDef.Name] = ruleDef
+
+			// Fill in attribute map if certain ruleDef is a attribute
+			if ruleDef.Object != "" {
+				if _, ok := a.Attributes[ruleDef.Object]; ok {
+					a.Attributes[ruleDef.Object] = append(a.Attributes[ruleDef.Object], ruleDef)
+				} else {
+					a.Attributes[ruleDef.Object] = []*RuleDef{ruleDef}
 				}
 			}
 		}
 	}
-
-	a.BuiltIns = statementMap
-	a.Attributes = attrMap
-	return nil
 }
 
 func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
@@ -279,38 +286,11 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 	return ch
 }
 
-// FuncCallFromContentAndPos returns a Identifier object represents function call,
+// CallFromStatementAndPos returns a Identifier object represents function call,
 // Only returns the not nil object when the Identifier is within the range specified by the position
-func (a *Analyzer) FuncCallFromContentAndPos(content string, pos lsp.Position) *Call {
+func (a *Analyzer) CallFromStatementAndPos(content string, pos lsp.Position) *Call {
 	stmts := a.AspStatementFromContent(content)
-	stmt := a.getStatementFromPos(stmts, pos)
-
-	return a.CallFromStatementAndPos(stmt, pos)
-	//return a.CallFromAST(stmts, pos)
-}
-
-// CallFromStatementAndPos returns a call object within the statement if it's within the range of the position
-func (a *Analyzer) CallFromStatementAndPos(stmt *Statement, pos lsp.Position) *Call {
-	if stmt == nil {
-		return nil
-	}
-
-	if stmt.Ident != nil {
-		call := a.CallFromAST(stmt, pos)
-		if call != nil {
-			return call
-		}
-		if stmt.Ident.Type == "call" {
-			return &Call{
-				Arguments: stmt.Ident.Action.Call.Arguments,
-				Name:      stmt.Ident.Name,
-			}
-		}
-	} else if stmt.Expression != nil {
-		return a.CallFromAST(stmt.Expression.Val, pos)
-	}
-
-	return nil
+	return a.CallFromAST(stmts, pos)
 }
 
 // CallFromAST returns the Call object from the AST if it's within the range of the position
@@ -331,6 +311,22 @@ func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
 					return asp.WalkAST(action.Property, callback)
 				}
 			}
+		} else if stmt, ok := astStruct.(asp.Statement); ok {
+			if stmt.Ident != nil && withInRange(stmt.Pos, stmt.EndPos, pos) {
+
+				// Walk through the ident first to see any the pos yields to any argument calls
+				if item := asp.WalkAST(stmt.Ident, callback); item != nil {
+					return item
+				}
+
+				if stmt.Ident.Action != nil && stmt.Ident.Action.Call != nil {
+					return &Call{
+						Arguments: stmt.Ident.Action.Call.Arguments,
+						Name:      stmt.Ident.Name,
+					}
+				}
+			}
+
 		}
 		return nil
 	}
@@ -423,36 +419,6 @@ func getVarType(valExpr *asp.ValueExpression) string {
 	}
 
 	return ""
-}
-
-// StatementFromPos returns a Statement struct with either an Identifier or asp.Expression
-func (a *Analyzer) StatementFromPos(uri lsp.DocumentURI, position lsp.Position) (*Statement, error) {
-	// Get all the statements from the build file
-	stmts, err := a.AspStatementFromFile(uri)
-	if err != nil {
-		return nil, err
-	}
-	return a.getStatementFromPos(stmts, position), nil
-}
-
-func (a *Analyzer) getStatementFromPos(stmts []*asp.Statement, position lsp.Position) *Statement {
-	if len(stmts) == 0 {
-		return nil
-	}
-
-	statement, expr := asp.StatementOrExpressionFromAst(stmts,
-		asp.Position{Line: position.Line + 1, Column: position.Character + 1})
-
-	if statement != nil {
-		return &Statement{
-			Ident: a.identFromStatement(statement),
-		}
-	} else if expr != nil {
-		return &Statement{
-			Expression: expr,
-		}
-	}
-	return nil
 }
 
 func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {

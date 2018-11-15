@@ -13,6 +13,7 @@ import (
 	"tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
+	"strings"
 )
 
 func TestNewAnalyzer(t *testing.T) {
@@ -24,6 +25,17 @@ func TestNewAnalyzer(t *testing.T) {
 	goLibrary := a.BuiltIns["go_library"]
 	assert.Equal(t, 15, len(goLibrary.ArgMap))
 	assert.Equal(t, true, goLibrary.ArgMap["name"].Required)
+
+	// check preloadBuildDefs has being loaded
+	goBinData := a.BuiltIns["go_bindata"]
+	assert.Equal(t, 10, len(goBinData.ArgMap))
+	assert.Equal(t, true, goBinData.ArgMap["name"].Required)
+	assert.Equal(t, "input_dir=None", goBinData.ArgMap["input_dir"].Repr)
+
+	// Ensure private funcDefs are not loaded
+	for name := range a.BuiltIns {
+		assert.False(t, strings.HasPrefix(name, "_"))
+	}
 
 	// Check for methods map
 	_, ok := a.Attributes["str"]
@@ -43,31 +55,6 @@ func TestAspStatementFromFile(t *testing.T) {
 	assert.Equal(t, stmts[0].Ident.Name, "go_library")
 
 	assert.Equal(t, stmts[1].Ident.Name, "go_test")
-}
-
-func TestStatementFromPos(t *testing.T) {
-	a, err := newAnalyzer()
-	assert.Equal(t, err, nil)
-
-	filePath := "tools/build_langserver/langserver/test_data/example.build"
-	a.State.Config.Parse.BuildFileName = append(a.State.Config.Parse.BuildFileName, "example.build")
-	uri := lsp.DocumentURI("file://" + filePath)
-
-	stmt, err := a.StatementFromPos(uri, lsp.Position{Line: 2, Character: 13})
-	assert.Equal(t, err, nil)
-	assert.Equal(t, "call", stmt.Ident.Type)
-	assert.Equal(t, "go_library", stmt.Ident.Name)
-	assert.Equal(t, "name", stmt.Ident.Action.Call.Arguments[0].Name)
-
-	// Test on blank Area
-	stmt, err = a.StatementFromPos(uri, lsp.Position{Line: 18, Character: 50})
-	assert.Equal(t, err, nil)
-	assert.True(t, nil == stmt)
-
-	// Test out of range
-	stmt, err = a.StatementFromPos(uri, lsp.Position{Line: 100, Character: 50})
-	assert.Equal(t, err, nil)
-	assert.True(t, nil == stmt)
 }
 
 func TestNewRuleDef(t *testing.T) {

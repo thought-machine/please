@@ -31,7 +31,6 @@ func TestGetSignaturesTwoParams(t *testing.T) {
 	assert.True(t, paramInList(sig.Signatures[0].Parameters, "name:str"))
 	assert.True(t, paramInList(sig.Signatures[0].Parameters, "visibility:list=None"))
 	assert.True(t, paramInList(sig.Signatures[0].Parameters, "test_only:bool&testonly=False"))
-	t.Log(sig.Signatures[0].Parameters)
 }
 
 func TestGetSignaturesMethods(t *testing.T) {
