@@ -14,11 +14,9 @@ func TestProjectLocation(t *testing.T) {
 }
 
 func TestModuleFileLocation(t *testing.T) {
-	target := &core.BuildTarget{
-		Label: core.BuildLabel{
-			PackageName: "some/package", Name: "target", Subrepo: "",
-		},
+	label := core.BuildLabel{
+		PackageName: "some/package", Name: "target", Subrepo: "",
 	}
 
-	assert.True(t, strings.HasSuffix(moduleFileLocation(target), "plz-out/intellij/some/package/some_package_target.iml"))
+	assert.True(t, strings.HasSuffix(moduleFileLocation(label), "plz-out/intellij/some/package/some_package_target.iml"))
 }

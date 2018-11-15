@@ -25,7 +25,7 @@ func newJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 	for _, label := range target.DeclaredDependencies() {
 		dep := graph.TargetOrDie(label)
 		if shouldMakeModule(dep) {
-			component.addOrderEntry(newModuleEntry(moduleName(dep)))
+			component.addOrderEntry(newModuleEntry(moduleName(label)))
 		}
 	}
 

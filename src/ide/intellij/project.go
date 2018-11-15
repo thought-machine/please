@@ -106,7 +106,7 @@ func newModulesComponent(targets core.BuildTargets) ModulesComponent {
 	}
 
 	for _, t := range targets {
-		component.Modules = append(component.Modules, newModulesModule(t))
+		component.Modules = append(component.Modules, newModulesModule(t.Label))
 	}
 
 	return component
@@ -119,8 +119,8 @@ type ModulesModule struct {
 	FilePath string   `xml:"filepath,attr"`
 }
 
-func newModulesModule(target *core.BuildTarget) ModulesModule {
-	filePath := "$PROJECT_DIR$/" + target.Label.PackageDir() + "/" + fmt.Sprintf("%s.iml", moduleName(target))
+func newModulesModule(label core.BuildLabel) ModulesModule {
+	filePath := "$PROJECT_DIR$/" + label.PackageDir() + "/" + fmt.Sprintf("%s.iml", moduleName(label))
 	return ModulesModule{
 		FileURL:  "file://"+filePath,
 		FilePath: filePath,
