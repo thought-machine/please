@@ -25,6 +25,12 @@ func TestNewAnalyzer(t *testing.T) {
 	assert.Equal(t, 15, len(goLibrary.ArgMap))
 	assert.Equal(t, true, goLibrary.ArgMap["name"].Required)
 
+	// check preloadBuildDefs has being loaded
+	goBinData := a.BuiltIns["go_bindata"]
+	assert.Equal(t, 10, len(goBinData.ArgMap))
+	assert.Equal(t, true, goBinData.ArgMap["name"].Required)
+	assert.Equal(t, "input_dir=None", goBinData.ArgMap["input_dir"].Repr)
+
 	// Check for methods map
 	_, ok := a.Attributes["str"]
 	assert.True(t, ok)

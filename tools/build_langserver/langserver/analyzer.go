@@ -119,8 +119,8 @@ func newAnalyzer() (*Analyzer, error) {
 // BuiltInsRules gets all the builtin functions and rules as a map, and store it in Analyzer.BuiltIns
 // This is typically called when instantiate a new Analyzer
 func (a *Analyzer) builtInsRules() error {
-	statementMap := make(map[string]*RuleDef)
-	attrMap := make(map[string][]*RuleDef)
+	a.BuiltIns = make(map[string]*RuleDef)
+	a.Attributes = make(map[string][]*RuleDef)
 
 	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)
@@ -132,30 +132,44 @@ func (a *Analyzer) builtInsRules() error {
 			if err != nil {
 				log.Warning("parsing failure: %s ", err)
 			}
-			// Iterate through the statement we got and add to statementMap
-			for _, statement := range stmts {
-				if statement.FuncDef != nil && !strings.HasPrefix(statement.FuncDef.Name, "_") {
-					content := string(asset)
 
-					ruleDef := newRuleDef(content, statement)
-					statementMap[statement.FuncDef.Name] = ruleDef
+			log.Info("Loading built-in build rules...")
+			a.loadBuiltinRules(stmts, string(asset))
+		}
+	}
 
-					// Fill in attribute map if certain ruleDef is a attribute
-					if ruleDef.Object != "" {
-						if _, ok := attrMap[ruleDef.Object]; ok {
-							attrMap[ruleDef.Object] = append(attrMap[ruleDef.Object], ruleDef)
-						} else {
-							attrMap[ruleDef.Object] = []*RuleDef{ruleDef}
-						}
-					}
+	for _, i := range a.State.Config.Parse.PreloadBuildDefs {
+		filePath := path.Join(core.RepoRoot, i)
+		bytecontent, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			log.Warning("parsing failure for preload build defs: %s ", err)
+		}
+		stmts, err := a.parser.ParseData(bytecontent, filePath)
+
+		log.Debug("Preloading build defs from %s...", i)
+		a.loadBuiltinRules(stmts, string(bytecontent))
+
+	}
+	return nil
+}
+
+func (a *Analyzer) loadBuiltinRules(stmts []*asp.Statement, fileContent string) {
+	for _, statement := range stmts {
+		if statement.FuncDef != nil && !strings.HasPrefix(statement.FuncDef.Name, "_") {
+
+			ruleDef := newRuleDef(fileContent, statement)
+			a.BuiltIns[statement.FuncDef.Name] = ruleDef
+
+			// Fill in attribute map if certain ruleDef is a attribute
+			if ruleDef.Object != "" {
+				if _, ok := a.Attributes[ruleDef.Object]; ok {
+					a.Attributes[ruleDef.Object] = append(a.Attributes[ruleDef.Object], ruleDef)
+				} else {
+					a.Attributes[ruleDef.Object] = []*RuleDef{ruleDef}
 				}
 			}
 		}
 	}
-
-	a.BuiltIns = statementMap
-	a.Attributes = attrMap
-	return nil
 }
 
 func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
