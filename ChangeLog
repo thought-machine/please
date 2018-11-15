@@ -1,3 +1,11 @@
+Version 13.2.5
+--------------
+
+    * Fix for a possible infinite loop during builds when some specific kinds of
+      changes to targets were made.
+    * Further updates to language protocol server.
+
+
 Version 13.2.4
 --------------
 

@@ -430,7 +430,7 @@ func RemoveOutputs(target *core.BuildTarget) error {
 // It returns true if something was removed.
 func checkForStaleOutput(filename string, err error) bool {
 	if perr, ok := err.(*os.PathError); ok && perr.Err.Error() == "not a directory" {
-		for dir := path.Dir(filename); dir != "." && dir != "/" && path.Base(dir) != "plz-out"; dir = path.Dir(filename) {
+		for dir := path.Dir(filename); dir != "." && dir != "/" && path.Base(dir) != "plz-out"; dir = path.Dir(dir) {
 			if fs.FileExists(dir) {
 				log.Warning("Removing %s which appears to be a stale output file", dir)
 				os.Remove(dir)
