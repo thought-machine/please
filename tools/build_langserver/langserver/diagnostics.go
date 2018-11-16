@@ -143,9 +143,16 @@ func (ds *diagnosticsStore) diagnosticFromBuildLabel(labelStr string, valRange l
 			Message:  fmt.Sprintf("Invalid build label %s", trimmed),
 		}
 	}
+	currentPkg, err := PackageLabelFromURI(ds.uri)
 
-	// TODO(bnm): check visibility
-	fmt.Println(label)
+	if isVisible(label.BuildDef, currentPkg) {
+		return &lsp.Diagnostic{
+			Range:    valRange,
+			Severity: lsp.Error,
+			Source:   "build",
+			Message:  fmt.Sprintf("build label %s is not visible to current pkg", trimmed),
+		}
+	}
 	return nil
 }
 

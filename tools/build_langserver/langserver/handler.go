@@ -242,3 +242,18 @@ func getURIAndHandleErrors(uri lsp.DocumentURI, method string) (lsp.DocumentURI,
 	}
 	return documentURI, err
 }
+
+func isVisible(buildDef *BuildDef, currentPkg string) bool {
+	for _, i := range buildDef.Visibility {
+		if i == "PUBLIC" {
+			return true
+		}
+
+		label := core.ParseBuildLabel(i, currentPkg)
+		currentPkgLabel := core.ParseBuildLabel(currentPkg, currentPkg)
+		if label.Includes(currentPkgLabel) {
+			return true
+		}
+	}
+	return false
+}
