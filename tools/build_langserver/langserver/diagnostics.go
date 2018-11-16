@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"parse/asp"
-	"strings"
 
 	"tools/build_langserver/lsp"
 
@@ -48,7 +47,7 @@ func newDiagnostics(analyzer *Analyzer, content string, uri lsp.DocumentURI) *di
 
 	var callback func(astStruct interface{}) interface{}
 
-	callback := func(astStruct interface{}) interface{} {
+	callback = func(astStruct interface{}) interface{} {
 		if stmt, ok := astStruct.(asp.Statement); ok {
 			if stmt.Ident != nil {
 				asp.WalkAST(stmt.Ident, callback)
@@ -68,6 +67,7 @@ func newDiagnostics(analyzer *Analyzer, content string, uri lsp.DocumentURI) *di
 
 					} else {
 						callRange := getStmtCallRange(stmt)
+						fmt.Println(callRange)
 					}
 				}
 			}
@@ -130,15 +130,22 @@ func (ds *diagnosticsStore) storeFuncCallDiagnostics(def *RuleDef, callArgs []as
 	}
 }
 
-func (ds *diagnosticsStore) diagnosticFromBuildLabel(labelStr string) *lsp.Diagnostic {
+func (ds *diagnosticsStore) diagnosticFromBuildLabel(labelStr string, valRange lsp.Range) *lsp.Diagnostic {
 	trimmed := TrimQuotes(labelStr)
 
 	ctx := context.Background()
-	label, err := ds.analyzer.BuildLabelFromString(ctx, ds.uri, labelStr)
+	label, err := ds.analyzer.BuildLabelFromString(ctx, ds.uri, trimmed)
 	if err != nil {
-		return
+		return &lsp.Diagnostic{
+			Range:    valRange,
+			Severity: lsp.Error,
+			Source:   "build",
+			Message:  fmt.Sprintf("Invalid build label %s", trimmed),
+		}
 	}
 
+	// TODO(bnm): check visibility
+	fmt.Println(label)
 	return nil
 }
 

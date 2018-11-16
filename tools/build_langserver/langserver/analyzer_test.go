@@ -232,6 +232,10 @@ func TestAnalyzer_BuildLabelFromStringBogusLabel(t *testing.T) {
 	label, err := a.BuildLabelFromString(ctx, exampleBuildURI, "//blah/foo")
 	assert.NotEqual(t, err, nil)
 	assert.True(t, nil == label)
+
+	label, err = a.BuildLabelFromString(ctx, exampleBuildURI, "//src/core:blah")
+	assert.NotEqual(t, err, nil)
+	assert.True(t, nil == label)
 }
 
 func TestAnalyzer_BuildDefFromUri(t *testing.T) {
