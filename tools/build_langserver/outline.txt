@@ -78,3 +78,10 @@ init.go
 - handles initialization of the request
 
 
+Wishlist
+--------
+
+ - Autoformatting
+ - Completion of function argument names (e.g. `vis` -> `visibility`)
+ - Find references (`plz query revdeps` probably does most of this)
+ - rename support
