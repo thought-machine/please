@@ -76,7 +76,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 		return method(ctx, req)
 	}
 
-	return h.handleTDRequests(ctx, req)
+	return h.handleTDRequests(ctx, conn, req)
 }
 
 func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {

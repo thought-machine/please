@@ -20,6 +20,8 @@ type document struct {
 	text []string
 	// test content of the document while in editing(not been saved)
 	textInEdit []string
+	// Diagnostics
+	diagnostics *diagnosticsStore
 }
 
 func newWorkspaceStore(rootURI lsp.DocumentURI) *workspaceStore {

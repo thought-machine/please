@@ -222,6 +222,18 @@ func TestBuildLabelFromString(t *testing.T) {
 	assert.Equal(t, "Subrepo label: @mysubrepo//spam/eggs:ham", label.Definition)
 }
 
+func TestAnalyzer_BuildLabelFromStringBogusLabel(t *testing.T) {
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
+	ctx := context.Background()
+
+	// Ensure we get an error when we pass in a bogus label
+	label, err := a.BuildLabelFromString(ctx, exampleBuildURI, "//blah/foo")
+	assert.NotEqual(t, err, nil)
+	assert.True(t, nil == label)
+}
+
 func TestAnalyzer_BuildDefFromUri(t *testing.T) {
 	ctx := context.Background()
 

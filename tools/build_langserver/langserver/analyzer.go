@@ -84,6 +84,13 @@ type BuildDef struct {
 	Visibility []string
 }
 
+// Statement is a simplified version of asp.Statement
+// Here we only care about Idents and Expressions
+type Statement struct {
+	Ident      *Identifier
+	Expression *asp.Expression
+}
+
 // BuildLabel is a wrapper around core.BuildLabel
 // Including the path of the buildFile
 type BuildLabel struct {
@@ -499,9 +506,9 @@ func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[st
 func (a *Analyzer) VariableFromIdent(ident *Identifier) *Variable {
 	var varType string
 	if ident.Type == "assign" {
-		varType = getVarType(ident.Action.Assign.Val)
+		varType = GetValType(ident.Action.Assign.Val)
 	} else if ident.Type == "augAssign" {
-		varType = getVarType(ident.Action.AugAssign.Val)
+		varType = GetValType(ident.Action.AugAssign.Val)
 	}
 
 	if varType != "" {
@@ -515,7 +522,8 @@ func (a *Analyzer) VariableFromIdent(ident *Identifier) *Variable {
 	return nil
 }
 
-func getVarType(valExpr *asp.ValueExpression) string {
+// GetValType returns a string representation of the type a asp.ValueExpression struct
+func GetValType(valExpr *asp.ValueExpression) string {
 	if valExpr.String != "" || valExpr.FString != nil {
 		return "string"
 	} else if valExpr.Int != nil {
@@ -750,6 +758,10 @@ func (a *Analyzer) IsBuildFile(uri lsp.DocumentURI) bool {
 	base := path.Base(filepath)
 	return a.State.Config.IsABuildFile(base)
 }
+
+/************************
+ * Helper functions
+ ************************/
 
 // e.g. src type:list, required:false
 func getArgString(argument asp.Argument) string {

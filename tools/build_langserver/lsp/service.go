@@ -152,3 +152,8 @@ type CompletionItem struct {
 	TextEdit         *TextEdit          `json:"textEdit,omitempty"`
 	Data             interface{}        `json:"data,omitempty"`
 }
+
+type PublishDiagnosticsParams struct {
+	URI         DocumentURI  `json:"uri"`
+	Diagnostics []Diagnostic `json:"diagnostics"`
+}

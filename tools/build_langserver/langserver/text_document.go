@@ -8,7 +8,7 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 )
 
-func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleTDRequests(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
 	if !isTextDocumentMethod(req) {
 		return nil, nil
 	}

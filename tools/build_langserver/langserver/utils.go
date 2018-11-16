@@ -225,6 +225,17 @@ func mustMatch(pattern string, str string) bool {
 	return false
 }
 
+// StringInSlice checks if an item is in a string slice
+func StringInSlice(strSlice []string, needle string) bool {
+	for _, item := range strSlice {
+		if item == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
 // isEmpty checks if the hovered line is empty
 func isEmpty(lineContent string, pos lsp.Position) bool {
 	return len(lineContent) < pos.Character || strings.TrimSpace(lineContent[:pos.Character]) == ""
@@ -267,5 +278,12 @@ func lspPositionToAsp(pos lsp.Position) asp.Position {
 	return asp.Position{
 		Line:   pos.Line + 1,
 		Column: pos.Character + 1,
+	}
+}
+
+func aspPositionToLsp(pos asp.Position) lsp.Position {
+	return lsp.Position{
+		Line:      pos.Line - 1,
+		Character: pos.Column - 1,
 	}
 }
