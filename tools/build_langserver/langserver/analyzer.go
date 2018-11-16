@@ -396,11 +396,16 @@ func (a *Analyzer) GetSubinclude(ctx context.Context, stmts []*asp.Statement, ur
 		if stmt.Ident != nil {
 			ident := a.identFromStatement(stmt)
 			if ident.Type == "call" && ident.Name == "subinclude" && len(ident.Action.Call.Arguments) > 0 {
+				if ident.Action.Call.Arguments[0].Value.Val == nil {
+					log.Warning("Subinclude is nil, skipping...")
+					continue
+				}
 				includeLabel := ident.Action.Call.Arguments[0].Value.Val.String
 
 				label, err := a.BuildLabelFromString(ctx, uri, TrimQuotes(includeLabel))
 				if err != nil {
 					log.Warning("error occured when trying to get subinclude %s: %s", includeLabel, err)
+					continue
 				}
 
 				if label.BuildDef != nil &&
@@ -483,7 +488,6 @@ func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[st
 		}
 
 		if variable := a.VariableFromIdent(i); variable != nil {
-		if variable != nil {
 			vars[variable.Name] = *variable
 		}
 	}
