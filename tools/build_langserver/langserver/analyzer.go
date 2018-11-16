@@ -286,9 +286,9 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 	return ch
 }
 
-// CallFromStatementAndPos returns a Identifier object represents function call,
+// CallFromContentAndPos returns a Identifier object represents function call,
 // Only returns the not nil object when the Identifier is within the range specified by the position
-func (a *Analyzer) CallFromStatementAndPos(content string, pos lsp.Position) *Call {
+func (a *Analyzer) CallFromContentAndPos(content string, pos lsp.Position) *Call {
 	stmts := a.AspStatementFromContent(content)
 	return a.CallFromAST(stmts, pos)
 }
@@ -338,11 +338,18 @@ func (a *Analyzer) CallFromAST(val interface{}, pos lsp.Position) *Call {
 	return nil
 }
 
-// BuildLabelFromContent returns the BuildLabel object from the AST if it's within the range of the position
-func (a *Analyzer) BuildLabelFromContent(ctx context.Context,
+// BuildLabelFromContentAndPos returns the BuildLabel object from the AST if it's within the range of the position
+// Given the content
+func (a *Analyzer) BuildLabelFromContentAndPos(ctx context.Context,
 	content string, uri lsp.DocumentURI, pos lsp.Position) *BuildLabel {
 
 	stmts := a.AspStatementFromContent(content)
+	return a.BuildLabelFromAST(ctx, stmts, uri, pos)
+}
+
+// BuildLabelFromAST returns the BuildLabel object from the AST if it's within the range of the position
+func (a *Analyzer) BuildLabelFromAST(ctx context.Context,
+	val interface{}, uri lsp.DocumentURI, pos lsp.Position) *BuildLabel {
 
 	var callback func(astStruct interface{}) interface{}
 
@@ -369,14 +376,108 @@ func (a *Analyzer) BuildLabelFromContent(ctx context.Context,
 		return nil
 	}
 
-	if item := asp.WalkAST(stmts, callback); item != nil {
+	if item := asp.WalkAST(val, callback); item != nil {
 		return item.(*BuildLabel)
 	}
 
 	return nil
 }
 
-// VariablesFromContent returns a map of variable name to Variable
+// GetSubinclude returns a Subinclude object based on the statement and uri passed in.
+func (a *Analyzer) GetSubinclude(ctx context.Context, stmts []*asp.Statement, uri lsp.DocumentURI) map[string]*RuleDef {
+
+	ruleDefs := make(map[string]*RuleDef)
+
+	currentPkg, err := PackageLabelFromURI(uri)
+	if err != nil {
+		log.Warning("fail to load package from uri %s: %s", uri, err)
+	}
+	for _, stmt := range stmts {
+		if stmt.Ident != nil {
+			ident := a.identFromStatement(stmt)
+			if ident.Type == "call" && ident.Name == "subinclude" && len(ident.Action.Call.Arguments) > 0 {
+				if ident.Action.Call.Arguments[0].Value.Val == nil {
+					log.Warning("Subinclude is nil, skipping...")
+					continue
+				}
+				includeLabel := ident.Action.Call.Arguments[0].Value.Val.String
+
+				label, err := a.BuildLabelFromString(ctx, uri, TrimQuotes(includeLabel))
+				if err != nil {
+					log.Warning("error occured when trying to get subinclude %s: %s", includeLabel, err)
+					continue
+				}
+
+				if label.BuildDef != nil &&
+					label.BuildDef.Name == "filegroup" && isVisible(label.BuildDef, currentPkg) {
+					// TODO(bnm): support genrule as well!
+					srcs := getSourcesFromBuildDef(label.BuildDef, label.Path)
+					a.loadRuleDefsFromSource(ruleDefs, srcs)
+
+				}
+			}
+		}
+	}
+
+	return ruleDefs
+}
+
+// GetBuildRuleByName takes the name and subincludes ruleDefs, and return the appropriate ruleDef
+func (a *Analyzer) GetBuildRuleByName(name string, subincludes map[string]*RuleDef) *RuleDef {
+	if rule, ok := a.BuiltIns[name]; ok {
+		return rule
+	}
+
+	if rule, ok := subincludes[name]; ok {
+		return rule
+	}
+
+	return nil
+}
+
+func (a *Analyzer) loadRuleDefsFromSource(rulesMap map[string]*RuleDef, srcs []string) {
+	for _, src := range srcs {
+		bytecontent, err := ioutil.ReadFile(src)
+		if err != nil {
+			log.Warning("parsing failure for build defs %s: %s ", src, err)
+		}
+
+		stmts, err := a.parser.ParseData(bytecontent, src)
+
+		for _, statement := range stmts {
+			if statement.FuncDef != nil && !statement.FuncDef.IsPrivate {
+
+				ruleDef := newRuleDef(string(bytecontent), statement)
+				rulesMap[statement.FuncDef.Name] = ruleDef
+			}
+		}
+	}
+}
+
+func getSourcesFromBuildDef(def *BuildDef, buildFilePath string) []string {
+	var srcs []string
+
+	pkgDir := path.Dir(buildFilePath)
+	for _, arg := range def.Action.Call.Arguments {
+		if arg.Value.Val == nil {
+			continue
+		}
+		if arg.Name == "src" && arg.Value.Val.String != "" {
+			srcPath := path.Join(pkgDir, arg.Value.Val.String)
+			srcs = append(srcs, srcPath)
+		} else if arg.Name == "srcs" && arg.Value.Val.List != nil {
+			srcList := aspListToStrSlice(arg.Value.Val.List)
+			for _, src := range srcList {
+				srcPath := path.Join(pkgDir, src)
+				srcs = append(srcs, srcPath)
+			}
+		}
+	}
+
+	return srcs
+}
+
+// VariablesFromContent returns a map of variable name to Variable objects
 func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[string]Variable {
 	idents := a.IdentsFromContent(content, pos)
 
@@ -386,23 +487,32 @@ func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[st
 			continue
 		}
 
-		var varType string
-		if i.Type == "assign" {
-			varType = getVarType(i.Action.Assign.Val)
-		} else if i.Type == "augAssign" {
-			varType = getVarType(i.Action.AugAssign.Val)
-		}
-
-		if varType != "" {
-			variable := Variable{
-				Name: i.Name,
-				Type: varType,
-			}
-			vars[i.Name] = variable
+		if variable := a.VariableFromIdent(i); variable != nil {
+			vars[variable.Name] = *variable
 		}
 	}
 
 	return vars
+}
+
+// VariableFromIdent returns Variable object passing in an Identifier
+func (a *Analyzer) VariableFromIdent(ident *Identifier) *Variable {
+	var varType string
+	if ident.Type == "assign" {
+		varType = getVarType(ident.Action.Assign.Val)
+	} else if ident.Type == "augAssign" {
+		varType = getVarType(ident.Action.AugAssign.Val)
+	}
+
+	if varType != "" {
+		variable := &Variable{
+			Name: ident.Name,
+			Type: varType,
+		}
+		return variable
+	}
+
+	return nil
 }
 
 func getVarType(valExpr *asp.ValueExpression) string {
@@ -552,6 +662,14 @@ func (a *Analyzer) BuildDefsFromURI(ctx context.Context, uri lsp.DocumentURI) (m
 		return nil, err
 	}
 
+	return a.BuildDefsFromStatements(ctx, uri, stmts)
+}
+
+// BuildDefsFromStatements takes in the uri of the label, stmts of the build file
+// returns a map of buildDefname : *BuildDef
+func (a *Analyzer) BuildDefsFromStatements(ctx context.Context, labelURI lsp.DocumentURI,
+	stmts []*asp.Statement) (map[string]*BuildDef, error) {
+
 	buildDefs := make(map[string]*BuildDef)
 
 	var defaultVisibility []string
@@ -588,7 +706,7 @@ func (a *Analyzer) BuildDefsFromURI(ctx context.Context, uri lsp.DocumentURI) (m
 				if len(defaultVisibility) > 0 {
 					buildDef.Visibility = defaultVisibility
 				} else {
-					currentPkg, err := PackageLabelFromURI(uri)
+					currentPkg, err := PackageLabelFromURI(labelURI)
 					if err != nil {
 						return nil, err
 					}
@@ -596,7 +714,7 @@ func (a *Analyzer) BuildDefsFromURI(ctx context.Context, uri lsp.DocumentURI) (m
 				}
 			}
 			// Get the content for the BuildDef
-			labelfileContent, err := ReadFile(ctx, uri)
+			labelfileContent, err := ReadFile(ctx, labelURI)
 			if err != nil {
 				return nil, err
 			}

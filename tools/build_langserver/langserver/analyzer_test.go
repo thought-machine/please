@@ -295,6 +295,20 @@ func TestAnalyzer_VariableFromContentGLOBAL(t *testing.T) {
 	assert.Equal(t, "int", vars["foo"].Type)
 }
 
+func TestAnalyzer_GetSubinclude(t *testing.T) {
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+	ctx := context.Background()
+
+	stmts, err := a.AspStatementFromFile(subincludeURI)
+	assert.NoError(t, err)
+
+	subinclude := a.GetSubinclude(ctx, stmts, subincludeURI)
+	assert.Equal(t, len(subinclude), 1)
+	_, ok := subinclude["plz_e2e_test"]
+	assert.True(t, ok)
+}
+
 /************************
  * Helper functions
  ************************/

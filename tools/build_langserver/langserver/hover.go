@@ -58,16 +58,20 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	if isEmpty(lineContent, pos) {
 		return "", nil
 	}
+	stmts := h.analyzer.AspStatementFromContent(JoinLines(fileContent, true))
 
-	call := h.analyzer.CallFromStatementAndPos(JoinLines(fileContent, true), pos)
-	label := h.analyzer.BuildLabelFromContent(ctx, JoinLines(fileContent, true),
-		uri, pos)
+	call := h.analyzer.CallFromAST(stmts, pos)
+	label := h.analyzer.BuildLabelFromAST(ctx, stmts, uri, pos)
 	var contentString string
 	var contentErr error
 
 	if call != nil {
-		contentString, contentErr = contentFromCall(h.analyzer, call.Arguments, call.Name,
-			lineContent, pos)
+		subincludes := h.analyzer.GetSubinclude(ctx, stmts, uri)
+		rule := h.analyzer.GetBuildRuleByName(call.Name, subincludes)
+
+		if rule != nil {
+			contentString, contentErr = contentFromCall(call.Arguments, rule, lineContent, pos)
+		}
 	}
 
 	if label != nil {
@@ -85,28 +89,27 @@ func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, po
 	return contentString, nil
 }
 
-func contentFromCall(analyzer *Analyzer, args []asp.CallArgument, identName string,
+func contentFromCall(args []asp.CallArgument, ruleDef *RuleDef,
 	lineContent string, pos lsp.Position) (string, error) {
 
 	// check if the hovered content is on the name of the ident
-	if strings.Contains(lineContent, identName) {
+	if strings.Contains(lineContent, ruleDef.Name) {
 		// adding the trailing open paren to the identName ensure it's a call,
 		// prevent inaccuracy for cases like so: replace_str = x.replace('-', '_')
-		identNameIndex := strings.Index(lineContent, identName+"(")
+		identNameIndex := strings.Index(lineContent, ruleDef.Name+"(")
 
 		if pos.Character >= identNameIndex &&
-			pos.Character <= identNameIndex+len(identName)-1 {
-			return contentFromRuleDef(analyzer, identName), nil
+			pos.Character <= identNameIndex+len(ruleDef.Name)-1 {
+			return contentFromRuleDef(ruleDef), nil
 		}
 	}
 
 	// Check arguments of the IdentStatement, and return the appropriate content if any
-	return contentFromArgs(analyzer, args, identName, pos)
+	return contentFromArgs(args, ruleDef, pos)
 }
 
-func contentFromArgs(analyzer *Analyzer, args []asp.CallArgument, identName string, pos lsp.Position) (string, error) {
+func contentFromArgs(args []asp.CallArgument, ruleDef *RuleDef, pos lsp.Position) (string, error) {
 
-	builtinRule := analyzer.BuiltIns[identName]
 	for i, identArg := range args {
 		argNameEndPos := asp.Position{
 			Line:   identArg.Pos.Line,
@@ -115,17 +118,17 @@ func contentFromArgs(analyzer *Analyzer, args []asp.CallArgument, identName stri
 		if withInRange(identArg.Pos, argNameEndPos, pos) {
 			// This is to prevent cases like str.format(),
 			// When the positional args are not exactly stored in ArgMap
-			arg, okay := analyzer.BuiltIns[identName].ArgMap[identArg.Name]
+			arg, okay := ruleDef.ArgMap[identArg.Name]
 			if okay {
 				return arg.Definition, nil
 			}
 			// Return definition if the hovered content is a positional argument
 		} else if identArg.Name == "" && withInRange(identArg.Value.Pos, identArg.Value.EndPos, pos) {
 			argInd := i
-			if builtinRule.Arguments[0].Name == "self" {
+			if ruleDef.Arguments[0].Name == "self" {
 				argInd++
 			}
-			return builtinRule.ArgMap[builtinRule.Arguments[argInd].Name].Definition, nil
+			return ruleDef.ArgMap[ruleDef.Arguments[argInd].Name].Definition, nil
 		}
 
 	}
@@ -134,10 +137,10 @@ func contentFromArgs(analyzer *Analyzer, args []asp.CallArgument, identName stri
 
 // contentFromRuleDef returns the content from when hovering over the name of a function call
 // return value consist of a string containing the header and the docstring of a build rule
-func contentFromRuleDef(analyzer *Analyzer, name string) string {
+func contentFromRuleDef(ruleDef *RuleDef) string {
 
-	header := analyzer.BuiltIns[name].Header
-	docString := analyzer.BuiltIns[name].Docstring
+	header := ruleDef.Header
+	docString := ruleDef.Docstring
 
 	if docString != "" {
 		return header + "\n\n" + docString

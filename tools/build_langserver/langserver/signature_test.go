@@ -68,6 +68,16 @@ func TestGetSignatureWithAssignment(t *testing.T) {
 	assert.True(t, paramInList(sig.Signatures[0].Parameters, "exclude:list&excludes=[]"))
 }
 
+func TestGetSignatureWithSubinclude(t *testing.T) {
+	ctx := context.Background()
+
+	sig := handler.getSignatures(ctx, subincludeURI, lsp.Position{Line: 3, Character: 24})
+	assert.Equal(t, 1, sig.ActiveParameter)
+	assert.True(t, paramInList(sig.Signatures[0].Parameters, "expect_file_doesnt_exist=None"))
+	assert.True(t, paramInList(sig.Signatures[0].Parameters, "expected_output=None"))
+	assert.True(t, paramInList(sig.Signatures[0].Parameters, "pre_cmd=None"))
+}
+
 /***************************************
  * Helpers
  ***************************************/

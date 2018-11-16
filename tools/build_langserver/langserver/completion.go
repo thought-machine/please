@@ -74,7 +74,11 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 		completionList, completionErr = itemsFromBuildLabel(ctx, h.analyzer, label, uri)
 	} else {
 		literal := ExtractLiteral(lineContent)
-		completionList = itemsFromliterals(h.analyzer, contentVars, literal)
+
+		stmts := h.analyzer.AspStatementFromContent(JoinLines(fileContent, true))
+		subincludes := h.analyzer.GetSubinclude(ctx, stmts, uri)
+
+		completionList = itemsFromliterals(h.analyzer, subincludes, contentVars, literal)
 	}
 
 	if completionErr != nil {
@@ -182,7 +186,9 @@ func buildLabelItemsFromPackage(ctx context.Context, analyzer *Analyzer, pkgLabe
 	return completionList, err
 }
 
-func itemsFromliterals(analyzer *Analyzer, contentVars map[string]Variable, literal string) []*lsp.CompletionItem {
+func itemsFromliterals(analyzer *Analyzer, subincludes map[string]*RuleDef,
+	contentVars map[string]Variable, literal string) []*lsp.CompletionItem {
+
 	var completionList []*lsp.CompletionItem
 
 	for key, val := range analyzer.BuiltIns {
@@ -200,7 +206,11 @@ func itemsFromliterals(analyzer *Analyzer, contentVars map[string]Variable, lite
 		}
 	}
 
-	// TODO(bnm): consider doing subincludes as well
+	for k, v := range subincludes {
+		if strings.Contains(k, literal) {
+			completionList = append(completionList, itemFromRuleDef(v))
+		}
+	}
 
 	return completionList
 }
