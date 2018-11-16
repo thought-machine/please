@@ -482,7 +482,7 @@ func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[st
 			continue
 		}
 
-		variable := a.VariableFromIdent(i)
+		if variable := a.VariableFromIdent(i); variable != nil {
 		if variable != nil {
 			vars[variable.Name] = *variable
 		}
