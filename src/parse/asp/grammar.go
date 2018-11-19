@@ -43,7 +43,7 @@ type FuncDef struct {
 	// be called using keyword arguments.
 	KeywordsOnly bool
 	// allowed return types of the FuncDef
-	Return    []string
+	Returns   []string
 	IsPrivate bool
 }
 

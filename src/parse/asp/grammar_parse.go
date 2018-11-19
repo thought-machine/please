@@ -229,7 +229,7 @@ func (p *parser) parseFuncDef() *FuncDef {
 	p.next(')')
 
 	if tok := p.l.Peek(); tok.Value != ":" {
-		fd.Return = p.parseFuncReturn()
+		fd.Returns = p.parseFuncReturn()
 	}
 
 	// Get the position for the end of function defition header
