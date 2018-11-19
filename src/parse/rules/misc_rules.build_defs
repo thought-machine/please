@@ -371,7 +371,7 @@ def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, 
     tar_name = name
     if xzip:
         tar_out = name + '.tar'
-        tar_name = f'_name#tar'
+        tar_name = f'_{name}#tar'
     elif gzip:
         cmd += ' -z'
     if subdir:
