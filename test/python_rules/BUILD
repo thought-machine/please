@@ -16,17 +16,17 @@ python_test(
     deps = [":proto_lib"],
 )
 
-python_library(
+python_binary(
     name = "strip_source",
-    srcs = ["strip_source.py"],
+    main = "strip_source.py",
     strip = True,
 )
 
 python_test(
     name = "strip_source_test",
     srcs = ["strip_source_test.py"],
+    data = [":strip_source"],
     labels = ["py3"],
-    deps = [":strip_source"],
 )
 
 # Test that has no actual tests in it. Should still count as a pass.

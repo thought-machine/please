@@ -1,19 +1,23 @@
 """Tests on source stripping."""
 
+import os
+import subprocess
 import unittest
 import zipfile
 
 
 class StripSourceTest(unittest.TestCase):
 
-    def test_file_is_a_pyc(self):
-        """Test that the stripped module is a .pyc."""
-        from test.python_rules import strip_source
-        self.assertTrue(strip_source.__file__.endswith('.pyc'))
+    def setUp(self):
+        self.filename = [x for x in os.environ['DATA'].split(' ') if x.endswith('.pex')][0]
 
-    def test_this_file_doesnt_exist(self):
-        """Test this file doesn't exist in the pex."""
-        import __main__ as pex_main
-        with zipfile.ZipFile(pex_main.PEX, 'r') as zf:
+    def test_can_run_binary(self):
+        """Test that the dependent binary can be run successfully."""
+        subprocess.check_call([self.filename])
+
+    def test_does_not_have_py_file(self):
+        """Test that the binary doesn't have the source in it."""
+        with zipfile.ZipFile(self.filename) as zf:
+            zf.getinfo('test/python_rules/strip_source.pyc')
             with self.assertRaises(KeyError):
                 zf.getinfo('test/python_rules/strip_source.py')
