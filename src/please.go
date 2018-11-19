@@ -650,10 +650,7 @@ var buildFunctions = map[string]func() bool{
 		opts.Watch.Watching = true
 		success, state := runBuild(opts.Watch.Args.Targets, true, true)
 		watchedProcessName := setWatchedTarget(state, state.ExpandOriginalTargets())
-		if success {
-			watch.Watch(state, state.ExpandOriginalTargets(), watchedProcessName, runWatchedBuild)
-		}
-
+		watch.Watch(state, state.ExpandOriginalTargets(), watchedProcessName, runWatchedBuild)
 		return success
 	},
 	"filter": func() bool {
