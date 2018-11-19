@@ -1,0 +1,8 @@
+def foo() -> str:
+    return "hello"
+
+def subinclude(target:str, hash:str=None):
+    pass
+
+def multi_return() -> [str, list, config]:
+    pass
