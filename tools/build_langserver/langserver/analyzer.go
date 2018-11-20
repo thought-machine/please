@@ -257,10 +257,32 @@ func (a *Analyzer) AspStatementFromContent(content string) []*asp.Statement {
 	return stmts
 }
 
+// StatementFromPos returns a Statement struct with either an Identifier or asp.Expression
+func (a *Analyzer) StatementFromPos(stmts []*asp.Statement, position lsp.Position) *Statement {
+	statement, expr := asp.StatementOrExpressionFromAst(stmts,
+		asp.Position{Line: position.Line + 1, Column: position.Character + 1})
+
+	if statement != nil {
+		return &Statement{
+			Ident: a.identFromStatement(statement),
+		}
+	} else if expr != nil {
+		return &Statement{
+			Expression: expr,
+		}
+	}
+	return nil
+}
+
 // IdentsFromContent returns a channel of Identifier object
-func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Identifier {
+func (a *Analyzer) IdentsFromContent(content string, pos *lsp.Position) chan *Identifier {
 	stmts := a.AspStatementFromContent(content)
 
+	return a.IdentsFromStatement(stmts, pos)
+}
+
+// IdentsFromStatement returns a channel of Identifier object given the slice of statement and position
+func (a *Analyzer) IdentsFromStatement(stmts []*asp.Statement, pos *lsp.Position) chan *Identifier {
 	ch := make(chan *Identifier)
 	go func() {
 		for _, stmt := range stmts {
@@ -270,7 +292,7 @@ func (a *Analyzer) IdentsFromContent(content string, pos lsp.Position) chan *Ide
 				ch <- ident
 			}
 			// Get local variables if it's within scope
-			if !withInRange(stmt.Pos, stmt.EndPos, pos) {
+			if pos != nil && !withInRange(stmt.Pos, stmt.EndPos, *pos) {
 				continue
 			}
 
@@ -487,16 +509,33 @@ func getSourcesFromBuildDef(def *BuildDef, buildFilePath string) []string {
 	return srcs
 }
 
-// VariablesFromContent returns a map of variable name to Variable objects
-func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[string]Variable {
+// VariablesFromContent returns a map of variable name to Variable objects given string content
+func (a *Analyzer) VariablesFromContent(content string, pos *lsp.Position) map[string]Variable {
 	idents := a.IdentsFromContent(content, pos)
 
+	return a.variablesFromIdents(idents)
+}
+
+// VariablesFromURI returns a map of variable name to Variable objects given an URI
+func (a *Analyzer) VariablesFromURI(uri lsp.DocumentURI, pos *lsp.Position) (map[string]Variable, error) {
+	stmts, err := a.AspStatementFromFile(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.VariablesFromStatements(stmts, pos), nil
+}
+
+// VariablesFromStatements returns a map of variable name to Variable objects given an slice of asp.Statements
+func (a *Analyzer) VariablesFromStatements(stmts []*asp.Statement, pos *lsp.Position) map[string]Variable {
+	idents := a.IdentsFromStatement(stmts, pos)
+
+	return a.variablesFromIdents(idents)
+}
+
+func (a *Analyzer) variablesFromIdents(idents chan *Identifier) map[string]Variable {
 	vars := make(map[string]Variable)
 	for i := range idents {
-		if i.Type != "assign" && i.Type != "augAssign" {
-			continue
-		}
-
 		if variable := a.VariableFromIdent(i); variable != nil {
 			vars[variable.Name] = *variable
 		}
@@ -505,7 +544,7 @@ func (a *Analyzer) VariablesFromContent(content string, pos lsp.Position) map[st
 	return vars
 }
 
-// VariableFromIdent returns Variable object passing in an Identifier
+// VariableFromIdent returns Variable object passing in an single Identifier
 func (a *Analyzer) VariableFromIdent(ident *Identifier) *Variable {
 	var varType string
 	if ident.Type == "assign" {
@@ -528,7 +567,7 @@ func (a *Analyzer) VariableFromIdent(ident *Identifier) *Variable {
 // GetValType returns a string representation of the type a asp.ValueExpression struct
 func GetValType(valExpr *asp.ValueExpression) string {
 	if valExpr.String != "" || valExpr.FString != nil {
-		return "string"
+		return "str"
 	} else if valExpr.Int != nil {
 		return "int"
 	} else if valExpr.Bool != "" {
@@ -703,27 +742,27 @@ func (a *Analyzer) BuildDefsFromStatements(ctx context.Context, labelURI lsp.Doc
 				buildDef = &BuildDef{
 					Identifier:   ident,
 					BuildDefName: TrimQuotes(arg.Value.Val.String),
+					Visibility:   []string{},
 				}
 			case "visibility":
 				if buildDef != nil {
-					buildDef.Visibility = aspListToStrSlice(arg.Value.Val.List)
+					buildDef.Visibility = append(buildDef.Visibility, aspListToStrSlice(arg.Value.Val.List)...)
 				}
 			}
 		}
 
 		// Set visibility
 		if buildDef != nil {
-			if buildDef.Visibility == nil {
-				if len(defaultVisibility) > 0 {
-					buildDef.Visibility = defaultVisibility
-				} else {
-					currentPkg, err := PackageLabelFromURI(labelURI)
-					if err != nil {
-						return nil, err
-					}
-					buildDef.Visibility = []string{currentPkg}
-				}
+			if len(buildDef.Visibility) == 0 && len(defaultVisibility) > 0 {
+				buildDef.Visibility = defaultVisibility
 			}
+
+			currentPkg, err := PackageLabelFromURI(labelURI)
+			if err != nil {
+				return nil, err
+			}
+			buildDef.Visibility = append(buildDef.Visibility, currentPkg)
+
 			// Get the content for the BuildDef
 			labelfileContent, err := ReadFile(ctx, labelURI)
 			if err != nil {

@@ -40,6 +40,7 @@ var completionLabelURI = lsp.DocumentURI("file://tools/build_langserver/langserv
 var completionLiteralURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_literal.build")
 var completionStmtURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_stmt.build")
 var sigURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/signature.build")
+var OutScopeURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/out_of_scope.build")
 
 var analyzer, _ = newAnalyzer()
 

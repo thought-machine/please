@@ -57,3 +57,17 @@ go_test(
         "//tools/build_langserver/lsp",
     ],
 )
+
+go_test(
+    name = "diagnostics_test",
+    srcs = [
+        "diagnostics_test.go",
+        "setup_test.go",
+    ],
+    data = ["test_data"],
+    deps = [
+        ":langserver",
+        "//third_party/go:testify",
+        "//tools/build_langserver/lsp",
+    ],
+)

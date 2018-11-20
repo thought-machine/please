@@ -23,11 +23,12 @@ go_test(
             "analyzer_test.go",
             "hover_test.go",
     ],
-    data = ["test_data"],
+    foo = ["test_data"],
     deps = [
         ":langserver",
         "//src/parse/rules",
         "//third_party/go:testify",
+        "//dummy/buildlabels:foo",
     ],
 )
 
@@ -45,3 +46,16 @@ blah = "my_str"
 "//sr"
 "//sr"
 blah = {"foo": "bar", "blah":1}
+
+subinclude("//build_defs:signing")
+subinclude({"foo": "bar", "blah":1})
+len(bar)
+
+blah("foo")
+
+hello = baz
+
+baz = blah
+
+foo = "test"
+python_library(name = foo, srcs = ["utils_test.go"])
