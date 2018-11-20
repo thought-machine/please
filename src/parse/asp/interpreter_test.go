@@ -267,3 +267,9 @@ func TestSubincludeConfig(t *testing.T) {
 	s.SetAll(s.interpreter.Subinclude("src/parse/asp/test_data/interpreter/subinclude_config.build"), false)
 	assert.EqualValues(t, "test test", s.config.Get("test", None))
 }
+
+func TestValidateReturnVal(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/return_type.build")
+	assert.NotNil(t, s.Lookup("subinclude"))
+	assert.Error(t, err, "Invalid return type str to function dict_val, expecting dict")
+}

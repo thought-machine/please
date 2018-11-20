@@ -8,4 +8,6 @@ def conf() -> config:
     pass
 
 def dict_val() -> dict:
-    pass
+    return "blah"
+
+dict_val()
