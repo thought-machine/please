@@ -70,6 +70,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	if req.Method != "initialize" && req.Method != "exit" &&
 		req.Method != "initialzed" && req.Method != "shutdown" {
 		ctx = h.requestStore.Store(ctx, req)
+		defer h.requestStore.Cancel(req.ID)
 
 		go func() {
 			t, err := h.diagPublisher.queue.Get(1)
@@ -78,12 +79,10 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 			}
 			if len(t) > 0 {
 				task := t[0].(taskDef)
-				log.Info("task %s", task)
-				//h.publishDiagnostics(ctx, conn, task.content, task.uri)
+
+				h.publishDiagnostics(conn, task.content, task.uri)
 			}
 		}()
-
-		defer h.requestStore.Cancel(req.ID)
 	}
 
 	if method, ok := methods[req.Method]; ok {

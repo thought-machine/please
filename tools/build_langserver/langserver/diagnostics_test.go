@@ -21,13 +21,20 @@ func TestDiagnose(t *testing.T) {
 	ds.storeDiagnostics(analyzer, stmts)
 
 	assert.Equal(t, 11, len(ds.stored))
-	assert.NotNil(t, DiagnosticStored(ds.stored, "Invalid build label //dummy/buildlabels:foo"))
+	assert.NotNil(t, DiagnosticStored(ds.stored, "Invalid build label //dummy/buildlabels:foo. error: cannot find the path for build label //dummy/buildlabels:foo"))
 	assert.NotNil(t, DiagnosticStored(ds.stored, "unexpected argument foo"))
 	assert.NotNil(t, DiagnosticStored(ds.stored,
 		"invalid type for argument type 'dict' for target, expecting one of [str]"))
 	assert.NotNil(t, DiagnosticStored(ds.stored, "unexpected variable 'baz'"))
 	assert.NotNil(t, DiagnosticStored(ds.stored, "unexpected variable 'bar'"))
-	assert.NotNil(t, DiagnosticStored(ds.stored, "function undefined: blah"))
+
+	diag := DiagnosticStored(ds.stored, "function undefined: blah")
+	assert.NotNil(t, diag)
+	expected := lsp.Range{
+		Start: lsp.Position{Line: 53, Character: 0},
+		End:   lsp.Position{Line: 53, Character: 4},
+	}
+	assert.Equal(t, expected, diag.Range)
 
 	for _, d := range ds.stored {
 		t.Log(d)
@@ -140,7 +147,7 @@ func TestDiagnosticFromBuildLabel(t *testing.T) {
 
 	// Tests for invalid labels
 	diag = ds.diagnosticFromBuildLabel(analyzer, "//src/blah:foo", dummyRange)
-	assert.Equal(t, "Invalid build label //src/blah:foo", diag.Message)
+	assert.Equal(t, "Invalid build label //src/blah:foo. error: cannot find the path for build label //src/blah:foo", diag.Message)
 
 	// Tests for invisible labels
 	diag = ds.diagnosticFromBuildLabel(analyzer, "//src/output:interactive_display_test", dummyRange)

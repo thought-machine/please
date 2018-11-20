@@ -62,7 +62,7 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 		}
 	}
 
-	return "", fmt.Errorf(fmt.Sprintf("invalid path %s, path must be in repo root", absPath))
+	return "", fmt.Errorf(fmt.Sprintf("invalid path %s, path must be in repo root: %s", absPath, core.RepoRoot))
 }
 
 // PackageLabelFromURI returns a build label of a package

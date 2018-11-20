@@ -11,7 +11,8 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 )
 
-func (h *LsHandler) publishDiagnostics(ctx context.Context, conn *jsonrpc2.Conn, content string, uri lsp.DocumentURI) error {
+func (h *LsHandler) publishDiagnostics(conn *jsonrpc2.Conn, content string, uri lsp.DocumentURI) error {
+	ctx := context.Background()
 
 	if _, ok := h.workspace.documents[uri]; !ok {
 		return nil
@@ -73,8 +74,8 @@ func (dp *diagnosticsPublisher) diagnose(ctx context.Context, analyzer *Analyzer
 
 	if _, ok := dp.stored[uri]; !ok {
 		dp.stored[uri] = &diagnosticStore{
+			uri:         uri,
 			subincludes: analyzer.GetSubinclude(ctx, stmts, uri),
-			stored:      []*lsp.Diagnostic{},
 		}
 	}
 
@@ -82,15 +83,19 @@ func (dp *diagnosticsPublisher) diagnose(ctx context.Context, analyzer *Analyzer
 }
 
 func (ds *diagnosticStore) storeDiagnostics(analyzer *Analyzer, stmts []*asp.Statement) {
+	ds.stored = []*lsp.Diagnostic{}
 
 	var callback func(astStruct interface{}) interface{}
 	callback = func(astStruct interface{}) interface{} {
 		if stmt, ok := astStruct.(asp.Statement); ok {
 			if stmt.Ident != nil {
 				if stmt.Ident.Action != nil && stmt.Ident.Action.Call != nil {
-					callRange := getCallRange(stmt.Pos, stmt.EndPos, stmt.Ident.Name)
+					callRange := lsp.Range{
+						Start: aspPositionToLsp(stmt.Pos),
+						End:   aspPositionToLsp(stmt.EndPos),
+					}
 					ds.storeFuncCallDiagnostics(analyzer, stmt.Ident.Name,
-						stmt.Ident.Action.Call.Arguments, *callRange)
+						stmt.Ident.Action.Call.Arguments, callRange)
 				}
 			}
 		} else if expr, ok := astStruct.(asp.Expression); ok {
@@ -120,10 +125,10 @@ func (ds *diagnosticStore) storeDiagnostics(analyzer *Analyzer, stmts []*asp.Sta
 				variables := analyzer.VariablesFromStatements(stmts, &pos)
 
 				if _, ok := variables[identExpr.Name]; !ok {
-					callRange := getCallRange(identExpr.Pos, identExpr.EndPos, identExpr.Name)
+					nameRange := getNameRange(aspPositionToLsp(identExpr.Pos), identExpr.Name)
 
 					diag := &lsp.Diagnostic{
-						Range:    *callRange,
+						Range:    nameRange,
 						Severity: lsp.Error,
 						Source:   "build",
 						Message:  fmt.Sprintf("unexpected variable '%s'", identExpr.Name),
@@ -280,7 +285,7 @@ func (ds *diagnosticStore) diagnosticFromBuildLabel(analyzer *Analyzer, labelStr
 			Range:    valRange,
 			Severity: lsp.Error,
 			Source:   "build",
-			Message:  fmt.Sprintf("Invalid build label %s", trimmed),
+			Message:  fmt.Sprintf("Invalid build label %s. error: %s", trimmed, err),
 		}
 	}
 	currentPkg, err := PackageLabelFromURI(ds.uri)
