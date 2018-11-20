@@ -229,7 +229,11 @@ func (p *parser) parseFuncDef() *FuncDef {
 	p.next(')')
 
 	if tok := p.l.Peek(); tok.Value != ":" {
-		fd.Returns = p.parseFuncReturn()
+		p.next('-')
+		p.next('>')
+
+		tok := p.oneofval("[", "bool", "str", "int", "list", "dict", "function", "config", "buildrule")
+		fd.Return = tok.Value
 	}
 
 	// Get the position for the end of function defition header
@@ -291,36 +295,6 @@ func (p *parser) parseArgument() Argument {
 	// Default value
 	a.Value = p.parseExpression()
 	return a
-}
-
-func (p *parser) parseFuncReturn() []string {
-	var returnTypes []string
-
-	p.next('-')
-	p.next('>')
-
-	var isMulti bool
-	for {
-		if tok := p.l.Peek(); tok.Value == ":" || tok.Value == "]" {
-			break
-		}
-		tok := p.oneofval("[", "bool", "str", "int", "list", "dict", "function", "config", "buildrule")
-		switch tok.Value {
-		case "[":
-			isMulti = true
-		default:
-			returnTypes = append(returnTypes, tok.Value)
-		}
-		if tok := p.l.Peek(); tok.Value == "," {
-			p.l.Next()
-		}
-	}
-
-	if isMulti {
-		p.next(']')
-	}
-
-	return returnTypes
 }
 
 func (p *parser) parseIf() *IfStatement {

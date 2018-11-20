@@ -4,5 +4,8 @@ def foo() -> str:
 def subinclude(target:str, hash:str=None):
     pass
 
-def multi_return() -> [str, list, config]:
+def conf() -> config:
+    pass
+
+def dict_val() -> dict:
     pass

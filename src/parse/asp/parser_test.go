@@ -655,6 +655,7 @@ func TestFuncReturnTypes(t *testing.T) {
 	stmts, err := newParser().parse("src/parse/asp/test_data/return_type.build")
 	assert.NoError(t, err)
 
-	assert.Equal(t, []string{"str"}, stmts[0].FuncDef.Returns)
-	assert.Equal(t, []string{"str", "list", "config"}, stmts[2].FuncDef.Returns)
+	assert.Equal(t, "str", stmts[0].FuncDef.Return)
+	assert.Equal(t, "config", stmts[2].FuncDef.Return)
+	assert.Equal(t, "dict", stmts[3].FuncDef.Return)
 }

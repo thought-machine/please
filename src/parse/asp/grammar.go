@@ -42,8 +42,8 @@ type FuncDef struct {
 	// Not part of the grammar. Used to indicate internal targets that can only
 	// be called using keyword arguments.
 	KeywordsOnly bool
-	// allowed return types of the FuncDef
-	Returns   []string
+	// allowed return type of the FuncDef
+	Return    string
 	IsPrivate bool
 }
 
