@@ -1,3 +1,9 @@
+Version 13.2.6
+--------------
+
+    * IntelliJ project export now ignores 'provides' redirects in
+      dependencies.
+
 Version 13.2.5
 --------------
 
