@@ -271,5 +271,5 @@ func TestSubincludeConfig(t *testing.T) {
 func TestValidateReturnVal(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/return_type.build")
 	assert.NotNil(t, s.Lookup("subinclude"))
-	assert.Error(t, err, "Invalid return type str to function dict_val, expecting dict")
+	assert.Error(t, err, "Invalid return type str from function dict_val, expecting dict")
 }

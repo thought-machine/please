@@ -560,7 +560,7 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 		return None // Implicit 'return None' in any function that didn't do that itself.
 	}
 	if f.returnType != "" && ret.Type() != f.returnType {
-		return s.Error("Invalid return type %s to function %s, expecting %s", ret.Type(), f.name, f.returnType)
+		return s.Error("Invalid return type %s from function %s, expecting %s", ret.Type(), f.name, f.returnType)
 	}
 
 	return ret
