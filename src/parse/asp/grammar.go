@@ -39,12 +39,12 @@ type FuncDef struct {
 	Docstring  string       `[ @String EOL ]`
 	Statements []*Statement `{ @@ } Unindent`
 	EoDef      Position
+	// allowed return type of the FuncDef
+	Return string
 	// Not part of the grammar. Used to indicate internal targets that can only
 	// be called using keyword arguments.
 	KeywordsOnly bool
-	// allowed return type of the FuncDef
-	Return    string
-	IsPrivate bool
+	IsPrivate    bool
 }
 
 // A ForStatement implements the 'for' statement.
