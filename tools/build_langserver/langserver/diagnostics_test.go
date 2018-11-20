@@ -10,56 +10,52 @@ import (
 
 func TestDiagnose(t *testing.T) {
 	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName, "example.build")
-	ds := &diagnosticsStore{
-		uri:         exampleBuildURI,
-		analyzer:    analyzer,
-		diagnostics: make(map[lsp.Range]*lsp.Diagnostic),
+	ds := &diagnosticStore{
+		uri:    exampleBuildURI,
+		stored: []*lsp.Diagnostic{},
 	}
 
 	stmts, err := analyzer.AspStatementFromFile(exampleBuildURI)
 	assert.NoError(t, err)
 
-	ds.diagnose(stmts)
+	ds.storeDiagnostics(analyzer, stmts)
 
-	assert.Equal(t, 11, len(ds.diagnostics))
-	assert.True(t, DiagnosticStored(ds.diagnostics, "Invalid build label //dummy/buildlabels:foo"))
-	assert.True(t, DiagnosticStored(ds.diagnostics, "unexpected argument foo"))
-	assert.True(t, DiagnosticStored(ds.diagnostics,
+	assert.Equal(t, 11, len(ds.stored))
+	assert.NotNil(t, DiagnosticStored(ds.stored, "Invalid build label //dummy/buildlabels:foo"))
+	assert.NotNil(t, DiagnosticStored(ds.stored, "unexpected argument foo"))
+	assert.NotNil(t, DiagnosticStored(ds.stored,
 		"invalid type for argument type 'dict' for target, expecting one of [str]"))
-	assert.True(t, DiagnosticStored(ds.diagnostics, "unexpected variable 'baz'"))
-	assert.True(t, DiagnosticStored(ds.diagnostics, "unexpected variable 'bar'"))
-	assert.True(t, DiagnosticStored(ds.diagnostics, "function undefined: blah"))
+	assert.NotNil(t, DiagnosticStored(ds.stored, "unexpected variable 'baz'"))
+	assert.NotNil(t, DiagnosticStored(ds.stored, "unexpected variable 'bar'"))
+	assert.NotNil(t, DiagnosticStored(ds.stored, "function undefined: blah"))
 
-	for _, d := range ds.diagnostics {
+	for _, d := range ds.stored {
 		t.Log(d)
 	}
 }
 
 func TestDiagnoseOutOfScope(t *testing.T) {
 	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName, "out_of_scope.build")
-	ds := &diagnosticsStore{
-		uri:         OutScopeURI,
-		analyzer:    analyzer,
-		diagnostics: make(map[lsp.Range]*lsp.Diagnostic),
+	ds := &diagnosticStore{
+		uri:    OutScopeURI,
+		stored: []*lsp.Diagnostic{},
 	}
 
 	stmts, err := analyzer.AspStatementFromFile(OutScopeURI)
 	assert.NoError(t, err)
 
-	ds.diagnose(stmts)
-	assert.Equal(t, 1, len(ds.diagnostics))
-	assert.True(t, DiagnosticStored(ds.diagnostics, "unexpected variable 'blah'"))
-	for _, d := range ds.diagnostics {
+	ds.storeDiagnostics(analyzer, stmts)
+	assert.Equal(t, 1, len(ds.stored))
+	assert.NotNil(t, DiagnosticStored(ds.stored, "unexpected variable 'blah'"))
+	for _, d := range ds.stored {
 		t.Log(d)
 	}
 }
 
 func TestStoreFuncCallDiagnosticsBuildDef(t *testing.T) {
 	ctx := context.Background()
-	ds := &diagnosticsStore{
-		uri:         exampleBuildURI,
-		analyzer:    analyzer,
-		diagnostics: make(map[lsp.Range]*lsp.Diagnostic),
+	ds := &diagnosticStore{
+		uri: exampleBuildURI,
 	}
 
 	buildDefs, err := analyzer.BuildDefsFromURI(ctx, exampleBuildURI)
@@ -72,23 +68,21 @@ func TestStoreFuncCallDiagnosticsBuildDef(t *testing.T) {
 		End:   lsp.Position{Line: 32, Character: 1},
 	}
 
-	ds.storeFuncCallDiagnostics("go_test", buildDef.Action.Call.Arguments,
-		callRange)
+	ds.storeFuncCallDiagnostics(analyzer, "go_test",
+		buildDef.Action.Call.Arguments, callRange)
 	expectedRange := lsp.Range{
 		Start: lsp.Position{Line: 25, Character: 4},
 		End:   lsp.Position{Line: 25, Character: 7},
 	}
-	diag, ok := ds.diagnostics[expectedRange]
-	assert.True(t, ok)
-	assert.Equal(t, lsp.Error, diag.Severity)
-	assert.Equal(t, "unexpected argument foo", diag.Message)
+	diag := DiagnosticStored(ds.stored,
+		"unexpected argument foo")
+	assert.Equal(t, expectedRange, diag.Range)
 }
 
 func TestStoreFuncCallDiagnosticsFuncCall(t *testing.T) {
-	ds := &diagnosticsStore{
-		uri:         exampleBuildURI,
-		analyzer:    analyzer,
-		diagnostics: make(map[lsp.Range]*lsp.Diagnostic),
+	ds := &diagnosticStore{
+		uri:    exampleBuildURI,
+		stored: []*lsp.Diagnostic{},
 	}
 
 	stmts, err := analyzer.AspStatementFromFile(exampleBuildURI)
@@ -100,8 +94,8 @@ func TestStoreFuncCallDiagnosticsFuncCall(t *testing.T) {
 		End:   lsp.Position{Line: 49, Character: 33},
 	}
 	stmt := analyzer.StatementFromPos(stmts, callRange.Start)
-	ds.storeFuncCallDiagnostics("subinclude", stmt.Ident.Action.Call.Arguments, callRange)
-	assert.Zero(t, len(ds.diagnostics))
+	ds.storeFuncCallDiagnostics(analyzer, "subinclude", stmt.Ident.Action.Call.Arguments, callRange)
+	assert.Zero(t, len(ds.stored))
 
 	// Test for function call with incorrect argument value type
 	callRange = lsp.Range{
@@ -109,24 +103,22 @@ func TestStoreFuncCallDiagnosticsFuncCall(t *testing.T) {
 		End:   lsp.Position{Line: 50, Character: 33},
 	}
 	stmt = analyzer.StatementFromPos(stmts, callRange.Start)
-	ds.storeFuncCallDiagnostics("subinclude", stmt.Ident.Action.Call.Arguments, callRange)
+	ds.storeFuncCallDiagnostics(analyzer, "subinclude", stmt.Ident.Action.Call.Arguments, callRange)
 
 	expectedRange := lsp.Range{
 		Start: lsp.Position{Line: 50, Character: 11},
 		End:   lsp.Position{Line: 50, Character: 35},
 	}
-	diag, ok := ds.diagnostics[expectedRange]
-	assert.True(t, ok)
-	assert.Equal(t, "invalid type for argument type 'dict' for target, expecting one of [str]",
-		diag.Message)
+	diag := DiagnosticStored(ds.stored,
+		"invalid type for argument type 'dict' for target, expecting one of [str]")
+	assert.Equal(t, expectedRange, diag.Range)
 
 }
 
 func TestDiagnosticFromBuildLabel(t *testing.T) {
 	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName, "example.build")
-	ds := &diagnosticsStore{
-		analyzer: analyzer,
-		uri:      exampleBuildURI,
+	ds := &diagnosticStore{
+		uri: exampleBuildURI,
 	}
 	t.Log(ds.uri)
 	dummyRange := lsp.Range{
@@ -135,23 +127,23 @@ func TestDiagnosticFromBuildLabel(t *testing.T) {
 	}
 
 	// Tests for valid labels
-	diag := ds.diagnosticFromBuildLabel("//src/query", dummyRange)
+	diag := ds.diagnosticFromBuildLabel(analyzer, "//src/query", dummyRange)
 	assert.Nil(t, diag)
-	diag = ds.diagnosticFromBuildLabel("//src/query:query", dummyRange)
+	diag = ds.diagnosticFromBuildLabel(analyzer, "//src/query:query", dummyRange)
 	assert.Nil(t, diag)
-	diag = ds.diagnosticFromBuildLabel(":langserver_test", dummyRange)
+	diag = ds.diagnosticFromBuildLabel(analyzer, ":langserver_test", dummyRange)
 	assert.Nil(t, diag)
-	diag = ds.diagnosticFromBuildLabel(":langserver", dummyRange)
+	diag = ds.diagnosticFromBuildLabel(analyzer, ":langserver", dummyRange)
 	assert.Nil(t, diag)
-	diag = ds.diagnosticFromBuildLabel("//third_party/go:jsonrpc2", dummyRange)
+	diag = ds.diagnosticFromBuildLabel(analyzer, "//third_party/go:jsonrpc2", dummyRange)
 	assert.Nil(t, diag)
 
 	// Tests for invalid labels
-	diag = ds.diagnosticFromBuildLabel("//src/blah:foo", dummyRange)
+	diag = ds.diagnosticFromBuildLabel(analyzer, "//src/blah:foo", dummyRange)
 	assert.Equal(t, "Invalid build label //src/blah:foo", diag.Message)
 
 	// Tests for invisible labels
-	diag = ds.diagnosticFromBuildLabel("//src/output:interactive_display_test", dummyRange)
+	diag = ds.diagnosticFromBuildLabel(analyzer, "//src/output:interactive_display_test", dummyRange)
 	assert.Equal(t, "build label //src/output:interactive_display_test is not visible to current package",
 		diag.Message)
 }
@@ -159,11 +151,11 @@ func TestDiagnosticFromBuildLabel(t *testing.T) {
 /************************
  * Helper functions
  ************************/
-func DiagnosticStored(diag map[lsp.Range]*lsp.Diagnostic, message string) bool {
+func DiagnosticStored(diag []*lsp.Diagnostic, message string) *lsp.Diagnostic {
 	for _, v := range diag {
 		if v.Message == message {
-			return true
+			return v
 		}
 	}
-	return false
+	return nil
 }

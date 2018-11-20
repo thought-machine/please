@@ -4,62 +4,93 @@ import (
 	"context"
 	"core"
 	"fmt"
+	"github.com/Workiva/go-datastructures/queue"
 	"parse/asp"
 	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
 )
 
-// TODO(bnm): use conn.Notify
-// TODO(bnm): below function can be moved to text_document.go
-func (h *LsHandler) publishDiagnostics(ctx context.Context, conn *jsonrpc2.Conn, uri lsp.DocumentURI) error {
-	//doc, present := h.workspace.documents[uri]
-	//if !present {
-	//	log.Warning("document not found at %s", uri)
-	//	return nil
-	//}
-	//
-	//diag := doc.diagnostics
+func (h *LsHandler) publishDiagnostics(ctx context.Context, conn *jsonrpc2.Conn, content string, uri lsp.DocumentURI) error {
 
+	if _, ok := h.workspace.documents[uri]; !ok {
+		return nil
+	}
+
+	h.diagPublisher.diagnose(ctx, h.analyzer, content, uri)
+
+	params := &lsp.PublishDiagnosticsParams{
+		URI:         uri,
+		Diagnostics: h.diagPublisher.stored[uri].stored,
+	}
+	log.Info("Diagnostics detected: %s", params.Diagnostics)
+
+	if err := conn.Notify(ctx, "textDocument/publishDiagnostics", params); err != nil {
+		return err
+	}
 	return nil
 }
 
-type diagnosticsStore struct {
-	uri      lsp.DocumentURI
-	analyzer *Analyzer
+type diagnosticsPublisher struct {
+	queue *queue.PriorityQueue
+
+	stored map[lsp.DocumentURI]*diagnosticStore
+}
+
+type diagnosticStore struct {
+	uri lsp.DocumentURI
 	// Subincludes of the file if any
 	subincludes map[string]*RuleDef
 
-	diagnostics map[lsp.Range]*lsp.Diagnostic
+	stored []*lsp.Diagnostic
 }
 
-func newDiagnostics(ctx context.Context, analyzer *Analyzer, content string, uri lsp.DocumentURI) *diagnosticsStore {
-	stmts := analyzer.AspStatementFromContent(content)
+type taskDef struct {
+	uri     lsp.DocumentURI
+	content string
+}
 
-	store := &diagnosticsStore{
-		uri:         uri,
-		diagnostics: make(map[lsp.Range]*lsp.Diagnostic),
-		analyzer:    analyzer,
-		subincludes: analyzer.GetSubinclude(ctx, stmts, uri),
+func (td taskDef) Compare(other queue.Item) int {
+	otherTask := other.(taskDef)
+	if otherTask.uri != td.uri || otherTask.content == td.content {
+		return 0
+	} else {
+		return 1
+	}
+}
+
+func newDiagnosticsPublisher() *diagnosticsPublisher {
+	publisher := &diagnosticsPublisher{
+		stored: make(map[lsp.DocumentURI]*diagnosticStore),
+		queue:  queue.NewPriorityQueue(10000, true),
 	}
 
-	store.diagnose(stmts)
-
-	return store
+	return publisher
 }
 
-func (ds *diagnosticsStore) diagnose(stmts []*asp.Statement) {
+func (dp *diagnosticsPublisher) diagnose(ctx context.Context, analyzer *Analyzer, content string, uri lsp.DocumentURI) {
+	stmts := analyzer.AspStatementFromContent(content)
+
+	if _, ok := dp.stored[uri]; !ok {
+		dp.stored[uri] = &diagnosticStore{
+			subincludes: analyzer.GetSubinclude(ctx, stmts, uri),
+			stored:      []*lsp.Diagnostic{},
+		}
+	}
+
+	dp.stored[uri].storeDiagnostics(analyzer, stmts)
+}
+
+func (ds *diagnosticStore) storeDiagnostics(analyzer *Analyzer, stmts []*asp.Statement) {
 
 	var callback func(astStruct interface{}) interface{}
-
 	callback = func(astStruct interface{}) interface{} {
 		if stmt, ok := astStruct.(asp.Statement); ok {
 			if stmt.Ident != nil {
-				asp.WalkAST(stmt.Ident, callback)
-
 				if stmt.Ident.Action != nil && stmt.Ident.Action.Call != nil {
-					callRange := getStmtCallRange(stmt)
-					ds.storeFuncCallDiagnostics(stmt.Ident.Name, stmt.Ident.Action.Call.Arguments, *callRange)
+					callRange := getCallRange(stmt.Pos, stmt.EndPos, stmt.Ident.Name)
+					ds.storeFuncCallDiagnostics(analyzer, stmt.Ident.Name,
+						stmt.Ident.Action.Call.Arguments, *callRange)
 				}
 			}
 		} else if expr, ok := astStruct.(asp.Expression); ok {
@@ -69,39 +100,44 @@ func (ds *diagnosticsStore) diagnose(stmts []*asp.Statement) {
 			}
 
 			if expr.Val == nil {
-				ds.diagnostics[exprRange] = &lsp.Diagnostic{
+				diag := &lsp.Diagnostic{
 					Range:    exprRange,
 					Severity: lsp.Error,
 					Source:   "build",
 					Message:  "expression expected",
 				}
+				ds.stored = append(ds.stored, diag)
 			} else if expr.Val.String != "" && core.LooksLikeABuildLabel(TrimQuotes(expr.Val.String)) {
-				if diag := ds.diagnosticFromBuildLabel(expr.Val.String, exprRange); diag != nil {
-					ds.diagnostics[exprRange] = diag
+				if diag := ds.diagnosticFromBuildLabel(analyzer, expr.Val.String, exprRange); diag != nil {
+					ds.stored = append(ds.stored, diag)
 				}
 			}
 		} else if identExpr, ok := astStruct.(asp.IdentExpr); ok {
-			identRange := lsp.Range{
-				Start: aspPositionToLsp(identExpr.Pos),
-				End:   aspPositionToLsp(identExpr.EndPos),
-			}
+
 			if identExpr.Action == nil {
 				// Check if variable has been defined
 				pos := aspPositionToLsp(identExpr.Pos)
-				variables := ds.analyzer.VariablesFromStatements(stmts, &pos)
+				variables := analyzer.VariablesFromStatements(stmts, &pos)
 
 				if _, ok := variables[identExpr.Name]; !ok {
-					ds.diagnostics[identRange] = &lsp.Diagnostic{
-						Range:    identRange,
+					callRange := getCallRange(identExpr.Pos, identExpr.EndPos, identExpr.Name)
+
+					diag := &lsp.Diagnostic{
+						Range:    *callRange,
 						Severity: lsp.Error,
 						Source:   "build",
 						Message:  fmt.Sprintf("unexpected variable '%s'", identExpr.Name),
 					}
+					ds.stored = append(ds.stored, diag)
 				}
 			}
 			for _, action := range identExpr.Action {
 				if action.Call != nil {
-					ds.storeFuncCallDiagnostics(identExpr.Name, action.Call.Arguments, identRange)
+					identRange := lsp.Range{
+						Start: aspPositionToLsp(identExpr.Pos),
+						End:   aspPositionToLsp(identExpr.EndPos),
+					}
+					ds.storeFuncCallDiagnostics(analyzer, identExpr.Name, action.Call.Arguments, identRange)
 				} else if action.Property != nil {
 					asp.WalkAST(action.Property, callback)
 				}
@@ -116,19 +152,22 @@ func (ds *diagnosticsStore) diagnose(stmts []*asp.Statement) {
 
 // storeFuncCallDiagnostics checks if the function call's argument name and type are correct
 // Store a *lsp.diagnostic if found
-func (ds *diagnosticsStore) storeFuncCallDiagnostics(funcName string, callArgs []asp.CallArgument, callRange lsp.Range) {
+func (ds *diagnosticStore) storeFuncCallDiagnostics(analyzer *Analyzer, funcName string,
+	callArgs []asp.CallArgument, callRange lsp.Range) {
+
 	excludedBuiltins := []string{"format", "zip", "package", "join_path"}
 
 	// Check if the funcDef is defined
-	def := ds.analyzer.GetBuildRuleByName(funcName, ds.subincludes)
+	def := analyzer.GetBuildRuleByName(funcName, ds.subincludes)
 	if def == nil {
 		diagRange := getNameRange(callRange.Start, funcName)
-		ds.diagnostics[diagRange] = &lsp.Diagnostic{
+		diag := &lsp.Diagnostic{
 			Range:    diagRange,
 			Severity: lsp.Error,
 			Source:   "build",
 			Message:  fmt.Sprintf("function undefined: %s", funcName),
 		}
+		ds.stored = append(ds.stored, diag)
 		return
 	}
 
@@ -136,58 +175,27 @@ func (ds *diagnosticsStore) storeFuncCallDiagnostics(funcName string, callArgs [
 		// Diagnostics for the cases when there are not enough argument passed to the function
 		if len(callArgs)-1 < i {
 			if def.ArgMap[arg.Name].Required == true {
-				ds.diagnostics[callRange] = &lsp.Diagnostic{
+				diag := &lsp.Diagnostic{
 					Range:    callRange,
 					Severity: lsp.Error,
 					Source:   "build",
 					Message:  fmt.Sprintf("not enough arguments in call to %s", def.Name),
 				}
+				ds.stored = append(ds.stored, diag)
 				break
 			}
 			continue
 		}
 
 		callArg := callArgs[i]
-
 		argRange := lsp.Range{
 			Start: aspPositionToLsp(callArg.Value.Pos),
 			End:   aspPositionToLsp(callArg.Value.EndPos),
 		}
 
 		// Check if the argument value type is correct
-		var msg string
-		if callArg.Value.Val == nil {
-			msg = "expression expected"
-		} else {
-			var varType string
-
-			if GetValType(callArg.Value.Val) != "" {
-				varType = GetValType(callArg.Value.Val)
-			} else if callArg.Value.Val.Ident != nil {
-				ident := callArg.Value.Val.Ident
-
-				if ident.Action == nil {
-					vars, err := ds.analyzer.VariablesFromURI(ds.uri, &argRange.Start)
-					if err != nil {
-						log.Warning("fail to get variables from %s, skipping", ds.uri)
-					}
-					// We don't have to worry about the case when the variable does not exist,
-					// as it has been taken care of in diagnose
-					if variable, ok := vars[ident.Name]; ok {
-						varType = variable.Type
-					}
-				} else {
-					// Check return types of call if variable is being assigned to a call
-					if retType := ds.getIdentExprReturnType(ident); retType != "" {
-						varType = retType
-					}
-				}
-			}
-
-			if varType != "" && len(arg.Type) != 0 && !StringInSlice(arg.Type, varType) {
-				msg = fmt.Sprintf("invalid type for argument type '%s' for %s, expecting one of %s",
-					varType, arg.Name, arg.Type)
-			}
+		if diag := ds.diagnosticFromCallArgType(analyzer, arg, callArg); diag != nil {
+			ds.stored = append(ds.stored, diag)
 		}
 
 		// Check if the argument is a valid keyword arg
@@ -195,27 +203,78 @@ func (ds *diagnosticsStore) storeFuncCallDiagnostics(funcName string, callArgs [
 		if callArg.Name != "" && !StringInSlice(excludedBuiltins, def.Name) {
 			if _, present := def.ArgMap[callArg.Name]; !present {
 				argRange = getNameRange(aspPositionToLsp(callArg.Pos), callArg.Name)
-				msg = fmt.Sprintf("unexpected argument %s", callArg.Name)
+				diag := &lsp.Diagnostic{
+					Range:    argRange,
+					Severity: lsp.Error,
+					Source:   "build",
+					Message:  fmt.Sprintf("unexpected argument %s", callArg.Name),
+				}
+				ds.stored = append(ds.stored, diag)
 			}
 
 		}
 
-		if msg != "" {
-			ds.diagnostics[argRange] = &lsp.Diagnostic{
-				Range:    argRange,
-				Severity: lsp.Error,
-				Source:   "build",
-				Message:  msg,
-			}
-		}
 	}
 }
 
-func (ds *diagnosticsStore) diagnosticFromBuildLabel(labelStr string, valRange lsp.Range) *lsp.Diagnostic {
+func (ds *diagnosticStore) diagnosticFromCallArgType(analyzer *Analyzer, argDef asp.Argument, callArg asp.CallArgument) *lsp.Diagnostic {
+	argRange := lsp.Range{
+		Start: aspPositionToLsp(callArg.Value.Pos),
+		End:   aspPositionToLsp(callArg.Value.EndPos),
+	}
+
+	// Check if the argument value type is correct
+	var msg string
+	if callArg.Value.Val == nil {
+		msg = "expression expected"
+	} else {
+		var varType string
+
+		if GetValType(callArg.Value.Val) != "" {
+			varType = GetValType(callArg.Value.Val)
+		} else if callArg.Value.Val.Ident != nil {
+			ident := callArg.Value.Val.Ident
+
+			if ident.Action == nil {
+				vars, err := analyzer.VariablesFromURI(ds.uri, &argRange.Start)
+				if err != nil {
+					log.Warning("fail to get variables from %s, skipping", ds.uri)
+				}
+				// We don't have to worry about the case when the variable does not exist,
+				// as it has been taken care of in diagnose
+				if variable, ok := vars[ident.Name]; ok {
+					varType = variable.Type
+				}
+			} else {
+				// Check return types of call if variable is being assigned to a call
+				if retType := ds.getIdentExprReturnType(analyzer, ident); retType != "" {
+					varType = retType
+				}
+			}
+		}
+
+		if varType != "" && len(argDef.Type) != 0 && !StringInSlice(argDef.Type, varType) {
+			msg = fmt.Sprintf("invalid type for argument type '%s' for %s, expecting one of %s",
+				varType, argDef.Name, argDef.Type)
+		}
+	}
+
+	if msg != "" {
+		return &lsp.Diagnostic{
+			Range:    argRange,
+			Severity: lsp.Error,
+			Source:   "build",
+			Message:  msg,
+		}
+	}
+	return nil
+}
+
+func (ds *diagnosticStore) diagnosticFromBuildLabel(analyzer *Analyzer, labelStr string, valRange lsp.Range) *lsp.Diagnostic {
 	trimmed := TrimQuotes(labelStr)
 
 	ctx := context.Background()
-	label, err := ds.analyzer.BuildLabelFromString(ctx, ds.uri, trimmed)
+	label, err := analyzer.BuildLabelFromString(ctx, ds.uri, trimmed)
 	if err != nil {
 		return &lsp.Diagnostic{
 			Range:    valRange,
@@ -237,18 +296,18 @@ func (ds *diagnosticsStore) diagnosticFromBuildLabel(labelStr string, valRange l
 	return nil
 }
 
-func (ds *diagnosticsStore) getIdentExprReturnType(ident *asp.IdentExpr) string {
+func (ds *diagnosticStore) getIdentExprReturnType(analyzer *Analyzer, ident *asp.IdentExpr) string {
 	if ident.Action == nil {
 		return ""
 	}
 
 	for _, action := range ident.Action {
 		if action.Call != nil {
-			if def := ds.analyzer.GetBuildRuleByName(ident.Name, ds.subincludes); def != nil {
+			if def := analyzer.GetBuildRuleByName(ident.Name, ds.subincludes); def != nil {
 				return def.Return
 			}
 		} else if action.Property != nil {
-			return ds.getIdentExprReturnType(action.Property)
+			return ds.getIdentExprReturnType(analyzer, action.Property)
 		}
 	}
 
@@ -258,16 +317,11 @@ func (ds *diagnosticsStore) getIdentExprReturnType(ident *asp.IdentExpr) string 
 /************************
  * Helper functions
  ************************/
-// TODO(bnm): will need one for IdentExpr as well
-func getStmtCallRange(stmt asp.Statement) *lsp.Range {
-	if stmt.Ident == nil {
-		return nil
-	}
-
+func getCallRange(pos asp.Position, endpos asp.Position, funcName string) *lsp.Range {
 	return &lsp.Range{
-		Start: lsp.Position{Line: stmt.Pos.Line - 1,
-			Character: stmt.Pos.Column + len(stmt.Ident.Name) - 1},
-		End: aspPositionToLsp(stmt.EndPos),
+		Start: lsp.Position{Line: pos.Line - 1,
+			Character: pos.Column + len(funcName) - 1},
+		End: aspPositionToLsp(endpos),
 	}
 
 	return nil

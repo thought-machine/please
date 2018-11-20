@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-
 	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
@@ -44,6 +43,8 @@ type LsHandler struct {
 
 	IsServerDown         bool
 	supportedCompletions []lsp.CompletionItemKind
+
+	diagPublisher *diagnosticsPublisher
 }
 
 // Handle function takes care of all the incoming from the client, and returns the correct response
@@ -69,6 +70,19 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	if req.Method != "initialize" && req.Method != "exit" &&
 		req.Method != "initialzed" && req.Method != "shutdown" {
 		ctx = h.requestStore.Store(ctx, req)
+
+		go func() {
+			t, err := h.diagPublisher.queue.Get(1)
+			if err != nil {
+				log.Warning("fail to get diagnostic publishing task")
+			}
+			if len(t) > 0 {
+				task := t[0].(taskDef)
+				log.Info("task %s", task)
+				//h.publishDiagnostics(ctx, conn, task.content, task.uri)
+			}
+		}()
+
 		defer h.requestStore.Cancel(req.ID)
 	}
 
@@ -76,7 +90,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 		return method(ctx, req)
 	}
 
-	return h.handleTDRequests(ctx, conn, req)
+	return h.handleTDRequests(ctx, req)
 }
 
 func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
@@ -103,6 +117,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	params.EnsureRoot()
 	h.repoRoot = string(params.RootURI)
 	h.workspace = newWorkspaceStore(params.RootURI)
+	h.diagPublisher = newDiagnosticsPublisher()
 
 	h.supportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
 	h.init = &params

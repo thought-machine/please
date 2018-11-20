@@ -8,7 +8,7 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 )
 
-func (h *LsHandler) handleTDRequests(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request) (result interface{}, err error) {
 	if !isTextDocumentMethod(req) {
 		return nil, nil
 	}
@@ -28,6 +28,8 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, conn *jsonrpc2.Conn, r
 		}
 
 		h.workspace.Store(documentURI, params.TextDocument.Text)
+		h.diagPublisher.queue.Put(taskDef{uri: documentURI, content: params.TextDocument.Text})
+
 		return nil, nil
 	case "textDocument/didChange":
 		var params lsp.DidChangeTextDocumentParams
@@ -40,7 +42,17 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, conn *jsonrpc2.Conn, r
 			return nil, err
 		}
 
-		return nil, h.workspace.TrackEdit(documentURI, params.ContentChanges)
+		if err := h.workspace.TrackEdit(documentURI, params.ContentChanges); err != nil {
+			return nil, err
+		}
+
+		task := taskDef{
+			uri:     documentURI,
+			content: JoinLines(h.workspace.documents[documentURI].textInEdit, true),
+		}
+		h.diagPublisher.queue.Put(task)
+
+		return nil, nil
 	case "textDocument/didSave":
 		var params lsp.DidSaveTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
@@ -64,7 +76,13 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, conn *jsonrpc2.Conn, r
 			return nil, err
 		}
 
-		return nil, h.workspace.Close(documentURI)
+		if err := h.workspace.Close(documentURI); err != nil {
+			return nil, err
+		}
+
+		delete(h.diagPublisher.stored, documentURI)
+
+		return nil, nil
 	case "textDocument/willSave":
 		var params lsp.WillSaveTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {

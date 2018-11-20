@@ -154,6 +154,6 @@ type CompletionItem struct {
 }
 
 type PublishDiagnosticsParams struct {
-	URI         DocumentURI  `json:"uri"`
-	Diagnostics []Diagnostic `json:"diagnostics"`
+	URI         DocumentURI   `json:"uri"`
+	Diagnostics []*Diagnostic `json:"diagnostics"`
 }
