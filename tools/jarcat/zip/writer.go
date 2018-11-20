@@ -53,6 +53,8 @@ type File struct {
 	IncludeOther bool
 	// AddInitPy will make the writer add __init__.py files to all directories that don't already have one on close.
 	AddInitPy bool
+	// StripPy will strip .py files when there is a corresponding .pyc
+	StripPy bool
 	// DirEntries makes the writer add empty directory entries.
 	DirEntries bool
 	// Align aligns entries to a multiple of this many bytes.
@@ -120,6 +122,14 @@ func (f *File) AddZipFile(filepath string) error {
 	}
 	defer r2.Close()
 
+	// Need to know all the filenames upfront if we're stripping sources.
+	filelist := map[string]struct{}{}
+	if f.StripPy {
+		for _, rf := range r.File {
+			filelist[rf.Name] = struct{}{}
+		}
+	}
+
 	for _, rf := range r.File {
 		log.Debug("Found file %s (from %s)", rf.Name, filepath)
 		if !f.shouldInclude(rf.Name) {
@@ -178,6 +188,16 @@ func (f *File) AddZipFile(filepath string) error {
 		if f.Prefix != "" {
 			rf.Name = path.Join(f.Prefix, rf.Name)
 		}
+		if f.StripPy && strings.HasSuffix(rf.Name, ".py") {
+			pyc := rf.Name + "c"
+			if f.HasExistingFile(pyc) {
+				log.Debug("Skipping %s since %s exists", rf.Name, pyc)
+				continue
+			} else if _, present := filelist[pyc]; present {
+				log.Debug("Skipping %s since %s exists in this archive", rf.Name, pyc)
+				continue
+			}
+		}
 		// Java tools don't seem to like writing a data descriptor for stored items.
 		// Unsure if this is a limitation of the format or a problem of those tools.
 		rf.Flags = 0
@@ -217,6 +237,10 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 					return fmt.Errorf("Error adding %s to zipfile: %s", path, err)
 				}
 			} else if f.IncludeOther && !f.HasExistingFile(path) {
+				if f.StripPy && strings.HasSuffix(path, ".py") && f.HasExistingFile(path+"c") {
+					log.Debug("Skipping %s since %sc exists", path, path)
+					return nil
+				}
 				log.Debug("Including existing non-zip file %s", path)
 				if info, err := os.Lstat(path); err != nil {
 					return err

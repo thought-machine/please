@@ -447,6 +447,8 @@ type pyFunc struct {
 	// This is the case for all builtin build rules, although for now it cannot be specified
 	// on any user-defined ones.
 	kwargsonly bool
+	// return type of the function
+	returnType string
 }
 
 func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
@@ -459,6 +461,7 @@ func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
 		types:      make([][]string, len(def.Arguments)),
 		code:       def.Statements,
 		kwargsonly: def.KeywordsOnly,
+		returnType: def.Return,
 	}
 	if def.Docstring != "" {
 		f.docstring = stringLiteral(def.Docstring)
@@ -556,6 +559,10 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if ret == nil {
 		return None // Implicit 'return None' in any function that didn't do that itself.
 	}
+	if f.returnType != "" && ret.Type() != f.returnType {
+		return s.Error("Invalid return type %s from function %s, expecting %s", ret.Type(), f.name, f.returnType)
+	}
+
 	return ret
 }
 

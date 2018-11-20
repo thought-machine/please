@@ -39,24 +39,25 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 
 	// moduleTargets exist only for the modules we actually built, to keep the size down.
 	moduleTargets := []*core.BuildTarget{}
-	targetsToVisit := []*core.BuildTarget{}
+	targetsToVisit := []core.BuildLabel{}
 
 	// For each target:
 	for _, buildLabel := range originalLabels {
-		targetsToVisit = append(targetsToVisit, graph.TargetOrDie(buildLabel))
+		targetsToVisit = append(targetsToVisit, buildLabel)
 	}
 
-	visitTargetsAndDependenciesOnce(targetsToVisit, func(buildTarget *core.BuildTarget) {
+	visitTargetsAndDependenciesOnce(graph, targetsToVisit, func(label core.BuildLabel) {
+		buildTarget := graph.TargetOrDie(label)
 		m := toModule(graph, buildTarget)
 
 		// Possibly write .iml
 		if m != nil {
-			if _, err := os.Stat(filepath.Dir(moduleFileLocation(buildTarget))); os.IsNotExist(err) {
-				os.MkdirAll(filepath.Dir(moduleFileLocation(buildTarget)), core.DirPermissions)
+			if _, err := os.Stat(filepath.Dir(moduleFileLocation(label))); os.IsNotExist(err) {
+				os.MkdirAll(filepath.Dir(moduleFileLocation(label)), core.DirPermissions)
 			}
-			f, err := os.Create(moduleFileLocation(buildTarget))
+			f, err := os.Create(moduleFileLocation(label))
 			if err != nil {
-				log.Fatal("Unable to write module file for", buildTarget.Label, "-", err)
+				log.Fatal("Unable to write module file for", label, "-", err)
 			}
 			m.toXML(f)
 			f.Close()
@@ -93,21 +94,21 @@ func ExportIntellijStructure(config *core.Configuration, graph *core.BuildGraph,
 	f.Close()
 }
 
-func visitTargetsAndDependenciesOnce(original []*core.BuildTarget, visitor func(target *core.BuildTarget)) {
-	targetsVisited := map[core.BuildLabel]core.BuildTarget{}
+func visitTargetsAndDependenciesOnce(graph *core.BuildGraph, original []core.BuildLabel, visitor func(label core.BuildLabel)) {
+	targetsVisited := map[core.BuildLabel]core.BuildLabel{}
 	for len(original) > 0 {
-		var buildTarget *core.BuildTarget
-		buildTarget, original = original[0], original[1:]
+		var buildLabel core.BuildLabel
+		buildLabel, original = original[0], original[1:]
 
-		if _, ok := targetsVisited[buildTarget.Label]; ok {
+		if _, ok := targetsVisited[buildLabel]; ok {
 			continue
 		}
 
-		targetsVisited[buildTarget.Label] = *buildTarget
+		targetsVisited[buildLabel] = buildLabel
 
-		visitor(buildTarget)
+		visitor(buildLabel)
 
-		original = append(original, buildTarget.Dependencies()...)
+		original = append(original, graph.TargetOrDie(buildLabel).DeclaredDependencies()...)
 	}
 }
 
@@ -119,8 +120,8 @@ func projectLocation() string {
 	return filepath.Join(outputLocation(), ".idea")
 }
 
-func moduleName(target *core.BuildTarget) string {
-	label := target.Label.PackageName + "_" + target.Label.Name
+func moduleName(buildLabel core.BuildLabel) string {
+	label := buildLabel.PackageName + "_" + buildLabel.Name
 	label = strings.Replace(label, "/", "_", -1)
 	label = strings.Replace(label, "#", "_", -1)
 	return label
@@ -130,8 +131,8 @@ func moduleDirLocation(target *core.BuildTarget) string {
 	return filepath.Join(outputLocation(), target.Label.PackageDir())
 }
 
-func moduleFileLocation(target *core.BuildTarget) string {
-	return filepath.Join(outputLocation(), target.Label.PackageDir(), fmt.Sprintf("%s.iml", moduleName(target)))
+func moduleFileLocation(label core.BuildLabel) string {
+	return filepath.Join(outputLocation(), label.PackageDir(), fmt.Sprintf("%s.iml", moduleName(label)))
 }
 
 func libraryDirLocation() string {

@@ -93,8 +93,8 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
 
 
 def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list=[],
-                  visibility:list=None, zip_safe:bool=None, interpreter:str=None, shebang:str='',
-                  labels:list&features&tags=[]):
+                  visibility:list=None, zip_safe:bool=None, strip:bool=False, interpreter:str=None,
+                  shebang:str='', labels:list&features&tags=[]):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -113,6 +113,7 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
                        If set to explicitly True or False, the output will be marked
                        appropriately; by default it will be safe unless any of the
                        transitive dependencies are themselves marked as not zip-safe.
+      strip (bool): Strips source code from the output .pex file, leaving just bytecode.
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
@@ -151,12 +152,15 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
         },
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
+    cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
+    if strip:
+        cmd += ' --strip_py'
     build_rule(
         name=name,
         srcs=[pex_rule],
         deps=[lib_rule],
         outs=[out or (name + '.pex')],
-        cmd=_PYTHON_BINARY_CMDS,
+        cmd=cmd,
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
@@ -264,7 +268,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         data=data + srcs,
         outs=[f'{name}.pex'],
         labels=labels,
-        cmd=_PYTHON_BINARY_CMDS,
+        cmd='$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
         test_cmd=test_cmd,
         needs_transitive_deps=True,
         output_is_complete=True,
@@ -553,13 +557,6 @@ def _add_licences(name, output):
             return
     log.warning('No licence found for %s, should add licences = [...] to the rule',
                 name.lstrip('_').split('#')[0])
-
-
-# The commands that we use for python_binary and python_test rules.
-_PYTHON_BINARY_CMDS = {
-    'opt': '$TOOL z -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
-    'stripped': '$TOOL z -i . -o $OUTS -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict -e .py -x "*.py"',
-}
 
 
 if CONFIG.BAZEL_COMPATIBILITY:

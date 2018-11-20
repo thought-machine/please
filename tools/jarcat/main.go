@@ -72,6 +72,7 @@ var opts = struct {
 		Strict                bool              `long:"strict" description:"Disallow duplicate files"`
 		IncludeOther          bool              `long:"include_other" description:"Add files that are not jar files as well"`
 		AddInitPy             bool              `long:"add_init_py" description:"Adds __init__.py files to all directories"`
+		StripPy               bool              `long:"strip_py" description:"Strips .py files when there is a corresponding .pyc"`
 		DumbMode              bool              `short:"d" long:"dumb" description:"Dumb mode, an alias for --suffix='' --exclude_suffix='' --include_other"`
 		NoDirEntries          bool              `short:"n" long:"nodir_entries" description:"Don't add directory entries to zip"`
 		RenameDirs            map[string]string `short:"r" long:"rename_dir" description:"Rename directories within zip file"`
@@ -183,6 +184,7 @@ func main() {
 	f.StoreSuffix = opts.Zip.StoreSuffix
 	f.IncludeOther = opts.Zip.IncludeOther
 	f.AddInitPy = opts.Zip.AddInitPy
+	f.StripPy = opts.Zip.StripPy
 	f.DirEntries = !opts.Zip.NoDirEntries
 	f.Align = opts.Zip.Align
 	f.Prefix = opts.Zip.Prefix
