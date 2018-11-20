@@ -15,44 +15,44 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=N
     pass
 
 
-def len(obj):
+def len(obj) -> int:
     pass
 def enumerate(seq:list):
     pass
 def zip(args):
     pass
 
-def join(self:str, seq:list):
+def join(self:str, seq:list) -> str:
     pass
-def split(self:str, on:str=' '):
+def split(self:str, on:str=' ') -> list:
     pass
 def replace(self:str, old:str, new:str):
     pass
-def partition(self:str, sep:str):
+def partition(self:str, sep:str) -> list:
     pass
-def rpartition(self:str, sep:str):
+def rpartition(self:str, sep:str) -> list:
     pass
-def startswith(self:str, s:str):
+def startswith(self:str, s:str) -> bool:
     pass
-def endswith(self:str, s:str):
+def endswith(self:str, s:str) -> bool:
     pass
-def format(self:str):
+def format(self:str) -> str:
     pass
-def lstrip(self:str, cutset:str=' \n'):
+def lstrip(self:str, cutset:str=' \n') -> str:
     pass
-def rstrip(self:str, cutset:str=' \n'):
+def rstrip(self:str, cutset:str=' \n') -> str:
     pass
-def strip(self:str, cutset:str=' \n'):
+def strip(self:str, cutset:str=' \n') -> str:
     pass
-def find(self:str, needle:str):
+def find(self:str, needle:str) -> int:
     pass
-def rfind(self:str, needle:str):
+def rfind(self:str, needle:str) -> int:
     pass
-def count(self:str, needle:str):
+def count(self:str, needle:str) -> int:
     pass
-def upper(self:str):
+def upper(self:str) -> str:
     pass
-def lower(self:str):
+def lower(self:str) -> str:
     pass
 
 def fail(msg:str):
@@ -66,29 +66,29 @@ def subrepo(name:str, dep:str='', path:str=None):
     pass
 
 
-def isinstance(obj, types:function|list):
+def isinstance(obj, types:function|list) -> bool:
     pass
 
 
-def range(start:int, stop:int=None, step:int=1):
+def range(start:int, stop:int=None, step:int=1) -> str:
     pass
-def any(seq:list):
+def any(seq:list) -> bool:
     for x in seq:
         if x:
             return True
     return False
-def all(seq:list):
+def all(seq:list) -> bool:
     for x in seq:
         if not x:
             return False
     return True
 
 
-def bool(b):
+def bool(b) -> bool:
     pass
-def int(s:str):
+def int(s:str) -> int:
     pass
-def str(s):
+def str(s) -> str:
     pass
 def list(l):
     raise 'list is not callable'
@@ -96,7 +96,7 @@ def dict(d):
     raise 'dict is not callable'
 
 
-def glob(include:list, exclude:list&excludes=[], hidden:bool=False):
+def glob(include:list, exclude:list&excludes=[], hidden:bool=False) -> list:
     pass
 
 
@@ -104,27 +104,27 @@ def package():
     pass
 
 
-def sorted(seq:list):
+def sorted(seq:list) -> list:
     pass
 
 
 def get(self:dict, key:str, default=None):
     pass
-def setdefault(self:config, key:str, default=None):
+def setdefault(self:config, key:str, default=None) -> config:
     if key in self:
         return self[key]
     self[key] = default
     return default
-def config_get(self:config, key:str, default=None):
+def config_get(self:config, key:str, default=None) -> config:
     pass
 
 
-def get_base_path():
+def get_base_path() -> str:
     pass
-def package_name():
+def package_name() -> str:
     pass
 
-def canonicalise(label:str):
+def canonicalise(label:str) -> str:
     """Converts the given build label to its full form.
 
     For example:
@@ -135,13 +135,13 @@ def canonicalise(label:str):
     pass
 
 
-def keys(self:dict):
+def keys(self:dict) -> list:
     pass
-def values(self:dict):
+def values(self:dict) -> list:
     pass
-def items(self:dict):
+def items(self:dict) -> list:
     pass
-def copy(self:dict):
+def copy(self:dict) -> dict:
     pass
 
 
@@ -168,27 +168,27 @@ log = {
 }
 
 
-def join_path(paths:str):
+def join_path(paths:str) -> str:
     pass  # Has to be implemented natively since it's varargs.
 
 
-def split_path(p:str):
+def split_path(p:str) -> list:
     before, _, after = p.rpartition('/')
     return before, after
 
 
-def splitext(p:str):
+def splitext(p:str) -> list:
     before, dot, after = p.rpartition('.')
     return (before, dot + after) if before else (after, '')
 
 
-def basename(p:str):
+def basename(p:str) -> str:
     """Returns the final component of a pathname"""
     _, _, after = p.rpartition('/')
     return after
 
 
-def dirname(p:str):
+def dirname(p:str) -> str:
     """Returns the directory component of a pathname"""
     before, _, after = p.rpartition('/')
     return before
@@ -202,9 +202,9 @@ ValueError = str
 
 
 # Post-build callback functions.
-def get_labels(name:str, prefix:str):
+def get_labels(name:str, prefix:str) -> list:
     pass
-def has_label(name:str, prefix:str):
+def has_label(name:str, prefix:str) -> bool:
     return len(get_labels(name, prefix)) > 0
 def add_dep(target:str, dep:str, exported:bool=False):
     pass
@@ -214,7 +214,7 @@ def add_out(target:str, name:str, out:str=''):
     pass
 def add_licence(target:str, licence:str):
     pass
-def get_command(target:str, config:str=''):
+def get_command(target:str, config:str='') -> str:
     pass
 def set_command(target:str, config:str, command:str=''):
     pass

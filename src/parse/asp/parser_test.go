@@ -460,7 +460,6 @@ func TestOptimise(t *testing.T) {
 	assert.Equal(t, 9, statements[1].EndPos.Column)
 	assert.Equal(t, 7, statements[1].EndPos.Line)
 
-
 	assert.NotNil(t, statements[2].FuncDef)
 	assert.Equal(t, 1, len(statements[2].FuncDef.Statements))
 	// Test for Endpos
@@ -510,7 +509,6 @@ func TestExample0(t *testing.T) {
 	assert.Equal(t, 2, statements[3].EndPos.Column)
 	assert.Equal(t, 43, statements[3].EndPos.Line)
 }
-
 
 func TestExample1(t *testing.T) {
 	// These tests are specific examples that turned out to fail.
@@ -651,4 +649,13 @@ func TestFStrings(t *testing.T) {
 	assert.Equal(t, 25, stmts[2].EndPos.Column)
 	assert.Equal(t, 6, stmts[3].EndPos.Line)
 	assert.Equal(t, 15, stmts[3].EndPos.Column)
+}
+
+func TestFuncReturnTypes(t *testing.T) {
+	stmts, err := newParser().parse("src/parse/asp/test_data/return_type.build")
+	assert.NoError(t, err)
+
+	assert.Equal(t, "str", stmts[0].FuncDef.Return)
+	assert.Equal(t, "config", stmts[2].FuncDef.Return)
+	assert.Equal(t, "dict", stmts[3].FuncDef.Return)
 }

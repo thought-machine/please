@@ -227,6 +227,15 @@ func (p *parser) parseFuncDef() *FuncDef {
 		}
 	}
 	p.next(')')
+
+	if tok := p.l.Peek(); tok.Value == "-" {
+		p.next('-')
+		p.next('>')
+
+		tok := p.oneofval("bool", "str", "int", "list", "dict", "function", "config")
+		fd.Return = tok.Value
+	}
+
 	// Get the position for the end of function defition header
 	fd.EoDef = p.next(':').Pos
 

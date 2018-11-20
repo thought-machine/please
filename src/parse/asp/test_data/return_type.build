@@ -1,0 +1,13 @@
+def foo() -> str:
+    return "hello"
+
+def subinclude(target:str, hash:str=None):
+    pass
+
+def conf() -> config:
+    pass
+
+def dict_val() -> dict:
+    return "blah"
+
+dict_val()

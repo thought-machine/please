@@ -211,6 +211,9 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 	}
 
 	header := strings.TrimSuffix(strings.Join(headerSlice, "\n"), ":")
+	if typeAnnotation := strings.Index(header, "->"); typeAnnotation != -1 {
+		header = header[:strings.Index(header, "->")-1]
+	}
 	ruleDef.Header = removePrivateArgFromHeader(header)
 	return ruleDef
 }
