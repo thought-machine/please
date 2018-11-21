@@ -243,7 +243,7 @@ func TestAnalyzer_BuildDefFromUri(t *testing.T) {
 
 	buildDefs, err := analyzer.BuildDefsFromURI(ctx, exampleBuildURI)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, 5, len(buildDefs))
+	assert.Equal(t, 6, len(buildDefs))
 	assert.True(t, StringInSlice(buildDefs["langserver"].Visibility, "//tools/build_langserver/..."))
 	assert.True(t, StringInSlice(buildDefs["langserver"].Visibility, "//src/core"))
 	t.Log(buildDefs["langserver_test"].Visibility)
