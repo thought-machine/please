@@ -44,7 +44,7 @@ go_test(
 python_library(name = "test", srcs = ["utils_test.go"])
 blah = "my_str"
 "//sr"
-"//sr"
+
 blah = {"foo": "bar", "blah":1}
 
 subinclude("//build_defs:signing")
@@ -59,3 +59,7 @@ baz = blah
 
 foo = "test"
 python_library(name = foo, srcs = ["utils_test.go"])
+
+add_dep("blah")
+
+python_library(name = "hello".blah())

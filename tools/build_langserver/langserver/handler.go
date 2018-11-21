@@ -124,6 +124,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 
 	defer h.requestStore.Cancel(req.ID)
 
+	// start the goroutine for publishing diagnostics
 	go func() {
 		for {
 			h.publishDiagnostics(h.conn)

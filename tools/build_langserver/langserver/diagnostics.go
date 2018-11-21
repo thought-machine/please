@@ -96,67 +96,16 @@ func (ds *diagnosticStore) storeDiagnostics(analyzer *Analyzer, stmts []*asp.Sta
 	ds.stored = []*lsp.Diagnostic{}
 
 	var callback func(astStruct interface{}) interface{}
+
 	callback = func(astStruct interface{}) interface{} {
 		if stmt, ok := astStruct.(asp.Statement); ok {
 			if stmt.Ident != nil {
-				if stmt.Ident.Action != nil && stmt.Ident.Action.Call != nil {
-					callRange := lsp.Range{
-						Start: aspPositionToLsp(stmt.Pos),
-						End:   aspPositionToLsp(stmt.EndPos),
-					}
-					ds.storeFuncCallDiagnostics(analyzer, stmt.Ident.Name,
-						stmt.Ident.Action.Call.Arguments, callRange)
-				}
+				ds.diagnoseIdentStmt(analyzer, stmt.Ident, stmt.Pos, stmt.EndPos)
 			}
 		} else if expr, ok := astStruct.(asp.Expression); ok {
-			exprRange := lsp.Range{
-				Start: aspPositionToLsp(expr.Pos),
-				End:   aspPositionToLsp(expr.EndPos),
-			}
-
-			if expr.Val == nil {
-				diag := &lsp.Diagnostic{
-					Range:    exprRange,
-					Severity: lsp.Error,
-					Source:   "build",
-					Message:  "expression expected",
-				}
-				ds.stored = append(ds.stored, diag)
-			} else if expr.Val.String != "" && core.LooksLikeABuildLabel(TrimQuotes(expr.Val.String)) {
-				if diag := ds.diagnosticFromBuildLabel(analyzer, expr.Val.String, exprRange); diag != nil {
-					ds.stored = append(ds.stored, diag)
-				}
-			}
+			ds.diagnoseExpression(analyzer, expr)
 		} else if identExpr, ok := astStruct.(asp.IdentExpr); ok {
-
-			if identExpr.Action == nil {
-				// Check if variable has been defined
-				pos := aspPositionToLsp(identExpr.Pos)
-				variables := analyzer.VariablesFromStatements(stmts, &pos)
-
-				if _, ok := variables[identExpr.Name]; !ok {
-					nameRange := getNameRange(aspPositionToLsp(identExpr.Pos), identExpr.Name)
-
-					diag := &lsp.Diagnostic{
-						Range:    nameRange,
-						Severity: lsp.Error,
-						Source:   "build",
-						Message:  fmt.Sprintf("unexpected variable '%s'", identExpr.Name),
-					}
-					ds.stored = append(ds.stored, diag)
-				}
-			}
-			for _, action := range identExpr.Action {
-				if action.Call != nil {
-					identRange := lsp.Range{
-						Start: aspPositionToLsp(identExpr.Pos),
-						End:   aspPositionToLsp(identExpr.EndPos),
-					}
-					ds.storeFuncCallDiagnostics(analyzer, identExpr.Name, action.Call.Arguments, identRange)
-				} else if action.Property != nil {
-					asp.WalkAST(action.Property, callback)
-				}
-			}
+			ds.diagnoseIdentExpr(analyzer, identExpr, stmts)
 		}
 
 		return nil
@@ -165,17 +114,84 @@ func (ds *diagnosticStore) storeDiagnostics(analyzer *Analyzer, stmts []*asp.Sta
 	asp.WalkAST(stmts, callback)
 }
 
-// storeFuncCallDiagnostics checks if the function call's argument name and type are correct
+func (ds *diagnosticStore) diagnoseIdentStmt(analyzer *Analyzer, ident *asp.IdentStatement,
+	pos asp.Position, endpos asp.Position) {
+
+	if ident.Action != nil && ident.Action.Call != nil {
+
+		funcRange := lsp.Range{
+			Start: aspPositionToLsp(pos),
+			End:   aspPositionToLsp(endpos),
+		}
+		ds.diagnoseFuncCall(analyzer, ident.Name,
+			ident.Action.Call.Arguments, funcRange)
+	}
+}
+
+func (ds *diagnosticStore) diagnoseExpression(analyzer *Analyzer, expr asp.Expression) {
+	exprRange := lsp.Range{
+		Start: aspPositionToLsp(expr.Pos),
+		End:   aspPositionToLsp(expr.EndPos),
+	}
+
+	if expr.Val == nil {
+		diag := &lsp.Diagnostic{
+			Range:    exprRange,
+			Severity: lsp.Error,
+			Source:   "build",
+			Message:  "expression expected",
+		}
+		ds.stored = append(ds.stored, diag)
+
+	} else if expr.Val.String != "" && core.LooksLikeABuildLabel(TrimQuotes(expr.Val.String)) {
+		if diag := ds.diagnosticFromBuildLabel(analyzer, expr.Val.String, exprRange); diag != nil {
+			ds.stored = append(ds.stored, diag)
+		}
+	}
+}
+
+func (ds *diagnosticStore) diagnoseIdentExpr(analyzer *Analyzer, identExpr asp.IdentExpr, stmts []*asp.Statement) {
+
+	if identExpr.Action == nil {
+		// Check if variable has been defined
+		pos := aspPositionToLsp(identExpr.Pos)
+		variables := analyzer.VariablesFromStatements(stmts, &pos)
+
+		if _, ok := variables[identExpr.Name]; !ok {
+			nameRange := getNameRange(aspPositionToLsp(identExpr.Pos), identExpr.Name)
+
+			diag := &lsp.Diagnostic{
+				Range:    nameRange,
+				Severity: lsp.Error,
+				Source:   "build",
+				Message:  fmt.Sprintf("unexpected variable '%s'", identExpr.Name),
+			}
+			ds.stored = append(ds.stored, diag)
+		}
+	}
+
+	for _, action := range identExpr.Action {
+		if action.Call != nil {
+			identRange := lsp.Range{
+				Start: aspPositionToLsp(identExpr.Pos),
+				End:   aspPositionToLsp(identExpr.EndPos),
+			}
+			ds.diagnoseFuncCall(analyzer, identExpr.Name, action.Call.Arguments, identRange)
+		}
+	}
+}
+
+// diagnoseFuncCall checks if the function call's argument name and type are correct
 // Store a *lsp.diagnostic if found
-func (ds *diagnosticStore) storeFuncCallDiagnostics(analyzer *Analyzer, funcName string,
-	callArgs []asp.CallArgument, callRange lsp.Range) {
+func (ds *diagnosticStore) diagnoseFuncCall(analyzer *Analyzer, funcName string,
+	callArgs []asp.CallArgument, funcRange lsp.Range) {
 
 	excludedBuiltins := []string{"format", "zip", "package", "join_path"}
 
 	// Check if the funcDef is defined
 	def := analyzer.GetBuildRuleByName(funcName, ds.subincludes)
 	if def == nil {
-		diagRange := getNameRange(callRange.Start, funcName)
+		diagRange := getNameRange(funcRange.Start, funcName)
 		diag := &lsp.Diagnostic{
 			Range:    diagRange,
 			Severity: lsp.Error,
@@ -191,7 +207,7 @@ func (ds *diagnosticStore) storeFuncCallDiagnostics(analyzer *Analyzer, funcName
 		if len(callArgs)-1 < i {
 			if def.ArgMap[arg.Name].Required == true {
 				diag := &lsp.Diagnostic{
-					Range:    callRange,
+					Range:    getCallRange(funcRange, funcName),
 					Severity: lsp.Error,
 					Source:   "build",
 					Message:  fmt.Sprintf("not enough arguments in call to %s", def.Name),
@@ -332,11 +348,11 @@ func (ds *diagnosticStore) getIdentExprReturnType(analyzer *Analyzer, ident *asp
 /************************
  * Helper functions
  ************************/
-func getCallRange(pos asp.Position, endpos asp.Position, funcName string) *lsp.Range {
-	return &lsp.Range{
-		Start: lsp.Position{Line: pos.Line - 1,
-			Character: pos.Column + len(funcName) - 1},
-		End: aspPositionToLsp(endpos),
+func getCallRange(funcRange lsp.Range, funcName string) lsp.Range {
+	return lsp.Range{
+		Start: lsp.Position{Line: funcRange.Start.Line,
+			Character: funcRange.Start.Character + len(funcName)},
+		End: funcRange.End,
 	}
 
 }
