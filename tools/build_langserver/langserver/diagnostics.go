@@ -4,10 +4,11 @@ import (
 	"context"
 	"core"
 	"fmt"
-	"github.com/Workiva/go-datastructures/queue"
+
 	"parse/asp"
 	"tools/build_langserver/lsp"
 
+	"github.com/Workiva/go-datastructures/queue"
 	"github.com/sourcegraph/jsonrpc2"
 )
 
@@ -329,7 +330,6 @@ func getCallRange(pos asp.Position, endpos asp.Position, funcName string) *lsp.R
 		End: aspPositionToLsp(endpos),
 	}
 
-	return nil
 }
 
 func getNameRange(pos lsp.Position, name string) lsp.Range {
