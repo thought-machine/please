@@ -158,3 +158,14 @@ type PublishDiagnosticsParams struct {
 	URI         DocumentURI   `json:"uri"`
 	Diagnostics []*Diagnostic `json:"diagnostics"`
 }
+
+type DocumentFormattingParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Options      FormattingOptions      `json:"options"`
+}
+
+type FormattingOptions struct {
+	TabSize      int    `json:"tabSize"`
+	InsertSpaces bool   `json:"insertSpaces"`
+	Key          string `json:"key"`
+}
