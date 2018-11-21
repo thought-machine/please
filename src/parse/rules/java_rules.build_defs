@@ -91,6 +91,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             },
         )
     elif resources:
+        # TODO(agenticarus): Turn `resources` into a first-class construct, and just use them in `deps` normally.
         # Can't run javac since there are no java files.
         if resources_root:
             cmd = 'cd ${PKG}/%s && $TOOL z -d -o ${OUT} -i .' % resources_root
@@ -106,7 +107,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             cmd=cmd,
             building_description="Linking...",
             requires=['java'],
-            labels = labels,
+            labels = labels + ['rule:test_resources' if test_only else 'rule:resources'],
             test_only=test_only,
             tools=[CONFIG.JARCAT_TOOL],
         )

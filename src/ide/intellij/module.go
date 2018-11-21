@@ -14,12 +14,12 @@ type Module struct {
 	XMLName    xml.Name          `xml:"module"`
 	ModuleType string            `xml:"type,attr"`
 	Version    int               `xml:"version,attr"`
-	Component  []ModuleComponent `xml:"component"`
+	Component  ModuleComponent   `xml:"component"`
 }
 
-func newJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
+func newModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
+	log.Infof("Making web module for %s", target.Label.Label())
 	component := newModuleComponent(target)
-	component.addOrderEntry(newInheritedJdkEntry())
 	component.addOrderEntry(newSourceFolderEntry(false))
 
 	for _, label := range target.DeclaredDependencies() {
@@ -29,16 +29,22 @@ func newJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 		}
 	}
 
-	if shouldMakeLibrary(target) {
-		component.addOrderEntry(newLibraryEntry(libraryName(target), "project"))
+	module := Module{
+		ModuleType: "WEB_MODULE",
+		Version:    4,
+		Component: component,
 	}
 
-	module := Module{
-		ModuleType: "JAVA_MODULE",
-		Version:    4,
-		Component: []ModuleComponent{
-			component,
-		},
+	return module
+}
+
+func newJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
+	module := newModule(graph, target)
+	module.ModuleType = "JAVA_MODULE"
+	module.Component.addOrderEntry(newInheritedJdkEntry())
+
+	if shouldMakeLibrary(target) {
+		module.Component.addOrderEntry(newLibraryEntry(libraryName(target), "project"))
 	}
 	return module
 }
@@ -46,7 +52,7 @@ func newJavaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 func newScalaModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 	module := newJavaModule(graph, target)
 
-	module.Component[0].addOrderEntry(newLibraryEntry("scala-sdk", "application"))
+	module.Component.addOrderEntry(newLibraryEntry("scala-sdk", "application"))
 
 	return module
 }
@@ -73,8 +79,18 @@ func shouldMakeScalaModule(target *core.BuildTarget) bool {
 	return false
 }
 
+func shouldMakeStaticModule(target *core.BuildTarget) bool {
+	for _, label := range target.PrefixedLabels("rule:") {
+		if label == "resources" || label == "test_resources" {
+			return true
+		}
+	}
+	return false
+}
+
 func shouldMakeModule(target *core.BuildTarget) bool {
-	return shouldMakeJavaModule(target) ||
+	return shouldMakeStaticModule(target) ||
+		shouldMakeJavaModule(target) ||
 		shouldMakeScalaModule(target)
 }
 
@@ -85,6 +101,10 @@ func shouldHaveContent(target *core.BuildTarget) bool {
 		} else if label == "java_test" {
 			return true
 		} else if label == "scala_library" {
+			return true
+		} else if label == "resources" {
+			return true
+		} else if label == "test_resources" {
 			return true
 		}
 	}
@@ -240,6 +260,11 @@ func newSourceFolderEntry(forTests bool) OrderEntry {
 
 func toModule(graph *core.BuildGraph, buildTarget *core.BuildTarget) *Module {
 	var module *Module
+
+	if shouldMakeStaticModule(buildTarget) {
+		madeModule := newModule(graph, buildTarget)
+		module = &madeModule
+	}
 
 	if shouldMakeJavaModule(buildTarget) {
 		madeModule := newJavaModule(graph, buildTarget)
