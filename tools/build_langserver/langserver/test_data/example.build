@@ -62,4 +62,6 @@ python_library(name = foo, srcs = ["utils_test.go"])
 
 add_dep("blah")
 
-python_library(name = "hello".blah())
+python_library(name = "hello".foo(), interpreter = CONFIG.DEFAULT_PYTHON_INTERPRETER)
+
+baz = CONFIG.BLAH

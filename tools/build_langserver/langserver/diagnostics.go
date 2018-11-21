@@ -157,14 +157,12 @@ func (ds *diagnosticStore) diagnoseIdentExpr(analyzer *Analyzer, identExpr asp.I
 		pos := aspPositionToLsp(identExpr.Pos)
 		variables := analyzer.VariablesFromStatements(stmts, &pos)
 
-		if _, ok := variables[identExpr.Name]; !ok {
-			nameRange := getNameRange(aspPositionToLsp(identExpr.Pos), identExpr.Name)
-
+		if _, ok := variables[identExpr.Name]; !ok && !StringInSlice(analyzer.GetConfigNames(), identExpr.Name) {
 			diag := &lsp.Diagnostic{
-				Range:    nameRange,
+				Range:    getNameRange(aspPositionToLsp(identExpr.Pos), identExpr.Name),
 				Severity: lsp.Error,
 				Source:   "build",
-				Message:  fmt.Sprintf("unexpected variable '%s'", identExpr.Name),
+				Message:  fmt.Sprintf("unexpected variable or config property '%s'", identExpr.Name),
 			}
 			ds.stored = append(ds.stored, diag)
 		}

@@ -10,7 +10,7 @@ import (
 
 func TestDiagnose(t *testing.T) {
 	ds := getDefaultDS(t)
-	assert.Equal(t, 12, len(ds.stored))
+	assert.Equal(t, 13, len(ds.stored))
 }
 
 func TestDiagnosisInvalidBuildLabel(t *testing.T) {
@@ -74,7 +74,7 @@ func TestDiagnosisVariable(t *testing.T) {
 	ds := getDefaultDS(t)
 
 	// Test for undefined variable, variable later defined
-	diag := FindDiagnosticByMsg(ds.stored, "unexpected variable 'baz'")
+	diag := FindDiagnosticByMsg(ds.stored, "unexpected variable or config property 'baz'")
 	assert.NotNil(t, diag)
 	expected := lsp.Range{
 		Start: lsp.Position{Line: 55, Character: 8},
@@ -83,7 +83,7 @@ func TestDiagnosisVariable(t *testing.T) {
 	assert.Equal(t, expected, diag.Range)
 
 	// Test for undefined variable in function
-	diag = FindDiagnosticByMsg(ds.stored, "unexpected variable 'bar'")
+	diag = FindDiagnosticByMsg(ds.stored, "unexpected variable or config property 'bar'")
 	assert.NotNil(t, diag)
 	expected = lsp.Range{
 		Start: lsp.Position{Line: 51, Character: 4},
@@ -119,6 +119,36 @@ func TestDiagnosisFunction(t *testing.T) {
 	}
 }
 
+func TestDiagnosticsProperty(t *testing.T) {
+	ds := getDefaultDS(t)
+
+	// Test for invalid string call
+	diag := FindDiagnosticByMsg(ds.stored, "function undefined: foo")
+	assert.NotNil(t, diag)
+	expected := lsp.Range{
+		Start: lsp.Position{Line: 64, Character: 30},
+		End:   lsp.Position{Line: 64, Character: 33},
+	}
+	assert.Equal(t, expected, diag.Range)
+
+	// Test for invalid config property
+	diag = FindDiagnosticByMsg(ds.stored, "unexpected variable or config property 'BLAH'")
+	assert.NotNil(t, diag)
+	expected = lsp.Range{
+		Start: lsp.Position{Line: 66, Character: 13},
+		End:   lsp.Position{Line: 66, Character: 17},
+	}
+	assert.Equal(t, expected, diag.Range)
+
+	// Ensure correct config property is not being listed in diagnostics
+	configRange := lsp.Range{
+		Start: lsp.Position{Line: 64, Character: 58},
+		End:   lsp.Position{Line: 64, Character: 84},
+	}
+	assert.Nil(t, FindDiagnosticByRange(ds.stored, configRange))
+
+}
+
 func TestDiagnoseOutOfScope(t *testing.T) {
 	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName, "out_of_scope.build")
 	ds := &diagnosticStore{
@@ -131,7 +161,7 @@ func TestDiagnoseOutOfScope(t *testing.T) {
 
 	ds.storeDiagnostics(analyzer, stmts)
 	assert.Equal(t, 1, len(ds.stored))
-	assert.NotNil(t, FindDiagnosticByMsg(ds.stored, "unexpected variable 'blah'"))
+	assert.NotNil(t, FindDiagnosticByMsg(ds.stored, "unexpected variable or config property 'blah'"))
 	for _, d := range ds.stored {
 		t.Log(d)
 	}

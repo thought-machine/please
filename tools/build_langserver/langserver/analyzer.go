@@ -801,6 +801,16 @@ func (a *Analyzer) IsBuildFile(uri lsp.DocumentURI) bool {
 	return a.State.Config.IsABuildFile(base)
 }
 
+func (a *Analyzer) GetConfigNames() []string {
+	var configs []string
+
+	for tag := range a.State.Config.TagsToFields() {
+		configs = append(configs, tag)
+	}
+
+	return configs
+}
+
 /************************
  * Helper functions
  ************************/
