@@ -801,6 +801,7 @@ func (a *Analyzer) IsBuildFile(uri lsp.DocumentURI) bool {
 	return a.State.Config.IsABuildFile(base)
 }
 
+// GetConfigNames returns a slice of strings config variable names
 func (a *Analyzer) GetConfigNames() []string {
 	var configs []string
 
