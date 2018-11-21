@@ -20,8 +20,7 @@ func NewHandler() jsonrpc2.Handler {
 	h := &LsHandler{
 		IsServerDown: false,
 	}
-	return langHandler{
-		jsonrpc2.HandlerWithError(h.Handle)}
+	return langHandler{jsonrpc2.HandlerWithError(h.Handle)}
 }
 
 // handler wraps around LsHandler to correctly handler requests in the correct order
@@ -71,18 +70,6 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 		req.Method != "initialzed" && req.Method != "shutdown" {
 		ctx = h.requestStore.Store(ctx, req)
 		defer h.requestStore.Cancel(req.ID)
-
-		go func() {
-			t, err := h.diagPublisher.queue.Get(1)
-			if err != nil {
-				log.Warning("fail to get diagnostic publishing task")
-			}
-			if len(t) > 0 {
-				task := t[0].(taskDef)
-
-				h.publishDiagnostics(conn, task.content, task.uri)
-			}
-		}()
 	}
 
 	if method, ok := methods[req.Method]; ok {
@@ -108,6 +95,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	// Set the Init state of the handler
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
 	// TODO(bnmetrics): Ideas: this could essentially be a bit fragile.
 	// maybe we can defer until user send a request with first file URL
 	core.FindRepoRoot()
@@ -136,6 +124,20 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 
 	defer h.requestStore.Cancel(req.ID)
 
+	go func() {
+		for {
+			t, err := h.diagPublisher.queue.Get(1)
+			if err != nil {
+				log.Warning("fail to get diagnostic publishing task")
+			}
+			if len(t) > 0 {
+				task := t[0].(taskDef)
+
+				h.publishDiagnostics(h.conn, task.content, task.uri)
+			}
+		}
+	}()
+
 	// Fill in the response results
 	TDsync := lsp.SyncIncremental
 	completeOps := &lsp.CompletionOptions{
@@ -147,7 +149,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 		TriggerCharacters: []string{"(", ","},
 	}
 
-	defer log.Info("Plz build file language server initialized")
+	log.Info("Initializing plz build file language server..")
 	return lsp.InitializeResult{
 		Capabilities: lsp.ServerCapabilities{
 			TextDocumentSync:           &TDsync,

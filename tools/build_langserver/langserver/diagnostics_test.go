@@ -19,7 +19,6 @@ func TestDiagnose(t *testing.T) {
 	assert.NoError(t, err)
 
 	ds.storeDiagnostics(analyzer, stmts)
-
 	assert.Equal(t, 11, len(ds.stored))
 
 	// Test for invalid build label

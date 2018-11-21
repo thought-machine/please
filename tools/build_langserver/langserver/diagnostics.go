@@ -19,12 +19,11 @@ func (h *LsHandler) publishDiagnostics(conn *jsonrpc2.Conn, content string, uri 
 		return nil
 	}
 
-	h.diagPublisher.diagnose(ctx, h.analyzer, content, uri)
-
 	params := &lsp.PublishDiagnosticsParams{
 		URI:         uri,
-		Diagnostics: h.diagPublisher.stored[uri].stored,
+		Diagnostics: h.diagPublisher.diagnose(ctx, h.analyzer, content, uri),
 	}
+
 	log.Info("Diagnostics detected: %s", params.Diagnostics)
 
 	if err := conn.Notify(ctx, "textDocument/publishDiagnostics", params); err != nil {
@@ -35,8 +34,6 @@ func (h *LsHandler) publishDiagnostics(conn *jsonrpc2.Conn, content string, uri 
 
 type diagnosticsPublisher struct {
 	queue *queue.PriorityQueue
-
-	stored map[lsp.DocumentURI]*diagnosticStore
 }
 
 type diagnosticStore struct {
@@ -63,24 +60,23 @@ func (td taskDef) Compare(other queue.Item) int {
 
 func newDiagnosticsPublisher() *diagnosticsPublisher {
 	publisher := &diagnosticsPublisher{
-		stored: make(map[lsp.DocumentURI]*diagnosticStore),
-		queue:  queue.NewPriorityQueue(10000, true),
+		queue: queue.NewPriorityQueue(10000, true),
 	}
 
 	return publisher
 }
 
-func (dp *diagnosticsPublisher) diagnose(ctx context.Context, analyzer *Analyzer, content string, uri lsp.DocumentURI) {
+func (dp *diagnosticsPublisher) diagnose(ctx context.Context, analyzer *Analyzer, content string, uri lsp.DocumentURI) []*lsp.Diagnostic {
 	stmts := analyzer.AspStatementFromContent(content)
 
-	if _, ok := dp.stored[uri]; !ok {
-		dp.stored[uri] = &diagnosticStore{
-			uri:         uri,
-			subincludes: analyzer.GetSubinclude(ctx, stmts, uri),
-		}
+	diag := &diagnosticStore{
+		uri:         uri,
+		subincludes: analyzer.GetSubinclude(ctx, stmts, uri),
 	}
 
-	dp.stored[uri].storeDiagnostics(analyzer, stmts)
+	diag.storeDiagnostics(analyzer, stmts)
+
+	return diag.stored
 }
 
 func (ds *diagnosticStore) storeDiagnostics(analyzer *Analyzer, stmts []*asp.Statement) {

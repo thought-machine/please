@@ -80,8 +80,6 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 			return nil, err
 		}
 
-		delete(h.diagPublisher.stored, documentURI)
-
 		return nil, nil
 	case "textDocument/willSave":
 		var params lsp.WillSaveTextDocumentParams
