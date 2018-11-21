@@ -56,9 +56,9 @@ func (td taskDef) Compare(other queue.Item) int {
 	otherTask := other.(taskDef)
 	if otherTask.uri != td.uri || otherTask.content == td.content {
 		return 0
-	} else {
-		return 1
 	}
+
+	return 1
 }
 
 func newDiagnosticsPublisher() *diagnosticsPublisher {
