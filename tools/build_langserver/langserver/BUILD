@@ -14,6 +14,7 @@ go_library(
         "//src/query",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
+        "//third_party/go:queue",
         "//tools/build_langserver/lsp",
     ],
 )
@@ -48,6 +49,20 @@ go_test(
     name = "analyzer_test",
     srcs = [
         "analyzer_test.go",
+        "setup_test.go",
+    ],
+    data = ["test_data"],
+    deps = [
+        ":langserver",
+        "//third_party/go:testify",
+        "//tools/build_langserver/lsp",
+    ],
+)
+
+go_test(
+    name = "diagnostics_test",
+    srcs = [
+        "diagnostics_test.go",
         "setup_test.go",
     ],
     data = ["test_data"],

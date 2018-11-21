@@ -377,4 +377,10 @@ func TestJoinLines(t *testing.T) {
 	content := JoinLines(text, true)
 
 	assert.Equal(t, expected, content)
+
+	stmts, _ := analyzer.AspStatementFromFile(exampleBuildURI)
+	for _, stmt := range stmts {
+		t.Log(stmt)
+	}
+
 }

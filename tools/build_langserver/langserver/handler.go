@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-
 	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
@@ -21,8 +20,7 @@ func NewHandler() jsonrpc2.Handler {
 	h := &LsHandler{
 		IsServerDown: false,
 	}
-	return langHandler{
-		jsonrpc2.HandlerWithError(h.Handle)}
+	return langHandler{jsonrpc2.HandlerWithError(h.Handle)}
 }
 
 // handler wraps around LsHandler to correctly handler requests in the correct order
@@ -44,6 +42,8 @@ type LsHandler struct {
 
 	IsServerDown         bool
 	supportedCompletions []lsp.CompletionItemKind
+
+	diagPublisher *diagnosticsPublisher
 }
 
 // Handle function takes care of all the incoming from the client, and returns the correct response
@@ -95,6 +95,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	// Set the Init state of the handler
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
 	// TODO(bnmetrics): Ideas: this could essentially be a bit fragile.
 	// maybe we can defer until user send a request with first file URL
 	core.FindRepoRoot()
@@ -103,6 +104,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 	params.EnsureRoot()
 	h.repoRoot = string(params.RootURI)
 	h.workspace = newWorkspaceStore(params.RootURI)
+	h.diagPublisher = newDiagnosticsPublisher()
 
 	h.supportedCompletions = params.Capabilities.TextDocument.Completion.CompletionItemKind.ValueSet
 	h.init = &params
@@ -122,6 +124,13 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 
 	defer h.requestStore.Cancel(req.ID)
 
+	// start the goroutine for publishing diagnostics
+	go func() {
+		for {
+			h.publishDiagnostics(h.conn)
+		}
+	}()
+
 	// Fill in the response results
 	TDsync := lsp.SyncIncremental
 	completeOps := &lsp.CompletionOptions{
@@ -133,7 +142,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 		TriggerCharacters: []string{"(", ","},
 	}
 
-	defer log.Info("Plz build file language server initialized")
+	log.Info("Initializing plz build file language server..")
 	return lsp.InitializeResult{
 		Capabilities: lsp.ServerCapabilities{
 			TextDocumentSync:           &TDsync,
@@ -241,4 +250,19 @@ func getURIAndHandleErrors(uri lsp.DocumentURI, method string) (lsp.DocumentURI,
 		}
 	}
 	return documentURI, err
+}
+
+func isVisible(buildDef *BuildDef, currentPkg string) bool {
+	for _, i := range buildDef.Visibility {
+		if i == "PUBLIC" {
+			return true
+		}
+
+		label := core.ParseBuildLabel(i, currentPkg)
+		currentPkgLabel := core.ParseBuildLabel(currentPkg, currentPkg)
+		if label.Includes(currentPkgLabel) {
+			return true
+		}
+	}
+	return false
 }

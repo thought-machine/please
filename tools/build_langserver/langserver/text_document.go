@@ -28,6 +28,8 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 		}
 
 		h.workspace.Store(documentURI, params.TextDocument.Text)
+		h.diagPublisher.queue.Put(taskDef{uri: documentURI, content: params.TextDocument.Text})
+
 		return nil, nil
 	case "textDocument/didChange":
 		var params lsp.DidChangeTextDocumentParams
@@ -40,7 +42,17 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 			return nil, err
 		}
 
-		return nil, h.workspace.TrackEdit(documentURI, params.ContentChanges)
+		if err := h.workspace.TrackEdit(documentURI, params.ContentChanges); err != nil {
+			return nil, err
+		}
+
+		task := taskDef{
+			uri:     documentURI,
+			content: JoinLines(h.workspace.documents[documentURI].textInEdit, true),
+		}
+		h.diagPublisher.queue.Put(task)
+
+		return nil, nil
 	case "textDocument/didSave":
 		var params lsp.DidSaveTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
@@ -51,6 +63,8 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 		if err != nil {
 			return nil, err
 		}
+
+		h.diagPublisher.queue.Put(taskDef{uri: documentURI, content: params.Text})
 
 		return nil, h.workspace.Update(documentURI, params.Text)
 	case "textDocument/didClose":
@@ -64,7 +78,11 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 			return nil, err
 		}
 
-		return nil, h.workspace.Close(documentURI)
+		if err := h.workspace.Close(documentURI); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
 	case "textDocument/willSave":
 		var params lsp.WillSaveTextDocumentParams
 		if err := json.Unmarshal(*req.Params, &params); err != nil {

@@ -120,17 +120,17 @@ func TestGetHoverContentOnArgumentWithProperty(t *testing.T) {
 	var ctx = context.Background()
 
 	// Hover on argument name
-	content, err := handler.getHoverContent(ctx, exampleBuildURI, lsp.Position{Line: 34, Character: 6})
+	content, err := handler.getHoverContent(ctx, exampleBuildURI, lsp.Position{Line: 35, Character: 6})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "name required:true, type:str", content)
 
 	// Hover on property name
-	content, err = handler.getHoverContent(ctx, exampleBuildURI, lsp.Position{Line: 34, Character: 20})
+	content, err = handler.getHoverContent(ctx, exampleBuildURI, lsp.Position{Line: 35, Character: 20})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", content)
 
 	// Hover on property call
-	content, err = handler.getHoverContent(ctx, exampleBuildURI, lsp.Position{Line: 34, Character: 34})
+	content, err = handler.getHoverContent(ctx, exampleBuildURI, lsp.Position{Line: 35, Character: 34})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "str.format()", content)
 }
@@ -138,7 +138,7 @@ func TestGetHoverContentOnArgumentWithProperty(t *testing.T) {
 func TestGetHoverContentArgOnTheSameLine(t *testing.T) {
 	var ctx = context.Background()
 
-	content, err := handler.getHoverContent(ctx, exampleBuildURI, lsp.Position{Line: 42, Character: 17})
+	content, err := handler.getHoverContent(ctx, exampleBuildURI, lsp.Position{Line: 43, Character: 17})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "name required:true, type:str", content)
 }

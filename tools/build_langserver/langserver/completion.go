@@ -66,7 +66,7 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	lineContent = lineContent[:pos.Character]
 
 	// get all the existing variable assignments in the current File
-	contentVars := h.analyzer.VariablesFromContent(fileContentStr, pos)
+	contentVars := h.analyzer.VariablesFromContent(fileContentStr, &pos)
 
 	if LooksLikeAttribute(lineContent) {
 		completionList = itemsFromAttributes(h.analyzer, contentVars, lineContent)
@@ -224,7 +224,7 @@ func itemsFromAttributes(analyzer *Analyzer, contentVars map[string]Variable, li
 	varName := literalSlice[0]
 	variable, present := contentVars[varName]
 
-	if LooksLikeStringAttr(lineContent) || (present && variable.Type == "string") {
+	if LooksLikeStringAttr(lineContent) || (present && variable.Type == "str") {
 		return itemsFromMethods(analyzer.Attributes["str"], partial)
 	} else if LooksLikeDictAttr(lineContent) || (present && variable.Type == "dict") {
 		return itemsFromMethods(analyzer.Attributes["dict"], partial)
@@ -286,19 +286,4 @@ func getCompletionItem(kind lsp.CompletionItemKind, label string, detail string)
 		InsertTextFormat: lsp.ITFPlainText,
 		SortText:         label,
 	}
-}
-
-func isVisible(buildDef *BuildDef, currentPkg string) bool {
-	for _, i := range buildDef.Visibility {
-		if i == "PUBLIC" {
-			return true
-		}
-
-		label := core.ParseBuildLabel(i, currentPkg)
-		currentPkgLabel := core.ParseBuildLabel(currentPkg, currentPkg)
-		if label.Includes(currentPkgLabel) {
-			return true
-		}
-	}
-	return false
 }

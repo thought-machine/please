@@ -222,19 +222,36 @@ func TestBuildLabelFromString(t *testing.T) {
 	assert.Equal(t, "Subrepo label: @mysubrepo//spam/eggs:ham", label.Definition)
 }
 
+func TestAnalyzer_BuildLabelFromStringBogusLabel(t *testing.T) {
+	a, err := newAnalyzer()
+	assert.Equal(t, err, nil)
+
+	ctx := context.Background()
+
+	// Ensure we get an error when we pass in a bogus label
+	label, err := a.BuildLabelFromString(ctx, exampleBuildURI, "//blah/foo")
+	assert.NotEqual(t, err, nil)
+	assert.True(t, nil == label)
+
+	label, err = a.BuildLabelFromString(ctx, exampleBuildURI, "//src/core:blah")
+	assert.NotEqual(t, err, nil)
+	assert.True(t, nil == label)
+}
+
 func TestAnalyzer_BuildDefFromUri(t *testing.T) {
 	ctx := context.Background()
 
 	buildDefs, err := analyzer.BuildDefsFromURI(ctx, exampleBuildURI)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, 4, len(buildDefs))
-	assert.Equal(t, []string{"//tools/build_langserver/...", "//src/core"}, buildDefs["langserver"].Visibility)
+	assert.Equal(t, 6, len(buildDefs))
+	assert.True(t, StringInSlice(buildDefs["langserver"].Visibility, "//tools/build_langserver/..."))
+	assert.True(t, StringInSlice(buildDefs["langserver"].Visibility, "//src/core"))
 	t.Log(buildDefs["langserver_test"].Visibility)
 
 	exampleBuildURI2 := lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example2.build")
 	buildDefs, err = analyzer.BuildDefsFromURI(ctx, exampleBuildURI2)
 	assert.Equal(t, 2, len(buildDefs))
-	assert.Equal(t, []string{"PUBLIC"}, buildDefs["langserver_test"].Visibility)
+	assert.True(t, StringInSlice(buildDefs["langserver_test"].Visibility, "PUBLIC"))
 }
 
 func TestAnalyzer_IsBuildFile(t *testing.T) {
@@ -252,7 +269,7 @@ func TestAnalyzer_IsBuildFile(t *testing.T) {
 func TestAnalyzer_VariableFromContentGLOBAL(t *testing.T) {
 	a, err := newAnalyzer()
 	assert.Equal(t, err, nil)
-	pos := lsp.Position{Line: 5, Character: 0}
+	pos := &lsp.Position{Line: 5, Character: 0}
 
 	// Tests for string variables
 	vars := a.VariablesFromContent(`my_str = "my str"`+"   \n"+
@@ -261,11 +278,11 @@ func TestAnalyzer_VariableFromContentGLOBAL(t *testing.T) {
 	assert.Equal(t, "another_str", vars["another_str"].Name)
 	assert.Equal(t, "more_empty", vars["more_empty"].Name)
 	for _, v := range vars {
-		assert.Equal(t, "string", v.Type)
+		assert.Equal(t, "str", v.Type)
 	}
 
 	vars = a.VariablesFromContent(`fstr = f"blah"`, pos)
-	assert.Equal(t, "string", vars["fstr"].Type)
+	assert.Equal(t, "str", vars["fstr"].Type)
 
 	// Tests for int variables
 	vars = a.VariablesFromContent(`my_int = 34`, pos)
