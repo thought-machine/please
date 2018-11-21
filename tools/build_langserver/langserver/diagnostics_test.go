@@ -9,12 +9,12 @@ import (
 )
 
 func TestDiagnose(t *testing.T) {
-	ds := GetDefaultDS(t)
+	ds := getDefaultDS(t)
 	assert.Equal(t, 12, len(ds.stored))
 }
 
 func TestDiagnosisInvalidBuildLabel(t *testing.T) {
-	ds := GetDefaultDS(t)
+	ds := getDefaultDS(t)
 
 	// Test for invalid build label
 	diag := FindDiagnosticByMsg(ds.stored,
@@ -47,7 +47,7 @@ func TestDiagnosisInvalidBuildLabel(t *testing.T) {
 }
 
 func TestDiagnosisFuncArgument(t *testing.T) {
-	ds := GetDefaultDS(t)
+	ds := getDefaultDS(t)
 
 	// Test for unexpected argument
 	diag := FindDiagnosticByMsg(ds.stored, "unexpected argument foo")
@@ -71,7 +71,7 @@ func TestDiagnosisFuncArgument(t *testing.T) {
 }
 
 func TestDiagnosisVariable(t *testing.T) {
-	ds := GetDefaultDS(t)
+	ds := getDefaultDS(t)
 
 	// Test for undefined variable, variable later defined
 	diag := FindDiagnosticByMsg(ds.stored, "unexpected variable 'baz'")
@@ -94,7 +94,7 @@ func TestDiagnosisVariable(t *testing.T) {
 }
 
 func TestDiagnosisFunction(t *testing.T) {
-	ds := GetDefaultDS(t)
+	ds := getDefaultDS(t)
 
 	// Test for undefined function
 	diag := FindDiagnosticByMsg(ds.stored, "function undefined: blah")
@@ -201,7 +201,7 @@ func TestStoreFuncCallDiagnosticsFuncCall(t *testing.T) {
 }
 
 func TestDiagnosticFromBuildLabel(t *testing.T) {
-	ds := GetDefaultDS(t)
+	ds := getDefaultDS(t)
 
 	dummyRange := lsp.Range{
 		Start: lsp.Position{Line: 19, Character: 1},
@@ -233,7 +233,7 @@ func TestDiagnosticFromBuildLabel(t *testing.T) {
 /************************
  * Helper functions
  ************************/
-func GetDefaultDS(t testing.TB) *diagnosticStore {
+func getDefaultDS(t testing.TB) *diagnosticStore {
 	if !StringInSlice(analyzer.State.Config.Parse.BuildFileName, "example.build") {
 		analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName, "example.build")
 	}
