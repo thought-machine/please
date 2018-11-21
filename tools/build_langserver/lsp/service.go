@@ -153,6 +153,7 @@ type CompletionItem struct {
 	Data             interface{}        `json:"data,omitempty"`
 }
 
+// PublishDiagnosticsParams is the params sent from the server to the client for textDocument/publishDiagnostics method
 type PublishDiagnosticsParams struct {
 	URI         DocumentURI   `json:"uri"`
 	Diagnostics []*Diagnostic `json:"diagnostics"`
