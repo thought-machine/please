@@ -126,15 +126,7 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 
 	go func() {
 		for {
-			t, err := h.diagPublisher.queue.Get(1)
-			if err != nil {
-				log.Warning("fail to get diagnostic publishing task")
-			}
-			if len(t) > 0 {
-				task := t[0].(taskDef)
-
-				h.publishDiagnostics(h.conn, task.content, task.uri)
-			}
+			h.publishDiagnostics(h.conn)
 		}
 	}()
 

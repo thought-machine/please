@@ -12,16 +12,29 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 )
 
-func (h *LsHandler) publishDiagnostics(conn *jsonrpc2.Conn, content string, uri lsp.DocumentURI) error {
+func (h *LsHandler) publishDiagnostics(conn *jsonrpc2.Conn) error {
 	ctx := context.Background()
 
-	if _, ok := h.workspace.documents[uri]; !ok {
+	// Get task from the queue
+	t, err := h.diagPublisher.queue.Get(1)
+	if err != nil {
+		log.Warning("fail to get diagnostic publishing task")
+		return nil
+	}
+	if len(t) <= 0 {
+		return nil
+	}
+
+	task := t[0].(taskDef)
+
+	// exit if the uri is not in the list of documents
+	if _, ok := h.workspace.documents[task.uri]; !ok {
 		return nil
 	}
 
 	params := &lsp.PublishDiagnosticsParams{
-		URI:         uri,
-		Diagnostics: h.diagPublisher.diagnose(ctx, h.analyzer, content, uri),
+		URI:         task.uri,
+		Diagnostics: h.diagPublisher.diagnose(ctx, h.analyzer, task.content, task.uri),
 	}
 
 	log.Info("Diagnostics detected: %s", params.Diagnostics)

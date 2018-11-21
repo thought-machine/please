@@ -64,6 +64,12 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 			return nil, err
 		}
 
+		task := taskDef{
+			uri:     documentURI,
+			content: JoinLines(h.workspace.documents[documentURI].textInEdit, true),
+		}
+		h.diagPublisher.queue.Put(task)
+
 		return nil, h.workspace.Update(documentURI, params.Text)
 	case "textDocument/didClose":
 		var params lsp.DidCloseTextDocumentParams
