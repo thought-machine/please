@@ -18,10 +18,10 @@ go_binary(
 
 for i in range(1, 6):
     gentest(
-        name = 'worker_test_%d' % i,
-        data = [':test_bin'],
+        name = "worker_test_%d" % i,
+        data = [":test_bin"],
         no_test_output = True,
-        test_cmd = '$(worker :worker) && $DATA',
-        tools = [':worker'],
         sandbox = False,
+        test_cmd = "$(worker :worker) && $DATA",
+        tools = [":worker"],
     )

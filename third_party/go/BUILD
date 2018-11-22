@@ -595,11 +595,29 @@ go_get(
 )
 
 go_get(
+    name = "skylark",
+    get = "github.com/google/skylark/syntax",
+    revision = "a5f7082aabed29c0e429c722292c66ec8ecf9591",
+)
+
+go_get(
+    name = "buildtools",
+    get = "github.com/bazelbuild/buildtools/...",
+    revision = "0.19.2",
+    deps = [
+        ":protobuf",
+        ":skylark",
+    ],
+)
+
+go_get(
     name = "buildifier",
     binary = True,
-    get = "github.com/bazelbuild/buildtools",
-    install = ["buildifier"],
-    revision = "0.11.1",
+    get = [],
+    install = ["github.com/bazelbuild/buildtools/buildifier"],
+    deps = [
+        ":buildtools",
+    ],
 )
 
 go_get(
@@ -623,4 +641,10 @@ go_get(
     name = "ar",
     get = "github.com/peterebden/ar",
     revision = "a0ae3a11a518fb9559c95ed151ec07865b31980b",
+)
+
+go_get(
+    name = "difflib",
+    get = "github.com/pmezard/go-difflib/difflib",
+    revision = "792786c7400a136282c1664665ae0a8db921c6c2",
 )

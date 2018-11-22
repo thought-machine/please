@@ -1,27 +1,25 @@
 package langserver
 
 import (
-	"context"
 	"os"
-	"strings"
 	"testing"
 
 	"core"
+	"io/ioutil"
 	"tools/build_langserver/lsp"
 )
 
 // TODO(bnm): cleanup setup
 // TestMain runs the setup for the tests for all the tests relating to langserver
 func TestMain(m *testing.M) {
-	ctx := context.Background()
-
 	core.FindRepoRoot()
 
 	// store files in handler workspace
 	URIs := []lsp.DocumentURI{exampleBuildURI, assignBuildURI, propURI, miscURI, completionURI, completion2URI,
-		completionPropURI, completionLabelURI, completionLiteralURI, completionStmtURI, sigURI, subincludeURI}
+		completionPropURI, completionLabelURI, completionLiteralURI, completionStmtURI, sigURI, subincludeURI,
+		reformatURI}
 	for _, i := range URIs {
-		storeFile(ctx, i)
+		storeFile(i)
 	}
 
 	retCode := m.Run()
@@ -41,6 +39,7 @@ var completionLiteralURI = lsp.DocumentURI("file://tools/build_langserver/langse
 var completionStmtURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/completion_stmt.build")
 var sigURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/signature.build")
 var OutScopeURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/out_of_scope.build")
+var reformatURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/reformat.build")
 
 var analyzer, _ = newAnalyzer()
 
@@ -61,13 +60,17 @@ var handler = LsHandler{
 	},
 }
 
-func storeFile(ctx context.Context, uri lsp.DocumentURI) error {
-	content, err := ReadFile(ctx, uri)
+func storeFile(uri lsp.DocumentURI) error {
+	filePath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return err
 	}
-	text := strings.Join(content, "\n")
 
-	handler.workspace.Store(uri, text)
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	handler.workspace.Store(uri, string(b))
 	return nil
 }

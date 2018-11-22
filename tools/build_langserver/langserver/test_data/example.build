@@ -29,7 +29,7 @@ go_test(
         "//src/parse/rules",
         "//third_party/go:testify",
         "//dummy/buildlabels:foo",
-    ],
+        ],
 )
 
 go_test(
@@ -65,3 +65,5 @@ add_dep("blah")
 python_library(name = "hello".foo(), interpreter = CONFIG.DEFAULT_PYTHON_INTERPRETER)
 
 baz = CONFIG.BLAH
+
+blah='blah'

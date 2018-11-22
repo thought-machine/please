@@ -158,3 +158,16 @@ type PublishDiagnosticsParams struct {
 	URI         DocumentURI   `json:"uri"`
 	Diagnostics []*Diagnostic `json:"diagnostics"`
 }
+
+// DocumentFormattingParams is the params sent from the client for textDocument/formatting request
+type DocumentFormattingParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Options      FormattingOptions      `json:"options"`
+}
+
+// FormattingOptions represent Value-object describing what options formatting should use.
+type FormattingOptions struct {
+	TabSize      int    `json:"tabSize"`
+	InsertSpaces bool   `json:"insertSpaces"`
+	Key          string `json:"key"`
+}
