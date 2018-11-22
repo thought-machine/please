@@ -242,16 +242,17 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
 
     # If there are resources specified, they have to get built into the pex.
     deps = [pex_rule]
-    if resources:
-        # Test library itself.
-        lib_rule = python_library(
-            name='_%s#lib' % name,
-            resources=resources,
-            interpreter=interpreter,
-            deps=deps,
-            test_only=True,
-        )
-        deps = [pex_rule, lib_rule]
+    lib_rule = python_library(
+        name='_%s#lib' % name,
+        srcs=srcs,
+        resources=resources,
+        interpreter=interpreter,
+        deps=deps,
+        test_only=True,
+        visibility=visibility,
+    )
+
+    deps = [pex_rule, lib_rule]
 
     test_cmd = f'$TEST {flags}'
     if worker:
