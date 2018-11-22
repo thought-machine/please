@@ -157,6 +157,14 @@ func TestAddOutputSorting(t *testing.T) {
 	assert.Equal(t, expected, target.Outputs())
 }
 
+func TestAddOutputPanics(t *testing.T) {
+	target := makeTarget("//src/test/python:lib1", "")
+	assert.Panics(t, func() { target.AddOutput("") })
+	assert.Panics(t, func() { target.AddOptionalOutput("") })
+	assert.Panics(t, func() { target.AddTestOutput("") })
+	assert.Panics(t, func() { target.AddNamedOutput("", "") })
+}
+
 func TestAddSource(t *testing.T) {
 	target := makeTarget("//src/test/python:lib1", "")
 	target.AddSource(ParseBuildLabel("//src/test/python:lib2", ""))

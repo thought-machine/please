@@ -1052,7 +1052,7 @@ func (target *BuildTarget) AddTestOutput(output string) {
 // No attempt to deduplicate against unnamed outputs is currently made.
 func (target *BuildTarget) AddNamedOutput(name, output string) {
 	if target.namedOutputs == nil {
-		target.namedOutputs = map[string][]string{name: {output}}
+		target.namedOutputs = map[string][]string{name: target.insert(nil, output)}
 		return
 	}
 	target.namedOutputs[name] = target.insert(target.namedOutputs[name], output)
@@ -1060,6 +1060,9 @@ func (target *BuildTarget) AddNamedOutput(name, output string) {
 
 // insert adds a string into a slice if it's not already there. Sorted order is maintained.
 func (target *BuildTarget) insert(sl []string, s string) []string {
+	if s == "" {
+		panic("Cannot add an empty string as an output of a target")
+	}
 	for i, x := range sl {
 		if s == x {
 			// Already present.
