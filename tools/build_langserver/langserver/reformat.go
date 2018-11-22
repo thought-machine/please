@@ -56,9 +56,17 @@ func (h *LsHandler) getFormatEdits(uri lsp.DocumentURI) ([]*lsp.TextEdit, error)
 	content := JoinLines(doc.textInEdit, true)
 	bytecontent := []byte(content)
 
-	f, err := build.ParseBuild(filePath, bytecontent)
-	if err != nil {
-		return nil, err
+	var f *build.File
+	if h.analyzer.IsBuildFile(uri) {
+		f, err = build.ParseBuild(filePath, bytecontent)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		f, err = build.ParseDefault(filePath, bytecontent)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	reformatted := build.Format(f)

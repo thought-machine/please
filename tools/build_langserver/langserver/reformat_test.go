@@ -8,6 +8,8 @@ import (
 )
 
 func TestGetFormatEdits(t *testing.T) {
+	analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
+		[]string{"reformat.build", "example.build"}...)
 	edits, err := handler.getFormatEdits(reformatURI)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(edits))
