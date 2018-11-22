@@ -65,3 +65,5 @@ add_dep("blah")
 python_library(name = "hello".foo(), interpreter = CONFIG.DEFAULT_PYTHON_INTERPRETER)
 
 baz = CONFIG.BLAH
+
+blah='blah'

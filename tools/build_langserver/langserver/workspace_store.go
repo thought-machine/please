@@ -137,11 +137,12 @@ func SplitLines(content string, keepEnds bool) []string {
 
 	for i := range splited {
 		// Do not add endline character on the last empty line
-		if i == len(splited)-1 {
+		if (i == len(splited)-1 && splited[i] == "") || len(splited) <= 1 {
 			continue
 		}
 		splited[i] += "\n"
 	}
+
 	return splited
 }
 
@@ -154,7 +155,12 @@ func JoinLines(text []string, hasEnds bool) string {
 
 	newText := make([]string, len(text))
 	for i := range text {
+		if i == len(text)-1 && text[i] == "" {
+			newText[i] = text[i]
+			continue
+		}
 		newText[i] = strings.TrimSuffix(text[i], "\n")
 	}
+
 	return strings.Join(newText, "\n")
 }

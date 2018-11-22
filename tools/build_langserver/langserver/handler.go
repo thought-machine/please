@@ -64,6 +64,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 		"textDocument/completion":    h.handleCompletion,
 		"textDocument/signatureHelp": h.handleSignature,
 		"textDocument/definition":    h.handleDefinition,
+		"textDocument/formatting":    h.handleReformatting,
 	}
 
 	if req.Method != "initialize" && req.Method != "exit" &&

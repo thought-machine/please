@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
-	"io/ioutil"
+	"strings"
 
 	"tools/build_langserver/lsp"
 
 	"github.com/bazelbuild/buildtools/build"
+	"github.com/pmezard/go-difflib/difflib"
 	"github.com/sourcegraph/jsonrpc2"
 )
 
@@ -48,18 +48,66 @@ func (h *LsHandler) getFormatEdits(uri lsp.DocumentURI) ([]*lsp.TextEdit, error)
 		return nil, err
 	}
 
-	bytecontent, err := ioutil.ReadFile(filePath)
-	f, err := build.ParseBuild(filePath, bytecontent)
+	doc, ok := h.workspace.documents[uri]
+	if !ok {
+		return nil, fmt.Errorf("document not opened: %s", uri)
+	}
 
+	content := JoinLines(doc.textInEdit, true)
+	bytecontent := []byte(content)
+
+	f, err := build.ParseBuild(filePath, bytecontent)
 	if err != nil {
 		return nil, err
 	}
 
 	reformatted := build.Format(f)
 
-	fmt.Println(f)
-	fmt.Println(string(reformatted))
+	return getEdits(content, string(reformatted)), nil
+}
 
-	// TODO(bnm): make them into edits
-	return nil, nil
+func getEdits(before string, after string) []*lsp.TextEdit {
+	beforeLines := difflib.SplitLines(before)
+	afterLines := difflib.SplitLines(after)
+
+	matcher := difflib.NewMatcher(beforeLines, afterLines)
+
+	var edits []*lsp.TextEdit
+	for _, op := range matcher.GetOpCodes() {
+		// Do nothing if it's "e"(equal)
+		if op.Tag == 'e' {
+			continue
+		}
+
+		edit := &lsp.TextEdit{
+			Range: lsp.Range{
+				Start: lsp.Position{
+					Line:      op.I1,
+					Character: 0,
+				},
+				End: lsp.Position{
+					Line:      op.I2,
+					Character: 0,
+				},
+			},
+		}
+
+		// 'r' means replace, 'i' means insert
+		if op.Tag == 'r' || op.Tag == 'i' {
+			// since both replaces and inserts are line based,
+			// so we add a "\n" at the end of each line if there isn't one
+			text := JoinLines(afterLines[op.J1:op.J2], true)
+			if strings.HasSuffix(text, "\n") {
+				edit.NewText = text
+			} else {
+				edit.NewText = text + "\n"
+			}
+		} else if op.Tag == 'd' { // 'd' means delete
+			edit.NewText = ""
+		}
+
+		edits = append(edits, edit)
+	}
+
+	return edits
 }

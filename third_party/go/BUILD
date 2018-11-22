@@ -643,11 +643,8 @@ go_get(
     revision = "a0ae3a11a518fb9559c95ed151ec07865b31980b",
 )
 
-#go_get(
-#    name = "build",
-#    get = "github.com/bazelbuild/buildtools/build",
-#    revision = "264ccecd4f2715cd5a37ce3dc987459ac2fb9d20",
-#    deps = [
-#        ":buildifier",
-#    ],
-#)
+go_get(
+    name = "difflib",
+    get = "github.com/pmezard/go-difflib/difflib",
+    revision = "792786c7400a136282c1664665ae0a8db921c6c2",
+)

@@ -57,7 +57,8 @@ func TestWorkspaceStore_TrackEdit(t *testing.T) {
 		"    name = \"\",\n",
 		"    srcs =[],\n",
 		"    \"//src\"\n",
-		")",
+		")\n",
+		"",
 	}
 	assert.Equal(t, expected, ws.documents[completionURI].textInEdit[6:])
 }
@@ -130,6 +131,7 @@ func TestWorkspaceStore_applyChangeAddChar(t *testing.T) {
 	outText, err = ws.applyChange([]string{""}, change)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "yh", outText[0])
+	assert.Equal(t, 1, len(outText))
 }
 
 func TestWorkspaceStore_applyChangeDelete(t *testing.T) {
