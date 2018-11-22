@@ -603,7 +603,7 @@ go_get(
 go_get(
     name = "buildtools",
     get = "github.com/bazelbuild/buildtools/...",
-    revision = "v0.19.2",
+    revision = "0.19.2",
     deps = [
         ":protobuf",
         ":skylark",
