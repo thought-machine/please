@@ -12,11 +12,11 @@ go_library(
         "//src/parse/asp",
         "//src/parse/rules",
         "//src/query",
+        "//third_party/go:buildtools",
+        "//third_party/go:difflib",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
-        "//third_party/go:difflib",
         "//third_party/go:queue",
-        "//third_party/go:buildtools",
         "//tools/build_langserver/lsp",
     ],
 )

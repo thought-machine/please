@@ -606,8 +606,8 @@ go_get(
     revision = "264ccecd4f2715cd5a37ce3dc987459ac2fb9d20",
     deps = [
         ":protobuf",
-        ":skylark"
-    ]
+        ":skylark",
+    ],
 )
 
 go_get(
