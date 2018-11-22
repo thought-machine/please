@@ -653,8 +653,8 @@ def _go_github_repo_cmd(name, get, repo, revision):
     )
     return [
         'rm -rf src/' + out,
-        '$TOOL x $SRCS_GET',
-        f'mv {dest}* src/{out}',
+        f'$TOOL x $SRCS_GET -o={dest}',
+        f'mv {dest}/{dest}* src/{out}',
     ], [remote_rule], [CONFIG.JARCAT_TOOL]
 
 
