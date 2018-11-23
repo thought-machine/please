@@ -17,7 +17,7 @@ func TestMain(m *testing.M) {
 	// store files in handler workspace
 	URIs := []lsp.DocumentURI{exampleBuildURI, assignBuildURI, propURI, miscURI, completionURI, completion2URI,
 		completionPropURI, completionLabelURI, completionLiteralURI, completionStmtURI, sigURI, subincludeURI,
-		reformatURI}
+		reformatURI, reformat2URI}
 	for _, i := range URIs {
 		storeFile(i)
 	}
@@ -40,6 +40,7 @@ var completionStmtURI = lsp.DocumentURI("file://tools/build_langserver/langserve
 var sigURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/signature.build")
 var OutScopeURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/out_of_scope.build")
 var reformatURI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/reformat.build")
+var reformat2URI = lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/reformat2.build")
 
 var analyzer, _ = newAnalyzer()
 
