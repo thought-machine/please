@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -467,9 +466,8 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 		for _, output := range target.FullOutputs() {
 			// Walk through the output,
 			// if the output is a directory,apply output mode to the file instead of the directory
-			err := filepath.Walk(output, func(path string, info os.FileInfo, err error) error {
-				fmt.Println(path)
-				if info.IsDir() && path == output {
+			err := fs.Walk(output, func(path string, isDir bool) error {
+				if isDir && path == output {
 					return nil
 				}
 				if err := os.Chmod(path, target.OutMode()); err != nil {
