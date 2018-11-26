@@ -466,7 +466,8 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	if target.IsBinary {
 		for _, output := range target.FullOutputs() {
 			// Walk through the output,
-			// if the output is a directory, apply output mode to the file instead of the directory
+			// if the output is a directory,
+			// apply output mode to the file instead of the directory
 			err := filepath.Walk(output, func(path string, info os.FileInfo, err error) error {
 				fmt.Println(path)
 				if info.IsDir() && path == output {
