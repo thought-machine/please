@@ -113,3 +113,12 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 	// And move it to its final destination.
 	return os.Rename(tempFile.Name(), to)
 }
+
+func IsDirectory(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	return info.IsDir()
+}

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -464,7 +465,17 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	// Set appropriate permissions on outputs
 	if target.IsBinary {
 		for _, output := range target.FullOutputs() {
-			if err := os.Chmod(output, target.OutMode()); err != nil {
+			err := filepath.Walk(output, func(path string, info os.FileInfo, err error) error {
+				if info.IsDir() && path == output {
+					return nil
+				}
+				if err := os.Chmod(path, target.OutMode()); err != nil {
+					return err
+				}
+
+				return nil
+			})
+			if err != nil {
 				return nil, err
 			}
 		}
