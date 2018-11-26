@@ -13,8 +13,6 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 		return nil, nil
 	}
 
-	log.Info("Handling fs method %s, with param %s", req.Method, req.Params)
-
 	switch req.Method {
 	case "textDocument/didOpen":
 		var params lsp.DidOpenTextDocumentParams

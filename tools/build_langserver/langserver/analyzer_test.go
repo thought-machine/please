@@ -80,6 +80,9 @@ func TestNewRuleDef(t *testing.T) {
 	assert.Equal(t, true, ruleDef.ArgMap["name"].Required)
 	assert.Equal(t, ruleDef.ArgMap["visibility"].Definition,
 		"visibility required:false, type:list")
+	assert.Equal(t, ruleDef.ArgMap["visibility"].Argument.Name, "visibility")
+	assert.Equal(t, ruleDef.ArgMap["name"].Argument.Name, "name")
+	assert.Equal(t, ruleDef.ArgMap["_link_private"].Argument.Name, "_link_private")
 
 	// Test header for len()
 	ruleContent = rules.MustAsset("builtins.build_defs")
@@ -95,6 +98,7 @@ func TestNewRuleDef(t *testing.T) {
 	assert.Equal(t, true, ruleDef.ArgMap["obj"].Required)
 	assert.Equal(t, ruleDef.ArgMap["obj"].Definition, "obj required:true")
 	assert.Equal(t, "obj", ruleDef.ArgMap["obj"].Repr)
+	assert.Equal(t, ruleDef.ArgMap["obj"].Argument.Name, "obj")
 
 	// Test header for a string function, startswith()
 	stmt = getStatementByName(statements, "startswith")

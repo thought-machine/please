@@ -4,12 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
-
 	"tools/build_langserver/lsp"
 
 	"github.com/bazelbuild/buildtools/build"
-	"github.com/pmezard/go-difflib/difflib"
 	"github.com/sourcegraph/jsonrpc2"
 )
 
@@ -38,6 +35,7 @@ func (h *LsHandler) handleReformatting(ctx context.Context, req *jsonrpc2.Reques
 		log.Warning("error occurred when formatting file: %s, skipping", err)
 	}
 
+	log.Info("formatting document with edits: %s", edits)
 	return edits, err
 }
 
@@ -75,43 +73,41 @@ func (h *LsHandler) getFormatEdits(uri lsp.DocumentURI) ([]*lsp.TextEdit, error)
 }
 
 func getEdits(before string, after string) []*lsp.TextEdit {
-	beforeLines := difflib.SplitLines(before)
-	afterLines := difflib.SplitLines(after)
-
-	matcher := difflib.NewMatcher(beforeLines, afterLines)
+	beforeLines := SplitLines(before, true)
+	afterLines := SplitLines(after, true)
 
 	var edits []*lsp.TextEdit
-	for _, op := range matcher.GetOpCodes() {
-		// Do nothing if it's "e"(equal)
-		if op.Tag == 'e' {
-			continue
-		}
+	for i, line := range afterLines {
 
-		edit := &lsp.TextEdit{
-			Range: lsp.Range{
-				Start: lsp.Position{
-					Line:      op.I1,
-					Character: 0,
-				},
-				End: lsp.Position{
-					Line:      op.I2,
-					Character: 0,
-				},
+		eRange := lsp.Range{
+			Start: lsp.Position{
+				Line:      i,
+				Character: 0,
+			},
+			End: lsp.Position{
+				Line:      i,
+				Character: 0,
 			},
 		}
 
-		// 'r' means replace, 'i' means insert
-		if op.Tag == 'r' || op.Tag == 'i' {
-			// since both replaces and inserts are line based,
-			// so we add a "\n" at the end of each line if there isn't one
-			text := JoinLines(afterLines[op.J1:op.J2], true)
-			if strings.HasSuffix(text, "\n") {
-				edit.NewText = text
-			} else {
-				edit.NewText = text + "\n"
+		if i <= len(beforeLines)-1 {
+			if line == beforeLines[i] {
+				continue
 			}
-		} else if op.Tag == 'd' { // 'd' means delete
-			edit.NewText = ""
+
+			if i < len(beforeLines)-1 {
+				eRange.End.Line = i + 1
+			} else if beforeLines[i] != "" {
+				// This is to ensure the original line gets overridden if there is no newline after:
+				// usually if the last line is new line, it gets formatted correctly with startline:currentline, endline:currline + 1
+				// however this does not apply we want to format the last line
+				eRange.End.Character = len(beforeLines[i]) - 1
+			}
+		}
+
+		edit := &lsp.TextEdit{
+			Range:   eRange,
+			NewText: line,
 		}
 
 		edits = append(edits, edit)

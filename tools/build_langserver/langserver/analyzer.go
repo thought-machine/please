@@ -208,7 +208,7 @@ func newRuleDef(content string, stmt *asp.Statement) *RuleDef {
 					repr = strings.TrimSpace(argReprs[i])
 				}
 				ruleDef.ArgMap[arg.Name] = &Argument{
-					Argument:   &arg,
+					Argument:   &stmt.FuncDef.Arguments[i],
 					Repr:       repr,
 					Definition: getArgString(arg),
 					Required:   arg.Value == nil,

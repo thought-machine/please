@@ -201,6 +201,10 @@ func (ds *diagnosticStore) diagnoseFuncCall(analyzer *Analyzer, funcName string,
 	}
 
 	for i, arg := range def.Arguments {
+		if def.Object != "" && arg.Name == "self" && i == 0 {
+			continue
+		}
+
 		// Diagnostics for the cases when there are not enough argument passed to the function
 		if len(callArgs)-1 < i {
 			if def.ArgMap[arg.Name].Required == true {
@@ -217,16 +221,12 @@ func (ds *diagnosticStore) diagnoseFuncCall(analyzer *Analyzer, funcName string,
 		}
 
 		callArg := callArgs[i]
+		argDef := arg
+
 		argRange := lsp.Range{
 			Start: aspPositionToLsp(callArg.Value.Pos),
 			End:   aspPositionToLsp(callArg.Value.EndPos),
 		}
-
-		// Check if the argument value type is correct
-		if diag := ds.diagnosticFromCallArgType(analyzer, arg, callArg); diag != nil {
-			ds.stored = append(ds.stored, diag)
-		}
-
 		// Check if the argument is a valid keyword arg
 		// **Ignore the builtins listed in excludedBuiltins, as the args are not definite
 		if callArg.Name != "" && !StringInSlice(excludedBuiltins, def.Name) {
@@ -239,8 +239,19 @@ func (ds *diagnosticStore) diagnoseFuncCall(analyzer *Analyzer, funcName string,
 					Message:  fmt.Sprintf("unexpected argument %s", callArg.Name),
 				}
 				ds.stored = append(ds.stored, diag)
+				continue
 			}
 
+			// ensure we are checking the correct argument definition
+			// As keyword args can be in any order
+			if callArg.Name != arg.Name {
+				argDef = *def.ArgMap[callArg.Name].Argument
+			}
+
+		}
+		// Check if the argument value type is correct
+		if diag := ds.diagnosticFromCallArgType(analyzer, argDef, callArg); diag != nil {
+			ds.stored = append(ds.stored, diag)
 		}
 
 	}
