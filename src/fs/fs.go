@@ -114,6 +114,7 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 	return os.Rename(tempFile.Name(), to)
 }
 
+// IsDirectory checks if a given path is a directory
 func IsDirectory(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
