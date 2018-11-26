@@ -467,14 +467,10 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 			// Walk through the output,
 			// if the output is a directory,apply output mode to the file instead of the directory
 			err := fs.Walk(output, func(path string, isDir bool) error {
-				if isDir && path == output {
+				if isDir {
 					return nil
 				}
-				if err := os.Chmod(path, target.OutMode()); err != nil {
-					return err
-				}
-
-				return nil
+				return os.Chmod(path, target.OutMode())
 			})
 			if err != nil {
 				return nil, err
