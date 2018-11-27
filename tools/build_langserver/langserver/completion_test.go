@@ -299,11 +299,6 @@ func TestCompletionArgSrcLocalFiles(t *testing.T) {
 	items, err = handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 25, Character: 12})
 	assert.Equal(t, nil, err)
 	assert.Nil(t, items)
-	//assert.Equal(t, 3, len(items))
-	//assert.True(t, itemInList(items, "foo.go"))
-	for _, i := range items {
-		t.Log(i.Label)
-	}
 }
 
 /***************************************
