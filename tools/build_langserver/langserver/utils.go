@@ -6,6 +6,7 @@ import (
 	"core"
 	"fmt"
 	"fs"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -45,6 +46,7 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 	if err != nil {
 		return "", err
 	}
+
 	if strings.HasPrefix(absPath, core.RepoRoot) {
 		pathType = strings.ToLower(pathType)
 		switch pathType {
@@ -52,10 +54,12 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 			if fs.FileExists(absPath) {
 				return absPath, nil
 			}
+			return "", fmt.Errorf("file %s does not exit", pathFromURL)
 		case "path":
 			if fs.PathExists(absPath) {
 				return absPath, nil
 			}
+			return "", fmt.Errorf("path %s does not exit", pathFromURL)
 		default:
 			return "", fmt.Errorf(fmt.Sprintf("invalid pathType %s, "+
 				"can only be 'file' or 'path'", pathType))
@@ -75,16 +79,13 @@ func LocalFilesFromURI(uri lsp.DocumentURI) ([]string, error) {
 
 	var files []string
 
-	fpDir := filepath.Dir(fp)
-	err = fs.Walk(fpDir, func(name string, isDir bool) error {
-		p, err := filepath.Rel(fpDir, name)
-		if err != nil {
-			return err
+	f, err := ioutil.ReadDir(filepath.Dir(fp))
+	fname := filepath.Base(fp)
+	for _, i := range f {
+		if i.Name() != "." && i.Name() != fname {
+			files = append(files, i.Name())
 		}
-
-		files = append(files, p)
-		return nil
-	})
+	}
 
 	return files, err
 }
@@ -181,6 +182,19 @@ func TrimQuotes(str string) string {
 	str = strings.Trim(str, `'`)
 
 	return str
+}
+
+// ExtractStringVal extracts the string value from a string,
+// **the string value must be at the end of the string passed in**
+func ExtractStrTail(str string) string {
+	re := regexp.MustCompile(`(("|')([^"]|"")*("|')$)`)
+	matched := re.FindString(strings.TrimSpace(str))
+
+	if matched != "" {
+		return matched[1 : len(matched)-1]
+	}
+
+	return ""
 }
 
 // LooksLikeString returns true if the input string looks like a string

@@ -62,6 +62,14 @@ func TestGetPathFromURLFail(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestLocalFilesFromURI(t *testing.T) {
+	exampleBuildURI := lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/example.build")
+	files, err := LocalFilesFromURI(exampleBuildURI)
+	assert.NoError(t, err)
+	assert.True(t, StringInSlice(files, "foo.go"))
+	assert.True(t, !StringInSlice(files, "example.go"))
+}
+
 func TestPackageLabelFromURI(t *testing.T) {
 	filePath := path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")
 	uri := lsp.DocumentURI("file://" + filePath)
@@ -148,6 +156,12 @@ func TestTrimQoutes(t *testing.T) {
 
 	trimed = TrimQuotes(`"//src/core`)
 	assert.Equal(t, "//src/core", trimed)
+}
+
+func TestExtractStringVal(t *testing.T) {
+	assert.Equal(t, "blah", ExtractStrTail(`    srcs=["blah"`))
+	assert.Equal(t, "foo", ExtractStrTail(`    "foo"`))
+	assert.Equal(t, "", ExtractStrTail(`"blah", srcs=`))
 }
 
 func TestLooksLikeAttribute(t *testing.T) {

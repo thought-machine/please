@@ -40,6 +40,7 @@ go_test(
 go_test(
     name = "utils_test",
     srcs = ["utils_test.go"],
+    data = ["test_data"],
     deps = [
         ":langserver",
         "//third_party/go:testify",

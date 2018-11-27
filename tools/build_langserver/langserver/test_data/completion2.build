@@ -30,3 +30,16 @@ go_library(
     na,
     sr,
 )
+
+go_library(
+    name="hello",
+    srcs=[
+    "f"
+    ],
+)
+
+go_library(
+    name="hello",
+    srcs=["refo"
+    ],
+)

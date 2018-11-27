@@ -170,7 +170,7 @@ func TestCompletionWithBuildLabels2(t *testing.T) {
 	// Ensure relative label working correctly
 	items, err := handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 15, Character: 11})
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 3, len(items))
+	assert.Equal(t, 4, len(items))
 
 	assert.True(t, itemInList(items, "my_binary"))
 	assert.True(t, itemInList(items, "langserver_test"))
@@ -299,6 +299,18 @@ func TestCompletionArgSrcLocalFiles(t *testing.T) {
 	items, err = handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 25, Character: 12})
 	assert.Equal(t, nil, err)
 	assert.Nil(t, items)
+
+	// test completion with string without ','
+	items, err = handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 36, Character: 6})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 6, len(items))
+	assert.True(t, itemInList(items, "foo.go"))
+
+	items, err = handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 42, Character: 15})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 2, len(items))
+	assert.True(t, itemInList(items, "reformat.build"))
+	assert.True(t, itemInList(items, "reformat2.build"))
 }
 
 /***************************************

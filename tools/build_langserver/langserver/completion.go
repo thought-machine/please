@@ -64,7 +64,7 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	}
 
 	contentToPos := lineContent[:pos.Character]
-	if len(lineContent) > pos.Character+2 && lineContent[pos.Character] == '"' {
+	if len(lineContent) > pos.Character+1 && lineContent[pos.Character] == '"' {
 		contentToPos = lineContent[:pos.Character+1]
 	}
 
@@ -82,8 +82,8 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	} else if label := ExtractBuildLabel(contentToPos); label != "" {
 		completionList, completionErr = itemsFromBuildLabel(ctx, h.analyzer,
 			label, uri)
-	} else if LooksLikeString(strings.TrimSpace(contentToPos)) {
-		completionList = itemsFromLocalSrcs(call, contentToPos, uri, pos)
+	} else if strVal := ExtractStrTail(contentToPos); strVal != "" {
+		completionList = itemsFromLocalSrcs(call, strVal, uri, pos)
 	} else {
 		literal := ExtractLiteral(contentToPos)
 
@@ -138,12 +138,11 @@ func argExist(call *Call, argName string) bool {
 	return false
 }
 
-func itemsFromLocalSrcs(call *Call, contentToPos string, uri lsp.DocumentURI, pos lsp.Position) []*lsp.CompletionItem {
+func itemsFromLocalSrcs(call *Call, text string, uri lsp.DocumentURI, pos lsp.Position) []*lsp.CompletionItem {
 	if !withinLocalSrcArg(call, pos) {
 		return nil
 	}
 
-	text := TrimQuotes(contentToPos)
 	files, err := LocalFilesFromURI(uri)
 	if err != nil {
 		log.Warning("Error occurred when trying to find local files: %s", err)
