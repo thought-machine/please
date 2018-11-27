@@ -65,6 +65,8 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 	return "", fmt.Errorf(fmt.Sprintf("invalid path %s, path must be in repo root: %s", absPath, core.RepoRoot))
 }
 
+// LocalFilesFromURI returns a slices of file path of the files in current directory
+// where the document is
 func LocalFilesFromURI(uri lsp.DocumentURI) ([]string, error) {
 	fp, err := GetPathFromURL(uri, "file")
 	if err != nil {
