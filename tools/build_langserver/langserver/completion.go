@@ -63,22 +63,38 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 		return completionList, nil
 	}
 
-	lineContent = lineContent[:pos.Character]
+	contentToPos := lineContent[:pos.Character]
+	if len(lineContent) > pos.Character+2 && lineContent[pos.Character] == '"' {
+		contentToPos = lineContent[:pos.Character+1]
+	}
 
 	// get all the existing variable assignments in the current File
 	contentVars := h.analyzer.VariablesFromContent(fileContentStr, &pos)
 
-	if LooksLikeAttribute(lineContent) {
-		completionList = itemsFromAttributes(h.analyzer, contentVars, lineContent)
-	} else if label := ExtractBuildLabel(lineContent); label != "" {
-		completionList, completionErr = itemsFromBuildLabel(ctx, h.analyzer, label, uri)
+	stmts := h.analyzer.AspStatementFromContent(JoinLines(fileContent, true))
+	subincludes := h.analyzer.GetSubinclude(ctx, stmts, uri)
+
+	call := h.analyzer.CallFromAST(stmts, pos)
+
+	if LooksLikeAttribute(contentToPos) {
+		completionList = itemsFromAttributes(h.analyzer,
+			contentVars, contentToPos)
+	} else if label := ExtractBuildLabel(contentToPos); label != "" {
+		completionList, completionErr = itemsFromBuildLabel(ctx, h.analyzer,
+			label, uri)
+	} else if LooksLikeString(strings.TrimSpace(contentToPos)) {
+		completionList = itemsFromLocalSrcs(call, contentToPos, uri, pos)
 	} else {
-		literal := ExtractLiteral(lineContent)
+		literal := ExtractLiteral(contentToPos)
 
-		stmts := h.analyzer.AspStatementFromContent(JoinLines(fileContent, true))
-		subincludes := h.analyzer.GetSubinclude(ctx, stmts, uri)
-
-		completionList = itemsFromliterals(h.analyzer, subincludes, contentVars, literal)
+		// Check if we are inside of a call, if so we get the completion for args
+		if call != nil && !strings.Contains(contentToPos, "=") {
+			ruleDef := h.analyzer.GetBuildRuleByName(call.Name, subincludes)
+			completionList = itemsFromFuncArgsName(ruleDef, call, literal)
+		} else {
+			completionList = itemsFromliterals(h.analyzer, subincludes,
+				contentVars, literal)
+		}
 	}
 
 	if completionErr != nil {
@@ -91,6 +107,72 @@ func (h *LsHandler) getCompletionItemsList(ctx context.Context,
 	}
 
 	return completionList, nil
+}
+
+func itemsFromFuncArgsName(ruleDef *RuleDef, call *Call, matchingStr string) []*lsp.CompletionItem {
+	var items []*lsp.CompletionItem
+
+	if ruleDef == nil || matchingStr == "" {
+		return nil
+	}
+
+	for name, info := range ruleDef.ArgMap {
+		if info.IsPrivate {
+			continue
+		}
+		if strings.Contains(name, matchingStr) && !argExist(call, name) {
+			details := strings.Replace(info.Definition, name, "", -1)
+			items = append(items, getCompletionItem(lsp.Variable, name+"=", details))
+		}
+	}
+
+	return items
+}
+
+func argExist(call *Call, argName string) bool {
+	for _, arg := range call.Arguments {
+		if arg.Name == argName {
+			return true
+		}
+	}
+	return false
+}
+
+func itemsFromLocalSrcs(call *Call, contentToPos string, uri lsp.DocumentURI, pos lsp.Position) []*lsp.CompletionItem {
+	if !withinLocalSrcArg(call, pos) {
+		return nil
+	}
+
+	text := TrimQuotes(contentToPos)
+	files, err := LocalFilesFromURI(uri)
+	if err != nil {
+		log.Warning("Error occurred when trying to find local files: %s", err)
+		return nil
+	}
+
+	var items []*lsp.CompletionItem
+	for _, file := range files {
+		if strings.Contains(file, text) {
+			items = append(items, getCompletionItem(lsp.Value, file, ""))
+		}
+	}
+
+	return items
+}
+
+// withinLocalSrcArg checks if the current position is part of the arguments that takes local srcs,
+// such as: src, srcs, data
+func withinLocalSrcArg(call *Call, pos lsp.Position) bool {
+	if call == nil {
+		return false
+	}
+
+	for _, arg := range call.Arguments {
+		if withInRange(arg.Value.Pos, arg.Value.EndPos, pos) && StringInSlice(LocalSrcsArgs, arg.Name) {
+			return true
+		}
+	}
+	return false
 }
 
 func itemsFromBuildLabel(ctx context.Context, analyzer *Analyzer, labelString string,
@@ -188,6 +270,10 @@ func buildLabelItemsFromPackage(ctx context.Context, analyzer *Analyzer, pkgLabe
 
 func itemsFromliterals(analyzer *Analyzer, subincludes map[string]*RuleDef,
 	contentVars map[string]Variable, literal string) []*lsp.CompletionItem {
+
+	if literal == "" {
+		return nil
+	}
 
 	var completionList []*lsp.CompletionItem
 

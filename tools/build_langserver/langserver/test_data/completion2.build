@@ -19,3 +19,14 @@ go_test(
     ],
 )
 
+go_library(
+    name="blah",
+    srcs = [
+        "handler_test.go",
+        "bla",
+        "fo",
+    ],
+    vi,
+    na,
+    sr,
+)

@@ -65,6 +65,28 @@ func GetPathFromURL(uri lsp.DocumentURI, pathType string) (documentPath string, 
 	return "", fmt.Errorf(fmt.Sprintf("invalid path %s, path must be in repo root: %s", absPath, core.RepoRoot))
 }
 
+func LocalFilesFromURI(uri lsp.DocumentURI) ([]string, error) {
+	fp, err := GetPathFromURL(uri, "file")
+	if err != nil {
+		return nil, err
+	}
+
+	var files []string
+
+	fpDir := filepath.Dir(fp)
+	err = fs.Walk(fpDir, func(name string, isDir bool) error {
+		p, err := filepath.Rel(fpDir, name)
+		if err != nil {
+			return err
+		}
+
+		files = append(files, p)
+		return nil
+	})
+
+	return files, err
+}
+
 // PackageLabelFromURI returns a build label of a package
 func PackageLabelFromURI(uri lsp.DocumentURI) (string, error) {
 	filePath, err := GetPathFromURL(uri, "file")
