@@ -184,7 +184,7 @@ func TrimQuotes(str string) string {
 	return str
 }
 
-// ExtractStringVal extracts the string value from a string,
+// ExtractStrTail extracts the string value from a string,
 // **the string value must be at the end of the string passed in**
 func ExtractStrTail(str string) string {
 	re := regexp.MustCompile(`(("|')([^"]|"")*("|')$)`)
