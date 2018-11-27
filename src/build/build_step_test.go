@@ -222,6 +222,26 @@ func TestLicenceEnforcement(t *testing.T) {
 	}, "Trying to add GPL should panic (case insensitive)")
 }
 
+func TestFileGroupBinDir(t *testing.T) {
+	state, target := newState("//package1:bindir")
+	//target.AddOutput("test_data")
+	target.AddSource(core.FileLabel{File: "package2", Package: target.Label.PackageName})
+	target.IsBinary = true
+	target.IsFilegroup = true
+
+	err := buildFilegroup(state, target)
+	assert.NoError(t, err)
+
+	assert.True(t, fs.PathExists("plz-out/bin/package1/package2/"))
+	assert.True(t, fs.FileExists("plz-out/bin/package1/package2/file1.py"))
+	assert.True(t, fs.IsDirectory("plz-out/bin/package1/package2/"))
+
+	// Ensure correct permission on directory
+	info, err := os.Stat("plz-out/bin/package1/package2/")
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0755), info.Mode().Perm())
+}
+
 func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	config, _ := core.ReadConfigFiles(nil, "")
 	state := core.NewBuildState(1, nil, 4, config)
