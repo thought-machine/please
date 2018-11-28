@@ -170,7 +170,8 @@ func TestCompletionWithBuildLabels2(t *testing.T) {
 	// Ensure relative label working correctly
 	items, err := handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 15, Character: 11})
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 2, len(items))
+	assert.Equal(t, 4, len(items))
+
 	assert.True(t, itemInList(items, "my_binary"))
 	assert.True(t, itemInList(items, "langserver_test"))
 }
@@ -259,6 +260,57 @@ func TestCompletionSubinclude(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, len(items), 1)
 	assert.True(t, itemInList(items, "plz_e2e_test"))
+}
+
+/***************************************
+ *Tests for argument name completion
+ ***************************************/
+func TestCompletionArgNameBuild(t *testing.T) {
+	ctx := context.Background()
+	analyzer.State.Config.Parse.BuildFileName = []string{"completion2.build", "BUILD"}
+
+	// test completion for a "visibility" arg
+	items, err := handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 28, Character: 6})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 1, len(items))
+
+	items, err = handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 29, Character: 6})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 0, len(items))
+
+	items, err = handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 30, Character: 6})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 2, len(items))
+	assert.True(t, itemInList(items, "filter_srcs="))
+	assert.True(t, itemInList(items, "asm_srcs="))
+
+}
+
+func TestCompletionArgSrcLocalFiles(t *testing.T) {
+	ctx := context.Background()
+	analyzer.State.Config.Parse.BuildFileName = []string{"completion2.build", "BUILD"}
+
+	items, err := handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 26, Character: 11})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 3, len(items))
+	assert.True(t, itemInList(items, "foo.go"))
+
+	// test completion with non-existent srcs
+	items, err = handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 25, Character: 12})
+	assert.Equal(t, nil, err)
+	assert.Nil(t, items)
+
+	// test completion with string without ','
+	items, err = handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 36, Character: 6})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 6, len(items))
+	assert.True(t, itemInList(items, "foo.go"))
+
+	items, err = handler.getCompletionItemsList(ctx, completion2URI, lsp.Position{Line: 42, Character: 15})
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 2, len(items))
+	assert.True(t, itemInList(items, "reformat.build"))
+	assert.True(t, itemInList(items, "reformat2.build"))
 }
 
 /***************************************

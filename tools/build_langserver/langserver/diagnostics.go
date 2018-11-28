@@ -184,8 +184,6 @@ func (ds *diagnosticStore) diagnoseIdentExpr(analyzer *Analyzer, identExpr asp.I
 func (ds *diagnosticStore) diagnoseFuncCall(analyzer *Analyzer, funcName string,
 	callArgs []asp.CallArgument, funcRange lsp.Range) {
 
-	excludedBuiltins := []string{"format", "zip", "package", "join_path"}
-
 	// Check if the funcDef is defined
 	def := analyzer.GetBuildRuleByName(funcName, ds.subincludes)
 	if def == nil {
@@ -229,7 +227,7 @@ func (ds *diagnosticStore) diagnoseFuncCall(analyzer *Analyzer, funcName string,
 		}
 		// Check if the argument is a valid keyword arg
 		// **Ignore the builtins listed in excludedBuiltins, as the args are not definite
-		if callArg.Name != "" && !StringInSlice(excludedBuiltins, def.Name) {
+		if callArg.Name != "" && !StringInSlice(BuiltInsWithIrregularArgs, def.Name) {
 			if _, present := def.ArgMap[callArg.Name]; !present {
 				argRange = getNameRange(aspPositionToLsp(callArg.Pos), callArg.Name)
 				diag := &lsp.Diagnostic{

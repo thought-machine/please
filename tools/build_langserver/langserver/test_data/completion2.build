@@ -19,3 +19,27 @@ go_test(
     ],
 )
 
+go_library(
+    name="blah",
+    srcs = [
+        "handler_test.go",
+        "bla",
+        "fo",
+    ],
+    vi,
+    na,
+    sr,
+)
+
+go_library(
+    name="hello",
+    srcs=[
+    "f"
+    ],
+)
+
+go_library(
+    name="hello",
+    srcs=["refo"
+    ],
+)
