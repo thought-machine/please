@@ -17,6 +17,17 @@ import (
 	"tools/build_langserver/lsp"
 )
 
+var quoteExp = regexp.MustCompile(`(^("|')([^"]|"")*("|'))`)
+var strTailExp = regexp.MustCompile(`(("|')([^"]|"")*("|')$)`)
+var strExp = regexp.MustCompile(`(^("|')([^"]|"")*("|'))`)
+var buildLabelExp = regexp.MustCompile(`("(\/\/|:)(\w+\/?)*(\w+[:]\w*)?"?$)`)
+var literalExp = regexp.MustCompile(`(\w*\.?\w*)$`)
+
+var attrExp = regexp.MustCompile(`(\.[\w]*)$`)
+var configAttrExp = regexp.MustCompile(`(CONFIG\.[\w]*)$`)
+var strAttrExp = regexp.MustCompile(`((".*"|'.*')\.\w*)$`)
+var dictAttrExp = regexp.MustCompile(`({.*}\.\w*)$`)
+
 // IsURL checks if the documentUri passed has 'file://' prefix
 func IsURL(uri lsp.DocumentURI) bool {
 	return strings.HasPrefix(string(uri), "file://")
@@ -172,8 +183,7 @@ func doIOScan(uri lsp.DocumentURI, callback func(scanner *bufio.Scanner) ([]stri
 func TrimQuotes(str string) string {
 	// Regex match the string starts with qoute("),
 	// this is so that strings like this(visibility = ["//tools/build_langserver/...", "//src/core"]) won't be matched
-	re := regexp.MustCompile(`(^("|')([^"]|"")*("|'))`)
-	matched := re.FindString(strings.TrimSpace(str))
+	matched := quoteExp.FindString(strings.TrimSpace(str))
 	if matched != "" {
 		return matched[1 : len(matched)-1]
 	}
@@ -187,8 +197,7 @@ func TrimQuotes(str string) string {
 // ExtractStrTail extracts the string value from a string,
 // **the string value must be at the end of the string passed in**
 func ExtractStrTail(str string) string {
-	re := regexp.MustCompile(`(("|')([^"]|"")*("|')$)`)
-	matched := re.FindString(strings.TrimSpace(str))
+	matched := strTailExp.FindString(strings.TrimSpace(str))
 
 	if matched != "" {
 		return matched[1 : len(matched)-1]
@@ -199,36 +208,35 @@ func ExtractStrTail(str string) string {
 
 // LooksLikeString returns true if the input string looks like a string
 func LooksLikeString(str string) bool {
-	return mustMatch(`(^("|')([^"]|"")*("|'))`, str)
+	return mustMatch(strExp, str)
 }
 
 // LooksLikeAttribute returns true if the input string looks like an attribute: "hello".
 func LooksLikeAttribute(str string) bool {
-	return mustMatch(`(\.[\w]*)$`, str)
+	return mustMatch(attrExp, str)
 }
 
 // LooksLikeCONFIGAttr returns true if the input string looks like an attribute of CONFIG object: CONFIG.PLZ_VERSION
 func LooksLikeCONFIGAttr(str string) bool {
-	return mustMatch(`(CONFIG\.[\w]*)$`, str)
+	return mustMatch(configAttrExp, str)
 }
 
 // LooksLikeStringAttr returns true if the input string looks like an attribute of string: "hello".format()
 func LooksLikeStringAttr(str string) bool {
-	return mustMatch(`((".*"|'.*')\.\w*)$`, str)
+	return mustMatch(strAttrExp, str)
 }
 
 // LooksLikeDictAttr returns true if the input string looks like an attribute of dict
 // e.g. {"foo": 1, "bar": "baz"}.keys()
 func LooksLikeDictAttr(str string) bool {
-	return mustMatch(`({.*}\.\w*)$`, str)
+	return mustMatch(dictAttrExp, str)
 }
 
 // ExtractBuildLabel extracts build label from a string.
 // Beginning of the buildlabel must have a quote
 // end of the string must not be anything other than quotes or characters
 func ExtractBuildLabel(str string) string {
-	re := regexp.MustCompile(`("(\/\/|:)(\w+\/?)*(\w+[:]\w*)?"?$)`)
-	matched := re.FindString(strings.TrimSpace(str))
+	matched := buildLabelExp.FindString(strings.TrimSpace(str))
 
 	return strings.Trim(matched, `"`)
 }
@@ -245,8 +253,7 @@ func ExtractLiteral(str string) string {
 	}
 
 	// Get our literal
-	re := regexp.MustCompile(`(\w*\.?\w*)$`)
-	matched := re.FindString(trimmed)
+	matched := literalExp.FindString(trimmed)
 	if matched != "" {
 		return matched
 	}
@@ -254,8 +261,7 @@ func ExtractLiteral(str string) string {
 	return ""
 }
 
-func mustMatch(pattern string, str string) bool {
-	re := regexp.MustCompile(pattern)
+func mustMatch(re *regexp.Regexp, str string) bool {
 	matched := re.FindString(str)
 	if matched != "" {
 		return true
