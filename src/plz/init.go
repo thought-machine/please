@@ -12,11 +12,7 @@ import (
 	"sync"
 	"test"
 	"utils"
-
-	"gopkg.in/op/go-logging.v1"
 )
-
-var log = logging.MustGetLogger("plz")
 
 type InitOpts struct {
 	ParsePackageOnly bool
