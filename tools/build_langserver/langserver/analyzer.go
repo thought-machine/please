@@ -709,6 +709,7 @@ func (a *Analyzer) getBuildDefByName(ctx context.Context, name string, path stri
 	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
 }
 
+// BuildDefsFromPos returns the BuildDef object from the position given if it exists
 func (a *Analyzer) BuildDefsFromPos(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (*BuildDef, error) {
 	defs, err := a.BuildDefsFromURI(ctx, uri)
 	if err != nil {
