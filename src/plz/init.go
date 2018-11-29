@@ -4,7 +4,9 @@ import (
 	"build"
 	"cli"
 	"core"
+	"follow"
 	"fs"
+	"metrics"
 	"output"
 	"parse"
 	"sync"
@@ -34,6 +36,18 @@ type InitOpts struct {
 }
 
 func Init(targets []core.BuildLabel, state *core.BuildState, config *core.Configuration, initOpts InitOpts) (bool, *core.BuildState) {
+	parse.InitParser(state)
+	build.Init(state)
+
+	if config.Events.Port != 0 && state.NeedBuild {
+		shutdown := follow.InitialiseServer(state, config.Events.Port)
+		defer shutdown()
+	}
+	if config.Events.Port != 0 || config.Display.SystemStats {
+		go follow.UpdateResources(state)
+	}
+	metrics.InitFromConfig(config)
+
 	// Start looking for the initial targets to kick the build off
 	go initOpts.findOriginalTasks(state, targets)
 	// Start up all the build workers

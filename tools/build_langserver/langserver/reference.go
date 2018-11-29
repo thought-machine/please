@@ -1,12 +1,10 @@
 package langserver
 
 import (
-	"build"
 	"context"
 	"core"
 	"encoding/json"
 	"fmt"
-	"parse"
 	"path/filepath"
 	"plz"
 	"query"
@@ -60,8 +58,6 @@ func (h *LsHandler) getReferences(ctx context.Context, uri lsp.DocumentURI, pos 
 	h.analyzer.State.NeedBuild = false
 	h.analyzer.State.NeedTests = false
 
-	parse.InitParser(h.analyzer.State)
-	build.Init(h.analyzer.State)
 	success, state := plz.InitDefault([]core.BuildLabel{label}, h.analyzer.State,
 		h.analyzer.State.Config)
 

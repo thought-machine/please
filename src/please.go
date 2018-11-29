@@ -771,26 +771,14 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 
-	parse.InitParser(state)
-	build.Init(state)
-
-	if config.Events.Port != 0 && state.NeedBuild {
-		shutdown := follow.InitialiseServer(state, config.Events.Port)
-		defer shutdown()
+	if state.DebugTests && len(targets) != 1 {
+		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
-	if config.Events.Port != 0 || config.Display.SystemStats {
-		go follow.UpdateResources(state)
-	}
-	metrics.InitFromConfig(config)
 
 	// Acquire the lock before we start building
 	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
-	}
-
-	if state.DebugTests && len(targets) != 1 {
-		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
