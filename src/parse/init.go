@@ -3,6 +3,7 @@ package parse
 import (
 	"fmt"
 	"io"
+	"path"
 	"sort"
 	"strings"
 
@@ -37,7 +38,7 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {
 		log.Debug("Preloading build defs from %s...", preload)
-		p.MustLoadBuiltins(preload, nil, nil)
+		p.MustLoadBuiltins(path.Join(core.RepoRoot, preload), nil, nil)
 	}
 
 	log.Debug("Parser initialised")

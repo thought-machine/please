@@ -27,7 +27,7 @@ func TestDiagnosisInvalidBuildLabel(t *testing.T) {
 	assert.Equal(t, expected, diag.Range)
 
 	diag = FindDiagnosticByMsg(ds.stored,
-		"Invalid build label //sr. error: cannot find the path for build label //sr")
+		"Invalid build label //sr. error: cannot find the path for build label //sr:sr")
 	assert.NotNil(t, diag)
 	expected = lsp.Range{
 		Start: lsp.Position{Line: 45, Character: 0},

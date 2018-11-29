@@ -19,6 +19,7 @@ go_binary(
         "//src/output",
         "//src/parse",
         "//src/query",
+        "//src/plz",
         "//src/run",
         "//src/test",
         "//src/tool",

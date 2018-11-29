@@ -22,6 +22,20 @@ type ServerCapabilities struct {
 	DocumentFormattingProvider bool                  `json:"documentFormattingProvider,omitempty"`
 }
 
+// TextDocumentPositionParams is a parameter literal used in requests to pass a text document
+// and a position inside that document
+type TextDocumentPositionParams struct {
+	/**
+	 * The text document.
+	 */
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+
+	/**
+	 * The position inside the text document.
+	 */
+	Position Position `json:"position"`
+}
+
 // TextDocumentSyncOptions defines the open and close notifications are sent to the server.
 // TODO(bnmetrics): this might not be needed
 type TextDocumentSyncOptions struct {
@@ -170,4 +184,16 @@ type FormattingOptions struct {
 	TabSize      int    `json:"tabSize"`
 	InsertSpaces bool   `json:"insertSpaces"`
 	Key          string `json:"key"`
+}
+
+// ReferenceParams is the params sent from the client for textDocument/references request
+type ReferenceParams struct {
+	*TextDocumentPositionParams
+
+	Context ReferenceContext `json:"context"`
+}
+
+// ReferenceContext is the context used in ReferenceParams
+type ReferenceContext struct {
+	IncludeDeclaration bool `json:"includeDeclaration"`
 }

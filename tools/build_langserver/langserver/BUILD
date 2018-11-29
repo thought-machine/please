@@ -10,6 +10,7 @@ go_library(
         "//src/fs",
         "//src/parse",
         "//src/parse/asp",
+        "//src/plz",
         "//src/parse/rules",
         "//src/query",
         "//third_party/go:buildtools",
