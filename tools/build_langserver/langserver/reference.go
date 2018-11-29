@@ -4,7 +4,6 @@ import (
 	"context"
 	"core"
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 	"plz"
 	"query"
@@ -55,10 +54,11 @@ func (h *LsHandler) getReferences(ctx context.Context, uri lsp.DocumentURI, pos 
 	}
 
 	//Ensure we do not get locked out
-	h.analyzer.State.NeedBuild = false
-	h.analyzer.State.NeedTests = false
+	state := core.NewBuildState(1, nil, 4, h.analyzer.State.Config)
+	state.NeedBuild = false
+	state.NeedTests = false
 
-	success, state := plz.InitDefault([]core.BuildLabel{label}, h.analyzer.State,
+	success, state := plz.InitDefault([]core.BuildLabel{label}, state,
 		h.analyzer.State.Config)
 
 	if !success {
@@ -88,7 +88,7 @@ func (h *LsHandler) getReferences(ctx context.Context, uri lsp.DocumentURI, pos 
 	return locs, nil
 }
 
-func getCoreBuildLabel(def *BuildDef, uri lsp.DocumentURI) (core.BuildLabel, error) {
+func getCoreBuildLabel(def *BuildDef, uri lsp.DocumentURI) (buildLabel core.BuildLabel, err error) {
 	fp, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return core.BuildLabel{}, err
@@ -99,7 +99,12 @@ func getCoreBuildLabel(def *BuildDef, uri lsp.DocumentURI) (core.BuildLabel, err
 		return core.BuildLabel{}, err
 	}
 
-	labelStr := fmt.Sprintf("//%s:%s", rel, def.BuildDefName)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warning("error occurred parsing build label")
+			err = r.(error)
+		}
+	}()
 
-	return core.TryParseBuildLabel(labelStr, fp)
+	return core.NewBuildLabel(rel, def.BuildDefName), err
 }
