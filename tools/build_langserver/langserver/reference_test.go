@@ -2,6 +2,7 @@ package langserver
 
 import (
 	"context"
+	"core"
 	"testing"
 
 	"tools/build_langserver/lsp"
@@ -16,7 +17,22 @@ func TestGetReferences(t *testing.T) {
 
 	// copy over the handler from the setup and get a new analyzer so it would be reading the config
 	a, _ := newAnalyzer()
-	h := handler
+	h := LsHandler{
+		repoRoot:  core.RepoRoot,
+		workspace: newWorkspaceStore(lsp.DocumentURI(core.RepoRoot)),
+		analyzer:  analyzer,
+		init: &lsp.InitializeParams{
+			RootURI: lsp.DocumentURI(core.RepoRoot),
+			Capabilities: lsp.ClientCapabilities{
+				TextDocument: lsp.TextDocumentClientCapabilities{
+					Completion: lsp.Completion{
+						CompletionItem: struct {
+							SnippetSupport bool `json:"snippetSupport,omitempty"`
+						}{SnippetSupport: true}},
+				},
+			},
+		},
+	}
 	h.analyzer = a
 
 	h.analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
