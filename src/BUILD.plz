@@ -18,6 +18,7 @@ go_binary(
         "//src/metrics",
         "//src/output",
         "//src/parse",
+        "//src/plz",
         "//src/query",
         "//src/run",
         "//src/test",

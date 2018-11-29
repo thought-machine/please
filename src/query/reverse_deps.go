@@ -9,6 +9,15 @@ import (
 // ReverseDeps For each input label, finds all targets which depend upon it.
 func ReverseDeps(state *core.BuildState, labels []core.BuildLabel) {
 
+	targets := GetRevDepsLabels(state, labels)
+
+	for _, target := range targets {
+		fmt.Printf("%s\n", target)
+	}
+}
+
+// GetRevDepsLabels returns a slice of build labels that are the reverse dependencies of the build labels being passed in
+func GetRevDepsLabels(state *core.BuildState, labels []core.BuildLabel) core.BuildLabels {
 	uniqueTargets := make(map[*core.BuildTarget]struct{})
 
 	graph := state.Graph
@@ -44,7 +53,6 @@ func ReverseDeps(state *core.BuildState, labels []core.BuildLabel) {
 		}
 	}
 	sort.Sort(targets)
-	for _, target := range targets {
-		fmt.Printf("%s\n", target)
-	}
+
+	return targets
 }

@@ -607,7 +607,7 @@ func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {
 	return ident
 }
 
-// BuildLabelFromString returns a BuildLabel object,
+// BuildLabelFromString returns a BuildLabel object given a label string
 func (a *Analyzer) BuildLabelFromString(ctx context.Context,
 	currentURI lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
 
@@ -621,8 +621,13 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context,
 		return nil, err
 	}
 
+	return a.BuildLabelFromCoreBuildLabel(ctx, label)
+}
+
+// BuildLabelFromCoreBuildLabel returns a BuildLabel object given a core.BuildLabel
+func (a *Analyzer) BuildLabelFromCoreBuildLabel(ctx context.Context, label core.BuildLabel) (buildLabel *BuildLabel, err error) {
 	if label.IsEmpty() {
-		return nil, fmt.Errorf("empty build label %s", labelStr)
+		return nil, fmt.Errorf("empty build label %s", label.String())
 	}
 
 	// Get the BUILD file path for the build label
@@ -632,13 +637,13 @@ func (a *Analyzer) BuildLabelFromString(ctx context.Context,
 			BuildLabel: &label,
 			Path:       label.PackageDir(),
 			BuildDef:   nil,
-			Definition: "Subrepo label: " + labelStr,
+			Definition: "Subrepo label: " + label.String(),
 		}, nil
 	}
 
 	labelPath := string(a.BuildFileURIFromPackage(label.PackageDir()))
 	if labelPath == "" {
-		return nil, fmt.Errorf("cannot find the path for build label %s", labelStr)
+		return nil, fmt.Errorf("cannot find the path for build label %s", label.String())
 	}
 
 	// Get the BuildDef and BuildDefContent for the BuildLabel
@@ -702,6 +707,21 @@ func (a *Analyzer) getBuildDefByName(ctx context.Context, name string, path stri
 	}
 
 	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
+}
+
+// BuildDefsFromPos returns the BuildDef object from the position given if it exists
+func (a *Analyzer) BuildDefsFromPos(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (*BuildDef, error) {
+	defs, err := a.BuildDefsFromURI(ctx, uri)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, def := range defs {
+		if withInRangeLSP(def.Pos, def.EndPos, pos) && def.Pos.Line == pos.Line {
+			return def, nil
+		}
+	}
+	return nil, nil
 }
 
 // BuildDefsFromURI returns a map of buildDefname : *BuildDef

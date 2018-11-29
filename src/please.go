@@ -22,7 +22,6 @@ import (
 	"core"
 	"export"
 	"follow"
-	"fs"
 	"gc"
 	"hashes"
 	"help"
@@ -30,9 +29,9 @@ import (
 	"metrics"
 	"output"
 	"parse"
+	"plz"
 	"query"
 	"run"
-	"sync"
 	"test"
 	"tool"
 	"update"
@@ -692,33 +691,6 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 	return false
 }
 
-func please(tid int, state *core.BuildState, parsePackageOnly bool, include, exclude []string) {
-	for {
-		label, dependor, t := state.NextTask()
-		switch t {
-		case core.Stop, core.Kill:
-			return
-		case core.Parse, core.SubincludeParse:
-			t := t
-			label := label
-			dependor := dependor
-			state.ParsePool <- func() {
-				parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude, t == core.SubincludeParse)
-				if opts.VisibilityParse && state.IsOriginalTarget(label) {
-					parseForVisibleTargets(state, label)
-				}
-				state.TaskDone(false)
-			}
-		case core.Build, core.SubincludeBuild:
-			build.Build(tid, state, label)
-			state.TaskDone(true)
-		case core.Test:
-			test.Test(tid, state, label)
-			state.TaskDone(true)
-		}
-	}
-}
-
 func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
 	if opts.Watch.Run {
 		opts.Run.Parallel.PositionalArgs.Targets = labels
@@ -749,15 +721,6 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	test.CopySurefireXmlFilesToDir(state, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
 	return success, state
-}
-
-// parseForVisibleTargets adds parse tasks for any targets that the given label is visible to.
-func parseForVisibleTargets(state *core.BuildState, label core.BuildLabel) {
-	if target := state.Graph.Target(label); target != nil {
-		for _, vis := range target.Visibility {
-			findOriginalTask(state, vis, false)
-		}
-	}
 }
 
 // prettyOutputs determines from input flags whether we should show 'pretty' output (ie. interactive).
@@ -807,87 +770,34 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.DebugTests = debugTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
-	parse.InitParser(state)
-	build.Init(state)
 
-	if config.Events.Port != 0 && state.NeedBuild {
-		shutdown := follow.InitialiseServer(state, config.Events.Port)
-		defer shutdown()
+	if state.DebugTests && len(targets) != 1 {
+		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
-	if config.Events.Port != 0 || config.Display.SystemStats {
-		go follow.UpdateResources(state)
-	}
-	metrics.InitFromConfig(config)
+
 	// Acquire the lock before we start building
 	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
 	}
-	if state.DebugTests && len(targets) != 1 {
-		log.Fatalf("-d/--debug flag can only be used with a single test target")
-	}
-	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed || (len(targets) == 1 && !targets[0].IsAllTargets() && !targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
-	// Start looking for the initial targets to kick the build off
-	go findOriginalTasks(state, targets)
-	// Start up all the build workers
-	var wg sync.WaitGroup
-	wg.Add(config.Please.NumThreads)
-	for i := 0; i < config.Please.NumThreads; i++ {
-		go func(tid int) {
-			please(tid, state, opts.ParsePackageOnly, opts.BuildFlags.Include, opts.BuildFlags.Exclude)
-			wg.Done()
-		}(i)
-	}
-	// Wait until they've all exited, which they'll do once they have no tasks left.
-	go func() {
-		wg.Wait()
-		close(state.Results) // This will signal MonitorState (below) to stop.
-	}()
-	// Draw stuff to the screen while there are still results coming through.
-	shouldRun := !opts.Run.Args.Target.IsEmpty()
-	success := output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, state.NeedBuild, state.NeedTests, shouldRun, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
 
-	if state.Cache != nil {
-		state.Cache.Shutdown()
-	}
+	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
+		(len(targets) == 1 && !targets[0].IsAllTargets() &&
+			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 
-	return success, state
-}
+	return plz.Init(targets, state, config, plz.InitOpts{
+		ParsePackageOnly: opts.ParsePackageOnly,
+		VisibilityParse:  opts.VisibilityParse,
+		DetailedTests:    detailedTests,
+		KeepGoing:        opts.BuildFlags.KeepGoing,
+		PrettyOutput:     prettyOutput,
+		ShouldRun:        !opts.Run.Args.Target.IsEmpty(),
+		ShowStatus:       opts.Build.ShowStatus,
+		TraceFile:        string(opts.OutputFlags.TraceFile),
+		Arch:             opts.BuildFlags.Arch,
+		NoLock:           !opts.FeatureFlags.NoLock,
+	})
 
-// findOriginalTasks finds the original parse tasks for the original set of targets.
-func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
-	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
-		// We have to parse the WORKSPACE file before anything else to understand subrepos.
-		// This is a bit crap really since it inhibits parallelism for the first step.
-		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false, state.Include, state.Exclude, false)
-	}
-	if opts.BuildFlags.Arch.Arch != "" {
-		// Set up a new subrepo for this architecture.
-		state.Graph.AddSubrepo(core.SubrepoForArch(state, opts.BuildFlags.Arch))
-	}
-	for _, target := range targets {
-		if target == core.BuildLabelStdin {
-			for label := range cli.ReadStdin() {
-				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0], true)
-			}
-		} else {
-			findOriginalTask(state, target, true)
-		}
-	}
-	state.TaskDone(true) // initial target adding counts as one.
-}
-
-func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool) {
-	if opts.BuildFlags.Arch.Arch != "" {
-		target.Subrepo = opts.BuildFlags.Arch.String()
-	}
-	if target.IsAllSubpackages() {
-		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
-			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"), addToList)
-		}
-	} else {
-		state.AddOriginalTarget(target, addToList)
-	}
 }
 
 // testTargets handles test targets which can be given in two formats; a list of targets or a single

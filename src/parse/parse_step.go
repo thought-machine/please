@@ -236,7 +236,7 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 		return "WORKSPACE", ""
 	}
 	for _, buildFileName := range config.Parse.BuildFileName {
-		if filename := path.Join(pkgName, buildFileName); fs.FileExists(filename) {
+		if filename := path.Join(core.RepoRoot, pkgName, buildFileName); fs.FileExists(filename) {
 			return filename, pkgName
 		}
 	}
