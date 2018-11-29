@@ -10,6 +10,7 @@ import (
 
 	"tools/build_langserver/lsp"
 
+	"fmt"
 	"github.com/sourcegraph/jsonrpc2"
 )
 
@@ -52,7 +53,7 @@ func (h *LsHandler) getReferences(ctx context.Context, uri lsp.DocumentURI, pos 
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println(label, err)
 	//Ensure we do not get locked out
 	state := core.NewBuildState(1, nil, 4, h.analyzer.State.Config)
 	state.NeedBuild = false
@@ -69,6 +70,7 @@ func (h *LsHandler) getReferences(ctx context.Context, uri lsp.DocumentURI, pos 
 
 	var locs []lsp.Location
 	for _, label := range revDeps {
+		fmt.Println(label)
 		buildLabel, err := h.analyzer.BuildLabelFromCoreBuildLabel(ctx, label)
 		if err != nil {
 			// In the case of error, we still return the current available locs
