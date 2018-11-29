@@ -65,7 +65,7 @@ func TestGetReferences(t *testing.T) {
 		URI: lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")),
 		Range: lsp.Range{
 			Start: lsp.Position{Line: 0, Character: 0},
-			End:   lsp.Position{Line: 21, Character: 1},
+			End:   lsp.Position{Line: 22, Character: 1},
 		},
 	}
 	assertLocInList(t, locs, expected)
