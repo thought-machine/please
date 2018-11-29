@@ -21,7 +21,7 @@ func TestGetReferences(t *testing.T) {
 	h := handler
 	h.analyzer = a
 
-	uri := lsp.DocumentURI(path.Join(core.RepoRoot, "src/query/BUILD"))
+	uri := lsp.DocumentURI(path.Join(core.RepoRoot, "tools/build_langserver/lsp/BUILD"))
 
 	// TODO(bnm): We need to think of a better way to run handler.getReferences in root directory instead of Chdir here
 	// save the current testing directory
@@ -38,37 +38,28 @@ func TestGetReferences(t *testing.T) {
 	err = os.Chdir(testDir)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 6, len(locs))
+	assert.Equal(t, 4, len(locs))
 
 	// Reference in //src:please
 	expected := lsp.Location{
-		URI: lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "src/BUILD.plz")),
+		URI: lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "tools/build_langserver/BUILD")),
 		Range: lsp.Range{
 			Start: lsp.Position{Line: 0, Character: 0},
-			End:   lsp.Position{Line: 32, Character: 1},
+			End:   lsp.Position{Line: 11, Character: 1},
 		},
 	}
 	assertLocInList(t, locs, expected)
 
 	// reference in query
-	queryURI := lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "src/query/BUILD"))
+	queryURI := lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD"))
 	var refCount int
 	for _, loc := range locs {
 		if loc.URI == queryURI {
 			refCount++
 		}
 	}
-	assert.Equal(t, 4, refCount)
+	assert.Equal(t, 3, refCount)
 
-	// reference in langserver
-	expected = lsp.Location{
-		URI: lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "tools/build_langserver/langserver/BUILD")),
-		Range: lsp.Range{
-			Start: lsp.Position{Line: 0, Character: 0},
-			End:   lsp.Position{Line: 22, Character: 1},
-		},
-	}
-	assertLocInList(t, locs, expected)
 }
 
 func assertLocInList(t testing.TB, locs []lsp.Location, passLoc lsp.Location) {
