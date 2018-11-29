@@ -16,6 +16,7 @@ func ReverseDeps(state *core.BuildState, labels []core.BuildLabel) {
 	}
 }
 
+// GetRevDepsLabels returns a slice of build labels that are the reverse dependencies of the build labels being passed in
 func GetRevDepsLabels(state *core.BuildState, labels []core.BuildLabel) core.BuildLabels {
 	uniqueTargets := make(map[*core.BuildTarget]struct{})
 

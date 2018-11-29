@@ -14,6 +14,7 @@ import (
 	"utils"
 )
 
+// InitOpts represents initialization options for please. These are usually being passed as cli args
 type InitOpts struct {
 	ParsePackageOnly bool
 	VisibilityParse  bool
@@ -31,6 +32,7 @@ type InitOpts struct {
 	NoLock    bool
 }
 
+// Init initialized the build for please
 func Init(targets []core.BuildLabel, state *core.BuildState, config *core.Configuration, initOpts InitOpts) (bool, *core.BuildState) {
 	parse.InitParser(state)
 	build.Init(state)
@@ -76,6 +78,7 @@ func Init(targets []core.BuildLabel, state *core.BuildState, config *core.Config
 	return success, state
 }
 
+// InitDefault initializing please as a default set, this is used in textDocument/references call in langserver
 func InitDefault(targets []core.BuildLabel, state *core.BuildState, config *core.Configuration) (bool, *core.BuildState) {
 	initOpts := InitOpts{
 		ParsePackageOnly: true,
