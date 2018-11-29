@@ -35,16 +35,17 @@ type InitOpts struct {
 
 func Init(targets []core.BuildLabel, state *core.BuildState, config *core.Configuration, initOpts InitOpts) (bool, *core.BuildState) {
 	// Start looking for the initial targets to kick the build off
-	go findOriginalTasks(state, targets, initOpts.Arch)
+	go initOpts.findOriginalTasks(state, targets)
 	// Start up all the build workers
 	var wg sync.WaitGroup
 	wg.Add(config.Please.NumThreads)
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
-			doTasks(tid, state, initOpts.ParsePackageOnly, initOpts.VisibilityParse, state.Include, state.Exclude)
+			initOpts.doTasks(tid, state, state.Include, state.Exclude)
 			wg.Done()
 		}(i)
 	}
+
 	// Wait until they've all exited, which they'll do once they have no tasks left.
 	go func() {
 		wg.Wait()
@@ -79,7 +80,7 @@ func InitDefault(targets []core.BuildLabel, state *core.BuildState, config *core
 		config, initOpts)
 }
 
-func doTasks(tid int, state *core.BuildState, parsePackageOnly, visibilityParse bool, include, exclude []string) {
+func (i *InitOpts) doTasks(tid int, state *core.BuildState, include, exclude []string) {
 	for {
 		label, dependor, t := state.NextTask()
 		switch t {
@@ -90,9 +91,9 @@ func doTasks(tid int, state *core.BuildState, parsePackageOnly, visibilityParse 
 			label := label
 			dependor := dependor
 			state.ParsePool <- func() {
-				parse.Parse(tid, state, label, dependor, parsePackageOnly, include, exclude, t == core.SubincludeParse)
-				if visibilityParse && state.IsOriginalTarget(label) {
-					parseForVisibleTargets(state, label)
+				parse.Parse(tid, state, label, dependor, i.ParsePackageOnly, include, exclude, t == core.SubincludeParse)
+				if i.VisibilityParse && state.IsOriginalTarget(label) {
+					i.parseForVisibleTargets(state, label)
 				}
 				state.TaskDone(false)
 			}
@@ -107,32 +108,34 @@ func doTasks(tid int, state *core.BuildState, parsePackageOnly, visibilityParse 
 }
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
-func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel, arch cli.Arch) {
+func (i *InitOpts) findOriginalTasks(state *core.BuildState, targets []core.BuildLabel) {
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
-		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false, state.Include, state.Exclude, false)
+		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget,
+			false, state.Include, state.Exclude, false)
 	}
-	if arch.Arch != "" {
+	if i.Arch.Arch != "" {
 		// Set up a new subrepo for this architecture.
-		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
+		state.Graph.AddSubrepo(core.SubrepoForArch(state, i.Arch))
 	}
 	for _, target := range targets {
 		if target == core.BuildLabelStdin {
 			for label := range cli.ReadStdin() {
-				if arch.Arch != "" {
-					target.Subrepo = arch.String()
-				}
-				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0], true)
+
+				i.findOriginalTask(state, core.ParseBuildLabels([]string{label})[0], true)
 			}
 		} else {
-			findOriginalTask(state, target, true)
+			i.findOriginalTask(state, target, true)
 		}
 	}
 	state.TaskDone(true) // initial target adding counts as one.
 }
 
-func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool) {
+func (i *InitOpts) findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool) {
+	if i.Arch.Arch != "" {
+		target.Subrepo = i.Arch.String()
+	}
 	if target.IsAllSubpackages() {
 		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
 			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"), addToList)
@@ -143,10 +146,10 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 }
 
 // parseForVisibleTargets adds parse tasks for any targets that the given label is visible to.
-func parseForVisibleTargets(state *core.BuildState, label core.BuildLabel) {
+func (i *InitOpts) parseForVisibleTargets(state *core.BuildState, label core.BuildLabel) {
 	if target := state.Graph.Target(label); target != nil {
 		for _, vis := range target.Visibility {
-			findOriginalTask(state, vis, false)
+			i.findOriginalTask(state, vis, false)
 		}
 	}
 }
