@@ -29,9 +29,3 @@ genrule(
     cmd = "echo \"VERSION = '`cat $SRCS`'\" > $OUT",
     visibility = ["PUBLIC"],
 )
-
-filegroup(
-    name = "maven_library",
-    srcs = ["maven_library.build_defs"],
-    visibility = ["//tools/javac_worker:all"],
-)
