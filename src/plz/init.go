@@ -63,6 +63,7 @@ func Init(targets []core.BuildLabel, state *core.BuildState, config *core.Config
 	}()
 
 	// Draw stuff to the screen while there are still results coming through.
+	// TODO(bnm): Definitely refactor this at some point
 	success := output.MonitorState(state, config.Please.NumThreads,
 		!initOpts.PrettyOutput, initOpts.PrettyOutput, state.NeedBuild, state.NeedTests,
 		initOpts.ShouldRun, initOpts.ShowStatus, initOpts.DetailedTests,
