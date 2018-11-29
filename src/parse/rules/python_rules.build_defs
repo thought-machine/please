@@ -492,6 +492,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         cmd += post_install_commands
 
     cmd += ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
+    label = f'whl:{package_name}=={version}'
 
     wheel_rule = build_rule(
         name = name,
@@ -510,7 +511,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         tools = [CONFIG.JARCAT_TOOL],
         post_build = None if licences else _add_licences,
         sandbox = False,
-        labels = ['py:zip-unsafe'] if not zip_safe else None,
+        labels = ['py:zip-unsafe', label] if not zip_safe else [label],
     )
     cmd = '$TOOL x $SRCS -s $PKG_DIR'
     if outs:
@@ -528,7 +529,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         deps = deps,
         visibility = visibility,
         test_only = test_only,
-        labels = [f'whl:{package_name}=={version}'],
+        labels = [label],
         provides = {'py': wheel_rule},
     )
 

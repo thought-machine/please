@@ -1,3 +1,14 @@
+Version 13.2.7
+--------------
+
+    * Disallowed adding empty outputs to a target (this never made sense and
+      would only break things).
+    * Langserver now supports autoformatting and completion for local files
+      and argument names.
+    * Fixed an issue with incorrect permissions when a rule marked as binary
+      had a directory as an output (#478).
+
+
 Version 13.2.6
 --------------
 

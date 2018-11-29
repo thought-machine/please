@@ -22,3 +22,9 @@ python_binary(
         "//third_party/python:requests",
     ],
 )
+
+python_test(
+    name = "gen_release_test",
+    srcs = ["gen_release_test.py"],
+    deps = [":gen_release"],
+)

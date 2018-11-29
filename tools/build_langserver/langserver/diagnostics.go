@@ -39,10 +39,7 @@ func (h *LsHandler) publishDiagnostics(conn *jsonrpc2.Conn) error {
 
 	log.Info("Diagnostics detected: %s", params.Diagnostics)
 
-	if err := conn.Notify(ctx, "textDocument/publishDiagnostics", params); err != nil {
-		return err
-	}
-	return nil
+	return conn.Notify(ctx, "textDocument/publishDiagnostics", params)
 }
 
 type diagnosticsPublisher struct {
