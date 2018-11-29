@@ -4,9 +4,7 @@ import (
 	"build"
 	"cli"
 	"core"
-	"follow"
 	"fs"
-	"metrics"
 	"output"
 	"parse"
 	"sync"
@@ -36,28 +34,6 @@ type InitOpts struct {
 }
 
 func Init(targets []core.BuildLabel, state *core.BuildState, config *core.Configuration, initOpts InitOpts) (bool, *core.BuildState) {
-	parse.InitParser(state)
-	build.Init(state)
-
-	if config.Events.Port != 0 && state.NeedBuild {
-		shutdown := follow.InitialiseServer(state, config.Events.Port)
-		defer shutdown()
-	}
-	if config.Events.Port != 0 || config.Display.SystemStats {
-		go follow.UpdateResources(state)
-	}
-	metrics.InitFromConfig(config)
-
-	// Acquire the lock before we start building
-	if (state.NeedBuild || state.NeedTests) && !initOpts.NoLock {
-		core.AcquireRepoLock()
-		defer core.ReleaseRepoLock()
-	}
-
-	if state.DebugTests && len(targets) != 1 {
-		log.Fatalf("-d/--debug flag can only be used with a single test target")
-	}
-
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, targets, initOpts.Arch)
 	// Start up all the build workers

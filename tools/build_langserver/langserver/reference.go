@@ -1,10 +1,12 @@
 package langserver
 
 import (
+	"build"
 	"context"
 	"core"
 	"encoding/json"
 	"fmt"
+	"parse"
 	"path/filepath"
 	"plz"
 	"query"
@@ -35,6 +37,10 @@ func (h *LsHandler) handleReferences(ctx context.Context, req *jsonrpc2.Request)
 	defer h.mu.Unlock()
 
 	refs, err := h.getReferences(ctx, documentURI, params.Position)
+	if err != nil && len(refs) == 0 {
+		log.Warning("error occurred when trying to get references: %s", err)
+		return nil, nil
+	}
 
 	return refs, nil
 }
@@ -54,6 +60,8 @@ func (h *LsHandler) getReferences(ctx context.Context, uri lsp.DocumentURI, pos 
 	h.analyzer.State.NeedBuild = false
 	h.analyzer.State.NeedTests = false
 
+	parse.InitParser(h.analyzer.State)
+	build.Init(h.analyzer.State)
 	success, state := plz.InitDefault([]core.BuildLabel{label}, h.analyzer.State,
 		h.analyzer.State.Config)
 
