@@ -549,10 +549,10 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
     if binary:
         outs = ['bin/' + name]
     else:
+        outs = [f'pkg/{CONFIG.OS}_{CONFIG.ARCH}/{out}' for out in outs]
         # Outputs are created one directory down from where we want them.
         # For most it doesn't matter but the top-level one will get lost.
-        cmd += [' if [ -f ${OUTS}.a ]; then mkdir -p $OUTS && mv ${OUTS}.a $OUTS; fi']
-        outs = [f'pkg/{CONFIG.OS}_{CONFIG.ARCH}/{out}' for out in outs]
+        cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && mv {out}.a {out}; fi' for out in outs]
     return build_rule(
         name = name,
         outs = outs,
