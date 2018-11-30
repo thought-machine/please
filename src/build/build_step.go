@@ -109,7 +109,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			return err
 		}
 		if err := prepareSources(state.Graph, target); err != nil {
-			//fmt.Println("LUNA", err)
 			return err
 		}
 		return errStop
