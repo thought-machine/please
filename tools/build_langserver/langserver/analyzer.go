@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"path/filepath"
+	"plz"
+	"query"
 	"regexp"
 	"sort"
 	"strconv"
@@ -611,12 +614,12 @@ func (a *Analyzer) identFromStatement(stmt *asp.Statement) *Identifier {
 func (a *Analyzer) BuildLabelFromString(ctx context.Context,
 	currentURI lsp.DocumentURI, labelStr string) (*BuildLabel, error) {
 
-	filepath, err := GetPathFromURL(currentURI, "file")
+	filePath, err := GetPathFromURL(currentURI, "file")
 	if err != nil {
 		return nil, err
 	}
 
-	label, err := core.TryParseBuildLabel(labelStr, path.Dir(filepath))
+	label, err := core.TryParseBuildLabel(labelStr, path.Dir(filePath))
 	if err != nil {
 		return nil, err
 	}
@@ -709,6 +712,35 @@ func (a *Analyzer) getBuildDefByName(ctx context.Context, name string, path stri
 	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
 }
 
+// RevDepsFromBuildDef returns a core.B
+func (a *Analyzer) RevDepsFromBuildDef(def *BuildDef, uri lsp.DocumentURI) (core.BuildLabels, error) {
+	label, err := getCoreBuildLabel(def, uri)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.RevDepsFromCoreBuildLabel(label, uri)
+}
+
+func (a *Analyzer) RevDepsFromCoreBuildLabel(label core.BuildLabel, uri lsp.DocumentURI) (core.BuildLabels, error) {
+
+	//Ensure we do not get locked out
+	state := core.NewBuildState(1, nil, 4, a.State.Config)
+	state.NeedBuild = false
+	state.NeedTests = false
+
+	success, state := plz.InitDefault([]core.BuildLabel{label}, state,
+		a.State.Config)
+
+	if !success {
+		log.Warning("building %s not successful, skipping..", label)
+		return nil, nil
+	}
+	revDeps := query.GetRevDepsLabels(state, []core.BuildLabel{label})
+
+	return revDeps, nil
+}
+
 // BuildDefsFromPos returns the BuildDef object from the position given if it exists
 func (a *Analyzer) BuildDefsFromPos(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (*BuildDef, error) {
 	defs, err := a.BuildDefsFromURI(ctx, uri)
@@ -717,10 +749,12 @@ func (a *Analyzer) BuildDefsFromPos(ctx context.Context, uri lsp.DocumentURI, po
 	}
 
 	for _, def := range defs {
-		if withInRangeLSP(def.Pos, def.EndPos, pos) && def.Pos.Line == pos.Line {
+		if withInRangeLSP(def.Pos, def.EndPos, pos) {
 			return def, nil
 		}
 	}
+
+	log.Info("BuildDef not found in %s at position:%s", uri, pos)
 	return nil, nil
 }
 
@@ -812,12 +846,12 @@ func (a *Analyzer) BuildFileURIFromPackage(packageDir string) lsp.DocumentURI {
 
 // IsBuildFile takes a uri path and check if it's a valid build file
 func (a *Analyzer) IsBuildFile(uri lsp.DocumentURI) bool {
-	filepath, err := GetPathFromURL(uri, "file")
+	filePath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return false
 	}
 
-	base := path.Base(filepath)
+	base := path.Base(filePath)
 	return a.State.Config.IsABuildFile(base)
 }
 
@@ -886,4 +920,26 @@ func aspListToStrSlice(listVal *asp.List) []string {
 		}
 	}
 	return retSlice
+}
+
+// getCoreBuildLabel returns a core.BuildLabel object providing a BuildDef and its URI
+func getCoreBuildLabel(def *BuildDef, uri lsp.DocumentURI) (buildLabel core.BuildLabel, err error) {
+	fp, err := GetPathFromURL(uri, "file")
+	if err != nil {
+		return core.BuildLabel{}, err
+	}
+
+	rel, err := filepath.Rel(core.RepoRoot, filepath.Dir(fp))
+	if err != nil {
+		return core.BuildLabel{}, err
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warning("error occurred parsing build label")
+			err = r.(error)
+		}
+	}()
+
+	return core.NewBuildLabel(rel, def.BuildDefName), err
 }

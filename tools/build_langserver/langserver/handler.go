@@ -66,6 +66,7 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 		"textDocument/definition":    h.handleDefinition,
 		"textDocument/formatting":    h.handleReformatting,
 		"textDocument/references":    h.handleReferences,
+		"textDocument/rename":        h.handleRename,
 	}
 
 	if req.Method != "initialize" && req.Method != "exit" &&
@@ -146,15 +147,17 @@ func (h *LsHandler) handleInit(ctx context.Context, req *jsonrpc2.Request) (resu
 
 	log.Info("Initializing plz build file language server..")
 	return lsp.InitializeResult{
+
 		Capabilities: lsp.ServerCapabilities{
 			TextDocumentSync:           &TDsync,
 			HoverProvider:              true,
+			RenameProvider:             true,
 			CompletionProvider:         completeOps,
 			SignatureHelpProvider:      sigHelpOps,
 			DefinitionProvider:         true,
 			TypeDefinitionProvider:     true,
 			ImplementationProvider:     true,
-			ReferenceProvider:          true,
+			ReferencesProvider:         true,
 			DocumentFormattingProvider: true,
 			DocumentHighlightProvider:  true,
 			DocumentSymbolProvider:     true,

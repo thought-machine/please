@@ -25,7 +25,7 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 			return nil, err
 		}
 
-		h.workspace.Store(documentURI, params.TextDocument.Text)
+		h.workspace.Store(documentURI, params.TextDocument.Text, params.TextDocument.Version)
 		h.diagPublisher.queue.Put(taskDef{uri: documentURI, content: params.TextDocument.Text})
 
 		return nil, nil
@@ -40,7 +40,7 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 			return nil, err
 		}
 
-		if err := h.workspace.TrackEdit(documentURI, params.ContentChanges); err != nil {
+		if err := h.workspace.TrackEdit(documentURI, params.ContentChanges, params.TextDocument.Version); err != nil {
 			return nil, err
 		}
 

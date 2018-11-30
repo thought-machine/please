@@ -72,6 +72,6 @@ func storeFile(uri lsp.DocumentURI) error {
 		return err
 	}
 
-	handler.workspace.Store(uri, string(b))
+	handler.workspace.Store(uri, string(b), 1)
 	return nil
 }

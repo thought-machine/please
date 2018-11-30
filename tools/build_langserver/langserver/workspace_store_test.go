@@ -20,7 +20,7 @@ func TestWorkspaceStore_Store(t *testing.T) {
 	assert.Equal(t, 0, len(ws.documents))
 
 	text := strings.Join(content, "\n")
-	ws.Store(completionURI, text)
+	ws.Store(completionURI, text, 1)
 	assert.Equal(t, 1, len(ws.documents))
 	assert.Equal(t, "name = \"langserver_test\"\n", ws.documents[completionURI].text[0])
 }
@@ -36,7 +36,7 @@ func TestWorkspaceStore_TrackEdit(t *testing.T) {
 		Text:        "s",
 	}
 
-	err := ws.TrackEdit(completionURI, []lsp.TextDocumentContentChangeEvent{change})
+	err := ws.TrackEdit(completionURI, []lsp.TextDocumentContentChangeEvent{change}, 33)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "    srcs\n", ws.documents[completionURI].textInEdit[4])
 
@@ -50,7 +50,7 @@ func TestWorkspaceStore_TrackEdit(t *testing.T) {
 		Text:        "",
 	}
 
-	err = ws.TrackEdit(completionURI, []lsp.TextDocumentContentChangeEvent{change})
+	err = ws.TrackEdit(completionURI, []lsp.TextDocumentContentChangeEvent{change}, 34)
 	assert.Equal(t, nil, err)
 	expected := []string{
 		"go_test(\n",
@@ -61,6 +61,7 @@ func TestWorkspaceStore_TrackEdit(t *testing.T) {
 		"",
 	}
 	assert.Equal(t, expected, ws.documents[completionURI].textInEdit[6:])
+	assert.Equal(t, 34, ws.documents[completionURI].version)
 }
 
 func TestWorkspaceStore_applyChangeAddChar(t *testing.T) {
