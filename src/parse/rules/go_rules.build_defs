@@ -258,7 +258,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
 
 def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[],
               visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
-              filter_srcs:bool=True):
+              filter_srcs:bool=True, definitions:str|list|dict=None):
     """Compiles a Go binary.
 
     Args:
@@ -276,6 +276,10 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
                      Note that it may have negative consequences if the binary contains any cgo
                      (including net/http DNS lookup code potentially).
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
+      definitions (str | list | dict): If set to a string, defines importpath.name=value to the
+                     when calling the Go linker.  If set to a list, pass each value as a
+                     definition to the linker.  If set to a dict, each key/value pair is used to
+                     contruct the list of definitions passed to the linker.
     """
     lib = go_library(
         name=f'_{name}#lib',
@@ -287,7 +291,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         _link_private = True,
         _link_extra = False,
     )
-    cmds, tools = _go_binary_cmds(static=static)
+    cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
     return build_rule(
         name=name,
         srcs=[lib],
@@ -705,17 +709,31 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     return cmds
 
 
-def _go_binary_cmds(static=False, ldflags='', pkg_config=''):
+def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None):
     """Returns the commands to run for linking a Go binary."""
     _link_cmd = '$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s -L . -o ${OUT} ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
+    linkerdefs = []
+    if definitions is None:
+        pass
+    elif isinstance(definitions, str):
+        linkerdefs += [f'{definitions}']
+    elif isinstance(definitions, list):
+        linkerdefs += [f'{linkerdef}' for linkerdef in definitions]
+    elif isinstance(definitions, dict):
+        linkerdefs = [k if v is None else f'{k}={v}' for k, v in sorted(definitions.items())]
+
+    defs = ''
+    if len(linkerdefs) > 0:
+        defs += ' '.join([f'-X "{linkerdef}"' for linkerdef in linkerdefs])
+
     if static:
-        flags = f'-linkmode external -extldflags "-static {ldflags} {pkg_config}"'
+        flags = f'-linkmode external -extldflags {defs} "-static {ldflags} {pkg_config}"'
     elif ldflags or pkg_config:
-        flags = f'-extldflags "{ldflags} {pkg_config}"'
+        flags = f'-extldflags {defs} "{ldflags} {pkg_config}"'
     else:
-        flags = ''
+        flags = f'{defs}'
 
     return {
         'dbg': f'{prefix} && {_link_cmd} {flags} $SRCS',
