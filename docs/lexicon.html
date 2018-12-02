@@ -240,6 +240,61 @@
       </ul>
     </p>
 
+    <h3><a name="exec">exec</a></h3>
+
+    <p><pre class="rule"><code>exec(cmd, stdout=True, stderr=False)</code></pre></p>
+
+    <p>Executes a command and returns the output as a string if the command's
+      exit code returns <code>0</code>. If <code>stdout</code>
+      and <code>stderr</code> are both set to true, the output from both stdout
+      and stderr is interleaved.</p>
+
+    <p>For example:
+      <ul>
+        <li><code>exec(cmd = ["git", "symbolic-ref", "-q", "--short", "HEAD"])</code> -> <code>master</code></li>
+        <li><code>exec(cmd = "git rev-parse --short HEAD")</code> -> <code>26ea52b</code></li>
+        <li><code>exec(cmd = ["sh", "-c", "echo stdout1; echo 1>&2 stderr; echo stdout2"], stdout = False, stderr = True)</code> -> <code>stderr</code></li>
+        <li><code>exec(cmd = ["sh", "-c", "echo stdout1; echo 1>&2 stderr; echo stdout2"], stderr = True)</code> -> <code>stdout1\nstderr\nstdout2</code></li>
+      </ul>
+    </p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>cmd</td>
+	<td></td>
+	<td>str or list</td>
+	<td>Command to be executed.  Command does not invoke the system shell
+	  and does not expand any glob patterns or handle other expansions,
+	  pipelines, or redirections typically done by shells.</td>
+      </tr>
+
+      <tr>
+	<td>stdout</td>
+	<td>True</td>
+	<td>bool</td>
+	<td>Capture and return stdout.</td>
+      </tr>
+
+      <tr>
+	<td>stderr</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>Capture and return stderr.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
 
     <h2><a name="cc">C and C++ rules</a></h2>
 
