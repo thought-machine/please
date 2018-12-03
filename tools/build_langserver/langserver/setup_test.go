@@ -63,10 +63,10 @@ var handler = LsHandler{
 
 func storeFile(uri lsp.DocumentURI) error {
 
-	return storeFileWithCustomHandler(uri, handler)
+	return storeFileWithCustomHandler(uri, &handler)
 }
 
-func storeFileWithCustomHandler(uri lsp.DocumentURI, h LsHandler) error {
+func storeFileWithCustomHandler(uri lsp.DocumentURI, h *LsHandler) error {
 	filePath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return err
