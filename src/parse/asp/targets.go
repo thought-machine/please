@@ -439,7 +439,7 @@ func asDict(obj pyObject) (pyDict, bool) {
 func checkSubDir(s *scope, src string) {
 	if strings.Contains(src, "/") {
 		// Target is in a subdirectory, check nobody else owns that.
-		for dir := path.Dir(path.Join(s.pkg.Name, src)); dir != s.pkg.Name && dir != "."; dir = path.Dir(dir) {
+		for dir := path.Dir(path.Join(s.pkg.Name, src)); dir != s.pkg.Name && dir != "." && dir != "/"; dir = path.Dir(dir) {
 			s.Assert(!fs.IsPackage(s.state.Config.Parse.BuildFileName, dir), "Trying to use file %s, but that belongs to another package (%s)", src, dir)
 		}
 	}
