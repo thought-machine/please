@@ -35,7 +35,7 @@ func TestGetRenameEdits(t *testing.T) {
 	uri := lsp.DocumentURI("file://tools/build_langserver/langserver/test_data/reference/BUILD.test")
 	h.analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
 		"BUILD.test")
-	storeFileWithCustomHandler(uri, h)
+	storeFileWithCustomHandler(uri, &h)
 
 	edits, err := h.getRenameEdits(ctx, "blah", uri, lsp.Position{Line: 1, Character: 13})
 	assert.NoError(t, err)
