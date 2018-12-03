@@ -17,4 +17,8 @@ go_test(
         ":test",
         "//third_party/go:testify",
     ],
+    definitions = {
+        "test/go_rules/test.Var": "var",
+        "test/go_rules/test.Var2": "var1 var2",
+    },
 )
