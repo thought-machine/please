@@ -722,6 +722,8 @@ func (a *Analyzer) RevDepsFromBuildDef(def *BuildDef, uri lsp.DocumentURI) (core
 	return a.RevDepsFromCoreBuildLabel(label, uri)
 }
 
+// RevDepsFromCoreBuildLabel returns a slice of core.BuildLabel object represent the reverse dependency
+// of the core.BuildLabel object passed in
 func (a *Analyzer) RevDepsFromCoreBuildLabel(label core.BuildLabel, uri lsp.DocumentURI) (core.BuildLabels, error) {
 
 	//Ensure we do not get locked out
