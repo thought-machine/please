@@ -38,6 +38,7 @@ func (h *LsHandler) handleRename(ctx context.Context, req *jsonrpc2.Request) (re
 func (h *LsHandler) getRenameEdits(ctx context.Context, newName string,
 	uri lsp.DocumentURI, pos lsp.Position) (*lsp.WorkspaceEdit, error) {
 
+	// Get the document stored
 	doc, ok := h.workspace.documents[uri]
 	if !ok {
 		log.Info("document %s is not opened", uri)
