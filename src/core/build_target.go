@@ -157,6 +157,8 @@ type BuildTarget struct {
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string
+	// True if this target cannot use `plz run`
+	CannotRun bool `name:"cannot_run"`
 }
 
 // A PreBuildFunction is a type that allows hooking a pre-build callback.

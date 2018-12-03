@@ -21,12 +21,10 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	isTruthy := func(i int) bool {
 		return args[i] != nil && args[i] != None && (args[i] == &True || args[i].IsTruthy())
 	}
-
 	name := string(args[0].(pyString))
 	testCmd := args[2]
 	container := isTruthy(19)
 	test := isTruthy(14)
-
 	// A bunch of error checking first
 	s.NAssert(name == "all", "'all' is a reserved build target name.")
 	s.NAssert(name == "", "Target name is empty")
@@ -47,13 +45,14 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.Subrepo = s.pkg.Subrepo
 	target.IsBinary = isTruthy(13)
 	target.IsTest = test
+	target.CannotRun = isTruthy(37)
 	target.NeedsTransitiveDependencies = isTruthy(17)
 	target.OutputIsComplete = isTruthy(18)
 	target.Containerise = container
 	target.Sandbox = isTruthy(20)
 	target.TestOnly = test || isTruthy(15)
 	target.ShowProgress = isTruthy(36)
-	target.IsRemoteFile = isTruthy(37)
+	target.IsRemoteFile = isTruthy(38)
 	if timeout := args[24]; timeout != nil {
 		target.BuildTimeout = time.Duration(timeout.(pyInt)) * time.Second
 	}
@@ -125,7 +124,7 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 // populateTarget sets the assorted attributes on a build target.
 func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if t.IsRemoteFile {
-		for _, url := range args[37].(pyList) {
+		for _, url := range args[38].(pyList) {
 			t.AddSource(core.URLLabel(url.(pyString)))
 		}
 	} else {
