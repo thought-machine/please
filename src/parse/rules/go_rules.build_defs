@@ -729,9 +729,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None):
     elif isinstance(definitions, dict):
         linkerdefs = [k if v is None else f'{k}={v}' for k, v in sorted(definitions.items())]
 
-    defs = ''
-    if len(linkerdefs) > 0:
-        defs += ' '.join([f'-X "{linkerdef}"' for linkerdef in linkerdefs])
+    defs = ' '.join([f'-X "{linkerdef}"' for linkerdef in linkerdefs])
 
     if static:
         flags = f'-linkmode external -extldflags "-static {ldflags} {pkg_config}"'
