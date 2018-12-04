@@ -258,7 +258,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
 
 def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[],
               visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
-              filter_srcs:bool=True):
+              filter_srcs:bool=True, definitions:str|list|dict=None):
     """Compiles a Go binary.
 
     Args:
@@ -276,6 +276,10 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
                      Note that it may have negative consequences if the binary contains any cgo
                      (including net/http DNS lookup code potentially).
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
+      definitions (str | list | dict): If set to a string, defines importpath.name=value
+                     when calling the Go linker.  If set to a list, pass each value as a
+                     definition to the linker.  If set to a dict, each key/value pair is
+                     used to contruct the list of definitions passed to the linker.
     """
     lib = go_library(
         name=f'_{name}#lib',
@@ -287,7 +291,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         _link_private = True,
         _link_extra = False,
     )
-    cmds, tools = _go_binary_cmds(static=static)
+    cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
     return build_rule(
         name=name,
         srcs=[lib],
@@ -309,7 +313,8 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
 def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', visibility:list=None,
             flags:str='', container:bool|dict=False, sandbox:bool=None, cgo:bool=False,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
-            labels:list&features&tags=None, size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC):
+            labels:list&features&tags=None, size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
+            definitions:str|list|dict=None):
     """Defines a Go test rule.
 
     Args:
@@ -336,6 +341,10 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
                      has absolutely no external dependencies.
                      Note that it may have negative consequences if the binary contains any cgo
                      (including net/http DNS lookup code potentially).
+      definitions (str | list | dict): If set to a string, defines importpath.name=value
+                     when calling the Go linker.  If set to a list, pass each value as a
+                     definition to the linker.  If set to a dict, each key/value pair is
+                     used to contruct the list of definitions passed to the linker.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # Unfortunately we have to recompile this to build the test together with its library.
@@ -376,7 +385,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
             'go': [CONFIG.GO_TOOL],
             'test': [CONFIG.GO_TEST_TOOL],
         },
-        post_build=lambda name, output: _replace_test_package(name, output, static),
+        post_build=lambda name, output: _replace_test_package(name, output, static, definitions=definitions),
     )
     deps.append(lib_rule)
     lib_rule = go_library(
@@ -386,7 +395,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
     )
-    cmds, tools = _go_binary_cmds(static=static)
+    cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
 
     test_cmd = '$TEST %s 2>&1 | tee $RESULTS_FILE' % flags
     if worker:
@@ -658,7 +667,7 @@ def _go_github_repo_cmd(name, get, repo, revision):
     ], [remote_rule], [CONFIG.JARCAT_TOOL]
 
 
-def _replace_test_package(name, output, static):
+def _replace_test_package(name, output, static, definitions):
     """Post-build function, called after we template the main function.
 
     The purpose is to replace the real library with the specific one we've
@@ -674,7 +683,7 @@ def _replace_test_package(name, output, static):
             pkg_name = line[9:]
             name_changed = pkg_name != new_name
             if name_changed or ldflags or pkg_config:  # Might not be necessary if names match already.
-                binary_cmds, _ = _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config)
+                binary_cmds, _ = _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config, definitions)
                 if name_changed:
                     for k, v in binary_cmds.items():
                         set_command(new_name, k, f'mv -f $PKG_DIR/{new_name}.a $PKG_DIR/{pkg_name}.a && {v}')
@@ -705,17 +714,32 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     return cmds
 
 
-def _go_binary_cmds(static=False, ldflags='', pkg_config=''):
+def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None):
     """Returns the commands to run for linking a Go binary."""
     _link_cmd = '$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s -L . -o ${OUT} ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
+
+    linkerdefs = []
+    if definitions is None:
+        pass
+    elif isinstance(definitions, str):
+        linkerdefs += [f'{definitions}']
+    elif isinstance(definitions, list):
+        linkerdefs += [f'{linkerdef}' for linkerdef in definitions]
+    elif isinstance(definitions, dict):
+        linkerdefs = [k if v is None else f'{k}={v}' for k, v in sorted(definitions.items())]
+
+    defs = ' '.join([f'-X "{linkerdef}"' for linkerdef in linkerdefs])
 
     if static:
         flags = f'-linkmode external -extldflags "-static {ldflags} {pkg_config}"'
     elif ldflags or pkg_config:
         flags = f'-extldflags "{ldflags} {pkg_config}"'
     else:
-        flags = ''
+        flags = f''
+
+    if len(defs) > 0:
+        flags += defs
 
     return {
         'dbg': f'{prefix} && {_link_cmd} {flags} $SRCS',

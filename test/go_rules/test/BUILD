@@ -12,6 +12,10 @@ go_library(
 go_test(
     name = "external_test",
     srcs = ["external_test.go"],
+    definitions = {
+        "test/go_rules/test.Var": "var",
+        "test/go_rules/test.Var2": "var1 var2",
+    },
     external = True,
     deps = [
         ":test",
