@@ -245,9 +245,11 @@
     <p><pre class="rule"><code>exec(cmd, stdout=True, stderr=False)</code></pre></p>
 
     <p>Executes a command and returns the output as a string if the command's
-      exit code returns <code>0</code>. If <code>stdout</code>
+      exit code returns <code>0</code>.  If <code>stdout</code>
       and <code>stderr</code> are both set to true, the output from both stdout
-      and stderr is interleaved.</p>
+      and stderr is interleaved.  The string form of <code>cmd</code> strips
+      whitespace from the individual arguments before calling the function.  The
+      list form of <code>cmd</code> leaves the input arguments untouched.</p>
 
     <p>For example:
       <ul>
@@ -275,7 +277,10 @@
 	<td>str or list</td>
 	<td>Command to be executed.  Command does not invoke the system shell
 	  and does not expand any glob patterns or handle other expansions,
-	  pipelines, or redirections typically done by shells.</td>
+	  pipelines, or redirections typically done by shells. NOTE: The command
+	  must be idempotent (i.e. deterministic and side-effect free) otherwise
+	  all promises with regards to reproducibility of the build state are
+	  invalid and the repository must be rebuilt.</td>
       </tr>
 
       <tr>
@@ -290,6 +295,15 @@
 	<td>False</td>
 	<td>bool</td>
 	<td>Capture and return stderr.</td>
+      </tr>
+
+      <tr>
+	<td>cache</td>
+	<td>True</td>
+	<td>bool</td>
+	<td>Cache the output.  By default the output from commands is cached
+	  based on its input.  Commands are assumed to be idempotent and
+	  side-effect free.</td>
       </tr>
 
       </tbody>
