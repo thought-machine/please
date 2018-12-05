@@ -172,6 +172,7 @@ func doExec(s *scope, args []pyObject) pyObject {
 	wantStdout := args[1].IsTruthy()
 	wantStderr := args[2].IsTruthy()
 	cacheOutput := args[3].IsTruthy()
+	keyExtra := args[4].String()
 
 	if !wantStdout && !wantStderr {
 		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false")
@@ -189,7 +190,7 @@ func doExec(s *scope, args []pyObject) pyObject {
 	}
 
 	// The cache key is tightly coupled to the operating parameters
-	key := execMakeKey(s, cmdArgs, wantStdout, wantStderr)
+	key := execMakeKey(keyExtra, cmdArgs, wantStdout, wantStderr)
 
 	// Only get cached output if this call is intended to be cached.
 	var completedPromise bool
@@ -235,7 +236,7 @@ func doExec(s *scope, args []pyObject) pyObject {
 	}
 
 	if cacheOutput {
-		execSetCachedOutput(key, cmdArgs, outStr)
+		execSetCachedOutput(keyExtra, key, cmdArgs, outStr)
 		completedPromise = true
 	}
 

@@ -97,10 +97,11 @@ func execGetCachedOutput(key execKey, args []string) (output string, found bool)
 }
 
 // execMakeKey returns an execKey
-func execMakeKey(s *scope, args []string, wantStdout bool, wantStderr bool) execKey {
+func execMakeKey(keyExtra string, args []string, wantStdout bool, wantStderr bool) execKey {
 	// TODO: Use scope to construct a better cache key when looking up cached
 	// outputs.
-	keyArgs := make([]string, 0, len(args)+2)
+	keyArgs := make([]string, 0, len(args)+3)
+	keyArgs = append(keyArgs, keyExtra)
 	keyArgs = append(keyArgs, args...)
 	keyArgs = append(keyArgs, strconv.FormatBool(wantStdout))
 	keyArgs = append(keyArgs, strconv.FormatBool(wantStderr))
@@ -109,7 +110,7 @@ func execMakeKey(s *scope, args []string, wantStdout bool, wantStderr bool) exec
 }
 
 // execSetCachedOutput sets a value to be cached
-func execSetCachedOutput(key execKey, args []string, output string) {
+func execSetCachedOutput(keyExtra string, key execKey, args []string, output string) {
 	execCacheLock.Lock()
 	execCachedOuts[key] = output
 	execCacheLock.Unlock()
