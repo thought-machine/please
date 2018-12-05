@@ -4,6 +4,7 @@ import (
 	"context"
 	"core"
 	"encoding/json"
+	"fmt"
 	"parse/asp"
 	"tools/build_langserver/lsp"
 
@@ -27,10 +28,10 @@ func (h *LsHandler) handleRename(ctx context.Context, req *jsonrpc2.Request) (re
 		return nil, err
 	}
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	edits, err := h.getRenameEdits(ctx, params.NewName, documentURI, params.Position)
+	if err != nil {
+		log.Warning("error occurred trying to get the rename edits from %s", documentURI)
+	}
 
 	return edits, nil
 }
@@ -38,37 +39,24 @@ func (h *LsHandler) handleRename(ctx context.Context, req *jsonrpc2.Request) (re
 func (h *LsHandler) getRenameEdits(ctx context.Context, newName string,
 	uri lsp.DocumentURI, pos lsp.Position) (*lsp.WorkspaceEdit, error) {
 
+	renamingLabel, err := h.GetRenamingLabel(ctx, uri, pos)
+	if err != nil {
+		return nil, err
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	doc, ok := h.workspace.documents[uri]
 	if !ok {
 		log.Info("document %s is not opened", uri)
 		return nil, nil
 	}
-
-	def, err := h.analyzer.BuildDefsFromPos(ctx, uri, pos)
-	if def == nil || err != nil || !isPosAtNameArg(def, pos) {
-		return nil, err
-	}
-
-	coreLabel, err := getCoreBuildLabel(def, uri)
-	if err != nil {
-		return nil, err
-	}
-	renamingLabel, err := h.analyzer.BuildLabelFromCoreBuildLabel(ctx, coreLabel)
-	if err != nil {
-		return nil, err
-	}
-
-	revDeps, err := h.analyzer.RevDepsFromCoreBuildLabel(coreLabel, uri)
-	if err != nil {
-		log.Info("error occurred computing the reverse dependency of %")
-		return nil, err
-	}
-
 	workSpaceEdit := &lsp.WorkspaceEdit{
 		Changes: make(map[lsp.DocumentURI][]lsp.TextEdit),
 	}
 	// Fill in workSpaceEdit.Changes first
-	for _, label := range revDeps {
+	for _, label := range renamingLabel.RevDeps {
 		buildLabel, err := h.analyzer.BuildLabelFromCoreBuildLabel(ctx, label)
 		if err != nil {
 			// In the case of error, we still return the current available locs
@@ -97,6 +85,38 @@ func (h *LsHandler) getRenameEdits(ctx context.Context, newName string,
 	}
 
 	return workSpaceEdit, nil
+}
+
+func (h *LsHandler) GetRenamingLabel(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (*BuildLabel, error) {
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	def, err := h.analyzer.BuildDefsFromPos(ctx, uri, pos)
+	if def == nil || err != nil || !isPosAtNameArg(def, pos) {
+		return nil, err
+	}
+
+	coreLabel, err := getCoreBuildLabel(def, uri)
+	if err != nil {
+		return nil, err
+	}
+	renamingLabel, err := h.analyzer.BuildLabelFromCoreBuildLabel(ctx, coreLabel)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(renamingLabel.RevDeps)
+
+	revDeps, err := h.analyzer.RevDepsFromCoreBuildLabel(coreLabel, uri)
+	if err != nil {
+		log.Info("error occurred computing the reverse dependency of %s: %s", coreLabel.String(), err)
+		return nil, err
+	}
+
+	renamingLabel.RevDeps = revDeps
+
+	return renamingLabel, nil
 }
 
 func getEditsFromLabel(depLabel *BuildLabel, renaminglabel *BuildLabel, newName string) (edits []lsp.TextEdit) {

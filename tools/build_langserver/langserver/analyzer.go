@@ -105,6 +105,8 @@ type BuildLabel struct {
 	BuildDef *BuildDef
 	// The definition of the buildlabel, e.g: BUILD Label: //src/core
 	Definition string
+	// Reverse Dependency of this build label
+	RevDeps core.BuildLabels
 }
 
 func newAnalyzer() (*Analyzer, error) {
@@ -934,12 +936,5 @@ func getCoreBuildLabel(def *BuildDef, uri lsp.DocumentURI) (buildLabel core.Buil
 		return core.BuildLabel{}, err
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			log.Warning("error occurred parsing build label")
-			err = r.(error)
-		}
-	}()
-
-	return core.NewBuildLabel(rel, def.BuildDefName), err
+	return core.TryNewBuildLabel(rel, def.BuildDefName)
 }
