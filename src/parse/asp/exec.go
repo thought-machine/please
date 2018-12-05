@@ -1,6 +1,7 @@
 package asp
 
 import (
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -35,9 +36,7 @@ func init() {
 }
 
 // execCancelPromise cancels any pending promises
-func execCancelPromise(s *scope, args []string) {
-	key := execMakeKey(s, args)
-
+func execCancelPromise(key execKey, args []string) {
 	execPromisesLock.Lock()
 	defer execPromisesLock.Unlock()
 	if promise, found := execPromises[key]; found {
@@ -51,9 +50,7 @@ func execCancelPromise(s *scope, args []string) {
 
 // execGetCachedOutput returns the output if found, sets found to true if found,
 // and returns a held promise that must be either cancelled or completed.
-func execGetCachedOutput(s *scope, args []string) (output string, found bool) {
-	key := execMakeKey(s, args)
-
+func execGetCachedOutput(key execKey, args []string) (output string, found bool) {
 	execCacheLock.RLock()
 	out, found := execCachedOuts[key]
 	execCacheLock.RUnlock()
@@ -100,17 +97,19 @@ func execGetCachedOutput(s *scope, args []string) (output string, found bool) {
 }
 
 // execMakeKey returns an execKey
-func execMakeKey(s *scope, args []string) execKey {
+func execMakeKey(s *scope, args []string, wantStdout bool, wantStderr bool) execKey {
 	// TODO: Use scope to construct a better cache key when looking up cached
 	// outputs.
+	keyArgs := make([]string, 0, len(args)+2)
+	keyArgs = append(keyArgs, args...)
+	keyArgs = append(keyArgs, strconv.FormatBool(wantStdout))
+	keyArgs = append(keyArgs, strconv.FormatBool(wantStderr))
 
-	return execKey(strings.Join(args, ""))
+	return execKey(strings.Join(keyArgs, ""))
 }
 
 // execSetCachedOutput sets a value to be cached
-func execSetCachedOutput(s *scope, args []string, output string) {
-	key := execMakeKey(s, args)
-
+func execSetCachedOutput(key execKey, args []string, output string) {
 	execCacheLock.Lock()
 	execCachedOuts[key] = output
 	execCacheLock.Unlock()

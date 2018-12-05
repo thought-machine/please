@@ -188,16 +188,19 @@ func doExec(s *scope, args []pyObject) pyObject {
 		}
 	}
 
+	// The cache key is tightly coupled to the operating parameters
+	key := execMakeKey(s, cmdArgs, wantStdout, wantStderr)
+
 	// Only get cached output if this call is intended to be cached.
 	var completedPromise bool
 	if cacheOutput {
-		out, found := execGetCachedOutput(s, cmdArgs)
+		out, found := execGetCachedOutput(key, cmdArgs)
 		if found {
 			return pyString(out)
 		}
 		defer func() {
 			if !completedPromise {
-				execCancelPromise(s, cmdArgs)
+				execCancelPromise(key, cmdArgs)
 			}
 		}()
 	}
@@ -232,7 +235,7 @@ func doExec(s *scope, args []pyObject) pyObject {
 	}
 
 	if cacheOutput {
-		execSetCachedOutput(s, cmdArgs, outStr)
+		execSetCachedOutput(key, cmdArgs, outStr)
 		completedPromise = true
 	}
 
