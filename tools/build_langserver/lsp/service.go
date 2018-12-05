@@ -199,7 +199,7 @@ type ReferenceContext struct {
 	IncludeDeclaration bool `json:"includeDeclaration"`
 }
 
-// ReferenceParams is the params sent from the client for textDocument/rename request
+// RenameParams is the params sent from the client for textDocument/rename request
 type RenameParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 	Position     Position               `json:"position"`

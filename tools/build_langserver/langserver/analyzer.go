@@ -714,7 +714,8 @@ func (a *Analyzer) getBuildDefByName(ctx context.Context, name string, path stri
 	return nil, fmt.Errorf("cannot find BuildDef for the name '%s' in '%s'", name, path)
 }
 
-// RevDepsFromBuildDef returns a core.B
+// RevDepsFromBuildDef returns a a slice of core.BuildLabel object represent the reverse dependency
+// of the BuildDef object passed in
 func (a *Analyzer) RevDepsFromBuildDef(def *BuildDef, uri lsp.DocumentURI) (core.BuildLabels, error) {
 	label, err := getCoreBuildLabel(def, uri)
 	if err != nil {
@@ -724,6 +725,8 @@ func (a *Analyzer) RevDepsFromBuildDef(def *BuildDef, uri lsp.DocumentURI) (core
 	return a.RevDepsFromCoreBuildLabel(label, uri)
 }
 
+// RevDepsFromCoreBuildLabel returns a slice of core.BuildLabel object represent the reverse dependency
+// of the core.BuildLabel object passed in
 func (a *Analyzer) RevDepsFromCoreBuildLabel(label core.BuildLabel, uri lsp.DocumentURI) (core.BuildLabels, error) {
 
 	//Ensure we do not get locked out
