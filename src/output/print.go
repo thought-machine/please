@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"cli"
+	"github.com/thought-machine/please/src/cli"
 )
 
 // printf is used throughout this package to print something to stderr with some niceties

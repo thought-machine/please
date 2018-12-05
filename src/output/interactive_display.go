@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"cli"
-	"core"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 )
 
 // We only set the terminal title for terminals that at least claim to be xterm

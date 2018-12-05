@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/shlex"
 
-	"build"
-	"core"
+	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/core"
 )
 
 // MustCheckout checks out the given revision.

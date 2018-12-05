@@ -19,8 +19,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
-	"fs"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 var cache core.Cache

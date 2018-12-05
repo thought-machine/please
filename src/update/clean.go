@@ -12,8 +12,8 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/coreos/go-semver/semver"
 
-	"cli"
-	"core"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 )
 
 // clean checks for any stale versions in the download directory and wipes them out if OK.

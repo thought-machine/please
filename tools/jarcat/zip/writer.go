@@ -16,7 +16,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"fs"
+	"github.com/thought-machine/please/src/fs"
 	"third_party/go/zip"
 )
 

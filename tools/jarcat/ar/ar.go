@@ -13,7 +13,7 @@ import (
 	"github.com/peterebden/ar"
 	"gopkg.in/op/go-logging.v1"
 
-	"fs"
+	"github.com/thought-machine/please/src/fs"
 )
 
 var log = logging.MustGetLogger("ar")

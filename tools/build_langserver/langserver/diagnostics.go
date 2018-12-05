@@ -2,11 +2,11 @@ package langserver
 
 import (
 	"context"
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"fmt"
 
-	"parse/asp"
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/src/tools/build_langserver/lsp"
 
 	"github.com/Workiva/go-datastructures/queue"
 	"github.com/sourcegraph/jsonrpc2"

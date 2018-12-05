@@ -6,8 +6,8 @@ import (
 	"path"
 	"strings"
 
-	"core"
-	"utils"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/utils"
 )
 
 // CompletionLabels produces a set of labels that complete a given input.

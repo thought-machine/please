@@ -2,7 +2,7 @@ package query
 
 import "fmt"
 
-import "core"
+import "github.com/thought-machine/please/src/core"
 
 // SomePath finds and returns a path between two targets.
 // Useful for a "why on earth do I depend on this thing" type query.

@@ -1,17 +1,17 @@
 package plz
 
 import (
-	"build"
-	"cli"
-	"core"
-	"follow"
-	"fs"
-	"metrics"
-	"output"
-	"parse"
+	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/follow"
+	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
+	"github.com/thought-machine/please/src/output"
+	"github.com/thought-machine/please/src/parse"
 	"sync"
-	"test"
-	"utils"
+	"github.com/thought-machine/please/src/test"
+	"github.com/thought-machine/please/src/utils"
 )
 
 // InitOpts represents initialization options for please. These are usually being passed as cli args

@@ -10,7 +10,7 @@ import (
 	"path"
 	"time"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"io"
 )
 

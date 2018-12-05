@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 func looksLikeIstanbulCoverageResults(results []byte) bool {

@@ -7,7 +7,7 @@ import (
 	"src/core"
 	"testing"
 
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/src/tools/build_langserver/lsp"
 )
 
 func TestGetDefinitionLocationOnBuildDefs(t *testing.T) {

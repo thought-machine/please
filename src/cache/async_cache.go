@@ -3,7 +3,7 @@ package cache
 import (
 	"sync"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 // An asyncCache is a wrapper around a Cache interface that handles incoming

@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	pb "cache/proto/rpc_cache"
+	pb "github.com/thought-machine/please/src/cache/proto/rpc_cache"
 )
 
 const (

@@ -30,8 +30,8 @@ import (
 	"github.com/ulikunitz/xz"
 	"gopkg.in/op/go-logging.v1"
 
-	"cli"
-	"core"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 )
 
 var log = logging.MustGetLogger("update")

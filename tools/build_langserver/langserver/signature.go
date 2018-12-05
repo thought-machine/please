@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/src/tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
 )

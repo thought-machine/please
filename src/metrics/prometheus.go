@@ -18,7 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/push"
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 var log = logging.MustGetLogger("metrics")

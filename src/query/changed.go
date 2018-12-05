@@ -1,8 +1,8 @@
 package query
 
 import (
-	"core"
-	"scm"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/scm"
 )
 
 // ChangedRequest is a simple parameter object

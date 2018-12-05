@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"cli"
-	"core"
-	"fs"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 const (

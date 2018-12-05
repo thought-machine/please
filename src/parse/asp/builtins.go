@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"core"
-	"fs"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // A few sneaky globals for when we don't have a scope handy

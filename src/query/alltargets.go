@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 // AllTargets simply prints all the targets according to some expression.

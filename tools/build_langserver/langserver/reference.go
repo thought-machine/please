@@ -3,9 +3,10 @@ package langserver
 import (
 	"context"
 	"encoding/json"
-	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
+
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 const referenceMethod = "textDocument/references"

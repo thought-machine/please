@@ -13,8 +13,8 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"cli"
-	"utils"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/utils"
 )
 
 var log = logging.MustGetLogger("help")

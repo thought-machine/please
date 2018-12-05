@@ -22,8 +22,8 @@ import (
 	"docker.io/go-docker/api/types/container"
 	"docker.io/go-docker/api/types/mount"
 
-	"build"
-	"core"
+	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/core"
 )
 
 var dockerClient *docker.Client

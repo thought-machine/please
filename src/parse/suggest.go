@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"core"
-	"utils"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/utils"
 )
 
 // Max levenshtein distance that we'll suggest at.

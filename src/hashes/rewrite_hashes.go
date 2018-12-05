@@ -12,9 +12,9 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"build"
-	"core"
-	"parse/asp"
+	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse/asp"
 )
 
 var log = logging.MustGetLogger("hashes")

@@ -2,12 +2,12 @@ package langserver
 
 import (
 	"context"
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/src/tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"

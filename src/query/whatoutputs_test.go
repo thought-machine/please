@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 func makeTarget(g *core.BuildGraph, packageName string, labelName string, outputs []string) *core.BuildTarget {

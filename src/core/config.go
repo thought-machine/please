@@ -21,7 +21,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/gcfg.v1"
 
-	"cli"
+	"github.com/thought-machine/please/src/cli"
 )
 
 // OsArch is the os/arch pair, like linux_amd64 etc.

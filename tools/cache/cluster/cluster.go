@@ -29,8 +29,8 @@ import (
 	"google.golang.org/grpc"
 	"gopkg.in/op/go-logging.v1"
 
-	pb "cache/proto/rpc_cache"
-	"cache/tools"
+	pb "github.com/thought-machine/please/src/cache/proto/rpc_cache"
+	"github.com/thought-machine/please/src/cache/tools"
 )
 
 var log = logging.MustGetLogger("cluster")

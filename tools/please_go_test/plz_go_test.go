@@ -9,8 +9,8 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"cli"
-	"tools/please_go_test/gotest"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/tools/please_go_test/gotest"
 )
 
 var log = logging.MustGetLogger("plz_go_test")

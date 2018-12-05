@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"cli"
-	"core"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 )
 
 // Parses test coverage for a single target from its output file.

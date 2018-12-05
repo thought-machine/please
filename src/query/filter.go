@@ -3,7 +3,7 @@ package query
 import (
 	"fmt"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 // Filter takes the list of BuildLabels and checks which ones match the label selectors passed in.

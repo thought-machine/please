@@ -18,10 +18,10 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"build"
-	"cli"
-	"core"
-	"test"
+	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/test"
 )
 
 var log = logging.MustGetLogger("output")

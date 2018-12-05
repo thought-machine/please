@@ -1,7 +1,7 @@
 package query
 
 import "fmt"
-import "core"
+import "github.com/thought-machine/please/src/core"
 
 // TargetInputs prints all inputs for a single target.
 func TargetInputs(graph *core.BuildGraph, labels []core.BuildLabel) {

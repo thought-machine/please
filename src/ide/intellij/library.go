@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"io"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 type libraryComponent struct {

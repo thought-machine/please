@@ -1,11 +1,11 @@
 package main
 
 import (
-	"cli"
+	"github.com/thought-machine/please/src/cli"
 	"context"
 	"net"
 	"os"
-	"tools/build_langserver/langserver"
+	"github.com/thought-machine/please/src/tools/build_langserver/langserver"
 
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"

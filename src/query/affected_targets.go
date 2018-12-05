@@ -1,6 +1,6 @@
 package query
 
-import "core"
+import "github.com/thought-machine/please/src/core"
 import "fmt"
 
 // AffectedTargets walks over the build graph and identifies all targets that have a transitive

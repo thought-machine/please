@@ -7,7 +7,7 @@ import "encoding/json"
 import "fmt"
 import "os"
 
-import "core"
+import "github.com/thought-machine/please/src/core"
 
 var traces = make([]traceEntry, 0, 1000)
 

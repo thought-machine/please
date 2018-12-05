@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/src/tools/build_langserver/lsp"
 
 	"github.com/bazelbuild/buildtools/build"
 	"github.com/sourcegraph/jsonrpc2"

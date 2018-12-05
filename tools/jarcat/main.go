@@ -14,11 +14,11 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"cli"
-	"tools/jarcat/ar"
-	"tools/jarcat/tar"
-	"tools/jarcat/unzip"
-	"tools/jarcat/zip"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/tools/jarcat/ar"
+	"github.com/thought-machine/please/src/tools/jarcat/tar"
+	"github.com/thought-machine/please/src/tools/jarcat/unzip"
+	"github.com/thought-machine/please/src/tools/jarcat/zip"
 )
 
 var javaExcludePrefixes = []string{

@@ -15,8 +15,8 @@ import (
 	"google.golang.org/grpc/peer"
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
-	pb "follow/proto/build_event"
+	"github.com/thought-machine/please/src/core"
+	pb "github.com/thought-machine/please/src/follow/proto/build_event"
 )
 
 var log = logging.MustGetLogger("remote")
