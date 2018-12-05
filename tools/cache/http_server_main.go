@@ -8,7 +8,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/src/tools/cache/server"
+	"github.com/thought-machine/please/tools/cache/server"
 )
 
 var log = logging.MustGetLogger("http_cache_server")

@@ -8,7 +8,7 @@ import (
 	"github.com/thought-machine/please/src/query"
 	"strings"
 
-	"github.com/thought-machine/please/src/tools/build_langserver/lsp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
 )

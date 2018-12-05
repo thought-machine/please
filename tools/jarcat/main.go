@@ -15,10 +15,10 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/src/tools/jarcat/ar"
-	"github.com/thought-machine/please/src/tools/jarcat/tar"
-	"github.com/thought-machine/please/src/tools/jarcat/unzip"
-	"github.com/thought-machine/please/src/tools/jarcat/zip"
+	"github.com/thought-machine/please/tools/jarcat/ar"
+	"github.com/thought-machine/please/tools/jarcat/tar"
+	"github.com/thought-machine/please/tools/jarcat/unzip"
+	"github.com/thought-machine/please/tools/jarcat/zip"
 )
 
 var javaExcludePrefixes = []string{

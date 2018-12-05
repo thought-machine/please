@@ -6,7 +6,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"io/ioutil"
-	"github.com/thought-machine/please/src/tools/build_langserver/lsp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 // TODO(bnm): cleanup setup

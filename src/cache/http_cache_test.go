@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/tools/cache/server"
+	"github.com/thought-machine/please/tools/cache/server"
 )
 
 var (

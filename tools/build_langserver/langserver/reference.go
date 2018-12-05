@@ -3,6 +3,7 @@ package langserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/sourcegraph/jsonrpc2"
 

@@ -10,7 +10,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/thought-machine/please/src/tools/jarcat/zip"
+	"github.com/thought-machine/please/tools/jarcat/zip"
 )
 
 // A Writer implements writing a .pex file in various steps.

@@ -18,7 +18,7 @@ import (
 	"github.com/thought-machine/please/src/parse/rules"
 	"src/fs"
 
-	"github.com/thought-machine/please/src/tools/build_langserver/lsp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 // Analyzer is a wrapper around asp.parser

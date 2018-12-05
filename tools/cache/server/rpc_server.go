@@ -28,7 +28,7 @@ import (
 
 	pb "github.com/thought-machine/please/src/cache/proto/rpc_cache"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/tools/cache/cluster"
+	"github.com/thought-machine/please/tools/cache/cluster"
 )
 
 // maxMsgSize is the maximum message size our gRPC server accepts.

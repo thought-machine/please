@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/src/tools/please_maven/maven"
+	"github.com/thought-machine/please/tools/please_maven/maven"
 )
 
 var opts = struct {

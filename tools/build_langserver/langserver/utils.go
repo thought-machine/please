@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/thought-machine/please/src/parse/asp"
-	"github.com/thought-machine/please/src/tools/build_langserver/lsp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 var quoteExp = regexp.MustCompile(`(^("|')([^"]|"")*("|'))`)
