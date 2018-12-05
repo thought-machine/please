@@ -163,20 +163,10 @@ func buildRule(s *scope, args []pyObject) pyObject {
 // accepts either a string or a list of commands and arguments.  The output from
 // exec() is memoized by default to prevent side effects and aid in performance
 // of duplicate calls to the same command with the same arguments (e.g. `git
-// rev-parse --short HEAD`).
+// rev-parse --short HEAD`).  The output from exec()'ed commands must be
+// reproducible.
 //
-// Memoization of command args is not straightforward without performing
-// duplicate work.  doExec() takes the following strategy:
-//
-// 1. Lookup the value.
-//    a. If the value is found, return the value.
-//    b. If the value is not found, return a promise that the caller must
-//       complete or cancel.  All other readers for this key will block until
-//       this promise is satisfied.
-// 2. Perform the command as instructed by the caller.
-// 3. Set the value in the cache.
-// 4. Mark the promise as completed.
-// 5. All blocking reads on the promise are woken up and returned the value.
+// NOTE: Commands that rely on the current working directory must not be cached.
 func doExec(s *scope, args []pyObject) pyObject {
 	cmdIn := args[0]
 	wantStdout := args[1].IsTruthy()
@@ -199,17 +189,17 @@ func doExec(s *scope, args []pyObject) pyObject {
 	}
 
 	// Only get cached output if this call is intended to be cached.
-	var promise execPromisePending
+	var completedPromise bool
 	if cacheOutput {
-		var out string
-		var found bool
-		out, found, promise = getCachedExecOutput(cmdArgs)
+		out, found := execGetCachedOutput(s, cmdArgs)
 		if found {
 			return pyString(out)
-		} else {
-			// NOTE: Cancelling a promise that has been committed is a nop
-			defer promise.cancel()
 		}
+		defer func() {
+			if !completedPromise {
+				execCancelPromise(s, cmdArgs)
+			}
+		}()
 	}
 
 	ctx, cancel := context.WithTimeout(context.TODO(), core.TargetTimeoutOrDefault(nil, s.state))
@@ -218,10 +208,9 @@ func doExec(s *scope, args []pyObject) pyObject {
 	var out []byte
 	var err error
 	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
-	switch {
-	case wantStdout && wantStderr:
+	if wantStdout && wantStderr {
 		out, err = cmd.CombinedOutput()
-	default:
+	} else {
 		buf := &bytes.Buffer{}
 		switch {
 		case wantStdout:
@@ -233,18 +222,21 @@ func doExec(s *scope, args []pyObject) pyObject {
 		}
 
 		err = cmd.Run()
-		out = bytes.TrimSpace(buf.Bytes())
+		out = buf.Bytes()
 	}
+	out = bytes.TrimSpace(out)
+	outStr := string(out)
 
 	if err != nil {
 		return s.Error("exec() unable to run command %q: %v", cmdArgs, err)
 	}
 
 	if cacheOutput {
-		promise.complete(out)
+		execSetCachedOutput(s, cmdArgs, outStr)
+		completedPromise = true
 	}
 
-	return pyString(out)
+	return pyString(outStr)
 }
 
 // filegroup implements the filegroup() builtin.
