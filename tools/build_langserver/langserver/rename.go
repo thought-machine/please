@@ -4,7 +4,6 @@ import (
 	"context"
 	"core"
 	"encoding/json"
-	"fmt"
 	"parse/asp"
 	"tools/build_langserver/lsp"
 
@@ -39,7 +38,7 @@ func (h *LsHandler) handleRename(ctx context.Context, req *jsonrpc2.Request) (re
 func (h *LsHandler) getRenameEdits(ctx context.Context, newName string,
 	uri lsp.DocumentURI, pos lsp.Position) (*lsp.WorkspaceEdit, error) {
 
-	renamingLabel, err := h.GetRenamingLabel(ctx, uri, pos)
+	renamingLabel, err := h.getRenamingLabel(ctx, uri, pos)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +86,8 @@ func (h *LsHandler) getRenameEdits(ctx context.Context, newName string,
 	return workSpaceEdit, nil
 }
 
-func (h *LsHandler) GetRenamingLabel(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (*BuildLabel, error) {
+// getRenamingLabel returns a BuildLabel object with RevDeps being defined
+func (h *LsHandler) getRenamingLabel(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (*BuildLabel, error) {
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -105,8 +105,6 @@ func (h *LsHandler) GetRenamingLabel(ctx context.Context, uri lsp.DocumentURI, p
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(renamingLabel.RevDeps)
 
 	revDeps, err := h.analyzer.RevDepsFromCoreBuildLabel(coreLabel, uri)
 	if err != nil {
