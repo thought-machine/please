@@ -96,10 +96,11 @@ func execGetCachedOutput(key execKey, args []string) (output string, found bool)
 	}
 }
 
-// execMakeKey returns an execKey
+// execMakeKey returns an execKey.  keyExtra is a user-supplied value that is
+// mixed into the key in order to allow for the same `cmd` to be used in
+// different contexts with the expectation that the output will be reproducible,
+// but predictably change.
 func execMakeKey(keyExtra string, args []string, wantStdout bool, wantStderr bool) execKey {
-	// TODO: Use scope to construct a better cache key when looking up cached
-	// outputs.
 	keyArgs := make([]string, 0, len(args)+3)
 	keyArgs = append(keyArgs, keyExtra)
 	keyArgs = append(keyArgs, args...)
