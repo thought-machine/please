@@ -648,3 +648,9 @@ go_get(
     get = "github.com/pmezard/go-difflib/difflib",
     revision = "792786c7400a136282c1664665ae0a8db921c6c2",
 )
+
+go_get(
+    name="structs",
+    get="github.com/fatih/structs",
+    revision = "v1.1.0",
+)

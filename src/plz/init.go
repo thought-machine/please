@@ -6,6 +6,7 @@ import (
 	"core"
 	"follow"
 	"fs"
+	"gopkg.in/op/go-logging.v1"
 	"metrics"
 	"output"
 	"parse"
@@ -14,8 +15,13 @@ import (
 	"utils"
 )
 
+var log = logging.MustGetLogger("plz")
+
 // InitOpts represents initialization options for please. These are usually being passed as cli args
 type InitOpts struct {
+	Targets          []core.BuildLabel
+	State            *core.BuildState
+	Config           *core.Configuration
 	ParsePackageOnly bool
 	VisibilityParse  bool
 	DetailedTests    bool
@@ -24,6 +30,8 @@ type InitOpts struct {
 	KeepGoing    bool
 	PrettyOutput bool
 	ShouldRun    bool
+	ShouldTest   bool
+	ShouldBuild  bool
 	// Show status of each target in output after build
 	ShowStatus bool
 
@@ -33,27 +41,33 @@ type InitOpts struct {
 }
 
 // Init initialized the build for please
-func Init(targets []core.BuildLabel, state *core.BuildState, config *core.Configuration, initOpts InitOpts) (bool, *core.BuildState) {
-	parse.InitParser(state)
-	build.Init(state)
+func Init(initOpts InitOpts) (bool, *core.BuildState) {
+	parse.InitParser(initOpts.State)
+	build.Init(initOpts.State)
 
-	if config.Events.Port != 0 && state.NeedBuild {
-		shutdown := follow.InitialiseServer(state, config.Events.Port)
+	// Acquire the lock before we start building
+	if (initOpts.State.NeedBuild || initOpts.State.NeedTests) && !initOpts.NoLock {
+		core.AcquireRepoLock()
+		defer core.ReleaseRepoLock()
+	}
+
+	if initOpts.Config.Events.Port != 0 && initOpts.State.NeedBuild {
+		shutdown := follow.InitialiseServer(initOpts.State, initOpts.Config.Events.Port)
 		defer shutdown()
 	}
-	if config.Events.Port != 0 || config.Display.SystemStats {
-		go follow.UpdateResources(state)
+	if initOpts.Config.Events.Port != 0 || initOpts.Config.Display.SystemStats {
+		go follow.UpdateResources(initOpts.State)
 	}
-	metrics.InitFromConfig(config)
+	metrics.InitFromConfig(initOpts.Config)
 
 	// Start looking for the initial targets to kick the build off
-	go initOpts.findOriginalTasks(state, targets)
+	go initOpts.findOriginalTasks(initOpts.State, initOpts.Targets)
 	// Start up all the build workers
 	var wg sync.WaitGroup
-	wg.Add(config.Please.NumThreads)
-	for i := 0; i < config.Please.NumThreads; i++ {
+	wg.Add(initOpts.Config.Please.NumThreads)
+	for i := 0; i < initOpts.Config.Please.NumThreads; i++ {
 		go func(tid int) {
-			initOpts.doTasks(tid, state, state.Include, state.Exclude)
+			initOpts.doTasks(tid, initOpts.State, initOpts.State.Include, initOpts.State.Exclude)
 			wg.Done()
 		}(i)
 	}
@@ -61,26 +75,29 @@ func Init(targets []core.BuildLabel, state *core.BuildState, config *core.Config
 	// Wait until they've all exited, which they'll do once they have no tasks left.
 	go func() {
 		wg.Wait()
-		close(state.Results) // This will signal MonitorState (below) to stop.
+		close(initOpts.State.Results) // This will signal MonitorState (below) to stop.
 	}()
 
 	// Draw stuff to the screen while there are still results coming through.
 	// TODO(bnm): Definitely refactor this at some point
-	success := output.MonitorState(state, config.Please.NumThreads,
-		!initOpts.PrettyOutput, initOpts.PrettyOutput, state.NeedBuild, state.NeedTests,
+	success := output.MonitorState(initOpts.State, initOpts.Config.Please.NumThreads,
+		!initOpts.PrettyOutput, initOpts.PrettyOutput, initOpts.State.NeedBuild, initOpts.State.NeedTests,
 		initOpts.ShouldRun, initOpts.ShowStatus, initOpts.DetailedTests,
 		initOpts.TraceFile)
 
-	if state.Cache != nil {
-		state.Cache.Shutdown()
+	if initOpts.State.Cache != nil {
+		initOpts.State.Cache.Shutdown()
 	}
 
-	return success, state
+	return success, initOpts.State
 }
 
 // InitDefault initializing please as a default set, this is used in textDocument/references call in langserver
 func InitDefault(targets []core.BuildLabel, state *core.BuildState, config *core.Configuration) (bool, *core.BuildState) {
 	initOpts := InitOpts{
+		Targets:          targets,
+		State:            state,
+		Config:           config,
 		ParsePackageOnly: true,
 		VisibilityParse:  true,
 		DetailedTests:    false,
@@ -90,8 +107,7 @@ func InitDefault(targets []core.BuildLabel, state *core.BuildState, config *core
 		TraceFile:        "",
 		NoLock:           true,
 	}
-	return Init(targets, state,
-		config, initOpts)
+	return Init(initOpts)
 }
 
 func (i *InitOpts) doTasks(tid int, state *core.BuildState, include, exclude []string) {

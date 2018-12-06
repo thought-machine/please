@@ -395,9 +395,11 @@ var buildFunctions = map[string]func() bool{
 		} else {
 			opts.BuildFlags.Config = "cover"
 		}
-		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
+		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args,
+			opts.Cover.Failed, opts.Cover.TestResultsFile)
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
 		success, state := doTest(targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
+
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 
@@ -723,14 +725,6 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	return success, state
 }
 
-// prettyOutputs determines from input flags whether we should show 'pretty' output (ie. interactive).
-func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbosity) bool {
-	if interactiveOutput && plainOutput {
-		log.Fatal("Can't pass both --interactive_output and --plain_output")
-	}
-	return interactiveOutput || (!plainOutput && cli.StdErrIsATerminal && verbosity < 4)
-}
-
 // newCache constructs a new cache based on the current config / flags.
 func newCache(config *core.Configuration) core.Cache {
 	if opts.FeatureFlags.NoCache {
@@ -739,8 +733,7 @@ func newCache(config *core.Configuration) core.Cache {
 	return cache.NewCache(config)
 }
 
-// Please starts & runs the main build process through to its completion.
-func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func setInitialState(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) *core.BuildState {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 	} else if config.Please.NumThreads <= 0 {
@@ -774,29 +767,16 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	if state.DebugTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
+	return state
+}
 
-	// Acquire the lock before we start building
-	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
-		core.AcquireRepoLock()
-		defer core.ReleaseRepoLock()
-	}
+// Please starts & runs the main build process through to its completion.
+func Please(targets []core.BuildLabel, config *core.Configuration,
+	prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 
-	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
-		(len(targets) == 1 && !targets[0].IsAllTargets() &&
-			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
+	initOpts := GetInitOps(targets, config, prettyOutput, shouldBuild, shouldTest)
 
-	return plz.Init(targets, state, config, plz.InitOpts{
-		ParsePackageOnly: opts.ParsePackageOnly,
-		VisibilityParse:  opts.VisibilityParse,
-		DetailedTests:    detailedTests,
-		KeepGoing:        opts.BuildFlags.KeepGoing,
-		PrettyOutput:     prettyOutput,
-		ShouldRun:        !opts.Run.Args.Target.IsEmpty(),
-		ShowStatus:       opts.Build.ShowStatus,
-		TraceFile:        string(opts.OutputFlags.TraceFile),
-		Arch:             opts.BuildFlags.Arch,
-		NoLock:           !opts.FeatureFlags.NoLock,
-	})
+	return plz.Init(*initOpts)
 
 }
 
@@ -849,8 +829,12 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *c
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}
-	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
-	return Please(targets, config, pretty, shouldBuild, shouldTest)
+	pretty := cli.PrettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
+	//return Please(targets, config, pretty, shouldBuild, shouldTest)
+
+	initOpts := GetInitOps(targets, config, pretty, shouldBuild, shouldTest)
+
+	return plz.Init(*initOpts)
 }
 
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
@@ -963,6 +947,14 @@ func initBuild(args []string) string {
 			log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
 		}()
 	}
+
+	//if command == "build" {
+	//	//blah := structs.Map(opts.Run)
+	//	//fmt.Println(blah["Args"].(map[string]interface{})["Target"])
+	//	b := utils.OptsStructToMap(opts.Build)
+	//	fmt.Println(b)
+	//}
+
 	return command
 }
 
@@ -993,12 +985,86 @@ func execute(command string) bool {
 		}
 	}
 
-	success := buildFunctions[command]()
+	var success bool
+	if command == "build" || command == "test" {
+		initOpts, params := getInitOpsAndParams(command)
+		success = plz.Handle(command, *initOpts, params)
+	} else {
+		success = buildFunctions[command]()
+	}
+
+	//success := buildFunctions[command]()
 
 	metrics.Stop()
 	worker.StopAll()
 
 	return success
+}
+
+func getInitOpsAndParams(command string) (*plz.InitOpts, map[string]interface{}) {
+	pretty := cli.PrettyOutput(opts.OutputFlags.InteractiveOutput,
+		opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
+
+	switch command {
+	case "build":
+		return GetInitOps(opts.Build.Args.Targets, config,
+			pretty, true, false), utils.OptsStructToMap(opts.Build)
+	case "rebuild":
+		opts.FeatureFlags.NoCache = true
+		return GetInitOps(opts.Rebuild.Args.Targets, config,
+			pretty, true, true), utils.OptsStructToMap(opts.Rebuild)
+	case "run":
+		return GetInitOps(opts.Rebuild.Args.Targets, config,
+			pretty, true, false), utils.OptsStructToMap(opts.Run)
+	case "hash":
+		return GetInitOps(opts.Rebuild.Args.Targets, config,
+			pretty, true, false), utils.OptsStructToMap(opts.Hash)
+	case "test":
+		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args,
+			opts.Test.Failed, opts.Test.TestResultsFile)
+
+		return GetInitOps(targets, config,
+			pretty, true, true), utils.OptsStructToMap(opts.Test)
+	case "cover":
+		if opts.BuildFlags.Config != "" {
+			log.Warning("Build config overridden; coverage may not be available for some languages")
+		} else {
+			opts.BuildFlags.Config = "cover"
+		}
+		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args,
+			opts.Cover.Failed, opts.Cover.TestResultsFile)
+		return GetInitOps(targets, config,
+			pretty, true, true), utils.OptsStructToMap(opts.Cover)
+	default:
+		return nil, nil
+	}
+
+}
+
+func GetInitOps(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) *plz.InitOpts {
+	state := setInitialState(targets, config, shouldBuild, shouldTest)
+
+	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
+		(len(targets) == 1 && !targets[0].IsAllTargets() &&
+			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
+
+	return &plz.InitOpts{
+		Targets:          targets,
+		State:            state,
+		Config:           config,
+		ParsePackageOnly: opts.ParsePackageOnly,
+		VisibilityParse:  opts.VisibilityParse,
+		DetailedTests:    detailedTests,
+		KeepGoing:        opts.BuildFlags.KeepGoing,
+		PrettyOutput:     prettyOutput,
+		ShouldRun:        !opts.Run.Args.Target.IsEmpty(),
+		ShouldBuild:      shouldBuild,
+		ShouldTest:       shouldTest,
+		ShowStatus:       opts.Build.ShowStatus,
+		TraceFile:        string(opts.OutputFlags.TraceFile),
+		Arch:             opts.BuildFlags.Arch,
+		NoLock:           !opts.FeatureFlags.NoLock,
+	}
 }
 
 func main() {

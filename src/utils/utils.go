@@ -4,6 +4,7 @@ package utils
 import (
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
@@ -65,4 +66,28 @@ func AddAll(map1 map[string]string, map2 map[string]string) map[string]string {
 		map1[k] = v
 	}
 	return map1
+}
+
+func OptsStructToMap(opts interface{}) map[string]interface{} {
+	ret := make(map[string]interface{})
+
+	v := reflect.ValueOf(opts)
+	for i := 0; i < v.NumField(); i++ {
+		ret[v.Type().Field(i).Name] = v.Field(i).Interface()
+		key := v.Type().Field(i).Name
+		switch key {
+		case "target":
+			ret[key] = v.Field(i).Interface().(core.BuildLabel)
+		case "targets":
+			ret[key] = v.Field(i).Interface().([]core.BuildLabel)
+		default:
+			if v.Field(i).Kind() == reflect.Struct {
+				ret[key] = OptsStructToMap(v.Field(i).Interface())
+			} else {
+				ret[key] = v.Field(i).Interface()
+			}
+		}
+
+	}
+	return ret
 }
