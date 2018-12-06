@@ -18,7 +18,6 @@ type Module struct {
 }
 
 func newModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
-	log.Infof("Making web module for %s", target.Label.Label())
 	component := newModuleComponent(target)
 	component.addOrderEntry(newSourceFolderEntry(false))
 
