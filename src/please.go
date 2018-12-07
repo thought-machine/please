@@ -976,7 +976,10 @@ func execute(command string) bool {
 
 	// TODO(bnm): This will eventually be replacing the original
 	var success bool
-	if command == "build" || command == "test" || command == "run" || command == "cover" {
+	if command == "build" || command == "test" ||
+		command == "run" || command == "cover" ||
+		command == "rebuild" || command == "hash" ||
+		command == "parallel" {
 		initOpts, params := getInitOpsAndParams(command)
 		success = plz.Handle(command, *initOpts, params)
 	} else {
@@ -991,6 +994,7 @@ func execute(command string) bool {
 	return success
 }
 
+// getInitOpsAndParams returns the plz.InitOpts and Parameters to be passed into plz handler
 func getInitOpsAndParams(command string) (*plz.InitOpts, map[string]interface{}) {
 	pretty := cli.PrettyOutput(opts.OutputFlags.InteractiveOutput,
 		opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
