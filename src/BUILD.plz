@@ -28,7 +28,6 @@ go_binary(
         "//src/watch",
         "//src/worker",
         "//third_party/go:go-flags",
-        "//third_party/go:structs",
         "//third_party/go:logging",
     ],
 )

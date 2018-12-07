@@ -4,6 +4,7 @@ import (
 	"core"
 )
 
+// Handle will handle commandline requests from the plz cli
 func Handle(command string, initOpts InitOpts, params map[string]interface{}) bool {
 	//argsIface, ok := params["Args"]
 	//if !ok {
@@ -14,18 +15,21 @@ func Handle(command string, initOpts InitOpts, params map[string]interface{}) bo
 	//	return false
 	//}
 	//
-	//targets := GetTargets(args)
+	//targets := getTargets(args)
 	funcs := map[string]func(initOpts *InitOpts, params map[string]interface{}) bool{
-		"run":   handleRun,
-		"build": handleBuild,
-		"test":  handleTest,
-		"cover": handleCover,
+		"run":      handleRun,
+		"build":    handleBuild,
+		"rebuild":  handleRebuild,
+		"hash":     handleHash,
+		"test":     handleTest,
+		"cover":    handleCover,
+		"parallel": handleParallel,
 	}
 
 	return funcs[command](&initOpts, params)
 }
 
-func GetTargets(args map[string]interface{}) []core.BuildLabel {
+func getTargets(args map[string]interface{}) []core.BuildLabel {
 	if targetsIface, exist := args["Targets"]; exist {
 		if targets, ok := targetsIface.([]core.BuildLabel); ok {
 			return targets

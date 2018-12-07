@@ -10,6 +10,8 @@ go_library(
         "//src/cli",
         "//src/core",
         "//src/follow",
+        "//src/hashes",
+        "//src/run",
         "//src/fs",
         "//src/metrics",
         "//src/output",

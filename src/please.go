@@ -948,13 +948,6 @@ func initBuild(args []string) string {
 		}()
 	}
 
-	//if command == "build" {
-	//	//blah := structs.Map(opts.Run)
-	//	//fmt.Println(blah["Args"].(map[string]interface{})["Target"])
-	//	b := utils.OptsStructToMap(opts.Build)
-	//	fmt.Println(b)
-	//}
-
 	return command
 }
 
@@ -985,8 +978,9 @@ func execute(command string) bool {
 		}
 	}
 
+	// TODO(bnm): This will eventually be replacing the original
 	var success bool
-	if command == "build" || command == "test" {
+	if command == "build" || command == "test" || command == "run" || command == "cover" {
 		initOpts, params := getInitOpsAndParams(command)
 		success = plz.Handle(command, *initOpts, params)
 	} else {
@@ -1013,11 +1007,8 @@ func getInitOpsAndParams(command string) (*plz.InitOpts, map[string]interface{})
 		opts.FeatureFlags.NoCache = true
 		return GetInitOps(opts.Rebuild.Args.Targets, config,
 			pretty, true, true), utils.OptsStructToMap(opts.Rebuild)
-	case "run":
-		return GetInitOps(opts.Rebuild.Args.Targets, config,
-			pretty, true, false), utils.OptsStructToMap(opts.Run)
 	case "hash":
-		return GetInitOps(opts.Rebuild.Args.Targets, config,
+		return GetInitOps(opts.Hash.Args.Targets, config,
 			pretty, true, false), utils.OptsStructToMap(opts.Hash)
 	case "test":
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args,
@@ -1035,12 +1026,22 @@ func getInitOpsAndParams(command string) (*plz.InitOpts, map[string]interface{})
 			opts.Cover.Failed, opts.Cover.TestResultsFile)
 		return GetInitOps(targets, config,
 			pretty, true, true), utils.OptsStructToMap(opts.Cover)
+	case "run":
+		return GetInitOps([]core.BuildLabel{opts.Run.Args.Target}, config,
+			pretty, true, false), utils.OptsStructToMap(opts.Run)
+	case "parallel":
+		params := utils.OptsStructToMap(opts.Run.Parallel)
+		params["Env"] = opts.Run.Env
+		params["Watch"] = opts.Watch.Run
+		return GetInitOps(opts.Run.Parallel.PositionalArgs.Targets, config,
+			pretty, true, false), params
 	default:
 		return nil, nil
 	}
 
 }
 
+// GetInitOps returns a plz.InitOpts waiting to be passed
 func GetInitOps(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) *plz.InitOpts {
 	state := setInitialState(targets, config, shouldBuild, shouldTest)
 

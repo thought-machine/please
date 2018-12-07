@@ -76,9 +76,9 @@ func OptsStructToMap(opts interface{}) map[string]interface{} {
 		ret[v.Type().Field(i).Name] = v.Field(i).Interface()
 		key := v.Type().Field(i).Name
 		switch key {
-		case "target":
+		case "Target":
 			ret[key] = v.Field(i).Interface().(core.BuildLabel)
-		case "targets":
+		case "Targets":
 			ret[key] = v.Field(i).Interface().([]core.BuildLabel)
 		default:
 			if v.Field(i).Kind() == reflect.Struct {

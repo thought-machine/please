@@ -1,9 +1,13 @@
 package plz
 
 import (
+	"build"
 	"cli"
+	"core"
+	"hashes"
 	"os"
 	"output"
+	"run"
 	"test"
 )
 
@@ -13,7 +17,21 @@ func handleBuild(initOpts *InitOpts, params map[string]interface{}) bool {
 }
 
 func handleRebuild(initOpts *InitOpts, params map[string]interface{}) bool {
-	return false
+	return handleBuild(initOpts, params)
+}
+
+func handleHash(initOpts *InitOpts, params map[string]interface{}) bool {
+	success, state := runBuild(initOpts)
+	if params["Detailed"].(bool) {
+		for _, target := range state.ExpandOriginalTargets() {
+			build.PrintHashes(state, state.Graph.TargetOrDie(target))
+		}
+	}
+	if params["Update"].(bool) {
+		hashes.RewriteHashes(state, state.ExpandOriginalTargets())
+	}
+
+	return success
 }
 
 func handleTest(initOpts *InitOpts, params map[string]interface{}) bool {
@@ -48,5 +66,23 @@ func handleCover(initOpts *InitOpts, params map[string]interface{}) bool {
 }
 
 func handleRun(initOpts *InitOpts, params map[string]interface{}) bool {
+	runArgs := params["Args"].(map[string]interface{})
+	if success, state := runBuild(initOpts); success {
+		run.Run(state, runArgs["Target"].(core.BuildLabel),
+			runArgs["Args"].([]string), params["Env"].(bool))
+	}
+	return false
+}
+
+func handleParallel(initOpts *InitOpts, params map[string]interface{}) bool {
+	if success, state := runBuild(initOpts); success {
+		if params["Watch"].(bool) {
+			run.Parallel(state, state.ExpandOriginalTargets(), params["Args"].([]string),
+				params["NumTasks"].(int), params["Quiet"].(bool), params["Env"].(bool))
+		} else {
+			os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), params["Args"].([]string),
+				params["NumTasks"].(int), params["Quiet"].(bool), params["Env"].(bool)))
+		}
+	}
 	return false
 }
