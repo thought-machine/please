@@ -1,7 +1,10 @@
 package asp
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"os/exec"
 	"path"
 	"reflect"
 	"sort"
@@ -46,6 +49,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_licence", addLicence)
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
+	setNativeCode(s, "exec", doExec)
 	stringMethods = map[string]*pyFunc{
 		"join":       setNativeCode(s, "join", strJoin),
 		"split":      setNativeCode(s, "split", strSplit),
@@ -153,6 +157,90 @@ func buildRule(s *scope, args []pyObject) pyObject {
 		s.pkg.MarkTargetModified(target)
 	}
 	return pyString(":" + target.Label.Name)
+}
+
+// doExec fork/exec's a command and returns the output as a string.  exec
+// accepts either a string or a list of commands and arguments.  The output from
+// exec() is memoized by default to prevent side effects and aid in performance
+// of duplicate calls to the same command with the same arguments (e.g. `git
+// rev-parse --short HEAD`).  The output from exec()'ed commands must be
+// reproducible.
+//
+// NOTE: Commands that rely on the current working directory must not be cached.
+func doExec(s *scope, args []pyObject) pyObject {
+	cmdIn := args[0]
+	wantStdout := args[1].IsTruthy()
+	wantStderr := args[2].IsTruthy()
+	cacheOutput := args[3].IsTruthy()
+	keyExtra := args[4].String()
+
+	if !wantStdout && !wantStderr {
+		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false")
+	}
+
+	var cmdArgs []string
+	if isType(cmdIn, "str") {
+		cmdArgs = strings.Fields(string(cmdIn.(pyString)))
+	} else if isType(cmdIn, "list") {
+		pl := cmdIn.(pyList)
+		cmdArgs = make([]string, 0, pl.Len())
+		for i := 0; i < pl.Len(); i++ {
+			cmdArgs = append(cmdArgs, pl[i].String())
+		}
+	}
+
+	// The cache key is tightly coupled to the operating parameters
+	key := execMakeKey(keyExtra, cmdArgs, wantStdout, wantStderr)
+
+	// Only get cached output if this call is intended to be cached.
+	var completedPromise bool
+	if cacheOutput {
+		out, found := execGetCachedOutput(key, cmdArgs)
+		if found {
+			return pyString(out)
+		}
+		defer func() {
+			if !completedPromise {
+				execCancelPromise(key, cmdArgs)
+			}
+		}()
+	}
+
+	ctx, cancel := context.WithTimeout(context.TODO(), core.TargetTimeoutOrDefault(nil, s.state))
+	defer cancel()
+
+	var out []byte
+	var err error
+	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
+	if wantStdout && wantStderr {
+		out, err = cmd.CombinedOutput()
+	} else {
+		buf := &bytes.Buffer{}
+		switch {
+		case wantStdout:
+			cmd.Stderr = nil
+			cmd.Stdout = buf
+		case wantStderr:
+			cmd.Stderr = buf
+			cmd.Stdout = nil
+		}
+
+		err = cmd.Run()
+		out = buf.Bytes()
+	}
+	out = bytes.TrimSpace(out)
+	outStr := string(out)
+
+	if err != nil {
+		return s.Error("exec() unable to run command %q: %v", cmdArgs, err)
+	}
+
+	if cacheOutput {
+		execSetCachedOutput(keyExtra, key, cmdArgs, outStr)
+		completedPromise = true
+	}
+
+	return pyString(outStr)
 }
 
 // filegroup implements the filegroup() builtin.
