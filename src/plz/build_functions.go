@@ -24,12 +24,12 @@ func handleRebuild(initOpts *InitOpts, params map[string]interface{}) bool {
 func handleHash(initOpts *InitOpts, params map[string]interface{}) bool {
 	success, state := runBuild(initOpts)
 	if params["Detailed"].(bool) {
-		for _, target := range state.ExpandOriginalTargets() {
+		for _, target := range state.ExpandOriginalLabels() {
 			build.PrintHashes(state, state.Graph.TargetOrDie(target))
 		}
 	}
 	if params["Update"].(bool) {
-		hashes.RewriteHashes(state, state.ExpandOriginalTargets())
+		hashes.RewriteHashes(state, state.ExpandOriginalLabels())
 	}
 
 	return success
@@ -78,10 +78,10 @@ func handleRun(initOpts *InitOpts, params map[string]interface{}) bool {
 func handleParallel(initOpts *InitOpts, params map[string]interface{}) bool {
 	if success, state := runBuild(initOpts); success {
 		if params["Watch"].(bool) {
-			run.Parallel(state, state.ExpandOriginalTargets(), params["Args"].([]string),
+			run.Parallel(state, state.ExpandOriginalLabels(), params["Args"].([]string),
 				params["NumTasks"].(int), params["Quiet"].(bool), params["Env"].(bool))
 		} else {
-			os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), params["Args"].([]string),
+			os.Exit(run.Parallel(state, state.ExpandOriginalLabels(), params["Args"].([]string),
 				params["NumTasks"].(int), params["Quiet"].(bool), params["Env"].(bool)))
 		}
 	}
