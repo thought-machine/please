@@ -4,6 +4,7 @@ import (
 	"build"
 	"cli"
 	"core"
+	"fmt"
 	"hashes"
 	"os"
 	"output"

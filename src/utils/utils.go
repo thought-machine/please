@@ -68,6 +68,7 @@ func AddAll(map1 map[string]string, map2 map[string]string) map[string]string {
 	return map1
 }
 
+// OptsStructToMap converts plz Opts from commandline options to a map
 func OptsStructToMap(opts interface{}) map[string]interface{} {
 	ret := make(map[string]interface{})
 
