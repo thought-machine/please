@@ -830,11 +830,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *c
 		targets = core.InitialPackage()
 	}
 	pretty := cli.PrettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
-	//return Please(targets, config, pretty, shouldBuild, shouldTest)
-
-	initOpts := GetInitOps(targets, config, pretty, shouldBuild, shouldTest)
-
-	return plz.Init(*initOpts)
+	return Please(targets, config, pretty, shouldBuild, shouldTest)
 }
 
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
