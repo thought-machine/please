@@ -179,7 +179,6 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
         no_test_output = no_test_output,
         test_outputs = test_outputs,
         flaky = flaky,
-        cannot_run=True,
     )
 
 

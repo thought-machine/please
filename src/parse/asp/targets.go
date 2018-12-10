@@ -45,14 +45,13 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.Subrepo = s.pkg.Subrepo
 	target.IsBinary = isTruthy(13)
 	target.IsTest = test
-	target.CannotRun = isTruthy(37)
 	target.NeedsTransitiveDependencies = isTruthy(17)
 	target.OutputIsComplete = isTruthy(18)
 	target.Containerise = container
 	target.Sandbox = isTruthy(20)
 	target.TestOnly = test || isTruthy(15)
 	target.ShowProgress = isTruthy(36)
-	target.IsRemoteFile = isTruthy(38)
+	target.IsRemoteFile = isTruthy(37)
 	if timeout := args[24]; timeout != nil {
 		target.BuildTimeout = time.Duration(timeout.(pyInt)) * time.Second
 	}
@@ -124,7 +123,7 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 // populateTarget sets the assorted attributes on a build target.
 func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if t.IsRemoteFile {
-		for _, url := range args[38].(pyList) {
+		for _, url := range args[37].(pyList) {
 			t.AddSource(core.URLLabel(url.(pyString)))
 		}
 	} else {

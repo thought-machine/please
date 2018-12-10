@@ -73,8 +73,8 @@ func run(state *core.BuildState, label core.BuildLabel, args []string, fork, qui
 	if !target.IsBinary {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
 	}
-	if target.CannotRun {
-		log.Fatal("Targets %s cannot be run; as the build rule this target created with has specified.", label)
+	if len(target.Outputs()) != 1 {
+		log.Fatalf("Targets %s cannot be run as it has %d outputs; Only targets with 1 output can be run.", label, len(target.Outputs()))
 	}
 	// ReplaceSequences always quotes stuff in case it contains spaces or special characters,
 	// that works fine if we interpret it as a shell but not to pass it as an argument here.
