@@ -25,6 +25,17 @@
     <p>The script will complete subcommands and flags but most relevantly can also complete
       build labels by reading BUILD files for you.</p>
 
+    <h2>Buildfile Language Protocol Server(LPS)</h2>
+    <p>Please ships with a language server for build files. LPS follows standard
+        <a href="https://langserver.org/">language server protocol</a>
+    from VS Code.</p>
+
+    <p>To use LPS, simply download the language server protocol plugin for your favorite editor,
+    and run the binary at <code>~/.please/build_langserver</code></p>
+
+    <p>Currently LPS supports auto-completion(this works with build labels too!), hover, goto defition,
+    diagnostics, signature help, auto-formatting and references.</p>
+
     <h2>Getting started</h2>
     <p>Run <code>plz init</code> at the root of your repo to create the .plzconfig file.
       There are many options that can be configured in this file but you can worry about them
