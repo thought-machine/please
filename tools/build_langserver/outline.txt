@@ -80,6 +80,3 @@ init.go
 
 Wishlist
 --------
-
- - Find references (`plz query revdeps` probably does most of this)
- - rename support
