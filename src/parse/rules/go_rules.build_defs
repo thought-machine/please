@@ -307,6 +307,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         visibility=visibility,
         requires=['go'],
         pre_build=_collect_linker_flags(static),
+        extra_hash_data=definitions,
     )
 
 
@@ -424,6 +425,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         building_description="Compiling...",
         needs_transitive_deps=True,
         output_is_complete=True,
+        extra_hash_data=definitions,
     )
 
 

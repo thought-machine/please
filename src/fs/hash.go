@@ -32,28 +32,29 @@ func NewPathHasher(root string) *PathHasher {
 // Hash hashes a single path.
 // It is memoised and so will only hash each path once, unless recalc is true which will
 // then force a recalculation of it.
-func (hasher *PathHasher) Hash(path string, recalc bool) ([]byte, error) {
+func (hasher *PathHasher) Hash(path string, extraHashData []byte, recalc bool) ([]byte, error) {
 	path = hasher.ensureRelative(path)
+	memoKey := path + string(extraHashData)
 	if !recalc {
 		hasher.mutex.RLock()
-		cached, present := hasher.memo[path]
+		cached, present := hasher.memo[memoKey]
 		hasher.mutex.RUnlock()
 		if present {
 			return cached, nil
 		}
 	}
-	result, err := hasher.hash(path)
+	result, err := hasher.hash(path, extraHashData)
 	if err == nil {
 		hasher.mutex.Lock()
-		hasher.memo[path] = result
+		hasher.memo[memoKey] = result
 		hasher.mutex.Unlock()
 	}
 	return result, err
 }
 
 // MustHash is as Hash but panics on error.
-func (hasher *PathHasher) MustHash(path string) []byte {
-	hash, err := hasher.Hash(path, false)
+func (hasher *PathHasher) MustHash(path string, extraData []byte) []byte {
+	hash, err := hasher.Hash(path, extraData, false)
 	if err != nil {
 		panic(err)
 	}
@@ -85,8 +86,9 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 	hasher.mutex.Unlock()
 }
 
-func (hasher *PathHasher) hash(path string) ([]byte, error) {
+func (hasher *PathHasher) hash(path string, extraHashData []byte) ([]byte, error) {
 	h := sha1.New()
+	h.Write(extraHashData)
 	info, err := os.Lstat(path)
 	if err == nil && info.Mode()&os.ModeSymlink != 0 {
 		// Handle symlinks specially (don't attempt to read their contents).
