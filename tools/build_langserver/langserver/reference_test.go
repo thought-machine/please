@@ -20,7 +20,7 @@ func TestGetReferences(t *testing.T) {
 	h := LsHandler{
 		repoRoot:  core.RepoRoot,
 		workspace: newWorkspaceStore(lsp.DocumentURI(core.RepoRoot)),
-		analyzer:  analyzer,
+		analyzer:  a,
 		init: &lsp.InitializeParams{
 			RootURI: lsp.DocumentURI(core.RepoRoot),
 			Capabilities: lsp.ClientCapabilities{
@@ -33,7 +33,6 @@ func TestGetReferences(t *testing.T) {
 			},
 		},
 	}
-	h.analyzer = a
 
 	h.analyzer.State.Config.Parse.BuildFileName = append(analyzer.State.Config.Parse.BuildFileName,
 		"BUILD.test")

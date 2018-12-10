@@ -2,15 +2,9 @@ package langserver
 
 import (
 	"context"
-	"core"
 	"encoding/json"
-	"path/filepath"
-	"plz"
-	"query"
-
 	"tools/build_langserver/lsp"
 
-	"fmt"
 	"github.com/sourcegraph/jsonrpc2"
 )
 
@@ -45,32 +39,18 @@ func (h *LsHandler) handleReferences(ctx context.Context, req *jsonrpc2.Request)
 
 func (h *LsHandler) getReferences(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) ([]lsp.Location, error) {
 	def, err := h.analyzer.BuildDefsFromPos(ctx, uri, pos)
-	if def == nil || err != nil {
+	if def == nil || err != nil || def.Pos.Line != pos.Line {
 		return nil, err
 	}
 
-	label, err := getCoreBuildLabel(def, uri)
+	revDeps, err := h.analyzer.RevDepsFromBuildDef(def, uri)
 	if err != nil {
+		log.Info("error occurred computing the reverse dependency of %")
 		return nil, err
 	}
-	fmt.Println(label, err)
-	//Ensure we do not get locked out
-	state := core.NewBuildState(1, nil, 4, h.analyzer.State.Config)
-	state.NeedBuild = false
-	state.NeedTests = false
-
-	success, state := plz.InitDefault([]core.BuildLabel{label}, state,
-		h.analyzer.State.Config)
-
-	if !success {
-		log.Warning("building %s not successful, skipping..", label)
-		return nil, nil
-	}
-	revDeps := query.GetRevDepsLabels(state, []core.BuildLabel{label})
 
 	var locs []lsp.Location
 	for _, label := range revDeps {
-		fmt.Println(label)
 		buildLabel, err := h.analyzer.BuildLabelFromCoreBuildLabel(ctx, label)
 		if err != nil {
 			// In the case of error, we still return the current available locs
@@ -88,25 +68,4 @@ func (h *LsHandler) getReferences(ctx context.Context, uri lsp.DocumentURI, pos 
 	}
 
 	return locs, nil
-}
-
-func getCoreBuildLabel(def *BuildDef, uri lsp.DocumentURI) (buildLabel core.BuildLabel, err error) {
-	fp, err := GetPathFromURL(uri, "file")
-	if err != nil {
-		return core.BuildLabel{}, err
-	}
-
-	rel, err := filepath.Rel(core.RepoRoot, filepath.Dir(fp))
-	if err != nil {
-		return core.BuildLabel{}, err
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Warning("error occurred parsing build label")
-			err = r.(error)
-		}
-	}()
-
-	return core.NewBuildLabel(rel, def.BuildDefName), err
 }

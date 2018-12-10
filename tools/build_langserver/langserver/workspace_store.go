@@ -20,6 +20,7 @@ type document struct {
 	text []string
 	// test content of the document while in editing(not been saved)
 	textInEdit []string
+	version    int
 }
 
 func newWorkspaceStore(rootURI lsp.DocumentURI) *workspaceStore {
@@ -31,11 +32,12 @@ func newWorkspaceStore(rootURI lsp.DocumentURI) *workspaceStore {
 
 // Store method is generally used to correspond to "textDocument/didOpen",
 // this stores the initial state of the document when opened
-func (ws *workspaceStore) Store(uri lsp.DocumentURI, content string) {
+func (ws *workspaceStore) Store(uri lsp.DocumentURI, content string, version int) {
 	text := SplitLines(content, true)
 	ws.documents[uri] = &document{
 		text:       text,
 		textInEdit: text,
+		version:    version,
 	}
 }
 
@@ -68,7 +70,7 @@ func (ws *workspaceStore) Close(uri lsp.DocumentURI) error {
 }
 
 // TrackEdit tracks the changes of the content for the targeting uri, and update the corresponding
-func (ws *workspaceStore) TrackEdit(uri lsp.DocumentURI, contentChanges []lsp.TextDocumentContentChangeEvent) error {
+func (ws *workspaceStore) TrackEdit(uri lsp.DocumentURI, contentChanges []lsp.TextDocumentContentChangeEvent, version int) error {
 	doc, ok := ws.documents[uri]
 	if !ok {
 		log.Error("document '%s' is not opened, edit did not apply", uri)
@@ -85,6 +87,7 @@ func (ws *workspaceStore) TrackEdit(uri lsp.DocumentURI, contentChanges []lsp.Te
 		}
 		doc.textInEdit = newText
 	}
+	doc.version = version
 
 	return nil
 }
