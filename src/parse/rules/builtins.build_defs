@@ -145,10 +145,6 @@ def copy(self:dict) -> dict:
     pass
 
 
-def exec(cmd:str|list, stdout:bool=True, stderr:bool=False, cache:bool=True, key_extra:str=None) -> str:
-    pass
-
-
 def debug(args):
     pass
 def info(args):

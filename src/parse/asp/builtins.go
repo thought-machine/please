@@ -49,7 +49,6 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_licence", addLicence)
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
-	setNativeCode(s, "exec", doExec)
 	stringMethods = map[string]*pyFunc{
 		"join":       setNativeCode(s, "join", strJoin),
 		"split":      setNativeCode(s, "split", strSplit),
