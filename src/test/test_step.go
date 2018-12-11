@@ -380,8 +380,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 					},
 				},
 			}
-		}
-		if runError == nil {
+		} else if runError == nil {
 			return core.TestSuite{
 				TestCases: []core.TestCase{
 					{
@@ -394,6 +393,25 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 								Error: &core.TestResultFailure{
 									Message: "Test failed to produce output results file",
 									Type:    "MissingResults",
+								},
+							},
+						},
+					},
+				},
+			}
+		} else if target.NoTestOutput {
+			return core.TestSuite{
+				TestCases: []core.TestCase{
+					{
+						Name: target.Results.Name,
+						Executions: []core.TestExecution{
+							{
+								Duration: &duration,
+								Stdout:   string(stdout),
+								Stderr:   stderr,
+								Failure: &core.TestResultFailure{
+									Message: "Test failed: " + runError.Error(),
+									Type:    "TestFailed",
 								},
 							},
 						},
