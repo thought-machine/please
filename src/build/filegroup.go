@@ -122,7 +122,7 @@ func filegroupOutputPath(state *core.BuildState, target *core.BuildTarget, outDi
 	// Hash filegroups have a hash embedded into the output name.
 	ext := path.Ext(source)
 	before := source[:len(source)-len(ext)]
-	hash, err := state.PathHasher.Hash(full, target.ExtraHashData, false)
+	hash, err := state.PathHasher.Hash(full, false)
 	if err != nil {
 		panic(err)
 	}

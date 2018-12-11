@@ -373,12 +373,12 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 
 func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, realOutput string) (bool, error) {
 	// hash the file
-	newHash, err := state.PathHasher.Hash(tmpOutput, target.ExtraHashData, false)
+	newHash, err := state.PathHasher.Hash(tmpOutput, false)
 	if err != nil {
 		return true, err
 	}
 	if fs.PathExists(realOutput) {
-		if oldHash, err := state.PathHasher.Hash(realOutput, target.ExtraHashData, false); err != nil {
+		if oldHash, err := state.PathHasher.Hash(realOutput, false); err != nil {
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
 			// We already have the same file in the current location. Don't bother moving it.
@@ -487,7 +487,7 @@ func OutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 		// NB. Always force a recalculation of the output hashes here. Memoisation is not
 		//     useful because by definition we are rebuilding a target, and can actively hurt
 		//     in cases where we compare the retrieved cache artifacts with what was there before.
-		h2, err := state.PathHasher.Hash(filename, target.ExtraHashData, true)
+		h2, err := state.PathHasher.Hash(filename, true)
 		if err != nil {
 			return nil, err
 		}
