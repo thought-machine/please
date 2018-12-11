@@ -4,10 +4,11 @@ import (
 	"context"
 	"core"
 	"encoding/json"
-	"parse/asp"
-	"tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
+
+	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 const renameMethod = "textDocument/rename"
