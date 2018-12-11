@@ -2,12 +2,12 @@ package langserver
 
 import (
 	"context"
-	"core"
 	"testing"
 
-	"tools/build_langserver/lsp"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 func TestGetRenameEdits(t *testing.T) {

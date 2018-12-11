@@ -12,9 +12,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"core"
-	pb "follow/proto/build_event"
-	"output"
+	"github.com/thought-machine/please/src/core"
+	pb "github.com/thought-machine/please/src/follow/proto/build_event"
+	"github.com/thought-machine/please/src/output"
 )
 
 // Used to track the state of the remote connection.

@@ -17,10 +17,10 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"gopkg.in/op/go-logging.v1"
 
-	"cli"
-	"core"
-	"parse/asp"
-	"parse/rules"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/src/parse/rules"
 )
 
 var log = logging.MustGetLogger("parser")

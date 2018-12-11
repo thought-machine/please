@@ -19,8 +19,8 @@ import (
 	"github.com/djherbis/atime"
 	"github.com/dustin/go-humanize"
 
-	"core"
-	"fs"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 type dirCache struct {

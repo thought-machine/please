@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/op/go-logging.v1"
 
-	"cli"
-	"core"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 )
 
 var server *httptest.Server

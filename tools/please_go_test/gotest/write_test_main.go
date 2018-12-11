@@ -29,7 +29,7 @@ type testDescr struct {
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(pkgDir string, version18 bool, sources []string, output string, coverVars []CoverVar) error {
+func WriteTestMain(pkgDir, importPath string, version18 bool, sources []string, output string, coverVars []CoverVar) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func WriteTestMain(pkgDir string, version18 bool, sources []string, output strin
 	testDescr.Version18 = version18
 	if len(testDescr.Functions) > 0 || len(testDescr.Examples) > 0 {
 		// Can't set this if there are no test functions, it'll be an unused import.
-		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, coverVars)
+		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, importPath, coverVars)
 	}
 
 	f, err := os.Create(output)
@@ -74,13 +74,13 @@ func isVersion18(version []byte) bool {
 }
 
 // extraImportPaths returns the set of extra import paths that are needed.
-func extraImportPaths(pkg, pkgDir string, coverVars []CoverVar) []string {
-	pkgDir = collapseFinalDir(path.Join(strings.TrimPrefix(pkgDir, "src/"), pkg))
-	ret := []string{fmt.Sprintf("%s \"%s\"", pkg, pkgDir)}
+func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []string {
+	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg), importPath)
+	ret := []string{fmt.Sprintf("%s \"%s\"", pkg, path.Join(importPath, pkgDir))}
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, v.ImportPath))
+		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, path.Join(importPath, v.ImportPath)))
 	}
 	return ret
 }

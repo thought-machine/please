@@ -9,8 +9,8 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	pb "cache/proto/rpc_cache"
-	"cache/tools"
+	pb "github.com/thought-machine/please/src/cache/proto/rpc_cache"
+	"github.com/thought-machine/please/src/cache/tools"
 )
 
 func TestBringUpCluster(t *testing.T) {

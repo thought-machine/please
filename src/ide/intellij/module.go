@@ -6,7 +6,7 @@ import (
 	"io"
 	"path/filepath"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 // Module represents the IntelliJ concept of a module

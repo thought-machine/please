@@ -8,7 +8,7 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 // resourceUpdateFrequency is the frequency that we re-check CPU usage etc at.

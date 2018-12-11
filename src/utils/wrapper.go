@@ -11,7 +11,7 @@ import (
 
 	"github.com/Songmu/prompter"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 const configTemplate = `; Please config file

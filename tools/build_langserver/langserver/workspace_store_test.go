@@ -2,11 +2,11 @@ package langserver
 
 import (
 	"context"
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"strings"
 	"testing"
 
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
 )

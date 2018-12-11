@@ -13,7 +13,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"sort"
 )
 

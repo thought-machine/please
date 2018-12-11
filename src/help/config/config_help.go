@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 type output struct {

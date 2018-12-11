@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestStore(t *testing.T) {

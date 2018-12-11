@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	"cli"
-	"tools/release_signer/signer"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/tools/release_signer/signer"
 )
 
 var opts = struct {

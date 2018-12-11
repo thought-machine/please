@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"fs"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // Package is a representation of a package, ie. the part of the system (one or more

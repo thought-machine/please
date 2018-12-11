@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"test/go_rules/asm"
+	"github.com/thought-machine/please/test/go_rules/asm"
 )
 
 func TestAssemblyAdd(t *testing.T) {

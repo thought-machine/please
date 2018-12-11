@@ -4,7 +4,7 @@
 
 package metrics
 
-import "core"
+import "github.com/thought-machine/please/src/core"
 import "time"
 
 // InitFromConfig does nothing in this file, it's just a stub.

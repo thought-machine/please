@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"core"
-	"fs"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // filegroupCommand is the command we put on filegroup rules.

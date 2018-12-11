@@ -19,10 +19,10 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
-	"fs"
-	"metrics"
-	"worker"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
+	"github.com/thought-machine/please/src/worker"
 )
 
 var log = logging.MustGetLogger("build")

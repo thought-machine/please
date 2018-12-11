@@ -13,10 +13,10 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"cli"
-	"core"
-	"fs"
-	"worker"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/worker"
 )
 
 var log = logging.MustGetLogger("parse")

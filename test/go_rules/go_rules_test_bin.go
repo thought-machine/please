@@ -2,7 +2,7 @@
 package main
 
 import "os"
-import "test/go_rules/test"
+import "github.com/thought-machine/please/test/go_rules/test"
 
 func main() {
 	if test.GetAnswer() == 42 {

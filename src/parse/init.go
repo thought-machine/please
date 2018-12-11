@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"core"
-	"parse/asp"
-	"parse/rules"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/src/parse/rules"
 )
 
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().

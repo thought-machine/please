@@ -5,8 +5,8 @@
 package main
 
 import (
-	"core"
-	"parse"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse"
 )
 
 func main() {

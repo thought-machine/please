@@ -3,7 +3,7 @@
 package scm
 
 import (
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"os/exec"
 	"path"
 	"path/filepath"

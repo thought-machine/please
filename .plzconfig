@@ -28,6 +28,7 @@ keep = //tools
 buildidtool = //tools/go_buildid_replacer
 filtertool = //tools/please_go_filter
 testtool = //tools/please_go_test
+importpath = github.com/thought-machine/please
 
 [cpp]
 defaultnamespace = thought_machine

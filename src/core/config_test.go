@@ -10,7 +10,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/assert"
 
-	"cli"
+	"github.com/thought-machine/please/src/cli"
 	"reflect"
 	"strings"
 )

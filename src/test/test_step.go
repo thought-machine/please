@@ -13,11 +13,11 @@ import (
 	"github.com/pkg/xattr"
 	"gopkg.in/op/go-logging.v1"
 
-	"build"
-	"core"
-	"metrics"
-	"utils"
-	"worker"
+	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/metrics"
+	"github.com/thought-machine/please/src/utils"
+	"github.com/thought-machine/please/src/worker"
 )
 
 var log = logging.MustGetLogger("test")

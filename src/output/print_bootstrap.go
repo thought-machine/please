@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"cli"
+	"github.com/thought-machine/please/src/cli"
 )
 
 // Used to strip the formatting stuff at bootstrap time.

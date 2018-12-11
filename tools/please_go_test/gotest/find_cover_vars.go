@@ -10,7 +10,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"fs"
+	"github.com/thought-machine/please/src/fs"
 )
 
 var log = logging.MustGetLogger("buildgo")
@@ -22,7 +22,7 @@ type CoverVar struct {
 }
 
 // FindCoverVars searches the given directory recursively to find all Go files with coverage variables.
-func FindCoverVars(dir string, exclude, srcs []string) ([]CoverVar, error) {
+func FindCoverVars(dir, importPath string, exclude, srcs []string) ([]CoverVar, error) {
 	if dir == "" {
 		return nil, nil
 	}
@@ -38,7 +38,7 @@ func FindCoverVars(dir string, exclude, srcs []string) ([]CoverVar, error) {
 				return filepath.SkipDir
 			}
 		} else if strings.HasSuffix(name, ".a") && !strings.ContainsRune(path.Base(name), '#') {
-			vars, err := findCoverVars(name, srcs)
+			vars, err := findCoverVars(name, importPath, srcs)
 			if err != nil {
 				return err
 			}
@@ -52,14 +52,14 @@ func FindCoverVars(dir string, exclude, srcs []string) ([]CoverVar, error) {
 }
 
 // findCoverVars scans a directory containing a .a file for any go files.
-func findCoverVars(filepath string, srcs []string) ([]CoverVar, error) {
+func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, error) {
 	dir, file := path.Split(filepath)
 	dir = strings.TrimRight(dir, "/")
 	fi, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	importPath := collapseFinalDir(strings.TrimPrefix(strings.TrimSuffix(filepath, ".a"), "src/"))
+	importPath = collapseFinalDir(strings.TrimSuffix(filepath, ".a"), importPath)
 	ret := make([]CoverVar, 0, len(fi))
 	for _, info := range fi {
 		name := info.Name()
@@ -102,7 +102,11 @@ func coverVar(dir, importPath, v string) CoverVar {
 
 // collapseFinalDir mimics what go does with import paths; if the final two components of
 // the given path are the same (eg. "src/core/core") it collapses them into one ("src/core")
-func collapseFinalDir(s string) string {
+// Also if importPath is empty then it trims a leading src/
+func collapseFinalDir(s, importPath string) string {
+	if importPath == "" {
+		s = strings.TrimPrefix(s, "src/")
+	}
 	if path.Base(path.Dir(s)) == path.Base(s) {
 		return path.Dir(s)
 	}

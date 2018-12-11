@@ -52,7 +52,7 @@ import (
 	"regexp"
 	"strings"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 var locationReplacement = regexp.MustCompile(`\$\(location ([^\)]+)\)`)

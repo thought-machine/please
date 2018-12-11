@@ -18,9 +18,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/streamrail/concurrent-map"
 
-	pb "cache/proto/rpc_cache"
-	"core"
-	"fs"
+	pb "github.com/thought-machine/please/src/cache/proto/rpc_cache"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // metadataFileName is the filename we store metadata in.

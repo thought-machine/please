@@ -18,8 +18,8 @@ import (
 	"syscall"
 	"time"
 
-	"cli"
-	"fs"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // RepoRoot is the root of the Please repository

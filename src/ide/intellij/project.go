@@ -1,7 +1,7 @@
 package intellij
 
 import (
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"encoding/xml"
 	"fmt"
 	"io"

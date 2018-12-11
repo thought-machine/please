@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"core"
-	"parse/rules"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse/rules"
 )
 
 func parseFileToStatements(filename string) (*scope, []*Statement, error) {

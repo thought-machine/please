@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"core"
-	"parse/asp"
-	"parse/rules"
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/src/parse/rules"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
 	"strings"

@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 var log = logging.MustGetLogger("intellij")

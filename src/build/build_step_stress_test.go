@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 const size = 1000

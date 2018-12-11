@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"core"
-	"tools/cache/server"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/tools/cache/server"
 )
 
 var (

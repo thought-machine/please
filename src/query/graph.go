@@ -7,8 +7,8 @@ import (
 	"path"
 	"sync"
 
-	"build"
-	"core"
+	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/core"
 )
 
 // Graph prints a representation of the build graph as JSON.

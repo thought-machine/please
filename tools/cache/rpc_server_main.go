@@ -12,9 +12,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/op/go-logging.v1"
 
-	"cli"
-	"tools/cache/cluster"
-	"tools/cache/server"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/tools/cache/cluster"
+	"github.com/thought-machine/please/tools/cache/server"
 )
 
 var log = logging.MustGetLogger("rpc_cache_server")

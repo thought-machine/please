@@ -2,13 +2,13 @@ package langserver
 
 import (
 	"context"
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"encoding/json"
 	"fmt"
-	"query"
+	"github.com/thought-machine/please/src/query"
 	"strings"
 
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
 )

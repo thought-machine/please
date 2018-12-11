@@ -6,7 +6,7 @@ package cache
 
 import (
 	"bytes"
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -27,9 +27,9 @@ import (
 	"google.golang.org/grpc/status"
 	"gopkg.in/op/go-logging.v1"
 
-	pb "cache/proto/rpc_cache"
-	"cache/tools"
-	"fs"
+	pb "github.com/thought-machine/please/src/cache/proto/rpc_cache"
+	"github.com/thought-machine/please/src/cache/tools"
+	"github.com/thought-machine/please/src/fs"
 )
 
 const maxErrors = 5

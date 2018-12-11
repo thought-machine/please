@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"fs"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // ExpandHomePath is an alias to the function in fs for compatibility.

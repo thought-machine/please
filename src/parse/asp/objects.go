@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 // A pyObject is the base type for all interpreter objects.

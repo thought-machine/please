@@ -6,7 +6,7 @@
 package cache
 
 import (
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"fmt"
 )
 

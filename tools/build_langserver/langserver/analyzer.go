@@ -2,7 +2,7 @@ package langserver
 
 import (
 	"context"
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -14,11 +14,11 @@ import (
 	"strconv"
 	"strings"
 
-	"parse/asp"
-	"parse/rules"
+	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/src/parse/rules"
 	"src/fs"
 
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 // Analyzer is a wrapper around asp.parser

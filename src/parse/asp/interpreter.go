@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 // An interpreter holds the package-independent state about our parsing process.

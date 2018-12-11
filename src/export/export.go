@@ -10,9 +10,9 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
-	"fs"
-	"gc"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/gc"
 )
 
 var log = logging.MustGetLogger("export")

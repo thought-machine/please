@@ -9,7 +9,7 @@ package test
 import "bytes"
 import "golang.org/x/tools/cover"
 
-import "core"
+import "github.com/thought-machine/please/src/core"
 
 func looksLikeGoCoverageResults(results []byte) bool {
 	return bytes.HasPrefix(results, []byte("mode: "))

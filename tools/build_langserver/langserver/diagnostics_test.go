@@ -3,7 +3,7 @@ package langserver
 import (
 	"context"
 	"testing"
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 
 	"github.com/stretchr/testify/assert"
 )

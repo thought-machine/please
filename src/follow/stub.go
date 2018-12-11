@@ -7,7 +7,7 @@ package follow
 import (
 	"time"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 // InitialiseServer is a stub that does nothing.

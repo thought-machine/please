@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"core"
+	"github.com/thought-machine/please/src/core"
 )
 
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.

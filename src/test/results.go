@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"core"
-	"fs"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 func parseTestResults(outputFile string) (core.TestSuite, error) {

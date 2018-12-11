@@ -12,9 +12,9 @@ import (
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/op/go-logging.v1"
 
-	"build"
-	"core"
-	"output"
+	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/output"
 )
 
 var log = logging.MustGetLogger("run")

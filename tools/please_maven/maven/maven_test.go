@@ -14,7 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"cli"
+	"github.com/thought-machine/please/src/cli"
 	"sort"
 )
 

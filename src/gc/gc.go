@@ -18,8 +18,8 @@ import (
 	"github.com/Songmu/prompter"
 	"gopkg.in/op/go-logging.v1"
 
-	"core"
-	"parse/asp"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse/asp"
 )
 
 var log = logging.MustGetLogger("gc")

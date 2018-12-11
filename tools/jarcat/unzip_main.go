@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"tools/jarcat/unzip"
+	"github.com/thought-machine/please/tools/jarcat/unzip"
 )
 
 func main() {

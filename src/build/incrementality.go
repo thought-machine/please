@@ -26,8 +26,8 @@ import (
 
 	"github.com/pkg/xattr"
 
-	"core"
-	"fs"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 const hashLength = sha1.Size

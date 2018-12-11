@@ -11,8 +11,8 @@ import (
 	"errors"
 	"time"
 
-	"core"
-	pb "follow/proto/build_event"
+	"github.com/thought-machine/please/src/core"
+	pb "github.com/thought-machine/please/src/follow/proto/build_event"
 )
 
 // toProto converts an internal test result into a proto type.

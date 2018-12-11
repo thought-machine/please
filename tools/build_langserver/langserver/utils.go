@@ -3,9 +3,9 @@ package langserver
 import (
 	"bufio"
 	"context"
-	"core"
+	"github.com/thought-machine/please/src/core"
 	"fmt"
-	"fs"
+	"github.com/thought-machine/please/src/fs"
 	"io/ioutil"
 	"os"
 	"path"
@@ -13,8 +13,8 @@ import (
 	"regexp"
 	"strings"
 
-	"parse/asp"
-	"tools/build_langserver/lsp"
+	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 var quoteExp = regexp.MustCompile(`(^("|')([^"]|"")*("|'))`)

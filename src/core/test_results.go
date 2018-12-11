@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"fs"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // TestSuites describes a collection of test results for a set of targets.
