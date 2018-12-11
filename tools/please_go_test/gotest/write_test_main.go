@@ -75,10 +75,7 @@ func isVersion18(version []byte) bool {
 
 // extraImportPaths returns the set of extra import paths that are needed.
 func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []string {
-	if importPath == "" {
-		pkgDir = strings.TrimPrefix(pkgDir, "src/")
-	}
-	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg))
+	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg), importPath)
 	ret := []string{fmt.Sprintf("%s \"%s\"", pkg, path.Join(importPath, pkgDir))}
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
