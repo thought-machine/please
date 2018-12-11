@@ -183,6 +183,7 @@ func RuleHash(state *core.BuildState, target *core.BuildTarget, runtime, postBui
 
 func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []byte {
 	h := sha1.New()
+	h.Write(target.ExtraHashData)
 	h.Write([]byte(target.Label.String()))
 	for _, dep := range target.DeclaredDependencies() {
 		h.Write([]byte(dep.String()))
