@@ -121,8 +121,9 @@ type BuildTarget struct {
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
-	// ExtraHashData is arbitrary data that will be added to the PathHasher (normally
-	// used by go_binary()/go_test() to add linker definitions to the hash)
+	// ExtraHashData is arbitrary data that will be added to the RuleHash
+	// (normally used by go_binary()/go_test() to add linker definitions to the
+	// hash)
 	ExtraHashData []byte
 	// Acceptable hashes of the outputs of this rule. If the output doesn't match any of these
 	// it's an error at build time. Can be used to validate third-party deps.
