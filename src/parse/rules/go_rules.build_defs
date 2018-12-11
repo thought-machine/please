@@ -547,7 +547,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
     # Now compile it in a separate step.
     cmd = [
         'export GOPATH="%s"' % CONFIG.GOPATH,
-        '$TOOLS_GO install -toolexec "$TOOLS_BUILDID" -gcflags "-trimpath $TMP_DIR" ' + ' '.join(all_installs or install),
+        '$TOOLS_GO install -toolexec "$TOOLS_BUILDID" -gcflags "-trimpath $TMP_DIR" -asmflags "-trimpath $TMP_DIR" ' + ' '.join(all_installs or install),
     ]
     if package_name():
         cmd += [
