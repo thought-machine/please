@@ -23,7 +23,8 @@ PLZ_ARGS="${PLZ_ARGS:-}"
 export GOPATH="${PWD}/.bootstrap:${PWD}"
 if [ -z "${PLZ_NO_GO_BOOTSTRAP+bootstrap}" ]; then
     noticen "Installing Go dependencies..."
-    mkdir -p "${PWD}/.bootstrap"
+    mkdir -p "${PWD}/.bootstrap/src/github.com/thought-machine"
+    ln -s "$PWD" "${PWD}/.bootstrap/src/github.com/thought-machine/please"
     go_get golang.org/x/crypto/ssh/terminal
     go_get golang.org/x/sync/errgroup
     go_get golang.org/x/tools/cover
