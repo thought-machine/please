@@ -25,4 +25,8 @@ func TestAnswer(t *testing.T) {
 
 	assert.Len(t, GetExecGitCommitFull(), 40, "git_commit() full length wrong")
 	assert.Len(t, GetExecGitCommitShort(), 8, "git_commit() short length wrong")
+
+	assert.True(t, len(GetExecGitBranchFull()) > len(GetExecGitBranchShort()), "git_branch() lengths inconsistent")
+	assert.Regexp(t, "^refs/", GetExecGitBranchFull())
+	assert.Contains(t, GetExecGitBranchFull(), GetExecGitBranchShort(), "short branch should be in full branch")
 }

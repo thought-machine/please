@@ -185,6 +185,37 @@ func execGetCachedOutput(key execKey, args []string) (output string, found bool)
 	}
 }
 
+// execGitBranch returns the output of a git_branch() command.
+//
+// git_branch() returns the output of `git symbolic-ref -q --short HEAD`
+func execGitBranch(s *scope, args []pyObject) pyObject {
+	short := args[0].IsTruthy()
+
+	cmdIn := make([]pyObject, 3, 5)
+	cmdIn[0] = pyString("git")
+	cmdIn[1] = pyString("symbolic-ref")
+	cmdIn[2] = pyString("-q")
+	if short {
+		cmdIn = append(cmdIn, pyString("--short"))
+	}
+	cmdIn = append(cmdIn, pyString("HEAD"))
+
+	wantStdout := True
+	wantStderr := False
+	cacheOutput := True
+	keyExtra := pyString("")
+
+	execArgs := []pyObject{
+		pyList(cmdIn),
+		wantStdout,
+		wantStderr,
+		cacheOutput,
+		keyExtra,
+	}
+
+	return doExec(s, execArgs)
+}
+
 // execGitCommit returns the output of a git_commit() command.
 //
 // git_commit() returns the output of `git rev-parse --short HEAD`

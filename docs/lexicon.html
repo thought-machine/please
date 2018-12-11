@@ -246,6 +246,35 @@
 
     <p>Rules for pulling information from <code>git</code>.</p>
 
+    <h3><a name="git_branch">git_branch</a></h3>
+
+    <p><pre class="rule"><code>git_branch(short:bool=True)</code></pre></p>
+
+    <p>Calls <code>git symbolic-ref -q --short HEAD</code> and returns the
+      corresponding git branch.  If <code>short</code> is false, show the full
+      symbolic ref for a branch.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>short</td>
+	<td>True</td>
+	<td>bool</td>
+	<td>Uses the shortened symbolic ref for a branch.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
     <h3><a name="git_commit">git_commit</a></h3>
 
     <p><pre class="rule"><code>git_commit(short:bool=True)</code></pre></p>
