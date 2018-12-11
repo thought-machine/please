@@ -147,7 +147,8 @@ def copy(self:dict) -> dict:
 
 def git_show(fmt:str) -> str:
     pass
-
+def git_state(clean_label:str="clean", dirty_label:str="dirty") -> str:
+    pass
 
 def debug(args):
     pass

@@ -16,6 +16,7 @@ go_test(
         "github.com/thought-machine/please/test/go_rules/test.Var": "var",
         "github.com/thought-machine/please/test/go_rules/test.Var2": "var1 var2",
         "github.com/thought-machine/please/test/go_rules/test.ExecGitShow": git_show("%ct"),
+        "github.com/thought-machine/please/test/go_rules/test.ExecGitState": git_state(clean_label="shiny", dirty_label="not shiny"),
     },
     external = True,
     deps = [

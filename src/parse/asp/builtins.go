@@ -78,6 +78,7 @@ func registerBuiltins(s *scope) {
 		"setdefault": s.Lookup("setdefault").(*pyFunc),
 	}
 	setNativeCode(s, "git_show", execGitShow)
+	setNativeCode(s, "git_state", execGitState)
 	setLogCode(s, "debug", log.Debug)
 	setLogCode(s, "info", log.Info)
 	setLogCode(s, "notice", log.Notice)

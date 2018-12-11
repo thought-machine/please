@@ -7,6 +7,7 @@
       <li><a href="#cc">C and C++ rules</a></li>
       <li><a href="#go">Go rules</a></li>
       <li><a href="#java">Java rules</a></li>
+      <li><a href="#git">Git rules</a></li>
       <li><a href="#misc">Miscellaneous rules</a></li>
       <li><a href="#proto">Protocol buffer rules</a></li>
       <li><a href="#python">Python rules</a></li>
@@ -241,6 +242,10 @@
     </p>
 
 
+    <h2><a name="git">Git rules</a></h2>
+
+    <p>Rules for pulling information from <code>git</code>.</p>
+
     <h3><a name="git_show">git_show</a></h3>
 
     <p><pre class="rule"><code>git_show(format:str)</code></pre></p>
@@ -303,6 +308,42 @@
       </tbody>
     </table>
 
+    <h3><a name="git_state">git_state</a></h3>
+
+    <p><pre class="rule"><code>git_state(clean_label:str="clean", dirty_label:str="dirty")</code></pre></p>
+
+    <p>Calls <code>git status --porcelain</code> and returns the
+      corresponding string.  If the repository is clean, the string set
+      in <code>clean_label</code> is returned.  If the repository is dirty, the
+      string set in <code>dirty_label</code> is returned.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>clean_label</td>
+	<td>clean</td>
+	<td>str</td>
+	<td>String returned if the repository is clean.</td>
+      </tr>
+
+      <tr>
+	<td>dirty_label</td>
+	<td>dirty</td>
+	<td>str</td>
+	<td>String returned if the repository is dirty.</td>
+      </tr>
+
+      </tbody>
+    </table>
 
     <h2><a name="cc">C and C++ rules</a></h2>
 

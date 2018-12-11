@@ -247,6 +247,44 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 	return doExec(s, execArgs)
 }
 
+// execGitState returns the output of a git_state() command.
+//
+// git_state() returns the output of `git status --porcelain`.
+func execGitState(s *scope, args []pyObject) pyObject {
+	cleanLabel := args[0].(pyString)
+	dirtyLabel := args[1].(pyString)
+
+	cmdIn := []pyObject{
+		pyString("git"),
+		pyString("status"),
+		pyString("--porcelain"),
+	}
+
+	wantStdout := True
+	wantStderr := False
+	cacheOutput := True
+	keyExtra := pyString("")
+
+	execArgs := []pyObject{
+		pyList(cmdIn),
+		wantStdout,
+		wantStderr,
+		cacheOutput,
+		keyExtra,
+	}
+
+	pyResult := doExec(s, execArgs)
+	if !isType(pyResult, "str") {
+		return pyResult
+	}
+
+	result := strings.TrimSpace(pyResult.String())
+	if len(result) != 0 {
+		return dirtyLabel
+	}
+	return cleanLabel
+}
+
 // execMakeKey returns an execKey.  keyExtra is a user-supplied value that is
 // mixed into the key in order to allow for the same `cmd` to be used in
 // different contexts with the expectation that the output will be reproducible,

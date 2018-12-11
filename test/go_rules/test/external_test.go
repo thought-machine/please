@@ -19,5 +19,7 @@ func TestAnswer(t *testing.T) {
 	if !assert.NoError(t, err) {
 		assert.Fail(t, "unable to parse time")
 	}
-	assert.True(t, lastCommitTime > featureAdded, "time went backwards")
+	assert.True(t, lastCommitTime > featureAdded, "git_show(): time went backwards")
+
+	assert.Contains(t, GetExecGitState(), "shiny", "git_state(): failed")
 }
