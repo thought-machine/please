@@ -145,6 +145,8 @@ def copy(self:dict) -> dict:
     pass
 
 
+def git_commit(short:bool=True) -> str:
+    pass
 def git_show(fmt:str) -> str:
     pass
 def git_state(clean_label:str="clean", dirty_label:str="dirty") -> str:

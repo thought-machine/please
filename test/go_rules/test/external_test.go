@@ -22,4 +22,7 @@ func TestAnswer(t *testing.T) {
 	assert.True(t, lastCommitTime > featureAdded, "git_show(): time went backwards")
 
 	assert.Contains(t, GetExecGitState(), "shiny", "git_state(): failed")
+
+	assert.Len(t, GetExecGitCommitFull(), 40, "git_commit() full length wrong")
+	assert.Len(t, GetExecGitCommitShort(), 8, "git_commit() short length wrong")
 }

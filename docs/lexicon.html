@@ -246,6 +246,35 @@
 
     <p>Rules for pulling information from <code>git</code>.</p>
 
+    <h3><a name="git_commit">git_commit</a></h3>
+
+    <p><pre class="rule"><code>git_commit(short:bool=True)</code></pre></p>
+
+    <p>Calls <code>git rev-parse --short HEAD</code> and returns the
+      corresponding git commit SHA.  If <code>short</code> is false, the full
+      SHA is returned.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>short</td>
+	<td>True</td>
+	<td>bool</td>
+	<td>Uses the shortened git commit SHA.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
     <h3><a name="git_show">git_show</a></h3>
 
     <p><pre class="rule"><code>git_show(format:str)</code></pre></p>
@@ -344,6 +373,7 @@
 
       </tbody>
     </table>
+
 
     <h2><a name="cc">C and C++ rules</a></h2>
 

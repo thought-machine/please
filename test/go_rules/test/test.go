@@ -4,8 +4,10 @@ var (
 	Var  string = "missing var"
 	Var2 string = "missing var2"
 
-	ExecGitShow  string = "missing git show"
-	ExecGitState string = "missing git state"
+	ExecGitShow        string = "missing git show"
+	ExecGitState       string = "missing git state"
+	ExecGitCommitFull  string = "missing git commit full"
+	ExecGitCommitShort string = "missing git commit short"
 )
 
 func GetAnswer() int {
@@ -26,4 +28,12 @@ func GetExecGitShow() string {
 
 func GetExecGitState() string {
 	return ExecGitState
+}
+
+func GetExecGitCommitFull() string {
+	return ExecGitCommitFull
+}
+
+func GetExecGitCommitShort() string {
+	return ExecGitCommitShort
 }

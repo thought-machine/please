@@ -185,6 +185,36 @@ func execGetCachedOutput(key execKey, args []string) (output string, found bool)
 	}
 }
 
+// execGitCommit returns the output of a git_commit() command.
+//
+// git_commit() returns the output of `git rev-parse --short HEAD`
+func execGitCommit(s *scope, args []pyObject) pyObject {
+	short := args[0].IsTruthy()
+
+	cmdIn := make([]pyObject, 2, 4)
+	cmdIn[0] = pyString("git")
+	cmdIn[1] = pyString("rev-parse")
+	if short {
+		cmdIn = append(cmdIn, pyString("--short"))
+	}
+	cmdIn = append(cmdIn, pyString("HEAD"))
+
+	wantStdout := True
+	wantStderr := False
+	cacheOutput := True
+	keyExtra := pyString("")
+
+	execArgs := []pyObject{
+		pyList(cmdIn),
+		wantStdout,
+		wantStderr,
+		cacheOutput,
+		keyExtra,
+	}
+
+	return doExec(s, execArgs)
+}
+
 // execGitShow returns the output of a git_show() command with a strict format.
 //
 // git_show() returns the output of `git show -s --format=%{fmt}`
@@ -278,7 +308,7 @@ func execGitState(s *scope, args []pyObject) pyObject {
 		return pyResult
 	}
 
-	result := strings.TrimSpace(pyResult.String())
+	result := pyResult.String()
 	if len(result) != 0 {
 		return dirtyLabel
 	}
