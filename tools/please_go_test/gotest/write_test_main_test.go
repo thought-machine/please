@@ -48,6 +48,7 @@ func TestParseTestSourcesFailsGracefully(t *testing.T) {
 func TestWriteTestMain(t *testing.T) {
 	err := WriteTestMain(
 		"tools/please_go_test/gotest/test_data",
+		"",
 		false, // not version 1.8
 		[]string{"tools/please_go_test/gotest/test_data/example_test.go"},
 		"test.go",
@@ -64,6 +65,7 @@ func TestWriteTestMain(t *testing.T) {
 func TestWriteTestMainWithCoverage(t *testing.T) {
 	err := WriteTestMain(
 		"tools/please_go_test/gotest/test_data",
+		"",
 		false, // not version 1.8
 		[]string{"tools/please_go_test/gotest/test_data/example_test.go"},
 		"test.go",
@@ -83,13 +85,24 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 }
 
 func TestExtraImportPaths(t *testing.T) {
-	assert.Equal(t, extraImportPaths("core", "src/core", []CoverVar{
+	assert.Equal(t, extraImportPaths("core", "src/core", "", []CoverVar{
 		{ImportPath: "core"},
 		{ImportPath: "output"},
 	}), []string{
 		"core \"core\"",
 		"_cover0 \"core\"",
 		"_cover1 \"output\"",
+	})
+}
+
+func TestExtraImportPathsWithImportPath(t *testing.T) {
+	assert.Equal(t, extraImportPaths("core", "src/core", "github.com/thought-machine/please", []CoverVar{
+		{ImportPath: "src/core"},
+		{ImportPath: "output"},
+	}), []string{
+		"core \"github.com/thought-machine/please/src/core\"",
+		"_cover0 \"github.com/thought-machine/please/src/core\"",
+		"_cover1 \"github.com/thought-machine/please/output\"",
 	})
 }
 

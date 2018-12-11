@@ -374,9 +374,9 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         outs=[name + '_main.go'],
         deps=deps,
         cmd={
-            'dbg': '$TOOLS_TEST $TOOLS_GO -o $OUT $SRCS',
-            'opt': '$TOOLS_TEST $TOOLS_GO -o $OUT $SRCS',
-            'cover': '$TOOLS_TEST $TOOLS_GO -d . -o $OUT $SRCS ',
+            'dbg': f'$TOOLS_TEST $TOOLS_GO -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
+            'opt': f'$TOOLS_TEST $TOOLS_GO -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
+            'cover': f'$TOOLS_TEST $TOOLS_GO -d . -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS ',
         },
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
         requires=['go'],
