@@ -24,12 +24,10 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	isTruthy := func(i int) bool {
 		return args[i] != nil && args[i] != None && (args[i] == &True || args[i].IsTruthy())
 	}
-
 	name := string(args[0].(pyString))
 	testCmd := args[2]
 	container := isTruthy(19)
 	test := isTruthy(14)
-
 	// A bunch of error checking first
 	s.NAssert(name == "all", "'all' is a reserved build target name.")
 	s.NAssert(name == "", "Target name is empty")

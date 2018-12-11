@@ -16,7 +16,8 @@ type ServerCapabilities struct {
 	DefinitionProvider         bool                  `json:"definitionProvider"`
 	TypeDefinitionProvider     bool                  `json:"typeDefinitionProvider,omitempty"`
 	ImplementationProvider     bool                  `json:"implementationProvider,omitempty"`
-	ReferenceProvider          bool                  `json:"referenceProvider,omitempty"`
+	ReferencesProvider         bool                  `json:"referenceProvider,omitempty"`
+	RenameProvider             bool                  `json:"renameProvider,omitempty"`
 	DocumentSymbolProvider     bool                  `json:"documentSymbolProvider,omitempty"`
 	DocumentHighlightProvider  bool                  `json:"documentHighlightProvider,omitempty"`
 	DocumentFormattingProvider bool                  `json:"documentFormattingProvider,omitempty"`
@@ -196,4 +197,11 @@ type ReferenceParams struct {
 // ReferenceContext is the context used in ReferenceParams
 type ReferenceContext struct {
 	IncludeDeclaration bool `json:"includeDeclaration"`
+}
+
+// RenameParams is the params sent from the client for textDocument/rename request
+type RenameParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+	NewName      string                 `json:"newName"`
 }

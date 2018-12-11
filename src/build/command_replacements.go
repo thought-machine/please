@@ -192,7 +192,7 @@ func replaceSequenceLabel(state *core.BuildState, target *core.BuildTarget, labe
 }
 
 func checkAndReplaceSequence(state *core.BuildState, target, dep *core.BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test, allOutputs, tool bool) string {
-	if allOutputs && !multiple && len(dep.Outputs()) != 1 {
+	if allOutputs && !multiple && len(dep.Outputs()) > 1 {
 		// Label must have only one output.
 		panic(fmt.Sprintf("Rule %s can't use %s; %s has multiple outputs.", target.Label, in, dep.Label))
 	} else if runnable && !dep.IsBinary {

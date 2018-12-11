@@ -62,6 +62,11 @@ var handler = LsHandler{
 }
 
 func storeFile(uri lsp.DocumentURI) error {
+
+	return storeFileWithCustomHandler(uri, &handler)
+}
+
+func storeFileWithCustomHandler(uri lsp.DocumentURI, h *LsHandler) error {
 	filePath, err := GetPathFromURL(uri, "file")
 	if err != nil {
 		return err
@@ -72,6 +77,6 @@ func storeFile(uri lsp.DocumentURI) error {
 		return err
 	}
 
-	handler.workspace.Store(uri, string(b))
+	h.workspace.Store(uri, string(b), 1)
 	return nil
 }
