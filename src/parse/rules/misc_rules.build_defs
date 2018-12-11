@@ -129,6 +129,10 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
       name (str): Name of the rule
       test_cmd (str | dict): Command to run for the test. It works similarly to the cmd attribute;
                              see genrule for a more detailed discussion of its properties.
+                             The command should exit with 0 when successful, and nonzero otherwise.
+                             Normally this will correspond to the test results that are output,
+                             unless no_test_output is True in which case this is the only thing
+                             that determines success / failure.
       labels (list): Labels to apply to this test.
       cmd (str | dict): Command to run to build the test.
       srcs (list | dict): Source files for this rule.
@@ -143,8 +147,8 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
       needs_transitive_deps (bool): True if building the rule requires all transitive dependencies to
                              be made available.
       flaky (bool | int): If true the test will be marked as flaky and automatically retried.
-      no_test_output (bool): If true the test is not expected to write any output results, it's only
-                      judged on its return value.
+      no_test_output (bool): If true the test is not expected to write any output results, it will
+                             pass if the command exits with 0 and fail otherwise.
       test_outputs (list): List of optional additional test outputs.
       output_is_complete (bool): If this is true then the rule blocks downwards searches of transitive
                           dependencies by other rules.
