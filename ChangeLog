@@ -1,3 +1,10 @@
+Version 13.3.0
+--------------
+
+    * Fixed extra_outs on go_get (#483)
+
+
+
 Version 13.2.7
 --------------
 
