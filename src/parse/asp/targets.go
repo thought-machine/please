@@ -1,11 +1,8 @@
 package asp
 
 import (
-	"bytes"
-	"fmt"
 	"os"
 	"path"
-	"sort"
 	"strings"
 	"time"
 
@@ -153,50 +150,12 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 		t.Secrets = append(t.Secrets, str)
 	})
 	addProvides(s, "provides", args[29], t)
-	t.ExtraHashData = addExtraHashData(s, "extra_hash_data", args[38])
 	setContainerSettings(s, "container", args[19], t)
 	if f := callbackFunction(s, "pre_build", args[26], 1, "argument"); f != nil {
 		t.PreBuildFunction = &preBuildFunction{f: f, s: s}
 	}
 	if f := callbackFunction(s, "post_build", args[27], 2, "arguments"); f != nil {
 		t.PostBuildFunction = &postBuildFunction{f: f, s: s}
-	}
-}
-
-// addExtraHashData creates a suitable []byte of data that can be used by
-// ExtraHashData.  If a pyString is passed in, return the string itself.  If a
-// dict is passed in, sort the keys and concatenate the key and value and return
-// it as a response.
-func addExtraHashData(s *scope, name string, obj pyObject) []byte {
-	switch {
-	case obj == nil, obj == None:
-		return []byte{}
-	case isType(obj, "str"):
-		return []byte(obj.(pyString).String())
-	case isType(obj, "dict"):
-		d, ok := asDict(obj)
-		s.Assert(ok, "unknown type for %s: %v", "extra_hash_data", obj.Type())
-
-		keys := make([]string, 0, len(d))
-		var bufLen int
-		for k, v := range d {
-			keys = append(keys, k)
-			bufLen += len(k) + 1 + len(v.String()) + 1 // 1 == '\0' delimited
-		}
-		sort.Strings(keys)
-		var b bytes.Buffer
-		b.Grow(bufLen)
-		for _, k := range keys {
-			b.WriteString(k)
-			b.WriteByte(0)
-			if v, found := d[k]; found {
-				b.WriteString(v.String())
-				b.WriteByte(0)
-			}
-		}
-		return b.Bytes()
-	default:
-		panic(fmt.Sprintf("unsupported pyObject type: %v", obj.Type()))
 	}
 }
 
