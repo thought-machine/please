@@ -3,12 +3,13 @@ package asp
 import (
 	"bytes"
 	"context"
-	"core"
 	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 type execKey string
@@ -218,17 +219,13 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 
 // execGitCommit returns the output of a git_commit() command.
 //
-// git_commit() returns the output of `git rev-parse --short HEAD`
+// git_commit() returns the output of `git rev-parse HEAD`
 func execGitCommit(s *scope, args []pyObject) pyObject {
-	short := args[0].IsTruthy()
-
-	cmdIn := make([]pyObject, 2, 4)
-	cmdIn[0] = pyString("git")
-	cmdIn[1] = pyString("rev-parse")
-	if short {
-		cmdIn = append(cmdIn, pyString("--short"))
+	cmdIn := []pyObject{
+		pyString("git"),
+		pyString("rev-parse"),
+		pyString("HEAD"),
 	}
-	cmdIn = append(cmdIn, pyString("HEAD"))
 
 	wantStdout := True
 	wantStderr := False
@@ -256,20 +253,14 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 	formatVerb := args[0].(pyString)
 	switch formatVerb {
 	case "%H": // commit hash
-	case "%h": // abbreviated commit hash
 	case "%T": // tree hash
-	case "%t": // abbreviated tree hash
 	case "%P": // parent hashes
-	case "%p": // abbreviated parent hashes
 	case "%an": // author name
 	case "%ae": // author email
 	case "%at": // author date, UNIX timestamp
-	case "%aI": // author date, strict ISO 8601 format
 	case "%cn": // committer name
 	case "%ce": // committer email
 	case "%ct": // committer date, UNIX timestamp
-	case "%cI": // committer date, strict ISO 8601 format
-	case "%d": // ref names, like the --decorate option of git-log(1)
 	case "%D": // ref names without the " (", ")" wrapping.
 	case "%e": // encoding
 	case "%s": // subject

@@ -250,7 +250,7 @@
 
     <p><pre class="rule"><code>git_branch(short:bool=True)</code></pre></p>
 
-    <p>Calls <code>git symbolic-ref -q --short HEAD</code> and returns the
+    <p>Calls <code>git symbolic-ref -q HEAD</code> and returns the
       corresponding git branch.  If <code>short</code> is false, show the full
       symbolic ref for a branch.</p>
 
@@ -277,32 +277,11 @@
 
     <h3><a name="git_commit">git_commit</a></h3>
 
-    <p><pre class="rule"><code>git_commit(short:bool=True)</code></pre></p>
+    <p><pre class="rule"><code>git_commit()</code></pre></p>
 
-    <p>Calls <code>git rev-parse --short HEAD</code> and returns the
-      corresponding git commit SHA.  If <code>short</code> is false, the full
-      SHA is returned.</p>
-
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
-
-      <tr>
-	<td>short</td>
-	<td>True</td>
-	<td>bool</td>
-	<td>Uses the shortened git commit SHA.</td>
-      </tr>
-
-      </tbody>
-    </table>
+    <p>Calls <code>git rev-parse HEAD</code> and returns the corresponding git
+      commit SHA.  To return a shortened commit
+      use <code>git_commit()[0:8]</code>.</p>
 
     <h3><a name="git_show">git_show</a></h3>
 
@@ -311,39 +290,6 @@
     <p>Calls <code>git show -s --format={format}</code> and returns the
       result.  <code>format</code> is limited to a subset of values accepted
       by <code>git show</code>.</p>
-
-    <p>Supported format verbs are limited to:
-      <ul>
-        <li><code>%H</code> commit hash</li>
-        <li><code>%h</code> abbreviated commit hash</li>
-        <li><code>%T</code> tree hash</li>
-        <li><code>%t</code> abbreviated tree hash</li>
-        <li><code>%P</code> parent hashes</li>
-        <li><code>%p</code> abbreviated parent hashes</li>
-        <li><code>%an</code> author name</li>
-        <li><code>%ae</code> author email</li>
-        <li><code>%at</code> author date, UNIX timestamp</li>
-        <li><code>%aI</code> author date, strict ISO 8601 format</li>
-        <li><code>%cn</code> committer name</li>
-        <li><code>%ce</code> committer email</li>
-        <li><code>%ct</code> committer date, UNIX timestamp</li>
-        <li><code>%cI</code> committer date, strict ISO 8601 format</li>
-        <li><code>%d</code> ref names, like the --decorate option of git-log(1)</li>
-        <li><code>%D</code> ref names without the "(", ")" wrapping.</li>
-        <li><code>%e</code> encoding</li>
-        <li><code>%s</code> subject of commit message</li>
-        <li><code>%f</code> sanitized subject line, suitable for a filename</li>
-        <li><code>%b</code> body of commit message</li>
-        <li><code>%B</code> raw body (unwrapped subject and body)</li>
-        <li><code>%N</code> commit notes</li>
-        <li><code>%GG</code> raw verification message from GPG for a signed commit</li>
-        <li><code>%G?</code> show "G" for a good (valid) signature, "B" for a bad signature, "U" for a good signature with unknown validity, "X" for a good signature that has expired, "Y" for a good signature made by an expired key, "R" for a good signature made by a revoked key, "E" if the signature cannot be checked (e.g. missing key) and "N" for no signature</li>
-        <li><code>%GS</code> show the name of the signer for a signed commit</li>
-        <li><code>%GK</code> show the key used to sign a signed commit</li>
-        <li><code>%n</code> newline</li>
-        <li><code>%%</code> a raw %</li>
-      </ul>
-    </p>
 
     <table>
       <thead>
@@ -365,6 +311,34 @@
 
       </tbody>
     </table>
+
+    <p>Supported format verbs are limited to:
+      <ul>
+        <li><code>%H</code> commit hash</li>
+        <li><code>%T</code> tree hash</li>
+        <li><code>%P</code> parent hashes</li>
+        <li><code>%an</code> author name</li>
+        <li><code>%ae</code> author email</li>
+        <li><code>%at</code> author date, UNIX timestamp</li>
+        <li><code>%cn</code> committer name</li>
+        <li><code>%ce</code> committer email</li>
+        <li><code>%ct</code> committer date, UNIX timestamp</li>
+        <li><code>%D</code> ref names</li>
+        <li><code>%e</code> encoding</li>
+        <li><code>%s</code> subject of commit message</li>
+        <li><code>%f</code> sanitized subject line, suitable for a filename</li>
+        <li><code>%b</code> body of commit message</li>
+        <li><code>%B</code> raw body (unwrapped subject and body)</li>
+        <li><code>%N</code> commit notes</li>
+        <li><code>%GG</code> raw verification message from GPG for a signed commit</li>
+        <li><code>%G?</code> show "G" for a good (valid) signature, "B" for a bad signature, "U" for a good signature with unknown validity, "X" for a good signature that has expired, "Y" for a good signature made by an expired key, "R" for a good signature made by a revoked key, "E" if the signature cannot be checked (e.g. missing key) and "N" for no signature</li>
+        <li><code>%GS</code> show the name of the signer for a signed commit</li>
+        <li><code>%GK</code> show the key used to sign a signed commit</li>
+        <li><code>%n</code> newline</li>
+        <li><code>%%</code> a raw %</li>
+      </ul>
+    </p>
+
 
     <h3><a name="git_state">git_state</a></h3>
 

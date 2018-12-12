@@ -6,8 +6,7 @@ var (
 
 	ExecGitShow        string = "missing git show"
 	ExecGitState       string = "missing git state"
-	ExecGitCommitFull  string = "missing git commit full"
-	ExecGitCommitShort string = "missing git commit short"
+	ExecGitCommit      string = "missing git commit"
 	ExecGitBranchFull  string = "missing git branch full"
 	ExecGitBranchShort string = "missing git branch short"
 )
@@ -32,12 +31,8 @@ func GetExecGitState() string {
 	return ExecGitState
 }
 
-func GetExecGitCommitFull() string {
-	return ExecGitCommitFull
-}
-
-func GetExecGitCommitShort() string {
-	return ExecGitCommitShort
+func GetExecGitCommit() string {
+	return ExecGitCommit
 }
 
 func GetExecGitBranchFull() string {

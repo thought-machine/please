@@ -147,7 +147,7 @@ def copy(self:dict) -> dict:
 
 def git_branch(short:bool=True) -> str:
     pass
-def git_commit(short:bool=True) -> str:
+def git_commit() -> str:
     pass
 def git_show(fmt:str) -> str:
     pass
