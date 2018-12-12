@@ -7,7 +7,6 @@
       <li><a href="#cc">C and C++ rules</a></li>
       <li><a href="#go">Go rules</a></li>
       <li><a href="#java">Java rules</a></li>
-      <li><a href="#git">Git rules</a></li>
       <li><a href="#misc">Miscellaneous rules</a></li>
       <li><a href="#proto">Protocol buffer rules</a></li>
       <li><a href="#python">Python rules</a></li>
@@ -242,142 +241,6 @@
     </p>
 
 
-    <h2><a name="git">Git rules</a></h2>
-
-    <p>Rules for pulling information from <code>git</code>.</p>
-
-    <h3><a name="git_branch">git_branch</a></h3>
-
-    <p><pre class="rule"><code>git_branch(short:bool=True)</code></pre></p>
-
-    <p>Calls <code>git symbolic-ref -q HEAD</code> and returns the
-      corresponding git branch.  If <code>short</code> is false, show the full
-      symbolic ref for a branch.</p>
-
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
-
-      <tr>
-	<td>short</td>
-	<td>True</td>
-	<td>bool</td>
-	<td>Uses the shortened symbolic ref for a branch.</td>
-      </tr>
-
-      </tbody>
-    </table>
-
-    <h3><a name="git_commit">git_commit</a></h3>
-
-    <p><pre class="rule"><code>git_commit()</code></pre></p>
-
-    <p>Calls <code>git rev-parse HEAD</code> and returns the corresponding git
-      commit SHA.  To return a shortened commit
-      use <code>git_commit()[0:8]</code>.</p>
-
-    <h3><a name="git_show">git_show</a></h3>
-
-    <p><pre class="rule"><code>git_show(format:str)</code></pre></p>
-
-    <p>Calls <code>git show -s --format={format}</code> and returns the
-      result.  <code>format</code> is limited to a subset of values accepted
-      by <code>git show</code>.</p>
-
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
-
-      <tr>
-	<td>format</td>
-	<td></td>
-	<td>str</td>
-	<td>String format passed to <code>git show</code>.</td>
-      </tr>
-
-      </tbody>
-    </table>
-
-    <p>Supported format verbs are limited to:
-      <ul>
-        <li><code>%H</code> commit hash</li>
-        <li><code>%T</code> tree hash</li>
-        <li><code>%P</code> parent hashes</li>
-        <li><code>%an</code> author name</li>
-        <li><code>%ae</code> author email</li>
-        <li><code>%at</code> author date, UNIX timestamp</li>
-        <li><code>%cn</code> committer name</li>
-        <li><code>%ce</code> committer email</li>
-        <li><code>%ct</code> committer date, UNIX timestamp</li>
-        <li><code>%D</code> ref names</li>
-        <li><code>%e</code> encoding</li>
-        <li><code>%s</code> subject of commit message</li>
-        <li><code>%f</code> sanitized subject line, suitable for a filename</li>
-        <li><code>%b</code> body of commit message</li>
-        <li><code>%B</code> raw body (unwrapped subject and body)</li>
-        <li><code>%N</code> commit notes</li>
-        <li><code>%GG</code> raw verification message from GPG for a signed commit</li>
-        <li><code>%G?</code> show "G" for a good (valid) signature, "B" for a bad signature, "U" for a good signature with unknown validity, "X" for a good signature that has expired, "Y" for a good signature made by an expired key, "R" for a good signature made by a revoked key, "E" if the signature cannot be checked (e.g. missing key) and "N" for no signature</li>
-        <li><code>%GS</code> show the name of the signer for a signed commit</li>
-        <li><code>%GK</code> show the key used to sign a signed commit</li>
-        <li><code>%n</code> newline</li>
-        <li><code>%%</code> a raw %</li>
-      </ul>
-    </p>
-
-
-    <h3><a name="git_state">git_state</a></h3>
-
-    <p><pre class="rule"><code>git_state(clean_label:str="clean", dirty_label:str="dirty")</code></pre></p>
-
-    <p>Calls <code>git status --porcelain</code> and returns the
-      corresponding string.  If the repository is clean, the string set
-      in <code>clean_label</code> is returned.  If the repository is dirty, the
-      string set in <code>dirty_label</code> is returned.</p>
-
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
-
-      <tr>
-	<td>clean_label</td>
-	<td>clean</td>
-	<td>str</td>
-	<td>String returned if the repository is clean.</td>
-      </tr>
-
-      <tr>
-	<td>dirty_label</td>
-	<td>dirty</td>
-	<td>str</td>
-	<td>String returned if the repository is dirty.</td>
-      </tr>
-
-      </tbody>
-    </table>
-
-
     <h2><a name="cc">C and C++ rules</a></h2>
 
     <p>Rules to build C and C++ targets.</p>
@@ -435,6 +298,137 @@
     {{ template "lexicon_entry.html" .Named "system_library" }}
     {{ template "lexicon_entry.html" .Named "remote_file" }}
     {{ template "lexicon_entry.html" .Named "tarball" }}
+
+    <h3><a name="git_branch">git_branch</a></h3>
+
+    <p><pre class="rule"><code>git_branch(<span class="optional">short:bool=True</span>)</code></pre></p>
+
+    <p>Calls <code>git symbolic-ref -q HEAD</code> and returns the
+      corresponding git branch.  If <code>short</code> is false, show the full
+      symbolic ref for a branch.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>short</td>
+	<td>True</td>
+	<td>bool</td>
+	<td>Uses the shortened symbolic ref for a branch.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
+    <h3><a name="git_commit">git_commit</a></h3>
+
+    <p><pre class="rule"><code>git_commit()</code></pre></p>
+
+    <p>Calls <code>git rev-parse HEAD</code> and returns the corresponding git
+      commit SHA.  To return a shortened commit
+      use <code>git_commit()[0:8]</code>.</p>
+
+    <h3><a name="git_show">git_show</a></h3>
+
+    <p><pre class="rule"><code>git_show(<span class="optional">format:str</span>)</code></pre></p>
+
+    <p>Calls <code>git show -s --format={format}</code> and returns the
+      result.  <code>format</code> is limited to a subset of values accepted
+      by <code>git show</code>.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>format</td>
+	<td></td>
+	<td>str</td>
+	<td>String format passed to <code>git show</code>.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
+    <p>Supported format verbs are limited to:
+      <ul>
+        <li><code>%H</code> commit hash</li>
+        <li><code>%T</code> tree hash</li>
+        <li><code>%P</code> parent hashes</li>
+        <li><code>%an</code> author name</li>
+        <li><code>%ae</code> author email</li>
+        <li><code>%at</code> author date, UNIX timestamp</li>
+        <li><code>%cn</code> committer name</li>
+        <li><code>%ce</code> committer email</li>
+        <li><code>%ct</code> committer date, UNIX timestamp</li>
+        <li><code>%D</code> ref names</li>
+        <li><code>%e</code> encoding</li>
+        <li><code>%s</code> subject of commit message</li>
+        <li><code>%f</code> sanitized subject line, suitable for a filename</li>
+        <li><code>%b</code> body of commit message</li>
+        <li><code>%B</code> raw body (unwrapped subject and body)</li>
+        <li><code>%N</code> commit notes</li>
+        <li><code>%GG</code> raw verification message from GPG for a signed commit</li>
+        <li><code>%G?</code> show "G" for a good (valid) signature, "B" for a bad signature, "U" for a good signature with unknown validity, "X" for a good signature that has expired, "Y" for a good signature made by an expired key, "R" for a good signature made by a revoked key, "E" if the signature cannot be checked (e.g. missing key) and "N" for no signature</li>
+        <li><code>%GS</code> show the name of the signer for a signed commit</li>
+        <li><code>%GK</code> show the key used to sign a signed commit</li>
+        <li><code>%n</code> newline</li>
+        <li><code>%%</code> a raw %</li>
+      </ul>
+    </p>
+
+
+    <h3><a name="git_state">git_state</a></h3>
+
+    <p><pre class="rule"><code>git_state(<span class="optional">clean_label:str="clean", dirty_label:str="dirty"</span>)</code></pre></p>
+
+    <p>Calls <code>git status --porcelain</code> and returns the
+      corresponding string.  If the repository is clean, the string set
+      in <code>clean_label</code> is returned.  If the repository is dirty, the
+      string set in <code>dirty_label</code> is returned.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>clean_label</td>
+	<td>clean</td>
+	<td>str</td>
+	<td>String returned if the repository is clean.</td>
+      </tr>
+
+      <tr>
+	<td>dirty_label</td>
+	<td>dirty</td>
+	<td>str</td>
+	<td>String returned if the repository is dirty.</td>
+      </tr>
+
+      </tbody>
+    </table>
 
 
     <h2><a name="proto">Proto rules</a></h2>
