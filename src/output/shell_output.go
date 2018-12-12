@@ -117,7 +117,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, cycle)
 		}
 	}
-	if state.Verbosity > 0 && shouldBuild {
+	if state.Verbosity > 0 && shouldBuild && len(failedNonTests) == 0 {
 		if state.PrepareOnly || state.PrepareShell {
 			printTempDirs(state, duration)
 		} else if shouldTest { // Got to the test phase, report their results.
