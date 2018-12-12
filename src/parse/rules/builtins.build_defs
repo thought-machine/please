@@ -146,13 +146,13 @@ def copy(self:dict) -> dict:
 
 
 def git_branch(short:bool=True) -> str:
-    pass
+    raise 'Disabled in config'
 def git_commit() -> str:
-    pass
+    raise 'Disabled in config'
 def git_show(fmt:str) -> str:
-    pass
+    raise 'Disabled in config'
 def git_state(clean_label:str="clean", dirty_label:str="dirty") -> str:
-    pass
+    raise 'Disabled in config'
 
 def debug(args):
     pass
