@@ -49,13 +49,7 @@ func init() {
 // reproducible.
 //
 // NOTE: Commands that rely on the current working directory must not be cached.
-func doExec(s *scope, args []pyObject) pyObject {
-	cmdIn := args[0]
-	wantStdout := args[1].IsTruthy()
-	wantStderr := args[2].IsTruthy()
-	cacheOutput := args[3].IsTruthy()
-	keyExtra := args[4].String()
-
+func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOutput bool) pyObject {
 	if !wantStdout && !wantStderr {
 		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false")
 	}
@@ -72,7 +66,7 @@ func doExec(s *scope, args []pyObject) pyObject {
 	}
 
 	// The cache key is tightly coupled to the operating parameters
-	key := execMakeKey(keyExtra, cmdArgs, wantStdout, wantStderr)
+	key := execMakeKey(cmdArgs, wantStdout, wantStderr)
 
 	// Only get cached output if this call is intended to be cached.
 	var completedPromise bool
@@ -118,7 +112,7 @@ func doExec(s *scope, args []pyObject) pyObject {
 	}
 
 	if cacheOutput {
-		execSetCachedOutput(keyExtra, key, cmdArgs, outStr)
+		execSetCachedOutput(key, cmdArgs, outStr)
 		completedPromise = true
 	}
 
@@ -201,20 +195,10 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 	}
 	cmdIn = append(cmdIn, pyString("HEAD"))
 
-	wantStdout := True
-	wantStderr := False
-	cacheOutput := True
-	keyExtra := pyString("")
-
-	execArgs := []pyObject{
-		pyList(cmdIn),
-		wantStdout,
-		wantStderr,
-		cacheOutput,
-		keyExtra,
-	}
-
-	return doExec(s, execArgs)
+	wantStdout := true
+	wantStderr := false
+	cacheOutput := true
+	return doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
 }
 
 // execGitCommit returns the output of a git_commit() command.
@@ -227,20 +211,10 @@ func execGitCommit(s *scope, args []pyObject) pyObject {
 		pyString("HEAD"),
 	}
 
-	wantStdout := True
-	wantStderr := False
-	cacheOutput := True
-	keyExtra := pyString("")
-
-	execArgs := []pyObject{
-		pyList(cmdIn),
-		wantStdout,
-		wantStderr,
-		cacheOutput,
-		keyExtra,
-	}
-
-	return doExec(s, execArgs)
+	wantStdout := true
+	wantStderr := false
+	cacheOutput := true
+	return doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
 }
 
 // execGitShow returns the output of a git_show() command with a strict format.
@@ -284,19 +258,11 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 		pyString("-s"),
 		pyString(fmt.Sprintf("--format=%s", formatVerb)),
 	}
-	wantStdout := True
-	wantStderr := False
-	cacheOutput := True
-	keyExtra := pyString("")
 
-	execArgs := []pyObject{
-		pyList(cmdIn),
-		wantStdout,
-		wantStderr,
-		cacheOutput,
-		keyExtra,
-	}
-	return doExec(s, execArgs)
+	wantStdout := true
+	wantStderr := false
+	cacheOutput := true
+	return doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
 }
 
 // execGitState returns the output of a git_state() command.
@@ -312,20 +278,11 @@ func execGitState(s *scope, args []pyObject) pyObject {
 		pyString("--porcelain"),
 	}
 
-	wantStdout := True
-	wantStderr := False
-	cacheOutput := True
-	keyExtra := pyString("")
+	wantStdout := true
+	wantStderr := false
+	cacheOutput := true
+	pyResult := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
 
-	execArgs := []pyObject{
-		pyList(cmdIn),
-		wantStdout,
-		wantStderr,
-		cacheOutput,
-		keyExtra,
-	}
-
-	pyResult := doExec(s, execArgs)
 	if !isType(pyResult, "str") {
 		return pyResult
 	}
@@ -337,13 +294,9 @@ func execGitState(s *scope, args []pyObject) pyObject {
 	return cleanLabel
 }
 
-// execMakeKey returns an execKey.  keyExtra is a user-supplied value that is
-// mixed into the key in order to allow for the same `cmd` to be used in
-// different contexts with the expectation that the output will be reproducible,
-// but predictably change.
-func execMakeKey(keyExtra string, args []string, wantStdout bool, wantStderr bool) execKey {
-	keyArgs := make([]string, 0, len(args)+3)
-	keyArgs = append(keyArgs, keyExtra)
+// execMakeKey returns an execKey.
+func execMakeKey(args []string, wantStdout bool, wantStderr bool) execKey {
+	keyArgs := make([]string, 0, len(args)+2)
 	keyArgs = append(keyArgs, args...)
 	keyArgs = append(keyArgs, strconv.FormatBool(wantStdout))
 	keyArgs = append(keyArgs, strconv.FormatBool(wantStderr))
@@ -352,7 +305,7 @@ func execMakeKey(keyExtra string, args []string, wantStdout bool, wantStderr boo
 }
 
 // execSetCachedOutput sets a value to be cached
-func execSetCachedOutput(keyExtra string, key execKey, args []string, output string) {
+func execSetCachedOutput(key execKey, args []string, output string) {
 	execCacheLock.Lock()
 	execCachedOuts[key] = output
 	execCacheLock.Unlock()
