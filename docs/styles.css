@@ -66,7 +66,7 @@ a {
 h1, h2, h3, h4 {
     color: white;
     font-size: medium;
-    text-transform: uppercase;
+    font-family: "Calibre-Thin", sans-serif;
 }
 
 .yellow   { color: #ffe752; }
@@ -117,17 +117,18 @@ hr {
 }
 
 /* Body uses flex to split left menu from rest of page */
-.above {
-    display: flex;
-    flex-direction: row;
+@media (min-width: 800px) {
+    .above {
+        display: flex;
+        flex-direction: row;
+    }
+    .left {
+        flex: 1 4 25%;
+    }
+    .right {
+        flex: 3 4 75%;
+    }
 }
-.left {
-    flex: 1 4 25%;
-}
-.right {
-    flex: 3 4 75%;
-}
-
 /* Header row */
 .header {
     display: flex;
@@ -152,6 +153,7 @@ hr {
     position: absolute;
     left: 40%;
     top: -50px;
+    display: none;
 }
 .hdrimg2 img {
     width: 120px;
@@ -159,12 +161,24 @@ hr {
     position: absolute;
     right: 20%;
     top: 50px;
+    display: none;
 }
 .sideimg img {
     height: auto;
     position: absolute;
     opacity: 0.2;
     z-index: -1000;
+    display: none;
+}
+@media only screen and (min-width: 800px) {
+    .sideimg img, .hdrimg2 img {
+        display: block;
+    }
+}
+@media only screen and (min-width: 600px) {
+    .hdrimg1 img {
+        display: block;
+    }
 }
 .rotate1 { transform: rotate(30deg); }
 .rotate2 { transform: rotate(60deg); }
@@ -180,6 +194,7 @@ hr {
     width: 300px;
     top: -120px;
     height: auto;
+    display: none;
 }
 .idximg2 img {
     transform: rotate(120deg);
@@ -188,6 +203,7 @@ hr {
     top: 250px;
     width: 120px;
     height: auto;
+    display: none;
 }
 .idximg3 img {
     transform: rotate(140deg);
@@ -196,6 +212,7 @@ hr {
     top: 100px;
     width: 300px;
     height: auto;
+    display: none;
 }
 .idximg4 img {
     transform: rotate(-30deg);
@@ -204,6 +221,7 @@ hr {
     top: -20px;
     width: 60px;
     height: auto;
+    display: none;
 }
 .idximg5 img {
     transform: rotate(-80deg);
@@ -213,21 +231,43 @@ hr {
     width: 120px;
     height: auto;
     z-index: -50;
+    display: none;
 }
 .idximg-spacer {
-    display: block;
-    height: 400px;
+    display: none;
+    height: 200px;
+}
+.header, .idximg-spacer {
+    display: none;
+}
+@media only screen and (min-width: 1200px) {
+    .idximg3 img { display: inline; }
+}
+@media only screen and (min-width: 1400px) {
+    .idximg5 img { display: inline; }
+}
+@media only screen and (min-width: 1000px) {
+    .idximg4 img { display: inline; }
+}
+@media only screen and (min-width: 800px) {
+    .idximg1 img, .idximg2 img, .header, .idximg-spacer { display: inline; }
 }
 
 /* Left menu */
-.left-container {
-    display: flex;
-    flex-direction: column;
-    position: sticky;
-    top: 0em;
-}
 .left .logo {
-    flex: 1 10 10%;
+    display: none;
+}
+@media (min-width: 800px) {
+    .left-container {
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 0em;
+    }
+    .left .logo {
+        flex: 1 10 10%;
+        display: block;
+    }
 }
 .logo h1 {
     text-transform: none;
@@ -250,8 +290,12 @@ hr {
     width: auto;
     height: 160px;
     transform: rotate(-90deg);
+    display: none;
 }
-.left .menu > ul {
+@media only screen and (min-width: 1000px) {
+    .left .menu-graphic img { display: inline; }
+}
+.left .menu > ul, .left .menu > p {
     list-style: none;
     padding-left: 2em;
 }
@@ -287,8 +331,30 @@ hr {
 .left .menu li {
     text-transform: uppercase;
 }
+.left .menu > ul {
+    transition: height 1s ease-in-out;
+}
+.hide {
+    height: 0;
+    display: none;
+    overflow: hidden;
+}
 .menu .selected a, .left .menu > ul > li > ul > li > a.selected, .left .menu > ul > li > ul > li.selected > a {
     color: white;
+}
+.menu > p {
+    text-align: center;
+}
+.menu > p a {
+    width: 80%;
+    border: 1px #999999 solid;
+    border-radius: 0.3em;
+    padding: 0.4em;
+    white-space: nowrap;
+    display: none;
+}
+@media only screen and (max-width: 800px) {
+    .menu p a { display: block; }
 }
 
 /* Main body */
@@ -297,16 +363,26 @@ hr {
     overflow-x: hidden;
 }
 .body h1 {
-    font-family: "Calibre", sans-serif;
+    font-family: "Calibre-Thin", sans-serif;
     padding: 5em 0;
-    font-size: x-large;
+    font-size: xx-large;
+    font-weight: normal;
+}
+@media (max-width: 800px) {
+    .body h1 { padding: 1em 0; }
 }
 .body h2, .body h3, .body h2 a, .body h3 a {
-    font-family: "Calibre", sans-serif;
+    font-family: "Calibre-Thin", sans-serif;
     color: #02e68f;
     text-indent: -5%;
-    padding: 1em 0 2em 0;
-    font-size: large;
+    padding: 2em 0 0 0;
+    font-weight: normal;
+}
+.body h2 {
+    font-size: xx-large;
+}
+.body h3 {
+    font-size: x-large;
 }
 .body ul {
     list-style: none;
@@ -337,27 +413,33 @@ td {
 }
 
 /* Footer */
-footer {
-    display: flex;
-    flex-direction: row;
-    margin-top: 8em;
-}
 footer > div {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    padding-top: 1em;
+    padding: 1em;
 }
-footer > div > div {
-    margin-top: auto;
-    flex: 1 1;
-}
-footer a {
-    color: #00ffff;
+@media (min-width: 800px) {
+    footer {
+        display: flex;
+        flex-direction: row;
+        margin-top: 8em;
+    }
+    footer > div {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        padding-top: 1em;
+    }
+    footer > div > div {
+        margin-top: auto;
+        flex: 1 1;
+    }
 }
 .lockup {
     margin-left: 20%;
     padding-bottom: 4em;
+    display: none;
+}
+@media only screen and (min-width: 800px) {
+    .lockup { display: block; }
 }
 
 /* Index page has a custom layout */
@@ -396,9 +478,12 @@ footer a {
 }
 .index-stripe {
     background-color: #111111;
-    padding: 8em 8em 8em 40%;
+    padding: 8em;
     position: relative;
     margin: 0;
+}
+@media (min-width: 800px) {
+    .index-stripe { padding: 8em 8em 8em 40%; }
 }
 .index-open {
     font-family: "Calibre", sans-serif;
@@ -408,10 +493,20 @@ footer a {
     font-family: "Calibre", sans-serif;
     font-size: x-large;
 }
+.index-stripe img {
+    display: none;
+}
+@media only screen and (min-width: 800px) {
+    .index-stripe img:nth-child(1), .index-stripe img:nth-child(3) { display: inline }
+}
+@media only screen and (min-width: 1200px) {
+    .index-stripe img:nth-child(2) { display: inline }
+}
 .index-stripe .button {
     border-radius: 2em;
     padding: 1em 4em;
     border: 2px #02e68f solid;
+    white-space: nowrap;
 }
 .index-stripe img:nth-child(1) {
     position: absolute;
@@ -444,6 +539,9 @@ footer a {
     opacity: 0.7;
     transform: rotate(30deg);
     z-index: -20;
+}
+@media (max-width: 1000px) {
+    .index-corner { display: none; }
 }
 .smol {
     width: 20%;
