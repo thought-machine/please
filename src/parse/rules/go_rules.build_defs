@@ -716,7 +716,7 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
 
 def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None):
     """Returns the commands to run for linking a Go binary."""
-    _link_cmd = '$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s -L . -o ${OUT} ' % _GOPATH.replace('-I ', '-L ')
+    _link_cmd = '$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s -o ${OUT} ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     linkerdefs = []
