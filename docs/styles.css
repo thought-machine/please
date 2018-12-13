@@ -22,35 +22,72 @@ but as a result they're not checked into Git.
          url('/fonts/31B6AC_1_0.ttf') format('truetype');
 }
 
+@font-face {
+    font-family: 'Calibre';
+    src: url('/fonts/CalibreWeb-Regular.eot');
+         url('/fonts/CalibreWeb-Regular.woff2') format('woff2'),
+         url('/fonts/CalibreWeb-Regular.woff') format('woff');
+}
+
+@font-face {
+    font-family: 'Calibre-Bold';
+    src: url('/fonts/CalibreWeb-Bold.eot');
+         url('/fonts/CalibreWeb-Bold.woff2') format('woff2'),
+         url('/fonts/CalibreWeb-Bold.woff') format('woff');
+}
+
+@font-face {
+    font-family: 'Calibre-Thin';
+    src: url('/fonts/CalibreWeb-Thin.eot');
+         url('/fonts/CalibreWeb-Thin.woff2') format('woff2'),
+         url('/fonts/CalibreWeb-Thin.woff') format('woff');
+}
+
 /* General */
 body {
     background: #202328;
     color: #999999;
     font-family: "EssentialPragmataPro", monospace;
+    margin: 0px;
+}
+body > div {
+    margin: 0.5em;
 }
 a {
     color: white;
     text-decoration: none;
 }
 .body a:link {
-    color: #29ABE2;
+    color: #00ffff;
 }
 .body a:visited {
-    color: #29ABE2;
+    color: #29abe2;
 }
 h1, h2, h3, h4 {
     color: white;
     font-size: medium;
     text-transform: uppercase;
 }
-.green, .experimental {
-    color: #00FFA9;
-}
+
+.yellow   { color: #ffe752; }
+.turquoise{ color: #02e68f; }
+.green    { color: #96ee05; }
+.blue     { color: #29abe2; }
+.cyan     { color: #00ffff; }
+.violet   { color: #af7dff; }
+.pink     { color: #ff00ff; }
+.red      { color: #fc1452; }
+.black:   { color: #111111; }
+.darkgrey { color: #242424; }
+.white    { color: #FFFFFF; }
+
+.experimental { color: #fc1452; }
+
 .caps {
     text-transform: uppercase;
 }
 pre {
-    border: 1px #00FFA9 solid;
+    border: 1px #02e68f solid;
     border-radius: 3px;
     margin-right: -3px;
     padding: 5px 5px 5px 2px;
@@ -75,7 +112,7 @@ p, li, td {
     line-height: 130%;
 }
 hr {
-    border-color: #00FFA9;
+    border-color: #02e68f;
     margin-top: 10em;
 }
 
@@ -109,20 +146,110 @@ hr {
 .header > div > div {
     flex: 1 1;
 }
+.hdrimg1 img {
+    width: 200px;
+    height: auto;
+    position: absolute;
+    left: 40%;
+    top: -50px;
+}
+.hdrimg2 img {
+    width: 120px;
+    height: auto;
+    position: absolute;
+    right: 20%;
+    top: 50px;
+}
+.sideimg img {
+    height: auto;
+    position: absolute;
+    opacity: 0.2;
+    z-index: -1000;
+}
+.rotate1 { transform: rotate(30deg); }
+.rotate2 { transform: rotate(60deg); }
+.rotate3 { transform: rotate(90deg); }
+.rotate4 { transform: rotate(120deg); }
+.rotate5 { transform: rotate(150deg); }
+.rotate6 { transform: rotate(210deg); }
+.rotate7 { transform: rotate(270deg); }
+.idximg1 img {
+    transform: rotate(20deg);
+    position: absolute;
+    left: 35%;
+    width: 300px;
+    top: -120px;
+    height: auto;
+}
+.idximg2 img {
+    transform: rotate(120deg);
+    position: absolute;
+    left: 45%;
+    top: 250px;
+    width: 120px;
+    height: auto;
+}
+.idximg3 img {
+    transform: rotate(140deg);
+    position: absolute;
+    right: 15%;
+    top: 100px;
+    width: 300px;
+    height: auto;
+}
+.idximg4 img {
+    transform: rotate(-30deg);
+    position: absolute;
+    right: 30%;
+    top: -20px;
+    width: 60px;
+    height: auto;
+}
+.idximg5 img {
+    transform: rotate(-80deg);
+    position: absolute;
+    right: 10em;
+    top: -20px;
+    width: 120px;
+    height: auto;
+    z-index: -50;
+}
+.idximg-spacer {
+    display: block;
+    height: 400px;
+}
 
 /* Left menu */
 .left-container {
     display: flex;
     flex-direction: column;
+    position: sticky;
+    top: 0em;
 }
 .left .logo {
-    flex: 1 4 25%;
+    flex: 1 10 10%;
 }
 .logo h1 {
     text-transform: none;
 }
 .left .menu {
-    flex: 3 4 75%;
+    flex: 9 10 90%;
+}
+.left .menu-graphic {
+    margin-bottom: 1em;
+    margin-top: 1em;
+    text-align: right;
+}
+.left .menu-blurb {
+    margin: 2em;
+    text-align: left;
+    font-family: "Calibre", sans-serif;
+    font-size: large;
+}
+.left .menu-graphic img {
+    width: auto;
+    height: 160px;
+    transform: rotate(-90deg);
 }
 .left .menu > ul {
     list-style: none;
@@ -133,8 +260,14 @@ hr {
     padding-left: 3em;
 }
 .left .menu > ul > li {
-    color: white;
+    color: #af7dff;
     margin: 0.8em 0;
+}
+.left .menu > ul > li > a {
+    color: #af7dff;
+}
+.left .menu > ul > li.selected > a {
+    color: white;
 }
 .left .menu > ul > li:before {
     content: "\2192";
@@ -143,10 +276,10 @@ hr {
 .left .menu > ul > li.selected:before {
     content: "\2193";
     padding-right: 1em;
-    color: #00FFA9;
+    color: white;
 }
 .left .menu > ul > li:hover:before {
-    color: #00FFA9;
+    color: white;
 }
 .left .menu > ul > li > ul > li, .left .menu > ul > li > ul > li > a {
     color: #999999;
@@ -155,7 +288,7 @@ hr {
     text-transform: uppercase;
 }
 .menu .selected a, .left .menu > ul > li > ul > li > a.selected, .left .menu > ul > li > ul > li.selected > a {
-    color: #00FFA9;
+    color: white;
 }
 
 /* Main body */
@@ -164,12 +297,16 @@ hr {
     overflow-x: hidden;
 }
 .body h1 {
+    font-family: "Calibre", sans-serif;
     padding: 5em 0;
+    font-size: x-large;
 }
 .body h2, .body h3, .body h2 a, .body h3 a {
-    color: #00FFA9;
-    text-indent: -10%;
+    font-family: "Calibre", sans-serif;
+    color: #02e68f;
+    text-indent: -5%;
     padding: 1em 0 2em 0;
+    font-size: large;
 }
 .body ul {
     list-style: none;
@@ -181,14 +318,14 @@ hr {
 }
 .body li:before {
     content: "\2022 ";
-    color: #00FFA9;
+    color: #02e68f;
     padding-right: 1.8em;
 }
 table {
     border-spacing: 0;
 }
 th {
-    color: #00FFA9;
+    color: #02e68f;
     text-transform: uppercase;
     border-bottom: 1px white solid;
     text-align: left;
@@ -202,20 +339,25 @@ td {
 /* Footer */
 footer {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    margin-top: 8em;
 }
 footer > div {
     flex: 1 1 auto;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     padding-top: 1em;
 }
 footer > div > div {
     margin-top: auto;
-    flex: 1 1 50%;
+    flex: 1 1;
 }
 footer a {
-    color: #29ABE2;
+    color: #00ffff;
+}
+.lockup {
+    margin-left: 20%;
+    padding-bottom: 4em;
 }
 
 /* Index page has a custom layout */
@@ -235,6 +377,7 @@ footer a {
 }
 .index-layout h2 {
     text-indent: 0;
+    padding-top: 2em;
 }
 .index-layout a:link, .index-layout a:visited {
     text-transform: uppercase;
@@ -243,22 +386,90 @@ footer a {
 .index-layout p {
     margin-bottom: 5em;
 }
+.index-layout img {
+    height: 8em;
+    width: auto;
+}
 .index-open {
     color: white;
     margin: 8em 8em 8em 0;
+}
+.index-stripe {
+    background-color: #111111;
+    padding: 8em 8em 8em 40%;
+    position: relative;
+    margin: 0;
+}
+.index-open {
+    font-family: "Calibre", sans-serif;
+    font-size: large;
+}
+.index-stripe p {
+    font-family: "Calibre", sans-serif;
+    font-size: x-large;
+}
+.index-stripe .button {
+    border-radius: 2em;
+    padding: 1em 4em;
+    border: 2px #02e68f solid;
+}
+.index-stripe img:nth-child(1) {
+    position: absolute;
+    left: -20px;
+    width: 90px;
+    height: auto;
+}
+.index-stripe img:nth-child(2) {
+    position: absolute;
+    left: 10%;
+    top: -100px;
+    width: 250px;
+    height: auto;
+    transform: rotate(160deg);
+}
+.index-stripe img:nth-child(3) {
+    position: absolute;
+    right: -30px;
+    bottom: -40px;
+    width: 150px;
+    height: auto;
+}
+.index-corner {
+    background-color: #111111;
+    position: absolute;
+    top: -60em;
+    right: -40em;
+    width: 80em;
+    height: 80em;
+    opacity: 0.7;
+    transform: rotate(30deg);
+    z-index: -20;
+}
+.smol {
+    width: 20%;
+    height: auto;
+}
+.r90 {
+    transform: rotate(90deg);
+}
+.r45 {
+    transform: rotate(45deg);
 }
 .icon {
     float: right;
 }
 .grammar-string {
-    color: #29ABE2;
+    color: #ffe752;
 }
 .grammar-syntax {
-    color: #00FFA9;
+    color: #ff00ff;
 }
 .grammar-comment {
     color: #999999;
 }
 .grammar-token {
-    font-weight: bold;
+    color: #96ee05;
+}
+.build-rule {
+    color: #96ee05;
 }

@@ -19,14 +19,18 @@ for src in glob(
 
 genrule(
     name = "lexicon_html",
-    srcs = [
+    srcs = deps + [
         "lexicon.html",
         "lexicon_entry.html",
         "template.html",
         "//src/parse/args",
     ],
     outs = ["lexicon.html"],
-    cmd = "$TOOLS_LEX > temp.html && $TOOLS_TMPL docs/template.html temp.html > $OUT",
+    cmd = [
+        "$TOOLS_LEX > lexicon.html",
+        "$TOOLS_TMPL docs/template.html lexicon.html > tmp.html",
+        "mv tmp.html $OUT",
+    ],
     tools = {
         "lex": [":lexicon_templater"],
         "tmpl": [":templater"],
@@ -50,24 +54,9 @@ genrule(
     },
 )
 
-# Downscale images from original resolution
-for colour, scale in [
-    ("teal", "50%"),
-    ("white", "20%"),
-]:
-    for src in glob(["images/%s*.png" % colour]):
-        image_rule = genrule(
-            name = src.replace(".", "_").replace("/", "_"),
-            srcs = [src],
-            outs = [src],
-            cmd = "mkdir -p images && $TOOL $SRC -crop 500x510+230+30 -resize %s $OUT" % scale,
-            tools = ["convert"],
-        )
-        deps += [image_rule]
-
 filegroup(
     name = "docs",
-    srcs = deps + [
+    srcs = glob(["images/*.png"]) + deps + [
         ":language_html",
         ":lexicon_html",
         "styles.css",

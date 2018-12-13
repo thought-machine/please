@@ -13,7 +13,15 @@
     <div class="left">
       <div class="left-container">
         <div class="logo">
-          <h1><a href="index.html">Please<span class="green">:</span></a></h1>
+          <h1><a href="index.html"><img src="images/please_build_p.png"></a></h1>
+        </div>
+        <div class="menu-graphic">
+          {{ if .IsIndex }}
+          <p class="menu-blurb"><span class="cyan">Please</span> is a cross-language build system
+            with an emphasis on high performance, extensibility and reproducibility.</p>
+          {{ else }}
+          <p><img src="images/{{shape 2}}_v.png"></p>
+          {{ end }}
         </div>
         <div class="menu">
           <ul>
@@ -55,52 +63,65 @@
     </div>
     <div class="right">
       <div class="header">
-        <div>
-          <div>
-            <a href="quickstart.html">Getting Started</a>
-          </div>
-          <div>
-            <a href="basics.html">Docs</a>
-          </div>
+      {{ if .IsIndex }}
+        <div class="idximg1"><img src="images/triangle_c.png"></div>
+        <div class="idximg2"><img src="images/circle_y.png"></div>
+        <div class="idximg3"><img src="images/pentagon_v.png"></div>
+        <div class="idximg4"><img src="images/square_g.png"></div>
+        <div class="idximg5"><img src="images/pentagon_r.png"></div>
+        <div class="idximg-spacer"></div>
+
+      {{ else }}
+        <div class="hdrimg1"><img src="images/{{shape 4}}_{{colour 7}}.png" class="{{rotate 5}}"></div>
+        <div class="hdrimg2"><img src="images/{{shape 5}}_{{colour 8}}.png" class="{{rotate 6}}"></div>
+        <div class="sideimg">
+        {{ range .SideImages }}
+          <img src="images/{{shape .}}_{{colour .}}.png" class="{{rotate .}}"
+               style="width: {{random . 140 240}}px; right: {{random . -60 10}}px; top: {{randomoffset . 0 50 100 }}%;">
+        {{ end }}
         </div>
-        <div>
-          <div>
-            <a href="https://github.com/thought-machine/please">Github</a>
-          </div>
-          <div>
-            <a href="lexicon.html">Reference</a>
-          </div>
-        </div>
+      {{ end }}
       </div>
       <div class="body">
-        <div class="icon">{{iconImage}}</div>
       {{ .Contents }}
       </div>
     </div>
     </div>
 
-    <hr>
+    {{ if .IsIndex }}
+    <div class="index-stripe">
+      <img src="images/hexagon_r.png">
+      <img src="images/triangle_g.png">
+      <img src="images/circle_y.png">
+      <p><span class="white">Want Please?</span> Get started:</p>
+      <p>&nbsp;</p>
+      <p><span class="button"><a href="quickstart.html">Yes Please</a></span></p>
+    </div>
+    {{ end }}
 
     <footer>
+      <div>
+        <div class="lockup">
+          <img src="images/lockup2.png">
+        </div>
+      </div>
+      <div>
+        <div>
+          <a href="index.html"><img src="images/please_build_t.png"></a>
+        </div>
+        <div>
+          <p><a href="acknowledgements.html">Acknowledgements</a><br/>
+            Documentation licensed under
+            <a href="https://creativecommons.org/licenses/by/4.0/">CC-BY-4.0</a></p>
+        </div>
+      </div>
       <div>
         <div>
           <a href="https://www.thoughtmachine.net"><img src="images/thoughtmachine.png"></a>
         </div>
         <div>
-          <a href="https://github.com/thought-machine/please">Github</a>
-        </div>
-      </div>
-      <div>
-        <div>
-          <p><span class="green caps">&nbsp;&copy; ThoughtMachine 2016-2018</span><br/>
-            &nbsp;A Creation of ThoughtMachine</p>
-        </div>
-        <div>
-          <p>
-            <a href="acknowledgements.html">Acknowledgements</a><br/>
-            Documentation licensed under
-            <a href="https://creativecommons.org/licenses/by/4.0/">CC-BY-4.0</a>
-          </p>
+          <p>&nbsp;&copy; 2018 Thought Machine<br/>
+            &nbsp;A Creation of <a href="https://www.thoughtmachine.net"><span class="white">Thought Machine</span></a></p>
         </div>
       </div>
     </footer>

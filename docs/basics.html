@@ -14,24 +14,26 @@
     <p>Each BUILD file can contain a number of <em>build targets</em>. These are units of buildable code
       which can be reused by other build targets. An example is probably worth 1000 words at this point:
       <pre><code>
-	  python_library(
+	  <span class="build-rule">python_library</span>(
 	      name = 'my_library',
 	      srcs = ['file1.py', 'file2.py'],
 	  )
 
-	  python_binary(
+	  <span class="build-rule">python_binary</span>(
 	      name = 'my_binary',
 	      main = 'my_main.py',
 	      deps = [':my_library'],
 	  )
 
-	  python_test(
+	  <span class="build-rule">python_test</span>(
 	      name = 'my_library_test',
 	      srcs = ['my_library_test.py'],
 	      deps = [':my_library'],
 	  )
       </code></pre>
-      This snippet defines three build rules:
+      This snippet defines three build targets; a build target is simply a thing that can be built
+      by Please and typically appear as a single object in the build file (as the
+      <code>python_library</code>, <code>python_binary</code> and <code>python_test</code> are above).
       <ul>
 	<li><code>my_library</code> is simply a collection of <code>file1.py</code> and <code>file2.py</code>.<br/>
 	  For some languages these might be compiled, for Python of course they're simply made available for other rules.</li>

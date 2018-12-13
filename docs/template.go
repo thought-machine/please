@@ -1,30 +1,41 @@
 package main
 
 import (
-	"fmt"
+	"hash/adler32"
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"text/template"
 )
 
-var iconImages = map[string]string{
-	"advanced.html":         "teal4.png",
-	"acknowledgements.html": "teal2.png",
-	"basics.html":           "teal1.png",
-	"build_rules.html":      "teal1.png",
-	"cache.html":            "teal3.png",
-	"commands.html":         "teal6.png",
-	"config.html":           "teal5.png",
-	"cross_compiling.html":  "teal5.png",
-	"dependencies.html":     "teal3.png",
-	"faq.html":              "teal4.png",
-	"intermediate.html":     "teal2.png",
-	"language.html":         "teal5.png",
-	"lexicon.html":          "teal1.png",
-	"pleasings.html":        "teal3.png",
-	"quickstart.html":       "teal6.png",
-	"error.html":            "teal4.png",
+var shapes = []string{
+	"circle",
+	"hexagon",
+	"pentagon",
+	"square",
+	"triangle",
+}
+
+var colours = []string{
+	"b", // blue
+	"c", // cyan
+	"g", // green
+	"p", // pink
+	"r", // red
+	"t", // turquoise
+	"v", // violet
+	"y", // yellow
+}
+
+var rotations = []string{
+	"rotate1",
+	"rotate2",
+	"rotate3",
+	"rotate4",
+	"rotate5",
+	"rotate6",
+	"rotate7",
 }
 
 var pageTitles = map[string]string{
@@ -55,6 +66,9 @@ func mustRead(filename string) string {
 func main() {
 	filename := os.Args[2]
 	basename := path.Base(filename)
+	basenameIndex := int(adler32.Checksum([]byte(basename)))
+	modulo := func(s []string, i int) string { return s[(basenameIndex+i)%len(s)] }
+	random := func(x, min, max int) int { return (x*basenameIndex+min)%(max-min) + min }
 	funcs := template.FuncMap{
 		"menuItem": func(s string) string {
 			if basename[:len(basename)-5] == s {
@@ -62,21 +76,26 @@ func main() {
 			}
 			return ""
 		},
-		"iconImage": func() string {
-			if img := iconImages[basename]; img != "" {
-				return fmt.Sprintf(`<img src="images/%s">`, img)
-			}
-			return ""
-		},
+		"shape":        func(i int) string { return modulo(shapes, i) },
+		"colour":       func(i int) string { return modulo(colours, i) },
+		"rotate":       func(i int) string { return modulo(rotations, i) },
+		"random":       func(x, min, max int) int { return (x*basenameIndex+min)%(max-min) + min },
+		"randomoffset": func(x, min, max, step int) int { return x*step + random(x, min, max) },
 	}
 	data := struct {
 		Title, Header, Contents string
-		Player                  bool
+		SideImages              []int
+		Player, IsIndex         bool
 	}{
 		Title:    pageTitles[basename],
 		Header:   mustRead(os.Args[1]),
 		Contents: mustRead(filename),
 		Player:   basename == "faq.html",
+		IsIndex:  basename == "index.html",
+	}
+	for i := 0; i <= strings.Count(data.Contents, "\n")/150; i++ {
+		// Awkwardly this seems to have to be a slice to range over in the template.
+		data.SideImages = append(data.SideImages, i+1)
 	}
 
 	tmpl := template.Must(template.New("tmpl").Funcs(funcs).Parse(mustRead(os.Args[1])))
