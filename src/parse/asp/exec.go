@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -24,6 +25,8 @@ var (
 	// The output from exec() is memoized by default
 	execCacheLock  sync.RWMutex
 	execCachedOuts map[execKey]string
+
+	execCmdPath sync.Map
 
 	execPromisesLock sync.Mutex
 	execPromises     map[execKey]*execPromise
@@ -49,35 +52,35 @@ func init() {
 // reproducible.
 //
 // NOTE: Commands that rely on the current working directory must not be cached.
-func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOutput bool) pyObject {
+func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOutput bool) (pyObject, error) {
 	if !wantStdout && !wantStderr {
-		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false")
+		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false"), nil
 	}
 
-	var cmdArgs []string
+	var argv []string
 	if isType(cmdIn, "str") {
-		cmdArgs = strings.Fields(string(cmdIn.(pyString)))
+		argv = strings.Fields(string(cmdIn.(pyString)))
 	} else if isType(cmdIn, "list") {
 		pl := cmdIn.(pyList)
-		cmdArgs = make([]string, 0, pl.Len())
+		argv = make([]string, 0, pl.Len())
 		for i := 0; i < pl.Len(); i++ {
-			cmdArgs = append(cmdArgs, pl[i].String())
+			argv = append(argv, pl[i].String())
 		}
 	}
 
 	// The cache key is tightly coupled to the operating parameters
-	key := execMakeKey(cmdArgs, wantStdout, wantStderr)
+	key := execMakeKey(argv, wantStdout, wantStderr)
 
 	// Only get cached output if this call is intended to be cached.
 	var completedPromise bool
 	if cacheOutput {
-		out, found := execGetCachedOutput(key, cmdArgs)
+		out, found := execGetCachedOutput(key, argv)
 		if found {
-			return pyString(out)
+			return pyString(out), nil
 		}
 		defer func() {
 			if !completedPromise {
-				execCancelPromise(key, cmdArgs)
+				execCancelPromise(key, argv)
 			}
 		}()
 	}
@@ -85,9 +88,14 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 	ctx, cancel := context.WithTimeout(context.TODO(), core.TargetTimeoutOrDefault(nil, s.state))
 	defer cancel()
 
+	cmdPath, err := execFindCmd(argv[0])
+	if err != nil {
+		return s.Error("exec() unable to find %q in PATH %q", argv[0], os.Getenv("PATH")), err
+	}
+	cmdArgs := argv[1:]
+
 	var out []byte
-	var err error
-	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
+	cmd := exec.CommandContext(ctx, cmdPath, cmdArgs...)
 	if wantStdout && wantStderr {
 		out, err = cmd.CombinedOutput()
 	} else {
@@ -108,15 +116,15 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 	outStr := string(out)
 
 	if err != nil {
-		return s.Error("exec() unable to run command %q: %v", cmdArgs, err)
+		return pyString(fmt.Sprintf("exec() unable to run command %q: %v", argv, err)), err
 	}
 
 	if cacheOutput {
-		execSetCachedOutput(key, cmdArgs, outStr)
+		execSetCachedOutput(key, argv, outStr)
 		completedPromise = true
 	}
 
-	return pyString(outStr)
+	return pyString(outStr), nil
 }
 
 // execCancelPromise cancels any pending promises
@@ -130,6 +138,24 @@ func execCancelPromise(key execKey, args []string) {
 		promise.cv.Broadcast()
 		promise.cv.L.Unlock()
 	}
+}
+
+// execFindCmd looks for a command using PATH and returns a cached abspath.
+func execFindCmd(cmdName string) (path string, err error) {
+	pathRaw, found := execCmdPath.Load(cmdName)
+	if !found {
+		// Perform a racy LookPath assuming the path is stable between concurrent
+		// lookups for the same cmdName.
+		path, err := exec.LookPath(cmdName)
+		if err != nil {
+			return "", err
+		}
+
+		// First write wins
+		pathRaw, _ = execCmdPath.LoadOrStore(cmdName, path)
+	}
+
+	return pathRaw.(string), nil
 }
 
 // execGetCachedOutput returns the output if found, sets found to true if found,
@@ -198,7 +224,30 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	return doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	gitSymRefResult, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	if gitSymRefResult, ok := gitSymRefResult.(pyString); ok && err == nil {
+		return gitSymRefResult
+	}
+
+	// We're in a detached head
+	cmdIn = make([]pyObject, 4)
+	cmdIn[0] = pyString("git")
+	cmdIn[1] = pyString("show")
+	cmdIn[2] = pyString("-q")
+	cmdIn[3] = pyString("--format=%D")
+	gitShowResult, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	if err != nil {
+		// doExec returns a formatted error string
+		return gitShowResult
+	}
+
+	results := strings.Fields(gitShowResult.String())
+	if len(results) == 0 {
+		// We're seeing something unknown and unexpected, go back to the original error message
+		return gitSymRefResult
+	}
+
+	return pyString(results[len(results)-1])
 }
 
 // execGitCommit returns the output of a git_commit() command.
@@ -214,7 +263,9 @@ func execGitCommit(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	return doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	// No error handling required since we don't want to retry
+	rawResult, _ := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	return rawResult
 }
 
 // execGitShow returns the output of a git_show() command with a strict format.
@@ -262,7 +313,8 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	return doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	rawResult, _ := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	return rawResult
 }
 
 // execGitState returns the output of a git_state() command.
@@ -281,7 +333,7 @@ func execGitState(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	pyResult := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	pyResult, _ := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
 
 	if !isType(pyResult, "str") {
 		return pyResult
