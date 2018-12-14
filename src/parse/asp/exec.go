@@ -230,10 +230,11 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 	}
 
 	// We're in a detached head
-	cmdIn = make([]pyObject, 3)
+	cmdIn = make([]pyObject, 4)
 	cmdIn[0] = pyString("git")
 	cmdIn[1] = pyString("show")
-	cmdIn[2] = pyString("--format=%D")
+	cmdIn[2] = pyString("-q")
+	cmdIn[3] = pyString("--format=%D")
 	gitShowResult, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
 	if err != nil {
 		// doExec returns a formatted error string
