@@ -52,9 +52,9 @@ func init() {
 // reproducible.
 //
 // NOTE: Commands that rely on the current working directory must not be cached.
-func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOutput bool) pyObject {
+func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOutput bool) (pyObject, error) {
 	if !wantStdout && !wantStderr {
-		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false")
+		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false"), nil
 	}
 
 	var argv []string
@@ -76,7 +76,7 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 	if cacheOutput {
 		out, found := execGetCachedOutput(key, argv)
 		if found {
-			return pyString(out)
+			return pyString(out), nil
 		}
 		defer func() {
 			if !completedPromise {
@@ -90,7 +90,7 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 
 	cmdPath, err := execFindCmd(argv[0])
 	if err != nil {
-		return s.Error("exec() unable to find %q in PATH %q", argv[0], os.Getenv("PATH"))
+		return s.Error("exec() unable to find %q in PATH %q", argv[0], os.Getenv("PATH")), err
 	}
 	cmdArgs := argv[1:]
 
@@ -116,7 +116,7 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 	outStr := string(out)
 
 	if err != nil {
-		return s.Error("exec() unable to run command %q: %v", argv, err)
+		return pyString(fmt.Sprintf("exec() unable to run command %q: %v", argv, err)), err
 	}
 
 	if cacheOutput {
@@ -124,7 +124,7 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 		completedPromise = true
 	}
 
-	return pyString(outStr)
+	return pyString(outStr), nil
 }
 
 // execCancelPromise cancels any pending promises
@@ -224,7 +224,29 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	return doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	gitSymRefResult, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	if gitSymRefResult, ok := gitSymRefResult.(pyString); ok && err == nil {
+		return gitSymRefResult
+	}
+
+	// We're in a detached head
+	cmdIn = make([]pyObject, 3)
+	cmdIn[0] = pyString("git")
+	cmdIn[1] = pyString("show")
+	cmdIn[2] = pyString("--format=%D")
+	gitShowResult, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	if err != nil {
+		// doExec returns a formatted error string
+		return gitShowResult
+	}
+
+	results := strings.Fields(gitShowResult.String())
+	if len(results) == 0 {
+		// We're seeing something unknown and unexpected, go back to the original error message
+		return gitSymRefResult
+	}
+
+	return pyString(results[len(results)-1])
 }
 
 // execGitCommit returns the output of a git_commit() command.
@@ -240,7 +262,9 @@ func execGitCommit(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	return doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	// No error handling required since we don't want to retry
+	rawResult, _ := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	return rawResult
 }
 
 // execGitShow returns the output of a git_show() command with a strict format.
@@ -288,7 +312,8 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	return doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	rawResult, _ := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	return rawResult
 }
 
 // execGitState returns the output of a git_state() command.
@@ -307,7 +332,7 @@ func execGitState(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	pyResult := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	pyResult, _ := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
 
 	if !isType(pyResult, "str") {
 		return pyResult
