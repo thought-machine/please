@@ -6,26 +6,32 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/thought-machine/please/src/core"
 )
 
-type execKey string
+type execKey struct {
+	args       string
+	wantStdout bool
+	wantStderr bool
+}
+
 type execPromise struct {
-	cv        *sync.Cond
-	out       string
-	cancelled bool
-	finished  bool
+	wg   *sync.WaitGroup
+	lock sync.Mutex
+}
+type execOut struct {
+	out     string
+	success bool
 }
 
 var (
-	// The output from exec() is memoized by default
-	execCacheLock  sync.RWMutex
-	execCachedOuts map[execKey]string
+	// The output from doExec() is memoized by default
+	execCachedOuts sync.Map
 
+	// The absolute path of commands
 	execCmdPath sync.Map
 
 	execPromisesLock sync.Mutex
@@ -33,14 +39,10 @@ var (
 )
 
 func init() {
-	execCacheLock.Lock()
-	defer execCacheLock.Unlock()
-
 	execPromisesLock.Lock()
 	defer execPromisesLock.Unlock()
 
-	const initCacheSize = 16
-	execCachedOuts = make(map[execKey]string, initCacheSize)
+	const initCacheSize = 8
 	execPromises = make(map[execKey]*execPromise, initCacheSize)
 }
 
@@ -49,12 +51,14 @@ func init() {
 // exec() is memoized by default to prevent side effects and aid in performance
 // of duplicate calls to the same command with the same arguments (e.g. `git
 // rev-parse --short HEAD`).  The output from exec()'ed commands must be
-// reproducible.
+// reproducible.  If storeNegative is true, it is possible for success to return
+// successfully and return an error (i.e. we're expecing a command to fail and
+// want to cache the failure).
 //
 // NOTE: Commands that rely on the current working directory must not be cached.
-func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOutput bool) (pyObject, error) {
+func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOutput bool, storeNegative bool) (pyObj pyObject, success bool, err error) {
 	if !wantStdout && !wantStderr {
-		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false"), nil
+		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false"), false, nil
 	}
 
 	var argv []string
@@ -71,18 +75,12 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 	// The cache key is tightly coupled to the operating parameters
 	key := execMakeKey(argv, wantStdout, wantStderr)
 
-	// Only get cached output if this call is intended to be cached.
-	var completedPromise bool
+
 	if cacheOutput {
 		out, found := execGetCachedOutput(key, argv)
 		if found {
-			return pyString(out), nil
+			return pyString(out.out), out.success, nil
 		}
-		defer func() {
-			if !completedPromise {
-				execCancelPromise(key, argv)
-			}
-		}()
 	}
 
 	ctx, cancel := context.WithTimeout(context.TODO(), core.TargetTimeoutOrDefault(nil, s.state))
@@ -90,7 +88,7 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 
 	cmdPath, err := execFindCmd(argv[0])
 	if err != nil {
-		return s.Error("exec() unable to find %q in PATH %q", argv[0], os.Getenv("PATH")), err
+		return s.Error("exec() unable to find %q in PATH %q", argv[0], os.Getenv("PATH")), false, err
 	}
 	cmdArgs := argv[1:]
 
@@ -116,28 +114,22 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 	outStr := string(out)
 
 	if err != nil {
-		return pyString(fmt.Sprintf("exec() unable to run command %q: %v", argv, err)), err
+		if cacheOutput && storeNegative {
+			// Completed successfully and returned an error.  Store the negative value
+			// since we're also returning an error, which tells the caller to
+			// fallthrough their logic if a command returns with a non-zero exit code.
+			outStr = execSetCachedOutput(key, argv, &execOut{out: outStr, success: false})
+			return pyString(outStr), true, err
+		}
+
+		return pyString(fmt.Sprintf("exec() unable to run command %q: %v", argv, err)), false, err
 	}
 
 	if cacheOutput {
-		execSetCachedOutput(key, argv, outStr)
-		completedPromise = true
+		outStr = execSetCachedOutput(key, argv, &execOut{out: outStr, success: true})
 	}
 
-	return pyString(outStr), nil
-}
-
-// execCancelPromise cancels any pending promises
-func execCancelPromise(key execKey, args []string) {
-	execPromisesLock.Lock()
-	defer execPromisesLock.Unlock()
-	if promise, found := execPromises[key]; found {
-		delete(execPromises, key)
-		promise.cv.L.Lock()
-		promise.cancelled = true
-		promise.cv.Broadcast()
-		promise.cv.L.Unlock()
-	}
+	return pyString(outStr), true, nil
 }
 
 // execFindCmd looks for a command using PATH and returns a cached abspath.
@@ -159,51 +151,49 @@ func execFindCmd(cmdName string) (path string, err error) {
 }
 
 // execGetCachedOutput returns the output if found, sets found to true if found,
-// and returns a held promise that must be either cancelled or completed.
-func execGetCachedOutput(key execKey, args []string) (output string, found bool) {
-	execCacheLock.RLock()
-	out, found := execCachedOuts[key]
-	execCacheLock.RUnlock()
+// and returns a held promise that must be completed.
+func execGetCachedOutput(key execKey, args []string) (output *execOut, found bool) {
+	outputRaw, found := execCachedOuts.Load(key)
 	if found {
-		return out, true
+		return outputRaw.(*execOut), true
 	}
 
-	// Re-check with exclusive lock held
-	execCacheLock.Lock()
-	out, found = execCachedOuts[key]
-	if found {
-		execCacheLock.Unlock()
-		return out, true
-	}
-
+	// Re-check with promises exclusive lock held
 	execPromisesLock.Lock()
+	outputRaw, found = execCachedOuts.Load(key)
+	if found {
+		execPromisesLock.Unlock()
+		return outputRaw.(*execOut), true
+	}
+
+	// Create a new promise.  Increment the WaitGroup while the lock is held.
 	promise, found := execPromises[key]
 	if !found {
 		promise = &execPromise{
-			cv: sync.NewCond(&sync.Mutex{}),
+			wg: &sync.WaitGroup{},
 		}
+		promise.wg.Add(1)
 		execPromises[key] = promise
 
-		execCacheLock.Unlock()
 		execPromisesLock.Unlock()
-		return "", false // Let the caller fulfill the promise
+		return nil, false // Let the caller fulfill the promise
 	}
-	execCacheLock.Unlock() // Release now that we've recorded our promise
-
-	promise.cv.L.Lock() // Lock our promise before we unlock execPromisesLock
 	execPromisesLock.Unlock()
 
-	for {
-		switch {
-		case promise.finished:
-			promise.cv.L.Unlock()
-			return promise.out, true
-		case promise.cancelled:
-			return "", false
-		default:
-			promise.cv.Wait()
-		}
+	promise.wg.Wait() // Block until the promise is completed
+	execPromisesLock.Lock()
+	defer execPromisesLock.Unlock()
+
+	outputRaw, found = execCachedOuts.Load(key)
+	if found {
+		return outputRaw.(*execOut), true
 	}
+
+	if !found {
+		panic(fmt.Sprintf("blocked on promise %v, didn't find value", key))
+	}
+
+	return outputRaw.(*execOut), true
 }
 
 // execGitBranch returns the output of a git_branch() command.
@@ -224,9 +214,17 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	gitSymRefResult, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
-	if gitSymRefResult, ok := gitSymRefResult.(pyString); ok && err == nil {
+	storeNegative := true
+	gitSymRefResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	switch {
+	case success && err == nil:
 		return gitSymRefResult
+	case success && err != nil:
+		//  ran a thing that failed, handle case below
+	case !success && err == nil:
+		//  previous invocation cached a negative value
+	default:
+		return s.Error("exec() %q failed: %v", pyList(cmdIn).String(), err)
 	}
 
 	// We're in a detached head
@@ -235,10 +233,11 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 	cmdIn[1] = pyString("show")
 	cmdIn[2] = pyString("-q")
 	cmdIn[3] = pyString("--format=%D")
-	gitShowResult, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
-	if err != nil {
+	storeNegative = false
+	gitShowResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	if !success {
 		// doExec returns a formatted error string
-		return gitShowResult
+		return s.Error("exec() %q failed: %v", pyList(cmdIn).String(), err)
 	}
 
 	results := strings.Fields(gitShowResult.String())
@@ -263,9 +262,14 @@ func execGitCommit(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
+	storeNegative := false
 	// No error handling required since we don't want to retry
-	rawResult, _ := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
-	return rawResult
+	pyResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	if !success {
+		return s.Error("git_commit() failed: %v", err)
+	}
+
+	return pyResult
 }
 
 // execGitShow returns the output of a git_show() command with a strict format.
@@ -313,8 +317,12 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	rawResult, _ := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
-	return rawResult
+	storeNegative := false
+	pyResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	if !success {
+		return s.Error("git_show() failed: %v", err)
+	}
+	return pyResult
 }
 
 // execGitState returns the output of a git_state() command.
@@ -333,7 +341,11 @@ func execGitState(s *scope, args []pyObject) pyObject {
 	wantStdout := true
 	wantStderr := false
 	cacheOutput := true
-	pyResult, _ := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput)
+	storeNegative := false
+	pyResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	if !success {
+		return s.Error("git_state() failed: %v", err)
+	}
 
 	if !isType(pyResult, "str") {
 		return pyResult
@@ -348,28 +360,29 @@ func execGitState(s *scope, args []pyObject) pyObject {
 
 // execMakeKey returns an execKey.
 func execMakeKey(args []string, wantStdout bool, wantStderr bool) execKey {
-	keyArgs := make([]string, 0, len(args)+2)
-	keyArgs = append(keyArgs, args...)
-	keyArgs = append(keyArgs, strconv.FormatBool(wantStdout))
-	keyArgs = append(keyArgs, strconv.FormatBool(wantStderr))
-
-	return execKey(strings.Join(keyArgs, ""))
+	return execKey{
+		args:       strings.Join(args, ""),
+		wantStdout: wantStdout,
+		wantStderr: wantStderr,
+	}
 }
 
 // execSetCachedOutput sets a value to be cached
-func execSetCachedOutput(key execKey, args []string, output string) {
-	execCacheLock.Lock()
-	execCachedOuts[key] = output
-	execCacheLock.Unlock()
+func execSetCachedOutput(key execKey, args []string, output *execOut) string {
+	outputRaw, alreadyLoaded := execCachedOuts.LoadOrStore(key, output)
+	if alreadyLoaded {
+		panic(fmt.Sprintf("race detected for key %v", key))
+	}
 
 	execPromisesLock.Lock()
 	defer execPromisesLock.Unlock()
 	if promise, found := execPromises[key]; found {
 		delete(execPromises, key)
-		promise.cv.L.Lock()
-		promise.out = output
-		promise.finished = true
-		promise.cv.Broadcast()
-		promise.cv.L.Unlock()
+		promise.lock.Lock()
+		defer promise.lock.Unlock()
+		promise.wg.Done()
 	}
+
+	out := outputRaw.(*execOut).out
+	return out
 }
