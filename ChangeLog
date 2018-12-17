@@ -1,3 +1,9 @@
+Version 13.3.2
+--------------
+
+    * Fixed race condition in cache for git builtins.
+
+
 Version 13.3.1
 --------------
 
