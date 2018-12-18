@@ -2,15 +2,17 @@ package langserver
 
 import (
 	"context"
-	"github.com/thought-machine/please/src/core"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
-	"github.com/thought-machine/please/tools/build_langserver/lsp"
 
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
+
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 var log = logging.MustGetLogger("lsp")
@@ -48,6 +50,11 @@ type LsHandler struct {
 
 // Handle function takes care of all the incoming from the client, and returns the correct response
 func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("Panic in handler: %s: %s", r, debug.Stack())
+		}
+	}()
 	if req.Method != "initialize" && h.init == nil {
 		return nil, fmt.Errorf("server must be initialized")
 	}
