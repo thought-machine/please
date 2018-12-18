@@ -56,14 +56,14 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 		if err := json.Unmarshal(*req.Params, &params); err != nil {
 			return nil, err
 		}
+		if params.Text == "" {
+			return nil, nil
+		}
 
 		documentURI, err := getURIAndHandleErrors(params.TextDocument.URI, "textDocument/didSave")
 		if err != nil {
 			return nil, err
 		}
-
-		h.diagPublisher.queue.Put(taskDef{uri: documentURI, content: params.Text})
-
 		return nil, h.workspace.Update(documentURI, params.Text)
 	case "textDocument/didClose":
 		var params lsp.DidCloseTextDocumentParams

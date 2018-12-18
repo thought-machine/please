@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/thought-machine/please/src/cli"
 	"context"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/tools/build_langserver/langserver"
 	"net"
 	"os"
-	"github.com/thought-machine/please/tools/build_langserver/langserver"
 
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
@@ -17,7 +17,7 @@ var log = logging.MustGetLogger("build_langserver")
 
 var opts = struct {
 	Usage     string
-	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
+	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"notice" description:"Verbosity of output (higher number = more output)"`
 	LogFile   cli.Filepath  `long:"log_file" description:"File to echo full logging output to"`
 
 	Mode string `short:"m" long:"mode" default:"stdio" choice:"stdio" choice:"tcp" description:"Mode of the language server communication"`
@@ -36,7 +36,7 @@ func main() {
 	cli.ParseFlagsOrDie("build_langserver", "1.0.0", &opts)
 	cli.InitLogging(opts.Verbosity)
 	if opts.LogFile != "" {
-		cli.InitFileLogging(string(opts.LogFile), 4)
+		cli.InitFileLogging(string(opts.LogFile), opts.Verbosity)
 	}
 
 	handler := langserver.NewHandler()
@@ -55,7 +55,7 @@ func serve(handler jsonrpc2.Handler) error {
 		}
 		defer lis.Close()
 
-		log.Info("langserver-go: listening on", opts.Host+":"+opts.Port)
+		log.Notice("build_langserver: listening on", opts.Host+":"+opts.Port)
 		for {
 			conn, err := lis.Accept()
 			if err != nil {
@@ -64,12 +64,12 @@ func serve(handler jsonrpc2.Handler) error {
 			jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(conn, jsonrpc2.VSCodeObjectCodec{}), handler)
 		}
 	} else {
-		log.Info("build_langserver: reading on stdin, writing on stdout")
+		log.Notice("build_langserver: reading on stdin, writing on stdout")
 
 		<-jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),
 			handler).DisconnectNotify()
 
-		log.Info("connection closed")
+		log.Notice("connection closed")
 	}
 
 	return nil

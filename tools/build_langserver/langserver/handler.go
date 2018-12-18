@@ -83,7 +83,11 @@ func (h *LsHandler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrp
 	}
 
 	if method, ok := methods[req.Method]; ok {
-		return method(ctx, req)
+		result, err := method(ctx, req)
+		if err != nil {
+			log.Error("Error handling %s: %s", req.Method, err)
+		}
+		return result, err
 	}
 
 	return h.handleTDRequests(ctx, req)

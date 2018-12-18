@@ -45,6 +45,12 @@ func (h *LsHandler) handleHover(ctx context.Context, req *jsonrpc2.Request) (res
 func (h *LsHandler) getHoverContent(ctx context.Context, uri lsp.DocumentURI, pos lsp.Position) (content string, err error) {
 	// Get the content of the line from the position
 	fileContent := h.workspace.documents[uri].textInEdit
+	if pos.Line >= len(fileContent) {
+		return "", &jsonrpc2.Error{
+			Code:    jsonrpc2.CodeInvalidParams,
+			Message: fmt.Sprintf("Invalid file line: requested %d, but we think file is only %d long", pos.Line, len(fileContent)),
+		}
+	}
 	lineContent := fileContent[pos.Line]
 
 	if err != nil {
