@@ -67,7 +67,8 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     if 'go' in languages:
         base_path = get_base_path()
         labels += [f'proto:go-map: {base_path}/{src}={base_path}/{name}' for src in srcs
-                   if not src.startswith(':') and not src.startswith('/')]
+                   if not src.startswith(':') and not src.startswith('/') and
+                       (src != (name + '.proto') or len(srcs) > 1)]
 
     # Figure out which languages we need to detect output files for.
     # This always happens for Java, and will be needed for any other language where the inputs aren't plain files.
@@ -373,6 +374,7 @@ def grpc_languages():
         'go': proto_language(
             language = 'go',
             extensions = ['.pb.go'],
+            use_file_names = False,
             func = lambda name, srcs, deps, test_only: go_library(
                 name = name,
                 srcs = srcs,
