@@ -41,7 +41,7 @@ plz_e2e_test(
 plz_e2e_test(
     name = "dep_required_test",
     cmd = "plz build //test:failed_dep",
-    expect_output_contains = " Target //src/core:config_test isn't visible to //test:failed_dep",
+    expect_output_contains = "Target //src/core:config_test isn't visible to //test:failed_dep",
     expected_failure = True,
 )
 

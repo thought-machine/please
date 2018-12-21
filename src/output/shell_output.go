@@ -547,15 +547,11 @@ func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buil
 	active bool, failed bool, cached bool, description string, err error, colour string, target *core.BuildTarget) {
 	updateTarget2(buildingTarget, label, active, failed, cached, description, err, colour, target)
 	if plainOutput {
-		if failed {
-			log.Errorf("%s: %s: %s", label.String(), description, shortError(err))
+		if !active {
+			active := pluralise(state.NumActive(), "task", "tasks")
+			log.Info("[%d/%s] %s: %s [%3.1fs]", state.NumDone(), active, label.String(), description, time.Since(buildingTarget.Started).Seconds())
 		} else {
-			if !active {
-				active := pluralise(state.NumActive(), "task", "tasks")
-				log.Info("[%d/%s] %s: %s [%3.1fs]", state.NumDone(), active, label.String(), description, time.Since(buildingTarget.Started).Seconds())
-			} else {
-				log.Info("%s: %s", label.String(), description)
-			}
+			log.Info("%s: %s", label.String(), description)
 		}
 	}
 }
