@@ -98,12 +98,12 @@ func (hasher *PathHasher) hash(path string) ([]byte, error) {
 		// This isn't quite perfect - it could potentially get mixed up with a file with the
 		// appropriate contents, but that is not really likely.
 		h.Write(boolTrueHashValue)
-		if rel := hasher.ensureRelative(dest); rel != dest || !filepath.IsAbs(dest) {
+		if rel := hasher.ensureRelative(dest); (rel != dest || !filepath.IsAbs(dest)) && !filepath.IsAbs(path) {
 			// Inside the root of our repo so it's something we manage - just hash its (relative) destination
 			h.Write([]byte(rel))
 		} else {
 			// Outside the repo; it's a system tool, so we hash its contents.
-			err := hasher.fileHash(h, dest)
+			err := hasher.fileHash(h, path)
 			return h.Sum(nil), err
 		}
 		return h.Sum(nil), nil
