@@ -309,10 +309,20 @@ func readRuleHash(target *core.BuildTarget, postBuild bool) ([]byte, []byte, []b
 		h = b
 	}
 	if h == nil {
-		// Try the fallback file; target might not have had any outputs, for example.
-		h = readRuleHashOnFile(target, fallbackRuleHashFileName(target))
-		if h == nil {
-			return nil, nil, nil, nil
+		// If the target has a post-build function, we might have written it there.
+		// Only works for pre-build, though.
+		if target.PostBuildFunction != nil && !postBuild {
+			h = readRuleHashOnFile(target, postBuildOutputFileName(target))
+			if h == nil {
+				return nil, nil, nil, nil
+			}
+
+		} else {
+			// Try the fallback file; target might not have had any outputs, for example.
+			h = readRuleHashOnFile(target, fallbackRuleHashFileName(target))
+			if h == nil {
+				return nil, nil, nil, nil
+			}
 		}
 	}
 	if postBuild {
@@ -360,6 +370,9 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 			return err
 		}
 	}
+	if target.PostBuildFunction != nil {
+		return writeRuleHashOnFile(target, postBuildOutputFileName(target), hash)
+	}
 	return nil
 }
 
@@ -389,7 +402,6 @@ func writeFallbackRuleHashFile(target *core.BuildTarget, hash []byte) error {
 	}
 	f.Close()
 	return writeRuleHashOnFile(target, fallbackFilename, hash)
-
 }
 
 // fallbackRuleHashFile returns the filename we'll store the hashes for this file on if we have
@@ -420,8 +432,7 @@ func storePostBuildOutput(target *core.BuildTarget, out []byte) {
 	filename := postBuildOutputFileName(target)
 	if err := os.RemoveAll(filename); err != nil {
 		panic(err)
-	}
-	if err := ioutil.WriteFile(filename, out, 0644); err != nil {
+	} else if err := ioutil.WriteFile(filename, out, 0644); err != nil {
 		panic(err)
 	}
 }
