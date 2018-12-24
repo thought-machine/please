@@ -5,7 +5,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_ubuntu:latest
      environment:
-       PLZ_ARGS: "-p --profile ci"
+       PLZ_ARGS: "-p --profile ci -o buildconfig.ci:true"
        PLZ_COVER: "cover"
      steps:
        - checkout

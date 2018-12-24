@@ -8,8 +8,8 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
     # but we can make it do it and it's a convenient way of testing the tool itself.
 
     def _e2e_test_cmd(cmd):
-        java_flag = '-o buildconfig.build_java:true' if CONFIG.get('BUILD_JAVA') else ''
-        cmd = cmd.replace('plz ', '$(location //src:please) --nolock -o cache.rpcurl:"" %s -o cache.dirclean:false --log_file plz-out/log/%s.log ' % (java_flag, name))
+        profile_flag = '--profile ci -o buildconfig.ci:true' if CONFIG.get('CI') else ''
+        cmd = cmd.replace('plz ', f'$(location //src:please) --nolock -o cache.rpcurl:"" {profile_flag} -o cache.dirclean:false --log_file plz-out/log/{name}.log ')
         if expected_failure:
             test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd
         else:
