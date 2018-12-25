@@ -54,9 +54,6 @@ func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reade
 	return err
 }
 
-func (p *aspParser) UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
-}
-
 func (p *aspParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
 	return p.runBuildFunction(threadID, state, target, "pre", func() error {
 		return target.PreBuildFunction.Call(target)

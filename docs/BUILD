@@ -18,12 +18,19 @@ for src in glob(
     deps += [templated_rule]
 
 genrule(
+    name = "rules",
+    outs = ["rules.json"],
+    cmd = "$TOOL query rules > $OUT",
+    tools = ["//src:please"],
+)
+
+genrule(
     name = "lexicon_html",
     srcs = deps + [
         "lexicon.html",
         "lexicon_entry.html",
         "template.html",
-        "//src/parse/args",
+        ":rules",
     ],
     outs = ["lexicon.html"],
     cmd = [

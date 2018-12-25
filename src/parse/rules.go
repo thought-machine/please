@@ -23,10 +23,10 @@ func PrintRuleArgs(state *core.BuildState, labels []core.BuildLabel) {
 	os.Stdout.Write(b)
 }
 
-// getRuleArgs retrieves the arguments of builtin rules. It's split from PrintRuleArgs for testing.
-func getRuleArgs(state *core.BuildState, labels []core.BuildLabel) environment {
+// AllBuiltinFunctions returns all the builtin functions, including those in a given set of labels.
+func AllBuiltinFunctions(state *core.BuildState, labels []core.BuildLabel) map[string]*asp.FuncDef {
 	p := newAspParser(state)
-	env := environment{Functions: map[string]function{}}
+	m := map[string]*asp.FuncDef{}
 	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)
 	for _, filename := range dir {
@@ -35,7 +35,7 @@ func getRuleArgs(state *core.BuildState, labels []core.BuildLabel) environment {
 			if err != nil {
 				log.Fatalf("%s", err)
 			}
-			env.AddAll(stmts)
+			addAllFunctions(m, stmts)
 		}
 	}
 	for _, l := range labels {
@@ -45,8 +45,47 @@ func getRuleArgs(state *core.BuildState, labels []core.BuildLabel) environment {
 			if err != nil {
 				log.Fatalf("%s", err)
 			}
-			env.AddAll(stmts)
+			addAllFunctions(m, stmts)
 		}
+	}
+	return m
+}
+
+// addAllFunctions adds all the functions from a set of statements to the given map.
+func addAllFunctions(m map[string]*asp.FuncDef, stmts []*asp.Statement) {
+	for _, stmt := range stmts {
+		if f := stmt.FuncDef; f != nil && !f.IsPrivate && f.Docstring != "" {
+			f.Docstring = strings.TrimSpace(strings.Trim(f.Docstring, `"`))
+			m[f.Name] = f
+		}
+	}
+}
+
+// getRuleArgs retrieves the arguments of builtin rules. It's split from PrintRuleArgs for testing.
+func getRuleArgs(state *core.BuildState, labels []core.BuildLabel) environment {
+	argsRegex := regexp.MustCompile("\n +Args: *\n")
+	env := environment{Functions: map[string]function{}}
+	for name, f := range AllBuiltinFunctions(state, labels) {
+		r := function{Docstring: f.Docstring}
+		if strings.HasSuffix(f.EoDef.Filename, "_rules.build_defs") {
+			r.Language = strings.TrimSuffix(f.EoDef.Filename, "_rules.build_defs")
+		}
+		if indices := argsRegex.FindStringIndex(r.Docstring); indices != nil {
+			r.Comment = strings.TrimSpace(r.Docstring[:indices[0]])
+		}
+		r.Args = make([]functionArg, len(f.Arguments))
+		for i, a := range f.Arguments {
+			r.Args[i] = functionArg{
+				Name:     a.Name,
+				Types:    a.Type,
+				Required: a.Value == nil,
+			}
+			regex := regexp.MustCompile(a.Name + `(?: \(.*\))?: ((?s:.*))`)
+			if match := regex.FindStringSubmatch(r.Docstring); match != nil {
+				r.Args[i].Comment = filterMatch(match[1])
+			}
+		}
+		env.Functions[name] = r
 	}
 	return env
 }
@@ -70,36 +109,6 @@ type functionArg struct {
 	Name       string   `json:"name"`
 	Required   bool     `json:"required,omitempty"`
 	Types      []string `json:"types"`
-}
-
-func (env *environment) AddAll(stmts []*asp.Statement) {
-	argsRegex := regexp.MustCompile("\n +Args: *\n")
-	for _, stmt := range stmts {
-		if f := stmt.FuncDef; f != nil && f.Name[0] != '_' && f.Docstring != "" {
-			r := function{
-				Docstring: strings.TrimSpace(strings.Trim(f.Docstring, `"`)),
-			}
-			if strings.HasSuffix(stmt.Pos.Filename, "_rules.build_defs") {
-				r.Language = strings.TrimSuffix(stmt.Pos.Filename, "_rules.build_defs")
-			}
-			if indices := argsRegex.FindStringIndex(r.Docstring); indices != nil {
-				r.Comment = strings.TrimSpace(r.Docstring[:indices[0]])
-			}
-			r.Args = make([]functionArg, len(f.Arguments))
-			for i, a := range f.Arguments {
-				r.Args[i] = functionArg{
-					Name:     a.Name,
-					Types:    a.Type,
-					Required: a.Value == nil,
-				}
-				regex := regexp.MustCompile(a.Name + `(?: \(.*\))?: ((?s:.*))`)
-				if match := regex.FindStringSubmatch(r.Docstring); match != nil {
-					r.Args[i].Comment = filterMatch(match[1])
-				}
-			}
-			env.Functions[f.Name] = r
-		}
-	}
 }
 
 // filterMatch filters a regex match to the part we want.

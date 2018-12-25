@@ -10,10 +10,13 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"text/template"
 
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/utils"
 )
 
@@ -26,8 +29,6 @@ The following help topics are available:
 
 // maxSuggestionDistance is the maximum Levenshtein edit distance we'll suggest help topics at.
 const maxSuggestionDistance = 4
-
-var backtickRegex = regexp.MustCompile("\\`[^\\`\n]+\\`")
 
 // Help prints help on a particular topic.
 // It returns true if the topic is known or false if it isn't.
@@ -64,6 +65,20 @@ func help(topic string) string {
 		if message, found := findHelpFromFile(topic, filename); found {
 			return message
 		}
+	}
+	// Check built-in build rules.
+	m := parse.AllBuiltinFunctions(core.NewDefaultBuildState(), nil)
+	if f, present := m[topic]; present {
+		var b strings.Builder
+		if err := template.Must(template.New("").Parse(docstringTemplate)).Execute(&b, f); err != nil {
+			log.Fatalf("%s", err)
+		}
+		s := strings.Replace(b.String(), "    Args:\n", "    ${BOLD_YELLOW}Args:${RESET}\n", 1)
+		for _, a := range f.Arguments {
+			r := regexp.MustCompile("( +)(" + a.Name + `)( \([a-z |]+\))?:`)
+			s = r.ReplaceAllString(s, "$1$${YELLOW}$2$${RESET}$${GREEN}$3$${RESET}:")
+		}
+		return s
 	}
 	return ""
 }
@@ -103,6 +118,9 @@ func allTopics() []string {
 			topics = append(topics, t)
 		}
 	}
+	for t := range parse.AllBuiltinFunctions(core.NewDefaultBuildState(), nil) {
+		topics = append(topics, t)
+	}
 	sort.Strings(topics)
 	return topics
 }
@@ -116,6 +134,7 @@ type helpFile struct {
 // printMessage prints a message, with some string replacements for ANSI codes.
 func printMessage(msg string) {
 	if cli.StdErrIsATerminal && cli.StdOutIsATerminal {
+		backtickRegex := regexp.MustCompile("\\`[^\\`\n]+\\`")
 		msg = backtickRegex.ReplaceAllStringFunc(msg, func(s string) string {
 			return "${BOLD_CYAN}" + strings.Replace(s, "`", "", -1) + "${RESET}"
 		})
@@ -123,3 +142,14 @@ func printMessage(msg string) {
 	// Replace % to %% when not followed by anything so it doesn't become a replacement.
 	cli.Fprintf(os.Stdout, strings.Replace(msg, "% ", "%% ", -1)+"\n")
 }
+
+const docstringTemplate = `${BLUE}{{ .Name }}${RESET} is a built-in build rule in Please. Instructions for use & its arguments:
+
+${BOLD_YELLOW}{{ .Name }}${RESET}(
+{{- range $i, $a := .Arguments }}{{ if gt $i 0 }}, {{ end }}${GREEN}{{ $a.Name }}${RESET}{{ end -}}
+):
+
+{{ .Docstring }}
+
+Online help is available at https://please.build/lexicon.html#{{ .Name }}.
+`

@@ -313,9 +313,6 @@ func (fake *fakeParser) RunPostBuildFunction(threadID int, state *core.BuildStat
 	return target.PostBuildFunction.Call(target, output)
 }
 
-func (fake *fakeParser) UndeferAnyParses(state *core.BuildState, target *core.BuildTarget) {
-}
-
 type preBuildFunction func(*core.BuildTarget) error
 type postBuildFunction func(*core.BuildTarget, string) error
 

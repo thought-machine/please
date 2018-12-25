@@ -597,7 +597,7 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"rules": func() bool {
-		success, state := Please(opts.Query.Rules.Args.Targets, config, true, true, false)
+		success, state := Please(opts.Query.Rules.Args.Targets, config, true, len(opts.Query.Rules.Args.Targets) > 0, false)
 		if success {
 			parse.PrintRuleArgs(state, state.ExpandOriginalTargets())
 		}

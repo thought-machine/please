@@ -56,8 +56,6 @@ type Parser interface {
 	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
 	RunPostBuildFunction(threadID int, state *BuildState, target *BuildTarget, output string) error
-	// UndeferAnyParses undefers any pending parses that are waiting for this target to build.
-	UndeferAnyParses(state *BuildState, target *BuildTarget)
 }
 
 // A BuildState tracks the current state of the build & related data.
