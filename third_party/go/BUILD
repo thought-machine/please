@@ -558,11 +558,6 @@ go_get(
 )
 
 go_get(
-    name = "md2man",
-    get = "github.com/cpuguy83/go-md2man/...",
-)
-
-go_get(
     name = "go-units",
     get = "github.com/docker/go-units",
     revision = "v0.3.2",
@@ -641,10 +636,4 @@ go_get(
     name = "ar",
     get = "github.com/peterebden/ar",
     revision = "a0ae3a11a518fb9559c95ed151ec07865b31980b",
-)
-
-go_get(
-    name = "difflib",
-    get = "github.com/pmezard/go-difflib/difflib",
-    revision = "792786c7400a136282c1664665ae0a8db921c6c2",
 )

@@ -79,11 +79,8 @@ func GarbageCollect(state *core.BuildState, filter, targets, keepTargets []core.
 // targetsToRemove finds the set of targets that are no longer needed and any extraneous sources.
 func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []core.BuildLabel, keepLabels []string, includeTests bool) (core.BuildLabels, []string) {
 	keepTargets := targetMap{}
-	for _, target := range targetsToKeep {
-		addTarget(graph, keepTargets, graph.TargetOrDie(target))
-	}
 	for _, target := range graph.AllTargets() {
-		if (target.IsBinary && (!target.IsTest || includeTests)) || target.HasAnyLabel(keepLabels) {
+		if (target.IsBinary && (!target.IsTest || includeTests)) || target.HasAnyLabel(keepLabels) || anyInclude(targetsToKeep, target.Label) || target.Label.Subrepo != "" {
 			log.Debug("GC root: %s", target.Label)
 			addTarget(graph, keepTargets, target)
 		}
@@ -108,7 +105,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 				}
 			}
 		} else {
-			addTarget(graph, keepTargets, graph.TargetOrDie(target))
+			addTarget(graph, keepTargets, graph.Target(target))
 		}
 	}
 	log.Notice("%d targets to keep after configured GC roots", len(keepTargets))
@@ -172,17 +169,27 @@ func isIncluded(target *core.BuildTarget, filter []core.BuildLabel) bool {
 
 // addTarget adds a target and all its transitive dependencies to the given map.
 func addTarget(graph *core.BuildGraph, m targetMap, target *core.BuildTarget) {
-	if m[target] {
+	if m[target] || target == nil {
 		return
 	}
 	log.Debug("  %s", target.Label)
 	m[target] = true
 	for _, dep := range target.DeclaredDependencies() {
-		addTarget(graph, m, graph.TargetOrDie(dep))
+		addTarget(graph, m, graph.Target(dep))
 	}
 	for _, dep := range target.Dependencies() {
 		addTarget(graph, m, dep)
 	}
+}
+
+// anyInclude returns true if any of the given labels include this one.
+func anyInclude(labels []core.BuildLabel, label core.BuildLabel) bool {
+	for _, l := range labels {
+		if l.Includes(label) {
+			return true
+		}
+	}
+	return false
 }
 
 // publicDependencies returns the public dependencies of a target, considering any
@@ -195,11 +202,12 @@ func addTarget(graph *core.BuildGraph, m targetMap, target *core.BuildTarget) {
 func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*core.BuildTarget {
 	ret := []*core.BuildTarget{}
 	for _, dep := range target.DeclaredDependencies() {
-		depTarget := graph.TargetOrDie(dep)
-		if depTarget.Label.Parent() == target.Label.Parent() {
-			ret = append(ret, publicDependencies(graph, depTarget)...)
-		} else {
-			ret = append(ret, depTarget)
+		if depTarget := graph.Target(dep); depTarget != nil {
+			if depTarget.Label.Parent() == target.Label.Parent() {
+				ret = append(ret, publicDependencies(graph, depTarget)...)
+			} else {
+				ret = append(ret, depTarget)
+			}
 		}
 	}
 	return ret

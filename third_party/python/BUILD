@@ -60,11 +60,6 @@ python_wheel(
     deps = [":six"],
 )
 
-python_wheel(
-    name = "pycparser",
-    version = "2.18",
-)
-
 python_multiversion_wheel(
     name = "coverage",
     repos = REPOS,

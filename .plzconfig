@@ -17,7 +17,6 @@ preloadbuilddefs = build_defs/go_bindata.build_defs
 keep = //test/...
 keep = //docs:all
 keep = //package:all
-keep = //tools
 
 [go]
 buildidtool = //tools/go_buildid_replacer
