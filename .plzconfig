@@ -10,11 +10,6 @@ moduledir = third_party.python
 ; in this project.
 buildfilename = BUILD
 buildfilename = BUILD.plz
-; Blacklist the third-party dirs, we never need to descend into those.
-blacklistdirs = github.com
-blacklistdirs = golang.org
-blacklistdirs = google.golang.org
-blacklistdirs = gopkg.in
 ; Make this generally available
 preloadbuilddefs = build_defs/go_bindata.build_defs
 
@@ -36,32 +31,19 @@ defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 
 [java]
-; By default these next two use prebuilt versions - bootstrap.sh will override this if
-; it detects Java is installed and it can build them locally.
 javacworker = //tools/java:javac_worker
 junitrunner = //tools/java:junit_runner
 jarcattool = @//tools/jarcat
 pleasemaventool = //tools/please_maven
-; We want the default to remain at java 8 because obviously it's significantly better,
-; but the builtin packages here support java 7 fine so it's nice not to require more.
-sourcelevel = 7
-targetlevel = 7
 
 [proto]
 protoctool = //third_party/proto:protoc
 protocgoplugin = //third_party/go:protoc-gen-go
 language = go
-language = py
 
 [docker]
 defaultimage = thoughtmachine/please_test:v2
 allowlocalfallback = false
-
-[alias "release"]
-; You will need to set PLZ_OVERRIDES="buildenv.gpg_password:$PASSWORD" in order for these to work
-; (and obviously have the gpg key available on the build machine).
-cmd = run //src:please -- -o 'buildconfig.gpg_userid:Please Releases <releases@please.build>' -o 'buildconfig.build_java:true' build //package:signed_tarballs
-desc = Builds the tarballs for a new release of Please.
 
 [provider "go"]
 target = //test/go_provider

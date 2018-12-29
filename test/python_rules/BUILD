@@ -2,6 +2,7 @@
 proto_library(
     name = "test_proto",
     srcs = ["test.proto"],
+    languages = ["py"],
 )
 
 python_library(

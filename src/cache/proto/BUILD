@@ -4,7 +4,6 @@ grpc_library(
         "rpc_cache.proto",
         "rpc_server.proto",
     ],
-    languages = ["go"],
     visibility = [
         "//src/cache/...",
         "//tools/cache/...",
