@@ -35,6 +35,7 @@ import (
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
 	"github.com/thought-machine/please/src/update"
+	"github.com/thought-machine/please/src/upgrade"
 	"github.com/thought-machine/please/src/utils"
 	"github.com/thought-machine/please/src/watch"
 	"github.com/thought-machine/please/src/worker"
@@ -198,6 +199,12 @@ var opts struct {
 		Latest   bool        `long:"latest" description:"Update to latest available version (overrides config)."`
 		Version  cli.Version `long:"version" description:"Updates to a particular version (overrides config)."`
 	} `command:"update" description:"Checks for an update and updates if needed."`
+
+	Upgrade struct {
+		Args struct {
+			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to upgrade"`
+		} `position-args:"true" required:"true"`
+	} `command:"upgrade" description:"Upgrades one or more third-party libraries."`
 
 	Op struct {
 	} `command:"op" description:"Re-runs previous command."`
@@ -507,6 +514,13 @@ var buildFunctions = map[string]func() bool{
 	"tool": func() bool {
 		tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args)
 		return false // If the function returns (which it shouldn't), something went wrong.
+	},
+	"upgrade": func() bool {
+		success, state := runBuild(opts.Upgrade.Args.Targets, true, false)
+		if success {
+			upgrade.Upgrade(state, state.ExpandOriginalTargets())
+		}
+		return success
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {

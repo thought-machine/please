@@ -582,10 +582,8 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 	done := map[*core.BuildTarget]bool{}
 	var getLabels func(*core.BuildTarget)
 	getLabels = func(t *core.BuildTarget) {
-		for _, label := range t.Labels {
-			if strings.HasPrefix(label, prefix) {
-				labels[strings.TrimSpace(strings.TrimPrefix(label, prefix))] = true
-			}
+		for _, label := range t.PrefixedLabels(prefix) {
+			labels[label] = true
 		}
 		done[t] = true
 		if !t.OutputIsComplete || t == target {

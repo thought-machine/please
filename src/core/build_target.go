@@ -695,7 +695,7 @@ func (target *BuildTarget) PrefixedLabels(prefix string) []string {
 	ret := []string{}
 	for _, l := range target.Labels {
 		if strings.HasPrefix(l, prefix) {
-			ret = append(ret, strings.TrimPrefix(l, prefix))
+			ret = append(ret, strings.TrimSpace(strings.TrimPrefix(l, prefix)))
 		}
 	}
 	return ret
