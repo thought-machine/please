@@ -1,7 +1,7 @@
 [python]
 ; We use the in-repo please_pex tool to build other pexes within this repo.
 ; Other projects using Please wouldn't normally need to do anything like this.
-pextool = //tools/please_pex
+pextool = @//tools/please_pex
 moduledir = third_party.python
 
 [parse]
@@ -19,9 +19,9 @@ keep = //docs:all
 keep = //package:all
 
 [go]
-buildidtool = //tools/go_buildid_replacer
-filtertool = //tools/please_go_filter
-testtool = //tools/please_go_test
+buildidtool = @//tools/go_buildid_replacer
+filtertool = @//tools/please_go_filter
+testtool = @//tools/please_go_test
 importpath = github.com/thought-machine/please
 
 [cpp]

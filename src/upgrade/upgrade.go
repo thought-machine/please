@@ -44,6 +44,9 @@ func upgrades(state *core.BuildState, labels []core.BuildLabel) map[string][]str
 			m[l] = append(m[l], labels...)
 		}
 	}
+	if len(m) == 0 {
+		log.Fatalf("None of the labels given specify how they can be upgraded")
+	}
 	return m
 }
 

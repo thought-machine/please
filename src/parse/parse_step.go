@@ -247,9 +247,6 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, forceBuild bool) {
 	// Stop at any package that's not loaded yet
 	if state.Graph.PackageByLabel(label) == nil {
-		if forceBuild {
-			log.Debug("Adding forced pending parse of %s", label)
-		}
 		state.AddPendingParse(label, dependor, forceBuild)
 		return
 	}

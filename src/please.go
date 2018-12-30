@@ -203,7 +203,7 @@ var opts struct {
 	Upgrade struct {
 		Args struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to upgrade"`
-		} `position-args:"true" required:"true"`
+		} `positional-args:"true" required:"true"`
 	} `command:"upgrade" description:"Upgrades one or more third-party libraries."`
 
 	Op struct {
@@ -516,7 +516,7 @@ var buildFunctions = map[string]func() bool{
 		return false // If the function returns (which it shouldn't), something went wrong.
 	},
 	"upgrade": func() bool {
-		success, state := runBuild(opts.Upgrade.Args.Targets, true, false)
+		success, state := runBuild(opts.Upgrade.Args.Targets, false, false)
 		if success {
 			upgrade.Upgrade(state, state.ExpandOriginalTargets())
 		}

@@ -24,6 +24,7 @@ go_binary(
         "//src/test",
         "//src/tool",
         "//src/update",
+        "//src/upgrade",
         "//src/utils",
         "//src/watch",
         "//src/worker",

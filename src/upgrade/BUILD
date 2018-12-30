@@ -5,6 +5,7 @@ go_library(
         "//third_party/go:logging",
         "//src/core",
     ],
+    visibility = ["PUBLIC"],
 )
 
 go_test(
