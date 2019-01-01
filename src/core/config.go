@@ -486,7 +486,7 @@ func (config *Configuration) Hash() []byte {
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
-	for _, env := range config.GetBuildEnv() {
+	for _, env := range config.getBuildEnv(false) {
 		h.Write([]byte(env))
 	}
 	return h.Sum(nil)
@@ -505,48 +505,59 @@ func (config *Configuration) ContainerisationHash() []byte {
 // GetBuildEnv returns the build environment configured for this config object.
 func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvStored.Once.Do(func() {
-		env := []string{
-			// Need to know these for certain rules.
-			"ARCH=" + config.Build.Arch.Arch,
-			"OS=" + config.Build.Arch.OS,
-			// These are slightly modified forms that are more convenient for some things.
-			"XARCH=" + config.Build.Arch.XArch(),
-			"XOS=" + config.Build.Arch.XOS(),
-			// It's easier to just make these available for Go-based rules.
-			"GOARCH=" + config.Build.Arch.GoArch(),
-			"GOOS=" + config.Build.Arch.OS,
-		}
-
-		// from the BuildEnv config keyword
-		for k, v := range config.BuildEnv {
-			pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
-			env = append(env, pair)
-		}
-
-		// from the user's environment based on the PassEnv config keyword
-		path := false
-		for _, k := range config.Build.PassEnv {
-			if v, isSet := os.LookupEnv(k); isSet {
-				if k == "PATH" {
-					// plz's install location always needs to be on the path.
-					v += ":" + ExpandHomePath(config.Please.Location)
-					path = true
-				}
-				env = append(env, k+"="+v)
-			}
-		}
-		if !path {
-			// Use a restricted PATH; it'd be easier for the user if we pass it through
-			// but really external environment variables shouldn't affect this.
-			// The only concession is that ~ is expanded as the user's home directory
-			// in PATH entries.
-			env = append(env, "PATH="+ExpandHomePath(strings.Join(append(config.Build.Path, config.Please.Location), ":")))
-		}
-
-		sort.Strings(env)
-		config.buildEnvStored.Env = env
+		config.buildEnvStored.Env = config.getBuildEnv(true)
 	})
 	return config.buildEnvStored.Env
+}
+
+func (config *Configuration) getBuildEnv(expanded bool) []string {
+	maybeExpandHomePath := func(s string) string {
+		if !expanded {
+			return s
+		}
+		return ExpandHomePath(s)
+	}
+
+	env := []string{
+		// Need to know these for certain rules.
+		"ARCH=" + config.Build.Arch.Arch,
+		"OS=" + config.Build.Arch.OS,
+		// These are slightly modified forms that are more convenient for some things.
+		"XARCH=" + config.Build.Arch.XArch(),
+		"XOS=" + config.Build.Arch.XOS(),
+		// It's easier to just make these available for Go-based rules.
+		"GOARCH=" + config.Build.Arch.GoArch(),
+		"GOOS=" + config.Build.Arch.OS,
+	}
+
+	// from the BuildEnv config keyword
+	for k, v := range config.BuildEnv {
+		pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
+		env = append(env, pair)
+	}
+
+	// from the user's environment based on the PassEnv config keyword
+	path := false
+	for _, k := range config.Build.PassEnv {
+		if v, isSet := os.LookupEnv(k); isSet {
+			if k == "PATH" {
+				// plz's install location always needs to be on the path.
+				v += ":" + maybeExpandHomePath(config.Please.Location)
+				path = true
+			}
+			env = append(env, k+"="+v)
+		}
+	}
+	if !path {
+		// Use a restricted PATH; it'd be easier for the user if we pass it through
+		// but really external environment variables shouldn't affect this.
+		// The only concession is that ~ is expanded as the user's home directory
+		// in PATH entries.
+		env = append(env, "PATH="+maybeExpandHomePath(strings.Join(append(config.Build.Path, config.Please.Location), ":")))
+	}
+
+	sort.Strings(env)
+	return env
 }
 
 // TagsToFields returns a map of string represent the properties of CONFIG object to the config Structfield
