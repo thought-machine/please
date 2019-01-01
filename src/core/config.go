@@ -109,16 +109,6 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc"})
 	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go", "js"})
 
-	// Default values for these guys depend on config.Please.Location.
-	defaultPath(&config.Go.BuildIDTool, config.Please.Location, "go_buildid_replacer")
-	defaultPath(&config.Go.TestTool, config.Please.Location, "please_go_test")
-	defaultPath(&config.Go.FilterTool, config.Please.Location, "please_go_filter")
-	defaultPath(&config.Python.PexTool, config.Please.Location, "please_pex")
-	defaultPath(&config.Java.JavacWorker, config.Please.Location, "javac_worker")
-	defaultPath(&config.Java.JarCatTool, config.Please.Location, "jarcat")
-	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
-	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
-
 	// Default values for these guys depend on config.Java.JavaHome if that's been set.
 	if config.Java.JavaHome != "" {
 		defaultPathIfExists(&config.Java.JlinkTool, config.Java.JavaHome, "bin/jlink")
@@ -221,11 +211,16 @@ func DefaultConfiguration() *Configuration {
 	config.Docker.RemoveTimeout = cli.Duration(20 * time.Second)
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
+	config.Go.BuildIDTool = "go_buildid_replacer"
+	config.Go.TestTool = "please_go_test"
+	config.Go.FilterTool = "please_go_filter"
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG_DIR:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
 	config.Python.PipTool = "pip3"
+	config.Python.PexTool = "please_pex"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
 	config.Python.UsePyPI = true
+
 	// Annoyingly pip on OSX doesn't seem to work with this flag (you get the dreaded
 	// "must supply either home or prefix/exec-prefix" error). Goodness knows why *adding* this
 	// flag - which otherwise seems exactly what we want - provokes that error, but the logic
@@ -240,6 +235,10 @@ func DefaultConfiguration() *Configuration {
 	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2"}
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
 	config.Java.JlinkTool = "jlink"
+	config.Java.JavacWorker = "javac_worker"
+	config.Java.JarCatTool = "jarcat"
+	config.Java.PleaseMavenTool = "please_maven"
+	config.Java.JUnitRunner = "junit_runner.jar"
 	config.Java.JavaHome = ""
 	config.Cpp.CCTool = "gcc"
 	config.Cpp.CppTool = "g++"
@@ -525,10 +524,23 @@ func (config *Configuration) GetBuildEnv() []string {
 		}
 
 		// from the user's environment based on the PassEnv config keyword
+		path := false
 		for _, k := range config.Build.PassEnv {
 			if v, isSet := os.LookupEnv(k); isSet {
+				if k == "PATH" {
+					// plz's install location always needs to be on the path.
+					v += ":" + ExpandHomePath(config.Please.Location)
+					path = true
+				}
 				env = append(env, k+"="+v)
 			}
+		}
+		if !path {
+			// Use a restricted PATH; it'd be easier for the user if we pass it through
+			// but really external environment variables shouldn't affect this.
+			// The only concession is that ~ is expanded as the user's home directory
+			// in PATH entries.
+			env = append(env, "PATH="+ExpandHomePath(strings.Join(append(config.Build.Path, config.Please.Location), ":")))
 		}
 
 		sort.Strings(env)

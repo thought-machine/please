@@ -17,14 +17,10 @@ type BuildEnv []string
 // GeneralBuildEnvironment creates the shell env vars used for a command, not based
 // on any specific target etc.
 func GeneralBuildEnvironment(config *Configuration) BuildEnv {
+	// TODO(peterebden): why is this not just config.GetBuildEnv()?
 	env := BuildEnv{
 		// Need this for certain tools, for example sass
 		"LANG=" + config.Build.Lang,
-		// Use a restricted PATH; it'd be easier for the user if we pass it through
-		// but really external environment variables shouldn't affect this.
-		// The only concession is that ~ is expanded as the user's home directory
-		// in PATH entries.
-		"PATH=" + ExpandHomePath(strings.Join(config.Build.Path, ":")),
 		// Expose the requested build config. We might also want to expose
 		// the command that's actually running (although typically this is more useful,
 		// because targets using this want to avoid defining different commands).
