@@ -80,7 +80,7 @@ func serveHTTP(port int, cache *server.Cache) {
 }
 
 func main() {
-	cli.ParseFlagsOrDie("Please RPC cache server", "5.5.0", &opts)
+	cli.ParseFlagsOrDie("Please RPC cache server", &opts)
 	cli.InitLogging(opts.Verbosity)
 	if opts.LogFile != "" {
 		cli.InitFileLogging(opts.LogFile, opts.Verbosity)

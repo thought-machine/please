@@ -43,6 +43,7 @@ if [ -z "${PLZ_NO_GO_BOOTSTRAP+bootstrap}" ]; then
     go_get github.com/hashicorp/go-multierror
     go_get github.com/google/shlex
     go_get github.com/pkg/xattr
+    go_get github.com/peterebden/go-cli-init
     notice ""
 else
     warn "Skipping Go bootstrap"

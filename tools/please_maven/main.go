@@ -79,7 +79,7 @@ func decodeGraph(r io.Reader) *maven.Graph {
 }
 
 func main() {
-	cli.ParseFlagsOrDie("please_maven", "9.0.3", &opts)
+	cli.ParseFlagsOrDie("please_maven", &opts)
 	cli.InitLogging(opts.Verbosity)
 	if opts.Android {
 		opts.Repositories = append(opts.Repositories, "https://maven.google.com")

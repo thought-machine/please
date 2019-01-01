@@ -6,6 +6,7 @@ go_library(
     ),
     visibility = ["PUBLIC"],
     deps = [
+        "//third_party/go:cli-init",
         "//third_party/go:go-flags",
         "//third_party/go:humanize",
         "//third_party/go:logging",

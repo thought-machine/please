@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -15,77 +13,36 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/dustin/go-humanize"
 	"github.com/jessevdk/go-flags"
+	"github.com/peterebden/go-cli-init"
 )
 
 // GiByte is a re-export for convenience of other things using it.
 const GiByte = humanize.GiByte
 
-// A CompletionHandler is the type of function that our flags library uses to handle completions.
-type CompletionHandler func(parser *flags.Parser, items []flags.Completion)
+// MinVerbosity is the minimum verbosity we support.
+const MinVerbosity = cli.MinVerbosity
 
-// ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
-// It may exit if certain options are encountered (eg. --help).
-func ParseFlags(appname string, data interface{}, args []string, opts flags.Options, completionHandler CompletionHandler) (*flags.Parser, []string, error) {
-	parser := flags.NewNamedParser(path.Base(args[0]), opts)
-	if completionHandler != nil {
-		parser.CompletionHandler = func(items []flags.Completion) { completionHandler(parser, items) }
-	}
-	parser.AddGroup(appname+" options", "", data)
-	extraArgs, err := parser.ParseArgs(args[1:])
-	if err != nil {
-		if err.(*flags.Error).Type == flags.ErrHelp {
-			writeUsage(data)
-			fmt.Printf("%s\n", err)
-			os.Exit(0)
-		} else if err.(*flags.Error).Type == flags.ErrUnknownFlag && strings.Contains(err.(*flags.Error).Message, "`halp'") {
-			fmt.Printf("Hmmmmm, hows can I halp you?\n")
-			writeUsage(data)
-			parser.WriteHelp(os.Stderr)
-			os.Exit(0)
-		}
-	}
-	return parser, extraArgs, err
-}
+// MaxVerbosity is the maximum verbosity we support.
+const MaxVerbosity = cli.MaxVerbosity
 
 // ParseFlagsOrDie parses the app's flags and dies if unsuccessful.
 // Also dies if any unexpected arguments are passed.
 // It returns the active command if there is one.
-func ParseFlagsOrDie(appname, version string, data interface{}) string {
-	return ParseFlagsFromArgsOrDie(appname, version, data, os.Args)
+func ParseFlagsOrDie(appname string, data interface{}) string {
+	return cli.ParseFlagsOrDie(appname, data)
 }
 
 // ParseFlagsFromArgsOrDie is similar to ParseFlagsOrDie but allows control over the
 // flags passed.
 // It returns the active command if there is one.
-func ParseFlagsFromArgsOrDie(appname, version string, data interface{}, args []string) string {
-	parser, extraArgs, err := ParseFlags(appname, data, args, flags.HelpFlag|flags.PassDoubleDash, nil)
-	if err != nil && err.(*flags.Error).Type == flags.ErrUnknownFlag && strings.Contains(err.(*flags.Error).Message, "`version'") {
-		fmt.Printf("%s version %s\n", appname, version)
-		os.Exit(0) // Ignore other errors if --version was passed.
-	}
-	if err != nil {
-		writeUsage(data)
-		parser.WriteHelp(os.Stderr)
-		fmt.Printf("\n%s\n", err)
-		os.Exit(1)
-	} else if len(extraArgs) > 0 {
-		writeUsage(data)
-		fmt.Printf("Unknown option %s\n", extraArgs)
-		parser.WriteHelp(os.Stderr)
-		os.Exit(1)
-	}
-	if parser.Command != nil {
-		return ActiveCommand(parser.Command)
-	}
-	return ""
+func ParseFlagsFromArgsOrDie(appname string, data interface{}, args []string) string {
+	return cli.ParseFlagsFromArgsOrDie(appname, data, args)
 }
 
-// ActiveCommand returns the name of the currently active command.
-func ActiveCommand(command *flags.Command) string {
-	if command.Active != nil {
-		return ActiveCommand(command.Active)
-	}
-	return command.Name
+// ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
+// It may exit if certain options are encountered (eg. --help).
+func ParseFlags(appname string, data interface{}, args []string, opts flags.Options, completionHandler cli.CompletionHandler) (*flags.Parser, []string, error) {
+	return cli.ParseFlags(appname, data, args, opts, completionHandler)
 }
 
 // PrintCompletions prints a set of completions to stdout.
@@ -95,24 +52,9 @@ func PrintCompletions(items []flags.Completion) {
 	}
 }
 
-// writeUsage prints any usage specified on the flag struct.
-func writeUsage(opts interface{}) {
-	if s := getUsage(opts); s != "" {
-		fmt.Println(s)
-		fmt.Println("") // extra blank line
-	}
-}
-
-// getUsage extracts any usage specified on a flag struct.
-// It is set on a field named Usage, either by value or in a struct tag named usage.
-func getUsage(opts interface{}) string {
-	if field := reflect.ValueOf(opts).Elem().FieldByName("Usage"); field.IsValid() && field.String() != "" {
-		return strings.TrimSpace(field.String())
-	}
-	if field, present := reflect.TypeOf(opts).Elem().FieldByName("Usage"); present {
-		return field.Tag.Get("usage")
-	}
-	return ""
+// ActiveCommand returns the name of the currently active command.
+func ActiveCommand(command *flags.Command) string {
+	return cli.ActiveCommand(command)
 }
 
 // A ByteSize is used for flags that represent some quantity of bytes that can be

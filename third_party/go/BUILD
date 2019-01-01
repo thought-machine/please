@@ -637,3 +637,14 @@ go_get(
     get = "github.com/peterebden/ar",
     revision = "a0ae3a11a518fb9559c95ed151ec07865b31980b",
 )
+
+go_get(
+    name = "cli-init",
+    get = "github.com/peterebden/go-cli-init",
+    revision = "v1.0.0",
+    deps = [
+        ":go-flags",
+        ":logging",
+        ":terminal",
+    ],
+)

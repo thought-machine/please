@@ -26,7 +26,7 @@ var opts = struct {
 }
 
 func main() {
-	cli.ParseFlagsOrDie("parser", "11.0.0", &opts)
+	cli.ParseFlagsOrDie("parser", &opts)
 	cli.InitLogging(opts.Verbosity)
 
 	if err := os.MkdirAll(opts.OutputDir, os.ModeDir|0775); err != nil {

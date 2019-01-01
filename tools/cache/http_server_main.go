@@ -29,7 +29,7 @@ var opts struct {
 }
 
 func main() {
-	cli.ParseFlagsOrDie("Please HTTP cache server", "5.5.0", &opts)
+	cli.ParseFlagsOrDie("Please HTTP cache server", &opts)
 	cli.InitLogging(opts.Verbosity)
 	if opts.LogFile != "" {
 		cli.InitFileLogging(opts.LogFile, opts.Verbosity)

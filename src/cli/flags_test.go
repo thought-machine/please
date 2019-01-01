@@ -1,11 +1,9 @@
 package cli
 
 import (
-	"os"
 	"testing"
 	"time"
 
-	"github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,16 +62,6 @@ func TestURLDefault(t *testing.T) {
 	assert.EqualValues(t, "https://localhost:8080", opts.U)
 }
 
-func TestCompletionHandler(t *testing.T) {
-	os.Setenv("GO_FLAGS_COMPLETION", "1")
-	called := false
-	opts := struct{}{}
-	ParseFlags("test", &opts, []string{"test"}, 0, func(parser *flags.Parser, items []flags.Completion) {
-		called = true
-	})
-	assert.True(t, called)
-}
-
 func TestVersion(t *testing.T) {
 	v := Version{}
 	assert.NoError(t, v.UnmarshalFlag("3.2.1"))
@@ -100,27 +88,6 @@ func TestVersionString(t *testing.T) {
 	assert.Equal(t, "3.2.1", v.String())
 	v.UnmarshalFlag(">=3.2.1")
 	assert.Equal(t, ">=3.2.1", v.String())
-}
-
-func TestGetUsageTag(t *testing.T) {
-	opts := struct {
-		Usage string `usage:"Test usage"`
-	}{}
-	assert.Equal(t, "Test usage", getUsage(&opts))
-}
-
-func TestGetUsageValue(t *testing.T) {
-	opts := struct {
-		Usage string
-	}{
-		Usage: "Test usage",
-	}
-	assert.Equal(t, "Test usage", getUsage(&opts))
-}
-
-func TestGetUsageNoUsage(t *testing.T) {
-	opts := struct{}{}
-	assert.Equal(t, "", getUsage(&opts))
 }
 
 func TestArch(t *testing.T) {

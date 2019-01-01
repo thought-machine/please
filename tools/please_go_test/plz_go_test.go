@@ -30,7 +30,7 @@ var opts struct {
 }
 
 func main() {
-	cli.ParseFlagsOrDie("plz_go_test", "7.2.0", &opts)
+	cli.ParseFlagsOrDie("plz_go_test", &opts)
 	cli.InitLogging(opts.Verbosity)
 	coverVars, err := gotest.FindCoverVars(opts.Dir, opts.ImportPath, opts.Exclude, opts.Args.Sources)
 	if err != nil {

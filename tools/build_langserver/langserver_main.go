@@ -33,7 +33,7 @@ Currently, it supports autocompletion, goto definition for build_defs, and signa
 }
 
 func main() {
-	cli.ParseFlagsOrDie("build_langserver", "1.0.0", &opts)
+	cli.ParseFlagsOrDie("build_langserver", &opts)
 	cli.InitLogging(opts.Verbosity)
 	if opts.LogFile != "" {
 		cli.InitFileLogging(string(opts.LogFile), opts.Verbosity)

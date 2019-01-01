@@ -34,7 +34,7 @@ dependent code as a self-contained self-executable environment.
 }
 
 func main() {
-	cli.ParseFlagsOrDie("please_pex", "9.6.0", &opts)
+	cli.ParseFlagsOrDie("please_pex", &opts)
 	cli.InitLogging(opts.Verbosity)
 	w := pex.NewWriter(opts.EntryPoint, opts.Interpreter, !opts.NoZipSafe)
 	if opts.Shebang != "" {

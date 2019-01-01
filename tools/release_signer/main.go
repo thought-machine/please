@@ -27,7 +27,7 @@ All it can do is create an ASCII-armoured detached signature for a single file.
 }
 
 func main() {
-	cli.ParseFlagsOrDie("release_signer", "9.3.2", &opts)
+	cli.ParseFlagsOrDie("release_signer", &opts)
 	if err := signer.SignFile(opts.In, opts.Out, opts.Key, opts.User, opts.Password); err != nil {
 		fmt.Fprintf(os.Stderr, "Signing failed: %s\n", err)
 		os.Exit(1)

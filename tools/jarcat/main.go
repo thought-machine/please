@@ -126,7 +126,7 @@ Any apparent relationship between the name of this tool and bonsai kittens is co
 }
 
 func main() {
-	command := cli.ParseFlagsOrDie("Jarcat", "12.1.4", &opts)
+	command := cli.ParseFlagsOrDie("Jarcat", &opts)
 	if opts.Zip.DumbMode {
 		opts.Zip.Suffix = nil
 		opts.Zip.ExcludeSuffix = nil

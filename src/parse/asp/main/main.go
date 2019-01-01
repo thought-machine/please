@@ -82,7 +82,7 @@ func mustLoadBuildDefsDir(state *core.BuildState, dirname string) {
 }
 
 func main() {
-	cli.ParseFlagsOrDie("parser", "11.0.0", &opts)
+	cli.ParseFlagsOrDie("parser", &opts)
 	cli.InitLogging(opts.Verbosity)
 
 	config := core.DefaultConfiguration()
