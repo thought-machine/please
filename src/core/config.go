@@ -466,8 +466,8 @@ type Alias struct {
 }
 
 type storedBuildEnv struct {
-	Env  []string
-	Once sync.Once
+	Env, Path []string
+	Once      sync.Once
 }
 
 // Hash returns a hash of the parts of this configuration that affect building targets in general.
@@ -506,8 +506,19 @@ func (config *Configuration) ContainerisationHash() []byte {
 func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvStored.Once.Do(func() {
 		config.buildEnvStored.Env = config.getBuildEnv(true)
+		for _, e := range config.buildEnvStored.Env {
+			if strings.HasPrefix(e, "PATH=") {
+				config.buildEnvStored.Path = strings.Split(strings.TrimPrefix(e, "PATH="), ":")
+			}
+		}
 	})
 	return config.buildEnvStored.Env
+}
+
+// Path returns the slice of strings corresponding to the PATH env var.
+func (config *Configuration) Path() []string {
+	config.GetBuildEnv() // ensure it is initialised
+	return config.buildEnvStored.Path
 }
 
 func (config *Configuration) getBuildEnv(expanded bool) []string {
