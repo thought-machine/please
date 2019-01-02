@@ -291,6 +291,7 @@ def proto_languages():
         'go': proto_language(
             language = 'go',
             extensions = ['.pb.go'],
+            use_file_names = False,
             func = lambda name, srcs, deps, test_only: go_library(
                 name = name,
                 srcs = srcs,
