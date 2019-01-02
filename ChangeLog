@@ -1,3 +1,11 @@
+Version 13.3.3
+--------------
+
+    * Fixed `proto_library` for .proto files that specify a `go_package`.
+    * Fix to not rebuild rules as often in some rare cases (involving rules that have no
+      declared outputs but add them later using post-build functions).
+
+
 Version 13.3.2
 --------------
 
