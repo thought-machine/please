@@ -67,6 +67,8 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     if 'go' in languages:
         base_path = get_base_path()
         diff_pkg = basename(base_path) != name
+        if CONFIG.GO_IMPORT_PATH:
+            base_path = join_path(CONFIG.GO_IMPORT_PATH, base_path)
         labels += [f'proto:go-map: {base_path}/{src}={base_path}/{name}' for src in srcs
                    if not src.startswith(':') and not src.startswith('/') and
                        (src != (name + '.proto') or len(srcs) > 1 or diff_pkg)]
