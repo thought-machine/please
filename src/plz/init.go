@@ -9,9 +9,9 @@ import (
 	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/parse"
-	"sync"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/utils"
+	"sync"
 )
 
 // InitOpts represents initialization options for please. These are usually being passed as cli args
@@ -67,7 +67,7 @@ func Init(targets []core.BuildLabel, state *core.BuildState, config *core.Config
 	// Draw stuff to the screen while there are still results coming through.
 	// TODO(bnm): Definitely refactor this at some point
 	success := output.MonitorState(state, config.Please.NumThreads,
-		!initOpts.PrettyOutput, initOpts.PrettyOutput, state.NeedBuild, state.NeedTests,
+		!initOpts.PrettyOutput, initOpts.KeepGoing, state.NeedBuild, state.NeedTests,
 		initOpts.ShouldRun, initOpts.ShowStatus, initOpts.DetailedTests,
 		initOpts.TraceFile)
 
