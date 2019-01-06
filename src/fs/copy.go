@@ -12,10 +12,10 @@ func CopyOrLinkFile(from, to string, mode os.FileMode, link, fallback bool) erro
 	if link {
 		if err := os.Link(from, to); err == nil || !fallback {
 			return err
-		} else if runtime.GOOS == "darwin" && os.IsNotExist(err) {
-			// There is an awkward issue on OSX where links to symlinks actually try to link
-			// to the target rather than the link itself. In that case we try to recreate
-			// a similar symlink at the destination to work around.
+		} else if runtime.GOOS != "linux" && os.IsNotExist(err) {
+			// There is an awkward issue on several non-Linux platforms where links to
+			// symlinks actually try to link to the target rather than the link itself.
+			// In that case we try to recreate a similar symlink at the destination.
 			if info, err := os.Lstat(from); err == nil && (info.Mode()&os.ModeSymlink) != 0 {
 				dest, err := os.Readlink(from)
 				if err != nil {
