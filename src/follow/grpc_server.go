@@ -39,8 +39,6 @@ func InitialiseServer(state *core.BuildState, port int) func() {
 // initialiseServer sets up the gRPC server on the given port.
 // It's split out from the above for testing purposes.
 func initialiseServer(state *core.BuildState, port int) (string, func()) {
-	// Set up the channel that we'll get messages off
-	state.RemoteResults = make(chan *core.BuildResult, buffering)
 	// TODO(peterebden): TLS support
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
@@ -49,12 +47,12 @@ func initialiseServer(state *core.BuildState, port int) (string, func()) {
 	addr := lis.Addr().String()
 	s := grpc.NewServer()
 	server := &eventServer{State: state}
-	go server.MultiplexEvents(state.RemoteResults)
+	results, _ := state.RemoteResults()
+	go server.MultiplexEvents(results)
 	pb.RegisterPlzEventsServer(s, server)
 	go s.Serve(lis)
 	log.Notice("Serving events over gRPC on :%s", addr)
 	return addr, func() {
-		close(state.RemoteResults)
 		stopServer(s)
 	}
 }
@@ -71,12 +69,13 @@ func (e *eventServer) ServerConfig(ctx context.Context, r *pb.ServerConfigReques
 	for i, t := range e.State.OriginalTargets {
 		targets[i] = toProtoBuildLabel(t)
 	}
+	_, results := e.State.RemoteResults()
 	return &pb.ServerConfigResponse{
 		NumThreads:      int32(e.State.Config.Please.NumThreads),
 		OriginalTargets: targets,
 		Tests:           e.State.NeedTests,
 		Coverage:        e.State.NeedCoverage,
-		LastEvents:      toProtos(e.State.LastResults, e.State.NumActive(), e.State.NumDone()),
+		LastEvents:      toProtos(results, e.State.NumActive(), e.State.NumDone()),
 		StartTime:       e.State.StartTime.UnixNano(),
 	}, nil
 }
@@ -123,7 +122,7 @@ func (e *eventServer) ResourceUsage(r *pb.ResourceUsageRequest, s pb.PlzEvents_R
 }
 
 // MultiplexEvents receives events from core and distributes them to receiving clients
-func (e *eventServer) MultiplexEvents(ch chan *core.BuildResult) {
+func (e *eventServer) MultiplexEvents(ch <-chan *core.BuildResult) {
 	for r := range ch {
 		p := toProto(r)
 		// Target labels don't exist on the internal build events, retrieve them here.

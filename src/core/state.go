@@ -68,12 +68,11 @@ type BuildState struct {
 	// Stream of pending tasks
 	pendingTasks *queue.PriorityQueue
 	// Stream of results from the build
-	Results chan *BuildResult
+	results chan *BuildResult
 	// Stream of results pushed to remote clients.
-	// Will be nil until server is initialised.
-	RemoteResults chan *BuildResult
+	remoteResults chan *BuildResult
 	// Last results for each thread. These are used to catch up remote clients quickly.
-	LastResults []*BuildResult
+	lastResults []*BuildResult
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
@@ -109,6 +108,8 @@ type BuildState struct {
 	VerifyHashes bool
 	// Aggregated coverage for this run
 	Coverage TestCoverage
+	// True if the build has been successful so far (i.e. nothing has failed yet).
+	Success bool
 	// True if tests should calculate coverage metrics
 	NeedCoverage bool
 	// True if we intend to build targets. False if we're just parsing
@@ -116,12 +117,17 @@ type BuildState struct {
 	NeedBuild bool
 	// True if we're running tests. False if we're only building or parsing.
 	NeedTests bool
+	// True if we will run targets at the end of the build.
+	NeedRun bool
 	// True if we want to calculate target hashes (ie. 'plz hash').
 	NeedHashesOnly bool
 	// True if we only want to prepare build directories (ie. 'plz build --prepare')
 	PrepareOnly bool
 	// True if we're going to run a shell after builds are prepared.
 	PrepareShell bool
+	// True if we only need to parse the initial package (i.e. don't search downwards
+	// through deps) - for example when doing `plz query print`.
+	ParsePackageOnly bool
 	// True if this build is triggered by watching for changes
 	Watch bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
@@ -244,6 +250,7 @@ func (state *BuildState) TaskDone(wasBuildOrTest bool) {
 	}
 	if atomic.AddInt64(&state.progress.numPending, -1) <= 0 {
 		state.Stop(state.numWorkers)
+		state.killall(Stop)
 	}
 }
 
@@ -254,18 +261,23 @@ func (state *BuildState) Stop(n int) {
 	}
 }
 
-// Kill adds n kill tasks to the list of pending tasks, which stops n workers before they do anything else.
-func (state *BuildState) Kill(n int) {
-	for i := 0; i < n; i++ {
-		state.pendingTasks.Put(pendingTask{Type: Kill})
-	}
-}
-
 // KillAll kills all the workers.
 func (state *BuildState) KillAll() {
+	state.killall(Kill)
+}
+
+func (state *BuildState) killall(signal TaskType) {
 	if !state.workersKilled {
 		state.workersKilled = true
-		state.Kill(state.numWorkers)
+		for i := 0; i < state.numWorkers; i++ {
+			state.pendingTasks.Put(pendingTask{Type: signal})
+		}
+		if state.results != nil {
+			close(state.results)
+		}
+		if state.remoteResults != nil {
+			close(state.remoteResults)
+		}
 	}
 }
 
@@ -362,7 +374,7 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 		state.progress.pendingPackageMutex.Unlock()
 		return // We don't notify anything else on these.
 	}
-	state.logResult(&BuildResult{
+	state.LogResult(&BuildResult{
 		ThreadID:    tid,
 		Time:        time.Now(),
 		Label:       label,
@@ -382,7 +394,7 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 
 // LogTestResult logs the result of a target once its tests have completed.
 func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
-	state.logResult(&BuildResult{
+	state.LogResult(&BuildResult{
 		ThreadID:    tid,
 		Time:        time.Now(),
 		Label:       label,
@@ -398,7 +410,7 @@ func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildRe
 
 // LogBuildError logs a failure for a target to parse, build or test.
 func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
-	state.logResult(&BuildResult{
+	state.LogResult(&BuildResult{
 		ThreadID:    tid,
 		Time:        time.Now(),
 		Label:       label,
@@ -408,7 +420,8 @@ func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildRe
 	})
 }
 
-func (state *BuildState) logResult(result *BuildResult) {
+// LogResult logs a build result directly to the state's queue.
+func (state *BuildState) LogResult(result *BuildResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			// This is basically always "send on closed channel" which can happen because this
@@ -417,11 +430,33 @@ func (state *BuildState) logResult(result *BuildResult) {
 			log.Notice("%s", r)
 		}
 	}()
-	state.Results <- result
-	if state.RemoteResults != nil {
-		state.RemoteResults <- result
-		state.LastResults[result.ThreadID] = result
+	if state.results != nil {
+		state.results <- result
 	}
+	if state.remoteResults != nil {
+		state.remoteResults <- result
+		state.lastResults[result.ThreadID] = result
+	}
+	if result.Status.IsFailure() {
+		state.Success = false
+	}
+}
+
+// Results returns a channel on which the caller can listen for results.
+func (state *BuildState) Results() <-chan *BuildResult {
+	if state.results == nil {
+		state.results = make(chan *BuildResult, 100*state.numWorkers)
+	}
+	return state.results
+}
+
+// RemoteResults returns a channel for distributing remote results too, as well as
+// the last set of results per thread.
+func (state *BuildState) RemoteResults() (<-chan *BuildResult, []*BuildResult) {
+	if state.remoteResults == nil {
+		state.remoteResults = make(chan *BuildResult, 100*state.numWorkers)
+	}
+	return state.remoteResults, state.lastResults
 }
 
 // NumActive returns the number of currently active tasks (i.e. those that are
@@ -599,8 +634,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 	state := &BuildState{
 		Graph:        NewGraph(),
 		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
-		Results:      make(chan *BuildResult, numThreads*100),
-		LastResults:  make([]*BuildResult, numThreads),
+		lastResults:  make([]*BuildResult, numThreads),
 		PathHasher:   fs.NewPathHasher(RepoRoot),
 		StartTime:    startTime,
 		Config:       config,
@@ -609,6 +643,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		ParsePool:    NewPool(numThreads),
 		VerifyHashes: true,
 		NeedBuild:    true,
+		Success:      true,
 		Coverage:     TestCoverage{Files: map[string][]LineCoverage{}},
 		numWorkers:   numThreads,
 		Stats:        &SystemStats{},
@@ -686,4 +721,14 @@ func (s BuildResultStatus) Category() string {
 	default:
 		return "Other"
 	}
+}
+
+// IsFailure returns true if this status represents a failure.
+func (s BuildResultStatus) IsFailure() bool {
+	return s == ParseFailed || s == TargetBuildFailed || s == TargetTestFailed
+}
+
+// IsActive returns true if this status represents a target that is not yet finished.
+func (s BuildResultStatus) IsActive() bool {
+	return s == PackageParsing || s == TargetBuilding || s == TargetTesting
 }

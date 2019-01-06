@@ -7,6 +7,7 @@ go_library(
     visibility = ["//tools/build_langserver/..."],
     deps = [
         "//src/build",
+        "//src/cli",
         "//src/core",
         "//src/fs",
         "//src/parse",

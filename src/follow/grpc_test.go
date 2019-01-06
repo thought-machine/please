@@ -59,18 +59,19 @@ func TestClientToServerCommunication(t *testing.T) {
 	serverState.LogBuildResult(1, l3, core.TargetBuilding, fmt.Sprintf("Building %s", l3))
 
 	clientState := core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
+	results := clientState.Results()
 	connectClient(clientState, addr, retries, delay)
 	// The client state should have synced up with the server's number of threads
 	assert.Equal(t, 5, clientState.Config.Please.NumThreads)
 
 	// We should be able to receive the latest build events for each thread.
 	// Note that they come out in thread order, not time order.
-	r := <-clientState.Results
+	r := <-results
 	log.Info("Received first build event")
 	assert.Equal(t, "Built //src/remote:target1", r.Description)
-	r = <-clientState.Results
+	r = <-results
 	assert.Equal(t, "Building //src/remote:target3", r.Description)
-	r = <-clientState.Results
+	r = <-results
 	assert.Equal(t, "Building //src/remote:target2", r.Description)
 
 	// Here we hit a bit of a synchronisation problem, whereby we can't guarantee that
@@ -87,7 +88,7 @@ func TestClientToServerCommunication(t *testing.T) {
 		serverState.LogBuildResult(2, l2, core.TargetBuilt, fmt.Sprintf("Built %s", l2))
 	}()
 	go func() {
-		for r := range clientState.Results {
+		for r := range results {
 			log.Info("Received result from thread %d", r.ThreadID)
 		}
 	}()

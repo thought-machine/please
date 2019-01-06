@@ -1,9 +1,6 @@
 go_library(
     name = "plz",
-    srcs = glob(
-        ["*.go"],
-        exclude = ["*_test.go"],
-    ),
+    srcs = ["plz.go"],
     visibility = ["PUBLIC"],
     deps = [
         "//src/build",
@@ -12,7 +9,6 @@ go_library(
         "//src/follow",
         "//src/fs",
         "//src/metrics",
-        "//src/output",
         "//src/parse",
         "//src/test",
         "//src/utils",

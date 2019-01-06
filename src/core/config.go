@@ -214,6 +214,7 @@ func DefaultConfiguration() *Configuration {
 	config.Metrics.PerUser = true
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Test.DefaultContainer = ContainerImplementationDocker
+	config.Display.SystemStats = true
 	config.Docker.DefaultImage = "ubuntu:trusty"
 	config.Docker.AllowLocalFallback = false
 	config.Docker.Timeout = cli.Duration(20 * time.Minute)

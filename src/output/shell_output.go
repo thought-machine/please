@@ -58,7 +58,7 @@ type buildingTargetData struct {
 
 // MonitorState monitors the build while it's running (essentially until state.TestCases is closed)
 // and prints output while it's happening.
-func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, shouldBuild, shouldTest, shouldRun, showStatus, detailedTests bool, traceFile string) bool {
+func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, showStatus, detailedTests bool, traceFile string) {
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads)
 
@@ -76,7 +76,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 	}
 	failedTargets := []core.BuildLabel{}
 	failedNonTests := []core.BuildLabel{}
-	for result := range state.Results {
+	for result := range state.Results() {
 		if state.DebugTests && result.Status == core.TargetTesting {
 			stop <- struct{}{}
 			<-displayDone
@@ -110,25 +110,24 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 			log.Fatalf("Target %s doesn't exist in build graph", label)
 		} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
 			// Do nothing, we will output about this shortly.
-		} else if shouldBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
+		} else if state.NeedBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
 			// N.B. Currently targets that are added post-build are excluded here, because in some legit cases this
 			//      check can fail incorrectly. It'd be better to verify this more precisely though.
 			cycle := graphCycleMessage(state.Graph, target)
 			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, cycle)
 		}
 	}
-	if state.Verbosity > 0 && shouldBuild && len(failedNonTests) == 0 {
+	if state.Verbosity > 0 && state.NeedBuild && len(failedNonTests) == 0 {
 		if state.PrepareOnly || state.PrepareShell {
 			printTempDirs(state, duration)
-		} else if shouldTest { // Got to the test phase, report their results.
+		} else if state.NeedTests { // Got to the test phase, report their results.
 			printTestResults(state, failedTargets, duration, detailedTests)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
-		} else if !shouldRun { // Must be plz build or similar, report build outputs.
+		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
 			printBuildResults(state, duration, showStatus)
 		}
 	}
-	return len(failedTargetMap) == 0
 }
 
 // PrintConnectionMessage prints the message when we're initially connected to a remote server.
@@ -175,8 +174,8 @@ func yesNo(b bool) string {
 func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, plainOutput bool,
 	keepGoing bool, failedTargets, failedNonTests *[]core.BuildLabel, failedTargetMap map[core.BuildLabel]error, shouldTrace bool) {
 	label := result.Label
-	active := result.Status == core.PackageParsing || result.Status == core.TargetBuilding || result.Status == core.TargetTesting
-	failed := result.Status == core.ParseFailed || result.Status == core.TargetBuildFailed || result.Status == core.TargetTestFailed
+	active := result.Status.IsActive()
+	failed := result.Status.IsFailure()
 	cached := result.Status == core.TargetCached || result.Tests.Cached
 	stopped := result.Status == core.TargetBuildStopped
 	parse := result.Status == core.PackageParsing || result.Status == core.PackageParsed || result.Status == core.ParseFailed

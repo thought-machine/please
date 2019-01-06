@@ -27,23 +27,22 @@ var log = logging.MustGetLogger("parse")
 // By default, after the package is parsed, any targets that are now needed for the build and ready
 // to be built are queued, and any new packages are queued for parsing. When a specific label is requested
 // this is straightforward, but when parsing for pseudo-targets like :all and ..., various flags affect it:
-// If 'noDeps' is true, then no new packages will be added and no new targets queued.
 // 'include' and 'exclude' refer to the labels of targets to be added. If 'include' is non-empty then only
 // targets with at least one matching label are added. Any targets with a label in 'exclude' are not added.
 // 'forSubinclude' is set when the parse is required for a subinclude target so should proceed
 // even when we're not otherwise building targets.
-func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) {
-	if err := parse(tid, state, label, dependor, noDeps, include, exclude, forSubinclude); err != nil {
+func Parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, include, exclude []string, forSubinclude bool) {
+	if err := parse(tid, state, label, dependor, include, exclude, forSubinclude); err != nil {
 		state.LogBuildError(tid, label, core.ParseFailed, err, "Failed to parse package")
 	}
 }
 
-func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noDeps bool, include, exclude []string, forSubinclude bool) error {
+func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, include, exclude []string, forSubinclude bool) error {
 	// See if something else has parsed this package first.
 	pkg := state.WaitForPackage(label)
 	if pkg != nil {
 		// Does exist, all we need to do is toggle on this target
-		return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
+		return activateTarget(state, pkg, label, dependor, forSubinclude, include, exclude)
 	}
 	// If we get here then it falls to us to parse this package.
 	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
@@ -60,7 +59,7 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, noD
 		return err
 	}
 	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed package")
-	return activateTarget(state, pkg, label, dependor, noDeps, forSubinclude, include, exclude)
+	return activateTarget(state, pkg, label, dependor, forSubinclude, include, exclude)
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
@@ -90,7 +89,7 @@ func parseSubrepoPackage(tid int, state *core.BuildState, pkg, subrepo string, d
 	if state.Graph.Package(pkg, subrepo) == nil {
 		// Don't have it already, must parse.
 		label := core.BuildLabel{Subrepo: subrepo, PackageName: pkg, Name: "all"}
-		return parse(tid, state, label, dependor, false, nil, nil, true)
+		return parse(tid, state, label, dependor, nil, nil, true)
 	}
 	return nil
 }
@@ -106,7 +105,7 @@ func checkArchSubrepo(state *core.BuildState, name string) *core.Subrepo {
 }
 
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
-func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor core.BuildLabel, noDeps, forSubinclude bool, include, exclude []string) error {
+func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor core.BuildLabel, forSubinclude bool, include, exclude []string) error {
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
 		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependor.Subrepo {
 			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {
@@ -119,7 +118,7 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 		}
 		return fmt.Errorf(msg + suggestTargets(pkg, label, dependor))
 	}
-	if noDeps && !forSubinclude {
+	if state.ParsePackageOnly && !forSubinclude {
 		return nil // Some kinds of query don't need a full recursive parse.
 	} else if label.IsAllTargets() {
 		for _, target := range pkg.AllTargets() {

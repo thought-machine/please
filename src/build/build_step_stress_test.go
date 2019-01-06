@@ -30,6 +30,7 @@ func TestBuildLotsOfTargets(t *testing.T) {
 	for i := 1; i <= size; i++ {
 		addTarget(state, i)
 	}
+	results := state.Results()
 	var wg sync.WaitGroup
 	wg.Add(numWorkers)
 	for i := 0; i < numWorkers; i++ {
@@ -40,7 +41,7 @@ func TestBuildLotsOfTargets(t *testing.T) {
 	}
 	// Consume and discard any results
 	go func() {
-		for result := range state.Results {
+		for result := range results {
 			assert.NotEqual(t, core.TargetBuildFailed, result.Status)
 			log.Info("%s", result.Description)
 		}

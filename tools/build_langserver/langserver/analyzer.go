@@ -2,22 +2,22 @@ package langserver
 
 import (
 	"context"
-	"github.com/thought-machine/please/src/core"
 	"fmt"
 	"io/ioutil"
 	"path"
 	"path/filepath"
-	"plz"
 	"query"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/parse/rules"
-	"src/fs"
-
+	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
@@ -734,10 +734,9 @@ func (a *Analyzer) RevDepsFromCoreBuildLabel(label core.BuildLabel, uri lsp.Docu
 	state.NeedBuild = false
 	state.NeedTests = false
 
-	success, state := plz.InitDefault([]core.BuildLabel{label}, state,
-		a.State.Config)
+	plz.Run([]core.BuildLabel{label}, state, a.State.Config, cli.Arch{})
 
-	if !success {
+	if !state.Success {
 		log.Warning("building %s not successful, skipping..", label)
 		return nil, nil
 	}

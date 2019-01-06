@@ -96,7 +96,7 @@ func connectSingleTry(state *core.BuildState, url string) error {
 			streamEvent(state, event)
 		}
 		log.Info("Reached end of server event stream, shutting down internal queue")
-		close(state.Results)
+		state.KillAll()
 	}()
 	log.Info("Established connection to remote server for build events")
 	// Stream back resource usage as well
@@ -112,7 +112,7 @@ func streamEvent(state *core.BuildState, event *pb.BuildEventResponse) {
 		t = state.Graph.AddTarget(core.NewBuildTarget(e.Label))
 		t.Labels = event.Labels
 	}
-	state.Results <- e
+	state.LogResult(e)
 	state.SetTaskNumbers(event.NumActive, event.NumDone)
 }
 
@@ -138,7 +138,7 @@ func streamResources(state *core.BuildState, client pb.PlzEventsClient) {
 
 // runOutput is just a wrapper around output.MonitorState for convenience in testing.
 func runOutput(state *core.BuildState) bool {
-	success := output.MonitorState(state, state.Config.Please.NumThreads, state.Verbosity >= 4, false, false, state.NeedTests, false, false, false, "")
-	output.PrintDisconnectionMessage(success, remoteClosed, remoteDisconnected)
-	return success
+	output.MonitorState(state, state.Config.Please.NumThreads, state.Verbosity >= 4, false, false, false, "")
+	output.PrintDisconnectionMessage(state.Success, remoteClosed, remoteDisconnected)
+	return state.Success
 }

@@ -1,0 +1,112 @@
+package plz
+
+import (
+	"sync"
+
+	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/follow"
+	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
+	"github.com/thought-machine/please/src/parse"
+	"github.com/thought-machine/please/src/test"
+	"github.com/thought-machine/please/src/utils"
+)
+
+// Run runs a build to completion.
+// The given state object controls most of the parameters to it and can be interrogated
+// afterwards to find success / failure.
+// To get detailed results as it runs, use state.Results. You should call that *before*
+// starting this (otherwise a sufficiently fast build may bypass you completely).
+func Run(targets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
+	parse.InitParser(state)
+	build.Init(state)
+
+	if config.Events.Port != 0 && state.NeedBuild {
+		shutdown := follow.InitialiseServer(state, config.Events.Port)
+		defer shutdown()
+	}
+	if config.Events.Port != 0 || config.Display.SystemStats {
+		go follow.UpdateResources(state)
+	}
+	metrics.InitFromConfig(config)
+
+	// Start looking for the initial targets to kick the build off
+	go findOriginalTasks(state, targets, arch)
+	// Start up all the build workers
+	var wg sync.WaitGroup
+	wg.Add(config.Please.NumThreads)
+	for i := 0; i < config.Please.NumThreads; i++ {
+		go func(tid int) {
+			doTasks(tid, state, state.Include, state.Exclude, arch)
+			wg.Done()
+		}(i)
+	}
+	// Wait until they've all exited, which they'll do once they have no tasks left.
+	wg.Wait()
+	if state.Cache != nil {
+		state.Cache.Shutdown()
+	}
+}
+
+func doTasks(tid int, state *core.BuildState, include, exclude []string, arch cli.Arch) {
+	for {
+		label, dependor, t := state.NextTask()
+		switch t {
+		case core.Stop, core.Kill:
+			return
+		case core.Parse, core.SubincludeParse:
+			t := t
+			label := label
+			dependor := dependor
+			state.ParsePool <- func() {
+				parse.Parse(tid, state, label, dependor, include, exclude, t == core.SubincludeParse)
+				state.TaskDone(false)
+			}
+		case core.Build, core.SubincludeBuild:
+			build.Build(tid, state, label)
+			state.TaskDone(true)
+		case core.Test:
+			test.Test(tid, state, label)
+			state.TaskDone(true)
+		}
+	}
+}
+
+// findOriginalTasks finds the original parse tasks for the original set of targets.
+func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel, arch cli.Arch) {
+	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
+		// We have to parse the WORKSPACE file before anything else to understand subrepos.
+		// This is a bit crap really since it inhibits parallelism for the first step.
+		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, state.Include, state.Exclude, false)
+	}
+	if arch.Arch != "" {
+		// Set up a new subrepo for this architecture.
+		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
+	}
+	for _, target := range targets {
+		if target == core.BuildLabelStdin {
+			for label := range cli.ReadStdin() {
+
+				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0], true, arch)
+			}
+		} else {
+			findOriginalTask(state, target, true, arch)
+		}
+	}
+	state.TaskDone(true) // initial target adding counts as one.
+}
+
+func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool, arch cli.Arch) {
+	if arch.Arch != "" {
+		target.Subrepo = arch.String()
+	}
+	if target.IsAllSubpackages() {
+		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
+			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"), addToList)
+		}
+	} else {
+		state.AddOriginalTarget(target, addToList)
+	}
+}

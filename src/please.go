@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -89,7 +90,6 @@ var opts struct {
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
-	VisibilityParse  bool   `description:"Parse all targets that the original targets are visible to. Used for some query steps." no-flag:"true"`
 
 	Build struct {
 		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
@@ -514,7 +514,6 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"reverseDeps": func() bool {
-		opts.VisibilityParse = true
 		return runQuery(false, opts.Query.ReverseDeps.Args.Targets, func(state *core.BuildState) {
 			query.ReverseDeps(state, state.ExpandOriginalTargets())
 		})
@@ -760,6 +759,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedCoverage = !opts.Cover.Args.Target.IsEmpty()
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell
 	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
@@ -769,6 +769,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.DebugTests = debugTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
+	state.ParsePackageOnly = opts.ParsePackageOnly
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 
 	if state.DebugTests && len(targets) != 1 {
@@ -785,19 +786,19 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 
-	return plz.Init(targets, state, config, plz.InitOpts{
-		ParsePackageOnly: opts.ParsePackageOnly,
-		VisibilityParse:  opts.VisibilityParse,
-		DetailedTests:    detailedTests,
-		KeepGoing:        opts.BuildFlags.KeepGoing,
-		PrettyOutput:     prettyOutput,
-		ShouldRun:        !opts.Run.Args.Target.IsEmpty(),
-		ShowStatus:       opts.Build.ShowStatus,
-		TraceFile:        string(opts.OutputFlags.TraceFile),
-		Arch:             opts.BuildFlags.Arch,
-		NoLock:           !opts.FeatureFlags.NoLock,
-	})
+	// Run the display
+	state.Results() // important this is called now, don't ask...
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
+		wg.Done()
+	}()
 
+	plz.Run(targets, state, config, opts.BuildFlags.Arch)
+	wg.Wait()
+
+	return state.Success, state
 }
 
 // testTargets handles test targets which can be given in two formats; a list of targets or a single

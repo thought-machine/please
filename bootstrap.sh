@@ -59,7 +59,7 @@ go run -tags bootstrap src/parse/asp/main/compiler.go -o plz-out/tmp/src/parse/r
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
-go run -tags bootstrap src/please.go $PLZ_ARGS build //src:please --log_file plz-out/log/bootstrap_build.log
+go run -tags bootstrap src/please.go $PLZ_ARGS build //src:please --log_file plz-out/log/bootstrap_build.log -o display.systemstats:false
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
 plz-out/bin/src/please $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
