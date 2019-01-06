@@ -20,10 +20,15 @@ var log = logging.MustGetLogger("watch")
 
 const debounceInterval = 50 * time.Millisecond
 
+// A CallbackFunc is supplied to Watch in order to trigger a build.
+type CallbackFunc func(*core.BuildState, []core.BuildLabel)
+
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels core.BuildLabels, watchedProcessName string, runWatchedBuild func(watchedProcessName string)) {
+func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFunc) {
+	// This hasn't been set before, do it now.
+	state.NeedTests = anyTests(state, labels)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("Error setting up watcher: %s", err)
@@ -31,6 +36,12 @@ func Watch(state *core.BuildState, labels core.BuildLabels, watchedProcessName s
 	// This sets up the actual watches. It must be done in a separate goroutine.
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
+
+	// The initial setup only builds targets, it doesn't test or run things.
+	// Do one of those now if requested.
+	if state.NeedTests || state.NeedRun {
+		build(state, labels, callback)
+	}
 
 	for {
 		select {
@@ -50,7 +61,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, watchedProcessName s
 					break outer
 				}
 			}
-			runWatchedBuild(watchedProcessName)
+			build(state, labels, callback)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
@@ -116,4 +127,29 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 			}
 		}
 	}
+}
+
+// anyTests returns true if any of the given labels refer to tests.
+func anyTests(state *core.BuildState, labels []core.BuildLabel) bool {
+	for _, l := range labels {
+		if state.Graph.TargetOrDie(l).IsTest {
+			return true
+		}
+	}
+	return false
+}
+
+// build invokes a single build while watching.
+func build(state *core.BuildState, labels []core.BuildLabel, callback CallbackFunc) {
+	// Set up a new state & copy relevant parts off the existing one.
+	ns := core.NewBuildState(state.Config.Please.NumThreads, state.Cache, state.Verbosity, state.Config)
+	ns.VerifyHashes = state.VerifyHashes
+	ns.NumTestRuns = state.NumTestRuns
+	ns.NeedTests = state.NeedTests
+	ns.NeedRun = state.NeedRun
+	ns.Watch = true
+	ns.CleanWorkdirs = state.CleanWorkdirs
+	ns.DebugTests = state.DebugTests
+	ns.ShowAllOutput = state.ShowAllOutput
+	callback(ns, labels)
 }

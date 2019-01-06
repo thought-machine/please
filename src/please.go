@@ -185,9 +185,8 @@ var opts struct {
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
 
 	Watch struct {
-		Run      bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
-		Watching bool `no-flag:"true"`
-		Args     struct {
+		Run  bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
+		Args struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to watch the sources of for changes"`
 		} `positional-args:"true" required:"true"`
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
@@ -419,11 +418,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			if opts.Watch.Run {
-				run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env)
-			} else {
-				os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
-			}
+			os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
 		}
 		return false
 	},
@@ -574,7 +569,7 @@ var buildFunctions = map[string]func() bool{
 			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
 		}
 		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
-		if success, state := Please(parseLabels, config, false, false, false); success {
+		if success, state := Please(parseLabels, config, false, false); success {
 			binary := opts.Query.Completions.Cmd == "run"
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
 			query.Completions(state.Graph, labels, binary, test, hidden)
@@ -596,7 +591,7 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"rules": func() bool {
-		success, state := Please(opts.Query.Rules.Args.Targets, config, true, len(opts.Query.Rules.Args.Targets) > 0, false)
+		success, state := Please(opts.Query.Rules.Args.Targets, config, len(opts.Query.Rules.Args.Targets) > 0, false)
 		if success {
 			parse.PrintRuleArgs(state, state.ExpandOriginalTargets())
 		}
@@ -645,10 +640,10 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"watch": func() bool {
-		opts.Watch.Watching = true
-		success, state := runBuild(opts.Watch.Args.Targets, true, true)
-		watchedProcessName := setWatchedTarget(state, state.ExpandOriginalTargets())
-		watch.Watch(state, state.ExpandOriginalTargets(), watchedProcessName, runWatchedBuild)
+		// Don't ask it to test now since we don't know if any of them are tests yet.
+		success, state := runBuild(opts.Watch.Args.Targets, true, false)
+		state.NeedRun = opts.Watch.Run
+		watch.Watch(state, state.ExpandOriginalTargets(), runPlease)
 		return success
 	},
 	"filter": func() bool {
@@ -664,8 +659,6 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 }
-
-var runWatchedBuild func(watchedProcessName string)
 
 // ConfigOverrides are used to implement completion on the -o flag.
 type ConfigOverrides map[string]string
@@ -739,7 +732,7 @@ func newCache(config *core.Configuration) core.Cache {
 }
 
 // Please starts & runs the main build process through to its completion.
-func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 	} else if config.Please.NumThreads <= 0 {
@@ -751,8 +744,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	} else if debugTests {
 		config.Build.Config = "dbg"
 	}
-	c := newCache(config)
-	state := core.NewBuildState(config.Please.NumThreads, c, int(opts.OutputFlags.Verbosity), config)
+	state := core.NewBuildState(config.Please.NumThreads, nil, int(opts.OutputFlags.Verbosity), config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)  // Only one of these can be passed
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
@@ -763,7 +755,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell
 	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
-	state.Watch = opts.Watch.Watching
+	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
@@ -776,6 +768,11 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
+	runPlease(state, targets)
+	return state.Success, state
+}
+
+func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	// Acquire the lock before we start building
 	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
 		core.AcquireRepoLock()
@@ -785,20 +782,20 @@ func Please(targets []core.BuildLabel, config *core.Configuration, prettyOutput,
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
+	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild
+	state.Cache = newCache(config)
 
 	// Run the display
 	state.Results() // important this is called now, don't ask...
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		output.MonitorState(state, config.Please.NumThreads, !prettyOutput, opts.BuildFlags.KeepGoing, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, config.Please.NumThreads, !pretty, opts.BuildFlags.KeepGoing, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 
 	plz.Run(targets, state, config, opts.BuildFlags.Arch)
 	wg.Wait()
-
-	return state.Success, state
 }
 
 // testTargets handles test targets which can be given in two formats; a list of targets or a single
@@ -850,8 +847,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *c
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}
-	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity)
-	return Please(targets, config, pretty, shouldBuild, shouldTest)
+	return Please(targets, config, shouldBuild, shouldTest)
 }
 
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
@@ -986,12 +982,6 @@ func execute(command string) bool {
 		}
 		defer f.Close()
 		defer pprof.WriteHeapProfile(f)
-	}
-
-	if command == "watch" {
-		runWatchedBuild = func(watchedProcessName string) {
-			buildFunctions[watchedProcessName]()
-		}
 	}
 
 	success := buildFunctions[command]()
