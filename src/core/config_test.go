@@ -234,7 +234,7 @@ func TestBuildEnvSection(t *testing.T) {
 		"GOARCH=" + runtime.GOARCH,
 		"GOOS=" + runtime.GOOS,
 		"OS=" + runtime.GOOS,
-		"PATH=/usr/local/bin:/usr/bin:/bin:" + os.Getenv("TMP_DIR") + "/.please",
+		"PATH=" + os.Getenv("TMP_DIR") + "/.please:/usr/local/bin:/usr/bin:/bin",
 		"XARCH=x86_64",
 		"XOS=" + xos(),
 	}
@@ -255,7 +255,7 @@ func TestPassEnv(t *testing.T) {
 		"GOARCH=" + runtime.GOARCH,
 		"GOOS=" + runtime.GOOS,
 		"OS=" + runtime.GOOS,
-		"PATH=" + os.Getenv("PATH") + ":" + os.Getenv("TMP_DIR") + "/.please",
+		"PATH=" + os.Getenv("TMP_DIR") + "/.please:" + os.Getenv("PATH"),
 		"XARCH=x86_64",
 		"XOS=" + xos(),
 	}

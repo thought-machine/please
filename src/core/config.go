@@ -564,7 +564,7 @@ func (config *Configuration) getBuildEnv(expanded bool) []string {
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+config.Please.Location+":"+maybeExpandHomePath(strings.Join(config.Build.Path, ":")))
+		env = append(env, "PATH="+maybeExpandHomePath(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")))
 	}
 
 	sort.Strings(env)
