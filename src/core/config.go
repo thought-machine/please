@@ -553,7 +553,7 @@ func (config *Configuration) getBuildEnv(expanded bool) []string {
 		if v, isSet := os.LookupEnv(k); isSet {
 			if k == "PATH" {
 				// plz's install location always needs to be on the path.
-				v += ":" + maybeExpandHomePath(config.Please.Location)
+				v = maybeExpandHomePath(config.Please.Location) + ":" + v
 				path = true
 			}
 			env = append(env, k+"="+v)
@@ -564,7 +564,7 @@ func (config *Configuration) getBuildEnv(expanded bool) []string {
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+maybeExpandHomePath(strings.Join(append(config.Build.Path, config.Please.Location), ":")))
+		env = append(env, "PATH="+config.Please.Location+":"+maybeExpandHomePath(strings.Join(config.Build.Path, ":")))
 	}
 
 	sort.Strings(env)
