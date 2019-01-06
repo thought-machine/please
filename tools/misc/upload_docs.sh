@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Script to automatically update the Please website.
 # Should be run from the root of the repo, and only by a CI system.
 

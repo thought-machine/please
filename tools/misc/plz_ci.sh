@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # This script implements an example CI flow using plz, which will perform an exhaustive diff
 # of the build graph against master and run all targets that have changed

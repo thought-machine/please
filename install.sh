@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Installs Please and its relevant binaries into ~/.please.
 # You must run ./bootstrap.sh before running this.

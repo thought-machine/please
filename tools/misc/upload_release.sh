@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Script to automatically upload new Please versions.
 # Will not overwrite existing versions, only adds new ones.
 # Should be run from the root of the repo, and only by a CI system.

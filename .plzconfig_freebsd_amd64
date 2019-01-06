@@ -5,3 +5,4 @@ protoctool = protoc
 # gcc isn't installed. Possibly this should be the default anyway?
 [cpp]
 cctool = cc
+cpptool = c++

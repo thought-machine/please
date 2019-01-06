@@ -836,22 +836,22 @@ def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, a
     linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
     if (not shared) and alwayslink:
         objs = f'{linker_prefix}{_WHOLE_ARCHIVE} {alwayslink} {linker_prefix}{_NO_WHOLE_ARCHIVE} {objs}'
-    build_id_flag = ''
     if CONFIG.OS != 'darwin':
         # We don't order libraries in a way that is especially useful for the linker, which is
         # nicely solved by --start-group / --end-group. Unfortunately the OSX linker doesn't
         # support those flags; in many cases it will work without, so try that.
         # Ordering them would be ideal but we lack a convenient way of working that out from here.
         objs = f'{linker_prefix}--start-group {objs} {linker_prefix}--end-group'
-        # OSX's ld doesn't have --build-id
-        # TODO(pebers): Not sure about other OS's / linkers? This might be GNU specific?
-        build_id_flag = linker_prefix + '--build-id=none'
+    if CONFIG.OS == 'linux':
+        # This flag exists only in the GNU ld, where it improves determinism. OS detection is not ideal
+        # but there isn't much alternative.
+        linker_flags += ['--build-id=none']
     if shared:
         objs = f'-shared {linker_prefix}{_WHOLE_ARCHIVE} {objs} {linker_prefix}{_NO_WHOLE_ARCHIVE}'
     linker_flags = ' '.join([linker_prefix + f for f in linker_flags])
     if not CONFIG.LINK_WITH_LD_TOOL:
         linker_flags += ' ' + _default_cflags(c, dbg)
-    return ' '.join([objs, build_id_flag, linker_flags, pkg_config_cmd])
+    return ' '.join([objs, linker_flags, pkg_config_cmd])
 
 
 def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_flags='', archive=True):

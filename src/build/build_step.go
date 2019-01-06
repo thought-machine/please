@@ -12,7 +12,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/shlex"
@@ -30,16 +29,11 @@ var log = logging.MustGetLogger("build")
 // Type that indicates that we're stopping the build of a target in a nonfatal way.
 var errStop = fmt.Errorf("stopping build")
 
-// goDirOnce is used to check old versions of plz-out/go.
-// This will be removed again soon.
-var goDirOnce sync.Once
-
 // httpClient is the shared http client that we use for fetching remote files.
 var httpClient http.Client
 
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
-	goDirOnce.Do(cleanupPlzOutGo)
 	start := time.Now()
 	target := state.Graph.TargetOrDie(label)
 	state = state.ForTarget(target)
@@ -686,17 +680,6 @@ func (r *progressReader) Read(b []byte) (int, error) {
 	r.Done += float32(n)
 	r.Target.Progress = 100.0 * r.Done / r.Total
 	return n, err
-}
-
-func cleanupPlzOutGo() {
-	removeIfSymlink("plz-out/go/src")
-	removeIfSymlink("plz-out/go/pkg/" + core.OsArch)
-}
-
-func removeIfSymlink(name string) {
-	if fi, err := os.Lstat(name); err == nil && fi.Mode()&os.ModeSymlink != 0 {
-		os.Remove(name)
-	}
 }
 
 // buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
