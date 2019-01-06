@@ -24,6 +24,7 @@ go_test(
     name = "rpc_cache_test",
     srcs = ["rpc_cache_test.go"],
     data = [":test_data"],
+    labels = ["no_cirrus"],
     deps = [
         ":cache",
         "//third_party/go:grpc",
