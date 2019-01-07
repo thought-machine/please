@@ -203,7 +203,9 @@ func DefaultConfiguration() *Configuration {
 	config.Aliases = map[string]string{}
 	config.Cache.HTTPTimeout = cli.Duration(5 * time.Second)
 	config.Cache.RPCTimeout = cli.Duration(5 * time.Second)
-	config.Cache.Dir = ".plz-cache"
+	if dir, err := os.UserCacheDir(); err == nil {
+		config.Cache.Dir = path.Join(dir, "please")
+	}
 	config.Cache.DirCacheHighWaterMark = 10 * cli.GiByte
 	config.Cache.DirCacheLowWaterMark = 8 * cli.GiByte
 	config.Cache.DirClean = true
@@ -323,7 +325,7 @@ type Configuration struct {
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
 	Cache       struct {
 		Workers               int          `help:"Number of workers for uploading artifacts to remote caches, which is done asynchronously."`
-		Dir                   string       `help:"Sets the directory to use for the dir cache.\nThe default is .plz-cache, if set to the empty string the dir cache will be disabled."`
+		Dir                   string       `help:"Sets the directory to use for the dir cache.\nThe default is 'please' under the user's cache dir (i.e. ~/.cache/please, ~/Library/Caches/please, etc), if set to the empty string the dir cache will be disabled."`
 		DirCacheHighWaterMark cli.ByteSize `help:"Starts cleaning the directory cache when it is over this number of bytes.\nCan also be given with human-readable suffixes like 10G, 200MB etc."`
 		DirCacheLowWaterMark  cli.ByteSize `help:"When cleaning the directory cache, it's reduced to at most this size."`
 		DirClean              bool         `help:"Controls whether entries in the dir cache are cleaned or not. If disabled the cache will only grow."`
