@@ -10,14 +10,10 @@
     <h2>The directory cache</h2>
 
     <p>This is the simplest kind of cache; it's on by default and simply is a directory tree
-      (by default <code>.plz-cache</code> at the root of your repo) containing various versions
-      of built artifacts. The main advantage of this is that it allows extremely fast rebuilds
-      when swapping between different versions of code (notably git branches).</p>
-
-    <p>Please comes with a binary creatively named <code>cache_cleaner</code> which it fires
-      off at startup to keep the size of the cache down. By nature of not having a full-time
-      daemon monitoring it it's possible that the size slightly exceeds the config bounds, but
-      generally it does as good a job as it can.</p>
+      (by default <code>~/.cache/please</code> or <code>~/Library/Caches/please</code>)
+      containing various versions of built artifacts. The main advantage of this is that it allows
+      extremely fast rebuilds when swapping between different versions of code
+      (notably git branches).</p>
 
     <p>Note that the dir cache is <b>not</b> threadsafe or locked in any way beyond plz's normal
       repo lock, so sharing the same directory between multiple projects is probably a Bad Idea.</p>
@@ -81,4 +77,3 @@
       noted there are ways to cause problems nonetheless. Hence the various caches store artifacts in
       a pretty obvious filesystem structure analogous to the repo structure itself, so if any single
       artifact is wrong it's not hard to excise it.</p>
-
