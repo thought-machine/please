@@ -681,12 +681,14 @@ func selectFunc(s *scope, args []pyObject) pyObject {
 	if s.pkg != nil {
 		pkgName = s.pkg.Name
 	}
-	// TODO(peterebden): this is an arbitrary match that drops Bazel's order-of-matching rules. Fix.
-	for k, v := range d {
+	// This is not really the same as Bazel's order-of-matching rules, but is at least deterministic.
+	keys := d.Keys()
+	for i := len(keys) - 1; i >= 0; i-- {
+		k := keys[i]
 		if k == "//conditions:default" || k == "default" {
-			def = v
+			def = d[k]
 		} else if selectTarget(s, core.ParseBuildLabel(k, pkgName)).HasLabel("config:on") {
-			return v
+			return d[k]
 		}
 	}
 	s.NAssert(def == nil, "None of the select() conditions matched")
