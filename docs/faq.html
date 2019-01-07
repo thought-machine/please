@@ -3,24 +3,22 @@
 
     <h3>Can I run it on my computer?</h3>
 
-    <p>If you're running Linux or OSX, definitely; we actively support both those platforms.<br/>
-      Installing Please on either is as easy as <code>curl https://get.please.build | bash</code>.
+    <p>If you're running Linux, OSX or FreeBSD, definitely; we actively support those platforms.<br/>
+      Installing Please on either Linux or OSX is as easy as <code>curl https://get.please.build | bash</code>.
       Further dependencies shouldn't be necessary after that, assuming you have what you need for
       the languages you want to work on (e.g. you'll need a JDK to use Please for Java).</p>
 
     <p>To compile it, one needs Go installed, plus a few other things for various other
-      builtin tools. On Linux we primarily support Ubuntu;
-      <a href="https://www.ubuntu.com/desktop">Bionic</a> is the easiest to get it working on, but
-      <a href="http://releases.ubuntu.com/16.04/">Xenial</a> is supported for most features too.
+      builtin tools. On Linux we primarily support Ubuntu; it should work pretty readily on
+      most distros though.<br/>
       See <a href="https://github.com/thought-machine/please/blob/master/tools/images/ubuntu">tools/images/ubuntu</a>
       for information and a Dockerfile for setting up a recommended environment.</p>
 
     <p>To build on OSX, you will similarly need to add some extra packages; we recommend using
-      <a href="https://brew.sh">Homebrew</a> to add at least <code>go</code> and <code>python3</code>.
-      <code>unittest-cpp</code> and <code>nasm</code> will be needed for Please's C++ tests.</p>
+      <a href="https://brew.sh">Homebrew</a> to add at least <code>go</code> and <code>python3</code>.</p>
 
-    <p>It should be buildable on FreeBSD; this is only tested infrequently though so minor
-      issues might have crept in.</p>
+    <p>For building on FreeBSD, you will need to install Bash as well as (obviously) Go and Git.<br/>
+    Currently binary downloads aren't available, we hope to make them available in future.</p>
 
     <p>Windows is unfortunately not supported natively, since it's just too different from the
       Unix environment Please is designed for. It might well be possible to make it work using
