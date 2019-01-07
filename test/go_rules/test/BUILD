@@ -25,6 +25,7 @@ go_test(
         "github.com/thought-machine/please/test/go_rules/test.ExecGitBranchShort": git_branch(),
     },
     external = True,
+    labels = ["no_cirrus"],  # Git branches aren't happening as expected here.
     deps = [
         ":test",
         "//third_party/go:testify",

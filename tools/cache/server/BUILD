@@ -45,6 +45,7 @@ go_test(
         "//src/cache:test_data",
     ],
     flaky = True,
+    labels = ["no_cirrus"],
     deps = [
         ":server",
         "//third_party/go:testify",
