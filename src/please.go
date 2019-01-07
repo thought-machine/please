@@ -892,6 +892,9 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 }
 
 func initBuild(args []string) string {
+	if _, present := os.LookupEnv("GO_FLAGS_COMPLETION"); present {
+		cli.InitLogging(cli.MinVerbosity)
+	}
 	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.HelpFlags.Version {
