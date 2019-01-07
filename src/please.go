@@ -94,7 +94,6 @@ var opts struct {
 	Build struct {
 		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
 		Shell      bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
-		ShowStatus bool     `long:"show_status" hidden:"true" description:"Show status of each target in output after build"`
 		Args       struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
@@ -790,7 +789,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		output.MonitorState(state, config.Please.NumThreads, !pretty, opts.BuildFlags.KeepGoing, opts.Build.ShowStatus, detailedTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, config.Please.NumThreads, !pretty, opts.BuildFlags.KeepGoing, detailedTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 

@@ -58,7 +58,7 @@ type buildingTargetData struct {
 
 // MonitorState monitors the build while it's running (essentially until state.TestCases is closed)
 // and prints output while it's happening.
-func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, showStatus, detailedTests bool, traceFile string) {
+func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing, detailedTests bool, traceFile string) {
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads)
 
@@ -125,7 +125,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
 		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
-			printBuildResults(state, duration, showStatus)
+			printBuildResults(state, duration)
 		}
 	}
 }
@@ -439,7 +439,7 @@ func testResultMessage(results core.TestSuite) string {
 	return msg
 }
 
-func printBuildResults(state *core.BuildState, duration time.Duration, showStatus bool) {
+func printBuildResults(state *core.BuildState, duration time.Duration) {
 	// Count incrementality.
 	totalBuilt := 0
 	totalReused := 0
@@ -458,11 +458,7 @@ func printBuildResults(state *core.BuildState, duration time.Duration, showStatu
 	printf("Build finished; total time %s, incrementality %.1f%%. Outputs:\n", duration, incrementality)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
-		if showStatus {
-			fmt.Printf("%s [%s]:\n", label, target.State())
-		} else {
-			fmt.Printf("%s:\n", label)
-		}
+		fmt.Printf("%s:\n", label)
 		for _, result := range buildResult(target) {
 			fmt.Printf("  %s\n", result)
 		}
