@@ -734,7 +734,7 @@ func (a *Analyzer) RevDepsFromCoreBuildLabel(label core.BuildLabel, uri lsp.Docu
 	state.NeedBuild = false
 	state.NeedTests = false
 
-	plz.Run([]core.BuildLabel{label}, state, a.State.Config, cli.Arch{})
+	plz.Run([]core.BuildLabel{label}, nil, state, a.State.Config, cli.Arch{})
 
 	if !state.Success {
 		log.Warning("building %s not successful, skipping..", label)

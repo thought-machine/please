@@ -3,6 +3,8 @@ package plz
 import (
 	"sync"
 
+	"gopkg.in/op/go-logging.v1"
+
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -14,12 +16,14 @@ import (
 	"github.com/thought-machine/please/src/utils"
 )
 
+var log = logging.MustGetLogger("plz")
+
 // Run runs a build to completion.
 // The given state object controls most of the parameters to it and can be interrogated
 // afterwards to find success / failure.
 // To get detailed results as it runs, use state.Results. You should call that *before*
 // starting this (otherwise a sufficiently fast build may bypass you completely).
-func Run(targets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
+func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
 	parse.InitParser(state)
 	build.Init(state)
 
@@ -33,7 +37,7 @@ func Run(targets []core.BuildLabel, state *core.BuildState, config *core.Configu
 	metrics.InitFromConfig(config)
 
 	// Start looking for the initial targets to kick the build off
-	go findOriginalTasks(state, targets, arch)
+	go findOriginalTasks(state, preTargets, targets, arch)
 	// Start up all the build workers
 	var wg sync.WaitGroup
 	wg.Add(config.Please.NumThreads)
@@ -75,7 +79,7 @@ func doTasks(tid int, state *core.BuildState, include, exclude []string, arch cl
 }
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
-func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel, arch cli.Arch) {
+func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildLabel, arch cli.Arch) {
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
@@ -85,17 +89,29 @@ func findOriginalTasks(state *core.BuildState, targets []core.BuildLabel, arch c
 		// Set up a new subrepo for this architecture.
 		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
 	}
+	if len(preTargets) > 0 {
+		findOriginalTaskSet(state, preTargets, false, arch)
+		for _, target := range preTargets {
+			log.Debug("Waiting for pre-target %s...", target)
+			state.WaitForBuiltTarget(target, targets[0])
+			log.Debug("Pre-target %s built, continuing...", target)
+		}
+	}
+	findOriginalTaskSet(state, targets, true, arch)
+	state.TaskDone(true) // initial target adding counts as one.
+}
+
+func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
 	for _, target := range targets {
 		if target == core.BuildLabelStdin {
 			for label := range cli.ReadStdin() {
 
-				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0], true, arch)
+				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0], addToList, arch)
 			}
 		} else {
-			findOriginalTask(state, target, true, arch)
+			findOriginalTask(state, target, addToList, arch)
 		}
 	}
-	state.TaskDone(true) // initial target adding counts as one.
 }
 
 func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool, arch cli.Arch) {

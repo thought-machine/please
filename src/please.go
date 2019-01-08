@@ -48,15 +48,16 @@ var config *core.Configuration
 var opts struct {
 	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
-		Config     string          `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
-		Arch       cli.Arch        `short:"a" long:"arch" description:"Architecture to compile for."`
-		RepoRoot   cli.Filepath    `short:"r" long:"repo_root" description:"Root of repository to build."`
-		KeepGoing  bool            `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
-		NumThreads int             `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
-		Include    []string        `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
-		Exclude    []string        `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
-		Option     ConfigOverrides `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
-		Profile    string          `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
+		Config     string            `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
+		Arch       cli.Arch          `short:"a" long:"arch" description:"Architecture to compile for."`
+		RepoRoot   cli.Filepath      `short:"r" long:"repo_root" description:"Root of repository to build."`
+		KeepGoing  bool              `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
+		NumThreads int               `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
+		Include    []string          `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
+		Exclude    []string          `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
+		Option     ConfigOverrides   `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
+		Profile    string            `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
+		PreTargets []core.BuildLabel `long:"pre" hidden:"true" description:"Targets to build before the other command-line ones. Sometimes useful to debug targets generated as part of a post-build function."`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
@@ -92,9 +93,9 @@ var opts struct {
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
 
 	Build struct {
-		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
-		Shell      bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
-		Args       struct { // Inner nesting is necessary to make positional-args work :(
+		Prepare bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		Shell   bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
+		Args    struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
@@ -793,7 +794,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		wg.Done()
 	}()
 
-	plz.Run(targets, state, config, opts.BuildFlags.Arch)
+	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, opts.BuildFlags.Arch)
 	wg.Wait()
 }
 
