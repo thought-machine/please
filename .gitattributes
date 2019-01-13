@@ -1,5 +1,5 @@
 *.build_defs linguist-language=Python diff=python
 BUILD linguist-language=Python diff=python
+BUILD.plz linguist-language=Python diff=python
 docs/* linguist-documentation
-third_party/go/src/* linguist-vendored
-
+third_party/go/zip/* linguist-vendored

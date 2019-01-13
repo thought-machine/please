@@ -5,11 +5,6 @@ pextool = //tools/please_pex
 moduledir = third_party.python
 
 [parse]
-; This is a hack to handle operating systems with case-insensitive file systems.
-; I don't want to rename my package so we have one slightly differently named build file
-; in this project.
-buildfilename = BUILD
-buildfilename = BUILD.plz
 ; Make this generally available
 preloadbuilddefs = build_defs/go_bindata.build_defs
 

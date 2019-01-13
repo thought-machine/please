@@ -99,9 +99,9 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
 	if usingBazelWorkspace {
-		setDefault(&config.Parse.BuildFileName, []string{"BUILD.bazel", "BUILD"})
+		setDefault(&config.Parse.BuildFileName, []string{"BUILD.bazel", "BUILD", "BUILD.plz"})
 	} else {
-		setDefault(&config.Parse.BuildFileName, []string{"BUILD"})
+		setDefault(&config.Parse.BuildFileName, []string{"BUILD", "BUILD.plz"})
 	}
 	setBuildPath(&config.Build.Path, config.Build.PassEnv)
 	setDefault(&config.Build.PassEnv, []string{})
