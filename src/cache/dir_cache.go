@@ -308,6 +308,11 @@ func (cache *dirCache) CleanAll() {
 	if err := core.AsyncDeleteDir(cache.Dir); err != nil {
 		log.Error("Failed to clean cache: %s", err)
 	}
+	// We used to store the cache in .plz-cache by default; we now use UserCacheDir but
+	// if the old one's there, we'll clean it out too.
+	if dir2 := path.Join(core.RepoRoot, ".plz-cache"); dir2 != cache.Dir && fs.PathExists(dir2) {
+		core.AsyncDeleteDir(dir2)
+	}
 }
 
 func (cache *dirCache) Shutdown() {}
