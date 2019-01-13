@@ -21,7 +21,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Lint
-           command: ./tools/misc/ci_lint.py && plz-out/bin/src/please run -p //third_party/go:buildifier -- --mode=check `git ls-files | grep BUILD`
+           command: ./tools/misc/ci_lint.py && plz-out/bin/src/please buildify --mode=check `git ls-files | grep BUILD`
        - run:
            name: Package
            command: ./plz-out/bin/src/please build //package:all //tools/misc:gen_release --exclude asc -p
@@ -80,6 +80,8 @@ jobs:
         xcode: "9.0"
       environment:
         PLZ_ARGS: "-p --profile ci --exclude pip"
+        HOMEBREW_LOGS: "~/homebrew-logs"
+        HOMEBREW_TEMP: "~/homebrew-temp"
       steps:
        - checkout
        - restore_cache:
@@ -92,7 +94,7 @@ jobs:
            key: homebrew-v1
        - run:
            name: Install deps
-           command: brew install go unittest-cpp nasm pkg-config && brew upgrade python
+           command: brew install go nasm pkg-config && brew upgrade python
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml

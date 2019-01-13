@@ -47,6 +47,17 @@ allowlocalfallback = false
 [provider "go"]
 target = //test/go_provider
 
+[alias "plz"]
+desc = Builds & runs the version of plz within this repo.
+cmd = run //src:please --
+subcommand = test
+subcommand = build
+positionallabels = true
+
+[alias "buildify"]
+desc = Runs buildifier, a BUILD file autoformatter.
+cmd = run //src:please -p -- run -p //third_party/go:buildifier --
+
 [licences]
 accept = MIT
 accept = MIT License
