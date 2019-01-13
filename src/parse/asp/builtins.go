@@ -722,7 +722,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	}
 	log.Debug("Registering subrepo %s in package %s", name, s.pkg.Label())
 	s.state.Graph.AddSubrepo(&core.Subrepo{
-		Name:   name,
+		Name:   path.Join(s.pkg.Name, name),
 		Root:   root,
 		Target: target,
 		State:  s.state,
