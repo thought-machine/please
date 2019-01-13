@@ -450,7 +450,8 @@ type Configuration struct {
 	Aliases  map[string]string `help:"It is possible to define aliases for new commands in your .plzconfig file. These are essentially string-string replacements of the command line, for example 'deploy = run //tools:deployer --' makes 'plz deploy' run a particular tool."`
 	Alias    map[string]*Alias `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
 	Provider map[string]*struct {
-		Target BuildLabel `help:"The in-repo target to build this provider."`
+		Target BuildLabel   `help:"The in-repo target to build this provider."`
+		Path   []BuildLabel `help:"The paths that this provider should operate for."`
 	} `help:"Allows configuring BUILD file providers, which are subprocesses that know how to provide the contents of a BUILD file when none exists. For example, a Go provider might infer the contents of a BUILD file from the Go source files directly."`
 	Bazel struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`

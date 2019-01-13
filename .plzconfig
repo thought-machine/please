@@ -41,6 +41,7 @@ allowlocalfallback = false
 
 [provider "go"]
 target = //test/go_provider
+path = //test/go_provider/...
 
 [alias "plz"]
 desc = Builds & runs the version of plz within this repo.

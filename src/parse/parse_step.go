@@ -328,9 +328,12 @@ func providePackage(state *core.BuildState, pkg *core.Package) (bool, error) {
 		return false, nil
 	}
 	success := false
-	// TODO(peterebden): Parallelise this.
+	label := pkg.Label()
 	for name, p := range state.Config.Provider {
-		t := state.WaitForBuiltTarget(p.Target, pkg.Label())
+		if !shouldProvide(p.Path, label) {
+			continue
+		}
+		t := state.WaitForBuiltTarget(p.Target, label)
 		outs := t.Outputs()
 		if !t.IsBinary && len(outs) != 1 {
 			log.Error("Cannot use %s as build provider %s, it must be a binary with exactly 1 output.", p.Target, name)
@@ -349,4 +352,14 @@ func providePackage(state *core.BuildState, pkg *core.Package) (bool, error) {
 		}
 	}
 	return success, nil
+}
+
+// shouldProvide returns true if a provider's set of configured paths overlaps a package.
+func shouldProvide(paths []core.BuildLabel, label core.BuildLabel) bool {
+	for _, p := range paths {
+		if p.Includes(label) {
+			return true
+		}
+	}
+	return false
 }
