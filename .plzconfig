@@ -54,6 +54,10 @@ subcommand = test
 subcommand = build
 positionallabels = true
 
+[alias "buildify"]
+desc = Runs buildifier, a BUILD file autoformatter.
+cmd = run //src:please -p -- run -p //third_party/go:buildifier --
+
 [licences]
 accept = MIT
 accept = MIT License

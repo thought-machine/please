@@ -142,8 +142,8 @@ if hash python3 2>/dev/null ; then
     # Don't run this in CI or any unusual workflows.
     if [ $# -eq 0 ] ; then
         tools/misc/ci_lint.py
-        plz-out/bin/src/please run -p //third_party/go:buildifier -- --mode=check `git ls-files | grep BUILD`
+        plz-out/bin/src/please buildify --mode=check `git ls-files | grep BUILD`
         # If the above fails, then the fix is to run:
-        # plz-out/bin/src/please run -p //third_party/go:buildifier -- --mode=fix `git ls-files | grep BUILD`
+        # plz-out/bin/src/please buildify --mode=fix `git ls-files | grep BUILD`
     fi
 fi
