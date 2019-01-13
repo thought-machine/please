@@ -25,7 +25,8 @@ def workspace(name:str):
 
 
 def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=None,
-                 sha256:str=None, visibility:list=None):
+                 sha256:str=None, config:str=None, bazel_compat:bool=False,
+                 visibility:list=None):
     """Fetches a remote file over HTTP and expands its contents.
 
     The archive should be either a zipfile or a tarball. Which one to use will be autodetected
@@ -40,7 +41,11 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=Non
       strip_prefix: Prefix to strip from the expanded archive.
       hashes: List of hashes to verify the rule with.
       sha256: Used for Bazel compat but currently has no effect.
-      visibility: Visibility declaration of the rule.
+      config: Configuration file to apply to this subrepo.
+      bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
+                    specifying a config file with `compatibility = true` in the `[bazel]`
+                    section.
+      visibility: Deprecated, has no effect.
     """
     new_http_archive(
         name = name,
@@ -48,12 +53,14 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=Non
         strip_prefix = strip_prefix,
         hashes = hashes,
         sha256 = sha256,
-        visibility = visibility,
+        config = config,
+        bazel_compat = bazel_compat,
     )
 
 
 def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
-                     strip_prefix:str=None, hashes:str|list=None, sha256:str=None, visibility:list=None):
+                     strip_prefix:str=None, hashes:str|list=None, sha256:str=None,
+                     config:str=None, bazel_compat:bool=False, visibility:list=None):
     """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
 
     The archive should be either a zipfile or a tarball. Which one to use will be autodetected
@@ -74,7 +81,11 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
       strip_prefix: Prefix to strip from the expanded archive.
       hashes: List of hashes to verify the rule with.
       sha256: Used for Bazel compat but currently has no effect.
-      visibility: Visibility declaration of the rule.
+      config: Configuration file to apply to this subrepo.
+      bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
+                    specifying a config file with `compatibility = true` in the `[bazel]`
+                    section.
+      visibility: Deprecated, has no effect.
     """
     remote_rule = remote_file(
         name = name,
@@ -111,6 +122,8 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
     subrepo(
         name = name,
         dep = extract_rule,
+        config = config,
+        bazel_compat = bazel_compat,
     )
 
 
@@ -136,4 +149,35 @@ def new_local_repository(name:str, path:str):
         dep = filegroup(
             name = name,
         ),
+    )
+
+
+def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:str|list=None,
+                config:str=None, bazel_compat:bool=False):
+    """Defines a new subrepo corresponding to a Github project.
+
+    This is a convenience alias to the more general new_http_archive. It knows how to
+    construct Github URLs appropriately which allows a more concise description.
+
+    Args:
+      name: Name of the rule.
+      repo: Github repo to fetch from (e.g. "thought-machine/please").
+      revision: Revision to download.
+      build_file: The file to use as a BUILD file for this subrepository.
+      hashes: List of hashes to verify the rule with.
+      config: Configuration file to apply to this subrepo.
+      bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
+                    specifying a config file with `compatibility = true` in the `[bazel]`
+                    section.
+    """
+    org, _, repo = repo.partition('/')
+    assert repo, "Must pass a valid Github repo argument, e.g. thought-machine/please"
+    return new_http_archive(
+        name = name,
+        urls = [f'https://github.com/{org}/{repo}/archive/{revision}.zip'],
+        strip_prefix = f'{repo}-{revision}',
+        build_file = build_file,
+        hashes = hashes,
+        config = config,
+        bazel_compat = bazel_compat,
     )

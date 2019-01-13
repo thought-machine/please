@@ -600,25 +600,43 @@ func (state *BuildState) ForTarget(target *BuildTarget) *BuildState {
 
 // ForArch creates a copy of this BuildState for a different architecture.
 func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
-	state.progress.mutex.Lock()
-	defer state.progress.mutex.Unlock()
 	// Check if we've got this one already.
 	// N.B. This implicitly handles the case of the host architecture
+	if s := state.findArch(arch); s != nil {
+		return s
+	}
+	// Copy with the architecture-specific config file.
+	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
+	// in fact take priority over this, but that's a lot more fiddly to get right.
+	s := state.ForConfig(".plzconfig_" + arch.String())
+	s.Config.Build.Arch = arch
+	return s
+}
+
+// findArch returns an existing state for the given architecture, if one exists.
+func (state *BuildState) findArch(arch cli.Arch) *BuildState {
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
 	for _, s := range state.progress.allStates {
 		if s.Config.Build.Arch == arch {
 			return s
 		}
 	}
+	return nil
+}
+
+// ForConfig creates a copy of this BuildState based on the given config files.
+func (state *BuildState) ForConfig(config ...string) *BuildState {
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
 	// Duplicate & alter configuration
 	c := &Configuration{}
 	*c = *state.Config
-	c.Build.Arch = arch
 	c.buildEnvStored = &storedBuildEnv{}
-	// Load the architecture-specific config file.
-	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
-	// in fact take priority over this, but that's a lot more fiddly to get right.
-	if err := readConfigFile(c, ".plzconfig_"+arch.String()); err != nil {
-		log.Fatalf("Failed to read config file for %s: %s", arch, err)
+	for _, filename := range config {
+		if err := readConfigFile(c, filename); err != nil {
+			log.Fatalf("Failed to read config file %s: %s", filename, err)
+		}
 	}
 	s := &BuildState{}
 	*s = *state

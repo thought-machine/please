@@ -1,6 +1,6 @@
-new_http_archive(
+github_repo(
     name = "gtest",
-    build_file = "gtest.build",
-    strip_prefix = "googletest-b4d4438df9479675a632b2f11125e57133822ece",
-    urls = ["https://github.com/google/googletest/archive/b4d4438df9479675a632b2f11125e57133822ece.zip"],
+    bazel_compat = True,
+    repo = "google/googletest",
+    revision = "release-1.8.1",
 )

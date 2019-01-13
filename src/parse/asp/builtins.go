@@ -720,12 +720,20 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	} else if args[2] != None {
 		root = string(args[2].(pyString))
 	}
+	state := s.state
+	if args[3] != None { // arg 3 is the config file to load
+		state = state.ForConfig(path.Join(s.pkg.Name, string(args[3].(pyString))))
+	} else if args[4].IsTruthy() { // arg 4 is bazel_compat
+		state = state.ForConfig()
+		state.Config.Bazel.Compatibility = true
+		state.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
+	}
 	log.Debug("Registering subrepo %s in package %s", name, s.pkg.Label())
 	s.state.Graph.AddSubrepo(&core.Subrepo{
 		Name:   path.Join(s.pkg.Name, name),
 		Root:   root,
 		Target: target,
-		State:  s.state,
+		State:  state,
 	})
 	return None
 }

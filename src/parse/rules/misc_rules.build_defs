@@ -504,7 +504,3 @@ if CONFIG.BAZEL_COMPATIBILITY:
             srcs = srcs,
             visibility = visibility,
         )
-
-    def licenses(licences):
-        """Sets the default licences for the package."""
-        package(default_licences = licences)

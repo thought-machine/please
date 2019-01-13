@@ -157,6 +157,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 			// Deliberate fallthrough, for the case where someone depended on the default
 			// @pleasings subrepo, and there is no BUILD file at their root.
 		} else if !success {
+			log.Warning("here %s", label)
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependor != core.OriginalTarget && exists {
@@ -168,6 +169,7 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 			}
 			return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
 		}
+		log.Warning("here %s", label)
 	} else {
 		pkg.Filename = filename
 		if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {

@@ -62,7 +62,7 @@ def subinclude(target:str, hash:str=None):
     pass
 def load(target:str, names:str=None):
     pass
-def subrepo(name:str, dep:str='', path:str=None):
+def subrepo(name:str, dep:str='', path:str=None, config:str=None, bazel_compat:bool=False):
     pass
 
 
@@ -227,3 +227,11 @@ def get_command(target:str, config:str='') -> str:
     pass
 def set_command(target:str, config:str, command:str=''):
     pass
+
+
+# N.B. This should really be limited so it's only visible when Bazel compat is on,
+#      but we currently don't alter the builtins for that scenario.
+def licenses(licences):
+    """Sets the default licences for the package."""
+    assert CONFIG.BAZEL_COMPATIBILITY, 'licenses() can only be called in Bazel compat mode'
+    package(default_licences = licences)
