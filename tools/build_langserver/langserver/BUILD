@@ -25,12 +25,8 @@ go_library(
 
 go_test(
     name = "langserver_test",
-    srcs = glob(
-        [
-            "*_test.go",
-            "setup_test.go",
-        ],
-        exclude = ["utils_test.go"],
+    srcs = glob(["*_test.go"],
+        exclude = ["utils_test.go", "analyzer_test.go"],
     ),
     data = ["test_data"],
     deps = [

@@ -23,7 +23,7 @@ func TestNewAnalyzer(t *testing.T) {
 	assert.NotEqual(t, nil, a.BuiltIns)
 
 	goLibrary := a.BuiltIns["go_library"]
-	assert.Equal(t, 15, len(goLibrary.ArgMap))
+	assert.Equal(t, 16, len(goLibrary.ArgMap))
 	assert.Equal(t, true, goLibrary.ArgMap["name"].Required)
 
 	// check preloadBuildDefs has being loaded
@@ -64,7 +64,7 @@ func TestNewRuleDef(t *testing.T) {
 	// Test header the definition for build_rule
 	expected := "def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],\n" +
 		"               visibility:list=None, test_only:bool&testonly=False, complete:bool=True, cover:bool=True,\n" +
-		"               filter_srcs:bool=True)"
+		"               filter_srcs:bool=True, tags:list=[])"
 
 	ruleContent := rules.MustAsset("go_rules.build_defs")
 

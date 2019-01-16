@@ -707,7 +707,7 @@ def _replace_test_package(name, output, static, definitions):
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, tags=''):
     """Returns the commands to run for building a Go library."""
-    filter_cmd = 'export SRCS="$(${TOOLS_FILTER} -tags="{tags}" ${SRCS})"; ' if filter_srcs else ''
+    filter_cmd = ('export SRCS="$(${TOOLS_FILTER} -tags="%s" ${SRCS})"; ' % tags) if filter_srcs else ''
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
     compile_cmd = '$TOOLS_GO tool compile -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (complete_flag, _GOPATH)

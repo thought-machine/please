@@ -192,7 +192,7 @@ func TestCompletionWithBuiltins(t *testing.T) {
 		if item.Label == "go_library" {
 			expectedDetail := "(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],\n" +
 				"               visibility:list=None, test_only:bool&testonly=False, complete:bool=True, cover:bool=True,\n" +
-				"               filter_srcs:bool=True)"
+				"               filter_srcs:bool=True, tags:list=[])"
 			assert.Equal(t, expectedDetail, item.Detail)
 		}
 	}
