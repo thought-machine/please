@@ -352,6 +352,8 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
       tags (list): List of Go build tags to consider satisfied.
+                   N.B. These should include any tags on the go_library as well, they are not
+                        implicitly reused.
     """
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # Unfortunately we have to recompile this to build the test together with its library.
@@ -466,6 +468,8 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
                      It may not be easy to make cgo tests work when linked statically; depending
                      on your toolchain it may not be possible or may fail.
       tags (list): List of Go build tags to consider satisfied.
+                   N.B. These should include any tags on the go_library as well, they are not
+                        implicitly reused.
     """
     return go_test(
         name = name,
