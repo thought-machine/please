@@ -16,7 +16,8 @@ _LINK_PKGS_CMD = ' '.join([
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
-               filter_srcs:bool=True, tags:list=[], _link_private:bool=False, _link_extra:bool=True):
+               filter_srcs:bool=CONFIG.GO_FILTER_SRCS, tags:list=[],
+               _link_private:bool=False, _link_extra:bool=True):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -91,37 +92,52 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             provides = {'go': ':' + name, 'go_src': lib_rule},
             test_only = test_only,
         )
+    tools = { 'go': [CONFIG.GO_TOOL] }
 
     # go_test and cgo_library need access to the sources as well.
-    src_rule = filegroup(
-        name = name,
-        tag = 'srcs',
-        srcs=srcs,
-        exported_deps=deps,
-        visibility=visibility,
-        requires=['go'],
-        labels = src_labels,
-        test_only=test_only,
-    )
-
-    tools = { 'go': [CONFIG.GO_TOOL] }
     if filter_srcs:
-        tools['filter'] = [CONFIG.GO_FILTER_TOOL]
+        tool = [CONFIG.GO_FILTER_TOOL]
+        cmd = '$TOOL $SRCS'
+        if tags:
+            cmd += ' -tags "%s"' % ','.join(tags)
+        src_rule = build_rule(
+            name = name,
+            tag = 'srcs',
+            srcs = srcs,
+            cmd = cmd,
+            post_build = lambda name, output: [add_out(name, out) for out in output],
+            tools = tool,
+            deps = deps,
+            requires = ['go'],
+            labels = src_labels,
+            test_only = test_only,
+        )
+        tools['filter'] = tool
+    else:
+        src_rule = filegroup(
+            name = name,
+            tag = 'srcs',
+            srcs = srcs,
+            deps = deps,
+            requires = ['go'],
+            labels = src_labels,
+            test_only = test_only,
+        )
 
     return build_rule(
-        name=name,
-        srcs=srcs,
-        deps=deps + [src_rule],
-        outs=[out],
-        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, tags=','.join(tags)),
-        visibility=visibility,
-        building_description="Compiling...",
-        requires=['go', 'go_src'] if _all_srcs else ['go'],
-        provides={'go': ':' + name, 'go_src': src_rule},
+        name = name,
+        srcs = [src_rule],
+        deps = deps,
+        outs = [out],
+        cmd = _go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover),
+        visibility = visibility,
+        building_description = "Compiling...",
+        requires = ['go', 'go_src'] if _all_srcs else ['go'],
+        provides = {'go': ':' + name, 'go_src': src_rule},
         labels = labels,
-        test_only=test_only,
-        tools=tools,
-        needs_transitive_deps=_needs_transitive_deps,
+        test_only = test_only,
+        tools = tools,
+        needs_transitive_deps = _needs_transitive_deps,
     )
 
 
@@ -709,9 +725,8 @@ def _replace_test_package(name, output, static, definitions):
                     set_command(lib, k, f'mv -f $PKG_DIR/{new_name}.a $PKG_DIR/{pkg_name}.a && {v}')
 
 
-def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, tags=''):
+def _go_library_cmds(complete=True, all_srcs=False, cover=True):
     """Returns the commands to run for building a Go library."""
-    filter_cmd = ('export SRCS="$(${TOOLS_FILTER} -tags="%s" ${SRCS})"; ' % tags) if filter_srcs else ''
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
     compile_cmd = '$TOOLS_GO tool compile -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (complete_flag, _GOPATH)
@@ -720,11 +735,11 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
     prefix += _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
     cmds = {
-        'dbg': f'{prefix}; {filter_cmd}{compile_cmd} -N -l $SRCS',
-        'opt': f'{prefix}; {filter_cmd}{compile_cmd} $SRCS',
+        'dbg': f'{prefix}; {compile_cmd} -N -l $SRCS',
+        'opt': f'{prefix}; {compile_cmd} $SRCS',
     }
     if cover:
-        cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd} $SRCS'
+        cmds['cover'] = f'{prefix}; {cover_cmd} && {compile_cmd} $SRCS'
     return cmds
 
 
