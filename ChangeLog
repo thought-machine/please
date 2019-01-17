@@ -1,3 +1,11 @@
+Version 13.3.4
+--------------
+
+    * Fixed Go coverage when there are hyphens in the path (#538)
+    * Some small FreeBSD-specific fixes
+    * `plz clean` honours the starting directory in the same way as `plz build` (#536)
+
+
 Version 13.3.3
 --------------
 
