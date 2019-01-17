@@ -429,8 +429,8 @@ var buildFunctions = map[string]func() bool{
 		return false
 	},
 	"clean": func() bool {
-		config.Cache.DirClean = false
-		if len(opts.Clean.Args.Targets) == 0 {
+		config.Cache.DirClean = false // don't run the normal cleaner
+		if len(opts.Clean.Args.Targets) == 0 && core.InitialPackage()[0].PackageName == "" {
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
 				// Clean everything, doesn't require parsing at all.
 				if !opts.Clean.Remote {
