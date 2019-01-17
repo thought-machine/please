@@ -155,8 +155,8 @@
         would copy your HTTP_PROXY environment variable to the build env for any rules.</li>
 
       <li><b>Sandbox</b> (bool)<br/>
-        Activates sandboxing for individual build actions, which isolates them using Linux namespaces.
-        Only works on Linux and requires please_sandbox to be installed separately.
+        Activates sandboxing for individual build actions, which isolates them from network
+        access, IPC and some aspects of the filesystem. Currently only works on Linux.
         Defaults to <code>False</code>.</li>
 
     </ul>
@@ -219,6 +219,11 @@
         Sets the default type of containerisation to use for tests that are given
         <code>container = True</code>.<br/>
         Currently the only option is "docker" but we intend to add rkt support at some point.</li>
+
+      <li><b>Sandbox</b> (bool)<br/>
+        Activates sandboxing for individual tests, which isolates them from network
+        access, IPC and some aspects of the filesystem. Currently only works on Linux.
+        Defaults to <code>False</code>.</li>
     </ul>
 
     <h3>[Cover]</h3>

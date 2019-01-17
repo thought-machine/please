@@ -5,12 +5,6 @@ filegroup(
 )
 
 filegroup(
-    name = "signing",
-    srcs = ["signing.build_defs"],
-    visibility = ["//package:all"],
-)
-
-filegroup(
     name = "multiversion_wheel",
     srcs = ["multiversion_wheel.build_defs"],
     visibility = ["//third_party/python:all"],

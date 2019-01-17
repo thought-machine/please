@@ -1,7 +1,5 @@
 subinclude("//build_defs:version")
 
-subinclude("//build_defs:signing")
-
 # This is the master list of files that get installed.
 filegroup(
     name = "installed_files",
@@ -16,17 +14,18 @@ filegroup(
         "//tools/please_go_test",
         "//tools/please_maven",
         "//tools/please_pex",
+        "//tools/sandbox:please_sandbox",
     ],
 )
 
-signed_tarball(
+tarball(
     name = "please_tarball",
     srcs = [":installed_files"],
     out = "please_%s.tar.gz" % VERSION,
     subdir = "please",
 )
 
-signed_tarball(
+tarball(
     name = "please_tarball_xz",
     srcs = [":installed_files"],
     out = "please_%s.tar.xz" % VERSION,
@@ -34,7 +33,7 @@ signed_tarball(
     xzip = True,
 )
 
-signed_tarball(
+tarball(
     name = "servers_tarball",
     srcs = [
         "//tools/cache:http_cache_server",
@@ -52,23 +51,6 @@ filegroup(
         ":servers_tarball",
     ],
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
-)
-
-filegroup(
-    name = "signed_tarballs",
-    srcs = [
-        ":please_tarball_signed",
-        ":please_tarball_xz_signed",
-        ":servers_tarball_signed",
-    ],
-    labels = ["manual"],
-)
-
-# This generates a stamped version of the various inputs which will have a unique name.
-# We don't really use it here, it's for testing purposes really.
-hash_filegroup(
-    name = "hash_files",
-    srcs = [":installed_files"],
 )
 
 filegroup(

@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -252,9 +251,8 @@ func ExecWithTimeoutShell(state *BuildState, target *BuildTarget, dir string, en
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
 func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool, msg string) ([]byte, []byte, error) {
 	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
-	// Runtime check is a little ugly, but we know this only works on Linux right now.
-	if sandbox && runtime.GOOS == "linux" {
-		tool, err := LookPath(state.Config.Build.PleaseSandboxTool, state.Config.Build.Path)
+	if sandbox {
+		tool, err := LookPath(state.Config.Build.PleaseSandboxTool, append([]string{ExpandHomePath(state.Config.Please.Location)}, state.Config.Build.Path...))
 		if err != nil {
 			return nil, nil, err
 		}

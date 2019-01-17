@@ -4,7 +4,7 @@ replace_str = x.replace('-', '_')
 
 unary = not len(replace_str)
 
-call_assign = subinclude("//build_defs:signing")
+call_assign = subinclude("//build_defs:plz_e2e_test")
 
 label_list_multi = [
      "//src/fs",

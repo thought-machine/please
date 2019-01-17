@@ -107,8 +107,8 @@ func TestGetDefinitionOnSubIncludeArgument(t *testing.T) {
 	loc := handler.getDefinitionLocation(ctx, assignBuildURI, lsp.Position{Line: 6, Character: 33})
 	expectedURI := lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "build_defs/BUILD"))
 	expectedRange := lsp.Range{
-		Start: lsp.Position{Line: 6, Character: 0},
-		End:   lsp.Position{Line: 10, Character: 1},
+		Start: lsp.Position{Line: 0, Character: 0},
+		End:   lsp.Position{Line: 4, Character: 1},
 	}
 	assert.Equal(t, 1, len(loc))
 	assert.Equal(t, expectedURI, loc[0].URI)

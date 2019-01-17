@@ -21,44 +21,6 @@
 #include <sys/prctl.h>
 #include <sys/types.h>
 
-// TODO(peterebden): Remove the following once our build machine gets updated...
-#ifndef MS_LAZYTIME
-#define MS_LAZYTIME	(1<<25)
-#endif
-
-// drop_root is ported more or less directly from Chrome's chrome-sandbox helper.
-// It simply drops us back to whatever user invoked us originally (i.e. before suid
-// got involved).
-int drop_root() {
-    if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0)) {
-        perror("prctl(PR_SET_DUMPABLE)");
-        return 1;
-    }
-    if (prctl(PR_GET_DUMPABLE, 0, 0, 0, 0)) {
-        perror("Still dumpable after prctl(PR_SET_DUMPABLE)");
-        return 1;
-    }
-    gid_t rgid, egid, sgid;
-    if (getresgid(&rgid, &egid, &sgid)) {
-        perror("getresgid");
-        return 1;
-    }
-    if (setresgid(rgid, rgid, rgid)) {
-        perror("setresgid");
-        return 1;
-    }
-    uid_t ruid, euid, suid;
-    if (getresuid(&ruid, &euid, &suid)) {
-        perror("getresuid");
-        return 1;
-    }
-    if (setresuid(ruid, ruid, ruid)) {
-        perror("setresuid");
-        return 1;
-    }
-    return 0;
-}
-
 // lo_up brings up the loopback interface in the new network namespace.
 // By default the namespace is created with lo but it is down.
 // Note that this can't be done with system() because it loses the
@@ -104,19 +66,16 @@ int mount_tmp() {
 
 // contain separates the process into new namespaces to sandbox it.
 int contain(char* argv[]) {
-    if (unshare(CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) != 0) {
+    if (unshare(CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) != 0) {
         perror("unshare");
         fputs("Your user doesn't seem to have enough permissions to call unshare(2).\n", stderr);
-        fputs("plz_sandbox normally needs to be installed setuid root in order to work.\n", stderr);
+        fputs("please_sandbox requires support for user namespaces (usually >= Linux 3.10)\n", stderr);
         return 1;
     }
     if (mount_tmp() != 0) {
       return 1;
     }
     if (lo_up() != 0) {
-        return 1;
-    }
-    if (drop_root() != 0) {
         return 1;
     }
     return execvp(argv[0], argv);
