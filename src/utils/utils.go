@@ -26,7 +26,7 @@ func FindAllSubpackages(config *core.Configuration, rootPath string, prefix stri
 		}
 		if err := fs.Walk(rootPath, func(name string, isDir bool) error {
 			basename := path.Base(name)
-			if name == core.OutDir || (isDir && strings.HasPrefix(basename, ".") && name != ".") {
+			if basename == core.OutDir || (isDir && strings.HasPrefix(basename, ".") && name != ".") {
 				return filepath.SkipDir // Don't walk output or hidden directories
 			} else if isDir && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
 				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
