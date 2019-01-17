@@ -11,6 +11,7 @@ func TestString(t *testing.T) {
 	assert.Equal(t, "//src/core:core", BuildLabel{PackageName: "src/core", Name: "core"}.String())
 	assert.Equal(t, "@please//src/core:core", BuildLabel{Subrepo: "please", PackageName: "src/core", Name: "core"}.String())
 	assert.Equal(t, "//src/core/...", BuildLabel{PackageName: "src/core", Name: "..."}.String())
+	assert.Equal(t, "//...", BuildLabel{Name: "..."}.String())
 }
 
 func TestIncludes(t *testing.T) {

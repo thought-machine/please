@@ -683,28 +683,6 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 	return false
 }
 
-func setWatchedTarget(state *core.BuildState, labels core.BuildLabels) string {
-	if opts.Watch.Run {
-		opts.Run.Parallel.PositionalArgs.Targets = labels
-		return "parallel"
-	}
-
-	for i, label := range labels {
-		if state.Graph.TargetOrDie(label).IsTest {
-			if i == 0 {
-				opts.Test.Args.Target = label
-			}
-			opts.Test.Args.Args = append(opts.Test.Args.Args, label.String())
-		}
-
-		if i == len(labels)-1 && opts.Test.Args.Target.Name != "" {
-			return "test"
-		}
-	}
-	opts.Build.Args.Targets = labels
-	return "build"
-}
-
 func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
 	os.RemoveAll(string(surefireDir))
 	os.RemoveAll(string(resultsFile))

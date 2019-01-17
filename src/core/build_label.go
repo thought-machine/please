@@ -43,6 +43,9 @@ func (label BuildLabel) String() string {
 		s = "@" + label.Subrepo + s
 	}
 	if label.IsAllSubpackages() {
+		if label.PackageName == "" {
+			return s + "..."
+		}
 		return s + "/..."
 	}
 	return s + ":" + label.Name
