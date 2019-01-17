@@ -21,6 +21,13 @@ type CoverVar struct {
 	Dir, ImportPath, ImportName, Var, File string
 }
 
+// replacer is used to replace characters in cover variables.
+// The scheme here must match what we do in go_rules.build_defs
+var replacer = strings.NewReplacer(
+	".", "_",
+	"-", "_",
+)
+
 // FindCoverVars searches the given directory recursively to find all Go files with coverage variables.
 func FindCoverVars(dir, importPath string, exclude, srcs []string) ([]CoverVar, error) {
 	if dir == "" {
@@ -68,8 +75,7 @@ func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, erro
 			return nil, nil
 		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
 			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
-				// N.B. The scheme here must match what we do in go_rules.build_defs
-				v := "GoCover_" + strings.Replace(name, ".", "_", -1)
+				v := "GoCover_" + replacer.Replace(name)
 				ret = append(ret, coverVar(dir, importPath, v))
 			}
 		}
