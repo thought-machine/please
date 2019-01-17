@@ -71,7 +71,7 @@ func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, erro
 		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
 			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
 				// N.B. The scheme here must match what we do in go_rules.build_defs
-				v := "GoCover_" + strings.Replace(name, ".", "_", -1)
+				v := "GoCover_" + strings.Replace(strings.Replace(name, ".", "_", -1), "-", "_", -1)
 				fs := token.NewFileSet()
 				ast, err := parser.ParseFile(fs, path.Join(dir, name), nil, parser.PackageClauseOnly)
 				if err != nil {
@@ -102,7 +102,7 @@ func coverVar(dir, importPath, v, pkg string) CoverVar {
 	return CoverVar{
 		Dir:        dir,
 		ImportPath: path.Join(path.Dir(importPath), pkg),
-		Var:        strings.Replace(strings.Replace(v, "-", "_", -1), ".", "_", -1),
+		Var:        v,
 		File:       f,
 	}
 }
