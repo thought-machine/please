@@ -18,7 +18,7 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/mount.h>
-#include <sys/prctl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 // lo_up brings up the loopback interface in the new network namespace.
@@ -64,6 +64,31 @@ int mount_tmp() {
     return setenv("TMPDIR", "/tmp", 1);
 }
 
+// mount_test bind mounts the test directory to
+int mount_test() {
+    const char* d = "/tmp/test";
+    const char* dir = getenv("TEST_DIR");
+    if (!dir) {
+        fputs("TEST_DIR not set, will not bind-mount to /tmp/test\n", stderr);
+        return 0;
+    }
+    if (mkdir(d, S_IRWXU) != 0) {
+        perror("mkdir /tmp/test");
+        return 1;
+    }
+    if (mount(dir, d, "", MS_BIND, NULL) != 0) {
+        perror("bind mount");
+        return 1;
+    }
+    if (setenv("TEST_DIR", d, 1) != 0 ||
+        setenv("TMP_DIR", d, 1) != 0 ||
+        setenv("HOME", d, 1) != 0) {
+        perror("setenv");
+        return 1;
+    }
+    return chdir(dir);
+}
+
 // contain separates the process into new namespaces to sandbox it.
 int contain(char* argv[]) {
     if (unshare(CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) != 0) {
@@ -73,6 +98,9 @@ int contain(char* argv[]) {
         return 1;
     }
     if (mount_tmp() != 0) {
+      return 1;
+    }
+    if (mount_test() != 0) {
       return 1;
     }
     if (lo_up() != 0) {
