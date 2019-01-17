@@ -102,7 +102,7 @@ func coverVar(dir, importPath, v, pkg string) CoverVar {
 	return CoverVar{
 		Dir:        dir,
 		ImportPath: path.Join(path.Dir(importPath), pkg),
-		Var:        strings.Replace(v, "-", "_", -1),
+		Var:        strings.Replace(strings.Replace(v, "-", "_", -1), ".", "_", -1),
 		File:       f,
 	}
 }
