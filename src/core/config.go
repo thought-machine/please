@@ -109,16 +109,6 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc"})
 	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go", "js"})
 
-	// Default values for these guys depend on config.Please.Location.
-	defaultPath(&config.Go.BuildIDTool, config.Please.Location, "go_buildid_replacer")
-	defaultPath(&config.Go.TestTool, config.Please.Location, "please_go_test")
-	defaultPath(&config.Go.FilterTool, config.Please.Location, "please_go_filter")
-	defaultPath(&config.Python.PexTool, config.Please.Location, "please_pex")
-	defaultPath(&config.Java.JavacWorker, config.Please.Location, "javac_worker")
-	defaultPath(&config.Java.JarCatTool, config.Please.Location, "jarcat")
-	defaultPath(&config.Java.PleaseMavenTool, config.Please.Location, "please_maven")
-	defaultPath(&config.Java.JUnitRunner, config.Please.Location, "junit_runner.jar")
-
 	// Default values for these guys depend on config.Java.JavaHome if that's been set.
 	if config.Java.JavaHome != "" {
 		defaultPathIfExists(&config.Java.JlinkTool, config.Java.JavaHome, "bin/jlink")
@@ -224,11 +214,16 @@ func DefaultConfiguration() *Configuration {
 	config.Docker.RemoveTimeout = cli.Duration(20 * time.Second)
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
+	config.Go.BuildIDTool = "go_buildid_replacer"
+	config.Go.TestTool = "please_go_test"
+	config.Go.FilterTool = "please_go_filter"
 	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG_DIR:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
 	config.Python.PipTool = "pip3"
+	config.Python.PexTool = "please_pex"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
 	config.Python.UsePyPI = true
+
 	// Annoyingly pip on OSX doesn't seem to work with this flag (you get the dreaded
 	// "must supply either home or prefix/exec-prefix" error). Goodness knows why *adding* this
 	// flag - which otherwise seems exactly what we want - provokes that error, but the logic
@@ -243,6 +238,10 @@ func DefaultConfiguration() *Configuration {
 	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2"}
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
 	config.Java.JlinkTool = "jlink"
+	config.Java.JavacWorker = "javac_worker"
+	config.Java.JarCatTool = "jarcat"
+	config.Java.PleaseMavenTool = "please_maven"
+	config.Java.JUnitRunner = "junit_runner.jar"
 	config.Java.JavaHome = ""
 	config.Cpp.CCTool = "gcc"
 	config.Cpp.CppTool = "g++"
@@ -471,8 +470,8 @@ type Alias struct {
 }
 
 type storedBuildEnv struct {
-	Env  []string
-	Once sync.Once
+	Env, Path []string
+	Once      sync.Once
 }
 
 // Hash returns a hash of the parts of this configuration that affect building targets in general.
@@ -491,7 +490,7 @@ func (config *Configuration) Hash() []byte {
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
-	for _, env := range config.GetBuildEnv() {
+	for _, env := range config.getBuildEnv(false) {
 		h.Write([]byte(env))
 	}
 	return h.Sum(nil)
@@ -510,35 +509,70 @@ func (config *Configuration) ContainerisationHash() []byte {
 // GetBuildEnv returns the build environment configured for this config object.
 func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvStored.Once.Do(func() {
-		env := []string{
-			// Need to know these for certain rules.
-			"ARCH=" + config.Build.Arch.Arch,
-			"OS=" + config.Build.Arch.OS,
-			// These are slightly modified forms that are more convenient for some things.
-			"XARCH=" + config.Build.Arch.XArch(),
-			"XOS=" + config.Build.Arch.XOS(),
-			// It's easier to just make these available for Go-based rules.
-			"GOARCH=" + config.Build.Arch.GoArch(),
-			"GOOS=" + config.Build.Arch.OS,
-		}
-
-		// from the BuildEnv config keyword
-		for k, v := range config.BuildEnv {
-			pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
-			env = append(env, pair)
-		}
-
-		// from the user's environment based on the PassEnv config keyword
-		for _, k := range config.Build.PassEnv {
-			if v, isSet := os.LookupEnv(k); isSet {
-				env = append(env, k+"="+v)
+		config.buildEnvStored.Env = config.getBuildEnv(true)
+		for _, e := range config.buildEnvStored.Env {
+			if strings.HasPrefix(e, "PATH=") {
+				config.buildEnvStored.Path = strings.Split(strings.TrimPrefix(e, "PATH="), ":")
 			}
 		}
-
-		sort.Strings(env)
-		config.buildEnvStored.Env = env
 	})
 	return config.buildEnvStored.Env
+}
+
+// Path returns the slice of strings corresponding to the PATH env var.
+func (config *Configuration) Path() []string {
+	config.GetBuildEnv() // ensure it is initialised
+	return config.buildEnvStored.Path
+}
+
+func (config *Configuration) getBuildEnv(expanded bool) []string {
+	maybeExpandHomePath := func(s string) string {
+		if !expanded {
+			return s
+		}
+		return ExpandHomePath(s)
+	}
+
+	env := []string{
+		// Need to know these for certain rules.
+		"ARCH=" + config.Build.Arch.Arch,
+		"OS=" + config.Build.Arch.OS,
+		// These are slightly modified forms that are more convenient for some things.
+		"XARCH=" + config.Build.Arch.XArch(),
+		"XOS=" + config.Build.Arch.XOS(),
+		// It's easier to just make these available for Go-based rules.
+		"GOARCH=" + config.Build.Arch.GoArch(),
+		"GOOS=" + config.Build.Arch.OS,
+	}
+
+	// from the BuildEnv config keyword
+	for k, v := range config.BuildEnv {
+		pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
+		env = append(env, pair)
+	}
+
+	// from the user's environment based on the PassEnv config keyword
+	path := false
+	for _, k := range config.Build.PassEnv {
+		if v, isSet := os.LookupEnv(k); isSet {
+			if k == "PATH" {
+				// plz's install location always needs to be on the path.
+				v = maybeExpandHomePath(config.Please.Location) + ":" + v
+				path = true
+			}
+			env = append(env, k+"="+v)
+		}
+	}
+	if !path {
+		// Use a restricted PATH; it'd be easier for the user if we pass it through
+		// but really external environment variables shouldn't affect this.
+		// The only concession is that ~ is expanded as the user's home directory
+		// in PATH entries.
+		env = append(env, "PATH="+maybeExpandHomePath(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")))
+	}
+
+	sort.Strings(env)
+	return env
 }
 
 // TagsToFields returns a map of string represent the properties of CONFIG object to the config Structfield

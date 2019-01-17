@@ -40,7 +40,7 @@ func TestEnvVars(t *testing.T) {
 	assert.NotContains(t, env, "PATH=/wibble")
 	env = environ(config, true)
 	assert.NotContains(t, env, "PATH=/usr/local/bin:/usr/bin:/bin")
-	assert.Contains(t, env, "PATH=/wibble")
+	assert.Contains(t, env, "PATH="+os.Getenv("TMP_DIR")+"/.please:/wibble")
 }
 
 func makeState() (*core.BuildState, []core.BuildLabel, []core.BuildLabel) {
