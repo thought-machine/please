@@ -3,8 +3,6 @@ package gotest
 
 import (
 	"go/build"
-	"go/parser"
-	"go/token"
 	"io/ioutil"
 	"path"
 	"path/filepath"
@@ -72,12 +70,7 @@ func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, erro
 			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
 				// N.B. The scheme here must match what we do in go_rules.build_defs
 				v := "GoCover_" + strings.Replace(strings.Replace(name, ".", "_", -1), "-", "_", -1)
-				fs := token.NewFileSet()
-				ast, err := parser.ParseFile(fs, path.Join(dir, name), nil, parser.PackageClauseOnly)
-				if err != nil {
-					return nil, err
-				}
-				ret = append(ret, coverVar(dir, importPath, v, ast.Name.Name))
+				ret = append(ret, coverVar(dir, importPath, v))
 			}
 		}
 	}
@@ -93,7 +86,7 @@ func contains(needle string, haystack []string) bool {
 	return false
 }
 
-func coverVar(dir, importPath, v, pkg string) CoverVar {
+func coverVar(dir, importPath, v string) CoverVar {
 	log.Info("Found cover variable: %s %s %s", dir, importPath, v)
 	f := path.Join(dir, strings.TrimPrefix(v, "GoCover_"))
 	if strings.HasSuffix(f, "_go") {
@@ -101,7 +94,7 @@ func coverVar(dir, importPath, v, pkg string) CoverVar {
 	}
 	return CoverVar{
 		Dir:        dir,
-		ImportPath: path.Join(path.Dir(importPath), pkg),
+		ImportPath: importPath,
 		Var:        v,
 		File:       f,
 	}
