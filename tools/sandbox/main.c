@@ -49,6 +49,25 @@ int lo_up() {
     return 0;
 }
 
+// map_ids maps the user id or group id inside the namespace to those outside.
+// Without this we fail to create directories in the tmpfs with an EOVERFLOW.
+int map_ids(int out_id, int in_id, const char* path) {
+    FILE* f = fopen(path, "w");
+    if (!f) {
+        perror("fopen");
+        return 1;
+    }
+    if (fprintf(f, "%d %d 1\n", in_id, out_id) < 0) {
+        perror("fprintf");
+        return 1;
+    }
+    if (fclose(f) != 0) {
+        perror("fclose");
+        return 1;
+    }
+    return 0;
+}
+
 // mount_tmp mounts a tmpfs on /tmp for the tests to muck about in.
 int mount_tmp() {
     // Remounting / as private is necessary so that the tmpfs mount isn't visible to anyone else.
@@ -91,17 +110,23 @@ int mount_test() {
 
 // contain separates the process into new namespaces to sandbox it.
 int contain(char* argv[]) {
+    const uid_t uid = getuid();
+    const uid_t gid = getgid();
     if (unshare(CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) != 0) {
         perror("unshare");
         fputs("Your user doesn't seem to have enough permissions to call unshare(2).\n", stderr);
         fputs("please_sandbox requires support for user namespaces (usually >= Linux 3.10)\n", stderr);
         return 1;
     }
+    if (map_ids(uid, getuid(), "/proc/self/uid_map") != 0 ||
+        map_ids(gid, getgid(), "/proc/self/gid_map") != 0) {
+        return 1;
+    }
     if (mount_tmp() != 0) {
-      return 1;
+        return 1;
     }
     if (mount_test() != 0) {
-      return 1;
+        return 1;
     }
     if (lo_up() != 0) {
         return 1;
