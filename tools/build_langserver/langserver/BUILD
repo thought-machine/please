@@ -38,6 +38,8 @@ go_test(
         "//src/parse/rules",
         "//third_party/go:testify",
     ],
+    # TODO(peterebden): All these tests fail inside the sandbox. Fix.
+    sandbox = False,
 )
 
 go_test(
@@ -48,6 +50,7 @@ go_test(
         ":langserver",
         "//third_party/go:testify",
     ],
+    sandbox = False,
 )
 
 go_test(
@@ -62,6 +65,7 @@ go_test(
         "//third_party/go:testify",
         "//tools/build_langserver/lsp",
     ],
+    sandbox = False,
 )
 
 go_test(
@@ -76,4 +80,5 @@ go_test(
         "//third_party/go:testify",
         "//tools/build_langserver/lsp",
     ],
+    sandbox = False,
 )
