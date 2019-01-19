@@ -16,8 +16,8 @@ go_test(
     name = "cluster_test",
     srcs = ["cluster_test.go"],
     flaky = True,
-    sandbox = False,
     labels = ["no_circleci"],
+    sandbox = False,
     deps = [
         ":cluster",
         "//src/cache/proto:rpc_cache",

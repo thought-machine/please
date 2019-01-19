@@ -33,24 +33,24 @@ go_test(
         exclude = ["utils_test.go"],
     ),
     data = ["test_data"],
+    # TODO(peterebden): All these tests fail inside the sandbox. Fix.
+    sandbox = False,
     deps = [
         ":langserver",
         "//src/parse/rules",
         "//third_party/go:testify",
     ],
-    # TODO(peterebden): All these tests fail inside the sandbox. Fix.
-    sandbox = False,
 )
 
 go_test(
     name = "utils_test",
     srcs = ["utils_test.go"],
     data = ["test_data"],
+    sandbox = False,
     deps = [
         ":langserver",
         "//third_party/go:testify",
     ],
-    sandbox = False,
 )
 
 go_test(
@@ -60,12 +60,12 @@ go_test(
         "setup_test.go",
     ],
     data = ["test_data"],
+    sandbox = False,
     deps = [
         ":langserver",
         "//third_party/go:testify",
         "//tools/build_langserver/lsp",
     ],
-    sandbox = False,
 )
 
 go_test(
@@ -75,10 +75,10 @@ go_test(
         "setup_test.go",
     ],
     data = ["test_data"],
+    sandbox = False,
     deps = [
         ":langserver",
         "//third_party/go:testify",
         "//tools/build_langserver/lsp",
     ],
-    sandbox = False,
 )
