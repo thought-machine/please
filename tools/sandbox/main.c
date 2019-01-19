@@ -100,7 +100,7 @@ int mount_tmp() {
 
 // mount_test bind mounts the test directory to
 int mount_test() {
-    const char* d = "/tmp/test";
+    const char* d = "/tmp/plz_sandbox";
     const char* dir = getenv("TEST_DIR");
     if (!dir) {
         fputs("TEST_DIR not set, will not bind-mount to /tmp/test\n", stderr);
@@ -120,7 +120,7 @@ int mount_test() {
         perror("setenv");
         return 1;
     }
-    return chdir(dir);
+    return chdir(d);
 }
 
 // contain separates the process into new namespaces to sandbox it.
