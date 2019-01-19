@@ -124,10 +124,10 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		env = append(env, "HOME="+testDir)
 	}
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
-		env = append(env, "COVERAGE=true", "COVERAGE_FILE="+path.Join(testDir, "test.coverage"))
+		env = append(env, "COVERAGE=true", "COVERAGE_FILE=test.coverage")
 	}
 	if len(target.Outputs()) > 0 {
-		env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
+		env = append(env, "TEST="+path.Join(target.SandboxTestDir(), target.Outputs()[0]))
 	}
 	if len(target.Data) > 0 {
 		env = append(env, "DATA="+strings.Join(target.AllData(state.Graph), " "))

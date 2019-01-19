@@ -497,7 +497,12 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 			fmt.Printf("   Expanded: %s\n", os.Expand(cmd, env.ReplaceEnvironment))
 		} else {
 			fmt.Printf("\n")
-			cmd := exec.Command("bash", "--noprofile", "--norc", "-o", "pipefail") // plz requires bash, some commands contain bashisms.
+			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
+			if (state.NeedTests && target.TestSandbox) || (!state.NeedTests && target.Sandbox) {
+				argv = core.MustSandboxCommand(state, argv)
+			}
+			log.Debug("Full command: %s", strings.Join(argv, " "))
+			cmd := exec.Command(argv[0], argv[1:]...)
 			cmd.Dir = dir
 			cmd.Env = env
 			cmd.Stdin = os.Stdin

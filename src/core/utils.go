@@ -250,15 +250,33 @@ func ExecWithTimeoutShell(state *BuildState, target *BuildTarget, dir string, en
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
 func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool, msg string) ([]byte, []byte, error) {
-	c := append([]string{"bash", "-u", "-o", "pipefail", "-c"}, cmd)
+	c := append([]string{"bash", "--noprofile", "--norc", "-u", "-o", "pipefail", "-c"}, cmd)
 	if sandbox {
-		tool, err := LookPath(state.Config.Build.PleaseSandboxTool, append([]string{ExpandHomePath(state.Config.Please.Location)}, state.Config.Build.Path...))
+		cmd, err := SandboxCommand(state, c)
 		if err != nil {
 			return nil, nil, err
 		}
-		c = append([]string{tool}, c...)
+		c = cmd
 	}
 	return ExecWithTimeout(target, dir, env, timeout, defaultTimeout, showOutput, attachStdStreams, c, msg)
+}
+
+// SandboxCommand applies a sandbox to the given command.
+func SandboxCommand(state *BuildState, cmd []string) ([]string, error) {
+	tool, err := LookPath(state.Config.Build.PleaseSandboxTool, append([]string{ExpandHomePath(state.Config.Please.Location)}, state.Config.Build.Path...))
+	if err != nil {
+		return nil, err
+	}
+	return append([]string{tool}, cmd...), nil
+}
+
+// MustSandboxCommand is like SandboxCommand but dies on errors.
+func MustSandboxCommand(state *BuildState, cmd []string) []string {
+	c, err := SandboxCommand(state, cmd)
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	return c
 }
 
 // ExecWithTimeoutSimple runs an external command with a timeout.

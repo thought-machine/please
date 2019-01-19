@@ -27,6 +27,9 @@ const BinDir string = "plz-out/bin"
 // DefaultBuildingDescription is the default description for targets when they're building.
 const DefaultBuildingDescription = "Building..."
 
+// SandboxDir is the directory that sandboxed actions are run in.
+const SandboxDir = "/tmp/plz_sandbox"
+
 // Suffixes for temporary directories
 const buildDirSuffix = "._build"
 const testDirSuffix = "._test"
@@ -284,6 +287,15 @@ func (target *BuildTarget) OutDir() string {
 // and to facilitate containerising tests.
 func (target *BuildTarget) TestDir() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
+}
+
+// SandboxTestDir returns the test directory for this target, possibly sandboxed.
+// If it is not sandboxed the returned directory is like TestDir but is an absolute path.
+func (target *BuildTarget) SandboxTestDir() string {
+	if target.TestSandbox {
+		return SandboxDir
+	}
+	return path.Join(RepoRoot, target.TestDir())
 }
 
 // TestResultsFile returns the output results file for tests for this target.
