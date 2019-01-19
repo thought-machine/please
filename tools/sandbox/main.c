@@ -49,15 +49,30 @@ int lo_up() {
     return 0;
 }
 
+// deny_groups disables the ability to call setgroups(2). This is required
+// before we can successfully write to gid_map in map_ids.
+int deny_groups() {
+    FILE* f = fopen("/proc/self/setgroups", "w");
+    if (!f) {
+        perror("fopen /proc/self/setgroups");
+        return 1;
+    }
+    if (fputs("deny\n", f) < 0) {
+        perror("fputs");
+        return 1;
+    }
+    return fclose(f);
+}
+
 // map_ids maps the user id or group id inside the namespace to those outside.
 // Without this we fail to create directories in the tmpfs with an EOVERFLOW.
-int map_ids(int out_id, int in_id, const char* path) {
+int map_ids(int out_id, const char* path) {
     FILE* f = fopen(path, "w");
     if (!f) {
         perror("fopen");
         return 1;
     }
-    if (fprintf(f, "%d %d 1\n", in_id, out_id) < 0) {
+    if (fprintf(f, "0 %d 1\n", out_id) < 0) {
         perror("fprintf");
         return 1;
     }
@@ -118,8 +133,11 @@ int contain(char* argv[]) {
         fputs("please_sandbox requires support for user namespaces (usually >= Linux 3.10)\n", stderr);
         return 1;
     }
-    if (map_ids(uid, getuid(), "/proc/self/uid_map") != 0 ||
-        map_ids(gid, getgid(), "/proc/self/gid_map") != 0) {
+    if (deny_groups() != 0) {
+      return 1;
+    }
+    if (map_ids(uid, "/proc/self/uid_map") != 0 ||
+        map_ids(gid, "/proc/self/gid_map") != 0) {
         return 1;
     }
     if (mount_tmp() != 0) {
