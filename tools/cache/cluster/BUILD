@@ -16,6 +16,7 @@ go_test(
     name = "cluster_test",
     srcs = ["cluster_test.go"],
     flaky = True,
+    sandbox = False,
     labels = ["no_circleci"],
     deps = [
         ":cluster",
