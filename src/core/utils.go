@@ -585,6 +585,9 @@ func LookPath(filename string, paths []string) (string, error) {
 		for _, p2 := range strings.Split(p, ":") {
 			p3 := path.Join(p2, filename)
 			if _, err := os.Stat(p3); err == nil {
+				if !filepath.IsAbs(p3) {
+					return path.Join(RepoRoot, p3), nil
+				}
 				return p3, nil
 			}
 		}

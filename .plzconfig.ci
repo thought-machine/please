@@ -1,3 +1,11 @@
 ; Config file used for CI.
 [cache]
 dircompress = true
+
+[build]
+path = /usr/local/bin:/usr/bin:/bin:plz-out/bin/tools/sandbox
+pleasesandboxtool = please_sandbox
+
+[test]
+; This will only have any impact on Linux, but shouldn't hurt things on other platforms.
+sandbox = true
