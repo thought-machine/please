@@ -546,7 +546,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
 
     # Now compile it in a separate step.
     cmd = [
-        'export GOPATH="%s"' % CONFIG.GOPATH,
+        f'export GOPATH="{CONFIG.GOPATH}" GO111MODULE="off"',
         '$TOOLS_GO install -toolexec "$TOOLS_BUILDID" -gcflags "-trimpath $TMP_DIR" -asmflags "-trimpath $TMP_DIR" ' + ' '.join(all_installs or install),
     ]
     if package_name():
@@ -613,7 +613,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
             # with no Go files in it, even if passed -d).
             cmd = [
                 'rm -rf src pkg',
-                'export GOPATH="$TMP_DIR"',
+                'export GOPATH="$TMP_DIR" GO111MODULE="off"',
                 '$TOOL get -d ' + get,
             ]
         if revision:
