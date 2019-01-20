@@ -2,6 +2,12 @@
 # (Note that this only controls the tools we invoke directly, not what they
 # might use underneath - ie. we are not passing -fuse-ld or similar).
 
+# Must pass -stdlib so the STL implementation matches what we use for other deps (i.e. unittest)
+package(
+    default_dbg_cppflags = "--std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter -stdlib=libstdc++",
+    default_opt_cppflags = "--std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter -stdlib=libstdc++",
+)
+
 package(
     cpp_tool = "clang++",
     ld_tool = "gold",

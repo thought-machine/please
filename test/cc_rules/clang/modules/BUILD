@@ -2,8 +2,8 @@
 
 package(
     cpp_tool = "clang++",
-    default_dbg_cppflags = "--std=c++1z -g3 -pipe -DDEBUG -Wall -Werror -Wno-unused-command-line-argument",
-    default_opt_cppflags = "--std=c++1z -O3 -pipe -DNDEBUG -Wall -Werror -Wno-unused-command-line-argument",
+    default_dbg_cppflags = "--std=c++1z -g3 -pipe -DDEBUG -Wall -Werror -Wno-unused-command-line-argument -stdlib=libstdc++",
+    default_opt_cppflags = "--std=c++1z -O3 -pipe -DNDEBUG -Wall -Werror -Wno-unused-command-line-argument -stdlib=libstdc++",
 )
 
 cc_module(
