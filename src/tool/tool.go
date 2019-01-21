@@ -59,9 +59,10 @@ func matchingTools(config *core.Configuration, prefix string) map[string]string 
 		"javacworker": config.Java.JavacWorker,
 		"junitrunner": config.Java.JUnitRunner,
 		"langserver":  path.Join(config.Please.Location, "build_langserver"),
-		"lps":  	   path.Join(config.Please.Location, "build_langserver"),
+		"lps":         path.Join(config.Please.Location, "build_langserver"),
 		"maven":       config.Java.PleaseMavenTool,
 		"pex":         config.Python.PexTool,
+		"sandbox":     path.Join(config.Please.Location, "please_sandbox"),
 	}
 	ret := map[string]string{}
 	for k, v := range knownTools {

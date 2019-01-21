@@ -72,7 +72,7 @@ int map_ids(int out_id, const char* path) {
         perror("fopen");
         return 1;
     }
-    if (fprintf(f, "0 %d 1\n", out_id) < 0) {
+    if (fprintf(f, "%d %d 1\n", out_id, out_id) < 0) {
         perror("fprintf");
         return 1;
     }

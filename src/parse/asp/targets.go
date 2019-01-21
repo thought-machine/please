@@ -93,7 +93,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		if timeout := args[25]; timeout != nil {
 			target.TestTimeout = time.Duration(timeout.(pyInt)) * time.Second
 		}
-		target.TestSandbox = isTruthy(21)
+		target.TestSandbox = isTruthy(21) && !target.Containerise
 		target.NoTestOutput = isTruthy(22)
 	}
 	return target
