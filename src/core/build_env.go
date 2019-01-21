@@ -127,7 +127,12 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		env = append(env, "COVERAGE=true", "COVERAGE_FILE=test.coverage")
 	}
 	if len(target.Outputs()) > 0 {
-		env = append(env, "TEST="+path.Join(target.SandboxTestDir(), target.Outputs()[0]))
+		// Bit of a hack; ideally we would be unaware of the sandbox here.
+		if target.TestSandbox {
+			env = append(env, "TEST="+path.Join(SandboxDir, target.Outputs()[0]))
+		} else {
+			env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
+		}
 	}
 	if len(target.Data) > 0 {
 		env = append(env, "DATA="+strings.Join(target.AllData(state.Graph), " "))

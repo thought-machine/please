@@ -289,15 +289,6 @@ func (target *BuildTarget) TestDir() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
 }
 
-// SandboxTestDir returns the test directory for this target, possibly sandboxed.
-// If it is not sandboxed the returned directory is like TestDir but is an absolute path.
-func (target *BuildTarget) SandboxTestDir() string {
-	if target.TestSandbox {
-		return SandboxDir
-	}
-	return path.Join(RepoRoot, target.TestDir())
-}
-
 // TestResultsFile returns the output results file for tests for this target.
 func (target *BuildTarget) TestResultsFile() string {
 	return path.Join(target.OutDir(), ".test_results_"+target.Label.Name)
