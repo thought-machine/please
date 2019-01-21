@@ -263,7 +263,7 @@ func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir 
 
 // SandboxCommand applies a sandbox to the given command.
 func SandboxCommand(state *BuildState, cmd []string) ([]string, error) {
-	tool, err := LookPath(state.Config.Build.PleaseSandboxTool, append([]string{ExpandHomePath(state.Config.Please.Location)}, state.Config.Build.Path...))
+	tool, err := LookBuildPath(state.Config.Build.PleaseSandboxTool, state.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -590,6 +590,11 @@ func LookPath(filename string, paths []string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("%s not found in PATH %s", filename, strings.Join(paths, ":"))
+}
+
+// LookBuildPath is like LookPath but takes the config's build path into account.
+func LookBuildPath(filename string, config *Configuration) (string, error) {
+	return LookPath(filename, append([]string{ExpandHomePath(config.Please.Location)}, config.Build.Path...))
 }
 
 // AsyncDeleteDir deletes a directory asynchronously.

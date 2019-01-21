@@ -6,7 +6,7 @@ package tool
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -39,6 +39,13 @@ func Run(config *core.Configuration, tool Tool, args []string) {
 	}
 	target := core.ExpandHomePath(tools[allToolNames(config, string(tool))[0]])
 	if !core.LooksLikeABuildLabel(target) {
+		if !filepath.IsAbs(target) {
+			t, err := core.LookBuildPath(target, config)
+			if err != nil {
+				log.Fatalf("%s", err)
+			}
+			target = t
+		}
 		// Hopefully we have an absolute path now, so let's run it.
 		err := syscall.Exec(target, append([]string{target}, args...), os.Environ())
 		log.Fatalf("Failed to exec %s: %s", target, err) // Always a failure, exec never returns.
@@ -58,11 +65,11 @@ func matchingTools(config *core.Configuration, prefix string) map[string]string 
 		"jarcat":      config.Java.JarCatTool,
 		"javacworker": config.Java.JavacWorker,
 		"junitrunner": config.Java.JUnitRunner,
-		"langserver":  path.Join(config.Please.Location, "build_langserver"),
-		"lps":         path.Join(config.Please.Location, "build_langserver"),
+		"langserver":  "build_langserver",
+		"lps":         "build_langserver",
 		"maven":       config.Java.PleaseMavenTool,
 		"pex":         config.Python.PexTool,
-		"sandbox":     path.Join(config.Please.Location, "please_sandbox"),
+		"sandbox":     "please_sandbox",
 	}
 	ret := map[string]string{}
 	for k, v := range knownTools {
