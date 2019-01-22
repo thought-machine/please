@@ -26,8 +26,8 @@ maven_jar(
 # The versions tend to lag a little bit behind this repo as a result.
 maven_jar(
     name = "junit_runner",
-    hashes = ["b9b4683a0218730a42ba35ada158d331926b40b1"],
-    id = "build.please:junit-runner:13.2.0",
+    hashes = ["409563f6d2de11ef5e9e88275e1da62e984e4ccb"],
+    id = "build.please:junit-runner:13.3.5",
     deps = [
         ":hamcrest",
         ":jacoco_shaded",
