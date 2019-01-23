@@ -255,6 +255,7 @@ var opts struct {
 	Query struct {
 		Deps struct {
 			Unique bool `long:"unique" short:"u" description:"Only output each dependency once"`
+			Hidden bool `long:"hidden" short:"h" description:"Output internal / hidden dependencies too"`
 			Level  int  `long:"level" default:"-1" description:"levels of the dependencies to retrieve."`
 			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
@@ -264,7 +265,7 @@ var opts struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
-		} `command:"reverseDeps" alias:"revdeps" description:"Queries all the reverse dependencies of a target."`
+		} `command:"revdeps" alias:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
 		SomePath struct {
 			Args struct {
 				Target1 core.BuildLabel `positional-arg-name:"target1" description:"First build target" required:"true"`
@@ -505,10 +506,10 @@ var buildFunctions = map[string]func() bool{
 	},
 	"deps": func() bool {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.Deps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Unique, opts.Query.Deps.Level)
+			query.Deps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Unique, opts.Query.Deps.Hidden, opts.Query.Deps.Level)
 		})
 	},
-	"reverseDeps": func() bool {
+	"revdeps": func() bool {
 		return runQuery(false, opts.Query.ReverseDeps.Args.Targets, func(state *core.BuildState) {
 			query.ReverseDeps(state, state.ExpandOriginalTargets())
 		})
