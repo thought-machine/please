@@ -80,7 +80,9 @@ func Create(srcs []string, out string, combine, rename bool) error {
 				hdr.ModTime = mtime
 				hdr.Uid = 0
 				hdr.Gid = 0
-				log.Debug("copying '%s' in from %s", hdr.Name, src)
+				// Fix weird bug about octal numbers (looks like we're prepending 100 multiple times)
+				hdr.Mode &= ^0100000
+				log.Debug("copying '%s' in from %s, mode %x", hdr.Name, src, hdr.Mode)
 				if err := w.WriteHeader(hdr); err != nil {
 					return err
 				} else if _, err = io.Copy(w, r); err != nil {

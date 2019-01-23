@@ -5,3 +5,12 @@ cgo_library(
     c_srcs = ["cgo.c"],
     hdrs = ["cgo.h"],
 )
+
+cgo_test(
+    name = "cgo_test",
+    srcs = ["cgo_test.go"],
+    deps = [
+        ":cgo",
+        "//third_party/go:testify",
+    ],
+)
