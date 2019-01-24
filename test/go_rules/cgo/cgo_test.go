@@ -11,6 +11,5 @@ func TestAnswer(t *testing.T) {
 }
 
 func TestQuestion(t *testing.T) {
-	// There has always been something wrong with the world.
-	assert.Equal(t, "What do you get if you multiply six by nine?", GetQuestion())
+	assert.NoError(t, CheckAnswer("42"))
 }
