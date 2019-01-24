@@ -8,10 +8,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/Songmu/prompter"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 const configTemplate = `; Please config file
@@ -59,4 +61,32 @@ func InitConfig(dir string, bazelCompatibility bool) {
 		log.Fatalf("Failed to write file: %s", err)
 	}
 	fmt.Printf("\nAlso wrote wrapper script to %s; users can invoke that directly to run Please, even without it installed.\n", wrapperScriptName)
+}
+
+// InitConfigFile sets a bunch of values in a config file.
+func InitConfigFile(filename string, options map[string]string) {
+	b := readConfig(filename)
+	for k, v := range options {
+		parts := strings.Split(k, ".")
+		if len(parts) != 2 {
+			log.Fatalf("unknown key format: %s", k)
+		}
+		b = append(b, []byte(fmt.Sprintf("[%s]\n%s = %s\n", parts[0], parts[1], v))...)
+	}
+	if err := fs.EnsureDir(filename); err != nil {
+		log.Fatalf("Cannot create directory for new file: %s", err)
+	} else if err := ioutil.WriteFile(filename, b, 0644); err != nil {
+		log.Fatalf("Failed to write updated config file: %s", err)
+	}
+}
+
+func readConfig(filename string) []byte {
+	if !fs.PathExists(filename) {
+		return nil
+	}
+	b, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("Failed to read config file: %s", err)
+	}
+	return b
 }

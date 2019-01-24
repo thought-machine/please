@@ -43,7 +43,9 @@ const LocalConfigFileName string = ".plzconfig.local"
 const MachineConfigFileName = "/etc/plzconfig"
 
 // UserConfigFileName is the file name for user-specific config (for all their repos).
-const UserConfigFileName = "~/.please/plzconfig"
+const UserConfigFileName = "~/.config/please/plzconfig"
+
+const oldUserConfigFileName = "~/.please/plzconfig"
 
 // The available container implementations that we support.
 const (
@@ -65,6 +67,8 @@ func readConfigFile(config *Configuration, filename string) error {
 		return err
 	} else if err != nil {
 		log.Warning("Error in config file: %s", err)
+	} else if filename == ExpandHomePath(oldUserConfigFileName) {
+		log.Warning("Read a config file at %s; this location is deprecated in favour of %s", filename, ExpandHomePath(UserConfigFileName))
 	}
 	return nil
 }
@@ -76,6 +80,7 @@ func ReadDefaultConfigFiles(profile string) (*Configuration, error) {
 	return ReadConfigFiles([]string{
 		MachineConfigFileName,
 		ExpandHomePath(UserConfigFileName),
+		ExpandHomePath(oldUserConfigFileName),
 		path.Join(RepoRoot, ConfigFileName),
 		path.Join(RepoRoot, ArchConfigFileName),
 		path.Join(RepoRoot, LocalConfigFileName),

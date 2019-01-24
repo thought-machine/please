@@ -204,6 +204,13 @@ var opts struct {
 	Init struct {
 		Dir                cli.Filepath `long:"dir" description:"Directory to create config in" default:"."`
 		BazelCompatibility bool         `long:"bazel_compat" description:"Initialises config for Bazel compatibility mode."`
+		Config             struct {
+			User  bool `short:"u" long:"user" description:"Modifies the user-level config file"`
+			Local bool `short:"l" long:"local" description:"Modifies the local config file (.plzconfig.local)"`
+			Args  struct {
+				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
+			} `positional-args:"true" required:"true"`
+		} `command:"config" description:"Initialises specific attributes of config files"`
 	} `command:"init" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
@@ -476,6 +483,16 @@ var buildFunctions = map[string]func() bool{
 	},
 	"init": func() bool {
 		utils.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
+		return true
+	},
+	"config": func() bool {
+		if opts.Init.Config.User {
+			utils.InitConfigFile(core.ExpandHomePath(core.UserConfigFileName), opts.Init.Config.Args.Options)
+		} else if opts.Init.Config.Local {
+			utils.InitConfigFile(core.LocalConfigFileName, opts.Init.Config.Args.Options)
+		} else {
+			utils.InitConfigFile(core.ConfigFileName, opts.Init.Config.Args.Options)
+		}
 		return true
 	},
 	"export": func() bool {
