@@ -1,3 +1,17 @@
+Version 13.4.0
+--------------
+
+    * The sandbox tool now uses user namespaces and is shipped with Please.
+      It also sandboxes the test directory too.
+    * Tools are now looked up via PATH, allowing a little more flexibility around installation.
+    * go_get now works as before in a repo containing a go.mod
+    * `plz query deps` has a `--hidden` flag to expose internal targets.
+    * cgo_test now works with coverage
+    * Added `plz init config` subcommand to add things to config files
+    * User config file has moved to ~/.config/please/plzconfig; the old location is still
+      read but is deprecated.
+
+
 Version 13.3.4
 --------------
 
