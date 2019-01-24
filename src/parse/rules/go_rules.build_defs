@@ -385,7 +385,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
             'go': [CONFIG.GO_TOOL],
             'test': [CONFIG.GO_TEST_TOOL],
         },
-        post_build=lambda name, output: _replace_test_package(name, output, static, definitions=definitions),
+        post_build=lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
     )
     deps.append(lib_rule)
     lib_rule = go_library(
@@ -395,7 +395,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
     )
-    cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
+    cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
     test_cmd = '$TEST %s 2>&1 | tee $RESULTS_FILE' % flags
     if worker:
@@ -667,7 +667,7 @@ def _go_github_repo_cmd(name, get, repo, revision):
     ], [remote_rule], [CONFIG.JARCAT_TOOL]
 
 
-def _replace_test_package(name, output, static, definitions):
+def _replace_test_package(name, output, static, definitions, cgo):
     """Post-build function, called after we template the main function.
 
     The purpose is to replace the real library with the specific one we've
@@ -683,7 +683,7 @@ def _replace_test_package(name, output, static, definitions):
             pkg_name = line[9:]
             name_changed = pkg_name != new_name
             if name_changed or ldflags or pkg_config:  # Might not be necessary if names match already.
-                binary_cmds, _ = _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config, definitions)
+                binary_cmds, _ = _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config, definitions, cgo)
                 if name_changed:
                     for k, v in binary_cmds.items():
                         set_command(new_name, k, f'mv -f $PKG_DIR/{new_name}.a $PKG_DIR/{pkg_name}.a && {v}')
@@ -714,7 +714,7 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     return cmds
 
 
-def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None):
+def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, gcov=False):
     """Returns the commands to run for linking a Go binary."""
     _link_cmd = '$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s -o ${OUT} ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
@@ -741,10 +741,14 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None):
     if len(defs) > 0:
         flags += defs
 
-    return {
+    cmds = {
         'dbg': f'{prefix} && {_link_cmd} {flags} $SRCS',
         'opt': f'{prefix} && {_link_cmd} {flags} -s -w $SRCS',
-    }, {
+    }
+    if gcov:
+        cmds['cover'] = f'{prefix} && {_link_cmd} {flags} -extldflags="-lgcov" $SRCS'
+
+    return cmds, {
         'go': [CONFIG.GO_TOOL],
         'ld': [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else CONFIG.CC_TOOL],
     }
