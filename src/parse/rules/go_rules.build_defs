@@ -745,7 +745,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
         'dbg': f'{prefix} && {_link_cmd} {flags} $SRCS',
         'opt': f'{prefix} && {_link_cmd} {flags} -s -w $SRCS',
     }
-    if gcov:
+    if gcov and CONFIG.CPP_COVERAGE:
         cmds['cover'] = f'{prefix} && {_link_cmd} {flags} -extldflags="-lgcov" $SRCS'
 
     return cmds, {
