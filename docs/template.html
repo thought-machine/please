@@ -11,18 +11,19 @@
   <body>
     <div class="above">
     <div class="left">
-      <div class="left-container">
         <div class="logo">
           <h1><a href="index.html"><img src="images/please_build_p.png"></a></h1>
         </div>
-        <div class="menu-graphic">
-          {{ if .IsIndex }}
+        {{ if .IsIndex }}
+        <div class="index-graphic">
           <p class="menu-blurb"><span class="cyan">Please</span> is a cross-language build system
             with an emphasis on high performance, extensibility and reproducibility.</p>
-          {{ else }}
-          <p><img src="images/{{shape 2}}_v.png"></p>
-          {{ end }}
         </div>
+        {{ else }}
+        <div class="menu-graphic">
+          <p><img src="images/{{shape 2}}_v.png"></p>
+        </div>
+        {{ end }}
         <nav class="menu">
           <p><a href="#">&#x2630; Navigation</a></p>
           <ul>
@@ -60,7 +61,6 @@
             <li><a href="https://github.com/thought-machine/please">Browse the source</a></li>
           </ul>
         </nav>
-      </div>
     </div>
     <div class="right">
       <div class="header">

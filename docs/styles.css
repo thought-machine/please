@@ -258,27 +258,36 @@ hr {
     display: none;
 }
 @media (min-width: 800px) {
-    .left-container {
-        display: flex;
-        flex-direction: column;
+    .menu {
         position: sticky;
         top: 0em;
+        z-index: 1000;
     }
     .left .logo {
-        flex: 1 10 10%;
         display: block;
+    }
+    .left .menu-graphic {
+        position: sticky;
+        top: 0em;
+        z-index: -10;
+        margin-bottom: 1em;
+        margin-top: 1em;
+        text-align: right;
+        height: 200px;
+    }
+    .left .index-graphic {
+        z-index: -10;
+        margin-bottom: 1em;
+        margin-top: 1em;
+        text-align: right;
+        height: 200px;
+    }
+    .left .menu-graphic img {
+        opacity: 0.5;
     }
 }
 .logo h1 {
     text-transform: none;
-}
-.left .menu {
-    flex: 9 10 90%;
-}
-.left .menu-graphic {
-    margin-bottom: 1em;
-    margin-top: 1em;
-    text-align: right;
 }
 .left .menu-blurb {
     margin: 2em;
@@ -305,7 +314,12 @@ hr {
 }
 .left .menu > ul > li {
     color: #af7dff;
-    margin: 0.8em 0;
+    margin: 0.5em 0;
+}
+@media (min-height: 800px) {
+    .left .menu > ul > li {
+        margin: 0.8em 0;
+    }
 }
 .left .menu > ul > li > a {
     color: #af7dff;

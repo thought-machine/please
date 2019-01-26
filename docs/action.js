@@ -39,6 +39,13 @@ document.addEventListener('DOMContentLoaded', function() {
         rots[i] = angle(pics[i]);
     }
 
+    var fadeImg = function() {
+        var img = document.querySelector('.menu-graphic img');
+        if (img) {
+            img.style.opacity = Math.max(400 - window.scrollY, 100.0) / 400.0;
+        }
+    }
+
     window.addEventListener('scroll', function(e) {
         if (found) {
             var maxY = 0;
@@ -59,6 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (var i = 0; i < pics.length; ++i) {
             pics[i].style.transform = 'rotate(' + (rot + rots[i]) + 'deg)';
         }
+        fadeImg();
     });
 
     var toggleMenu = function() {
@@ -79,4 +87,5 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.innerWidth < 800) {
         toggleMenu();
     }
+    fadeImg();
 }, false);
