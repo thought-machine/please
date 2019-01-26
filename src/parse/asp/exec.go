@@ -66,16 +66,14 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 		argv = strings.Fields(string(cmdIn.(pyString)))
 	} else if isType(cmdIn, "list") {
 		pl := cmdIn.(pyList)
-		argv = make([]string, 0, pl.Len())
-		for i := 0; i < pl.Len(); i++ {
+		argv = make([]string, 0, len(pl))
+		for i := 0; i < len(pl); i++ {
 			argv = append(argv, pl[i].String())
 		}
 	}
 
 	// The cache key is tightly coupled to the operating parameters
 	key := execMakeKey(argv, wantStdout, wantStderr)
-
-
 	if cacheOutput {
 		out, found := execGetCachedOutput(key, argv)
 		if found {

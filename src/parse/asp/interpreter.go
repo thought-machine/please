@@ -510,15 +510,17 @@ func (s *scope) interpretFString(f *FString) pyObject {
 }
 
 func (s *scope) interpretSlice(obj pyObject, sl *Slice) pyObject {
-	lst, ok1 := obj.(pyList)
-	str, ok2 := obj.(pyString)
-	s.Assert(ok1 || ok2, "Unsliceable type "+obj.Type())
 	start := s.interpretSliceExpression(obj, sl.Start, 0)
-	end := s.interpretSliceExpression(obj, sl.End, pyInt(obj.Len()))
-	if ok1 {
-		return lst[start:end]
+	switch t := obj.(type) {
+	case pyList:
+		end := s.interpretSliceExpression(obj, sl.End, pyInt(len(t)))
+		return t[start:end]
+	case pyString:
+		end := s.interpretSliceExpression(obj, sl.End, pyInt(len(t)))
+		return t[start:end]
 	}
-	return str[start:end]
+	s.Error("Unsliceable type %s", obj.Type())
+	return nil
 }
 
 // interpretSliceExpression interprets one of the begin or end parts of a slice.

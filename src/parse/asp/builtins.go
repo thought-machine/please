@@ -252,7 +252,19 @@ func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
 }
 
 func lenFunc(s *scope, args []pyObject) pyObject {
-	return pyInt(args[0].Len())
+	return objLen(args[0])
+}
+
+func objLen(obj pyObject) pyInt {
+	switch t := obj.(type) {
+	case pyList:
+		return pyInt(len(t))
+	case pyDict:
+		return pyInt(len(t))
+	case pyString:
+		return pyInt(len(t))
+	}
+	panic("object of type " + obj.Type() + " has no len()")
 }
 
 func isinstance(s *scope, args []pyObject) pyObject {

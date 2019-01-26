@@ -1,0 +1,2 @@
+x = 'golang.org/x/sync'
+y = x[len('golang.org/x/'):]

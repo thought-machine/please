@@ -193,7 +193,7 @@ func TestGetHoverContentOnUnaryAssignment(t *testing.T) {
 	// Hover on assignment with unary op
 	content, err := handler.getHoverContent(ctx, assignBuildURI, lsp.Position{Line: 4, Character: 13})
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "def len(obj)", content)
+	assert.Equal(t, "def len(obj:list|dict|str)", content)
 }
 
 func TestGetHoverContentOnListAssignment(t *testing.T) {
@@ -249,7 +249,7 @@ func TestGetHoverContentAugAssign(t *testing.T) {
 	// Hover on assignment with call
 	content, err := handler.getHoverContent(ctx, assignBuildURI, lsp.Position{Line: 23, Character: 14})
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "def len(obj)", content)
+	assert.Equal(t, "def len(obj:list|dict|str)", content)
 
 	// Hover on empty space
 	content, err = handler.getHoverContent(ctx, assignBuildURI, lsp.Position{Line: 23, Character: 56})
@@ -282,7 +282,7 @@ func TestGetHoverContentAst(t *testing.T) {
 	// Test for statement
 	content, err := handler.getHoverContent(ctx, miscURI, lsp.Position{Line: 0, Character: 11})
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "def len(obj)", content)
+	assert.Equal(t, "def len(obj:list|dict|str)", content)
 
 	// Test inner For statement
 	content, err = handler.getHoverContent(ctx, miscURI, lsp.Position{Line: 1, Character: 11})

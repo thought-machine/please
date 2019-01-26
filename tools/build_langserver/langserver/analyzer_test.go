@@ -93,11 +93,11 @@ func TestNewRuleDef(t *testing.T) {
 	stmt = getStatementByName(statements, "len")
 	ruleDef = newRuleDef(string(ruleContent), stmt)
 
-	assert.Equal(t, ruleDef.Header, "def len(obj)")
+	assert.Equal(t, ruleDef.Header, "def len(obj:list|dict|str)")
 	assert.Equal(t, len(ruleDef.ArgMap), 1)
 	assert.Equal(t, true, ruleDef.ArgMap["obj"].Required)
-	assert.Equal(t, ruleDef.ArgMap["obj"].Definition, "obj required:true")
-	assert.Equal(t, "obj", ruleDef.ArgMap["obj"].Repr)
+	assert.Equal(t, ruleDef.ArgMap["obj"].Definition, "obj required:true, type:list|dict|str")
+	assert.Equal(t, "obj:list|dict|str", ruleDef.ArgMap["obj"].Repr)
 	assert.Equal(t, ruleDef.ArgMap["obj"].Argument.Name, "obj")
 
 	// Test header for a string function, startswith()

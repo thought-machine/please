@@ -4,17 +4,17 @@
     <p>Please's BUILD files typically contain a series of build rule declarations. These are
       invocations of builtins like <code>java_binary</code> which create new BUILD targets.</p>
 
-    <p>However, you can do much more with it; the syntax is actually a restricted Python subset
-      so it's possible to script the creation of build targets in elaborate ways. See
-      <a href="#grammar">below</a> for a formal description of the grammar.</p>
+    <p>However, you can do much more with it; it is a fully capable programming language with which
+      it's possible to script the creation of build targets in elaborate ways. See
+      <a href="#grammar">below</a> for a formal description of the grammar; it is a subset of
+      Python so should be fairly familiar.</p>
 
-    <p>You can do most things that one might consider "simple" Python; <code>for</code> and
+    <p>You can do most things that one might expect in such a language; <code>for</code> and
       <code>if</code> statements, define functions, create lists and dicts, etc. Conventionally
       we keep complex logic in build_defs files but at present there is no difference in accepted
       syntax between the two.</p>
 
-    <p>Since it is not possible to <code>import</code> things, one obviously requires a different
-      method of sharing code; in Please that is <a href="lexicon.html#subinclude">subinclude</a>.
+    <p>One obviously needs a mechanism to import new code; in Please that is <a href="lexicon.html#subinclude">subinclude</a>.
       This function takes the output of a build rule elsewhere in the repo and makes it available
       in the context of the currently executing file - for example, if it has defined a function,
       that function is now available in your BUILD file at the top level.</p>
@@ -23,22 +23,20 @@
 
     <h2>Types</h2>
 
-    <p>The set of builtin types are again a subset of Python's:
+    <p>The set of builtin types are again fairly familiar:
       <ul>
 	<li>Integers (all integers are 64-bit signed integers)</li>
 	<li>Strings</li>
 	<li>Lists</li>
 	<li>Dictionaries</li>
 	<li>Functions</li>
-	<li><code>True</code>, <code>False</code> and <code>None</code> are singletons which are
-	  instantiated by name.</li>
+    <li>Booleans (named <code>True</code> and <code>False</code>)</li>
       </ul>
     </p>
 
-    <p>Specifically there are no classes, sets, floats or bytes. Tuples don't exist as a standalone
-      type, in various cases lists are generated as a replacement. In some cases the runtime may
-      prohibit modification of a list or dict when they can be shared between multiple BUILD files
-      in order to prevent one from seeing another's modifications.</p>
+    <p>There are no floating-point numbers or class types. In some cases lists and dicts can be
+      "frozen" to prohibit modification when they may be shared between files; that's done implicitly
+      by the runtime when appropriate.</p>
 
     <p>Dictionaries are somewhat restricted in function; they may only be keyed by strings and cannot
       be iterated directly - i.e. one must use <code>keys()</code>, <code>values()</code> or
@@ -46,29 +44,24 @@
 
     <h2>Functions</h2>
 
-    <p>The following functions are available as builtins; unless otherwise noted they mimic Python's
-      builtins in most cases (although this is not guaranteed to every possible nuance).
+    <p>The following functions are available as builtins:
       <ul>
-	<li><code>len</code></li>
-	<li><code>enumerate</code></li>
-	<li><code>zip</code></li>
-	<li><code>isinstance</code></li>
-	<li><code>range</code></li>
-	<li><code>any</code></li>
-	<li><code>all</code></li>
-	<li><code>sorted</code></li>
-      </ul>
-    </p>
-
-    <p>Several additional builtin functions are also available:
-      <ul>
-	<li><code>package_name</code> - returns the package being currently parsed.</li>
-	<li><code>join_path</code> - like <code>os.path.join</code></li>
-	<li><code>split_path</code> - like <code>os.path.split</code></li>
-	<li><code>splitext</code> - like <code>os.path.splitext</code></li>
-	<li><code>basename</code> - like <code>os.path.basename</code></li>
-	<li><code>dirname</code> - like <code>os.path.dirname</code></li>
-	<li><code>exec</code> - like <code>subprocess.Popen</code></li>
+	<li><code>len(x)</code> - returns the length of <code>x</code></li>
+	<li><code>enumerate(seq)</code> - returns a list of pairs of the index and object for each item in <code>seq</code></li>
+	<li><code>zip(x, y, ...)</code> - returns a list in which each element has one item from each argument</li>
+	<li><code>isinstance(x, type)</code> - returns True if <code>x</code> is of the given type.</li>
+	<li><code>range([start, ]stop[, step])</code> - returns a list of integers up to <code>stop</code>
+      (or from <code>start</code> to <code>stop</code>)</li>
+	<li><code>any(seq)</code> - returns true if any of the items in <code>seq</code> are considered true.</li>
+	<li><code>all(seq)</code> - returns true if all of the items in <code>seq</code> are considered true.</li>
+	<li><code>sorted(seq)</code> - returns a copy of the given list with the contents sorted.</li>
+	<li><code>package_name()</code> - returns the package being currently parsed.</li>
+	<li><code>join_path(x, ...)</code> - joins the given path elements using the OS separator. It will intelligently
+      handle repeated or missing separators.</li>
+	<li><code>split_path(path)</code> - splits the given path into the directory and filename.</li>
+	<li><code>splitext(filename)</code> - splits the given filename into base name and extension at the final dot.</li>
+	<li><code>basename(path)</code> - returns the basename of a file</li>
+	<li><code>dirname(path)</code> - returns the directory name of a file.</li>
       </ul>
     </p>
 

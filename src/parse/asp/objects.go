@@ -25,8 +25,6 @@ type pyObject interface {
 	Operator(operator Operator, operand pyObject) pyObject
 	// Used for index-assignment statements
 	IndexAssign(index, value pyObject)
-	// Returns the length of this object
-	Len() int
 }
 
 // A freezable represents an object that can be frozen into a readonly state.
@@ -78,10 +76,6 @@ func (b pyBool) IndexAssign(index, value pyObject) {
 	panic("bool type is not indexable")
 }
 
-func (b pyBool) Len() int {
-	panic("bool has no len()")
-}
-
 func (b pyBool) String() string {
 	if b == None {
 		return "None"
@@ -98,11 +92,11 @@ func pyIndex(obj, index pyObject, slice bool) pyInt {
 	i, ok := index.(pyInt)
 	if !ok {
 		panic(obj.Type() + " indices must be integers, not " + index.Type())
-	} else if i < 0 {
-		i = pyInt(obj.Len()) + i // Go doesn't support negative indices
-	} else if int(i) > obj.Len() {
+	} else if l := objLen(obj); i < 0 {
+		i = l + i // Go doesn't support negative indices
+	} else if i > l {
 		if slice {
-			return pyInt(obj.Len())
+			return l
 		}
 		panic(obj.Type() + " index out of range")
 	}
@@ -148,10 +142,6 @@ func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
 }
 func (i pyInt) IndexAssign(index, value pyObject) {
 	panic("int type is not indexable")
-}
-
-func (i pyInt) Len() int {
-	panic("int has no len()")
 }
 
 func (i pyInt) String() string {
@@ -223,10 +213,6 @@ func (s pyString) IndexAssign(index, value pyObject) {
 	panic("str type cannot be partially assigned to")
 }
 
-func (s pyString) Len() int {
-	return len(s)
-}
-
 func (s pyString) String() string {
 	return string(s)
 }
@@ -294,10 +280,6 @@ func (l pyList) IndexAssign(index, value pyObject) {
 	l[i] = value
 }
 
-func (l pyList) Len() int {
-	return len(l)
-}
-
 func (l pyList) String() string {
 	return fmt.Sprintf("%s", []pyObject(l))
 }
@@ -361,10 +343,6 @@ func (d pyDict) IndexAssign(index, value pyObject) {
 		panic("Dict keys must be strings, not " + index.Type())
 	}
 	d[string(key)] = value
-}
-
-func (d pyDict) Len() int {
-	return len(d)
 }
 
 func (d pyDict) String() string {
@@ -506,10 +484,6 @@ func (f *pyFunc) Operator(operator Operator, operand pyObject) pyObject {
 
 func (f *pyFunc) IndexAssign(index, value pyObject) {
 	panic("function type is not indexable")
-}
-
-func (f *pyFunc) Len() int {
-	panic("function has no len()")
 }
 
 func (f *pyFunc) String() string {
@@ -711,10 +685,6 @@ func (c *pyConfig) IndexAssign(index, value pyObject) {
 	} else {
 		c.overlay[key] = value
 	}
-}
-
-func (c *pyConfig) Len() int {
-	panic("Config object has no len()")
 }
 
 // Copy creates a copy of this config object. It does not copy the overlay config, so be careful

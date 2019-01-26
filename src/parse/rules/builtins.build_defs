@@ -15,7 +15,7 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=N
     pass
 
 
-def len(obj) -> int:
+def len(obj:list|dict|str) -> int:
     pass
 def enumerate(seq:list):
     pass

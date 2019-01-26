@@ -273,3 +273,9 @@ func TestValidateReturnVal(t *testing.T) {
 	assert.NotNil(t, s.Lookup("subinclude"))
 	assert.Error(t, err, "Invalid return type str from function dict_val, expecting dict")
 }
+
+func TestLen(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/len.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, "sync", s.Lookup("y"))
+}
