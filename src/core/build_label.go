@@ -126,6 +126,8 @@ func ParseBuildLabelContext(target string, pkg *Package) BuildLabel {
 	if p, name, subrepo := parseBuildLabelParts(target, pkg.Name, pkg.Subrepo); name != "" {
 		if subrepo == "" && pkg.Subrepo != nil && target[0] != '@' {
 			subrepo = pkg.Subrepo.Name
+		} else {
+			subrepo = pkg.SubrepoArchName(subrepo)
 		}
 		return BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}
 	}

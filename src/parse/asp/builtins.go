@@ -740,12 +740,14 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		state.Config.Bazel.Compatibility = true
 		state.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
 	}
-	log.Debug("Registering subrepo %s in package %s", name, s.pkg.Label())
-	s.state.Graph.AddSubrepo(&core.Subrepo{
-		Name:   path.Join(s.pkg.Name, name),
-		Root:   root,
-		Target: target,
-		State:  state,
-	})
+	sr := &core.Subrepo{
+		Name:           s.pkg.SubrepoArchName(path.Join(s.pkg.Name, name)),
+		Root:           root,
+		Target:         target,
+		State:          state,
+		IsCrossCompile: s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile,
+	}
+	log.Debug("Registering subrepo %s in package %s", sr.Name, s.pkg.Label())
+	s.state.Graph.AddSubrepo(sr)
 	return None
 }

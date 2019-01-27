@@ -125,7 +125,7 @@ if [ ! -d "/usr/include/google/protobuf" ]; then
     EXCLUDES="${EXCLUDES} --exclude=proto"
 fi
 GCCVER="`cc -dumpversion`"
-if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ]; then
+if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ] && [ ! -d "/usr/lib/gcc/x86_64-pc-linux-gnu/$GCCVER/32" ]; then
     warn "32-bit gcc libraries not found, excluding cross-compile tests"
     EXCLUDES="${EXCLUDES} --exclude=x86"
 fi
