@@ -23,7 +23,8 @@ ident_statement = Ident
 # Any generalised expression, with all the trimmings.
 expression = [ "-" | "not" ] value [ operator expression ]
              [ "if" expression "else" expression ];
-value = ( String | Int | "True" | "False" | "None" | list | dict | tuple | lambda | ident )
+string = [ "f" | "r" ] String;
+value = ( string | Int | "True" | "False" | "None" | list | dict | tuple | lambda | ident )
         [ slice ] [ ( "." ident | call ) ];
 ident = Ident { "." ident | call };
 call = "(" [ arg { "," arg } ] ")";

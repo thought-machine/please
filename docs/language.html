@@ -25,12 +25,12 @@
 
     <p>The set of builtin types are again fairly familiar:
       <ul>
-	<li>Integers (all integers are 64-bit signed integers)</li>
-	<li>Strings</li>
-	<li>Lists</li>
-	<li>Dictionaries</li>
-	<li>Functions</li>
-    <li>Booleans (named <code>True</code> and <code>False</code>)</li>
+	<li><b>Integers</b> (all integers are 64-bit signed integers)</li>
+	<li><b>Strings</b></li>
+	<li><b>Lists</b></li>
+	<li><b>Dictionaries</b></li>
+	<li><b>Functions</b></li>
+    <li><b>Booleans</b> (named <code>True</code> and <code>False</code>)</li>
       </ul>
     </p>
 
@@ -46,52 +46,85 @@
 
     <p>The following functions are available as builtins:
       <ul>
-	<li><code>len(x)</code> - returns the length of <code>x</code></li>
-	<li><code>enumerate(seq)</code> - returns a list of pairs of the index and object for each item in <code>seq</code></li>
-	<li><code>zip(x, y, ...)</code> - returns a list in which each element has one item from each argument</li>
-	<li><code>isinstance(x, type)</code> - returns True if <code>x</code> is of the given type.</li>
-	<li><code>range([start, ]stop[, step])</code> - returns a list of integers up to <code>stop</code>
-      (or from <code>start</code> to <code>stop</code>)</li>
-	<li><code>any(seq)</code> - returns true if any of the items in <code>seq</code> are considered true.</li>
-	<li><code>all(seq)</code> - returns true if all of the items in <code>seq</code> are considered true.</li>
-	<li><code>sorted(seq)</code> - returns a copy of the given list with the contents sorted.</li>
-	<li><code>package_name()</code> - returns the package being currently parsed.</li>
-	<li><code>join_path(x, ...)</code> - joins the given path elements using the OS separator. It will intelligently
+	    <li><code><span class="fn-name">len</span><span class="fn-p">(</span><span class="fn-arg">x</span><span class="fn-p">)</span></code>
+          - returns the length of <code>x</code></li>
+	    <li><code><span class="fn-name">enumerate</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
+          - returns a list of pairs of the index and object for each item in <code>seq</code></li>
+	    <li><code><span class="fn-name">zip</span><span class="fn-p">(</span><span class="fn-arg">x</span>, <span class="fn-arg">y</span>, <span class="fn-arg">...</span><span class="fn-p">)</span></code>
+          - returns a list in which each element has one item from each argument</li>
+	    <li><code><span class="fn-name">isinstance</span><span class="fn-p">(</span><span class="fn-arg">x</span>, <span class="fn-arg">type</span><span class="fn-p">)</span></code>
+          - returns True if <code>x</code> is of the given type.</li>
+	    <li><code><span class="fn-name">range</span><span class="fn-p">(</span>[<span class="fn-arg">start</span>, ]<span class="fn-arg">stop</span>[, <span class="fn-arg">step</span>]</span><span class="fn-p">)</span></code>
+          - returns a list of integers up to <code>stop</code> (or from <code>start</code> to <code>stop</code>)</li>
+	    <li><code><span class="fn-name">any</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
+          - returns true if any of the items in <code>seq</code> are considered true.</li>
+	    <li><code><span class="fn-name">all</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
+          - returns true if all of the items in <code>seq</code> are considered true.</li>
+	    <li><code><span class="fn-name">sorted</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
+          - returns a copy of the given list with the contents sorted.</li>
+	    <li><code><span class="fn-name">package_name</span><span class="fn-p">(</span><span class="fn-arg"></span><span class="fn-p">)</span></code>
+          - returns the package being currently parsed.</li>
+	    <li><code><span class="fn-name">join_path</span><span class="fn-p">(</span><span class="fn-arg">x</span>, <span class="fn-arg">...</span><span class="fn-p">)</span></code>
+          - joins the given path elements using the OS separator. It will intelligently
       handle repeated or missing separators.</li>
-	<li><code>split_path(path)</code> - splits the given path into the directory and filename.</li>
-	<li><code>splitext(filename)</code> - splits the given filename into base name and extension at the final dot.</li>
-	<li><code>basename(path)</code> - returns the basename of a file</li>
-	<li><code>dirname(path)</code> - returns the directory name of a file.</li>
+	    <li><code><span class="fn-name">split_path</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
+          - splits the given path into the directory and filename.</li>
+	    <li><code><span class="fn-name">splitext</span><span class="fn-p">(</span><span class="fn-arg">filename</span><span class="fn-p">)</span></code>
+          - splits the given filename into base name and extension at the final dot.</li>
+	    <li><code><span class="fn-name">basename</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
+          - returns the basename of a file</li>
+	    <li><code><span class="fn-name">dirname</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
+          - returns the directory name of a file.</li>
       </ul>
     </p>
 
     <p>The following are available as member functions of strings:
       <ul>
-	<li><code>join</code></li>
-	<li><code>split</code></li>
-	<li><code>replace</code></li>
-	<li><code>partition</code></li>
-	<li><code>rpartition</code></li>
-	<li><code>startswith</code></li>
-	<li><code>endswith</code></li>
-	<li><code>format</code> - although this lacks some functionality, <code>%</code> is generally preferred</li>
-	<li><code>lstrip</code></li>
-	<li><code>rstrip</code></li>
-	<li><code>strip</code></li>
-	<li><code>find</code></li>
-	<li><code>rfind</code></li>
-	<li><code>count</code></li>
-	<li><code>upper</code></li>
-	<li><code>lower</code></li>
+	    <li><code><span class="fn-name">join</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
+          - joins the elements of <code>seq</code> together with this string as a separator.</li>
+	    <li><code><span class="fn-name">split</span><span class="fn-p">(</span><span class="fn-arg">sep</span><span class="fn-p">)</span></code>
+          - splits this string at each occurrence of the given separator.</li>
+	    <li><code><span class="fn-name">replace</span><span class="fn-p">(</span><span class="fn-arg">old</span>, <span class="fn-arg">new</span><span class="fn-p">)</span></code>
+          - returns a copy of this string with all instances of <code>old</code> replaced with <code>new</code>.</li>
+	    <li><code><span class="fn-name">partition</span><span class="fn-p">(</span><span class="fn-arg">sep</span><span class="fn-p">)</span></code>
+          - breaks this string around the first occurrence of <code>sep</code> and returns a 3-tuple of (before, sep, after).</li>
+	    <li><code><span class="fn-name">rpartition</span><span class="fn-p">(</span><span class="fn-arg">sep</span><span class="fn-p">)</span></code>
+          - breaks this string around the last occurrence of <code>sep</code> and returns a 3-tuple of (before, sep, after).</li>
+	    <li><code><span class="fn-name">startswith</span><span class="fn-p">(</span><span class="fn-arg">prefix</span><span class="fn-p">)</span></code>
+          - returns true if this string begins with <code>prefix</code></li>
+	    <li><code><span class="fn-name">endswith</span><span class="fn-p">(</span><span class="fn-arg">suffix</span><span class="fn-p">)</span></code>
+          - returns true if this string ends with <code>suffix</code></li>
+	    <li><code><span class="fn-name">format</span><span class="fn-p">(</span><span class="fn-arg">args...</span><span class="fn-p">)</span></code>
+          - <span class="red">deprecated</span>, prefer f-strings instead.</li>
+	    <li><code><span class="fn-name">lstrip</span><span class="fn-p">(</span><span class="fn-arg">cutset</span><span class="fn-p">)</span></code>
+          - strips all characters in <code>cutset</code> from the beginning of this string.</li>
+	    <li><code><span class="fn-name">rstrip</span><span class="fn-p">(</span><span class="fn-arg">cutset</span><span class="fn-p">)</span></code>
+          - strips all characters in <code>cutset</code> from the end of this string.</li>
+	    <li><code><span class="fn-name">strip</span><span class="fn-p">(</span><span class="fn-arg">cutset</span><span class="fn-p">)</span></code>
+          - strips all characters in <code>cutset</code> from the beginning & end of this string.</li>
+	    <li><code><span class="fn-name">find</span><span class="fn-p">(</span><span class="fn-arg">needle</span><span class="fn-p">)</span></code>
+          - returns the index of the first occurrence of <code>needle</code> in this string.</li>
+	    <li><code><span class="fn-name">rfind</span><span class="fn-p">(</span><span class="fn-arg">needle</span><span class="fn-p">)</span></code>
+          - returns the index of the last occurrence of <code>needle</code> in this string.</li>
+	    <li><code><span class="fn-name">count</span><span class="fn-p">(</span><span class="fn-arg">needle</span><span class="fn-p">)</span></code>
+          - returns the number of times <code>needle</code> occurs in this string.</li>
+	    <li><code><span class="fn-name">upper</span><span class="fn-p">()</span></code>
+          - returns a copy of this string converted to uppercase.</li>
+	    <li><code><span class="fn-name">lower</span><span class="fn-p">()</span></code>
+          - returns a copy of this string converted to lowercase.</li>
       </ul>
     </p>
 
     <p>The following are available as member functions of dictionaries:
       <ul>
-	<li><code>keys</code></li>
-	<li><code>values</code></li>
-	<li><code>items</code></li>
-	<li><code>copy</code></li>
+	    <li><code><span class="fn-name">keys</span><span class="fn-p">()</span></code>
+          - returns an iterable sequence of the keys of this dictionary, in a consistent order.</li>
+	    <li><code><span class="fn-name">values</span><span class="fn-p">()</span></code>
+          - returns an iterable sequence of the values of this dictionary, in a consistent order.</li>
+	    <li><code><span class="fn-name">items</span><span class="fn-p">()</span></code>
+          - returns an iterable sequence of pairs of the keys and values of this dictionary, in a consistent order.</li>
+	    <li><code><span class="fn-name">copy</span><span class="fn-p">()</span></code>
+          - <span class="red">deprecated</span>, use a comprehension if needed. Returns a copy of this dictionary.</li>
       </ul>
     </p>
 
@@ -99,12 +132,13 @@
       may or may not be displayed depending on the <code>-v</code> flag; by default only
       <code>warning</code> and above are visible.
       <ul>
-	<li><code>log.debug</code></li>
-	<li><code>log.info</code></li>
-	<li><code>log.notice</code></li>
-	<li><code>log.warning</code></li>
-	<li><code>log.error</code></li>
-	<li><code>log.fatal</code> - this will cause the process to exit immediately and unsuccessfully.</li>
+	    <li><code><span class="fn-name">log.debug</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
+	    <li><code><span class="fn-name">log.info</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
+	    <li><code><span class="fn-name">log.notice</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
+	    <li><code><span class="fn-name">log.warning</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
+	    <li><code><span class="fn-name">log.error</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
+	    <li><code><span class="fn-name">log.fatal</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
+          - this will cause the process to exit immediately and unsuccessfully.</li>
       </ul>
     </p>
 
@@ -129,14 +163,15 @@
     </code></pre>
 
     <p><b>All arguments to build rules are passed as keywords.</b> This is pretty important
-      since (1) nobody will be able to read your BUILD file otherwise and (2) while we don't
-      normally change the order of function arguments, we might sometimes insert earlier ones
-      which will break code using positional arguments.</p>
+      since (1) nobody will be able to read your BUILD file otherwise and (2) we don't guarantee
+      not to change the order of arguments when we insert new ones. Fortunately Please will
+      check this for you at runtime.</p>
 
     <p>Arguments to functions like <code>glob()</code> and <code>subinclude()</code> are not
       necessarily passed as keywords.</p>
 
-    <p>We put spaces around the <code>=</code> for each argument to the build rule.</p>
+    <p>We put spaces around the <code>=</code> for each argument to the build rule - we think it's
+      easier to read this way.</p>
 
     <p>Either single or double quotes work, as usual, but don't mix both in one file.</p>
 
@@ -150,13 +185,16 @@
           ]</code></pre>
     </p>
 
-    <p>Indentation is normally four spaces.</p>
+    <p>Indentation is normally four spaces. Tabs will be rejected by the parser.<br/>
+      Dealing with indentation in a whitespace-significant language is tricky enough without
+      introducing tabs to complicate the situation as well.</p>
 
-    <p>We generally try to order lists lexicographically but don't always get this 100%.</p>
+    <p>We generally try to order lists lexicographically where it does not matter (for example
+      <code>deps</code> or <code>visibility</code>).</p>
 
     <p>If you'd like an autoformatter for BUILD files, Google's
       <a href="https://github.com/bazelbuild/buildifier">Buildifier</a> is very good & fast.
-      We use a slightly modified version of it internally & on the Please repo.</p>
+      We use it both internally & on the Please repo.</p>
 
     <h2><a name="grammar">Grammar</a></h2>
 
@@ -187,6 +225,6 @@
 
     <p>Varargs and kwargs functions are not supported.</p>
 
-    <p><a href="https://www.python.org/dev/peps/pep-0498">PEP-498</a> style string interpolation
-      is available, but it is much more limited than in Python; it can only interpolate variable
+    <p><a href="https://www.python.org/dev/peps/pep-0498">PEP-498</a> style "f-string" interpolation
+      is available, but it is deliberately much more limited than in Python; it can only interpolate variable
       names rather than arbitrary expressions.</p>

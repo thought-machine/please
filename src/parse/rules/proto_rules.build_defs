@@ -183,7 +183,7 @@ def _go_path_mapping(grpc):
 
 def proto_language(language:str, extensions:list|dict, func:function, use_file_names:bool=True, protoc_flags:list=None,
                    tools:list=None, deps:list=None, pre_build:function=None, proto_language:str=''):
-    """Returns the definition of how to build a particular language for proto_library.
+    """Returns the definition of how to build a particular language for proto_library or grpc_library.
 
     Args:
       language (str): Name of the language (as we would name it).

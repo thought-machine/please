@@ -9,7 +9,7 @@
       (from lowest priority to highest):
       <ul>
         <li><code>/etc/plzconfig</code></li>
-        <li><code>~/.please/plzconfig</code></li>
+        <li><code>~/.config/please/plzconfig</code></li>
         <li><code>.plzconfig</code></li>
         <li><code>.plzconfig_&lt;arch&gt;</code> (e.g. .plzconfig_linux_amd64)</li>
         <li><code>.plzconfig.&lt;profile&gt;</code> (if the <code>--profile</code> flag is passed)</li>
@@ -33,9 +33,9 @@
       multiple times in their entirety, e.g.
       <pre><code>
           buildfilename = BUILD
-          buildfilename = BUCK
+          buildfilename = BUILD.plz
       </code></pre>
-      Comma-separating on the same line won't work.</p>
+      Comma-separating on the same line won't generally work.</p>
 
     <h3>[Please]</h3>
 
@@ -52,7 +52,7 @@
       <li><b>Location</b><br/>
         Defines the directory Please is installed into.<br/>
         Defaults to <code>~/.please</code> but you might want it to be somewhere else if you're
-        installing via another method (e.g. the debs and install script still use <code>/opt/please</code>).</li>
+        installing via another method.</li>
 
       <li><b>SelfUpdate</b> (bool)<br/>
         Sets whether plz will attempt to update itself when the version set in the config file is

@@ -585,3 +585,12 @@ footer > div {
 .build-rule {
     color: #96ee05;
 }
+.fn-name {
+    color: #ff00ff;
+}
+.fn-p {
+    color: #29abe2;
+}
+.fn-arg {
+    color: #96ee05;
+}

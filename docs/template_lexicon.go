@@ -23,6 +23,20 @@ func (r *rules) Named(name string) rule {
 	return rule
 }
 
+// AddLinks adds HTML links to a function docstring.
+func (r *rules) AddLinks(name, docstring string) string {
+	if strings.Contains(name, "_") { // Don't do it for something generic like "tarball"
+		for k := range r.Functions {
+			if name == k {
+				docstring = strings.Replace(docstring, k, "<code>"+k+"</code>", -1)
+			} else {
+				docstring = strings.Replace(docstring, k, `<a href="#`+k+`">`+k+"</a>", -1)
+			}
+		}
+	}
+	return docstring
+}
+
 type rule struct {
 	Args []struct {
 		Comment    string   `json:"comment"`
@@ -45,17 +59,16 @@ func must(err error) {
 }
 
 func main() {
+	r := &rules{}
 	tmpl, err := template.New("lexicon.html").Funcs(template.FuncMap{
 		"join": strings.Join,
-		"newlines": func(s string) string {
-			return strings.Replace(htmltemplate.HTMLEscapeString(s), "\n", "<br/>", -1)
+		"newlines": func(name, docstring string) string {
+			return r.AddLinks(name, strings.Replace(htmltemplate.HTMLEscapeString(docstring), "\n", "<br/>", -1))
 		},
-	}).ParseFiles(
-		"docs/lexicon.html", "docs/lexicon_entry.html")
+	}).ParseFiles("docs/lexicon.html", "docs/lexicon_entry.html")
 	must(err)
 	b, err := ioutil.ReadFile("docs/rules.json")
 	must(err)
-	r := &rules{}
 	must(json.Unmarshal(b, r))
 	must(tmpl.Execute(os.Stdout, r))
 }

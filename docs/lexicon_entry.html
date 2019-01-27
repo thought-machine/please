@@ -10,7 +10,7 @@
           {{- end -}}
       {{- end }})</code></pre></p>
 
-    <p>{{ newlines .Comment }}</p>
+    <p>{{ newlines .Name .Comment }}</p>
 
     <table>
       <thead>
@@ -27,7 +27,7 @@
           <td>{{ .Name }}</td>
           <td>{{ if .Required }}yes{{ end }}</td>
           <td>{{ join .Types " or " }}</td>
-          <td>{{ newlines .Comment }}</td>
+          <td>{{ newlines .Name .Comment }}</td>
         </tr>
       {{ end }}
       </tbody>
