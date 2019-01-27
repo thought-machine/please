@@ -71,6 +71,12 @@ def main():
             linter.reset_line()
             sys.exit('Some linters failed')
         linter.reset_line()
+    # Run Buildifier
+    try:
+        subprocess.check_call(['plz-out/bin/src/please', 'run', '//tools/misc:buildify', '-p', '--', '--mode=check'],
+                              stdout=sys.stdout, stderr=sys.stderr)
+    except subprocess.CalledProcessError:
+        sys.exit('Your BUILD files are not correctly formatted, run `plz buildify` to fix.')
 
 
 if __name__ == '__main__':

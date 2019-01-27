@@ -28,3 +28,13 @@ python_test(
     srcs = ["gen_release_test.py"],
     deps = [":gen_release"],
 )
+
+sh_binary(
+    name = "buildify",
+    main = "buildify.sh",
+)
+
+python_binary(
+    name = "lint",
+    main = "ci_lint.py",
+)

@@ -119,11 +119,6 @@ if ! hash java 2>/dev/null ; then
     warn "Java not found, excluding Java tests"
     EXCLUDES="${EXCLUDES} --exclude=java"
 fi
-# If the proto files are installed in a different location, their tests won't work.
-if [ ! -d "/usr/include/google/protobuf" ]; then
-    warn "google/protobuf not found, excluding relevant tests"
-    EXCLUDES="${EXCLUDES} --exclude=proto"
-fi
 GCCVER="`cc -dumpversion`"
 if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ] && [ ! -d "/usr/lib/gcc/x86_64-pc-linux-gnu/$GCCVER/32" ]; then
     warn "32-bit gcc libraries not found, excluding cross-compile tests"
@@ -135,15 +130,12 @@ plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --lo
 # We run the end-to-end tests separately to ensure things don't fight with one another; they are
 # finicky about some things due to running plz recursively and disabling the lock.
 notice "Running end-to-end tests..."
-plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
+plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/test_build.log --log_file_level 4 $@
 
 # Lint needs python3.
 if hash python3 2>/dev/null ; then
     # Don't run this in CI or any unusual workflows.
     if [ $# -eq 0 ] ; then
-        tools/misc/ci_lint.py
-        plz-out/bin/src/please buildify --mode=check `git ls-files | grep BUILD`
-        # If the above fails, then the fix is to run:
-        # plz-out/bin/src/please buildify --mode=fix `git ls-files | grep BUILD`
+        plz lint
     fi
 fi

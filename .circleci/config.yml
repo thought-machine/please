@@ -21,7 +21,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Lint
-           command: ./tools/misc/ci_lint.py && plz-out/bin/src/please buildify --mode=check `git ls-files | grep BUILD`
+           command: plz-out/bin/src/please lint
        - run:
            name: Package
            command: ./plz-out/bin/src/please build //package:all //tools/misc:gen_release --exclude asc -p
