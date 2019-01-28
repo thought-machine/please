@@ -58,7 +58,7 @@ var opts = struct {
 		In                    cli.StdinStrings  `short:"i" long:"input" description:"Input directory" required:"true"`
 		Out                   string            `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
 		Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
-		ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" default:"src.jar" description:"Suffix of files to exclude"`
+		ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" default:"_src.jar" description:"Suffix of files to exclude"`
 		ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
 		ExcludeInternalPrefix []string          `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
 		IncludeInternalPrefix []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
