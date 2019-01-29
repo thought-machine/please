@@ -71,10 +71,12 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependor core.BuildLab
 	}
 	// We don't have the definition of it at all. Need to parse that first.
 	sl := label.SubrepoLabel()
-	if err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
+	if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
 		return nil, err
-	} else if err := parseSubrepoPackage(tid, state, sl.PackageName, dependor.Subrepo, label); err != nil {
-		return nil, err
+	} else if !handled {
+		if _, err := parseSubrepoPackage(tid, state, sl.PackageName, dependor.Subrepo, label); err != nil {
+			return nil, err
+		}
 	}
 	if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
 		return subrepo, nil
@@ -85,13 +87,13 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependor core.BuildLab
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
-func parseSubrepoPackage(tid int, state *core.BuildState, pkg, subrepo string, dependor core.BuildLabel) error {
+func parseSubrepoPackage(tid int, state *core.BuildState, pkg, subrepo string, dependor core.BuildLabel) (bool, error) {
 	if state.Graph.Package(pkg, subrepo) == nil {
 		// Don't have it already, must parse.
 		label := core.BuildLabel{Subrepo: subrepo, PackageName: pkg, Name: "all"}
-		return parse(tid, state, label, dependor, nil, nil, true)
+		return true, parse(tid, state, label, dependor, nil, nil, true)
 	}
-	return nil
+	return false, nil
 }
 
 // checkArchSubrepo checks if a target refers to a cross-compiling subrepo.
