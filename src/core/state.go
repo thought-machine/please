@@ -487,8 +487,13 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original labels.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
+	return state.ExpandLabels(state.OriginalTargets)
+}
+
+// ExpandLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets) from a set of labels.
+func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 	ret := BuildLabels{}
-	for _, label := range state.OriginalTargets {
+	for _, label := range labels {
 		if label.IsAllTargets() || label.IsAllSubpackages() {
 			ret = append(ret, state.expandOriginalPseudoTarget(label)...)
 		} else {

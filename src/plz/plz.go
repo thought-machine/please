@@ -92,6 +92,13 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 	if len(preTargets) > 0 {
 		findOriginalTaskSet(state, preTargets, false, arch)
 		for _, target := range preTargets {
+			if target.IsAllTargets() {
+				log.Debug("Waiting for pre-target %s...", target)
+				state.WaitForPackage(target)
+				log.Debug("Pre-target %s parsed, continuing...", target)
+			}
+		}
+		for _, target := range state.ExpandLabels(preTargets) {
 			log.Debug("Waiting for pre-target %s...", target)
 			state.WaitForBuiltTarget(target, targets[0])
 			log.Debug("Pre-target %s built, continuing...", target)
