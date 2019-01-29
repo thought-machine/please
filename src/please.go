@@ -527,8 +527,8 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"revdeps": func() bool {
-		return runQuery(false, opts.Query.ReverseDeps.Args.Targets, func(state *core.BuildState) {
-			query.ReverseDeps(state, state.ExpandOriginalTargets())
+		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+			query.ReverseDeps(state, state.ExpandLabels(opts.Query.ReverseDeps.Args.Targets))
 		})
 	},
 	"somepath": func() bool {
