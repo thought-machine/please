@@ -9,7 +9,7 @@ jobs:
      steps:
        - checkout
        - restore_cache:
-           key: bootstrap-linux-main-{{ checksum "bootstrap.sh" }}
+           key: go-mod-linux-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-linux-main-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
@@ -34,8 +34,9 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: bootstrap-linux-main-{{ checksum "bootstrap.sh" }}
-           paths: [ ".bootstrap" ]
+           key: go-mod-linux-{{ checksum "go.mod" }}
+           paths:
+             - "/go/pkg/mod"
        - save_cache:
            key: go-linux-main-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
