@@ -3,7 +3,6 @@ freebsd_instance:
 
 task:
   install_script: pkg install -y bash protobuf go git python3
-  build_script: ./bootstrap.sh --exclude pip --exclude py2 --exclude no_cirrus
   go_mod_cache:
     folder: ~/go
     fingerprint_script: cat go.mod
@@ -12,3 +11,4 @@ task:
     folder: .plz-cache/third_party/go
     fingerprint_script: cat third_party/go/BUILD
     populate_script: ./bootstrap.sh --skip_tests
+  build_script: ./bootstrap.sh --exclude pip --exclude py2 --exclude no_cirrus

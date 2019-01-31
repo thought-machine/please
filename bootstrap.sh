@@ -13,7 +13,7 @@ function warn {
 PLZ_ARGS="${PLZ_ARGS:-}"
 
 # Clean out old artifacts.
-rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go
+rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go .bootstrap
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
