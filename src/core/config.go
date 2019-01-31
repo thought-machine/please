@@ -76,7 +76,7 @@ func readConfigFile(config *Configuration, filename string) error {
 // ReadDefaultConfigFiles reads all the config files from the default locations and
 // merges them into a config object.
 // The repo root must have already have been set before calling this.
-func ReadDefaultConfigFiles(profile string) (*Configuration, error) {
+func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
 	return ReadConfigFiles([]string{
 		MachineConfigFileName,
 		ExpandHomePath(UserConfigFileName),
@@ -84,18 +84,18 @@ func ReadDefaultConfigFiles(profile string) (*Configuration, error) {
 		path.Join(RepoRoot, ConfigFileName),
 		path.Join(RepoRoot, ArchConfigFileName),
 		path.Join(RepoRoot, LocalConfigFileName),
-	}, profile)
+	}, profiles)
 }
 
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
-func ReadConfigFiles(filenames []string, profile string) (*Configuration, error) {
+func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, error) {
 	config := DefaultConfiguration()
 	for _, filename := range filenames {
 		if err := readConfigFile(config, filename); err != nil {
 			return config, err
 		}
-		if profile != "" {
+		for _, profile := range profiles {
 			if err := readConfigFile(config, filename+"."+profile); err != nil {
 				return config, err
 			}
@@ -329,7 +329,7 @@ type Configuration struct {
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
 	Cache       struct {
 		Workers               int          `help:"Number of workers for uploading artifacts to remote caches, which is done asynchronously."`
-		Dir                   string       `help:"Sets the directory to use for the dir cache.\nThe default is 'please' under the user's cache dir (i.e. ~/.cache/please, ~/Library/Caches/please, etc), if set to the empty string the dir cache will be disabled."`
+		Dir                   string       `help:"Sets the directory to use for the dir cache.\nThe default is 'please' under the user's cache dir (i.e. ~/.cache/please, ~/Library/Caches/please, etc), if set to the empty string the dir cache will be disabled." example:".plz-cache"`
 		DirCacheHighWaterMark cli.ByteSize `help:"Starts cleaning the directory cache when it is over this number of bytes.\nCan also be given with human-readable suffixes like 10G, 200MB etc."`
 		DirCacheLowWaterMark  cli.ByteSize `help:"When cleaning the directory cache, it's reduced to at most this size."`
 		DirClean              bool         `help:"Controls whether entries in the dir cache are cleaned or not. If disabled the cache will only grow."`

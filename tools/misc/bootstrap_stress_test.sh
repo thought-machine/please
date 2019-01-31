@@ -5,7 +5,6 @@
 # This script assumes the initial bootstrap has already run.
 
 N="${1:-10}"
-export PLZ_NO_GO_BOOTSTRAP=1
 
 for i in `seq 1 $N`; do
     echo "Round $i / $N"
