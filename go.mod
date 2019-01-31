@@ -9,6 +9,7 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/karrick/godirwalk v1.7.8
+	github.com/kevinburke/go-bindata v3.13.0+incompatible // indirect
 	github.com/peterebden/go-cli-init v1.0.0
 	github.com/pkg/xattr v0.4.0
 	github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e
