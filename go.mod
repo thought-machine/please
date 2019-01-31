@@ -1,6 +1,7 @@
 module github.com/thought-machine/please
 
 require (
+	github.com/Songmu/prompter v0.0.0-20181014095714-d227c68538bd
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/coreos/go-semver v0.2.0
 	github.com/djherbis/atime v1.0.0
@@ -10,8 +11,10 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/karrick/godirwalk v1.7.8
 	github.com/kevinburke/go-bindata v3.13.0+incompatible // indirect
+	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/peterebden/go-cli-init v1.0.0
 	github.com/pkg/xattr v0.4.0
+	github.com/stretchr/testify v1.2.2
 	github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e
 	golang.org/x/crypto v0.0.0-20190131182504-b8fe1690c613
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4

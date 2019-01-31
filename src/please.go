@@ -56,7 +56,7 @@ var opts struct {
 		Include    []string          `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
 		Exclude    []string          `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
 		Option     ConfigOverrides   `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
-		Profile    string            `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
+		Profile    []string          `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
 		PreTargets []core.BuildLabel `long:"pre" hidden:"true" description:"Targets to build before the other command-line ones. Sometimes useful to debug targets generated as part of a post-build function."`
 	} `group:"Options controlling what to build & how to build it"`
 
@@ -902,7 +902,7 @@ func initBuild(args []string) string {
 		cli.InitLogging(cli.MinVerbosity)
 		parser.WriteHelp(os.Stderr)
 		if core.FindRepoRoot() {
-			if config, err := core.ReadDefaultConfigFiles(""); err == nil {
+			if config, err := core.ReadDefaultConfigFiles(nil); err == nil {
 				config.PrintAliases(os.Stderr)
 			}
 		}
