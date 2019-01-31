@@ -5,49 +5,12 @@ set -eu
 function notice {
     >&2 echo -e "\033[32m$1\033[0m"
 }
-function noticen {
-    >&2 echo -n -e "\033[32m$1\033[0m"
-}
-function go_get {
-    go get $1
-    noticen "."
-}
 function warn {
     >&2 echo -e "\033[33m$1\033[0m"
 }
 
 # PLZ_ARGS can be set to pass arguments to all plz invocations in this script.
 PLZ_ARGS="${PLZ_ARGS:-}"
-
-# Fetch the Go dependencies manually
-export GOPATH="${PWD}/.bootstrap:${PWD}"
-if [ -z "${PLZ_NO_GO_BOOTSTRAP+bootstrap}" ]; then
-    noticen "Installing Go dependencies..."
-    mkdir -p "${PWD}/.bootstrap/src/github.com/thought-machine"
-    if [ ! -e "${PWD}/.bootstrap/src/github.com/thought-machine/please" ]; then
-        ln -s "$PWD" "${PWD}/.bootstrap/src/github.com/thought-machine/please"
-    fi
-    go_get golang.org/x/crypto/ssh/terminal
-    go_get golang.org/x/sync/errgroup
-    go_get golang.org/x/tools/cover
-    go_get gopkg.in/op/go-logging.v1
-    go_get gopkg.in/gcfg.v1
-    go_get github.com/kevinburke/go-bindata/...
-    go_get github.com/jessevdk/go-flags
-    go_get github.com/dustin/go-humanize
-    go_get github.com/texttheater/golang-levenshtein/levenshtein
-    go_get github.com/Workiva/go-datastructures/queue
-    go_get github.com/coreos/go-semver/semver
-    go_get github.com/djherbis/atime
-    go_get github.com/karrick/godirwalk
-    go_get github.com/hashicorp/go-multierror
-    go_get github.com/google/shlex
-    go_get github.com/pkg/xattr
-    go_get github.com/peterebden/go-cli-init
-    notice ""
-else
-    warn "Skipping Go bootstrap"
-fi
 
 # Clean out old artifacts.
 rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go
