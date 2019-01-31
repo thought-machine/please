@@ -14,15 +14,15 @@ PLZ_ARGS="${PLZ_ARGS:-}"
 
 # Clean out old artifacts.
 rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go
-# Compile the builtin rules
-notice "Compiling built-in rules..."
-go run -tags bootstrap src/parse/asp/main/compiler.go -o plz-out/tmp/src/parse/rules src/parse/rules/*.build_defs
-# Embed them into Go
-go run github.com/kevinburke/go-bindata/go-bindata -o src/parse/rules/builtin_data.bindata.go -pkg rules -prefix plz-out/tmp/src/parse/rules plz-out/tmp/src/parse/rules
 
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
-go run -tags bootstrap src/please.go $PLZ_ARGS build //src:please --log_file plz-out/log/bootstrap_build.log -o display.systemstats:false
+go run -tags bootstrap src/please.go $PLZ_ARGS build //src:please \
+   --log_file plz-out/log/bootstrap_build.log \
+   -o display.systemstats:false \
+   -o parse.preloadbuilddefs:src/parse/rules/builtins.build_defs \
+   -o parse.preloadbuilddefs:src/parse/rules/go_rules.build_defs \
+   -o parse.preloadbuilddefs:src/parse/rules/misc_rules.build_defs
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
 plz-out/bin/src/please $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
