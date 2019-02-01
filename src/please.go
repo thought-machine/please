@@ -211,7 +211,7 @@ var opts struct {
 				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
 			} `positional-args:"true" required:"true"`
 		} `command:"config" description:"Initialises specific attributes of config files"`
-	} `command:"init" description:"Initialises a .plzconfig file in the current directory"`
+	} `command:"init" subcommands-optional:"true" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
 		Conservative bool `short:"c" long:"conservative" description:"Runs a more conservative / safer GC."`

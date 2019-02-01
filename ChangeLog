@@ -1,3 +1,9 @@
+Version 13.4.2
+--------------
+
+    * Fixed `plz init` command without the `config` subcommand.
+
+
 Version 13.4.1
 --------------
 
