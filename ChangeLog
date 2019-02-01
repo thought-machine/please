@@ -1,3 +1,10 @@
+Version 13.4.1
+--------------
+
+    * Various minor subrepo improvements & fixes
+    * Fixed query revdeps which wasn't querying to arbitrary depth correctly.
+
+
 Version 13.4.0
 --------------
 
