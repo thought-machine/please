@@ -211,7 +211,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
 	l := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
-	s.SetAll(s.interpreter.Subinclude(path.Join(l.PackageName, l.Name)), false)
+	s.SetAll(s.interpreter.Subinclude(path.Join(l.PackageName, l.Name), s.contextPkg), false)
 	return None
 }
 
@@ -223,8 +223,16 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 
 func subinclude(s *scope, args []pyObject) pyObject {
 	t := subincludeTarget(s, subincludeLabel(s, args))
+	pkg := s.contextPkg
+	if t.Subrepo != s.contextPkg.Subrepo {
+		pkg = &core.Package{
+			Name:        "@" + t.Subrepo.Name,
+			SubrepoName: t.Subrepo.Name,
+			Subrepo:     t.Subrepo,
+		}
+	}
 	for _, out := range t.Outputs() {
-		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out)), false)
+		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), pkg), false)
 	}
 	return None
 }
@@ -232,12 +240,10 @@ func subinclude(s *scope, args []pyObject) pyObject {
 // subincludeTarget returns the target for a subinclude() call to a label.
 // It blocks until the target exists and is built.
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
-	if s.pkg == nil {
-		// Really we should not get here, but it's hard to prove that's not the case. Make the best of it.
-		return s.state.WaitForBuiltTarget(l, l)
-	}
-	t := s.state.WaitForBuiltTarget(l, s.pkg.Label())
-	s.pkg.RegisterSubinclude(l)
+	t := s.state.WaitForBuiltTarget(l, s.contextPkg.Label())
+	// This is not quite right, if you subinclude from another subinclude we can basically
+	// lose track of it later on. It's hard to know what better to do at this point though.
+	s.contextPkg.RegisterSubinclude(l)
 	return t
 }
 
@@ -246,7 +252,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
 	target := string(args[0].(pyString))
 	s.NAssert(strings.HasPrefix(target, ":"), "Subincludes cannot be from the local package")
-	label := core.ParseBuildLabel(target, "")
+	label := core.ParseBuildLabelContext(target, s.contextPkg)
 	s.NAssert(s.pkg != nil && label.PackageName == s.pkg.Name, "Subincludes cannot be from the local package")
 	return label
 }

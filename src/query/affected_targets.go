@@ -19,10 +19,13 @@ func AffectedTargets(state *core.BuildState, files, include, exclude []string, t
 	// Check all the targets to see if any own one of these files
 	go func() {
 		for _, target := range state.Graph.AllTargets() {
-			for _, source := range target.AllSourcePaths(state.Graph) {
-				if _, present := filePaths[source]; present {
-					affectedTargets <- target
-					break
+			// TODO(peterebden): this assumption is very crude, revisit.
+			if target.Subrepo == nil {
+				for _, source := range target.AllSourcePaths(state.Graph) {
+					if _, present := filePaths[source]; present {
+						affectedTargets <- target
+						break
+					}
 				}
 			}
 		}

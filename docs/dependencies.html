@@ -34,14 +34,49 @@
   Dependencies are built as part of the build process along with everything else, so
   their downloads can be parallelised with compiling other targets.</p>
 
+
+<h2>Subrepos</h2>
+
+<p>Please also supports a concept called "subrepos" which allows fetching arbitrary dependencies
+  and attaching build rules to them. These can be depended on from other build rules and generally
+  used as normal.</p>
+
+<p>Subrepos are defined using builtins like <a href="lexicon.html#http_archive">http_archive</a> or
+  <a href="lexicon.html#github_repo">github_repo</a>. These download a remote file and
+  extract it, and make the contents available to other rules. In most cases you can choose to attach a
+  BUILD file to them, but it can also use an existing one if appropriate.</p>
+
+<p>For example (as seen <a href="https://github.com/thought-machine/please/blob/master/third_party/cc/BUILD">in the Please repo</a>):
+  <pre><code>github_repo(
+    name = "gtest",
+    bazel_compat = True,
+    repo = "google/googletest",
+    revision = "release-1.8.1",
+)
+</code></pre></p>
+
+<p>Rules within subrepos can be referenced using an <code>@</code> prefix on rules, anywhere
+  where a build rule would normally be accepted. For example:
+  <pre><code>
+cc_test(
+    name = "my_test",
+    ...
+    deps = [
+        "@third_party/cc/gtest//:gtest_main",
+    ],
+)
+</code></pre>
+
+<p>Note that the subrepo label (<code>third_party/cc/gtest</code>) includes the package we defined
+  it in earlier. In many ways subrepos mirror the feature in Bazel, but in this case are more
+  flexible since they're not limited to being defined at the repo root.</p>
+
 <h2>Comparison to other systems</h2>
 
 <p>For users familiar with Bazel, we expect that writing BUILD files won't be
   challenging, the main difference being that there is no direct equivalent to
   Bazel's WORKSPACE file. As mentioned above, third-party dependencies can occur
-  wherever you choose to put them in normal BUILD files.<br/>
-  Right now there is no direct equivalent to Bazel's <code>new_http_archive</code>
-  and similar, but this is definitely on the <s>roadmap</s> wishlist.</p>
+  wherever you choose to put them in normal BUILD files.</p>
 
 <p>If you've used Buck before, the model is pretty similar to fetching Maven jars
   using the bucklet for it. This is not entirely coincidental since we were previously

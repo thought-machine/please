@@ -264,7 +264,8 @@ func TestFStrings(t *testing.T) {
 func TestSubincludeConfig(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
-	s.SetAll(s.interpreter.Subinclude("src/parse/asp/test_data/interpreter/subinclude_config.build"), false)
+	pkg := core.NewPackage("test")
+	s.SetAll(s.interpreter.Subinclude("src/parse/asp/test_data/interpreter/subinclude_config.build", pkg), false)
 	assert.EqualValues(t, "test test", s.config.Get("test", None))
 }
 

@@ -107,7 +107,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (er
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
-func (i *interpreter) Subinclude(path string) pyDict {
+func (i *interpreter) Subinclude(path string, pkg *core.Package) pyDict {
 	i.mutex.RLock()
 	globals, present := i.subincludes[path]
 	i.mutex.RUnlock()
@@ -124,6 +124,7 @@ func (i *interpreter) Subinclude(path string) pyDict {
 	}
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
+	s.contextPkg = pkg
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
 	s.Set("CONFIG", s.config)
@@ -190,6 +191,7 @@ type scope struct {
 	interpreter *interpreter
 	state       *core.BuildState
 	pkg         *core.Package
+	contextPkg  *core.Package // used during subincludes
 	parent      *scope
 	locals      pyDict
 	config      *pyConfig
@@ -208,6 +210,7 @@ func (s *scope) NewPackagedScope(pkg *core.Package) *scope {
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
+		contextPkg:  pkg,
 		parent:      s,
 		locals:      pyDict{},
 		config:      s.config,
