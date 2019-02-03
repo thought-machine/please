@@ -55,21 +55,22 @@
 )
 </code></pre></p>
 
-<p>Rules within subrepos can be referenced using an <code>@</code> prefix on rules, anywhere
+<p>Rules within subrepos can be referenced using a triple-slash prefix on rules, anywhere
   where a build rule would normally be accepted. For example:
   <pre><code>
 cc_test(
     name = "my_test",
     ...
     deps = [
-        "@third_party/cc/gtest//:gtest_main",
+        "///third_party/cc/gtest//:gtest_main",
     ],
 )
 </code></pre>
 
 <p>Note that the subrepo label (<code>third_party/cc/gtest</code>) includes the package we defined
   it in earlier. In many ways subrepos mirror the feature in Bazel, but in this case are more
-  flexible since they're not limited to being defined at the repo root.</p>
+  flexible since they're not limited to being defined at the repo root. For compatibility,
+  we also accept an <code>@</code> prefix for subrepos instead of <code>///</code>.</p>
 
 <h2>Comparison to other systems</h2>
 
