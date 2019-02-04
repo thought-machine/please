@@ -156,3 +156,10 @@ func TestAbsoluteEmptySubrepo(t *testing.T) {
 	label := ParseBuildLabelContext("@//tools/jarcat", pkg)
 	assert.Equal(t, "", label.Subrepo)
 }
+
+func TestNewSyntaxSubrepo(t *testing.T) {
+	// Test the new triple-slash syntax.
+	assertSubrepoLabel(t, "///subrepo//pkg:target", "pkg", "target", "subrepo")
+	assertSubrepoLabel(t, "///third_party/cc/gtest//:gtest", "", "gtest", "third_party/cc/gtest")
+	assertSubrepoLabel(t, "///third_party/cc/gtest", "", "gtest", "third_party/cc/gtest")
+}

@@ -16,7 +16,7 @@ sh_test(
 sh_test(
     name = "auto_arch_test",
     src = "test_arch.sh",
-    data = ["@test_x86:record_arch"],
+    data = ["///test_x86:record_arch"],
 )
 
 plz_e2e_test(

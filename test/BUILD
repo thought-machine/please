@@ -14,7 +14,7 @@ subinclude("//build_defs:plz_e2e_test")
 
 # This isn't really needed in this BUILD file, but is intended to avoid race conditions
 # between this and other BUILD files that have the same dependency.
-subinclude("@pleasings//go:go_bindata")
+subinclude("///pleasings//go:go_bindata")
 
 # Tests the expected output of 'query somepath'.
 # Note that you have to be careful with the choice of targets, since the path

@@ -40,7 +40,7 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 func (label BuildLabel) String() string {
 	s := "//" + label.PackageName
 	if label.Subrepo != "" {
-		s = "@" + label.Subrepo + s
+		s = "///" + label.Subrepo + s
 	}
 	if label.IsAllSubpackages() {
 		if label.PackageName == "" {
@@ -124,7 +124,7 @@ func TryParseBuildLabel(target, currentPath string) (BuildLabel, error) {
 // It panics on error.
 func ParseBuildLabelContext(target string, pkg *Package) BuildLabel {
 	if p, name, subrepo := parseBuildLabelParts(target, pkg.Name, pkg.Subrepo); name != "" {
-		if subrepo == "" && pkg.Subrepo != nil && target[0] != '@' {
+		if subrepo == "" && pkg.Subrepo != nil && (target[0] != '@' && !strings.HasPrefix(target, "///")) {
 			subrepo = pkg.Subrepo.Name
 		} else {
 			subrepo = pkg.SubrepoArchName(subrepo)
@@ -147,15 +147,10 @@ func parseBuildLabelParts(target, currentPath string, subrepo *Subrepo) (string,
 		return currentPath, target[1:], ""
 	} else if target[0] == '@' {
 		// @subrepo//pkg:target or @subrepo:target syntax
-		idx := strings.Index(target, "//")
-		if idx == -1 {
-			// if subrepo and target are the same name, then @subrepo syntax will also suffice
-			if idx = strings.IndexRune(target, ':'); idx == -1 {
-				return "", target[1:], target[1:]
-			}
-		}
-		pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, subrepo)
-		return pkg, name, target[1:idx]
+		return parseBuildLabelSubrepo(target[1:], currentPath, subrepo)
+	} else if strings.HasPrefix(target, "///") {
+		// ///subrepo/pkg:target syntax.
+		return parseBuildLabelSubrepo(target[3:], currentPath, subrepo)
 	} else if target[0] != '/' || target[1] != '/' {
 		return "", "", ""
 	} else if idx := strings.IndexRune(target, ':'); idx != -1 {
@@ -176,6 +171,22 @@ func parseBuildLabelParts(target, currentPath string, subrepo *Subrepo) (string,
 		return target[2:], target[idx+1:], ""
 	}
 	return target[2:], target[2:], ""
+}
+
+// parseBuildLabelSubrepo parses a build label that began with a subrepo symbol (either @ or ///).
+func parseBuildLabelSubrepo(target, currentPath string, subrepo *Subrepo) (string, string, string) {
+	idx := strings.Index(target, "//")
+	if idx == -1 {
+		// if subrepo and target are the same name, then @subrepo syntax will also suffice
+		if idx = strings.IndexByte(target, ':'); idx == -1 {
+			if idx := strings.LastIndexByte(target, '/'); idx != -1 {
+				return "", target[idx+1:], target
+			}
+			return "", target, target
+		}
+	}
+	pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, subrepo)
+	return pkg, name, target[:idx]
 }
 
 // As above, but allows parsing of relative labels (eg. src/parse/rules:python_rules)

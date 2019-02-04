@@ -1,4 +1,4 @@
-subinclude("@pleasings//go:go_bindata")
+subinclude("///pleasings//go:go_bindata")
 
 go_bindata(
     name = "embed",
