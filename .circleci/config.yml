@@ -89,7 +89,7 @@ jobs:
        - restore_cache:
            key: go-mod-darwin-v2-{{ checksum "bootstrap.sh" }}
        - restore_cache:
-           key: go-darwin-go111-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go111-v2-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -121,7 +121,7 @@ jobs:
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-darwin-go111-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go111-v2-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
