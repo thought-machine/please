@@ -79,7 +79,7 @@ jobs:
 
    build-darwin:
       macos:
-        xcode: "10.1.0"
+        xcode: "9.3.0"
       environment:
         PLZ_ARGS: "-p --profile ci --exclude pip"
         HOMEBREW_LOGS: "~/homebrew-logs"
