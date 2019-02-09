@@ -81,7 +81,7 @@ jobs:
       macos:
         xcode: "9.0"
       environment:
-        PLZ_ARGS: "-p --profile ci  -o buildconfig.ci:true --exclude pip --exclude cc"
+        PLZ_ARGS: "-p --profile ci  -o buildconfig.ci:true --exclude pip --exclude py3_pkg_config"
       steps:
        - checkout
        - restore_cache:
