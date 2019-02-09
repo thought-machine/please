@@ -20,6 +20,7 @@ cc_embed_binary(
 cc_test(
     name = "embed_file_test",
     srcs = ["embed_file_test.cc"],
+    labels = ["embed"],
     deps = [
         ":embedded_file_1",
         ":embedded_file_3",
@@ -62,6 +63,7 @@ python_test(
     labels = [
         "cc",
         "py3_pkg_config",
+        "embed",
     ],
     zip_safe = False,
     deps = [
@@ -81,7 +83,10 @@ cc_binary(
 gentest(
     name = "cc_binary_test",
     data = [":test_binary"],
-    labels = ["cc"],
+    labels = [
+        "cc",
+        "embed",
+    ],
     no_test_output = True,
     test_cmd = "$(exe :test_binary)",
 )
