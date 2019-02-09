@@ -90,10 +90,6 @@ jobs:
            key: go-darwin-go111-v2-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
-       - restore_cache:
-           key: go-system-darwin-v1
-       - restore_cache:
-           key: xz-v1
        - run:
            name: Install deps
            command: ./.circleci/setup_osx.sh
@@ -113,12 +109,6 @@ jobs:
              - darwin_amd64/please_*.tar.*
        - store_artifacts:
            path: /tmp/artifacts
-       - save_cache:
-           key: xz-v1
-           paths: [ "/usr/local/bin/xz" ]
-       - save_cache:
-           key: go-system-darwin-v1
-           paths: [ "/usr/local/go" ]
        - save_cache:
            key: go-mod-darwin-v2-{{ checksum "go.mod" }}
            paths:
