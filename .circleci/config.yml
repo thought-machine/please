@@ -81,9 +81,7 @@ jobs:
       macos:
         xcode: "10.1.0"
       environment:
-        PLZ_ARGS: "-p --profile ci --exclude pip"
-        HOMEBREW_LOGS: "~/homebrew-logs"
-        HOMEBREW_TEMP: "~/homebrew-temp"
+        PLZ_ARGS: "-p --profile ci --exclude pip --exclude cc"
       steps:
        - checkout
        - restore_cache:
@@ -93,10 +91,10 @@ jobs:
        - restore_cache:
            key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
-           key: homebrew-v1
+           key: go-system-darwin-v1-{{ checksum ".circleci/setup_osx.sh" }}
        - run:
            name: Install deps
-           command: brew install go nasm pkg-config && brew upgrade python
+           command: ./.circleci/setup_osx.sh
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
@@ -114,8 +112,8 @@ jobs:
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
-           key: homebrew-v1
-           paths: [ "/usr/local/Homebrew" ]
+           key: go-system-darwin-v1-{{ checksum ".circleci/setup_osx.sh" }}
+           paths: [ "/usr/local/go" ]
        - save_cache:
            key: go-mod-darwin-v2-{{ checksum "go.mod" }}
            paths:
