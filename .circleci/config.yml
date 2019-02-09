@@ -91,7 +91,9 @@ jobs:
        - restore_cache:
            key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
-           key: go-system-darwin-v1-{{ checksum ".circleci/setup_osx.sh" }}
+           key: go-system-darwin-v1
+       - restore_cache:
+           key: xz-v1
        - run:
            name: Install deps
            command: ./.circleci/setup_osx.sh
@@ -112,7 +114,10 @@ jobs:
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
-           key: go-system-darwin-v1-{{ checksum ".circleci/setup_osx.sh" }}
+           key: xz-v1
+           paths: [ "/usr/local/bin/xz" ]
+       - save_cache:
+           key: go-system-darwin-v1
            paths: [ "/usr/local/go" ]
        - save_cache:
            key: go-mod-darwin-v2-{{ checksum "go.mod" }}
