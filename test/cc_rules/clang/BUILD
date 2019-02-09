@@ -36,6 +36,7 @@ cc_test(
     labels = [
         "clang",
         "gold",
+        "embed",
     ],
     deps = [
         ":embedded_file_1",
@@ -72,6 +73,7 @@ python_test(
         "clang",
         "gold",
         "py3_pkg_config",
+        "embed",
     ],
     zip_safe = False,
     deps = [
@@ -95,6 +97,7 @@ gentest(
         "cc",
         "clang",
         "gold",
+        "embed",
     ],
     no_test_output = True,
     test_cmd = "$(exe :test_binary)",
