@@ -151,7 +151,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
                 pre_build=pre_build,
                 needs_transitive_deps=True,
             )
-            a_rules.append(a_rule)
+            a_rules += [a_rule]
 
         # Combine the archives into one.
         a_rule = build_rule(
@@ -170,7 +170,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             },
         )
         if alwayslink:
-            labels.append(f'cc:al:{pkg}/{name}.a')
+            labels += [f'cc:al:{pkg}/{name}.a']
 
         # Filegroup to pick that up with extra deps. This is a little annoying but means that
         # things depending on this get the combined rule and not the individual ones, but do get
@@ -205,7 +205,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             needs_transitive_deps=True,
         )
         if alwayslink:
-            labels.append(f'cc:al:{pkg}/{name}.a')
+            labels += [f'cc:al:{pkg}/{name}.a']
         # Need another rule to cover require / provide stuff. This is getting a bit complicated...
         lib_rule = filegroup(
             name = name,
@@ -275,7 +275,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
               [f'cc:inc:{pkg}/{include}' for include in includes] +
               ['cc:def:' + define for define in defines])
     if alwayslink:
-        labels.append('cc:al:{pkg}/{name}.a')
+        labels += ['cc:al:{pkg}/{name}.a']
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, pkg_config_cflags, archive=False)
 
     return build_rule(
@@ -376,7 +376,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
       includes (list): Include directories to be added to the compiler's lookup path.
     """
     if CONFIG.DEFAULT_LDFLAGS:
-        linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
+        linker_flags += [CONFIG.DEFAULT_LDFLAGS]
 
     provides = None
     if srcs:
@@ -505,13 +505,13 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
     if CONFIG.BAZEL_COMPATIBILITY:
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
     if CONFIG.DEFAULT_LDFLAGS:
-        linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
+        linker_flags += [CONFIG.DEFAULT_LDFLAGS]
     if static:
-        linker_flags.append('-static')
+        linker_flags += ['-static']
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
     if srcs:
         if static:
-            compiler_flags.append('-static -static-libgcc')
+            compiler_flags += ['-static -static-libgcc']
         lib_rule = cc_library(
             name=f'_{name}#lib',
             srcs=srcs,
@@ -524,7 +524,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
             test_only=test_only,
             _c=_c,
         )
-        deps.append(lib_rule)
+        deps += [lib_rule]
     return build_rule(
         name=name,
         outs=[name],
@@ -583,7 +583,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     if CONFIG.DEFAULT_LDFLAGS:
-        linker_flags.append(CONFIG.DEFAULT_LDFLAGS)
+        linker_flags += [CONFIG.DEFAULT_LDFLAGS]
     if CONFIG.CC_TEST_MAIN and not _c:
         deps += [CONFIG.CC_TEST_MAIN]
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
@@ -601,7 +601,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             alwayslink=True,
             _c=_c,
         )
-        deps.append(lib_rule)
+        deps += [lib_rule]
 
     test_cmd = f'$TEST {flags}'
     if worker:
@@ -893,10 +893,10 @@ def _library_transitive_labels(c, compiler_flags, pkg_config_libs, pkg_config_cf
     def apply_transitive_labels(name):
         labels = get_labels(name, 'cc:')
         flags = ['-isystem %s' % l[4:] for l in labels if l.startswith('inc:')]
-        flags.extend(['-D' + l[4:] for l in labels if l.startswith('def:')])
+        flags += ['-D' + l[4:] for l in labels if l.startswith('def:')]
 
-        pkg_config_libs.extend([l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs])
-        pkg_config_cflags.extend([l[4:] for l in labels if l.startswith('pcc:') and l[4:] not in pkg_config_cflags])
+        pkg_config_libs += [l[3:] for l in labels if l.startswith('pc:') and l[3:] not in pkg_config_libs]
+        pkg_config_cflags += [l[4:] for l in labels if l.startswith('pcc:') and l[4:] not in pkg_config_cflags]
         mods = ['-fmodule-file=' + l[4:] for l in labels if l.startswith('mod:')]
         flags += mods
         if mods:
@@ -915,7 +915,7 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
         linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
         flags = [linker_prefix + l[3:] for l in labels if l.startswith('ld:')]
 
-        flags.extend(['`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:')])
+        flags += ['`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:')]
 
         # ./ here because some weak linkers don't realise ./lib.a is the same file as lib.a
         # and report duplicate symbol errors as a result.

@@ -387,7 +387,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         },
         post_build=lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
     )
-    deps.append(lib_rule)
+    deps += [lib_rule]
     lib_rule = go_library(
         name='_%s#main_lib' % name,
         srcs=[main_rule],
@@ -618,11 +618,11 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
             ]
         if revision:
             # Annoyingly -C does not work on git checkout :(
-            cmd.append(f'(cd {subdir} && git checkout -q {revision})')
-        cmd.append('find . -name .git | xargs rm -rf')
+            cmd += [f'(cd {subdir} && git checkout -q {revision})']
+        cmd += ['find . -name .git | xargs rm -rf']
         tools = [CONFIG.GO_TOOL]
     if patch:
-        cmd.append(f'patch -s -d {subdir} -p1 < $TMP_DIR/$SRCS_PATCH')
+        cmd += [f'patch -s -d {subdir} -p1 < $TMP_DIR/$SRCS_PATCH']
     if strip:
         cmd += [f'rm -rf {subdir}/{s}' for s in strip]
     return build_rule(

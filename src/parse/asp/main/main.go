@@ -90,7 +90,7 @@ func main() {
 		var err error
 		config, err = core.ReadConfigFiles([]string{
 			path.Join(core.MustFindRepoRoot(), core.ConfigFileName),
-		}, "")
+		}, nil)
 		if err != nil {
 			log.Fatalf("%s", err)
 		}

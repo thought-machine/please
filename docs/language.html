@@ -117,6 +117,10 @@
 
     <p>The following are available as member functions of dictionaries:
       <ul>
+	    <li><code><span class="fn-name">get</span><span class="fn-p">(</span><span class="fn-arg">key</span>[, </span><span class="fn-arg">default</span>]<span class="fn-p">)</span></code>
+          - returns the item with the given key, or the default (<code>None</code> if that is not given).</li>
+	    <li><code><span class="fn-name">setdefault</span><span class="fn-p">(</span><span class="fn-arg">key</span>[, </span><span class="fn-arg">default</span>]<span class="fn-p">)</span></code>
+          - If the given key is in the dict, return its value, otherwise insert it with the given value (<code>None</code> if that is not given).</li>
 	    <li><code><span class="fn-name">keys</span><span class="fn-p">()</span></code>
           - returns an iterable sequence of the keys of this dictionary, in a consistent order.</li>
 	    <li><code><span class="fn-name">values</span><span class="fn-p">()</span></code>
@@ -124,7 +128,7 @@
 	    <li><code><span class="fn-name">items</span><span class="fn-p">()</span></code>
           - returns an iterable sequence of pairs of the keys and values of this dictionary, in a consistent order.</li>
 	    <li><code><span class="fn-name">copy</span><span class="fn-p">()</span></code>
-          - <span class="red">deprecated</span>, use a comprehension if needed. Returns a copy of this dictionary.</li>
+          - <span class="red">deprecated</span>, use a comprehension if needed. Returns a shallow copy of this dictionary.</li>
       </ul>
     </p>
 
@@ -151,13 +155,13 @@
     <pre><code>
       # Taken from //src/core/BUILD in the Please repo
       go_library(
-          name = 'core',
-          srcs = glob(['*.go'], exclude=['*_test.go', 'version.go']) + [':version'],
-          visibility = ['PUBLIC'],
+          name = "core",
+          srcs = glob(["*.go"], exclude=["*_test.go", "version.go"]) + [":version"],
+          visibility = ["PUBLIC"],
           deps = [
-              '//third_party/go:gcfg',
-              '//third_party/go:logging',
-              '//third_party/go:queue',
+              "//third_party/go:gcfg",
+              "//third_party/go:logging",
+              "//third_party/go:queue",
           ]
       )
     </code></pre>
@@ -173,15 +177,16 @@
     <p>We put spaces around the <code>=</code> for each argument to the build rule - we think it's
       easier to read this way.</p>
 
-    <p>Either single or double quotes work, as usual, but don't mix both in one file.</p>
+    <p>Either single or double quotes work, as usual, but don't mix both in one file. We usually
+      prefer double because that's what Buildifier (see below) prefers.</p>
 
     <p>Lists either go all on one line:
-      <pre><code>['*_test.go', 'version.go']</code></pre>
+      <pre><code>["*_test.go", "version.go"]</code></pre>
       or are broken across multiple lines like so:
       <pre><code>          [
-              '//third_party/go:gcfg',
-              '//third_party/go:logging',
-              '//third_party/go:queue',
+              "//third_party/go:gcfg",
+              "//third_party/go:logging",
+              "//third_party/go:queue",
           ]</code></pre>
     </p>
 
@@ -198,7 +203,7 @@
 
     <h2><a name="grammar">Grammar</a></h2>
 
-    <p>The grammar is defined as (more or less) the following, where <code>Ident</code>,
+    <p>The grammar is defined as (more or less) the following in EBNF, where <code>Ident</code>,
       <code>String</code>, <code>Int</code> and <code>EOL</code> are token types emitted by the lexer.</p>
 
     <pre><code>{{ .Grammar }}</code></pre>
@@ -206,12 +211,13 @@
     <p>As mentioned above, this is similar to Python but lacks the <code>import</code>, <code>try</code>,
       <code>except</code>, <code>finally</code>, <code>class</code>, <code>global</code>,
       <code>nonlocal</code>, <code>while</code> and <code>async</code> keywords. The implementation
-      may happen to permit using these as identifiers although it's discouraged (some tools might
+      disallows using these as identifiers nonetheless since some tools might
       attempt to operate on the file using Python's <code>ast</code> module for convenience, which would not
-      be possible if those keywords are used).<br/>
+      be possible if those keywords are used.<br/>
       As a result, while <code>raise</code> and <code>assert</code> <b>are</b> supported, it's
       not possible to catch and handle the resulting exceptions. These hence function only to
-      signal an error condition which results in immediate termination.</p>
+      signal an error condition which results in immediate termination.<br/>
+      Note that <code>assert</code> is never optimised out, as it can be in Python.</p>
 
     <p>A more limited set of operators than in Python are available. The provided set are
       considered sufficient for use in BUILD files.</p>
@@ -223,7 +229,7 @@
       be verified to match. This makes it easier to give useful feedback to users if they
       make mistakes in their BUILD files (e.g. passing a string where a list is required).</p>
 
-    <p>Varargs and kwargs functions are not supported.</p>
+    <p>User-defined varargs and kwargs functions are not supported.</p>
 
     <p><a href="https://www.python.org/dev/peps/pep-0498">PEP-498</a> style "f-string" interpolation
       is available, but it is deliberately much more limited than in Python; it can only interpolate variable

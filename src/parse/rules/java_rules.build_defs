@@ -230,7 +230,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
             srcs = srcs,
             deps = deps,
         )
-        deps.append(lib_rule)
+        deps += [lib_rule]
     if self_executable:
         preamble = '#!/bin/sh\nexec java %s -jar $0 ${@}' % (jvm_args or '')
         cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
@@ -352,7 +352,7 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
       optional (list): List of optional dependencies to fetch. By default we fetch none of them.
     """
     if id:
-        ids.append(id)
+        ids += [id]
     for id in ids:
         if id.count(':') != 2:
             raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
@@ -537,7 +537,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
             licences = licences,
             test_only = test_only,
         )
-        srcs.append(src_rule)
+        srcs += [src_rule]
 
     # .aar's have an embedded classes.jar in them. Pull that out so other rules can use it.
     if artifact_type == '.aar':

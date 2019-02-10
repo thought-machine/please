@@ -1,8 +1,24 @@
 package asp
 
+import "fmt"
+
 // A FileInput is the top-level structure of a BUILD file.
 type FileInput struct {
 	Statements []*Statement `{ @@ } EOF`
+}
+
+// A Position describes a position in a source file.
+// All properties in Position are one(1) indexed
+type Position struct {
+	Filename string
+	Offset   int
+	Line     int
+	Column   int
+}
+
+// String implements the fmt.Stringer interface.
+func (pos Position) String() string {
+	return fmt.Sprintf("%s:%d:%d", pos.Filename, pos.Line, pos.Column)
 }
 
 // A Statement is the type we work with externally the most; it's a single Python statement.

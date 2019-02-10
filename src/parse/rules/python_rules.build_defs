@@ -43,7 +43,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
       strip (bool): If True, the original sources are stripped and only bytecode is output.
     """
     if not zip_safe:
-        labels.append('py:zip-unsafe')
+        labels += ['py:zip-unsafe']
     if srcs or resources:
         cmd = '$TOOLS_JARCAT z -d -o ${OUTS} -i .'
         interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
@@ -76,7 +76,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
                 'jarcat': [CONFIG.JARCAT_TOOL],
             },
         )
-        deps.append(zip_rule)
+        deps += [zip_rule]
     elif strip:
         raise ParseError("Can't pass strip=True to a python_library with no srcs")
 
@@ -327,7 +327,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if repo:
         if repo.startswith('//') or repo.startswith(':'):  # Looks like a build label, not a URL.
             repo_flag = f'-f %(location {repo})'
-            deps.append(repo)
+            deps += [repo]
         else:
             repo_flag = '-f ' + repo
 
@@ -449,26 +449,26 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                          'to python_wheel')
     urls = []
     if name_scheme:
-        urls.append(name_scheme.format(url_base=url_base,
-                                       package_name=package_name,
-                                       version=version))
+        urls += [name_scheme.format(url_base=url_base,
+                                    package_name=package_name,
+                                    version=version)]
     elif CONFIG.PYTHON_WHEEL_NAME_SCHEME:
-        urls.append(CONFIG.PYTHON_WHEEL_NAME_SCHEME.format(url_base=url_base,
-                                                           package_name=package_name,
-                                                           version=version))
+        urls += [CONFIG.PYTHON_WHEEL_NAME_SCHEME.format(url_base=url_base,
+                                                        package_name=package_name,
+                                                        version=version)]
     else:
         # Populate urls using a reasonable set of possible wheel naming schemes.
         # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
         # has optional arch-specific bits) and we prefer the one with the cool stuff.
-        urls.append('{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                       package_name=package_name,
-                                                                                       version=version))
-        urls.append('{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                       package_name=package_name,
-                                                                                       version=version))
-        urls.append('{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
-                                                                     package_name=package_name,
-                                                                     version=version))
+        urls += ['{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
+                                                                                    package_name=package_name,
+                                                                                    version=version),
+                 '{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
+                                                                                    package_name=package_name,
+                                                                                    version=version),
+                 '{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
+                                                                  package_name=package_name,
+                                                                  version=version)]
 
     file_rule = remote_file(
         name = name,
@@ -483,8 +483,8 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     if strip:
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
     if not licences:
-        cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
-                   'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
+        cmd += ['find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
+                'xargs grep -E "License ?:" | grep -v UNKNOWN | cat']
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
         cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
