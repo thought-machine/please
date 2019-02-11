@@ -10,9 +10,6 @@ sudo ln -s /usr/local/go/bin/go /usr/local/bin/go
 
 # xz might also.
 if [ ! -f "/usr/local/bin/xz" ]; then
-    curl -fsSL https://tukaani.org/xz/xz-5.2.4.tar.gz | tar -xz
-    cd xz-5.2.4
-    ./configure --disable-shared
-    make
-    make install
+    curl -fsSL https://get.please.build/third_party/binary/xz-5.2.4-darwin_amd64 -o /usr/local/bin/xz
+    chmod +x /usr/local/bin/xz
 fi
