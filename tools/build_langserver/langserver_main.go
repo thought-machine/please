@@ -64,12 +64,12 @@ func serve(handler jsonrpc2.Handler) error {
 			jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(conn, jsonrpc2.VSCodeObjectCodec{}), handler)
 		}
 	} else {
-		log.Notice("build_langserver: reading on stdin, writing on stdout")
+		log.Info("build_langserver: reading on stdin, writing on stdout")
 
 		<-jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),
 			handler).DisconnectNotify()
 
-		log.Notice("connection closed")
+		log.Info("connection closed")
 	}
 
 	return nil
