@@ -13,6 +13,7 @@ go_library(
         "//src/fs",
         "//src/parse/asp",
         "//src/parse/rules",
+        "//src/parse/rules/bazel",
         "//src/utils",
         "//src/worker",
         "//third_party/go:logging",
