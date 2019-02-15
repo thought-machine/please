@@ -211,6 +211,10 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
 	l := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
+	// If it has a subrepo, we need to build it.
+	if l.Subrepo != "" {
+		subincludeTarget(s, l)
+	}
 	s.SetAll(s.interpreter.Subinclude(path.Join(l.PackageName, l.Name), s.contextPkg), false)
 	return None
 }
