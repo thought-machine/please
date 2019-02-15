@@ -54,6 +54,10 @@ func parse(tid int, state *core.BuildState, label, dependor core.BuildLabel, inc
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
 		state.WaitForBuiltTarget(subrepo.Target.Label, label)
 	}
+	// Subrepo & nothing else means we just want to ensure that subrepo is present.
+	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
+		return nil
+	}
 	pkg, err = parsePackage(state, label, dependor, subrepo)
 	if err != nil {
 		return err

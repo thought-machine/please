@@ -211,11 +211,16 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
 	l := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
-	// If it has a subrepo, we need to build it.
+	filename := path.Join(l.PackageName, l.Name)
 	if l.Subrepo != "" {
-		subincludeTarget(s, l)
+		subrepo := s.state.Graph.Subrepo(l.Subrepo)
+		if subrepo == nil || subrepo.Target != nil {
+			subincludeTarget(s, l)
+			subrepo = s.state.Graph.SubrepoOrDie(l.Subrepo)
+		}
+		filename = subrepo.Dir(filename)
 	}
-	s.SetAll(s.interpreter.Subinclude(path.Join(l.PackageName, l.Name), s.contextPkg), false)
+	s.SetAll(s.interpreter.Subinclude(filename, s.contextPkg), false)
 	return None
 }
 
@@ -756,6 +761,9 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		Target:         target,
 		State:          state,
 		IsCrossCompile: s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile,
+	}
+	if s.state.Config.Bazel.Compatibility && s.pkg.Name == "workspace" {
+		sr.Name = s.pkg.SubrepoArchName(name)
 	}
 	log.Debug("Registering subrepo %s in package %s", sr.Name, s.pkg.Label())
 	s.state.Graph.AddSubrepo(sr)
