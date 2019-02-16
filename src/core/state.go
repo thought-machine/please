@@ -599,7 +599,7 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 	pkg.AddTarget(target)
 	state.Graph.AddTarget(target)
 	for _, dep := range target.DeclaredDependencies() {
-		state.Graph.AddDependency(target.Label, dep)
+		state.Graph.AddDependencyForTarget(target, dep)
 	}
 	if target.IsFilegroup {
 		// At least register these guys as outputs.
