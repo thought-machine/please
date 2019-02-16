@@ -149,7 +149,7 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	args[21] = defaultFromConfig(s.config, args[21], "TEST_SANDBOX")
 	target := createTarget(s, args)
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
-	s.pkg.AddTarget(target)
+	s.state.AddTarget(s.pkg, target)
 	populateTarget(s, target, args)
 	if s.Callback {
 		// We are in a post-build function, so add the target directly to the graph now.

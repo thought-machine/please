@@ -134,14 +134,14 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 				// Must always do this for coverage because we need to calculate sources of
 				// non-test targets later on.
 				if !state.NeedTests || target.IsTest || state.NeedCoverage {
-					addDep(state, target.Label, dependor, false, dependor.IsAllTargets())
+					state.QueueTarget(target.Label, dependor, false, dependor.IsAllTargets())
 				}
 			}
 		}
 	} else {
 		for _, l := range state.Graph.DependentTargets(dependor, label) {
 			// We use :all to indicate a dependency needed for parse.
-			addDep(state, l, dependor, false, forSubinclude || dependor.IsAllTargets())
+			state.QueueTarget(l, dependor, false, forSubinclude || dependor.IsAllTargets())
 		}
 	}
 	return nil
@@ -186,44 +186,11 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 			log.Fatalf("Failed to load pleasings: %s", err) // This shouldn't happen, of course.
 		}
 	}
-	addPackage(state, pkg)
-	return pkg, nil
-}
-
-// addPackage adds the given package to the graph, with appropriate dependencies and whatnot.
-func addPackage(state *core.BuildState, pkg *core.Package) {
-	allTargets := pkg.AllTargets()
-	for _, target := range allTargets {
-		state.Graph.AddTarget(target)
-		if target.IsFilegroup {
-			// At least register these guys as outputs.
-			// It's difficult to handle non-file sources because we don't know if they're
-			// parsed yet - recall filegroups are a special case for this since they don't
-			// explicitly declare their outputs but can re-output other rules' outputs.
-			for _, src := range target.AllLocalSources() {
-				pkg.MustRegisterOutput(src, target)
-			}
-		} else {
-			for _, out := range target.DeclaredOutputs() {
-				pkg.MustRegisterOutput(out, target)
-			}
-			for _, out := range target.TestOutputs {
-				if !fs.IsGlob(out) {
-					pkg.MustRegisterOutput(out, target)
-				}
-			}
-		}
-	}
-	// Do this in a separate loop so we get intra-package dependencies right now.
-	for _, target := range allTargets {
-		for _, dep := range target.DeclaredDependencies() {
-			state.Graph.AddDependency(target.Label, dep)
-		}
-	}
 	// Verify some details of the output files in the background. Don't need to wait for this
 	// since it only issues warnings sometimes.
 	go pkg.VerifyOutputs()
 	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
+	return pkg, nil
 }
 
 // buildFileName returns the name of the BUILD file for a package, or the empty string if one
@@ -248,59 +215,6 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 	return "", pkgName
 }
 
-// Adds a single target to the build queue.
-func addDep(state *core.BuildState, label, dependor core.BuildLabel, rescan, forceBuild bool) {
-	// Stop at any package that's not loaded yet
-	if state.Graph.PackageByLabel(label) == nil {
-		if forceBuild {
-			log.Debug("Adding forced pending parse of %s", label)
-		}
-		state.AddPendingParse(label, dependor, forceBuild)
-		return
-	}
-	target := state.Graph.Target(label)
-	if target == nil {
-		log.Fatalf("Target %s (referenced by %s) doesn't exist\n", label, dependor)
-	}
-	if target.State() >= core.Active && !rescan && !forceBuild {
-		return // Target is already tagged to be built and likely on the queue.
-	}
-	// Only do this bit if we actually need to build the target
-	if !target.SyncUpdateState(core.Inactive, core.Semiactive) && !rescan && !forceBuild {
-		return
-	}
-	if state.NeedBuild || forceBuild {
-		if target.SyncUpdateState(core.Semiactive, core.Active) {
-			state.AddActiveTarget()
-			if target.IsTest && state.NeedTests {
-				state.AddActiveTarget() // Tests count twice if we're gonna run them.
-			}
-		}
-	}
-	// If this target has no deps, add it to the queue now, otherwise handle its deps.
-	// Only add if we need to build targets (not if we're just parsing) but we might need it to parse...
-	if target.State() == core.Active && state.Graph.AllDepsBuilt(target) {
-		if target.SyncUpdateState(core.Active, core.Pending) {
-			state.AddPendingBuild(label, dependor.IsAllTargets())
-		}
-		if !rescan {
-			return
-		}
-	}
-	for _, dep := range target.DeclaredDependencies() {
-		// Check the require/provide stuff; we may need to add a different target.
-		if len(target.Requires) > 0 {
-			if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
-				for _, provided := range depTarget.ProvideFor(target) {
-					addDep(state, provided, label, false, forceBuild)
-				}
-				continue
-			}
-		}
-		addDep(state, dep, label, false, forceBuild)
-	}
-}
-
 func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) {
 	// Run over all the changed targets in this package and ensure that any newly added dependencies enter the build queue.
 	for target := range changed {
@@ -310,7 +224,7 @@ func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) 
 			}
 		}
 		if s := target.State(); s < core.Built && s > core.Inactive {
-			addDep(state, target.Label, core.OriginalTarget, true, false)
+			state.QueueTarget(target.Label, core.OriginalTarget, true, false)
 		}
 	}
 }

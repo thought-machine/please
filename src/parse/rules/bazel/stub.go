@@ -1,7 +1,7 @@
 // +build bootstrap
 
-// Package rules provides stubs for the builtin rules for Please.
-package rules
+// Package bazel provides stubs for Bazel extensions for Please.
+package bazel
 
 import "fmt"
 
