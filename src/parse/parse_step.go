@@ -118,11 +118,18 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 				return nil
 			}
 		}
-		msg := fmt.Sprintf("Parsed build file %s but it doesn't contain target %s", pkg.Filename, label.Name)
-		if dependor != core.OriginalTarget {
-			msg += fmt.Sprintf(" (depended on by %s)", dependor)
+		if state.Config.Bazel.Compatibility && forSubinclude {
+			// Bazel allows some things that look like build targets but aren't - notably the syntax
+			// to load(). It suits us to treat that as though it is one, but we now have to
+			// implicitly make it available.
+			exportFile(state, pkg, label)
+		} else {
+			msg := fmt.Sprintf("Parsed build file %s but it doesn't contain target %s", pkg.Filename, label.Name)
+			if dependor != core.OriginalTarget {
+				msg += fmt.Sprintf(" (depended on by %s)", dependor)
+			}
+			return fmt.Errorf(msg + suggestTargets(pkg, label, dependor))
 		}
-		return fmt.Errorf(msg + suggestTargets(pkg, label, dependor))
 	}
 	if state.ParsePackageOnly && !forSubinclude {
 		return nil // Some kinds of query don't need a full recursive parse.
@@ -282,4 +289,13 @@ func shouldProvide(paths []core.BuildLabel, label core.BuildLabel) bool {
 		}
 	}
 	return false
+}
+
+// exportFile adds a single-file export target. This is primarily used for Bazel compat.
+func exportFile(state *core.BuildState, pkg *core.Package, label core.BuildLabel) {
+	t := core.NewBuildTarget(label)
+	t.Subrepo = pkg.Subrepo
+	t.IsFilegroup = true
+	t.AddSource(core.NewFileLabel(label.Name, pkg))
+	state.AddTarget(pkg, t)
 }
