@@ -210,7 +210,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	s.Assert(s.state.Config.Bazel.Compatibility, "load() is only available in Bazel compatibility mode. See `plz help bazel` for more information.")
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
-	l := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
+	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.contextPkg)
 	filename := path.Join(l.PackageName, l.Name)
 	if l.Subrepo != "" {
 		subrepo := s.state.Graph.Subrepo(l.Subrepo)
