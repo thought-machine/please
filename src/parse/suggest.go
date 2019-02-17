@@ -26,3 +26,11 @@ func suggestTargets(pkg *core.Package, label, dependor core.BuildLabel) string {
 	// Use relative package labels where possible.
 	return strings.Replace(msg, "//"+pkg.Name+":", ":", -1)
 }
+
+// buildFileNames returns a descriptive version of the configured BUILD file names.
+func buildFileNames(l []string) string {
+	if len(l) == 1 {
+		return l[0]
+	}
+	return strings.Join(l[:len(l)-1], ", ") + " or " + l[len(l)-1]
+}

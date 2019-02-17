@@ -173,11 +173,11 @@ func parsePackage(state *core.BuildState, label, dependor core.BuildLabel, subre
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependor != core.OriginalTarget && exists {
-				return nil, fmt.Errorf("%s depends on %s, but there's no BUILD file in %s/", dependor, label, dir)
+				return nil, fmt.Errorf("%s depends on %s, but there's no %s file in %s/", dependor, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			} else if dependor != core.OriginalTarget {
 				return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist", dependor, label, dir)
 			} else if exists {
-				return nil, fmt.Errorf("Can't build %s; there's no BUILD file in %s/", label, dir)
+				return nil, fmt.Errorf("Can't build %s; there's no %s file in %s/", label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			}
 			return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
 		}
