@@ -231,7 +231,8 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 }
 
 func subinclude(s *scope, args []pyObject) pyObject {
-	t := subincludeTarget(s, subincludeLabel(s, args))
+	target := string(args[0].(pyString))
+	t := subincludeTarget(s, core.ParseBuildLabelContext(target, s.contextPkg))
 	pkg := s.contextPkg
 	if t.Subrepo != s.contextPkg.Subrepo {
 		pkg = &core.Package{
@@ -256,16 +257,6 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// lose track of it later on. It's hard to know what better to do at this point though.
 	s.contextPkg.RegisterSubinclude(l)
 	return t
-}
-
-// subincludeLabel returns the label for a subinclude() call (which might be indirect
-// if the given argument was a URL instead of a build label)
-func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
-	target := string(args[0].(pyString))
-	s.NAssert(strings.HasPrefix(target, ":"), "Subincludes cannot be from the local package")
-	label := core.ParseBuildLabelContext(target, s.contextPkg)
-	s.NAssert(s.pkg != nil && label.PackageName == s.pkg.Name, "Subincludes cannot be from the local package")
-	return label
 }
 
 func lenFunc(s *scope, args []pyObject) pyObject {

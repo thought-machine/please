@@ -6,3 +6,8 @@ plz_e2e_test(
     expected_failure = True,
     expect_output_contains = "isn't visible",
 )
+
+plz_e2e_test(
+    name = "inline_subinclude_test",
+    cmd = "plz query alltargets //test/parse/inline_subinclude:all",
+)
