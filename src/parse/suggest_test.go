@@ -50,6 +50,12 @@ func TestSuggestSeveralTargetsFromAnotherPackage(t *testing.T) {
 	assert.Equal(t, s, "\nMaybe you meant //src/core:target1 , //src/core:target21 or //src/core:target_21 ?")
 }
 
+func TestBuildFileNames(t *testing.T) {
+	assert.Equal(t, "BUILD", buildFileNames([]string{"BUILD"}))
+	assert.Equal(t, "BUILD or BUILD.plz", buildFileNames([]string{"BUILD", "BUILD.plz"}))
+	assert.Equal(t, "BUILD, BUILD.plz or BUILD.test", buildFileNames([]string{"BUILD", "BUILD.plz", "BUILD.test"}))
+}
+
 func makePackage(name string, targets ...string) *core.Package {
 	pkg := core.NewPackage(name)
 	for _, target := range targets {
