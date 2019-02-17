@@ -2,3 +2,6 @@
 [cache]
 dir = .plz-cache
 dircompress = true
+
+[buildconfig]
+ci = true

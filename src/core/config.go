@@ -19,7 +19,7 @@ import (
 
 	"github.com/google/shlex"
 	"github.com/jessevdk/go-flags"
-	"gopkg.in/gcfg.v1"
+	"github.com/peterebden/gcfg"
 
 	"github.com/thought-machine/please/src/cli"
 )

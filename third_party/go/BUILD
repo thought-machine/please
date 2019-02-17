@@ -23,15 +23,8 @@ go_get(
 
 go_get(
     name = "gcfg",
-    get = "gopkg.in/gcfg.v1",
-    install = [
-        "",
-        "scanner",
-        "token",
-        "types",
-    ],
-    patch = "gcfg_dynamic_fields.patch",
-    revision = "27e4946190b4a327b539185f2b5b1f7c84730728",
+    get = "github.com/peterebden/gcfg/...",
+    revision = "v1.3.0",
     deps = [
         ":warnings",
     ],
