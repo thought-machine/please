@@ -598,9 +598,6 @@ func (state *BuildState) WaitForBuiltTarget(l, dependor BuildLabel) *BuildTarget
 func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 	pkg.AddTarget(target)
 	state.Graph.AddTarget(target)
-	for _, dep := range target.DeclaredDependencies() {
-		state.Graph.AddDependencyForTarget(target, dep)
-	}
 	if target.IsFilegroup {
 		// At least register these guys as outputs.
 		// It's difficult to handle non-file sources because we don't know if they're
@@ -630,8 +627,11 @@ func (state *BuildState) QueueTarget(label, dependor BuildLabel, rescan, forceBu
 			state.AddPendingParse(label, dependor, forceBuild)
 			return
 		}
-		// Package is loaded but target doesn't exist in it.
-		log.Fatalf("Target %s (referenced by %s) doesn't exist\n", label, dependor)
+		// Package is loaded but target doesn't exist in it. Check again to avoid nasty races.
+		target = state.Graph.Target(label)
+		if target == nil {
+			log.Fatalf("Target %s (referenced by %s) doesn't exist\n", label, dependor)
+		}
 	}
 	if target.State() >= Active && !rescan && !forceBuild {
 		return // Target is already tagged to be built and likely on the queue.
