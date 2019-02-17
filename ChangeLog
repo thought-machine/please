@@ -1,3 +1,10 @@
+Version 13.4.4
+--------------
+
+    * Bunch of Bazel compat fixes
+    * Fixed visibility checking of subinclude()
+
+
 Version 13.4.3
 --------------
 
