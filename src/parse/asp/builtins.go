@@ -149,8 +149,8 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	args[21] = defaultFromConfig(s.config, args[21], "TEST_SANDBOX")
 	target := createTarget(s, args)
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
-	s.pkg.AddTarget(target)
 	populateTarget(s, target, args)
+	s.state.AddTarget(s.pkg, target)
 	if s.Callback {
 		// We are in a post-build function, so add the target directly to the graph now.
 		log.Debug("Adding new target %s directly to graph", target.Label)
@@ -210,8 +210,17 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	s.Assert(s.state.Config.Bazel.Compatibility, "load() is only available in Bazel compatibility mode. See `plz help bazel` for more information.")
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
-	l := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
-	s.SetAll(s.interpreter.Subinclude(path.Join(l.PackageName, l.Name), s.contextPkg), false)
+	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.contextPkg)
+	filename := path.Join(l.PackageName, l.Name)
+	if l.Subrepo != "" {
+		subrepo := s.state.Graph.Subrepo(l.Subrepo)
+		if subrepo == nil || subrepo.Target != nil {
+			subincludeTarget(s, l)
+			subrepo = s.state.Graph.SubrepoOrDie(l.Subrepo)
+		}
+		filename = subrepo.Dir(filename)
+	}
+	s.SetAll(s.interpreter.Subinclude(filename, s.contextPkg), false)
 	return None
 }
 
@@ -222,7 +231,8 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 }
 
 func subinclude(s *scope, args []pyObject) pyObject {
-	t := subincludeTarget(s, subincludeLabel(s, args))
+	target := string(args[0].(pyString))
+	t := subincludeTarget(s, core.ParseBuildLabelContext(target, s.contextPkg))
 	pkg := s.contextPkg
 	if t.Subrepo != s.contextPkg.Subrepo {
 		pkg = &core.Package{
@@ -231,6 +241,8 @@ func subinclude(s *scope, args []pyObject) pyObject {
 			Subrepo:     t.Subrepo,
 		}
 	}
+	l := pkg.Label()
+	s.Assert(l.CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, l)
 	for _, out := range t.Outputs() {
 		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), pkg), false)
 	}
@@ -245,16 +257,6 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// lose track of it later on. It's hard to know what better to do at this point though.
 	s.contextPkg.RegisterSubinclude(l)
 	return t
-}
-
-// subincludeLabel returns the label for a subinclude() call (which might be indirect
-// if the given argument was a URL instead of a build label)
-func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
-	target := string(args[0].(pyString))
-	s.NAssert(strings.HasPrefix(target, ":"), "Subincludes cannot be from the local package")
-	label := core.ParseBuildLabelContext(target, s.contextPkg)
-	s.NAssert(s.pkg != nil && label.PackageName == s.pkg.Name, "Subincludes cannot be from the local package")
-	return label
 }
 
 func lenFunc(s *scope, args []pyObject) pyObject {
@@ -752,6 +754,9 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		Target:         target,
 		State:          state,
 		IsCrossCompile: s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile,
+	}
+	if s.state.Config.Bazel.Compatibility && s.pkg.Name == "workspace" {
+		sr.Name = s.pkg.SubrepoArchName(name)
 	}
 	log.Debug("Registering subrepo %s in package %s", sr.Name, s.pkg.Label())
 	s.state.Graph.AddSubrepo(sr)

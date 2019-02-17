@@ -338,14 +338,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	for _, filename := range s.state.Config.Parse.BuildFileName {
 		s.Assert(filename != src, "You can't specify the BUILD file as an input to a rule")
 	}
-	if s.pkg.Subrepo != nil {
-		return core.SubrepoFileLabel{
-			File:        src,
-			Package:     s.pkg.Name,
-			FullPackage: s.pkg.Subrepo.Dir(s.pkg.Name),
-		}
-	}
-	return core.FileLabel{File: src, Package: s.pkg.Name}
+	return core.NewFileLabel(src, s.pkg)
 }
 
 // checkLabel checks that the given build label is not a pseudo-label.

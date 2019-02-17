@@ -36,7 +36,8 @@ def sh_library(name:str, src:str, deps:list=None, visibility:list=None, labels:l
     )
 
 
-def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:list&features&tags=None):
+def sh_binary(name:str, main:str|list&srcs, deps:list=None, visibility:list=None,
+              labels:list&features&tags=None):
     """Generates a shell script binary.
 
     It assumes that unzip is in your path.
@@ -53,6 +54,9 @@ def sh_binary(name:str, main:str, deps:list=None, visibility:list=None, labels:l
       visibility (list): Visibility declaration of the rule.
       labels (list): List of labels.
     """
+    if isinstance(main, list):
+        assert len(main) == 1, "srcs must be a single-element list"
+        main = main[0]
     # No need to go through zip/unzip and injecting code if there are no dependencies
     if deps:
         cmds = ' && '.join([

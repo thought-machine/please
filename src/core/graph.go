@@ -171,18 +171,23 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // AddDependency adds a dependency between two build targets.
 // The 'to' target doesn't necessarily have to exist in the graph yet (but 'from' must).
 func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
-	fromTarget := graph.targets[from]
+	graph.AddDependencyForTarget(graph.TargetOrDie(from), to)
+}
+
+// AddDependencyForTarget adds a dependency between two build targets.
+// The 'to' target doesn't necessarily have to exist in the graph yet.
+func (graph *BuildGraph) AddDependencyForTarget(fromTarget *BuildTarget, to BuildLabel) {
 	// We might have done this already; do a quick check here first.
 	if fromTarget.hasResolvedDependency(to) {
 		return
 	}
+	graph.mutex.Lock()
+	defer graph.mutex.Unlock()
 	toTarget, present := graph.targets[to]
 	// The dependency may not exist yet if we haven't parsed its package.
 	// In that case we stash it away for later.
 	if !present {
-		graph.addPendingRevDep(from, to, nil)
+		graph.addPendingRevDep(fromTarget.Label, to, nil)
 	} else {
 		graph.linkDependencies(fromTarget, toTarget)
 	}
