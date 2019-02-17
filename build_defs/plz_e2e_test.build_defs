@@ -9,9 +9,11 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
 
     def _e2e_test_cmd(cmd):
         profile_flag = '--profile ci -o buildconfig.ci:true' if CONFIG.get('CI') else ''
-        cmd = cmd.replace('plz ', f'$(location //src:please) --nolock {profile_flag} --profile test --log_file plz-out/log/{name}.log ')
+        if package_name().startswith('test/parse'):
+            profile_flag += ' -o parse.buildfilename:BUILD -o parse.buildfilename:BUILD.plz -o parse.buildfilename:BUILD.test '
+        cmd = cmd.replace('plz ', f'$(location //src:please) --nolock -o cache.rpcurl:"" {profile_flag} -o cache.dirclean:false --log_file plz-out/log/{name}.log ')
         if expected_failure:
-            test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then echo "unexpected success"; exit 1; fi; ' % cmd
+            test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd
         else:
             test_cmd = '%s 2>&1 | tee output && ' % cmd
         if expected_output and expect_output_contains:
