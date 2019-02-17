@@ -487,9 +487,6 @@ func (config *Configuration) Hash() []byte {
 	// These fields are the ones that need to be in the general hash; other things will be
 	// picked up by relevant rules (particularly tool paths etc).
 	// Note that container settings are handled separately.
-	for _, f := range config.Parse.BuildFileName {
-		h.Write([]byte(f))
-	}
 	h.Write([]byte(config.Build.Lang))
 	h.Write([]byte(config.Build.Nonce))
 	for _, l := range config.Licences.Reject {
