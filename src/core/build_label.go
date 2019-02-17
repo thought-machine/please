@@ -363,6 +363,41 @@ func (label BuildLabel) SubrepoLabel() BuildLabel {
 	return BuildLabel{Name: label.Subrepo}
 }
 
+// CanSee returns true if label can see the given dependency, or false if not.
+func (label BuildLabel) CanSee(state *BuildState, dep *BuildTarget) bool {
+	// Targets are always visible to other targets in the same directory.
+	if label.PackageName == dep.Label.PackageName {
+		return true
+	} else if dep.Label.isExperimental(state) && !label.isExperimental(state) {
+		log.Error("Target %s cannot depend on experimental target %s", label, dep.Label)
+		return false
+	}
+	parent := label.Parent()
+	for _, vis := range dep.Visibility {
+		if vis.Includes(parent) {
+			return true
+		}
+	}
+	if dep.Label.PackageName == parent.PackageName {
+		return true
+	}
+	if label.isExperimental(state) {
+		log.Warning("Visibility restrictions suppressed for %s since %s is in the experimental tree", dep.Label, label)
+		return true
+	}
+	return false
+}
+
+// isExperimental returns true if this label is in the "experimental" tree
+func (label BuildLabel) isExperimental(state *BuildState) bool {
+	for _, exp := range state.experimentalLabels {
+		if exp.Includes(label) {
+			return true
+		}
+	}
+	return false
+}
+
 // Complete implements the flags.Completer interface, which is used for shell completion.
 // Unfortunately it's rather awkward to handle here; we need to do a proper parse in order
 // to find out what the possible build labels are, and we're not ready for that yet.
