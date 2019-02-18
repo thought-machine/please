@@ -1,3 +1,9 @@
+Version 13.4.5
+--------------
+
+    * Fixed some post-build functions that were incorrectly erroring.
+
+
 Version 13.4.4
 --------------
 

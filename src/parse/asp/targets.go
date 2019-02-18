@@ -383,7 +383,6 @@ type postBuildFunction struct {
 }
 
 func (f *postBuildFunction) Call(target *core.BuildTarget, output string) error {
-	log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, output)
 	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label))
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))

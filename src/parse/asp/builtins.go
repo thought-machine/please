@@ -152,10 +152,7 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	populateTarget(s, target, args)
 	s.state.AddTarget(s.pkg, target)
 	if s.Callback {
-		// We are in a post-build function, so add the target directly to the graph now.
-		log.Debug("Adding new target %s directly to graph", target.Label)
 		target.AddedPostBuild = true
-		s.state.Graph.AddTarget(target)
 		s.pkg.MarkTargetModified(target)
 	}
 	return pyString(":" + target.Label.Name)
