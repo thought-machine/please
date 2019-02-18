@@ -94,7 +94,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
         # TODO(agenticarus): Turn `resources` into a first-class construct, and just use them in `deps` normally.
         # Can't run javac since there are no java files.
         if resources_root:
-            cmd = 'cd ${PKG}/%s && $TOOL z -d -o ${OUT} -i .' % resources_root
+            cmd = 'cd ${PKG_DIR}/%s && $TOOL z -d -o ${OUT} -i .' % resources_root
         else:
             cmd = '$TOOL z -d -o ${OUTS} -i .'
         return build_rule(
