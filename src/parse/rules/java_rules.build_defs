@@ -435,7 +435,6 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
             visibility=visibility,
             cmd=cmd + ' -e "_src.jar"',
             tools=tools,
-            licences=licences,
         )
     elif not deps_only:
         return maven_jar(
@@ -446,7 +445,6 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
             deps = deps + [f':_{name}#deps'],
             visibility=visibility,
             filename=filename,
-            licences=licences,
         )
     else:
         return build_rule(
@@ -456,7 +454,6 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
             cmd='true',  # do nothing!
             visibility=visibility,
             requires=['java'],
-            licences=licences,
         )
 
 
