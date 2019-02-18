@@ -211,7 +211,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	filename := path.Join(l.PackageName, l.Name)
 	if l.Subrepo != "" {
 		subrepo := s.state.Graph.Subrepo(l.Subrepo)
-		if subrepo == nil || subrepo.Target != nil {
+		if subrepo == nil || (subrepo.Target != nil && subrepo != s.contextPkg.Subrepo) {
 			subincludeTarget(s, l)
 			subrepo = s.state.Graph.SubrepoOrDie(l.Subrepo)
 		}
@@ -757,5 +757,5 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	}
 	log.Debug("Registering subrepo %s in package %s", sr.Name, s.pkg.Label())
 	s.state.Graph.AddSubrepo(sr)
-	return None
+	return pyString("///" + sr.Name)
 }

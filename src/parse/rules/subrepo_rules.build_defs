@@ -47,7 +47,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=Non
                     section.
       visibility: Deprecated, has no effect.
     """
-    new_http_archive(
+    return new_http_archive(
         name = name,
         urls = urls,
         strip_prefix = strip_prefix,
@@ -119,7 +119,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         outs = [name],
         cmd = cmd,
     )
-    subrepo(
+    return subrepo(
         name = name,
         dep = extract_rule,
         config = config,
