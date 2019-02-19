@@ -166,7 +166,12 @@ int contain(char* argv[]) {
             return 1;
         }
     }
-    return execvp(argv[0], argv);
+    if (execvp(argv[0], argv) != 0) {
+        fprintf(stderr, "exec %s: ", argv[0]);
+        perror("");
+        return 1;
+    }
+    return 0;
 }
 
 #else
