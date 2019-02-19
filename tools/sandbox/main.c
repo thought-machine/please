@@ -85,6 +85,14 @@ int map_ids(int out_id, const char* path) {
 
 // mount_tmp mounts a tmpfs on /tmp for the tests to muck about in.
 int mount_tmp() {
+    // Don't mount on /tmp if our tmp dir is under there, otherwise we won't be able to see it.
+    const char* dir = getenv("TMP_DIR");
+    if (dir) {
+        if (strncmp(dir, "/tmp/", 5) == 0) {
+            fputs("Not mounting tmpfs on /tmp since TMP_DIR is a subdir\n", stderr);
+            return 0;
+        }
+    }
     // Remounting / as private is necessary so that the tmpfs mount isn't visible to anyone else.
     if (mount("none", "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0) {
         perror("remount");
@@ -98,16 +106,16 @@ int mount_tmp() {
     return setenv("TMPDIR", "/tmp", 1);
 }
 
-// mount_test bind mounts the test directory to
+// mount_test bind mounts the test directory to /tmp/plz_sandbox.
 int mount_test() {
     const char* d = "/tmp/plz_sandbox";
-    const char* dir = getenv("TEST_DIR");
+    const char* dir = getenv("TMP_DIR");
     if (!dir) {
-        fputs("TEST_DIR not set, will not bind-mount to /tmp/test\n", stderr);
+        fputs("TMP_DIR not set, will not bind-mount to /tmp/plz_sandbox\n", stderr);
         return 0;
     }
     if (mkdir(d, S_IRWXU) != 0) {
-        perror("mkdir /tmp/test");
+        perror("mkdir /tmp/plz_sandbox");
         return 1;
     }
     if (mount(dir, d, "", MS_BIND, NULL) != 0) {
@@ -127,7 +135,14 @@ int mount_test() {
 int contain(char* argv[]) {
     const uid_t uid = getuid();
     const uid_t gid = getgid();
-    if (unshare(CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) != 0) {
+    int flags = CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS;
+    const int sandbox_net = !getenv("PLZ_SANDBOX_NO_NET");
+    if (sandbox_net) {
+        flags |= CLONE_NEWNET;
+    } else {
+        fputs("PLZ_SANDBOX_NO_NET set, no new network namespace will be created\n", stderr);
+    }
+    if (unshare(flags) != 0) {
         perror("unshare");
         fputs("Your user doesn't seem to have enough permissions to call unshare(2).\n", stderr);
         fputs("please_sandbox requires support for user namespaces (usually >= Linux 3.10)\n", stderr);
@@ -146,8 +161,10 @@ int contain(char* argv[]) {
     if (mount_test() != 0) {
         return 1;
     }
-    if (lo_up() != 0) {
-        return 1;
+    if (sandbox_net) {
+        if (lo_up() != 0) {
+            return 1;
+        }
     }
     return execvp(argv[0], argv);
 }
