@@ -191,8 +191,6 @@ func TestHashReplacement(t *testing.T) {
 
 	target2 := makeTarget("//path/to:target2", "cp $< $@", nil)
 	target := makeTarget("//path/to:target", "echo $(hash //path/to:target2)", target2)
-	assert.Panics(t, func() { replaceSequences(state, target) }, "Can't use $(hash ) on a non-stamped target")
-	target.Stamp = true
 	// Note that this hash is determined arbitrarily, it doesn't matter for this test
 	// precisely what its value is.
 	assert.Equal(t, "echo gB4sUwsLkB1ODYKUxYrKGlpdYUI", replaceSequences(state, target))

@@ -123,9 +123,6 @@ func replaceSequencesInternal(state *core.BuildState, target *core.BuildTarget, 
 		return replaceSequence(state, target, in[6:len(in)-1], false, true, true, false, false, test)
 	})
 	cmd = hashReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
-		if !target.Stamp {
-			panic(fmt.Sprintf("Target %s can't use $(hash ) replacements without stamp=True", target.Label))
-		}
 		return replaceSequence(state, target, in[7:len(in)-1], false, true, true, false, true, test)
 	})
 	if state.Config.Bazel.Compatibility {
