@@ -151,5 +151,6 @@ func build(state *core.BuildState, labels []core.BuildLabel, callback CallbackFu
 	ns.CleanWorkdirs = state.CleanWorkdirs
 	ns.DebugTests = state.DebugTests
 	ns.ShowAllOutput = state.ShowAllOutput
+	ns.StartTime = time.Now()
 	callback(ns, labels)
 }
