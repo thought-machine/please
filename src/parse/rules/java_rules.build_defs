@@ -351,6 +351,8 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
                         have a top-level target as a facade which doesn't have actual code.
       optional (list): List of optional dependencies to fetch. By default we fetch none of them.
     """
+    log.warning('The builtin maven_jars is deprecated, please look at using ' +
+                'https://github.com/thought-machine/pleasings/blob/master/java/maven_jars.build_defs instead')
     if id:
         ids += [id]
     for id in ids:

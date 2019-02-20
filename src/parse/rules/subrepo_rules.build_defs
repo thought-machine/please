@@ -153,7 +153,7 @@ def new_local_repository(name:str, path:str):
 
 
 def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:str|list=None,
-                config:str=None, bazel_compat:bool=False):
+                strip_prefix:str=None, config:str=None, bazel_compat:bool=False):
     """Defines a new subrepo corresponding to a Github project.
 
     This is a convenience alias to the more general new_http_archive. It knows how to
@@ -165,6 +165,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
       revision: Revision to download.
       build_file: The file to use as a BUILD file for this subrepository.
       hashes: List of hashes to verify the rule with.
+      strip: Prefix to strip from the contents of the zip. Is usually autodetected for you.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
@@ -175,7 +176,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
     return new_http_archive(
         name = name,
         urls = [f'https://github.com/{org}/{repo}/archive/{revision}.zip'],
-        strip_prefix = f'{repo}-{revision}',
+        strip_prefix = strip_prefix or f'{repo}-{revision}',
         build_file = build_file,
         hashes = hashes,
         config = config,

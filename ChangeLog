@@ -1,3 +1,9 @@
+Version 13.4.6
+--------------
+
+    * Fixed 'licences' error in maven_jars. Now issues a deprecation warning.
+
+
 Version 13.4.5
 --------------
 
