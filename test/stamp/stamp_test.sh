@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [ "`$DATA`" = "12345" ]; then
     echo "Stamped variable has not been replaced correctly."
