@@ -27,4 +27,6 @@ type Response struct {
 	Messages []string `json:"messages"`
 	// The contents of the BUILD file that should be assumed for this directory, if it's a parse request.
 	BuildFile string `json:"build_file"`
+	// If this is non-empty it replaces the existing test command.
+	Command string `json:"command"`
 }

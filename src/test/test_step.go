@@ -570,14 +570,18 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
 func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
-	workerCmd, _, _ := build.TestWorkerCommand(state, target)
+	workerCmd, _, testCmd := build.TestWorkerCommand(state, target)
 	if workerCmd == "" {
 		return "", nil
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Starting test worker...")
-	err := worker.EnsureWorkerStarted(state, workerCmd, target)
+	resp, err := worker.EnsureWorkerStarted(state, workerCmd, testCmd, target)
 	if err == nil {
 		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
+		if resp.Command != "" {
+			log.Debug("Setting test command for %s to %s", target.Label, resp.Command)
+			target.TestCommand = resp.Command
+		}
 	}
 	return workerCmd, err
 }

@@ -155,7 +155,7 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
     if strip:
         cmd += ' --strip_py'
-    build_rule(
+    return build_rule(
         name=name,
         srcs=[pex_rule],
         deps=[lib_rule],
@@ -260,7 +260,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         deps += [worker]
 
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
-    build_rule(
+    return build_rule(
         name=name,
         srcs=[pex_rule],
         deps=deps,

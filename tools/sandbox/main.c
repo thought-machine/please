@@ -135,14 +135,7 @@ int mount_test() {
 int contain(char* argv[]) {
     const uid_t uid = getuid();
     const uid_t gid = getgid();
-    int flags = CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS;
-    const int sandbox_net = !getenv("PLZ_SANDBOX_NO_NET");
-    if (sandbox_net) {
-        flags |= CLONE_NEWNET;
-    } else {
-        fputs("PLZ_SANDBOX_NO_NET set, no new network namespace will be created\n", stderr);
-    }
-    if (unshare(flags) != 0) {
+    if (unshare(CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS | CLONE_NEWNET) != 0) {
         perror("unshare");
         fputs("Your user doesn't seem to have enough permissions to call unshare(2).\n", stderr);
         fputs("please_sandbox requires support for user namespaces (usually >= Linux 3.10)\n", stderr);
@@ -161,10 +154,8 @@ int contain(char* argv[]) {
     if (mount_test() != 0) {
         return 1;
     }
-    if (sandbox_net) {
-        if (lo_up() != 0) {
-            return 1;
-        }
+    if (lo_up() != 0) {
+      return 1;
     }
     if (execvp(argv[0], argv) != 0) {
         fprintf(stderr, "exec %s: ", argv[0]);
