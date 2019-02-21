@@ -228,6 +228,7 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 }
 
 func subinclude(s *scope, args []pyObject) pyObject {
+	s.NAssert(s.contextPkg == nil, "Cannot subinclude() from this context")
 	target := string(args[0].(pyString))
 	t := subincludeTarget(s, core.ParseBuildLabelContext(target, s.contextPkg))
 	pkg := s.contextPkg
