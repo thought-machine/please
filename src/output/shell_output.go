@@ -483,7 +483,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 		target := state.Graph.TargetOrDie(label)
 		cmd := target.GetCommand(state)
 		dir := target.TmpDir()
-		env := core.BuildEnvironment(state, target)
+		env := core.StampedBuildEnvironment(state, target, nil)
 		if state.NeedTests {
 			cmd = target.GetTestCommand(state)
 			dir = path.Join(core.RepoRoot, target.TestDir())
