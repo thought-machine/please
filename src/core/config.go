@@ -527,14 +527,7 @@ func (config *Configuration) Path() []string {
 	return config.buildEnvStored.Path
 }
 
-func (config *Configuration) getBuildEnv(expanded bool) []string {
-	maybeExpandHomePath := func(s string) string {
-		if !expanded {
-			return s
-		}
-		return ExpandHomePath(s)
-	}
-
+func (config *Configuration) getBuildEnv(includePath bool) []string {
 	env := []string{
 		// Need to know these for certain rules.
 		"ARCH=" + config.Build.Arch.Arch,
@@ -554,23 +547,22 @@ func (config *Configuration) getBuildEnv(expanded bool) []string {
 	}
 
 	// from the user's environment based on the PassEnv config keyword
-	path := false
 	for _, k := range config.Build.PassEnv {
 		if v, isSet := os.LookupEnv(k); isSet {
 			if k == "PATH" {
 				// plz's install location always needs to be on the path.
-				v = maybeExpandHomePath(config.Please.Location) + ":" + v
-				path = true
+				v = ExpandHomePath(config.Please.Location) + ":" + v
+				includePath = false // skip this in a bit
 			}
 			env = append(env, k+"="+v)
 		}
 	}
-	if !path {
+	if includePath {
 		// Use a restricted PATH; it'd be easier for the user if we pass it through
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+maybeExpandHomePath(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")))
+		env = append(env, "PATH="+ExpandHomePath(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")))
 	}
 
 	sort.Strings(env)
