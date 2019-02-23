@@ -23,6 +23,7 @@ go_library(
     deps = [
         "//src/cli",
         "//src/fs",
+        "//src/scm",
         "//third_party/go:gcfg",
         "//third_party/go:go-flags",
         "//third_party/go:godirwalk",

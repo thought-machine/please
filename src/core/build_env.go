@@ -5,8 +5,10 @@ import (
 	"path"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/scm"
 )
 
 // ExpandHomePath is an alias to the function in fs for compatibility.
@@ -153,9 +155,21 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte) BuildEnv {
 	env := BuildEnvironment(state, target)
 	if target.Stamp {
+		stampEnvOnce.Do(initStampEnv)
+		env = append(env, stampEnv...)
 		return append(env, "STAMP="+base64.RawURLEncoding.EncodeToString(stamp))
 	}
 	return env
+}
+
+// stampEnv is the generic (i.e. non-target-specific) environment variables we pass to a
+// build rule marked with stamp=True.
+var stampEnv BuildEnv
+var stampEnvOnce sync.Once
+
+func initStampEnv() {
+	git := scm.NewGit(RepoRoot)
+	stampEnv = BuildEnv{"SCM_REVISION=" + git.CurrentRevIdentifier()}
 }
 
 func toolPath(state *BuildState, tool BuildInput) string {
