@@ -421,11 +421,11 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 						Failures:   testSuite.Failures(),
 						Skipped:    testSuite.Skips(),
 						timed:      timed{testSuite.Duration.Seconds()},
-						Properties: toXmlProperties(testSuite.Properties),
+						Properties: toXMLProperties(testSuite.Properties),
 					}
 				}
 				for _, testCase := range testSuite.TestCases {
-					xmlTest := toXmlTestCase(testCase)
+					xmlTest := toXMLTestCase(testCase)
 					if xmlTest.ClassName == "" {
 						xmlTest.ClassName = testSuite.JavaStyleName()
 					}
@@ -433,7 +433,7 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 				}
 				xmlSuites[testSuite.JavaStyleName()] = xmlTestSuite
 				for _, testCase := range testSuite.TestCases {
-					xmlTest := toXmlTestCase(testCase)
+					xmlTest := toXMLTestCase(testCase)
 					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
 				}
 			}
@@ -450,7 +450,7 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	}
 }
 
-func toXmlProperties(props map[string]string) jUnitXMLProperties {
+func toXMLProperties(props map[string]string) jUnitXMLProperties {
 	out := jUnitXMLProperties{}
 	for k, v := range props {
 		out.Property = append(out.Property, jUnitXMLProperty{
@@ -461,7 +461,7 @@ func toXmlProperties(props map[string]string) jUnitXMLProperties {
 	return out
 }
 
-func toXmlTestCase(result core.TestCase) jUnitXMLTest {
+func toXMLTestCase(result core.TestCase) jUnitXMLTest {
 	testcase := jUnitXMLTest{
 		ClassName: result.ClassName,
 		Name:      result.Name,
