@@ -19,4 +19,7 @@ for TARGET in `plz query alltargets --include go_src --hidden | grep -v "_test#l
     fi
 done
 
-plz run //tools/misc:buildify -p -- --mode=check || exit 1
+plz run //tools/misc:buildify -p -- --mode=check || {
+    echo "BUILD files are not correctly formatted; run plz buildify to fix."
+    exit 1
+}
