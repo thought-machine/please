@@ -2,9 +2,9 @@ package langserver
 
 import (
 	"context"
-	"github.com/thought-machine/please/src/core"
 	"encoding/json"
 	"fmt"
+	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/query"
 	"strings"
 

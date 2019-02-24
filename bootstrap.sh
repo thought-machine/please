@@ -89,11 +89,3 @@ plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --lo
 # finicky about some things due to running plz recursively and disabling the lock.
 notice "Running end-to-end tests..."
 plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/test_build.log --log_file_level 4 $@
-
-# Lint needs python3.
-if hash python3 2>/dev/null ; then
-    # Don't run this in CI or any unusual workflows.
-    if [ $# -eq 0 ] ; then
-        plz lint
-    fi
-fi

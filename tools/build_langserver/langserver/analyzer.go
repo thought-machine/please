@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"path"
 	"path/filepath"
-	"query"
 	"regexp"
 	"sort"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/parse/rules"
 	"github.com/thought-machine/please/src/plz"
+	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 

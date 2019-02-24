@@ -3,11 +3,17 @@
 
 package output
 
-import "encoding/json"
-import "fmt"
-import "os"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
 
-import "github.com/thought-machine/please/src/core"
+	"gopkg.in/op/go-logging.v1"
+
+	"github.com/thought-machine/please/src/core"
+)
+
+var log = logging.MustGetLogger("output")
 
 var traces = make([]traceEntry, 0, 1000)
 

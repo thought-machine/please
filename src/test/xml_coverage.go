@@ -3,9 +3,9 @@
 package test
 
 import (
+	"encoding/xml"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
-	"encoding/xml"
 	"math"
 	"path"
 	"strings"
@@ -118,12 +118,12 @@ func getLineCoverageInfo(lineCover []core.LineCoverage) ([]line, int, int) {
 		if status == core.Covered {
 			line := line{Hits: 1, Number: index}
 			lines = append(lines, line)
-			covered += 1
-			total += 1
+			covered++
+			total++
 		} else if status == core.Uncovered {
 			line := line{Hits: 0, Number: index}
 			lines = append(lines, line)
-			total += 1
+			total++
 		}
 	}
 

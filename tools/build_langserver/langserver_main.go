@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/tools/build_langserver/langserver"
 	"net"
 	"os"
 
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
+
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/tools/build_langserver/langserver"
 )
 
 // TODO(bnmetrics): also think about how we can implement this with .build_defs as well

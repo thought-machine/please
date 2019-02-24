@@ -3,8 +3,8 @@ package langserver
 import (
 	"bufio"
 	"context"
-	"github.com/thought-machine/please/src/core"
 	"fmt"
+	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"io/ioutil"
 	"os"

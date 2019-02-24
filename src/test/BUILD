@@ -3,7 +3,6 @@ go_library(
     srcs = glob(
         ["*.go"],
         exclude = [
-            "*_stub.go",
             "*_test.go",
         ],
     ),

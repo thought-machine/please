@@ -1,8 +1,8 @@
 package query
 
 import (
-	"github.com/thought-machine/please/src/core"
 	"fmt"
+	"github.com/thought-machine/please/src/core"
 	"path"
 )
 

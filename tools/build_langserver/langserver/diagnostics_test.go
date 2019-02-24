@@ -2,8 +2,8 @@ package langserver
 
 import (
 	"context"
-	"testing"
 	"github.com/thought-machine/please/tools/build_langserver/lsp"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )

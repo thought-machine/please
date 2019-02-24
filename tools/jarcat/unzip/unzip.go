@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"third_party/go/zip"
+	"github.com/thought-machine/please/third_party/go/zip"
 )
 
 // concurrency controls the maximum level of concurrency we'll allow.

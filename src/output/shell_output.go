@@ -16,15 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/test"
 )
-
-var log = logging.MustGetLogger("output")
 
 // durationGranularity is the granularity that we build durations at.
 const durationGranularity = 10 * time.Millisecond

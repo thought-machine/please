@@ -2,8 +2,8 @@ package langserver
 
 import (
 	"context"
-	"github.com/thought-machine/please/src/core"
 	"fmt"
+	"github.com/thought-machine/please/src/core"
 
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/tools/build_langserver/lsp"

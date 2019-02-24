@@ -8,8 +8,8 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-// CopySurefireXmlFilesToDir copies all the XML test results files into the given directory.
-func CopySurefireXmlFilesToDir(state *core.BuildState, surefireDir string) {
+// CopySurefireXMLFilesToDir copies all the XML test results files into the given directory.
+func CopySurefireXMLFilesToDir(state *core.BuildState, surefireDir string) {
 	for _, label := range state.ExpandOriginalLabels() {
 		target := state.Graph.TargetOrDie(label)
 		if state.ShouldInclude(target) && target.IsTest && !target.NoTestOutput {
