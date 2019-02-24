@@ -82,7 +82,7 @@ type TextDocumentItem struct {
 // TextDocumentClientCapabilities define capabilities the editor / tool provides on text documents.
 // TODO: work out if this is being dynamically filled in
 type TextDocumentClientCapabilities struct {
-	Completion Completion `json:"completion, omitempty"`
+	Completion Completion `json:"completion,omitempty"`
 }
 
 // Completion is Capabilities specific to the `textDocument/completion`, referenced in TextDocumentClientCapabilities
@@ -112,5 +112,5 @@ type Completion struct {
 	 */
 	CompletionItemKind struct {
 		ValueSet []CompletionItemKind `json:"valueSet,omitempty"`
-	} `json:"completionItem,omitempty"`
+	} `json:"completionItemKind,omitempty"`
 }
