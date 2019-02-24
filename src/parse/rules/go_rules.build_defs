@@ -42,7 +42,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     src_labels = []
     private = out.startswith('_')
     if _link_private or not private:
-        src_labels = ['link:plz-out/go/src/${PKG}']
+        src_labels = ['link:plz-out/go/src/${PKG}', 'go_src']
         if not private:
             labels = ['link:plz-out/go/pkg/${OS}_${ARCH}/${PKG}']
         libname = out[:-2] if len(out) > 2 else out
