@@ -12,9 +12,11 @@ for TARGET in `plz query alltargets --include go_src --hidden | grep -v "_test#l
             echo Failed: go vet -tags bootstrap $FILTERED
             exit 1;
         }
+        if [ "`gofmt -s -l $FILTERED`" != "" ]; then
+            echo "Files are not gofmt'd: gofmt -s -l" $FILTERED
+            exit 1;
+        fi
     fi
 done
 
-# for DIR in `git ls-files | grep "\.go" | grep -v _test.go | grep -v test_data | xargs dirname | sort | uniq`; do
-#     go vet -tags bootstrap $DIR/*.go
-# done
+plz run //tools/misc:buildify -p -- --mode=check || exit 1
