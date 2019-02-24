@@ -3,9 +3,9 @@
 package test
 
 import (
+	"encoding/xml"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
-	"encoding/xml"
 	"math"
 	"path"
 	"strings"

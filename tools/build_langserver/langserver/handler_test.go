@@ -2,13 +2,13 @@ package langserver
 
 import (
 	"context"
-	"github.com/thought-machine/please/src/core"
 	"github.com/sourcegraph/jsonrpc2"
 	"github.com/stretchr/testify/assert"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/tools/build_langserver/lsp"
 	"net"
 	"strings"
 	"testing"
-	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
 // TODO(bnm): cleanup

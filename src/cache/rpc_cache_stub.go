@@ -6,8 +6,8 @@
 package cache
 
 import (
-	"github.com/thought-machine/please/src/core"
 	"fmt"
+	"github.com/thought-machine/please/src/core"
 )
 
 func newRPCCache(config *core.Configuration) (*httpCache, error) {

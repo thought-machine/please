@@ -1,9 +1,9 @@
 package intellij
 
 import (
-	"github.com/thought-machine/please/src/core"
 	"encoding/xml"
 	"fmt"
+	"github.com/thought-machine/please/src/core"
 	"io"
 )
 
@@ -25,7 +25,7 @@ func (misc *Misc) toXML(w io.Writer) {
 	w.Write([]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"))
 	content, err := xml.MarshalIndent(misc, "", "   ")
 
-	if err  == nil {
+	if err == nil {
 		w.Write(content)
 	}
 }
@@ -72,8 +72,8 @@ func newMiscOutput() MiscOutput {
 
 // Modules are the main structure that tells IntelliJ where to find all the modules it knows about.
 type Modules struct {
-	XMLName xml.Name `xml:"project"`
-	Version int `xml:"version,attr"`
+	XMLName   xml.Name         `xml:"project"`
+	Version   int              `xml:"version,attr"`
 	Component ModulesComponent `xml:"component"`
 }
 
@@ -88,15 +88,15 @@ func (modules *Modules) toXML(w io.Writer) {
 	w.Write([]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"))
 	content, err := xml.MarshalIndent(modules, "", "   ")
 
-	if err  == nil {
+	if err == nil {
 		w.Write(content)
 	}
 }
 
 // ModulesComponent represents all modules in the workspace.
 type ModulesComponent struct {
-	XMLName xml.Name  `xml:"component"`
-	Name string `xml:"name,attr"`
+	XMLName xml.Name        `xml:"component"`
+	Name    string          `xml:"name,attr"`
 	Modules []ModulesModule `xml:"modules>module"`
 }
 
@@ -122,7 +122,7 @@ type ModulesModule struct {
 func newModulesModule(label core.BuildLabel) ModulesModule {
 	filePath := "$PROJECT_DIR$/" + label.PackageDir() + "/" + fmt.Sprintf("%s.iml", moduleName(label))
 	return ModulesModule{
-		FileURL:  "file://"+filePath,
+		FileURL:  "file://" + filePath,
 		FilePath: filePath,
 	}
 }

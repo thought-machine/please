@@ -125,8 +125,8 @@ type MarkedString struct {
 
 // MarkupContent represents a string value which content can be represented in different formats.
 type MarkupContent struct {
-	Kind 	MarkupKind  `json:"kind"`
-	Value 	string 		`json:"value"`
+	Kind  MarkupKind `json:"kind"`
+	Value string     `json:"value"`
 }
 
 // MarkupKind Describes the content type that a client supports in various result literals
