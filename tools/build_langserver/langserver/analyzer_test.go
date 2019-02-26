@@ -23,7 +23,7 @@ func TestNewAnalyzer(t *testing.T) {
 	assert.NotEqual(t, nil, a.BuiltIns)
 
 	goLibrary := a.BuiltIns["go_library"]
-	assert.Equal(t, 15, len(goLibrary.ArgMap))
+	assert.Equal(t, 16, len(goLibrary.ArgMap))
 	assert.Equal(t, true, goLibrary.ArgMap["name"].Required)
 
 	// check preloadBuildDefs has being loaded
