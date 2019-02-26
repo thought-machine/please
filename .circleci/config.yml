@@ -3,15 +3,15 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20190201
+       - image: thoughtmachine/please_ubuntu:20190226
      environment:
        PLZ_ARGS: "-p --profile ci"
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-linux-v2-{{ checksum "go.mod" }}
+           key: go-mod-linux-v3-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-main-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v2-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-main-{{ checksum "third_party/python/BUILD" }}
        - run:
@@ -34,11 +34,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-linux-v2-{{ checksum "go.mod" }}
+           key: go-mod-linux-v3-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-main-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v2-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-linux-main-{{ checksum "third_party/python/BUILD" }}
