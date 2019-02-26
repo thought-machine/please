@@ -1,7 +1,7 @@
 go_library(
     name = "asm",
     srcs = ["asm.go"],
-    asm_srcs = ["add.S"],
+    asm_srcs = ["add.s"],
 )
 
 go_test(
