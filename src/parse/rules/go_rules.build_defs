@@ -16,7 +16,7 @@ _LINK_PKGS_CMD = ' '.join([
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
-               filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=False):
+               filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -51,19 +51,6 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             # a subdirectory for go to be able to transparently import them.
             src_labels += [f'link:plz-out/go/src/$PKG/{libname}']
     if asm_srcs:
-        abi_rule = build_rule(
-            name = name,
-            tag = 'abi',
-            srcs = {
-                'asm': asm_srcs,
-                'hdrs': hdrs,
-            },
-            outs = [name + '.abi'],
-            building_description = 'Creating ABI...',
-            cmd = 'eval `$TOOL env` && $TOOL tool asm -trimpath $TMP_DIR -I ${GOROOT}/pkg/include -D GOOS_${OS} -D GOARCH_${ARCH} -gensymabis -o $OUT $SRCS_ASM',
-            tools=[CONFIG.GO_TOOL],
-            test_only = test_only,
-        )
         lib_rule = go_library(
             name = f'_{name}#lib',
             srcs = srcs,
@@ -71,7 +58,6 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             test_only = test_only,
             complete = False,
             cover = cover,
-            _abi = abi_rule,
             _needs_transitive_deps = _needs_transitive_deps,
             _all_srcs = _all_srcs,
         )
@@ -81,7 +67,6 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             srcs = {
                 'asm': asm_srcs,
                 'hdrs': hdrs,
-                'hdr': [lib_rule + '|h'],
             },
             outs = [name + '.o'],
             building_description = 'Assembling...',
@@ -92,7 +77,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         return build_rule(
             name = name,
             srcs = {
-                'lib': [lib_rule + '|o'],
+                'lib': [lib_rule],
                 'asm': [asm_rule],
             },
             outs=[out],
@@ -122,24 +107,12 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     if filter_srcs:
         tools['filter'] = [CONFIG.GO_FILTER_TOOL]
 
-    if _abi:
-        outs = {
-            'o': [out],
-            'h': [name + '.h'],
-        }
-        srcs = {
-            'go': srcs,
-            'abi': [_abi],
-        }
-    else:
-        outs = [out]
-
     return build_rule(
         name=name,
         srcs=srcs,
         deps=deps + [src_rule],
-        outs=outs,
-        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi),
+        outs=[out],
+        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs),
         visibility=visibility,
         building_description="Compiling...",
         requires=['go', 'go_src'] if _all_srcs else ['go'],
@@ -725,16 +698,12 @@ def _replace_test_package(name, output, static, definitions, cgo):
                     set_command(lib, k, f'mv -f $PKG_DIR/{new_name}.a $PKG_DIR/{pkg_name}.a && {v}')
 
 
-def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
+def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True):
     """Returns the commands to run for building a Go library."""
     filter_cmd = 'export SRCS="$(${TOOLS_FILTER} ${SRCS})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
-    compile_cmd = '$TOOLS_GO tool compile -trimpath $TMP_DIR %s%s -pack ' % (complete_flag, _GOPATH)
-    if abi:
-        compile_cmd += ' -o $OUTS_O -symabis $SRCS_ABI -asmhdr $OUTS_H'
-    else:
-        compile_cmd += ' -o $OUT'
+    compile_cmd = '$TOOLS_GO tool compile -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (complete_flag, _GOPATH)
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
