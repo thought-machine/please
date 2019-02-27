@@ -112,6 +112,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	// We don't record rule hashes for filegroups since we know the implementation and the check
 	// is just "are these the same file" which we do anyway, and it means we don't have to worry
 	// about two rules outputting the same file.
+	haveRunPostBuildFunction := false
 	if !target.IsFilegroup && !needsBuilding(state, target, false) {
 		log.Debug("Not rebuilding %s, nothing's changed", target.Label)
 		if postBuildOutput, err = runPostBuildFunctionIfNeeded(tid, state, target, ""); err != nil {
@@ -131,6 +132,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			}
 			log.Debug("Rebuilding %s after post-build function", target.Label)
 		}
+		haveRunPostBuildFunction = true
 	}
 	oldOutputHash, outputHashErr := OutputHash(state, target)
 	if target.IsFilegroup {
@@ -187,7 +189,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if state.Cache != nil {
 		// Note that ordering here is quite sensitive since the post-build function can modify
 		// what we would retrieve from the cache.
-		if target.PostBuildFunction != nil {
+		if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
 			log.Debug("Checking for post-build output file for %s in cache...", target.Label)
 			if state.Cache.RetrieveExtra(target, cacheKey, target.PostBuildOutputFileName()) {
 				if postBuildOutput, err = runPostBuildFunctionIfNeeded(tid, state, target, postBuildOutput); err != nil {
