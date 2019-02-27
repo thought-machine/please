@@ -1,3 +1,10 @@
+Version 13.4.7
+--------------
+
+    * Fix for some incorrect cache misses by not re-retrieving post-build output.
+    * Config hash filters out PATH since items located via it are hashed directly.
+
+
 Version 13.4.6
 --------------
 
