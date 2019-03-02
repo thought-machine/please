@@ -98,7 +98,7 @@ func workerAndArgs(state *core.BuildState, target *core.BuildTarget, command str
 	} else if match[1] != "" {
 		panic("$(worker) replacements cannot have any commands preceding them.")
 	}
-	return replaceSequence(state, target, core.ExpandHomePath(match[2]), true, false, false, true, false, false),
+	return replaceWorkerSequence(state, target, core.ExpandHomePath(match[2]), true, false, false, true, false, false),
 		replaceSequencesInternal(state, target, strings.TrimSpace(match[3]), false),
 		replaceSequencesInternal(state, target, match[4], false)
 }
@@ -164,6 +164,15 @@ func replaceSequence(state *core.BuildState, target *core.BuildTarget, in string
 		return in // Absolute path, probably on a tool or system src.
 	}
 	return quote(path.Join(target.Label.PackageName, in))
+}
+
+// replaceWorkerSequence is like replaceSequence but for worker commands, which do not
+// prefix the target's directory if it's not a build label.
+func replaceWorkerSequence(state *core.BuildState, target *core.BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test bool) string {
+	if !core.LooksLikeABuildLabel(in) {
+		return in
+	}
+	return replaceSequence(state, target, in, runnable, multiple, dir, outPrefix, hash, test)
 }
 
 // sourcesOrTools returns either the tools of a target if runnable is true, otherwise its sources.

@@ -594,7 +594,7 @@ func LookPath(filename string, paths []string) (string, error) {
 
 // LookBuildPath is like LookPath but takes the config's build path into account.
 func LookBuildPath(filename string, config *Configuration) (string, error) {
-	return LookPath(filename, append([]string{ExpandHomePath(config.Please.Location)}, config.Build.Path...))
+	return LookPath(filename, config.Path())
 }
 
 // AsyncDeleteDir deletes a directory asynchronously.

@@ -104,6 +104,13 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 		return w, nil
 	}
 	// Need to create a new process
+	if !strings.Contains(worker, "/") {
+		path, err := core.LookBuildPath(worker, state.Config)
+		if err != nil {
+			return nil, err
+		}
+		worker = path
+	}
 	cmd := core.ExecCommand(worker)
 	cmd.Env = core.GeneralBuildEnvironment(state.Config)
 	stdin, err := cmd.StdinPipe()

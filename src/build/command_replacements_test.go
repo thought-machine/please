@@ -243,6 +243,14 @@ func TestWorkerReplacementWithNoWorker(t *testing.T) {
 	assert.Equal(t, "echo hello", localCmd)
 }
 
+func TestWorkerReplacementNotTarget(t *testing.T) {
+	target := makeTarget("//path/to:target", "$(worker javac_worker) --some_arg && find . | xargs rm && echo hello", nil)
+	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
+	assert.Equal(t, "javac_worker", worker)
+	assert.Equal(t, "--some_arg", remoteArgs)
+	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
+}
+
 func makeTarget(name string, command string, dep *core.BuildTarget) *core.BuildTarget {
 	target := core.NewBuildTarget(core.ParseBuildLabel(name, ""))
 	target.Command = command
