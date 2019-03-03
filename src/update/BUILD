@@ -54,6 +54,7 @@ tarball(
     srcs = ["//src/update/test:please"],
     out = "please_test.tar.gz",
     subdir = "please",
+    test_only = True,
 )
 
 tarball(
@@ -61,5 +62,6 @@ tarball(
     srcs = ["//src/update/test:please"],
     out = "please_test.tar.xz",
     subdir = "please",
+    test_only = True,
     xzip = True,
 )

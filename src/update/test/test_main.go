@@ -5,8 +5,8 @@ package main
 
 import "os"
 
-var PleaseVersion = "1.0.9999"
+var pleaseVersion = "1.0.9999"
 
 func main() {
-	os.Stdout.Write([]byte("Please version " + PleaseVersion + "\n"))
+	os.Stdout.Write([]byte("Please version " + pleaseVersion + "\n"))
 }

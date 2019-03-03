@@ -622,7 +622,7 @@ go_get(
         "lzma",
         "internal/...",
     ],
-    revision = "v0.5.4",
+    revision = "v0.5.6",
 )
 
 go_get(
