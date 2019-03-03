@@ -51,18 +51,14 @@ go_test(
 
 tarball(
     name = "test_tarball",
-    srcs = [
-        "//src:please",
-    ],
+    srcs = ["//src/update/test:please"],
     out = "please_test.tar.gz",
     subdir = "please",
 )
 
 tarball(
     name = "test_tarball_xz",
-    srcs = [
-        "//src:please",
-    ],
+    srcs = ["//src/update/test:please"],
     out = "please_test.tar.xz",
     subdir = "please",
     xzip = True,
