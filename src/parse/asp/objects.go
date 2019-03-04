@@ -610,7 +610,7 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	if f.types[i] == nil {
 		return val
 	} else if val == None {
-		if f.constants[i] == nil && f.defaults[i] == nil {
+		if f.constants[i] == nil && (f.defaults == nil || f.defaults[i] == nil) {
 			return val
 		}
 		return f.defaultArg(s, i, f.args[i])

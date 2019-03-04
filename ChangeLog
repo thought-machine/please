@@ -3,6 +3,7 @@ Version 13.4.8
 
     * Fix worker replacements that are not build labels not to be prefixed incorrectly.
     * Honour escape sequences in f-strings correctly.
+    * Fixed a rare parse failure involving functions with a particular argument configuration.
 
 
 Version 13.4.7
