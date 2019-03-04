@@ -280,3 +280,9 @@ func TestLen(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, "sync", s.Lookup("y"))
 }
+
+func TestFStringDollars(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/fstrings.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, "mickey donald ${goofy} {{sora}}", s.Lookup("z"))
+}

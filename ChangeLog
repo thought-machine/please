@@ -1,3 +1,10 @@
+Version 13.4.8
+--------------
+
+    * Fix worker replacements that are not build labels not to be prefixed incorrectly.
+    * Honour escape sequences in f-strings correctly.
+
+
 Version 13.4.7
 --------------
 

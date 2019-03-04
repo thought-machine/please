@@ -668,7 +668,7 @@ func (p *parser) parseFString() *FString {
 	s := tok.Value[2 : len(tok.Value)-1] // Strip preceding f" and trailing "
 	p.endPos = tok.EndPos()
 	tok.Pos.Column++ // track position in case of error
-	for idx := strings.IndexByte(s, '{'); idx != -1; idx = strings.IndexByte(s, '{') {
+	for idx := p.findBrace(s); idx != -1; idx = p.findBrace(s) {
 		v := &f.Vars[p.newElement(&f.Vars)]
 		v.Prefix = s[:idx]
 		s = s[idx+1:]
@@ -686,4 +686,19 @@ func (p *parser) parseFString() *FString {
 	f.Suffix = s
 
 	return f
+}
+
+func (p *parser) findBrace(s string) int {
+	last := ' '
+	for i, c := range s {
+		if c == '{' && last != '{' && last != '$' {
+			if i < len(s) && s[i+1] == '{' {
+				last = c
+				continue
+			}
+			return i
+		}
+		last = c
+	}
+	return -1
 }
