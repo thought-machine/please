@@ -216,7 +216,6 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
                          which is normally just 'python', but could be 'python3' or
                         'pypy' or whatever.
     """
-    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe' % (interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
@@ -280,6 +279,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         building_description="Building pex...",
         visibility=visibility,
         test_timeout=timeout,
+        size = size,
         flaky=flaky,
         test_outputs=test_outputs,
         requires=['py', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],

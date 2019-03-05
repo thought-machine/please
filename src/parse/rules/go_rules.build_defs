@@ -349,7 +349,6 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
     """
-    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
         name = '_%s#lib' % name,
@@ -418,6 +417,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         container=container,
         test_sandbox=sandbox,
         test_timeout=timeout,
+        size = size,
         flaky=flaky,
         test_outputs=test_outputs,
         requires=['go'],

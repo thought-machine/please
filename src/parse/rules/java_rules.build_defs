@@ -257,7 +257,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
 
 
 def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:list=None, worker:str='',
-              labels:list&features&tags=None, visibility:list=None, flags:str='', container:bool|dict=False,
+              labels:list&features&tags=[], visibility:list=None, flags:str='', container:bool|dict=False,
               sandbox:bool=None, timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
               test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str=''):
     """Defines a Java test.
@@ -281,9 +281,6 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
       test_package (str): Java package to scan for test classes to run.
       jvm_args (str): Arguments to pass to the JVM in the run script.
     """
-    timeout, labels = _test_size_and_timeout(size, timeout, labels)
-    if not labels:
-        labels = []
     # It's a bit sucky doing this in two separate steps, but it is
     # at least easy and reuses the existing code.
     lib_rule = java_library(
@@ -318,6 +315,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
         test_sandbox=sandbox,
         labels=labels,
         test_timeout=timeout,
+        size = size,
         flaky=flaky,
         test_outputs=test_outputs,
         requires=['java'],

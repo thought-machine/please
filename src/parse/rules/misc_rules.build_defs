@@ -118,7 +118,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
             deps:list=None, tools:list|dict=None, data:list=None, visibility:list=None, timeout:int=0,
             needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list=None, no_test_output:bool=False,
             test_outputs:list=None, output_is_complete:bool=True, requires:list=None,
-            container:bool|dict=False, sandbox:bool=None, size:str=''):
+            container:bool|dict=False, sandbox:bool=None, size:str=None):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -159,7 +159,6 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
                       If this is on by default then tests can opt out by setting this to False.
       size (str): Test size (enormous, large, medium or small).
     """
-    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     return build_rule(
         name = name,
         srcs = srcs,
@@ -176,6 +175,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
         binary = True,
         test = True,
         test_timeout = timeout,
+        size = size,
         needs_transitive_deps = needs_transitive_deps,
         requires = requires,
         container = container,
@@ -448,32 +448,6 @@ def check_config(key:str, section:str='buildconfig', rule:str='', example:str='.
         msg = f'{msg}, e.g.\n[{section}]\n{key} = {example}\n'
         raise ConfigError(msg)
     return val
-
-
-def _test_size_and_timeout(size, timeout, labels:list=[]):
-    """Resolves size and timeout arguments for a test."""
-    if size:
-        labels += [size]
-        if not timeout:
-            timeout = _SIZE_TIMEOUTS.get(size, 0)
-    if isinstance(timeout, str):
-        timeout = _TIMEOUT_NAMES[timeout]
-    return timeout, labels
-
-
-_SIZE_TIMEOUTS = {
-    'enormous': 3600,
-    'large': 900,
-    'medium': 300,
-    'small': 60,
-}
-
-_TIMEOUT_NAMES = {
-    'eternal': 0,  # means unlimited
-    'long': 900,
-    'moderate': 300,
-    'short': 60,
-}
 
 
 def exports_files(srcs, name='exported_files', visibility=['PUBLIC'], licenses=None):

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -51,10 +52,16 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.Sandbox = isTruthy(20)
 	target.TestOnly = test || isTruthy(15)
 	target.ShowProgress = isTruthy(36)
-	target.IsRemoteFile = isTruthy(37)
-	if timeout := args[24]; timeout != nil {
-		target.BuildTimeout = time.Duration(timeout.(pyInt)) * time.Second
+	target.IsRemoteFile = isTruthy(38)
+
+	var size *core.Size
+	if args[37] != None {
+		name := string(args[37].(pyString))
+		size = mustSize(s, name)
+		target.AddLabel(name)
 	}
+
+	target.BuildTimeout = sizeAndTimeout(s, size, args[24], s.state.Config.Build.Timeout)
 	target.Stamp = isTruthy(33)
 	target.IsHashFilegroup = args[1] == hashFilegroupCommand
 	target.IsFilegroup = args[1] == filegroupCommand || target.IsHashFilegroup
@@ -90,13 +97,32 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		if testCmd != nil && testCmd != None {
 			target.TestCommand, target.TestCommands = decodeCommands(s, args[2])
 		}
-		if timeout := args[25]; timeout != nil {
-			target.TestTimeout = time.Duration(timeout.(pyInt)) * time.Second
-		}
+		target.TestTimeout = sizeAndTimeout(s, size, args[25], s.state.Config.Test.Timeout)
 		target.TestSandbox = isTruthy(21) && !target.Containerise
 		target.NoTestOutput = isTruthy(22)
 	}
 	return target
+}
+
+// sizeAndTimeout handles the size and build/test timeout arguments.
+func sizeAndTimeout(s *scope, size *core.Size, timeout pyObject, defaultTimeout cli.Duration) time.Duration {
+	switch t := timeout.(type) {
+	case pyInt:
+		return time.Duration(t) * time.Second
+	case pyString:
+		return time.Duration(mustSize(s, string(t)).Timeout)
+	}
+	if size != nil {
+		return time.Duration(size.Timeout)
+	}
+	return time.Duration(defaultTimeout)
+}
+
+// mustSize looks up a size by name. It panics if it cannot be found.
+func mustSize(s *scope, name string) *core.Size {
+	size, present := s.state.Config.Size[name]
+	s.Assert(present, "Unknown size %s", name)
+	return size
 }
 
 // decodeCommands takes a Python object and returns it as a string and a map; only one will be set.
@@ -123,7 +149,7 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 // populateTarget sets the assorted attributes on a build target.
 func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if t.IsRemoteFile {
-		for _, url := range args[37].(pyList) {
+		for _, url := range args[38].(pyList) {
 			t.AddSource(core.URLLabel(url.(pyString)))
 		}
 	} else {

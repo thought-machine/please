@@ -132,6 +132,32 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		config.Test.DisableCoverage = append(config.Test.DisableCoverage, "cc")
 	}
 
+	if len(config.Size) == 0 {
+		config.Size = map[string]*Size{
+			"small": {
+				Timeout:     cli.Duration(1 * time.Minute),
+				TimeoutName: "short",
+			},
+			"medium": {
+				Timeout:     cli.Duration(5 * time.Minute),
+				TimeoutName: "moderate",
+			},
+			"large": {
+				Timeout:     cli.Duration(15 * time.Minute),
+				TimeoutName: "long",
+			},
+			"enormous": {
+				TimeoutName: "eternal",
+			},
+		}
+	}
+	// Dump the timeout names back in so we can look them up later
+	for _, size := range config.Size {
+		if size.TimeoutName != "" {
+			config.Size[size.TimeoutName] = size
+		}
+	}
+
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"test.defaultcontainer": config.Test.DefaultContainer,
@@ -228,7 +254,6 @@ func DefaultConfiguration() *Configuration {
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
 	config.Python.UsePyPI = true
-
 	// Annoyingly pip on OSX doesn't seem to work with this flag (you get the dreaded
 	// "must supply either home or prefix/exec-prefix" error). Goodness knows why *adding* this
 	// flag - which otherwise seems exactly what we want - provokes that error, but the logic
@@ -315,7 +340,7 @@ type Configuration struct {
 	} `help:"The [events] section in the config contains settings relating to the internal build event system & streaming them externally."`
 	Build struct {
 		Arch              cli.Arch     `help:"Architecture to compile for. Defaults to the host architecture."`
-		Timeout           cli.Duration `help:"Default timeout for Dockerised tests, in seconds. Default is twenty minutes."`
+		Timeout           cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
 		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
 		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
 		FallbackConfig    string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
@@ -360,6 +385,7 @@ type Configuration struct {
 		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
 		DisableCoverage  []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 	}
+	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
 		ExcludeExtension []string `help:"Extensions of files to exclude from coverage.\nTypically this is for generated code; the default is to exclude protobuf extensions like .pb.go, _pb2.py, etc."`
@@ -472,6 +498,12 @@ type Alias struct {
 	Subcommand       []string `help:"Known subcommands of this command"`
 	Flag             []string `help:"Known flags of this command"`
 	PositionalLabels bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+}
+
+// A Size represents a named size in the config.
+type Size struct {
+	Timeout     cli.Duration `help:"Timeout for targets of this size"`
+	TimeoutName string       `help:"Name of the timeout, to be passed to the 'timeout' argument"`
 }
 
 type storedBuildEnv struct {
