@@ -31,6 +31,7 @@ go_test(
         ":test_tarball_xz",
         "//src:please",
     ],
+    labels = ["xz"],
     deps = [
         ":update",
         "//src/cli",

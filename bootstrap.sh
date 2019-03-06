@@ -76,6 +76,15 @@ fi
 if ! hash java 2>/dev/null ; then
     warn "Java not found, excluding Java tests"
     EXCLUDES="${EXCLUDES} --exclude=java"
+elif [ "`uname`" = "Darwin" ]; then
+    if [ -n "$(find /Library/Java/JavaVirtualMachines -prune -empty)" ] ; then
+        warn "JVM not found, excluding Java tests"
+        EXCLUDES="${EXCLUDES} --exclude=java"
+    fi
+fi
+if ! hash xz 2>/dev/null ; then
+    warn "xz not found, excluding update tests"
+    EXCLUDES="${EXCLUDES} --exclude=xz"
 fi
 GCCVER="`cc -dumpversion`"
 if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ] && [ ! -d "/usr/lib/gcc/x86_64-pc-linux-gnu/$GCCVER/32" ]; then
