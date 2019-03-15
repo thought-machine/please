@@ -131,7 +131,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	}
 	if len(target.Outputs()) > 0 {
 		// Bit of a hack; ideally we would be unaware of the sandbox here.
-		if target.TestSandbox && runtime.GOOS == "linux" {
+		if target.TestSandbox && runtime.GOOS == "linux" && !strings.HasPrefix(RepoRoot, "/tmp/") {
 			env = append(env, "TEST="+path.Join(SandboxDir, target.Outputs()[0]))
 		} else {
 			env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
