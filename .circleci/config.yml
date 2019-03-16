@@ -24,13 +24,14 @@ jobs:
            command: plz-out/bin/src/please lint
        - run:
            name: Package
-           command: ./plz-out/bin/src/please build //package:all //tools/misc:gen_release --exclude asc -p
+           command: ./plz-out/bin/src/please build //package:all //tools/misc:gen_release //docs:tarball -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
              - linux_amd64/please_*.tar.*
              - gen_release.pex
              - release_signer
+             - docs.tar.gz
        - store_artifacts:
            path: plz-out/log
        - save_cache:
@@ -128,6 +129,20 @@ jobs:
            at: /tmp/workspace
        - run: /tmp/workspace/gen_release.pex --github_token $GITHUB_TOKEN --signer /tmp/workspace/release_signer /tmp/workspace/linux_amd64/* /tmp/workspace/darwin_amd64/*
 
+   docs:
+     docker:
+       - image: thoughtmachine/please_docs:20190317
+     steps:
+       - attach_workspace:
+           at: /tmp/site
+       - add_ssh_keys:
+           fingerprints:
+             - "cc:57:b9:67:31:65:a6:70:8c:e3:e7:90:ca:e6:a6:41"
+       - run:
+           name: Upload docs
+           working_directory: /tmp/site
+           command: tar -xzf docs.tar.gz && sftp -oStrictHostKeyChecking=no -b /root/sftp.txt 3472291@sftp.dc2.gpaas.net
+
 workflows:
   version: 2
   build-all:
@@ -143,6 +158,12 @@ workflows:
             - build-linux
             - build-linux-alt
             - build-darwin
+          filters:
+            branches:
+              only: master
+      - docs:
+          requires:
+            - build-linux
           filters:
             branches:
               only: master
