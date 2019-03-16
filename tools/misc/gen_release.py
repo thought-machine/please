@@ -15,6 +15,7 @@ logging.root.handlers[0].setFormatter(colorlog.ColoredFormatter('%(log_color)s%(
 
 
 flags.DEFINE_string('github_token', None, 'Github API token')
+flags.DEFINE_string('circleci_token', None, 'CircleCI API token')
 flags.DEFINE_string('signer', None, 'Release signer binary')
 flags.DEFINE_bool('dry_run', False, "Don't actually do the release, just print it.")
 flags.mark_flag_as_required('github_token')
@@ -65,7 +66,7 @@ class ReleaseGen:
             'name': 'Please v' + self.version,
             'body': '\n'.join(self.get_release_notes()),
             'prerelease': self.is_prerelease,
-            'draft': not self.is_prerelease,
+            'draft': False,
         }
         if FLAGS.dry_run:
             logging.info('Would post the following to Github: %s', json.dumps(data, indent=4))
@@ -132,6 +133,13 @@ class ReleaseGen:
         with zipfile.ZipFile(sys.argv[0]) as zf:
             return zf.read(filename).decode('utf-8')
 
+    def trigger_build(self, token, project):
+        """Triggers a CircleCI build of a downstream project."""
+        response = self.session.post(
+            f'https://circleci.com/api/v1.1/project/github/{project}?circle-token={token}'
+        )
+        response.raise_for_status()
+
 
 def main(argv):
     r = ReleaseGen(FLAGS.github_token, dry_run=FLAGS.dry_run)
@@ -144,6 +152,8 @@ def main(argv):
     for artifact, signature in zip(argv[1:], signatures):
         r.upload(artifact)
         r.upload(signature)
+    if FLAGS.circleci_token and not FLAGS.dry_run:
+        r.trigger_build(FLAGS.circleci_token, 'thought-machine/homebrew-please')
 
 
 if __name__ == '__main__':
