@@ -477,6 +477,10 @@ func (target *BuildTarget) NamedOutputs(name string) []string {
 func (target *BuildTarget) GetTmpOutput(parseOutput string) string {
 	if parseOutput == target.Label.PackageName {
 		return parseOutput + ".out"
+	} else if target.Label.PackageName == "" && target.HasSource(parseOutput) {
+		// This also fixes the case where source and output are the same, which can happen
+		// when we're in the root directory.
+		return parseOutput + ".out"
 	}
 	return parseOutput
 }

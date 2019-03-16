@@ -16,6 +16,7 @@ filegroup(
         "//tools/please_pex",
         "//tools/sandbox:please_sandbox",
     ],
+    visibility = ["//:install"],
 )
 
 tarball(

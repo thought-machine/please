@@ -43,6 +43,18 @@ allowlocalfallback = false
 target = //test/go_provider
 path = //test/go_provider/...
 
+[alias "bootstrap"]
+desc = Bootstraps Please from scratch
+cmd = run //:bootstrap --
+
+[alias "bootonly"]
+desc = Bootstraps Please, but does not run any tests.
+cmd = run //:bootstrap -- --skip_tests
+
+[alias "install"]
+desc = Installs Please into ~/.please
+cmd = run //:install --
+
 [alias "plz"]
 desc = Builds & runs the version of plz within this repo.
 cmd = run //src:please --
