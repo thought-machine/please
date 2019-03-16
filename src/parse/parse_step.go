@@ -134,14 +134,16 @@ func activateTarget(state *core.BuildState, pkg *core.Package, label, dependor c
 	if state.ParsePackageOnly && !forSubinclude {
 		return nil // Some kinds of query don't need a full recursive parse.
 	} else if label.IsAllTargets() {
-		for _, target := range pkg.AllTargets() {
-			// Don't activate targets that were added in a post-build function; that causes a race condition
-			// between the post-build functions running and other things trying to activate them too early.
-			if state.ShouldInclude(target) && !target.AddedPostBuild {
-				// Must always do this for coverage because we need to calculate sources of
-				// non-test targets later on.
-				if !state.NeedTests || target.IsTest || state.NeedCoverage {
-					state.QueueTarget(target.Label, dependor, false, dependor.IsAllTargets())
+		if dependor == core.OriginalTarget {
+			for _, target := range pkg.AllTargets() {
+				// Don't activate targets that were added in a post-build function; that causes a race condition
+				// between the post-build functions running and other things trying to activate them too early.
+				if state.ShouldInclude(target) && !target.AddedPostBuild {
+					// Must always do this for coverage because we need to calculate sources of
+					// non-test targets later on.
+					if !state.NeedTests || target.IsTest || state.NeedCoverage {
+						state.QueueTarget(target.Label, dependor, false, dependor.IsAllTargets())
+					}
 				}
 			}
 		}

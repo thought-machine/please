@@ -5,11 +5,11 @@ package core
 import (
 	"crypto/sha1"
 	"encoding/gob"
-	"path/filepath"
 	"fmt"
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"sort"
