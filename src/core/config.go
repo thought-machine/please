@@ -22,6 +22,7 @@ import (
 	"github.com/peterebden/gcfg"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // OsArch is the os/arch pair, like linux_amd64 etc.
@@ -68,7 +69,13 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else if err != nil {
 		log.Warning("Error in config file: %s", err)
 	} else if filename == ExpandHomePath(oldUserConfigFileName) {
-		log.Warning("Read a config file at %s; this location is deprecated in favour of %s", filename, ExpandHomePath(UserConfigFileName))
+		if dest := ExpandHomePath(UserConfigFileName); !fs.PathExists(dest) {
+			log.Warning("Migrating old config from %s to %s", filename, dest)
+			fs.EnsureDir(dest)
+			os.Rename(filename, dest)
+		} else {
+			log.Warning("Read a config file at %s; this location is deprecated in favour of %s", filename, dest)
+		}
 	}
 	return nil
 }
