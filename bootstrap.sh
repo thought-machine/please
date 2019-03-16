@@ -12,9 +12,6 @@ function warn {
 # PLZ_ARGS can be set to pass arguments to all plz invocations in this script.
 PLZ_ARGS="${PLZ_ARGS:-}"
 
-# Clean out old artifacts.
-rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go .bootstrap
-
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
 go run -tags bootstrap src/please.go $PLZ_ARGS --profile bootstrap build //src:please --log_file plz-out/log/bootstrap_build.log

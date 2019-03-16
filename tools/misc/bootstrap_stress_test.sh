@@ -8,7 +8,9 @@ N="${1:-10}"
 
 for i in `seq 1 $N`; do
     echo "Round $i / $N"
-    ./bootstrap.sh --plain_output || { echo "Bootstrap failed"; exit 1; }
+    rm -rf plz-out
+    export PLZ_ARGS="--plain_output"
+    ./bootstrap.sh || { echo "Bootstrap failed"; exit 1; }
     BUILDING="$(grep "Building target" plz-out/log/*.log)"
     if [ -n "$BUILDING" ]; then
         echo "Found building targets:"

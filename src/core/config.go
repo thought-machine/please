@@ -5,6 +5,7 @@ package core
 import (
 	"crypto/sha1"
 	"encoding/gob"
+	"path/filepath"
 	"fmt"
 	"io"
 	"os"
@@ -165,6 +166,19 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		}
 	}
 
+	if config.Please.Location == "" {
+		// Determine the location based off where we're running from.
+		if exec, err := os.Executable(); err != nil {
+			log.Warning("Can't determine current executable: %s", err)
+			config.Please.Location = "~/.please"
+		} else if deref, err := filepath.EvalSymlinks(exec); err != nil {
+			log.Warning("Can't dereference %s: %s", exec, err)
+			config.Please.Location = "~/.please"
+		} else {
+			config.Please.Location = path.Dir(deref)
+		}
+	}
+
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"test.defaultcontainer": config.Test.DefaultContainer,
@@ -212,7 +226,6 @@ func defaultPathIfExists(conf *string, dir, file string) {
 // DefaultConfiguration returns the default configuration object with no overrides.
 func DefaultConfiguration() *Configuration {
 	config := Configuration{buildEnvStored: &storedBuildEnv{}}
-	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.Autoclean = true
 	config.Please.DownloadLocation = "https://get.please.build"
