@@ -205,6 +205,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	if err := target.CheckSecrets(); err != nil {
 		return err
 	}
+	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
 	if err := prepareSources(state.Graph, target); err != nil {
 		return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
 	}
