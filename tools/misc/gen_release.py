@@ -140,6 +140,24 @@ class ReleaseGen:
         )
         response.raise_for_status()
 
+    def upload_sftp(self, artifacts, signatures):
+        """Uploads artifacts to get.please.build via sftp."""
+        with open('latest_version', 'w') as f:
+            f.write(self.version)
+        # Write batch instruction file
+        with open('sftp.txt', 'w') as f:
+            f.write('cd vhosts/get.please.build/htdocs\n')
+            f.write(f'mkdir linux_amd64/{self.version}\n')
+            f.write(f'mkdir darwin_amd64/{self.version}\n')
+            for artifact in artifacts + signatures:
+                arch = 'darwin' if 'darwin' in artifact else 'linux'
+                f.write(f'put {artifact} {arch}_amd64/{self.version}/{artifact}\n')
+            f.write('put latest_version\n')
+            f.write('bye\n')
+        if not FLAGS.dry_run:
+            subprocess.check_call(['sftp', '-oStrictHostKeyChecking=no', '-b', 'sftp.txt',
+                                   '3472291@sftp.dc2.gpaas.net'])
+
 
 def main(argv):
     r = ReleaseGen(FLAGS.github_token, dry_run=FLAGS.dry_run)
@@ -152,6 +170,7 @@ def main(argv):
     for artifact, signature in zip(argv[1:], signatures):
         r.upload(artifact)
         r.upload(signature)
+    r.upload_sftp(argv[1:], signatures)
     if FLAGS.circleci_token and not FLAGS.dry_run:
         r.trigger_build(FLAGS.circleci_token, 'thought-machine/homebrew-please')
 
