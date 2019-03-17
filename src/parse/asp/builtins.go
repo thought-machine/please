@@ -642,7 +642,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	target := getTargetPost(s, string(args[0].(pyString)))
 	dep := core.ParseBuildLabel(string(args[1].(pyString)), s.pkg.Name)
 	exported := args[2].IsTruthy()
-	target.AddMaybeExportedDependency(dep, exported, false)
+	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Note that here we're in a post-build function so we must call this explicitly
 	// (in other callbacks it's handled after the package parses all at once).
 	s.state.Graph.AddDependency(target.Label, dep)

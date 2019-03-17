@@ -161,8 +161,9 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addMaybeNamedOutput(s, "outs", args[5], t.AddOutput, t.AddNamedOutput, t, false)
 	addMaybeNamedOutput(s, "optional_outs", args[35], t.AddOptionalOutput, nil, t, true)
 	addMaybeNamedOutput(s, "test_outputs", args[31], t.AddTestOutput, nil, t, false)
-	addDependencies(s, "deps", args[6], t, false)
-	addDependencies(s, "exported_deps", args[7], t, true)
+	addDependencies(s, "deps", args[6], t, false, false)
+	addDependencies(s, "exported_deps", args[7], t, true, false)
+	addDependencies(s, "internal_deps", args[39], t, false, true)
 	addStrings(s, "labels", args[10], t.AddLabel)
 	addStrings(s, "hashes", args[12], t.AddHash)
 	addStrings(s, "licences", args[30], t.AddLicence)
@@ -254,13 +255,13 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 }
 
 // addDependencies adds dependencies to a target, which may or may not be exported.
-func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarget, exported bool) {
+func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarget, exported, internal bool) {
 	addStrings(s, name, obj, func(str string) {
 		if s.state.Config.Bazel.Compatibility && !core.LooksLikeABuildLabel(str) && !strings.HasPrefix(str, "@") {
 			// *sigh*... Bazel seems to allow an implicit : on the start of dependencies
 			str = ":" + str
 		}
-		target.AddMaybeExportedDependency(checkLabel(s, core.ParseBuildLabelContext(str, s.pkg)), exported, false)
+		target.AddMaybeExportedDependency(checkLabel(s, core.ParseBuildLabelContext(str, s.pkg)), exported, false, internal)
 	})
 }
 

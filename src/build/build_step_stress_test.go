@@ -107,7 +107,7 @@ func postBuild(target *core.BuildTarget, out string) error {
 	newTarget := addTarget(state, target.Flakiness+size)
 
 	// This mimics what interpreter.go does.
-	state.Graph.TargetOrDie(parent).AddMaybeExportedDependency(newTarget.Label, false, false)
+	state.Graph.TargetOrDie(parent).AddDependency(newTarget.Label)
 	state.Graph.AddDependency(parent, newTarget.Label)
 	return nil
 }

@@ -110,7 +110,8 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     return build_rule(
         name=name,
         srcs=srcs,
-        deps=deps + [src_rule],
+        deps=deps,
+        internal_deps = [src_rule],
         outs=[out],
         cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs),
         visibility=visibility,

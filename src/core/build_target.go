@@ -181,6 +181,7 @@ type depInfo struct {
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
+	internal bool           // is it an internal dependency (that is not picked up implicitly by transitive searches)
 	source   bool           // is it implicit because it's a source (not true if it's a dependency too)
 	data     bool           // is it a data item for a test
 }
@@ -360,11 +361,11 @@ func (target *BuildTarget) Dependencies() []*BuildTarget {
 	return ret
 }
 
-// BuildDependencies returns the build-time dependencies of this target (i.e. not data).
+// BuildDependencies returns the build-time dependencies of this target (i.e. not data and not internal).
 func (target *BuildTarget) BuildDependencies() []*BuildTarget {
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
-		if !deps.data {
+		if !deps.data && !deps.internal {
 			for _, dep := range deps.deps {
 				ret = append(ret, dep)
 			}
@@ -772,7 +773,7 @@ func (target *BuildTarget) addSource(sources []BuildInput, source BuildInput) []
 	}
 	// Add a dependency if this is not just a file.
 	if label := source.Label(); label != nil {
-		target.AddMaybeExportedDependency(*label, false, true)
+		target.AddMaybeExportedDependency(*label, false, true, false)
 	}
 	return append(sources, source)
 }
@@ -965,20 +966,21 @@ func (target *BuildTarget) AllData(graph *BuildGraph) []string {
 
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
-	target.AddMaybeExportedDependency(dep, false, false)
+	target.AddMaybeExportedDependency(dep, false, false, false)
 }
 
 // AddMaybeExportedDependency adds a dependency to this target which may be exported. It deduplicates against any existing deps.
-func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, source bool) {
+func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, source, internal bool) {
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
 	}
 	info := target.dependencyInfo(dep)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported, source: source})
+		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported, source: source, internal: internal})
 	} else {
 		info.exported = info.exported || exported
 		info.source = info.source && source
+		info.internal = info.internal && internal
 		info.data = false // It's not *only* data any more.
 	}
 }
