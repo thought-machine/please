@@ -151,7 +151,8 @@ class ReleaseGen:
             f.write(f'mkdir darwin_amd64/{self.version}\n')
             for artifact in artifacts + signatures:
                 arch = 'darwin' if 'darwin' in artifact else 'linux'
-                f.write(f'put {artifact} {arch}_amd64/{self.version}/{artifact}\n')
+                filename = os.path.basename(artifact)
+                f.write(f'put {artifact} {arch}_amd64/{self.version}/{filename}\n')
             f.write('put latest_version\n')
             f.write('bye\n')
         if not FLAGS.dry_run:
