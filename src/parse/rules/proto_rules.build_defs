@@ -116,6 +116,8 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
         # TODO(pebers): find a way of genericising this too...
         if language == 'cc':
             provides['cc_hdrs'] = provides['cc'].replace('#cc', '#cc_hdrs')
+        elif language == 'go':
+            provides['go_src'] = provides['go'].replace('#go', '#go_srcs')
 
     # This simply collects the sources, it's used for other proto_library rules to depend on.
     filegroup(
