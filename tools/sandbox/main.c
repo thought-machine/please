@@ -94,9 +94,6 @@ int mount_tmp() {
             fputs("Not mounting tmpfs on /tmp since TMP_DIR is a subdir\n", stderr);
             return 0;
         }
-    } else {
-        fputs("TMP_DIR not set, will not bind-mount to /tmp/plz_sandbox\n", stderr);
-        return 0;
     }
     // Remounting / as private is necessary so that the tmpfs mount isn't visible to anyone else.
     if (mount("none", "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0) {
@@ -111,6 +108,10 @@ int mount_tmp() {
     if (setenv("TMPDIR", "/tmp", 1) != 0) {
         perror("setenv");
         return 1;
+    }
+    if (!dir) {
+        fputs("TMP_DIR not set, will not bind-mount to /tmp/plz_sandbox\n", stderr);
+        return 0;
     }
     if (mkdir(d, S_IRWXU) != 0) {
         perror("mkdir /tmp/plz_sandbox");
