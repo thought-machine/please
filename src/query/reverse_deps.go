@@ -2,11 +2,12 @@ package query
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/core"
 	"sort"
+
+	"github.com/thought-machine/please/src/core"
 )
 
-// ReverseDeps For each input label, finds all targets which depend upon it.
+// ReverseDeps finds all transitive targets that depend on the set of input labels.
 func ReverseDeps(state *core.BuildState, labels []core.BuildLabel) {
 
 	targets := GetRevDepsLabels(state, labels)
@@ -16,9 +17,29 @@ func ReverseDeps(state *core.BuildState, labels []core.BuildLabel) {
 	}
 }
 
+// GetRevDepTransitiveLabels returns the transitive reverse dependencies of the given labels.
+func GetRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel) core.BuildLabels {
+	return getRevDepTransitiveLabels(state, labels, map[core.BuildLabel]struct{}{})
+}
+
+func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel, done map[core.BuildLabel]struct{}) core.BuildLabels {
+	for _, l := range GetRevDepsLabels(state, labels) {
+		if _, present := done[l]; !present {
+			done[l] = struct{}{}
+			getRevDepTransitiveLabels(state, []core.BuildLabel{l}, done)
+		}
+	}
+	ret := core.BuildLabels{}
+	for label := range done {
+		ret = append(ret, label)
+	}
+	sort.Sort(ret)
+	return ret
+}
+
 // GetRevDepsLabels returns a slice of build labels that are the reverse dependencies of the build labels being passed in
 func GetRevDepsLabels(state *core.BuildState, labels []core.BuildLabel) core.BuildLabels {
-	uniqueTargets := make(map[*core.BuildTarget]struct{})
+	uniqueTargets := map[*core.BuildTarget]struct{}{}
 
 	graph := state.Graph
 	for _, label := range labels {
