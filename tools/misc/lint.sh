@@ -4,7 +4,7 @@ plz="plz-out/bin/src/please"
 BLACKLIST="src/parse/asp/main|tools/cache|//test|tools/please_pex|third_party"
 
 # gofmt and go vet
-for TARGET in `$plz query alltargets --include go_src --hidden | grep -v "_test#lib" | grep -v proto | grep -Ev $BLACKLIST`; do
+for TARGET in `$plz query alltargets --include go_src --hidden | grep -v "_test#lib" | grep -v "#main" | grep -v proto | grep -Ev $BLACKLIST`; do
     DIR=`echo $TARGET | cut -f 1 -d ':' | cut -c 3-`
     SRCS=`$plz query print $TARGET -f srcs | grep -v // | while read SRC; do echo $DIR/$SRC; done`
     FILTERED=`plz-out/bin/tools/please_go_filter/please_go_filter -tags bootstrap $SRCS`

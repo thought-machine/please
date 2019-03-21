@@ -382,7 +382,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
             'cover': f'$TOOLS_TEST $TOOLS_GO -d . -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS ',
         },
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
-        requires=['go'],
+        requires=['go', 'go_src'],
         test_only=True,
         tools={
             'go': [CONFIG.GO_TOOL],
