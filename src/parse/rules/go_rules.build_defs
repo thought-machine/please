@@ -421,7 +421,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         size = size,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['go'],
+        requires=['go', 'test'],
         labels=labels,
         binary=True,
         test=True,
