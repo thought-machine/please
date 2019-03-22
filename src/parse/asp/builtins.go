@@ -250,7 +250,12 @@ func subinclude(s *scope, args []pyObject) pyObject {
 // subincludeTarget returns the target for a subinclude() call to a label.
 // It blocks until the target exists and is built.
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
-	t := s.state.WaitForBuiltTarget(l, s.contextPkg.Label())
+	pkgLabel := s.contextPkg.Label()
+	if l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName {
+		// This is a subinclude in the same package, check the target exists.
+		s.NAssert(s.contextPkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
+	}
+	t := s.state.WaitForBuiltTarget(l, pkgLabel)
 	// This is not quite right, if you subinclude from another subinclude we can basically
 	// lose track of it later on. It's hard to know what better to do at this point though.
 	s.contextPkg.RegisterSubinclude(l)
