@@ -1,0 +1,66 @@
+"""Rules for compiling a proper business-oriented programming language.
+
+There is no cobol_test since it's inconceivable there could ever be a bug, and hence any
+need for testing, in a language this robust and well-designed.
+"""
+
+
+def cobol_library(name:str, srcs:list, deps:list=None, visibility:list=None):
+    """Generates a library using a proper business-oriented programming language.
+
+    Args:
+      name: Name of the rule
+      srcs: Source .cob files
+      deps: Any dependencies
+      visibility : Visibility of the rule
+    """
+    return build_rule(
+        name = name,
+        srcs = srcs,
+        outs = [name + ".o"],
+        cmd = "cobc -free -c $SRCS -o $OUT",
+        deps = deps,
+        tools = [CONFIG.COBC_TOOL],
+        visibility = visibility,
+    )
+
+
+def cobol_shared_object(name:str, srcs:list, deps:list=None, visibility:list=None):
+    """Generates a shared object from cobol_library rules.
+
+    Args:
+      name: Name of the rule
+      srcs: Source .cob files
+      deps: Any dependencies
+      visibility : Visibility of the rule
+    """
+    return build_rule(
+        name = name,
+        srcs = srcs,
+        outs = [name + ".so"],
+        cmd = "cobc -free -fimplicit-init -m `find . -name '*.o' | sort` -o $OUT $SRCS",
+        output_is_complete = True,
+        deps = deps,
+        visibility = visibility,
+    )
+
+
+def cobol_binary(name:str, srcs:list, deps:list=None, visibility:list=None):
+    """Generates an executable binary from cobol_library rules.
+
+    Args:
+      name: Name of the rule
+      srcs: Source .cob files
+      deps: Any dependencies
+      visibility : Visibility of the rule
+    """
+    return build_rule(
+        name = name,
+        srcs = srcs,
+        outs = [name],
+        cmd = "cobc -free -fimplicit-init -x `find . -name '*.o' | sort` -o $OUT $SRCS",
+        output_is_complete = True,
+        binary = True,
+        deps = deps,
+        visibility = visibility,
+    )
