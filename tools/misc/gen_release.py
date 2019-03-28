@@ -14,8 +14,8 @@ from third_party.python.absl import app, flags
 logging.root.handlers[0].setFormatter(colorlog.ColoredFormatter('%(log_color)s%(levelname)s: %(message)s'))
 
 
-flags.DEFINE_string('github_token', None, 'Github API token')
-flags.DEFINE_string('circleci_token', None, 'CircleCI API token')
+flags.DEFINE_string('github_token', os.environ.get('GITHUB_TOKEN'), 'Github API token')
+flags.DEFINE_string('circleci_token', os.environ.get('CIRCLECI_TOKEN'), 'CircleCI API token')
 flags.DEFINE_string('signer', None, 'Release signer binary')
 flags.DEFINE_bool('dry_run', False, "Don't actually do the release, just print it.")
 flags.mark_flag_as_required('github_token')

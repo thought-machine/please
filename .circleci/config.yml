@@ -130,7 +130,7 @@ jobs:
        - add_ssh_keys:
            fingerprints:
              - "cc:57:b9:67:31:65:a6:70:8c:e3:e7:90:ca:e6:a6:41"
-       - run: /tmp/workspace/gen_release.pex --github_token $GITHUB_TOKEN --signer /tmp/workspace/release_signer /tmp/workspace/linux_amd64/* /tmp/workspace/darwin_amd64/*
+       - run: /tmp/workspace/gen_release.pex --signer /tmp/workspace/release_signer /tmp/workspace/linux_amd64/* /tmp/workspace/darwin_amd64/*
 
    docs:
      docker:
