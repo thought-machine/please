@@ -21,6 +21,12 @@ Or, if you prefer, grab one of the tarballs off our
 [releases page](https://github.com/thought-machine/please/releases)
 and extract it yourself; it typically lives in `~/.please`.
 
+You can also install using [Homebrew](https://brew.sh):
+```bash
+brew tap thought-machine/please
+brew install please
+```
+
 Then you simply run `plz init` at the root of your project to set up
 a default config and you're good to start adding BUILD files.
 See [the website](http://please.build) for more instructions about
