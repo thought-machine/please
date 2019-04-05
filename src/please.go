@@ -263,13 +263,15 @@ var opts struct {
 		Deps struct {
 			Unique bool `long:"unique" short:"u" description:"Only output each dependency once"`
 			Hidden bool `long:"hidden" short:"h" description:"Output internal / hidden dependencies too"`
-			Level  int  `long:"level" default:"-1" description:"levels of the dependencies to retrieve."`
+			Level  int  `long:"level" default:"-1" description:"Levels of the dependencies to retrieve."`
 			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"deps" description:"Queries the dependencies of a target."`
 		ReverseDeps struct {
-			Args struct {
+			Level  int  `long:"level" default:"1" description:"Levels of the dependencies to retrieve (-1 for unlimited)."`
+			Hidden bool `long:"hidden" short:"h" description:"Output internal / hidden dependencies too"`
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"revdeps" alias:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
@@ -528,7 +530,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"revdeps": func() bool {
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.ReverseDeps(state, state.ExpandLabels(opts.Query.ReverseDeps.Args.Targets))
+			query.ReverseDeps(state, state.ExpandLabels(opts.Query.ReverseDeps.Args.Targets), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
 	"somepath": func() bool {

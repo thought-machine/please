@@ -1,3 +1,9 @@
+Version 13.5.1
+--------------
+
+    * Level of reverse dependencies queried can now be controlled by a flag (#570)
+
+
 Version 13.5.0
 --------------
 
