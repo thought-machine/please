@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/thought-machine/please/src/core"
@@ -83,6 +84,7 @@ func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
 		Name:       xmlTestSuite.Name,
 		Timestamp:  xmlTestSuite.Timestamp,
 		Duration:   xmlTestSuite.Duration(),
+		Cached:     toCoreCached(xmlTestSuite.Properties),
 		Properties: toCoreProperties(xmlTestSuite.Properties),
 	}
 	for _, test := range xmlTestSuite.TestCases {
@@ -96,9 +98,26 @@ func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
 	return testSuite
 }
 
+func toCoreCached(properties jUnitXMLProperties) bool {
+	cached := false
+	for _, prop := range properties.Property {
+		if prop.Name == "cached" {
+			p, err := strconv.ParseBool(prop.Value)
+			if err == nil {
+				cached = p
+			}
+			break
+		}
+	}
+	return cached
+}
+
 func toCoreProperties(properties jUnitXMLProperties) map[string]string {
 	props := make(map[string]string)
 	for _, prop := range properties.Property {
+		if prop.Name == "cached" {
+			continue
+		}
 		props[prop.Name] = prop.Value
 	}
 	return props
@@ -421,7 +440,7 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 						Failures:   testSuite.Failures(),
 						Skipped:    testSuite.Skips(),
 						timed:      timed{testSuite.Duration.Seconds()},
-						Properties: toXMLProperties(testSuite.Properties),
+						Properties: toXMLProperties(testSuite.Properties, testSuite.Cached),
 					}
 				}
 				for _, testCase := range testSuite.TestCases {
@@ -450,12 +469,18 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	}
 }
 
-func toXMLProperties(props map[string]string) jUnitXMLProperties {
+func toXMLProperties(props map[string]string, cached bool) jUnitXMLProperties {
 	out := jUnitXMLProperties{}
 	for k, v := range props {
 		out.Property = append(out.Property, jUnitXMLProperty{
 			Name:  k,
 			Value: v,
+		})
+	}
+	if cached {
+		out.Property = append(out.Property, jUnitXMLProperty{
+			Name:  "cached",
+			Value: strconv.FormatBool(cached),
 		})
 	}
 	return out
