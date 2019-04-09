@@ -1,3 +1,11 @@
+Version 13.5.2
+--------------
+
+    * Cached test results have an equivalent property set.
+    * Fixed pre_build argument not always being honoured on `genrule`.
+    * `plz init config` now does not need to be run within a repo (as `plz init` does not).
+
+
 Version 13.5.1
 --------------
 

@@ -103,6 +103,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         output_is_complete = output_is_complete,
         building_description = building_description,
         hashes = hashes,
+        pre_build = pre_build,
         post_build = post_build,
         binary = binary,
         sandbox = sandbox,
