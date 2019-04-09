@@ -1,7 +1,7 @@
 # Please [![Build Status](https://circleci.com/gh/thought-machine/please.svg?style=shield)](https://circleci.com/gh/thought-machine/please) [![Build Status](https://api.cirrus-ci.com/github/thought-machine/please.svg)](https://cirrus-ci.com/github/thought-machine/please) [![Go Report Card](https://goreportcard.com/badge/github.com/thought-machine/please)](https://goreportcard.com/report/github.com/thought-machine/please) [![Gitter chat](https://badges.gitter.im/thought-machine/please.png)](https://gitter.im/please-build/Lobby)
 
 Please is a cross-language build system with an emphasis on
-high performance, extensibility and reproduceability.
+high performance, extensibility and reproducibility.
 It supports a number of popular languages and can automate
 nearly any aspect of your build process.
 
