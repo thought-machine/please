@@ -99,17 +99,15 @@ func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
 }
 
 func toCoreCached(properties jUnitXMLProperties) bool {
-	cached := false
 	for _, prop := range properties.Property {
 		if prop.Name == "cached" {
-			p, err := strconv.ParseBool(prop.Value)
-			if err == nil {
-				cached = p
+			if p, err := strconv.ParseBool(prop.Value); err == nil {
+				return p
 			}
-			break
+			return false
 		}
 	}
-	return cached
+	return false
 }
 
 func toCoreProperties(properties jUnitXMLProperties) map[string]string {
