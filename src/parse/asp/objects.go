@@ -777,6 +777,8 @@ func newConfig(config *core.Configuration) *pyConfig {
 	}
 	c["OS"] = pyString(config.Build.Arch.OS)
 	c["ARCH"] = pyString(config.Build.Arch.Arch)
+	c["HOSTOS"] = pyString(config.Build.Arch.HostOS())
+	c["HOSTARCH"] = pyString(config.Build.Arch.HostArch())
 	return &pyConfig{base: c}
 }
 
