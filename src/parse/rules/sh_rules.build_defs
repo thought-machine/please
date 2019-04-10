@@ -128,6 +128,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=No
         test=True,
         no_test_output=True,
         flaky=flaky,
+        requires=['test'],
         test_outputs=test_outputs,
         test_timeout=timeout,
         size = size,

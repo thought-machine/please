@@ -318,7 +318,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
         size = size,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['java'],
+        requires=['java', 'test'],
         needs_transitive_deps=True,
         output_is_complete=True,
         test=True,

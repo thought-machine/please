@@ -627,7 +627,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         test=True,
         needs_transitive_deps=True,
         output_is_complete=True,
-        requires=['cc', 'cc_hdrs'],
+        requires=['cc', 'cc_hdrs', 'test'],
         labels=labels,
         tools=tools,
         pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs),
