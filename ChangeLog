@@ -1,3 +1,10 @@
+Version 13.5.3
+--------------
+
+    * Several cross-compilation issues fixed (#581, #582, #584, #585).
+    * Process termination is more robust for test timeouts etc.
+
+
 Version 13.5.2
 --------------
 
