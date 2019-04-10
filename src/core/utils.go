@@ -289,7 +289,8 @@ func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, error) 
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
 // shortly after if it hasn't exited.
 func KillProcess(cmd *exec.Cmd) {
-	if !killProcess(cmd, syscall.SIGTERM, 30*time.Millisecond) && !killProcess(cmd, syscall.SIGKILL, time.Second) {
+	success := killProcess(cmd, syscall.SIGTERM, 30*time.Millisecond)
+	if !killProcess(cmd, syscall.SIGKILL, time.Second) && !success {
 		log.Error("Failed to kill inferior process")
 	}
 }
@@ -299,8 +300,8 @@ func KillProcess(cmd *exec.Cmd) {
 func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool {
 	// This is a bit of a fiddle. We want to wait for the process to exit but only for just so
 	// long (we do not want to get hung up if it ignores our SIGTERM).
-	log.Debug("Sending signal %s to %d", sig, cmd.Process.Pid)
-	syscall.Kill(cmd.Process.Pid, sig)
+	log.Debug("Sending signal %s to -%d", sig, cmd.Process.Pid)
+	syscall.Kill(-cmd.Process.Pid, sig) // Kill the group - we always set one in ExecCommand.
 	ch := make(chan error)
 	go runCommand(cmd, ch)
 	select {
@@ -309,6 +310,15 @@ func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool 
 	case <-time.After(timeout):
 		return false
 	}
+}
+
+// ExecCommand executes an external command.
+func ExecCommand(command string, args ...string) *exec.Cmd {
+	cmd := exec.Command(command, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+	return cmd
 }
 
 // A SourcePair represents a source file with its source and temporary locations.
