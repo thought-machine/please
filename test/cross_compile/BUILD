@@ -42,3 +42,24 @@ plz_e2e_test(
     cmd = "plz test -a linux_x86 //test/cross_compile:bin_test",
     labels = ["x86"],
 )
+
+# Test for #582
+genrule(
+    name = "location",
+    srcs = [":record_arch"],
+    outs = ["arch_location.txt"],
+    cmd = "echo '$(location :record_arch)' > $OUT",
+)
+
+sh_test(
+    name = "location_test",
+    src = "location_test.sh",
+    data = [":location"],
+    labels = ["manual"],
+)
+
+plz_e2e_test(
+    name = "location_cross_compile_test",
+    cmd = "plz test -a linux_x86 //test/cross_compile:location_test",
+    labels = ["x86"],
+)

@@ -26,10 +26,7 @@ func TestLocation(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "ln -s $(location //path/to:target2) ${OUT}", target2)
 
 	expected := "ln -s path/to/target2.py ${OUT}"
-	cmd := replaceSequences(state, target1)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestLocations(t *testing.T) {
@@ -38,10 +35,7 @@ func TestLocations(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "cat $(locations //path/to:target2) > ${OUT}", target2)
 
 	expected := "cat path/to/target2.py path/to/target2_other.py > ${OUT}"
-	cmd := replaceSequences(state, target1)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestExe(t *testing.T) {
@@ -50,10 +44,7 @@ func TestExe(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "path/to/target2.py -o ${OUT}"
-	cmd := replaceSequences(state, target1)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestOutExe(t *testing.T) {
@@ -62,10 +53,7 @@ func TestOutExe(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "plz-out/bin/path/to/target2.py -o ${OUT}"
-	cmd := replaceSequences(state, target1)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestJavaExe(t *testing.T) {
@@ -75,10 +63,7 @@ func TestJavaExe(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "java -jar path/to/target2.py -o ${OUT}"
-	cmd := replaceSequences(state, target1)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestJavaOutExe(t *testing.T) {
@@ -88,10 +73,7 @@ func TestJavaOutExe(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "java -jar plz-out/bin/path/to/target2.py -o ${OUT}"
-	cmd := replaceSequences(state, target1)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestReplacementsForTest(t *testing.T) {
@@ -102,9 +84,7 @@ func TestReplacementsForTest(t *testing.T) {
 
 	expected := "./target1.py path/to/target2.py"
 	cmd := ReplaceTestSequences(state, target1, target1.Command)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, cmd)
 }
 
 func TestDataReplacementForTest(t *testing.T) {
@@ -113,18 +93,14 @@ func TestDataReplacementForTest(t *testing.T) {
 
 	expected := "cat path/to/test_data.txt"
 	cmd := ReplaceTestSequences(state, target, target.Command)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, cmd)
 }
 
 func TestAmpersandReplacement(t *testing.T) {
 	target := makeTarget("//path/to:target1", "cat $(location b&b.txt)", nil)
 	expected := "cat \"path/to/b&b.txt\""
 	cmd := ReplaceSequences(state, target, target.Command)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, cmd)
 }
 
 func TestToolReplacement(t *testing.T) {
@@ -135,9 +111,7 @@ func TestToolReplacement(t *testing.T) {
 	wd, _ := os.Getwd()
 	expected := quote(path.Join(wd, "plz-out/gen/path/to/target2.py"))
 	cmd := ReplaceSequences(state, target1, target1.Command)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, cmd)
 }
 
 func TestDirReplacement(t *testing.T) {
@@ -147,9 +121,7 @@ func TestDirReplacement(t *testing.T) {
 
 	expected := "path/to"
 	cmd := ReplaceSequences(state, target1, target1.Command)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, cmd)
 }
 
 func TestToolDirReplacement(t *testing.T) {
@@ -161,9 +133,7 @@ func TestToolDirReplacement(t *testing.T) {
 	wd, _ := os.Getwd()
 	expected := quote(path.Join(wd, "plz-out/gen/path/to"))
 	cmd := ReplaceSequences(state, target1, target1.Command)
-	if cmd != expected {
-		t.Errorf("Replacement sequence not as expected; is %s, should be %s", cmd, expected)
-	}
+	assert.Equal(t, expected, cmd)
 }
 
 func TestBazelCompatReplacements(t *testing.T) {
@@ -249,6 +219,14 @@ func TestWorkerReplacementNotTarget(t *testing.T) {
 	assert.Equal(t, "javac_worker", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
+}
+
+func TestCrossCompileReplacement(t *testing.T) {
+	target2 := makeTarget("///linux_x86//path/to:target2", "", nil)
+	target1 := makeTarget("///linux_x86//path/to:target1", "ln -s $(location //path/to:target2) ${OUT}", target2)
+
+	expected := "ln -s path/to/target2.py ${OUT}"
+	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func makeTarget(name string, command string, dep *core.BuildTarget) *core.BuildTarget {
