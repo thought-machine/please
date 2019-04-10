@@ -707,7 +707,7 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     complete_flag = '-complete ' if complete else ''
 
     _GOPATH = ' '.join(
-        ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':')])
+        ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
     compile_cmd = '$TOOLS_GO tool compile -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (complete_flag, _GOPATH)
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
@@ -726,7 +726,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
     """Returns the commands to run for linking a Go binary."""
 
     _GOPATH = ' '.join(
-        ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':')])
+        ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
     _link_cmd = '$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s -o ${OUT} ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
