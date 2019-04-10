@@ -220,6 +220,11 @@ func NewArch(os, arch string) Arch {
 	return Arch{OS: os, Arch: arch}
 }
 
+// HostArch returns the architecture for the host OS.
+func HostArch() Arch {
+	return Arch{OS: runtime.GOOS, Arch: runtime.GOARCH}
+}
+
 // String prints this Arch to its string representation.
 func (arch *Arch) String() string {
 	return arch.OS + "_" + arch.Arch

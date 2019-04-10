@@ -104,6 +104,8 @@ type BuildState struct {
 	Include, Exclude []string
 	// Actual targets to exclude from discovery
 	ExcludeTargets []BuildLabel
+	// The original architecture that the user requested to build for.
+	OriginalArch cli.Arch
 	// True if we require rule hashes to be correctly verified (usually the case).
 	VerifyHashes bool
 	// Aggregated coverage for this run
@@ -746,6 +748,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		NeedBuild:    true,
 		Success:      true,
 		Coverage:     TestCoverage{Files: map[string][]LineCoverage{}},
+		OriginalArch: cli.HostArch(),
 		numWorkers:   numThreads,
 		Stats:        &SystemStats{},
 		progress: &stateProgress{

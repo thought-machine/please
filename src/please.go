@@ -761,6 +761,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+	if opts.BuildFlags.Arch.OS != "" {
+		state.OriginalArch = opts.BuildFlags.Arch
+	}
 
 	if state.DebugTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")

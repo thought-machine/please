@@ -475,6 +475,7 @@ func printHashes(state *core.BuildState, duration time.Duration) {
 
 func printTempDirs(state *core.BuildState, duration time.Duration) {
 	fmt.Printf("Temp directories prepared, total time %s:\n", duration)
+	state = state.ForArch(state.OriginalArch)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		cmd := target.GetCommand(state)
