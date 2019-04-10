@@ -171,11 +171,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addStrings(s, "visibility", args[11], func(str string) {
 		t.Visibility = append(t.Visibility, parseVisibility(s, str))
 	})
-	addStrings(s, "secrets", args[8], func(str string) {
-		s.NAssert(strings.HasPrefix(str, "//"), "Secret %s of %s cannot be a build label", str, t.Label.Name)
-		s.Assert(strings.HasPrefix(str, "/") || strings.HasPrefix(str, "~"), "Secret '%s' of %s is not an absolute path", str, t.Label.Name)
-		t.Secrets = append(t.Secrets, str)
-	})
+	addMaybeNamedSecret(s, "secrets", args[8], t.AddSecret, t.AddNamedSecret, t, true)
 	addProvides(s, "provides", args[29], t)
 	setContainerSettings(s, "container", args[19], t)
 	if f := callbackFunction(s, "pre_build", args[26], 1, "argument"); f != nil {
@@ -246,6 +242,46 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 					if !optional || !strings.HasPrefix(string(out), "*") {
 						s.pkg.MustRegisterOutput(string(out), t)
 					}
+				}
+			}
+		}
+	} else if obj != None {
+		s.Assert(false, "Argument %s must be a list or dict, not %s", name, obj.Type())
+	}
+}
+
+// addMaybeNamedSecret adds outputs to a target, possibly in a named group
+func addMaybeNamedSecret(s *scope, name string, obj pyObject, anon func(string), named func(string, string), t *core.BuildTarget, optional bool) {
+	validateSecret := func(secret string) {
+		s.NAssert(strings.HasPrefix(secret, "//"),
+			"Secret %s of %s cannot be a build label", secret, t.Label.Name)
+		s.Assert(strings.HasPrefix(secret, "/") || strings.HasPrefix(secret, "~"),
+			"Secret '%s' of %s is not an absolute path", secret, t.Label.Name)
+	}
+
+	if obj == nil {
+		return
+	}
+	if l, ok := asList(obj); ok {
+		for _, li := range l {
+			if li != None {
+				out, ok := li.(pyString)
+				s.Assert(ok, "secrets must be strings")
+				validateSecret(string(out))
+				anon(string(out))
+			}
+		}
+	} else if d, ok := asDict(obj); ok {
+		s.Assert(named != nil, "%s cannot be given as a dict", name)
+		for k, v := range d {
+			l, ok := asList(v)
+			s.Assert(ok, "Values must be lists of strings")
+			for _, li := range l {
+				if li != None {
+					out, ok := li.(pyString)
+					s.Assert(ok, "outs must be strings")
+					validateSecret(string(out))
+					named(k, string(out))
 				}
 			}
 		}

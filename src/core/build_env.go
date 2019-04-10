@@ -95,7 +95,15 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	}
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
-		env = append(env, "SECRETS="+ExpandHomePath(strings.Join(target.Secrets, " ")))
+		secrets := "SECRETS=" + ExpandHomePath(strings.Join(target.Secrets, ":"))
+		secrets = strings.Replace(secrets, ":", " ", -1)
+		env = append(env, secrets)
+	}
+	// NamedSecrets, if they declared any.
+	for name, secrets := range target.NamedSecrets {
+		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + ExpandHomePath(strings.Join(secrets, ":"))
+		secrets = strings.Replace(secrets, ":", " ", -1)
+		env = append(env, secrets)
 	}
 	if state.Config.Bazel.Compatibility {
 		// Obviously this is only a subset of the variables Bazel would expose, but there's

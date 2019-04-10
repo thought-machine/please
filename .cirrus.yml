@@ -3,6 +3,7 @@ freebsd_instance:
 
 task:
   install_script: pkg install -y bash protobuf go git python3
+  bashrc_script: touch ~/.bashrc
   go_mod_cache:
     folder: ~/go
     fingerprint_script: cat go.mod
