@@ -388,9 +388,12 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 
 // DependenciesFor returns the dependencies that relate to a given label.
 func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
-	info := target.dependencyInfo(label)
-	if info != nil {
+	if info := target.dependencyInfo(label); info != nil {
 		return info.deps
+	} else if target.Label.Subrepo != "" && label.Subrepo == "" {
+		// Can implicitly use the target's subrepo.
+		label.Subrepo = target.Label.Subrepo
+		return target.DependenciesFor(label)
 	}
 	return nil
 }
