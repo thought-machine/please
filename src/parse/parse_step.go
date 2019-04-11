@@ -87,6 +87,10 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependor core.BuildLab
 	} else if subrepo := checkArchSubrepo(state, label.Subrepo); subrepo != nil {
 		return subrepo, nil
 	}
+	// Fix for #577; fallback like above, it might be defined within the subrepo.
+	if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, dependor.Subrepo, label); handled && err == nil {
+		return state.Graph.Subrepo(label.Subrepo), nil
+	}
 	return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
 }
 
