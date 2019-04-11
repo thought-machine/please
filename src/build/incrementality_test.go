@@ -45,6 +45,7 @@ var KnownFields = map[string]bool{
 	"Tools":                       true,
 	"namedTools":                  true,
 	"Secrets":                     true,
+	"NamedSecrets":                true,
 	"TestOutputs":                 true,
 	"Stamp":                       true,
 

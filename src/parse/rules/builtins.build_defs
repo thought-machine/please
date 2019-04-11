@@ -4,7 +4,7 @@
 # Do not change the order of arguments to this function unless you feel like
 # updating all of targets.go to match it.
 def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=None, data:list=None, outs:list|dict=None,
-               deps:list=None, exported_deps:list=None, secrets:list=None, tools:list|dict=None, labels:list=None,
+               deps:list=None, exported_deps:list=None, secrets:list|dict=None, tools:list|dict=None, labels:list=None,
                visibility:list=CONFIG.DEFAULT_VISIBILITY, hashes:list=None, binary:bool=False, test:bool=False,
                test_only:bool=CONFIG.DEFAULT_TESTONLY, building_description:str=None, needs_transitive_deps:bool=False,
                output_is_complete:bool=False, container:bool|dict=False, sandbox:bool=CONFIG.BUILD_SANDBOX,

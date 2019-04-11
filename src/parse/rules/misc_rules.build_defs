@@ -5,7 +5,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
             labels:list&features&tags=None, visibility:list=None, building_description:str='Building...',
             hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
             needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool&testonly=False,
-            secrets:list=None, requires:list=None, provides:dict=None, pre_build:function=None,
+            secrets:list|dict=None, requires:list=None, provides:dict=None, pre_build:function=None,
             post_build:function=None, tools:list|dict=None):
     """A general build rule which allows the user to specify a command.
 
@@ -38,14 +38,16 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                            rule).
                            If tools is given as a dict then the keys of the dict name the various
                            tools and they can be accessed with $TOOLS_KEY.
-      secrets (list): Files containing secrets (credentials etc) used to build this rule. These are
-                      all absolute paths (beginning with / or ~) and are not copied to the build
-                      directory. They can be accessed through the environment variable $SECRETS.
-                      They don't contribute to the key used to retrieve outputs from the cache; this
-                      means it's possible for one machine to build a target with the secret and then
-                      share the output with others. That also implies that secrets are things like
-                      credentials or signing keys and shouldn't be copied directly to outputs, otherwise
-                      they might become more widely known.
+      secrets (list | dict): Files containing secrets (credentials etc) used to build this rule.
+           Can be a list of secrets, or a dict to lists. In the latter case they can be accessed
+           separately which is useful to be able to refer to them distinctly in the command. These
+           are all absolute paths (beginning with / or ~) and are not copied to the build directory.
+           They can be accessed through the environment variable $SECRETS (named secrets can be
+           addressed individually as $SECRETS_<NAME_OF_SECRET>). They don't contribute to the key
+           used to retrieve outputs from the cache; this means it's possible for one machine to
+           build a target with the secret and then share the output with others. That also implies
+           that secrets are things like credentials or signing keys and shouldn't be copied directly
+           to outputs, otherwise they might become more widely known.
       labels (list): Labels to apply to this rule.
       visibility (list): Visibility declaration of this rule
       building_description (str): Description to display to the user while the rule is building.
@@ -117,7 +119,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
 
 def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str|dict=None, srcs:list|dict=None, outs:list=None,
             deps:list=None, tools:list|dict=None, data:list=None, visibility:list=None, timeout:int=0,
-            needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list=None, no_test_output:bool=False,
+            needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False,
             test_outputs:list=None, output_is_complete:bool=True, requires:list=None,
             container:bool|dict=False, sandbox:bool=None, size:str=None):
     """A rule which creates a test with an arbitrary command.
@@ -141,7 +143,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
       deps (list): Dependencies of this rule.
       tools (list): Tools used to build this rule; similar to srcs but are not copied to the temporary
                     build directory. Should be accessed via $(exe //path/to:tool) or similar.
-      secrets (list): Secrets available to this rule while building.
+      secrets (list | dict): Secrets available to this rule while building.
       data (list): Runtime data files for the test.
       visibility (list): Visibility declaration of this rule.
       timeout (int): Length of time in seconds to allow the test to run for before killing it.

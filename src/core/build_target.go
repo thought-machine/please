@@ -135,6 +135,8 @@ type BuildTarget struct {
 	// if changed locally will still force a rebuild. They're not copied into the source directory
 	// (or indeed anywhere by plz).
 	Secrets []string
+	// Named secrets of this rule; as above but identified by name.
+	NamedSecrets map[string][]string
 	// BUILD language functions to call before / after target is built. Allows deferred manipulation of the build graph.
 	PreBuildFunction  PreBuildFunction  `name:"pre_build"`
 	PostBuildFunction PostBuildFunction `name:"post_build"`
@@ -587,12 +589,28 @@ func (target *BuildTarget) CheckDuplicateOutputs() error {
 // requiring them will presumably fail if they aren't available.
 // Returns an error if any aren't.
 func (target *BuildTarget) CheckSecrets() error {
-	for _, secret := range target.Secrets {
+	for _, secret := range target.AllSecrets() {
 		if path := ExpandHomePath(secret); !PathExists(path) {
 			return fmt.Errorf("Path %s doesn't exist; it's required to build %s", secret, target.Label)
 		}
 	}
 	return nil
+}
+
+// AllSecrets returns all the sources of this rule.
+func (target *BuildTarget) AllSecrets() []string {
+	ret := target.Secrets[:]
+	if target.NamedSecrets != nil {
+		keys := make([]string, 0, len(target.NamedSecrets))
+		for k := range target.NamedSecrets {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			ret = append(ret, target.NamedSecrets[k]...)
+		}
+	}
+	return ret
 }
 
 // HasDependency checks if a target already depends on this label.
@@ -781,6 +799,20 @@ func (target *BuildTarget) addSource(sources []BuildInput, source BuildInput) []
 	return append(sources, source)
 }
 
+// AddSecret adds a secret to the build target, deduplicating against existing entries.
+func (target *BuildTarget) AddSecret(secret string) {
+	target.Secrets = target.addSecret(target.Secrets, secret)
+}
+
+func (target *BuildTarget) addSecret(secrets []string, secret string) []string {
+	for _, existing := range secrets {
+		if existing == secret {
+			return secrets
+		}
+	}
+	return append(secrets, secret)
+}
+
 // AddNamedSource adds a source to the target which is tagged with a particular name.
 // For example, C++ rules add sources tagged as "sources" and "headers" to distinguish
 // two conceptually different kinds of input.
@@ -789,6 +821,16 @@ func (target *BuildTarget) AddNamedSource(name string, source BuildInput) {
 		target.NamedSources = map[string][]BuildInput{name: target.addSource(nil, source)}
 	} else {
 		target.NamedSources[name] = target.addSource(target.NamedSources[name], source)
+	}
+}
+
+// AddNamedSecret adds a secret to the target which is tagged with a particular name.
+// These will be made available in the environment at runtime, with key-format "SECRETS_<NAME>".
+func (target *BuildTarget) AddNamedSecret(name string, secret string) {
+	if target.NamedSecrets == nil {
+		target.NamedSecrets = map[string][]string{name: target.addSecret(nil, secret)}
+	} else {
+		target.NamedSecrets[name] = target.addSecret(target.NamedSecrets[name], secret)
 	}
 }
 
