@@ -232,7 +232,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 	target := string(args[0].(pyString))
 	t := subincludeTarget(s, core.ParseBuildLabelContext(target, s.contextPkg))
 	pkg := s.contextPkg
-	if t.Subrepo != s.contextPkg.Subrepo {
+	if t.Subrepo != s.contextPkg.Subrepo && t.Subrepo != nil {
 		pkg = &core.Package{
 			Name:        "@" + t.Subrepo.Name,
 			SubrepoName: t.Subrepo.Name,

@@ -1,3 +1,10 @@
+Version 13.5.4
+--------------
+
+    * Fix for finding subrepos (fixes cc_test in #577)
+    * Fixed secret substitutions only replacing the first tilde (#572)
+
+
 Version 13.5.3
 --------------
 
