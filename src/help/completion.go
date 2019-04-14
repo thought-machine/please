@@ -3,8 +3,6 @@
 package help
 
 import (
-	"strings"
-
 	"github.com/jessevdk/go-flags"
 )
 
@@ -20,12 +18,10 @@ func (topic *Topic) UnmarshalFlag(value string) error {
 
 // Complete implements the flags.Completer interface, which is used for shell completion.
 func (topic Topic) Complete(match string) []flags.Completion {
-	topics := allTopics()
+	topics := allTopics(match)
 	completions := make([]flags.Completion, len(topics))
 	for i, topic := range topics {
-		if strings.HasPrefix(topic, match) {
-			completions[i].Item = topic
-		}
+		completions[i].Item = topic
 	}
 	return completions
 }

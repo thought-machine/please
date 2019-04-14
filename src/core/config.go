@@ -112,15 +112,16 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
 	if usingBazelWorkspace {
-		setDefault(&config.Parse.BuildFileName, []string{"BUILD.bazel", "BUILD", "BUILD.plz"})
+		setDefault(&config.Parse.BuildFileName, "BUILD.bazel", "BUILD", "BUILD.plz")
 	} else {
-		setDefault(&config.Parse.BuildFileName, []string{"BUILD", "BUILD.plz"})
+		setDefault(&config.Parse.BuildFileName, "BUILD", "BUILD.plz")
 	}
 	setBuildPath(&config.Build.Path, config.Build.PassEnv)
-	setDefault(&config.Build.PassEnv, []string{})
-	setDefault(&config.Cover.FileExtension, []string{".go", ".py", ".java", ".js", ".cc", ".h", ".c"})
-	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc"})
-	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go", "js"})
+	setDefault(&config.Build.PassEnv)
+	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".js", ".cc", ".h", ".c")
+	setDefault(&config.Cover.ExcludeExtension, ".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc")
+	setDefault(&config.Proto.Language, "cc", "py", "java", "go", "js")
+	setDefault(&config.Parse.BuildDefsDir, "build_defs")
 
 	// Default values for these guys depend on config.Java.JavaHome if that's been set.
 	if config.Java.JavaHome != "" {
@@ -187,7 +188,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 }
 
 // setDefault sets a slice of strings in the config if the set one is empty.
-func setDefault(conf *[]string, def []string) {
+func setDefault(conf *[]string, def ...string) {
 	if len(*conf) == 0 {
 		*conf = def
 	}
@@ -201,8 +202,7 @@ func setBuildPath(conf *[]string, passEnv []string) {
 			pathVal = strings.Split(os.Getenv("PATH"), ":")
 		}
 	}
-
-	setDefault(conf, pathVal)
+	setDefault(conf, pathVal...)
 }
 
 // defaultPath sets a variable to a location in a directory if it's not already set.
@@ -348,6 +348,7 @@ type Configuration struct {
 		BuildFileName    []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
 		BlacklistDirs    []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
 		PreloadBuildDefs []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths." example:"build_defs/go_bindata.build_defs"`
+		BuildDefsDir     []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
 		BuiltinPleasings bool     `help:"Adds github.com/thought-machine/pleasings as a default subrepo named pleasings. This makes some builtin extensions available, but is not fully deterministic (it always uses the latest version). You may prefer to disable this and define your own subrepo for it (or not use it at all, of course)."`
 		GitFunctions     bool     `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
