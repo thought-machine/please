@@ -645,7 +645,7 @@ func getTargetPost(s *scope, name string) *core.BuildTarget {
 func addDep(s *scope, args []pyObject) pyObject {
 	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
 	target := getTargetPost(s, string(args[0].(pyString)))
-	dep := core.ParseBuildLabel(string(args[1].(pyString)), s.pkg.Name)
+	dep := core.ParseBuildLabelContext(string(args[1].(pyString)), s.pkg)
 	exported := args[2].IsTruthy()
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Note that here we're in a post-build function so we must call this explicitly
