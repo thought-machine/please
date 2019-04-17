@@ -5,7 +5,6 @@ go_binary(
         "github.com/thought-machine/please/test/stamp/lib.GitRevision": "$SCM_REVISION",
     },
     stamp = True,
-    static = True,
     deps = ["//test/stamp/lib"],
 )
 
@@ -14,3 +13,21 @@ sh_test(
     src = "stamp_test.sh",
     data = [":stamp"],
 )
+
+if CONFIG.OS == 'linux':
+    go_binary(
+        name = "stamp_static",
+        srcs = ["main.go"],
+        definitions = {
+            "github.com/thought-machine/please/test/stamp/lib.GitRevision": "$SCM_REVISION",
+        },
+        stamp = True,
+        static = True,
+        deps = ["//test/stamp/lib"],
+    )
+
+    sh_test(
+        name = "stamp_test_static",
+        src = "stamp_test.sh",
+        data = [":stamp_static"],
+    )
