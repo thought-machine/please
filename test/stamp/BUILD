@@ -4,8 +4,8 @@ go_binary(
     definitions = {
         "github.com/thought-machine/please/test/stamp/lib.GitRevision": "$SCM_REVISION",
     },
-    static = True,
     stamp = True,
+    static = True,
     deps = ["//test/stamp/lib"],
 )
 
