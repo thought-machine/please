@@ -1,3 +1,10 @@
+Version 13.5.5
+--------------
+
+    * Fix for static Go binaries with definitions (#597)
+    * Allow config_setting rules to switch based on OS (#596)
+
+
 Version 13.5.4
 --------------
 
