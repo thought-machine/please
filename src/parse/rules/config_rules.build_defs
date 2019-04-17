@@ -61,6 +61,8 @@ def _config_on(name, value):
         return value.upper() in CONFIG
     elif name == 'crosstool_top':
         return False  # Android build - not clear right now how we would best represent this.
+    elif name == 'os':
+        return CONFIG.OS == value.lower()
     else:
         raise ParseError('Unknown config_setting key %s' % name)
 
