@@ -750,7 +750,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
         flags = f''
 
     if len(defs) > 0:
-        flags += defs
+        flags += " " + defs
 
     cmds = {
         'dbg': f'{prefix} && {_link_cmd} {flags} $SRCS',
