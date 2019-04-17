@@ -611,7 +611,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
         get_deps = []
         if repo:
             # we've been told exactly where to get the source from.
-            cmd = [f'git clone {repo} src/{getroot}']
+            cmd = [f'git clone --branch {revision} --depth=1 --shallow-submodules --no-tags {repo} src/{getroot}']
         else:
             # Ultimate fallback to go get.
             # This has some more restrictions than the above (e.g. go get won't fetch a directory
