@@ -25,7 +25,8 @@ func Run(state *core.BuildState, label core.BuildLabel, args []string, env bool)
 }
 
 // Parallel runs a series of targets in parallel.
-// Returns true if all were successful.
+// Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
+// that code, otherwise 0 if all were successful).
 func Parallel(state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, env bool) int {
 	pool := NewGoroutinePool(numTasks)
 	var g errgroup.Group
@@ -52,7 +53,8 @@ func Parallel(state *core.BuildState, labels []core.BuildLabel, args []string, n
 }
 
 // Sequential runs a series of targets sequentially.
-// Returns true if all were successful.
+// Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
+// that code, otherwise 0 if all were successful).
 func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, env bool) int {
 	for _, label := range labels {
 		log.Notice("Running %s", label)

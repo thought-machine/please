@@ -14,6 +14,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/run"
 )
 
 var log = logging.MustGetLogger("watch")
@@ -153,4 +154,7 @@ func build(state *core.BuildState, labels []core.BuildLabel, callback CallbackFu
 	ns.ShowAllOutput = state.ShowAllOutput
 	ns.StartTime = time.Now()
 	callback(ns, labels)
+	if state.NeedRun {
+		run.Parallel(state, labels, nil, state.Config.Please.NumThreads, false, false)
+	}
 }
