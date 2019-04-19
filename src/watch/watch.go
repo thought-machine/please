@@ -4,6 +4,7 @@
 package watch
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"time"
@@ -38,10 +39,12 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	// The initial setup only builds targets, it doesn't test or run things.
 	// Do one of those now if requested.
 	if state.NeedTests || state.NeedRun {
-		build(state, labels, callback)
+		build(ctx, state, labels, callback)
 	}
 
 	for {
@@ -52,6 +55,9 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 				log.Notice("Skipping notification for %s", event.Name)
 				continue
 			}
+			// Kill any previous process.
+			cancel()
+			ctx, cancel = context.WithCancel(context.Background())
 
 			// Quick debounce; poll and discard all events for the next brief period.
 		outer:
@@ -62,7 +68,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 					break outer
 				}
 			}
-			build(state, labels, callback)
+			build(ctx, state, labels, callback)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
@@ -141,7 +147,7 @@ func anyTests(state *core.BuildState, labels []core.BuildLabel) bool {
 }
 
 // build invokes a single build while watching.
-func build(state *core.BuildState, labels []core.BuildLabel, callback CallbackFunc) {
+func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, callback CallbackFunc) {
 	// Set up a new state & copy relevant parts off the existing one.
 	ns := core.NewBuildState(state.Config.Please.NumThreads, state.Cache, state.Verbosity, state.Config)
 	ns.VerifyHashes = state.VerifyHashes
@@ -155,6 +161,7 @@ func build(state *core.BuildState, labels []core.BuildLabel, callback CallbackFu
 	ns.StartTime = time.Now()
 	callback(ns, labels)
 	if state.NeedRun {
-		run.Parallel(state, labels, nil, state.Config.Please.NumThreads, false, false)
+		// Don't wait for this, its lifetime will be controlled by the context.
+		go run.Parallel(ctx, state, labels, nil, state.Config.Please.NumThreads, false, false)
 	}
 }

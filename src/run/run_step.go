@@ -2,6 +2,7 @@
 package run
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,13 +22,14 @@ var log = logging.MustGetLogger("run")
 
 // Run implements the running part of 'plz run'.
 func Run(state *core.BuildState, label core.BuildLabel, args []string, env bool) {
-	run(state, label, args, false, false, env)
+	run(context.Background(), state, label, args, false, false, env)
 }
 
 // Parallel runs a series of targets in parallel.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Parallel(state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, env bool) int {
+// The given context can be used to control the lifetime of the subprocesses.
+func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, env bool) int {
 	pool := NewGoroutinePool(numTasks)
 	var g errgroup.Group
 	for _, label := range labels {
@@ -36,7 +38,7 @@ func Parallel(state *core.BuildState, labels []core.BuildLabel, args []string, n
 			var wg sync.WaitGroup
 			wg.Add(1)
 			pool.Submit(func() {
-				if e := run(state, label, args, true, quiet, env); e != nil {
+				if e := run(ctx, state, label, args, true, quiet, env); e != nil {
 					err = e
 				}
 				wg.Done()
@@ -46,7 +48,9 @@ func Parallel(state *core.BuildState, labels []core.BuildLabel, args []string, n
 		})
 	}
 	if err := g.Wait(); err != nil {
-		log.Error("Command failed: %s", err)
+		if ctx.Err() != context.Canceled { // Don't error if the context killed the process.
+			log.Error("Command failed: %s", err)
+		}
 		return err.(*exitError).code
 	}
 	return 0
@@ -58,7 +62,7 @@ func Parallel(state *core.BuildState, labels []core.BuildLabel, args []string, n
 func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, env bool) int {
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		if err := run(state, label, args, true, quiet, env); err != nil {
+		if err := run(context.Background(), state, label, args, true, quiet, env); err != nil {
 			log.Error("%s", err)
 			return err.code
 		}
@@ -70,7 +74,7 @@ func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string,
 // If fork is true then we fork to run the target and return any error from the subprocesses.
 // If it's false this function never returns (because we either win or die; it's like
 // Game of Thrones except rather less glamorous).
-func run(state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, setenv bool) *exitError {
+func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, setenv bool) *exitError {
 	target := state.Graph.TargetOrDie(label)
 	if !target.IsBinary {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
@@ -101,7 +105,7 @@ func run(state *core.BuildState, label core.BuildLabel, args []string, fork, qui
 	}
 	// Run as a normal subcommand.
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.
-	cmd := core.ExecCommand(splitCmd[0], args[1:]...) // args here don't include argv[0]
+	cmd := exec.CommandContext(ctx, splitCmd[0], args[1:]...) // args here don't include argv[0]
 	cmd.Env = env
 	if !quiet {
 		cmd.Stdout = os.Stdout
