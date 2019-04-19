@@ -2,7 +2,7 @@
 set -eu
 
 source "test/pass_env.sh"
-if [ -z "$SHELL" ]; then
-    echo '$SHELL is not set'
+if [ -z "$USER" ]; then
+    echo '$USER is not set'
     exit 1
 fi

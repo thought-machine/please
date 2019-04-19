@@ -439,8 +439,8 @@ sh_test(
 genrule(
     name = "pass_env",
     outs = ["pass_env.sh"],
-    cmd = "echo \"export SHELL='$SHELL'\" > $OUT",
-    pass_env = ["SHELL"],
+    cmd = "echo \"export USER='$USER'\" > $OUT",
+    pass_env = ["USER"],
 )
 
 sh_test(
