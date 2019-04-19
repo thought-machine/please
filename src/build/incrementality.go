@@ -276,6 +276,13 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	// any amount of other stuff).
 	hashBool(h, target.PreBuildFunction != nil)
 	hashBool(h, target.PostBuildFunction != nil)
+	if target.PassEnv != nil {
+		for _, env := range *target.PassEnv {
+			h.Write([]byte(env))
+			h.Write([]byte{'='})
+			h.Write([]byte(os.Getenv(env)))
+		}
+	}
 	return h.Sum(nil)
 }
 

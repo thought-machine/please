@@ -435,3 +435,16 @@ sh_test(
     src = "glob_build_test.sh",
     data = glob(["*"]),
 )
+
+genrule(
+    name = "pass_env",
+    outs = ["pass_env.sh"],
+    cmd = "echo \"export SHELL='$SHELL'\" > $OUT",
+    pass_env = ["SHELL"],
+)
+
+sh_test(
+    name = "pass_env_test",
+    src = "pass_env_test.sh",
+    data = [":pass_env"],
+)
