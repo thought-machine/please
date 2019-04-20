@@ -133,6 +133,7 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
+		active              bool         `no-flag:"true"`
 		FailingTestsOk      bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NoCoverageReport    bool         `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
 		LineCoverageReport  bool         `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
@@ -400,6 +401,7 @@ var buildFunctions = map[string]func() bool{
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
+		opts.Cover.active = true
 		if opts.BuildFlags.Config != "" {
 			log.Warning("Build config overridden; coverage may not be available for some languages")
 		} else {
@@ -747,7 +749,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)  // Only one of these can be passed
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
-	state.NeedCoverage = !opts.Cover.Args.Target.IsEmpty()
+	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0

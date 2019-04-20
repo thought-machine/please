@@ -151,8 +151,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
 	if state.NumTestRuns == 1 && !needToRun() {
-		cachedResults := cachedTestResults()
-		if cachedResults != nil {
+		if cachedResults := cachedTestResults(); cachedResults != nil {
 			target.Results = *cachedResults
 			return
 		}

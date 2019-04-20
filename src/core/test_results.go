@@ -250,9 +250,9 @@ type LineCoverage uint8
 // Constants representing the states that a single line can be in for coverage.
 const (
 	NotExecutable LineCoverage = iota // Line isn't executable (eg. comment, blank)
-	Unreachable   LineCoverage = iota // Line is executable but we've determined it can't be reached. So far not used.
-	Uncovered     LineCoverage = iota // Line is executable but isn't covered.
-	Covered       LineCoverage = iota // Line is executable and covered.
+	Unreachable                       // Line is executable but we've determined it can't be reached. So far not used.
+	Uncovered                         // Line is executable but isn't covered.
+	Covered                           // Line is executable and covered.
 )
 
 var lineCoverageOutput = [...]rune{'N', 'X', 'U', 'C'} // Corresponds to ordering of enum.
@@ -264,7 +264,7 @@ type TestCoverage struct {
 	Files map[string][]LineCoverage
 }
 
-// Aggregate aggregates results from that coverage object into this one.
+// Aggregate aggregates results from another coverage object into this one.
 func (coverage *TestCoverage) Aggregate(cov *TestCoverage) {
 	if coverage.Tests == nil {
 		coverage.Tests = map[BuildLabel]map[string][]LineCoverage{}

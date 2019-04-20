@@ -17,6 +17,8 @@ def initialise_coverage():
     def _xml_file(self, fr, analysis):
         if '.pex' in fr.filename:
             fr.filename = fr.filename[fr.filename.index('.pex') + 5:]  # +5 to take off .pex/
+        if fr.filename == '__main__.py':
+            return  # Don't calculate coverage for the synthetic entrypoint.
         if not (fr.filename.endswith('__init__.py') and len(analysis.statements) <= 1):
             analysis.filename = fr.filename
             fr.relname = fr.filename
