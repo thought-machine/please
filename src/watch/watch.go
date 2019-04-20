@@ -23,7 +23,7 @@ import (
 
 var log = logging.MustGetLogger("watch")
 
-const debounceInterval = 50 * time.Millisecond
+const debounceInterval = 100 * time.Millisecond
 
 // A CallbackFunc is supplied to Watch in order to trigger a build.
 type CallbackFunc func(*core.BuildState, []core.BuildLabel)
