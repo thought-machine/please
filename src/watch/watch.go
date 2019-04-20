@@ -6,7 +6,10 @@ package watch
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"path"
+	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -39,7 +42,19 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, os.Interrupt)
+	parentCtx, cancelParent := context.WithCancel(context.Background())
+	go func() {
+		for range sigchan {
+			cancelParent()
+			signal.Stop(sigchan)
+			close(sigchan)
+			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+		}
+	}()
+
+	ctx, cancel := context.WithCancel(parentCtx)
 
 	// The initial setup only builds targets, it doesn't test or run things.
 	// Do one of those now if requested.
@@ -57,7 +72,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 			}
 			// Kill any previous process.
 			cancel()
-			ctx, cancel = context.WithCancel(context.Background())
+			ctx, cancel = context.WithCancel(parentCtx)
 
 			// Quick debounce; poll and discard all events for the next brief period.
 		outer:

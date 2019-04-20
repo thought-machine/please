@@ -2,6 +2,7 @@
 package run
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -107,15 +108,26 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.
 	cmd := exec.CommandContext(ctx, splitCmd[0], args[1:]...) // args here don't include argv[0]
 	cmd.Env = env
-	if !quiet {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		must(cmd.Start(), args)
-		err := cmd.Wait()
-		return toExitError(err, cmd, nil)
+
+	var combinedOutput bytes.Buffer // Dump the command output here, for quiet mode.
+	if quiet {
+		cmd.Stdout, cmd.Stderr = &combinedOutput, &combinedOutput
+	} else {
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	}
-	out, err := cmd.CombinedOutput()
-	return toExitError(err, cmd, out)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	must(cmd.Start(), args)
+
+	if pgid, err := syscall.Getpgid(cmd.Process.Pid); err == nil && pgid > 0 {
+		go func() {
+			for range ctx.Done() {
+			}
+			syscall.Kill(-pgid, syscall.SIGKILL)
+		}()
+	}
+
+	err := cmd.Wait()
+	return toExitError(err, cmd, combinedOutput.Bytes())
 }
 
 // environ returns an appropriate environment for a command.
