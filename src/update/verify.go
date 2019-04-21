@@ -3,10 +3,12 @@
 package update
 
 import (
+	"bufio"
 	"bytes"
 	"io"
 	"io/ioutil"
 
+	"github.com/thought-machine/please/src/cli"
 	"golang.org/x/crypto/openpgp"
 )
 
@@ -51,5 +53,5 @@ func mustVerifySignature(signed, signature io.Reader) io.Reader {
 	if !verifySignature(bytes.NewReader(b), signature) {
 		panic("Invalid signature on downloaded file, possible tampering; will not continue.")
 	}
-	return bytes.NewReader(b)
+	return bufio.NewReader(cli.NewProgressReader(ioutil.NopCloser(bytes.NewReader(b)), len(b), "Extracting"))
 }

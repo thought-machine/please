@@ -23,6 +23,7 @@ import (
 	"os/signal"
 	"path"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -225,7 +226,8 @@ func mustDownload(url string, progress bool) io.ReadCloser {
 	} else if response.StatusCode < 200 || response.StatusCode > 299 {
 		panic(fmt.Sprintf("Failed to download %s: got response %s", url, response.Status))
 	} else if progress {
-		return cli.NewProgressReader(response.Body, response.Header.Get("Content-Length"))
+		i, _ := strconv.Atoi(response.Header.Get("Content-Length"))
+		return cli.NewProgressReader(response.Body, i, "Downloading")
 	}
 	return response.Body
 }
