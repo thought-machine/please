@@ -176,8 +176,7 @@ var stampEnv BuildEnv
 var stampEnvOnce sync.Once
 
 func initStampEnv() {
-	git := scm.NewGit(RepoRoot)
-	stampEnv = BuildEnv{"SCM_REVISION=" + git.CurrentRevIdentifier()}
+	stampEnv = BuildEnv{"SCM_REVISION=" + scm.MustNew(RepoRoot).CurrentRevIdentifier()}
 }
 
 func toolPath(state *BuildState, tool BuildInput) string {

@@ -14,6 +14,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/scm"
 )
 
 const configTemplate = `; Please config file
@@ -61,6 +62,13 @@ func InitConfig(dir string, bazelCompatibility bool) {
 		log.Fatalf("Failed to write file: %s", err)
 	}
 	fmt.Printf("\nAlso wrote wrapper script to %s; users can invoke that directly to run Please, even without it installed.\n", wrapperScriptName)
+	// If we're in a known repository type, ignore the plz-out directory.
+	if s := scm.New(dir); s != nil {
+		fmt.Printf("Also marking plz-out to be ignored by your SCM.\n")
+		if err := s.IgnoreFile("plz-out"); err != nil {
+			log.Error("Failed to ignore plz-out: %s", err)
+		}
+	}
 }
 
 // InitConfigFile sets a bunch of values in a config file.

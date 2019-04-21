@@ -31,7 +31,7 @@ func ChangedLabels(state *core.BuildState, request ChangedRequest) []core.BuildL
 }
 
 func changedFiles(since string, diffSpec string) []string {
-	git := scm.NewGit(core.RepoRoot)
+	git := scm.New(core.RepoRoot)
 	if diffSpec != "" {
 		return git.ChangesIn(diffSpec, "")
 	}
