@@ -745,19 +745,19 @@ extern const char _binary_${ENCODED_FILENAME}_end[];
 #endif  // __cplusplus
 
 // Nicer aliases.
-inline const char* ${BINARY_NAME}_start() {
+static inline const char* ${BINARY_NAME}_start() {
   return _binary_${ENCODED_FILENAME}_start;
 }
-inline const char* ${BINARY_NAME}_end() {
+static inline const char* ${BINARY_NAME}_end() {
   return _binary_${ENCODED_FILENAME}_end;
 }
-inline unsigned long ${BINARY_NAME}_size() {
+static inline unsigned long ${BINARY_NAME}_size() {
   return _binary_${ENCODED_FILENAME}_end - _binary_${ENCODED_FILENAME}_start;
 }
-inline char* ${BINARY_NAME}_start_nc() {
+static inline char* ${BINARY_NAME}_start_nc() {
   return (char*)(_binary_${ENCODED_FILENAME}_start);
 }
-inline char* ${BINARY_NAME}_end_nc() {
+static inline char* ${BINARY_NAME}_end_nc() {
   return (char*)(_binary_${ENCODED_FILENAME}_end);
 }
 #ifdef __cplusplus
@@ -769,19 +769,19 @@ _C_HEADER_CONTENTS = """\
 extern const char _binary_${ENCODED_FILENAME}_start[];
 extern const char _binary_${ENCODED_FILENAME}_end[];
 
-inline const char* ${BINARY_NAME}_start() {
+static inline const char* ${BINARY_NAME}_start() {
   return _binary_${ENCODED_FILENAME}_start;
 }
-inline const char* ${BINARY_NAME}_end() {
+static inline const char* ${BINARY_NAME}_end() {
   return _binary_${ENCODED_FILENAME}_end;
 }
-inline unsigned long ${BINARY_NAME}_size() {
+static inline unsigned long ${BINARY_NAME}_size() {
   return _binary_${ENCODED_FILENAME}_end - _binary_${ENCODED_FILENAME}_start;
 }
-inline char* ${BINARY_NAME}_start_nc() {
+static inline char* ${BINARY_NAME}_start_nc() {
   return (char*)(_binary_${ENCODED_FILENAME}_start);
 }
-inline char* ${BINARY_NAME}_end_nc() {
+static inline char* ${BINARY_NAME}_end_nc() {
   return (char*)(_binary_${ENCODED_FILENAME}_end);
 }
 """
