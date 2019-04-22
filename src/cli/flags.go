@@ -280,6 +280,8 @@ func (arch *Arch) XArch() string {
 func (arch *Arch) GoArch() string {
 	if arch.Arch == "x86" {
 		return "386"
+	} else if arch.Arch == "x86-64" {
+		return "amd64"
 	}
 	return arch.Arch
 }
