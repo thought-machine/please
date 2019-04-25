@@ -317,7 +317,8 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
 
 def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:bool=False,
                 visibility:list=None, licences:list=None, test_only:bool&testonly=False,
-                labels:list=[], deps:list=None, exported_deps:list=None, _tag=''):
+                labels:list=[], deps:list=None, exported_deps:list=None,
+                extract:bool=False, strip_prefix:str='', _tag:str=''):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -333,7 +334,37 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
       labels (list): Labels to apply to this rule.
       deps (list): List of extra dependencies for this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
+      extract (bool): Extracts the contents of the downloaded file. It must be either zip or
+                      tar format.
+      strip_prefix (str): When extracting, strip this prefix from the extracted files.
     """
+    if extract:
+        assert out, "Must pass 'out' when passing 'extract' to remote_file"
+        remote_rule = remote_file(
+            name = name,
+            _tag = _tag + 'download',
+            url = url,
+            hashes = hashes,
+            out = out,
+            licences = licences,
+            test_only = test_only,
+            labels = labels,
+        )
+        if strip_prefix:
+            cmd = '$TOOL x $SRCS_REMOTE -o $OUT -s ' + strip_prefix
+        else:
+            cmd = '$TOOL x $SRCS_REMOTE -o $OUT'
+        return build_rule(
+            name = name,
+            srcs = [remote_rule],
+            outs = [out],
+            tools = [CONFIG.JARCAT_TOOL],
+            cmd = cmd,
+            test_only = test_only,
+            labels = labels,
+            visibility = visibility,
+        )
+
     urls = [url] if isinstance(url, str) else url
     url = urls[0]
     return build_rule(

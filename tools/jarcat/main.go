@@ -88,15 +88,15 @@ var opts = struct {
 		Prefix string   `long:"prefix" description:"Prefix all entries with this directory name."`
 	} `command:"tar" alias:"t" description:"Builds a tarball instead of a zipfile."`
 
-	Unzip struct {
+	Extract struct {
 		Args struct {
-			In   string `positional-arg-name:"input" required:"true" description:"Input zipfile"`
+			In   string `positional-arg-name:"input" required:"true" description:"Input archive"`
 			File string `positional-arg-name:"file" description:"File to extract"`
 		} `positional-args:"true"`
 		StripPrefix string `short:"s" long:"strip_prefix" description:"Strip this prefix from extracted files"`
 		OutDir      string `short:"o" long:"out" description:"Output directory"`
 		Out         string `long:"out_file" hidden:"true" env:"OUT"`
-	} `command:"unzip" alias:"u" alias:"x" description:"Unzips a zipfile"`
+	} `command:"extract" alias:"unzip" alias:"u" alias:"x" description:"Extracts a zipfile or tarball"`
 
 	Ar struct {
 		Srcs    []string `long:"srcs" env:"SRCS_SRCS" env-delim:" " description:"Source .ar files to combine"`
@@ -142,15 +142,15 @@ func main() {
 			log.Fatalf("Error writing tarball: %s\n", err)
 		}
 		os.Exit(0)
-	} else if command == "unzip" {
+	} else if command == "extract" {
 		// This comes up if we're in the root directory. Ignore it.
-		if opts.Unzip.StripPrefix == "." {
-			opts.Unzip.StripPrefix = ""
+		if opts.Extract.StripPrefix == "." {
+			opts.Extract.StripPrefix = ""
 		}
-		if opts.Unzip.Args.File != "" && opts.Unzip.OutDir == "" {
-			opts.Unzip.OutDir = opts.Unzip.Out
+		if opts.Extract.Args.File != "" && opts.Extract.OutDir == "" {
+			opts.Extract.OutDir = opts.Extract.Out
 		}
-		if err := unzip.Extract(opts.Unzip.Args.In, opts.Unzip.OutDir, opts.Unzip.Args.File, opts.Unzip.StripPrefix); err != nil {
+		if err := unzip.Extract(opts.Extract.Args.In, opts.Extract.OutDir, opts.Extract.Args.File, opts.Extract.StripPrefix); err != nil {
 			log.Fatalf("Error extracting zipfile: %s", err)
 		}
 		os.Exit(0)
