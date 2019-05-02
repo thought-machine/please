@@ -482,7 +482,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
            install:list=None, revision:str|list=None, strip:list=None, hashes:list=None,
-           extra_outs:list=[]):
+           extra_outs:list=[], licences:list=None):
     """Defines a dependency on a third-party Go library.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -516,6 +516,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
       strip (list): List of paths to strip from the installed target.
       hashes (list): List of hashes to verify the downloaded sources against.
       extra_outs (list): List of additional output files after the compile.
+      licences (list): Licences this rule is subject to.
     """
     if isinstance(get, str):
         get = [get]
@@ -584,6 +585,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         sandbox = False,
         needs_transitive_deps = True,
         provides = provides,
+        licences = licences,
     )
 
 
