@@ -94,7 +94,7 @@ func (e *extractor) extractTar(f io.Reader) error {
 				return err
 			}
 		default:
-			fmt.Fprintf(os.Stderr, "Unhandled file type %s for %s", hdr.Typeflag, hdr.Name)
+			fmt.Fprintf(os.Stderr, "Unhandled file type %c for %s", hdr.Typeflag, hdr.Name)
 		}
 	}
 }
