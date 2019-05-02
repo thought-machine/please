@@ -116,7 +116,13 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	must(cmd.Start(), args)
+	if err := cmd.Start(); err != nil {
+		if err == context.Canceled {
+			log.Notice("Context canceled before command could be started")
+			return toExitError(err, cmd, nil)
+		}
+		must(err, args)
+	}
 
 	if pgid, err := syscall.Getpgid(cmd.Process.Pid); err == nil && pgid > 0 {
 		go func() {
