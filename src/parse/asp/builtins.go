@@ -44,6 +44,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_dep", addDep)
 	setNativeCode(s, "add_out", addOut)
 	setNativeCode(s, "add_licence", addLicence)
+	setNativeCode(s, "get_licences", getLicences)
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
 	stringMethods = map[string]*pyFunc{
@@ -589,15 +590,16 @@ func zip(s *scope, args []pyObject) pyObject {
 func getLabels(s *scope, args []pyObject) pyObject {
 	name := string(args[0].(pyString))
 	prefix := string(args[1].(pyString))
+	all := args[2].IsTruthy()
 	if core.LooksLikeABuildLabel(name) {
 		label := core.ParseBuildLabel(name, s.pkg.Name)
-		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built)
+		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all)
 	}
 	target := getTargetPost(s, name)
-	return getLabelsInternal(target, prefix, core.Building)
+	return getLabelsInternal(target, prefix, core.Building, all)
 }
 
-func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState) pyObject {
+func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all bool) pyObject {
 	if target.State() < minState {
 		log.Fatalf("get_labels called on a target that is not yet built: %s", target.Label)
 	}
@@ -611,7 +613,7 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 			}
 		}
 		done[t] = true
-		if !t.OutputIsComplete || t == target {
+		if !t.OutputIsComplete || t == target || all {
 			for _, dep := range t.Dependencies() {
 				if !done[dep] {
 					getLabels(dep)
@@ -675,6 +677,11 @@ func addLicence(s *scope, args []pyObject) pyObject {
 	target := getTargetPost(s, string(args[0].(pyString)))
 	target.AddLicence(string(args[1].(pyString)))
 	return None
+}
+
+// getLicences returns the licences for a single target.
+func getLicences(s *scope, args []pyObject) pyObject {
+	return fromStringList(getTargetPost(s, string(args[0].(pyString))).Licences)
 }
 
 // getCommand gets the command of a target, optionally for a configuration.

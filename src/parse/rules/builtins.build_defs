@@ -212,10 +212,10 @@ ValueError = str
 
 
 # Post-build callback functions.
-def get_labels(name:str, prefix:str) -> list:
+def get_labels(name:str, prefix:str, all:bool=False) -> list:
     pass
-def has_label(name:str, prefix:str) -> bool:
-    return len(get_labels(name, prefix)) > 0
+def has_label(name:str, prefix:str, all:bool=False) -> bool:
+    return len(get_labels(name, prefix, all)) > 0
 def add_dep(target:str, dep:str, exported:bool=False):
     pass
 def add_exported_dep(target:str, dep:str):
@@ -223,6 +223,8 @@ def add_exported_dep(target:str, dep:str):
 def add_out(target:str, name:str, out:str=''):
     pass
 def add_licence(target:str, licence:str):
+    pass
+def get_licences(target:str):
     pass
 def get_command(target:str, config:str='') -> str:
     pass
