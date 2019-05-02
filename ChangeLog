@@ -1,3 +1,13 @@
+Version 13.6.0
+--------------
+
+    * Various fixes for `plz watch --run` (#599, #600, #602, #603)
+    * Fixes for `plz coverage` with no argument (#535)
+    * More cross-compilation fixes (#603)
+    * `remote_file` now takes an `extract` argument to extract tarballs / zipfiles.
+    * Added `get_licences` builtin to find licences of a target.
+
+
 Version 13.5.5
 --------------
 
