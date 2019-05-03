@@ -848,10 +848,28 @@ func readConfig(forceUpdate bool) *core.Configuration {
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
 func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !readingStdin(targets) {
+		if len(targets) == 0 {
+			// Assume they want us to read from stdin since nothing else was given.
+			targets = []core.BuildLabel{core.BuildLabelStdin}
+		} else {
+			log.Warning("Input is being piped to stdin but is not being read; you need to pass - explicitly to read it.")
+		}
+	}
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}
 	return Please(targets, config, shouldBuild, shouldTest)
+}
+
+// readingStdin returns true if any of the given build labels are reading from stdin.
+func readingStdin(labels []core.BuildLabel) bool {
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			return true
+		}
+	}
+	return false
 }
 
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
