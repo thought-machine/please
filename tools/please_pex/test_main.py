@@ -36,8 +36,8 @@ def main():
         # It's important that we run coverage while we load the tests otherwise
         # we get no coverage for import statements etc.
         cov = initialise_coverage().coverage()
-        cov.exclude(r'\bdef\b')
-        cov.exclude(r'\bclass\b')
+        cov.exclude(r'^import\b')
+        cov.exclude(r'^from\b')
         cov.start()
         result = run_tests(args)
         cov.stop()
