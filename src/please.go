@@ -49,7 +49,7 @@ var config *core.Configuration
 var opts struct {
 	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
-		Config     string            `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
+		Config     string            `short:"c" long:"config" env:"PLZ_BUILD_CONFIG" description:"Build config to use. Defaults to opt."`
 		Arch       cli.Arch          `short:"a" long:"arch" description:"Architecture to compile for."`
 		RepoRoot   cli.Filepath      `short:"r" long:"repo_root" description:"Root of repository to build."`
 		KeepGoing  bool              `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
@@ -852,7 +852,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *c
 		if len(targets) == 0 {
 			// Assume they want us to read from stdin since nothing else was given.
 			targets = []core.BuildLabel{core.BuildLabelStdin}
-		} else {
+		} else if shouldBuild || shouldTest || len(targets) != 1 || targets[0] != core.WholeGraph[0] {
 			log.Warning("Input is being piped to stdin but is not being read; you need to pass - explicitly to read it.")
 		}
 	}
