@@ -660,10 +660,10 @@ def _go_github_repo_cmd(name, get, repo, revision):
     else:
         dest = parts[-1]
     remote_rule = remote_file(
-        name = name,
+        name = name + '-' + parts[-1],
         _tag = 'download',
         url = f'https://{repo}/archive/{revision}.zip',
-        out = name + '.zip',
+        out = name + '-' + parts[-1] + '.zip',
     )
     return [
         'rm -rf src/' + out,
