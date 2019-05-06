@@ -81,7 +81,9 @@ func help(topic string) string {
 // helpFromBuildRule returns the printable help message from a build rule (a function).
 func helpFromBuildRule(f *asp.FuncDef) string {
 	var b strings.Builder
-	if err := template.Must(template.New("").Parse(docstringTemplate)).Execute(&b, f); err != nil {
+	if err := template.Must(template.New("").Funcs(template.FuncMap{
+		"trim": func(s string) string { return strings.Trim(s, `"`) },
+	}).Parse(docstringTemplate)).Execute(&b, f); err != nil {
 		log.Fatalf("%s", err)
 	}
 	s := strings.Replace(b.String(), "    Args:\n", "    ${BOLD_YELLOW}Args:${RESET}\n", 1)
@@ -173,12 +175,14 @@ func localFunctions() map[string]*asp.FuncDef {
 				p := asp.NewParser(core.NewDefaultBuildState())
 				if files, err := ioutil.ReadDir(dir); err == nil {
 					for _, file := range files {
-						if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
-							for _, stmt := range stmts {
-								if stmt.FuncDef != nil {
-									m[stmt.FuncDef.Name] = stmt.FuncDef
-									// Small hack used below; this identifies that it isn't a builtin.
-									stmt.FuncDef.EoDef.Offset = 0
+						if !file.IsDir() {
+							if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
+								for _, stmt := range stmts {
+									if stmt.FuncDef != nil {
+										m[stmt.FuncDef.Name] = stmt.FuncDef
+										// Small hack used below; this identifies that it isn't a builtin.
+										stmt.FuncDef.EoDef.Offset = 0
+									}
 								}
 							}
 						}
@@ -199,7 +203,8 @@ ${BOLD_YELLOW}{{ .Name }}${RESET}(
 {{- range $i, $a := .Arguments }}{{ if gt $i 0 }}, {{ end }}${GREEN}{{ $a.Name }}${RESET}{{ end -}}
 ):
 
-{{ .Docstring }}
-
+{{ trim .Docstring }}
+{{ if .EoDef.Offset }}
 Online help is available at https://please.build/lexicon.html#{{ .Name }}.
+{{- end }}
 `

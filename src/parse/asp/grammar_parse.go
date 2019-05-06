@@ -53,6 +53,7 @@ type parser struct {
 
 // parseFileInput is the only external entry point to this class, it parses a file into a FileInput structure.
 func parseFileInput(r io.Reader) (input *FileInput, err error) {
+	input = &FileInput{}
 	// The rest of the parser functions signal unhappiness by panicking, we
 	// recover any such failures here and convert to an error.
 	defer func() {
@@ -62,7 +63,6 @@ func parseFileInput(r io.Reader) (input *FileInput, err error) {
 	}()
 
 	p := &parser{l: newLexer(r)}
-	input = &FileInput{}
 	for tok := p.l.Peek(); tok.Type != EOF; tok = p.l.Peek() {
 		input.Statements = append(input.Statements, p.parseStatement())
 	}
