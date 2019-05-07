@@ -5,6 +5,7 @@ package unzip
 
 import (
 	"archive/tar"
+	"compress/bzip2"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -59,7 +60,19 @@ func (e *extractor) Extract() error {
 		}
 		return r.Close()
 	}
+	// Reset back to the start of the file and try bzip2
+	f.Seek(0, os.SEEK_SET)
+	if err := e.extractTar(bzip2.NewReader(f)); err == nil || !isStructuralError(err) {
+		return err
+	}
+	// Assume uncompressed.
+	f.Seek(0, os.SEEK_SET)
 	return e.extractTar(f)
+}
+
+func isStructuralError(err error) bool {
+	_, ok := err.(bzip2.StructuralError)
+	return ok
 }
 
 func (e *extractor) extractTar(f io.Reader) error {
