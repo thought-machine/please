@@ -1,3 +1,12 @@
+Version 13.6.2
+--------------
+
+    * bzip2 decompression is now supported when extracting remote_file rules.
+    * go_get improvements for multiple downloads in the same rule.
+    * No longer fails for stamped rules when the SCM revision is unknown; instead
+      the placeholder <unknown> will be returned.
+
+
 Version 13.6.1
 --------------
 

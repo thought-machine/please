@@ -26,6 +26,8 @@ type SCM interface {
 
 // New returns a new SCM instance for this repo root.
 // It returns nil if there is no known implementation there.
+
+// If there is no known implementation it returns a stub.
 func New(repoRoot string) SCM {
 	if fs.PathExists(path.Join(repoRoot, ".git")) {
 		return &git{repoRoot: repoRoot}
@@ -33,12 +35,12 @@ func New(repoRoot string) SCM {
 	return nil
 }
 
-// MustNew returns a new SCM instance for this repo root.
-// It dies if a supported one cannot be determined.
-func MustNew(repoRoot string) SCM {
-	s := New(repoRoot)
-	if s == nil {
-		log.Fatalf("Cannot determine SCM implementation for this repo")
+// NewFallback returns a new SCM instance for this repo root.
+// If there is no known implementation it returns a stub.
+func NewFallback(repoRoot string) SCM {
+	if scm := New(repoRoot); scm != nil {
+		return scm
 	}
-	return s
+	log.Warning("Cannot determine SCM, revision identifiers will be unavailable and `plz query changes/changed` will not work correctly.")
+	return &stub{}
 }
