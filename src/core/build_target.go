@@ -161,7 +161,7 @@ type BuildTarget struct {
 	TestTimeout  time.Duration `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
-	TestOutputs []string
+	TestOutputs []string `name:"test_outputs"`
 }
 
 // A PreBuildFunction is a type that allows hooking a pre-build callback.
