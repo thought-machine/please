@@ -26,8 +26,6 @@ type SCM interface {
 
 // New returns a new SCM instance for this repo root.
 // It returns nil if there is no known implementation there.
-
-// If there is no known implementation it returns a stub.
 func New(repoRoot string) SCM {
 	if fs.PathExists(path.Join(repoRoot, ".git")) {
 		return &git{repoRoot: repoRoot}
