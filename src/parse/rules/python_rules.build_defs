@@ -92,7 +92,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
     )
 
 
-def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list=[],
+def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
                   visibility:list=None, zip_safe:bool=None, strip:bool=False, interpreter:str=None,
                   shebang:str='', labels:list&features&tags=[]):
     """Generates a Python binary target.
@@ -105,6 +105,7 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
     Args:
       name (str): Name of the rule.
       main (str): Python file which is the entry point and __main__ module.
+      srcs (list): List of additional Python source files for this binary.
       resources (list): List of static resources to include in the .pex.
       out (str): Name of the output file. Default to name + .pex
       deps (list): Dependencies of this rule.
@@ -125,9 +126,11 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
     cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe' % (shebang, CONFIG.PYTHON_MODULE_DIR)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
+    assert main not in srcs, "main file should not be included in srcs"
+
     lib_rule = python_library(
         name='_%s#lib' % name,
-        srcs=[main],
+        srcs=[main] + srcs,
         resources=resources,
         interpreter=interpreter,
         deps=deps,
