@@ -312,15 +312,6 @@ func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool 
 	}
 }
 
-// ExecCommand executes an external command.
-func ExecCommand(command string, args ...string) *exec.Cmd {
-	cmd := exec.Command(command, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
-	return cmd
-}
-
 // A SourcePair represents a source file with its source and temporary locations.
 // This isn't typically used much by callers; it's just useful to have a single type for channels.
 type SourcePair struct{ Src, Tmp string }
