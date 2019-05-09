@@ -597,17 +597,18 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
     labels = [f'go_get:{get}@{revision}' if revision else f'go_get:{get}']
     getroot = get[:-4] if get.endswith('/...') else get
     subdir = 'src/' + getroot
+    revision = revision or 'master'
 
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
-    if repo.startswith('github.com') and revision:
+    if repo.startswith('github.com'):
             cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, repo, revision)
-    elif get.startswith('github.com') and revision:
+    elif get.startswith('github.com'):
         cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, getroot, revision)
-    elif get.startswith('golang.org/x/') and revision and not repo:
+    elif get.startswith('golang.org/x/') and not repo:
         # We know about these guys...
         cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision)
-    elif get.startswith('google.golang.org/grpc') and revision and not repo:
+    elif get.startswith('google.golang.org/grpc') and not repo:
         cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, 'github.com/grpc/grpc-go' + getroot[len('google.golang.org/grpc'):], revision)
     else:
         get_deps = []
