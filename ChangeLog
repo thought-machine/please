@@ -1,3 +1,11 @@
+Version 13.6.3
+--------------
+
+    * Instruct user directory to add to PATH manually. (#614)
+    * Use master for default revision in go_get, to avoid slow path. (#613)
+    * Setting PDEATHSIG on child processes (#605)
+
+
 Version 13.6.2
 --------------
 
