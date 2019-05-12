@@ -177,6 +177,10 @@ func downloadPlease(config *core.Configuration, verify bool) {
 	defer mustClose(rc)
 	var r io.Reader = bufio.NewReader(rc)
 
+	if len(config.Please.VersionChecksum) > 0 {
+		r = mustVerifyHash(r, config.Please.VersionChecksum)
+	}
+
 	if verify && config.Please.Version.LessThan(minSignedVersion) {
 		log.Warning("Won't verify signature of download, version is too old to be signed.")
 	} else if verify {

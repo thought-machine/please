@@ -5,8 +5,12 @@ package update
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	"github.com/thought-machine/please/src/cli"
 	"golang.org/x/crypto/openpgp"
@@ -54,4 +58,26 @@ func mustVerifySignature(signed, signature io.Reader) io.Reader {
 		panic("Invalid signature on downloaded file, possible tampering; will not continue.")
 	}
 	return bufio.NewReader(cli.NewProgressReader(ioutil.NopCloser(bytes.NewReader(b)), len(b), "Extracting"))
+}
+
+// mustVerifyHash verifies the sha256 hash of the downloaded file matches one of the given ones.
+// On success it returns an equivalent reader, on failure it panics.
+func mustVerifyHash(r io.Reader, hashes []string) io.Reader {
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		panic(err)
+	}
+	log.Notice("Verifying hash of downloaded tarball")
+	sum := sha256.Sum256(b)
+	checksum := hex.EncodeToString(sum[:])
+	for _, hash := range hashes {
+		if hash == checksum {
+			log.Notice("Good checksum: %s", checksum)
+			return bytes.NewReader(b)
+		}
+	}
+	if len(hashes) == 1 {
+		panic(fmt.Errorf("Invalid checksum of downloaded file, was %s, expected %s", checksum, hashes[0]))
+	}
+	panic(fmt.Errorf("Invalid checksum of downloaded file, was %s, expected one of [%s]", checksum, strings.Join(hashes, ", ")))
 }
