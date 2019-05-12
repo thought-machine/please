@@ -44,7 +44,6 @@ func main() {
 
 	if err := serve(handler); err != nil {
 		log.Fatalf("fail to start server: %s", err)
-		os.Exit(1)
 	}
 }
 
@@ -62,17 +61,23 @@ func serve(handler jsonrpc2.Handler) error {
 			if err != nil {
 				return err
 			}
-			jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(conn, jsonrpc2.VSCodeObjectCodec{}), handler)
+			<-jsonrpc2.NewConn(context.Background(),
+				jsonrpc2.NewBufferedStream(conn, jsonrpc2.VSCodeObjectCodec{}),
+				handler,
+				jsonrpc2.LogMessages(logger{}),
+			).DisconnectNotify()
 		}
 	} else {
 		log.Info("build_langserver: reading on stdin, writing on stdout")
 
-		<-jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),
-			handler).DisconnectNotify()
+		<-jsonrpc2.NewConn(context.Background(),
+			jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),
+			handler,
+			jsonrpc2.LogMessages(logger{}),
+		).DisconnectNotify()
 
 		log.Info("connection closed")
 	}
-
 	return nil
 }
 
@@ -91,4 +96,10 @@ func (stdrwc) Close() error {
 		return err
 	}
 	return os.Stdout.Close()
+}
+
+type logger struct{}
+
+func (l logger) Printf(tmpl string, args ...interface{}) {
+	log.Debugf(tmpl, args...)
 }

@@ -90,6 +90,11 @@ func (dp *diagnosticsPublisher) diagnose(ctx context.Context, analyzer *Analyzer
 }
 
 func (ds *diagnosticStore) storeDiagnostics(analyzer *Analyzer, stmts []*asp.Statement) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Fatalf("Error storing diagnostics: %s", r)
+		}
+	}()
 	ds.stored = []*lsp.Diagnostic{}
 
 	var callback func(astStruct interface{}) interface{}
@@ -107,7 +112,6 @@ func (ds *diagnosticStore) storeDiagnostics(analyzer *Analyzer, stmts []*asp.Sta
 
 		return nil
 	}
-
 	asp.WalkAST(stmts, callback)
 }
 

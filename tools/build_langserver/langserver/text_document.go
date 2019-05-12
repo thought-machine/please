@@ -24,10 +24,8 @@ func (h *LsHandler) handleTDRequests(ctx context.Context, req *jsonrpc2.Request)
 		if err != nil {
 			return nil, err
 		}
-
 		h.workspace.Store(documentURI, params.TextDocument.Text, params.TextDocument.Version)
 		h.diagPublisher.queue.Put(taskDef{uri: documentURI, content: params.TextDocument.Text})
-
 		return nil, nil
 	case "textDocument/didChange":
 		var params lsp.DidChangeTextDocumentParams

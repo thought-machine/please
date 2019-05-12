@@ -22,6 +22,12 @@ func TestIncludes(t *testing.T) {
 	assert.True(t, label1.Includes(label2))
 }
 
+func TestIncludesRoot(t *testing.T) {
+	label1 := BuildLabel{PackageName: "", Name: "all"}
+	label2 := BuildLabel{PackageName: "", Name: ""}
+	assert.True(t, label1.Includes(label2))
+}
+
 func TestIncludesSubstring(t *testing.T) {
 	label1 := BuildLabel{PackageName: "third_party/python", Name: "..."}
 	label2 := BuildLabel{PackageName: "third_party/python3", Name: "six"}
