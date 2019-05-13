@@ -60,3 +60,31 @@ func TestMustVerifyBadFile(t *testing.T) {
 	signature := readFile("src/update/test_data/test.txt.asc")
 	assert.Panics(t, func() { mustVerifySignature(signed, signature) })
 }
+
+func TestMustVerifyHash(t *testing.T) {
+	r := readFile("src/update/test_data/test.txt")
+	r = mustVerifyHash(r, []string{
+		"d5ddcfb56bee0bf465da6d8e0ab0db5b4635061b45be18c231a558cf1d86c2e0",
+	})
+	b, err := ioutil.ReadAll(r)
+	assert.NoError(t, err)
+	assert.EqualValues(t, []byte("Test file for verifying release signatures.\n"), b)
+}
+
+func TestMustVerifyHashMultiple(t *testing.T) {
+	r := readFile("src/update/test_data/test.txt")
+	mustVerifyHash(r, []string{
+		"510dc30e9c55d5da05d971bed8568534667640b70295f78082967207745afec0",
+		"d5ddcfb56bee0bf465da6d8e0ab0db5b4635061b45be18c231a558cf1d86c2e0",
+	})
+}
+
+func TestMustVerifyHashBad(t *testing.T) {
+	r := readFile("src/update/test_data/test.txt")
+	assert.Panics(t, func() {
+		mustVerifyHash(r, []string{
+			"510dc30e9c55d5da05d971bed8568534667640b70295f78082967207745afec0",
+			"877265724bc9ba415dc1774569384fcfde80c6694d70f8f29405a917bbdf09db",
+		})
+	})
+}

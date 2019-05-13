@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Script to create Github releases & generate release notes."""
 
+import hashlib
 import json
 import logging
 import os
@@ -49,6 +50,7 @@ class ReleaseGen:
             '.gz': 'application/gzip',
             '.xz': 'application/x-xz',
             '.asc': 'text/plain',
+            '.sha256': 'text/plain',
         }
 
     def needs_release(self):
@@ -106,6 +108,16 @@ class ReleaseGen:
             subprocess.check_call([FLAGS.signer, '-o', out, '-i', artifact])
         return out
 
+    def checksum(self, artifact:str) -> str:
+        """Creates a file containing a sha256 checksum for an artifact."""
+        out = artifact + ".sha256"
+        with open(artifact, 'rb') as f:
+            checksum = hashlib.sha256(f.read()).hexdigest()
+        with open(out, 'w') as f:
+            basename = os.path.basename(artifact)
+            f.write(f'{checksum}  {basename}\n')
+        return out
+
     def get_release_notes(self):
         """Yields the changelog notes for a given version."""
         found_version = False
@@ -140,7 +152,7 @@ class ReleaseGen:
         )
         response.raise_for_status()
 
-    def upload_sftp(self, artifacts, signatures):
+    def upload_sftp(self, artifacts, signatures, checksums):
         """Uploads artifacts to get.please.build via sftp."""
         with open('latest_version', 'w') as f:
             f.write(self.version)
@@ -149,7 +161,7 @@ class ReleaseGen:
             f.write('cd vhosts/get.please.build/htdocs\n')
             f.write(f'mkdir linux_amd64/{self.version}\n')
             f.write(f'mkdir darwin_amd64/{self.version}\n')
-            for artifact in artifacts + signatures:
+            for artifact in artifacts + signatures + checksums:
                 arch = 'darwin' if 'darwin' in artifact else 'linux'
                 filename = os.path.basename(artifact)
                 f.write(f'put {artifact} {arch}_amd64/{self.version}/{filename}\n')
@@ -167,11 +179,13 @@ def main(argv):
         return
     # Check we can sign the artifacts before trying to create a release.
     signatures = [r.sign(artifact) for artifact in argv[1:]]
+    checksums = [r.checksum(artifact) for artifact in argv[1:]]
     r.release()
-    for artifact, signature in zip(argv[1:], signatures):
+    for artifact, signature, checksum in zip(argv[1:], signatures, checksums):
         r.upload(artifact)
         r.upload(signature)
-    r.upload_sftp(argv[1:], signatures)
+        r.upload(checksum)
+    r.upload_sftp(argv[1:], signatures, checksums)
     if FLAGS.circleci_token and not FLAGS.dry_run:
         r.trigger_build(FLAGS.circleci_token, 'thought-machine/homebrew-please')
 
