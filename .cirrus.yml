@@ -8,8 +8,4 @@ task:
     folder: ~/go
     fingerprint_script: cat go.mod
     populate_script: go mod download
-  go_cache:
-    folder: .plz-cache/third_party/go
-    fingerprint_script: cat third_party/go/BUILD
-    populate_script: ./bootstrap.sh --skip_tests
   build_script: ./bootstrap.sh --exclude pip --exclude py2 --exclude no_cirrus
