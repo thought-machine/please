@@ -550,7 +550,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
 
     # Now compile it in a separate step.
     cmd = [
-        f'export GOPATH="{CONFIG.GOPATH}" GO111MODULE="off"',
+        'export GOPATH=$(find $TMP_DIR \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr "\\n" ":") GO111MODULE="off"',
         '$TOOLS_GO install -toolexec "$TOOLS_BUILDID" -gcflags "-trimpath $TMP_DIR" -asmflags "-trimpath $TMP_DIR" ' + ' '.join(all_installs or install),
     ]
     if package_name():
@@ -711,7 +711,7 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
 
     _GOPATH = ' '.join(
         ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
-    compile_cmd = '$TOOLS_GO tool compile -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (complete_flag, _GOPATH)
+    compile_cmd = f'$TOOLS_GO tool compile -trimpath $TMP_DIR {complete_flag}{_GOPATH} $(for i in $(find $TMP_DIR -name pkg -type d); do echo -n " -I $i/{CONFIG.GOOS}_{CONFIG.GOARCH} "; done) -pack -o $OUT '
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
@@ -730,7 +730,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     _GOPATH = ' '.join(
         ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
-    _link_cmd = '$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s -o ${OUT} ' % _GOPATH.replace('-I ', '-L ')
+    _link_cmd = f'$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s $(find $TMP_DIR -type d -print | grep  "pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}$" | sed -e "s/^/-L /" | tr "\\n" " ") -o $OUT ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     linkerdefs = []
