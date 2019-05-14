@@ -159,7 +159,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
       revision: Revision to download.
       build_file: The file to use as a BUILD file for this subrepository.
       hashes: List of hashes to verify the rule with.
-      strip: Prefix to strip from the contents of the zip. Is usually autodetected for you.
+      strip_prefix: Prefix to strip from the contents of the zip. Is usually autodetected for you.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
