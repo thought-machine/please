@@ -447,4 +447,5 @@ sh_test(
     name = "pass_env_test",
     src = "pass_env_test.sh",
     data = [":pass_env"],
+    labels = ["manual"],  # Unclear what a good env var to pass is that works locally & on CI.
 )
