@@ -33,6 +33,7 @@ var KnownFields = map[string]bool{
 	"OptionalOutputs":             true,
 	"OutputIsComplete":            true,
 	"Requires":                    true,
+	"PassEnv":                     true,
 	"Provides":                    true,
 	"PreBuildFunction":            true,
 	"PostBuildFunction":           true,

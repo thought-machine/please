@@ -435,3 +435,17 @@ sh_test(
     src = "glob_build_test.sh",
     data = glob(["*"]),
 )
+
+genrule(
+    name = "pass_env",
+    outs = ["pass_env.sh"],
+    cmd = "echo \"export USER='$USER'\" > $OUT",
+    pass_env = ["USER"],
+)
+
+sh_test(
+    name = "pass_env_test",
+    src = "pass_env_test.sh",
+    data = [":pass_env"],
+    labels = ["manual"],  # Unclear what a good env var to pass is that works locally & on CI.
+)

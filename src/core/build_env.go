@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/base64"
+	"os"
 	"path"
 	"runtime"
 	"strings"
@@ -40,12 +41,18 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 
 // buildEnvironment returns the basic parts of the build environment.
 func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
-	return append(GeneralBuildEnvironment(state.Config),
+	env := append(GeneralBuildEnvironment(state.Config),
 		"PKG="+target.Label.PackageName,
 		"PKG_DIR="+target.Label.PackageDir(),
 		"NAME="+target.Label.Name,
 		"CONFIG="+state.Config.Build.Config,
 	)
+	if target.PassEnv != nil {
+		for _, e := range *target.PassEnv {
+			env = append(env, e+"="+os.Getenv(e))
+		}
+	}
+	return env
 }
 
 // BuildEnvironment creates the shell env vars to be passed into the exec.Command calls made by plz.

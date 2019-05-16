@@ -6,7 +6,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
             hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
             needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool&testonly=False,
             secrets:list|dict=None, requires:list=None, provides:dict=None, pre_build:function=None,
-            post_build:function=None, tools:list|dict=None):
+            post_build:function=None, tools:list|dict=None, pass_env:list=None):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -89,6 +89,8 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                   arguments, the rule name and its command line output.
                   This is significantly more useful than the pre_build function, it can be used
                   to dynamically create new rules based on the output of another.
+      pass_env: List of environment variables to be passed from outside. Any changes to them will
+                be recorded in this target's hash and will hence force it to rebuild.
     """
     if out and outs:
         raise TypeError('Can\'t specify both "out" and "outs".')
@@ -114,6 +116,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         requires = requires,
         provides = provides,
         test_only = test_only,
+        pass_env = pass_env,
     )
 
 

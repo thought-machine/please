@@ -60,6 +60,10 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		size = mustSize(s, name)
 		target.AddLabel(name)
 	}
+	if args[40] != None {
+		l := asStringList(s, args[40].(pyList), "pass_env")
+		target.PassEnv = &l
+	}
 
 	target.BuildTimeout = sizeAndTimeout(s, size, args[24], s.state.Config.Build.Timeout)
 	target.Stamp = isTruthy(33)

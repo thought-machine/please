@@ -154,6 +154,8 @@ type BuildTarget struct {
 	Tools []BuildInput
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
+	// Target-specific environment passthroughs.
+	PassEnv *[]string `name:"pass_env"`
 	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
 	Flakiness int `name:"flaky"`
 	// Timeouts for build/test actions

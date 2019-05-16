@@ -212,6 +212,11 @@ func (p *printer) genericPrint(v reflect.Value) (string, bool) {
 			secs := v.Interface().(time.Duration).Seconds()
 			return fmt.Sprintf("%0.0f", secs), secs > 0.0
 		}
+	case reflect.Ptr:
+		if v.IsNil() {
+			return "", false
+		}
+		return p.genericPrint(v.Elem())
 	}
 	log.Error("Unknown field type %s: %s", v.Kind(), v.Type().Name())
 	p.error = true
