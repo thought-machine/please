@@ -4,13 +4,17 @@
 package unzip
 
 import (
+	"archive/tar"
+	"compress/bzip2"
+	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 	"path"
 	"strings"
 	"sync"
 
-	"third_party/go/zip"
+	"github.com/thought-machine/please/third_party/go/zip"
 )
 
 // concurrency controls the maximum level of concurrency we'll allow.
@@ -41,11 +45,74 @@ type extractor struct {
 }
 
 func (e *extractor) Extract() error {
-	r, err := zip.OpenReader(e.In)
+	if r, err := zip.OpenReader(e.In); err == nil {
+		defer r.Close()
+		return e.extractZip(r)
+	}
+	f, err := os.Open(e.In)
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer f.Close()
+	if r, err := gzip.NewReader(f); err == nil {
+		if err := e.extractTar(r); err != nil {
+			return err
+		}
+		return r.Close()
+	}
+	// Reset back to the start of the file and try bzip2
+	f.Seek(0, os.SEEK_SET)
+	if err := e.extractTar(bzip2.NewReader(f)); err == nil || !isStructuralError(err) {
+		return err
+	}
+	// Assume uncompressed.
+	f.Seek(0, os.SEEK_SET)
+	return e.extractTar(f)
+}
+
+func isStructuralError(err error) bool {
+	_, ok := err.(bzip2.StructuralError)
+	return ok
+}
+
+func (e *extractor) extractTar(f io.Reader) error {
+	r := tar.NewReader(f)
+	for {
+		hdr, err := r.Next()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		out := path.Join(e.Out, hdr.Name)
+		if err := e.makeDir(out); err != nil {
+			return err
+		}
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.Mkdir(out, 0755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if f, err := os.Create(out); err != nil {
+				return err
+			} else if _, err := io.Copy(f, r); err != nil {
+				return err
+			} else if err := f.Close(); err != nil {
+				return err
+			}
+		case tar.TypeSymlink:
+			if err := os.Symlink(path.Join(e.Out, hdr.Linkname), out); err != nil {
+				return err
+			}
+		default:
+			fmt.Fprintf(os.Stderr, "Unhandled file type %d for %s", hdr.Typeflag, hdr.Name)
+		}
+	}
+}
+
+func (e *extractor) extractZip(r *zip.ReadCloser) error {
 	ch := make(chan *zip.File, 100)
 	for i := 0; i < concurrency; i++ {
 		go e.consume(ch)

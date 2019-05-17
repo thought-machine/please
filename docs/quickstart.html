@@ -2,8 +2,8 @@
     <h1>Please quickstart</h1>
 
     <h2>System requirements</h2>
-    <p>Please supports Linux and OSX at the moment. We're internally using Ubuntu Xenial and Sierra but it should
-      work on other reasonably recent distros.</p>
+    <p>Please supports Linux, OSX and FreeBSD at the moment. It should work on reasonably
+      recent releases of each without additional requirements.</p>
 
     <h2>Installing</h2>
     <p><code>curl https://get.please.build | bash</code></p>
@@ -11,7 +11,11 @@
       It also adds itself to your <code>PATH</code>; you may need to <code>source ~/.bashrc</code>
       or <code>source ~/.zshrc</code> after install to get that updated.</p>
 
-    <p>If you'd prefer more manual installation, grab a tarball off
+    <p>If you're using <a href="https://brew.sh">Homebrew</a>, you can install using that:
+      <pre><code>brew tap thought-machine/please
+brew install please</code></pre></p>
+
+    <p>Finally, if you'd prefer more manual installation, grab a tarball off
       <a href="https://github.com/thought-machine/please/releases">our releases page</a> and extract
       it yourself; it normally lives in <code>~/.please</code> but you can put it where you want.</p>
 
@@ -43,3 +47,8 @@
     <p>You will need to write some BUILD files to define how to compile your code.
       Carry on to <a href="basics.html">Please Basics</a> which will explain more about it.
     </p>
+
+    <h2>More info</h2>
+    <p>If you want more information on Please, you can try
+      <a href="https://groups.google.com/forum/#!forum/please-build">the mailing list</a> or catch us
+      <a href="https://gitter.im/please-build/Lobby">on Gitter</a> to ask questions.</p>

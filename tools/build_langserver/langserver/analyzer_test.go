@@ -223,7 +223,7 @@ func TestBuildLabelFromString(t *testing.T) {
 	label, err = a.BuildLabelFromString(ctx, uri, "@mysubrepo//spam/eggs:ham")
 	assert.Equal(t, err, nil)
 	assert.True(t, nil == label.BuildDef)
-	assert.Equal(t, "Subrepo label: @mysubrepo//spam/eggs:ham", label.Definition)
+	assert.Equal(t, "Subrepo label: ///mysubrepo//spam/eggs:ham", label.Definition)
 }
 
 func TestAnalyzer_BuildLabelFromStringBogusLabel(t *testing.T) {

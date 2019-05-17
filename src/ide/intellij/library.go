@@ -9,8 +9,8 @@ import (
 
 type libraryComponent struct {
 	XMLName xml.Name `xml:"component"`
-	Name string `xml:"name,attr"`
-	Library Library `xml:"library"`
+	Name    string   `xml:"name,attr"`
+	Library Library  `xml:"library"`
 }
 
 // Content is a simple wrapper for a URL.
@@ -33,7 +33,7 @@ func newLibrary(graph *core.BuildGraph, target *core.BuildTarget) Library {
 	classes := []Content{}
 	javadocs := []Content{}
 	sources := []Content{}
-	for _, dep  := range target.Sources {
+	for _, dep := range target.Sources {
 		label := dep.Label()
 		if label != nil {
 			depTarget := graph.TargetOrDie(*label)
@@ -65,9 +65,9 @@ func newLibrary(graph *core.BuildGraph, target *core.BuildTarget) Library {
 	}
 
 	library := Library{
-		Name: libraryName(target),
-		SourcePaths: sources,
-		ClassPaths: classes,
+		Name:         libraryName(target),
+		SourcePaths:  sources,
+		ClassPaths:   classes,
 		JavadocPaths: javadocs,
 	}
 
@@ -76,7 +76,7 @@ func newLibrary(graph *core.BuildGraph, target *core.BuildTarget) Library {
 
 func (library *Library) toXML(writer io.Writer) {
 	table := libraryComponent{
-		Name: "libraryTable",
+		Name:    "libraryTable",
 		Library: *library,
 	}
 	contents, err := xml.MarshalIndent(table, "", "  ")

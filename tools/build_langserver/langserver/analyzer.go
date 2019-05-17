@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"path"
 	"path/filepath"
-	"query"
 	"regexp"
 	"sort"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/parse/rules"
 	"github.com/thought-machine/please/src/plz"
+	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/tools/build_langserver/lsp"
 )
 
@@ -112,9 +112,12 @@ type BuildLabel struct {
 func newAnalyzer() (*Analyzer, error) {
 	// Saving the state to Analyzer,
 	// so we will be able to get the CONFIG properties by calling state.config.GetTags()
-	config, err := core.ReadDefaultConfigFiles("")
+	config, err := core.ReadDefaultConfigFiles(nil)
 	if err != nil {
 		return nil, err
+	}
+	for i, def := range config.Parse.PreloadBuildDefs {
+		config.Parse.PreloadBuildDefs[i] = path.Join(core.RepoRoot, def)
 	}
 	state := core.NewBuildState(1, nil, 4, config)
 	parser := asp.NewParser(state)
@@ -151,12 +154,11 @@ func (a *Analyzer) builtInsRules() error {
 	}
 
 	for _, buildDef := range a.State.Config.Parse.PreloadBuildDefs {
-		filePath := path.Join(core.RepoRoot, buildDef)
-		bytecontent, err := ioutil.ReadFile(filePath)
+		bytecontent, err := ioutil.ReadFile(buildDef)
 		if err != nil {
 			log.Warning("parsing failure for preload build defs: %s ", err)
 		}
-		stmts, err := a.parser.ParseData(bytecontent, filePath)
+		stmts, err := a.parser.ParseData(bytecontent, buildDef)
 
 		log.Debug("Preloading build defs from %s...", buildDef)
 		a.loadBuiltinRules(stmts, string(bytecontent))

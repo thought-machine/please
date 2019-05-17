@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/thought-machine/please/src/core"
@@ -83,6 +84,7 @@ func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
 		Name:       xmlTestSuite.Name,
 		Timestamp:  xmlTestSuite.Timestamp,
 		Duration:   xmlTestSuite.Duration(),
+		Cached:     toCoreCached(xmlTestSuite.Properties),
 		Properties: toCoreProperties(xmlTestSuite.Properties),
 	}
 	for _, test := range xmlTestSuite.TestCases {
@@ -96,9 +98,24 @@ func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
 	return testSuite
 }
 
+func toCoreCached(properties jUnitXMLProperties) bool {
+	for _, prop := range properties.Property {
+		if prop.Name == "cached" {
+			if p, err := strconv.ParseBool(prop.Value); err == nil {
+				return p
+			}
+			return false
+		}
+	}
+	return false
+}
+
 func toCoreProperties(properties jUnitXMLProperties) map[string]string {
 	props := make(map[string]string)
 	for _, prop := range properties.Property {
+		if prop.Name == "cached" {
+			continue
+		}
 		props[prop.Name] = prop.Value
 	}
 	return props
@@ -421,11 +438,11 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 						Failures:   testSuite.Failures(),
 						Skipped:    testSuite.Skips(),
 						timed:      timed{testSuite.Duration.Seconds()},
-						Properties: toXmlProperties(testSuite.Properties),
+						Properties: toXMLProperties(testSuite.Properties, testSuite.Cached),
 					}
 				}
 				for _, testCase := range testSuite.TestCases {
-					xmlTest := toXmlTestCase(testCase)
+					xmlTest := toXMLTestCase(testCase)
 					if xmlTest.ClassName == "" {
 						xmlTest.ClassName = testSuite.JavaStyleName()
 					}
@@ -433,7 +450,7 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 				}
 				xmlSuites[testSuite.JavaStyleName()] = xmlTestSuite
 				for _, testCase := range testSuite.TestCases {
-					xmlTest := toXmlTestCase(testCase)
+					xmlTest := toXMLTestCase(testCase)
 					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
 				}
 			}
@@ -450,7 +467,7 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	}
 }
 
-func toXmlProperties(props map[string]string) jUnitXMLProperties {
+func toXMLProperties(props map[string]string, cached bool) jUnitXMLProperties {
 	out := jUnitXMLProperties{}
 	for k, v := range props {
 		out.Property = append(out.Property, jUnitXMLProperty{
@@ -458,10 +475,16 @@ func toXmlProperties(props map[string]string) jUnitXMLProperties {
 			Value: v,
 		})
 	}
+	if cached {
+		out.Property = append(out.Property, jUnitXMLProperty{
+			Name:  "cached",
+			Value: strconv.FormatBool(cached),
+		})
+	}
 	return out
 }
 
-func toXmlTestCase(result core.TestCase) jUnitXMLTest {
+func toXMLTestCase(result core.TestCase) jUnitXMLTest {
 	testcase := jUnitXMLTest{
 		ClassName: result.ClassName,
 		Name:      result.Name,

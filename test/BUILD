@@ -14,7 +14,7 @@ subinclude("//build_defs:plz_e2e_test")
 
 # This isn't really needed in this BUILD file, but is intended to avoid race conditions
 # between this and other BUILD files that have the same dependency.
-subinclude("@pleasings//go:go_bindata")
+subinclude("///pleasings//go:go_bindata")
 
 # Tests the expected output of 'query somepath'.
 # Note that you have to be careful with the choice of targets, since the path
@@ -434,4 +434,18 @@ sh_test(
     name = "glob_build_test",
     src = "glob_build_test.sh",
     data = glob(["*"]),
+)
+
+genrule(
+    name = "pass_env",
+    outs = ["pass_env.sh"],
+    cmd = "echo \"export USER='$USER'\" > $OUT",
+    pass_env = ["USER"],
+)
+
+sh_test(
+    name = "pass_env_test",
+    src = "pass_env_test.sh",
+    data = [":pass_env"],
+    labels = ["manual"],  # Unclear what a good env var to pass is that works locally & on CI.
 )

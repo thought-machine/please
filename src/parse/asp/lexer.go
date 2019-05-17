@@ -45,15 +45,6 @@ func (tok Token) EndPos() Position {
 	return end
 }
 
-// A Position describes a position in a source file.
-// All properties in Position are one(1) indexed
-type Position struct {
-	Filename string
-	Offset   int
-	Line     int
-	Column   int
-}
-
 type namer interface {
 	Name() string
 }

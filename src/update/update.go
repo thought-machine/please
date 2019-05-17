@@ -23,6 +23,7 @@ import (
 	"os/signal"
 	"path"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -176,6 +177,10 @@ func downloadPlease(config *core.Configuration, verify bool) {
 	defer mustClose(rc)
 	var r io.Reader = bufio.NewReader(rc)
 
+	if len(config.Please.VersionChecksum) > 0 {
+		r = mustVerifyHash(r, config.Please.VersionChecksum)
+	}
+
 	if verify && config.Please.Version.LessThan(minSignedVersion) {
 		log.Warning("Won't verify signature of download, version is too old to be signed.")
 	} else if verify {
@@ -225,7 +230,8 @@ func mustDownload(url string, progress bool) io.ReadCloser {
 	} else if response.StatusCode < 200 || response.StatusCode > 299 {
 		panic(fmt.Sprintf("Failed to download %s: got response %s", url, response.Status))
 	} else if progress {
-		return cli.NewProgressReader(response.Body, response.Header.Get("Content-Length"))
+		i, _ := strconv.Atoi(response.Header.Get("Content-Length"))
+		return cli.NewProgressReader(response.Body, i, "Downloading")
 	}
 	return response.Body
 }

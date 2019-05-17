@@ -23,6 +23,7 @@ go_library(
         "//src/cli",
         "//src/core",
         "//src/parse",
+        "//src/parse/asp",
         "//src/utils",
         "//third_party/go:go-flags",
         "//third_party/go:logging",

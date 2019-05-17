@@ -32,6 +32,13 @@
     <p><a href="http://www.apache.org/licenses/">Apache 2.0</a></p>
 
 
+    <h3>Where can I get more information? / My question isn't answered here</h3>
+
+    <p>Check out the code <a href="https://github.com/thought-machine/please">on GitHub</a>,
+      <a href="https://gitter.im/please-build/Lobby">chat on Gitter</a> or ask in
+      <a href="https://groups.google.com/forum/#!forum/please-build">the discussion group</a>.</p>
+
+
     <h3>Why use Please instead of go build / Maven / Gradle?</h3>
 
     <p>Cross-language support is a big advantage; we have four main languages in use at Thought Machine
@@ -140,9 +147,9 @@
     <h3>How does Please build itself? Do I need Please to build Please?</h3>
 
     <p>Please bootstraps itself using <code>go build</code> to build a temporary version of itself,
-      which is then used to rebuild itself using its own BUILD rules. This requires a little
-      duplication between the initial bootstrap script and the BUILD rules but obviously we
-      can't rely on anyone building it already having a version of it installed.</p>
+      which is then used to rebuild itself using its own BUILD rules. This requires disabling some
+      features for that bootstrap step (mostly codegen steps), but is definitely worth it since
+      obviously we can't rely on anyone building it already having a version of it installed.</p>
 
     <p>Fortunately the process is pretty fast since Go is fast to compile.</p>
 

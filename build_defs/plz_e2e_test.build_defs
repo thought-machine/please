@@ -8,7 +8,9 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
     # but we can make it do it and it's a convenient way of testing the tool itself.
 
     def _e2e_test_cmd(cmd):
-        profile_flag = '--profile ci -o buildconfig.ci:true' if CONFIG.get('CI') else ''
+        profile_flag = '--profile ci' if CONFIG.get('CI') else ''
+        if package_name().startswith('test/parse'):
+            profile_flag += ' -o parse.buildfilename:BUILD,BUILD.plz,BUILD.test '
         cmd = cmd.replace('plz ', f'$(location //src:please) --nolock -o cache.rpcurl:"" {profile_flag} -o cache.dirclean:false --log_file plz-out/log/{name}.log ')
         if expected_failure:
             test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd
@@ -30,7 +32,7 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
             test_cmd += 'true'
         if pre_cmd:
             test_cmd = pre_cmd + ' && ' + test_cmd
-        return 'set -o pipefail; ' + test_cmd
+        return test_cmd
 
     if expected_output:
         data += [expected_output]

@@ -1,3 +1,146 @@
+Version 13.7.0
+--------------
+
+    * `genrule` now accepts `pass_env`, a list of environment variables to be passed through (#575)
+    * `go_get` rules can now find dependencies without `gopath` (#617)
+    * Downloaded plz versions can be hash validated in addition to signature checked (#615)
+    * Jacoco version updated for better java 11 compatibility.
+
+
+Version 13.6.3
+--------------
+
+    * Instruct user directory to add to PATH manually. (#614)
+    * Use master for default revision in go_get, to avoid slow path. (#613)
+    * Setting PDEATHSIG on child processes (#605)
+
+
+Version 13.6.2
+--------------
+
+    * bzip2 decompression is now supported when extracting remote_file rules.
+    * go_get improvements for multiple downloads in the same rule.
+    * No longer fails for stamped rules when the SCM revision is unknown; instead
+      the placeholder <unknown> will be returned.
+
+
+Version 13.6.1
+--------------
+
+    * Add licences field to go_get
+    * Warn if stdin is being piped but not being read
+
+
+Version 13.6.0
+--------------
+
+    * Various fixes for `plz watch --run` (#599, #600, #602, #603)
+    * Fixes for `plz coverage` with no argument (#535)
+    * More cross-compilation fixes (#603)
+    * `remote_file` now takes an `extract` argument to extract tarballs / zipfiles.
+    * Added `get_licences` builtin to find licences of a target.
+
+
+Version 13.5.5
+--------------
+
+    * Fix for static Go binaries with definitions (#597)
+    * Allow config_setting rules to switch based on OS (#596)
+
+
+Version 13.5.4
+--------------
+
+    * Fix for finding subrepos (fixes cc_test in #577)
+    * Fixed secret substitutions only replacing the first tilde (#572)
+
+
+Version 13.5.3
+--------------
+
+    * Several cross-compilation issues fixed (#581, #582, #584, #585).
+    * Process termination is more robust for test timeouts etc.
+
+
+Version 13.5.2
+--------------
+
+    * Cached test results have an equivalent property set.
+    * Fixed pre_build argument not always being honoured on `genrule`.
+    * `plz init config` now does not need to be run within a repo (as `plz init` does not).
+
+
+Version 13.5.1
+--------------
+
+    * Level of reverse dependencies queried can now be controlled by a flag (#570)
+
+
+Version 13.5.0
+--------------
+
+    * Test sizes are now configurable through config (and more usable for non-builtin rules)
+    * Old user config files (in ~/.please/plzconfig) are now auto-migrated to new location.
+    * A Homebrew formula is now available (#530)
+    * please.location config property is now auto-detected based on install location.
+      This is somewhat nicer for system-level installs through Brew etc.
+    * Improved incrementality for go_library targets
+    * Don't arbitrarily exclude files named src.jar any more
+
+
+Version 13.4.8
+--------------
+
+    * Fix worker replacements that are not build labels not to be prefixed incorrectly.
+    * Honour escape sequences in f-strings correctly.
+    * Fixed a rare parse failure involving functions with a particular argument configuration.
+
+
+Version 13.4.7
+--------------
+
+    * Fix for some incorrect cache misses by not re-retrieving post-build output.
+    * Config hash filters out PATH since items located via it are hashed directly.
+
+
+Version 13.4.6
+--------------
+
+    * Fixed 'licences' error in maven_jars. Now issues a deprecation warning.
+
+
+Version 13.4.5
+--------------
+
+    * Fixed some post-build functions that were incorrectly erroring.
+
+
+Version 13.4.4
+--------------
+
+    * Bunch of Bazel compat fixes
+    * Fixed visibility checking of subinclude()
+
+
+Version 13.4.3
+--------------
+
+    * Fixed an issue on OSX with some incorrect dirs when the test sandbox flag was enabled.
+
+
+Version 13.4.2
+--------------
+
+    * Fixed `plz init` command without the `config` subcommand.
+
+
+Version 13.4.1
+--------------
+
+    * Various minor subrepo improvements & fixes
+    * Fixed query revdeps which wasn't querying to arbitrary depth correctly.
+
+
 Version 13.4.0
 --------------
 

@@ -16,15 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/test"
 )
-
-var log = logging.MustGetLogger("output")
 
 // durationGranularity is the granularity that we build durations at.
 const durationGranularity = 10 * time.Millisecond
@@ -479,11 +475,12 @@ func printHashes(state *core.BuildState, duration time.Duration) {
 
 func printTempDirs(state *core.BuildState, duration time.Duration) {
 	fmt.Printf("Temp directories prepared, total time %s:\n", duration)
+	state = state.ForArch(state.OriginalArch)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		cmd := target.GetCommand(state)
 		dir := target.TmpDir()
-		env := core.BuildEnvironment(state, target)
+		env := core.StampedBuildEnvironment(state, target, nil)
 		if state.NeedTests {
 			cmd = target.GetTestCommand(state)
 			dir = path.Join(core.RepoRoot, target.TestDir())
@@ -628,11 +625,15 @@ func PrintCoverage(state *core.BuildState, includeFiles []string) {
 		}
 		dir := filepath.Dir(file)
 		if dir != lastDir {
-			printf("${WHITE}%s:${RESET}\n", strings.TrimRight(dir, "/"))
+			if dir == "." {
+				printf("${WHITE}top-level:${RESET}\n")
+			} else {
+				printf("${WHITE}%s:${RESET}\n", strings.TrimRight(dir, "/"))
+			}
 		}
 		lastDir = dir
 		covered, total := test.CountCoverage(state.Coverage.Files[file])
-		printf("  %s\n", coveragePercentage(covered, total, file[len(dir)+1:]))
+		printf("  %s\n", coveragePercentage(covered, total, strings.TrimPrefix(file, dir+"/")))
 		totalCovered += covered
 		totalTotal += total
 	}
@@ -786,7 +787,7 @@ func unbuiltTargetsMessage(graph *core.BuildGraph) string {
 	for _, target := range graph.AllTargets() {
 		if target.State() == core.Active {
 			if graph.AllDepsBuilt(target) {
-				msg += fmt.Sprintf("  %s (waiting for deps to build)\n", target.Label)
+				msg += fmt.Sprintf("  %s (all deps have built)\n", target.Label)
 			} else {
 				msg += fmt.Sprintf("  %s\n", target.Label)
 			}

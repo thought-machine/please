@@ -3,6 +3,8 @@ package parse
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -10,6 +12,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/parse/rules"
+	"github.com/thought-machine/please/src/parse/rules/bazel"
 )
 
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
@@ -38,7 +41,13 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {
 		log.Debug("Preloading build defs from %s...", preload)
-		p.MustLoadBuiltins(path.Join(core.RepoRoot, preload), nil, nil)
+		p.MustLoadBuiltins(preload, nil, nil)
+	}
+
+	if state.Config.Bazel.Compatibility {
+		// Add a subrepo for @bazel_tools which appears to be one of their builtins.
+		// Mostly we only include build defs in there.
+		createBazelSubrepo(state)
 	}
 
 	log.Debug("Parser initialised")
@@ -70,7 +79,7 @@ func (p *aspParser) RunPostBuildFunction(threadID int, state *core.BuildState, t
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(tid, target.Label, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	pkg := state.Graph.PackageByLabel(target.Label)
+	pkg := state.WaitForPackage(target.Label)
 	changed, err := pkg.EnterBuildCallback(f)
 	if err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
@@ -79,4 +88,25 @@ func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *co
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
 	}
 	return err
+}
+
+func createBazelSubrepo(state *core.BuildState) {
+	dir := path.Join(core.OutDir, "bazel_tools")
+	state.Graph.AddSubrepo(&core.Subrepo{
+		Name:  "bazel_tools",
+		Root:  dir,
+		State: state,
+	})
+	// TODO(peterebden): This is a bit yuck... would be nice if we could avoid hardcoding all
+	//                   this upfront and add a build target to do it for us.
+	dir = path.Join(dir, "tools/build_defs/repo")
+	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
+		log.Fatalf("%s", err)
+	}
+	filenames, _ := bazel.AssetDir("")
+	for _, filename := range filenames {
+		if err := ioutil.WriteFile(path.Join(dir, strings.Replace(filename, ".build_defs", ".bzl", -1)), bazel.MustAsset(filename), 0644); err != nil {
+			log.Fatalf("%s", err)
+		}
+	}
 }

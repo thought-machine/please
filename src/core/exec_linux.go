@@ -1,5 +1,3 @@
-// +build linux
-
 package core
 
 import (
@@ -13,6 +11,7 @@ func ExecCommand(command string, args ...string) *exec.Cmd {
 	cmd := exec.Command(command, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pdeathsig: syscall.SIGHUP,
+		Setpgid:   true,
 	}
 	return cmd
 }

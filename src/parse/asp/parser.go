@@ -227,9 +227,10 @@ func whitelistedKwargs(name, filename string) bool {
 		return true // Don't care about anything private, or non-rule builtins.
 	}
 	return map[string]bool{
-		"workspace":    true,
-		"decompose":    true,
-		"check_config": true,
-		"select":       true,
+		"workspace":     true,
+		"decompose":     true,
+		"check_config":  true,
+		"select":        true,
+		"exports_files": true,
 	}[name]
 }

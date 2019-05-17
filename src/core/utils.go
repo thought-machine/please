@@ -63,7 +63,7 @@ func MustFindRepoRoot() string {
 	}
 	// Check the config for a default repo location. Of course, we have to load system-level config
 	// in order to do that...
-	config, err := ReadConfigFiles([]string{MachineConfigFileName, ExpandHomePath(UserConfigFileName)}, "")
+	config, err := ReadConfigFiles([]string{MachineConfigFileName, ExpandHomePath(UserConfigFileName)}, nil)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	}
@@ -289,7 +289,8 @@ func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, error) 
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
 // shortly after if it hasn't exited.
 func KillProcess(cmd *exec.Cmd) {
-	if !killProcess(cmd, syscall.SIGTERM, 30*time.Millisecond) && !killProcess(cmd, syscall.SIGKILL, time.Second) {
+	success := killProcess(cmd, syscall.SIGTERM, 30*time.Millisecond)
+	if !killProcess(cmd, syscall.SIGKILL, time.Second) && !success {
 		log.Error("Failed to kill inferior process")
 	}
 }
@@ -299,8 +300,8 @@ func KillProcess(cmd *exec.Cmd) {
 func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool {
 	// This is a bit of a fiddle. We want to wait for the process to exit but only for just so
 	// long (we do not want to get hung up if it ignores our SIGTERM).
-	log.Debug("Sending signal %s to %d", sig, cmd.Process.Pid)
-	syscall.Kill(cmd.Process.Pid, sig)
+	log.Debug("Sending signal %s to -%d", sig, cmd.Process.Pid)
+	syscall.Kill(-cmd.Process.Pid, sig) // Kill the group - we always set one in ExecCommand.
 	ch := make(chan error)
 	go runCommand(cmd, ch)
 	select {
@@ -594,7 +595,7 @@ func LookPath(filename string, paths []string) (string, error) {
 
 // LookBuildPath is like LookPath but takes the config's build path into account.
 func LookBuildPath(filename string, config *Configuration) (string, error) {
-	return LookPath(filename, append([]string{ExpandHomePath(config.Please.Location)}, config.Build.Path...))
+	return LookPath(filename, config.Path())
 }
 
 // AsyncDeleteDir deletes a directory asynchronously.

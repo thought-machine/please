@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Script to create Github releases & generate release notes."""
 
+import hashlib
 import json
 import logging
 import os
@@ -14,7 +15,8 @@ from third_party.python.absl import app, flags
 logging.root.handlers[0].setFormatter(colorlog.ColoredFormatter('%(log_color)s%(levelname)s: %(message)s'))
 
 
-flags.DEFINE_string('github_token', None, 'Github API token')
+flags.DEFINE_string('github_token', os.environ.get('GITHUB_TOKEN'), 'Github API token')
+flags.DEFINE_string('circleci_token', os.environ.get('CIRCLECI_TOKEN'), 'CircleCI API token')
 flags.DEFINE_string('signer', None, 'Release signer binary')
 flags.DEFINE_bool('dry_run', False, "Don't actually do the release, just print it.")
 flags.mark_flag_as_required('github_token')
@@ -48,6 +50,7 @@ class ReleaseGen:
             '.gz': 'application/gzip',
             '.xz': 'application/x-xz',
             '.asc': 'text/plain',
+            '.sha256': 'text/plain',
         }
 
     def needs_release(self):
@@ -65,7 +68,7 @@ class ReleaseGen:
             'name': 'Please v' + self.version,
             'body': '\n'.join(self.get_release_notes()),
             'prerelease': self.is_prerelease,
-            'draft': not self.is_prerelease,
+            'draft': False,
         }
         if FLAGS.dry_run:
             logging.info('Would post the following to Github: %s', json.dumps(data, indent=4))
@@ -105,6 +108,16 @@ class ReleaseGen:
             subprocess.check_call([FLAGS.signer, '-o', out, '-i', artifact])
         return out
 
+    def checksum(self, artifact:str) -> str:
+        """Creates a file containing a sha256 checksum for an artifact."""
+        out = artifact + ".sha256"
+        with open(artifact, 'rb') as f:
+            checksum = hashlib.sha256(f.read()).hexdigest()
+        with open(out, 'w') as f:
+            basename = os.path.basename(artifact)
+            f.write(f'{checksum}  {basename}\n')
+        return out
+
     def get_release_notes(self):
         """Yields the changelog notes for a given version."""
         found_version = False
@@ -132,6 +145,32 @@ class ReleaseGen:
         with zipfile.ZipFile(sys.argv[0]) as zf:
             return zf.read(filename).decode('utf-8')
 
+    def trigger_build(self, token, project):
+        """Triggers a CircleCI build of a downstream project."""
+        response = self.session.post(
+            f'https://circleci.com/api/v1.1/project/github/{project}?circle-token={token}'
+        )
+        response.raise_for_status()
+
+    def upload_sftp(self, artifacts, signatures, checksums):
+        """Uploads artifacts to get.please.build via sftp."""
+        with open('latest_version', 'w') as f:
+            f.write(self.version)
+        # Write batch instruction file
+        with open('sftp.txt', 'w') as f:
+            f.write('cd vhosts/get.please.build/htdocs\n')
+            f.write(f'mkdir linux_amd64/{self.version}\n')
+            f.write(f'mkdir darwin_amd64/{self.version}\n')
+            for artifact in artifacts + signatures + checksums:
+                arch = 'darwin' if 'darwin' in artifact else 'linux'
+                filename = os.path.basename(artifact)
+                f.write(f'put {artifact} {arch}_amd64/{self.version}/{filename}\n')
+            f.write('put latest_version\n')
+            f.write('bye\n')
+        if not FLAGS.dry_run:
+            subprocess.check_call(['sftp', '-oStrictHostKeyChecking=no', '-b', 'sftp.txt',
+                                   '3472291@sftp.dc2.gpaas.net'])
+
 
 def main(argv):
     r = ReleaseGen(FLAGS.github_token, dry_run=FLAGS.dry_run)
@@ -140,10 +179,15 @@ def main(argv):
         return
     # Check we can sign the artifacts before trying to create a release.
     signatures = [r.sign(artifact) for artifact in argv[1:]]
+    checksums = [r.checksum(artifact) for artifact in argv[1:]]
     r.release()
-    for artifact, signature in zip(argv[1:], signatures):
+    for artifact, signature, checksum in zip(argv[1:], signatures, checksums):
         r.upload(artifact)
         r.upload(signature)
+        r.upload(checksum)
+    r.upload_sftp(argv[1:], signatures, checksums)
+    if FLAGS.circleci_token and not FLAGS.dry_run:
+        r.trigger_build(FLAGS.circleci_token, 'thought-machine/homebrew-please')
 
 
 if __name__ == '__main__':

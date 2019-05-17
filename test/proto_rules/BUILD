@@ -9,11 +9,7 @@ filegroup(
 proto_library(
     name = "test_proto",
     srcs = [":gen_proto"],
-    languages = [
-        "cc",
-        "py",
-    ],
-    visibility = ["//test/misc_rules:all"],  # Used by another test over here too.
+    languages = ["py"],
 )
 
 python_test(

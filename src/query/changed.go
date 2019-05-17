@@ -31,15 +31,16 @@ func ChangedLabels(state *core.BuildState, request ChangedRequest) []core.BuildL
 }
 
 func changedFiles(since string, diffSpec string) []string {
+	git := scm.New(core.RepoRoot)
 	if diffSpec != "" {
-		return scm.ChangesIn(diffSpec, "")
+		return git.ChangesIn(diffSpec, "")
 	}
 
 	if since == "" {
-		since = scm.CurrentRevIdentifier()
+		since = git.CurrentRevIdentifier()
 	}
 
-	return scm.ChangedFiles(since, true, "")
+	return git.ChangedFiles(since, true, "")
 }
 
 func targetsForChangedFiles(graph *core.BuildGraph, files []string, includeDependees string) []*core.BuildTarget {

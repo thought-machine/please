@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
@@ -48,7 +49,7 @@ var config *core.Configuration
 var opts struct {
 	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
-		Config     string            `short:"c" long:"config" description:"Build config to use. Defaults to opt."`
+		Config     string            `short:"c" long:"config" env:"PLZ_BUILD_CONFIG" description:"Build config to use. Defaults to opt."`
 		Arch       cli.Arch          `short:"a" long:"arch" description:"Architecture to compile for."`
 		RepoRoot   cli.Filepath      `short:"r" long:"repo_root" description:"Root of repository to build."`
 		KeepGoing  bool              `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
@@ -56,7 +57,7 @@ var opts struct {
 		Include    []string          `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
 		Exclude    []string          `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
 		Option     ConfigOverrides   `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
-		Profile    string            `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
+		Profile    []string          `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
 		PreTargets []core.BuildLabel `long:"pre" hidden:"true" description:"Targets to build before the other command-line ones. Sometimes useful to debug targets generated as part of a post-build function."`
 	} `group:"Options controlling what to build & how to build it"`
 
@@ -132,6 +133,7 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
+		active              bool         `no-flag:"true"`
 		FailingTestsOk      bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NoCoverageReport    bool         `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
 		LineCoverageReport  bool         `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
@@ -211,7 +213,7 @@ var opts struct {
 				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
 			} `positional-args:"true" required:"true"`
 		} `command:"config" description:"Initialises specific attributes of config files"`
-	} `command:"init" description:"Initialises a .plzconfig file in the current directory"`
+	} `command:"init" subcommands-optional:"true" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
 		Conservative bool `short:"c" long:"conservative" description:"Runs a more conservative / safer GC."`
@@ -263,13 +265,15 @@ var opts struct {
 		Deps struct {
 			Unique bool `long:"unique" short:"u" description:"Only output each dependency once"`
 			Hidden bool `long:"hidden" short:"h" description:"Output internal / hidden dependencies too"`
-			Level  int  `long:"level" default:"-1" description:"levels of the dependencies to retrieve."`
+			Level  int  `long:"level" default:"-1" description:"Levels of the dependencies to retrieve."`
 			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"deps" description:"Queries the dependencies of a target."`
 		ReverseDeps struct {
-			Args struct {
+			Level  int  `long:"level" default:"1" description:"Levels of the dependencies to retrieve (-1 for unlimited)."`
+			Hidden bool `long:"hidden" short:"h" description:"Output internal / hidden dependencies too"`
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"revdeps" alias:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
@@ -397,6 +401,7 @@ var buildFunctions = map[string]func() bool{
 		return success || opts.Test.FailingTestsOk
 	},
 	"cover": func() bool {
+		opts.Cover.active = true
 		if opts.BuildFlags.Config != "" {
 			log.Warning("Build config overridden; coverage may not be available for some languages")
 		} else {
@@ -426,7 +431,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Parallel(state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
+			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
 		}
 		return false
 	},
@@ -528,7 +533,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"revdeps": func() bool {
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.ReverseDeps(state, state.ExpandLabels(opts.Query.ReverseDeps.Args.Targets))
+			query.ReverseDeps(state, state.ExpandLabels(opts.Query.ReverseDeps.Args.Targets), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
 	"somepath": func() bool {
@@ -706,7 +711,7 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	os.RemoveAll(string(resultsFile))
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
 	success, state := runBuild(targets, true, true)
-	test.CopySurefireXmlFilesToDir(state, string(surefireDir))
+	test.CopySurefireXMLFilesToDir(state, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
 	return success, state
 }
@@ -744,7 +749,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)  // Only one of these can be passed
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.
-	state.NeedCoverage = !opts.Cover.Args.Target.IsEmpty()
+	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0
@@ -759,6 +764,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
+	if opts.BuildFlags.Arch.OS != "" {
+		state.OriginalArch = opts.BuildFlags.Arch
+	}
 
 	if state.DebugTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
@@ -840,10 +848,28 @@ func readConfig(forceUpdate bool) *core.Configuration {
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
 func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !readingStdin(targets) {
+		if len(targets) == 0 {
+			// Assume they want us to read from stdin since nothing else was given.
+			targets = []core.BuildLabel{core.BuildLabelStdin}
+		} else if shouldBuild || shouldTest || len(targets) != 1 || targets[0] != core.WholeGraph[0] {
+			log.Warning("Input is being piped to stdin but is not being read; you need to pass - explicitly to read it.")
+		}
+	}
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}
 	return Please(targets, config, shouldBuild, shouldTest)
+}
+
+// readingStdin returns true if any of the given build labels are reading from stdin.
+func readingStdin(labels []core.BuildLabel) bool {
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			return true
+		}
+	}
+	return false
 }
 
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
@@ -902,7 +928,7 @@ func initBuild(args []string) string {
 		cli.InitLogging(cli.MinVerbosity)
 		parser.WriteHelp(os.Stderr)
 		if core.FindRepoRoot() {
-			if config, err := core.ReadDefaultConfigFiles(""); err == nil {
+			if config, err := core.ReadDefaultConfigFiles(nil); err == nil {
 				config.PrintAliases(os.Stderr)
 			}
 		}
@@ -925,7 +951,7 @@ func initBuild(args []string) string {
 		opts.Query.Completions.Cmd = command
 		opts.Query.Completions.Args.Fragments = []string{opts.Complete}
 		command = "completions"
-	} else if command == "help" || command == "follow" || command == "init" {
+	} else if command == "help" || command == "follow" || command == "init" || command == "config" {
 		// These commands don't use a config file, allowing them to be run outside a repo.
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
 			cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args)

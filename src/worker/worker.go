@@ -84,15 +84,16 @@ func ProvideParse(state *core.BuildState, worker string, dir string) (string, er
 }
 
 // EnsureWorkerStarted ensures that a worker server is started and has responded saying it's ready.
-func EnsureWorkerStarted(state *core.BuildState, worker string, target *core.BuildTarget) error {
+func EnsureWorkerStarted(state *core.BuildState, worker, test string, target *core.BuildTarget) (*Response, error) {
 	resp, err := buildRemotely(state, target, worker, "waiting for "+worker+" to start", &Request{
-		Rule: target.Label.String(),
-		Test: true,
+		Rule:    target.Label.String(),
+		Test:    true,
+		Options: []string{test},
 	})
 	if err == nil && !resp.Success {
-		return fmt.Errorf(strings.Join(resp.Messages, "\n"))
+		return nil, fmt.Errorf(strings.Join(resp.Messages, "\n"))
 	}
-	return err
+	return resp, err
 }
 
 // getOrStartWorker either retrieves an existing worker process or starts a new one.
@@ -103,6 +104,13 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 		return w, nil
 	}
 	// Need to create a new process
+	if !strings.Contains(worker, "/") {
+		path, err := core.LookBuildPath(worker, state.Config)
+		if err != nil {
+			return nil, err
+		}
+		worker = path
+	}
 	cmd := core.ExecCommand(worker)
 	cmd.Env = core.GeneralBuildEnvironment(state.Config)
 	stdin, err := cmd.StdinPipe()

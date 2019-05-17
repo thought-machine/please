@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -219,6 +220,11 @@ func NewArch(os, arch string) Arch {
 	return Arch{OS: os, Arch: arch}
 }
 
+// HostArch returns the architecture for the host OS.
+func HostArch() Arch {
+	return Arch{OS: runtime.GOOS, Arch: runtime.GOARCH}
+}
+
 // String prints this Arch to its string representation.
 func (arch *Arch) String() string {
 	return arch.OS + "_" + arch.Arch
@@ -237,6 +243,17 @@ func (arch *Arch) UnmarshalFlag(in string) error {
 		return nil
 	}
 	return fmt.Errorf("Can't parse architecture %s (should be a Go-style arch pair, like 'linux_amd64' etc)", in)
+}
+
+// HostOS returns the OS of the host (machine doing the building).
+// Configuring certain tools (e.g. pip) requires this information, even when cross-compiling.
+func (arch *Arch) HostOS() string {
+	return runtime.GOOS
+}
+
+// HostArch returns the architecture of the host (machine doing the building).
+func (arch *Arch) HostArch() string {
+	return runtime.GOARCH
 }
 
 // XOS returns the "alternative" OS spelling which some things prefer.
@@ -263,6 +280,8 @@ func (arch *Arch) XArch() string {
 func (arch *Arch) GoArch() string {
 	if arch.Arch == "x86" {
 		return "386"
+	} else if arch.Arch == "x86-64" {
+		return "amd64"
 	}
 	return arch.Arch
 }

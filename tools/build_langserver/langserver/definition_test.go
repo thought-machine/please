@@ -30,8 +30,8 @@ func TestGetDefinitionLocationOnBuildDefs(t *testing.T) {
 	loc = handler.getDefinitionLocation(ctx, exampleBuildURI, lsp.Position{Line: 13, Character: 21})
 	expectedURI = lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "third_party/go/BUILD"))
 	expectedRange = lsp.Range{
-		Start: lsp.Position{Line: 617, Character: 0},
-		End:   lsp.Position{Line: 621, Character: 1},
+		Start: lsp.Position{Line: 610, Character: 0},
+		End:   lsp.Position{Line: 614, Character: 1},
 	}
 	assert.Equal(t, 1, len(loc))
 	assert.Equal(t, expectedURI, loc[0].URI)
@@ -47,7 +47,7 @@ func TestGetDefinitionLocationOnBuildDefs(t *testing.T) {
 	expectedURI = lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "src/core/BUILD"))
 	expectedRange = lsp.Range{
 		Start: lsp.Position{Line: 10, Character: 0},
-		End:   lsp.Position{Line: 34, Character: 1},
+		End:   lsp.Position{Line: 35, Character: 1},
 	}
 	assert.Equal(t, 1, len(loc))
 	assert.Equal(t, expectedURI, loc[0].URI)
@@ -83,7 +83,7 @@ func TestGetDefinitionLocationOnAssignments(t *testing.T) {
 	expectedURI = lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "src/core/BUILD"))
 	expectedRange = lsp.Range{
 		Start: lsp.Position{Line: 10, Character: 0},
-		End:   lsp.Position{Line: 34, Character: 1},
+		End:   lsp.Position{Line: 35, Character: 1},
 	}
 	assert.Equal(t, 1, len(loc))
 	assert.Equal(t, expectedURI, loc[0].URI)

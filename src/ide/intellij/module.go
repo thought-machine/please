@@ -11,10 +11,10 @@ import (
 
 // Module represents the IntelliJ concept of a module
 type Module struct {
-	XMLName    xml.Name          `xml:"module"`
-	ModuleType string            `xml:"type,attr"`
-	Version    int               `xml:"version,attr"`
-	Component  ModuleComponent   `xml:"component"`
+	XMLName    xml.Name        `xml:"module"`
+	ModuleType string          `xml:"type,attr"`
+	Version    int             `xml:"version,attr"`
+	Component  ModuleComponent `xml:"component"`
 }
 
 func newModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
@@ -31,7 +31,7 @@ func newModule(graph *core.BuildGraph, target *core.BuildTarget) Module {
 	module := Module{
 		ModuleType: "WEB_MODULE",
 		Version:    4,
-		Component: component,
+		Component:  component,
 	}
 
 	return module
@@ -135,7 +135,7 @@ func (module *Module) toXML(writer io.Writer) {
 	writer.Write([]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"))
 
 	content, err := xml.MarshalIndent(module, "", "  ")
-	if err  == nil {
+	if err == nil {
 		writer.Write(content)
 	}
 }
@@ -153,7 +153,7 @@ func newModuleComponent(target *core.BuildTarget) ModuleComponent {
 	orderEntries := []OrderEntry{}
 
 	return ModuleComponent{
-		Name: "NewModuleRootManager",
+		Name:                  "NewModuleRootManager",
 		InheritCompilerOutput: true,
 		Content:               newModuleContent(target),
 		OrderEntries:          orderEntries,
@@ -231,7 +231,7 @@ func newLibraryEntry(name, level string) OrderEntry {
 		Type:         "library",
 		LibraryName:  &name,
 		LibraryLevel: &level,
-		Exported: &exported,
+		Exported:     &exported,
 	}
 }
 
@@ -240,7 +240,7 @@ func newModuleEntry(name string) OrderEntry {
 	return OrderEntry{
 		Type:       "module",
 		ModuleName: &name,
-		Exported: &exported,
+		Exported:   &exported,
 	}
 }
 

@@ -47,7 +47,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=Non
                     section.
       visibility: Deprecated, has no effect.
     """
-    new_http_archive(
+    return new_http_archive(
         name = name,
         urls = urls,
         strip_prefix = strip_prefix,
@@ -94,16 +94,10 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         out = name + '_' + basename(urls[0]),
         hashes = hashes,
     )
-    if any([u.endswith('.jar') or u.endswith('.zip') for u in urls]):
-        if strip_prefix:
-            cmd = '$TOOL x $SRCS_REMOTE -o $OUT -s ' + strip_prefix
-        else:
-            cmd = '$TOOL x $SRCS_REMOTE -o $OUT'
+    if strip_prefix:
+        cmd = '$TOOL x $SRCS_REMOTE -o $OUT -s ' + strip_prefix
     else:
-        if strip_prefix:
-            cmd = f'tar -axf $SRCS_REMOTE && mv {strip_prefix} $OUT'
-        else:
-            cmd = 'mkdir $OUT && tar -axf $SRCS_REMOTE -C $OUT'
+        cmd = '$TOOL x $SRCS_REMOTE -o $OUT'
     if build_file:
         cmd += ' && mv $SRCS_BUILD $OUT/' + CONFIG.BUILD_FILE_NAMES[0]
     elif build_file_content:
@@ -119,7 +113,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         outs = [name],
         cmd = cmd,
     )
-    subrepo(
+    return subrepo(
         name = name,
         dep = extract_rule,
         config = config,
@@ -153,7 +147,7 @@ def new_local_repository(name:str, path:str):
 
 
 def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:str|list=None,
-                config:str=None, bazel_compat:bool=False):
+                strip_prefix:str=None, config:str=None, bazel_compat:bool=False):
     """Defines a new subrepo corresponding to a Github project.
 
     This is a convenience alias to the more general new_http_archive. It knows how to
@@ -165,6 +159,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
       revision: Revision to download.
       build_file: The file to use as a BUILD file for this subrepository.
       hashes: List of hashes to verify the rule with.
+      strip_prefix: Prefix to strip from the contents of the zip. Is usually autodetected for you.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
@@ -175,7 +170,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
     return new_http_archive(
         name = name,
         urls = [f'https://github.com/{org}/{repo}/archive/{revision}.zip'],
-        strip_prefix = f'{repo}-{revision}',
+        strip_prefix = strip_prefix or f'{repo}-{revision}',
         build_file = build_file,
         hashes = hashes,
         config = config,

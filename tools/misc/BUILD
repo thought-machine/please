@@ -34,7 +34,7 @@ sh_binary(
     main = "buildify.sh",
 )
 
-python_binary(
+sh_binary(
     name = "lint",
-    main = "ci_lint.py",
+    main = "lint.sh",
 )

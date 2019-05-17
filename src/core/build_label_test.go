@@ -9,7 +9,7 @@ import (
 
 func TestString(t *testing.T) {
 	assert.Equal(t, "//src/core:core", BuildLabel{PackageName: "src/core", Name: "core"}.String())
-	assert.Equal(t, "@please//src/core:core", BuildLabel{Subrepo: "please", PackageName: "src/core", Name: "core"}.String())
+	assert.Equal(t, "///please//src/core:core", BuildLabel{Subrepo: "please", PackageName: "src/core", Name: "core"}.String())
 	assert.Equal(t, "//src/core/...", BuildLabel{PackageName: "src/core", Name: "..."}.String())
 	assert.Equal(t, "//...", BuildLabel{Name: "..."}.String())
 }
@@ -19,6 +19,12 @@ func TestIncludes(t *testing.T) {
 	label2 := BuildLabel{PackageName: "src/parse", Name: "parse"}
 	assert.False(t, label1.Includes(label2))
 	label2 = BuildLabel{PackageName: "src/core", Name: "core_test"}
+	assert.True(t, label1.Includes(label2))
+}
+
+func TestIncludesRoot(t *testing.T) {
+	label1 := BuildLabel{PackageName: "", Name: "all"}
+	label2 := BuildLabel{PackageName: "", Name: ""}
 	assert.True(t, label1.Includes(label2))
 }
 
@@ -72,6 +78,7 @@ func TestLooksLikeABuildLabel(t *testing.T) {
 	assert.True(t, LooksLikeABuildLabel("@test_x86:core"))
 	assert.False(t, LooksLikeABuildLabel("core"))
 	assert.False(t, LooksLikeABuildLabel("@test_x86"))
+	assert.True(t, LooksLikeABuildLabel("///test_x86"))
 }
 
 func TestComplete(t *testing.T) {
@@ -102,7 +109,7 @@ func TestSubrepoLabel(t *testing.T) {
 }
 
 func TestParseBuildLabelParts(t *testing.T) {
-	target1 := "@unittest_cpp//:unittest_cpp"
+	target1 := "///unittest_cpp//:unittest_cpp"
 	targetNewSyntax := "@unittest_cpp"
 	pkg, name, subrepo := parseBuildLabelParts(target1, "/", nil)
 	pkg2, name2, subrepo2 := parseBuildLabelParts(targetNewSyntax, "/", nil)

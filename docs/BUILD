@@ -74,6 +74,13 @@ filegroup(
     ],
 )
 
+tarball(
+    name = "tarball",
+    srcs = [":docs"],
+    out = "docs.tar.gz",
+    labels = ["hlink:plz-out/pkg"],
+)
+
 go_binary(
     name = "templater",
     srcs = ["template.go"],

@@ -6,31 +6,24 @@
 ; (add-to-list 'auto-mode-alist '("/BUILD\\'" . please-mode))
 ; (add-to-list 'auto-mode-alist '("/BUILD.plz\\'" . please-mode))
 
-(require 'lsp-mode)
-(require 'lsp-imenu)
-(add-hook 'lsp-after-open-hook 'lsp-enable-imenu)
-(use-package lsp-ui
-  :ensure t
-  :config
-  (setq lsp-ui-sideline-ignore-duplicate t)
-  (add-hook 'lsp-mode-hook 'lsp-ui-mode))
+(require 'lsp)
 
-(lsp-define-stdio-client
- please-mode
- "Please"
- (lambda () default-directory) ; TODO(peterebden): what should we do here?
- '("plz" "tool" "langserver"))
+(define-derived-mode please-mode python-mode "plz")
 
-(define-derived-mode please-mode python-mode "Please mode")
-
-(add-hook 'please-mode-hook
-          (lambda ()
-           (please-mode-enable)))
+(lsp-register-client
+ (make-lsp-client :new-connection (lsp-stdio-connection '("/home/peter/git/please/plz-out/bin/tools/build_langserver/build_langserver" "--log_file=/tmp/plzl.log" "-v=4"))
+                  :major-modes '(please-mode)
+                  :server-id 'plz))
 
 (defun please-mode-fmt-on-save ()
   (interactive)
   (when (eq major-mode 'please-mode) (lsp-format-buffer)))
 
 (add-hook 'before-save-hook 'please-mode-fmt-on-save)
+(add-to-list 'lsp-language-id-configuration '(please-mode . "plz"))
+(add-hook 'please-mode-hook #'lsp)
+
+(add-to-list 'auto-mode-alist '("/BUILD\\'" . please-mode))
+(add-to-list 'auto-mode-alist '("/BUILD.plz\\'" . please-mode))
 
 (provide 'please-mode)

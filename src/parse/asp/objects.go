@@ -610,7 +610,7 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	if f.types[i] == nil {
 		return val
 	} else if val == None {
-		if f.constants[i] == nil && f.defaults[i] == nil {
+		if f.constants[i] == nil && (f.defaults == nil || f.defaults[i] == nil) {
 			return val
 		}
 		return f.defaultArg(s, i, f.args[i])
@@ -777,6 +777,10 @@ func newConfig(config *core.Configuration) *pyConfig {
 	}
 	c["OS"] = pyString(config.Build.Arch.OS)
 	c["ARCH"] = pyString(config.Build.Arch.Arch)
+	c["HOSTOS"] = pyString(config.Build.Arch.HostOS())
+	c["HOSTARCH"] = pyString(config.Build.Arch.HostArch())
+	c["GOOS"] = pyString(config.Build.Arch.OS)
+	c["GOARCH"] = pyString(config.Build.Arch.GoArch())
 	return &pyConfig{base: c}
 }
 

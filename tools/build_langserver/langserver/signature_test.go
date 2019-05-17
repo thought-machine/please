@@ -19,7 +19,7 @@ func TestGetSignaturesEmptyCall(t *testing.T) {
 
 	expectedLabel := "(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[],\n" +
 		"              visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,\n" +
-		"              filter_srcs:bool=True, definitions:str|list|dict=None)"
+		"              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False)"
 	assert.Equal(t, expectedLabel, sig.Signatures[0].Label)
 }
 

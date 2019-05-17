@@ -1,3 +1,7 @@
 ; Config file used for CI.
 [cache]
+dir = .plz-cache
 dircompress = true
+
+[buildconfig]
+ci = true

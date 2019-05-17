@@ -1,6 +1,7 @@
 package run
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -25,9 +26,9 @@ func TestSequential(t *testing.T) {
 
 func TestParallel(t *testing.T) {
 	state, labels1, labels2 := makeState()
-	code := Parallel(state, labels1, nil, 5, false, false)
+	code := Parallel(context.Background(), state, labels1, nil, 5, false, false)
 	assert.Equal(t, 0, code)
-	code = Parallel(state, labels2, nil, 5, true, false)
+	code = Parallel(context.Background(), state, labels2, nil, 5, true, false)
 	assert.Equal(t, 1, code)
 }
 
@@ -40,7 +41,7 @@ func TestEnvVars(t *testing.T) {
 	assert.NotContains(t, env, "PATH=/wibble")
 	env = environ(config, true)
 	assert.NotContains(t, env, "PATH=/usr/local/bin:/usr/bin:/bin")
-	assert.Contains(t, env, "PATH="+os.Getenv("TMP_DIR")+"/.please:/wibble")
+	assert.Contains(t, env, "PATH=:/wibble")
 }
 
 func makeState() (*core.BuildState, []core.BuildLabel, []core.BuildLabel) {

@@ -37,6 +37,10 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
 	graph.targets[target.Label] = target
+	// Register any of its dependencies now
+	for _, dep := range target.DeclaredDependencies() {
+		graph.addDependencyForTarget(target, dep)
+	}
 	// Check these reverse deps which may have already been added against this target.
 	revdeps, present := graph.pendingRevDeps[target.Label]
 	if present {
@@ -173,7 +177,13 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
-	fromTarget := graph.targets[from]
+	graph.addDependencyForTarget(graph.targets[from], to)
+}
+
+// addDependencyForTarget adds a dependency between two build targets.
+// The 'to' target doesn't necessarily have to exist in the graph yet.
+// The caller must already hold the lock before calling this.
+func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to BuildLabel) {
 	// We might have done this already; do a quick check here first.
 	if fromTarget.hasResolvedDependency(to) {
 		return
@@ -182,7 +192,7 @@ func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
 	// The dependency may not exist yet if we haven't parsed its package.
 	// In that case we stash it away for later.
 	if !present {
-		graph.addPendingRevDep(from, to, nil)
+		graph.addPendingRevDep(fromTarget.Label, to, nil)
 	} else {
 		graph.linkDependencies(fromTarget, toTarget)
 	}

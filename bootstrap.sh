@@ -5,13 +5,6 @@ set -eu
 function notice {
     >&2 echo -e "\033[32m$1\033[0m"
 }
-function noticen {
-    >&2 echo -n -e "\033[32m$1\033[0m"
-}
-function go_get {
-    go get $1
-    noticen "."
-}
 function warn {
     >&2 echo -e "\033[33m$1\033[0m"
 }
@@ -19,47 +12,9 @@ function warn {
 # PLZ_ARGS can be set to pass arguments to all plz invocations in this script.
 PLZ_ARGS="${PLZ_ARGS:-}"
 
-# Fetch the Go dependencies manually
-export GOPATH="${PWD}/.bootstrap:${PWD}"
-if [ -z "${PLZ_NO_GO_BOOTSTRAP+bootstrap}" ]; then
-    noticen "Installing Go dependencies..."
-    mkdir -p "${PWD}/.bootstrap/src/github.com/thought-machine"
-    if [ ! -e "${PWD}/.bootstrap/src/github.com/thought-machine/please" ]; then
-        ln -s "$PWD" "${PWD}/.bootstrap/src/github.com/thought-machine/please"
-    fi
-    go_get golang.org/x/crypto/ssh/terminal
-    go_get golang.org/x/sync/errgroup
-    go_get golang.org/x/tools/cover
-    go_get gopkg.in/op/go-logging.v1
-    go_get gopkg.in/gcfg.v1
-    go_get github.com/kevinburke/go-bindata/...
-    go_get github.com/jessevdk/go-flags
-    go_get github.com/dustin/go-humanize
-    go_get github.com/texttheater/golang-levenshtein/levenshtein
-    go_get github.com/Workiva/go-datastructures/queue
-    go_get github.com/coreos/go-semver/semver
-    go_get github.com/djherbis/atime
-    go_get github.com/karrick/godirwalk
-    go_get github.com/hashicorp/go-multierror
-    go_get github.com/google/shlex
-    go_get github.com/pkg/xattr
-    go_get github.com/peterebden/go-cli-init
-    notice ""
-else
-    warn "Skipping Go bootstrap"
-fi
-
-# Clean out old artifacts.
-rm -rf plz-out src/parse/rules/builtin_rules.bindata.go src/parse/rules/builtin_data.bindata.go
-# Compile the builtin rules
-notice "Compiling built-in rules..."
-go run -tags bootstrap src/parse/asp/main/compiler.go -o plz-out/tmp/src/parse/rules src/parse/rules/*.build_defs
-# Embed them into Go
-.bootstrap/bin/go-bindata -o src/parse/rules/builtin_data.bindata.go -pkg rules -prefix plz-out/tmp/src/parse/rules plz-out/tmp/src/parse/rules
-
 # Now invoke Go to run Please to build itself.
 notice "Building Please..."
-go run -tags bootstrap src/please.go $PLZ_ARGS build //src:please --log_file plz-out/log/bootstrap_build.log -o display.systemstats:false
+go run -tags bootstrap src/please.go $PLZ_ARGS --profile bootstrap build //src:please --log_file plz-out/log/bootstrap_build.log
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
 plz-out/bin/src/please $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
@@ -118,6 +73,15 @@ fi
 if ! hash java 2>/dev/null ; then
     warn "Java not found, excluding Java tests"
     EXCLUDES="${EXCLUDES} --exclude=java"
+elif [ "`uname`" = "Darwin" ]; then
+    if [ -n "$(find /Library/Java/JavaVirtualMachines -prune -empty)" ] ; then
+        warn "JVM not found, excluding Java tests"
+        EXCLUDES="${EXCLUDES} --exclude=java"
+    fi
+fi
+if ! hash xz 2>/dev/null ; then
+    warn "xz not found, excluding update tests"
+    EXCLUDES="${EXCLUDES} --exclude=xz"
 fi
 GCCVER="`cc -dumpversion`"
 if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ] && [ ! -d "/usr/lib/gcc/x86_64-pc-linux-gnu/$GCCVER/32" ]; then
@@ -131,11 +95,3 @@ plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --lo
 # finicky about some things due to running plz recursively and disabling the lock.
 notice "Running end-to-end tests..."
 plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/test_build.log --log_file_level 4 $@
-
-# Lint needs python3.
-if hash python3 2>/dev/null ; then
-    # Don't run this in CI or any unusual workflows.
-    if [ $# -eq 0 ] ; then
-        plz lint
-    fi
-fi

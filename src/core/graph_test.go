@@ -35,12 +35,6 @@ func TestRevDeps(t *testing.T) {
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)
 	graph.AddTarget(target3)
-	// No revdeps until we call AddDependency
-	assert.Equal(t, 0, len(graph.ReverseDependencies(target1)))
-	assert.Equal(t, 0, len(graph.ReverseDependencies(target2)))
-	assert.Equal(t, 0, len(graph.ReverseDependencies(target3)))
-	graph.AddDependency(target2.Label, target1.Label)
-	graph.AddDependency(target3.Label, target2.Label)
 	assert.Equal(t, []*BuildTarget{target2}, graph.ReverseDependencies(target1))
 	assert.Equal(t, []*BuildTarget{target3}, graph.ReverseDependencies(target2))
 	assert.Equal(t, 0, len(graph.ReverseDependencies(target3)))

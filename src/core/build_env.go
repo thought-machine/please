@@ -2,10 +2,14 @@ package core
 
 import (
 	"encoding/base64"
+	"os"
 	"path"
+	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/scm"
 )
 
 // ExpandHomePath is an alias to the function in fs for compatibility.
@@ -37,12 +41,18 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 
 // buildEnvironment returns the basic parts of the build environment.
 func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
-	return append(GeneralBuildEnvironment(state.Config),
+	env := append(GeneralBuildEnvironment(state.Config),
 		"PKG="+target.Label.PackageName,
 		"PKG_DIR="+target.Label.PackageDir(),
 		"NAME="+target.Label.Name,
 		"CONFIG="+state.Config.Build.Config,
 	)
+	if target.PassEnv != nil {
+		for _, e := range *target.PassEnv {
+			env = append(env, e+"="+os.Getenv(e))
+		}
+	}
+	return env
 }
 
 // BuildEnvironment creates the shell env vars to be passed into the exec.Command calls made by plz.
@@ -92,7 +102,15 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	}
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
-		env = append(env, "SECRETS="+ExpandHomePath(strings.Join(target.Secrets, " ")))
+		secrets := "SECRETS=" + ExpandHomePath(strings.Join(target.Secrets, ":"))
+		secrets = strings.Replace(secrets, ":", " ", -1)
+		env = append(env, secrets)
+	}
+	// NamedSecrets, if they declared any.
+	for name, secrets := range target.NamedSecrets {
+		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + ExpandHomePath(strings.Join(secrets, ":"))
+		secrets = strings.Replace(secrets, ":", " ", -1)
+		env = append(env, secrets)
 	}
 	if state.Config.Bazel.Compatibility {
 		// Obviously this is only a subset of the variables Bazel would expose, but there's
@@ -128,7 +146,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	}
 	if len(target.Outputs()) > 0 {
 		// Bit of a hack; ideally we would be unaware of the sandbox here.
-		if target.TestSandbox {
+		if target.TestSandbox && runtime.GOOS == "linux" && !strings.HasPrefix(RepoRoot, "/tmp/") {
 			env = append(env, "TEST="+path.Join(SandboxDir, target.Outputs()[0]))
 		} else {
 			env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
@@ -152,9 +170,20 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte) BuildEnv {
 	env := BuildEnvironment(state, target)
 	if target.Stamp {
+		stampEnvOnce.Do(initStampEnv)
+		env = append(env, stampEnv...)
 		return append(env, "STAMP="+base64.RawURLEncoding.EncodeToString(stamp))
 	}
 	return env
+}
+
+// stampEnv is the generic (i.e. non-target-specific) environment variables we pass to a
+// build rule marked with stamp=True.
+var stampEnv BuildEnv
+var stampEnvOnce sync.Once
+
+func initStampEnv() {
+	stampEnv = BuildEnv{"SCM_REVISION=" + scm.NewFallback(RepoRoot).CurrentRevIdentifier()}
 }
 
 func toolPath(state *BuildState, tool BuildInput) string {

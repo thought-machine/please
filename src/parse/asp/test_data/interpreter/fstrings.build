@@ -1,0 +1,3 @@
+x = 'mickey'
+y = 'donald'
+z = f'{x} {y} ${goofy} {{sora}}'

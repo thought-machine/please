@@ -4,8 +4,12 @@
 package watch
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"path"
+	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -14,11 +18,12 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/run"
 )
 
 var log = logging.MustGetLogger("watch")
 
-const debounceInterval = 50 * time.Millisecond
+const debounceInterval = 100 * time.Millisecond
 
 // A CallbackFunc is supplied to Watch in order to trigger a build.
 type CallbackFunc func(*core.BuildState, []core.BuildLabel)
@@ -37,10 +42,24 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
 
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, os.Interrupt)
+	parentCtx, cancelParent := context.WithCancel(context.Background())
+	go func() {
+		for range sigchan {
+			cancelParent()
+			signal.Stop(sigchan)
+			close(sigchan)
+			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+		}
+	}()
+
+	ctx, cancel := context.WithCancel(parentCtx)
+
 	// The initial setup only builds targets, it doesn't test or run things.
 	// Do one of those now if requested.
 	if state.NeedTests || state.NeedRun {
-		build(state, labels, callback)
+		build(ctx, state, labels, callback)
 	}
 
 	for {
@@ -51,6 +70,9 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 				log.Notice("Skipping notification for %s", event.Name)
 				continue
 			}
+			// Kill any previous process.
+			cancel()
+			ctx, cancel = context.WithCancel(parentCtx)
 
 			// Quick debounce; poll and discard all events for the next brief period.
 		outer:
@@ -61,7 +83,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 					break outer
 				}
 			}
-			build(state, labels, callback)
+			build(ctx, state, labels, callback)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
@@ -140,7 +162,7 @@ func anyTests(state *core.BuildState, labels []core.BuildLabel) bool {
 }
 
 // build invokes a single build while watching.
-func build(state *core.BuildState, labels []core.BuildLabel, callback CallbackFunc) {
+func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, callback CallbackFunc) {
 	// Set up a new state & copy relevant parts off the existing one.
 	ns := core.NewBuildState(state.Config.Please.NumThreads, state.Cache, state.Verbosity, state.Config)
 	ns.VerifyHashes = state.VerifyHashes
@@ -151,5 +173,10 @@ func build(state *core.BuildState, labels []core.BuildLabel, callback CallbackFu
 	ns.CleanWorkdirs = state.CleanWorkdirs
 	ns.DebugTests = state.DebugTests
 	ns.ShowAllOutput = state.ShowAllOutput
+	ns.StartTime = time.Now()
 	callback(ns, labels)
+	if state.NeedRun {
+		// Don't wait for this, its lifetime will be controlled by the context.
+		go run.Parallel(ctx, state, labels, nil, state.Config.Please.NumThreads, false, false)
+	}
 }

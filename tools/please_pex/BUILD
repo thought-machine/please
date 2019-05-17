@@ -65,13 +65,6 @@ python_test(
 )
 
 python_test(
-    name = "custom_interpreter_test",
-    srcs = ["custom_interpreter_test.py"],
-    interpreter = "/usr/bin/pypy",
-    labels = ["manual"],
-)
-
-python_test(
     name = "pex_import_test",
     srcs = ["pex_import_test.py"],
     deps = [

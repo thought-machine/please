@@ -104,6 +104,8 @@ type BuildState struct {
 	Include, Exclude []string
 	// Actual targets to exclude from discovery
 	ExcludeTargets []BuildLabel
+	// The original architecture that the user requested to build for.
+	OriginalArch cli.Arch
 	// True if we require rule hashes to be correctly verified (usually the case).
 	VerifyHashes bool
 	// Aggregated coverage for this run
@@ -587,11 +589,89 @@ func (state *BuildState) WaitForBuiltTarget(l, dependor BuildLabel) *BuildTarget
 	// Nothing's registered this, set it up.
 	state.progress.pendingTargets[l] = make(chan struct{})
 	state.progress.pendingTargetMutex.Unlock()
-	state.AddPendingParse(l, dependor, true)
+	state.QueueTarget(l, dependor, false, true)
 	// Do this all over; the re-checking that happens here is actually fairly important to resolve
 	// a potential race condition if the target was built between us checking earlier and registering
 	// the channel just now.
 	return state.WaitForBuiltTarget(l, dependor)
+}
+
+// AddTarget adds a new target to the build graph.
+func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
+	pkg.AddTarget(target)
+	state.Graph.AddTarget(target)
+	if target.IsFilegroup {
+		// At least register these guys as outputs.
+		// It's difficult to handle non-file sources because we don't know if they're
+		// parsed yet - recall filegroups are a special case for this since they don't
+		// explicitly declare their outputs but can re-output other rules' outputs.
+		for _, src := range target.AllLocalSources() {
+			pkg.MustRegisterOutput(src, target)
+		}
+	} else {
+		for _, out := range target.DeclaredOutputs() {
+			pkg.MustRegisterOutput(out, target)
+		}
+		for _, out := range target.TestOutputs {
+			if !fs.IsGlob(out) {
+				pkg.MustRegisterOutput(out, target)
+			}
+		}
+	}
+}
+
+// QueueTarget adds a single target to the build queue.
+func (state *BuildState) QueueTarget(label, dependor BuildLabel, rescan, forceBuild bool) {
+	target := state.Graph.Target(label)
+	if target == nil {
+		// If the package isn't loaded yet, we need to queue a parse for it.
+		if state.Graph.PackageByLabel(label) == nil {
+			state.AddPendingParse(label, dependor, forceBuild)
+			return
+		}
+		// Package is loaded but target doesn't exist in it. Check again to avoid nasty races.
+		target = state.Graph.Target(label)
+		if target == nil {
+			log.Fatalf("Target %s (referenced by %s) doesn't exist\n", label, dependor)
+		}
+	}
+	if target.State() >= Active && !rescan && !forceBuild {
+		return // Target is already tagged to be built and likely on the queue.
+	}
+	// Only do this bit if we actually need to build the target
+	if !target.SyncUpdateState(Inactive, Semiactive) && !rescan && !forceBuild {
+		return
+	}
+	if state.NeedBuild || forceBuild {
+		if target.SyncUpdateState(Semiactive, Active) {
+			state.AddActiveTarget()
+			if target.IsTest && state.NeedTests {
+				state.AddActiveTarget() // Tests count twice if we're gonna run them.
+			}
+		}
+	}
+	// If this target has no deps, add it to the queue now, otherwise handle its deps.
+	// Only add if we need to build targets (not if we're just parsing) but we might need it to parse...
+	if target.State() == Active && state.Graph.AllDepsBuilt(target) {
+		if target.SyncUpdateState(Active, Pending) {
+			state.AddPendingBuild(label, dependor.IsAllTargets())
+		}
+		if !rescan {
+			return
+		}
+	}
+	for _, dep := range target.DeclaredDependencies() {
+		// Check the require/provide stuff; we may need to add a different target.
+		if len(target.Requires) > 0 {
+			if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
+				for _, provided := range depTarget.ProvideFor(target) {
+					state.QueueTarget(provided, label, false, forceBuild)
+				}
+				continue
+			}
+		}
+		state.QueueTarget(dep, label, false, forceBuild)
+	}
 }
 
 // ForTarget returns the state associated with a given target.
@@ -668,6 +748,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		NeedBuild:    true,
 		Success:      true,
 		Coverage:     TestCoverage{Files: map[string][]LineCoverage{}},
+		OriginalArch: cli.HostArch(),
 		numWorkers:   numThreads,
 		Stats:        &SystemStats{},
 		progress: &stateProgress{

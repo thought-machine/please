@@ -25,7 +25,7 @@ func TestLibraryToXml(t *testing.T) {
 	buf := &bytes.Buffer{}
 	library.toXML(buf)
 	assert.Equal(t,
-			"<component name=\"libraryTable\">\n"+
+		"<component name=\"libraryTable\">\n"+
 			"  <library name=\"finagle-base-http\">\n"+
 			"    <CLASSES>\n"+
 			"      <root url=\"jar://$USER_HOME$/code/git.corp.tmachine.io/CORE/plz-out/gen/third_party/java/com/twitter/finagle-base-http.jar!/\"></root>\n"+

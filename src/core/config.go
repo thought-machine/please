@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"sort"
@@ -19,9 +20,10 @@ import (
 
 	"github.com/google/shlex"
 	"github.com/jessevdk/go-flags"
-	"gopkg.in/gcfg.v1"
+	"github.com/peterebden/gcfg"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // OsArch is the os/arch pair, like linux_amd64 etc.
@@ -68,7 +70,13 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else if err != nil {
 		log.Warning("Error in config file: %s", err)
 	} else if filename == ExpandHomePath(oldUserConfigFileName) {
-		log.Warning("Read a config file at %s; this location is deprecated in favour of %s", filename, ExpandHomePath(UserConfigFileName))
+		if dest := ExpandHomePath(UserConfigFileName); !fs.PathExists(dest) {
+			log.Warning("Migrating old config from %s to %s", filename, dest)
+			fs.EnsureDir(dest)
+			os.Rename(filename, dest)
+		} else {
+			log.Warning("Read a config file at %s; this location is deprecated in favour of %s", filename, dest)
+		}
 	}
 	return nil
 }
@@ -76,7 +84,7 @@ func readConfigFile(config *Configuration, filename string) error {
 // ReadDefaultConfigFiles reads all the config files from the default locations and
 // merges them into a config object.
 // The repo root must have already have been set before calling this.
-func ReadDefaultConfigFiles(profile string) (*Configuration, error) {
+func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
 	return ReadConfigFiles([]string{
 		MachineConfigFileName,
 		ExpandHomePath(UserConfigFileName),
@@ -84,18 +92,18 @@ func ReadDefaultConfigFiles(profile string) (*Configuration, error) {
 		path.Join(RepoRoot, ConfigFileName),
 		path.Join(RepoRoot, ArchConfigFileName),
 		path.Join(RepoRoot, LocalConfigFileName),
-	}, profile)
+	}, profiles)
 }
 
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
-func ReadConfigFiles(filenames []string, profile string) (*Configuration, error) {
+func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, error) {
 	config := DefaultConfiguration()
 	for _, filename := range filenames {
 		if err := readConfigFile(config, filename); err != nil {
 			return config, err
 		}
-		if profile != "" {
+		for _, profile := range profiles {
 			if err := readConfigFile(config, filename+"."+profile); err != nil {
 				return config, err
 			}
@@ -104,15 +112,16 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
 	if usingBazelWorkspace {
-		setDefault(&config.Parse.BuildFileName, []string{"BUILD.bazel", "BUILD", "BUILD.plz"})
+		setDefault(&config.Parse.BuildFileName, "BUILD.bazel", "BUILD", "BUILD.plz")
 	} else {
-		setDefault(&config.Parse.BuildFileName, []string{"BUILD", "BUILD.plz"})
+		setDefault(&config.Parse.BuildFileName, "BUILD", "BUILD.plz")
 	}
 	setBuildPath(&config.Build.Path, config.Build.PassEnv)
-	setDefault(&config.Build.PassEnv, []string{})
-	setDefault(&config.Cover.FileExtension, []string{".go", ".py", ".java", ".js", ".cc", ".h", ".c"})
-	setDefault(&config.Cover.ExcludeExtension, []string{".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc"})
-	setDefault(&config.Proto.Language, []string{"cc", "py", "java", "go", "js"})
+	setDefault(&config.Build.PassEnv)
+	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".js", ".cc", ".h", ".c")
+	setDefault(&config.Cover.ExcludeExtension, ".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc")
+	setDefault(&config.Proto.Language, "cc", "py", "java", "go", "js")
+	setDefault(&config.Parse.BuildDefsDir, "build_defs")
 
 	// Default values for these guys depend on config.Java.JavaHome if that's been set.
 	if config.Java.JavaHome != "" {
@@ -132,6 +141,49 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 		config.Test.DisableCoverage = append(config.Test.DisableCoverage, "cc")
 	}
 
+	if len(config.Size) == 0 {
+		config.Size = map[string]*Size{
+			"small": {
+				Timeout:     cli.Duration(1 * time.Minute),
+				TimeoutName: "short",
+			},
+			"medium": {
+				Timeout:     cli.Duration(5 * time.Minute),
+				TimeoutName: "moderate",
+			},
+			"large": {
+				Timeout:     cli.Duration(15 * time.Minute),
+				TimeoutName: "long",
+			},
+			"enormous": {
+				TimeoutName: "eternal",
+			},
+		}
+	}
+	// Dump the timeout names back in so we can look them up later
+	for _, size := range config.Size {
+		if size.TimeoutName != "" {
+			config.Size[size.TimeoutName] = size
+		}
+	}
+
+	if config.Please.Location == "" {
+		// Determine the location based off where we're running from.
+		if exec, err := os.Executable(); err != nil {
+			log.Warning("Can't determine current executable: %s", err)
+			config.Please.Location = "~/.please"
+		} else if strings.HasPrefix(exec, ExpandHomePath("~/.please")) {
+			// Paths within ~/.please are managed by us and have symlinks to subdirectories
+			// that we don't want to follow.
+			config.Please.Location = "~/.please"
+		} else if deref, err := filepath.EvalSymlinks(exec); err != nil {
+			log.Warning("Can't dereference %s: %s", exec, err)
+			config.Please.Location = "~/.please"
+		} else {
+			config.Please.Location = path.Dir(deref)
+		}
+	}
+
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"test.defaultcontainer": config.Test.DefaultContainer,
@@ -140,7 +192,7 @@ func ReadConfigFiles(filenames []string, profile string) (*Configuration, error)
 }
 
 // setDefault sets a slice of strings in the config if the set one is empty.
-func setDefault(conf *[]string, def []string) {
+func setDefault(conf *[]string, def ...string) {
 	if len(*conf) == 0 {
 		*conf = def
 	}
@@ -154,8 +206,7 @@ func setBuildPath(conf *[]string, passEnv []string) {
 			pathVal = strings.Split(os.Getenv("PATH"), ":")
 		}
 	}
-
-	setDefault(conf, pathVal)
+	setDefault(conf, pathVal...)
 }
 
 // defaultPath sets a variable to a location in a directory if it's not already set.
@@ -179,7 +230,6 @@ func defaultPathIfExists(conf *string, dir, file string) {
 // DefaultConfiguration returns the default configuration object with no overrides.
 func DefaultConfiguration() *Configuration {
 	config := Configuration{buildEnvStored: &storedBuildEnv{}}
-	config.Please.Location = "~/.please"
 	config.Please.SelfUpdate = true
 	config.Please.Autoclean = true
 	config.Please.DownloadLocation = "https://get.please.build"
@@ -228,7 +278,6 @@ func DefaultConfiguration() *Configuration {
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
 	config.Python.UsePyPI = true
-
 	// Annoyingly pip on OSX doesn't seem to work with this flag (you get the dreaded
 	// "must supply either home or prefix/exec-prefix" error). Goodness knows why *adding* this
 	// flag - which otherwise seems exactly what we want - provokes that error, but the logic
@@ -289,6 +338,7 @@ func DefaultConfiguration() *Configuration {
 type Configuration struct {
 	Please struct {
 		Version          cli.Version `help:"Defines the version of plz that this repo is supposed to use currently. If it's not present or the version matches the currently running version no special action is taken; otherwise if SelfUpdate is set Please will attempt to download an appropriate version, otherwise it will issue a warning and continue.\n\nNote that if this is not set, you can run plz update to update to the latest version available on the server." var:"PLZ_VERSION"`
+		VersionChecksum  []string    `help:"Defines a hex-encoded sha256 checksum that the downloaded version must match. Can be specified multiple times to support different architectures."`
 		Location         string      `help:"Defines the directory Please is installed into.\nDefaults to ~/.please but you might want it to be somewhere else if you're installing via another method (e.g. the debs and install script still use /opt/please)."`
 		SelfUpdate       bool        `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
 		DownloadLocation cli.URL     `help:"Defines the location to download Please from when self-updating. Defaults to the Please web server, but you can point it to some location of your own if you prefer to keep traffic within your network or use home-grown versions."`
@@ -303,6 +353,7 @@ type Configuration struct {
 		BuildFileName    []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
 		BlacklistDirs    []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
 		PreloadBuildDefs []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths." example:"build_defs/go_bindata.build_defs"`
+		BuildDefsDir     []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
 		BuiltinPleasings bool     `help:"Adds github.com/thought-machine/pleasings as a default subrepo named pleasings. This makes some builtin extensions available, but is not fully deterministic (it always uses the latest version). You may prefer to disable this and define your own subrepo for it (or not use it at all, of course)."`
 		GitFunctions     bool     `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
@@ -315,7 +366,7 @@ type Configuration struct {
 	} `help:"The [events] section in the config contains settings relating to the internal build event system & streaming them externally."`
 	Build struct {
 		Arch              cli.Arch     `help:"Architecture to compile for. Defaults to the host architecture."`
-		Timeout           cli.Duration `help:"Default timeout for Dockerised tests, in seconds. Default is twenty minutes."`
+		Timeout           cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
 		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
 		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
 		FallbackConfig    string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
@@ -329,7 +380,7 @@ type Configuration struct {
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
 	Cache       struct {
 		Workers               int          `help:"Number of workers for uploading artifacts to remote caches, which is done asynchronously."`
-		Dir                   string       `help:"Sets the directory to use for the dir cache.\nThe default is 'please' under the user's cache dir (i.e. ~/.cache/please, ~/Library/Caches/please, etc), if set to the empty string the dir cache will be disabled."`
+		Dir                   string       `help:"Sets the directory to use for the dir cache.\nThe default is 'please' under the user's cache dir (i.e. ~/.cache/please, ~/Library/Caches/please, etc), if set to the empty string the dir cache will be disabled." example:".plz-cache"`
 		DirCacheHighWaterMark cli.ByteSize `help:"Starts cleaning the directory cache when it is over this number of bytes.\nCan also be given with human-readable suffixes like 10G, 200MB etc."`
 		DirCacheLowWaterMark  cli.ByteSize `help:"When cleaning the directory cache, it's reduced to at most this size."`
 		DirClean              bool         `help:"Controls whether entries in the dir cache are cleaned or not. If disabled the cache will only grow."`
@@ -360,6 +411,7 @@ type Configuration struct {
 		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
 		DisableCoverage  []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 	}
+	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
 		ExcludeExtension []string `help:"Extensions of files to exclude from coverage.\nTypically this is for generated code; the default is to exclude protobuf extensions like .pb.go, _pb2.py, etc."`
@@ -429,7 +481,7 @@ type Configuration struct {
 		DefaultNamespace   string     `help:"Namespace passed to all cc_embed_binary rules when not overridden by the namespace argument to that rule.\nNot set by default, if you want to use those rules you'll need to set it or pass it explicitly to each one." var:"DEFAULT_NAMESPACE"`
 		PkgConfigPath      string     `help:"Custom PKG_CONFIG_PATH for pkg-config.\nBy default this is empty." var:"PKG_CONFIG_PATH"`
 		Coverage           bool       `help:"If true (the default), coverage will be available for C and C++ build rules.\nThis is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.\nIt's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation." var:"CPP_COVERAGE"`
-		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"@pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
+		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
 		ClangModules       bool       `help:"Uses Clang-style arguments for compiling cc_module rules. If disabled gcc-style arguments will be used instead. Experimental, expected to be removed at some point once module compilation methods are more consistent." var:"CC_MODULES_CLANG"`
 	} `help:"Please has built-in support for compiling C and C++ code. We don't support every possible nuance of compilation for these languages, but aim to provide something fairly straightforward.\nTypically there is little problem compiling & linking against system libraries although Please has no insight into those libraries and when they change, so cannot rebuild targets appropriately.\n\nThe C and C++ rules are very similar and simply take a different set of tools and flags to facilitate side-by-side usage."`
 	Proto struct {
@@ -474,6 +526,12 @@ type Alias struct {
 	PositionalLabels bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
 }
 
+// A Size represents a named size in the config.
+type Size struct {
+	Timeout     cli.Duration `help:"Timeout for targets of this size"`
+	TimeoutName string       `help:"Name of the timeout, to be passed to the 'timeout' argument"`
+}
+
 type storedBuildEnv struct {
 	Env, Path []string
 	Once      sync.Once
@@ -487,9 +545,6 @@ func (config *Configuration) Hash() []byte {
 	// These fields are the ones that need to be in the general hash; other things will be
 	// picked up by relevant rules (particularly tool paths etc).
 	// Note that container settings are handled separately.
-	for _, f := range config.Parse.BuildFileName {
-		h.Write([]byte(f))
-	}
 	h.Write([]byte(config.Build.Lang))
 	h.Write([]byte(config.Build.Nonce))
 	for _, l := range config.Licences.Reject {
@@ -530,14 +585,7 @@ func (config *Configuration) Path() []string {
 	return config.buildEnvStored.Path
 }
 
-func (config *Configuration) getBuildEnv(expanded bool) []string {
-	maybeExpandHomePath := func(s string) string {
-		if !expanded {
-			return s
-		}
-		return ExpandHomePath(s)
-	}
-
+func (config *Configuration) getBuildEnv(includePath bool) []string {
 	env := []string{
 		// Need to know these for certain rules.
 		"ARCH=" + config.Build.Arch.Arch,
@@ -557,23 +605,22 @@ func (config *Configuration) getBuildEnv(expanded bool) []string {
 	}
 
 	// from the user's environment based on the PassEnv config keyword
-	path := false
 	for _, k := range config.Build.PassEnv {
 		if v, isSet := os.LookupEnv(k); isSet {
 			if k == "PATH" {
 				// plz's install location always needs to be on the path.
-				v = maybeExpandHomePath(config.Please.Location) + ":" + v
-				path = true
+				v = ExpandHomePath(config.Please.Location) + ":" + v
+				includePath = false // skip this in a bit
 			}
 			env = append(env, k+"="+v)
 		}
 	}
-	if !path {
+	if includePath {
 		// Use a restricted PATH; it'd be easier for the user if we pass it through
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+maybeExpandHomePath(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")))
+		env = append(env, "PATH="+ExpandHomePath(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")))
 	}
 
 	sort.Strings(env)

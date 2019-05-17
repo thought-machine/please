@@ -43,7 +43,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
       strip (bool): If True, the original sources are stripped and only bytecode is output.
     """
     if not zip_safe:
-        labels.append('py:zip-unsafe')
+        labels += ['py:zip-unsafe']
     if srcs or resources:
         cmd = '$TOOLS_JARCAT z -d -o ${OUTS} -i .'
         interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
@@ -76,7 +76,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
                 'jarcat': [CONFIG.JARCAT_TOOL],
             },
         )
-        deps.append(zip_rule)
+        deps += [zip_rule]
     elif strip:
         raise ParseError("Can't pass strip=True to a python_library with no srcs")
 
@@ -92,7 +92,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
     )
 
 
-def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list=[],
+def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
                   visibility:list=None, zip_safe:bool=None, strip:bool=False, interpreter:str=None,
                   shebang:str='', labels:list&features&tags=[]):
     """Generates a Python binary target.
@@ -105,6 +105,7 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
     Args:
       name (str): Name of the rule.
       main (str): Python file which is the entry point and __main__ module.
+      srcs (list): List of additional Python source files for this binary.
       resources (list): List of static resources to include in the .pex.
       out (str): Name of the output file. Default to name + .pex
       deps (list): Dependencies of this rule.
@@ -125,9 +126,11 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
     cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe' % (shebang, CONFIG.PYTHON_MODULE_DIR)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
+    assert main not in srcs, "main file should not be included in srcs"
+
     lib_rule = python_library(
         name='_%s#lib' % name,
-        srcs=[main],
+        srcs=[main] + srcs,
         resources=resources,
         interpreter=interpreter,
         deps=deps,
@@ -155,7 +158,7 @@ def python_binary(name:str, main:str, resources:list=[], out:str=None, deps:list
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
     if strip:
         cmd += ' --strip_py'
-    build_rule(
+    return build_rule(
         name=name,
         srcs=[pex_rule],
         deps=[lib_rule],
@@ -216,7 +219,6 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
                          which is normally just 'python', but could be 'python3' or
                         'pypy' or whatever.
     """
-    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe' % (interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
@@ -260,7 +262,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         deps += [worker]
 
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
-    build_rule(
+    return build_rule(
         name=name,
         srcs=[pex_rule],
         deps=deps,
@@ -280,9 +282,10 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         building_description="Building pex...",
         visibility=visibility,
         test_timeout=timeout,
+        size = size,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['py', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+        requires=['py', 'test', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
         tools=[CONFIG.JARCAT_TOOL],
     )
 
@@ -327,24 +330,24 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if repo:
         if repo.startswith('//') or repo.startswith(':'):  # Looks like a build label, not a URL.
             repo_flag = f'-f %(location {repo})'
-            deps.append(repo)
+            deps += [repo]
         else:
             repo_flag = '-f ' + repo
 
     target = outs[0] if install_subdirectory else '.'
 
     cmd = '$TOOLS_PIP install --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
-    if CONFIG.OS == 'linux':
-        # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
-        # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
-        # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
-        cmd = f'[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; {cmd} $SYS_FLAG'
-    elif CONFIG.OS == 'darwin':
+    if CONFIG.HOSTOS == 'darwin':
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
         # but that prevents downloading binary wheels. This is more fiddly but seems to work.
         # Unfortunately it does *not* work similarly on the Debian problem :(
         cmd = 'echo "[install]\nprefix=" > .pydistutils.cfg; ' + cmd
+    if CONFIG.OS == 'linux':
+        # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
+        # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
+        # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
+        cmd = f'[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; {cmd} $SYS_FLAG' 
     cmd += f' -b build {repo_flag} {index_flag} {pip_flags} {package_name}'
 
     if strip:
@@ -449,26 +452,26 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                          'to python_wheel')
     urls = []
     if name_scheme:
-        urls.append(name_scheme.format(url_base=url_base,
-                                       package_name=package_name,
-                                       version=version))
+        urls += [name_scheme.format(url_base=url_base,
+                                    package_name=package_name,
+                                    version=version)]
     elif CONFIG.PYTHON_WHEEL_NAME_SCHEME:
-        urls.append(CONFIG.PYTHON_WHEEL_NAME_SCHEME.format(url_base=url_base,
-                                                           package_name=package_name,
-                                                           version=version))
+        urls += [CONFIG.PYTHON_WHEEL_NAME_SCHEME.format(url_base=url_base,
+                                                        package_name=package_name,
+                                                        version=version)]
     else:
         # Populate urls using a reasonable set of possible wheel naming schemes.
         # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
         # has optional arch-specific bits) and we prefer the one with the cool stuff.
-        urls.append('{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                       package_name=package_name,
-                                                                                       version=version))
-        urls.append('{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                       package_name=package_name,
-                                                                                       version=version))
-        urls.append('{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
-                                                                     package_name=package_name,
-                                                                     version=version))
+        urls += ['{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
+                                                                                    package_name=package_name,
+                                                                                    version=version),
+                 '{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
+                                                                                    package_name=package_name,
+                                                                                    version=version),
+                 '{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
+                                                                  package_name=package_name,
+                                                                  version=version)]
 
     file_rule = remote_file(
         name = name,
@@ -483,8 +486,8 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     if strip:
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
     if not licences:
-        cmd.append('find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
-                   'xargs grep -E "License ?:" | grep -v UNKNOWN | cat')
+        cmd += ['find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
+                'xargs grep -E "License ?:" | grep -v UNKNOWN | cat']
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
         cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
@@ -528,6 +531,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         cmd = cmd,
         deps = deps,
         visibility = visibility,
+        licences = licences,
         test_only = test_only,
         labels = [label],
         provides = {'py': wheel_rule},

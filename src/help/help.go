@@ -6,7 +6,9 @@ package help
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -17,6 +19,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse"
+	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/utils"
 )
 
@@ -49,17 +52,15 @@ func Help(topic string) bool {
 
 // Topics prints the list of help topics beginning with the given prefix.
 func Topics(prefix string) {
-	for _, topic := range allTopics() {
-		if strings.HasPrefix(topic, prefix) {
-			fmt.Println(topic)
-		}
+	for _, topic := range allTopics(prefix) {
+		fmt.Println(topic)
 	}
 }
 
 func help(topic string) string {
 	topic = strings.ToLower(topic)
 	if topic == "topics" {
-		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(), "\n"))
+		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(""), "\n"))
 	}
 	for _, filename := range AssetNames() {
 		if message, found := findHelpFromFile(topic, filename); found {
@@ -69,18 +70,28 @@ func help(topic string) string {
 	// Check built-in build rules.
 	m := parse.AllBuiltinFunctions(core.NewDefaultBuildState(), nil)
 	if f, present := m[topic]; present {
-		var b strings.Builder
-		if err := template.Must(template.New("").Parse(docstringTemplate)).Execute(&b, f); err != nil {
-			log.Fatalf("%s", err)
-		}
-		s := strings.Replace(b.String(), "    Args:\n", "    ${BOLD_YELLOW}Args:${RESET}\n", 1)
-		for _, a := range f.Arguments {
-			r := regexp.MustCompile("( +)(" + a.Name + `)( \([a-z |]+\))?:`)
-			s = r.ReplaceAllString(s, "$1$${YELLOW}$2$${RESET}$${GREEN}$3$${RESET}:")
-		}
-		return s
+		return helpFromBuildRule(f)
+	}
+	if f, present := localFunctions()[topic]; present {
+		return helpFromBuildRule(f)
 	}
 	return ""
+}
+
+// helpFromBuildRule returns the printable help message from a build rule (a function).
+func helpFromBuildRule(f *asp.FuncDef) string {
+	var b strings.Builder
+	if err := template.Must(template.New("").Funcs(template.FuncMap{
+		"trim": func(s string) string { return strings.Trim(s, `"`) },
+	}).Parse(docstringTemplate)).Execute(&b, f); err != nil {
+		log.Fatalf("%s", err)
+	}
+	s := strings.Replace(b.String(), "    Args:\n", "    ${BOLD_YELLOW}Args:${RESET}\n", 1)
+	for _, a := range f.Arguments {
+		r := regexp.MustCompile("( +)(" + a.Name + `)( \([a-z |]+\))?:`)
+		s = r.ReplaceAllString(s, "$1$${YELLOW}$2$${RESET}$${GREEN}$3$${RESET}:")
+	}
+	return s
 }
 
 func findHelpFromFile(topic, filename string) (string, bool) {
@@ -106,20 +117,31 @@ func loadData(filename string) (string, map[string]string) {
 
 // suggest looks through all known help topics and tries to make a suggestion about what the user might have meant.
 func suggest(topic string) string {
-	return utils.PrettyPrintSuggestion(topic, allTopics(), maxSuggestionDistance)
+	return utils.PrettyPrintSuggestion(topic, allTopics(""), maxSuggestionDistance)
 }
 
 // allTopics returns all the possible topics to get help on.
-func allTopics() []string {
+func allTopics(prefix string) []string {
 	topics := []string{}
 	for _, filename := range AssetNames() {
 		_, data := loadData(filename)
 		for t := range data {
-			topics = append(topics, t)
+			if strings.HasPrefix(t, prefix) {
+				topics = append(topics, t)
+			}
 		}
 	}
 	for t := range parse.AllBuiltinFunctions(core.NewDefaultBuildState(), nil) {
-		topics = append(topics, t)
+		if strings.HasPrefix(t, prefix) {
+			topics = append(topics, t)
+		}
+	}
+	if len(topics) == 0 {
+		for t := range localFunctions() {
+			if strings.HasPrefix(t, prefix) {
+				topics = append(topics, t)
+			}
+		}
 	}
 	sort.Strings(topics)
 	return topics
@@ -143,13 +165,46 @@ func printMessage(msg string) {
 	cli.Fprintf(os.Stdout, strings.Replace(msg, "% ", "%% ", -1)+"\n")
 }
 
-const docstringTemplate = `${BLUE}{{ .Name }}${RESET} is a built-in build rule in Please. Instructions for use & its arguments:
+// localFunctions returns all locally defined build functions that we might additionally try to load.
+func localFunctions() map[string]*asp.FuncDef {
+	m := map[string]*asp.FuncDef{}
+	// If we're in a repo, we might be able to read some stuff from there.
+	if core.FindRepoRoot() {
+		if config, err := core.ReadDefaultConfigFiles(nil); err == nil {
+			for _, dir := range config.Parse.BuildDefsDir {
+				p := asp.NewParser(core.NewDefaultBuildState())
+				if files, err := ioutil.ReadDir(dir); err == nil {
+					for _, file := range files {
+						if !file.IsDir() {
+							if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
+								for _, stmt := range stmts {
+									if stmt.FuncDef != nil {
+										m[stmt.FuncDef.Name] = stmt.FuncDef
+										// Small hack used below; this identifies that it isn't a builtin.
+										stmt.FuncDef.EoDef.Offset = 0
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return m
+}
+
+const docstringTemplate = `${BLUE}{{ .Name }}${RESET} is
+{{- if .EoDef.Offset }} a built-in build rule in Please.
+{{- else }} an add-on build rule for Please defined in ${YELLOW}{{ .EoDef.Filename }}${RESET}.
+{{- end }} Instructions for use & its arguments:
 
 ${BOLD_YELLOW}{{ .Name }}${RESET}(
 {{- range $i, $a := .Arguments }}{{ if gt $i 0 }}, {{ end }}${GREEN}{{ $a.Name }}${RESET}{{ end -}}
 ):
 
-{{ .Docstring }}
-
+{{ trim .Docstring }}
+{{ if .EoDef.Offset }}
 Online help is available at https://please.build/lexicon.html#{{ .Name }}.
+{{- end }}
 `

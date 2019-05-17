@@ -27,7 +27,7 @@ maven_jar(
 maven_jar(
     name = "junit_runner",
     hashes = ["409563f6d2de11ef5e9e88275e1da62e984e4ccb"],
-    id = "build.please:junit-runner:13.3.5",
+    id = "build.please:junit-runner:13.4.0",
     deps = [
         ":hamcrest",
         ":jacoco_shaded",
@@ -43,7 +43,7 @@ maven_jar(
 
 maven_jar(
     name = "javac_worker",
-    hashes = ["46b9672f0adb195e610fc86a656fd70ef3359d07"],
-    id = "build.please:javac-worker:13.1.10",
+    hashes = ["9358da07f1497e8eeba6991be2ad626f994801b1"],
+    id = "build.please:javac-worker:13.4.0",
     deps = [":gson"],
 )

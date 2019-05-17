@@ -1,0 +1,5 @@
+cd vhosts/please.build/htdocs
+put /tmp/site/*.html
+put /tmp/site/*.css
+put /tmp/site/*.js
+bye

@@ -12,6 +12,7 @@ go_library(
     name = "output",
     srcs = [
         "print.go",
+        "print_bootstrap.go",
         "trace.go",
         ":ansi_replacements",
     ],

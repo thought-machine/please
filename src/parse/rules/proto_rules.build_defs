@@ -81,12 +81,12 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
                          if need_post_build or not plugin['use_file_names']]
     if search_extensions:
         all_exts = [ext for _, exts in search_extensions for ext in exts]
-        cmds.append('find . %s | sort' % ' -or '.join(['-name "*%s"' % ext for ext in all_exts]))
+        cmds += ['find . %s | sort' % ' -or '.join(['-name "*%s"' % ext for ext in all_exts])]
         post_build = _annotate_outs(search_extensions)
 
     # Plugins can declare their own pre-build functions. If there are any, we need to apply them all in sequence.
     pre_build_functions = [plugin['pre_build'] for plugin in plugins if plugin['pre_build']]
-    pre_build_functions.append(_collect_transitive_labels)
+    pre_build_functions += [_collect_transitive_labels]
     pre_build = lambda rule: [fn(rule) for fn in pre_build_functions]
     protoc_rule = build_rule(
         name = name,
@@ -116,6 +116,8 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
         # TODO(pebers): find a way of genericising this too...
         if language == 'cc':
             provides['cc_hdrs'] = provides['cc'].replace('#cc', '#cc_hdrs')
+        elif language == 'go':
+            provides['go_src'] = provides['go'].replace('#go', '#go_srcs')
 
     # This simply collects the sources, it's used for other proto_library rules to depend on.
     filegroup(

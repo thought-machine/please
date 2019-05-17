@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -51,10 +52,20 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.Sandbox = isTruthy(20)
 	target.TestOnly = test || isTruthy(15)
 	target.ShowProgress = isTruthy(36)
-	target.IsRemoteFile = isTruthy(37)
-	if timeout := args[24]; timeout != nil {
-		target.BuildTimeout = time.Duration(timeout.(pyInt)) * time.Second
+	target.IsRemoteFile = isTruthy(38)
+
+	var size *core.Size
+	if args[37] != None {
+		name := string(args[37].(pyString))
+		size = mustSize(s, name)
+		target.AddLabel(name)
 	}
+	if args[40] != None {
+		l := asStringList(s, args[40].(pyList), "pass_env")
+		target.PassEnv = &l
+	}
+
+	target.BuildTimeout = sizeAndTimeout(s, size, args[24], s.state.Config.Build.Timeout)
 	target.Stamp = isTruthy(33)
 	target.IsHashFilegroup = args[1] == hashFilegroupCommand
 	target.IsFilegroup = args[1] == filegroupCommand || target.IsHashFilegroup
@@ -90,13 +101,32 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		if testCmd != nil && testCmd != None {
 			target.TestCommand, target.TestCommands = decodeCommands(s, args[2])
 		}
-		if timeout := args[25]; timeout != nil {
-			target.TestTimeout = time.Duration(timeout.(pyInt)) * time.Second
-		}
+		target.TestTimeout = sizeAndTimeout(s, size, args[25], s.state.Config.Test.Timeout)
 		target.TestSandbox = isTruthy(21) && !target.Containerise
 		target.NoTestOutput = isTruthy(22)
 	}
 	return target
+}
+
+// sizeAndTimeout handles the size and build/test timeout arguments.
+func sizeAndTimeout(s *scope, size *core.Size, timeout pyObject, defaultTimeout cli.Duration) time.Duration {
+	switch t := timeout.(type) {
+	case pyInt:
+		return time.Duration(t) * time.Second
+	case pyString:
+		return time.Duration(mustSize(s, string(t)).Timeout)
+	}
+	if size != nil {
+		return time.Duration(size.Timeout)
+	}
+	return time.Duration(defaultTimeout)
+}
+
+// mustSize looks up a size by name. It panics if it cannot be found.
+func mustSize(s *scope, name string) *core.Size {
+	size, present := s.state.Config.Size[name]
+	s.Assert(present, "Unknown size %s", name)
+	return size
 }
 
 // decodeCommands takes a Python object and returns it as a string and a map; only one will be set.
@@ -123,7 +153,7 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 // populateTarget sets the assorted attributes on a build target.
 func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if t.IsRemoteFile {
-		for _, url := range args[37].(pyList) {
+		for _, url := range args[38].(pyList) {
 			t.AddSource(core.URLLabel(url.(pyString)))
 		}
 	} else {
@@ -135,8 +165,9 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addMaybeNamedOutput(s, "outs", args[5], t.AddOutput, t.AddNamedOutput, t, false)
 	addMaybeNamedOutput(s, "optional_outs", args[35], t.AddOptionalOutput, nil, t, true)
 	addMaybeNamedOutput(s, "test_outputs", args[31], t.AddTestOutput, nil, t, false)
-	addDependencies(s, "deps", args[6], t, false)
-	addDependencies(s, "exported_deps", args[7], t, true)
+	addDependencies(s, "deps", args[6], t, false, false)
+	addDependencies(s, "exported_deps", args[7], t, true, false)
+	addDependencies(s, "internal_deps", args[39], t, false, true)
 	addStrings(s, "labels", args[10], t.AddLabel)
 	addStrings(s, "hashes", args[12], t.AddHash)
 	addStrings(s, "licences", args[30], t.AddLicence)
@@ -144,11 +175,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addStrings(s, "visibility", args[11], func(str string) {
 		t.Visibility = append(t.Visibility, parseVisibility(s, str))
 	})
-	addStrings(s, "secrets", args[8], func(str string) {
-		s.NAssert(strings.HasPrefix(str, "//"), "Secret %s of %s cannot be a build label", str, t.Label.Name)
-		s.Assert(strings.HasPrefix(str, "/") || strings.HasPrefix(str, "~"), "Secret '%s' of %s is not an absolute path", str, t.Label.Name)
-		t.Secrets = append(t.Secrets, str)
-	})
+	addMaybeNamedSecret(s, "secrets", args[8], t.AddSecret, t.AddNamedSecret, t, true)
 	addProvides(s, "provides", args[29], t)
 	setContainerSettings(s, "container", args[19], t)
 	if f := callbackFunction(s, "pre_build", args[26], 1, "argument"); f != nil {
@@ -227,14 +254,54 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 	}
 }
 
+// addMaybeNamedSecret adds outputs to a target, possibly in a named group
+func addMaybeNamedSecret(s *scope, name string, obj pyObject, anon func(string), named func(string, string), t *core.BuildTarget, optional bool) {
+	validateSecret := func(secret string) {
+		s.NAssert(strings.HasPrefix(secret, "//"),
+			"Secret %s of %s cannot be a build label", secret, t.Label.Name)
+		s.Assert(strings.HasPrefix(secret, "/") || strings.HasPrefix(secret, "~"),
+			"Secret '%s' of %s is not an absolute path", secret, t.Label.Name)
+	}
+
+	if obj == nil {
+		return
+	}
+	if l, ok := asList(obj); ok {
+		for _, li := range l {
+			if li != None {
+				out, ok := li.(pyString)
+				s.Assert(ok, "secrets must be strings")
+				validateSecret(string(out))
+				anon(string(out))
+			}
+		}
+	} else if d, ok := asDict(obj); ok {
+		s.Assert(named != nil, "%s cannot be given as a dict", name)
+		for k, v := range d {
+			l, ok := asList(v)
+			s.Assert(ok, "Values must be lists of strings")
+			for _, li := range l {
+				if li != None {
+					out, ok := li.(pyString)
+					s.Assert(ok, "outs must be strings")
+					validateSecret(string(out))
+					named(k, string(out))
+				}
+			}
+		}
+	} else if obj != None {
+		s.Assert(false, "Argument %s must be a list or dict, not %s", name, obj.Type())
+	}
+}
+
 // addDependencies adds dependencies to a target, which may or may not be exported.
-func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarget, exported bool) {
+func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarget, exported, internal bool) {
 	addStrings(s, name, obj, func(str string) {
 		if s.state.Config.Bazel.Compatibility && !core.LooksLikeABuildLabel(str) && !strings.HasPrefix(str, "@") {
 			// *sigh*... Bazel seems to allow an implicit : on the start of dependencies
 			str = ":" + str
 		}
-		target.AddMaybeExportedDependency(checkLabel(s, core.ParseBuildLabelContext(str, s.pkg)), exported, false)
+		target.AddMaybeExportedDependency(checkLabel(s, core.ParseBuildLabelContext(str, s.pkg)), exported, false, internal)
 	})
 }
 
@@ -338,14 +405,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	for _, filename := range s.state.Config.Parse.BuildFileName {
 		s.Assert(filename != src, "You can't specify the BUILD file as an input to a rule")
 	}
-	if s.pkg.Subrepo != nil {
-		return core.SubrepoFileLabel{
-			File:        src,
-			Package:     s.pkg.Name,
-			FullPackage: s.pkg.Subrepo.Dir(s.pkg.Name),
-		}
-	}
-	return core.FileLabel{File: src, Package: s.pkg.Name}
+	return core.NewFileLabel(src, s.pkg)
 }
 
 // checkLabel checks that the given build label is not a pseudo-label.
@@ -390,7 +450,6 @@ type postBuildFunction struct {
 }
 
 func (f *postBuildFunction) Call(target *core.BuildTarget, output string) error {
-	log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, output)
 	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label))
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))

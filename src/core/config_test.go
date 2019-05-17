@@ -16,7 +16,7 @@ import (
 )
 
 func TestPlzConfigWorking(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/working.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/working.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "pexmabob", config.Python.PexTool)
 	assert.Equal(t, "javac", config.Java.JavacTool)
@@ -28,12 +28,12 @@ func TestPlzConfigWorking(t *testing.T) {
 }
 
 func TestPlzConfigFailing(t *testing.T) {
-	_, err := ReadConfigFiles([]string{"src/core/test_data/failing.plzconfig"}, "")
+	_, err := ReadConfigFiles([]string{"src/core/test_data/failing.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestPlzConfigProfile(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/working.plzconfig"}, "dev")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/working.plzconfig"}, []string{"dev"})
 	assert.NoError(t, err)
 	assert.Equal(t, "pexmabob", config.Python.PexTool)
 	assert.Equal(t, "/opt/java/bin/javac", config.Java.JavacTool)
@@ -46,14 +46,14 @@ func TestMultiplePlzConfigFiles(t *testing.T) {
 	config, err := ReadConfigFiles([]string{
 		"src/core/test_data/working.plzconfig",
 		"src/core/test_data/failing.plzconfig",
-	}, "")
+	}, nil)
 	assert.Error(t, err)
 	// Quick check of this - we should have still read the first config file correctly.
 	assert.Equal(t, "javac", config.Java.JavacTool)
 }
 
 func TestConfigSlicesOverwrite(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/slices.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/slices.plzconfig"}, nil)
 	assert.NoError(t, err)
 	// This should be completely overwritten by the config file
 	assert.Equal(t, []string{"/sbin"}, config.Build.Path)
@@ -153,7 +153,7 @@ func TestConfigOverrideOptions(t *testing.T) {
 }
 
 func TestDynamicSection(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/aliases.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/aliases.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := map[string]string{
 		"deploy":      "run //deployment:deployer --",
@@ -164,7 +164,7 @@ func TestDynamicSection(t *testing.T) {
 }
 
 func TestDynamicSubsection(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/metrics.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/metrics.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, "http://localhost:9091", config.Metrics.PushGatewayURL)
 	expected := map[string]string{
@@ -174,37 +174,37 @@ func TestDynamicSubsection(t *testing.T) {
 }
 
 func TestReadSemver(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/version_good.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/version_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 2, config.Please.Version.Major)
 	assert.EqualValues(t, 3, config.Please.Version.Minor)
 	assert.EqualValues(t, 4, config.Please.Version.Patch)
-	config, err = ReadConfigFiles([]string{"src/core/test_data/version_bad.plzconfig"}, "")
+	config, err = ReadConfigFiles([]string{"src/core/test_data/version_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestReadDurations(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/duration_good.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/duration_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 500*time.Millisecond, config.Metrics.PushTimeout)
 	assert.EqualValues(t, 5*time.Second, config.Metrics.PushFrequency)
-	config, err = ReadConfigFiles([]string{"src/core/test_data/duration_bad.plzconfig"}, "")
+	config, err = ReadConfigFiles([]string{"src/core/test_data/duration_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestReadByteSizes(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/bytesize_good.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/bytesize_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 500*1000*1000, config.Cache.RPCMaxMsgSize)
-	config, err = ReadConfigFiles([]string{"src/core/test_data/bytesize_bad.plzconfig"}, "")
+	config, err = ReadConfigFiles([]string{"src/core/test_data/bytesize_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestReadContainers(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/container_good.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/container_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, ContainerImplementationDocker, config.Test.DefaultContainer)
-	config, err = ReadConfigFiles([]string{"src/core/test_data/container_bad.plzconfig"}, "")
+	config, err = ReadConfigFiles([]string{"src/core/test_data/container_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
@@ -217,15 +217,15 @@ func TestCompletions(t *testing.T) {
 }
 
 func TestConfigVerifiesOptions(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/testrunner_good.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/testrunner_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "pytest", config.Python.TestRunner)
-	_, err = ReadConfigFiles([]string{"src/core/test_data/testrunner_bad.plzconfig"}, "")
+	_, err = ReadConfigFiles([]string{"src/core/test_data/testrunner_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestBuildEnvSection(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/buildenv.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/buildenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
 		"ARCH=" + runtime.GOARCH,
@@ -234,7 +234,7 @@ func TestBuildEnvSection(t *testing.T) {
 		"GOARCH=" + runtime.GOARCH,
 		"GOOS=" + runtime.GOOS,
 		"OS=" + runtime.GOOS,
-		"PATH=" + os.Getenv("TMP_DIR") + "/.please:/usr/local/bin:/usr/bin:/bin",
+		"PATH=" + os.Getenv("TMP_DIR") + ":/usr/local/bin:/usr/bin:/bin",
 		"XARCH=x86_64",
 		"XOS=" + xos(),
 	}
@@ -246,7 +246,7 @@ func TestPassEnv(t *testing.T) {
 	assert.NoError(t, err)
 	err = os.Setenv("BAR", "second")
 	assert.NoError(t, err)
-	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
 		"ARCH=" + runtime.GOARCH,
@@ -255,7 +255,7 @@ func TestPassEnv(t *testing.T) {
 		"GOARCH=" + runtime.GOARCH,
 		"GOOS=" + runtime.GOOS,
 		"OS=" + runtime.GOOS,
-		"PATH=" + os.Getenv("TMP_DIR") + "/.please:" + os.Getenv("PATH"),
+		"PATH=" + os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
 		"XARCH=x86_64",
 		"XOS=" + xos(),
 	}
@@ -263,7 +263,7 @@ func TestPassEnv(t *testing.T) {
 }
 
 func TestBuildPathWithPathEnv(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, "")
+	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, config.Build.Path, strings.Split(os.Getenv("PATH"), ":"))
 }
@@ -301,7 +301,7 @@ func TestUpdateArgsWithQuotedAliases(t *testing.T) {
 }
 
 func TestParseNewFormatAliases(t *testing.T) {
-	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, "")
+	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(c.Alias))
 	a := c.Alias["auth"]
@@ -311,7 +311,7 @@ func TestParseNewFormatAliases(t *testing.T) {
 }
 
 func TestAttachAliasFlags(t *testing.T) {
-	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, "")
+	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	os.Setenv("GO_FLAGS_COMPLETION", "1")
 	p := flags.NewParser(&struct{}{}, 0)
@@ -347,7 +347,7 @@ func TestAttachAliasFlags(t *testing.T) {
 }
 
 func TestPrintAliases(t *testing.T) {
-	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, "")
+	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	var buf bytes.Buffer
 	c.PrintAliases(&buf)

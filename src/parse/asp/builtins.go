@@ -44,6 +44,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_dep", addDep)
 	setNativeCode(s, "add_out", addOut)
 	setNativeCode(s, "add_licence", addLicence)
+	setNativeCode(s, "get_licences", getLicences)
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
 	stringMethods = map[string]*pyFunc{
@@ -149,13 +150,10 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	args[21] = defaultFromConfig(s.config, args[21], "TEST_SANDBOX")
 	target := createTarget(s, args)
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
-	s.pkg.AddTarget(target)
 	populateTarget(s, target, args)
+	s.state.AddTarget(s.pkg, target)
 	if s.Callback {
-		// We are in a post-build function, so add the target directly to the graph now.
-		log.Debug("Adding new target %s directly to graph", target.Label)
 		target.AddedPostBuild = true
-		s.state.Graph.AddTarget(target)
 		s.pkg.MarkTargetModified(target)
 	}
 	return pyString(":" + target.Label.Name)
@@ -210,8 +208,17 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	s.Assert(s.state.Config.Bazel.Compatibility, "load() is only available in Bazel compatibility mode. See `plz help bazel` for more information.")
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
-	l := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
-	s.SetAll(s.interpreter.Subinclude(path.Join(l.PackageName, l.Name)), false)
+	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.contextPkg)
+	filename := path.Join(l.PackageName, l.Name)
+	if l.Subrepo != "" {
+		subrepo := s.state.Graph.Subrepo(l.Subrepo)
+		if subrepo == nil || (subrepo.Target != nil && subrepo != s.contextPkg.Subrepo) {
+			subincludeTarget(s, l)
+			subrepo = s.state.Graph.SubrepoOrDie(l.Subrepo)
+		}
+		filename = subrepo.Dir(filename)
+	}
+	s.SetAll(s.interpreter.Subinclude(filename, s.contextPkg), false)
 	return None
 }
 
@@ -222,9 +229,21 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 }
 
 func subinclude(s *scope, args []pyObject) pyObject {
-	t := subincludeTarget(s, subincludeLabel(s, args))
+	s.NAssert(s.contextPkg == nil, "Cannot subinclude() from this context")
+	target := string(args[0].(pyString))
+	t := subincludeTarget(s, core.ParseBuildLabelContext(target, s.contextPkg))
+	pkg := s.contextPkg
+	if t.Subrepo != s.contextPkg.Subrepo && t.Subrepo != nil {
+		pkg = &core.Package{
+			Name:        "@" + t.Subrepo.Name,
+			SubrepoName: t.Subrepo.Name,
+			Subrepo:     t.Subrepo,
+		}
+	}
+	l := pkg.Label()
+	s.Assert(l.CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, l)
 	for _, out := range t.Outputs() {
-		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out)), false)
+		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), pkg), false)
 	}
 	return None
 }
@@ -232,23 +251,16 @@ func subinclude(s *scope, args []pyObject) pyObject {
 // subincludeTarget returns the target for a subinclude() call to a label.
 // It blocks until the target exists and is built.
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
-	if s.pkg == nil {
-		// Really we should not get here, but it's hard to prove that's not the case. Make the best of it.
-		return s.state.WaitForBuiltTarget(l, l)
+	pkgLabel := s.contextPkg.Label()
+	if l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName {
+		// This is a subinclude in the same package, check the target exists.
+		s.NAssert(s.contextPkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
-	t := s.state.WaitForBuiltTarget(l, s.pkg.Label())
-	s.pkg.RegisterSubinclude(l)
+	t := s.state.WaitForBuiltTarget(l, pkgLabel)
+	// This is not quite right, if you subinclude from another subinclude we can basically
+	// lose track of it later on. It's hard to know what better to do at this point though.
+	s.contextPkg.RegisterSubinclude(l)
 	return t
-}
-
-// subincludeLabel returns the label for a subinclude() call (which might be indirect
-// if the given argument was a URL instead of a build label)
-func subincludeLabel(s *scope, args []pyObject) core.BuildLabel {
-	target := string(args[0].(pyString))
-	s.NAssert(strings.HasPrefix(target, ":"), "Subincludes cannot be from the local package")
-	label := core.ParseBuildLabel(target, "")
-	s.NAssert(s.pkg != nil && label.PackageName == s.pkg.Name, "Subincludes cannot be from the local package")
-	return label
 }
 
 func lenFunc(s *scope, args []pyObject) pyObject {
@@ -578,15 +590,16 @@ func zip(s *scope, args []pyObject) pyObject {
 func getLabels(s *scope, args []pyObject) pyObject {
 	name := string(args[0].(pyString))
 	prefix := string(args[1].(pyString))
+	all := args[2].IsTruthy()
 	if core.LooksLikeABuildLabel(name) {
 		label := core.ParseBuildLabel(name, s.pkg.Name)
-		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built)
+		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all)
 	}
 	target := getTargetPost(s, name)
-	return getLabelsInternal(target, prefix, core.Building)
+	return getLabelsInternal(target, prefix, core.Building, all)
 }
 
-func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState) pyObject {
+func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all bool) pyObject {
 	if target.State() < minState {
 		log.Fatalf("get_labels called on a target that is not yet built: %s", target.Label)
 	}
@@ -600,7 +613,7 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 			}
 		}
 		done[t] = true
-		if !t.OutputIsComplete || t == target {
+		if !t.OutputIsComplete || t == target || all {
 			for _, dep := range t.Dependencies() {
 				if !done[dep] {
 					getLabels(dep)
@@ -634,9 +647,9 @@ func getTargetPost(s *scope, name string) *core.BuildTarget {
 func addDep(s *scope, args []pyObject) pyObject {
 	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
 	target := getTargetPost(s, string(args[0].(pyString)))
-	dep := core.ParseBuildLabel(string(args[1].(pyString)), s.pkg.Name)
+	dep := core.ParseBuildLabelContext(string(args[1].(pyString)), s.pkg)
 	exported := args[2].IsTruthy()
-	target.AddMaybeExportedDependency(dep, exported, false)
+	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Note that here we're in a post-build function so we must call this explicitly
 	// (in other callbacks it's handled after the package parses all at once).
 	s.state.Graph.AddDependency(target.Label, dep)
@@ -664,6 +677,11 @@ func addLicence(s *scope, args []pyObject) pyObject {
 	target := getTargetPost(s, string(args[0].(pyString)))
 	target.AddLicence(string(args[1].(pyString)))
 	return None
+}
+
+// getLicences returns the licences for a single target.
+func getLicences(s *scope, args []pyObject) pyObject {
+	return fromStringList(getTargetPost(s, string(args[0].(pyString))).Licences)
 }
 
 // getCommand gets the command of a target, optionally for a configuration.
@@ -747,7 +765,10 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		State:          state,
 		IsCrossCompile: s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile,
 	}
+	if s.state.Config.Bazel.Compatibility && s.pkg.Name == "workspace" {
+		sr.Name = s.pkg.SubrepoArchName(name)
+	}
 	log.Debug("Registering subrepo %s in package %s", sr.Name, s.pkg.Label())
 	s.state.Graph.AddSubrepo(sr)
-	return None
+	return pyString("///" + sr.Name)
 }

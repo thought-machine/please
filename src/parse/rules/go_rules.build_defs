@@ -4,7 +4,6 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 
-_GOPATH = ' '.join(['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.OS, CONFIG.ARCH) for p in CONFIG.GOPATH.split(':')])
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
 _LINK_PKGS_CMD = ' '.join([
     'for FN in `find . -name "*.a" | sort`; do ',
@@ -42,9 +41,9 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     src_labels = []
     private = out.startswith('_')
     if _link_private or not private:
-        src_labels = ['link:plz-out/go/src/${PKG}']
+        src_labels = ['link:plz-out/go/src/${PKG}', 'go_src']
         if not private:
-            labels = ['link:plz-out/go/pkg/${OS}_${ARCH}/${PKG}']
+            labels = ['link:plz-out/go/pkg/${GOOS}_${GOARCH}/${PKG}']
         libname = out[:-2] if len(out) > 2 else out
         if libname != basename(package_name()) and _link_extra:
             # Libraries that are in a directory not of their own name will need the sources in
@@ -70,7 +69,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             },
             outs = [name + '.o'],
             building_description = 'Assembling...',
-            cmd = 'eval `$TOOL env` && $TOOL tool asm -trimpath $TMP_DIR -I ${GOROOT}/pkg/include -D GOOS_${OS} -D GOARCH_${ARCH} -o $OUT $SRCS_ASM',
+            cmd = 'eval `$TOOL env` && $TOOL tool asm -trimpath $TMP_DIR -I ${GOROOT}/pkg/include -D GOOS_${GOOS} -D GOARCH_${GOARCH} -o $OUT $SRCS_ASM',
             tools=[CONFIG.GO_TOOL],
             test_only = test_only,
         )
@@ -110,7 +109,8 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     return build_rule(
         name=name,
         srcs=srcs,
-        deps=deps + [src_rule],
+        deps=deps,
+        internal_deps = [src_rule],
         outs=[out],
         cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs),
         visibility=visibility,
@@ -258,7 +258,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
 
 def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[],
               visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
-              filter_srcs:bool=True, definitions:str|list|dict=None):
+              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False):
     """Compiles a Go binary.
 
     Args:
@@ -280,6 +280,8 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
                      when calling the Go linker.  If set to a list, pass each value as a
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
+      stamp (bool): Allows this rule to gain access to information about SCM revision etc
+                    via env vars. These can be useful to pass into `definitions`.
     """
     lib = go_library(
         name=f'_{name}#lib',
@@ -307,6 +309,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         visibility=visibility,
         requires=['go'],
         pre_build=_collect_linker_flags(static),
+        stamp = stamp,
     )
 
 
@@ -346,7 +349,6 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
     """
-    timeout, labels = _test_size_and_timeout(size, timeout, labels)
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
         name = '_%s#lib' % name,
@@ -379,7 +381,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
             'cover': f'$TOOLS_TEST $TOOLS_GO -d . -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS ',
         },
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
-        requires=['go'],
+        requires=['go', 'go_src'],
         test_only=True,
         tools={
             'go': [CONFIG.GO_TOOL],
@@ -387,7 +389,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         },
         post_build=lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
     )
-    deps.append(lib_rule)
+    deps += [lib_rule]
     lib_rule = go_library(
         name='_%s#main_lib' % name,
         srcs=[main_rule],
@@ -415,9 +417,10 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         container=container,
         test_sandbox=sandbox,
         test_timeout=timeout,
+        size = size,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['go'],
+        requires=['go', 'test'],
         labels=labels,
         binary=True,
         test=True,
@@ -479,7 +482,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
            install:list=None, revision:str|list=None, strip:list=None, hashes:list=None,
-           extra_outs:list=[]):
+           extra_outs:list=[], licences:list=None):
     """Defines a dependency on a third-party Go library.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -513,6 +516,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
       strip (list): List of paths to strip from the installed target.
       hashes (list): List of hashes to verify the downloaded sources against.
       extra_outs (list): List of additional output files after the compile.
+      licences (list): Licences this rule is subject to.
     """
     if isinstance(get, str):
         get = [get]
@@ -546,7 +550,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
 
     # Now compile it in a separate step.
     cmd = [
-        f'export GOPATH="{CONFIG.GOPATH}" GO111MODULE="off"',
+        'export GOPATH=$(find $TMP_DIR \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr "\\n" ":") GO111MODULE="off"',
         '$TOOLS_GO install -toolexec "$TOOLS_BUILDID" -gcflags "-trimpath $TMP_DIR" -asmflags "-trimpath $TMP_DIR" ' + ' '.join(all_installs or install),
     ]
     if package_name():
@@ -558,7 +562,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
     if binary:
         outs = ['bin/' + name]
     else:
-        outs = [f'pkg/{CONFIG.OS}_{CONFIG.ARCH}/{out}' for out in outs]
+        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in outs]
         # Outputs are created one directory down from where we want them.
         # For most it doesn't matter but the top-level one will get lost.
         cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && mv {out}.a {out}; fi' for out in outs]
@@ -581,6 +585,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         sandbox = False,
         needs_transitive_deps = True,
         provides = provides,
+        licences = licences,
     )
 
 
@@ -592,21 +597,24 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
     labels = [f'go_get:{get}@{revision}' if revision else f'go_get:{get}']
     getroot = get[:-4] if get.endswith('/...') else get
     subdir = 'src/' + getroot
+    revision = revision or 'master'
 
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
-    if repo.startswith('github.com') and revision:
+    if repo.startswith('github.com'):
             cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, repo, revision)
-    elif get.startswith('github.com') and revision:
+    elif get.startswith('github.com'):
         cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, getroot, revision)
-    elif get.startswith('golang.org/x/') and revision and not repo:
+    elif get.startswith('golang.org/x/') and not repo:
         # We know about these guys...
         cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision)
+    elif get.startswith('google.golang.org/grpc') and not repo:
+        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, 'github.com/grpc/grpc-go' + getroot[len('google.golang.org/grpc'):], revision)
     else:
         get_deps = []
         if repo:
             # we've been told exactly where to get the source from.
-            cmd = [f'git clone {repo} src/{getroot}']
+            cmd = [f'git clone --branch {revision} --depth=1 --shallow-submodules --no-tags {repo} src/{getroot}']
         else:
             # Ultimate fallback to go get.
             # This has some more restrictions than the above (e.g. go get won't fetch a directory
@@ -618,11 +626,11 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
             ]
         if revision:
             # Annoyingly -C does not work on git checkout :(
-            cmd.append(f'(cd {subdir} && git checkout -q {revision})')
-        cmd.append('find . -name .git | xargs rm -rf')
+            cmd += [f'(cd {subdir} && git checkout -q {revision})']
+        cmd += ['find . -name .git | xargs rm -rf']
         tools = [CONFIG.GO_TOOL]
     if patch:
-        cmd.append(f'patch -s -d {subdir} -p1 < $TMP_DIR/$SRCS_PATCH')
+        cmd += [f'patch -s -d {subdir} -p1 < $TMP_DIR/$SRCS_PATCH']
     if strip:
         cmd += [f'rm -rf {subdir}/{s}' for s in strip]
     return build_rule(
@@ -655,10 +663,10 @@ def _go_github_repo_cmd(name, get, repo, revision):
     else:
         dest = parts[-1]
     remote_rule = remote_file(
-        name = name,
+        name = name + '-' + parts[-1],
         _tag = 'download',
         url = f'https://{repo}/archive/{revision}.zip',
-        out = name + '.zip',
+        out = name + '-' + parts[-1] + '.zip',
     )
     return [
         'rm -rf src/' + out,
@@ -700,7 +708,10 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     filter_cmd = 'export SRCS="$(${TOOLS_FILTER} ${SRCS})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
-    compile_cmd = '$TOOLS_GO tool compile -trimpath $TMP_DIR %s%s -pack -o $OUT ' % (complete_flag, _GOPATH)
+
+    _GOPATH = ' '.join(
+        ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
+    compile_cmd = f'$TOOLS_GO tool compile -trimpath $TMP_DIR {complete_flag}{_GOPATH} $(for i in $(find $TMP_DIR -name pkg -type d); do echo -n " -I $i/{CONFIG.GOOS}_{CONFIG.GOARCH} "; done) -pack -o $OUT '
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
@@ -716,7 +727,10 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
 
 def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, gcov=False):
     """Returns the commands to run for linking a Go binary."""
-    _link_cmd = '$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s -o ${OUT} ' % _GOPATH.replace('-I ', '-L ')
+
+    _GOPATH = ' '.join(
+        ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
+    _link_cmd = f'$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s $(find $TMP_DIR -type d -print | grep  "pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}$" | sed -e "s/^/-L /" | tr "\\n" " ") -o $OUT ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     linkerdefs = []
@@ -739,7 +753,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
         flags = f''
 
     if len(defs) > 0:
-        flags += defs
+        flags += " " + defs
 
     cmds = {
         'dbg': f'{prefix} && {_link_cmd} {flags} $SRCS',

@@ -135,6 +135,8 @@ type BuildTarget struct {
 	// if changed locally will still force a rebuild. They're not copied into the source directory
 	// (or indeed anywhere by plz).
 	Secrets []string
+	// Named secrets of this rule; as above but identified by name.
+	NamedSecrets map[string][]string
 	// BUILD language functions to call before / after target is built. Allows deferred manipulation of the build graph.
 	PreBuildFunction  PreBuildFunction  `name:"pre_build"`
 	PostBuildFunction PostBuildFunction `name:"post_build"`
@@ -152,6 +154,8 @@ type BuildTarget struct {
 	Tools []BuildInput
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
+	// Target-specific environment passthroughs.
+	PassEnv *[]string `name:"pass_env"`
 	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
 	Flakiness int `name:"flaky"`
 	// Timeouts for build/test actions
@@ -159,7 +163,7 @@ type BuildTarget struct {
 	TestTimeout  time.Duration `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
-	TestOutputs []string
+	TestOutputs []string `name:"test_outputs"`
 }
 
 // A PreBuildFunction is a type that allows hooking a pre-build callback.
@@ -181,6 +185,7 @@ type depInfo struct {
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
+	internal bool           // is it an internal dependency (that is not picked up implicitly by transitive searches)
 	source   bool           // is it implicit because it's a source (not true if it's a dependency too)
 	data     bool           // is it a data item for a test
 }
@@ -360,11 +365,11 @@ func (target *BuildTarget) Dependencies() []*BuildTarget {
 	return ret
 }
 
-// BuildDependencies returns the build-time dependencies of this target (i.e. not data).
+// BuildDependencies returns the build-time dependencies of this target (i.e. not data and not internal).
 func (target *BuildTarget) BuildDependencies() []*BuildTarget {
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
-		if !deps.data {
+		if !deps.data && !deps.internal {
 			for _, dep := range deps.deps {
 				ret = append(ret, dep)
 			}
@@ -387,9 +392,12 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 
 // DependenciesFor returns the dependencies that relate to a given label.
 func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
-	info := target.dependencyInfo(label)
-	if info != nil {
+	if info := target.dependencyInfo(label); info != nil {
 		return info.deps
+	} else if target.Label.Subrepo != "" && label.Subrepo == "" {
+		// Can implicitly use the target's subrepo.
+		label.Subrepo = target.Label.Subrepo
+		return target.DependenciesFor(label)
 	}
 	return nil
 }
@@ -477,6 +485,10 @@ func (target *BuildTarget) NamedOutputs(name string) []string {
 func (target *BuildTarget) GetTmpOutput(parseOutput string) string {
 	if parseOutput == target.Label.PackageName {
 		return parseOutput + ".out"
+	} else if target.Label.PackageName == "" && target.HasSource(parseOutput) {
+		// This also fixes the case where source and output are the same, which can happen
+		// when we're in the root directory.
+		return parseOutput + ".out"
 	}
 	return parseOutput
 }
@@ -538,39 +550,9 @@ func (target *BuildTarget) allDependenciesResolved() bool {
 	return true
 }
 
-// isExperimental returns true if the given target is in the "experimental" tree
-func isExperimental(state *BuildState, target *BuildTarget) bool {
-	for _, exp := range state.experimentalLabels {
-		if exp.Includes(target.Label) {
-			return true
-		}
-	}
-	return false
-}
-
 // CanSee returns true if target can see the given dependency, or false if not.
 func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
-	// Targets are always visible to other targets in the same directory.
-	if target.Label.PackageName == dep.Label.PackageName {
-		return true
-	} else if isExperimental(state, dep) && !isExperimental(state, target) {
-		log.Error("Target %s cannot depend on experimental target %s", target.Label, dep.Label)
-		return false
-	}
-	parent := target.Label.Parent()
-	for _, vis := range dep.Visibility {
-		if vis.Includes(parent) {
-			return true
-		}
-	}
-	if dep.Label.PackageName == parent.PackageName {
-		return true
-	}
-	if isExperimental(state, target) {
-		log.Warning("Visibility restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
-		return true
-	}
-	return false
+	return target.Label.CanSee(state, dep)
 }
 
 // CheckDependencyVisibility checks that all declared dependencies of this target are visible to it.
@@ -581,7 +563,7 @@ func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 		if !target.CanSee(state, dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
 		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
-			if isExperimental(state, target) {
+			if target.Label.isExperimental(state) {
 				log.Warning("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
 			} else {
 				return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
@@ -609,12 +591,28 @@ func (target *BuildTarget) CheckDuplicateOutputs() error {
 // requiring them will presumably fail if they aren't available.
 // Returns an error if any aren't.
 func (target *BuildTarget) CheckSecrets() error {
-	for _, secret := range target.Secrets {
+	for _, secret := range target.AllSecrets() {
 		if path := ExpandHomePath(secret); !PathExists(path) {
 			return fmt.Errorf("Path %s doesn't exist; it's required to build %s", secret, target.Label)
 		}
 	}
 	return nil
+}
+
+// AllSecrets returns all the sources of this rule.
+func (target *BuildTarget) AllSecrets() []string {
+	ret := target.Secrets[:]
+	if target.NamedSecrets != nil {
+		keys := make([]string, 0, len(target.NamedSecrets))
+		for k := range target.NamedSecrets {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			ret = append(ret, target.NamedSecrets[k]...)
+		}
+	}
+	return ret
 }
 
 // HasDependency checks if a target already depends on this label.
@@ -798,9 +796,23 @@ func (target *BuildTarget) addSource(sources []BuildInput, source BuildInput) []
 	}
 	// Add a dependency if this is not just a file.
 	if label := source.Label(); label != nil {
-		target.AddMaybeExportedDependency(*label, false, true)
+		target.AddMaybeExportedDependency(*label, false, true, false)
 	}
 	return append(sources, source)
+}
+
+// AddSecret adds a secret to the build target, deduplicating against existing entries.
+func (target *BuildTarget) AddSecret(secret string) {
+	target.Secrets = target.addSecret(target.Secrets, secret)
+}
+
+func (target *BuildTarget) addSecret(secrets []string, secret string) []string {
+	for _, existing := range secrets {
+		if existing == secret {
+			return secrets
+		}
+	}
+	return append(secrets, secret)
 }
 
 // AddNamedSource adds a source to the target which is tagged with a particular name.
@@ -811,6 +823,16 @@ func (target *BuildTarget) AddNamedSource(name string, source BuildInput) {
 		target.NamedSources = map[string][]BuildInput{name: target.addSource(nil, source)}
 	} else {
 		target.NamedSources[name] = target.addSource(target.NamedSources[name], source)
+	}
+}
+
+// AddNamedSecret adds a secret to the target which is tagged with a particular name.
+// These will be made available in the environment at runtime, with key-format "SECRETS_<NAME>".
+func (target *BuildTarget) AddNamedSecret(name string, secret string) {
+	if target.NamedSecrets == nil {
+		target.NamedSecrets = map[string][]string{name: target.addSecret(nil, secret)}
+	} else {
+		target.NamedSecrets[name] = target.addSecret(target.NamedSecrets[name], secret)
 	}
 }
 
@@ -991,20 +1013,21 @@ func (target *BuildTarget) AllData(graph *BuildGraph) []string {
 
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
-	target.AddMaybeExportedDependency(dep, false, false)
+	target.AddMaybeExportedDependency(dep, false, false, false)
 }
 
 // AddMaybeExportedDependency adds a dependency to this target which may be exported. It deduplicates against any existing deps.
-func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, source bool) {
+func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, source, internal bool) {
 	if dep == target.Label {
 		log.Fatalf("Attempted to add %s as a dependency of itself.\n", dep)
 	}
 	info := target.dependencyInfo(dep)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported, source: source})
+		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported, source: source, internal: internal})
 	} else {
 		info.exported = info.exported || exported
 		info.source = info.source && source
+		info.internal = info.internal && internal
 		info.data = false // It's not *only* data any more.
 	}
 }

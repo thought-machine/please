@@ -55,3 +55,13 @@ go_test(
         "//third_party/go:testify",
     ],
 )
+
+go_test(
+    name = "reverse_deps_test",
+    srcs = ["reverse_deps_test.go"],
+    deps = [
+        ":query",
+        "//src/core",
+        "//third_party/go:testify",
+    ],
+)

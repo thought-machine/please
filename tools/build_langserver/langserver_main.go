@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/tools/build_langserver/langserver"
 	"net"
 	"os"
 
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
+
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/tools/build_langserver/langserver"
 )
 
 // TODO(bnmetrics): also think about how we can implement this with .build_defs as well
@@ -43,7 +44,6 @@ func main() {
 
 	if err := serve(handler); err != nil {
 		log.Fatalf("fail to start server: %s", err)
-		os.Exit(1)
 	}
 }
 
@@ -61,17 +61,23 @@ func serve(handler jsonrpc2.Handler) error {
 			if err != nil {
 				return err
 			}
-			jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(conn, jsonrpc2.VSCodeObjectCodec{}), handler)
+			<-jsonrpc2.NewConn(context.Background(),
+				jsonrpc2.NewBufferedStream(conn, jsonrpc2.VSCodeObjectCodec{}),
+				handler,
+				jsonrpc2.LogMessages(logger{}),
+			).DisconnectNotify()
 		}
 	} else {
-		log.Notice("build_langserver: reading on stdin, writing on stdout")
+		log.Info("build_langserver: reading on stdin, writing on stdout")
 
-		<-jsonrpc2.NewConn(context.Background(), jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),
-			handler).DisconnectNotify()
+		<-jsonrpc2.NewConn(context.Background(),
+			jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),
+			handler,
+			jsonrpc2.LogMessages(logger{}),
+		).DisconnectNotify()
 
-		log.Notice("connection closed")
+		log.Info("connection closed")
 	}
-
 	return nil
 }
 
@@ -90,4 +96,10 @@ func (stdrwc) Close() error {
 		return err
 	}
 	return os.Stdout.Close()
+}
+
+type logger struct{}
+
+func (l logger) Printf(tmpl string, args ...interface{}) {
+	log.Debugf(tmpl, args...)
 }

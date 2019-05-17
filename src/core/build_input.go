@@ -102,6 +102,18 @@ func (label SubrepoFileLabel) String() string {
 	return label.File
 }
 
+// NewFileLabel returns either a FileLabel or SubrepoFileLabel as appropriate.
+func NewFileLabel(src string, pkg *Package) BuildInput {
+	if pkg.Subrepo != nil {
+		return SubrepoFileLabel{
+			File:        src,
+			Package:     pkg.Name,
+			FullPackage: pkg.Subrepo.Dir(pkg.Name),
+		}
+	}
+	return FileLabel{File: src, Package: pkg.Name}
+}
+
 // SystemFileLabel represents an absolute system dependency, which is not managed by the build system.
 type SystemFileLabel struct {
 	Path string

@@ -6,11 +6,11 @@ package cache
 
 import (
 	"bytes"
-	"github.com/thought-machine/please/src/core"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"github.com/thought-machine/please/src/core"
 	"io/ioutil"
 	"os"
 	"path"

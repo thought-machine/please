@@ -2,7 +2,6 @@ package cli
 
 import (
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize"
@@ -14,16 +13,18 @@ import (
 // Note that it is fairly hardcoded to our use case right now (i.e. downloading Please tarballs),
 // it probably doesn't generalise perfectly to things of arbitrary sizes.
 type progressReader struct {
+	message                   string
 	current, last, max, width int
 	reader                    io.ReadCloser
 	interactive               bool
 }
 
 // NewProgressReader returns a new progress bar reader.
-func NewProgressReader(reader io.ReadCloser, total string) io.ReadCloser {
-	i, _ := strconv.Atoi(total)
+// total describes the total size of it, in bytes. It can be zero.
+func NewProgressReader(reader io.ReadCloser, total int, message string) io.ReadCloser {
 	r := &progressReader{
-		max:         i, // If we failed above this is zero, that's handled later.
+		message:     message,
+		max:         total,
 		reader:      reader,
 		width:       80,
 		interactive: StdErrIsATerminal,
@@ -80,12 +81,12 @@ func (pr *progressReader) update() {
 	maxBytes := humanize.Bytes(uint64(pr.max))
 	proportion := float64(pr.current) / float64(pr.max)
 	percentage := 100.0 * proportion
-	totalCols := pr.width - 30 // Pretty arbitrary amount of overhead to make sure we have space.
+	totalCols := pr.width - 40 // Pretty arbitrary amount of overhead to make sure we have space.
 	currentPos := int(proportion * float64(totalCols))
 	if currentPos > totalCols {
 		currentPos = totalCols
 	}
 	before := strings.Repeat("=", currentPos)
 	after := strings.Repeat(" ", totalCols-currentPos)
-	Printf("${RESETLN}${BOLD_WHITE}%s / %s ${GREY}[%s>%s] ${BOLD_WHITE}%0.1f%%${RESET}", currentBytes, maxBytes, before, after, percentage)
+	Printf("${RESETLN}${BOLD_WHITE}%s: %s / %s ${GREY}[%s>%s] ${BOLD_WHITE}%0.1f%%${RESET}", pr.message, currentBytes, maxBytes, before, after, percentage)
 }

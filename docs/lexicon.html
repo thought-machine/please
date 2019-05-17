@@ -28,7 +28,7 @@
 
     <p>The target that you attempt to subinclude is simply a normal build target, with the
       restriction that it must have exactly one output. The simplest form of this is a single-file
-      <a href="#filegroup">filegroup</a> or <a href="export_file">export_file</a> rule, but
+      <a href="#filegroup">filegroup</a> or <a href="#export_file">export_file</a> rule, but
       it is possible to have more complex rules generating your BUILD definitions.</p>
 
     <p>For example:
@@ -96,7 +96,7 @@
 
     <h3><a name="get_labels">get_labels</a></h3>
 
-    <p><pre class="rule"><code>get_labels(target, prefix)</code></pre></p>
+    <p><pre class="rule"><code>get_labels(target, prefix, all=False)</code></pre></p>
 
     <p>Gets the unique set of labels for a rule and all its transitive dependencies.</p>
 
@@ -139,6 +139,13 @@
 	<td>Filters the returned labels to only ones starting with this prefix.</td>
       </tr>
 
+      <tr>
+	<td>all</td>
+	<td>False</td>
+	<td>bool</td>
+	<td>Returns labels from all dependencies, even past those marked as <code>output_is_complete</code>.</td>
+      </tr>
+
       </tbody>
     </table>
 
@@ -171,6 +178,68 @@
 	<td>None</td>
 	<td>str</td>
 	<td>Checks only labels that start with this prefix.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
+    <h3><a name="add_licence">add_licence</a></h3>
+
+    <p><pre class="rule"><code>add_licence(target, licence)</code></pre></p>
+
+    <p>Adds a new licence to a target. The assumption (as usual) is that if multiple are added,
+      they are options, so any one can be accepted.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>target</td>
+	<td></td>
+	<td>str</td>
+	<td>Label of the target to add the licence to.</td>
+      </tr>
+
+      <tr>
+	<td>licence</td>
+	<td></td>
+	<td>str</td>
+	<td>Name of the licence to add.</td>
+      </tr>
+
+      </tbody>
+    </table>
+
+    <h3><a name="get_licences">get_licences</a></h3>
+
+    <p><pre class="rule"><code>get_licences(target)</code></pre></p>
+
+    <p>Returns all the licences that are currently known to apply to a target.</p>
+
+    <table>
+      <thead>
+      <tr>
+	<th>Argument</th>
+	<th>Default</th>
+	<th>Type</th>
+	<th></th>
+      </tr>
+      </thead>
+      <tbody>
+
+      <tr>
+	<td>target</td>
+	<td></td>
+	<td>str</td>
+	<td>Label of the target to get licences for.</td>
       </tr>
 
       </tbody>
@@ -484,3 +553,4 @@
 
     {{ template "lexicon_entry.html" .Named "http_archive" }}
     {{ template "lexicon_entry.html" .Named "new_http_archive" }}
+    {{ template "lexicon_entry.html" .Named "github_repo" }}

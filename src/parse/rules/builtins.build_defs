@@ -4,14 +4,15 @@
 # Do not change the order of arguments to this function unless you feel like
 # updating all of targets.go to match it.
 def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=None, data:list=None, outs:list|dict=None,
-               deps:list=None, exported_deps:list=None, secrets:list=None, tools:list|dict=None, labels:list=None,
+               deps:list=None, exported_deps:list=None, secrets:list|dict=None, tools:list|dict=None, labels:list=None,
                visibility:list=CONFIG.DEFAULT_VISIBILITY, hashes:list=None, binary:bool=False, test:bool=False,
                test_only:bool=CONFIG.DEFAULT_TESTONLY, building_description:str=None, needs_transitive_deps:bool=False,
                output_is_complete:bool=False, container:bool|dict=False, sandbox:bool=CONFIG.BUILD_SANDBOX,
-               test_sandbox:bool=CONFIG.TEST_SANDBOX, no_test_output:bool=False, flaky:bool|int=0, build_timeout:int=0,
-               test_timeout:int=0, pre_build:function=None, post_build:function=None, requires:list=None, provides:dict=None,
+               test_sandbox:bool=CONFIG.TEST_SANDBOX, no_test_output:bool=False, flaky:bool|int=0, build_timeout:int|str=0,
+               test_timeout:int|str=0, pre_build:function=None, post_build:function=None, requires:list=None, provides:dict=None,
                licences:list=CONFIG.DEFAULT_LICENCES, test_outputs:list=None, system_srcs:list=None, stamp:bool=False,
-               tag:str='', optional_outs:list=None, progress:bool=False, _urls:list=None):
+               tag:str='', optional_outs:list=None, progress:bool=False, size:str=None, _urls:list=None,
+               internal_deps:list=None, pass_env:list=None):
     pass
 
 
@@ -211,10 +212,10 @@ ValueError = str
 
 
 # Post-build callback functions.
-def get_labels(name:str, prefix:str) -> list:
+def get_labels(name:str, prefix:str, all:bool=False) -> list:
     pass
-def has_label(name:str, prefix:str) -> bool:
-    return len(get_labels(name, prefix)) > 0
+def has_label(name:str, prefix:str, all:bool=False) -> bool:
+    return len(get_labels(name, prefix, all)) > 0
 def add_dep(target:str, dep:str, exported:bool=False):
     pass
 def add_exported_dep(target:str, dep:str):
@@ -222,6 +223,8 @@ def add_exported_dep(target:str, dep:str):
 def add_out(target:str, name:str, out:str=''):
     pass
 def add_licence(target:str, licence:str):
+    pass
+def get_licences(target:str):
     pass
 def get_command(target:str, config:str='') -> str:
     pass

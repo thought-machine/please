@@ -2,6 +2,7 @@ package query
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"fmt"
 	"os/exec"
 	"sort"
@@ -66,7 +67,32 @@ func changed(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget, files []string) 
 	}
 	h1 := build.RuleHash(s1, t1, true, false)
 	h2 := build.RuleHash(s2, t2, true, false)
-	return !bytes.Equal(h1, h2)
+	if !bytes.Equal(h1, h2) {
+		return true
+	}
+	h1, err1 := sourceHash(s1, t1)
+	h2, err2 := sourceHash(s2, t2)
+	return !bytes.Equal(h1, h2) || err1 != nil || err2 != nil
+}
+
+// sourceHash performs a partial source hash on a target to determine if it's changed.
+// This is a bit different to the one in the build package since we can't assume everything is
+// necessarily present (and for performance reasons don't want to hash *everything*).
+func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
+	h := sha1.New()
+	for _, tool := range target.AllTools() {
+		if tool.Label() != nil {
+			continue // Skip in-repo tools, that will be handled via revdeps.
+		}
+		for _, path := range tool.FullPaths(state.Graph) {
+			result, err := state.PathHasher.Hash(path, false)
+			if err != nil {
+				return nil, err
+			}
+			h.Write(result)
+		}
+	}
+	return h.Sum(nil), nil
 }
 
 // addRevdeps walks back up the reverse dependencies of a target, marking them all changed.

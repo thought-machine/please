@@ -94,7 +94,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
         # TODO(agenticarus): Turn `resources` into a first-class construct, and just use them in `deps` normally.
         # Can't run javac since there are no java files.
         if resources_root:
-            cmd = 'cd ${PKG}/%s && $TOOL z -d -o ${OUT} -i .' % resources_root
+            cmd = 'cd ${PKG_DIR}/%s && $TOOL z -d -o ${OUT} -i .' % resources_root
         else:
             cmd = '$TOOL z -d -o ${OUTS} -i .'
         return build_rule(
@@ -230,7 +230,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
             srcs = srcs,
             deps = deps,
         )
-        deps.append(lib_rule)
+        deps += [lib_rule]
     if self_executable:
         preamble = '#!/bin/sh\nexec java %s -jar $0 ${@}' % (jvm_args or '')
         cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
@@ -257,7 +257,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
 
 
 def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:list=None, worker:str='',
-              labels:list&features&tags=None, visibility:list=None, flags:str='', container:bool|dict=False,
+              labels:list&features&tags=[], visibility:list=None, flags:str='', container:bool|dict=False,
               sandbox:bool=None, timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
               test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str=''):
     """Defines a Java test.
@@ -281,9 +281,6 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
       test_package (str): Java package to scan for test classes to run.
       jvm_args (str): Arguments to pass to the JVM in the run script.
     """
-    timeout, labels = _test_size_and_timeout(size, timeout, labels)
-    if not labels:
-        labels = []
     # It's a bit sucky doing this in two separate steps, but it is
     # at least easy and reuses the existing code.
     lib_rule = java_library(
@@ -318,9 +315,10 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
         test_sandbox=sandbox,
         labels=labels,
         test_timeout=timeout,
+        size = size,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['java'],
+        requires=['java', 'test'],
         needs_transitive_deps=True,
         output_is_complete=True,
         test=True,
@@ -351,8 +349,10 @@ def maven_jars(name:str, id:str='', ids:list=[], repository:str|list=None, exclu
                         have a top-level target as a facade which doesn't have actual code.
       optional (list): List of optional dependencies to fetch. By default we fetch none of them.
     """
+    log.warning('The builtin maven_jars is deprecated, please look at using ' +
+                'https://github.com/thought-machine/pleasings/blob/master/java/maven_jars.build_defs instead')
     if id:
-        ids.append(id)
+        ids += [id]
     for id in ids:
         if id.count(':') != 2:
             raise ValueError('Bad Maven id string: %s. Must be in the format group:artifact:id' % id)
@@ -537,7 +537,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
             licences = licences,
             test_only = test_only,
         )
-        srcs.append(src_rule)
+        srcs += [src_rule]
 
     # .aar's have an embedded classes.jar in them. Pull that out so other rules can use it.
     if artifact_type == '.aar':
@@ -571,6 +571,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
         hashes = hashes if hashes else [hash] if hash else None,
         labels = ['mvn:' + id, 'rule:maven_jar'],
         visibility = visibility,
+        licences = licences,
         test_only=test_only,
         output_is_complete = False,
         binary = binary,

@@ -269,15 +269,18 @@ func getURIAndHandleErrors(uri lsp.DocumentURI, method string) (lsp.DocumentURI,
 }
 
 func isVisible(buildDef *BuildDef, currentPkg string) bool {
+	label2, _ := core.TryParseBuildLabel(currentPkg+":all", currentPkg)
 	for _, i := range buildDef.Visibility {
 		if i == "PUBLIC" {
 			return true
 		}
-
-		label := core.ParseBuildLabel(i, currentPkg)
-		currentPkgLabel := core.ParseBuildLabel(currentPkg, currentPkg)
-		if label.Includes(currentPkgLabel) {
-			return true
+		if label, err := core.TryParseBuildLabel(i, currentPkg); err == nil {
+			// TODO(peterebden): This is wrong - but here we only seem to know the package that
+			//                   we're looking at, not the individual target...
+			label.Name = "all"
+			if label.Includes(label2) {
+				return true
+			}
 		}
 	}
 	return false
