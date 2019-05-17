@@ -1,3 +1,12 @@
+Version 13.7.0
+--------------
+
+    * `genrule` now accepts `pass_env`, a list of environment variables to be passed through (#575)
+    * `go_get` rules can now find dependencies without `gopath` (#617)
+    * Downloaded plz versions can be hash validated in addition to signature checked (#615)
+    * Jacoco version updated for better java 11 compatibility.
+
+
 Version 13.6.3
 --------------
 
