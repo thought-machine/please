@@ -1,6 +1,6 @@
 // +build !linux
 
-package core
+package process
 
 import (
 	"os/exec"
@@ -8,10 +8,13 @@ import (
 )
 
 // ExecCommand executes an external command.
-func ExecCommand(command string, args ...string) *exec.Cmd {
+func (e *Executor) ExecCommand(command string, args ...string) *exec.Cmd {
 	cmd := exec.Command(command, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	e.processes[cmd] = struct{}{}
 	return cmd
 }

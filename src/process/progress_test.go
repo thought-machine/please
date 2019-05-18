@@ -1,4 +1,4 @@
-package core
+package process
 
 import (
 	"io/ioutil"
@@ -8,12 +8,12 @@ import (
 )
 
 func TestProgressWriter(t *testing.T) {
-	target := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "progress_test"})
-	w := newProgressWriter(target, ioutil.Discard)
+	var progress float32
+	w := newProgressWriter(&progress, ioutil.Discard)
 	w.Write([]byte(singleline))
-	assert.EqualValues(t, 1.0, target.Progress)
+	assert.EqualValues(t, 1.0, progress)
 	w.Write([]byte(multiline))
-	assert.EqualValues(t, 2.0, target.Progress)
+	assert.EqualValues(t, 2.0, progress)
 }
 
 const singleline = `[  1%] Building CXX object lib/TableGen/CMakeFiles/LLVMTableGen.dir/Error.cpp.o`

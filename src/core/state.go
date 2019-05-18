@@ -12,6 +12,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/process"
 )
 
 // startTime is as close as we can conveniently get to process start time.
@@ -83,6 +84,8 @@ type BuildState struct {
 	Parser Parser
 	// Worker pool for the parser
 	ParsePool Pool
+	// Subprocess executor.
+	ProcessExecutor processes.Executor
 	// Hashes of variouts bits of the configuration, used for incrementality.
 	Hashes struct {
 		// Hash of the general config, not including specialised bits.
@@ -734,23 +737,26 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
 func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configuration) *BuildState {
+	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
+	sandboxTool, _ := LookBuildPath(config.Build.PleaseSandboxTool, config)
 	state := &BuildState{
-		Graph:        NewGraph(),
-		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
-		lastResults:  make([]*BuildResult, numThreads),
-		PathHasher:   fs.NewPathHasher(RepoRoot),
-		StartTime:    startTime,
-		Config:       config,
-		Verbosity:    verbosity,
-		Cache:        cache,
-		ParsePool:    NewPool(numThreads),
-		VerifyHashes: true,
-		NeedBuild:    true,
-		Success:      true,
-		Coverage:     TestCoverage{Files: map[string][]LineCoverage{}},
-		OriginalArch: cli.HostArch(),
-		numWorkers:   numThreads,
-		Stats:        &SystemStats{},
+		Graph:           NewGraph(),
+		pendingTasks:    queue.NewPriorityQueue(10000, true), // big hint, why not
+		lastResults:     make([]*BuildResult, numThreads),
+		PathHasher:      fs.NewPathHasher(RepoRoot),
+		ProcessExecutor: process.New(sandboxTool),
+		StartTime:       startTime,
+		Config:          config,
+		Verbosity:       verbosity,
+		Cache:           cache,
+		ParsePool:       NewPool(numThreads),
+		VerifyHashes:    true,
+		NeedBuild:       true,
+		Success:         true,
+		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
+		OriginalArch:    cli.HostArch(),
+		numWorkers:      numThreads,
+		Stats:           &SystemStats{},
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numRunning:      1, // Similarly.

@@ -115,8 +115,6 @@ type BuildTarget struct {
 	// If true, the interactive progress display will try to infer the target's progress
 	// via some heuristics on its output.
 	ShowProgress bool `name:"progress"`
-	// If ShowProgress is true, this is used to store the current progress of the target.
-	Progress float32 `print:"false"`
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings `name:"container"`
 	// The results of this test target, if it is one.
@@ -266,6 +264,12 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 		state:               int32(Inactive),
 		BuildingDescription: DefaultBuildingDescription,
 	}
+}
+
+// String returns a stringified form of the build label of this target, which is
+// a unique identity for it.
+func (target *BuildTarget) String() string {
+	return target.Label.String()
 }
 
 // TmpDir returns the temporary working directory for this target, eg.
@@ -1171,6 +1175,18 @@ func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
 // HasParent returns true if the target has a parent rule that's not itself.
 func (target *BuildTarget) HasParent() bool {
 	return target.Label.HasParent()
+}
+
+// ShouldShowProgress returns true if the target should display progress.
+// This is provided as a function to satisfy the process package.
+func (target *BuildTarget) ShouldShowProgress() bool {
+	return target.ShowProgress
+}
+
+// ProgressDescription returns a description of what the target is doing as it runs.
+// This is provided as a function to satisfy the process package.
+func (target *BuildTarget) ProgressDescription() string {
+	return target.BuildingDescription
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.
