@@ -4,6 +4,7 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/core",
+        "//src/process",
         "//third_party/go:logging",
         "//third_party/go:prometheus",
         "//third_party/go:shlex",

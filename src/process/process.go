@@ -57,6 +57,7 @@ func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, time
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	cmd := e.ExecCommand(argv[0], argv[1:]...)
+	defer e.removeProcess(cmd)
 	cmd.Dir = dir
 	cmd.Env = env
 
@@ -133,6 +134,10 @@ func (e *Executor) KillProcess(cmd *exec.Cmd) {
 	if !killProcess(cmd, syscall.SIGKILL, time.Second) && !success {
 		log.Error("Failed to kill inferior process")
 	}
+	e.removeProcess(cmd)
+}
+
+func (e *Executor) removeProcess(cmd *exec.Cmd) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 	delete(e.processes, cmd)
@@ -224,4 +229,12 @@ func (e *Executor) handleSignals() {
 			e.KillProcess(proc)
 		}
 	}
+}
+
+// ExecCommand is a utility function that runs the given command with few options.
+func ExecCommand(args ...string) ([]byte, error) {
+	e := New("")
+	cmd := e.ExecCommand(args[0], args[1:]...)
+	defer e.removeProcess(cmd)
+	return cmd.Output()
 }

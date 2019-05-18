@@ -8,8 +8,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-
-	"github.com/thought-machine/please/src/core"
+	"time"
 )
 
 type execKey struct {
@@ -81,7 +80,7 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), core.TargetTimeoutOrDefault(nil, s.state))
+	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
 	defer cancel()
 
 	cmdPath, err := execFindCmd(argv[0])
