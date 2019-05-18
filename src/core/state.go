@@ -85,7 +85,7 @@ type BuildState struct {
 	// Worker pool for the parser
 	ParsePool Pool
 	// Subprocess executor.
-	ProcessExecutor processes.Executor
+	ProcessExecutor *process.Executor
 	// Hashes of variouts bits of the configuration, used for incrementality.
 	Hashes struct {
 		// Hash of the general config, not including specialised bits.

@@ -2,22 +2,17 @@ package core
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"syscall"
-	"time"
 
-	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
 )
 

@@ -4,13 +4,10 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/thought-machine/please/src/cli"
 )
 
 func TestCollapseHash(t *testing.T) {

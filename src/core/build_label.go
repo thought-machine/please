@@ -5,9 +5,12 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/op/go-logging.v1"
+
+	"github.com/thought-machine/please/src/process"
 )
 
 var log = logging.MustGetLogger("core")
@@ -410,7 +413,7 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	os.Setenv("PLZ_COMPLETE", match)
 	os.Unsetenv("GO_FLAGS_COMPLETION")
 	exec, _ := os.Executable()
-	out, _, err := ExecWithTimeout(nil, "", os.Environ(), 0, 0, false, false, append([]string{exec}, os.Args[1:]...), "")
+	out, _, err := process.New("").ExecWithTimeout(nil, "", os.Environ(), 10*time.Second, false, false, append([]string{exec}, os.Args[1:]...))
 	if err != nil {
 		return nil
 	}
