@@ -15,6 +15,7 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/op/go-logging.v1"
@@ -247,6 +248,7 @@ func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	state := core.NewBuildState(1, nil, 4, config)
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 	target.Command = fmt.Sprintf("echo 'output of %s' > $OUT", target.Label)
+	target.BuildTimeout = 100 * time.Second
 	state.Graph.AddTarget(target)
 	state.Parser = &fakeParser{}
 	return state, target
