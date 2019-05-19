@@ -40,3 +40,15 @@ func TestExecWithTimeoutStderr(t *testing.T) {
 	assert.Equal(t, "", string(out))
 	assert.Equal(t, "hello\n", string(stderr))
 }
+
+func TestKillSubprocesses(t *testing.T) {
+	e := New("")
+	cmd := e.ExecCommand("sleep", "infinity")
+	assert.Equal(t, 1, len(e.processes))
+	err := cmd.Start()
+	assert.NoError(t, err)
+	e.killAll()
+	err = cmd.Wait()
+	assert.Error(t, err)
+	assert.Equal(t, 0, len(e.processes))
+}

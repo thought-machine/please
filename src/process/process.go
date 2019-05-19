@@ -152,7 +152,7 @@ func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool 
 	// long (we do not want to get hung up if it ignores our SIGTERM).
 	log.Debug("Sending signal %s to -%d", sig, cmd.Process.Pid)
 	syscall.Kill(-cmd.Process.Pid, sig) // Kill the group - we always set one in ExecCommand.
-	ch := make(chan error)
+	ch := make(chan error, 1)
 	go runCommand(cmd, ch)
 	select {
 	case <-ch:
@@ -223,13 +223,27 @@ func (e *Executor) handleSignals() {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT, syscall.SIGTERM)
 	sig := <-ch
+	log.Warning("Received %s, shutting down all subprocesses...", sig)
+	e.killAll()
+	if s, ok := sig.(syscall.Signal); ok {
+		os.Exit(128 + int(s))
+	}
+	os.Exit(1)
+}
+
+// killAll kills all subprocesses of this executor.
+func (e *Executor) killAll() {
 	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	if len(e.processes) > 0 {
+	processes := make([]*exec.Cmd, 0, len(e.processes))
+	for proc := range e.processes {
+		processes = append(processes, proc)
+	}
+	e.mutex.Unlock()
+
+	if len(processes) > 0 {
 		var wg sync.WaitGroup
-		wg.Add(len(e.processes))
-		log.Warning("Received %s, shutting down all subprocesses...", sig)
-		for proc := range e.processes {
+		wg.Add(len(processes))
+		for _, proc := range processes {
 			go func(proc *exec.Cmd) {
 				e.KillProcess(proc)
 				wg.Done()
@@ -237,10 +251,6 @@ func (e *Executor) handleSignals() {
 		}
 		wg.Wait()
 	}
-	if s, ok := sig.(syscall.Signal); ok {
-		os.Exit(128 + int(s))
-	}
-	os.Exit(1)
 }
 
 // ExecCommand is a utility function that runs the given command with few options.
