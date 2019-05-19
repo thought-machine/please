@@ -226,10 +226,16 @@ func (e *Executor) handleSignals() {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 	if len(e.processes) > 0 {
+		var wg sync.WaitGroup
+		wg.Add(len(e.processes))
 		log.Warning("Received %s, shutting down all subprocesses...", sig)
 		for proc := range e.processes {
-			e.KillProcess(proc)
+			go func(proc *exec.Cmd) {
+				e.KillProcess(proc)
+				wg.Done()
+			}(proc)
 		}
+		wg.Wait()
 	}
 	if s, ok := sig.(syscall.Signal); ok {
 		os.Exit(128 + int(s))
