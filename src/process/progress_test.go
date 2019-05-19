@@ -8,12 +8,15 @@ import (
 )
 
 func TestProgressWriter(t *testing.T) {
+	targ := target{}
 	var progress float32
-	w := newProgressWriter(&progress, ioutil.Discard)
+	w := newProgressWriter(&targ, &progress, ioutil.Discard)
 	w.Write([]byte(singleline))
 	assert.EqualValues(t, 1.0, progress)
+	assert.EqualValues(t, 1.0, targ.Progress)
 	w.Write([]byte(multiline))
 	assert.EqualValues(t, 2.0, progress)
+	assert.EqualValues(t, 2.0, targ.Progress)
 }
 
 const singleline = `[  1%] Building CXX object lib/TableGen/CMakeFiles/LLVMTableGen.dir/Error.cpp.o`
@@ -39,3 +42,12 @@ Scanning dependencies of target LLVMMC
 [  1%] Building CXX object lib/Support/CMakeFiles/LLVMSupport.dir/AMDGPUCodeObjectMetadata.cpp.o
 [  2%] Building CXX object lib/MC/CMakeFiles/LLVMMC.dir/ConstantPools.cpp.o
 `
+
+type target struct {
+	Progress float32
+}
+
+func (t *target) String() string               { return "//src/core:progress_test" }
+func (t *target) ShouldShowProgress() bool     { return true }
+func (t *target) SetProgress(progress float32) { t.Progress = progress }
+func (t *target) ProgressDescription() string  { return "building" }

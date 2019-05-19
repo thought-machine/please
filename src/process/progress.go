@@ -18,7 +18,7 @@ type progressWriter struct {
 var progressRegex = regexp.MustCompile(`\[ *([0-9]+)%\]`)
 
 func newProgressWriter(t Target, p *float32, w io.Writer) io.Writer {
-	return &progressWriter{p: p, w: w}
+	return &progressWriter{t: t, p: p, w: w}
 }
 
 // Write implements the io.Writer interface
