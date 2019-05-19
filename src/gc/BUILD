@@ -5,8 +5,8 @@ go_library(
     deps = [
         "//src/core",
         "//src/fs",
-        "//src/scm",
         "//src/parse/asp",
+        "//src/scm",
         "//third_party/go:logging",
         "//third_party/go:prompter",
     ],
