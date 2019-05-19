@@ -231,6 +231,10 @@ func (e *Executor) handleSignals() {
 			e.KillProcess(proc)
 		}
 	}
+	if s, ok := sig.(syscall.Signal); ok {
+		os.Exit(128 + int(s))
+	}
+	os.Exit(1)
 }
 
 // ExecCommand is a utility function that runs the given command with few options.
