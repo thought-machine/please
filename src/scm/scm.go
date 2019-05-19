@@ -22,6 +22,8 @@ type SCM interface {
 	ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) []string
 	// IgnoreFile marks a file to be ignored by the SCM.
 	IgnoreFile(name string) error
+	// Remove deletes the given files from the SCM.
+	Remove(names []string) error
 }
 
 // New returns a new SCM instance for this repo root.

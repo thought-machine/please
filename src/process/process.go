@@ -43,6 +43,8 @@ type Target interface {
 	String() string
 	// ShouldShowProgress returns true if the target should display progress.
 	ShouldShowProgress() bool
+	// SetProgress sets the current progress of the target.
+	SetProgress(float32)
 	// ProgressDescription returns a description of what the target is doing as it runs.
 	ProgressDescription() string
 }
@@ -73,8 +75,8 @@ func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, time
 	}
 	if target != nil && target.ShouldShowProgress() {
 		progress = new(float32)
-		cmd.Stdout = newProgressWriter(progress, cmd.Stdout)
-		cmd.Stderr = newProgressWriter(progress, cmd.Stderr)
+		cmd.Stdout = newProgressWriter(target, progress, cmd.Stdout)
+		cmd.Stderr = newProgressWriter(target, progress, cmd.Stderr)
 	}
 	if attachStdStreams {
 		cmd.Stdin = os.Stdin

@@ -115,6 +115,8 @@ type BuildTarget struct {
 	// If true, the interactive progress display will try to infer the target's progress
 	// via some heuristics on its output.
 	ShowProgress bool `name:"progress"`
+	// If ShowProgress is true, this is used to store the current progress of the target.
+	Progress float32 `print:"false"`
 	// Containerisation settings that override the defaults.
 	ContainerSettings *TargetContainerSettings `name:"container"`
 	// The results of this test target, if it is one.
@@ -1186,7 +1188,15 @@ func (target *BuildTarget) ShouldShowProgress() bool {
 // ProgressDescription returns a description of what the target is doing as it runs.
 // This is provided as a function to satisfy the process package.
 func (target *BuildTarget) ProgressDescription() string {
+	if target.State() >= Built && target.IsTest {
+		return "testing"
+	}
 	return target.BuildingDescription
+}
+
+// SetProgress sets the current progress of this target.
+func (target *BuildTarget) SetProgress(progress float32) {
+	target.Progress = progress
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

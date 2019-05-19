@@ -3,6 +3,7 @@
 package scm
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -104,4 +105,13 @@ func (g *git) IgnoreFile(name string) error {
 	}
 	b = append(b, []byte("# Please output directory\nplz-out\n")...)
 	return ioutil.WriteFile(gitignore, b, 0644)
+}
+
+func (g *git) Remove(names []string) error {
+	cmd := exec.Command("git", append([]string{"rm", "-q"}, names...)...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git rm failed: %s %s", err, out)
+	}
+	return nil
 }

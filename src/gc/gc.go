@@ -20,6 +20,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/src/scm"
 )
 
 var log = logging.MustGetLogger("gc")
@@ -54,11 +55,7 @@ func GarbageCollect(state *core.BuildState, filter, targets, keepTargets []core.
 		if !targetsOnly {
 			if git {
 				log.Notice("Running git rm %s\n", strings.Join(srcs, " "))
-				srcs = append([]string{"rm", "-q"}, srcs...)
-				cmd := core.ExecCommand("git", srcs...)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); err != nil {
+				if err := scm.NewFallback(core.RepoRoot).Remove(srcs); err != nil {
 					log.Fatalf("git rm failed: %s\n", err)
 				}
 			} else {
