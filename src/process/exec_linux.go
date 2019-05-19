@@ -18,3 +18,11 @@ func (e *Executor) ExecCommand(command string, args ...string) *exec.Cmd {
 	e.processes[cmd] = struct{}{}
 	return cmd
 }
+
+// MustSandboxCommand modifies the given command to run in the sandbox.
+func (e *Executor) MustSandboxCommand(cmd []string) []string {
+	if e.sandboxCommand == "" {
+		log.Fatalf("Sandbox tool not found on PATH")
+	}
+	return append([]string{e.sandboxCommand}, cmd...)
+}
