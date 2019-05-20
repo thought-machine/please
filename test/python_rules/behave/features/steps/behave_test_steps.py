@@ -21,3 +21,8 @@ def step_impl(context, number):
 def step_impl(context):
     assert context.failed is False
     assert context.tests_count >= 0
+
+
+@step('behave finds {number:d} feature files')
+def step_impl(context, number):
+    assert len(context.config.paths) == 3
