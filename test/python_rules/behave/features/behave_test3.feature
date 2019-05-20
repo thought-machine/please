@@ -1,4 +1,4 @@
-Feature: Please Integration with Behave
+Feature: Please Integration with Behave - Test Feature 3
   In order to support BDD in python
   As the most awesome build tool
   I want to be able to support behave
