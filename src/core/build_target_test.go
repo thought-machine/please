@@ -639,6 +639,14 @@ func TestShouldIncludeManual(t *testing.T) {
 	assert.False(t, target.ShouldInclude([]string{"a"}, nil))
 }
 
+func TestExternalDependencies(t *testing.T) {
+	t1a := makeTarget("//src/core:_target1#a", "PUBLIC")
+	t1 := makeTarget("//src/core:target1", "PUBLIC", t1a)
+	t2a := makeTarget("//src/core:_target2#a", "PUBLIC", t1)
+	t2 := makeTarget("//src/core:target2", "PUBLIC", t2a)
+	assert.Equal(t, []*BuildTarget{t1}, t2.ExternalDependencies())
+}
+
 func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {

@@ -42,70 +42,54 @@ func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCo
 // query that we haven't discovered through tests to the overall report.
 // The coverage reports only contain information about files that were covered during
 // tests, so it's important that we identify anything with zero coverage here.
-// This is made trickier by attempting to reconcile coverage targets from languages like
-// Java that don't preserve the original file structure, which requires a slightly fuzzy match.
 func AddOriginalTargetsToCoverage(state *core.BuildState, includeAllFiles bool) {
-	// First we collect all the source files from all relevant targets
-	allFiles := map[string]bool{}
+	// Track the set of immediate dependencies that the user ran tests from.
 	doneTargets := map[*core.BuildTarget]bool{}
-	// Track the set of packages the user ran tests from; we only show coverage metrics from them.
-	coveragePackages := map[string]bool{}
-	for _, label := range state.OriginalTargets {
-		coveragePackages[label.PackageName] = true
-	}
-	coveragePackages["."] = coveragePackages[""] // helps path.Dir later on
+	coverageFiles := map[string]bool{}
 	for _, label := range state.ExpandOriginalTargets() {
-		collectAllFiles(state, state.Graph.TargetOrDie(label), coveragePackages, allFiles, doneTargets, includeAllFiles)
+		collectAllFiles(state, state.Graph.TargetOrDie(label), coverageFiles, includeAllFiles, true, doneTargets)
 	}
 
 	// Now merge the recorded coverage so far into them
 	recordedCoverage := state.Coverage
 	state.Coverage = core.TestCoverage{Tests: recordedCoverage.Tests, Files: map[string][]core.LineCoverage{}}
-	mergeCoverage(state, recordedCoverage, coveragePackages, allFiles, includeAllFiles)
+	mergeCoverage(state, recordedCoverage, coverageFiles)
 }
 
 // Collects all the source files from a single target
-func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coveragePackages, allFiles map[string]bool, doneTargets map[*core.BuildTarget]bool, includeAllFiles bool) {
-	doneTargets[target] = true
-	if !includeAllFiles && !coveragePackages[target.Label.PackageName] {
-		return
-	}
-	// Small hack here; explore these targets when we don't have any sources yet. Helps languages
-	// like Java where we generate a wrapper target with a complete one immediately underneath.
-	// TODO(pebers): do we still need this now we have Java sourcemaps?
-	if !target.OutputIsComplete || len(allFiles) == 0 {
-		for _, dep := range target.Dependencies() {
-			if !doneTargets[dep] {
-				collectAllFiles(state, dep, coveragePackages, allFiles, doneTargets, includeAllFiles)
+func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coverageFiles map[string]bool, includeAllFiles, deps bool, doneTargets map[*core.BuildTarget]bool) {
+	if !doneTargets[target] {
+		doneTargets[target] = true
+		for _, path := range target.AllSourcePaths(state.Graph) {
+			extension := filepath.Ext(path)
+			for _, ext := range state.Config.Cover.FileExtension {
+				if ext == extension {
+					coverageFiles[path] = !target.IsTest && !target.TestOnly // Skip test source files from actual coverage display
+					break
+				}
 			}
 		}
-	}
-	if target.IsTest {
-		return // Test sources don't count for coverage.
-	}
-	for _, path := range target.AllSourcePaths(state.Graph) {
-		extension := filepath.Ext(path)
-		for _, ext := range state.Config.Cover.FileExtension {
-			if ext == extension {
-				allFiles[path] = target.IsTest || target.TestOnly // Skip test source files from actual coverage display
-				break
+		if deps {
+			for _, dep := range target.ExternalDependencies() {
+				collectAllFiles(state, dep, coverageFiles, includeAllFiles, includeAllFiles, doneTargets)
 			}
 		}
 	}
 }
 
 // mergeCoverage merges recorded coverage with the list of all existing files.
-func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, coveragePackages, allFiles map[string]bool, includeAllFiles bool) {
+func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, coverageFiles map[string]bool) {
+	doneFiles := map[string]bool{}
 	for file, coverage := range recordedCoverage.Files {
-		if includeAllFiles || isOwnedBy(file, coveragePackages) {
+		if coverageFiles[file] {
 			state.Coverage.Files[file] = coverage
-			allFiles[file] = true
+			doneFiles[file] = true
 		}
 	}
 	// For any files left over now, enter them in as 100% uncovered.
 	// This is pessimistic but there's not much we can do at this point.
-	for file, done := range allFiles {
-		if !done {
+	for file, include := range coverageFiles {
+		if include && !doneFiles[file] {
 			s := make([]core.LineCoverage, countLines(file))
 			if len(s) > 0 {
 				for i := 0; i < len(s); i++ {

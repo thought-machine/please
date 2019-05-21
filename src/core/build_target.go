@@ -365,6 +365,22 @@ func (target *BuildTarget) Dependencies() []*BuildTarget {
 	return ret
 }
 
+// ExternalDependencies returns the non-internal dependencies of this target (i.e. not "_target#tag" ones).
+func (target *BuildTarget) ExternalDependencies() []*BuildTarget {
+	ret := make(BuildTargets, 0, len(target.dependencies))
+	for _, deps := range target.dependencies {
+		for _, dep := range deps.deps {
+			if dep.Label.Parent() != target.Label {
+				ret = append(ret, dep)
+			} else {
+				ret = append(ret, dep.ExternalDependencies()...)
+			}
+		}
+	}
+	sort.Sort(ret)
+	return ret
+}
+
 // BuildDependencies returns the build-time dependencies of this target (i.e. not data and not internal).
 func (target *BuildTarget) BuildDependencies() []*BuildTarget {
 	ret := make(BuildTargets, 0, len(target.dependencies))
