@@ -6,6 +6,7 @@ package pex
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -24,17 +25,18 @@ type Writer struct {
 }
 
 // NewWriter constructs a new Writer.
-func NewWriter(entryPoint, interpreter string, zipSafe bool) *Writer {
+func NewWriter(entryPoint, interpreter string, options string, zipSafe bool) *Writer {
 	pw := &Writer{
 		zipSafe:        zipSafe,
 		realEntryPoint: toPythonPath(entryPoint),
 	}
-	pw.SetShebang(interpreter)
+	pw.SetShebang(interpreter, options)
 	return pw
 }
 
 // SetShebang sets the leading shebang that will be written to the file.
-func (pw *Writer) SetShebang(shebang string) {
+func (pw *Writer) SetShebang(shebang string, options string) {
+	shebang = strings.TrimSpace(fmt.Sprintf("%s %s", shebang, options))
 	if !path.IsAbs(shebang) {
 		shebang = "/usr/bin/env " + shebang
 	}

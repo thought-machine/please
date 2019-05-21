@@ -123,7 +123,8 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       labels (list): Labels to apply to this rule.
     """
     shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe' % (shebang, CONFIG.PYTHON_MODULE_DIR)
+    cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe --interpreter_options="%s"' % (
+        shebang, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
     assert main not in srcs, "main file should not be included in srcs"
@@ -220,7 +221,9 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
                         'pypy' or whatever.
     """
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe' % (interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER)
+    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --interpreter_options="%s"' % (
+        interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER,
+        CONFIG.PYTHON_INTERPRETER_OPTIONS)
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
