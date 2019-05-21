@@ -6,6 +6,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/parse/asp",
+        "//src/scm",
         "//third_party/go:logging",
         "//third_party/go:prompter",
     ],

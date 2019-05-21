@@ -268,6 +268,12 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 	}
 }
 
+// String returns a stringified form of the build label of this target, which is
+// a unique identity for it.
+func (target *BuildTarget) String() string {
+	return target.Label.String()
+}
+
 // TmpDir returns the temporary working directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy._build
 // Note the extra subdirectory to keep rules separate from one another, and the .build suffix
@@ -1187,6 +1193,26 @@ func (target *BuildTarget) Parent(graph *BuildGraph) *BuildTarget {
 // HasParent returns true if the target has a parent rule that's not itself.
 func (target *BuildTarget) HasParent() bool {
 	return target.Label.HasParent()
+}
+
+// ShouldShowProgress returns true if the target should display progress.
+// This is provided as a function to satisfy the process package.
+func (target *BuildTarget) ShouldShowProgress() bool {
+	return target.ShowProgress
+}
+
+// ProgressDescription returns a description of what the target is doing as it runs.
+// This is provided as a function to satisfy the process package.
+func (target *BuildTarget) ProgressDescription() string {
+	if target.State() >= Built && target.IsTest {
+		return "testing"
+	}
+	return target.BuildingDescription
+}
+
+// SetProgress sets the current progress of this target.
+func (target *BuildTarget) SetProgress(progress float32) {
+	target.Progress = progress
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

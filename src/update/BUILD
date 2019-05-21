@@ -10,6 +10,7 @@ go_library(
     deps = [
         "//src/cli",
         "//src/core",
+        "//src/process",
         "//third_party/go:logging",
         "//third_party/go:openpgp",
         "//third_party/go:prompter",

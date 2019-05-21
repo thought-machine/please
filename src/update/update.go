@@ -33,6 +33,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/process"
 )
 
 var log = logging.MustGetLogger("update")
@@ -327,8 +328,7 @@ func describe(a, b semver.Version, verb bool) string {
 // It returns true iff the version is as expected.
 func verifyNewPlease(newPlease, version string) bool {
 	version = "Please version " + version // Output is prefixed with this.
-	cmd := core.ExecCommand(newPlease, "--version")
-	output, err := cmd.Output()
+	output, err := process.ExecCommand(newPlease, "--version")
 	if err != nil {
 		log.Errorf("Failed to run new Please: %s", err)
 		return false

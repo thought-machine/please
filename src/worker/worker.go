@@ -24,6 +24,7 @@ type workerServer struct {
 	responseMutex sync.Mutex
 	process       *exec.Cmd
 	stderr        *stderrLogger
+	state         *core.BuildState
 	closing       bool
 }
 
@@ -49,11 +50,11 @@ func buildRemotely(state *core.BuildState, target *core.BuildTarget, worker, msg
 	if target != nil {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		go core.LogProgress(ctx, target, msg)
+		go state.ProcessExecutor.LogProgress(ctx, target)
 	}
 
 	// Time out this request appropriately
-	ctx, cancel := context.WithTimeout(context.Background(), core.TargetTimeoutOrDefault(target, state))
+	ctx, cancel := context.WithTimeout(context.Background(), target.BuildTimeout)
 	defer cancel()
 	w.requests <- req
 	select {
@@ -111,7 +112,7 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 		}
 		worker = path
 	}
-	cmd := core.ExecCommand(worker)
+	cmd := state.ProcessExecutor.ExecCommand(worker)
 	cmd.Env = core.GeneralBuildEnvironment(state.Config)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -131,6 +132,7 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 		responses: map[string]chan *Response{},
 		process:   cmd,
 		stderr:    stderr,
+		state:     state,
 	}
 	workerMap[worker] = w
 	go w.sendRequests(stdin)
@@ -241,7 +243,7 @@ func StopAll() {
 		log.Debug("Terminating build worker %s", name)
 		worker.closing = true         // suppress any error messages from worker
 		worker.stderr.Suppress = true // Make sure we don't print anything as they die.
-		core.KillProcess(worker.process)
+		worker.state.ProcessExecutor.KillProcess(worker.process)
 	}
 	workerMap = map[string]*workerServer{}
 }

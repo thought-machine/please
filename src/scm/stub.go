@@ -19,3 +19,7 @@ func (s *stub) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo
 func (s *stub) IgnoreFile(name string) error {
 	return fmt.Errorf("Don't know how to mark %s as ignored", name)
 }
+
+func (s *stub) Remove(names []string) error {
+	return fmt.Errorf("Unknown SCM, can't remove files")
+}

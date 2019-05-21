@@ -23,6 +23,7 @@ go_library(
     deps = [
         "//src/cli",
         "//src/fs",
+        "//src/process",
         "//src/scm",
         "//third_party/go:gcfg",
         "//third_party/go:go-flags",
@@ -107,7 +108,6 @@ go_test(
     srcs = ["utils_test.go"],
     deps = [
         ":core",
-        "//src/cli",
         "//third_party/go:testify",
     ],
 )
@@ -142,15 +142,6 @@ go_test(
 go_test(
     name = "build_input_test",
     srcs = ["build_input_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "progress_test",
-    srcs = ["progress_test.go"],
     deps = [
         ":core",
         "//third_party/go:testify",

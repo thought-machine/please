@@ -112,7 +112,9 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 func sizeAndTimeout(s *scope, size *core.Size, timeout pyObject, defaultTimeout cli.Duration) time.Duration {
 	switch t := timeout.(type) {
 	case pyInt:
-		return time.Duration(t) * time.Second
+		if t > 0 {
+			return time.Duration(t) * time.Second
+		}
 	case pyString:
 		return time.Duration(mustSize(s, string(t)).Timeout)
 	}

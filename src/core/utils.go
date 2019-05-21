@@ -2,22 +2,17 @@ package core
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"syscall"
-	"time"
 
-	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
 )
 
@@ -114,202 +109,6 @@ func getRepoRoot(filename string) (string, string) {
 // Used to provide slightly nicer output in some places.
 func StartedAtRepoRoot() bool {
 	return RepoRoot == initialWorkingDir
-}
-
-// safeBuffer is an io.Writer that ensures that only one thread writes to it at a time.
-// This is important because we potentially have both stdout and stderr writing to the same
-// buffer, and os.exec only guarantees goroutine-safety if both are the same writer, which in
-// our case they're not (but are both ultimately causing writes to the same buffer)
-type safeBuffer struct {
-	sync.Mutex
-	buf bytes.Buffer
-}
-
-func (sb *safeBuffer) Write(b []byte) (int, error) {
-	sb.Lock()
-	defer sb.Unlock()
-	return sb.buf.Write(b)
-}
-
-func (sb *safeBuffer) Bytes() []byte {
-	return sb.buf.Bytes()
-}
-
-func (sb *safeBuffer) String() string {
-	return sb.buf.String()
-}
-
-// LogProgress logs a message once a minute until the given context has expired.
-// Used to provide some notion of progress while waiting for external commands.
-func LogProgress(ctx context.Context, target *BuildTarget, msg string) {
-	t := time.NewTicker(1 * time.Minute)
-	defer t.Stop()
-	for i := 1; i < 1000000; i++ {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			if i == 1 {
-				log.Notice("%s still %s after 1 minute %s", target.Label, msg, progressMessage(target))
-			} else {
-				log.Notice("%s still %s after %d minutes %s", target.Label, msg, i, progressMessage(target))
-			}
-		}
-	}
-}
-
-// progressMessage displays a progress message for a target, if it tracks progress.
-func progressMessage(target *BuildTarget) string {
-	if target.ShowProgress {
-		return fmt.Sprintf("(%0.1f%% done)", target.Progress)
-	}
-	return ""
-}
-
-// TimeoutOrDefault uses the given timeout, or the default if it is not set.
-func TimeoutOrDefault(timeout time.Duration, defaultTimeout cli.Duration) time.Duration {
-	if timeout != 0 {
-		return timeout
-	} else if defaultTimeout != 0 {
-		return time.Duration(defaultTimeout)
-	}
-	return 10 * time.Minute // fallback
-}
-
-// TargetTimeoutOrDefault is like TimeoutOrDefault but uses the given target, which can be nil.
-func TargetTimeoutOrDefault(target *BuildTarget, state *BuildState) time.Duration {
-	if target != nil {
-		return TimeoutOrDefault(target.BuildTimeout, state.Config.Build.Timeout)
-	}
-	return TimeoutOrDefault(0, state.Config.Build.Timeout)
-}
-
-// ExecWithTimeout runs an external command with a timeout.
-// If the command times out the returned error will be a context.DeadlineExceeded error.
-// If showOutput is true then output will be printed to stderr as well as returned.
-// It returns the stdout only, combined stdout and stderr and any error that occurred.
-func ExecWithTimeout(target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput, attachStdStreams bool, argv []string, msg string) ([]byte, []byte, error) {
-	timeout = TimeoutOrDefault(timeout, defaultTimeout)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	cmd := ExecCommand(argv[0], argv[1:]...)
-	cmd.Dir = dir
-	cmd.Env = env
-
-	var out bytes.Buffer
-	var outerr safeBuffer
-	if showOutput {
-		cmd.Stdout = io.MultiWriter(os.Stderr, &out, &outerr)
-		cmd.Stderr = io.MultiWriter(os.Stderr, &outerr)
-	} else {
-		cmd.Stdout = io.MultiWriter(&out, &outerr)
-		cmd.Stderr = &outerr
-	}
-	if target != nil && target.ShowProgress {
-		cmd.Stdout = newProgressWriter(target, cmd.Stdout)
-		cmd.Stderr = newProgressWriter(target, cmd.Stderr)
-	}
-	if attachStdStreams {
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-	if target != nil {
-		go LogProgress(ctx, target, msg)
-	}
-	// Start the command, wait for the timeout & then kill it.
-	// We deliberately don't use CommandContext because it will only send SIGKILL which
-	// child processes can't handle themselves.
-	err := cmd.Start()
-	if err != nil {
-		return nil, nil, err
-	}
-	ch := make(chan error)
-	go runCommand(cmd, ch)
-	select {
-	case err = <-ch:
-		// Do nothing.
-	case <-time.After(timeout):
-		KillProcess(cmd)
-		err = fmt.Errorf("Timeout exceeded: %s", outerr.String())
-	}
-	return out.Bytes(), outerr.Bytes(), err
-}
-
-// runCommand runs a command and signals on the given channel when it's done.
-func runCommand(cmd *exec.Cmd, ch chan error) {
-	ch <- cmd.Wait()
-}
-
-// ExecWithTimeoutShell runs an external command within a Bash shell.
-// Other arguments are as ExecWithTimeout.
-// Note that the command is deliberately a single string.
-func ExecWithTimeoutShell(state *BuildState, target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
-	return ExecWithTimeoutShellStdStreams(state, target, dir, env, timeout, defaultTimeout, showOutput, cmd, sandbox, false, "building")
-}
-
-// ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
-func ExecWithTimeoutShellStdStreams(state *BuildState, target *BuildTarget, dir string, env []string, timeout time.Duration, defaultTimeout cli.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool, msg string) ([]byte, []byte, error) {
-	c := append([]string{"bash", "--noprofile", "--norc", "-u", "-o", "pipefail", "-c"}, cmd)
-	if sandbox {
-		cmd, err := SandboxCommand(state, c)
-		if err != nil {
-			return nil, nil, err
-		}
-		c = cmd
-	}
-	return ExecWithTimeout(target, dir, env, timeout, defaultTimeout, showOutput, attachStdStreams, c, msg)
-}
-
-// SandboxCommand applies a sandbox to the given command.
-func SandboxCommand(state *BuildState, cmd []string) ([]string, error) {
-	tool, err := LookBuildPath(state.Config.Build.PleaseSandboxTool, state.Config)
-	if err != nil {
-		return nil, err
-	}
-	return append([]string{tool}, cmd...), nil
-}
-
-// MustSandboxCommand is like SandboxCommand but dies on errors.
-func MustSandboxCommand(state *BuildState, cmd []string) []string {
-	c, err := SandboxCommand(state, cmd)
-	if err != nil {
-		log.Fatalf("%s", err)
-	}
-	return c
-}
-
-// ExecWithTimeoutSimple runs an external command with a timeout.
-// It's a simpler version of ExecWithTimeout that gives less control.
-func ExecWithTimeoutSimple(timeout cli.Duration, cmd ...string) ([]byte, error) {
-	_, out, err := ExecWithTimeout(nil, "", nil, time.Duration(timeout), timeout, false, false, cmd, "")
-	return out, err
-}
-
-// KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
-// shortly after if it hasn't exited.
-func KillProcess(cmd *exec.Cmd) {
-	success := killProcess(cmd, syscall.SIGTERM, 30*time.Millisecond)
-	if !killProcess(cmd, syscall.SIGKILL, time.Second) && !success {
-		log.Error("Failed to kill inferior process")
-	}
-}
-
-// killProcess implements the two-step killing of processes with a SIGTERM and a SIGKILL if
-// that's unsuccessful. It returns true if the process exited within the timeout.
-func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool {
-	// This is a bit of a fiddle. We want to wait for the process to exit but only for just so
-	// long (we do not want to get hung up if it ignores our SIGTERM).
-	log.Debug("Sending signal %s to -%d", sig, cmd.Process.Pid)
-	syscall.Kill(-cmd.Process.Pid, sig) // Kill the group - we always set one in ExecCommand.
-	ch := make(chan error)
-	go runCommand(cmd, ch)
-	select {
-	case <-ch:
-		return true
-	case <-time.After(timeout):
-		return false
-	}
 }
 
 // A SourcePair represents a source file with its source and temporary locations.

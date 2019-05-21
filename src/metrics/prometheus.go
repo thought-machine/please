@@ -19,6 +19,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/process"
 )
 
 var log = logging.MustGetLogger("metrics")
@@ -270,7 +271,7 @@ func deriveLabelValue(cmd string) string {
 		panic(fmt.Sprintf("Invalid custom metric command [%s]: %s", cmd, err))
 	}
 	log.Debug("Running custom label command: %s", cmd)
-	b, err := core.ExecCommand(parts[0], parts[1:]...).Output()
+	b, err := process.ExecCommand(parts...)
 	log.Debug("Got output: %s", b)
 	if err != nil {
 		panic(fmt.Sprintf("Custom metric command [%s] failed: %s", cmd, err))

@@ -4,17 +4,11 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/thought-machine/please/src/cli"
 )
-
-var tenSecondsTime = 10 * time.Second
-var tenSeconds = cli.Duration(tenSecondsTime)
 
 func TestCollapseHash(t *testing.T) {
 	// Test that these two come out differently
@@ -141,42 +135,6 @@ func TestLookPathDoesntExist(t *testing.T) {
 	_, err := LookPath("wibblewobbleflibble", []string{"/usr/local/bin", "/usr/bin", "/bin"})
 	assert.Error(t, err)
 }
-
-func TestExecWithTimeout(t *testing.T) {
-	out, err := ExecWithTimeoutSimple(tenSeconds, "true")
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(out))
-}
-
-func TestExecWithTimeoutFailure(t *testing.T) {
-	out, err := ExecWithTimeoutSimple(tenSeconds, "false")
-	assert.Error(t, err)
-	assert.Equal(t, 0, len(out))
-}
-
-func TestExecWithTimeoutDeadline(t *testing.T) {
-	out, err := ExecWithTimeoutSimple(cli.Duration(1*time.Nanosecond), "sleep", "10")
-	assert.Error(t, err)
-	assert.True(t, strings.HasPrefix(err.Error(), "Timeout exceeded"))
-	assert.Equal(t, 0, len(out))
-}
-
-func TestExecWithTimeoutOutput(t *testing.T) {
-	state := NewDefaultBuildState()
-	out, stderr, err := ExecWithTimeoutShell(state, nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello", false)
-	assert.NoError(t, err)
-	assert.Equal(t, "hello\n", string(out))
-	assert.Equal(t, "hello\n", string(stderr))
-}
-
-func TestExecWithTimeoutStderr(t *testing.T) {
-	state := NewDefaultBuildState()
-	out, stderr, err := ExecWithTimeoutShell(state, nil, "", nil, tenSecondsTime, tenSeconds, false, "echo hello 1>&2", false)
-	assert.NoError(t, err)
-	assert.Equal(t, "", string(out))
-	assert.Equal(t, "hello\n", string(stderr))
-}
-
 func TestAsyncDeleteDir(t *testing.T) {
 	err := os.MkdirAll("test_dir/a/b/c", DirPermissions)
 	assert.NoError(t, err)
