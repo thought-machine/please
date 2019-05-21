@@ -37,8 +37,8 @@ maven_jar(
 
 maven_jar(
     name = "jacoco_shaded",
-    hashes = ["1bf517865fcb9740159d6b4de4f6fb7b69f24aa9"],
-    id = "build.please:jacoco-shaded:0.8.1",
+    hashes = ["d0ee5760fa10cfe453c01ba9be7ca1733a485384"],
+    id = "build.please:jacoco-shaded:0.8.4",
 )
 
 maven_jar(
