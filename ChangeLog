@@ -1,3 +1,11 @@
+Version 13.8.0
+--------------
+
+    * Allow specifying Python interpreter options through global config (#625)
+    * Allow `sh_cmd` to take commands as a list (#623)
+    * Explicit feature passing in the behave test runner integration (#621)
+
+
 Version 13.7.1
 --------------
 
