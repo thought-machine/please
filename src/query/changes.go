@@ -78,7 +78,12 @@ func changed(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget, files []string) 
 // sourceHash performs a partial source hash on a target to determine if it's changed.
 // This is a bit different to the one in the build package since we can't assume everything is
 // necessarily present (and for performance reasons don't want to hash *everything*).
-func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
+func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
 	h := sha1.New()
 	for _, tool := range target.AllTools() {
 		if tool.Label() != nil {
