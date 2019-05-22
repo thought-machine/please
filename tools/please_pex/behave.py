@@ -11,10 +11,7 @@ def get_features_dir():
 
 
 def get_all_feature_files():
-    files = []
-    for feature in Path('.').glob('**/*.feature'):
-        files.append(str(feature))
-    return files
+    return [str(feature) for feature in Path('.').glob('**/*.feature')]
 
 
 def run_tests(args=None):
