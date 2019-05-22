@@ -390,7 +390,8 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
 
 def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, gzip:bool=True,
-            xzip:bool=False, test_only:bool=False, visibility:list=None, labels:list&features&tags=[]):
+            xzip:bool=False, flatten:bool=True, strip_prefix:str='',
+            test_only:bool=False, visibility:list=None, labels:list&features&tags=[]):
     """Defines a rule to create a tarball containing outputs of other rules.
 
     File mode and ownership are preserved. However, the atime and mtime of all
@@ -400,9 +401,11 @@ def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, 
       name (str): Rule name
       srcs (list): Source files to include in the tarball
       out (str): Name of output tarball (defaults to `name`.tar.gz, but see below re compression)
-      subdir (str): Subdirectory to create in. All files will be flattened into this directory.
+      subdir (str): Subdirectory to create in.
       gzip (bool): If True, the output will be gzipped. If False, it will just be a tarball.
       xzip (bool): If True, the output will be xzipped. Overrides gzip if passed.
+      flatten (bool): If True, the output will be flattened into the subdirectory.
+      strip_prefix (str): If flatten is False, strips this prefix from internal directory structure.
       deps (list): Dependencies
       visibility (list): Visibility specification.
       labels (list): Labels associated with this rule.
@@ -417,6 +420,10 @@ def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, 
         cmd += ' -z'
     if subdir:
         cmd += ' --prefix ' + subdir
+    if flatten:
+        cmd += ' --flatten'
+    elif strip_prefix:
+        cmd += ' --strip-prefix ' + strip_prefix
 
     tar_rule = build_rule(
         name = tar_name,

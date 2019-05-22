@@ -26,7 +26,7 @@ const nobody = 65534
 // Write writes a tarball to output with all the files found in inputDir.
 // If prefix is given the files are all placed into a single directory with that name.
 // If compress is true the output will be gzip-compressed.
-func Write(output string, srcs []string, prefix string, gzcompress, xzcompress bool) error {
+func Write(output string, srcs []string, prefix string, gzcompress, xzcompress, flatten bool, stripPrefix string) error {
 	f, err := os.Create(output)
 	if err != nil {
 		return err
@@ -38,23 +38,26 @@ func Write(output string, srcs []string, prefix string, gzcompress, xzcompress b
 			return err
 		}
 		defer w.Close()
-		return write(w, output, srcs, prefix)
+		return write(w, output, srcs, prefix, flatten, stripPrefix)
 	} else if gzcompress {
 		w := gzip.NewWriter(f)
 		defer w.Close()
-		return write(w, output, srcs, prefix)
+		return write(w, output, srcs, prefix, flatten, stripPrefix)
 	}
-	return write(f, output, srcs, prefix)
+	return write(f, output, srcs, prefix, flatten, stripPrefix)
 }
 
 // write writes a tarball to the given writer with all the files found in inputDir.
 // If prefix is given the files are all placed into a single directory with that name.
-func write(w io.Writer, output string, srcs []string, prefix string) error {
+func write(w io.Writer, output string, srcs []string, prefix string, flatten bool, stripPrefix string) error {
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
 	for _, src := range srcs {
-		strip := filepath.Dir(src)
+		strip := stripPrefix
+		if flatten {
+			strip = filepath.Dir(src)
+		}
 		if err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err

@@ -19,7 +19,7 @@ var testInputs = []string{"tools/jarcat/tar/test_data/dir1", "tools/jarcat/tar/t
 
 func TestNoCompression(t *testing.T) {
 	filename := "test_no_compression.tar"
-	err := Write(filename, testInputs, "", false, false)
+	err := Write(filename, testInputs, "", false, false, true, "")
 	require.NoError(t, err)
 
 	m := ReadTar(t, filename, false, false)
@@ -45,7 +45,7 @@ func TestNoCompression(t *testing.T) {
 
 func TestCompression(t *testing.T) {
 	filename := "test_compression.tar.gz"
-	err := Write(filename, testInputs, "", true, false)
+	err := Write(filename, testInputs, "", true, false, true, "")
 	require.NoError(t, err)
 
 	m := ReadTar(t, filename, true, false)
@@ -57,7 +57,7 @@ func TestCompression(t *testing.T) {
 
 func TestXzipCompression(t *testing.T) {
 	filename := "test_compression.tar.xz"
-	err := Write(filename, testInputs, "", false, true)
+	err := Write(filename, testInputs, "", false, true, true, "")
 	require.NoError(t, err)
 
 	m := ReadTar(t, filename, false, true)
@@ -69,13 +69,49 @@ func TestXzipCompression(t *testing.T) {
 
 func TestWithPrefix(t *testing.T) {
 	filename := "test_prefix.tar"
-	err := Write(filename, testInputs, "/", false, false)
+	err := Write(filename, testInputs, "/", false, false, true, "")
 	require.NoError(t, err)
 
 	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
 		"/dir1/file1.txt": "test file 1",
 		"/dir2/file2.txt": "test file 2",
+	}, toFilenameMap(m))
+}
+
+func TestWithoutFlatten(t *testing.T) {
+	filename := "test_without_flatten.tar"
+	err := Write(filename, testInputs, "", false, false, false, "")
+	require.NoError(t, err)
+
+	m := ReadTar(t, filename, false, false)
+	assert.EqualValues(t, map[string]string{
+		"tools/jarcat/tar/test_data/dir1/file1.txt": "test file 1",
+		"tools/jarcat/tar/test_data/dir2/file2.txt": "test file 2",
+	}, toFilenameMap(m))
+}
+
+func TestStripPrefixWithoutFlatten(t *testing.T) {
+	filename := "test_strip_prefix_without_flatten.tar"
+	err := Write(filename, testInputs, "", false, false, false, "tools/jarcat/tar/test_data/dir1")
+	require.NoError(t, err)
+
+	m := ReadTar(t, filename, false, false)
+	assert.EqualValues(t, map[string]string{
+		"file1.txt": "test file 1",
+		"tools/jarcat/tar/test_data/dir2/file2.txt": "test file 2",
+	}, toFilenameMap(m))
+}
+
+func TestStripPrefixWithPrefix(t *testing.T) {
+	filename := "test_strip_prefix_with_prefix.tar"
+	err := Write(filename, testInputs, "prefix", false, false, false, "tools/jarcat/tar/test_data")
+	require.NoError(t, err)
+
+	m := ReadTar(t, filename, false, false)
+	assert.EqualValues(t, map[string]string{
+		"prefix/dir1/file1.txt": "test file 1",
+		"prefix/dir2/file2.txt": "test file 2",
 	}, toFilenameMap(m))
 }
 
