@@ -1,0 +1,94 @@
+diff --git a/test/python_rules/behave/BUILD b/test/python_rules/behave/BUILD
+index 9293cd86..dbbe5563 100644
+--- a/test/python_rules/behave/BUILD
++++ b/test/python_rules/behave/BUILD
+@@ -8 +8 @@
+-    flags = "-D test_value='this value should show up in my context'",
++    flags = "-D test_value='this value should show up in my context' -D all_features=True",
+diff --git a/test/python_rules/behave/features/behave_test.feature b/test/python_rules/behave/features/behave_test3.feature
+similarity index 79%
+rename from test/python_rules/behave/features/behave_test.feature
+rename to test/python_rules/behave/features/behave_test3.feature
+index 87923a62..d4a3f1e1 100644
+--- a/test/python_rules/behave/features/behave_test.feature
++++ b/test/python_rules/behave/features/behave_test3.feature
+@@ -1 +1 @@
+-Feature: Please Integration with Behave
++Feature: Please Integration with Behave - Test Feature 3
+@@ -9,0 +10 @@ Feature: Please Integration with Behave
++    And behave finds 3 feature files
+diff --git a/test/python_rules/behave/features/steps/behave_test_steps.py b/test/python_rules/behave/features/steps/behave_test_steps.py
+index 234285f8..037b74fe 100644
+--- a/test/python_rules/behave/features/steps/behave_test_steps.py
++++ b/test/python_rules/behave/features/steps/behave_test_steps.py
+@@ -23,0 +24,5 @@ def step_impl(context):
++
++
++@step('behave finds {number:d} feature files')
++def step_impl(context, number):
++    assert len(context.config.paths) == 3
+diff --git a/test/python_rules/behave/features/test_suite_1/behave_test1.feature b/test/python_rules/behave/features/test_suite_1/behave_test1.feature
+new file mode 100644
+index 00000000..b79d1021
+--- /dev/null
++++ b/test/python_rules/behave/features/test_suite_1/behave_test1.feature
+@@ -0,0 +1,12 @@
++Feature: Please Integration with Behave - Test Feature 1
++  In order to support BDD in python
++  As the most awesome build tool
++  I want to be able to support behave
++  This is a feature for testing please integration with behave
++
++  Scenario: Run a dummy test
++    Given we have behave installed
++    And  we should see our custom flags in context
++    And behave finds 3 feature files
++    When we implement 6 tests
++    Then behave will test them for us!
+diff --git a/test/python_rules/behave/features/test_suite_2/behave_test2.feature b/test/python_rules/behave/features/test_suite_2/behave_test2.feature
+new file mode 100644
+index 00000000..bcee5440
+--- /dev/null
++++ b/test/python_rules/behave/features/test_suite_2/behave_test2.feature
+@@ -0,0 +1,12 @@
++Feature: Please Integration with Behave - Test Feature 2
++  In order to support BDD in python
++  As the most awesome build tool
++  I want to be able to support behave
++  This is a feature for testing please integration with behave
++
++  Scenario: Run a dummy test
++    Given we have behave installed
++    And  we should see our custom flags in context
++    And behave finds 3 feature files
++    When we implement 6 tests
++    Then behave will test them for us!
+diff --git a/tools/please_pex/behave.py b/tools/please_pex/behave.py
+index 11780293..16477750 100644
+--- a/tools/please_pex/behave.py
++++ b/tools/please_pex/behave.py
+@@ -1,0 +2,2 @@ import os
++import logging
++from pathlib import Path
+@@ -8 +10,8 @@ def get_features_dir():
+-            return os.path.dirname(i)
++            return [os.path.dirname(i)]
++
++
++def get_all_feature_files():
++    files = []
++    for feature in Path('.').glob('**/*.feature'):
++        files.append(str(feature))
++    return files
+@@ -15,2 +24,9 @@ def run_tests(args=None):
+-    args += [get_features_dir(), '--junit',
+-             '--junit-directory', 'test.results']
++
++    if 'all_features=True' in args:
++        logging.info('Getting all feature files')
++        features = get_all_feature_files()
++    else:
++        logging.info('Getting a single feature dir')
++        features = get_features_dir()
++
++    args += features + [ '--junit', '--junit-directory', 'test.results']
