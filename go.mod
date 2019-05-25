@@ -31,6 +31,7 @@ require (
 	github.com/pkg/xattr v0.4.0
 	github.com/prometheus/client_golang v0.9.2
 	github.com/shirou/gopsutil v2.18.12+incompatible
+	github.com/sourcegraph/go-diff v0.5.1
 	github.com/sourcegraph/jsonrpc2 v0.0.0-20190106185902-35a74f039c6a
 	github.com/streamrail/concurrent-map v0.0.0-20160823150647-8bf1e9bacbf6
 	github.com/stretchr/testify v1.2.2

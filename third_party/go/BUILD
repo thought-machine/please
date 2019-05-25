@@ -641,3 +641,21 @@ go_get(
         ":terminal",
     ],
 )
+
+go_get(
+    name = "diff",
+    get = "github.com/sourcegraph/go-diff/diff",
+    revision = "v0.5.1",
+    deps = [
+        ":sqs-pbtypes",
+        ":gogo-protobuf",
+    ],
+)
+
+go_get(
+    name = "sqs-pbtypes",
+    get = "sourcegraph.com/sqs/pbtypes",
+    repo = "github.com/sqs/pbtypes",
+    revision = "v1.0.0",
+    deps = [":gogo-protobuf"],
+)

@@ -10,6 +10,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/sourcegraph/go-diff/diff"
 )
 
 // git implements operations on a git repository.
@@ -125,7 +127,21 @@ func (g *git) ChangedLines(diffSpec string) (map[string][]int, error) {
 	return g.parseChangedLines(out)
 }
 
-func (g *git) parseChangedLines(lines []byte) (map[string][]int, error) {
+func (g *git) parseChangedLines(input []byte) (map[string][]int, error) {
 	m := map[string][]int{}
-	return m, nil
+	fds, err := diff.ParseMultiFileDiff(input)
+	for _, fd := range fds {
+		m[strings.TrimPrefix(fd.NewName, "b/")] = g.parseHunks(fd.Hunks)
+	}
+	return m, err
+}
+
+func (g *git) parseHunks(hunks []*diff.Hunk) []int {
+	ret := []int{}
+	for _, hunk := range hunks {
+		for i := 0; i < int(hunk.NewLines); i++ {
+			ret = append(ret, int(hunk.NewStartLine)+i)
+		}
+	}
+	return ret
 }
