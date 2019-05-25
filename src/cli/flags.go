@@ -213,6 +213,7 @@ func (f *Filepath) Complete(match string) []flags.Completion {
 // Filepaths is a convenience type that is a list of file paths that knows how to convert itself to strings.
 type Filepaths []Filepath
 
+// AsStrings returns this slice of filepaths as a slice of strings.
 func (f Filepaths) AsStrings() []string {
 	ret := make([]string, len(f))
 	for i, fp := range f {
