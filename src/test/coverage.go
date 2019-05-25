@@ -14,6 +14,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/scm"
 )
 
 // Parses test coverage for a single target from its output file.
@@ -43,30 +44,30 @@ func parseTestCoverage(target *core.BuildTarget, outputFile string) (core.TestCo
 // The coverage reports only contain information about files that were covered during
 // tests, so it's important that we identify anything with zero coverage here.
 func AddOriginalTargetsToCoverage(state *core.BuildState, includeAllFiles bool) {
-	// Track the set of immediate dependencies that the user ran tests from.
+	recordedCoverage := state.Coverage
+	state.Coverage = core.TestCoverage{Tests: recordedCoverage.Tests, Files: map[string][]core.LineCoverage{}}
+	mergeCoverage(state, recordedCoverage, collectCoverageFiles(state, includeAllFiles))
+}
+
+// collectCoverageFiles collects all the coverage files for all original targets.
+// It returns a map of filename to whether it should be considered or not (test targets
+// and test only targets are not considered for coverage metrics).
+func collectCoverageFiles(state *core.BuildState, includeAllFiles bool) map[string]bool {
 	doneTargets := map[*core.BuildTarget]bool{}
 	coverageFiles := map[string]bool{}
 	for _, label := range state.ExpandOriginalTargets() {
 		collectAllFiles(state, state.Graph.TargetOrDie(label), coverageFiles, includeAllFiles, true, doneTargets)
 	}
-
-	// Now merge the recorded coverage so far into them
-	recordedCoverage := state.Coverage
-	state.Coverage = core.TestCoverage{Tests: recordedCoverage.Tests, Files: map[string][]core.LineCoverage{}}
-	mergeCoverage(state, recordedCoverage, coverageFiles)
+	return coverageFiles
 }
 
-// Collects all the source files from a single target
+// collectAllFiles collects all the source files from a single target
 func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coverageFiles map[string]bool, includeAllFiles, deps bool, doneTargets map[*core.BuildTarget]bool) {
 	if !doneTargets[target] {
 		doneTargets[target] = true
 		for _, path := range target.AllSourcePaths(state.Graph) {
-			extension := filepath.Ext(path)
-			for _, ext := range state.Config.Cover.FileExtension {
-				if ext == extension {
-					coverageFiles[path] = !target.IsTest && !target.TestOnly // Skip test source files from actual coverage display
-					break
-				}
+			if hasCoverageExtension(state, path) {
+				coverageFiles[path] = !target.IsTest && !target.TestOnly // Skip test source files from actual coverage display
 			}
 		}
 		if deps {
@@ -75,6 +76,17 @@ func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coverageF
 			}
 		}
 	}
+}
+
+// hasCoverageExtension returns true if the given filename has an extension that we consider as coverable.
+func hasCoverageExtension(state *core.BuildState, filename string) bool {
+	extension := filepath.Ext(filename)
+	for _, ext := range state.Config.Cover.FileExtension {
+		if ext == extension {
+			return true
+		}
+	}
+	return false
 }
 
 // mergeCoverage merges recorded coverage with the list of all existing files.
@@ -116,7 +128,7 @@ func countLines(path string) int {
 }
 
 // WriteCoverageToFileOrDie writes the collected coverage data to a file in JSON format. Dies on failure.
-func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string) {
+func WriteCoverageToFileOrDie(state *core.BuildState, coverage core.TestCoverage, filename string, calcIncremental bool) {
 	out := jsonCoverage{Tests: map[string]map[string]string{}}
 	allowedFiles := coverage.OrderedFiles()
 
@@ -126,6 +138,13 @@ func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string) {
 
 	out.Files = convertCoverage(coverage.Files, allowedFiles)
 	out.Stats = getStats(coverage)
+	if calcIncremental {
+		lines, err := scm.NewFallback(core.RepoRoot).ChangedLines()
+		if err != nil {
+			log.Fatalf("Failed to determine changes: %s", err)
+		}
+		out.Stats.Incremental = calculateIncrementalStats(state, coverage, lines, collectCoverageFiles(state, true))
+	}
 	if b, err := json.MarshalIndent(out, "", "    "); err != nil {
 		log.Fatalf("Failed to encode json: %s", err)
 	} else if err := ioutil.WriteFile(filename, b, 0644); err != nil {
@@ -196,6 +215,15 @@ type jsonCoverage struct {
 type stats struct {
 	TotalCoverage  float32            `json:"total_coverage"`
 	CoverageByFile map[string]float32 `json:"coverage_by_file"`
+	Incremental    *incrementalStats  `json:"incremental,omitempty"`
+}
+
+// incrementalStats is a struct describing summarised stats for incremental coverage info.
+type incrementalStats struct {
+	ModifiedFiles int     `json:"modified_files"`
+	ModifiedLines int     `json:"modified_lines"`
+	CoveredLines  int     `json:"covered_lines"`
+	Percentage    float32 `json:"percentage"`
 }
 
 // RemoveFilesFromCoverage removes any files with extensions matching the given set from coverage.
@@ -214,4 +242,36 @@ func removeFilesFromCoverage(files map[string][]core.LineCoverage, extensions []
 			}
 		}
 	}
+}
+
+func calculateIncrementalStats(state *core.BuildState, coverage core.TestCoverage, lines map[string][]int, files map[string]bool) *incrementalStats {
+	stats := &incrementalStats{}
+	for file, lines := range lines {
+		// Include all files except those explicitly marked as test targets.
+		if include, present := files[file]; include || !present {
+			// Only include files that are marked as coverable types.
+			if hasCoverageExtension(state, file) {
+				stats.ModifiedFiles++
+				if coverage, present := coverage.Files[file]; present {
+					for _, line := range lines {
+						if line-1 < len(coverage) { // -1 because they're 1-indexed.
+							if c := coverage[line-1]; c == core.Covered {
+								stats.ModifiedLines++
+								stats.CoveredLines++
+							} else if c == core.Uncovered || c == core.Unreachable {
+								stats.ModifiedLines++
+							} // Non-executable lines don't count here.
+						}
+					}
+				} else {
+					// Don't know anything about it, assume all lines are uncovered.
+					stats.ModifiedLines += len(lines)
+				}
+			}
+		}
+	}
+	if stats.ModifiedLines > 0 {
+		stats.Percentage = 100.0 * float32(stats.CoveredLines) / float32(stats.ModifiedLines)
+	}
+	return stats
 }

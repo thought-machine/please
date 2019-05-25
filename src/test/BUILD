@@ -12,6 +12,7 @@ go_library(
         "//src/cli",
         "//src/core",
         "//src/fs",
+        "//src/scm",
         "//src/metrics",
         "//src/utils",
         "//src/worker",

@@ -118,8 +118,8 @@ func (g *git) Remove(names []string) error {
 	return nil
 }
 
-func (g *git) ChangedLines(diffSpec string) (map[string][]int, error) {
-	cmd := exec.Command("git", "diff", diffSpec, "--unified=0", "--no-color", "--no-ext-diff")
+func (g *git) ChangedLines() (map[string][]int, error) {
+	cmd := exec.Command("git", "diff", "origin/master", "--unified=0", "--no-color", "--no-ext-diff")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("git diff failed: %s", err)

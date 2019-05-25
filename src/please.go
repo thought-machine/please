@@ -414,7 +414,7 @@ var buildFunctions = map[string]func() bool{
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 
-		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile))
+		test.WriteCoverageToFileOrDie(state, state.Coverage, string(opts.Cover.CoverageResultsFile), opts.Cover.Incremental)
 		test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
 
 		if opts.Cover.LineCoverageReport {
