@@ -210,6 +210,17 @@ func (f *Filepath) Complete(match string) []flags.Completion {
 	return ret
 }
 
+// Filepaths is a convenience type that is a list of file paths that knows how to convert itself to strings.
+type Filepaths []Filepath
+
+func (f Filepaths) AsStrings() []string {
+	ret := make([]string, len(f))
+	for i, fp := range f {
+		ret[i] = string(fp)
+	}
+	return ret
+}
+
 // Arch represents a combined Go-style operating system and architecture pair, as in "linux_amd64".
 type Arch struct {
 	OS, Arch string
