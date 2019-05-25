@@ -111,6 +111,13 @@ func StartedAtRepoRoot() bool {
 	return RepoRoot == initialWorkingDir
 }
 
+// ReturnToInitialWorkingDir changes directory back to where plz was first started from.
+func ReturnToInitialWorkingDir() {
+	if err := os.Chdir(initialWorkingDir); err != nil {
+		log.Error("Failed to change directory to %s: %s", err)
+	}
+}
+
 // A SourcePair represents a source file with its source and temporary locations.
 // This isn't typically used much by callers; it's just useful to have a single type for channels.
 type SourcePair struct{ Src, Tmp string }
