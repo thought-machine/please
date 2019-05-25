@@ -1,9 +1,10 @@
 # Rules for end-to-end tests on Please itself.
 
-def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure=False,
-                 expect_output_contains=None, expect_output_doesnt_contain=None,
-                 deps=None, data=[], labels=None, sandbox=None,
-                 expect_file_exists=None, expect_file_doesnt_exist=None):
+def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
+                 expected_failure:bool=False, expect_output_contains:str=None,
+                 expect_output_doesnt_contain:str=None, deps:list=None, data:list=[],
+                 labels:list=None, sandbox:bool=None, completion:bool=False,
+                 expect_file_exists:str=None, expect_file_doesnt_exist:str=None):
     # Please isn't really designed to work this way (running a test against the entire source repo)
     # but we can make it do it and it's a convenient way of testing the tool itself.
 
@@ -30,6 +31,8 @@ def plz_e2e_test(name, cmd, pre_cmd=None, expected_output=None, expected_failure
             test_cmd += 'if [ -f %s ]; then cat output; exit 1; fi' % expect_file_doesnt_exist
         else:
             test_cmd += 'true'
+        if completion:
+            test_cmd = "export GO_FLAGS_COMPLETION=1; " + test_cmd
         if pre_cmd:
             test_cmd = pre_cmd + ' && ' + test_cmd
         return test_cmd
