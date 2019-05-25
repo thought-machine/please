@@ -78,6 +78,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	clean(config, updateCommand)
 
 	// Now run the new one.
+	core.ReturnToInitialWorkingDir()
 	args := filterArgs(forceUpdate, append([]string{newPlease}, os.Args[1:]...))
 	log.Info("Executing %s", strings.Join(args, " "))
 	if err := syscall.Exec(newPlease, args, os.Environ()); err != nil {
