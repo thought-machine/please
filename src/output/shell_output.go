@@ -640,6 +640,11 @@ func PrintCoverage(state *core.BuildState, includeFiles []string) {
 	printf("${BOLD_WHITE}Total coverage: %s${RESET}\n", coveragePercentage(totalCovered, totalTotal, ""))
 }
 
+// PrintIncrementalCoverage prints the given incremental coverage statistics.
+func PrintIncrementalCoverage(stats *test.IncrementalStats) {
+	printf("${BOLD_WHITE}Incremental coverage: %s${RESET}\n", coveragePercentage(stats.CoveredLines, stats.ModifiedLines, ""))
+}
+
 // PrintLineCoverageReport writes out line-by-line coverage metrics after a test run.
 func PrintLineCoverageReport(state *core.BuildState, includeFiles []string) {
 	coverageColours := map[core.LineCoverage]string{

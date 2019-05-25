@@ -14,7 +14,6 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/scm"
 )
 
 // Parses test coverage for a single target from its output file.
@@ -128,7 +127,7 @@ func countLines(path string) int {
 }
 
 // WriteCoverageToFileOrDie writes the collected coverage data to a file in JSON format. Dies on failure.
-func WriteCoverageToFileOrDie(state *core.BuildState, coverage core.TestCoverage, filename string, calcIncremental bool) {
+func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string, incrementalStats *IncrementalStats) {
 	out := jsonCoverage{Tests: map[string]map[string]string{}}
 	allowedFiles := coverage.OrderedFiles()
 
@@ -138,13 +137,7 @@ func WriteCoverageToFileOrDie(state *core.BuildState, coverage core.TestCoverage
 
 	out.Files = convertCoverage(coverage.Files, allowedFiles)
 	out.Stats = getStats(coverage)
-	if calcIncremental {
-		lines, err := scm.NewFallback(core.RepoRoot).ChangedLines()
-		if err != nil {
-			log.Fatalf("Failed to determine changes: %s", err)
-		}
-		out.Stats.Incremental = calculateIncrementalStats(state, coverage, lines, collectCoverageFiles(state, true))
-	}
+	out.Stats.Incremental = incrementalStats
 	if b, err := json.MarshalIndent(out, "", "    "); err != nil {
 		log.Fatalf("Failed to encode json: %s", err)
 	} else if err := ioutil.WriteFile(filename, b, 0644); err != nil {
@@ -215,11 +208,11 @@ type jsonCoverage struct {
 type stats struct {
 	TotalCoverage  float32            `json:"total_coverage"`
 	CoverageByFile map[string]float32 `json:"coverage_by_file"`
-	Incremental    *incrementalStats  `json:"incremental,omitempty"`
+	Incremental    *IncrementalStats  `json:"incremental,omitempty"`
 }
 
-// incrementalStats is a struct describing summarised stats for incremental coverage info.
-type incrementalStats struct {
+// IncrementalStats is a struct describing summarised stats for incremental coverage info.
+type IncrementalStats struct {
 	ModifiedFiles int     `json:"modified_files"`
 	ModifiedLines int     `json:"modified_lines"`
 	CoveredLines  int     `json:"covered_lines"`
@@ -244,8 +237,13 @@ func removeFilesFromCoverage(files map[string][]core.LineCoverage, extensions []
 	}
 }
 
-func calculateIncrementalStats(state *core.BuildState, coverage core.TestCoverage, lines map[string][]int, files map[string]bool) *incrementalStats {
-	stats := &incrementalStats{}
+// CalculateIncrementalStats works out incremental coverage statistics based on a set of changed lines from files.
+func CalculateIncrementalStats(state *core.BuildState, lines map[string][]int) *IncrementalStats {
+	return calculateIncrementalStats(state, state.Coverage, lines, collectCoverageFiles(state, true))
+}
+
+func calculateIncrementalStats(state *core.BuildState, coverage core.TestCoverage, lines map[string][]int, files map[string]bool) *IncrementalStats {
+	stats := &IncrementalStats{}
 	for file, lines := range lines {
 		// Include all files except those explicitly marked as test targets.
 		if include, present := files[file]; include || !present {

@@ -34,6 +34,7 @@ import (
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
+	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
 	"github.com/thought-machine/please/src/update"
@@ -414,13 +415,24 @@ var buildFunctions = map[string]func() bool{
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 
-		test.WriteCoverageToFileOrDie(state, state.Coverage, string(opts.Cover.CoverageResultsFile), opts.Cover.Incremental)
+		var stats *test.IncrementalStats
+		if opts.Cover.Incremental {
+			lines, err := scm.NewFallback(core.RepoRoot).ChangedLines()
+			if err != nil {
+				log.Fatalf("Failed to determine changes: %s", err)
+			}
+			stats = test.CalculateIncrementalStats(state, lines)
+		}
+		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile), stats)
 		test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
 
 		if opts.Cover.LineCoverageReport {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile)
 		} else if !opts.Cover.NoCoverageReport {
 			output.PrintCoverage(state, opts.Cover.IncludeFile)
+		}
+		if opts.Cover.Incremental {
+			output.PrintIncrementalCoverage(stats)
 		}
 		return success || opts.Cover.FailingTestsOk
 	},
