@@ -26,6 +26,7 @@ require (
 	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
+	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
 	github.com/peterebden/gcfg v1.3.0
 	github.com/peterebden/go-cli-init v1.0.0
 	github.com/pkg/xattr v0.4.0

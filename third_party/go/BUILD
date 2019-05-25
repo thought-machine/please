@@ -647,8 +647,8 @@ go_get(
     get = "github.com/sourcegraph/go-diff/diff",
     revision = "v0.5.1",
     deps = [
-        ":sqs-pbtypes",
         ":gogo-protobuf",
+        ":sqs-pbtypes",
     ],
 )
 
