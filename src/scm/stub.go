@@ -23,3 +23,7 @@ func (s *stub) IgnoreFile(name string) error {
 func (s *stub) Remove(names []string) error {
 	return fmt.Errorf("Unknown SCM, can't remove files")
 }
+
+func (s *stub) ChangedLines() (map[string][]int, error) {
+	return nil, fmt.Errorf("Unknown SCM, can't calculate changed lines")
+}

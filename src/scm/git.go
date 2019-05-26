@@ -10,6 +10,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/sourcegraph/go-diff/diff"
 )
 
 // git implements operations on a git repository.
@@ -114,4 +116,32 @@ func (g *git) Remove(names []string) error {
 		return fmt.Errorf("git rm failed: %s %s", err, out)
 	}
 	return nil
+}
+
+func (g *git) ChangedLines() (map[string][]int, error) {
+	cmd := exec.Command("git", "diff", "origin/master", "--unified=0", "--no-color", "--no-ext-diff")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("git diff failed: %s", err)
+	}
+	return g.parseChangedLines(out)
+}
+
+func (g *git) parseChangedLines(input []byte) (map[string][]int, error) {
+	m := map[string][]int{}
+	fds, err := diff.ParseMultiFileDiff(input)
+	for _, fd := range fds {
+		m[strings.TrimPrefix(fd.NewName, "b/")] = g.parseHunks(fd.Hunks)
+	}
+	return m, err
+}
+
+func (g *git) parseHunks(hunks []*diff.Hunk) []int {
+	ret := []int{}
+	for _, hunk := range hunks {
+		for i := 0; i < int(hunk.NewLines); i++ {
+			ret = append(ret, int(hunk.NewStartLine)+i)
+		}
+	}
+	return ret
 }

@@ -218,3 +218,29 @@ func TestIstanbulCoverage2(t *testing.T) {
 	assertLine(t, lines, 22, core.Covered)
 	assertLine(t, lines, 23, core.Covered)
 }
+
+func TestIncrementalStats(t *testing.T) {
+	state := core.NewDefaultBuildState()
+	state.Config.Cover.FileExtension = []string{".go"}
+	cov := core.TestCoverage{
+		Files: map[string][]core.LineCoverage{
+			"src/test/coverage.go":      {core.NotExecutable, core.Uncovered, core.Covered, core.Uncovered},
+			"src/test/coverage_test.go": {core.NotExecutable, core.Uncovered, core.Covered, core.Uncovered},
+		},
+	}
+	lines := map[string][]int{
+		"src/test/coverage.go":      {1, 2, 3},
+		"src/test/coverage_test.go": {1, 2, 3},
+	}
+	files := map[string]bool{
+		"src/test/coverage.go":      true,
+		"src/test/coverage_test.go": false,
+	}
+	stats := calculateIncrementalStats(state, cov, lines, files)
+	// Only coverage.go should count as modified (because test files are not included)
+	assert.Equal(t, 1, stats.ModifiedFiles)
+	// Only executable lines count as coverable (this will be 3 if we include others too)
+	assert.Equal(t, 2, stats.ModifiedLines)
+	assert.Equal(t, 1, stats.CoveredLines)
+	assert.EqualValues(t, 50.0, stats.Percentage)
+}

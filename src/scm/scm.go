@@ -24,6 +24,9 @@ type SCM interface {
 	IgnoreFile(name string) error
 	// Remove deletes the given files from the SCM.
 	Remove(names []string) error
+	// ChangedLines returns the set of lines that have been modified,
+	// as a map of filename -> affected line numbers.
+	ChangedLines() (map[string][]int, error)
 }
 
 // New returns a new SCM instance for this repo root.

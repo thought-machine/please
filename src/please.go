@@ -34,6 +34,7 @@ import (
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
+	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
 	"github.com/thought-machine/please/src/update"
@@ -144,6 +145,7 @@ var opts struct {
 		SurefireDir         cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
 		CoverageResultsFile cli.Filepath `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
 		CoverageXMLReport   cli.Filepath `long:"coverage_xml_report" default:"plz-out/log/coverage.xml" description:"XML File to write combined coverage results to."`
+		Incremental         bool         `short:"i" long:"incremental" description:"Calculates summary statistics for incremental coverage, i.e. stats for just the lines currently modified."`
 		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed              bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
@@ -413,13 +415,24 @@ var buildFunctions = map[string]func() bool{
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
 
-		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile))
+		var stats *test.IncrementalStats
+		if opts.Cover.Incremental {
+			lines, err := scm.NewFallback(core.RepoRoot).ChangedLines()
+			if err != nil {
+				log.Fatalf("Failed to determine changes: %s", err)
+			}
+			stats = test.CalculateIncrementalStats(state, lines)
+		}
+		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile), stats)
 		test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
 
 		if opts.Cover.LineCoverageReport {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile)
 		} else if !opts.Cover.NoCoverageReport {
 			output.PrintCoverage(state, opts.Cover.IncludeFile)
+		}
+		if opts.Cover.Incremental {
+			output.PrintIncrementalCoverage(stats)
 		}
 		return success || opts.Cover.FailingTestsOk
 	},
