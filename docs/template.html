@@ -3,7 +3,7 @@
     <title>{{ .Title }}</title>
     <link rel="stylesheet" type="text/css" href="styles.css">
     <script src="action.js"></script>
-    {{ if .Player }}
+    {{ if eq .Filename "faq.html" }}
     <link rel="stylesheet" type="text/css" href="asciinema-player.css" />
     <script src="asciinema-player.js"></script>
     {{ end }}
@@ -14,7 +14,7 @@
         <div class="logo">
           <h1><a href="index.html"><img src="images/please_build_p.png"></a></h1>
         </div>
-        {{ if .IsIndex }}
+        {{ if eq .Filename "index.html" }}
         <div class="index-graphic">
           <p class="menu-blurb"><span class="cyan">Please</span> is a cross-language build system
             with an emphasis on high performance, extensibility and reproducibility.</p>
@@ -30,17 +30,15 @@
             <li{{menuItem "quickstart"}}><a href="quickstart.html">Getting Started</a></li>
             <li{{menuItem "basics"}}><a href="basics.html">Documentation</a>
               <ul>
-                <li{{menuItem "basics"}}><a href="basics.html">Basic features</a></li>
-                <li{{menuItem "intermediate"}}><a href="intermediate.html">Intermediate features</a></li>
-                <li{{menuItem "advanced"}}><a href="advanced.html">Advanced features</a></li>
+                <li{{menuItem "basics"}}><a href="basics.html">Basic concepts</a></li>
                 <li{{menuItem "dependencies"}}><a href="dependencies.html">Third-party dependencies</a></li>
                 <li{{menuItem "cross_compiling"}}><a href="cross_compiling.html">Cross-compiling</a></li>
+                <li{{menuItem "cache"}}><a href="cache.html">Caching</a></li>
               </ul>
             </li>
-            <li{{menuItem "commands"}}><a href="commands.html">Commands</a></li>
             <li{{menuItem "language"}}><a href="language.html">The BUILD language</a></li>
-            <li{{menuItem "build_rules"}}><a href="build_rules.html">Writing build rules</a></li>
-            <li{{menuItem "lexicon"}}><a href="lexicon.html">BUILD Rule Reference</a>
+            <li{{menuItem "lexicon"}}><a href="lexicon.html">BUILD Rule Lexicon</a>
+              {{ if eq .Filename "lexicon.html" }}
               <ul>
                 <li><a href="lexicon.html#builtins">Builtin rules & functions</a></li>
                 <li><a href="lexicon.html#cc">C++ rules</a></li>
@@ -52,10 +50,23 @@
                 <li><a href="lexicon.html#sh">Shell rules</a></li>
                 <li><a href="lexicon.html#subrepo">Subrepo rules</a></li>
               </ul>
+              {{ end }}
             </li>
-            <li{{menuItem "config"}}><a href="config.html">Config reference</a></li>
+            <li{{menuItem "reference"}}><a href="reference.html">Reference</a>
+              {{ if matches .Filename "reference.html" "config.html" "commands.html" "build_rules.html" "workers.html" "post_build.html" "verification.html" "require_provide.html" "tests.html" }}
+              <ul>
+                <li{{menuItem "config"}}><a href="config.html">Config options</a></li>
+                <li{{menuItem "commands"}}><a href="commands.html">Commands</a></li>
+                <li{{menuItem "build_rules"}}><a href="build_rules.html">Build rules</a></li>
+                <li{{menuItem "tests"}}><a href="tests.html">Testing with Please</a></li>
+                <li{{menuItem "verification"}}><a href="verification.html">Hashes and licences</a></li>
+                <li{{menuItem "workers"}}><a href="workers.html">Persistent workers</a></li>
+                <li{{menuItem "post_build"}}><a href="post_build.html">Post-build functions</a></li>
+                <li{{menuItem "require_provide"}}><a href="require_provide.html">Require & Provide</a></li>
+              </ul>
+              {{ end }}
+            </li>
             <li{{menuItem "pleasings"}}><a href="pleasings.html">Extra rules</a></li>
-            <li{{menuItem "cache"}}><a href="cache.html">Caching</a></li>
             <li{{menuItem "faq"}}><a href="faq.html">FAQ</a></li>
             <li><a href="https://github.com/thought-machine/please">Browse the source</a></li>
           </ul>
@@ -63,7 +74,7 @@
     </div>
     <div class="right">
       <div class="header">
-      {{ if .IsIndex }}
+      {{ if eq .Filename "index.html" }}
         <div class="idximg1"><img src="images/triangle_c.png"></div>
         <div class="idximg2"><img src="images/circle_y.png"></div>
         <div class="idximg3"><img src="images/pentagon_v.png"></div>
@@ -88,7 +99,7 @@
     </div>
     </div>
 
-    {{ if .IsIndex }}
+    {{ if eq .Filename "index.html" }}
     <div class="index-stripe">
       <img src="images/hexagon_r.png">
       <img src="images/triangle_g.png">

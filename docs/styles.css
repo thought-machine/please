@@ -108,8 +108,11 @@ pre.rule {
 .optional {
     font-style: italic;
 }
-p, li, td {
+p, code {
     line-height: 130%;
+}
+li, td {
+    line-height: 150%;
 }
 hr {
     border-color: #02e68f;
@@ -400,8 +403,8 @@ hr {
 }
 .body ul {
     list-style: none;
-    padding:0;
-    margin:0;
+    padding: 0;
+    margin: 0 0 1em 0;
 }
 .body li {
     text-indent: -2em;
@@ -586,11 +589,14 @@ footer > div {
     color: #96ee05;
 }
 .fn-name {
-    color: #ff00ff;
+    color: #29abe2;
 }
 .fn-p {
-    color: #29abe2;
+    color: #ffe752;
 }
 .fn-arg {
     color: #96ee05;
+}
+.fn-str {
+    color: #af7dff;
 }

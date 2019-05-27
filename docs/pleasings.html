@@ -20,13 +20,13 @@
     <p>The simplest and most lightweight way to load new rules is to do it directly with
       <code>subinclude</code>, like so:</p>
 
-    <pre><code>
-        subinclude('@pleasings//rust')
+    <pre><code class="language-plz">
+    subinclude('@pleasings//rust')
 
-        rust_library(
-            name = 'my_rust_lib',
-            srcs = ['mine.rs'],
-        )
+    rust_library(
+        name = 'my_rust_lib',
+        srcs = ['mine.rs'],
+    )
     </code></pre>
 
     <p>Some rules may have extra requirements, for example some single package in which you have
@@ -47,27 +47,27 @@
       <code>//build_defs/BUILD</code> as follows:
     </p>
 
-    <pre><code>
-        package(default_visibility = ['PUBLIC'])
+    <pre><code class="language-plz">
+    package(default_visibility = ['PUBLIC'])
 
-        remote_file(
-            name = 'rust',
-            url = 'https://raw.githubusercontent.com/thought-machine/pleasings/4a8158a65ef39e7dd9a1569fbfa1e5eec398e066/rust/rust.build_defs',
-            hashes = [
-                'bbfa10e522cfc870bfcbfbae6b899b770b54031a',
-            ],
-        )
+    remote_file(
+        name = 'rust',
+        url = 'https://raw.githubusercontent.com/thought-machine/pleasings/4a8158a65ef39e7dd9a1569fbfa1e5eec398e066/rust/rust.build_defs',
+        hashes = [
+            'bbfa10e522cfc870bfcbfbae6b899b770b54031a',
+        ],
+    )
     </code></pre>
 
     <p>Then from any other package in your repo you could write the following:</p>
 
-    <pre><code>
-        subinclude('//build_defs:rust')
+    <pre><code class="language-plz">
+    subinclude('//build_defs:rust')
 
-        rust_library(
-            name = 'my_rust_lib',
-            srcs = ['mine.rs'],
-        )
+    rust_library(
+        name = 'my_rust_lib',
+        srcs = ['mine.rs'],
+    )
     </code></pre>
 
     <p>This has the advantage of a shorter call to <code>subinclude</code> in each package,

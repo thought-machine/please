@@ -32,7 +32,7 @@
 <p>Sources can be referred to through the <code>$SRCS</code> environment variable. If there's only
   one, a <code>$SRC</code> variable will be defined too.<br/>
   Sources can also be named, e.g.
-  <pre><code>
+  <pre><code class="language-plz">
       srcs = {
           'srcs': ['my_source.py'],
           'resources': ['something.txt'],
@@ -57,7 +57,7 @@
 
 <p>Tools are the things that a rule uses to build with. They can refer either to other rules
   within the repo, or system-level binaries, for example:
-  <pre><code>
+  <pre><code class="language-plz">
       tools = [
           'curl',
           '//path/to:tool',
@@ -73,6 +73,11 @@
 <p>Note that since tools aren't copied, they can be a source of nondeterminism if you make use of
   other outputs that happen to be located near them. In order to ensure correctness you should
   make sure that you only run the tool itself and don't access neighbouring outputs.</p>
+
+<p>The distinction between tools and other sources or dependencies is very important when
+  using Please to <a href="cross_compiling.html">cross-compile</a> to a different target
+  architecture. Tools will always be used from the host architecture (since they must be
+  executed locally) whereas other dependencies will be for the target.</p>
 
 
 <h2>Commands</h2>
@@ -102,6 +107,9 @@
       Consider carefully when to use this though; it is not normally useful.</li>
     <li><code>$(hash //path/to:target)</code> expands to a hash of the outputs of that target.<br/>
       This can be useful to uniquely fingerprint the given rule.</li>
+    <li><code>$(worker //path/to:target)</code> invokes the given target as a
+      <a href="workers.html">persistent worker</a>. See the linked page for more details on
+      how to use them.</li>
   </ul>
 </p>
 

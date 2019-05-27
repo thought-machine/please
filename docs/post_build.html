@@ -1,0 +1,79 @@
+<h1>Pre- and post-build functions</h1>
+
+
+<p>It's possible in Please to define callbacks into the build language that are invoked either
+  immediately before or immediately after the target is built.
+  These allow modifying aspects of the target or the wider build graph which can potentially
+  be a powerful tool to handle things that are otherwise awkward or impossible.</p>
+
+<p>Note that these functions are only evaluated at build time, so their results will not be
+  visible to <code>plz query</code>, they impose additional actions that must happen at each
+  build (even if the target has not built, the same effects must happen) and they can be a
+  little hard to debug if you get things wrong. They should hence be used judiciously.</p>
+
+
+<h2>Pre-build function</h2>
+
+<p>The pre-build function is defined on a <code>build_rule</code> as simply:
+  <pre><code class="language-plz">
+    pre_build = lambda name: do_stuff(name)
+  </code></pre></p>
+
+<p>As you can see, it's invoked with one argument, the name of the rule about to be built.
+  It's up to you what you do in the function, although in practice the only really useful
+  thing at present is to inspect the rule's transitive labels and adjust its build command
+  accordingly. This is done via calling <code>get_labels(name, prefix)</code> where
+  <code>name</code> is the name of the current rule and <code>prefix</code> is a prefix
+  the labels you're interested in will have (for convenience, it's stripped from the
+  returned values). Having got these, one can then call <code>set_command(name, cmd)</code>
+  to alter the command for your rule.</p>
+
+<p>The built-in C++ rules for Please (<code><a href="https://github.com/thought-machine/please/blob/master/src/parse/rules/cc_rules.build_defs">src/parse/rules/cc_rules.build_defs</a></code>) are a reasonably good example of how to use this.</p>
+
+<h2>Post-build function</h2>
+
+<p>The post-build function is somewhat more powerful and useful than the pre-build function,
+  and hence it appeared in the API several months sooner. It is defined similarly:
+  <pre><code class="language-plz">
+    post_build = lambda name, output: do_stuff(output)
+  </code></pre>
+  but takes an extra output which is the standard output of the build rule after
+  successful invocation.</p>
+
+<p>The power of this is that you can run a build rule to do arbitrary operations and then
+  alter the build graph based on that; you can add outputs to the rule, define
+  new rules and add dependencies to a rule.</p>
+
+<p>One useful example is collecting additional output files. This happens with Java protobuf outputs where
+  the output files are not obvious until the .proto file is parsed, because their location
+  is defined by the <code>option java_package</code> stanza. One could of course require them
+  to be explicitly defined but that rapidly becomes tedious; the nicer solution is detecting
+  it this way. The build rule simply invokes <code>find</code> to locate all the
+  <code>.java</code> files it produces and the post-build function receives those and runs
+  <code>add_out(name, java_file)</code> for each.</p>
+
+<p>Another is adding entirely new rules to the build graph dynamically. This is done in
+  the <code><a href="https://github.com/thought-machine/pleasings/blob/master/java/maven_jars.build_defs">maven_jars</a></code> add-on rule,
+  which derives the set of transitive dependencies for a set of Maven coordinates then
+  creates rules dynamically based on that. This is done simply by calling functions to
+  create build rules as normal; one must finish it off by using <code>add_dep</code> to
+  add dependencies on them from other build rules (since otherwise nothing can depend on
+  them and they'll hence never get built).</p>
+
+
+<h2>Hints</h2>
+
+<p>As mentioned above, be judicious in the use of these callbacks. They add some overhead
+  and are more complex to reason about than totally static build targets.</p>
+
+<p>Note that the target supplying the post-build function must produce consistent output -
+  since they are bringing input from outside the build language it's a possible source of
+  nondeterminism. It's possible to run into awkward situations around caching etc (normally
+  indicated by some mildly scary warnings from plz) if done wrong.<br/>
+  A common mistake here is using <code>find</code> to locate files without <code>sort</code>
+  to ensure they're in a consistent order.</p>
+
+<p>If you need to debug your rules via <code>plz query print</code> or similar, there is a
+  <code>--pre</code> flag that can be given to force building a target before the query
+  is run. That can be useful to ensure the target you want to debug is generated before
+  we attempt to print it.</p>

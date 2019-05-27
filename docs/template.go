@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"text/template"
 )
@@ -39,20 +40,27 @@ var rotations = []string{
 }
 
 var pageTitles = map[string]string{
-	"advanced.html":         "Advanced Please",
 	"acknowledgements.html": "Acknowledgements",
 	"basics.html":           "Please basics",
+	"build_rules.html":      "Writing additional build rules",
 	"cache.html":            "Please caching system",
 	"commands.html":         "Please commands",
 	"config.html":           "Please config file reference",
+	"cross_compiling.html":  "Cross-compiling",
+	"dependencies.html":     "Third-party dependencies",
+	"error.html":            "plz op...",
 	"faq.html":              "Please FAQ",
 	"index.html":            "Please",
-	"intermediate.html":     "Intermediate Please",
 	"language.html":         "The Please BUILD language",
 	"lexicon.html":          "Please Lexicon",
 	"pleasings.html":        "Extra rules (aka. Pleasings)",
+	"post_build.html":       "Pre- and post-build functions",
+	"require_provide.html":  "Require & Provide",
 	"quickstart.html":       "Please quickstart",
-	"error.html":            "plz op...",
+	"reference.html":        "Reference documentation",
+	"tests.html":            "Testing with Please",
+	"verification.html":     "Hash verification",
+	"workers.html":          "Persistent worker processes",
 }
 
 func mustRead(filename string) string {
@@ -61,6 +69,29 @@ func mustRead(filename string) string {
 		panic(err)
 	}
 	return string(b)
+}
+
+// mustHighlight implements some quick-and-dirty syntax highlighting for code snippets.
+func mustHighlight(contents string) string {
+	return regexp.MustCompile(`(?sU)<pre><code class="language-plz">.*</code></pre>`).ReplaceAllStringFunc(contents, func(match string) string {
+		const prefix = `<pre><code class="language-plz">`
+		match = match[len(prefix):]
+		match = regexp.MustCompile(`(?U)".*"`).ReplaceAllStringFunc(match, func(s string) string {
+			return `<span class="fn-str">"` + s[1:len(s)-1] + `"</span>`
+		})
+		match = regexp.MustCompile(`(?U)'.*'`).ReplaceAllStringFunc(match, func(s string) string {
+			return `<span class="fn-str">"` + s[1:len(s)-1] + `"</span>`
+		})
+		match = regexp.MustCompile(`(?U)[a-z_]+\ =`).ReplaceAllStringFunc(match, func(s string) string {
+			return `<span class="fn-arg">` + s[:len(s)-2] + "</span> ="
+		})
+		match = regexp.MustCompile(`(?Um)#.*$`).ReplaceAllStringFunc(match, func(s string) string {
+			return `<span class="grammar-comment">` + s + "</span>"
+		})
+		return prefix + regexp.MustCompile(`(?U)[a-z_]+\(`).ReplaceAllStringFunc(match, func(s string) string {
+			return `<span class="fn-name">` + s[:len(s)-1] + "</span>("
+		})
+	})
 }
 
 func main() {
@@ -81,17 +112,27 @@ func main() {
 		"rotate":       func(i int) string { return modulo(rotations, i) },
 		"random":       func(x, min, max int) int { return (x*basenameIndex+min)%(max-min) + min },
 		"randomoffset": func(x, min, max, step int) int { return x*step + random(x, min, max) },
+		"matches": func(needle string, haystack ...string) bool {
+			for _, straw := range haystack {
+				if straw == needle {
+					return true
+				}
+			}
+			return false
+		},
+	}
+	title, present := pageTitles[basename]
+	if !present {
+		panic("missing title for " + basename)
 	}
 	data := struct {
-		Title, Header, Contents string
-		SideImages              []int
-		Player, IsIndex         bool
+		Title, Header, Contents, Filename string
+		SideImages                        []int
 	}{
-		Title:    pageTitles[basename],
+		Title:    title,
 		Header:   mustRead(os.Args[1]),
-		Contents: mustRead(filename),
-		Player:   basename == "faq.html",
-		IsIndex:  basename == "index.html",
+		Contents: mustHighlight(mustRead(filename)),
+		Filename: basename,
 	}
 	for i := 0; i <= strings.Count(data.Contents, "\n")/150; i++ {
 		// Awkwardly this seems to have to be a slice to range over in the template.

@@ -11,8 +11,6 @@ import (
 var log = logging.MustGetLogger("worker")
 
 // A BuildMessage is a minimal subset of BuildRequest / BuildResponse that we use here.
-// This illustrates one scheme for using it without necessarily requiring the protobufs
-// (although that is also a valid approach, as javac_worker illustrates).
 type BuildMessage struct {
 	Rule    string `json:"rule"`
 	Success bool   `json:"success"`

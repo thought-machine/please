@@ -223,7 +223,7 @@ func (e *Executor) handleSignals() {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT, syscall.SIGTERM)
 	sig := <-ch
-	log.Warning("Received %s, shutting down all subprocesses...", sig)
+	log.Notice("Received %s, shutting down all subprocesses...", sig)
 	e.killAll()
 	if s, ok := sig.(syscall.Signal); ok {
 		os.Exit(128 + int(s))

@@ -152,7 +152,7 @@
       The justification is that these are mostly just inherited from working on Blaze, but a
       brief explanation follows after an example:</p>
 
-    <pre><code>
+    <pre><code class="language-plz">
       # Taken from //src/core/BUILD in the Please repo
       go_library(
           name = "core",
@@ -181,13 +181,17 @@
       prefer double because that's what Buildifier (see below) prefers.</p>
 
     <p>Lists either go all on one line:
-      <pre><code>["*_test.go", "version.go"]</code></pre>
+      <pre><code class="language-plz">
+      ["*_test.go", "version.go"]
+      </code></pre>
       or are broken across multiple lines like so:
-      <pre><code>          [
-              "//third_party/go:gcfg",
-              "//third_party/go:logging",
-              "//third_party/go:queue",
-          ]</code></pre>
+      <pre><code class="language-plz">
+      [
+          "//third_party/go:gcfg",
+          "//third_party/go:logging",
+          "//third_party/go:queue",
+      ]
+      </code></pre>
     </p>
 
     <p>Indentation is normally four spaces. Tabs will be rejected by the parser.<br/>

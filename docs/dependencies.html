@@ -47,25 +47,26 @@
   BUILD file to them, but it can also use an existing one if appropriate.</p>
 
 <p>For example (as seen <a href="https://github.com/thought-machine/please/blob/master/third_party/cc/BUILD">in the Please repo</a>):
-  <pre><code>github_repo(
-    name = "gtest",
-    bazel_compat = True,
-    repo = "google/googletest",
-    revision = "release-1.8.1",
-)
-</code></pre></p>
+  <pre><code class="language-plz">
+    github_repo(
+        name = "gtest",
+        bazel_compat = True,
+        repo = "google/googletest",
+        revision = "release-1.8.1",
+    )
+  </code></pre></p>
 
 <p>Rules within subrepos can be referenced using a triple-slash prefix on rules, anywhere
   where a build rule would normally be accepted. For example:
-  <pre><code>
-cc_test(
-    name = "my_test",
-    ...
-    deps = [
-        "///third_party/cc/gtest//:gtest_main",
-    ],
-)
-</code></pre>
+  <pre><code class="language-plz">
+    cc_test(
+        name = "my_test",
+        ...
+        deps = [
+            "///third_party/cc/gtest//:gtest_main",
+        ],
+    )
+  </code></pre>
 
 <p>Note that the subrepo label (<code>third_party/cc/gtest</code>) includes the package we defined
   it in earlier. In many ways subrepos mirror the feature in Bazel, but in this case are more

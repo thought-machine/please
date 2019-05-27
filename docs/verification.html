@@ -1,0 +1,80 @@
+<h1>Verification</h1>
+
+<p>An important concept of Please is that you should be getting what you expect at
+  each build. Third-party dependencies are an important case for this since they allow
+  code you don't totally control into your build.<br/>
+  Please has two explicit mechanisms for controlling this.</p>
+
+
+<h2>Hash verification</h2>
+
+<p>Please can natively verify hashes of packages. Some of the built-in rules for fetching
+  things from third-party repos have this option, and you can add it to your own genrules.
+  For example, one of the Python libraries we use:
+
+  <pre><code class="language-plz">
+    pip_library(
+        name = 'six',
+        version = '1.9.0',
+        outs = ['six.py'],
+        hashes = ['sha1: 0c31ab7cf1a2761efa32d9a7e891ddeadc0d8673'],
+    )
+  </code></pre>
+
+  This declares that the calculated sha1 hash of the package must match one of the given
+  set, and it's a failure if not.
+</p>
+
+<p>You can find the output hash of a particular target by running
+  <code>plz hash //third_party/python:six</code> which will calculate it for you, and
+  you can enter it in the BUILD file.<br/>
+  If it changes (for example when you update the version) plz can update the BUILD file
+  for you via <code>plz hash --update //third_party/python:six</code>.</p>
+
+<p>The reason for allowing multiple hashes is for rules that generate different outputs
+  on different architectures; this is common for Python libraries which have a compiled
+  component, for example.</p>
+
+<p>For testing purposes you can run Please with the <code>--nohash_verification</code>
+  flag which will reduce hash verification failures to a warning message only.</p>
+
+<p>Note that when using this you must be careful that the outputs of your rule are
+  really deterministic. This is generally true for <code>remote_file</code> calls,
+  but obviously only if the server returns the same thing every time for that URL.
+  Some care should be taken with <code>pip_library</code> since the outputs of a
+  <code>pip install</code> for a package containing binary (not pure Python) modules are
+  not bit-for-bit identical if compiled locally, only if you downloaded a precompiled wheel.
+  Different Python and OS versions can affect it too.</p>
+
+<p>The <code>sha1:</code> prefix is informative only and indeed any string can occur before
+  the colon. In future we may extend this to allow specifying other hash types.</p>
+
+
+<h2>Licence validation</h2>
+
+<p>Please can attempt to autodetect licences from some third-party packages and inform you if
+  they're not ones you'd accept. You mark licences in the .plzconfig file like so:
+  <pre><code>
+    [licences]
+    accept = MIT
+    accept = BSD
+    reject = MS-EULA
+  </code></pre>
+  By default, with no <code>[licences]</code> section, Please won't perform any licence
+  checking.<br/>
+  Once you've added some any package with a licence must have a matching accepted licence
+  in the config.</p>
+
+<p>Currently we can autodetect licences from <code>pip_library</code> and <code>maven_jars</code> rules,
+  you can also set them manually via the <code>licences</code> attribute on a rule.</p>
+
+<p>It bears mentioning that this is done as a best-effort - since licences and their
+  locations are not standardised in pip (and many other places) we can't always be fully
+  confident about how to match licence names and hence don't try (for example,
+  <code>Apache 2</code>, <code>Apache-2.0</code>,  and
+  <code>The Apache Software License, version 2</code> all refer to the same licence,
+  despite being very different strings, whereas <code>LGPL</code> and <code>AGPL</code>
+  are significantly different licences but only one letter apart).</p>
+
+<p>Please also isn't a lawyer and can't provide advice about whether a specific licence is
+  suitable for you or not. Only you can make that decision.</p>
