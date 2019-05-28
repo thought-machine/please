@@ -134,23 +134,23 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
-		active              bool         `no-flag:"true"`
-		FailingTestsOk      bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
-		NoCoverageReport    bool         `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
-		LineCoverageReport  bool         `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
-		NumRuns             int          `short:"n" long:"num_runs" default:"1" description:"Number of times to run each test target."`
-		IncludeAllFiles     bool         `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
-		IncludeFile         []string     `long:"include_file" description:"Filenames to filter coverage display to"`
-		TestResultsFile     cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
-		SurefireDir         cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
-		CoverageResultsFile cli.Filepath `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
-		CoverageXMLReport   cli.Filepath `long:"coverage_xml_report" default:"plz-out/log/coverage.xml" description:"XML File to write combined coverage results to."`
-		Incremental         bool         `short:"i" long:"incremental" description:"Calculates summary statistics for incremental coverage, i.e. stats for just the lines currently modified."`
-		ShowOutput          bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
-		Debug               bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
-		Failed              bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
-		Detailed            bool         `long:"detailed" description:"Prints more detailed output after tests."`
-		Shell               bool         `long:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
+		active              bool          `no-flag:"true"`
+		FailingTestsOk      bool          `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NoCoverageReport    bool          `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
+		LineCoverageReport  bool          `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
+		NumRuns             int           `short:"n" long:"num_runs" default:"1" description:"Number of times to run each test target."`
+		IncludeAllFiles     bool          `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
+		IncludeFile         cli.Filepaths `long:"include_file" description:"Filenames to filter coverage display to"`
+		TestResultsFile     cli.Filepath  `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		SurefireDir         cli.Filepath  `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
+		CoverageResultsFile cli.Filepath  `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
+		CoverageXMLReport   cli.Filepath  `long:"coverage_xml_report" default:"plz-out/log/coverage.xml" description:"XML File to write combined coverage results to."`
+		Incremental         bool          `short:"i" long:"incremental" description:"Calculates summary statistics for incremental coverage, i.e. stats for just the lines currently modified."`
+		ShowOutput          bool          `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
+		Debug               bool          `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
+		Failed              bool          `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
+		Detailed            bool          `long:"detailed" description:"Prints more detailed output after tests."`
+		Shell               bool          `long:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -165,18 +165,18 @@ var opts struct {
 			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
-			Args []string `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
+			Args cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
-			Args []string `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
+			Args cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 		} `command:"sequential" description:"Runs a sequence of targets sequentially."`
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
-			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
+			Args   cli.Filepaths   `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
 		} `positional-args:"true"`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
@@ -258,8 +258,8 @@ var opts struct {
 
 	Tool struct {
 		Args struct {
-			Tool tool.Tool `positional-arg-name:"tool" description:"Tool to invoke (jarcat, lint, etc)"`
-			Args []string  `positional-arg-name:"arguments" description:"Arguments to pass to the tool"`
+			Tool tool.Tool     `positional-arg-name:"tool" description:"Tool to invoke (jarcat, lint, etc)"`
+			Args cli.Filepaths `positional-arg-name:"arguments" description:"Arguments to pass to the tool"`
 		} `positional-args:"true"`
 	} `command:"tool" hidden:"true" description:"Invoke one of Please's sub-tools"`
 
@@ -427,9 +427,9 @@ var buildFunctions = map[string]func() bool{
 		test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
 
 		if opts.Cover.LineCoverageReport {
-			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile)
+			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile.AsStrings())
 		} else if !opts.Cover.NoCoverageReport {
-			output.PrintCoverage(state, opts.Cover.IncludeFile)
+			output.PrintCoverage(state, opts.Cover.IncludeFile.AsStrings())
 		}
 		if opts.Cover.Incremental {
 			output.PrintIncrementalCoverage(stats)
@@ -438,19 +438,19 @@ var buildFunctions = map[string]func() bool{
 	},
 	"run": func() bool {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false); success {
-			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args, opts.Run.Env)
+			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Env)
 		}
 		return false // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"parallel": func() bool {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args, opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
+			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
 		}
 		return false
 	},
 	"sequential": func() bool {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
-			os.Exit(run.Sequential(state, state.ExpandOriginalTargets(), opts.Run.Sequential.Args, opts.Run.Sequential.Quiet, opts.Run.Env))
+			os.Exit(run.Sequential(state, state.ExpandOriginalTargets(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Env))
 		}
 		return false
 	},
@@ -536,7 +536,7 @@ var buildFunctions = map[string]func() bool{
 		return help.Help(string(opts.Help.Args.Topic))
 	},
 	"tool": func() bool {
-		tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args)
+		tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
 		return false // If the function returns (which it shouldn't), something went wrong.
 	},
 	"deps": func() bool {
