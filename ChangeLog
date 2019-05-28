@@ -1,3 +1,11 @@
+Version 13.8.1
+--------------
+
+    * Update returns to original directory before re-exec (#627)
+    * More arguments are completed as filenames (#628)
+    * Initial support for incremental coverage calculations.
+
+
 Version 13.8.0
 --------------
 
