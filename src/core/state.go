@@ -327,6 +327,7 @@ func (state *BuildState) isOriginalTarget(label BuildLabel, exact bool) bool {
 // Handles build labels on Exclude so should be preferred over setting them directly.
 func (state *BuildState) SetIncludeAndExclude(include, exclude []string) {
 	state.Include = include
+	state.Exclude = nil
 	for _, e := range exclude {
 		if LooksLikeABuildLabel(e) {
 			if label, err := parseMaybeRelativeBuildLabel(e, ""); err != nil {

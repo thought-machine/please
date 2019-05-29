@@ -575,7 +575,9 @@ var buildFunctions = map[string]func() bool{
 			targets = core.FindOwningPackages(state, files)
 		}
 		return runQuery(true, targets, func(state *core.BuildState) {
-			query.AffectedTargets(state, files.Get(), opts.BuildFlags.Include, opts.BuildFlags.Exclude, opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
+			// affectedtargets deliberately does not include targets labelled "manual".
+			state.SetIncludeAndExclude(opts.BuildFlags.Include, append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch))
+			query.AffectedTargets(state, files.Get(), opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
 		})
 	},
 	"input": func() bool {

@@ -5,9 +5,7 @@ import "fmt"
 
 // AffectedTargets walks over the build graph and identifies all targets that have a transitive
 // dependency on the given set of files.
-// Targets are filtered by given include / exclude labels and if 'tests' is true only
-// test targets will be returned.
-func AffectedTargets(state *core.BuildState, files, include, exclude []string, tests, transitive bool) {
+func AffectedTargets(state *core.BuildState, files []string, tests, transitive bool) {
 	affectedTargets := make(chan *core.BuildTarget, 100)
 	done := make(chan bool)
 
@@ -59,7 +57,7 @@ func AffectedTargets(state *core.BuildState, files, include, exclude []string, t
 		done <- true
 	}()
 
-	go handleAffectedTargets(state, affectedTargets, done, include, exclude, tests, transitive)
+	go handleAffectedTargets(state, affectedTargets, done, tests, transitive)
 
 	<-done
 	<-done
@@ -67,7 +65,7 @@ func AffectedTargets(state *core.BuildState, files, include, exclude []string, t
 	<-done
 }
 
-func handleAffectedTargets(state *core.BuildState, affectedTargets <-chan *core.BuildTarget, done chan<- bool, include, exclude []string, tests, transitive bool) {
+func handleAffectedTargets(state *core.BuildState, affectedTargets <-chan *core.BuildTarget, done chan<- bool, tests, transitive bool) {
 	seenTargets := map[*core.BuildTarget]bool{}
 
 	var inner func(*core.BuildTarget)
