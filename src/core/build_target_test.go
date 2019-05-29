@@ -625,20 +625,6 @@ func TestShouldIncludeWithCompoundIncludeAndExclude(t *testing.T) {
 	assert.False(t, target.ShouldInclude(includes, excludes))
 }
 
-func TestShouldIncludeManual(t *testing.T) {
-	target := makeTargetWithLabels("//src/core:target1", "a", "manual")
-	// Doesn't include because "manual" overrides it
-	assert.False(t, target.ShouldInclude([]string{"a"}, nil))
-
-	target = makeTargetWithLabels("//src/core:target1", "a", "manual:test_armhf")
-	// Does include because it's a different architecture
-	assert.True(t, target.ShouldInclude([]string{"a"}, nil))
-
-	target = makeTargetWithLabels("//src/core:target1", "a", "manual:"+OsArch)
-	// Doesn't include because it's manual for this architecture.
-	assert.False(t, target.ShouldInclude([]string{"a"}, nil))
-}
-
 func TestExternalDependencies(t *testing.T) {
 	t1a := makeTarget("//src/core:_target1#a", "PUBLIC")
 	t1 := makeTarget("//src/core:target1", "PUBLIC", t1a)
