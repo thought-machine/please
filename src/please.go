@@ -374,7 +374,7 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() bool{
 	"build": func() bool {
-		success, _ := runBuild(opts.Build.Args.Targets, true, false)
+		success, _ := runBuild(opts.Build.Args.Targets, true, false, false)
 		return success
 	},
 	"rebuild": func() bool {
@@ -382,11 +382,11 @@ var buildFunctions = map[string]func() bool{
 		// you use 'plz rebuild', you don't want the cache coming in and mucking things up.
 		// 'plz clean' followed by 'plz build' would still work in those cases, anyway.
 		opts.FeatureFlags.NoCache = true
-		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false)
+		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false, false)
 		return success
 	},
 	"hash": func() bool {
-		success, state := runBuild(opts.Hash.Args.Targets, true, false)
+		success, state := runBuild(opts.Hash.Args.Targets, true, false, false)
 		if opts.Hash.Detailed {
 			for _, target := range state.ExpandOriginalTargets() {
 				build.PrintHashes(state, state.Graph.TargetOrDie(target))
@@ -437,19 +437,19 @@ var buildFunctions = map[string]func() bool{
 		return success || opts.Cover.FailingTestsOk
 	},
 	"run": func() bool {
-		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false); success {
+		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, false); success {
 			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Env)
 		}
 		return false // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"parallel": func() bool {
-		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false); success {
+		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false, false); success {
 			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
 		}
 		return false
 	},
 	"sequential": func() bool {
-		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false); success {
+		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false, false); success {
 			os.Exit(run.Sequential(state, state.ExpandOriginalTargets(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Env))
 		}
 		return false
@@ -469,7 +469,7 @@ var buildFunctions = map[string]func() bool{
 			}
 			opts.Clean.Args.Targets = core.WholeGraph
 		}
-		if success, state := runBuild(opts.Clean.Args.Targets, false, false); success {
+		if success, state := runBuild(opts.Clean.Args.Targets, false, false, false); success {
 			clean.Targets(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache)
 			return true
 		}
@@ -491,7 +491,7 @@ var buildFunctions = map[string]func() bool{
 		return false
 	},
 	"gc": func() bool {
-		success, state := runBuild(core.WholeGraph, false, false)
+		success, state := runBuild(core.WholeGraph, false, false, true)
 		if success {
 			state.OriginalTargets = state.Config.Gc.Keep
 			gc.GarbageCollect(state, opts.Gc.Args.Targets, state.ExpandOriginalTargets(), state.Config.Gc.Keep, state.Config.Gc.KeepLabel,
@@ -514,7 +514,7 @@ var buildFunctions = map[string]func() bool{
 		return true
 	},
 	"export": func() bool {
-		success, state := runBuild(opts.Export.Args.Targets, false, false)
+		success, state := runBuild(opts.Export.Args.Targets, false, false, false)
 		if success {
 			export.ToDir(state, opts.Export.Output, state.ExpandOriginalTargets())
 		}
@@ -526,7 +526,7 @@ var buildFunctions = map[string]func() bool{
 		return follow.ConnectClient(state, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay))
 	},
 	"outputs": func() bool {
-		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false)
+		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false, true)
 		if success {
 			export.Outputs(state, opts.Export.Output, state.ExpandOriginalTargets())
 		}
@@ -634,7 +634,7 @@ var buildFunctions = map[string]func() bool{
 		return success
 	},
 	"changed": func() bool {
-		success, state := runBuild(core.WholeGraph, false, false)
+		success, state := runBuild(core.WholeGraph, false, false, false)
 		if !success {
 			return false
 		}
@@ -656,12 +656,12 @@ var buildFunctions = map[string]func() bool{
 		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
 		files := opts.Query.Changes.Args.Files.Get()
 		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
-		_, before := runBuild(core.WholeGraph, false, false)
+		_, before := runBuild(core.WholeGraph, false, false, false)
 		opts.BuildFlags.KeepGoing = keepGoing
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		query.MustCheckout(original, opts.Query.Changes.CheckoutCommand)
-		success, after := runBuild(core.WholeGraph, false, false)
+		success, after := runBuild(core.WholeGraph, false, false, false)
 		if !success {
 			return false
 		}
@@ -677,7 +677,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"watch": func() bool {
 		// Don't ask it to test now since we don't know if any of them are tests yet.
-		success, state := runBuild(opts.Watch.Args.Targets, true, false)
+		success, state := runBuild(opts.Watch.Args.Targets, true, false, false)
 		state.NeedRun = opts.Watch.Run
 		watch.Watch(state, state.ExpandOriginalTargets(), runPlease)
 		return success
@@ -688,7 +688,7 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"intellij": func() bool {
-		success, state := runBuild(opts.Ide.IntelliJ.Args.Labels, false, false)
+		success, state := runBuild(opts.Ide.IntelliJ.Args.Labels, false, false, false)
 		if success {
 			intellij.ExportIntellijStructure(state.Config, state.Graph, state.ExpandOriginalLabels())
 		}
@@ -712,7 +712,7 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 	if len(labels) == 0 {
 		labels = core.WholeGraph
 	}
-	if success, state := runBuild(labels, false, false); success {
+	if success, state := runBuild(labels, false, false, true); success {
 		onSuccess(state)
 		return true
 	}
@@ -723,7 +723,7 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	os.RemoveAll(string(surefireDir))
 	os.RemoveAll(string(resultsFile))
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
-	success, state := runBuild(targets, true, true)
+	success, state := runBuild(targets, true, true, false)
 	test.CopySurefireXMLFilesToDir(state, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
 	return success, state
@@ -860,7 +860,10 @@ func readConfig(forceUpdate bool) *core.Configuration {
 
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
-func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) (bool, *core.BuildState) {
+	if !isQuery {
+		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
+	}
 	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !readingStdin(targets) {
 		if len(targets) == 0 {
 			// Assume they want us to read from stdin since nothing else was given.

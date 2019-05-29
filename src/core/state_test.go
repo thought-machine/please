@@ -17,7 +17,6 @@ func TestExpandOriginalTargets(t *testing.T) {
 	addTarget(state, "//src/core:target2", "py")
 	addTarget(state, "//src/core:target3", "go", "py")
 	addTarget(state, "//src/core:target4")
-	addTarget(state, "//src/core:target5", "go", "manual")
 	addTarget(state, "//src/parse:parse")
 	addTarget(state, "//src/parse:parse2", "go")
 
@@ -43,7 +42,6 @@ func TestExpandOriginalTestTargets(t *testing.T) {
 	addTarget(state, "//src/core:target1_test", "go")
 	addTarget(state, "//src/core:target2_test", "py")
 	addTarget(state, "//src/core:target3_test")
-	addTarget(state, "//src/core:target4_test", "go", "manual")
 	// Only the one target comes out here; it must be a test and otherwise follows
 	// the same include / exclude logic as the previous test.
 	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{PackageName: "src/core", Name: "target1_test"}})
