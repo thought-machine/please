@@ -132,6 +132,9 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 		for _, src := range source.Paths(state.Graph) {
 			if err := fs.Walk(src, func(src string, isDir bool) error {
 				files.Set(src, struct{}{})
+				if !path.IsAbs(src) {
+					files.Set("./"+src, struct{}{})
+				}
 				dir := src
 				if !isDir {
 					dir = path.Dir(src)
