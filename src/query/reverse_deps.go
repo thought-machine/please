@@ -28,7 +28,9 @@ func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel,
 	}
 	ret := core.BuildLabels{}
 	for label := range done {
-		ret = append(ret, label)
+		if state.ShouldInclude(state.Graph.TargetOrDie(label)) {
+			ret = append(ret, label)
+		}
 	}
 	sort.Sort(ret)
 	return ret
@@ -66,9 +68,7 @@ func GetRevDepsLabels(state *core.BuildState, labels []core.BuildLabel) core.Bui
 		delete(uniqueTargets, graph.TargetOrDie(label))
 	}
 	for target := range uniqueTargets {
-		if state.ShouldInclude(target) {
-			targets = append(targets, target.Label)
-		}
+		targets = append(targets, target.Label)
 	}
 	sort.Sort(targets)
 
