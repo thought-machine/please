@@ -290,7 +290,7 @@ func DefaultConfiguration() *Configuration {
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"
 	config.Java.ReleaseLevel = ""
-	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2"}
+	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2", "https://jcenter.bintray.com/"}
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
 	config.Java.JlinkTool = "jlink"
 	config.Java.JavacWorker = "javac_worker"

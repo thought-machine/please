@@ -23,7 +23,7 @@ maven_jar(
 
 # These are shipped as components of Please, but for easier management the code lives in
 # https://github.com/thought-machine/please-java
-# The versions tend to lag a little bit behind this repo as a result.
+# As a result the versions are no longer directly connected to the ones in this repo.
 maven_jar(
     name = "junit_runner",
     hashes = ["409563f6d2de11ef5e9e88275e1da62e984e4ccb"],
