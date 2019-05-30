@@ -1,3 +1,12 @@
+Version 13.8.2
+--------------
+
+    * Fix watch on files at repo root (#618)
+    * Allow targets labelled as manual to be included in (most) `plz query` invocations
+    * Add jcenter.bintry.com as a default Maven repo to improve reliability (looks like
+      repo1.maven.org rate limits us sometimes).
+
+
 Version 13.8.1
 --------------
 
