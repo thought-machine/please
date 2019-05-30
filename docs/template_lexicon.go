@@ -10,11 +10,11 @@ import (
 )
 
 type rules struct {
-	Functions map[string]rule `json:"functions"`
+	Functions map[string]*rule `json:"functions"`
 }
 
 // Named returns the rule with given name.
-func (r *rules) Named(name string) rule {
+func (r *rules) Named(name string) *rule {
 	rule, present := r.Functions[name]
 	if !present {
 		panic("unknown function " + name)
@@ -28,9 +28,9 @@ func (r *rules) AddLinks(name, docstring string) string {
 	if strings.Contains(name, "_") { // Don't do it for something generic like "tarball"
 		for k := range r.Functions {
 			if name == k {
-				docstring = strings.Replace(docstring, k, "<code>"+k+"</code>", -1)
+				docstring = strings.Replace(docstring, " "+k, " <code>"+k+"</code>", -1)
 			} else {
-				docstring = strings.Replace(docstring, k, `<a href="#`+k+`">`+k+"</a>", -1)
+				docstring = strings.Replace(docstring, " "+k, ` <a href="#`+k+`">`+k+"</a>", -1)
 			}
 		}
 	}
@@ -70,5 +70,10 @@ func main() {
 	b, err := ioutil.ReadFile("docs/rules.json")
 	must(err)
 	must(json.Unmarshal(b, r))
+	for name, rule := range r.Functions {
+		if strings.HasPrefix(name, "c_") {
+			rule.Aliases = append(rule.Aliases, "c"+name)
+		}
+	}
 	must(tmpl.Execute(os.Stdout, r))
 }

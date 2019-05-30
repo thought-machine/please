@@ -1,4 +1,4 @@
-    <h3><a name="{{ .Name }}">{{ .Name }}{{ if .Aliases }} / {{ join .Aliases " / " }}{{ end }}</a></h3>
+    <h3><a name="{{ .Name }}">{{ range .Aliases }}<a name="{{ . }}"></a>{{ end }}{{ .Name }}{{ if .Aliases }} / {{ join .Aliases " / " }}{{ end }}</a></h3>
 
     <p><pre class="rule"><code>{{ .Name }}(
       {{- range $i, $arg := .Args -}}
