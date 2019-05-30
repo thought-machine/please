@@ -21,6 +21,7 @@ var opts = struct {
 	Interpreter        string        `short:"i" long:"interpreter" env:"TOOLS_INTERPRETER" description:"Python interpreter to use"`
 	TestRunner         string        `short:"r" long:"test_runner" choice:"unittest" choice:"pytest" choice:"behave" default:"unittest" description:"Test runner to use"`
 	Shebang            string        `short:"s" long:"shebang" description:"Explicitly set shebang to this"`
+	Site               bool          `short:"S" long:"site" description:"Allow the pex to import site at startup"`
 	ZipSafe            bool          `long:"zip_safe" description:"Marks this pex as zip-safe"`
 	NoZipSafe          bool          `long:"nozip_safe" description:"Marks this pex as zip-unsafe"`
 	InterpreterOptions string        `long:"interpreter_options" description:"Options-string to pass to the python interpreter"`
@@ -37,7 +38,7 @@ dependent code as a self-contained self-executable environment.
 func main() {
 	cli.ParseFlagsOrDie("please_pex", &opts)
 	cli.InitLogging(opts.Verbosity)
-	w := pex.NewWriter(opts.EntryPoint, opts.Interpreter, opts.InterpreterOptions, !opts.NoZipSafe)
+	w := pex.NewWriter(opts.EntryPoint, opts.Interpreter, opts.InterpreterOptions, !opts.NoZipSafe, !opts.Site)
 	if opts.Shebang != "" {
 		w.SetShebang(opts.Shebang, opts.InterpreterOptions)
 	}

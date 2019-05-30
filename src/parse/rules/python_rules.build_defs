@@ -93,7 +93,8 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
 
 
 def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
-                  visibility:list=None, test_only:bool=False, zip_safe:bool=None, strip:bool=False,
+                  visibility:list=None, test_only:bool=False, zip_safe:bool=None,
+                  site:bool=False, strip:bool=False,
                   interpreter:str=None, shebang:str='', labels:list&features&tags=[]):
     """Generates a Python binary target.
 
@@ -116,6 +117,8 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
                        appropriately; by default it will be safe unless any of the
                        transitive dependencies are themselves marked as not zip-safe.
       strip (bool): Strips source code from the output .pex file, leaving just bytecode.
+      site (bool): Allows the Python interpreter to import site; conversely if False, it will be
+                   started with the -S flag to avoid importing site.
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
@@ -126,6 +129,8 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe --interpreter_options="%s"' % (
         shebang, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_INTERPRETER_OPTIONS)
+    if site:
+        cmd += ' -S'
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
     assert main not in srcs, "main file should not be included in srcs"
@@ -190,7 +195,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
 def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=[], worker:str='',
                 labels:list&features&tags=None, size:str=None, flags:str='', visibility:list=None,
                 container:bool|dict=False, sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
-                test_outputs:list=None, zip_safe:bool=None, interpreter:str=None):
+                test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
@@ -223,11 +228,15 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
       interpreter (str): The Python interpreter to use. Defaults to the config setting
                          which is normally just 'python', but could be 'python3' or
                         'pypy' or whatever.
+      site (bool): Allows the Python interpreter to import site; conversely if False, it will be
+                   started with the -S flag to avoid importing site.
     """
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --interpreter_options="%s"' % (
         interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
+    if site:
+        cmd += ' -S'
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
@@ -354,7 +363,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
-        cmd = f'[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; {cmd} $SYS_FLAG' 
+        cmd = f'[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; {cmd} $SYS_FLAG'
     cmd += f' -b build {repo_flag} {index_flag} {pip_flags} {package_name}'
 
     if strip:

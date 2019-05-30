@@ -17,6 +17,7 @@ import (
 // A Writer implements writing a .pex file in various steps.
 type Writer struct {
 	zipSafe        bool
+	noSite         bool
 	shebang        string
 	realEntryPoint string
 	testSrcs       []string
@@ -25,9 +26,10 @@ type Writer struct {
 }
 
 // NewWriter constructs a new Writer.
-func NewWriter(entryPoint, interpreter string, options string, zipSafe bool) *Writer {
+func NewWriter(entryPoint, interpreter string, options string, zipSafe, noSite bool) *Writer {
 	pw := &Writer{
 		zipSafe:        zipSafe,
+		noSite:         noSite,
 		realEntryPoint: toPythonPath(entryPoint),
 	}
 	pw.SetShebang(interpreter, options)
@@ -39,6 +41,15 @@ func (pw *Writer) SetShebang(shebang string, options string) {
 	shebang = strings.TrimSpace(fmt.Sprintf("%s %s", shebang, options))
 	if !path.IsAbs(shebang) {
 		shebang = "/usr/bin/env " + shebang
+	}
+	if pw.noSite {
+		// In many environments shebangs cannot have more than one argument; we can work around
+		// that by treating it as a shell script.
+		if strings.Contains(shebang, " ") {
+			shebang = "#!/bin/sh\nexec " + shebang + " -S $0 $@"
+		} else {
+			shebang += " -S"
+		}
 	}
 	if !strings.HasPrefix(shebang, "#") {
 		shebang = "#!" + shebang
