@@ -76,11 +76,12 @@ var opts struct {
 	} `group:"Options controlling output & logging"`
 
 	FeatureFlags struct {
-		NoUpdate           bool `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
-		NoCache            bool `long:"nocache" description:"Disable caches (NB. not incrementality)"`
-		NoHashVerification bool `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
-		NoLock             bool `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
-		KeepWorkdirs       bool `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
+		NoUpdate           bool    `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
+		NoCache            bool    `long:"nocache" description:"Disable caches (NB. not incrementality)"`
+		NoHashVerification bool    `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
+		NoLock             bool    `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
+		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
+		HTTPProxy          cli.URL `long:"http_proxy" env:"HTTP_PROXY" description:"HTTP proxy to use for downloads"`
 	} `group:"Options that enable / disable certain features"`
 
 	HelpFlags struct {
@@ -849,6 +850,9 @@ func readConfig(forceUpdate bool) *core.Configuration {
 		log.Fatalf("Error reading config file: %s", err)
 	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
 		log.Fatalf("Can't override requested config setting: %s", err)
+	}
+	if opts.FeatureFlags.HTTPProxy != "" {
+		config.Build.HTTPProxy = opts.FeatureFlags.HTTPProxy
 	}
 	// Now apply any flags that override this
 	if opts.Update.Latest {

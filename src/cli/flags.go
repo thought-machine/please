@@ -117,8 +117,16 @@ func (u *URL) UnmarshalText(text []byte) error {
 }
 
 // String implements the fmt.Stringer interface
-func (u *URL) String() string {
-	return string(*u)
+func (u URL) String() string {
+	return string(u)
+}
+
+// AsURL returns this as a url.URL
+// It is assumed never to fail because this URL has already been successfully parsed, at which
+// point it is checked for validity.
+func (u URL) AsURL() *url.URL {
+	ret, _ := url.Parse(string(u))
+	return ret
 }
 
 // A Version is an extension to semver.Version extending it with the ability to

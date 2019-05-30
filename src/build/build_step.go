@@ -12,6 +12,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/shlex"
@@ -31,6 +32,7 @@ var errStop = fmt.Errorf("stopping build")
 
 // httpClient is the shared http client that we use for fetching remote files.
 var httpClient http.Client
+var httpClientOnce sync.Once
 
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel) {
@@ -622,6 +624,13 @@ func linkIfNotExists(src, dest string, f linkFunc) {
 // fetchRemoteFile fetches a remote file from a URL.
 // This is a builtin for better efficiency and more control over the whole process.
 func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
+	httpClientOnce.Do(func() {
+		if state.Config.Build.HTTPProxy != "" {
+			httpClient.Transport = &http.Transport{
+				Proxy: http.ProxyURL(state.Config.Build.HTTPProxy.AsURL()),
+			}
+		}
+	})
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return err
 	} else if err := prepareDirectory(target.TmpDir(), false); err != nil {
