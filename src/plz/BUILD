@@ -1,6 +1,9 @@
 go_library(
     name = "plz",
-    srcs = ["plz.go"],
+    srcs = [
+        "plz.go",
+        "limit.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
         "//src/build",
