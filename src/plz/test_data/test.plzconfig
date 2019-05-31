@@ -1,0 +1,7 @@
+[limit "java"]
+label = java
+limit = 2
+
+[limit "go"]
+label = go
+limit = 2

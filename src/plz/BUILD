@@ -18,3 +18,14 @@ go_library(
         "//third_party/go:logging",
     ],
 )
+
+go_test(
+    name = "limit_test",
+    srcs = ["limit_test.go"],
+    data = ["test_data"],
+    deps = [
+        ":plz",
+        "//src/core",
+        "//third_party/go:testify",
+    ],
+)
