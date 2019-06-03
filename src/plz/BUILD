@@ -1,8 +1,8 @@
 go_library(
     name = "plz",
     srcs = [
-        "plz.go",
         "limit.go",
+        "plz.go",
     ],
     visibility = ["PUBLIC"],
     deps = [
