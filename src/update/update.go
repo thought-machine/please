@@ -41,6 +41,8 @@ var log = logging.MustGetLogger("update")
 // minSignedVersion is the earliest version of Please that has a signature.
 var minSignedVersion = semver.Version{Major: 9, Minor: 2}
 
+var httpClient http.Client
+
 // CheckAndUpdate checks whether we should update Please and does so if needed.
 // If it requires an update it will never return, it will either die on failure or on success will exec the new Please.
 // Conversely, if an update isn't required it will return. It may adjust the version in the configuration.
@@ -68,6 +70,13 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	if forceUpdate && core.PathExists(newDir) {
 		if err := os.RemoveAll(newDir); err != nil {
 			log.Fatalf("Failed to remove existing directory: %s", err)
+		}
+	}
+
+	// Honour the proxy setting if it's in the config.
+	if config.Build.HTTPProxy != "" {
+		httpClient.Transport = &http.Transport{
+			Proxy: http.ProxyURL(config.Build.HTTPProxy.AsURL()),
 		}
 	}
 
@@ -226,7 +235,7 @@ func copyTarFile(zr io.Reader, newDir, url string) {
 // It panics if the download fails.
 func mustDownload(url string, progress bool) io.ReadCloser {
 	log.Info("Downloading %s", url)
-	response, err := http.Get(url)
+	response, err := httpClient.Get(url)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to download %s: %s", url, err))
 	} else if response.StatusCode < 200 || response.StatusCode > 299 {
