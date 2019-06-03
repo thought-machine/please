@@ -89,7 +89,7 @@ func please(tid int, state *core.BuildState) {
 		case core.Stop, core.Kill:
 			return
 		case core.Build:
-			Build(tid, state, label)
+			Build(tid, state, state.Graph.TargetOrDie(label))
 		default:
 			panic(fmt.Sprintf("unexpected task type: %d", t))
 		}
