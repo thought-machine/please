@@ -35,9 +35,8 @@ var httpClient http.Client
 var httpClientOnce sync.Once
 
 // Build implements the core logic for building a single target.
-func Build(tid int, state *core.BuildState, label core.BuildLabel) {
+func Build(tid int, state *core.BuildState, target *core.BuildTarget) {
 	start := time.Now()
-	target := state.Graph.TargetOrDie(label)
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
 	if err := buildTarget(tid, state, target); err != nil {
@@ -46,7 +45,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
 			return
 		}
-		state.LogBuildError(tid, label, core.TargetBuildFailed, err, "Build failed: %s", err)
+		state.LogBuildError(tid, target.Label, core.TargetBuildFailed, err, "Build failed: %s", err)
 		if err := RemoveOutputs(target); err != nil {
 			log.Errorf("Failed to remove outputs for %s: %s", target.Label, err)
 		}

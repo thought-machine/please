@@ -413,6 +413,10 @@ type Configuration struct {
 		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
 		DisableCoverage  []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 	}
+	Limit map[string]*struct {
+		Label string `help:"Label to restrict"`
+		Limit int    `help:"Maximum number of targets that can build or test simultaneously"`
+	} `help:"A section of options allowing limiting the number of targets with certain criteria that can run simultaneously"`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
