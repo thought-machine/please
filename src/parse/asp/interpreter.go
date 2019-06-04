@@ -11,13 +11,12 @@ import (
 
 // An interpreter holds the package-independent state about our parsing process.
 type interpreter struct {
-	builtinScope *scope
-	scope        *scope
-	parser       *Parser
-	subincludes  map[string]pyDict
-	config       map[*core.Configuration]*pyConfig
-	mutex        sync.RWMutex
-	configMutex  sync.RWMutex
+	scope       *scope
+	parser      *Parser
+	subincludes map[string]pyDict
+	config      map[*core.Configuration]*pyConfig
+	mutex       sync.RWMutex
+	configMutex sync.RWMutex
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -27,52 +26,48 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		state:  state,
 		locals: map[string]pyObject{},
 	}
-	bs := &scope{
-		state:  state,
-		locals: map[string]pyObject{},
-	}
 	i := &interpreter{
-		builtinScope: bs,
-		scope:        s,
-		parser:       p,
-		subincludes:  map[string]pyDict{},
-		config:       map[*core.Configuration]*pyConfig{},
+		scope:       s,
+		parser:      p,
+		subincludes: map[string]pyDict{},
+		config:      map[*core.Configuration]*pyConfig{},
 	}
 	s.interpreter = i
-	bs.interpreter = i
 	s.LoadSingletons(state)
-	bs.LoadSingletons(state)
 	return i
 }
 
 // LoadBuiltins loads a set of builtins from a file, optionally with its contents.
 func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements []*Statement) error {
+	s := i.scope.NewScope()
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
 	if filename == "builtins.build_defs" || filename == "src/parse/rules/builtins.build_defs" {
-		defer registerBuiltins(i.builtinScope)
+		defer registerBuiltins(s)
 	} else if filename == "misc_rules.build_defs" || filename == "src/parse/rules/misc_rules.build_defs" {
-		defer registerSubincludePackage(i.builtinScope)
+		defer registerSubincludePackage(s)
 	} else if filename == "config_rules.build_defs" || filename == "src/parse/rules/config_rules.build_defs" {
-		defer setNativeCode(i.builtinScope, "select", selectFunc)
+		defer setNativeCode(s, "select", selectFunc)
 	}
-	defer i.scope.SetAll(i.builtinScope.Freeze(), true)
+	defer i.scope.SetAll(s.Freeze(), true)
 	if statements != nil {
-		return i.interpretStatements(i.builtinScope, statements)
+		return i.interpretStatements(s, statements)
 	} else if len(contents) != 0 {
-		return i.loadBuiltinStatements(i.parser.ParseData(contents, filename))
+		stmts, err := i.parser.ParseData(contents, filename)
+		return i.loadBuiltinStatements(s, stmts, err)
 	}
-	return i.loadBuiltinStatements(i.parser.parse(filename))
+	stmts, err := i.parser.parse(filename)
+	return i.loadBuiltinStatements(s, stmts, err)
 }
 
 // loadBuiltinStatements loads statements as builtins.
-func (i *interpreter) loadBuiltinStatements(statements []*Statement, err error) error {
+func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, err error) error {
 	if err != nil {
 		return err
 	}
 	i.optimiseExpressions(reflect.ValueOf(statements))
-	return i.interpretStatements(i.builtinScope, i.parser.optimise(statements))
+	return i.interpretStatements(s, i.parser.optimise(statements))
 }
 
 // interpretAll runs a series of statements in the context of the given package.
