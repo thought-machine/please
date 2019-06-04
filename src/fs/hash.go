@@ -9,7 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/pkg/xattr"
 )
+
+// Tag that we attach for xattrs to store hashes of files so we can read them back in
+// constant time.
+const xattrName = "user.plz_hash"
 
 // boolTrueHashValue is used when we need to write something indicating a bool in the input.
 var boolTrueHashValue = []byte{2}
@@ -83,9 +89,17 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 	hasher.mutex.Lock()
 	hasher.memo[path] = hash
 	hasher.mutex.Unlock()
+	if strings.HasPrefix(path, "plz-out") {
+		// As mentioned below, this is best-effort only.
+		xattr.LSet(path, xattrName, hash)
+	}
 }
 
 func (hasher *PathHasher) hash(path string) ([]byte, error) {
+	// Try to read xattrs first so we don't have to hash the whole thing.
+	if b, err := xattr.LGet(path, xattrName); err == nil {
+		return b, nil
+	}
 	h := sha1.New()
 	info, err := os.Lstat(path)
 	if err == nil && info.Mode()&os.ModeSymlink != 0 {
@@ -132,7 +146,15 @@ func (hasher *PathHasher) hash(path string) ([]byte, error) {
 	} else {
 		err = hasher.fileHash(h, path) // let this handle any other errors
 	}
-	return h.Sum(nil), err
+	hash := h.Sum(nil)
+	if err != nil {
+		return hash, err
+	} else if strings.HasPrefix(path, "plz-out") {
+		// Ignore error; this is best-effort only (if it is not set we can fall back to a slower
+		// but reliable strategy later).
+		xattr.LSet(path, xattrName, hash)
+	}
+	return hash, err
 }
 
 // Calculate the hash of a single file
