@@ -20,7 +20,7 @@ func TestGetDefinitionLocationOnBuildDefs(t *testing.T) {
 	expectedURI := lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "src/fs/BUILD"))
 	expectedRange := lsp.Range{
 		Start: lsp.Position{Line: 0, Character: 0},
-		End:   lsp.Position{Line: 15, Character: 1},
+		End:   lsp.Position{Line: 16, Character: 1},
 	}
 	assert.Equal(t, 1, len(loc))
 	assert.Equal(t, expectedURI, loc[0].URI)
@@ -73,7 +73,7 @@ func TestGetDefinitionLocationOnAssignments(t *testing.T) {
 	expectedURI := lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "src/fs/BUILD"))
 	expectedRange := lsp.Range{
 		Start: lsp.Position{Line: 0, Character: 0},
-		End:   lsp.Position{Line: 15, Character: 1},
+		End:   lsp.Position{Line: 16, Character: 1},
 	}
 	assert.Equal(t, 1, len(loc))
 	assert.Equal(t, expectedURI, loc[0].URI)
@@ -94,7 +94,7 @@ func TestGetDefinitionLocationOnAssignments(t *testing.T) {
 	expectedURI = lsp.DocumentURI("file://" + path.Join(core.RepoRoot, "src/fs/BUILD"))
 	expectedRange = lsp.Range{
 		Start: lsp.Position{Line: 0, Character: 0},
-		End:   lsp.Position{Line: 15, Character: 1},
+		End:   lsp.Position{Line: 16, Character: 1},
 	}
 	assert.Equal(t, 1, len(loc))
 	assert.Equal(t, expectedURI, loc[0].URI)
