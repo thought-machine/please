@@ -85,7 +85,7 @@ func (e *extractor) extractTar(f io.Reader) error {
 			}
 			return err
 		}
-		out := path.Join(e.Out, hdr.Name)
+		out := path.Join(e.Out, strings.TrimLeft(strings.TrimPrefix(hdr.Name, e.Prefix), "/"))
 		if err := e.makeDir(out); err != nil {
 			return err
 		}
