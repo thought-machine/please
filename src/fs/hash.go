@@ -40,6 +40,9 @@ func NewPathHasher(root string) *PathHasher {
 // then force a recalculation of it.
 // If store is true then the hash may be stored permanently; this should not be set for files that
 // are user-controlled.
+// TODO(peterebden): ensure that this actually does hash each path only once (there are benign race
+//                   conditions that can lead to it happening twice)
+// TODO(peterebden): ensure that xattrs are marked correctly on cache retrieval.
 func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) {
 	path = hasher.ensureRelative(path)
 	if !recalc {
