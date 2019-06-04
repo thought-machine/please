@@ -48,6 +48,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		// File exists already and is the same file. Nothing to do.
 		// TODO(peterebden): This should also have a recursive case for when it's a directory...
 		builder.built[to] = true
+		state.PathHasher.MoveHash(from, to, true)
 		return nil
 	}
 	// Must actually build the file.
@@ -122,7 +123,7 @@ func filegroupOutputPath(state *core.BuildState, target *core.BuildTarget, outDi
 	// Hash filegroups have a hash embedded into the output name.
 	ext := path.Ext(source)
 	before := source[:len(source)-len(ext)]
-	hash, err := state.PathHasher.Hash(full, false)
+	hash, err := state.PathHasher.Hash(full, false, false)
 	if err != nil {
 		panic(err)
 	}

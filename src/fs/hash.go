@@ -38,7 +38,9 @@ func NewPathHasher(root string) *PathHasher {
 // Hash hashes a single path.
 // It is memoised and so will only hash each path once, unless recalc is true which will
 // then force a recalculation of it.
-func (hasher *PathHasher) Hash(path string, recalc bool) ([]byte, error) {
+// If store is true then the hash may be stored permanently; this should not be set for files that
+// are user-controlled.
+func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) {
 	path = hasher.ensureRelative(path)
 	if !recalc {
 		hasher.mutex.RLock()
@@ -48,7 +50,7 @@ func (hasher *PathHasher) Hash(path string, recalc bool) ([]byte, error) {
 			return cached, nil
 		}
 	}
-	result, err := hasher.hash(path)
+	result, err := hasher.hash(path, store)
 	if err == nil {
 		hasher.mutex.Lock()
 		hasher.memo[path] = result
@@ -59,7 +61,7 @@ func (hasher *PathHasher) Hash(path string, recalc bool) ([]byte, error) {
 
 // MustHash is as Hash but panics on error.
 func (hasher *PathHasher) MustHash(path string) []byte {
-	hash, err := hasher.Hash(path, false)
+	hash, err := hasher.Hash(path, false, false)
 	if err != nil {
 		panic(err)
 	}
@@ -95,10 +97,12 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 	}
 }
 
-func (hasher *PathHasher) hash(path string) ([]byte, error) {
+func (hasher *PathHasher) hash(path string, store bool) ([]byte, error) {
 	// Try to read xattrs first so we don't have to hash the whole thing.
-	if b, err := xattr.LGet(path, xattrName); err == nil {
-		return b, nil
+	if store {
+		if b, err := xattr.LGet(path, xattrName); err == nil {
+			return b, nil
+		}
 	}
 	h := sha1.New()
 	info, err := os.Lstat(path)
@@ -149,7 +153,7 @@ func (hasher *PathHasher) hash(path string) ([]byte, error) {
 	hash := h.Sum(nil)
 	if err != nil {
 		return hash, err
-	} else if strings.HasPrefix(path, "plz-out") {
+	} else if store && strings.HasPrefix(path, "plz-out") {
 		// Ignore error; this is best-effort only (if it is not set we can fall back to a slower
 		// but reliable strategy later).
 		xattr.LSet(path, xattrName, hash)
