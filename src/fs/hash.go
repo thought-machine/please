@@ -118,10 +118,7 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 	hasher.mutex.Lock()
 	hasher.memo[path] = hash
 	hasher.mutex.Unlock()
-	if strings.HasPrefix(path, "plz-out") {
-		// As mentioned below, this is best-effort only.
-		xattr.LSet(path, xattrName, hash)
-	}
+	hasher.storeHash(path, hash)
 }
 
 func (hasher *PathHasher) hash(path string, store bool) ([]byte, error) {
@@ -180,12 +177,29 @@ func (hasher *PathHasher) hash(path string, store bool) ([]byte, error) {
 	hash := h.Sum(nil)
 	if err != nil {
 		return hash, err
-	} else if store && strings.HasPrefix(path, "plz-out") {
-		// Ignore error; this is best-effort only (if it is not set we can fall back to a slower
-		// but reliable strategy later).
-		xattr.LSet(path, xattrName, hash)
+	} else if store {
+		hasher.storeHash(path, hash)
 	}
 	return hash, err
+}
+
+// storeHash stores the hash of a file on it as an xattr.
+// This is best-effort since if it fails we can always fall back to a slower but reliable rehash.
+func (hasher *PathHasher) storeHash(path string, hash []byte) {
+	// Only ever store hashes on output files.
+	if !strings.HasPrefix(path, "plz-out/") {
+		return
+	}
+	if err := xattr.LSet(path, xattrName, hash); err != nil && os.IsPermission(err) {
+		// If we get a permission denied, that may be because the output file was readonly.
+		// Cheekily attempt to chmod it into submission.
+		if info, err := os.Lstat(path); err == nil {
+			if err := os.Chmod(path, info.Mode()|0220); err == nil {
+				xattr.LSet(path, xattrName, hash)
+				os.Chmod(path, info.Mode())
+			}
+		}
+	}
 }
 
 // Calculate the hash of a single file
