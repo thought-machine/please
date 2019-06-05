@@ -147,6 +147,8 @@ type BuildState struct {
 	ShowAllOutput bool
 	// True to attach a debugger on test failure.
 	DebugTests bool
+	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
+	XattrsSupported bool
 	// True once we have killed the workers, so we only do it once.
 	workersKilled bool
 	// Number of running workers
@@ -754,6 +756,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		Success:         true,
+		XattrsSupported: true, // until proven otherwise
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		OriginalArch:    cli.HostArch(),
 		numWorkers:      numThreads,
