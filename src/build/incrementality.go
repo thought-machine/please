@@ -155,7 +155,7 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 	}
 	for _, tool := range target.AllTools() {
 		for _, path := range tool.FullPaths(state.Graph) {
-			result, err := state.PathHasher.Hash(path, false, false)
+			result, err := state.PathHasher.Hash(path, false, true)
 			if err != nil {
 				return nil, err
 			}
