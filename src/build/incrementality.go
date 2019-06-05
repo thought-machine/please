@@ -63,7 +63,7 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 			}
 		}
 	}
-	oldRuleHash, oldConfigHash, oldSourceHash, oldSecretHash := readRuleHash(target, postBuild)
+	oldRuleHash, oldConfigHash, oldSourceHash, oldSecretHash := readRuleHash(state, target, postBuild)
 	if !bytes.Equal(oldConfigHash, state.Hashes.Config) {
 		if len(oldConfigHash) == 0 {
 			// Small nicety to make it a bit clearer what's going on.
@@ -347,14 +347,15 @@ func readRuleHashOnFile(state *core.BuildState, target *core.BuildTarget, output
 			return nil
 		}
 		defer f.Close()
-		b, _ := f.Read()
+		b := make([]byte, fullHashLength)
+		f.Read(b)
 		return b
 	}
 	b, err := xattr.LGet(output, xattrName)
 	if err != nil {
 		if fs.IsSymlink(output) {
 			// Symlinks can't take xattrs on Linux. We stash it on the fallback hash file instead.
-			return readRuleHashOnFile(target, fallbackRuleHashFileName(target))
+			return readRuleHashOnFile(state, target, fallbackRuleHashFileName(target))
 		} else if e2 := err.(*xattr.Error).Err; !os.IsNotExist(e2) && e2 != xattr.ENOATTR {
 			log.Warning("Failed to read rule hash for %s: %s", target.Label, err)
 		}
@@ -380,7 +381,7 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 	outputs := target.FullOutputs()
 	if len(outputs) == 0 {
 		// Target has no outputs, have to use the fallback file.
-		return writeFallbackRuleHashFile(state, target, hash, path.Join(target.OutDir(), target.Label.Name))
+		return writeFallbackRuleHashFile(target, hash, path.Join(target.OutDir(), target.Label.Name))
 	}
 	for _, output := range outputs {
 		if err := writeRuleHashOnFile(state, target, output, hash); err != nil {
@@ -388,7 +389,7 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 		}
 	}
 	if target.PostBuildFunction != nil {
-		return writeRuleHashOnFile(target, postBuildOutputFileName(target), hash)
+		return writeRuleHashOnFile(state, target, postBuildOutputFileName(target), hash)
 	}
 	return nil
 }
@@ -422,7 +423,8 @@ func writeFallbackRuleHashFile(target *core.BuildTarget, hash []byte, output str
 		return err
 	}
 	defer f.Close()
-	return f.Write(hash)
+	_, err = f.Write(hash)
+	return err
 }
 
 // fallbackRuleHashFile returns the filename we'll store the hashes for this file on if we have

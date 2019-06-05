@@ -11,7 +11,7 @@ import (
 
 func TestAcquireRepoLock(t *testing.T) {
 	// Grab the lock
-	AcquireRepoLock()
+	AcquireRepoLock(nil)
 	// Now we should be able to open the file (ie. it exists)
 	lockFile, err := os.Open(lockFilePath)
 	assert.NoError(t, err)

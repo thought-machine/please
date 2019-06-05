@@ -736,6 +736,13 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 	return s
 }
 
+// DisableXattrs disables xattr support for this build. This is done for filesystems that
+// don't support it.
+func (state *BuildState) DisableXattrs() {
+	state.XattrsSupported = false
+	state.PathHasher.DisableXattrs()
+}
+
 // NewBuildState constructs and returns a new BuildState.
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
@@ -746,7 +753,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		Graph:           NewGraph(),
 		pendingTasks:    queue.NewPriorityQueue(10000, true), // big hint, why not
 		lastResults:     make([]*BuildResult, numThreads),
-		PathHasher:      fs.NewPathHasher(RepoRoot),
+		PathHasher:      fs.NewPathHasher(RepoRoot, config.Build.Xattrs),
 		ProcessExecutor: process.New(sandboxTool),
 		StartTime:       startTime,
 		Config:          config,
@@ -756,7 +763,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		Success:         true,
-		XattrsSupported: true, // until proven otherwise
+		XattrsSupported: config.Build.Xattrs,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		OriginalArch:    cli.HostArch(),
 		numWorkers:      numThreads,

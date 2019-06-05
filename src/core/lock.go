@@ -52,9 +52,11 @@ func AcquireRepoLock(state *BuildState) {
 	}
 
 	// Quick test of xattrs; we don't keep trying to use them if they fail here.
-	if err := xattr.Set(lockFilePath, "user.plz_build", []byte("lock")); err != nil {
-		log.Notice("xattrs are not supported on this filesystem, using fallbacks")
-		state.XattrsSupported = false
+	if state != nil && state.XattrsSupported {
+		if err := xattr.Set(lockFilePath, "user.plz_build", []byte("lock")); err != nil {
+			log.Warning("xattrs are not supported on this filesystem, using fallbacks")
+			state.DisableXattrs()
+		}
 	}
 }
 
