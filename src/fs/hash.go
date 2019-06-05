@@ -23,14 +23,22 @@ var boolTrueHashValue = []byte{2}
 // A PathHasher is responsible for hashing & remembering paths.
 type PathHasher struct {
 	memo  map[string][]byte
+	wait  map[string]*pendingHash
 	mutex sync.RWMutex
 	root  string
+}
+
+type pendingHash struct {
+	Ch   chan struct{}
+	Hash []byte
+	Err  error
 }
 
 // NewPathHasher returns a new PathHasher based on the given root directory.
 func NewPathHasher(root string) *PathHasher {
 	return &PathHasher{
 		memo: map[string][]byte{},
+		wait: map[string]*pendingHash{},
 		root: root,
 	}
 }
@@ -40,8 +48,6 @@ func NewPathHasher(root string) *PathHasher {
 // then force a recalculation of it.
 // If store is true then the hash may be stored permanently; this should not be set for files that
 // are user-controlled.
-// TODO(peterebden): ensure that this actually does hash each path only once (there are benign race
-//                   conditions that can lead to it happening twice)
 // TODO(peterebden): ensure that xattrs are marked correctly on cache retrieval.
 func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) {
 	path = hasher.ensureRelative(path)
@@ -53,12 +59,30 @@ func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) 
 			return cached, nil
 		}
 	}
+	// This check is important; if the file doesn't exist now, we don't want that
+	// recorded forever in hasher.wait since it might get created later.
+	if !PathExists(path) {
+		return nil, os.ErrNotExist
+	}
+	hasher.mutex.Lock()
+	if pending, present := hasher.wait[path]; present {
+		hasher.mutex.Unlock()
+		<-pending.Ch
+		return pending.Hash, pending.Err
+	}
+	pending := &pendingHash{Ch: make(chan struct{})}
+	hasher.wait[path] = pending
+	hasher.mutex.Unlock()
 	result, err := hasher.hash(path, store)
 	if err == nil {
 		hasher.mutex.Lock()
 		hasher.memo[path] = result
+		delete(hasher.wait, path)
 		hasher.mutex.Unlock()
 	}
+	pending.Hash = result
+	pending.Err = err
+	close(pending.Ch)
 	return result, err
 }
 
