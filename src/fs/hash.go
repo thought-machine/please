@@ -123,7 +123,7 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 
 func (hasher *PathHasher) hash(path string, store bool) ([]byte, error) {
 	// Try to read xattrs first so we don't have to hash the whole thing.
-	if store {
+	if strings.HasPrefix(path, "plz-out/") {
 		if b, err := xattr.LGet(path, xattrName); err == nil {
 			return b, nil
 		}
