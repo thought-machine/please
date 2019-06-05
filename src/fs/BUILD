@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//third_party/go:godirwalk",
         "//third_party/go:logging",
+        "//third_party/go:xattr",
     ],
 )
 

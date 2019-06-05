@@ -146,7 +146,7 @@ func mustSourceHash(state *core.BuildState, target *core.BuildTarget) []byte {
 func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
 	for source := range core.IterSources(state.Graph, target) {
-		result, err := state.PathHasher.Hash(source.Src, false)
+		result, err := state.PathHasher.Hash(source.Src, false, true)
 		if err != nil {
 			return nil, err
 		}
@@ -155,7 +155,7 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 	}
 	for _, tool := range target.AllTools() {
 		for _, path := range tool.FullPaths(state.Graph) {
-			result, err := state.PathHasher.Hash(path, false)
+			result, err := state.PathHasher.Hash(path, false, true)
 			if err != nil {
 				return nil, err
 			}
@@ -482,7 +482,7 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 	h := sha1.New()
 	h.Write(sh)
 	for source := range core.IterRuntimeFiles(state.Graph, target, true) {
-		result, err := state.PathHasher.Hash(source.Src, false)
+		result, err := state.PathHasher.Hash(source.Src, false, true)
 		if err != nil {
 			return result, err
 		}
@@ -520,7 +520,7 @@ func secretHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 	}
 	h := sha1.New()
 	for _, secret := range target.Secrets {
-		ph, err := state.PathHasher.Hash(secret, false)
+		ph, err := state.PathHasher.Hash(secret, false, false)
 		if err != nil && os.IsNotExist(err) {
 			return noSecrets, nil // Not having the secrets is not an error yet.
 		} else if err != nil {

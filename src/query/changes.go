@@ -90,7 +90,7 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, 
 			continue // Skip in-repo tools, that will be handled via revdeps.
 		}
 		for _, path := range tool.FullPaths(state.Graph) {
-			result, err := state.PathHasher.Hash(path, false)
+			result, err := state.PathHasher.Hash(path, false, false)
 			if err != nil {
 				return nil, err
 			}

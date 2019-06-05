@@ -9,7 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/pkg/xattr"
 )
+
+// Tag that we attach for xattrs to store hashes of files so we can read them back in
+// constant time.
+const xattrName = "user.plz_hash"
 
 // boolTrueHashValue is used when we need to write something indicating a bool in the input.
 var boolTrueHashValue = []byte{2}
@@ -17,14 +23,22 @@ var boolTrueHashValue = []byte{2}
 // A PathHasher is responsible for hashing & remembering paths.
 type PathHasher struct {
 	memo  map[string][]byte
+	wait  map[string]*pendingHash
 	mutex sync.RWMutex
 	root  string
+}
+
+type pendingHash struct {
+	Ch   chan struct{}
+	Hash []byte
+	Err  error
 }
 
 // NewPathHasher returns a new PathHasher based on the given root directory.
 func NewPathHasher(root string) *PathHasher {
 	return &PathHasher{
 		memo: map[string][]byte{},
+		wait: map[string]*pendingHash{},
 		root: root,
 	}
 }
@@ -32,7 +46,10 @@ func NewPathHasher(root string) *PathHasher {
 // Hash hashes a single path.
 // It is memoised and so will only hash each path once, unless recalc is true which will
 // then force a recalculation of it.
-func (hasher *PathHasher) Hash(path string, recalc bool) ([]byte, error) {
+// If store is true then the hash may be stored permanently; this should not be set for files that
+// are user-controlled.
+// TODO(peterebden): ensure that xattrs are marked correctly on cache retrieval.
+func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) {
 	path = hasher.ensureRelative(path)
 	if !recalc {
 		hasher.mutex.RLock()
@@ -42,18 +59,36 @@ func (hasher *PathHasher) Hash(path string, recalc bool) ([]byte, error) {
 			return cached, nil
 		}
 	}
-	result, err := hasher.hash(path)
+	// This check is important; if the file doesn't exist now, we don't want that
+	// recorded forever in hasher.wait since it might get created later.
+	if !PathExists(path) {
+		return nil, os.ErrNotExist
+	}
+	hasher.mutex.Lock()
+	if pending, present := hasher.wait[path]; present {
+		hasher.mutex.Unlock()
+		<-pending.Ch
+		return pending.Hash, pending.Err
+	}
+	pending := &pendingHash{Ch: make(chan struct{})}
+	hasher.wait[path] = pending
+	hasher.mutex.Unlock()
+	result, err := hasher.hash(path, store)
 	if err == nil {
 		hasher.mutex.Lock()
 		hasher.memo[path] = result
+		delete(hasher.wait, path)
 		hasher.mutex.Unlock()
 	}
+	pending.Hash = result
+	pending.Err = err
+	close(pending.Ch)
 	return result, err
 }
 
 // MustHash is as Hash but panics on error.
 func (hasher *PathHasher) MustHash(path string) []byte {
-	hash, err := hasher.Hash(path, false)
+	hash, err := hasher.Hash(path, false, false)
 	if err != nil {
 		panic(err)
 	}
@@ -83,9 +118,16 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 	hasher.mutex.Lock()
 	hasher.memo[path] = hash
 	hasher.mutex.Unlock()
+	hasher.storeHash(path, hash)
 }
 
-func (hasher *PathHasher) hash(path string) ([]byte, error) {
+func (hasher *PathHasher) hash(path string, store bool) ([]byte, error) {
+	// Try to read xattrs first so we don't have to hash the whole thing.
+	if strings.HasPrefix(path, "plz-out/") {
+		if b, err := xattr.LGet(path, xattrName); err == nil {
+			return b, nil
+		}
+	}
 	h := sha1.New()
 	info, err := os.Lstat(path)
 	if err == nil && info.Mode()&os.ModeSymlink != 0 {
@@ -132,7 +174,32 @@ func (hasher *PathHasher) hash(path string) ([]byte, error) {
 	} else {
 		err = hasher.fileHash(h, path) // let this handle any other errors
 	}
-	return h.Sum(nil), err
+	hash := h.Sum(nil)
+	if err != nil {
+		return hash, err
+	} else if store {
+		hasher.storeHash(path, hash)
+	}
+	return hash, err
+}
+
+// storeHash stores the hash of a file on it as an xattr.
+// This is best-effort since if it fails we can always fall back to a slower but reliable rehash.
+func (hasher *PathHasher) storeHash(path string, hash []byte) {
+	// Only ever store hashes on output files.
+	if !strings.HasPrefix(path, "plz-out/") {
+		return
+	}
+	if err := xattr.LSet(path, xattrName, hash); err != nil && os.IsPermission(err) {
+		// If we get a permission denied, that may be because the output file was readonly.
+		// Cheekily attempt to chmod it into submission.
+		if info, err := os.Lstat(path); err == nil {
+			if err := os.Chmod(path, info.Mode()|0220); err == nil {
+				xattr.LSet(path, xattrName, hash)
+				os.Chmod(path, info.Mode())
+			}
+		}
+	}
 }
 
 // Calculate the hash of a single file
