@@ -20,7 +20,7 @@ var lockFile *os.File
 
 // AcquireRepoLock opens the lock file and acquires the lock.
 // Dies if the lock cannot be successfully acquired.
-func AcquireRepoLock() {
+func AcquireRepoLock(state *BuildState) {
 	var err error
 	// There is of course technically a bit of a race condition between the file & flock operations here,
 	// but it shouldn't matter much since we're trying to mutually exclude plz processes started by the user
@@ -51,10 +51,12 @@ func AcquireRepoLock() {
 		}
 	}
 
-	// Quick test of xattrs; everything will fail later if we can't write them, so make
-	// sure plz-out supports them now and give a clear error if not.
-	if err := xattr.Set(lockFilePath, "user.plz_build", []byte("lock")); err != nil {
-		log.Fatalf("Failed to set xattrs:%s\nMaybe plz-out is on a filesystem that doesn't support them?", err)
+	// Quick test of xattrs; we don't keep trying to use them if they fail here.
+	if state != nil && state.XattrsSupported {
+		if err := xattr.Set(lockFilePath, "user.plz_build", []byte("lock")); err != nil {
+			log.Warning("xattrs are not supported on this filesystem, using fallbacks")
+			state.DisableXattrs()
+		}
 	}
 }
 

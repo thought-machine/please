@@ -22,10 +22,11 @@ var boolTrueHashValue = []byte{2}
 
 // A PathHasher is responsible for hashing & remembering paths.
 type PathHasher struct {
-	memo  map[string][]byte
-	wait  map[string]*pendingHash
-	mutex sync.RWMutex
-	root  string
+	memo      map[string][]byte
+	wait      map[string]*pendingHash
+	mutex     sync.RWMutex
+	root      string
+	useXattrs bool
 }
 
 type pendingHash struct {
@@ -35,12 +36,18 @@ type pendingHash struct {
 }
 
 // NewPathHasher returns a new PathHasher based on the given root directory.
-func NewPathHasher(root string) *PathHasher {
+func NewPathHasher(root string, useXattrs bool) *PathHasher {
 	return &PathHasher{
-		memo: map[string][]byte{},
-		wait: map[string]*pendingHash{},
-		root: root,
+		memo:      map[string][]byte{},
+		wait:      map[string]*pendingHash{},
+		root:      root,
+		useXattrs: useXattrs,
 	}
+}
+
+// DisableXattrs turns off xattr support, which bypasses using them to record file hashes.
+func (hasher *PathHasher) DisableXattrs() {
+	hasher.useXattrs = false
 }
 
 // Hash hashes a single path.
@@ -123,7 +130,7 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 
 func (hasher *PathHasher) hash(path string, store bool) ([]byte, error) {
 	// Try to read xattrs first so we don't have to hash the whole thing.
-	if strings.HasPrefix(path, "plz-out/") {
+	if strings.HasPrefix(path, "plz-out/") && hasher.useXattrs {
 		if b, err := xattr.LGet(path, xattrName); err == nil {
 			return b, nil
 		}
@@ -177,7 +184,7 @@ func (hasher *PathHasher) hash(path string, store bool) ([]byte, error) {
 	hash := h.Sum(nil)
 	if err != nil {
 		return hash, err
-	} else if store {
+	} else if store && hasher.useXattrs {
 		hasher.storeHash(path, hash)
 	}
 	return hash, err

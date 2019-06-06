@@ -3,7 +3,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20190226
+       - image: thoughtmachine/please_ubuntu:20190605
      environment:
        PLZ_ARGS: "-p --profile ci"
      steps:
@@ -48,7 +48,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20190201
+       - image: thoughtmachine/please_ubuntu_alt:20190605
      environment:
        PLZ_ARGS: "-p --profile ci"
        PLZ_COVER: "cover"

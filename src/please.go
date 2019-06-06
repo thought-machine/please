@@ -795,7 +795,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	// Acquire the lock before we start building
 	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
-		core.AcquireRepoLock()
+		core.AcquireRepoLock(state)
 		defer core.ReleaseRepoLock()
 	}
 
