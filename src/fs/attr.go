@@ -69,9 +69,6 @@ func ReadAttr(filename, xattrName string, xattrsEnabled bool) []byte {
 			log.Warning("Failed to read hash for %s: %s", filename, err)
 		}
 		return nil
-	} else if len(b) != fullHashLength {
-		// We could warn here but that would be annoying if we ever did change it.
-		return nil
 	}
 	return b
 }
