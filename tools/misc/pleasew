@@ -28,7 +28,7 @@ if [ -z "$URL_BASE" ]; then
 fi
 URL_BASE="${URL_BASE%/}"
 
-VERSION="`grep -i "^version" .plzconfig`"
+VERSION="`grep -i "^version[^a-z]" .plzconfig`"
 VERSION="${VERSION#*=}"    # Strip until after first =
 VERSION="${VERSION/ /}"    # Remove all spaces
 VERSION="${VERSION#>=}"    # Strip any initial >=
