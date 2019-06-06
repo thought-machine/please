@@ -93,8 +93,8 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
 
 
 def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
-                  visibility:list=None, zip_safe:bool=None, strip:bool=False, interpreter:str=None,
-                  shebang:str='', labels:list&features&tags=[]):
+                  visibility:list=None, test_only:bool=False, zip_safe:bool=None, strip:bool=False,
+                  interpreter:str=None, shebang:str='', labels:list&features&tags=[]):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -110,6 +110,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       out (str): Name of the output file. Default to name + .pex
       deps (list): Dependencies of this rule.
       visibility (list): Visibility specification.
+      test_only (bool): If True, can only be depended on by tests.
       zip_safe (bool): Allows overriding whether the output is marked zip safe or not.
                        If set to explicitly True or False, the output will be marked
                        appropriately; by default it will be safe unless any of the
@@ -136,6 +137,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         interpreter=interpreter,
         deps=deps,
         visibility=visibility,
+        test_only=test_only,
     )
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
@@ -154,6 +156,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
             'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
             'pex': [CONFIG.PEX_TOOL],
         },
+        test_only=test_only,
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
@@ -180,6 +183,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         # intermediary filegroup rule if really needed.
         provides={'py': lib_rule},
         labels=labels,
+        test_only=test_only,
     )
 
 
