@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/xattr"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/utils"
 	"github.com/thought-machine/please/src/worker"
@@ -120,10 +120,10 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if target.State() == core.Unchanged && core.PathExists(cachedOutputFile) {
 			// Output file exists already and appears to be valid. We might still need to rerun though
 			// if the coverage files aren't available.
-			if needCoverage && !verifyHash(cachedCoverageFile, hash) {
+			if needCoverage && !verifyHash(state, cachedCoverageFile, hash) {
 				log.Debug("Rerunning %s, coverage file doesn't exist or has wrong hash", target.Label)
 				return true
-			} else if !verifyHash(cachedOutputFile, hash) {
+			} else if !verifyHash(state, cachedOutputFile, hash) {
 				log.Debug("Rerunning %s, results file has incorrect hash", target.Label)
 				return true
 			}
@@ -563,7 +563,7 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 		state.Cache.StoreExtra(target, hash, filename)
 	}
 	// Set the hash on the new destination file
-	return xattr.LSet(to, xattrName, hash)
+	return fs.RecordAttr(to, hash, xattrName, state.XattrsSupported)
 }
 
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
@@ -585,7 +585,6 @@ func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.Build
 }
 
 // verifyHash verifies that the hash on a test file matches the one for the current test.
-func verifyHash(filename string, hash []byte) bool {
-	attr, err := xattr.LGet(filename, xattrName)
-	return err == nil && bytes.Equal(attr, hash)
+func verifyHash(state *core.BuildState, filename string, hash []byte) bool {
+	return bytes.Equal(hash, fs.ReadAttr(filename, xattrName, state.XattrsSupported))
 }

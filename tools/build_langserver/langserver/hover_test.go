@@ -181,7 +181,7 @@ func TestGetHoverAssignmentBuildLabel(t *testing.T) {
 	var ctx = context.Background()
 
 	content, err := handler.getHoverContent(ctx, assignBuildURI, lsp.Position{Line: 25, Character: 13})
-	expected := []string{"go_library(", "    name = \"fs\",", "    srcs = ["}
+	expected := []string{"go_library(", "    name = \"fs\",", "    srcs = glob("}
 	t.Log(content)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, strings.Split(content, "\n")[:3], expected)
@@ -200,7 +200,7 @@ func TestGetHoverContentOnListAssignment(t *testing.T) {
 	var ctx = context.Background()
 
 	coreContent := []string{"go_library(", "    name = \"core\",", "    srcs = glob("}
-	fsContent := []string{"go_library(", "    name = \"fs\",", "    srcs = ["}
+	fsContent := []string{"go_library(", "    name = \"fs\",", "    srcs = glob("}
 
 	// Hover on assignment with Multiline list
 	content, err := handler.getHoverContent(ctx, assignBuildURI, lsp.Position{Line: 10, Character: 11})

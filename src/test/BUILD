@@ -18,7 +18,6 @@ go_library(
         "//third_party/go:docker",
         "//third_party/go:logging",
         "//third_party/go:tools",
-        "//third_party/go:xattr",
     ],
 )
 
