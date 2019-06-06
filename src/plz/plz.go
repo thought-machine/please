@@ -1,6 +1,7 @@
 package plz
 
 import (
+	"strings"
 	"sync"
 
 	"gopkg.in/op/go-logging.v1"
@@ -135,8 +136,20 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 		target.Subrepo = arch.String()
 	}
 	if target.IsAllSubpackages() {
-		for pkg := range utils.FindAllSubpackages(state.Config, target.PackageName, "") {
-			state.AddOriginalTarget(core.NewBuildLabel(pkg, "all"), addToList)
+		// Any command-line labels with subrepos and ... require us to know where they are in order to
+		// walk the directory tree, so we have to make sure the subrepo exists first.
+		dir := target.PackageName
+		prefix := ""
+		if target.Subrepo != "" {
+			state.WaitForBuiltTarget(target.SubrepoLabel(), target)
+			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
+			dir = subrepo.Dir(dir)
+			prefix = subrepo.Dir(prefix)
+		}
+		for pkg := range utils.FindAllSubpackages(state.Config, dir, "") {
+			l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(pkg, prefix), "/"), "all")
+			l.Subrepo = target.Subrepo
+			state.AddOriginalTarget(l, addToList)
 		}
 	} else {
 		state.AddOriginalTarget(target, addToList)
