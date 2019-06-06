@@ -342,7 +342,7 @@ func readRuleHash(state *core.BuildState, target *core.BuildTarget, postBuild bo
 func readRuleHashOnFile(state *core.BuildState, target *core.BuildTarget, output string) []byte {
 	if !state.XattrsSupported {
 		// Read from the fallback file.
-		f, err := os.Open(output)
+		f, err := os.Open(ruleHashFileName(output))
 		if err != nil {
 			return nil
 		}
@@ -416,15 +416,19 @@ func writeRuleHashOnFile(state *core.BuildState, target *core.BuildTarget, outpu
 
 // writeFallbackRuleHashFile writes a rule hash to the fallback file.
 func writeFallbackRuleHashFile(target *core.BuildTarget, hash []byte, output string) error {
-	dir, file := path.Split(output)
-	output = dir + ".rule_hash_" + file
-	f, err := os.Create(output)
+	f, err := os.Create(ruleHashFileName(output))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 	_, err = f.Write(hash)
 	return err
+}
+
+// ruleHashFileName returns the name we'd use for the rule hash file for an output.
+func ruleHashFileName(output string) string {
+	dir, file := path.Split(output)
+	return dir + ".rule_hash_" + file
 }
 
 // fallbackRuleHashFile returns the filename we'll store the hashes for this file on if we have
