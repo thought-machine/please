@@ -105,14 +105,12 @@ python_test(
     interpreter = "python2",
     labels = ["py2"],
     deps = [":python_coverage"],
-    deps = [":python_coverage"],
 )
 
 python_test(
     name = "python3_coverage_test",
     srcs = ["python_coverage_test.py"],
     labels = ["py3"],
-    deps = [":python_coverage"],
     deps = [":python_coverage"],
 )
 
