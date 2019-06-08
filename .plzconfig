@@ -20,7 +20,6 @@ testtool = //tools/please_go_test
 importpath = github.com/thought-machine/please
 
 [cpp]
-defaultnamespace = thought_machine
 defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 

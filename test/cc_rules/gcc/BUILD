@@ -1,5 +1,9 @@
 # So far just contains tests for the C++ build rules.
 
+subinclude("//build_defs:cc_embed_binary")
+
+package(default_namespace = "plz")
+
 cc_embed_binary(
     name = "embedded_file_1",
     src = "embedded_file_1.txt",

@@ -303,7 +303,6 @@ func DefaultConfiguration() *Configuration {
 	config.Cpp.CppTool = "g++"
 	config.Cpp.LdTool = "ld"
 	config.Cpp.ArTool = "ar"
-	config.Cpp.AsmTool = "nasm"
 	config.Cpp.DefaultOptCflags = "--std=c99 -O3 -pipe -DNDEBUG -Wall -Werror"
 	config.Cpp.DefaultDbgCflags = "--std=c99 -g3 -pipe -DDEBUG -Wall -Werror"
 	config.Cpp.DefaultOptCppflags = "--std=c++11 -O3 -pipe -DNDEBUG -Wall -Werror"
@@ -480,14 +479,12 @@ type Configuration struct {
 		CppTool            string     `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example." var:"CPP_TOOL"`
 		LdTool             string     `help:"The tool invoked to link object files. Defaults to ld but you could also set it to gold, for example." var:"LD_TOOL"`
 		ArTool             string     `help:"The tool invoked to archive static libraries. Defaults to ar." var:"AR_TOOL"`
-		AsmTool            string     `help:"The tool invoked as an assembler. Currently only used on OSX for cc_embed_binary rules and so defaults to nasm." var:"ASM_TOOL"`
 		LinkWithLdTool     bool       `help:"If true, instructs Please to use the tool set earlier in ldtool to link binaries instead of cctool.\nThis is an esoteric setting that most people don't want; a vanilla ld will not perform all steps necessary here (you'll get lots of missing symbol messages from having no libc etc). Generally best to leave this disabled unless you have very specific requirements." var:"LINK_WITH_LD_TOOL"`
 		DefaultOptCflags   string     `help:"Compiler flags passed to all C rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c99 -O3 -DNDEBUG -Wall -Wextra -Werror" var:"DEFAULT_OPT_CFLAGS"`
 		DefaultDbgCflags   string     `help:"Compiler rules passed to all C rules during dbg builds.\nDefaults to --std=c99 -g3 -DDEBUG -Wall -Wextra -Werror." var:"DEFAULT_DBG_CFLAGS"`
 		DefaultOptCppflags string     `help:"Compiler flags passed to all C++ rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c++11 -O3 -DNDEBUG -Wall -Wextra -Werror" var:"DEFAULT_OPT_CPPFLAGS"`
 		DefaultDbgCppflags string     `help:"Compiler rules passed to all C++ rules during dbg builds.\nDefaults to --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror." var:"DEFAULT_DBG_CPPFLAGS"`
 		DefaultLdflags     string     `help:"Linker flags passed to all C++ rules.\nBy default this is empty." var:"DEFAULT_LDFLAGS"`
-		DefaultNamespace   string     `help:"Namespace passed to all cc_embed_binary rules when not overridden by the namespace argument to that rule.\nNot set by default, if you want to use those rules you'll need to set it or pass it explicitly to each one." var:"DEFAULT_NAMESPACE"`
 		PkgConfigPath      string     `help:"Custom PKG_CONFIG_PATH for pkg-config.\nBy default this is empty." var:"PKG_CONFIG_PATH"`
 		Coverage           bool       `help:"If true (the default), coverage will be available for C and C++ build rules.\nThis is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.\nIt's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation." var:"CPP_COVERAGE"`
 		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`

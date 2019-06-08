@@ -3,9 +3,12 @@
 # might use underneath - ie. we are not passing -fuse-ld or similar).
 
 # Must pass -stdlib so the STL implementation matches what we use for other deps (i.e. unittest)
+subinclude("//build_defs:cc_embed_binary")
+
 package(
     default_dbg_cppflags = "--std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter -stdlib=libstdc++",
     default_opt_cppflags = "--std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter -stdlib=libstdc++",
+    default_namespace = "plz",
 )
 
 package(
