@@ -28,7 +28,6 @@ defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-p
 javacworker = //tools/java:javac_worker
 junitrunner = //tools/java:junit_runner
 jarcattool = @//tools/jarcat
-pleasemaventool = //tools/please_maven
 
 [proto]
 protoctool = //third_party/proto:protoc
