@@ -97,6 +97,10 @@ python_test(
 python_library(
     name = "python_coverage",
     srcs = ["python_coverage.py"],
+    labels = [
+        "py2",
+        "py3",
+    ],
 )
 
 python_test(
