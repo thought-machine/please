@@ -170,3 +170,4 @@ python_test(
     name = "worker_test",
     srcs = ["worker_test.py"],
     worker = "//test/workers:worker",
+)
