@@ -2,6 +2,7 @@ package fs
 
 import (
 	"crypto/sha1"
+	"io/ioutil"
 	"os"
 	"path"
 
@@ -39,13 +40,7 @@ func RecordAttr(filename string, hash []byte, xattrName string, xattrsEnabled bo
 // xattrs aren't available.
 // The actual filename written will differ from the original (since obviously we cannot overwrite it).
 func RecordAttrFile(filename string, hash []byte) error {
-	f, err := os.Create(fallbackFileName(filename))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.Write(hash)
-	return err
+	return ioutil.WriteFile(fallbackFileName(filename), hash, 0644)
 }
 
 func fallbackFileName(filename string) string {
@@ -76,12 +71,6 @@ func ReadAttr(filename, xattrName string, xattrsEnabled bool) []byte {
 // ReadAttrFile reads a hash for the given file. It's the fallback for ReadAttr and pairs with
 // RecordAttrFile to read the same files it would write.
 func ReadAttrFile(filename string) []byte {
-	f, err := os.Open(fallbackFileName(filename))
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-	b := make([]byte, fullHashLength)
-	f.Read(b)
+	b, _ := ioutil.ReadFile(fallbackFileName(filename))
 	return b
 }
