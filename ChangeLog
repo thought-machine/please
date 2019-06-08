@@ -1,3 +1,10 @@
+Version 13.6.1
+--------------
+
+    * Add licences field to go_get
+    * Warn if stdin is being piped but not being read
+
+
 Version 13.6.0
 --------------
 
