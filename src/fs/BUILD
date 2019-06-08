@@ -1,13 +1,9 @@
 go_library(
     name = "fs",
-    srcs = [
-        "copy.go",
-        "fs.go",
-        "glob.go",
-        "hash.go",
-        "home.go",
-        "sort.go",
-    ],
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     visibility = ["PUBLIC"],
     deps = [
         "//third_party/go:godirwalk",

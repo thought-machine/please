@@ -15,7 +15,6 @@ go_library(
         "//third_party/go:logging",
         "//third_party/go:protobuf",
         "//third_party/go:shlex",
-        "//third_party/go:xattr",
     ],
 )
 
