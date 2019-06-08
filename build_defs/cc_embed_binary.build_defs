@@ -122,6 +122,7 @@ def c_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
         deps = deps,
         visibility = visibility,
         test_only = test_only,
+        _c = True,
     )
 
 

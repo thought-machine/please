@@ -7,7 +7,7 @@
 #include "test/cc_rules/clang/embedded_files.h"
 
 
-namespace thought_machine {
+namespace plz {
 
 PyObject* get_file1(PyObject *self, PyObject *args) {
     return PyUnicode_FromString(embedded_file1_contents().c_str());
@@ -54,14 +54,14 @@ static struct PyModuleDef so_test_def = {
 
 #endif  // PY_MAJOR_VERSION >= 3
 
-}  // namespace thought_machine
+}  // namespace plz
 
 #if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC PyInit_so_test() {
-    return PyModule_Create(&thought_machine::so_test_def);
+    return PyModule_Create(&plz::so_test_def);
 }
 #else
 PyMODINIT_FUNC initso_test() {
-    Py_InitModule("so_test", thought_machine::so_test_methods);
+    Py_InitModule("so_test", plz::so_test_methods);
 }
 #endif

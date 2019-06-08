@@ -5,7 +5,7 @@
 #include "test/cc_rules/lib1.h"
 #include "test/cc_rules/lib2.h"
 
-namespace thought_machine {
+namespace plz {
 
 TEST(GTest, Number1) {
     EXPECT_EQ(107, get_number_1());

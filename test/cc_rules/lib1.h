@@ -1,10 +1,10 @@
 #ifndef _TEST_CC_RULES_LIB1_H
 #define _TEST_CC_RULES_LIB1_H
 
-namespace thought_machine {
+namespace plz {
 
 int get_number_1();
 
-}  // namespace thought_machine
+}  // namespace plz
 
 #endif  // _TEST_CC_RULES_LIB1_H

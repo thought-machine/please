@@ -5,7 +5,7 @@
 #include "test/cc_rules/gcc/embedded_file_1.h"
 #include "test/cc_rules/gcc/embedded_file_3.h"
 
-namespace thought_machine {
+namespace plz {
 
 // This is the most basic case.
 TEST(EmbeddedFile1) {

@@ -274,36 +274,3 @@ def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copt
         _c = True,
         write_main = False,
     )
-
-
-def c_embed_binary(name:str, src:str, deps:list=[], visibility:list=None, test_only:list=False):
-    """Build rule to embed an arbitrary binary file into a C library.
-
-    You can depend on the output of this as though it were a c_library rule.
-    There are five functions available to access the data once compiled, all of which are
-    prefixed with the file's basename:
-      filename_start(): returns a const char* pointing to the beginning of the data.
-      filename_end(): returns a const char* pointing to the end of the data.
-      filename_size(): returns the length of the data in bytes.
-      filename_start_nc(): returns a char* pointing to the beginning of the data.
-                           This is a convenience wrapper using const_cast, you should not
-                           mutate the contents of the returned pointer.
-      filename_end_nc(): returns a char* pointing to the end of the data.
-                         Again, don't mutate the contents of the pointer.
-    You don't own the contents of any of these pointers so don't try to delete them :)
-
-    Args:
-      name (str): Name of the rule.
-      src (str): Source file to embed.
-      deps (list): Dependencies.
-      visibility (list): Rule visibility.
-      test_only (bool): If True, is only available to test rules.
-    """
-    return cc_embed_binary(
-        name = name,
-        src = src,
-        deps = deps,
-        visibility = visibility,
-        test_only = test_only,
-        _c = True,
-    )
