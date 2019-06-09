@@ -373,7 +373,7 @@ var buildFunctions = map[string]func() bool{
 		if opts.Build.Rebuild == true {
 			opts.FeatureFlags.NoCache = true
 		}
-		success, _ := runBuild(opts.Build.Args.Targets, true, false)
+		success, _ := runBuild(opts.Build.Args.Targets, true, false, false)
 		return success
 	},
 	"hash": func() bool {
