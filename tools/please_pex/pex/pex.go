@@ -46,7 +46,7 @@ func (pw *Writer) SetShebang(shebang string, options string) {
 		// In many environments shebangs cannot have more than one argument; we can work around
 		// that by treating it as a shell script.
 		if strings.Contains(shebang, " ") {
-			shebang = "#!/bin/sh\nexec " + shebang + " -S $0 $@"
+			shebang = "#!/bin/sh\nexec " + shebang + ` -S $0 "$@"`
 		} else {
 			shebang += " -S"
 		}
