@@ -98,16 +98,11 @@ var opts struct {
 	Build struct {
 		Prepare bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
 		Shell   bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
+		Rebuild bool     `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
 		Args    struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
-
-	Rebuild struct {
-		Args struct {
-			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to rebuild"`
-		} `positional-args:"true" required:"true"`
-	} `command:"rebuild" description:"Forces a rebuild of one or more targets"`
 
 	Hash struct {
 		Detailed bool `long:"detailed" description:"Produces a detailed breakdown of the hash"`
@@ -375,15 +370,10 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() bool{
 	"build": func() bool {
+		if opts.Build.Rebuild == true {
+			opts.FeatureFlags.NoCache = true
+		}
 		success, _ := runBuild(opts.Build.Args.Targets, true, false, false)
-		return success
-	},
-	"rebuild": func() bool {
-		// It would be more pure to require --nocache for this, but in basically any context that
-		// you use 'plz rebuild', you don't want the cache coming in and mucking things up.
-		// 'plz clean' followed by 'plz build' would still work in those cases, anyway.
-		opts.FeatureFlags.NoCache = true
-		success, _ := runBuild(opts.Rebuild.Args.Targets, true, false, false)
 		return success
 	},
 	"hash": func() bool {
@@ -774,7 +764,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
-	state.ForceRebuild = len(opts.Rebuild.Args.Targets) > 0
+	state.ForceRebuild = opts.Build.Rebuild
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.DebugTests = debugTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
