@@ -27,3 +27,8 @@ class PythonCoverageTest(unittest.TestCase):
         """Test we can import the binary tracer module."""
         from coverage import tracer
         self.assertIsNotNone(tracer)
+
+    def test_coverage_output(self):
+        """Test for manually examining coverage output."""
+        from test.python_rules.python_coverage import the_answer
+        self.assertEqual(42, the_answer())
