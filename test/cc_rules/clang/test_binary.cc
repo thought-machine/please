@@ -6,7 +6,7 @@
 
 
 int main(int argc, char** argv) {
-    using namespace thought_machine;
+    using namespace plz;
 
     if (embedded_file1_contents() != "testing message 1\n") {
 	return 1;
