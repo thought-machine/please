@@ -67,7 +67,6 @@ func matchingTools(config *core.Configuration, prefix string) map[string]string 
 		"junitrunner": config.Java.JUnitRunner,
 		"langserver":  "build_langserver",
 		"lps":         "build_langserver",
-		"maven":       config.Java.PleaseMavenTool,
 		"pex":         config.Python.PexTool,
 		"sandbox":     "please_sandbox",
 	}

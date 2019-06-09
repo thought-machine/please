@@ -12,7 +12,6 @@ filegroup(
         "//tools/java:junit_runner",
         "//tools/please_go_filter",
         "//tools/please_go_test",
-        "//tools/please_maven",
         "//tools/please_pex",
         "//tools/sandbox:please_sandbox",
     ],

@@ -17,8 +17,7 @@
   Each of these require explicit declarations of all their dependencies in the
   BUILD file; this is how we pin dependencies & guarantee reproducibility.<br/>
   There are one or two alternatives that show slightly different approaches
-  (e.g. <a href="lexicon.html#python_wheel">python_wheel</a> or
-  <a href="lexicon.html#maven_jars">maven_jars</a>) as well, and
+  (e.g. <a href="lexicon.html#python_wheel">python_wheel</a> which is more standalone, and
   <a href="lexicon.html#remote_file">remote_file</a> which is a general tool to
   download anything (although often more work is required to actually build it)</p>
 
@@ -87,10 +86,10 @@
 
 <p>If you're coming from Gradle or Maven, it's a little more alien due to being less language-specific
   and requiring full transitive dependencies to be specified.<br/>
-  <a href="lexicon.html#maven_jars">maven_jars</a> is the closest equivalent to declaring
-  Maven dependencies in the same way that Gradle does it; it works by communicating with
-  Maven repositories to find dependencies and generating more BUILD rules for them. This can
-  be a little unreliable though, since the Maven package format is complex, and your dependencies
+  There is an <a href="https://github.com/thought-machine/pleasings/blob/master/java/maven_jars.build_defs">add-on rule</a>
+  which is the closest equivalent; it works by communicating with Maven repositories to
+  find dependencies and generating more BUILD rules for them. This can be a little
+  unreliable though, since the Maven package format is complex, and your dependencies
   aren't fully within your control and can change between builds - we recommend
   <a href="lexicon.html#maven_jar">maven_jar</a> instead, but understand it's more work to set up.</p>
 

@@ -431,10 +431,6 @@
 	or <a href="http://d104xtrw2rzoau.cloudfront.net/wp-content/uploads/2013/06/15806-cat_stuck_jar_27_8_2012.jpg">this</a>
 	is purr-ly coincidental.</li>
 
-      <li><b>PleaseMavenTool</b><br/>
-        Defines the tool used to fetch information from Maven in <code>maven_jars</code> rules.<br/>
-        Defaults to <code>please_maven</code> in the Please install directory.</li>
-
       <li><b>DefaultMavenRepo</b><br/>
         Default location to load artifacts from in maven_jar rules.</li>
 
@@ -478,10 +474,6 @@
       <li><b>ArTool</b><br/>
         The tool invoked to archive static libraries. Defaults to <code>ar</code>.</li>
 
-      <li><b>AsmTool</b><br/>
-        The tool invoked as an assembler. Currently only used on OSX for
-	<code>cc_embed_binary</code> rules and so defaults to <code>nasm</code>.</li>
-
       <li><b>LinkWithLdTool</b><br/>
 	If true, instructs Please to use the tool set earlier in <code>ldtool</code>
 	to link binaries instead of <code>cctool</code>.<br/>
@@ -512,12 +504,6 @@
       <li><b>DefaultLdFlags</b><br/>
         Linker flags passed to all C++ rules.<br/>
         By default this is empty.</li>
-
-      <li><b>DefaultNamespace</b><br/>
-        Namespace passed to all <code>cc_embed_binary</code> rules when not overridden
-        by the <code>namespace</code> argument to that rule.<br/>
-        Not set by default, if you want to use those rules you'll need to set it or
-        pass it explicitly to each one.</li>
 
       <li><b>Coverage</b><br/>
         If true (the default), coverage will be available for C and C++ build rules.<br/>
