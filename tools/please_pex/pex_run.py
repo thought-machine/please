@@ -6,7 +6,6 @@ def add_module_dir_to_sys_path(dirname):
 
 
 def run():
-    clean_sys_path()
     if not ZIP_SAFE:
         with explode_zip()():
             add_module_dir_to_sys_path(MODULE_DIR)

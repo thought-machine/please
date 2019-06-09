@@ -44,8 +44,12 @@ func mustReadPreamble(path string) string {
 	defer f.Close()
 	r := bufio.NewReader(f)
 	s, err := r.ReadString('\n')
-	if err != nil {
-		log.Fatalf("%s", err)
+	must(err)
+	if s == "#!/bin/sh\n" {
+		// Preamble continues onto the next line. Read that too.
+		s2, err := r.ReadString('\n')
+		must(err)
+		return s + s2
 	}
 	return s
 }

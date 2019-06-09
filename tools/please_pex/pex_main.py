@@ -141,18 +141,6 @@ class ModuleDirImport(object):
         return module.__loader__.get_code(fullname)
 
 
-def clean_sys_path():
-    """Remove anything from sys.path that isn't either the pex or the main Python install dir.
-
-    NB: *not* site-packages or dist-packages or any of that malarkey, just the place where
-        we get the actual Python standard library packages from).
-    This would be cleaner if we could suppress loading site in the first place, but that isn't
-    as easy as all that to build into a pex, unfortunately.
-    """
-    site_packages = getsitepackages()
-    sys.path = [x for x in sys.path if not any(x.startswith(pkg) for pkg in site_packages)]
-
-
 def explode_zip():
     """Extracts the current pex to a temp directory where we can import everything from.
 
