@@ -376,17 +376,14 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         outs=[name + '_main.go'],
         deps=deps,
         cmd={
-            'dbg': f'$TOOLS_TEST $TOOLS_GO -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
-            'opt': f'$TOOLS_TEST $TOOLS_GO -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
-            'cover': f'$TOOLS_TEST $TOOLS_GO -d . -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS ',
+            'dbg': f'$TOOLS -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
+            'opt': f'$TOOLS -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
+            'cover': f'$TOOLS -d . -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS ',
         },
         needs_transitive_deps=True,  # Need all .a files to template coverage variables
         requires=['go', 'go_src'],
         test_only=True,
-        tools={
-            'go': [CONFIG.GO_TOOL],
-            'test': [CONFIG.GO_TEST_TOOL],
-        },
+        tools = [CONFIG.GO_TEST_TOOL],
         post_build=lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
     )
     deps += [lib_rule]
