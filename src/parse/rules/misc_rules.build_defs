@@ -348,15 +348,14 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             _tag = _tag + 'download',
             url = url,
             hashes = hashes,
-            out = out,
             licences = licences,
             test_only = test_only,
             labels = labels,
         )
         if strip_prefix:
-            cmd = '$TOOL x $SRCS_REMOTE -o $OUT -s ' + strip_prefix
+            cmd = '$TOOL x $SRCS -o $OUT -s ' + strip_prefix
         else:
-            cmd = '$TOOL x $SRCS_REMOTE -o $OUT'
+            cmd = '$TOOL x $SRCS -o $OUT'
         return build_rule(
             name = name,
             srcs = [remote_rule],
