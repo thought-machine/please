@@ -288,18 +288,6 @@ func (state *BuildState) killall(signal TaskType) {
 	}
 }
 
-// anyRunningTasks checks over a little while whether there are any tasks still running and
-// returns true if so.
-func (state *BuildState) anyRunningTasks() bool {
-	for i := 0; i < 10; i++ {
-		if state.progress.numRunning > 0 {
-			return true
-		}
-		time.Sleep(10 * time.Millisecond) // Give it a little time to see if anything wakes.
-	}
-	return state.progress.numRunning > 0
-}
-
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
 func (state *BuildState) IsOriginalTarget(label BuildLabel) bool {
 	return state.isOriginalTarget(label, false)
