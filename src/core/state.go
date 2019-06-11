@@ -288,16 +288,6 @@ func (state *BuildState) killall(signal TaskType) {
 	}
 }
 
-// DelayedKillAll waits until no workers are running
-func (state *BuildState) DelayedKillAll() {
-	for state.anyRunningTasks() {
-	}
-	if state.progress.numPending > 0 {
-		log.Error("All workers seem deadlocked, stopping.")
-		state.KillAll()
-	}
-}
-
 // anyRunningTasks checks over a little while whether there are any tasks still running and
 // returns true if so.
 func (state *BuildState) anyRunningTasks() bool {
