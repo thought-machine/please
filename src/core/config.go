@@ -412,6 +412,7 @@ type Configuration struct {
 		DefaultContainer string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only available option is 'docker', we expect to add support for more engines in future." options:"none,docker"`
 		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
 		DisableCoverage  []string     `help:"Disables coverage for tests that have any of these labels spcified."`
+		Upload           cli.URL      `help:"URL to upload test results to (in XML format)"`
 	}
 	Limit map[string]*struct {
 		Label string `help:"Label to restrict"`

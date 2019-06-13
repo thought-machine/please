@@ -5,7 +5,9 @@ package test
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"strconv"
@@ -410,7 +412,23 @@ type unitTestXMLFailure struct {
 func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	if err := os.MkdirAll(path.Dir(filename), core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory for test output")
+	} else if err = ioutil.WriteFile(filename, mustSerialiseResults(graph), 0644); err != nil {
+		log.Fatalf("Failed to write XML to %s: %s", filename, err)
 	}
+}
+
+// UploadResults uploads test results to a remote server.
+func UploadResults(graph *core.BuildGraph, url string) error {
+	if resp, err := http.Post(url, "application/xml", bytes.NewReader(mustSerialiseResults(graph))); err != nil {
+		return fmt.Errorf("Failed to upload test results: %s", err)
+	} else if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("Error from remote server on uploading test results: %s", resp.Status)
+	}
+	return nil
+}
+
+// mustSerialiseResults serialises all test results into XML.
+func mustSerialiseResults(graph *core.BuildGraph) []byte {
 	xmlTestResults := jUnitXMLTestSuites{}
 	xmlTestResults.XMLName.Local = "testsuites"
 
@@ -460,11 +478,11 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	for _, xmlTestSuite := range xmlSuites {
 		xmlTestResults.TestSuites = append(xmlTestResults.TestSuites, xmlTestSuite)
 	}
-	if b, err := xml.MarshalIndent(xmlTestResults, "", "    "); err != nil {
+	b, err := xml.MarshalIndent(xmlTestResults, "", "    ")
+	if err != nil {
 		log.Fatalf("Failed to serialise XML: %s", err)
-	} else if err = ioutil.WriteFile(filename, b, 0644); err != nil {
-		log.Fatalf("Failed to write XML to %s: %s", filename, err)
 	}
+	return b
 }
 
 func toXMLProperties(props map[string]string, cached bool) jUnitXMLProperties {
