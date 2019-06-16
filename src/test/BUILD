@@ -61,6 +61,7 @@ go_test(
     srcs = ["xml_results_test.go"],
     deps = [
         ":test",
+        "//src/core",
         "//third_party/go:testify",
     ],
 )

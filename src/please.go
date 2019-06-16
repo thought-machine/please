@@ -719,6 +719,11 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	success, state := runBuild(targets, true, true, false)
 	test.CopySurefireXMLFilesToDir(state, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
+	if state.Config.Test.Upload != "" {
+		if err := test.UploadResults(state.Graph, state.Config.Test.Upload.String()); err != nil {
+			log.Error("%s", err)
+		}
+	}
 	return success, state
 }
 
