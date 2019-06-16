@@ -174,7 +174,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
             (f'OUT_DIR="$TMP_DIR/{subdir}"') if subdir else 'OUT_DIR="$TMP_DIR"',
             'mkdir -p $OUT_DIR',
             'cd $PKG_DIR/' + subdir,
-            '$TOOL tool cgo -objdir $OUT_DIR -importpath ${PKG#*src/} *.go',
+            '$TOOL tool cgo -objdir $OUT_DIR -importpath ${PKG_DIR#*src/} *.go',
             # Remove the .o file which BSD sed gets upset about in the next command
             'rm -f $OUT_DIR/_cgo_.o $OUT_DIR/_cgo_main.c',
             # cgo leaves absolute paths in these files which we must get rid of :(
@@ -232,7 +232,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
     if o_rule:
         cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOLS_AR x $SRCS_O && $TOOLS_GO tool pack r $OUT *.o'
     else:
-        cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOLS_AR x $PKG/*#c.a && $TOOLS_GO tool pack r $OUT *.o'
+        cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOLS_AR x $PKG_DIR/*#c.a && $TOOLS_GO tool pack r $OUT *.o'
 
     return build_rule(
         name = name,
