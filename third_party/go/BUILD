@@ -505,42 +505,6 @@ go_get(
 )
 
 go_get(
-    name = "docker",
-    get = "docker.io/go-docker",
-    install = [
-        "",
-        "api/...",
-    ],
-    repo = "github.com/docker/go-docker",
-    revision = "v1.0.0",
-    deps = [
-        ":docker-distribution",
-        ":errors",
-        ":go-connections",
-        ":go-digest",
-        ":go-units",
-        ":gogo-protobuf",
-        ":image-spec",
-        ":net",
-    ],
-)
-
-go_get(
-    name = "docker-distribution",
-    get = "github.com/docker/distribution",
-    install = [
-        "reference",
-        "digestset",
-    ],
-    revision = "edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c",
-    strip = ["vendor"],
-    deps = [
-        ":go-digest",
-        ":net",
-    ],
-)
-
-go_get(
     name = "go-connections",
     get = "github.com/docker/go-connections/...",
     revision = "v0.3.0",

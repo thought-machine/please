@@ -16,7 +16,6 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
-	"encoding/gob"
 	"fmt"
 	"hash"
 	"io/ioutil"
@@ -233,17 +232,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 		for _, datum := range target.Data {
 			h.Write([]byte(datum.String()))
 		}
-		hashBool(h, target.Containerise)
 		hashOptionalBool(h, target.TestSandbox)
-		if target.ContainerSettings != nil {
-			e := gob.NewEncoder(h)
-			if err := e.Encode(target.ContainerSettings); err != nil {
-				panic(err)
-			}
-		}
-		if target.Containerise {
-			h.Write(state.Hashes.Containerisation)
-		}
 	}
 
 	hashBool(h, target.NeedsTransitiveDependencies)

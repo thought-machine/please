@@ -49,12 +49,6 @@ var specialFields = map[string]func(*printer) (string, bool){
 		}
 		return p.genericPrint(reflect.ValueOf(p.target.Visibility))
 	},
-	"container": func(p *printer) (string, bool) {
-		if p.target.ContainerSettings == nil {
-			return "True", p.target.Containerise
-		}
-		return p.genericPrint(reflect.ValueOf(p.target.ContainerSettings.ToMap()))
-	},
 	"tools": func(p *printer) (string, bool) {
 		return p.genericPrint(reflect.ValueOf(p.target.AllTools()))
 	},

@@ -4,7 +4,6 @@ package core
 
 import (
 	"crypto/sha1"
-	"encoding/gob"
 	"fmt"
 	"io"
 	"os"
@@ -48,12 +47,6 @@ const MachineConfigFileName = "/etc/plzconfig"
 const UserConfigFileName = "~/.config/please/plzconfig"
 
 const oldUserConfigFileName = "~/.please/plzconfig"
-
-// The available container implementations that we support.
-const (
-	ContainerImplementationNone   = "none"
-	ContainerImplementationDocker = "docker"
-)
 
 // GithubDownloadLocation is plz's Github repo, which will become the default download location in future.
 const GithubDownloadLocation = "https://github.com/thought-machine/please"
@@ -186,8 +179,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
-		"test.defaultcontainer": config.Test.DefaultContainer,
-		"python.testrunner":     config.Python.TestRunner,
+		"python.testrunner": config.Python.TestRunner,
 	})
 }
 
@@ -261,7 +253,6 @@ func DefaultConfiguration() *Configuration {
 	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)
 	config.Metrics.PerUser = true
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
-	config.Test.DefaultContainer = ContainerImplementationDocker
 	config.Display.SystemStats = true
 	config.Docker.DefaultImage = "ubuntu:trusty"
 	config.Docker.AllowLocalFallback = false
@@ -408,11 +399,10 @@ type Configuration struct {
 	} `help:"A section of options relating to reporting metrics. Currently only pushing metrics to a Prometheus pushgateway is supported, which is enabled by the pushgatewayurl setting."`
 	CustomMetricLabels map[string]string `help:"Allows defining custom labels to be applied to metrics. The key is the name of the label, and the value is a command to be run, the output of which becomes the label's value. For example, to attach the current Git branch to all metrics:\n\n[custommetriclabels]\nbranch = git rev-parse --abbrev-ref HEAD\n\nBe careful when defining new labels, it is quite possible to overwhelm the metric collector by creating metric sets with too high cardinality."`
 	Test               struct {
-		Timeout          cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		DefaultContainer string       `help:"Sets the default type of containerisation to use for tests that are given container = True.\nCurrently the only available option is 'docker', we expect to add support for more engines in future." options:"none,docker"`
-		Sandbox          bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
-		DisableCoverage  []string     `help:"Disables coverage for tests that have any of these labels spcified."`
-		Upload           cli.URL      `help:"URL to upload test results to (in XML format)"`
+		Timeout         cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
+		Sandbox         bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
+		DisableCoverage []string     `help:"Disables coverage for tests that have any of these labels spcified."`
+		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
 	}
 	Limit map[string]*struct {
 		Label string `help:"Label to restrict"`
@@ -557,16 +547,6 @@ func (config *Configuration) Hash() []byte {
 	}
 	for _, env := range config.getBuildEnv(false) {
 		h.Write([]byte(env))
-	}
-	return h.Sum(nil)
-}
-
-// ContainerisationHash returns the hash of the containerisation part of the config.
-func (config *Configuration) ContainerisationHash() []byte {
-	h := sha1.New()
-	encoder := gob.NewEncoder(h)
-	if err := encoder.Encode(config.Docker); err != nil {
-		panic(err)
 	}
 	return h.Sum(nil)
 }
