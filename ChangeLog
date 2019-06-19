@@ -1,3 +1,22 @@
+Version 14.0.0
+--------------
+
+    * Hashes are stored on files in xattrs (when available) for faster rebuilds (#640).
+    * Use of xattrs can now be disabled for systems where they are not supported (#641, #548, #644)
+    * `plz tool maven` and the builtin `maven_jars` are removed. They can be used from their
+      new home of https://github.com/thought-machine/pleasings.
+    * `go_test` no longer works for versions prior to 1.8
+    * `go_library` rules using assembly now only work with Go 1.12+ (previously they did not
+      work with 1.12) (#659)
+    * `plz rebuild` is removed in favour of `plz build --rebuild`
+    * `python_binary` and `python_test` now take a `site` argument determining whether they
+      import the site module at startup. Default is off. (#634)
+    * Import lines are excluded from Python coverage stats (#607)
+    * Jarcat honours --strip_prefix in some more places
+    * Support for uploading test results to a remote server (#657)
+    * Some fixes for cgo_library when at the root of the repo
+
+
 Version 13.8.2
 --------------
 
