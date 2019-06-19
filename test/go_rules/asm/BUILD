@@ -8,7 +8,7 @@ go_test(
     name = "asm_test",
     srcs = ["asm_test.go"],
     external = True,
-    labels = ["manual"],  # does not work in go 1.12 yet
+    labels = ["asm"],
     deps = [
         ":asm",
         "//third_party/go:testify",
