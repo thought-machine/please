@@ -75,6 +75,7 @@ func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, erro
 		name := info.Name()
 		if name != file && strings.HasSuffix(name, ".a") {
 			log.Warning("multiple .a files in %s, can't determine coverage variables accurately", dir)
+			return nil, nil
 		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
 			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
 				v := "GoCover_" + replacer.Replace(name)
