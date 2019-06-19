@@ -53,7 +53,6 @@ var opts struct {
 		Config     string            `short:"c" long:"config" env:"PLZ_BUILD_CONFIG" description:"Build config to use. Defaults to opt."`
 		Arch       cli.Arch          `short:"a" long:"arch" description:"Architecture to compile for."`
 		RepoRoot   cli.Filepath      `short:"r" long:"repo_root" description:"Root of repository to build."`
-		KeepGoing  bool              `short:"k" long:"keep_going" description:"Don't stop on first failed target."`
 		NumThreads int               `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
 		Include    []string          `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
 		Exclude    []string          `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
@@ -643,14 +642,10 @@ var buildFunctions = map[string]func() bool{
 		return true
 	},
 	"changes": func() bool {
-		// Temporarily set this flag on to avoid fatal errors from the first parse.
-		keepGoing := opts.BuildFlags.KeepGoing
-		opts.BuildFlags.KeepGoing = true
 		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
 		files := opts.Query.Changes.Args.Files.Get()
 		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
 		_, before := runBuild(core.WholeGraph, false, false, false)
-		opts.BuildFlags.KeepGoing = keepGoing
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		query.MustCheckout(original, opts.Query.Changes.CheckoutCommand)
@@ -805,7 +800,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		output.MonitorState(state, config.Please.NumThreads, !pretty, opts.BuildFlags.KeepGoing, detailedTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, config.Please.NumThreads, !pretty, detailedTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 
