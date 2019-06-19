@@ -9,6 +9,7 @@ Version 14.0.0
     * `go_library` rules using assembly now only work with Go 1.12+ (previously they did not
       work with 1.12) (#659)
     * `plz rebuild` is removed in favour of `plz build --rebuild`
+    * The `--keep_going` flag has been removed (#655)
     * `python_binary` and `python_test` now take a `site` argument determining whether they
       import the site module at startup. Default is off. (#634)
     * Import lines are excluded from Python coverage stats (#607)
