@@ -15,7 +15,6 @@ go_binary(
         "//src/hashes",
         "//src/help",
         "//src/ide/intellij",
-        "//src/metrics",
         "//src/output",
         "//src/parse",
         "//src/plz",

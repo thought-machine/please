@@ -500,8 +500,6 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabel
 	if label.IsAllTargets() {
 		if pkg := state.Graph.PackageByLabel(label); pkg != nil {
 			addPackage(pkg)
-		} else {
-			log.Warning("Package %s does not exist in graph", label.PackageName)
 		}
 	} else {
 		for name, pkg := range state.Graph.PackageMap() {

@@ -1,2 +1,2 @@
-[metrics]
-pushfrequency = 500eons
+[build]
+timeout = 500eons

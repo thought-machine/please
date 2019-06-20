@@ -12,7 +12,6 @@ go_library(
         "//src/cli",
         "//src/core",
         "//src/fs",
-        "//src/metrics",
         "//src/utils",
         "//src/worker",
         "//third_party/go:logging",
