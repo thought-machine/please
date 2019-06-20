@@ -254,11 +254,6 @@ func DefaultConfiguration() *Configuration {
 	config.Metrics.PerUser = true
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Display.SystemStats = true
-	config.Docker.DefaultImage = "ubuntu:trusty"
-	config.Docker.AllowLocalFallback = false
-	config.Docker.Timeout = cli.Duration(20 * time.Minute)
-	config.Docker.ResultsTimeout = cli.Duration(20 * time.Second)
-	config.Docker.RemoveTimeout = cli.Duration(20 * time.Second)
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
 	config.Go.BuildIDTool = "go_buildid_replacer"
@@ -413,13 +408,6 @@ type Configuration struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
 		ExcludeExtension []string `help:"Extensions of files to exclude from coverage.\nTypically this is for generated code; the default is to exclude protobuf extensions like .pb.go, _pb2.py, etc."`
 	}
-	Docker struct {
-		DefaultImage       string       `help:"The default image used for any test that doesn't specify another."`
-		AllowLocalFallback bool         `help:"If True, will attempt to run the test locally if containerised running fails."`
-		Timeout            cli.Duration `help:"Default timeout for containerised tests. Can be overridden on a per-rule basis."`
-		ResultsTimeout     cli.Duration `help:"Timeout to wait when trying to retrieve results from inside the container. Default is 20 seconds."`
-		RemoveTimeout      cli.Duration `help:"Timeout to wait when trying to remove a container after running a test. Defaults to 20 seconds."`
-	} `help:"Please supports running individual tests within Docker containers for isolation. This is useful for tests that mutate some global state (such as an embedded database, or open a server on a particular port). To do so, simply mark a test rule with container = True."`
 	Gc struct {
 		Keep      []BuildLabel `help:"Marks targets that gc should always keep. Can include meta-targets such as //test/... and //docs:all."`
 		KeepLabel []string     `help:"Defines a target label to be kept; for example, if you set this to go, no Go targets would ever be considered for deletion." example:"go"`

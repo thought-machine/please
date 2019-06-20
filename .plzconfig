@@ -33,10 +33,6 @@ protoctool = //third_party/proto:protoc
 protocgoplugin = //third_party/go:protoc-gen-go
 language = go
 
-[docker]
-defaultimage = thoughtmachine/please_test:v2
-allowlocalfallback = false
-
 [provider "go"]
 target = //test/go_provider
 path = //test/go_provider/...
