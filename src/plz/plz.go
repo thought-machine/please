@@ -11,7 +11,6 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/follow"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/utils"
@@ -35,7 +34,6 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	if config.Events.Port != 0 || config.Display.SystemStats {
 		go follow.UpdateResources(state)
 	}
-	metrics.InitFromConfig(config)
 
 	l := newLimiter(state.Config)
 	// Start looking for the initial targets to kick the build off

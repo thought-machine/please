@@ -138,9 +138,9 @@ func TestConfigOverrideUnknownName(t *testing.T) {
 
 func TestConfigOverrideURL(t *testing.T) {
 	config := DefaultConfiguration()
-	err := config.ApplyOverrides(map[string]string{"metrics.pushgatewayurl": "http://gateway:9091"})
+	err := config.ApplyOverrides(map[string]string{"test.upload": "http://gateway:9091"})
 	assert.NoError(t, err)
-	assert.EqualValues(t, "http://gateway:9091", config.Metrics.PushGatewayURL)
+	assert.EqualValues(t, "http://gateway:9091", config.Test.Upload)
 }
 
 func TestConfigOverrideOptions(t *testing.T) {
@@ -163,16 +163,6 @@ func TestDynamicSection(t *testing.T) {
 	assert.Equal(t, expected, config.Aliases)
 }
 
-func TestDynamicSubsection(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/metrics.plzconfig"}, nil)
-	assert.NoError(t, err)
-	assert.EqualValues(t, "http://localhost:9091", config.Metrics.PushGatewayURL)
-	expected := map[string]string{
-		"branch": "git rev-parse --abbrev-ref HEAD",
-	}
-	assert.Equal(t, expected, config.CustomMetricLabels)
-}
-
 func TestReadSemver(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/version_good.plzconfig"}, nil)
 	assert.NoError(t, err)
@@ -186,8 +176,8 @@ func TestReadSemver(t *testing.T) {
 func TestReadDurations(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/duration_good.plzconfig"}, nil)
 	assert.NoError(t, err)
-	assert.EqualValues(t, 500*time.Millisecond, config.Metrics.PushTimeout)
-	assert.EqualValues(t, 5*time.Second, config.Metrics.PushFrequency)
+	assert.EqualValues(t, 500*time.Millisecond, config.Build.Timeout)
+	assert.EqualValues(t, 5*time.Second, config.Test.Timeout)
 	config, err = ReadConfigFiles([]string{"src/core/test_data/duration_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }

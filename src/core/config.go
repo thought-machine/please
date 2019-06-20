@@ -249,9 +249,6 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.DirClean = true
 	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
 	config.Cache.RPCMaxMsgSize.UnmarshalFlag("200MiB")
-	config.Metrics.PushFrequency = cli.Duration(400 * time.Millisecond)
-	config.Metrics.PushTimeout = cli.Duration(500 * time.Millisecond)
-	config.Metrics.PerUser = true
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Display.SystemStats = true
 	config.Go.GoTool = "go"
@@ -385,15 +382,7 @@ type Configuration struct {
 		RPCSecure             bool         `help:"Forces SSL on for the RPC cache. It will be activated if any of rpcpublickey, rpcprivatekey or rpccacert are set, but this can be used if none of those are needed and SSL is still in use."`
 		RPCMaxMsgSize         cli.ByteSize `help:"Maximum size of a single message that we'll send to the RPC server.\nThis should agree with the server's limit, if it's higher the artifacts will be rejected.\nThe value is given as a byte size so can be suffixed with M, GB, KiB, etc."`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
-	Metrics struct {
-		PushGatewayURL cli.URL      `help:"The URL of the pushgateway to send metrics to."`
-		PushFrequency  cli.Duration `help:"The frequency, in milliseconds, to push statistics at." example:"400ms"`
-		PushTimeout    cli.Duration `help:"Timeout on pushes to the metrics repository." example:"500ms"`
-		PerTest        bool         `help:"Emit per-test duration metrics. Off by default because they generate increased load on Prometheus."`
-		PerUser        bool         `help:"Emit per-user metrics. On by default for compatibility, but will generate more load on Prometheus."`
-	} `help:"A section of options relating to reporting metrics. Currently only pushing metrics to a Prometheus pushgateway is supported, which is enabled by the pushgatewayurl setting."`
-	CustomMetricLabels map[string]string `help:"Allows defining custom labels to be applied to metrics. The key is the name of the label, and the value is a command to be run, the output of which becomes the label's value. For example, to attach the current Git branch to all metrics:\n\n[custommetriclabels]\nbranch = git rev-parse --abbrev-ref HEAD\n\nBe careful when defining new labels, it is quite possible to overwhelm the metric collector by creating metric sets with too high cardinality."`
-	Test               struct {
+	Test struct {
 		Timeout         cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
 		Sandbox         bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
 		DisableCoverage []string     `help:"Disables coverage for tests that have any of these labels spcified."`

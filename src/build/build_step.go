@@ -21,7 +21,6 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/worker"
 )
 
@@ -36,7 +35,6 @@ var httpClientOnce sync.Once
 
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, target *core.BuildTarget) {
-	start := time.Now()
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
 	if err := buildTarget(tid, state, target); err != nil {
@@ -52,7 +50,6 @@ func Build(tid int, state *core.BuildState, target *core.BuildTarget) {
 		target.SetState(core.Failed)
 		return
 	}
-	metrics.Record(target, time.Since(start))
 
 	// Add any of the reverse deps that are now fully built to the queue.
 	for _, reverseDep := range state.Graph.ReverseDependencies(target) {

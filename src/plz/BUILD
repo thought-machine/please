@@ -11,7 +11,6 @@ go_library(
         "//src/core",
         "//src/follow",
         "//src/fs",
-        "//src/metrics",
         "//src/parse",
         "//src/test",
         "//src/utils",

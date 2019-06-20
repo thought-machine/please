@@ -15,7 +15,6 @@ import (
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/utils"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -33,9 +32,7 @@ const xattrName = "user.plz_test"
 // Test runs the tests for a single target.
 func Test(tid int, state *core.BuildState, target *core.BuildTarget) {
 	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
-	startTime := time.Now()
 	test(tid, state.ForTarget(target), target.Label, target)
-	metrics.Record(target, time.Since(startTime))
 }
 
 func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget) {

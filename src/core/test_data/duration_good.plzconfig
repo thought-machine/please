@@ -1,3 +1,4 @@
-[metrics]
-pushtimeout = 500ms
-pushfrequency = 5
+[build]
+timeout = 500ms
+[test]
+timeout = 5

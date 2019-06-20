@@ -28,7 +28,6 @@ import (
 	"github.com/thought-machine/please/src/hashes"
 	"github.com/thought-machine/please/src/help"
 	"github.com/thought-machine/please/src/ide/intellij"
-	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/plz"
@@ -1023,7 +1022,6 @@ func execute(command string) bool {
 
 	success := buildFunctions[command]()
 
-	metrics.Stop()
 	worker.StopAll()
 
 	return success

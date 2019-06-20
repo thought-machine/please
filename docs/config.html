@@ -245,47 +245,6 @@
         <code>_pb.go</code>, <code>_bindata.go</code>, and <code>_test_main.cc</code>.</li>
     </ul>
 
-    <h3>[Metrics]</h3>
-
-    <p>Options related to metric collection. Currently the only metrics implementation pushes
-      to a <a href="https://prometheus.io/">Prometheus</a>
-      <a href="https://github.com/prometheus/pushgateway">pushgateway</a> for collection.</p>
-
-    <ul>
-      <li><b>PushGatewayURL</b><br/>
-	    The URL of the pushgateway to send metrics to.</li>
-
-      <li><b>PushFrequency</b> (duration)<br/>
-	    The frequency to push statistics at. Defaults to 400ms.</li>
-
-      <li><b>PushTimeout</b> (duration)<br/>
-	    The timeout for metric pushes. Defaults to 500ms.</li>
-
-      <li><b>PerTest</b> (bool)<br/>
-	    Emit per-test duration metrics. Off by default, they can be very useful but generate
-        larger cardinalities of labels in Prometheus.</li>
-
-      <li><b>PerUser</b> (bool)<br/>
-	    Emit per-user metric labels. On by default, but turning it off can reduce the amount of
-        data to be stored.</li>
-    </ul>
-
-    <h3>[CustomMetricLabels]</h3>
-
-    <p>Describes optional labels to attach to metrics.<br/>
-      For technical reasons this is a separate section to the main metrics options.</p>
-
-    <p>These are defined as key-value pairs, where the key is the label attached to the metric
-      and the value is a command to run on the system that defines the value to attach.<br/>
-      Hence these labels are run once at startup and constant across all build targets.</p>
-
-    <p>For example:<br/>
-      <pre><code>branch = git rev-parse --abbrev-ref HEAD</code></pre>
-      to attach the current git branch to all metrics reported.</p>
-
-    <p>In general it's a good idea not to let the cardinality of your labels become too large,
-      so you might want to filter it to only print whether the user is on master or not.</p>
-
     <h3>[Gc]</h3>
 
     <p>Options relating to use of <code>plz gc</code>.</p>
