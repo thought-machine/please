@@ -81,12 +81,12 @@ func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) 
 	hasher.wait[path] = pending
 	hasher.mutex.Unlock()
 	result, err := hasher.hash(path, store)
+	hasher.mutex.Lock()
 	if err == nil {
-		hasher.mutex.Lock()
 		hasher.memo[path] = result
-		delete(hasher.wait, path)
-		hasher.mutex.Unlock()
 	}
+	delete(hasher.wait, path)
+	hasher.mutex.Unlock()
 	pending.Hash = result
 	pending.Err = err
 	close(pending.Ch)
