@@ -505,45 +505,10 @@ go_get(
 )
 
 go_get(
-    name = "go-connections",
-    get = "github.com/docker/go-connections/...",
-    revision = "v0.3.0",
-    deps = [
-        ":errors",
-        ":net",
-    ],
-)
-
-go_get(
-    name = "go-units",
-    get = "github.com/docker/go-units",
-    revision = "v0.3.2",
-)
-
-go_get(
     name = "gogo-protobuf",
     get = "github.com/gogo/protobuf",
     install = ["proto"],
     revision = "v0.4",
-)
-
-go_get(
-    name = "go-digest",
-    get = "github.com/opencontainers/go-digest",
-    revision = "v1.0.0-rc1",
-)
-
-go_get(
-    name = "image-spec",
-    get = "github.com/opencontainers/image-spec",
-    install = [
-        "specs-go/...",
-    ],
-    revision = "v1.0.0",
-    deps = [
-        ":errors",
-        ":go-digest",
-    ],
 )
 
 go_get(
