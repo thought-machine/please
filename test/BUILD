@@ -56,8 +56,6 @@ plz_e2e_test(
     name = "test_output_test",
     cmd = "plz test //test:test_output_test_1 //test:test_output_test_2",
     expect_output_contains = "6 passed.",
-    # Invokes a containerised test although it's not itself.
-    labels = ["container"],
 )
 
 gentest(
@@ -69,7 +67,6 @@ gentest(
 
 gentest(
     name = "test_output_test_2",
-    container = True,
     data = ["test_output_test_2.xml"],
     labels = ["manual"],
     test_cmd = "cp $(location test_output_test_2.xml) test.results",
@@ -308,7 +305,6 @@ plz_e2e_test(
 go_test(
     name = "extra_test_output_go_test",
     srcs = ["extra_test_output_test.go"],
-    container = True,
     labels = ["manual"],
     test_outputs = ["truth.txt"],
 )
@@ -317,7 +313,6 @@ plz_e2e_test(
     name = "extra_test_output_test",
     cmd = "plz test //test:extra_test_output_go_test",
     expect_file_exists = "../../../bin/test/truth.txt",
-    labels = ["container"],
 )
 
 # Test 'query alltargets'

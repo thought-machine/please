@@ -194,7 +194,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
 
 def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=[], worker:str='',
                 labels:list&features&tags=None, size:str=None, flags:str='', visibility:list=None,
-                container:bool|dict=False, sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
+                sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
                 test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False):
     """Generates a Python test target.
 
@@ -216,7 +216,6 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
       size (str): Test size (enormous, large, medium or small).
       flags (str): Flags to apply to the test command.
       visibility (list): Visibility specification.
-      container (bool | dict): If True, the test will be run in a container (eg. Docker).
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       timeout (int): Maximum time this test is allowed to run for, in seconds.
       flaky (int | bool): True to mark this test as flaky, or an integer for a number of reruns.
@@ -293,7 +292,6 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         output_is_complete=True,
         binary=True,
         test=True,
-        container=container,
         test_sandbox=sandbox,
         building_description="Building pex...",
         visibility=visibility,

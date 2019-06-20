@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -83,8 +82,6 @@ type BuildTarget struct {
 	// Indicates that the target can only be depended on by tests or other rules with this set.
 	// Used to restrict non-deployable code and also affects coverage detection.
 	TestOnly bool `name:"test_only"`
-	// True if we're going to containerise the test.
-	Containerise bool `name:"container"`
 	// True if the build action is sandboxed.
 	Sandbox bool
 	// True if the test action is sandboxed.
@@ -117,8 +114,6 @@ type BuildTarget struct {
 	ShowProgress bool `name:"progress"`
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
-	// Containerisation settings that override the defaults.
-	ContainerSettings *TargetContainerSettings `name:"container"`
 	// The results of this test target, if it is one.
 	Results TestSuite `print:"false"`
 	// Description displayed while the command is building.
@@ -235,28 +230,6 @@ func (s BuildTargetState) String() string {
 		return "Failed"
 	}
 	return "Unknown"
-}
-
-// TargetContainerSettings are known settings controlling containerisation for a particular target.
-type TargetContainerSettings struct {
-	// Image to use for this test
-	DockerImage string `name:"docker_image"`
-	// Username / Uid to run as
-	DockerUser string `name:"docker_user"`
-	// Location to mount a tmpfs at
-	Tmpfs string `name:"tmpfs"`
-}
-
-// ToMap returns this struct as a map.
-func (settings *TargetContainerSettings) ToMap() map[string]string {
-	m := map[string]string{}
-	v := reflect.ValueOf(settings).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		if s := v.Field(i).String(); s != "" {
-			m[v.Type().Field(i).Tag.Get("name")] = s
-		}
-	}
-	return m
 }
 
 // NewBuildTarget constructs & returns a new BuildTarget.
@@ -1143,22 +1116,6 @@ func (target *BuildTarget) AddRequire(require string) {
 	target.Requires = append(target.Requires, require)
 	// Requirements are also implicit labels
 	target.AddLabel(require)
-}
-
-// SetContainerSetting sets one of the fields on the container settings by name.
-func (target *BuildTarget) SetContainerSetting(name, value string) error {
-	if target.ContainerSettings == nil {
-		target.ContainerSettings = &TargetContainerSettings{}
-	}
-	t := reflect.TypeOf(*target.ContainerSettings)
-	for i := 0; i < t.NumField(); i++ {
-		if strings.ToLower(t.Field(i).Name) == name {
-			v := reflect.ValueOf(target.ContainerSettings)
-			v.Elem().Field(i).SetString(value)
-			return nil
-		}
-	}
-	return fmt.Errorf("Field %s isn't a valid container setting", name)
 }
 
 // OutMode returns the mode to set outputs of a target to.

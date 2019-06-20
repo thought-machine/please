@@ -215,15 +215,17 @@
         Sets the default timeout length, in seconds, for any test that isn't explicitly given one.
         Defaults to 600 (10 minutes).</li>
 
-      <li><b>DefaultContainer</b><br/>
-        Sets the default type of containerisation to use for tests that are given
-        <code>container = True</code>.<br/>
-        Currently the only option is "docker" but we intend to add rkt support at some point.</li>
-
       <li><b>Sandbox</b> (bool)<br/>
         Activates sandboxing for individual tests, which isolates them from network
         access, IPC and some aspects of the filesystem. Currently only works on Linux.
         Defaults to <code>False</code>.</li>
+
+      <li><b>DisableCoverage</b> (repeated string)<br/>
+        Disables coverage for tests that have any of these labels specified.</li>
+
+      <li><b>Upload</b> (string)<br/>
+        URL to upload test results to. The request is a POST containing the results in
+        XML format.</li>
     </ul>
 
     <h3>[Cover]</h3>
@@ -283,29 +285,6 @@
 
     <p>In general it's a good idea not to let the cardinality of your labels become too large,
       so you might want to filter it to only print whether the user is on master or not.</p>
-
-    <h3>[Docker]</h3>
-
-    <p>Options relating to tests that are run inside Docker containers.</p>
-
-    <ul>
-      <li><b>DefaultImage</b><br/>
-        The default image used for any test that doesn't specify another.
-        Defaults to <code>ubuntu:trusty</code>.</li>
-
-      <li><b>AllowLocalFallback</b> (bool)<br/>
-        If True, will attempt to run the test locally if containerised running fails.
-        Defaults to <code>False</code>.</li>
-
-      <li><b>Timeout</b> (int)<br/>
-        Default timeout for Dockerised tests, in seconds. Default is 1200 (twenty minutes).</li>
-
-      <li><b>ResultsTimeout</b> (int)<br/>
-        Timeout to wait when trying to retrieve results from inside the container. Default is 20 seconds.</li>
-
-      <li><b>RemoveTimeout</b> (int)<br/>
-        Timeout to wait when trying to remove a container after running a test. Defaults to 20 seconds.</li>
-    </ul>
 
     <h3>[Gc]</h3>
 

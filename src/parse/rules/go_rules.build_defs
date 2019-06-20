@@ -341,7 +341,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
 
 
 def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', visibility:list=None,
-            flags:str='', container:bool|dict=False, sandbox:bool=None, cgo:bool=False,
+            flags:str='', sandbox:bool=None, cgo:bool=False,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
             labels:list&features&tags=None, size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
             definitions:str|list|dict=None):
@@ -355,7 +355,6 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
       worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
       visibility (list): Visibility specification
       flags (str): Flags to apply to the test invocation.
-      container (bool | dict): True to run this test in a container.
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       cgo (bool): True if this test depends on a cgo_library.
       external (bool): True if this test is external to the library it's testing, i.e. it uses the
@@ -438,7 +437,6 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         cmd=cmds,
         test_cmd=test_cmd,
         visibility=visibility,
-        container=container,
         test_sandbox=sandbox,
         test_timeout=timeout,
         size = size,
@@ -455,7 +453,7 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
 
 
 def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:list=None,
-             flags:str='', container:bool|dict=False, sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
+             flags:str='', sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
              test_outputs:list=None, labels:list&features&tags=None, size:str=None, static:bool=False):
     """Defines a Go test rule over a cgo_library.
 
@@ -470,7 +468,6 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
       deps (list): Dependencies
       visibility (list): Visibility specification
       flags (str): Flags to apply to the test invocation.
-      container (bool | dict): True to run this test in a container.
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       timeout (int): Timeout in seconds to allow the test to run for.
       flaky (int | bool): True to mark the test as flaky, or an integer to specify how many reruns.
@@ -493,7 +490,6 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
         static = static,
         visibility = visibility,
         flags = flags,
-        container = container,
         sandbox = sandbox,
         timeout = timeout,
         flaky = flaky,

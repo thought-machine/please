@@ -136,11 +136,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		// We shouldn't really have specific things like this here, but it really is just easier to set it.
 		"GTEST_OUTPUT=xml:"+resultsFile,
 	)
-	// Ideally we would set this to something useful even within a container, but it ends
-	// up being /tmp/test or something which just confuses matters.
-	if !target.Containerise {
-		env = append(env, "HOME="+testDir)
-	}
+	env = append(env, "HOME="+testDir)
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
 		env = append(env, "COVERAGE=true", "COVERAGE_FILE=test.coverage")
 	}

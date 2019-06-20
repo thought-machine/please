@@ -1,1 +1,0 @@
-This file will only appear in the container if data is working properly.

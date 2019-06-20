@@ -90,8 +90,6 @@ type BuildState struct {
 	Hashes struct {
 		// Hash of the general config, not including specialised bits.
 		Config []byte
-		// Hash of the config relating to containerisation for tests.
-		Containerisation []byte
 	}
 	// Tracks file hashes during the build.
 	PathHasher *fs.PathHasher
@@ -756,7 +754,6 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 	}
 	state.progress.allStates = []*BuildState{state}
 	state.Hashes.Config = config.Hash()
-	state.Hashes.Containerisation = config.ContainerisationHash()
 	config.Please.NumThreads = numThreads
 	for _, exp := range config.Parse.ExperimentalDir {
 		state.experimentalLabels = append(state.experimentalLabels, BuildLabel{PackageName: exp, Name: "..."})

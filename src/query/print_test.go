@@ -121,23 +121,6 @@ func TestPostBuildOutput(t *testing.T) {
 	assert.Equal(t, expected, s)
 }
 
-func TestContainerOutput(t *testing.T) {
-	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_container_output", ""))
-	target.SetContainerSetting("dockerimage", "alpine:3.5")
-	target.SetContainerSetting("dockeruser", "test")
-	s := testPrint(target)
-	expected := `  build_rule(
-      name = 'test_container_output',
-      container = {
-          'docker_image': 'alpine:3.5',
-          'docker_user': 'test',
-      },
-  )
-
-`
-	assert.Equal(t, expected, s)
-}
-
 func TestPrintFields(t *testing.T) {
 	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_print_fields", ""))
 	target.AddLabel("go")

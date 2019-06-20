@@ -15,7 +15,6 @@ go_library(
         "//src/metrics",
         "//src/utils",
         "//src/worker",
-        "//third_party/go:docker",
         "//third_party/go:logging",
         "//third_party/go:tools",
     ],
@@ -29,13 +28,6 @@ go_test(
         ":test",
         "//third_party/go:testify",
     ],
-)
-
-go_test(
-    name = "container_test",
-    srcs = ["container_test.go"],
-    container = True,
-    data = ["test_data/container_data.txt"],
 )
 
 go_test(

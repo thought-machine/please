@@ -42,13 +42,8 @@ if [ "`uname`" = "Darwin" ]; then
 fi
 eval `go env`
 if [ "$GOOS" != "linux" ] ; then
-    warn "Containerised tests disabled due to not being on Linux"
-    EXCLUDES="${EXCLUDES} --exclude=container"
     warn "cc_module tests disabled due to not being on Linux"
     EXCLUDES="${EXCLUDES} --exclude=cc_module"
-elif ! hash docker 2>/dev/null ; then
-    warn "Docker not found, excluding containerised tests"
-    EXCLUDES="${EXCLUDES} --exclude=container"
 fi
 # TODO(peterebden): Once Go 1.13 is out we will need to update (or remove) this.
 if [ ! "`go version | grep 1.12`" ]; then
