@@ -225,7 +225,7 @@ def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compile
 def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
            pkg_config_libs:list=[], pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=None, flags:str='',
            labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=None, size:str=None, timeout:int=0,
-           container:bool|dict=False, sandbox:bool=None):
+           sandbox:bool=None):
     """Defines a C test target.
 
     Note that you must supply your own main() and test framework (ala cc_test when
@@ -248,7 +248,6 @@ def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copt
       test_outputs (list): Extra test output files to generate from this test.
       size (str): Test size (enormous, large, medium or small).
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
-      container (bool | dict): If true the test is run in a container (eg. Docker).
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
     """
     return cc_test(
@@ -269,7 +268,6 @@ def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copt
         test_outputs = test_outputs,
         size = size,
         timeout = timeout,
-        container = container,
         sandbox = sandbox,
         _c = True,
         write_main = False,

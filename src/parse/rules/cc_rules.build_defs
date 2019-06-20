@@ -546,7 +546,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[],
             pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[],
             visibility:list=[], flags:str='', labels:list&features&tags=[], flaky:bool|int=0,
-            test_outputs:list=[], size:str=None, timeout:int=0, container:bool|dict=False,
+            test_outputs:list=[], size:str=None, timeout:int=0,
             sandbox:bool=None, write_main:bool=False, linkstatic:bool=False, _c=False):
     """Defines a C++ test.
 
@@ -571,7 +571,6 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
       test_outputs (list): Extra test output files to generate from this test.
       size (str): Test size (enormous, large, medium or small).
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
-      container (bool | dict): If true the test is run in a container (eg. Docker).
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       write_main (bool): Deprecated, has no effect. See `plz help testmain` for more information
                          about how to define a default dependency for the test main.
@@ -635,7 +634,6 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         test_outputs=test_outputs,
         test_timeout=timeout,
         size = size,
-        container=container,
         test_sandbox=sandbox,
     )
 
