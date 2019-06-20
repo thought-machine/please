@@ -174,16 +174,6 @@ func TestAddSource(t *testing.T) {
 	assert.Equal(t, 2, len(target.DeclaredDependencies()))
 }
 
-func TestSetContainerSettings(t *testing.T) {
-	target := makeTarget("//src/test/python:lib1", "")
-
-	target.SetContainerSetting("dockerimage", "tm/special_image:v2")
-	assert.Equal(t, "tm/special_image:v2", target.ContainerSettings.DockerImage)
-
-	target.SetContainerSetting("dockeruser", "")
-	assert.Equal(t, "", target.ContainerSettings.DockerUser)
-}
-
 func TestOutputs(t *testing.T) {
 	target1 := makeTarget("//src/core:target1", "PUBLIC")
 	target1.AddOutput("file1.go")
@@ -537,18 +527,6 @@ func TestAllTools(t *testing.T) {
 	target1.AddNamedTool("test1", target4.Label)
 	target1.AddNamedTool("test2", target3.Label)
 	assert.Equal(t, []BuildInput{target2.Label, target4.Label, target3.Label}, target1.AllTools())
-}
-
-func TestContainerSettingsToMap(t *testing.T) {
-	s := TargetContainerSettings{
-		DockerImage: "alpine:3.5",
-		DockerUser:  "test",
-	}
-	expected := map[string]string{
-		"docker_image": "alpine:3.5",
-		"docker_user":  "test",
-	}
-	assert.Equal(t, expected, s.ToMap())
 }
 
 func TestShouldIncludeSimple(t *testing.T) {

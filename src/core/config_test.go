@@ -200,14 +200,6 @@ func TestReadByteSizes(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestReadContainers(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/container_good.plzconfig"}, nil)
-	assert.NoError(t, err)
-	assert.EqualValues(t, ContainerImplementationDocker, config.Test.DefaultContainer)
-	config, err = ReadConfigFiles([]string{"src/core/test_data/container_bad.plzconfig"}, nil)
-	assert.Error(t, err)
-}
-
 func TestCompletions(t *testing.T) {
 	config := DefaultConfiguration()
 	completions := config.Completions("python.pip")

@@ -31,13 +31,6 @@ go_test(
 )
 
 go_test(
-    name = "container_test",
-    srcs = ["container_test.go"],
-    container = True,
-    data = ["test_data/container_data.txt"],
-)
-
-go_test(
     name = "coverage_test",
     srcs = ["coverage_test.go"],
     data = [
