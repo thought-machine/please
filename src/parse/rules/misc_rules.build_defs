@@ -360,9 +360,13 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             outs = [out],
             tools = [CONFIG.JARCAT_TOOL],
             cmd = cmd,
+            binary = binary,
             test_only = test_only,
             labels = labels,
             visibility = visibility,
+            building_description = 'Extracting...',
+            deps = deps,
+            exported_deps = exported_deps,
         )
 
     urls = [url] if isinstance(url, str) else url
