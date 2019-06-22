@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"crypto/sha1"
 	"fmt"
 	"hash"
 	"io"
@@ -22,6 +21,7 @@ var boolTrueHashValue = []byte{2}
 
 // A PathHasher is responsible for hashing & remembering paths.
 type PathHasher struct {
+	new       func() hash.Hash
 	memo      map[string][]byte
 	wait      map[string]*pendingHash
 	mutex     sync.RWMutex
@@ -36,8 +36,9 @@ type pendingHash struct {
 }
 
 // NewPathHasher returns a new PathHasher based on the given root directory.
-func NewPathHasher(root string, useXattrs bool) *PathHasher {
+func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash) *PathHasher {
 	return &PathHasher{
+		new:       hash,
 		memo:      map[string][]byte{},
 		wait:      map[string]*pendingHash{},
 		root:      root,
@@ -135,7 +136,7 @@ func (hasher *PathHasher) hash(path string, store bool) ([]byte, error) {
 			return b, nil
 		}
 	}
-	h := sha1.New()
+	h := hasher.new()
 	info, err := os.Lstat(path)
 	if err == nil && info.Mode()&os.ModeSymlink != 0 {
 		// Handle symlinks specially (don't attempt to read their contents).

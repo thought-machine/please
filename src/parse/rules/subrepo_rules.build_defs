@@ -24,8 +24,8 @@ def workspace(name:str):
     )
 
 
-def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=None,
-                 sha256:str=None, config:str=None, bazel_compat:bool=False,
+def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha256=None,
+                 config:str=None, bazel_compat:bool=False,
                  visibility:list=None):
     """Fetches a remote file over HTTP and expands its contents.
 
@@ -40,7 +40,6 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=Non
             tried in sequence.
       strip_prefix: Prefix to strip from the expanded archive.
       hashes: List of hashes to verify the rule with.
-      sha256: Used for Bazel compat but currently has no effect.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
@@ -52,14 +51,13 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list=Non
         urls = urls,
         strip_prefix = strip_prefix,
         hashes = hashes,
-        sha256 = sha256,
         config = config,
         bazel_compat = bazel_compat,
     )
 
 
 def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
-                     strip_prefix:str=None, hashes:str|list=None, sha256:str=None,
+                     strip_prefix:str=None, hashes:str|list&sha256=None,
                      config:str=None, bazel_compat:bool=False, visibility:list=None):
     """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
 
@@ -80,7 +78,6 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
                           We suggest using build_file instead, but this is provided for Bazel compatibility.
       strip_prefix: Prefix to strip from the expanded archive.
       hashes: List of hashes to verify the rule with.
-      sha256: Used for Bazel compat but currently has no effect.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
