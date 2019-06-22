@@ -731,8 +731,8 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		Graph:           NewGraph(),
 		pendingTasks:    queue.NewPriorityQueue(10000, true), // big hint, why not
 		lastResults:     make([]*BuildResult, numThreads),
-		PathHasher:      fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New),
-		SHA256Hasher:    fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New),
+		PathHasher:      fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
+		SHA256Hasher:    fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "_sha256"),
 		ProcessExecutor: process.New(sandboxTool),
 		StartTime:       startTime,
 		Config:          config,
