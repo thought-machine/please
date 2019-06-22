@@ -522,8 +522,8 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 	hashStr := hex.EncodeToString(hash)
 	if checkRuleHashesOfType(target, outputs, state.PathHasher, sha1.New, sha1Len, hashStr) ||
 		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.PathHasher, nil, sha1Len, "")) ||
-		(len(outputs) != 1 && checkRuleHashesOfType(target, outputs, state.PathHasher, sha256.New, sha256Len, "")) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.PathHasher, nil, sha256Len, "")) {
+		(len(outputs) != 1 && checkRuleHashesOfType(target, outputs, state.SHA256Hasher, sha256.New, sha256Len, "")) ||
+		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.SHA256Hasher, nil, sha256Len, "")) {
 		return nil
 	} else if len(target.Hashes) == 1 {
 		return fmt.Errorf("Bad output hash for rule %s: was %s but expected %s",
