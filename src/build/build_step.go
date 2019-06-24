@@ -4,8 +4,10 @@ package build
 import (
 	"bytes"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
 	"os"
@@ -443,7 +445,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	if err != nil {
 		return nil, err
 	}
-	if err = checkRuleHashes(target, hash); err != nil {
+	if err = checkRuleHashes(state, target, hash); err != nil {
 		if state.NeedHashesOnly && (state.IsOriginalTarget(target.Label) || state.IsOriginalTarget(target.Label.Parent())) {
 			return nil, errStop
 		} else if state.VerifyHashes {
@@ -476,14 +478,24 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	return hash, nil
 }
 
-// OutputHash calculates the hash of a target's outputs.
+// OutputHash calculates the usual hash of a target's outputs.
 func OutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	h := sha1.New()
-	for _, filename := range target.FullOutputs() {
+	return outputHash(target, target.FullOutputs(), state.PathHasher, sha1.New)
+}
+
+// outputHash is a more general form of OutputHash that allows different hashing strategies.
+// For example, one could choose to use sha256 instead of our usual sha1.
+func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash) ([]byte, error) {
+	if combine == nil {
+		// Must be a single output, just hash that directly.
+		return hasher.Hash(outputs[0], true, !target.IsFilegroup)
+	}
+	h := combine()
+	for _, filename := range outputs {
 		// NB. Always force a recalculation of the output hashes here. Memoisation is not
 		//     useful because by definition we are rebuilding a target, and can actively hurt
 		//     in cases where we compare the retrieved cache artifacts with what was there before.
-		h2, err := state.PathHasher.Hash(filename, true, !target.IsFilegroup)
+		h2, err := hasher.Hash(filename, true, !target.IsFilegroup)
 		if err != nil {
 			return nil, err
 		}
@@ -499,36 +511,50 @@ func OutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 	return h.Sum(nil), nil
 }
 
-// mustOutputHash calculates the hash of a target's outputs. It panics on any errors.
-func mustOutputHash(state *core.BuildState, target *core.BuildTarget) []byte {
-	hash, err := OutputHash(state, target)
-	if err != nil {
-		panic(err)
-	}
-	return hash
-}
-
 // Verify the hash of output files for a rule match the ones set on it.
-func checkRuleHashes(target *core.BuildTarget, hash []byte) error {
+func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []byte) error {
+	const sha1Len = 2 * sha1.Size // x2 because of hex-encoding
+	const sha256Len = 2 * sha256.Size
 	if len(target.Hashes) == 0 {
 		return nil // nothing to check
 	}
+	outputs := target.FullOutputs()
 	hashStr := hex.EncodeToString(hash)
-	for _, okHash := range target.Hashes {
-		// Hashes can have an arbitrary label prefix. Strip it off if present.
-		if index := strings.LastIndexByte(okHash, ':'); index != -1 {
-			okHash = strings.TrimSpace(okHash[index+1:])
-		}
-		if okHash == hashStr {
-			return nil
-		}
-	}
-	if len(target.Hashes) == 1 {
+	if checkRuleHashesOfType(target, outputs, state.PathHasher, sha1.New, sha1Len, hashStr) ||
+		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.PathHasher, nil, sha1Len, "")) ||
+		(len(outputs) != 1 && checkRuleHashesOfType(target, outputs, state.SHA256Hasher, sha256.New, sha256Len, "")) ||
+		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.SHA256Hasher, nil, sha256Len, "")) {
+		return nil
+	} else if len(target.Hashes) == 1 {
 		return fmt.Errorf("Bad output hash for rule %s: was %s but expected %s",
 			target.Label, hashStr, target.Hashes[0])
 	}
 	return fmt.Errorf("Bad output hash for rule %s: was %s but expected one of [%s]",
 		target.Label, hashStr, strings.Join(target.Hashes, ", "))
+}
+
+// checkRuleHashesOfType checks any hashes on this rule of a single type.
+// Currently we support SHA-1 and SHA-256, and also have specialisations for the case
+// where a target has a single output so as not to double-hash it.
+// It is a bit fiddly, but is organised this way to avoid calculating hashes of
+// unused types unnecessarily since that could get quite expensive.
+func checkRuleHashesOfType(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash, size int, hash string) bool {
+	for _, h := range target.Hashes {
+		// Hashes can have an arbitrary label prefix. Strip it off if present.
+		if index := strings.LastIndexByte(h, ':'); index != -1 {
+			h = strings.TrimSpace(h[index+1:])
+		}
+		if len(h) == size { // Check if the hash is of the right algorithm
+			if hash == "" {
+				bhash, _ := outputHash(target, outputs, hasher, combine)
+				hash = hex.EncodeToString(bhash)
+			}
+			if hash == h {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func retrieveFromCache(state *core.BuildState, target *core.BuildTarget) ([]byte, bool) {

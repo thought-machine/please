@@ -207,7 +207,11 @@ func checkAndReplaceSequence(state *core.BuildState, target, dep *core.BuildTarg
 		panic(fmt.Sprintf("Rule %s is tagged as binary but produces no output.", dep.Label))
 	}
 	if hash {
-		return base64.RawURLEncoding.EncodeToString(mustOutputHash(state, dep))
+		h, err := OutputHash(state, dep)
+		if err != nil {
+			panic(err)
+		}
+		return base64.RawURLEncoding.EncodeToString(h)
 	}
 	output := ""
 	for _, out := range dep.Outputs() {

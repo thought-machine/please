@@ -8,6 +8,7 @@
 package build
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -241,6 +242,41 @@ func TestFileGroupBinDir(t *testing.T) {
 	info, err := os.Stat("plz-out/bin/package1/package2/")
 	assert.NoError(t, err)
 	assert.Equal(t, os.FileMode(0755), info.Mode().Perm())
+}
+
+func TestOutputHash(t *testing.T) {
+	state, target := newState("//package3:target1")
+	target.AddOutput("file1")
+	target.Hashes = []string{"6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a"}
+	b, err := OutputHash(state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, "6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a", hex.EncodeToString(b))
+}
+
+func TestCheckRuleHashes(t *testing.T) {
+	state, target := newState("//package3:target1")
+	target.AddOutput("file1")
+	target.Hashes = []string{"6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a"}
+
+	// This is the normal sha1-with-combine hash calculation
+	b, _ := OutputHash(state, target)
+	err := checkRuleHashes(state, target, b)
+	assert.NoError(t, err)
+
+	// This is testing the negative case
+	target.Hashes = []string{"630bff40cc8d5329e6176779493281ddb3e0add3"}
+	err = checkRuleHashes(state, target, b)
+	assert.Error(t, err)
+
+	// This is the equivalent to sha1sum of the file, so should be accepted too
+	target.Hashes = []string{"dba7673010f19a94af4345453005933fd511bea9"}
+	err = checkRuleHashes(state, target, b)
+	assert.NoError(t, err)
+
+	// This is the equivalent to sha256sum of the file, so should be accepted too
+	target.Hashes = []string{"634b027b1b69e1242d40d53e312b3b4ac7710f55be81f289b549446ef6778bee"}
+	err = checkRuleHashes(state, target, b)
+	assert.NoError(t, err)
 }
 
 func newState(label string) (*core.BuildState, *core.BuildTarget) {

@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"crypto/sha1"
 	"fmt"
 	"hash"
 	"io"
@@ -13,19 +12,17 @@ import (
 	"github.com/pkg/xattr"
 )
 
-// Tag that we attach for xattrs to store hashes of files so we can read them back in
-// constant time.
-const xattrName = "user.plz_hash"
-
 // boolTrueHashValue is used when we need to write something indicating a bool in the input.
 var boolTrueHashValue = []byte{2}
 
 // A PathHasher is responsible for hashing & remembering paths.
 type PathHasher struct {
+	new       func() hash.Hash
 	memo      map[string][]byte
 	wait      map[string]*pendingHash
 	mutex     sync.RWMutex
 	root      string
+	xattrName string
 	useXattrs bool
 }
 
@@ -36,12 +33,14 @@ type pendingHash struct {
 }
 
 // NewPathHasher returns a new PathHasher based on the given root directory.
-func NewPathHasher(root string, useXattrs bool) *PathHasher {
+func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, hashSuffix string) *PathHasher {
 	return &PathHasher{
+		new:       hash,
 		memo:      map[string][]byte{},
 		wait:      map[string]*pendingHash{},
 		root:      root,
 		useXattrs: useXattrs,
+		xattrName: "user.plz_hash" + hashSuffix,
 	}
 }
 
@@ -80,7 +79,7 @@ func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) 
 	pending := &pendingHash{Ch: make(chan struct{})}
 	hasher.wait[path] = pending
 	hasher.mutex.Unlock()
-	result, err := hasher.hash(path, store)
+	result, err := hasher.hash(path, store, !recalc)
 	hasher.mutex.Lock()
 	if err == nil {
 		hasher.memo[path] = result
@@ -128,14 +127,14 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 	hasher.storeHash(path, hash)
 }
 
-func (hasher *PathHasher) hash(path string, store bool) ([]byte, error) {
+func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
 	// Try to read xattrs first so we don't have to hash the whole thing.
-	if strings.HasPrefix(path, "plz-out/") && hasher.useXattrs {
-		if b, err := xattr.LGet(path, xattrName); err == nil {
+	if read && strings.HasPrefix(path, "plz-out/") && hasher.useXattrs {
+		if b, err := xattr.LGet(path, hasher.xattrName); err == nil {
 			return b, nil
 		}
 	}
-	h := sha1.New()
+	h := hasher.new()
 	info, err := os.Lstat(path)
 	if err == nil && info.Mode()&os.ModeSymlink != 0 {
 		// Handle symlinks specially (don't attempt to read their contents).
@@ -197,12 +196,12 @@ func (hasher *PathHasher) storeHash(path string, hash []byte) {
 	if !strings.HasPrefix(path, "plz-out/") {
 		return
 	}
-	if err := xattr.LSet(path, xattrName, hash); err != nil && os.IsPermission(err) {
+	if err := xattr.LSet(path, hasher.xattrName, hash); err != nil && os.IsPermission(err) {
 		// If we get a permission denied, that may be because the output file was readonly.
 		// Cheekily attempt to chmod it into submission.
 		if info, err := os.Lstat(path); err == nil {
 			if err := os.Chmod(path, info.Mode()|0220); err == nil {
-				xattr.LSet(path, xattrName, hash)
+				xattr.LSet(path, hasher.xattrName, hash)
 				os.Chmod(path, info.Mode())
 			}
 		}

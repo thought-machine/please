@@ -1,6 +1,8 @@
 package core
 
 import (
+	"crypto/sha1"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"sort"
@@ -93,6 +95,8 @@ type BuildState struct {
 	}
 	// Tracks file hashes during the build.
 	PathHasher *fs.PathHasher
+	// Backup hasher that's used for sha256 hashes
+	SHA256Hasher *fs.PathHasher
 	// Level of verbosity during the build
 	Verbosity int
 	// Cache to store / retrieve old build results.
@@ -727,7 +731,8 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 		Graph:           NewGraph(),
 		pendingTasks:    queue.NewPriorityQueue(10000, true), // big hint, why not
 		lastResults:     make([]*BuildResult, numThreads),
-		PathHasher:      fs.NewPathHasher(RepoRoot, config.Build.Xattrs),
+		PathHasher:      fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
+		SHA256Hasher:    fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "_sha256"),
 		ProcessExecutor: process.New(sandboxTool),
 		StartTime:       startTime,
 		Config:          config,
