@@ -23,8 +23,8 @@ var opts = struct {
 	Shebang            string        `short:"s" long:"shebang" description:"Explicitly set shebang to this"`
 	Site               bool          `short:"S" long:"site" description:"Allow the pex to import site at startup"`
 	ZipSafe            bool          `long:"zip_safe" description:"Marks this pex as zip-safe"`
-	NoZipSafe          bool          `long:"nozip_safe" description:"Marks this pex as zip-unsafe"`
 	InterpreterOptions string        `long:"interpreter_options" description:"Options-string to pass to the python interpreter"`
+	AddTestRunnerDeps  bool          `long:"add_test_runner_deps" description:"True if test-runner dependencies should be baked into test binaries"`
 }{
 	Usage: `
 please_pex is a tool to create .pex files for Python.
@@ -38,12 +38,13 @@ dependent code as a self-contained self-executable environment.
 func main() {
 	cli.ParseFlagsOrDie("please_pex", &opts)
 	cli.InitLogging(opts.Verbosity)
-	w := pex.NewWriter(opts.EntryPoint, opts.Interpreter, opts.InterpreterOptions, !opts.NoZipSafe, !opts.Site)
+	w := pex.NewWriter(
+		opts.EntryPoint, opts.Interpreter, opts.InterpreterOptions, opts.ZipSafe, !opts.Site)
 	if opts.Shebang != "" {
 		w.SetShebang(opts.Shebang, opts.InterpreterOptions)
 	}
 	if opts.Test {
-		w.SetTest(opts.TestSrcs, opts.TestRunner)
+		w.SetTest(opts.TestSrcs, opts.TestRunner, opts.AddTestRunnerDeps)
 	}
 	if err := w.Write(opts.Out, opts.ModuleDir); err != nil {
 		log.Fatalf("%s", err)

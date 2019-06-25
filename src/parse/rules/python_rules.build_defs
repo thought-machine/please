@@ -231,12 +231,23 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
                    started with the -S flag to avoid importing site.
     """
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --interpreter_options="%s"' % (
+    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s"' % (
         interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
+
+    # If the config specifies a PYTHON_TEST_RUNNER_BOOTSTRAP target, then this ought to contain
+    # the test-runner library (e.g. pytest), and its transitive dependencies. In this case, we just
+    # add the specified target as a dependency.
+    #
+    # If no bootstrap target is provided, then plz will provide a pinned set of dependencies to
+    # support the specified test-runner framework.
+    bootstrap = CONFIG.PYTHON_TEST_RUNNER_BOOTSTRAP
+    if bootstrap:
+        deps += [bootstrap] if bootstrap not in deps else []
+        cmd = cmd.replace(' --add_test_runner_deps', '')
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
     pex_rule = build_rule(
@@ -555,12 +566,12 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
 def _handle_zip_safe(cmd, zip_safe):
     """Handles the zip safe flag. Returns a tuple of (pre-build function, new command)."""
     if zip_safe is None:
-        return lambda name: (set_command(name, cmd.replace('--zip_safe', ' --nozip_safe'))
+        return lambda name: (set_command(name, cmd.replace(' --zip_safe', ''))
                              if has_label(name, 'py:zip-unsafe') else None), cmd
     elif zip_safe:
         return None, cmd
     else:
-        return None, cmd.replace('--zip_safe', ' --nozip_safe')
+        return None, cmd.replace(' --zip_safe', '')
 
 
 def _add_licences(name, output):
