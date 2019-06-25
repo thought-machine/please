@@ -127,7 +127,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       labels (list): Labels to apply to this rule.
     """
     shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe --interpreter_options="%s"' % (
+    cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe --interpreter_options="%s" --stamp="$STAMP"' % (
         shebang, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
@@ -162,6 +162,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
             'pex': [CONFIG.PEX_TOOL],
         },
         test_only=test_only,
+        stamp=True,  # Used to derive a unique cache-directory for zip-unsafe binaries.
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'

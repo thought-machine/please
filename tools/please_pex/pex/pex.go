@@ -20,17 +20,19 @@ type Writer struct {
 	noSite         bool
 	shebang        string
 	realEntryPoint string
+	pexStamp       string
 	testSrcs       []string
 	testIncludes   []string
 	testRunner     string
 }
 
 // NewWriter constructs a new Writer.
-func NewWriter(entryPoint, interpreter string, options string, zipSafe, noSite bool) *Writer {
+func NewWriter(entryPoint, interpreter, options, stamp string, zipSafe, noSite bool) *Writer {
 	pw := &Writer{
 		zipSafe:        zipSafe,
 		noSite:         noSite,
 		realEntryPoint: toPythonPath(entryPoint),
+		pexStamp:       stamp,
 	}
 	pw.SetShebang(interpreter, options)
 	return pw
@@ -132,6 +134,7 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(strings.Replace(moduleDir, ".", "/", -1)), 1)
 	b = bytes.Replace(b, []byte("__ENTRY_POINT__"), []byte(pw.realEntryPoint), 1)
 	b = bytes.Replace(b, []byte("__ZIP_SAFE__"), []byte(pythonBool(pw.zipSafe)), 1)
+	b = bytes.Replace(b, []byte("__PEX_STAMP__"), []byte(pw.pexStamp), 1)
 
 	if len(pw.testSrcs) != 0 {
 		// If we're writing a test, we append test_main.py to it.

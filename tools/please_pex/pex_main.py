@@ -1,5 +1,6 @@
 """Zipfile entry point which supports auto-extracting itself based on zip-safety."""
 
+import fcntl
 from importlib import import_module
 import zipfile
 import os
@@ -54,6 +55,7 @@ sys.path = [PEX_PATH] + sys.path
 MODULE_DIR = '__MODULE_DIR__'
 ENTRY_POINT = '__ENTRY_POINT__'
 ZIP_SAFE = __ZIP_SAFE__
+PEX_STAMP = '__PEX_STAMP__'
 
 
 class SoImport(object):
@@ -141,27 +143,65 @@ class ModuleDirImport(object):
         return module.__loader__.get_code(fullname)
 
 
+def pex_basepath(temp=False):
+    if temp:
+        import tempfile
+        return tempfile.mkdtemp(dir=os.environ.get('TEMP_DIR'), prefix='pex_')
+    else:
+        return os.path.expanduser('~/.pex')
+
+def pex_uniquedir():
+    return 'pex-%s' % PEX_STAMP
+
+
 def explode_zip():
     """Extracts the current pex to a temp directory where we can import everything from.
 
     This is primarily used for binary extensions which can't be imported directly from
     inside a zipfile.
     """
-    import contextlib, shutil, tempfile, zipfile
+    import contextlib
+
+    @contextlib.contextmanager
+    def pex_lockfile(basepath, uniquedir):
+        # Acquire the lockfile.
+        lockfile_path = os.path.join(basepath, '.lock-%s' % uniquedir)
+        lockfile = open(lockfile_path, "a+")
+        fcntl.flock(lockfile, fcntl.LOCK_EX)  # Block until we can acquire the lockfile.
+        lockfile.seek(0)
+        yield lockfile
+        fcntl.flock(lockfile, fcntl.LOCK_UN)
 
     @contextlib.contextmanager
     def _explode_zip():
         # We need to update the actual variable; other modules are allowed to look at
         # these variables to find out what's going on (e.g. are we zip-safe or not).
         global PEX_PATH
-        PEX_PATH = tempfile.mkdtemp(dir=os.environ.get('TEMP_DIR'), prefix='pex_')
-        with zipfile.ZipFile(PEX, 'r') as zf:
-            zf.extractall(PEX_PATH)
-        # Strip the pex paths so nothing accidentally imports from there.
+
+        no_cache = os.environ.get('PEX_NOCACHE')
+        no_cache = no_cache and no_cache.lower() == 'true'
+        basepath, uniquedir = pex_basepath(no_cache), pex_uniquedir()
+        os.makedirs(basepath, exist_ok=True)
+        with pex_lockfile(basepath, uniquedir) as lockfile:
+            PEX_PATH = os.path.join(basepath, uniquedir)
+            if len(lockfile.read()) == 0:
+                import compileall, zipfile
+
+                os.makedirs(PEX_PATH, exist_ok=True)
+                with zipfile.ZipFile(PEX, 'r') as zf:
+                    zf.extractall(PEX_PATH)
+
+                if not no_cache:  # Don't bother optimizing; we're deleting this when we're done.
+                    compileall.compile_dir(PEX_PATH, optimize=2, quiet=1)
+
+                # Writing nonempty content to the lockfile will signal to subsequent invocations
+                # that the cache has already been prepared.
+                lockfile.write("pex unzip completed")
         sys.path = [PEX_PATH] + [x for x in sys.path if x != PEX]
         yield
-        if not os.environ.get('PEX_SAVE_TEMP_DIR'):
-            shutil.rmtree(PEX_PATH)
+        if no_cache:
+            import shutil
+            shutil.rmtree(pex_basepath)
 
     return _explode_zip
 
