@@ -12,7 +12,7 @@ go_library(
         "//src/fs",
         "//src/parse",
         "//src/parse/asp",
-        "//src/parse/rules",
+        "//rules",
         "//src/plz",
         "//src/query",
         "//third_party/go:buildtools",
@@ -37,7 +37,7 @@ go_test(
     sandbox = False,
     deps = [
         ":langserver",
-        "//src/parse/rules",
+        "//rules",
         "//third_party/go:testify",
     ],
 )

@@ -10,7 +10,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
-	"github.com/thought-machine/please/src/parse/rules"
+	"github.com/thought-machine/please/rules"
 )
 
 // PrintRuleArgs prints the arguments of all builtin rules (plus any associated ones from the given targets)

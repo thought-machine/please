@@ -3,7 +3,7 @@
 // Currently supported operations:
 //   'deps': 'plz query deps //src:please'
 //           shows the dependency graph of this target.
-//   'somepath': 'plz query somepath //src:please //src/parse/rules:java_rules_pyc'
+//   'somepath': 'plz query somepath //src:please //rules:java_rules_pyc'
 //               finds a route between these two targets, if there is one.
 //               useful for saying 'why on earth do I depend on that thing?'
 //   'alltargets': 'plz query alltargets //src/...'

@@ -1,12 +1,12 @@
 ; Used during initial bootstrap, mostly to get rules loaded.
 [parse]
-preloadbuilddefs = src/parse/rules/builtins.build_defs
-preloadbuilddefs = src/parse/rules/go_rules.build_defs
-preloadbuilddefs = src/parse/rules/misc_rules.build_defs
-preloadbuilddefs = src/parse/rules/proto_rules.build_defs
-preloadbuilddefs = src/parse/rules/python_rules.build_defs
-preloadbuilddefs = src/parse/rules/subrepo_rules.build_defs
-preloadbuilddefs = src/parse/rules/sh_rules.build_defs
+preloadbuilddefs = rules/builtins.build_defs
+preloadbuilddefs = rules/go_rules.build_defs
+preloadbuilddefs = rules/misc_rules.build_defs
+preloadbuilddefs = rules/proto_rules.build_defs
+preloadbuilddefs = rules/python_rules.build_defs
+preloadbuilddefs = rules/subrepo_rules.build_defs
+preloadbuilddefs = rules/sh_rules.build_defs
 preloadbuilddefs = build_defs/go_bindata.build_defs
 
 [display]

@@ -43,11 +43,11 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
-	if filename == "builtins.build_defs" || filename == "src/parse/rules/builtins.build_defs" {
+	if filename == "builtins.build_defs" || filename == "rules/builtins.build_defs" {
 		defer registerBuiltins(s)
-	} else if filename == "misc_rules.build_defs" || filename == "src/parse/rules/misc_rules.build_defs" {
+	} else if filename == "misc_rules.build_defs" || filename == "rules/misc_rules.build_defs" {
 		defer registerSubincludePackage(s)
-	} else if filename == "config_rules.build_defs" || filename == "src/parse/rules/config_rules.build_defs" {
+	} else if filename == "config_rules.build_defs" || filename == "rules/config_rules.build_defs" {
 		defer setNativeCode(s, "select", selectFunc)
 	}
 	defer i.scope.SetAll(s.Freeze(), true)

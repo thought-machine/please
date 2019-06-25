@@ -8,7 +8,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
-	"github.com/thought-machine/please/src/parse/rules"
+	"github.com/thought-machine/please/rules"
 )
 
 func isWhitelisted(err error) bool {
@@ -68,7 +68,7 @@ func Fuzz(data []byte) int {
 		if strings.HasSuffix(filename, ".gob") {
 			srcFile := strings.TrimSuffix(filename, ".gob")
 			src, _ := rules.Asset(srcFile)
-			p.MustLoadBuiltins("src/parse/rules/"+srcFile, src, rules.MustAsset(filename))
+			p.MustLoadBuiltins("rules/"+srcFile, src, rules.MustAsset(filename))
 		}
 	}
 

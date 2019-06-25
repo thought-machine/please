@@ -14,7 +14,7 @@ go_test(
     data = ["test_data"],
     deps = [
         ":",
-        "//src/parse/rules",
+        "//rules",
         "//third_party/go:testify",
     ],
 )

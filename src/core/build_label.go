@@ -192,7 +192,7 @@ func parseBuildLabelSubrepo(target, currentPath string, subrepo *Subrepo) (strin
 	return pkg, name, target[:idx]
 }
 
-// As above, but allows parsing of relative labels (eg. src/parse/rules:python_rules)
+// As above, but allows parsing of relative labels (eg. rules:python_rules)
 // which is convenient at the shell prompt
 func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 	// Try the ones that don't need locating the repo root first.

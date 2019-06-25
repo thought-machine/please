@@ -15,7 +15,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/parse/asp"
-	"github.com/thought-machine/please/src/parse/rules"
+	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/tools/build_langserver/lsp"

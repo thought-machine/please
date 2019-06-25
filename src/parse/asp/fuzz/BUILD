@@ -13,7 +13,7 @@ genrule(
     deps = [
         "//src/core",
         "//src/parse/asp",
-        "//src/parse/rules",
+        "//rules",
         "//third_party/go:go-fuzz-dep",
     ],
 )
