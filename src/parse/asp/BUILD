@@ -41,8 +41,8 @@ go_test(
     data = ["test_data"],
     deps = [
         ":asp",
-        "//src/core",
         "//rules",
+        "//src/core",
         "//third_party/go:testify",
     ],
 )
@@ -53,8 +53,8 @@ go_test(
     data = ["test_data"],
     deps = [
         ":asp",
-        "//src/core",
         "//rules",
+        "//src/core",
         "//third_party/go:logging",
         "//third_party/go:testify",
     ],
