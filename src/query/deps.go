@@ -7,23 +7,25 @@ import (
 
 // Deps prints all transitive dependencies of a set of targets.
 func Deps(state *core.BuildState, labels []core.BuildLabel, unique, hidden bool, targetLevel int) {
-	targets := map[*core.BuildTarget]bool{}
+	done := map[core.BuildLabel]bool{}
 	for _, label := range labels {
-		printTarget(state, state.Graph.TargetOrDie(label), "", targets, unique, hidden, 0, targetLevel)
+		printTarget(state, state.Graph.TargetOrDie(label), "", done, unique, hidden, 0, targetLevel)
 	}
 }
 
-func printTarget(state *core.BuildState, target *core.BuildTarget, indent string, targets map[*core.BuildTarget]bool,
+func printTarget(state *core.BuildState, target *core.BuildTarget, indent string, done map[core.BuildLabel]bool,
 	unique, hidden bool, currentLevel int, targetLevel int) {
-
-	if unique && targets[target] {
+	if unique && done[target.Label] {
 		return
 	}
 
-	targets[target] = true
+	done[target.Label] = true
 	if state.ShouldInclude(target) {
-		if hidden || target.Parent(state.Graph) == nil {
+		if parent := target.Label.Parent(); hidden || parent == target.Label {
 			fmt.Printf("%s%s\n", indent, target.Label)
+		} else if !done[parent] {
+			fmt.Printf("%s%s\n", indent, parent)
+			done[parent] = true
 		}
 	}
 	if !unique {
@@ -38,6 +40,6 @@ func printTarget(state *core.BuildState, target *core.BuildTarget, indent string
 	currentLevel++
 
 	for _, dep := range target.Dependencies() {
-		printTarget(state, dep, indent, targets, unique, hidden, currentLevel, targetLevel)
+		printTarget(state, dep, indent, done, unique, hidden, currentLevel, targetLevel)
 	}
 }

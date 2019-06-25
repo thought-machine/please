@@ -226,7 +226,8 @@ func RewriteFile(state *core.BuildState, filename string, targets []string) erro
 	for _, target := range targets {
 		stmt := asp.FindTarget(stmts, target)
 		if stmt == nil {
-			return fmt.Errorf("Can't find target %s in %s", target, filename)
+			log.Warning("Can't find target %s in %s", target, filename)
+			continue
 		}
 		start, end := asp.GetExtents(stmts, stmt, len(lines))
 		for i := start; i <= end; i++ {
