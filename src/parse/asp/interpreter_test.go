@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/parse/rules"
+	"github.com/thought-machine/please/rules"
 )
 
 func parseFileToStatements(filename string) (*scope, []*Statement, error) {

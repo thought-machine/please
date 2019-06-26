@@ -6,13 +6,13 @@ go_library(
     ),
     visibility = ["//tools/build_langserver/..."],
     deps = [
+        "//rules",
         "//src/build",
         "//src/cli",
         "//src/core",
         "//src/fs",
         "//src/parse",
         "//src/parse/asp",
-        "//src/parse/rules",
         "//src/plz",
         "//src/query",
         "//third_party/go:buildtools",
@@ -37,7 +37,7 @@ go_test(
     sandbox = False,
     deps = [
         ":langserver",
-        "//src/parse/rules",
+        "//rules",
         "//third_party/go:testify",
     ],
 )

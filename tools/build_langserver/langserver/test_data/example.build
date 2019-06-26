@@ -10,7 +10,7 @@ go_library(
         "//src/fs",
         "//src/parse",
         "//src/parse/asp",
-        "//src/parse/rules",
+        "//rules",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
         "//tools/build_langserver/lsp",
@@ -26,7 +26,7 @@ go_test(
     foo = ["test_data"],
     deps = [
         ":langserver",
-        "//src/parse/rules",
+        "//rules",
         "//third_party/go:testify",
         "//dummy/buildlabels:foo",
         ],

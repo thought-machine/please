@@ -18,7 +18,7 @@ for TARGET in `$plz query alltargets --include go_src --hidden | grep -v "_test#
             exit 1
         }
         if [ "`gofmt -s -l $FILTERED`" != "" ]; then
-            echo "Files are not gofmt'd: gofmt -s -l" $FILTERED
+            echo "Files are not gofmt'd: gofmt -s -w" $FILTERED
             exit 1
         fi
     fi

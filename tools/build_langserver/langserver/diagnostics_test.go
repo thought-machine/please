@@ -38,11 +38,11 @@ func TestDiagnosisInvalidBuildLabel(t *testing.T) {
 	// Test for invisible build label
 	expected = lsp.Range{
 		Start: lsp.Position{Line: 12, Character: 8},
-		End:   lsp.Position{Line: 12, Character: 27},
+		End:   lsp.Position{Line: 12, Character: 17},
 	}
 	diag = FindDiagnosticByRange(ds.stored, expected)
 	assert.NotNil(t, diag)
-	assert.Equal(t, "build label //src/parse/rules is not visible to current package", diag.Message)
+	assert.Equal(t, "build label //rules is not visible to current package", diag.Message)
 
 }
 

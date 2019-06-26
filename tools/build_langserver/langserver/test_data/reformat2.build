@@ -6,7 +6,7 @@ go_test(
     foo = ["test_data"],
     deps = [
         ":langserver",
-        "//src/parse/rules",
+        "//rules",
         "//third_party/go:testify",
         "//dummy/buildlabels:foo",
         ],

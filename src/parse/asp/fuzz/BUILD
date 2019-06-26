@@ -11,9 +11,9 @@ genrule(
     ],
     tools = ["//third_party/go:go-fuzz-build"],
     deps = [
+        "//rules",
         "//src/core",
         "//src/parse/asp",
-        "//src/parse/rules",
         "//third_party/go:go-fuzz-dep",
     ],
 )
