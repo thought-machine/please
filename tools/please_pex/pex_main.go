@@ -23,6 +23,7 @@ var opts = struct {
 	Shebang            string        `short:"s" long:"shebang" description:"Explicitly set shebang to this"`
 	Site               bool          `short:"S" long:"site" description:"Allow the pex to import site at startup"`
 	ZipSafe            bool          `long:"zip_safe" description:"Marks this pex as zip-safe"`
+	Stamp              string        `long:"stamp" description:"Unique value used to derive cache directory for pex"`
 	InterpreterOptions string        `long:"interpreter_options" description:"Options-string to pass to the python interpreter"`
 	AddTestRunnerDeps  bool          `long:"add_test_runner_deps" description:"True if test-runner dependencies should be baked into test binaries"`
 }{
@@ -39,7 +40,8 @@ func main() {
 	cli.ParseFlagsOrDie("please_pex", &opts)
 	cli.InitLogging(opts.Verbosity)
 	w := pex.NewWriter(
-		opts.EntryPoint, opts.Interpreter, opts.InterpreterOptions, opts.ZipSafe, !opts.Site)
+		opts.EntryPoint, opts.Interpreter, opts.InterpreterOptions, opts.Stamp,
+		opts.ZipSafe, !opts.Site)
 	if opts.Shebang != "" {
 		w.SetShebang(opts.Shebang, opts.InterpreterOptions)
 	}

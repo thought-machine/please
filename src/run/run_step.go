@@ -139,12 +139,20 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 // environ returns an appropriate environment for a command.
 func environ(config *core.Configuration, setenv bool) []string {
 	env := os.Environ()
+	for _, e := range adRunEnviron {
+		env = addEnv(env, e)
+	}
 	if setenv {
 		for _, e := range core.GeneralBuildEnvironment(config) {
 			env = addEnv(env, e)
 		}
 	}
 	return env
+}
+
+// adRunEnviron returns values that are appended to the environment for a command.
+var adRunEnviron = []string{
+	"PEX_NOCACHE=true",
 }
 
 // addEnv adds an env var to an existing set, with replacement.
