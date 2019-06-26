@@ -5,6 +5,8 @@ Version 14.0.0
     * Use of xattrs can now be disabled for systems where they are not supported (#641, #548, #644)
     * `plz tool maven` and the builtin `maven_jars` are removed. They can be used from their
       new home of https://github.com/thought-machine/pleasings.
+    * Non zip-safe pexes are now cached & can be reused on subsequent runs.
+    * Users can bring their own test runner via the `python.testrunnerbootstrap` config property.
     * `go_test` no longer works for versions prior to 1.8
     * `go_library` rules using assembly now only work with Go 1.12+ (previously they did not
       work with 1.12) (#659)
