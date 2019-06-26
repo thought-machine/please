@@ -148,7 +148,7 @@ def pex_basepath(temp=False):
         import tempfile
         return tempfile.mkdtemp(dir=os.environ.get('TEMP_DIR'), prefix='pex_')
     else:
-        return os.path.expanduser('~/.pex')
+        return os.path.expanduser('~/.cache/pex')
 
 def pex_uniquedir():
     return 'pex-%s' % PEX_STAMP
