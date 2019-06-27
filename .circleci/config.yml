@@ -48,7 +48,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20190605
+       - image: thoughtmachine/please_ubuntu_alt:20190627
      environment:
        PLZ_ARGS: "-p --profile ci"
        PLZ_COVER: "cover"
