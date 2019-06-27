@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -758,17 +759,28 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		state.Config.Bazel.Compatibility = true
 		state.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
 	}
+
+	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile
+	if args[5] != None { // arg 5 is arch-string, for arch-subrepos.
+		var arch cli.Arch
+		givenArch := string(args[5].(pyString))
+		if err := arch.UnmarshalFlag(givenArch); err != nil {
+			log.Fatalf("Could not interpret architecture '%s' for subrepo '%s'", givenArch, name)
+		}
+		state = state.ForArch(arch)
+		isCrossCompile = true
+	}
 	sr := &core.Subrepo{
 		Name:           s.pkg.SubrepoArchName(path.Join(s.pkg.Name, name)),
 		Root:           root,
 		Target:         target,
 		State:          state,
-		IsCrossCompile: s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile,
+		IsCrossCompile: isCrossCompile,
 	}
 	if s.state.Config.Bazel.Compatibility && s.pkg.Name == "workspace" {
 		sr.Name = s.pkg.SubrepoArchName(name)
 	}
 	log.Debug("Registering subrepo %s in package %s", sr.Name, s.pkg.Label())
-	s.state.Graph.AddSubrepo(sr)
+	s.state.Graph.MaybeAddSubrepo(sr)
 	return pyString("///" + sr.Name)
 }
