@@ -5,6 +5,7 @@
 package core
 
 import (
+	"reflect"
 	"sort"
 	"sync"
 )
@@ -120,6 +121,10 @@ func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
 	if s, present := graph.subrepos[subrepo.Name]; present {
+		if !reflect.DeepEqual(s, subrepo) {
+			log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)",
+				s.Name, s, subrepo)
+		}
 		return s
 	}
 	graph.subrepos[subrepo.Name] = subrepo

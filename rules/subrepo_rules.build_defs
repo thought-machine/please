@@ -173,3 +173,24 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
         config = config,
         bazel_compat = bazel_compat,
     )
+
+def arch(name:str, os:str, arch:str):
+    """ Defines an architecture subrepo.
+
+    This is a convenience alias to the more general subrepo rule. It allows for a user-defined
+    subrepo for cross-built rules targeting a specific architecture. This lets users define
+    architectures that won't conflict with the subrepos implicitly instantiated by plz.
+
+    Args:
+      name: Name of the rule.
+      os:  Target operating system (e.g. "darwin")..
+      arch: Target architecture (e.g. "amd64").
+    """
+    arch_str = f'{os}_{arch}'
+    assert arch_str.count('_') == 1, "Character '_' disallowed in OS/Arch names"
+
+    subrepo(
+        name = name,
+        path = "",
+        arch = arch_str,
+    )
