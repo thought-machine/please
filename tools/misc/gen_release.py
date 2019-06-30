@@ -154,8 +154,11 @@ class ReleaseGen:
 
     def upload_sftp(self, artifacts, signatures, checksums):
         """Uploads artifacts to get.please.build via sftp."""
-        with open('latest_version', 'w') as f:
+        with open('latest_prerelease_version', 'w') as f:
             f.write(self.version)
+        if not self.is_prerelease:
+            with open('latest_version', 'w') as f:
+                f.write(self.version)
         # Write batch instruction file
         with open('sftp.txt', 'w') as f:
             f.write('cd vhosts/get.please.build/htdocs\n')
