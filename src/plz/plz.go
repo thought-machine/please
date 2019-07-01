@@ -35,7 +35,6 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		go follow.UpdateResources(state)
 	}
 
-	l := newLimiter(state.Config)
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)
 	// Start up all the build workers
@@ -43,7 +42,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	wg.Add(config.Please.NumThreads)
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
-			doTasks(l, tid, state, state.Include, state.Exclude, arch)
+			doTasks(tid, state, state.Include, state.Exclude, arch)
 			wg.Done()
 		}(i)
 	}
@@ -54,7 +53,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}
 }
 
-func doTasks(l *limiter, tid int, state *core.BuildState, include, exclude []string, arch cli.Arch) {
+func doTasks(tid int, state *core.BuildState, include, exclude []string, arch cli.Arch) {
 	for {
 		label, dependor, t := state.NextTask()
 		switch t {
@@ -69,19 +68,11 @@ func doTasks(l *limiter, tid int, state *core.BuildState, include, exclude []str
 				state.TaskDone(false)
 			}
 		case core.Build, core.SubincludeBuild:
-			target := state.Graph.TargetOrDie(label)
-			if l.ShouldRun(state, target, t) {
-				build.Build(tid, state, target)
-				state.TaskDone(true)
-				l.Done(target)
-			}
+			build.Build(tid, state, label)
+			state.TaskDone(true)
 		case core.Test:
-			target := state.Graph.TargetOrDie(label)
-			if l.ShouldRun(state, target, t) {
-				test.Test(tid, state, target)
-				state.TaskDone(true)
-				l.Done(target)
-			}
+			test.Test(tid, state, label)
+			state.TaskDone(true)
 		}
 	}
 }

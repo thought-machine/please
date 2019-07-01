@@ -30,9 +30,10 @@ const dummyCoverage = "<?xml version=\"1.0\" ?><coverage></coverage>"
 const xattrName = "user.plz_test"
 
 // Test runs the tests for a single target.
-func Test(tid int, state *core.BuildState, target *core.BuildTarget) {
-	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
-	test(tid, state.ForTarget(target), target.Label, target)
+func Test(tid int, state *core.BuildState, label core.BuildLabel) {
+	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
+	target := state.Graph.TargetOrDie(label)
+	test(tid, state.ForTarget(target), label, target)
 }
 
 func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget) {
