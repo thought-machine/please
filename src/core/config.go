@@ -22,7 +22,6 @@ import (
 	"github.com/peterebden/gcfg"
 
 	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/src/fs"
 )
 
 // OsArch is the os/arch pair, like linux_amd64 etc.
@@ -45,12 +44,6 @@ const MachineConfigFileName = "/etc/plzconfig"
 
 // UserConfigFileName is the file name for user-specific config (for all their repos).
 const UserConfigFileName = "~/.config/please/plzconfig"
-
-// GithubDownloadLocation is plz's Github repo, which will become the default download location in future.
-const GithubDownloadLocation = "https://github.com/thought-machine/please"
-
-// GithubAPILocation is as above, but for the API endpoints.
-const GithubAPILocation = "https://api.github.com/repos/thought-machine/please"
 
 func readConfigFile(config *Configuration, filename string) error {
 	log.Debug("Reading config from %s...", filename)
