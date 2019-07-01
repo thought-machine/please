@@ -46,8 +46,6 @@ const MachineConfigFileName = "/etc/plzconfig"
 // UserConfigFileName is the file name for user-specific config (for all their repos).
 const UserConfigFileName = "~/.config/please/plzconfig"
 
-const oldUserConfigFileName = "~/.please/plzconfig"
-
 // GithubDownloadLocation is plz's Github repo, which will become the default download location in future.
 const GithubDownloadLocation = "https://github.com/thought-machine/please"
 
@@ -62,14 +60,6 @@ func readConfigFile(config *Configuration, filename string) error {
 		return err
 	} else if err != nil {
 		log.Warning("Error in config file: %s", err)
-	} else if filename == ExpandHomePath(oldUserConfigFileName) {
-		if dest := ExpandHomePath(UserConfigFileName); !fs.PathExists(dest) {
-			log.Warning("Migrating old config from %s to %s", filename, dest)
-			fs.EnsureDir(dest)
-			os.Rename(filename, dest)
-		} else {
-			log.Warning("Read a config file at %s; this location is deprecated in favour of %s", filename, dest)
-		}
 	}
 	return nil
 }
@@ -81,7 +71,6 @@ func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
 	return ReadConfigFiles([]string{
 		MachineConfigFileName,
 		ExpandHomePath(UserConfigFileName),
-		ExpandHomePath(oldUserConfigFileName),
 		path.Join(RepoRoot, ConfigFileName),
 		path.Join(RepoRoot, ArchConfigFileName),
 		path.Join(RepoRoot, LocalConfigFileName),
