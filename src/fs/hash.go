@@ -68,7 +68,7 @@ func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) 
 	// This check is important; if the file doesn't exist now, we don't want that
 	// recorded forever in hasher.wait since it might get created later.
 	if !PathExists(path) {
-		return nil, os.ErrNotExist
+		return nil, fmt.Errorf("cannot calculate hash for %s: %s", path, os.ErrNotExist)
 	}
 	hasher.mutex.Lock()
 	if pending, present := hasher.wait[path]; present {
