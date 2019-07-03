@@ -3,6 +3,8 @@ Version 14.0.0
 
     * Hashes are stored on files in xattrs (when available) for faster rebuilds (#640).
     * Use of xattrs can now be disabled for systems where they are not supported (#641, #548, #644)
+    * The machine config file now lives in `/etc/please/plzconfig`
+      (previously it was `/etc/plzconfig`).
     * `plz tool maven` and the builtin `maven_jars` are removed. They can be used from their
       new home of https://github.com/thought-machine/pleasings.
     * Non zip-safe pexes are now cached & can be reused on subsequent runs.

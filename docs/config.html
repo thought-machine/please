@@ -8,7 +8,7 @@
     <p>Please looks in several locations for these files and builds it up bit by bit. In order
       (from lowest priority to highest):
       <ul>
-        <li><code>/etc/plzconfig</code></li>
+        <li><code>/etc/please/plzconfig</code></li>
         <li><code>~/.config/please/plzconfig</code></li>
         <li><code>.plzconfig</code></li>
         <li><code>.plzconfig_&lt;arch&gt;</code> (e.g. .plzconfig_linux_amd64)</li>
@@ -16,7 +16,7 @@
         <li><code>.plzconfig.local</code></li>
       </ul>
       One would normally check in <code>.plzconfig</code> (and arch-specific equivalents if needed).<br/>
-      <code>/etc/plzconfig</code> is there to facilitate per-machine config in cases where the repo is often
+      <code>/etc/please/plzconfig</code> is there to facilitate per-machine config in cases where the repo is often
       deleted - this is quite common in CI systems.<br/>
       Finally you normally add <code>.plzconfig.local</code> to .gitignore to allow people to override
       settings locally if needed.</p>

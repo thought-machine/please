@@ -40,7 +40,7 @@ const LocalConfigFileName string = ".plzconfig.local"
 
 // MachineConfigFileName is the file name for the machine-level config - can use this to override
 // things for a particular machine (eg. build machine with different caching behaviour).
-const MachineConfigFileName = "/etc/plzconfig"
+const MachineConfigFileName = "/etc/please/plzconfig"
 
 // UserConfigFileName is the file name for user-specific config (for all their repos).
 const UserConfigFileName = "~/.config/please/plzconfig"
