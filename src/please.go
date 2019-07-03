@@ -644,10 +644,12 @@ var buildFunctions = map[string]func() bool{
 		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
 		files := opts.Query.Changes.Args.Files.Get()
 		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
+		readConfig(false)
 		_, before := runBuild(core.WholeGraph, false, false, false)
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		query.MustCheckout(original, opts.Query.Changes.CheckoutCommand)
+		readConfig(false)
 		success, after := runBuild(core.WholeGraph, false, false, false)
 		if !success {
 			return false
@@ -828,29 +830,19 @@ func testTargets(target core.BuildLabel, args []string, failed bool, resultsFile
 	return []core.BuildLabel{target}
 }
 
-// readConfig sets various things up and reads the initial configuration.
+// readConfig reads the initial configuration files
 func readConfig(forceUpdate bool) *core.Configuration {
-	if opts.FeatureFlags.NoHashVerification {
-		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
-	}
-
-	config, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
+	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
-	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
+	} else if err := cfg.ApplyOverrides(opts.BuildFlags.Option); err != nil {
 		log.Fatalf("Can't override requested config setting: %s", err)
 	}
 	if opts.FeatureFlags.HTTPProxy != "" {
-		config.Build.HTTPProxy = opts.FeatureFlags.HTTPProxy
+		cfg.Build.HTTPProxy = opts.FeatureFlags.HTTPProxy
 	}
-	// Now apply any flags that override this
-	if opts.Update.Latest {
-		config.Please.Version.Unset()
-	} else if opts.Update.Version.IsSet {
-		config.Please.Version = opts.Update.Version
-	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify)
-	return config
+	config = cfg
+	return cfg
 }
 
 // Runs the actual build
@@ -902,8 +894,18 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 		}
 		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel)
 	}
-
-	return readConfig(forceUpdate)
+	if opts.FeatureFlags.NoHashVerification {
+		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
+	}
+	config := readConfig(forceUpdate)
+	// Now apply any flags that override this
+	if opts.Update.Latest {
+		config.Please.Version.Unset()
+	} else if opts.Update.Version.IsSet {
+		config.Please.Version = opts.Update.Version
+	}
+	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify)
+	return config
 }
 
 // handleCompletions handles shell completion. Typically it just prints to stdout but
