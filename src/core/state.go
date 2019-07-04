@@ -415,7 +415,7 @@ func (state *BuildState) LogResult(result *BuildResult) {
 			// This is basically always "send on closed channel" which can happen because this
 			// channel gets closed while there might still be some other workers doing stuff.
 			// At that point we don't care much because the build has already failed.
-			log.Notice("%s", r)
+			log.Info("%s", r)
 		}
 	}()
 	if state.results != nil {
