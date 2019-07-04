@@ -136,15 +136,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		haveRunPostBuildFunction = true
 	}
 	if target.IsFilegroup {
-		// Ordering here is important; the hasher needs to get a chance to see the source hash
-
-		oldOutputHash, _ := OutputHash(state, target)
 		log.Debug("Building %s...", target.Label)
-		if err := buildFilegroup(state, target); err != nil {
+		if changed, err := buildFilegroup(state, target); err != nil {
 			return err
-		} else if newOutputHash, err := calculateAndCheckRuleHash(state, target); err != nil {
+		} else if _, err := calculateAndCheckRuleHash(state, target); err != nil {
 			return err
-		} else if !bytes.Equal(newOutputHash, oldOutputHash) {
+		} else if changed {
 			target.SetState(core.Built)
 			state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
 		} else {

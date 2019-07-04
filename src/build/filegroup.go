@@ -38,46 +38,49 @@ type filegroupBuilder struct {
 var theFilegroupBuilder *filegroupBuilder
 
 // Build builds a single filegroup file.
-func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.BuildTarget, from, to string) error {
+func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.BuildTarget, from, to string) (bool, error) {
 	builder.mutex.Lock()
 	defer builder.mutex.Unlock()
-	if builder.built[to] {
-		return nil // File's already been built.
+	if changed, present := builder.built[to]; present {
+		return changed, nil // File's already been built.
 	}
 	if fs.IsSameFile(from, to) {
 		// File exists already and is the same file. Nothing to do.
 		// TODO(peterebden): This should also have a recursive case for when it's a directory...
-		builder.built[to] = true
+		builder.built[to] = false
 		state.PathHasher.MoveHash(from, to, true)
-		return nil
+		return false, nil
 	}
 	// Must actually build the file.
 	if err := os.RemoveAll(to); err != nil {
-		return err
+		return true, err
 	} else if err := fs.EnsureDir(to); err != nil {
-		return err
+		return true, err
 	} else if err := fs.RecursiveLink(from, to, target.OutMode()); err != nil {
-		return err
+		return true, err
 	}
 	builder.built[to] = true
 	state.PathHasher.MoveHash(from, to, true)
-	return nil
+	return true, nil
 }
 
 // buildFilegroup runs the manual build steps for a filegroup rule.
 // We don't force this to be done in bash to avoid errors with maximum command lengths,
 // and it's actually quite fiddly to get just so there.
-func buildFilegroup(state *core.BuildState, target *core.BuildTarget) error {
+func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, error) {
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
-		return err
+		return true, err
 	}
+	changed := false
 	outDir := target.OutDir()
 	localSources := target.AllLocalSourcePaths(state.Graph)
 	for i, source := range target.AllFullSourcePaths(state.Graph) {
 		out, _ := filegroupOutputPath(state, target, outDir, localSources[i], source)
-		if err := theFilegroupBuilder.Build(state, target, source, out); err != nil {
-			return err
+		fileChanged, err := theFilegroupBuilder.Build(state, target, source, out)
+		if err != nil {
+			return true, err
 		}
+		changed = changed || fileChanged
 	}
 	if target.HasLabel("py") && !target.IsBinary {
 		// Pre-emptively create __init__.py files so the outputs can be loaded dynamically.
@@ -89,7 +92,7 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) error {
 			createInitPy(outDir)
 		}
 	}
-	return nil
+	return changed, nil
 }
 
 // copyFilegroupHashes copies the hashes of the inputs of this filegroup to their outputs.
