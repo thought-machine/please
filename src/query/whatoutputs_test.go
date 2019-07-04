@@ -1,8 +1,6 @@
 package query
 
 import (
-	"fmt"
-	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,53 +8,49 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-func makeTarget(g *core.BuildGraph, packageName string, labelName string, outputs []string) *core.BuildTarget {
-	l := core.ParseBuildLabel(fmt.Sprintf("//%s:%s", packageName, labelName), "")
+func makeTarget(g *core.BuildGraph, label string, filegroup bool, outputs ...string) *core.BuildTarget {
+	l := core.ParseBuildLabel(label, "")
 	t := core.NewBuildTarget(l)
 
-	p := g.Package(packageName, "")
+	p := g.Package(l.PackageName, "")
 	if p == nil {
-		p = core.NewPackage(packageName)
+		p = core.NewPackage(l.PackageName)
 		g.AddPackage(p)
 	}
-	for _, out := range outputs {
-		t.AddOutput(out)
-		p.MustRegisterOutput(out, t)
+	if filegroup {
+		t.IsFilegroup = true
+		for _, out := range outputs {
+			t.AddSource(core.FileLabel{File: out, Package: l.PackageName})
+		}
+	} else {
+		for _, out := range outputs {
+			t.AddOutput(out)
+			p.MustRegisterOutput(out, t)
+		}
 	}
 	p.AddTarget(t)
 	g.AddTarget(t)
 	return t
 }
 
-func TestConstructsMapFromGraph(t *testing.T) {
+func TestDetectsOutputs(t *testing.T) {
 	graph := core.NewGraph()
-	m := filesToLabelMap(graph)
-	assert.Equal(t, 0, len(m))
-
-	label := core.ParseBuildLabel("//package1:target1", "")
-	makeTarget(graph, "package1", "target1", []string{"out1", "out2"})
-	m = filesToLabelMap(graph)
-	assert.Equal(t, 2, len(m))
-	for _, l := range m {
-		assert.Equal(t, label.String(), l.String())
-	}
+	makeTarget(graph, "//package1:target1", false, "out1", "out2")
+	targets := whatOutputs(graph.AllTargets(), "plz-out/gen/package1/out1")
+	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "target1"}}, targets)
 }
 
-func TestMapKeysContainFullPathFromProjectRoot(t *testing.T) {
+func TestDetectOutputsFilegroup(t *testing.T) {
+	// Slightly different because filegroups register outputs in different ways and
+	// there can be multiple outputting one file.
 	graph := core.NewGraph()
-	makeTarget(graph, "package1", "target1", []string{"out1", "out2"})
-	makeTarget(graph, "package1", "target2", []string{"out3"})
-	makeTarget(graph, "package2", "target1", []string{"out4"})
-	m := filesToLabelMap(graph)
-	label1 := core.ParseBuildLabel("//package1:target1", "")
-	label2 := core.ParseBuildLabel("//package1:target2", "")
-	label3 := core.ParseBuildLabel("//package2:target1", "")
-
-	p1 := graph.Package("package1", "")
-	p2 := graph.Package("package2", "")
-
-	assert.Equal(t, m[path.Join(p1.Target("target1").OutDir(), "out1")].String(), label1.String())
-	assert.Equal(t, m[path.Join(p1.Target("target1").OutDir(), "out2")].String(), label1.String())
-	assert.Equal(t, m[path.Join(p1.Target("target2").OutDir(), "out3")].String(), label2.String())
-	assert.Equal(t, m[path.Join(p2.Target("target1").OutDir(), "out4")].String(), label3.String())
+	makeTarget(graph, "//package1:target1", true, "out1", "out2")
+	makeTarget(graph, "//package1:target2", true, "out1")
+	targets := whatOutputs(graph.AllTargets(), "plz-out/gen/package1/out1")
+	assert.Equal(t, []core.BuildLabel{
+		{PackageName: "package1", Name: "target1"},
+		{PackageName: "package1", Name: "target2"},
+	}, targets)
+	targets = whatOutputs(graph.AllTargets(), "plz-out/gen/package1/out2")
+	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "target1"}}, targets)
 }
