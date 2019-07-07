@@ -380,7 +380,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         cmd += ' && find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])
 
     if not licences:
-        cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat'
+        cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
 
     if install_subdirectory:
         cmd += f' && touch {target}/__init__.py && rm -rf {target}/*.egg-info {target}/*.dist-info'
@@ -513,7 +513,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
     if not licences:
         cmd += ['find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
-                'xargs grep -E "License ?:" | grep -v UNKNOWN | cat']
+                'xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true']
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
         cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
