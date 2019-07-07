@@ -577,16 +577,20 @@ def _handle_zip_safe(cmd, zip_safe):
 
 def _add_licences(name, output):
     """Annotates a pip_library rule with detected licences after download."""
+    found = False
     for line in output:
         if line.startswith('License: '):
             for licence in line[9:].split(' or '):  # Some are defined this way (eg. "PSF or ZPL")
                 add_licence(name, licence)
+                found = True
         elif line.startswith('Classifier: License'):
             # Oddly quite a few packages seem to have UNKNOWN for the licence but this Classifier
             # section still seems to know what they are licenced as.
             add_licence(name, line.split(' :: ')[-1])
-    log.warning('No licence found for %s, should add licences = [...] to the rule',
-                name.lstrip('_').split('#')[0])
+            found = True
+    if not found:
+        log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
+)
 
 
 if CONFIG.BAZEL_COMPATIBILITY:
