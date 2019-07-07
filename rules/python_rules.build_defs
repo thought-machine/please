@@ -581,12 +581,10 @@ def _add_licences(name, output):
         if line.startswith('License: '):
             for licence in line[9:].split(' or '):  # Some are defined this way (eg. "PSF or ZPL")
                 add_licence(name, licence)
-            return
         elif line.startswith('Classifier: License'):
             # Oddly quite a few packages seem to have UNKNOWN for the licence but this Classifier
             # section still seems to know what they are licenced as.
             add_licence(name, line.split(' :: ')[-1])
-            return
     log.warning('No licence found for %s, should add licences = [...] to the rule',
                 name.lstrip('_').split('#')[0])
 
