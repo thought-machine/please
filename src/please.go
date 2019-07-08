@@ -332,10 +332,10 @@ var opts struct {
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
 			Since           string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
-			CheckoutCommand string `long:"checkout_command" default:"git checkout %s" description:"Command to run to check out the before/after revisions."`
-			CurrentCommand  string `long:"current_revision_command" default:"git rev-parse --abbrev-ref HEAD" description:"Command to run to get the current revision (which will be checked out again at the end)"`
+			CheckoutCommand string `long:"checkout_command" hidden:"true" description:"Deprecated, has no effect."`
+			CurrentCommand  string `long:"current_revision_command" hidden:"true" description:"Deprecated, has no effect."`
 			Args            struct {
-				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to consider changed"`
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Deprecated, no longer necessary."`
 			} `positional-args:"true"`
 		} `command:"changes" description:"Calculates the difference between two different states of the build graph"`
 		Roots struct {
@@ -641,14 +641,19 @@ var buildFunctions = map[string]func() bool{
 		return true
 	},
 	"changes": func() bool {
-		original := query.MustGetRevision(opts.Query.Changes.CurrentCommand)
-		files := opts.Query.Changes.Args.Files.Get()
-		query.MustCheckout(opts.Query.Changes.Since, opts.Query.Changes.CheckoutCommand)
+		scm := scm.MustNew(core.RepoRoot)
+		original := scm.CurrentRevIdentifier()
+		files := scm.ChangedFiles(opts.Query.Changes.Since, true, "")
+		if err := scm.Checkout(opts.Query.Changes.Since); err != nil {
+			log.Fatalf("%s", err)
+		}
 		readConfig(false)
 		_, before := runBuild(core.WholeGraph, false, false, false)
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
-		query.MustCheckout(original, opts.Query.Changes.CheckoutCommand)
+		if err := scm.Checkout(original); err != nil {
+			log.Fatalf("%s", err)
+		}
 		readConfig(false)
 		success, after := runBuild(core.WholeGraph, false, false, false)
 		if !success {
