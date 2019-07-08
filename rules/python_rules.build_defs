@@ -380,7 +380,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         cmd += ' && find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])
 
     if not licences:
-        cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat'
+        cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
 
     if install_subdirectory:
         cmd += f' && touch {target}/__init__.py && rm -rf {target}/*.egg-info {target}/*.dist-info'
@@ -513,7 +513,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
     if not licences:
         cmd += ['find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
-                'xargs grep -E "License ?:" | grep -v UNKNOWN | cat']
+                'xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true']
     if patch:
         patches = [patch] if isinstance(patch, str) else patch
         cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
@@ -577,19 +577,19 @@ def _handle_zip_safe(cmd, zip_safe):
 
 def _add_licences(name, output):
     """Annotates a pip_library rule with detected licences after download."""
+    found = False
     for line in output:
         if line.startswith('License: '):
             for licence in line[9:].split(' or '):  # Some are defined this way (eg. "PSF or ZPL")
                 add_licence(name, licence)
-            return
+                found = True
         elif line.startswith('Classifier: License'):
             # Oddly quite a few packages seem to have UNKNOWN for the licence but this Classifier
             # section still seems to know what they are licenced as.
             add_licence(name, line.split(' :: ')[-1])
-            return
-    log.warning('No licence found for %s, should add licences = [...] to the rule',
-                name.lstrip('_').split('#')[0])
-
+            found = True
+    if not found:
+        log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
 
 if CONFIG.BAZEL_COMPATIBILITY:
     py_library = python_library
