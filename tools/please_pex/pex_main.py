@@ -85,7 +85,7 @@ class SoImport(object):
         self.suffixes_by_length = sorted(self.suffixes, key=lambda x: -len(x))
         # Identify all the possible modules we could handle.
         self.modules = {}
-        if zipfile.is_zipfile(sys.argv[0]):
+        if is_zipfile(sys.argv[0]):
             zf = ZipFileWithPermissions(sys.argv[0])
             for name in zf.namelist():
                 path, _ = self.splitext(name)
