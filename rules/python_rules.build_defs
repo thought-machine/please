@@ -590,8 +590,6 @@ def _add_licences(name, output):
             found = True
     if not found:
         log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
-)
-
 
 if CONFIG.BAZEL_COMPATIBILITY:
     py_library = python_library
