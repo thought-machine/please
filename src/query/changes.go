@@ -4,38 +4,11 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"fmt"
-	"os/exec"
 	"sort"
-
-	"github.com/google/shlex"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 )
-
-// MustCheckout checks out the given revision.
-func MustCheckout(revision, command string) {
-	log.Notice("Checking out %s...", revision)
-	if argv, err := shlex.Split(fmt.Sprintf(command, revision)); err != nil {
-		log.Fatalf("Invalid checkout command: %s", err)
-	} else if out, err := exec.Command(argv[0], argv[1:]...).CombinedOutput(); err != nil {
-		log.Fatalf("Failed to check out %s: %s\n%s", revision, err, out)
-	}
-}
-
-// MustGetRevision runs a command to determine the current revision.
-func MustGetRevision(command string) string {
-	log.Notice("Determining current revision...")
-	argv, err := shlex.Split(command)
-	if err != nil {
-		log.Fatalf("Invalid revision command: %s", err)
-	}
-	out, err := exec.Command(argv[0], argv[1:]...).Output()
-	if err != nil {
-		log.Fatalf("Failed to determine current revision: %s\n%s", err, out)
-	}
-	return string(bytes.TrimSpace(out))
-}
 
 // DiffGraphs calculates the difference between two build graphs.
 // Note that this is not symmetric; targets that have been removed from 'before' do not appear

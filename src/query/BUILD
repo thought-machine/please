@@ -12,7 +12,6 @@ go_library(
         "//src/scm",
         "//src/utils",
         "//third_party/go:logging",
-        "//third_party/go:shlex",
     ],
 )
 
