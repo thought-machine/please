@@ -145,3 +145,10 @@ func (g *git) parseHunks(hunks []*diff.Hunk) []int {
 	}
 	return ret
 }
+
+func (g *git) Checkout(revision string) error {
+	if out, err := exec.Command("git", "checkout", revision).CombinedOutput(); err != nil {
+		return fmt.Errorf("git checkout failed: %s\n%s", err, out)
+	}
+	return nil
+}

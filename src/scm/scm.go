@@ -27,6 +27,8 @@ type SCM interface {
 	// ChangedLines returns the set of lines that have been modified,
 	// as a map of filename -> affected line numbers.
 	ChangedLines() (map[string][]int, error)
+	// Checkout checks out the given revision.
+	Checkout(revision string) error
 }
 
 // New returns a new SCM instance for this repo root.
@@ -46,4 +48,13 @@ func NewFallback(repoRoot string) SCM {
 	}
 	log.Warning("Cannot determine SCM, revision identifiers will be unavailable and `plz query changes/changed` will not work correctly.")
 	return &stub{}
+}
+
+// MustNew returns a new SCM instance for this repo root. It dies on any errors.
+func MustNew(repoRoot string) SCM {
+	scm := New(repoRoot)
+	if scm == nil {
+		log.Fatalf("Cannot determine SCM implementation")
+	}
+	return scm
 }

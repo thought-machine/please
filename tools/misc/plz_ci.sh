@@ -9,6 +9,4 @@ set -o pipefail
 
 # Set $ORIGIN to a branch or tag name if you want to build vs. something other than master.
 ORIGIN="${ORIGIN:-origin/master}"
-git diff --name-only "$ORIGIN" | \
-    plz query changes --since "$ORIGIN" - | \
-    plz test -
+plz query changes --since "$ORIGIN" | plz test -

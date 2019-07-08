@@ -27,3 +27,7 @@ func (s *stub) Remove(names []string) error {
 func (s *stub) ChangedLines() (map[string][]int, error) {
 	return nil, fmt.Errorf("Unknown SCM, can't calculate changed lines")
 }
+
+func (s *stub) Checkout(revision string) error {
+	return fmt.Errorf("Unknown SCM, can't checkout")
+}
