@@ -168,7 +168,9 @@ class ReleaseGen:
                 arch = 'darwin' if 'darwin' in artifact else 'linux'
                 filename = os.path.basename(artifact)
                 f.write(f'put {artifact} {arch}_amd64/{self.version}/{filename}\n')
-            f.write('put latest_version\n')
+            f.write('put latest_prerelease_version\n')
+            if not self.is_prerelease:
+                f.write('put latest_version\n')
             f.write('bye\n')
         if not FLAGS.dry_run:
             subprocess.check_call(['sftp', '-oStrictHostKeyChecking=no', '-b', 'sftp.txt',
