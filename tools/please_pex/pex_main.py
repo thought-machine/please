@@ -2,7 +2,7 @@
 
 import fcntl
 from importlib import import_module
-import zipfile
+from zipfile import ZipFile, ZipInfo, is_zipfile
 import os
 import runpy
 import sys
@@ -57,6 +57,20 @@ ENTRY_POINT = '__ENTRY_POINT__'
 ZIP_SAFE = __ZIP_SAFE__
 PEX_STAMP = '__PEX_STAMP__'
 
+# Workaround for https://bugs.python.org/issue15795
+class ZipFileWithPermissions(ZipFile):
+    """ Custom ZipFile class handling file permissions. """
+    
+    def _extract_member(self, member, targetpath, pwd):
+        if not isinstance(member, ZipInfo):
+            member = self.getinfo(member)
+
+        targetpath = super()._extract_member(member, targetpath, pwd)
+        
+        attr = member.external_attr >> 16
+        if attr != 0:
+            os.chmod(targetpath, attr)
+        return targetpath
 
 class SoImport(object):
     """So import. Much binary. Such dynamic. Wow."""
@@ -71,8 +85,8 @@ class SoImport(object):
         self.suffixes_by_length = sorted(self.suffixes, key=lambda x: -len(x))
         # Identify all the possible modules we could handle.
         self.modules = {}
-        if zipfile.is_zipfile(sys.argv[0]):
-            zf = zipfile.ZipFile(sys.argv[0])
+        if is_zipfile(sys.argv[0]):
+            zf = ZipFileWithPermissions(sys.argv[0])
             for name in zf.namelist():
                 path, _ = self.splitext(name)
                 if path:
@@ -192,7 +206,7 @@ def explode_zip():
                 import compileall, zipfile
 
                 os.makedirs(PEX_PATH, exist_ok=True)
-                with zipfile.ZipFile(PEX, 'r') as zf:
+                with ZipFileWithPermissions(PEX, 'r') as zf:
                     zf.extractall(PEX_PATH)
 
                 if not no_cache:  # Don't bother optimizing; we're deleting this when we're done.
