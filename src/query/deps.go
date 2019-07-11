@@ -21,11 +21,11 @@ func printTarget(state *core.BuildState, target *core.BuildTarget, indent string
 
 	done[target.Label] = true
 	if state.ShouldInclude(target) {
-		if parent := target.Label.Parent(); hidden || parent == target.Label {
+		if parent := target.Parent(state.Graph); hidden || parent == target || parent == nil {
 			fmt.Printf("%s%s\n", indent, target.Label)
-		} else if !done[parent] {
+		} else if !done[parent.Label] {
 			fmt.Printf("%s%s\n", indent, parent)
-			done[parent] = true
+			done[parent.Label] = true
 		}
 	}
 	if !unique {

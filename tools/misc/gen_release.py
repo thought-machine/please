@@ -154,8 +154,11 @@ class ReleaseGen:
 
     def upload_sftp(self, artifacts, signatures, checksums):
         """Uploads artifacts to get.please.build via sftp."""
-        with open('latest_version', 'w') as f:
+        with open('latest_prerelease_version', 'w') as f:
             f.write(self.version)
+        if not self.is_prerelease:
+            with open('latest_version', 'w') as f:
+                f.write(self.version)
         # Write batch instruction file
         with open('sftp.txt', 'w') as f:
             f.write('cd vhosts/get.please.build/htdocs\n')
@@ -165,7 +168,9 @@ class ReleaseGen:
                 arch = 'darwin' if 'darwin' in artifact else 'linux'
                 filename = os.path.basename(artifact)
                 f.write(f'put {artifact} {arch}_amd64/{self.version}/{filename}\n')
-            f.write('put latest_version\n')
+            f.write('put latest_prerelease_version\n')
+            if not self.is_prerelease:
+                f.write('put latest_version\n')
             f.write('bye\n')
         if not FLAGS.dry_run:
             subprocess.check_call(['sftp', '-oStrictHostKeyChecking=no', '-b', 'sftp.txt',

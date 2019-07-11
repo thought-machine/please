@@ -168,6 +168,13 @@ def pex_uniquedir():
     return 'pex-%s' % PEX_STAMP
 
 
+def pex_paths():
+    no_cache = os.environ.get('PEX_NOCACHE')
+    no_cache = no_cache and no_cache.lower() == 'true'
+    basepath, uniquedir = pex_basepath(no_cache), pex_uniquedir()
+    pex_path = os.path.join(basepath, uniquedir)
+    return pex_path, basepath, uniquedir, no_cache
+
 def explode_zip():
     """Extracts the current pex to a temp directory where we can import everything from.
 
@@ -192,12 +199,9 @@ def explode_zip():
         # these variables to find out what's going on (e.g. are we zip-safe or not).
         global PEX_PATH
 
-        no_cache = os.environ.get('PEX_NOCACHE')
-        no_cache = no_cache and no_cache.lower() == 'true'
-        basepath, uniquedir = pex_basepath(no_cache), pex_uniquedir()
+        PEX_PATH, basepath, uniquedir, no_cache = pex_paths()
         os.makedirs(basepath, exist_ok=True)
         with pex_lockfile(basepath, uniquedir) as lockfile:
-            PEX_PATH = os.path.join(basepath, uniquedir)
             if len(lockfile.read()) == 0:
                 import compileall, zipfile
 
