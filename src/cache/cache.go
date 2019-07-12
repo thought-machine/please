@@ -13,32 +13,35 @@ import (
 var log = logging.MustGetLogger("cache")
 
 // NewCache is the factory function for creating a cache setup from the given config.
-func NewCache(config *core.Configuration) core.Cache {
-	c := newSyncCache(config, false)
-	if config.Cache.Workers > 0 {
-		return newAsyncCache(c, config)
+func NewCache(state *core.BuildState) core.Cache {
+	c := newSyncCache(state, false)
+	if state.Config.Cache.Workers > 0 {
+		return newAsyncCache(c, state.Config)
 	}
 	return c
 }
 
 // newSyncCache creates a new cache, possibly multiplexing many underneath.
-func newSyncCache(config *core.Configuration, remoteOnly bool) core.Cache {
+func newSyncCache(state *core.BuildState, remoteOnly bool) core.Cache {
 	mplex := &cacheMultiplexer{}
-	if config.Cache.Dir != "" && !remoteOnly {
-		mplex.caches = append(mplex.caches, newDirCache(config))
+	if state.Config.Cache.Dir != "" && !remoteOnly {
+		mplex.caches = append(mplex.caches, newDirCache(state.Config))
 	}
-	if config.Cache.RPCURL != "" {
-		cache, err := newRPCCache(config)
+	if state.Config.Remote.URL != "" {
+		mplex.caches = append(mplex.caches, newRemoteCache(state))
+	}
+	if state.Config.Cache.RPCURL != "" {
+		cache, err := newRPCCache(state.Config)
 		if err == nil {
 			mplex.caches = append(mplex.caches, cache)
 		} else {
 			log.Warning("RPC cache server could not be reached: %s", err)
 		}
 	}
-	if config.Cache.HTTPURL != "" {
-		res, err := http.Get(config.Cache.HTTPURL.String() + "/ping")
+	if state.Config.Cache.HTTPURL != "" {
+		res, err := http.Get(state.Config.Cache.HTTPURL.String() + "/ping")
 		if err == nil && res.StatusCode == 200 {
-			mplex.caches = append(mplex.caches, newHTTPCache(config))
+			mplex.caches = append(mplex.caches, newHTTPCache(state.Config))
 		} else {
 			log.Warning("Http cache server could not be reached: %s.\nSkipping http caching...", err)
 		}

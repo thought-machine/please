@@ -139,7 +139,10 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	)
 	env = append(env, "HOME="+testDir)
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
-		env = append(env, "COVERAGE=true", "COVERAGE_FILE=test.coverage")
+		env = append(env,
+			"COVERAGE=true",
+			"COVERAGE_FILE="+path.Join(testDir, "test.coverage"),
+		)
 	}
 	if len(target.Outputs()) > 0 {
 		// Bit of a hack; ideally we would be unaware of the sandbox here.

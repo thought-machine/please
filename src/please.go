@@ -453,7 +453,8 @@ var buildFunctions = map[string]func() bool{
 					config.Cache.RPCURL = ""
 					config.Cache.HTTPURL = ""
 				}
-				clean.Clean(config, newCache(config), !opts.Clean.NoBackground)
+				state := core.NewBuildState(1, nil, 4, config)
+				clean.Clean(config, newCache(state), !opts.Clean.NoBackground)
 				return true
 			}
 			opts.Clean.Args.Targets = core.WholeGraph
@@ -737,11 +738,11 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 }
 
 // newCache constructs a new cache based on the current config / flags.
-func newCache(config *core.Configuration) core.Cache {
+func newCache(state *core.BuildState) core.Cache {
 	if opts.FeatureFlags.NoCache {
 		return nil
 	}
-	return cache.NewCache(config)
+	return cache.NewCache(state)
 }
 
 // Please starts & runs the main build process through to its completion.
@@ -799,7 +800,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild
-	state.Cache = newCache(config)
+	state.Cache = newCache(state)
 
 	// Run the display
 	state.Results() // important this is called now, don't ask...

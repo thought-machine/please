@@ -11,6 +11,7 @@ import (
 
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/rules/bazel"
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 )
@@ -96,6 +97,7 @@ func createBazelSubrepo(state *core.BuildState) {
 		Name:  "bazel_tools",
 		Root:  dir,
 		State: state,
+		Arch:  cli.HostArch(),
 	})
 	// TODO(peterebden): This is a bit yuck... would be nice if we could avoid hardcoding all
 	//                   this upfront and add a build target to do it for us.

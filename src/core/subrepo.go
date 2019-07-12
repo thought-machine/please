@@ -17,6 +17,8 @@ type Subrepo struct {
 	// The build state instance that tracks this subrepo (it's different from the host one if
 	// this subrepo is for a different architecture)
 	State *BuildState
+	// Architecture for this subrepo.
+	Arch cli.Arch
 	// True if this subrepo was created for a different architecture
 	IsCrossCompile bool
 }
@@ -26,6 +28,7 @@ func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
 	return &Subrepo{
 		Name:           arch.String(),
 		State:          state.ForArch(arch),
+		Arch:           arch,
 		IsCrossCompile: true,
 	}
 }

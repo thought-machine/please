@@ -761,8 +761,8 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	}
 
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile
+	arch := cli.HostArch()
 	if args[5] != None { // arg 5 is arch-string, for arch-subrepos.
-		var arch cli.Arch
 		givenArch := string(args[5].(pyString))
 		if err := arch.UnmarshalFlag(givenArch); err != nil {
 			log.Fatalf("Could not interpret architecture '%s' for subrepo '%s'", givenArch, name)
@@ -775,6 +775,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		Root:           root,
 		Target:         target,
 		State:          state,
+		Arch:           arch,
 		IsCrossCompile: isCrossCompile,
 	}
 	if s.state.Config.Bazel.Compatibility && s.pkg.Name == "workspace" {
