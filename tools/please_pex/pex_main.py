@@ -158,11 +158,12 @@ class ModuleDirImport(object):
 
 
 def pex_basepath(temp=False):
-    if temp:
+    if temp or not os.access('~/.cache/pex', os.W_OK):
         import tempfile
         return tempfile.mkdtemp(dir=os.environ.get('TEMP_DIR'), prefix='pex_')
     else:
         return os.path.expanduser('~/.cache/pex')
+
 
 def pex_uniquedir():
     return 'pex-%s' % PEX_STAMP
@@ -174,6 +175,7 @@ def pex_paths():
     basepath, uniquedir = pex_basepath(no_cache), pex_uniquedir()
     pex_path = os.path.join(basepath, uniquedir)
     return pex_path, basepath, uniquedir, no_cache
+
 
 def explode_zip():
     """Extracts the current pex to a temp directory where we can import everything from.
