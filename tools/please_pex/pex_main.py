@@ -219,7 +219,7 @@ def explode_zip():
         yield
         if no_cache:
             import shutil
-            shutil.rmtree(pex_basepath)
+            shutil.rmtree(basepath)
 
     return _explode_zip
 
