@@ -135,6 +135,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		"RESULTS_FILE="+resultsFile,
 		// We shouldn't really have specific things like this here, but it really is just easier to set it.
 		"GTEST_OUTPUT=xml:"+resultsFile,
+		"PEX_NOCACHE=true",
 	)
 	env = append(env, "HOME="+testDir)
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {

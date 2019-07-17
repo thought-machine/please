@@ -232,7 +232,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
                    started with the -S flag to avoid importing site.
     """
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s"' % (
+    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$STAMP"' % (
         interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
@@ -267,6 +267,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
             'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
             'pex': [CONFIG.PEX_TOOL],
         },
+        stamp = True,
     )
 
     # If there are resources specified, they have to get built into the pex.
