@@ -1,6 +1,7 @@
 package asp
 
 import (
+	"encoding/json"
 	"fmt"
 	"path"
 	"reflect"
@@ -48,6 +49,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "get_licences", getLicences)
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
+	setNativeCode(s, "json", valueAsJSON)
 	stringMethods = map[string]*pyFunc{
 		"join":       setNativeCode(s, "join", strJoin),
 		"split":      setNativeCode(s, "split", strSplit),
@@ -689,6 +691,16 @@ func getLicences(s *scope, args []pyObject) pyObject {
 func getCommand(s *scope, args []pyObject) pyObject {
 	target := getTargetPost(s, string(args[0].(pyString)))
 	return pyString(target.GetCommandConfig(string(args[1].(pyString))))
+}
+
+// valueAsJSON returns a JSON-formatted string representation of a plz value.
+func valueAsJSON(s *scope, args []pyObject) pyObject {
+	js, err := json.Marshal(args[0])
+	if err != nil {
+		s.Error("Could not marshal object as JSON")
+		return None
+	}
+	return pyString(js)
 }
 
 // setCommand sets the command of a target, optionally for a configuration.

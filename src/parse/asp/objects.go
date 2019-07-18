@@ -85,6 +85,15 @@ func (b pyBool) String() string {
 	return "False"
 }
 
+func (b pyBool) MarshalJSON() ([]byte, error) {
+	if b.IsTruthy() {
+		return []byte("true"), nil
+	} else if b == None {
+		return []byte("null"), nil
+	}
+	return []byte("false"), nil
+}
+
 type pyInt int
 
 // pyIndex converts an object that's being used as an index to an int.
