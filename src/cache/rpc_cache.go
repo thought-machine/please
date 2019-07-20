@@ -58,12 +58,15 @@ type cacheNode struct {
 	hashEnd   uint32
 }
 
-func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, files ...string) {
+func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 	if cache.isConnected() && cache.Writeable {
 		log.Debug("Storing %s in RPC cache...", target.Label)
 		artifacts := []*pb.Artifact{}
 		totalSize := 0
-		for _, out := range cacheArtifacts(target, files...) {
+		if needsPostBuildFile(target) {
+			files = append(files, target.PostBuildOutputFileName())
+		}
+		for _, out := range files {
 			artifacts2, size, err := cache.loadArtifacts(target, out)
 			if err != nil {
 				log.Warning("RPC cache failed to load artifact %s: %s", out, err)
@@ -75,23 +78,6 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, files ...stri
 		}
 		if totalSize > cache.maxMsgSize {
 			log.Info("Artifacts for %s exceed maximum message size of %s bytes", target.Label, cache.maxMsgSize)
-			return
-		}
-		cache.sendArtifacts(target, key, artifacts)
-	}
-}
-
-func (cache *rpcCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
-	if cache.isConnected() && cache.Writeable {
-		log.Debug("Storing %s : %s in RPC cache...", target.Label, file)
-		artifacts, totalSize, err := cache.loadArtifacts(target, file)
-		if err != nil {
-			log.Warning("RPC cache failed to load artifact %s: %s", file, err)
-			cache.error()
-			return
-		}
-		if totalSize > cache.maxMsgSize {
-			log.Info("Artifact %s for %s exceeds maximum message size of %s bytes", file, target.Label, cache.maxMsgSize)
 			return
 		}
 		cache.sendArtifacts(target, key, artifacts)
@@ -155,22 +141,37 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 	})
 }
 
-func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) bool {
+func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
 	if !cache.isConnected() {
-		return false
+		return nil
 	}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
-	for _, out := range cacheArtifacts(target) {
-		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name, File: out}
-		req.Artifacts = append(req.Artifacts, &artifact)
+	for _, out := range target.Outputs() {
+		req.Artifacts = append(req.Artifacts, &pb.Artifact{
+			Package: target.Label.PackageName,
+			Target:  target.Label.Name,
+			File:    out,
+		})
+	}
+	if needsPostBuildFile(target) {
+		req.Artifacts = append(req.Artifacts, &pb.Artifact{
+			Package: target.Label.PackageName,
+			Target:  target.Label.Name,
+			File:    target.PostBuildOutputFileName(),
+		})
 	}
 	// We can't tell from here if retrieval has been successful for a target with no outputs.
 	// This is kind of weird but not actually disallowed, and we already have a test case for it,
 	// so might as well try to get it right here.
 	if len(req.Artifacts) == 0 {
-		return false
+		return nil
 	}
-	return cache.retrieveArtifacts(target, &req, true)
+	if !cache.retrieveArtifacts(target, &req, true) {
+		return nil
+	} else if needsPostBuildFile(target) {
+		return loadPostBuildFile(target)
+	}
+	return &core.BuildMetadata{}
 }
 
 func (cache *rpcCache) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {

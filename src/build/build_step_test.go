@@ -306,29 +306,18 @@ func newPyFilegroup(state *core.BuildState, label, filename string) *core.BuildT
 // Fake cache implementation with hardcoded behaviour for the various tests above.
 type mockCache struct{}
 
-func (*mockCache) Store(target *core.BuildTarget, key []byte, files ...string) {
+func (*mockCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 }
 
-func (*mockCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
-}
-
-func (*mockCache) Retrieve(target *core.BuildTarget, key []byte) bool {
+func (*mockCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
 	if target.Label.Name == "target8" {
 		ioutil.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
-		return true
+		return &core.BuildMetadata{}
 	} else if target.Label.Name == "target10" {
 		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
-		return true
+		return &core.BuildMetadata{Stdout: []byte("retrieved from cache")}
 	}
-	return false
-}
-
-func (*mockCache) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {
-	if target.Label.Name == "target10" && file == target.PostBuildOutputFileName() {
-		ioutil.WriteFile(postBuildOutputFileName(target), []byte("retrieved from cache"), 0664)
-		return true
-	}
-	return false
+	return nil
 }
 
 func (*mockCache) Clean(target *core.BuildTarget) {}

@@ -5,6 +5,7 @@ package cache
 import (
 	"encoding/base64"
 	"io"
+	"io/ioutil"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -22,26 +23,29 @@ type httpCache struct {
 	Timeout   time.Duration
 }
 
-func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files ...string) {
+func (cache *httpCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 	// TODO(pebers): Change this to upload using multipart, it's quite slow doing every file separately
 	//               for targets with many files.
 	if cache.Writeable {
-		for _, out := range cacheArtifacts(target, files...) {
+		for _, out := range files {
 			if info, err := os.Stat(out); err == nil && info.IsDir() {
 				fs.Walk(out, func(name string, isDir bool) error {
 					if !isDir {
-						cache.StoreExtra(target, key, name)
+						cache.storeOne(target, key, name)
 					}
 					return nil
 				})
 			} else {
-				cache.StoreExtra(target, key, out)
+				cache.storeOne(target, key, out)
 			}
+		}
+		if needsPostBuildFile(target) {
+			cache.storeOne(target, key, target.PostBuildOutputFileName())
 		}
 	}
 }
 
-func (cache *httpCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
+func (cache *httpCache) storeOne(target *core.BuildTarget, key []byte, file string) {
 	if cache.Writeable {
 		artifact := path.Join(
 			core.OsArch,
@@ -69,21 +73,27 @@ func (cache *httpCache) StoreExtra(target *core.BuildTarget, key []byte, file st
 	}
 }
 
-func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte) bool {
+func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
 	// We can't tell from outside if this works or not (as we can for the dir cache)
 	// so we must assume that a target with no artifacts can't be retrieved. It's a weird
 	// case but a test already exists in the plz test suite so...
-	retrieved := false
-	for _, out := range cacheArtifacts(target) {
-		if !cache.RetrieveExtra(target, key, out) {
-			return false
+	var metadata *core.BuildMetadata
+	for _, out := range target.Outputs() {
+		if !cache.retrieveOne(target, key, out) {
+			return nil
 		}
-		retrieved = true
+		metadata = &core.BuildMetadata{}
 	}
-	return retrieved
+	if needsPostBuildFile(target) {
+		if !cache.retrieveOne(target, key, target.PostBuildOutputFileName()) {
+			return nil
+		}
+		metadata = loadPostBuildFile(target)
+	}
+	return metadata
 }
 
-func (cache *httpCache) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {
+func (cache *httpCache) retrieveOne(target *core.BuildTarget, key []byte, file string) bool {
 	log.Debug("Retrieving %s:%s from http cache...", target.Label, file)
 
 	artifact := path.Join(
@@ -176,4 +186,18 @@ func newHTTPCache(config *core.Configuration) *httpCache {
 		Writeable: config.Cache.HTTPWriteable,
 		Timeout:   time.Duration(config.Cache.HTTPTimeout),
 	}
+}
+
+// Convenience function to load a post-build output file after retrieving it from the cache.
+func loadPostBuildFile(target *core.BuildTarget) *core.BuildMetadata {
+	b, err := ioutil.ReadFile(path.Join(target.OutDir(), target.PostBuildOutputFileName()))
+	if err != nil {
+		return nil
+	}
+	return &core.BuildMetadata{Stdout: b}
+}
+
+// Another one to work out if we should try to store/retrieve a post-build output file.
+func needsPostBuildFile(target *core.BuildTarget) bool {
+	return target.PostBuildFunction != nil && target.State() < core.Built
 }

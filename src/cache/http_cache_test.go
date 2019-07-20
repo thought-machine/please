@@ -36,7 +36,7 @@ func init() {
 
 func TestStore(t *testing.T) {
 	target.AddOutput("testfile")
-	httpcache.Store(target, []byte("test_key"))
+	httpcache.Store(target, []byte("test_key"), &core.BuildMetadata{}, target.Outputs())
 	abs, _ := filepath.Abs(path.Join("src/cache/test_data", core.OsArch, "pkg/name", "label_name"))
 	if !core.PathExists(abs) {
 		t.Errorf("Test file %s was not stored in cache.", abs)
@@ -44,7 +44,7 @@ func TestStore(t *testing.T) {
 }
 
 func TestRetrieve(t *testing.T) {
-	if !httpcache.Retrieve(target, []byte("test_key")) {
+	if httpcache.Retrieve(target, []byte("test_key")) == nil {
 		t.Error("Artifact expected and not found.")
 	}
 }

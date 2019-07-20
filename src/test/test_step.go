@@ -46,11 +46,10 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	hash = core.CollapseHash(hash)
 	cachedOutputFile := target.TestResultsFile()
 	cachedCoverageFile := target.CoverageFile()
-	resultsFileName := path.Base(cachedOutputFile)
-	coverageFileName := path.Base(cachedCoverageFile)
-	outputFile := path.Join(target.TestDir(), "test.results")
-	coverageFile := path.Join(target.TestDir(), "test.coverage")
-	needCoverage := state.NeedCoverage && !target.NoTestOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
+	outputFile := path.Join(target.TestDir(), core.TestResultsFile)
+	coverageFile := path.Join(target.TestDir(), core.CoverageFile)
+	needCoverage := target.NeedCoverage(state)
+	metadata := &core.BuildMetadata{Test: true, StartTime: time.Now()}
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareShell {
@@ -93,23 +92,29 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			log.Debug("Not caching results for %s, test had failures", label)
 			return true
 		}
-		if err := moveAndCacheOutputFile(state, target, hash, outputFile, cachedOutputFile, resultsFileName, dummyOutput); err != nil {
+		outs := []string{path.Base(cachedOutputFile)}
+		if err := moveOutputFile(state, target, hash, outputFile, cachedOutputFile, dummyOutput); err != nil {
 			state.LogTestResult(tid, label, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 			return false
 		}
 		if needCoverage || core.PathExists(coverageFile) {
-			if err := moveAndCacheOutputFile(state, target, hash, coverageFile, cachedCoverageFile, coverageFileName, dummyCoverage); err != nil {
+			if err := moveOutputFile(state, target, hash, coverageFile, cachedCoverageFile, dummyCoverage); err != nil {
 				state.LogTestResult(tid, label, core.TargetTestFailed, results, coverage, err, "Failed to move test coverage file")
 				return false
 			}
+			outs = append(outs, path.Base(cachedCoverageFile))
 		}
 		for _, output := range target.TestOutputs {
 			tmpFile := path.Join(target.TestDir(), output)
 			outFile := path.Join(target.OutDir(), output)
-			if err := moveAndCacheOutputFile(state, target, hash, tmpFile, outFile, output, ""); err != nil {
+			if err := moveOutputFile(state, target, hash, tmpFile, outFile, ""); err != nil {
 				state.LogTestResult(tid, label, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 				return false
 			}
+			outs = append(outs, output)
+		}
+		if state.Cache != nil {
+			state.Cache.Store(target, hash, metadata, outs)
 		}
 		return true
 	}
@@ -129,21 +134,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 		log.Debug("Output file %s does not exist for %s", cachedOutputFile, target.Label)
 		// Check the cache for these artifacts.
-		if state.Cache == nil {
-			return true
-		}
-		if !state.Cache.RetrieveExtra(target, hash, resultsFileName) {
-			return true
-		}
-		if needCoverage && !state.Cache.RetrieveExtra(target, hash, coverageFileName) {
-			return true
-		}
-		for _, output := range target.TestOutputs {
-			if !state.Cache.RetrieveExtra(target, hash, output) {
-				return true
-			}
-		}
-		return false
+		return state.Cache == nil || state.Cache.Retrieve(target, hash) == nil
 	}
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
@@ -227,7 +218,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		// So if you ask for 3 runs you get 3 separate `PASS`es.
 		target.Results.Collapse(flakeResults)
 	}
-
+	metadata.EndTime = time.Now()
 	coverage = parseCoverageFile(target, coverageFile)
 
 	if target.Results.TestCases.AllSucceeded() {
@@ -545,8 +536,9 @@ func RemoveTestOutputs(target *core.BuildTarget) error {
 	return nil
 }
 
-// Attempt to write a dummy coverage file to record that it's been done for a test.
-func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, hash []byte, from, to, filename, dummy string) error {
+// moveOutputFile moves an output file from the temporary directory to its permanent location.
+// If dummy is given, it writes that into the destination if the file doesn't exist.
+func moveOutputFile(state *core.BuildState, target *core.BuildTarget, hash []byte, from, to, dummy string) error {
 	if !core.PathExists(from) {
 		if dummy == "" {
 			return nil
@@ -556,9 +548,6 @@ func moveAndCacheOutputFile(state *core.BuildState, target *core.BuildTarget, ha
 		}
 	} else if err := os.Rename(from, to); err != nil {
 		return err
-	}
-	if state.Cache != nil {
-		state.Cache.StoreExtra(target, hash, filename)
 	}
 	// Set the hash on the new destination file
 	return fs.RecordAttr(to, hash, xattrName, state.XattrsSupported)

@@ -48,23 +48,23 @@ func inCompressedCache(target *core.BuildTarget) bool {
 func TestStoreAndRetrieve(t *testing.T) {
 	cache := makeCache(".plz-cache-test1", false)
 	target := makeTarget("//test1:target1", 20)
-	cache.Store(target, hash)
+	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	// Should now exist in cache at this path
 	assert.True(t, inCache(target))
-	assert.True(t, cache.Retrieve(target, hash))
+	assert.NotNil(t, cache.Retrieve(target, hash))
 	// Should be able to store it again without problems
-	cache.Store(target, hash)
+	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	assert.True(t, inCache(target))
-	assert.True(t, cache.Retrieve(target, hash))
+	assert.NotNil(t, cache.Retrieve(target, hash))
 }
 
 func TestCleanNoop(t *testing.T) {
 	cache := makeCache(".plz-cache-test2", false)
 	target1 := makeTarget("//test2:target1", 2000)
-	cache.Store(target1, hash)
+	cache.Store(target1, hash, &core.BuildMetadata{}, target1.Outputs())
 	assert.True(t, inCache(target1))
 	target2 := makeTarget("//test2:target2", 2000)
-	cache.Store(target2, hash)
+	cache.Store(target2, hash, &core.BuildMetadata{}, target2.Outputs())
 	assert.True(t, inCache(target2))
 	// Doesn't clean anything this time because the high water mark is sufficiently high
 	totalSize := cache.clean(20000, 1000)
@@ -76,10 +76,10 @@ func TestCleanNoop(t *testing.T) {
 func TestCleanNoop2(t *testing.T) {
 	cache := makeCache(".plz-cache-test3", false)
 	target1 := makeTarget("//test3:target1", 2000)
-	cache.Store(target1, hash)
+	cache.Store(target1, hash, &core.BuildMetadata{}, target1.Outputs())
 	assert.True(t, inCache(target1))
 	target2 := makeTarget("//test3:target2", 2000)
-	cache.Store(target2, hash)
+	cache.Store(target2, hash, &core.BuildMetadata{}, target2.Outputs())
 	assert.True(t, inCache(target2))
 	// Doesn't clean anything this time, the high water mark is lower but both targets have
 	// just been built.
@@ -92,7 +92,7 @@ func TestCleanNoop2(t *testing.T) {
 func TestCleanForReal(t *testing.T) {
 	cache := makeCache(".plz-cache-test4", false)
 	target1 := makeTarget("//test4:target1", 2000)
-	cache.Store(target1, hash)
+	cache.Store(target1, hash, &core.BuildMetadata{}, target1.Outputs())
 	assert.True(t, inCache(target1))
 	target2 := makeTarget("//test4:target2", 2000)
 	writeFile(cachePath(target2, false), 2000)
@@ -110,7 +110,7 @@ func TestCleanForReal2(t *testing.T) {
 	writeFile(cachePath(target1, false), 2000)
 	assert.True(t, inCache(target1))
 	target2 := makeTarget("//test5:target2", 2000)
-	cache.Store(target2, hash)
+	cache.Store(target2, hash, &core.BuildMetadata{}, target2.Outputs())
 	assert.True(t, inCache(target2))
 	// This time it should clean target1, because target2 has just been stored
 	totalSize := cache.clean(10000, 1000)
@@ -122,14 +122,14 @@ func TestCleanForReal2(t *testing.T) {
 func TestStoreAndRetrieveCompressed(t *testing.T) {
 	cache := makeCache(".plz-cache-test6", true)
 	target := makeTarget("//test6:target6", 20)
-	cache.Store(target, hash)
+	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	// Should now exist in cache at this path
 	assert.True(t, inCompressedCache(target))
-	assert.True(t, cache.Retrieve(target, hash))
+	assert.NotNil(t, cache.Retrieve(target, hash))
 	// Should be able to store it again without problems
-	cache.Store(target, hash)
+	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	assert.True(t, inCompressedCache(target))
-	assert.True(t, cache.Retrieve(target, hash))
+	assert.NotNil(t, cache.Retrieve(target, hash))
 }
 
 func TestCleanCompressed(t *testing.T) {
@@ -138,7 +138,7 @@ func TestCleanCompressed(t *testing.T) {
 	writeFile(cachePath(target1, true), 2000)
 	assert.True(t, inCompressedCache(target1))
 	target2 := makeTarget("//test7:target2", 2000)
-	cache.Store(target2, hash)
+	cache.Store(target2, hash, &core.BuildMetadata{}, target2.Outputs())
 	assert.True(t, inCompressedCache(target2))
 	// Don't want to assert the size here since it depends on how well gzip compresses.
 	// It's a bit hard to know exactly what the sizes here should be too but we'll guess

@@ -32,7 +32,7 @@ type dirCache struct {
 	mutex    sync.Mutex
 }
 
-func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files ...string) {
+func (cache *dirCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 	cacheDir := cache.getPath(target, key, "")
 	tmpDir := cache.getFullPath(target, key, "", "=")
 	cache.markDir(cacheDir, 0)
@@ -40,15 +40,13 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files ...stri
 		log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
 		return
 	}
-	cache.storeFiles(target, key, "", cacheDir, tmpDir, cacheArtifacts(target, files...), true)
+	if target.PostBuildFunction != nil {
+		files = append(files, target.PostBuildOutputFileName())
+	}
+	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
 	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 	}
-}
-
-func (cache *dirCache) StoreExtra(target *core.BuildTarget, key []byte, out string) {
-	cacheDir := cache.getPath(target, key, out)
-	cache.storeFiles(target, key, out, cacheDir, cacheDir, []string{out}, false)
 }
 
 // storeFiles stores the given files in the cache, either compressed or not.
@@ -182,12 +180,18 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 	return size
 }
 
-func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte) bool {
-	return cache.retrieveFiles(target, key, "", cacheArtifacts(target))
-}
-
-func (cache *dirCache) RetrieveExtra(target *core.BuildTarget, key []byte, out string) bool {
-	return cache.retrieveFiles(target, key, out, []string{out})
+func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
+	outs := target.Outputs()
+	if needsPostBuildFile(target) {
+		outs = append(outs, target.PostBuildOutputFileName())
+	}
+	if !cache.retrieveFiles(target, key, "", outs) {
+		return nil
+	}
+	if needsPostBuildFile(target) {
+		return loadPostBuildFile(target)
+	}
+	return &core.BuildMetadata{}
 }
 
 // retrieveFiles retrieves the given set of files from the cache.

@@ -15,32 +15,40 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte) (digest *pb.Digest, err error) {
-	err = c.uploadBlobs(func(ch chan<- *blob) error {
+func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, isTest bool) (*pb.Digest, error) {
+	timeout := target.BuildTimeout
+	if isTest {
+		timeout = target.TestTimeout
+	}
+	var digest *pb.Digest
+	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		inputRoot, err := c.buildInputRoot(target, true)
+		inputRoot, err := c.buildInputRoot(target, true, isTest)
 		if err != nil {
 			return err
 		}
 		inputRootDigest, inputRootMsg := digestMessageContents(inputRoot)
 		ch <- &blob{Data: inputRootMsg, Digest: inputRootDigest}
-		commandDigest, commandMsg := digestMessageContents(c.buildCommand(target, stamp))
+		commandDigest, commandMsg := digestMessageContents(c.buildCommand(target, stamp, isTest))
 		ch <- &blob{Data: commandMsg, Digest: commandDigest}
 		action := &pb.Action{
 			CommandDigest:   commandDigest,
 			InputRootDigest: inputRootDigest,
-			Timeout:         ptypes.DurationProto(target.BuildTimeout),
+			Timeout:         ptypes.DurationProto(timeout),
 		}
 		actionDigest, actionMsg := digestMessageContents(action)
 		ch <- &blob{Data: actionMsg, Digest: actionDigest}
 		digest = actionDigest
 		return nil
 	})
-	return
+	return digest, err
 }
 
 // buildCommand builds the command for a single target.
-func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte) *pb.Command {
+func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest bool) *pb.Command {
+	if isTest {
+		return c.buildTestCommand(target)
+	}
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{
@@ -60,7 +68,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte) *pb.Comman
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", target.GetCommand(c.state),
 		},
-		EnvironmentVariables: buildEnv(c.state, target, stamp),
+		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp)),
 		OutputFiles:          target.Outputs(),
 		// TODO(peterebden): We will need to deal with OutputDirectories somehow.
 		//                   Unfortunately it's unclear how to do that without introducing
@@ -68,8 +76,31 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte) *pb.Comman
 	}
 }
 
+// buildTestCommand builds a command for a target when testing.
+func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
+	outs := []string{core.TestResultsFile}
+	if target.NeedCoverage(c.state) {
+		outs = append(outs, core.CoverageFile)
+	}
+	return &pb.Command{
+		Platform: &pb.Platform{
+			Properties: []*pb.Platform_Property{
+				{
+					Name:  "OSFamily",
+					Value: translateOS(target.Subrepo),
+				},
+			},
+		},
+		Arguments: []string{
+			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", target.GetTestCommand(c.state),
+		},
+		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "")),
+		OutputFiles:          outs,
+	}
+}
+
 // buildInputRoot constructs the directory that is the input root and optionally uploads it.
-func (c *Client) buildInputRoot(target *core.BuildTarget, upload bool) (*pb.Directory, error) {
+func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (*pb.Directory, error) {
 	// This is pretty awkward; we need to recursively build this whole set of directories
 	// which does not match up to how we represent it (which is a series of files, with
 	// no corresponding directories, that are not usefully ordered for this purpose).
@@ -77,9 +108,16 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload bool) (*pb.Dire
 	strip := len(target.TmpDir()) + 1 // Amount we have to strip off the start of the temp paths
 	root := &pb.Directory{}
 	dirs["."] = root // Ensure the root is in there
+	var sources <-chan core.SourcePair
+	if isTest {
+		sources = core.IterRuntimeFiles(c.state.Graph, target, false)
+		strip = len(target.TestDir()) + 1
+	} else {
+		sources = core.IterSources(c.state.Graph, target)
+	}
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		for source := range core.IterSources(c.state.Graph, target) {
+		for source := range sources {
 			// Ensure all parent directories exist
 			child := ""
 			dir := path.Dir(source.Tmp[strip:])
@@ -162,9 +200,8 @@ func reallyTranslateOS(os string) string {
 	}
 }
 
-// buildEnv creates the set of environment variables for this target.
-func buildEnv(state *core.BuildState, target *core.BuildTarget, stamp []byte) []*pb.Command_EnvironmentVariable {
-	env := core.StampedBuildEnvironment(state, target, stamp)
+// buildEnv translates the set of environment variables for this target to a proto.
+func buildEnv(env []string) []*pb.Command_EnvironmentVariable {
 	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
 	for i, e := range env {
