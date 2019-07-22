@@ -28,7 +28,7 @@ func (rc *rexCache) Store(target *core.BuildTarget, key []byte, files ...string)
 }
 
 func (c *rexCache) StoreExtra(target *core.BuildTarget, key []byte, file string) {
-	log.Debug("Storing %s: %s in remote cache...", target.Label, file)
+	// Not implemented
 }
 
 func (rc *rexCache) Retrieve(target *core.BuildTarget, key []byte) bool {
