@@ -238,3 +238,8 @@ def licenses(licences):
     """Sets the default licences for the package."""
     assert CONFIG.BAZEL_COMPATIBILITY, 'licenses() can only be called in Bazel compat mode'
     package(default_licences = licences)
+
+
+def json(value) -> str:
+    """Returns a JSON-formatted representation of a plz value"""
+    pass
