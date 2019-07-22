@@ -27,6 +27,8 @@ func TestInit(t *testing.T) {
 }
 
 func TestBadAPIVersion(t *testing.T) {
+	// We specify a required API version of v2.0.0, so should fail initialisation if the server
+	// specifies something incompatible with that.
 	defer server.Reset()
 	server.HighApiVersion.Major = 1
 	server.LowApiVersion.Major = 1

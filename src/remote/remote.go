@@ -94,6 +94,7 @@ func (c *Client) init() {
 	c.err = func() error {
 		// TODO(peterebden): We may need to add the ability to have multiple URLs which we
 		//                   would then query for capabilities to discover which is which.
+		// TODO(peterebden): Add support for TLS.
 		conn, err := grpc.Dial(c.state.Config.Remote.URL.String(),
 			grpc.WithTimeout(dialTimeout),
 			grpc.WithInsecure(),
@@ -110,7 +111,8 @@ func (c *Client) init() {
 		})
 		if err != nil {
 			return err
-		} else if lessThan(&apiVersion, resp.LowApiVersion) || lessThan(resp.HighApiVersion, &apiVersion) {
+		}
+		if lessThan(&apiVersion, resp.LowApiVersion) || lessThan(resp.HighApiVersion, &apiVersion) {
 			return fmt.Errorf("Unsupported API version; we require %s but server only supports %s - %s", printVer(&apiVersion), printVer(resp.LowApiVersion), printVer(resp.HighApiVersion))
 		}
 		caps := resp.CacheCapabilities
@@ -154,6 +156,9 @@ func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
 
 // Store stores a set of artifacts for a single build target.
 func (c *Client) Store(target *core.BuildTarget, key []byte, files []string) error {
+	if err := c.CheckInitialised(); err != nil {
+		return err
+	}
 	// v0.1: just do BatchUpdateBlobs  <-- we are here
 	// v0.2: honour the max size to do ByteStreams
 	// v0.3: get the action cache involved
@@ -244,6 +249,9 @@ func (c *Client) Store(target *core.BuildTarget, key []byte, files []string) err
 // Retrieve fetches back a set of artifacts for a single build target.
 // Its outputs are written out to their final locations.
 func (c *Client) Retrieve(target *core.BuildTarget, key []byte) error {
+	if err := c.CheckInitialised(); err != nil {
+		return err
+	}
 	inputRoot, err := c.buildInputRoot(target, false)
 	if err != nil {
 		return err

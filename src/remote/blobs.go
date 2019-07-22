@@ -12,6 +12,7 @@ import (
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"golang.org/x/sync/errgroup"
 	bs "google.golang.org/genproto/googleapis/bytestream"
+	"google.golang.org/grpc/codes"
 
 	"github.com/thought-machine/please/src/fs"
 )
@@ -153,7 +154,7 @@ func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
 	//                   instead of Message (since this ends up being user-facing) and
 	//                   shouldn't just take the first one. This will do for now though.
 	for _, r := range resp.Responses {
-		if r.Status.Code != 0 {
+		if r.Status.Code != int32(codes.OK) {
 			return fmt.Errorf("%s", r.Status.Message)
 		}
 	}
@@ -173,7 +174,7 @@ func (c *Client) receiveBlobs(digests []*pb.Digest, filenames map[string]string,
 	}
 	// TODO(peterebden): as above, could probably handle this a bit better.
 	for _, r := range resp.Responses {
-		if r.Status.Code != 0 {
+		if r.Status.Code != int32(codes.OK) {
 			return fmt.Errorf("%s", r.Status.Message)
 		}
 		filename := filenames[r.Digest.Hash]
