@@ -152,9 +152,6 @@ func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
 	return fmt.Errorf("No acceptable hash function available; server supports %s but we require SHA1", fns)
 }
 
-func (c *Client) GetArtifact() {
-}
-
 // Store stores a set of artifacts for a single build target.
 func (c *Client) Store(target *core.BuildTarget, key []byte, files []string) error {
 	// v0.1: just do BatchUpdateBlobs  <-- we are here
