@@ -8,7 +8,7 @@ import (
 )
 
 func TestExpandOriginalTargets(t *testing.T) {
-	state := NewBuildState(1, nil, 4, DefaultConfiguration())
+	state := NewDefaultBuildState()
 	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}, {PackageName: "src/parse", Name: "parse"}}
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
@@ -32,7 +32,7 @@ func TestExpandOriginalTargets(t *testing.T) {
 }
 
 func TestExpandOriginalTestTargets(t *testing.T) {
-	state := NewBuildState(1, nil, 4, DefaultConfiguration())
+	state := NewDefaultBuildState()
 	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}}
 	state.NeedTests = true
 	state.Include = []string{"go"}
@@ -48,7 +48,7 @@ func TestExpandOriginalTestTargets(t *testing.T) {
 }
 
 func TestExpandVisibleOriginalTargets(t *testing.T) {
-	state := NewBuildState(1, nil, 4, DefaultConfiguration())
+	state := NewDefaultBuildState()
 	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}}
 
 	addTarget(state, "//src/core:target1", "py")
@@ -57,7 +57,7 @@ func TestExpandVisibleOriginalTargets(t *testing.T) {
 }
 
 func TestExpandOriginalSubTargets(t *testing.T) {
-	state := NewBuildState(1, nil, 4, DefaultConfiguration())
+	state := NewDefaultBuildState()
 	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "..."}}
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
@@ -73,7 +73,7 @@ func TestExpandOriginalSubTargets(t *testing.T) {
 }
 
 func TestExpandOriginalTargetsOrdering(t *testing.T) {
-	state := NewBuildState(1, nil, 4, DefaultConfiguration())
+	state := NewDefaultBuildState()
 	state.OriginalTargets = []BuildLabel{
 		{PackageName: "src/parse", Name: "parse"},
 		{PackageName: "src/core", Name: "..."},

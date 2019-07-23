@@ -42,7 +42,7 @@ func TestClientToServerCommunication(t *testing.T) {
 	// Note that the ordering of things here is pretty important; we need to get the
 	// client connected & ready to receive events before we push them all into the
 	// server and shut it down again.
-	serverState := core.NewBuildState(5, nil, 4, core.DefaultConfiguration())
+	serverState := core.NewDefaultBuildState()
 	addr, shutdown := initialiseServer(serverState, 0)
 
 	// This is a bit awkward. We want to assert that we receive a matching set of
@@ -58,7 +58,7 @@ func TestClientToServerCommunication(t *testing.T) {
 	serverState.LogBuildResult(0, l1, core.TargetBuilt, fmt.Sprintf("Built %s", l1))
 	serverState.LogBuildResult(1, l3, core.TargetBuilding, fmt.Sprintf("Building %s", l3))
 
-	clientState := core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
+	clientState := core.NewDefaultBuildState()
 	results := clientState.Results()
 	connectClient(clientState, addr, retries, delay)
 	// The client state should have synced up with the server's number of threads
@@ -98,9 +98,9 @@ func TestClientToServerCommunication(t *testing.T) {
 }
 
 func TestWithOutput(t *testing.T) {
-	serverState := core.NewBuildState(5, nil, 4, core.DefaultConfiguration())
+	serverState := core.NewDefaultBuildState()
 	addr, shutdown := initialiseServer(serverState, 0)
-	clientState := core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
+	clientState := core.NewDefaultBuildState()
 	connectClient(clientState, addr, retries, delay)
 	go func() {
 		serverState.LogBuildResult(0, l1, core.PackageParsed, fmt.Sprintf("Parsed %s", l1))
@@ -117,11 +117,11 @@ func TestWithOutput(t *testing.T) {
 }
 
 func TestResources(t *testing.T) {
-	serverState := core.NewBuildState(5, nil, 4, core.DefaultConfiguration())
+	serverState := core.NewDefaultBuildState()
 	go UpdateResources(serverState)
 	addr, shutdown := initialiseServer(serverState, 0)
 	defer shutdown()
-	clientState := core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
+	clientState := core.NewDefaultBuildState()
 	connectClient(clientState, addr, retries, delay)
 	// Fortunately this is a lot less fiddly than the others, because we always
 	// receive updates eventually. On the downside it's hard to know when it'll

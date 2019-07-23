@@ -141,7 +141,7 @@ func TestBazelCompatReplacements(t *testing.T) {
 	target := makeTarget("//path/to:target", "cp $< $@", nil)
 	assert.Equal(t, "cp $< $@", replaceSequences(state, target))
 	// In Bazel compat mode we do though.
-	state := core.NewBuildState(1, nil, 1, core.DefaultConfiguration())
+	state := core.NewDefaultBuildState()
 	state.Config.Bazel.Compatibility = true
 	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(state, target))
 	// @D is the output dir, for us it's the tmp dir.

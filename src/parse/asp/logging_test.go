@@ -21,7 +21,7 @@ type record struct {
 }
 
 func parseFile(filename string) (*scope, error) {
-	state := core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
+	state := core.NewDefaultBuildState()
 	pkg := core.NewPackage("test/package")
 	pkg.Filename = "test/package/BUILD"
 	parser := NewParser(state)

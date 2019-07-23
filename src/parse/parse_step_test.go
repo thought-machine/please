@@ -121,7 +121,7 @@ func makeTarget(label string, deps ...string) *core.BuildTarget {
 // makeState creates a new build state with optionally one or two packages in it.
 // Used in various tests above.
 func makeState(withPackage1, withPackage2 bool) *core.BuildState {
-	state := core.NewBuildState(5, nil, 4, core.DefaultConfiguration())
+	state := core.NewDefaultBuildState()
 	if withPackage1 {
 		pkg := core.NewPackage("package1")
 		state.Graph.AddPackage(pkg)

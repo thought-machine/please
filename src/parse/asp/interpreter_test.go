@@ -15,7 +15,7 @@ import (
 )
 
 func parseFileToStatements(filename string) (*scope, []*Statement, error) {
-	state := core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
+	state := core.NewDefaultBuildState()
 	state.Config.BuildConfig = map[string]string{"parser-engine": "python27"}
 	pkg := core.NewPackage("test/package")
 	parser := NewParser(state)

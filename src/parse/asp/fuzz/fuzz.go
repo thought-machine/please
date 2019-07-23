@@ -61,7 +61,7 @@ func isWhitelisted(err error) bool {
 // Fuzz implements the interface that go-fuzz requires for fuzz testing of the parser.
 func Fuzz(data []byte) int {
 	// This lot is copied from src/parse/init.go to load all the builtins.
-	p := asp.NewParser(core.NewBuildState(1, nil, 4, core.DefaultConfiguration()))
+	p := asp.NewParser(core.NewDefaultBuildState())
 	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)
 	for _, filename := range dir {

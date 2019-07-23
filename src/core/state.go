@@ -767,7 +767,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 // NewDefaultBuildState creates a BuildState for the default configuration.
 // This is useful for tests etc that don't need to customise anything about it.
 func NewDefaultBuildState() *BuildState {
-	return NewBuildState(1, nil, 4, DefaultConfiguration())
+	return NewDefaultBuildState()
 }
 
 // A BuildResult represents a single event in the build process, i.e. a target starting or finishing

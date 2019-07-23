@@ -20,7 +20,7 @@ const cachePath = "tools/cache/server/test_data"
 
 func init() {
 	cache = newCache(cachePath)
-	core.NewBuildState(1, nil, 4, core.DefaultConfiguration())
+	core.NewDefaultBuildState()
 }
 
 func TestFilesToClean(t *testing.T) {
