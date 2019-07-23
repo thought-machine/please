@@ -1,6 +1,9 @@
 freebsd_instance:
   image: freebsd-11-2-release-amd64
 
+env:
+  GOPROXY: https://proxy.golang.org
+
 task:
   install_script: pkg install -y bash protobuf go git python3
   bashrc_script: touch ~/.bashrc
