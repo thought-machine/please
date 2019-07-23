@@ -202,6 +202,7 @@ func defaultPathIfExists(conf *string, dir, file string) {
 }
 
 // DefaultConfiguration returns the default configuration object with no overrides.
+// N.B. Slice fields are not populated by this (since it interferes with reading them)
 func DefaultConfiguration() *Configuration {
 	config := Configuration{buildEnvStored: &storedBuildEnv{}}
 	config.Please.SelfUpdate = true
@@ -371,6 +372,11 @@ type Configuration struct {
 		DisableCoverage []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
 	}
+	Remote struct {
+		URL          cli.URL `help:"URL for the remote server. If this is set but no executors are configured then it can still act as a remote cache."`
+		NumExecutors int     `help:"Maximum number of remote executors to use simultaneously."`
+		Name         string  `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
+	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
