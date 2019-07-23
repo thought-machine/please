@@ -73,12 +73,12 @@ func (cache *httpCache) storeOne(target *core.BuildTarget, key []byte, file stri
 	}
 }
 
-func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
+func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	// We can't tell from outside if this works or not (as we can for the dir cache)
 	// so we must assume that a target with no artifacts can't be retrieved. It's a weird
 	// case but a test already exists in the plz test suite so...
 	var metadata *core.BuildMetadata
-	for _, out := range target.Outputs() {
+	for _, out := range files {
 		if !cache.retrieveOne(target, key, out) {
 			return nil
 		}

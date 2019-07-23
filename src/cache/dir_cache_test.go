@@ -51,11 +51,11 @@ func TestStoreAndRetrieve(t *testing.T) {
 	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	// Should now exist in cache at this path
 	assert.True(t, inCache(target))
-	assert.NotNil(t, cache.Retrieve(target, hash))
+	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs()))
 	// Should be able to store it again without problems
 	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	assert.True(t, inCache(target))
-	assert.NotNil(t, cache.Retrieve(target, hash))
+	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs()))
 }
 
 func TestCleanNoop(t *testing.T) {
@@ -125,11 +125,11 @@ func TestStoreAndRetrieveCompressed(t *testing.T) {
 	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	// Should now exist in cache at this path
 	assert.True(t, inCompressedCache(target))
-	assert.NotNil(t, cache.Retrieve(target, hash))
+	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs()))
 	// Should be able to store it again without problems
 	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	assert.True(t, inCompressedCache(target))
-	assert.NotNil(t, cache.Retrieve(target, hash))
+	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs()))
 }
 
 func TestCleanCompressed(t *testing.T) {

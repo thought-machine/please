@@ -141,12 +141,12 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 	})
 }
 
-func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
+func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	if !cache.isConnected() {
 		return nil
 	}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
-	for _, out := range target.Outputs() {
+	for _, out := range files {
 		req.Artifacts = append(req.Artifacts, &pb.Artifact{
 			Package: target.Label.PackageName,
 			Target:  target.Label.Name,
@@ -172,16 +172,6 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte) *core.Buil
 		return loadPostBuildFile(target)
 	}
 	return &core.BuildMetadata{}
-}
-
-func (cache *rpcCache) RetrieveExtra(target *core.BuildTarget, key []byte, file string) bool {
-	if !cache.isConnected() {
-		return false
-	}
-	artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name, File: file}
-	artifacts := []*pb.Artifact{&artifact}
-	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH, Artifacts: artifacts}
-	return cache.retrieveArtifacts(target, &req, false)
 }
 
 func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.RetrieveRequest, remove bool) bool {

@@ -47,8 +47,8 @@ func (c *asyncCache) Store(target *core.BuildTarget, key []byte, metadata *core.
 	}
 }
 
-func (c *asyncCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
-	return c.realCache.Retrieve(target, key)
+func (c *asyncCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+	return c.realCache.Retrieve(target, key, files)
 }
 
 func (c *asyncCache) Clean(target *core.BuildTarget) {

@@ -173,7 +173,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		}
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 
-		if state.Cache.Retrieve(target, mustShortTargetHash(state, target)) != nil {
+		if state.Cache.Retrieve(target, mustShortTargetHash(state, target), target.Outputs()) != nil {
 			log.Debug("Retrieved artifacts for %s from cache", target.Label)
 			checkLicences(state, target)
 			newOutputHash, err := calculateAndCheckRuleHash(state, target)
@@ -199,7 +199,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		// what we would retrieve from the cache.
 		if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
 			log.Debug("Checking for post-build output for %s in cache...", target.Label)
-			if metadata := state.Cache.Retrieve(target, cacheKey); metadata != nil {
+			if metadata := state.Cache.Retrieve(target, cacheKey, nil); metadata != nil {
 				storePostBuildOutput(target, metadata.Stdout)
 				postBuildOutput = string(metadata.Stdout)
 				if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {

@@ -180,8 +180,7 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 	return size
 }
 
-func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
-	outs := target.Outputs()
+func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) *core.BuildMetadata {
 	if needsPostBuildFile(target) {
 		outs = append(outs, target.PostBuildOutputFileName())
 	}
@@ -223,6 +222,7 @@ func (cache *dirCache) retrieveFiles2(target *core.BuildTarget, cacheDir string,
 		}
 		cachedOut := path.Join(cacheDir, out)
 		log.Debug("Retrieving %s: %s from dir cache...", target.Label, cachedOut)
+		log.Debug("here %s  %s -> %s", target.Label, cachedOut, realOut)
 		if err := fs.RecursiveLink(cachedOut, realOut, target.OutMode()); err != nil {
 			return false, err
 		}

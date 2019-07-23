@@ -12,7 +12,7 @@ type Cache interface {
 	// (the only field that is guaranteed is standard output though, and only for targets
 	// that have post-build functions).
 	// If unsuccessful, it will return nil.
-	Retrieve(target *BuildTarget, key []byte) *BuildMetadata
+	Retrieve(target *BuildTarget, key []byte, files []string) *BuildMetadata
 	// Retrieves the results of a test run.
 	// Cleans any artifacts associated with this target from the cache, for any possible key.
 	// Some implementations may not honour this, depending on configuration etc.

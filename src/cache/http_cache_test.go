@@ -44,7 +44,7 @@ func TestStore(t *testing.T) {
 }
 
 func TestRetrieve(t *testing.T) {
-	if httpcache.Retrieve(target, []byte("test_key")) == nil {
+	if httpcache.Retrieve(target, []byte("test_key"), target.Outputs()) == nil {
 		t.Error("Artifact expected and not found.")
 	}
 }

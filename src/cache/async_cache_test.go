@@ -23,7 +23,7 @@ func TestStore(t *testing.T) {
 func TestRetrieve(t *testing.T) {
 	mCache, aCache := makeCaches()
 	target := makeTarget("//pkg1:test_retrieve")
-	aCache.Retrieve(target, nil)
+	aCache.Retrieve(target, nil, target.Outputs())
 	aCache.Shutdown()
 	assert.False(t, mCache.inFlight[target])
 	assert.True(t, mCache.completed[target])
@@ -91,7 +91,7 @@ func (c *mockCache) Store(target *core.BuildTarget, key []byte, metadata *core.B
 	c.Unlock()
 }
 
-func (c *mockCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
+func (c *mockCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	c.Lock()
 	c.completed[target] = true
 	c.Unlock()
@@ -99,7 +99,7 @@ func (c *mockCache) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMe
 }
 
 func (c *mockCache) Clean(target *core.BuildTarget) {
-	c.Retrieve(target, nil)
+	c.Retrieve(target, nil, nil)
 }
 
 func (c *mockCache) CleanAll() {}

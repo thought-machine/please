@@ -86,13 +86,13 @@ func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, m
 	wg.Wait()
 }
 
-func (mplex cacheMultiplexer) Retrieve(target *core.BuildTarget, key []byte) *core.BuildMetadata {
+func (mplex cacheMultiplexer) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	// Retrieve from caches sequentially; if we did them simultaneously we could
 	// easily write the same file from two goroutines at once.
 	for i, cache := range mplex.caches {
-		if metadata := cache.Retrieve(target, key); metadata != nil {
+		if metadata := cache.Retrieve(target, key, files); metadata != nil {
 			// Store this into other caches
-			mplex.storeUntil(target, key, metadata, target.Outputs(), i)
+			mplex.storeUntil(target, key, metadata, files, i)
 			return metadata
 		}
 	}

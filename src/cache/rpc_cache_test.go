@@ -75,7 +75,7 @@ func TestStore(t *testing.T) {
 func TestRetrieve(t *testing.T) {
 	target := core.NewBuildTarget(label)
 	target.AddOutput("testfile")
-	if rpccache.Retrieve(target, []byte("test_key")) == nil {
+	if rpccache.Retrieve(target, []byte("test_key"), target.Outputs()) == nil {
 		t.Error("Artifact expected and not found.")
 	}
 }
@@ -89,7 +89,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 	if err := os.Remove(outPath); err != nil {
 		t.Errorf("Failed to remove artifact: %s", err)
 	}
-	if rpccache.Retrieve(target, []byte("test_key")) == nil {
+	if rpccache.Retrieve(target, []byte("test_key"), target.Outputs()) == nil {
 		t.Error("Artifact expected and not found.")
 	} else if !core.PathExists(outPath) {
 		t.Errorf("Artifact %s doesn't exist after alleged cache retrieval", outPath)
@@ -114,12 +114,12 @@ func TestDisconnectAfterEnoughErrors(t *testing.T) {
 	target.AddOutput("testfile4")
 	key := []byte("test_key")
 	c.Store(target, []byte("test_key"), &core.BuildMetadata{}, target.Outputs())
-	assert.NotNil(t, c.Retrieve(target, key))
+	assert.NotNil(t, c.Retrieve(target, key, target.Outputs()))
 	s.Stop()
 	// Now after we hit the max number of errors it should disconnect.
 	for i := 0; i < maxErrors; i++ {
 		assert.True(t, c.Connected)
-		assert.Nil(t, c.Retrieve(target, key))
+		assert.Nil(t, c.Retrieve(target, key, target.Outputs()))
 	}
 	assert.False(t, c.Connected)
 }
