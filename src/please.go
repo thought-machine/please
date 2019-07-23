@@ -7,7 +7,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path"
-	"runtime"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -749,8 +748,6 @@ func newCache(state *core.BuildState) core.Cache {
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
-	} else if config.Please.NumThreads <= 0 {
-		config.Please.NumThreads = runtime.NumCPU() + 2
 	}
 	debugTests := opts.Test.Debug || opts.Cover.Debug
 	if opts.BuildFlags.Config != "" {

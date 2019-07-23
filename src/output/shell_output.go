@@ -92,9 +92,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, detailedT
 	}
 	duration := time.Since(state.StartTime).Round(durationGranularity)
 	if len(failedNonTests) > 0 { // Something failed in the build step.
-		if state.Verbosity > 0 {
-			printFailedBuildResults(failedNonTests, failedTargetMap, duration)
-		}
+		printFailedBuildResults(failedNonTests, failedTargetMap, duration)
 		return
 	}
 	// Check all the targets we wanted to build actually have been built.
@@ -110,7 +108,7 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, detailedT
 			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, cycle)
 		}
 	}
-	if state.Verbosity > 0 && state.NeedBuild && len(failedNonTests) == 0 {
+	if state.NeedBuild && len(failedNonTests) == 0 {
 		if state.PrepareOnly || state.PrepareShell {
 			printTempDirs(state, duration)
 		} else if state.NeedTests { // Got to the test phase, report their results.

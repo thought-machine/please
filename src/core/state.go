@@ -97,8 +97,6 @@ type BuildState struct {
 	PathHasher *fs.PathHasher
 	// Backup hasher that's used for sha256 hashes
 	SHA256Hasher *fs.PathHasher
-	// Level of verbosity during the build
-	Verbosity int
 	// Cache to store / retrieve old build results.
 	Cache Cache
 	// Targets that we were originally requested to build

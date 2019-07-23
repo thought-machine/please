@@ -42,7 +42,9 @@ func TestClientToServerCommunication(t *testing.T) {
 	// Note that the ordering of things here is pretty important; we need to get the
 	// client connected & ready to receive events before we push them all into the
 	// server and shut it down again.
-	serverState := core.NewDefaultBuildState()
+	config := core.DefaultConfiguration()
+	config.Please.NumThreads = 5
+	serverState := core.NewBuildState(config)
 	addr, shutdown := initialiseServer(serverState, 0)
 
 	// This is a bit awkward. We want to assert that we receive a matching set of
