@@ -122,7 +122,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			postBuildOutput, err := loadPostBuildOutput(target)
 			if err != nil {
 				log.Warning("Missing post-build output for %s; will rebuild.", target.Label)
-			} else if err := runPostBuildFunctionIfNeeded(tid, state, target, postBuildOutput); err != nil {
+			} else if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
 				log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
 			}
 		}
@@ -202,7 +202,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			if metadata := state.Cache.Retrieve(target, cacheKey); metadata != nil {
 				storePostBuildOutput(target, metadata.Stdout)
 				postBuildOutput = string(metadata.Stdout)
-				if err := runPostBuildFunctionIfNeeded(tid, state, target, postBuildOutput); err != nil {
+				if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
 					return err
 				} else if retrieveArtifacts() {
 					return writeRuleHash(state, target)
@@ -564,14 +564,6 @@ func checkRuleHashesOfType(target *core.BuildTarget, outputs []string, hasher *f
 		}
 	}
 	return false
-}
-
-// Runs the post-build function for a target if it's got one.
-func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget, out string) error {
-	if target.PostBuildFunction != nil {
-		return runPostBuildFunction(tid, state, target, out, "")
-	}
-	return nil
 }
 
 // Runs the post-build function for a target.
