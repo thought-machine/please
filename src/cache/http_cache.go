@@ -48,7 +48,7 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, metadata *co
 
 // makeURL returns the remote URL for a key.
 func (cache *httpCache) makeURL(key []byte) string {
-	return path.Join(cache.url, hex.EncodeToString(key))
+	return cache.url + "/" + hex.EncodeToString(key)
 }
 
 // write writes a series of files into the given Writer.
@@ -56,10 +56,11 @@ func (cache *httpCache) write(w io.WriteCloser, target *core.BuildTarget, key []
 	defer w.Close()
 	gzw := gzip.NewWriter(w)
 	defer gzw.Close()
-	tw := tar.NewWriter(w)
+	tw := tar.NewWriter(gzw)
 	defer tw.Close()
+	outDir := target.OutDir()
 	for _, out := range files {
-		if err := fs.Walk(out, func(name string, isDir bool) error {
+		if err := fs.Walk(path.Join(outDir, out), func(name string, isDir bool) error {
 			return cache.storeFile(tw, name)
 		}); err != nil {
 			log.Warning("Error uploading artifacts to HTTP cache: %s", err)
@@ -122,6 +123,8 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (*core.Bu
 	resp, err := cache.client.Do(req)
 	if err != nil {
 		return nil, err
+	} else if resp.StatusCode != http.StatusOK {
+		return nil, nil // most likely it doesn't exist - not an error.
 	}
 	defer resp.Body.Close()
 	gzr, err := gzip.NewReader(resp.Body)

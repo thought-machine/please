@@ -2,57 +2,68 @@ package cache
 
 import (
 	"io/ioutil"
-	"net/http/httptest"
-	"path"
-	"path/filepath"
+	"net"
+	"net/http"
+	"os"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/tools/cache/server"
-)
-
-var (
-	label     core.BuildLabel
-	target    *core.BuildTarget
-	httpcache *httpCache
-	key       []byte
 )
 
 func init() {
-	label = core.NewBuildLabel("pkg/name", "label_name")
-	target = core.NewBuildTarget(label)
+	os.Chdir("src/cache/test_data")
+	// Split up the listen and serve parts to avoid race conditions.
+	lis, err := net.Listen("tcp", ":8989")
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	go func() {
+		http.Serve(lis, &testServer{
+			data: map[string][]byte{},
+		})
+	}()
+}
 
-	// Arbitrary large numbers so the cleaner never needs to run.
-	cache := server.NewCache("src/cache/test_data", 20*time.Hour, 100000, 100000000, 1000000000)
-	key, _ = ioutil.ReadFile("src/cache/test_data/testfile")
-	testServer := httptest.NewServer(server.BuildRouter(cache))
-
+func TestStoreAndRetrieve(t *testing.T) {
+	target := core.NewBuildTarget(core.NewBuildLabel("pkg/name", "label_name"))
+	target.AddOutput("testfile2")
 	config := core.DefaultConfiguration()
-	config.Cache.HTTPURL.UnmarshalFlag(testServer.URL)
+	config.Cache.HTTPURL = "http://127.0.0.1:8989"
 	config.Cache.HTTPWriteable = true
-	httpcache = newHTTPCache(config)
+	cache := newHTTPCache(config)
+
+	key := []byte("test_key")
+	cache.Store(target, key, &core.BuildMetadata{}, target.Outputs())
+
+	b, err := ioutil.ReadFile("plz-out/gen/pkg/name/testfile2")
+	assert.NoError(t, err)
+
+	// Remove the file before we retrieve
+	metadata := cache.Retrieve(target, key, nil)
+	assert.NotNil(t, metadata)
+
+	b2, err := ioutil.ReadFile("plz-out/gen/pkg/name/testfile2")
+	assert.NoError(t, err)
+	assert.Equal(t, b, b2)
 }
 
-func TestStore(t *testing.T) {
-	target.AddOutput("testfile")
-	httpcache.Store(target, []byte("test_key"), &core.BuildMetadata{}, target.Outputs())
-	abs, _ := filepath.Abs(path.Join("src/cache/test_data", core.OsArch, "pkg/name", "label_name"))
-	if !core.PathExists(abs) {
-		t.Errorf("Test file %s was not stored in cache.", abs)
-	}
+type testServer struct {
+	data map[string][]byte
 }
 
-func TestRetrieve(t *testing.T) {
-	if httpcache.Retrieve(target, []byte("test_key"), target.Outputs()) == nil {
-		t.Error("Artifact expected and not found.")
+func (s *testServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPut {
+		b, _ := ioutil.ReadAll(r.Body)
+		s.data[r.URL.Path] = b
+		w.WriteHeader(http.StatusNoContent)
+		return
 	}
-}
-
-func TestClean(t *testing.T) {
-	httpcache.Clean(target)
-	filename := path.Join("src/cache/test_data", core.OsArch, "pkg/name/label_name")
-	if core.PathExists(filename) {
-		t.Errorf("File %s was not removed from cache.", filename)
+	data, present := s.data[r.URL.Path]
+	if !present {
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
+	w.Write(data)
 }
