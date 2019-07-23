@@ -724,28 +724,26 @@ func (state *BuildState) DisableXattrs() {
 // NewBuildState constructs and returns a new BuildState.
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
-func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configuration) *BuildState {
+func NewBuildState(config *Configuration) *BuildState {
 	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
 	sandboxTool, _ := LookBuildPath(config.Build.PleaseSandboxTool, config)
 	state := &BuildState{
 		Graph:           NewGraph(),
 		pendingTasks:    queue.NewPriorityQueue(10000, true), // big hint, why not
-		lastResults:     make([]*BuildResult, numThreads),
+		lastResults:     make([]*BuildResult, config.Please.NumThreads),
 		PathHasher:      fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
 		SHA256Hasher:    fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "_sha256"),
 		ProcessExecutor: process.New(sandboxTool),
 		StartTime:       startTime,
 		Config:          config,
-		Verbosity:       verbosity,
-		Cache:           cache,
-		ParsePool:       NewPool(numThreads),
+		ParsePool:       NewPool(config.Please.NumThreads),
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		Success:         true,
 		XattrsSupported: config.Build.Xattrs,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		OriginalArch:    cli.HostArch(),
-		numWorkers:      numThreads,
+		numWorkers:      config.Please.NumThreads,
 		Stats:           &SystemStats{},
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
@@ -757,7 +755,6 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 	}
 	state.progress.allStates = []*BuildState{state}
 	state.Hashes.Config = config.Hash()
-	config.Please.NumThreads = numThreads
 	for _, exp := range config.Parse.ExperimentalDir {
 		state.experimentalLabels = append(state.experimentalLabels, BuildLabel{PackageName: exp, Name: "..."})
 	}
@@ -767,7 +764,7 @@ func NewBuildState(numThreads int, cache Cache, verbosity int, config *Configura
 // NewDefaultBuildState creates a BuildState for the default configuration.
 // This is useful for tests etc that don't need to customise anything about it.
 func NewDefaultBuildState() *BuildState {
-	return NewDefaultBuildState()
+	return NewBuildState(DefaultConfiguration())
 }
 
 // A BuildResult represents a single event in the build process, i.e. a target starting or finishing

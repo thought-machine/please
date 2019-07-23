@@ -284,7 +284,7 @@ func TestCheckRuleHashes(t *testing.T) {
 
 func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	config, _ := core.ReadConfigFiles(nil, nil)
-	state := core.NewBuildState(1, nil, 4, config)
+	state := core.NewBuildState(config)
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 	target.Command = fmt.Sprintf("echo 'output of %s' > $OUT", target.Label)
 	target.BuildTimeout = 100 * time.Second
