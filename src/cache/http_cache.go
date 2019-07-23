@@ -3,11 +3,11 @@
 package cache
 
 import (
-	"encoding/base64"
+	"archive/tar"
+	"compress/gzip"
+	"encoding/hex"
 	"io"
 	"io/ioutil"
-	"mime"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"path"
@@ -18,178 +18,173 @@ import (
 )
 
 type httpCache struct {
-	URL       string
-	Writeable bool
-	Timeout   time.Duration
+	url      string
+	writable bool
+	client   *http.Client
 }
+
+// mtime is the time we attach for the modification time of all files.
+var mtime = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+// nobody is the usual uid / gid of the 'nobody' user.
+const nobody = 65534
 
 func (cache *httpCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
-	// TODO(pebers): Change this to upload using multipart, it's quite slow doing every file separately
-	//               for targets with many files.
-	if cache.Writeable {
-		for _, out := range files {
-			if info, err := os.Stat(out); err == nil && info.IsDir() {
-				fs.Walk(out, func(name string, isDir bool) error {
-					if !isDir {
-						cache.storeOne(target, key, name)
-					}
-					return nil
-				})
-			} else {
-				cache.storeOne(target, key, out)
-			}
+	if cache.writable {
+		r, w := io.Pipe()
+		go cache.write(w, target, key, metadata, files)
+		req, err := http.NewRequest(http.MethodPut, cache.makeURL(key), r)
+		if err != nil {
+			log.Warning("Invalid cache URL: %s", err)
+			return
 		}
-		if needsPostBuildFile(target) {
-			cache.storeOne(target, key, target.PostBuildOutputFileName())
+		if resp, err := cache.client.Do(req); err != nil {
+			log.Warning("Failed to store files in HTTP cache: %s", err)
+		} else {
+			resp.Body.Close()
 		}
 	}
 }
 
-func (cache *httpCache) storeOne(target *core.BuildTarget, key []byte, file string) {
-	if cache.Writeable {
-		artifact := path.Join(
-			core.OsArch,
-			target.Label.PackageName,
-			target.Label.Name,
-			base64.RawURLEncoding.EncodeToString(key),
-			file,
-		)
-		log.Info("Storing %s: %s in http cache...", target.Label, artifact)
+// makeURL returns the remote URL for a key.
+func (cache *httpCache) makeURL(key []byte) string {
+	return path.Join(cache.url, hex.EncodeToString(key))
+}
 
-		// NB. Don't need to close this file, http.Post will do it for us.
-		file, err := os.Open(path.Join(target.OutDir(), file))
-		if err != nil {
-			log.Warning("Failed to read artifact: %s", err)
-			return
+// write writes a series of files into the given Writer.
+func (cache *httpCache) write(w io.WriteCloser, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+	defer w.Close()
+	gzw := gzip.NewWriter(w)
+	defer gzw.Close()
+	tw := tar.NewWriter(w)
+	defer tw.Close()
+	for _, out := range files {
+		if err := fs.Walk(out, func(name string, isDir bool) error {
+			return cache.storeFile(tw, name)
+		}); err != nil {
+			log.Warning("Error uploading artifacts to HTTP cache: %s", err)
+			// TODO(peterebden): How can we cancel the request at this point?
 		}
-		response, err := http.Post(cache.URL+"/artifact/"+artifact, "application/octet-stream", file)
-		if err != nil {
-			log.Warning("Failed to send artifact to %s: %s", cache.URL+"/artifact/"+artifact, err)
-			return
-		} else if response.StatusCode < 200 || response.StatusCode > 299 {
-			log.Warning("Failed to send artifact to %s: got response %s", cache.URL+"/artifact/"+artifact, response.Status)
-		}
-		response.Body.Close()
 	}
+	if needsPostBuildFile(target) {
+		cache.storeFile(tw, target.PostBuildOutputFileName())
+	}
+}
+
+func (cache *httpCache) storeFile(tw *tar.Writer, name string) error {
+	info, err := os.Lstat(name)
+	if err != nil {
+		return err
+	}
+	target := ""
+	if info.Mode()&os.ModeSymlink != 0 {
+		target, _ = os.Readlink(name)
+	}
+	hdr, err := tar.FileInfoHeader(info, target)
+	if err != nil {
+		return err
+	}
+	hdr.Name = name
+	// Zero out all timestamps.
+	hdr.ModTime = mtime
+	hdr.AccessTime = mtime
+	hdr.ChangeTime = mtime
+	// Strip user/group ids.
+	hdr.Uid = nobody
+	hdr.Gid = nobody
+	hdr.Uname = "nobody"
+	hdr.Gname = "nobody"
+	if err := tw.WriteHeader(hdr); err != nil {
+		return err
+	}
+	f, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = io.Copy(tw, f)
+	return err
 }
 
 func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
-	// We can't tell from outside if this works or not (as we can for the dir cache)
-	// so we must assume that a target with no artifacts can't be retrieved. It's a weird
-	// case but a test already exists in the plz test suite so...
-	var metadata *core.BuildMetadata
-	for _, out := range files {
-		if !cache.retrieveOne(target, key, out) {
-			return nil
-		}
-		metadata = &core.BuildMetadata{}
+	m, err := cache.retrieve(target, key)
+	if err != nil {
+		log.Warning("Failed to retrieve files from HTTP cache: %s", err)
 	}
-	if needsPostBuildFile(target) {
-		if !cache.retrieveOne(target, key, target.PostBuildOutputFileName()) {
-			return nil
-		}
-		metadata = loadPostBuildFile(target)
-	}
-	return metadata
+	return m
 }
 
-func (cache *httpCache) retrieveOne(target *core.BuildTarget, key []byte, file string) bool {
-	log.Debug("Retrieving %s:%s from http cache...", target.Label, file)
-
-	artifact := path.Join(
-		core.OsArch,
-		target.Label.PackageName,
-		target.Label.Name,
-		base64.RawURLEncoding.EncodeToString(key),
-		file,
-	)
-
-	response, err := http.Get(cache.URL + "/artifact/" + artifact)
+func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (*core.BuildMetadata, error) {
+	req, err := http.NewRequest(http.MethodGet, cache.makeURL(key), nil)
 	if err != nil {
-		return false
+		return nil, err
 	}
-	defer response.Body.Close()
-	if response.StatusCode == 404 {
-		return false
-	} else if response.StatusCode < 200 || response.StatusCode > 299 {
-		log.Warning("Error %d from http cache", response.StatusCode)
-		return false
-	} else if response.Header.Get("Content-Type") == "application/octet-stream" {
-		// Single artifact
-		return cache.writeFile(target, file, response.Body)
-	} else if _, params, err := mime.ParseMediaType(response.Header.Get("Content-Type")); err != nil {
-		log.Warning("Couldn't parse response: %s", err)
-		return false
-	} else {
-		// Directory, comes back in multipart
-		mr := multipart.NewReader(response.Body, params["boundary"])
-		for {
-			if part, err := mr.NextPart(); err == io.EOF {
-				return true
-			} else if err != nil {
-				log.Warning("Error reading multipart response: %s", err)
-				return false
-			} else if !cache.writeFile(target, part.FileName(), part) {
-				return false
+	resp, err := cache.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	gzr, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer gzr.Close()
+	tr := tar.NewReader(gzr)
+	for {
+		hdr, err := tr.Next()
+		if err != nil {
+			if err == io.EOF {
+				return loadPostBuildFile(target), nil
 			}
 		}
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.Mkdir(hdr.Name, core.DirPermissions); err != nil {
+				return nil, err
+			}
+		case tar.TypeReg:
+			if f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(hdr.Mode)); err != nil {
+				return nil, err
+			} else if _, err := io.Copy(f, tr); err != nil {
+				return nil, err
+			} else if err := f.Close(); err != nil {
+				return nil, err
+			}
+		case tar.TypeSymlink:
+			if err := os.Symlink(hdr.Linkname, hdr.Name); err != nil {
+				return nil, err
+			}
+		default:
+			log.Warning("Unhandled file type %d for %s", hdr.Typeflag, hdr.Name)
+		}
 	}
-}
-
-func (cache *httpCache) writeFile(target *core.BuildTarget, file string, r io.Reader) bool {
-	outFile := path.Join(target.OutDir(), file)
-	if err := os.MkdirAll(path.Dir(outFile), core.DirPermissions); err != nil {
-		log.Errorf("Failed to create directory: %s", err)
-		return false
-	}
-	f, err := os.OpenFile(outFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, target.OutMode())
-	if err != nil {
-		log.Errorf("Failed to open file: %s", err)
-		return false
-	}
-	defer f.Close()
-	if _, err := io.Copy(f, r); err != nil {
-		log.Errorf("Failed to write file: %s", err)
-		return false
-	}
-	log.Info("Retrieved %s from http cache", target.Label)
-	return true
 }
 
 func (cache *httpCache) Clean(target *core.BuildTarget) {
-	var reader io.Reader
-	artifact := path.Join(
-		core.OsArch,
-		target.Label.PackageName,
-		target.Label.Name,
-	)
-	req, _ := http.NewRequest("DELETE", cache.URL+"/artifact/"+artifact, reader)
-	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Warning("Failed to remove artifacts for %s from http cache: %s", target.Label, err)
-	}
-	response.Body.Close()
+	// Not possible; this implementation can only clean for a hash.
 }
 
 func (cache *httpCache) CleanAll() {
-	req, _ := http.NewRequest("DELETE", cache.URL, nil)
-	if _, err := http.DefaultClient.Do(req); err != nil {
-		log.Warning("Failed to remove artifacts from http cache: %s", err)
-	}
+	// Also not possible.
 }
 
 func (cache *httpCache) Shutdown() {}
 
 func newHTTPCache(config *core.Configuration) *httpCache {
 	return &httpCache{
-		URL:       config.Cache.HTTPURL.String(),
-		Writeable: config.Cache.HTTPWriteable,
-		Timeout:   time.Duration(config.Cache.HTTPTimeout),
+		url:      config.Cache.HTTPURL.String(),
+		writable: config.Cache.HTTPWriteable,
+		client: &http.Client{
+			Timeout: time.Duration(config.Cache.HTTPTimeout),
+		},
 	}
 }
 
 // Convenience function to load a post-build output file after retrieving it from the cache.
 func loadPostBuildFile(target *core.BuildTarget) *core.BuildMetadata {
+	if !needsPostBuildFile(target) {
+		return &core.BuildMetadata{}
+	}
 	b, err := ioutil.ReadFile(path.Join(target.OutDir(), target.PostBuildOutputFileName()))
 	if err != nil {
 		return nil
