@@ -6,6 +6,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -48,7 +49,7 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, metadata *co
 
 // makeURL returns the remote URL for a key.
 func (cache *httpCache) makeURL(key []byte) string {
-	return cache.url + "/" + hex.EncodeToString(key)
+	return cache.url + "/cas/" + hex.EncodeToString(key)
 }
 
 // write writes a series of files into the given Writer.
@@ -123,8 +124,11 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (*core.Bu
 	resp, err := cache.client.Do(req)
 	if err != nil {
 		return nil, err
+	} else if resp.StatusCode == http.StatusNotFound {
+		return nil, nil // doesn't exist - not an error
 	} else if resp.StatusCode != http.StatusOK {
-		return nil, nil // most likely it doesn't exist - not an error.
+		b, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("%s", string(b))
 	}
 	defer resp.Body.Close()
 	gzr, err := gzip.NewReader(resp.Body)

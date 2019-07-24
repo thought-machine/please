@@ -223,8 +223,9 @@ func DefaultConfiguration() *Configuration {
 	config.BuildConfig = map[string]string{}
 	config.BuildEnv = map[string]string{}
 	config.Aliases = map[string]string{}
-	config.Cache.HTTPTimeout = cli.Duration(5 * time.Second)
-	config.Cache.RPCTimeout = cli.Duration(5 * time.Second)
+	config.Cache.HTTPWriteable = true
+	config.Cache.HTTPTimeout = cli.Duration(25 * time.Second)
+	config.Cache.RPCTimeout = cli.Duration(25 * time.Second)
 	if dir, err := os.UserCacheDir(); err == nil {
 		config.Cache.Dir = path.Join(dir, "please")
 	}
