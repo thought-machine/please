@@ -148,7 +148,7 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (*core.Bu
 		}
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			if err := os.Mkdir(hdr.Name, core.DirPermissions); err != nil {
+			if err := os.MkdirAll(hdr.Name, core.DirPermissions); err != nil {
 				return nil, err
 			}
 		case tar.TypeReg:
