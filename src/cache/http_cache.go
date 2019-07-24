@@ -49,7 +49,7 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, metadata *co
 
 // makeURL returns the remote URL for a key.
 func (cache *httpCache) makeURL(key []byte) string {
-	return cache.url + "/cas/" + hex.EncodeToString(key)
+	return cache.url + "/" + hex.EncodeToString(key)
 }
 
 // write writes a series of files into the given Writer.
