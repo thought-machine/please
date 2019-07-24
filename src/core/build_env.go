@@ -126,7 +126,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 // TestEnvironment creates the environment variables for a test.
 func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) BuildEnv {
 	env := buildEnvironment(state, target)
-	resultsFile := path.Join(testDir, "test.results")
+	resultsFile := path.Join(testDir, TestResultsFile)
 	env = append(env,
 		"TEST_DIR="+testDir,
 		"TMP_DIR="+testDir,
@@ -141,7 +141,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
 		env = append(env,
 			"COVERAGE=true",
-			"COVERAGE_FILE="+path.Join(testDir, "test.coverage"),
+			"COVERAGE_FILE="+path.Join(testDir, CoverageFile),
 		)
 	}
 	if len(target.Outputs()) > 0 {

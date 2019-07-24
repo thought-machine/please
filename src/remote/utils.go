@@ -10,6 +10,7 @@ import (
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -71,6 +72,13 @@ func toTimestamp(t time.Time) *timestamp.Timestamp {
 		Seconds: t.Unix(),
 		Nanos:   int32(t.Nanosecond()),
 	}
+}
+
+// toTime converts a protobuf timestamp into a time.Time.
+// It's like the ptypes one but we ignore errors (we don't generally care that much)
+func toTime(ts *timestamp.Timestamp) time.Time {
+	t, _ := ptypes.Timestamp(ts)
+	return t
 }
 
 // extraPerms returns any additional permission bits we should apply for this file.

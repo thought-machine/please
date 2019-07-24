@@ -5,18 +5,17 @@ package core
 // it's passed around on the BuildState object.
 type Cache interface {
 	// Stores the results of a single build target.
-	// Optionally can store extra files against it at the same time.
-	Store(target *BuildTarget, key []byte, files ...string)
-	// Stores an extra file against a build target.
-	// The file name is relative to the target's out directory.
-	StoreExtra(target *BuildTarget, key []byte, file string)
+	Store(target *BuildTarget, key []byte, metadata *BuildMetadata, files []string)
 	// Retrieves the results of a single build target.
-	// If successful, the outputs will be placed into the output file tree.
-	Retrieve(target *BuildTarget, key []byte) bool
-	// Retrieves an extra file previously stored by StoreExtra.
-	// If successful, the file will be placed into the output file tree.
-	RetrieveExtra(target *BuildTarget, key []byte, file string) bool
+	// If successful, the outputs will be placed into the output file tree and
+	// the returned metadata structure will be populated with whatever is stored
+	// (the only field that is guaranteed is standard output though, and only for targets
+	// that have post-build functions).
+	// If unsuccessful, it will return nil.
+	Retrieve(target *BuildTarget, key []byte, files []string) *BuildMetadata
+	// Retrieves the results of a test run.
 	// Cleans any artifacts associated with this target from the cache, for any possible key.
+	// Some implementations may not honour this, depending on configuration etc.
 	Clean(target *BuildTarget)
 	// Cleans the entire cache.
 	CleanAll()

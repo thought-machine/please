@@ -77,6 +77,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		}
 	}()
 
+	metadata := &core.BuildMetadata{StartTime: time.Now()}
+
 	if err := target.CheckDependencyVisibility(state); err != nil {
 		return err
 	}
@@ -116,23 +118,27 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 	haveRunPostBuildFunction := false
 	if !target.IsFilegroup && !needsBuilding(state, target, false) {
 		log.Debug("Not rebuilding %s, nothing's changed", target.Label)
-		if postBuildOutput, err = runPostBuildFunctionIfNeeded(tid, state, target, ""); err != nil {
-			log.Warning("Missing post-build output for %s; will rebuild.", target.Label)
-		} else {
-			// If a post-build function ran it may modify the rule definition. In that case we
-			// need to check again whether the rule needs building.
-			if target.PostBuildFunction == nil || !needsBuilding(state, target, true) {
-				if target.IsFilegroup {
-					// Small optimisation to ensure we don't need to rehash things unnecessarily.
-					copyFilegroupHashes(state, target)
-				}
-				target.SetState(core.Reused)
-				state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
-				buildLinks(state, target)
-				return nil // Nothing needs to be done.
+		if target.PostBuildFunction != nil {
+			postBuildOutput, err := loadPostBuildOutput(target)
+			if err != nil {
+				log.Warning("Missing post-build output for %s; will rebuild.", target.Label)
+			} else if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
+				log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
 			}
-			log.Debug("Rebuilding %s after post-build function", target.Label)
 		}
+		// If a post-build function ran it may modify the rule definition. In that case we
+		// need to check again whether the rule needs building.
+		if target.PostBuildFunction == nil || !needsBuilding(state, target, true) {
+			if target.IsFilegroup {
+				// Small optimisation to ensure we don't need to rehash things unnecessarily.
+				copyFilegroupHashes(state, target)
+			}
+			target.SetState(core.Reused)
+			state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
+			buildLinks(state, target)
+			return nil // Nothing needs to be done.
+		}
+		log.Debug("Rebuilding %s after post-build function", target.Label)
 		haveRunPostBuildFunction = true
 	}
 	if target.IsFilegroup {
@@ -166,7 +172,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			return true
 		}
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
-		if _, retrieved := retrieveFromCache(state, target); retrieved {
+
+		if state.Cache.Retrieve(target, mustShortTargetHash(state, target), target.Outputs()) != nil {
 			log.Debug("Retrieved artifacts for %s from cache", target.Label)
 			checkLicences(state, target)
 			newOutputHash, err := calculateAndCheckRuleHash(state, target)
@@ -191,9 +198,11 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		// Note that ordering here is quite sensitive since the post-build function can modify
 		// what we would retrieve from the cache.
 		if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
-			log.Debug("Checking for post-build output file for %s in cache...", target.Label)
-			if state.Cache.RetrieveExtra(target, cacheKey, target.PostBuildOutputFileName()) {
-				if postBuildOutput, err = runPostBuildFunctionIfNeeded(tid, state, target, postBuildOutput); err != nil {
+			log.Debug("Checking for post-build output for %s in cache...", target.Label)
+			if metadata := state.Cache.Retrieve(target, cacheKey, nil); metadata != nil {
+				storePostBuildOutput(target, metadata.Stdout)
+				postBuildOutput = string(metadata.Stdout)
+				if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
 					return err
 				} else if retrieveArtifacts() {
 					return writeRuleHash(state, target)
@@ -221,11 +230,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 		if err := runPostBuildFunction(tid, state, target, string(out), postBuildOutput); err != nil {
 			return err
 		}
+		metadata.Stdout = out
 		storePostBuildOutput(target, out)
 	}
+	metadata.EndTime = time.Now()
 	checkLicences(state, target)
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
-	extraOuts, outputsChanged, err := moveOutputs(state, target)
+	outs, outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
 		return fmt.Errorf("Error moving outputs for target %s: %s", target.Label, err)
 	}
@@ -245,12 +256,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err
 			if !bytes.Equal(newCacheKey, cacheKey) {
 				// NB. Important this is stored with the earlier hash - if we calculate the hash
 				//     now, it might be different, and we could of course never retrieve it again.
-				state.Cache.StoreExtra(target, cacheKey, target.PostBuildOutputFileName())
-			} else {
-				extraOuts = append(extraOuts, target.PostBuildOutputFileName())
+				state.Cache.Store(target, cacheKey, metadata, nil)
 			}
 		}
-		state.Cache.Store(target, newCacheKey, extraOuts...)
+		state.Cache.Store(target, newCacheKey, metadata, outs)
 	}
 	// Clean up the temporary directory once it's done.
 	if state.CleanWorkdirs {
@@ -331,7 +340,10 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	changed := false
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
-	for _, output := range target.Outputs() {
+	outs := target.Outputs()
+	allOuts := make([]string, len(outs))
+	for i, output := range outs {
+		allOuts[i] = output
 		tmpOutput := path.Join(tmpDir, target.GetTmpOutput(output))
 		realOutput := path.Join(outDir, output)
 		if !core.PathExists(tmpOutput) {
@@ -350,7 +362,6 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	}
 	// Optional outputs get moved but don't contribute to the hash or for incrementality.
 	// Glob patterns are supported on these.
-	extraOuts := []string{}
 	for _, output := range fs.Glob(state.Config.Parse.BuildFileName, tmpDir, target.OptionalOutputs, nil, nil, true) {
 		log.Debug("Discovered optional output %s", output)
 		tmpOutput := path.Join(tmpDir, output)
@@ -358,9 +369,9 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		if _, err := moveOutput(state, target, tmpOutput, realOutput); err != nil {
 			return nil, changed, err
 		}
-		extraOuts = append(extraOuts, output)
+		allOuts = append(allOuts, output)
 	}
-	return extraOuts, changed, nil
+	return allOuts, changed, nil
 }
 
 func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, realOutput string) (bool, error) {
@@ -549,23 +560,6 @@ func checkRuleHashesOfType(target *core.BuildTarget, outputs []string, hasher *f
 		}
 	}
 	return false
-}
-
-func retrieveFromCache(state *core.BuildState, target *core.BuildTarget) ([]byte, bool) {
-	hash := mustShortTargetHash(state, target)
-	return hash, state.Cache.Retrieve(target, hash)
-}
-
-// Runs the post-build function for a target if it's got one.
-func runPostBuildFunctionIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget, prevOutput string) (string, error) {
-	if target.PostBuildFunction != nil {
-		out, err := loadPostBuildOutput(target)
-		if err != nil {
-			return "", err
-		}
-		return out, runPostBuildFunction(tid, state, target, out, prevOutput)
-	}
-	return "", nil
 }
 
 // Runs the post-build function for a target.

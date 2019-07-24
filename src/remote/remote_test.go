@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
@@ -55,9 +56,15 @@ func TestStoreAndRetrieve(t *testing.T) {
 	target.AddSource(core.FileLabel{File: "src1.txt", Package: "package"})
 	target.AddSource(core.FileLabel{File: "src2.txt", Package: "package"})
 	target.AddOutput("out1.txt")
+	target.PostBuildFunction = testFunction{}
 	// The hash is arbitrary as far as this package is concerned.
 	key, _ := hex.DecodeString("2dd283abb148ebabcd894b306e3d86d0390c82a7")
-	err := c.Store(target, key, []string{"plz-out/gen/package/out1.txt"})
+	metadata := &core.BuildMetadata{
+		Stdout:    []byte("test stdout"),
+		StartTime: time.Now().UTC(),
+		EndTime:   time.Now().UTC(),
+	}
+	err := c.Store(target, key, metadata, []string{"out1.txt"})
 	assert.NoError(t, err)
 	// Remove the old file, but remember its contents so we can compare later.
 	contents, err := ioutil.ReadFile("plz-out/gen/package/out1.txt")
@@ -65,11 +72,12 @@ func TestStoreAndRetrieve(t *testing.T) {
 	err = os.Remove("plz-out/gen/package/out1.txt")
 	assert.NoError(t, err)
 	// Now retrieve back the output of this thing.
-	err = c.Retrieve(target, key)
+	retrievedMetadata, err := c.Retrieve(target, key)
 	assert.NoError(t, err)
 	cachedContents, err := ioutil.ReadFile("plz-out/gen/package/out1.txt")
 	assert.NoError(t, err)
 	assert.Equal(t, contents, cachedContents)
+	assert.Equal(t, metadata, retrievedMetadata)
 }
 
 func newClient() *Client {
@@ -120,6 +128,9 @@ func (s *testServer) GetActionResult(ctx context.Context, req *pb.GetActionResul
 	ar, present := s.actionResults[req.ActionDigest.Hash]
 	if !present {
 		return nil, status.Errorf(codes.NotFound, "action result not found")
+	}
+	if req.InlineStdout && ar.StdoutDigest != nil {
+		ar.StdoutRaw = s.blobs[ar.StdoutDigest.Hash]
 	}
 	return ar, nil
 }
@@ -251,6 +262,13 @@ func (s *testServer) QueryWriteStatus(ctx context.Context, req *bs.QueryWriteSta
 }
 
 var server = &testServer{}
+
+// A testFunction is something we can assign to a target's PostBuildFunction; it will
+// not be called but affects whether we bother trying to restore stdout or not.
+type testFunction struct{}
+
+func (f testFunction) String() string                           { return "test post-build function" }
+func (f testFunction) Call(t *core.BuildTarget, o string) error { return nil }
 
 func TestMain(m *testing.M) {
 	server.Reset()

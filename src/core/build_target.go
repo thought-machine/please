@@ -33,6 +33,14 @@ const SandboxDir = "/tmp/plz_sandbox"
 const buildDirSuffix = "._build"
 const testDirSuffix = "._test"
 
+// TestResultsFile is the file that targets output their test results into.
+// This is normally defined for them via an environment variable.
+const TestResultsFile = "test.results"
+
+// CoverageFile is the file that targets output coverage information into.
+// This is similarly defined via an environment variable.
+const CoverageFile = "test.coverage"
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -159,6 +167,19 @@ type BuildTarget struct {
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string `name:"test_outputs"`
+}
+
+// BuildMetadata is temporary metadata that's stored around a build target - we don't
+// generally persist it indefinitely.
+type BuildMetadata struct {
+	// Time the build began
+	StartTime time.Time
+	// Time it ended
+	EndTime time.Time
+	// Standard output
+	Stdout []byte
+	// True if this represents a test run.
+	Test bool
 }
 
 // A PreBuildFunction is a type that allows hooking a pre-build callback.
@@ -1129,6 +1150,12 @@ func (target *BuildTarget) OutMode() os.FileMode {
 // PostBuildOutputFileName returns the post-build output file for this target.
 func (target *BuildTarget) PostBuildOutputFileName() string {
 	return ".build_output_" + target.Label.Name
+}
+
+// NeedCoverage returns true if this target should output coverage during a test
+// for a particular invocation.
+func (target *BuildTarget) NeedCoverage(state *BuildState) bool {
+	return state.NeedCoverage && !target.NoTestOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.
