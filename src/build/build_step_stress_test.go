@@ -21,7 +21,8 @@ var state *core.BuildState
 
 func TestBuildLotsOfTargets(t *testing.T) {
 	config, _ := core.ReadConfigFiles(nil, nil)
-	state = core.NewBuildState(numWorkers, nil, 4, config)
+	config.Please.NumThreads = 10
+	state = core.NewBuildState(config)
 	state.Parser = &fakeParser{
 		PostBuildFunctions: buildFunctionMap{},
 	}

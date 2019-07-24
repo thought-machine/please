@@ -119,7 +119,7 @@ func newAnalyzer() (*Analyzer, error) {
 	for i, def := range config.Parse.PreloadBuildDefs {
 		config.Parse.PreloadBuildDefs[i] = path.Join(core.RepoRoot, def)
 	}
-	state := core.NewBuildState(1, nil, 4, config)
+	state := core.NewBuildState(config)
 	parser := asp.NewParser(state)
 
 	a := &Analyzer{
@@ -731,8 +731,7 @@ func (a *Analyzer) RevDepsFromBuildDef(def *BuildDef, uri lsp.DocumentURI) (core
 // of the core.BuildLabel object passed in
 func (a *Analyzer) RevDepsFromCoreBuildLabel(label core.BuildLabel, uri lsp.DocumentURI) (core.BuildLabels, error) {
 
-	//Ensure we do not get locked out
-	state := core.NewBuildState(1, nil, 4, a.State.Config)
+	state := core.NewBuildState(a.State.Config)
 	state.NeedBuild = false
 	state.NeedTests = false
 

@@ -209,6 +209,7 @@ func DefaultConfiguration() *Configuration {
 	config.Please.Autoclean = true
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
+	config.Please.NumThreads = runtime.NumCPU() + 2
 	config.Parse.BuiltinPleasings = true
 	config.Parse.GitFunctions = true
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)

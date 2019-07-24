@@ -76,7 +76,7 @@ func newClient() *Client {
 	config := core.DefaultConfiguration()
 	config.Build.Path = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 	// Can't use NewDefaultBuildState since we need to modify the config first.
-	state := core.NewBuildState(1, nil, 4, config)
+	state := core.NewBuildState(config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
 	return New(state)
 }

@@ -167,7 +167,8 @@ func anyTests(state *core.BuildState, labels []core.BuildLabel) bool {
 // build invokes a single build while watching.
 func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, callback CallbackFunc) {
 	// Set up a new state & copy relevant parts off the existing one.
-	ns := core.NewBuildState(state.Config.Please.NumThreads, state.Cache, state.Verbosity, state.Config)
+	ns := core.NewBuildState(state.Config)
+	ns.Cache = state.Cache
 	ns.VerifyHashes = state.VerifyHashes
 	ns.NumTestRuns = state.NumTestRuns
 	ns.NeedTests = state.NeedTests

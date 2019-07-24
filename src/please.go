@@ -7,7 +7,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path"
-	"runtime"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -453,7 +452,7 @@ var buildFunctions = map[string]func() bool{
 					config.Cache.RPCURL = ""
 					config.Cache.HTTPURL = ""
 				}
-				state := core.NewBuildState(1, nil, 4, config)
+				state := core.NewBuildState(config)
 				clean.Clean(config, newCache(state), !opts.Clean.NoBackground)
 				return true
 			}
@@ -512,7 +511,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"follow": func() bool {
 		// This is only temporary, ConnectClient will alter it to match the server.
-		state := core.NewBuildState(1, nil, int(opts.OutputFlags.Verbosity), config)
+		state := core.NewBuildState(config)
 		return follow.ConnectClient(state, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay))
 	},
 	"outputs": func() bool {
@@ -561,7 +560,7 @@ var buildFunctions = map[string]func() bool{
 		files := opts.Query.AffectedTargets.Args.Files
 		targets := core.WholeGraph
 		if opts.Query.AffectedTargets.Intransitive {
-			state := core.NewBuildState(1, nil, 1, config)
+			state := core.NewBuildState(config)
 			targets = core.FindOwningPackages(state, files)
 		}
 		return runQuery(true, targets, func(state *core.BuildState) {
@@ -749,8 +748,6 @@ func newCache(state *core.BuildState) core.Cache {
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
-	} else if config.Please.NumThreads <= 0 {
-		config.Please.NumThreads = runtime.NumCPU() + 2
 	}
 	debugTests := opts.Test.Debug || opts.Cover.Debug
 	if opts.BuildFlags.Config != "" {
@@ -758,7 +755,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	} else if debugTests {
 		config.Build.Config = "dbg"
 	}
-	state := core.NewBuildState(config.Please.NumThreads, nil, int(opts.OutputFlags.Verbosity), config)
+	state := core.NewBuildState(config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
 	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)  // Only one of these can be passed
 	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // Similarly here.

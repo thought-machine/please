@@ -45,7 +45,7 @@ func TestEnvVars(t *testing.T) {
 }
 
 func makeState() (*core.BuildState, []core.BuildLabel, []core.BuildLabel) {
-	state := core.NewBuildState(1, nil, 0, core.DefaultConfiguration())
+	state := core.NewDefaultBuildState()
 	target1 := core.NewBuildTarget(core.ParseBuildLabel("//:true", ""))
 	target1.IsBinary = true
 	target1.AddOutput("true")

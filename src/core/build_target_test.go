@@ -78,7 +78,7 @@ func TestCanSee(t *testing.T) {
 func TestCanSeeExperimental(t *testing.T) {
 	config := DefaultConfiguration()
 	config.Parse.ExperimentalDir = []string{"experimental"}
-	state := NewBuildState(1, nil, 1, config)
+	state := NewBuildState(config)
 
 	target1 := makeTarget("//src/core:target1", "")
 	target2 := makeTarget("//experimental/user:target2", "PUBLIC")

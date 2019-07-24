@@ -276,10 +276,6 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, command, target.Sandbox)
 	if err != nil {
-		if state.Verbosity >= 4 {
-			return nil, fmt.Errorf("Error building target %s: %s\nENVIRONMENT:\n%s\n%s\n%s",
-				target.Label, err, env, target.GetCommand(state), combined)
-		}
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
 	return out, nil
