@@ -7,4 +7,4 @@ env:
 task:
   install_script: pkg install -y bash protobuf go git python3
   bashrc_script: touch ~/.bashrc
-  build_script: ./bootstrap.sh --exclude pip --exclude py2 --exclude no_cirrus
+  build_script: PLZ_ARGS="-o cache.httpurl:http://$CIRRUS_HTTP_CACHE_HOST" ./bootstrap.sh --exclude pip --exclude py2 --exclude no_cirrus
