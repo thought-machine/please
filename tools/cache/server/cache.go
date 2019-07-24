@@ -17,11 +17,14 @@ import (
 	"github.com/djherbis/atime"
 	"github.com/dustin/go-humanize"
 	"github.com/streamrail/concurrent-map"
+	"gopkg.in/op/go-logging.v1"
 
 	pb "github.com/thought-machine/please/src/cache/proto/rpc_cache"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
+
+var log = logging.MustGetLogger("server")
 
 // metadataFileName is the filename we store metadata in.
 const metadataFileName = ".plz_metadata"
