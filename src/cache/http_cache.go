@@ -98,6 +98,8 @@ func (cache *httpCache) storeFile(tw *tar.Writer, name string) error {
 	hdr.Gname = "nobody"
 	if err := tw.WriteHeader(hdr); err != nil {
 		return err
+	} else if info.IsDir() || target != "" {
+		return nil // nothing to write
 	}
 	f, err := os.Open(name)
 	if err != nil {
