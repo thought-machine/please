@@ -145,6 +145,7 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (*core.Bu
 			if err == io.EOF {
 				return loadPostBuildFile(target), nil
 			}
+			return nil, err
 		}
 		switch hdr.Typeflag {
 		case tar.TypeDir:
