@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
@@ -118,47 +119,62 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
 		for source := range sources {
-			// Ensure all parent directories exist
-			child := ""
-			dir := path.Dir(source.Tmp[strip:])
-			for d := dir; ; d = path.Dir(d) {
-				parent, present := dirs[d]
-				if !present {
-					parent = &pb.Directory{}
-					dirs[d] = parent
+			prefix := source.Tmp[strip:]
+			if err := fs.Walk(source.Src, func(name string, isDir bool) error {
+				if isDir {
+					return nil // nothing to do
 				}
-				if child != "" {
-					parent.Directories = append(parent.Directories, &pb.DirectoryNode{Name: child})
+				dest := name
+				if len(name) > len(source.Src) {
+					dest = path.Join(prefix, name[len(source.Src)+1:])
 				}
-				child = d
-				if d == "." {
-					break
+				// Ensure all parent directories exist
+				child := ""
+				dir := path.Dir(dest)
+				for d := dir; ; d = path.Dir(d) {
+					parent, present := dirs[d]
+					if !present {
+						parent = &pb.Directory{}
+						dirs[d] = parent
+					}
+					// TODO(peterebden): The linear scan in hasChild is a bit suboptimal, we should
+					//                   really use the dirs map to determine this.
+					if c := path.Base(child); child != "" && !hasChild(parent, c) {
+						parent.Directories = append(parent.Directories, &pb.DirectoryNode{Name: path.Base(child)})
+					}
+					child = d
+					if d == "." {
+						break
+					}
 				}
-			}
-			// Now handle the file itself
-			h, err := c.state.PathHasher.Hash(source.Src, false, true)
-			if err != nil {
+				// Now handle the file itself
+				h, err := c.state.PathHasher.Hash(name, false, true)
+				if err != nil {
+					return err
+				}
+				d := dirs[dir]
+				info, err := os.Stat(name)
+				if err != nil {
+					return err
+				}
+				digest := &pb.Digest{
+					Hash:      hex.EncodeToString(h),
+					SizeBytes: info.Size(),
+				}
+				d.Files = append(d.Files, &pb.FileNode{
+					Name:         path.Base(dest),
+					Digest:       digest,
+					IsExecutable: target.IsBinary,
+				})
+				if upload {
+					ch <- &blob{
+						File:   source.Src,
+						Digest: digest,
+					}
+				}
+				return nil
+			}); err != nil {
 				return err
-			}
-			d := dirs[dir]
-			info, err := os.Stat(source.Src)
-			if err != nil {
-				return err
-			}
-			digest := &pb.Digest{
-				Hash:      hex.EncodeToString(h),
-				SizeBytes: info.Size(),
-			}
-			d.Files = append(d.Files, &pb.FileNode{
-				Name:         path.Base(source.Tmp),
-				Digest:       digest,
-				IsExecutable: target.IsBinary,
-			})
-			if upload {
-				ch <- &blob{
-					File:   source.Src,
-					Digest: digest,
-				}
 			}
 		}
 		// Now the protos are complete we need to calculate all the digests...

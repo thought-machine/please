@@ -1,0 +1,28 @@
+{
+  "blobstore": {
+    "contentAddressableStorage": {
+      "circular": {
+        "directory": "storage-cas",
+        "offsetFileSizeBytes": 16777216,
+        "offsetCacheSize": 10000,
+        "dataFileSizeBytes": 10737418240,
+        "dataAllocationChunkSizeBytes": 16777216
+      }
+    },
+    "actionCache": {
+      "circular": {
+        "directory": "storage-ac",
+        "offsetFileSizeBytes": 1048576,
+        "offsetCacheSize": 1000,
+        "dataFileSizeBytes": 104857600,
+        "dataAllocationChunkSizeBytes": 1048576,
+        "instance": ["foo", "bar"]
+      }
+    }
+  },
+  "jaeger": {},
+  "schedulers": {
+    "bar": "bar-scheduler:8981"
+  },
+  "allowAcUpdatesForInstances": ["foo"]
+}

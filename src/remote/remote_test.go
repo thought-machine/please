@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 
@@ -192,9 +193,13 @@ func (s *testServer) GetTree(*pb.GetTreeRequest, pb.ContentAddressableStorage_Ge
 }
 
 func (s *testServer) Read(req *bs.ReadRequest, srv bs.ByteStream_ReadServer) error {
-	b, present := s.blobs[req.ResourceName]
+	blobName, err := s.bytestreamBlobName(req.ResourceName)
+	if err != nil {
+		return err
+	}
+	b, present := s.blobs[blobName]
 	if !present {
-		return status.Errorf(codes.NotFound, "bytestream %s not found", req.ResourceName)
+		return status.Errorf(codes.NotFound, "bytestream %s not found", blobName)
 	} else if req.ReadOffset < 0 || req.ReadOffset > int64(len(b)) {
 		return status.Errorf(codes.OutOfRange, "invalid offset for bytestream %s, was %d, must be [0-%d]", req.ResourceName, req.ReadOffset, len(b))
 	} else if req.ReadLimit < 0 {
@@ -225,6 +230,10 @@ func (s *testServer) Write(srv bs.ByteStream_WriteServer) error {
 		return status.Errorf(codes.InvalidArgument, "missing ResourceName")
 	}
 	name := req.ResourceName
+	blobName, err := s.bytestreamBlobName(name)
+	if err != nil {
+		return err
+	}
 	b := s.bytestreams[name]
 	for {
 		if req.WriteOffset != int64(len(b)) {
@@ -232,7 +241,7 @@ func (s *testServer) Write(srv bs.ByteStream_WriteServer) error {
 		}
 		b = append(b, req.Data...)
 		if req.FinishWrite {
-			s.blobs[name] = b
+			s.blobs[blobName] = b
 			delete(s.bytestreams, name)
 			break
 		}
@@ -245,6 +254,15 @@ func (s *testServer) Write(srv bs.ByteStream_WriteServer) error {
 	return srv.SendAndClose(&bs.WriteResponse{
 		CommittedSize: int64(len(b)),
 	})
+}
+
+func (s *testServer) bytestreamBlobName(bytestream string) (string, error) {
+	r := regexp.MustCompile("uploads/[0-9a-f-]+/blobs/([0-9a-f]+)/[0-9]+")
+	matches := r.FindStringSubmatch(bytestream)
+	if matches == nil {
+		return "", status.Errorf(codes.InvalidArgument, "invalid ResourceName")
+	}
+	return matches[1], nil
 }
 
 func (s *testServer) QueryWriteStatus(ctx context.Context, req *bs.QueryWriteStatusRequest) (*bs.QueryWriteStatusResponse, error) {

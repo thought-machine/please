@@ -94,3 +94,19 @@ func extraPerms(file *pb.OutputFile) os.FileMode {
 func IsNotFound(err error) bool {
 	return status.Code(err) == codes.NotFound
 }
+
+// hasChild returns true if a Directory has a child directory by the given name.
+func hasChild(dir *pb.Directory, child string) bool {
+	for _, d := range dir.Directories {
+		if d.Name == child {
+			return true
+		}
+	}
+	return false
+}
+
+// exhaustChannel reads and discards all messages on the given channel.
+func exhaustChannel(ch <-chan *blob) {
+	for range ch {
+	}
+}

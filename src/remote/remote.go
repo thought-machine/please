@@ -52,10 +52,7 @@ type Client struct {
 	initOnce          sync.Once
 	state             *core.BuildState
 	err               error // for initialisation
-
-	// This is for servers have have multiple instances. Right now we never set it but
-	// we keep this here to remind us where it would need to go in the API.
-	instance string
+	instance          string
 
 	// Server-sent cache properties
 	maxBlobBatchSize int64
@@ -71,7 +68,7 @@ var instance *Client
 // New returns a new Client instance.
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
-	c := &Client{state: state}
+	c := &Client{state: state, instance: state.Config.Remote.Instance}
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
 	return c
 }
@@ -127,12 +124,19 @@ func (c *Client) init() {
 			c.cacheWritable = caps.ActionCacheUpdateCapabilities.UpdateEnabled
 		}
 		c.maxBlobBatchSize = caps.MaxBatchTotalSizeBytes
+		if c.maxBlobBatchSize == 0 {
+			// No limit was set by the server, assume we are implicitly limited to 4MB (that's
+			// gRPC's limit which most implementations do not seem to override). Round it down a
+			// bit to allow a bit of serialisation overhead etc.
+			c.maxBlobBatchSize = 4000000
+		}
 		c.actionCacheClient = pb.NewActionCacheClient(conn)
 		c.storageClient = pb.NewContentAddressableStorageClient(conn)
 		c.bsClient = bs.NewByteStreamClient(conn)
 		// Look this up just once now.
 		bash, err := core.LookBuildPath("bash", c.state.Config)
 		c.bashPath = bash
+		log.Debug("Remote execution client initialised for storage")
 		return err
 	}()
 	if c.err != nil {

@@ -101,6 +101,9 @@ func (c *Client) uploadBlobs(f func(ch chan<- *blob) error) error {
 // reallyUploadBlobs actually does the upload of the individual blobs, after they have
 // been filtered through FindMissingBlobs.
 func (c *Client) reallyUploadBlobs(ch <-chan *blob) error {
+	// Important that if we exit this function with an error we still exhaust the channel,
+	// otherwise we can hang other goroutines that are trying to write to it.
+	defer exhaustChannel(ch)
 	reqs := []*pb.BatchUpdateBlobsRequest_Request{}
 	var totalSize int64
 	for b := range ch {
@@ -110,6 +113,7 @@ func (c *Client) reallyUploadBlobs(ch <-chan *blob) error {
 			if err := c.storeByteStream(b); err != nil {
 				return err
 			}
+			continue
 		} else if b.Digest.SizeBytes+totalSize > c.maxBlobBatchSize {
 			// We have exceeded the total but this blob on its own is OK.
 			// Send what we have so far then deal with this one.
