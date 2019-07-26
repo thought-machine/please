@@ -134,9 +134,9 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 		log.Debug("Output file %s does not exist for %s", cachedOutputFile, target.Label)
 		// Check the cache for these artifacts.
-		files := []string{core.TestResultsFile}
+		files := []string{path.Base(target.TestResultsFile())}
 		if needCoverage {
-			files = append(files, core.CoverageFile)
+			files = append(files, path.Base(target.CoverageFile()))
 		}
 		return state.Cache == nil || state.Cache.Retrieve(target, hash, files) == nil
 	}
