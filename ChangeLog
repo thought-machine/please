@@ -12,6 +12,8 @@ Version 14.0.0
     * `go_test` no longer works for versions prior to 1.8
     * `go_library` rules using assembly now only work with Go 1.12+ (previously they did not
       work with 1.12) (#659)
+    * The HTTP cache protocol has changed; we no longer provide a server implementation, but it
+      is now compatible with many other implementations (e.g. Cirrus, nginx/webdav, etc).
     * `plz rebuild` is removed in favour of `plz build --rebuild`
     * The `--keep_going` flag has been removed (#655)
     * `python_binary` and `python_test` now take a `site` argument determining whether they

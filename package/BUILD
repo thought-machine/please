@@ -33,22 +33,11 @@ tarball(
     xzip = True,
 )
 
-tarball(
-    name = "servers_tarball",
-    srcs = [
-        "//tools/cache:http_cache_server",
-        "//tools/cache:rpc_cache_server",
-    ],
-    out = "please_servers_%s.tar.gz" % VERSION,
-    subdir = "please",
-)
-
 filegroup(
     name = "tarballs",
     srcs = [
         ":please_tarball",
         ":please_tarball_xz",
-        ":servers_tarball",
     ],
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )

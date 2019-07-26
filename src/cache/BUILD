@@ -49,7 +49,7 @@ go_test(
     deps = [
         ":cache",
         "//third_party/go:logging",
-        "//tools/cache/server",
+        "//third_party/go:testify",
     ],
 )
 

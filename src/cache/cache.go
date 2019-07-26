@@ -3,7 +3,6 @@
 package cache
 
 import (
-	"net/http"
 	"sync"
 
 	"gopkg.in/op/go-logging.v1"
@@ -40,12 +39,7 @@ func newSyncCache(state *core.BuildState, remoteOnly bool) core.Cache {
 		}
 	}
 	if state.Config.Cache.HTTPURL != "" {
-		res, err := http.Get(state.Config.Cache.HTTPURL.String() + "/ping")
-		if err == nil && res.StatusCode == 200 {
-			mplex.caches = append(mplex.caches, newHTTPCache(state.Config))
-		} else {
-			log.Warning("Http cache server could not be reached: %s.\nSkipping http caching...", err)
-		}
+		mplex.caches = append(mplex.caches, newHTTPCache(state.Config))
 	}
 	if len(mplex.caches) == 0 {
 		return nil

@@ -2,7 +2,6 @@ go_library(
     name = "server",
     srcs = [
         "cache.go",
-        "http_server.go",
         "rpc_server.go",
     ],
     # Exposed for a test only.
@@ -24,16 +23,6 @@ go_library(
         "//third_party/go:mux",
         "//third_party/go:prometheus",
         "//tools/cache/cluster",
-    ],
-)
-
-go_test(
-    name = "http_server_test",
-    srcs = ["http_server_test.go"],
-    data = [":test_data"],
-    deps = [
-        ":server",
-        "//third_party/go:testify",
     ],
 )
 

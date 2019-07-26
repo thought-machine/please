@@ -21,41 +21,32 @@
     <h2>The HTTP cache</h2>
 
     <p>This is a more advanced cache which, as one would expect, can run on a centralised machine
-      to share artifacts between multiple clients. It has a reasonably simple API, for reference:
-      <ul>
-	<li><code>GET /artifact/{os_name}/{artifact}</code>: Retrieves a particular artifact.</li>
-	<li><code>POST /artifact/{os_name}/{artifact}</code>: Stores a particular artifact.</li>
-	<li><code>DELETE /artifact/{artifact}</code>: Deletes all versions of a given artifact.</li>
-	<li><code>DELETE /</code>: Deletes all artifacts.</li>
-      </ul>
+      to share artifacts between multiple clients. It has a simple API based on PUT and GET to
+      store and retrieve opaque blobs.</p>
 
-      We should document this in more detail, especially since the formats can be subtle
-      (an awkward corner case requires multipart for some cases) but as described below it is probably
-      preferable to implement the RPC cache instead.
-    </p>
+    <p>It is simply configured by setting the <code>httpurl</code> property in the
+      <a href="config.html#cache">cache section of the config</a>. There are a couple more settings
+      to configure it for readonly mode and to set timeouts etc.</p>
 
-    <p>The cache runs as a daemon and is fully threadsafe so is of course safe for multiple clients
-      to attempt to store / retrieve artifacts simultaneously. Because it's a daemon it maintains
-      its own stats about what artifacts it has so can be a little more intelligent than the dir
-      cache about what it should delete and when.</p>
-
-    <p>Please comes with an implementation of this cache as a standalone binary.</p>
+    <p>Since the API is simple there are many existing servers that can be configured for a
+      backend; one option is nginx using its
+      <a href="http://nginx.org/en/docs/http/ngx_http_dav_module.html">webDAV</a> module.<br/>
+      Alternatively some CI services (for example <a href="https://cirrus-ci.org">Cirrus</a>)
+      may offer a compatible cache out of the box.</p>
 
     <p>Thanks to Diana Costea who implemented the original version of this as part of her internship
       with us, and prodded us into getting on and actually deploying it for our CI servers.</p>
 
     <h2>The RPC cache</h2>
 
-    <p>This is very similar conceptually to the HTTP cache, but uses <a href="http://grpc.io">gRPC</a>
-      for communication (of course that uses HTTP itself underneath). The motivation was partly that
-      we realised fairly late that our cache semantics sometimes require multiple files to be communicated
-      in a single request, which implied multipart encodings which are of course not great fun. We
-      also felt that we could get better performance this way too. An awful lot of the internal code is
-      shared with the HTTP server so only the transport layer really differs.</p>
+    <p>This works similarly to the HTTP cache but uses <a href="http://grpc.io">gRPC</a>
+      for communication (of course that uses HTTP itself underneath). Its protocol is quite different
+      and fairly bespoke to Please; a server implementation is provided (under
+      <a href="https://github.com/thought-machine/please/tree/master/tools/cache">//tools/cache</a>)
+      which implements the required backend.</p>
 
-    <p>The API can be found in <code>src/cache/proto/rpc_cache.proto</code>. It's not very complex
-      so would not be hard to implement, although again Please comes with an implementation of this
-      cache as a standalone binary.</p>
+    <p>This server is nearing the end of its lifespan; in future we will likely deprecate it in
+      favour of Google's <a href="https://github.com/bazelbuild/remote-apis">remote execution API</a>.</p>
 
     <h2>Notes</h2>
 
