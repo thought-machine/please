@@ -113,7 +113,7 @@ func (cache *httpCache) storeFile(tw *tar.Writer, name string) error {
 func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	m, err := cache.retrieve(target, key)
 	if err != nil {
-		log.Warning("Failed to retrieve files from HTTP cache: %s", err)
+		log.Warning("%s: Failed to retrieve files from HTTP cache: %s", target.Label, err)
 	}
 	return m
 }
@@ -152,6 +152,11 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (*core.Bu
 				return nil, err
 			}
 		case tar.TypeReg:
+			if dir := path.Dir(hdr.Name); dir != "." {
+				if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
+					return nil, err
+				}
+			}
 			if f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(hdr.Mode)); err != nil {
 				return nil, err
 			} else if _, err := io.Copy(f, tr); err != nil {
