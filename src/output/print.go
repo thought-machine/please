@@ -20,6 +20,11 @@ func printf(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, os.Expand(format, replace), args...)
 }
 
+// rprintf is like printf but does its replacements after replacing the format string.
+func rprintf(format string, args ...interface{}) {
+	fmt.Fprint(os.Stderr, os.Expand(fmt.Sprintf(format, args...), replace))
+}
+
 func replace(s string) string {
 	return replacements[s]
 }
