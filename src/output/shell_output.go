@@ -55,6 +55,7 @@ type buildingTargetData struct {
 // MonitorState monitors the build while it's running (essentially until state.TestCases is closed)
 // and prints output while it's happening.
 func MonitorState(state *core.BuildState, numThreads int, plainOutput, detailedTests bool, traceFile string) {
+	initPrintf()
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads)
 

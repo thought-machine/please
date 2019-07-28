@@ -1,21 +1,9 @@
-subinclude("//build_defs:ansi_escapes")
-
-replace_ansi_escapes(
-    name = "ansi_replacements",
-    srcs = [
-        "interactive_display.go",
-        "shell_output.go",
-    ],
-)
-
 go_library(
     name = "output",
-    srcs = [
-        "print.go",
-        "print_bootstrap.go",
-        "trace.go",
-        ":ansi_replacements",
-    ],
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     visibility = ["PUBLIC"],
     deps = [
         "//src/build",

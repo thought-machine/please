@@ -42,7 +42,7 @@ loop:
 			moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows, state.Config.Display.SystemStats)
 			printLines(state, *buildingTargets, backend.MaxInteractiveRows, backend.Cols)
 			for _, line := range backend.Output {
-				printf("\x1b[2K%s\n", line) // erase each line as we go
+				printf("${ERASE_AFTER}%s\n", line)
 			}
 			outputLines = len(backend.Output)
 			setWindowTitle(state, true)
@@ -52,7 +52,7 @@ loop:
 	setWindowTitle(state, false)
 	// Clear it all out.
 	moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows, state.Config.Display.SystemStats)
-	printf("\x1b[0J") // Clear out to end of screen.
+	printf("${CLEAR_END}")
 	backend.Deactivate()
 	done <- struct{}{}
 }
