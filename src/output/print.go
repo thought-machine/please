@@ -13,7 +13,9 @@ func initPrintf(config *core.Configuration) {
 	if !cli.StdErrIsATerminal {
 		replacements = map[string]string{}
 	} else {
-		targetColours = config.Colours
+		for k, v := range config.Colours {
+			replacements[k] = v
+		}
 	}
 }
 
@@ -52,6 +54,3 @@ var replacements = map[string]string{
 	"ERASE_AFTER":  "\x1b[K",
 	"CLEAR_END":    "\x1b[0J",
 }
-
-// These are the target colour codes.
-var targetColours map[string]string

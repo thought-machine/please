@@ -578,7 +578,7 @@ func targetColour(target *core.BuildTarget) string {
 
 func targetColour2(target *core.BuildTarget) string {
 	for _, require := range target.Requires {
-		if colour, present := targetColours[require]; present {
+		if colour, present := replacements[require]; present {
 			return colour
 		}
 	}
