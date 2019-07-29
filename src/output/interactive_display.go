@@ -133,7 +133,7 @@ func printStat(caption string, stat float64, multiplier int) {
 	} else if stat > 60.0*float64(multiplier) {
 		colour = "${BOLD_YELLOW}"
 	}
-	rprintf("  ${BOLD_WHITE}%s:${RESET} %s%5.1f%%${RESET}", caption, colour, stat)
+	printf("  ${BOLD_WHITE}%s:${RESET} %s%5.1f%%${RESET}", caption, colour, stat)
 }
 
 func recalcWindowSize(backend *cli.LogBackend) {

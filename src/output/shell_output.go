@@ -267,12 +267,12 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 			aggregate.TestCases = append(aggregate.TestCases, target.Results.TestCases...)
 			if len(target.Results.TestCases) > 0 {
 				if target.Results.Errors() > 0 {
-					rprintf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
 				} else if target.Results.Failures() > 0 {
-					rprintf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
 				} else if detailed || len(failedTargets) == 0 {
 					// Succeeded or skipped
-					rprintf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
 				}
 				if state.ShowTestOutput || detailed {
 					// Determine max width of test name so we align them
@@ -284,10 +284,10 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 					}
 					format := fmt.Sprintf("%%-%ds", width+1)
 					for _, result := range target.Results.TestCases {
-						rprintf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name)))
+						printf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name)))
 						if len(result.Executions) > 1 {
 							for run, execution := range result.Executions {
-								rprintf("        RUN %d: %s\n", run+1, formatTestExecution(execution))
+								printf("        RUN %d: %s\n", run+1, formatTestExecution(execution))
 								if state.ShowTestOutput {
 									showExecutionOutput(execution)
 								}
@@ -654,7 +654,7 @@ func PrintLineCoverageReport(state *core.BuildState, includeFiles []string) {
 		i := 0
 		for scanner.Scan() {
 			if i < len(coverage) {
-				rprintf("${WHITE}%4d %s%s\n", i, coverageColours[coverage[i]], scanner.Text())
+				printf("${WHITE}%4d %s%s\n", i, coverageColours[coverage[i]], scanner.Text())
 			} else {
 				// Assume the lines are not executable. This happens for python, for example.
 				printf("${WHITE}%4d ${GREY}%s\n", i, scanner.Text())

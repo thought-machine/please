@@ -20,11 +20,6 @@ func initPrintf(config *core.Configuration) {
 // printf is used throughout this package to print something to stderr with some
 // replacements for pseudo-shell variables for ANSI formatting codes.
 func printf(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, os.Expand(format, replace), args...)
-}
-
-// rprintf is like printf but does its replacements after replacing the format string.
-func rprintf(format string, args ...interface{}) {
 	fmt.Fprint(os.Stderr, os.Expand(fmt.Sprintf(format, args...), replace))
 }
 
