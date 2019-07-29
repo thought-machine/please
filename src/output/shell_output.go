@@ -55,6 +55,7 @@ type buildingTargetData struct {
 // MonitorState monitors the build while it's running (essentially until state.TestCases is closed)
 // and prints output while it's happening.
 func MonitorState(state *core.BuildState, numThreads int, plainOutput, detailedTests bool, traceFile string) {
+	initPrintf(state.Config)
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, numThreads)
 
@@ -576,20 +577,10 @@ func targetColour(target *core.BuildTarget) string {
 }
 
 func targetColour2(target *core.BuildTarget) string {
-	// Quick heuristic on language types. May want to make this configurable.
 	for _, require := range target.Requires {
-		if require == "py" {
-			return "${GREEN}"
-		} else if require == "java" {
-			return "${RED}"
-		} else if require == "go" {
-			return "${YELLOW}"
-		} else if require == "js" {
-			return "${BLUE}"
+		if colour, present := replacements[require]; present {
+			return colour
 		}
-	}
-	if strings.Contains(target.Label.PackageName, "third_party") {
-		return "${MAGENTA}"
 	}
 	return "${WHITE}"
 }
