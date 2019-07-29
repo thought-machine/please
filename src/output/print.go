@@ -5,12 +5,15 @@ import (
 	"os"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 )
 
 // initPrintf sets up the replacements used by printf.
-func initPrintf() {
+func initPrintf(config *core.Configuration) {
 	if !cli.StdErrIsATerminal {
 		replacements = map[string]string{}
+	} else {
+		targetColours = config.Colours
 	}
 }
 
@@ -54,3 +57,6 @@ var replacements = map[string]string{
 	"ERASE_AFTER":  "\x1b[K",
 	"CLEAR_END":    "\x1b[0J",
 }
+
+// These are the target colour codes.
+var targetColours map[string]string

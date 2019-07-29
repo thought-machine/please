@@ -111,6 +111,22 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		log.Warning("The [aliases] section of .plzconfig is deprecated in favour of [alias]. See https://please.build/config.html for more information.")
 	}
 
+	if config.Colours == nil {
+		config.Colours = map[string]string{
+			"py":   "${GREEN}",
+			"java": "${RED}",
+			"go":   "${YELLOW}",
+			"js":   "${BLUE}",
+		}
+	} else {
+		// You are allowed to just write "yellow" but we map that to a pseudo-variable thing.
+		for k, v := range config.Colours {
+			if v[0] != '$' {
+				config.Colours[k] = "${" + strings.ToUpper(v) + "}"
+			}
+		}
+	}
+
 	// In a few versions we will deprecate Cpp.Coverage completely in favour of this more generic scheme.
 	if !config.Cpp.Coverage {
 		config.Test.DisableCoverage = append(config.Test.DisableCoverage, "cc")
@@ -330,7 +346,8 @@ type Configuration struct {
 		UpdateTitle bool `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
 		SystemStats bool `help:"Whether or not to show basic system resource usage in the interactive display. Has no effect without that configured."`
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
-	Events struct {
+	Colours map[string]string `help:"Colour code overrides in interactive output. These correspond to requirements on each target."`
+	Events  struct {
 		Port int `help:"Port to start the streaming build event server on."`
 	} `help:"The [events] section in the config contains settings relating to the internal build event system & streaming them externally."`
 	Build struct {
