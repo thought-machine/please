@@ -147,7 +147,6 @@ func (w *workerServer) sendRequests(stdin io.Writer) {
 	e := json.NewEncoder(stdin)
 	for request := range w.requests {
 		if err := e.Encode(request); err != nil {
-			log.Error("Failed to write request: %s", err)
 			w.dispatchResponse(&Response{
 				Rule:     request.Rule,
 				Success:  false,
