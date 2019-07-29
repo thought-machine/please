@@ -11,7 +11,7 @@ import (
 // AttachAliasFlags attaches the alias flags to the given flag parser.
 // It returns true if any modifications were made.
 func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
-	for name, alias := range config.AllAliases() {
+	for name, alias := range config.Alias {
 		cmd := parser.Command
 		fields := strings.Fields(name)
 		for i, namePart := range fields {
@@ -25,7 +25,7 @@ func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 			}
 		}
 	}
-	return len(config.Aliases) > 0 || len(config.Alias) > 0
+	return len(config.Alias) > 0
 }
 
 // addSubcommands attaches a series of subcommands to the given command.
