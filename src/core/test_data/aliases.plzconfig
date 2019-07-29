@@ -1,6 +1,0 @@
-[aliases]
-deploy = run //deployment:deployer --
-
-[aliases "deploy"]
-dev = run //deployment:deployer -- --env=dev
-prod = run //deployment:deployer -- --env=prod

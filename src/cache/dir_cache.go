@@ -222,7 +222,6 @@ func (cache *dirCache) retrieveFiles2(target *core.BuildTarget, cacheDir string,
 		}
 		cachedOut := path.Join(cacheDir, out)
 		log.Debug("Retrieving %s: %s from dir cache...", target.Label, cachedOut)
-		log.Debug("here %s  %s -> %s", target.Label, cachedOut, realOut)
 		if err := fs.RecursiveLink(cachedOut, realOut, target.OutMode()); err != nil {
 			return false, err
 		}

@@ -542,39 +542,9 @@
 	documenting things that the team aren't allowed to use.</li>
     </ul>
 
-    <h3>[Aliases]</h3>
-
-    <p>This section lets you define new commands to run at the command line. These are
-      currently implemented as a simple text-based replacement of the original command
-      which limits some applications, but they can still be very useful.</p>
-
-    <p>They're written with a simple <code>alias = replacement</code> syntax:</p>
-
-    <pre><code>
-	[aliases]
-	deploy = run //deployment:deployer --
-    </code></pre>
-
-    <p>This would transform <code>plz deploy //src:please</code> into
-      <code>plz run //deployment:deployer -- //src:please</code>.</p>
-
-    <p>You can also do subcommands of aliases, with a slightly different syntax:</p>
-
-    <pre><code>
-	[aliases "deploy"]
-	dev = run //deployment:deployer -- --env=dev
-	prod = run //deployment:deployer -- --env=prod
-    </code></pre>
-
-    <p>These are then invoked as <code>plz deploy dev</code> and
-      <code>plz deploy prod</code> respectively.<br/>
-      Due to the limitations of parsing our config format, you can only have one
-      level of subcommand of aliases.</p>
-
     <h3>[Alias]</h3>
 
-    <p>This is (unsurprisingly) very similar to the <code>[Aliases]</code> section, but
-      allows more information to be defined against each one. For example:</p>
+    <p>This section lets you define new commands to run at the command line. For example:</p>
 
     <pre><code>
 	[alias "deploy"]
@@ -586,7 +556,14 @@
     flag = -f
     </code></pre>
 
-    <p>This will tab-complete, taking into account the various sub-commands and flags etc.</p>
+    <p>This lets you run say <code>plz deploy //my:target</code>, which turns into a call to
+      <code>plz run //deployment:deployer -- //my:target</code>. This lets you add in lightweight
+      ways of invoking your custom commands (our developers at Thought Machine use these
+      extensively during their normal day-to-day).</p>
+
+    <p>This will tab-complete, taking into account the various sub-commands and flags etc.<br/>
+      Those commands and flags are not enforced though, they are only informational and used
+      for completion.</p>
 
     <h3><a name="events">[Events]</a></h3>
 

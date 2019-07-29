@@ -153,20 +153,13 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []st
 			File:    out,
 		})
 	}
-	if needsPostBuildFile(target) {
-		req.Artifacts = append(req.Artifacts, &pb.Artifact{
-			Package: target.Label.PackageName,
-			Target:  target.Label.Name,
-			File:    target.PostBuildOutputFileName(),
-		})
-	}
 	// We can't tell from here if retrieval has been successful for a target with no outputs.
 	// This is kind of weird but not actually disallowed, and we already have a test case for it,
 	// so might as well try to get it right here.
 	if len(req.Artifacts) == 0 {
 		return nil
 	}
-	if !cache.retrieveArtifacts(target, &req, true) {
+	if !cache.retrieveArtifacts(target, &req, true, files) {
 		return nil
 	} else if needsPostBuildFile(target) {
 		return loadPostBuildFile(target)
@@ -174,7 +167,7 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []st
 	return &core.BuildMetadata{}
 }
 
-func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.RetrieveRequest, remove bool) bool {
+func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.RetrieveRequest, remove bool, files []string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
 	defer cancel()
 	success, artifacts := cache.runRPC(req.Hash, func(cache *rpcCache) (bool, []*pb.Artifact) {
@@ -198,7 +191,7 @@ func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.Retri
 	// directory, because we get back individual artifacts, and we need to make sure that
 	// only the retrieved artifacts are present in the output.
 	if remove {
-		for _, out := range target.Outputs() {
+		for _, out := range files {
 			out := path.Join(target.OutDir(), out)
 			if err := os.RemoveAll(out); err != nil {
 				log.Error("Failed to remove artifact %s: %s", out, err)

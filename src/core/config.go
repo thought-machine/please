@@ -107,10 +107,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
 	}
 
-	if len(config.Aliases) > 0 {
-		log.Warning("The [aliases] section of .plzconfig is deprecated in favour of [alias]. See https://please.build/config.html for more information.")
-	}
-
 	if config.Colours == nil {
 		config.Colours = map[string]string{
 			"py":   "${GREEN}",
@@ -238,7 +234,6 @@ func DefaultConfiguration() *Configuration {
 	config.Build.Xattrs = true
 	config.BuildConfig = map[string]string{}
 	config.BuildEnv = map[string]string{}
-	config.Aliases = map[string]string{}
 	config.Cache.HTTPWriteable = true
 	config.Cache.HTTPTimeout = cli.Duration(25 * time.Second)
 	config.Cache.RPCTimeout = cli.Duration(25 * time.Second)
@@ -481,7 +476,6 @@ type Configuration struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
 		Reject []string `help:"Licences that are explicitly rejected in this repository.\nAn astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
 	} `help:"Please has some limited support for declaring acceptable licences and detecting them from some libraries. You should not rely on this for complete licence compliance, but it can be a useful check to try to ensure that unacceptable licences do not slip in."`
-	Aliases  map[string]string `help:"It is possible to define aliases for new commands in your .plzconfig file. These are essentially string-string replacements of the command line, for example 'deploy = run //tools:deployer --' makes 'plz deploy' run a particular tool."`
 	Alias    map[string]*Alias `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
 	Provider map[string]*struct {
 		Target BuildLabel   `help:"The in-repo target to build this provider."`
@@ -724,7 +718,7 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		if arg == "--" {
 			break
 		}
-		for k, v := range config.AllAliases() {
+		for k, v := range config.Alias {
 			if arg == k {
 				// We could insert every token in v into os.Args at this point and then we could have
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
@@ -741,21 +735,9 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 	return args
 }
 
-// AllAliases returns all the aliases defined in this config
-func (config *Configuration) AllAliases() map[string]*Alias {
-	ret := map[string]*Alias{}
-	for k, v := range config.Aliases {
-		ret[k] = &Alias{Cmd: v}
-	}
-	for k, v := range config.Alias {
-		ret[k] = v
-	}
-	return ret
-}
-
 // PrintAliases prints the set of aliases defined in the config.
 func (config *Configuration) PrintAliases(w io.Writer) {
-	aliases := config.AllAliases()
+	aliases := config.Alias
 	names := make([]string, 0, len(aliases))
 	maxlen := 0
 	for alias := range aliases {

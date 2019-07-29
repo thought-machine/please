@@ -152,17 +152,6 @@ func TestConfigOverrideOptions(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestDynamicSection(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/aliases.plzconfig"}, nil)
-	assert.NoError(t, err)
-	expected := map[string]string{
-		"deploy":      "run //deployment:deployer --",
-		"deploy dev":  "run //deployment:deployer -- --env=dev",
-		"deploy prod": "run //deployment:deployer -- --env=prod",
-	}
-	assert.Equal(t, expected, config.Aliases)
-}
-
 func TestReadSemver(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/version_good.plzconfig"}, nil)
 	assert.NoError(t, err)
@@ -259,8 +248,10 @@ func xos() string {
 
 func TestUpdateArgsWithAliases(t *testing.T) {
 	c := DefaultConfiguration()
-	c.Aliases["deploy"] = "run //deploy:deployer --"
-	c.Aliases["mytool"] = "run //mytool:tool --"
+	c.Alias = map[string]*Alias{
+		"deploy": {Cmd: "run //deploy:deployer --"},
+		"mytool": {Cmd: "run //mytool:tool --"},
+	}
 
 	args := c.UpdateArgsWithAliases([]string{"plz", "run", "//src/tools:tool"})
 	assert.EqualValues(t, []string{"plz", "run", "//src/tools:tool"}, args)
@@ -277,7 +268,9 @@ func TestUpdateArgsWithAliases(t *testing.T) {
 
 func TestUpdateArgsWithQuotedAliases(t *testing.T) {
 	c := DefaultConfiguration()
-	c.Aliases["release"] = "build -o 'buildconfig.gpg_userid:Please Releases <releases@please.build>' //package:tarballs"
+	c.Alias = map[string]*Alias{
+		"release": {Cmd: "build -o 'buildconfig.gpg_userid:Please Releases <releases@please.build>' //package:tarballs"},
+	}
 	args := c.UpdateArgsWithAliases([]string{"plz", "release"})
 	assert.EqualValues(t, []string{"plz", "build", "-o", "buildconfig.gpg_userid:Please Releases <releases@please.build>", "//package:tarballs"}, args)
 }
