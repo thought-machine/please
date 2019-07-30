@@ -168,7 +168,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 				})
 				if upload {
 					ch <- &blob{
-						File:   source.Src,
+						File:   name,
 						Digest: digest,
 					}
 				}

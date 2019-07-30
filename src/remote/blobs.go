@@ -136,6 +136,7 @@ func (c *Client) reallyUploadBlobs(ch <-chan *blob) error {
 			Digest: b.Digest,
 			Data:   b.Data,
 		})
+		totalSize += b.Digest.SizeBytes
 	}
 	if len(reqs) > 0 {
 		return c.sendBlobs(reqs)
