@@ -637,3 +637,9 @@ go_get(
         ":protobuf",
     ],
 )
+
+go_get(
+    name = "uuid",
+    get = "github.com/google/uuid",
+    revision = "v1.1.1",
+)

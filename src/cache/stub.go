@@ -16,5 +16,5 @@ func newRPCCache(config *core.Configuration) (*httpCache, error) {
 }
 
 func newRemoteCache(state *core.BuildState) core.Cache {
-	panic("Config specifies remote execution cache but it is not compiled")
+	return nil
 }

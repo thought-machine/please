@@ -10,9 +10,11 @@ import (
 	"os"
 
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/thought-machine/please/src/fs"
 )
@@ -212,7 +214,7 @@ func (c *Client) storeByteStream(b *blob) error {
 }
 
 func (c *Client) reallyStoreByteStream(b *blob, r io.ReadSeeker) error {
-	name := c.byteStreamResourceName(b.Digest)
+	name := c.byteStreamUploadName(b.Digest)
 	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
 	defer cancel()
 	stream, err := c.bsClient.Write(ctx)
@@ -245,15 +247,21 @@ func (c *Client) reallyStoreByteStream(b *blob, r io.ReadSeeker) error {
 	return err
 }
 
-// byteStreamResourceName returns the resource name for a file uploaded / downloaded
+// byteStreamUploadName returns the resource name for a file uploaded
 // as a bytestream. The scheme is specified by the remote execution API.
-func (c *Client) byteStreamResourceName(digest *pb.Digest) string {
-	// TODO(peterebden): find out if there is a better scheme we can use then hardcoding
-	//                   this. It seems to be technically OK but seems against the spirit
-	//                   of it - but it is unclear how we can get the object back again
-	//                   without knowing the id we used previously.
-	const uuid = "1b7abfb8-744a-4a2a-9b91-f0cb9eb69e19"
-	name := fmt.Sprintf("uploads/%s/blobs/%s/%d", uuid, digest.Hash, digest.SizeBytes)
+func (c *Client) byteStreamUploadName(digest *pb.Digest) string {
+	u, _ := uuid.NewRandom()
+	name := fmt.Sprintf("uploads/%s/blobs/%s/%d", u, digest.Hash, digest.SizeBytes)
+	if c.instance != "" {
+		name = c.instance + "/" + name
+	}
+	return name
+}
+
+// byteStreamDownloadName returns the resource name for a file downloaded from
+// the API as a bytestream. Of course this is different to the one it's uploaded under.
+func (c *Client) byteStreamDownloadName(digest *pb.Digest) string {
+	name := fmt.Sprintf("blobs/%s/%d", digest.Hash, digest.SizeBytes)
 	if c.instance != "" {
 		name = c.instance + "/" + name
 	}
@@ -277,7 +285,7 @@ func (c *Client) downloadBlobs(f func(ch chan<- *blob) error) error {
 	for b := range ch {
 		filenames[b.Digest.Hash] = b.File
 		modes[b.Digest.Hash] = b.Mode
-		if b.Digest.SizeBytes > c.maxBlobBatchSize {
+		if b.Digest.SizeBytes > c.maxBlobBatchSize || !c.canBatchBlobReads {
 			// This blob individually exceeds the size, have to use this
 			// ByteStream malarkey instead.
 			if err := c.retrieveByteStream(b); err != nil {
@@ -289,10 +297,9 @@ func (c *Client) downloadBlobs(f func(ch chan<- *blob) error) error {
 			if err := c.receiveBlobs(digests, filenames, modes); err != nil {
 				return err
 			}
-			digests = []*pb.Digest{}
-			totalSize = 0
+			digests = []*pb.Digest{b.Digest}
+			totalSize = b.Digest.SizeBytes
 		}
-		digests = append(digests, b.Digest)
 	}
 	if len(digests) > 0 {
 		if err := c.receiveBlobs(digests, filenames, modes); err != nil {
@@ -307,12 +314,23 @@ func (c *Client) retrieveByteStream(b *blob) error {
 	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
 	defer cancel()
 	stream, err := c.bsClient.Read(ctx, &bs.ReadRequest{
-		ResourceName: c.byteStreamResourceName(b.Digest),
+		ResourceName: c.byteStreamDownloadName(b.Digest),
 	})
 	if err != nil {
 		return err
 	}
 	return fs.WriteFile(&byteStreamReader{stream: stream}, b.File, b.Mode)
+}
+
+// checkBatchReadBlobs sends a fake request to verify if BatchReadBlobs is supported
+// (it is not on some servers, e.g. buildbarn).
+func (c *Client) checkBatchReadBlobs() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
+	defer cancel()
+	_, err := c.storageClient.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
+		InstanceName: c.instance,
+	})
+	return status.Code(err) != codes.Unimplemented
 }
 
 // A byteStreamReader abstracts over the bytestream gRPC API to turn it into an

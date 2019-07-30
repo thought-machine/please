@@ -106,15 +106,15 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 	// which does not match up to how we represent it (which is a series of files, with
 	// no corresponding directories, that are not usefully ordered for this purpose).
 	dirs := map[string]*pb.Directory{}
-	strip := len(target.TmpDir()) + 1 // Amount we have to strip off the start of the temp paths
+	strip := 0
 	root := &pb.Directory{}
 	dirs["."] = root // Ensure the root is in there
 	var sources <-chan core.SourcePair
 	if isTest {
 		sources = core.IterRuntimeFiles(c.state.Graph, target, false)
-		strip = len(target.TestDir()) + 1
 	} else {
 		sources = core.IterSources(c.state.Graph, target)
+		strip = len(target.TmpDir()) + 1 // Amount we have to strip off the start of the temp paths
 	}
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)

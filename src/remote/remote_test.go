@@ -257,10 +257,10 @@ func (s *testServer) Write(srv bs.ByteStream_WriteServer) error {
 }
 
 func (s *testServer) bytestreamBlobName(bytestream string) (string, error) {
-	r := regexp.MustCompile("uploads/[0-9a-f-]+/blobs/([0-9a-f]+)/[0-9]+")
+	r := regexp.MustCompile("(?:uploads/[0-9a-f-]+/)?blobs/([0-9a-f]+)/[0-9]+")
 	matches := r.FindStringSubmatch(bytestream)
 	if matches == nil {
-		return "", status.Errorf(codes.InvalidArgument, "invalid ResourceName")
+		return "", status.Errorf(codes.InvalidArgument, "invalid ResourceName: %s", bytestream)
 	}
 	return matches[1], nil
 }

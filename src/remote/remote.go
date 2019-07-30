@@ -55,8 +55,9 @@ type Client struct {
 	instance          string
 
 	// Server-sent cache properties
-	maxBlobBatchSize int64
-	cacheWritable    bool
+	maxBlobBatchSize  int64
+	cacheWritable     bool
+	canBatchBlobReads bool // This isn't supported by all servers.
 
 	// Cache this for later
 	bashPath string
@@ -136,6 +137,7 @@ func (c *Client) init() {
 		// Look this up just once now.
 		bash, err := core.LookBuildPath("bash", c.state.Config)
 		c.bashPath = bash
+		c.canBatchBlobReads = c.checkBatchReadBlobs()
 		log.Debug("Remote execution client initialised for storage")
 		return err
 	}()
