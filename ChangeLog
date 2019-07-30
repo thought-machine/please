@@ -14,6 +14,8 @@ Version 14.0.0
       work with 1.12) (#659)
     * The HTTP cache protocol has changed; we no longer provide a server implementation, but it
       is now compatible with many other implementations (e.g. Cirrus, nginx/webdav, etc).
+    * The RPC cache is now deprecated in favour of a new remote execution cache. The client
+      remains in plz but we aren't providing the server implementation any more.
     * `plz rebuild` is removed in favour of `plz build --rebuild`
     * The `--keep_going` flag has been removed (#655)
     * `python_binary` and `python_test` now take a `site` argument determining whether they
@@ -21,7 +23,6 @@ Version 14.0.0
     * Import lines are excluded from Python coverage stats (#607)
     * Jarcat honours --strip_prefix in some more places
     * Support for uploading test results to a remote server (#657)
-    * Some fixes for cgo_library when at the root of the repo
 
 
 Version 13.8.2

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 plz="plz-out/bin/src/please"
-BLACKLIST="src/parse/asp/main|tools/cache|//test|tools/please_pex|third_party"
+BLACKLIST="src/parse/asp/main|//test|tools/please_pex|third_party"
 
 # gofmt and go vet
 for TARGET in `$plz query alltargets --include go_src --hidden | grep -v "_test#lib" | grep -v "#main" | grep -v proto | grep -Ev $BLACKLIST`; do

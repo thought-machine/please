@@ -59,21 +59,6 @@ go_get(
 )
 
 go_get(
-    name = "mux",
-    get = "github.com/gorilla/mux",
-    revision = "9c068cf16d982f8bd444b8c352acbeec34c4fe5b",
-    deps = [
-        ":gorilla_context",
-    ],
-)
-
-go_get(
-    name = "gorilla_context",
-    get = "github.com/gorilla/context",
-    revision = "1c83b3eabd45b6d76072b66b746c20815fb2872d",
-)
-
-go_get(
     name = "net",
     get = "golang.org/x/net/...",
     revision = "136a25c244d3019482a795d728110278d6ba09a4",
@@ -233,78 +218,6 @@ go_get(
 )
 
 go_get(
-    name = "quantile",
-    get = "github.com/beorn7/perks/quantile",
-    revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9",
-)
-
-go_get(
-    name = "pbutil",
-    get = "github.com/matttproud/golang_protobuf_extensions/pbutil",
-    revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c",
-    deps = [":protobuf"],
-)
-
-go_get(
-    name = "prometheus",
-    get = "github.com/prometheus/client_golang/prometheus/...",
-    revision = "v0.8.0",
-    deps = [
-        ":grpc",
-        ":pbutil",
-        ":procfs",
-        ":prometheus_client_model",
-        ":prometheus_common",
-        ":protobuf",
-        ":quantile",
-    ],
-)
-
-go_get(
-    name = "prometheus_common",
-    get = "github.com/prometheus/common",
-    install = [
-        "expfmt",
-        "model",
-        "internal/bitbucket.org/ww/goautoneg",
-    ],
-    revision = "c7de2306084e37d54b8be01f3541a8464345e9a5",
-    deps = [
-        ":pbutil",
-        ":prometheus_client_model",
-        ":protobuf",
-    ],
-)
-
-go_get(
-    name = "prometheus_client_model",
-    get = "github.com/prometheus/client_model/go",
-    revision = "5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f",
-    deps = [
-        ":protobuf",
-    ],
-)
-
-go_get(
-    name = "procfs",
-    get = "github.com/prometheus/procfs/...",
-    revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92",
-    strip = ["fixtures"],  # Test fixture has a symlink to /usr/bin/vim which might not exist
-)
-
-go_get(
-    name = "grpc-prometheus",
-    get = "github.com/grpc-ecosystem/go-grpc-prometheus",
-    revision = "34abd90a014618f61222a1b0a7b7eb834a2d0dc3",
-    deps = [
-        ":grpc",
-        ":procfs",
-        ":prometheus",
-        ":protobuf",
-    ],
-)
-
-go_get(
     name = "grpc-middleware",
     get = "github.com/grpc-ecosystem/go-grpc-middleware",
     install = [
@@ -333,32 +246,6 @@ go_get(
 )
 
 go_get(
-    name = "memberlist",
-    get = "github.com/hashicorp/memberlist",
-    revision = "2072f3a3ff4b7b3d830be77678d5d4b978362bc4",
-    deps = [
-        ":dns",
-        ":go-metrics",
-        ":go-msgpack",
-        ":go-multierror",
-        ":go-sockaddr",
-        ":seed",
-    ],
-)
-
-go_get(
-    name = "seed",
-    get = "github.com/sean-/seed",
-    revision = "e2103e2c35297fb7e17febb81e49b312087a2372",
-)
-
-go_get(
-    name = "go-msgpack",
-    get = "github.com/hashicorp/go-msgpack/...",
-    revision = "fa3f63826f7c23912c15263591e65d54d080b458",
-)
-
-go_get(
     name = "go-multierror",
     get = "github.com/hashicorp/go-multierror",
     install = [
@@ -366,56 +253,6 @@ go_get(
         "vendor/github.com/hashicorp/errwrap",
     ],
     revision = "b7773ae218740a7be65057fc60b366a49b538a44",
-)
-
-go_get(
-    name = "go-metrics",
-    get = "github.com/armon/go-metrics",
-    revision = "7aa49fde808223f8dadfdbfd3a20ff6c19e5f9ec",
-    deps = [
-        ":go-immutable-radix",
-        ":verify",
-    ],
-)
-
-go_get(
-    name = "go-sockaddr",
-    get = "github.com/hashicorp/go-sockaddr",
-    revision = "6d291a969b86c4b633730bfc6b8b9d64c3aafed9",
-)
-
-go_get(
-    name = "go-immutable-radix",
-    get = "github.com/hashicorp/go-immutable-radix",
-    revision = "7f3cd4390caab3250a57f30efdb2a65dd7649ecf",
-    deps = [
-        ":go-uuid",
-        ":simplelru",
-    ],
-)
-
-go_get(
-    name = "simplelru",
-    get = "github.com/hashicorp/golang-lru/simplelru",
-    revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3",
-)
-
-go_get(
-    name = "go-uuid",
-    get = "github.com/hashicorp/go-uuid",
-    revision = "64130c7a86d732268a38cb04cfbaf0cc987fda98",
-)
-
-go_get(
-    name = "verify",
-    get = "github.com/pascaldekloe/goe/verify",
-    revision = "c580d16984352a427218a8e43232313d1c1c6f84",
-)
-
-go_get(
-    name = "dns",
-    get = "github.com/miekg/dns/...",
-    revision = "be5ae6ca7ac994584d2e30167737687f1c1ded8e",
 )
 
 go_get(

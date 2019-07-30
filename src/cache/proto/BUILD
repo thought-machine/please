@@ -6,6 +6,5 @@ grpc_library(
     ],
     visibility = [
         "//src/cache/...",
-        "//tools/cache/...",
     ],
 )
