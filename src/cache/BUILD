@@ -21,25 +21,10 @@ go_library(
     ],
 )
 
-go_test(
-    name = "rpc_cache_test",
-    srcs = ["rpc_cache_test.go"],
-    data = [":test_data"],
-    labels = ["no_cirrus"],
-    deps = [
-        ":cache",
-        "//third_party/go:grpc",
-        "//third_party/go:logging",
-        "//third_party/go:testify",
-        "//tools/cache/server",
-    ],
-)
-
 filegroup(
     name = "test_data",
     srcs = ["test_data"],
     test_only = True,
-    visibility = ["//tools/cache/..."],
 )
 
 go_test(

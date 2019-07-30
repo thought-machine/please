@@ -161,6 +161,26 @@
 
     </ul>
 
+    <h3><a name="remote">[Remote]</a></h3>
+
+    <ul>
+      <li><b>URL</b><br/>
+        Sets the URL to communicate with the remote server on.<br/>
+        Typically this would look something like <code>127.0.0.1:8989</code>, i.e. it is
+        given without a protocol.</li>
+
+      <li><b>Instance</b><br/>
+        Defines the name of the remote instance to request. Depending on the server implementation
+        or configuration this may be required; if so it must be set here to agree with it.</li>
+
+      <li><b>NumExecutors</b> (int)<br/>
+        Defines the number of remote executors to use simultaneously.</li>
+
+      <li><b>Name</b><br/>
+        A name for this worker instance. This is informational only and attached to artifacts
+        uploaded to remote storage to identify the original machine that created them.</li>
+    </ul>
+
     <h3><a name="cache">[Cache]</a></h3>
 
     <ul>
