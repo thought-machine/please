@@ -36,8 +36,10 @@ type freezable interface {
 type pyBool bool
 
 // True and False are the singletons representing those values.
-var True pyBool = true
-var False pyBool = false
+var (
+	True  pyBool = true
+	False pyBool = false
+)
 
 // newPyBool creates a new bool. It's a minor optimisation to treat them as singletons
 // although also means one can write "is True" and have it work (not that you should, really).
