@@ -87,8 +87,13 @@
         <div class="hdrimg2"><img src="images/{{shape 5}}_{{colour 8}}.png" class="{{rotate 6}}"></div>
         <div class="sideimg">
         {{ range .SideImages }}
-          <img src="images/{{shape .}}_{{colour .}}.png" class="{{rotate .}}"
-               style="width: {{random . 140 240}}px; right: {{random . -60 10}}px; top: {{randomoffset . 0 50 100 }}%;">
+          {{ $width := random . 140 240 }}
+          {{ $right := random . -60 10 }}
+          {{ $divw := add $width $right }}
+        <div style="width: {{ $divw }}px; right: 0; top: {{randomoffset . 0 50 100 }}%;">
+          <br/>
+          <img src="images/{{shape .}}_{{colour .}}.png" class="{{rotate .}}" style="width: {{ $width}}px;">
+          </div>
         {{ end }}
         </div>
       {{ end }}
