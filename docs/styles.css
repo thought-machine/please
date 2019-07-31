@@ -547,14 +547,16 @@ footer > div {
     height: auto;
 }
 .index-corner {
-    background-color: #111111;
     position: absolute;
-    top: -60em;
-    right: -40em;
-    width: 80em;
-    height: 80em;
+    top: -10em;
+    right: 0;
+    width: 30em;
+    height: 10em;
+    border-top: 0 solid transparent;
+    border-left: 0 solid transparent;
+    border-right: 30em solid #111111;
+    border-bottom: 20em solid transparent;
     opacity: 0.7;
-    transform: rotate(30deg);
     z-index: -20;
 }
 @media (max-width: 1000px) {
