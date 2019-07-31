@@ -418,10 +418,18 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 		case NotEqual:
 			obj = newPyBool(!reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
 		case Is:
-			// Is only works on boolean types.
-			b1, isBool1 := obj.(pyBool)
-			b2, isBool2 := s.interpretExpression(op.Expr).(pyBool)
-			obj = newPyBool(isBool1 && isBool2 && b1 == b2)
+			// Is only works None or boolean types.
+			expr := s.interpretExpression(op.Expr)
+			switch tobj := obj.(type) {
+			case pyNone:
+				_, ok := expr.(pyNone)
+				obj = newPyBool(ok)
+			case pyBool:
+				b, ok := expr.(pyBool)
+				obj = newPyBool(ok && b == tobj)
+			default:
+				obj = newPyBool(false)
+			}
 		case In, NotIn:
 			// the implementation of in is defined by the right-hand side, not the left.
 			obj = s.interpretExpression(op.Expr).Operator(op.Op, obj)
