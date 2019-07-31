@@ -112,6 +112,7 @@ func main() {
 		"rotate":       func(i int) string { return modulo(rotations, i) },
 		"random":       func(x, min, max int) int { return (x*basenameIndex+min)%(max-min) + min },
 		"randomoffset": func(x, min, max, step int) int { return x*step + random(x, min, max) },
+		"add":          func(x, y int) int { return x + y },
 		"matches": func(needle string, haystack ...string) bool {
 			for _, straw := range haystack {
 				if straw == needle {

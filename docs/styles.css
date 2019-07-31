@@ -166,15 +166,20 @@ hr {
     top: 50px;
     display: none;
 }
-.sideimg img {
-    height: auto;
+.sideimg div {
+    height: 250px;
     position: absolute;
     opacity: 0.2;
     z-index: -1000;
     display: none;
+    overflow-x: hidden;
+    overflow-y: visible;
+}
+.sideimg div img {
+    position: relative;
 }
 @media only screen and (min-width: 800px) {
-    .sideimg img, .hdrimg2 img {
+    .sideimg div, .hdrimg2 img {
         display: block;
     }
 }
