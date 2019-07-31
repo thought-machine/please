@@ -20,6 +20,7 @@ var log = logging.MustGetLogger("asp")
 
 func init() {
 	// gob needs to know how to encode and decode our types.
+	gob.Register(False)
 	gob.Register(None)
 	gob.Register(pyInt(0))
 	gob.Register(pyString(""))

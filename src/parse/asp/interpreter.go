@@ -362,7 +362,7 @@ func (s *scope) interpretFor(stmt *ForStatement) pyObject {
 	for _, li := range s.iterate(&stmt.Expr) {
 		s.unpackNames(stmt.Names, li)
 		if ret := s.interpretStatements(stmt.Statements); ret != nil {
-			if b, ok := ret.(pyBool); ok && b == continueIteration {
+			if s, ok := ret.(pySentinel); ok && s == continueIteration {
 				continue
 			}
 			return ret
