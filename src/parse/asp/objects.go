@@ -33,18 +33,12 @@ type freezable interface {
 	Freeze() pyObject
 }
 
-type pyBool int // Don't ask.
+type pyBool bool
 
-// True, False and None are the singletons representing those values in Python.
-// None isn't really a bool of course, but it's easier to use an instance of bool than another
-// custom type.
+// True and False are the singletons representing those values.
 var (
-	True         pyBool = 1
-	False        pyBool
-	None         pyBool = -1
-	FileNotFound pyBool = -2
-	// continueIteration is used as a sentinel value to implement the "continue" statement.
-	continueIteration pyBool = -3
+	True  pyBool = true
+	False pyBool = false
 )
 
 // newPyBool creates a new bool. It's a minor optimisation to treat them as singletons
@@ -77,21 +71,85 @@ func (b pyBool) IndexAssign(index, value pyObject) {
 }
 
 func (b pyBool) String() string {
-	if b == None {
-		return "None"
-	} else if b == True {
+	if b == True {
 		return "True"
 	}
 	return "False"
 }
 
 func (b pyBool) MarshalJSON() ([]byte, error) {
-	if b.IsTruthy() {
+	if b {
 		return []byte("true"), nil
-	} else if b == None {
-		return []byte("null"), nil
 	}
 	return []byte("false"), nil
+}
+
+type pyNone struct{}
+
+// None is the singleton representing None; there can be only one etc.
+var None = pyNone{}
+
+func (n pyNone) Type() string {
+	return "none"
+}
+
+func (n pyNone) IsTruthy() bool {
+	return false
+}
+
+func (n pyNone) Property(name string) pyObject {
+	panic("none object has no property " + name)
+}
+
+func (n pyNone) Operator(operator Operator, operand pyObject) pyObject {
+	panic(fmt.Sprintf("operator %s not implemented on type none", operator))
+}
+
+func (n pyNone) IndexAssign(index, value pyObject) {
+	panic("none type is not indexable")
+}
+
+func (n pyNone) String() string {
+	return "None"
+}
+
+func (n pyNone) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
+// A pySentinel is an internal implementation detail used in some cases. It should never be
+// exposed to users.
+type pySentinel struct{}
+
+// continueIteration is used to implement the "continue" statement.
+var continueIteration = pySentinel{}
+
+func (s pySentinel) Type() string {
+	return "sentinel"
+}
+
+func (s pySentinel) IsTruthy() bool {
+	return false
+}
+
+func (s pySentinel) Property(name string) pyObject {
+	panic("sentinel object has no property " + name)
+}
+
+func (s pySentinel) Operator(operator Operator, operand pyObject) pyObject {
+	panic(fmt.Sprintf("operator %s not implemented on type sentinel", operator))
+}
+
+func (s pySentinel) IndexAssign(index, value pyObject) {
+	panic("sentinel type is not indexable")
+}
+
+func (s pySentinel) String() string {
+	panic("non stringable type sentinel")
+}
+
+func (s pySentinel) MarshalJSON() ([]byte, error) {
+	panic("non serialisable type sentinel")
 }
 
 type pyInt int
