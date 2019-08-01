@@ -49,6 +49,12 @@ func (t pendingTask) Compare(that queue.Item) int {
 	return int((t.Type & priorityMask) - (that.(pendingTask).Type & priorityMask))
 }
 
+// A LabelPair is the type returned for parse tasks
+type LabelPair struct {
+	Label, Dependor BuildLabel
+	ForSubinclude   bool
+}
+
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
@@ -149,8 +155,6 @@ type BuildState struct {
 	DebugTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
 	XattrsSupported bool
-	// True once we have killed the workers, so we only do it once.
-	workersKilled bool
 	// Number of running workers
 	numWorkers int
 	// Experimental directories
@@ -230,17 +234,45 @@ func (state *BuildState) AddPendingTest(label BuildLabel) {
 	}
 }
 
-// NextTask receives the next task that should be processed according to the priority queues.
-func (state *BuildState) NextTask() (BuildLabel, BuildLabel, TaskType) {
-	t, err := state.pendingTasks.Get(1)
-	if err != nil {
-		log.Fatalf("error receiving next task: %s", err)
+// TaskQueues returns a set of channels to listen on for tasks of various types.
+// This should only be called once per state (otherwise you will not get a full set of tasks).
+func (state *BuildState) TaskQueues() (parses <-chan LabelPair, builds, tests <-chan BuildLabel) {
+	parses = make(chan BuildLabelPair, 100)
+	builds = make(chan BuildLabel, 100)
+	tests = make(chan BuildLabel, 100)
+	go state.feedQueues(parses, builds, tests)
+	return parses, builds, tests
+}
+
+// feedQueues feeds the build queues created in TaskQueues.
+// We retain the internal priority queue since it is unbounded size which is pretty important
+// for us not to deadlock.
+func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests chan<- BuildLabel) {
+	for {
+		t, _ := state.pendingTasks.Get(1)
+		task := t[0].(pendingTask)
+		switch task.Type {
+		case Stop, Kill:
+			close(parses)
+			close(builds)
+			close(tests)
+			if state.results != nil {
+				close(state.results)
+			}
+			if state.remoteResults != nil {
+				close(state.remoteResults)
+			}
+			return
+		case Parse, SubincludeParse:
+			parses <- LabelPair{Label: task.Label, Dependor: task.Dependor, ForSubinclude: task.Type == SubincludeParse}
+		case Build, SubincludeBuild:
+			atomic.AddInt64(&state.progress.numRunning, 1)
+			builds <- task.Label
+		case Test:
+			atomic.AddInt64(&state.progress.numRunning, 1)
+			tests <- task.Label
+		}
 	}
-	task := t[0].(pendingTask)
-	if task.Type == Build || task.Type == SubincludeBuild || task.Type == Test {
-		atomic.AddInt64(&state.progress.numRunning, 1)
-	}
-	return task.Label, task.Dependor, task.Type
 }
 
 func (state *BuildState) addPending(label BuildLabel, t TaskType) {
@@ -256,36 +288,19 @@ func (state *BuildState) TaskDone(wasBuildOrTest bool) {
 		atomic.AddInt64(&state.progress.numRunning, -1)
 	}
 	if atomic.AddInt64(&state.progress.numPending, -1) <= 0 {
-		state.Stop(state.numWorkers)
-		state.killall(Stop)
+		state.Stop()
+		state.KillAll()
 	}
 }
 
-// Stop adds n stop tasks to the list of pending tasks, which stops n workers after all their other tasks are done.
-func (state *BuildState) Stop(n int) {
-	for i := 0; i < n; i++ {
-		state.pendingTasks.Put(pendingTask{Type: Stop})
-	}
+// Stop stops the worker queues after any current tasks are done.
+func (state *BuildState) Stop() {
+	state.pendingTasks.Put(pendingTask{Type: Stop})
 }
 
 // KillAll kills all the workers.
 func (state *BuildState) KillAll() {
-	state.killall(Kill)
-}
-
-func (state *BuildState) killall(signal TaskType) {
-	if !state.workersKilled {
-		state.workersKilled = true
-		for i := 0; i < state.numWorkers; i++ {
-			state.pendingTasks.Put(pendingTask{Type: signal})
-		}
-		if state.results != nil {
-			close(state.results)
-		}
-		if state.remoteResults != nil {
-			close(state.remoteResults)
-		}
-	}
+	state.pendingTasks.Put(pendingTask{Type: Kill})
 }
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.

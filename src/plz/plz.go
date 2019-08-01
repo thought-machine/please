@@ -37,12 +37,15 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)
+
+	parses, builds, tests := state.TaskQueues()
+
 	// Start up all the build workers
 	var wg sync.WaitGroup
 	wg.Add(config.Please.NumThreads)
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
-			doTasks(tid, state, state.Include, state.Exclude, arch)
+			doTasks(tid, state, parses, builds, tests, arch)
 			wg.Done()
 		}(i)
 	}
@@ -53,25 +56,31 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}
 }
 
-func doTasks(tid int, state *core.BuildState, include, exclude []string, arch cli.Arch) {
-	for {
-		label, dependor, t := state.NextTask()
-		switch t {
-		case core.Stop, core.Kill:
-			return
-		case core.Parse, core.SubincludeParse:
-			t := t
-			label := label
-			dependor := dependor
+func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, builds, tests <-chan core.BuildLabel, arch cli.Arch) {
+	for parses != nil || builds != nil || tests != nil {
+		select {
+		case p, ok := <-parses:
+			if !ok {
+				parses = nil
+				break
+			}
 			state.ParsePool <- func() {
-				parse.Parse(tid, state, label, dependor, include, exclude, t == core.SubincludeParse)
+				parse.Parse(tid, state, p.Label, p.Dependor, p.ForSubinclude)
 				state.TaskDone(false)
 			}
-		case core.Build, core.SubincludeBuild:
-			build.Build(tid, state, label)
+		case l, ok := <-builds:
+			if !ok {
+				builds = nil
+				break
+			}
+			build.Build(tid, state, l)
 			state.TaskDone(true)
-		case core.Test:
-			test.Test(tid, state, label)
+		case l, ok := <-tests:
+			if !ok {
+				tests = nil
+				break
+			}
+			test.Test(tid, state, l)
 			state.TaskDone(true)
 		}
 	}

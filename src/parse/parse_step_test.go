@@ -154,7 +154,7 @@ func addDeps(graph *core.BuildGraph, pkg *core.Package) {
 }
 
 func assertPendingParses(t *testing.T, state *core.BuildState, targets ...string) {
-	state.Stop(1)
+	state.Stop()
 	pending := []core.BuildLabel{}
 	for {
 		label, _, typ := state.NextTask()
@@ -174,7 +174,7 @@ func assertPendingParses(t *testing.T, state *core.BuildState, targets ...string
 }
 
 func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string) {
-	state.Stop(1)
+	state.Stop()
 	pending := []core.BuildLabel{}
 	for {
 		label, _, typ := state.NextTask()
