@@ -40,9 +40,9 @@ const (
 )
 
 type pendingTask struct {
-	Label    BuildLabel // Label of target to parse
-	Dependor BuildLabel // The target that depended on it (only for parse tasks)
-	Type     taskType
+	Label     BuildLabel // Label of target to parse
+	Dependent BuildLabel // The target that depended on it (only for parse tasks)
+	Type      taskType
 }
 
 func (t pendingTask) Compare(that queue.Item) int {
@@ -51,8 +51,8 @@ func (t pendingTask) Compare(that queue.Item) int {
 
 // A LabelPair is the type returned for parse tasks
 type LabelPair struct {
-	Label, Dependor BuildLabel
-	ForSubinclude   bool
+	Label, Dependent BuildLabel
+	ForSubinclude    bool
 }
 
 // A Parser is the interface to reading and interacting with BUILD files.
@@ -208,13 +208,13 @@ func (state *BuildState) AddActiveTarget() {
 }
 
 // AddPendingParse adds a task for a pending parse of a build label.
-func (state *BuildState) AddPendingParse(label, dependor BuildLabel, forSubinclude bool) {
+func (state *BuildState) AddPendingParse(label, dependent BuildLabel, forSubinclude bool) {
 	atomic.AddInt64(&state.progress.numActive, 1)
 	atomic.AddInt64(&state.progress.numPending, 1)
 	if forSubinclude {
-		state.pendingTasks.Put(pendingTask{Label: label, Dependor: dependor, Type: SubincludeParse})
+		state.pendingTasks.Put(pendingTask{Label: label, Dependent: dependent, Type: SubincludeParse})
 	} else {
-		state.pendingTasks.Put(pendingTask{Label: label, Dependor: dependor, Type: Parse})
+		state.pendingTasks.Put(pendingTask{Label: label, Dependent: dependent, Type: Parse})
 	}
 }
 
@@ -264,7 +264,7 @@ func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests chan<
 			}
 			return
 		case Parse, SubincludeParse:
-			parses <- LabelPair{Label: task.Label, Dependor: task.Dependor, ForSubinclude: task.Type == SubincludeParse}
+			parses <- LabelPair{Label: task.Label, Dependent: task.Dependent, ForSubinclude: task.Type == SubincludeParse}
 		case Build, SubincludeBuild:
 			atomic.AddInt64(&state.progress.numRunning, 1)
 			builds <- task.Label
@@ -564,33 +564,33 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 }
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
-func (state *BuildState) WaitForBuiltTarget(l, dependor BuildLabel) *BuildTarget {
+func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
 	if t := state.Graph.Target(l); t != nil {
 		if state := t.State(); state >= Built && state != Failed {
 			return t
 		}
 	}
-	dependor.Name = "all" // Every target in this package depends on this one.
+	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
 	state.progress.pendingTargetMutex.Lock()
 	if ch, present := state.progress.pendingTargets[l]; present {
 		// Something's already registered for this, get on the train
 		state.progress.pendingTargetMutex.Unlock()
-		log.Debug("Pausing parse of %s to wait for %s", dependor, l)
+		log.Debug("Pausing parse of %s to wait for %s", dependent, l)
 		state.ParsePool.AddWorker()
 		<-ch
 		state.ParsePool.StopWorker()
-		log.Debug("Resuming parse of %s now %s is ready", dependor, l)
+		log.Debug("Resuming parse of %s now %s is ready", dependent, l)
 		return state.Graph.Target(l)
 	}
 	// Nothing's registered this, set it up.
 	state.progress.pendingTargets[l] = make(chan struct{})
 	state.progress.pendingTargetMutex.Unlock()
-	state.QueueTarget(l, dependor, false, true)
+	state.QueueTarget(l, dependent, false, true)
 	// Do this all over; the re-checking that happens here is actually fairly important to resolve
 	// a potential race condition if the target was built between us checking earlier and registering
 	// the channel just now.
-	return state.WaitForBuiltTarget(l, dependor)
+	return state.WaitForBuiltTarget(l, dependent)
 }
 
 // AddTarget adds a new target to the build graph.
@@ -618,18 +618,18 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 }
 
 // QueueTarget adds a single target to the build queue.
-func (state *BuildState) QueueTarget(label, dependor BuildLabel, rescan, forceBuild bool) {
+func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceBuild bool) {
 	target := state.Graph.Target(label)
 	if target == nil {
 		// If the package isn't loaded yet, we need to queue a parse for it.
 		if state.Graph.PackageByLabel(label) == nil {
-			state.AddPendingParse(label, dependor, forceBuild)
+			state.AddPendingParse(label, dependent, forceBuild)
 			return
 		}
 		// Package is loaded but target doesn't exist in it. Check again to avoid nasty races.
 		target = state.Graph.Target(label)
 		if target == nil {
-			log.Fatalf("Target %s (referenced by %s) doesn't exist\n", label, dependor)
+			log.Fatalf("Target %s (referenced by %s) doesn't exist\n", label, dependent)
 		}
 	}
 	if target.State() >= Active && !rescan && !forceBuild {
@@ -651,7 +651,7 @@ func (state *BuildState) QueueTarget(label, dependor BuildLabel, rescan, forceBu
 	// Only add if we need to build targets (not if we're just parsing) but we might need it to parse...
 	if target.State() == Active && state.Graph.AllDepsBuilt(target) {
 		if target.SyncUpdateState(Active, Pending) {
-			state.AddPendingBuild(label, dependor.IsAllTargets())
+			state.AddPendingBuild(label, dependent.IsAllTargets())
 		}
 		if !rescan {
 			return
