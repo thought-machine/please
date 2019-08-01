@@ -99,7 +99,7 @@ func parseSubrepoPackage(tid int, state *core.BuildState, pkg, subrepo string, d
 	if state.Graph.Package(pkg, subrepo) == nil {
 		// Don't have it already, must parse.
 		label := core.BuildLabel{Subrepo: subrepo, PackageName: pkg, Name: "all"}
-		return true, parse(tid, state, label, dependor, nil, nil, true)
+		return true, parse(tid, state, label, dependor, true)
 	}
 	return false, nil
 }

@@ -237,11 +237,11 @@ func (state *BuildState) AddPendingTest(label BuildLabel) {
 // TaskQueues returns a set of channels to listen on for tasks of various types.
 // This should only be called once per state (otherwise you will not get a full set of tasks).
 func (state *BuildState) TaskQueues() (parses <-chan LabelPair, builds, tests <-chan BuildLabel) {
-	parses = make(chan BuildLabelPair, 100)
-	builds = make(chan BuildLabel, 100)
-	tests = make(chan BuildLabel, 100)
-	go state.feedQueues(parses, builds, tests)
-	return parses, builds, tests
+	p := make(chan LabelPair, 100)
+	b := make(chan BuildLabel, 100)
+	t := make(chan BuildLabel, 100)
+	go state.feedQueues(p, b, t)
+	return p, b, t
 }
 
 // feedQueues feeds the build queues created in TaskQueues.
