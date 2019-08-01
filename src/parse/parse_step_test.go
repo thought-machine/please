@@ -153,43 +153,41 @@ func addDeps(graph *core.BuildGraph, pkg *core.Package) {
 }
 
 func assertPendingParses(t *testing.T, state *core.BuildState, targets ...string) {
-	state.Stop()
-	pending := []core.BuildLabel{}
-	for {
-		label, _, typ := state.NextTask()
-		if typ == core.Stop {
-			break
-		} else if typ != core.Parse && typ != core.SubincludeParse {
-			t.Errorf("Unexpected non-parse task")
-		} else {
-			pending = append(pending, label)
-		}
-	}
-	expected := []core.BuildLabel{}
-	for _, target := range targets {
-		expected = append(expected, core.ParseBuildLabel(target, ""))
-	}
-	assert.Equal(t, expected, pending)
+	parses, _ := getAllPending(state)
+	assert.EqualValues(t, targets, parses)
 }
 
 func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string) {
+	_, builds := getAllPending(state)
+	assert.EqualValues(t, targets, builds)
+}
+
+func getAllPending(state *core.BuildState) ([]string, []string) {
+	parses, builds, tests := state.TaskQueues()
 	state.Stop()
-	pending := []core.BuildLabel{}
-	for {
-		label, _, typ := state.NextTask()
-		if typ == core.Stop {
-			break
-		} else if typ != core.Build && typ != core.SubincludeBuild {
-			t.Errorf("Unexpected non-build task")
-		} else {
-			pending = append(pending, label)
+	var pendingParses, pendingBuilds []string
+	for parses != nil || builds != nil || tests != nil {
+		select {
+		case p, ok := <-parses:
+			if !ok {
+				parses = nil
+				break
+			}
+			pendingParses = append(pendingParses, p.Label.String())
+		case l, ok := <-builds:
+			if !ok {
+				builds = nil
+				break
+			}
+			pendingBuilds = append(pendingBuilds, l.String())
+		case _, ok := <-tests:
+			if !ok {
+				tests = nil
+				break
+			}
 		}
 	}
-	expected := []core.BuildLabel{}
-	for _, target := range targets {
-		expected = append(expected, core.ParseBuildLabel(target, ""))
-	}
-	assert.Equal(t, expected, pending)
+	return pendingParses, pendingBuilds
 }
 
 func buildLabel(bl string) core.BuildLabel {

@@ -18,7 +18,9 @@ import (
 
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) {
-	state.Parser = &aspParser{asp: newAspParser(state)}
+	if state.Parser == nil {
+		state.Parser = &aspParser{asp: newAspParser(state)}
+	}
 }
 
 // An aspParser implements the core.Parser interface around our asp package.

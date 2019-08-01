@@ -20,8 +20,8 @@ import (
 // startTime is as close as we can conveniently get to process start time.
 var startTime = time.Now()
 
-// A TaskType identifies the kind of task returned from NextTask()
-type TaskType int
+// A taskType identifies the kind of task returned from NextTask()
+type taskType int
 
 // The values here are fiddled to make Compare work easily.
 // Essentially we prioritise on the higher bits only and use the lower ones to make
@@ -29,7 +29,7 @@ type TaskType int
 // Subinclude tasks order first, but we're happy for all build / parse / test tasks
 // to be treated equivalently.
 const (
-	Kill            TaskType = 0x0000 | 0
+	Kill            taskType = 0x0000 | 0
 	SubincludeBuild          = 0x1000 | 1
 	SubincludeParse          = 0x2000 | 2
 	Build                    = 0x4000 | 3
@@ -42,7 +42,7 @@ const (
 type pendingTask struct {
 	Label    BuildLabel // Label of target to parse
 	Dependor BuildLabel // The target that depended on it (only for parse tasks)
-	Type     TaskType
+	Type     taskType
 }
 
 func (t pendingTask) Compare(that queue.Item) int {
@@ -275,7 +275,7 @@ func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests chan<
 	}
 }
 
-func (state *BuildState) addPending(label BuildLabel, t TaskType) {
+func (state *BuildState) addPending(label BuildLabel, t taskType) {
 	atomic.AddInt64(&state.progress.numPending, 1)
 	state.pendingTasks.Put(pendingTask{Label: label, Type: t})
 }
