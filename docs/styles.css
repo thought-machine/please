@@ -546,7 +546,7 @@ footer > div {
 }
 .index-stripe img:nth-child(3) {
     position: absolute;
-    right: -30px;
+    right: 180px;
     bottom: -40px;
     width: 150px;
     height: auto;
