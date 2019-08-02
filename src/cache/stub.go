@@ -14,7 +14,3 @@ import (
 func newRPCCache(config *core.Configuration) (*httpCache, error) {
 	return nil, fmt.Errorf("Config specifies RPC cache but it is not compiled")
 }
-
-func newRemoteCache(state *core.BuildState) core.Cache {
-	return nil
-}
