@@ -3,7 +3,6 @@ package plz
 import (
 	"strings"
 	"sync"
-	"time"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -65,9 +64,6 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, builds, tests <-chan core.BuildLabel, arch cli.Arch, remote bool) {
 	for parses != nil || builds != nil || tests != nil {
-		if parses == nil {
-			time.Sleep(3 * time.Second)
-		}
 		select {
 		case p, ok := <-parses:
 			if !ok {
