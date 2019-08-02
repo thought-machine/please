@@ -30,7 +30,7 @@ var cache core.Cache
 func TestBuildTargetWithNoDeps(t *testing.T) {
 	state, target := newState("//package1:target1")
 	target.AddOutput("file1")
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -38,7 +38,7 @@ func TestBuildTargetWithNoDeps(t *testing.T) {
 func TestFailedBuildTarget(t *testing.T) {
 	state, target := newState("//package1:target1a")
 	target.Command = "false"
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.Error(t, err)
 }
 
@@ -47,7 +47,7 @@ func TestBuildTargetWhichNeedsRebuilding(t *testing.T) {
 	// because there's no rule hash file.
 	state, target := newState("//package1:target2")
 	target.AddOutput("file2")
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -57,7 +57,7 @@ func TestBuildTargetWhichDoesntNeedRebuilding(t *testing.T) {
 	state, target := newState("//package1:target3")
 	target.AddOutput("file3")
 	assert.NoError(t, writeRuleHash(state, target))
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Reused, target.State())
 }
@@ -70,7 +70,7 @@ func TestModifiedBuildTargetStillNeedsRebuilding(t *testing.T) {
 	assert.NoError(t, writeRuleHash(state, target))
 	target.Command = "echo 'wibble wibble wibble' > $OUT"
 	target.RuleHash = nil // Have to force a reset of this
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -81,7 +81,7 @@ func TestSymlinkedOutputs(t *testing.T) {
 	target.AddOutput("file5")
 	target.AddSource(core.FileLabel{File: "src5", Package: "package1"})
 	target.Command = "ln -s $SRC $OUT"
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -95,7 +95,7 @@ func TestPreBuildFunction(t *testing.T) {
 		target.Command = "echo 'wibble wibble wibble' > $OUT"
 		return nil
 	})
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -109,7 +109,7 @@ func TestPostBuildFunction(t *testing.T) {
 		assert.Equal(t, "wibble wibble wibble", output)
 		return nil
 	})
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 	assert.Equal(t, []string{"file7"}, target.Outputs())
@@ -121,7 +121,7 @@ func TestCacheRetrieval(t *testing.T) {
 	target.AddOutput("file8")
 	target.Command = "false" // Will fail if we try to build it.
 	state.Cache = cache
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Cached, target.State())
 }
@@ -139,7 +139,7 @@ func TestPostBuildFunctionAndCache(t *testing.T) {
 		return nil
 	})
 	state.Cache = cache
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 	assert.True(t, called)
@@ -159,7 +159,7 @@ func TestPostBuildFunctionAndCache2(t *testing.T) {
 		return nil
 	})
 	state.Cache = cache
-	err := buildTarget(1, state, target)
+	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Cached, target.State())
 	assert.True(t, called)
@@ -193,7 +193,7 @@ func TestCreatePlzOutGo(t *testing.T) {
 	target.AddLabel("link:plz-out/go/${PKG}/src")
 	target.AddOutput("file1.go")
 	assert.False(t, fs.PathExists("plz-out/go"))
-	assert.NoError(t, buildTarget(1, state, target))
+	assert.NoError(t, buildTarget(1, state, target, false))
 	assert.True(t, fs.PathExists("plz-out/go/gopkg/src/file1.go"))
 }
 
